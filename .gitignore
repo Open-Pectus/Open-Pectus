@@ -127,3 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Antlr internal files
+openpectus/lang/grammar/.antlr
