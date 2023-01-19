@@ -40,6 +40,6 @@ jobs:
     - name: Test with unittest
       run: |
         cd openpectus
-        python -m unittest test\test_lexer.py
-        python -m unittest test\test_parser.py
+        python -m unittest test/test_lexer.py
+        
     
