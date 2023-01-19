@@ -40,7 +40,7 @@ jobs:
         # use configuration from ./.flake8
         cd openpectus
         flake8 . --count --statistics
-      continue-on-error: true
+      continue-on-error: true #TODO report build warning if flake8 has warnings
     - name: Test with unittest
       run: |
         cd openpectus
