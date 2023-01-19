@@ -40,9 +40,8 @@ jobs:
         # use configuration from ./.flake8
         cd openpectus
         if ! flake8 . --count --statistics; then
-          echo "::warning::flake8 linting warning"
-        fi
-      #continue-on-error: true #TODO report build warning if flake8 has warnings
+          echo "::warning::Flake8 Lint Warning"
+        fi      
     - name: Test with unittest
       run: |
         cd openpectus
