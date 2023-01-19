@@ -1,8 +1,8 @@
-from typing import List
 import unittest
 
 from lang.grammar.pgrammar import PGrammar
 from lang.grammar.codegen.pcodeParser import ParserRuleContext, pcodeParser
+
 
 def parse(s):
     p = PGrammar()
@@ -23,7 +23,6 @@ class ParserTest(unittest.TestCase):
         self.assertIsNotNone(c)
         self.assertIsInstance(c, pcodeParser.ProgramContext)
 
-    
     def assertIsPCommandWithNameArgs(self, c: ParserRuleContext, name: str, args: str):
         self.assertIsNotNone(c)
         self.assertIsInstance(c, pcodeParser.CommandContext)
@@ -41,31 +40,31 @@ class ParserTest(unittest.TestCase):
         self.assertEqual(_args, args)
 
     def test_cmd_name(self):
-        self.assertEqual(parse("foo").parser.cmd_name().getText(), "foo")        
+        self.assertEqual(parse("foo").parser.cmd_name().getText(), "foo")
 
-    def test_cmd_args(self):        
+    def test_cmd_args(self):
         def test(code, expected_args):
             with self.subTest(code):
                 print(f"\nCode: '{code}'")
                 p = parse(code)
                 c = p.parser.cmd_args()
-                print('Tree:')
+                print("Tree:")
                 p.printSyntaxTree(c)
                 self.assertEqual(c.getText(), expected_args)
 
-        test("bar", "bar")        
+        test("bar", "bar")
         test("bar baz", "bar baz")
         test("bar=baz", "bar=baz")
-        test("bar,baz", "bar,baz")        
-        # TODO test("bar,baz #comment", "bar,baz")        
+        test("bar,baz", "bar,baz")
+        # TODO test("bar,baz #comment", "bar,baz")
 
     def test_command(self):
         def test(code):
             with self.subTest(code):
-                c = parse(code).parser.command()            
+                c = parse(code).parser.command()
                 self.assertIsNotNone(c)
                 self.assertIsInstance(c, pcodeParser.CommandContext)
-        
+
         test("foo")
         test(" foo")
         test("   foo")
@@ -88,7 +87,7 @@ class ParserTest(unittest.TestCase):
                 print(f"\nCode: '{code}'")
                 p = parse(code)
                 c = p.parser.command()
-                print('Tree:')
+                print("Tree:")
                 p.printSyntaxTree(c)
                 self.assertIsPCommandWithNameArgs(c, expected_name, expected_args)
 
@@ -97,9 +96,8 @@ class ParserTest(unittest.TestCase):
         test("1 foo: bar", "foo", "bar")
         test("7.89 foo: bar", "foo", "bar")
 
-        #We do not support comma in timeexp for now
+        # We do not support comma in timeexp for now
         # test("7,89 foo: bar", "foo", "bar"))
-     
 
     def test_command_name_args(self):
         def test(code, expected_name, expected_args):
@@ -107,7 +105,7 @@ class ParserTest(unittest.TestCase):
                 print(f"\nCode: '{code}'")
                 p = parse(code)
                 c = p.parser.command()
-                print('Tree:')
+                print("Tree:")
                 p.printSyntaxTree(c)
                 self.assertIsPCommandWithNameArgs(c, expected_name, expected_args)
 
@@ -118,6 +116,5 @@ class ParserTest(unittest.TestCase):
         test("foo: 3=5", "foo", "3=5")
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

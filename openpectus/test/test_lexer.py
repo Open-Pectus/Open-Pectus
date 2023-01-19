@@ -8,7 +8,7 @@ class LexerTest(unittest.TestCase):
         print(f"\nCode: '{code}'")
         print("Tokens:")
         p = PGrammar()
-        p.parse(code)        
+        p.parse(code)
         tokens = p.tokens
         for t in tokens:
             print(t)
@@ -24,14 +24,15 @@ class LexerTest(unittest.TestCase):
         code = "\nblock:foo#cmt\n"
         self.assertPTokenCountGE(code, 1)
 
-    def test_command(self):        
+    def test_command(self):
         code = "foo #no comment"
         self.assertPTokenCountGE(code, 1)
 
-    # def test_comment(self):        
-        # p = parse("foo #foo")
-        # c = p.parser.comment()
-        # self.assertGreaterEqual(len(p.tokens), 1)
+    # def test_comment(self):
+    # p = parse("foo #foo")
+    # c = p.parser.comment()
+    # self.assertGreaterEqual(len(p.tokens), 1)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

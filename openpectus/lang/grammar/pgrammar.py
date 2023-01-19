@@ -3,42 +3,42 @@ from typing import List
 
 from .codegen.pcodeLexer import pcodeLexer
 from .codegen.pcodeParser import pcodeParser
-from .codegen.pcodeListener import pcodeListener
+
+# from .codegen.pcodeListener import pcodeListener
 
 from antlr4 import InputStream, CommonTokenStream, Token, ParserRuleContext
 from antlr4.tree.Tree import ParseTree
 
 
-class PGrammar():
+class PGrammar:
     def __init__(self) -> None:
         self.lexer = pcodeLexer
-        self.parser = pcodeParser        
+        self.parser = pcodeParser
 
     def parse(self, code: TextIOWrapper):
         input = InputStream(code)
         self.lexer = pcodeLexer(input)
         stream = CommonTokenStream(self.lexer)
         self.parser = pcodeParser(stream)
-        #self.tree = self.parser.program()
+        # self.tree = self.parser.program()
 
     @property
     def tokens(self) -> List[Token]:
         return list(self.lexer.getAllTokens())
 
     @staticmethod
-    def _recursive(aRoot : ParseTree, buf:List[str], offset:int, ruleNames: List[str]):    
-        for _ in range(offset):    
+    def _recursive(aRoot: ParseTree, buf: List[str], offset: int, ruleNames: List[str]):
+        for _ in range(offset):
             buf.append("  ")
-        
-        buf.append(aRoot.getText() + ' | ' + type(aRoot).__name__ + '\n')    
-        
+
+        buf.append(aRoot.getText() + " | " + type(aRoot).__name__ + "\n")
+
         if isinstance(aRoot, ParserRuleContext):
             if not aRoot.children is None:
-                for child in aRoot.children:                
-                    PGrammar._recursive(child, buf, offset+1, ruleNames)
+                for child in aRoot.children:
+                    PGrammar._recursive(child, buf, offset + 1, ruleNames)
 
     def printSyntaxTree(self, root: ParseTree):
-        buf = []        
+        buf = []
         self._recursive(root, buf, 0, list(self.parser.ruleNames))
-        print(''.join(buf))    
-    
+        print("".join(buf))
