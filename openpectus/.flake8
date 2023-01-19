@@ -1,8 +1,6 @@
 [flake8]
 extend-ignore = 
     E203, 
-    # line too long
-    E501
 
 exclude = 
     .git,
@@ -13,3 +11,4 @@ exclude =
     dist
 
 max-complexity = 10
+max-line-length = 100
