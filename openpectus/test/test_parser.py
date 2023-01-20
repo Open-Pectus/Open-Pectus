@@ -13,13 +13,13 @@ def parse(s):
 class ParserTest(unittest.TestCase):
     def test_block(self):
         p = parse("block: foo")
-        c = p.parser.block()
+        c = p.parser.block()  # type: ignore
         self.assertIsNotNone(c)
         p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.BlockContext)
 
         p = parse("block: foo")
-        c = p.parser.program()
+        c = p.parser.program()  # type: ignore
         self.assertIsNotNone(c)
         self.assertIsInstance(c, pcodeParser.ProgramContext)
 
@@ -30,24 +30,25 @@ class ParserTest(unittest.TestCase):
         _name = None
         _args = None
 
-        for x in c.children:
-            if isinstance(x, pcodeParser.Cmd_nameContext):
-                _name = x.getText()
-            elif isinstance(x, pcodeParser.Cmd_argsContext):
-                _args = x.getText()
+        if c.children is not None:
+            for x in c.children:
+                if isinstance(x, pcodeParser.Command_nameContext):
+                    _name = x.getText()
+                elif isinstance(x, pcodeParser.Command_argsContext):
+                    _args = x.getText()
 
         self.assertEqual(_name, name)
         self.assertEqual(_args, args)
 
-    def test_cmd_name(self):
-        self.assertEqual(parse("foo").parser.cmd_name().getText(), "foo")
+    def test_command_name(self):
+        self.assertEqual(parse("foo").parser.command_name().getText(), "foo")  # type: ignore
 
-    def test_cmd_args(self):
+    def test_command_args(self):
         def test(code, expected_args):
             with self.subTest(code):
                 print(f"\nCode: '{code}'")
                 p = parse(code)
-                c = p.parser.cmd_args()
+                c = p.parser.command_args()  # type: ignore
                 print("Tree:")
                 p.printSyntaxTree(c)
                 self.assertEqual(c.getText(), expected_args)
@@ -61,7 +62,7 @@ class ParserTest(unittest.TestCase):
     def test_command(self):
         def test(code):
             with self.subTest(code):
-                c = parse(code).parser.command()
+                c = parse(code).parser.command()  # type: ignore
                 self.assertIsNotNone(c)
                 self.assertIsInstance(c, pcodeParser.CommandContext)
 
@@ -86,7 +87,7 @@ class ParserTest(unittest.TestCase):
             with self.subTest(code):
                 print(f"\nCode: '{code}'")
                 p = parse(code)
-                c = p.parser.command()
+                c = p.parser.command()  # type: ignore
                 print("Tree:")
                 p.printSyntaxTree(c)
                 self.assertIsPCommandWithNameArgs(c, expected_name, expected_args)
@@ -97,23 +98,26 @@ class ParserTest(unittest.TestCase):
         test("7.89 foo: bar", "foo", "bar")
 
         # We do not support comma in timeexp for now
-        # test("7,89 foo: bar", "foo", "bar"))
+        test("7,89 foo: bar", "foo", "bar")
 
     def test_command_name_args(self):
         def test(code, expected_name, expected_args):
             with self.subTest(code):
                 print(f"\nCode: '{code}'")
                 p = parse(code)
-                c = p.parser.command()
+                c = p.parser.command()  # type: ignore
                 print("Tree:")
                 p.printSyntaxTree(c)
                 self.assertIsPCommandWithNameArgs(c, expected_name, expected_args)
 
-        test("1.23 foo bar", "foo", None)
+        test("1.23 foo bar", "foo bar", None) 
         test("foo: bar,baz", "foo", "bar,baz")
         test("1.23 foo: bar baz", "foo", "bar baz")
         test("foo: 3,5", "foo", "3,5")
         test("foo: 3=5", "foo", "3=5")
+
+        test("Inlet PU01: VA01", "Inlet PU01", "VA01")
+        test("PU01: 77.64 %", "PU01", "77.64 %")
 
 
 if __name__ == "__main__":
