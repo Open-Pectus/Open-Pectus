@@ -26,6 +26,15 @@ class pcodeListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by pcodeParser#builtin_command.
+    def enterBuiltin_command(self, ctx:pcodeParser.Builtin_commandContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#builtin_command.
+    def exitBuiltin_command(self, ctx:pcodeParser.Builtin_commandContext):
+        pass
+
+
     # Enter a parse tree produced by pcodeParser#block.
     def enterBlock(self, ctx:pcodeParser.BlockContext):
         pass
@@ -41,6 +50,24 @@ class pcodeListener(ParseTreeListener):
 
     # Exit a parse tree produced by pcodeParser#block_name.
     def exitBlock_name(self, ctx:pcodeParser.Block_nameContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#end_block.
+    def enterEnd_block(self, ctx:pcodeParser.End_blockContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#end_block.
+    def exitEnd_block(self, ctx:pcodeParser.End_blockContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#end_blocks.
+    def enterEnd_blocks(self, ctx:pcodeParser.End_blocksContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#end_blocks.
+    def exitEnd_blocks(self, ctx:pcodeParser.End_blocksContext):
         pass
 
 
@@ -89,6 +116,51 @@ class pcodeListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by pcodeParser#condition.
+    def enterCondition(self, ctx:pcodeParser.ConditionContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#condition.
+    def exitCondition(self, ctx:pcodeParser.ConditionContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#increment_rc.
+    def enterIncrement_rc(self, ctx:pcodeParser.Increment_rcContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#increment_rc.
+    def exitIncrement_rc(self, ctx:pcodeParser.Increment_rcContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#stop.
+    def enterStop(self, ctx:pcodeParser.StopContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#stop.
+    def exitStop(self, ctx:pcodeParser.StopContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#pause.
+    def enterPause(self, ctx:pcodeParser.PauseContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#pause.
+    def exitPause(self, ctx:pcodeParser.PauseContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#time.
+    def enterTime(self, ctx:pcodeParser.TimeContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#time.
+    def exitTime(self, ctx:pcodeParser.TimeContext):
+        pass
+
+
     # Enter a parse tree produced by pcodeParser#timeexp.
     def enterTimeexp(self, ctx:pcodeParser.TimeexpContext):
         pass
@@ -113,6 +185,24 @@ class pcodeListener(ParseTreeListener):
 
     # Exit a parse tree produced by pcodeParser#comment_text.
     def exitComment_text(self, ctx:pcodeParser.Comment_textContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#blank.
+    def enterBlank(self, ctx:pcodeParser.BlankContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#blank.
+    def exitBlank(self, ctx:pcodeParser.BlankContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#error.
+    def enterError(self, ctx:pcodeParser.ErrorContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#error.
+    def exitError(self, ctx:pcodeParser.ErrorContext):
         pass
 
 

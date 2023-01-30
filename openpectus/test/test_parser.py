@@ -23,6 +23,96 @@ class ParserTest(unittest.TestCase):
         self.assertIsNotNone(c)
         self.assertIsInstance(c, pcodeParser.ProgramContext)
 
+    def test_end_block(self):
+        p = parse("end block")
+        c = p.parser.end_block()  # type: ignore
+        self.assertIsNotNone(c)
+        p.printSyntaxTree(c)
+        self.assertIsInstance(c, pcodeParser.End_blockContext)
+
+    def test_end_blocks(self):
+        p = parse("end blocks")
+        c = p.parser.end_blocks()  # type: ignore
+        self.assertIsNotNone(c)
+        p.printSyntaxTree(c)
+        self.assertIsInstance(c, pcodeParser.End_blocksContext)
+
+    def test_watch(self):
+        p = parse("watch")
+        c = p.parser.watch()  # type: ignore
+        self.assertIsNotNone(c)
+        p.printSyntaxTree(c)
+        self.assertIsInstance(c, pcodeParser.WatchContext)
+
+    def test_condition(self):
+        p = parse("X > 10 ml")
+        c = p.parser.condition()  # type: ignore
+        self.assertIsNotNone(c)
+        p.printSyntaxTree(c)
+        self.assertIsInstance(c, pcodeParser.ConditionContext)
+
+    def assertIsWatchWithCondition(self, c: ParserRuleContext, condition: str):
+        self.assertIsNotNone(c)
+        self.assertIsInstance(c, pcodeParser.WatchContext)
+        _args = None
+        if c.children is not None:
+            for x in c.children:
+                if isinstance(x, pcodeParser.ConditionContext):
+                    _args = x.getText()
+        self.assertEqual(_args, condition)
+
+    def test_watch_with_condition(self):
+        p = parse("watch: X > 10 ml")
+        c = p.parser.watch()  # type: ignore
+        self.assertIsNotNone(c)
+        p.printSyntaxTree(c)
+        self.assertIsWatchWithCondition(c, "X > 10 ml")
+
+    def assertIsAlarmWithCondition(self, c: ParserRuleContext, condition: str):
+        self.assertIsNotNone(c)
+        self.assertIsInstance(c, pcodeParser.AlarmContext)
+        _args = None
+        if c.children is not None:
+            for x in c.children:
+                if isinstance(x, pcodeParser.ConditionContext):
+                    _args = x.getText()
+        self.assertEqual(_args, condition)
+
+    def test_alarm(self):
+        p = parse("alarm")
+        c = p.parser.alarm()  # type: ignore
+        self.assertIsNotNone(c)
+        p.printSyntaxTree(c)
+        self.assertIsInstance(c, pcodeParser.AlarmContext)
+
+    def test_alarm_with_condition(self):
+        p = parse("alarm: X > 10 ml")
+        c = p.parser.alarm()  # type: ignore
+        self.assertIsNotNone(c)
+        p.printSyntaxTree(c)
+        self.assertIsAlarmWithCondition(c, "X > 10 ml")
+
+    def test_increment_rc(self):
+        p = parse("Increment run counter")
+        c = p.parser.increment_rc()  # type: ignore
+        self.assertIsNotNone(c)
+        p.printSyntaxTree(c)
+        self.assertIsInstance(c, pcodeParser.Increment_rcContext)
+
+    def test_stop(self):
+        p = parse("sTop")
+        c = p.parser.stop()  # type: ignore
+        self.assertIsNotNone(c)
+        p.printSyntaxTree(c)
+        self.assertIsInstance(c, pcodeParser.StopContext)
+
+    def test_pause(self):
+        p = parse("PAuSe")
+        c = p.parser.pause()  # type: ignore
+        self.assertIsNotNone(c)
+        p.printSyntaxTree(c)
+        self.assertIsInstance(c, pcodeParser.PauseContext)
+
     def assertIsPCommandWithNameArgs(self, c: ParserRuleContext, name: str, args: str):
         self.assertIsNotNone(c)
         self.assertIsInstance(c, pcodeParser.CommandContext)
@@ -81,6 +171,7 @@ class ParserTest(unittest.TestCase):
         test("   foo:a=3")
         test("1 foo:3,4 ")
         test("1.1 foo: 3=4,5:6")
+        test("2.95 Zero UV")
 
     def test_command_name_args_simple(self):
         def test(code, expected_name, expected_args):
@@ -96,9 +187,8 @@ class ParserTest(unittest.TestCase):
         test("foo: bar", "foo", "bar")
         test("1 foo: bar", "foo", "bar")
         test("7.89 foo: bar", "foo", "bar")
-
-        # We do not support comma in timeexp for now
         test("7,89 foo: bar", "foo", "bar")
+        test("2.95 Zero UV", "Zero UV", None)
 
     def test_command_name_args(self):
         def test(code, expected_name, expected_args):
@@ -110,7 +200,7 @@ class ParserTest(unittest.TestCase):
                 p.printSyntaxTree(c)
                 self.assertIsPCommandWithNameArgs(c, expected_name, expected_args)
 
-        test("1.23 foo bar", "foo bar", None) 
+        test("1.23 foo bar", "foo bar", None)
         test("foo: bar,baz", "foo", "bar,baz")
         test("1.23 foo: bar baz", "foo", "bar baz")
         test("foo: 3,5", "foo", "3,5")

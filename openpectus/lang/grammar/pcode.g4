@@ -5,30 +5,51 @@ grammar pcode;
 program : WHITESPACE* instruction (NEWLINE WHITESPACE* instruction)* EOF;
 
 instruction
-        : block comment?
+        : builtin_command comment?
         | command comment?
-        | watch comment?
-        | alarm comment?
         | comment
+        | blank
+        | error comment?
         ;
 
-block   : WHITESPACE* (timeexp WHITESPACE)? BLOCK COLON WHITESPACE* block_name;
-block_name : IDENTIFIER; 
+builtin_command
+        : block
+        | end_block | end_blocks
+        | watch
+        | alarm
+        | increment_rc
+        | stop
+        | pause
+        ;
+
+block           : time? BLOCK COLON WHITESPACE* block_name; // allow whitespace before colon?
+block_name      : IDENTIFIER; 
+end_block       : time? END_BLOCK ;
+end_blocks      : time? END_BLOCKS ;
 
 // (?P<ws>\s+)?((?P<time>(?P<timed1>\d*)\.(?P<timed2>\d*))\s)?(?P<command>[^:#]+)?(: (?P<argument>[^#\n]+))?((?P<comment>\s?#.*$))?
-command : WHITESPACE* (timeexp WHITESPACE)? command_name (COLON WHITESPACE* command_args)?;
-command_name: IDENTIFIER;
-command_args: .*?  ~(NEWLINE | HASH);
+command         : time? command_name (COLON WHITESPACE* command_args)?;
+command_name    : IDENTIFIER;
+command_args    : .*?  ~(NEWLINE | HASH);
 
-watch   : WATCH ;
-alarm   : ALARM ;
+watch           : time? WATCH (COLON WHITESPACE* condition)?;
+alarm           : time? ALARM (COLON WHITESPACE* condition)?;
+condition       : .*?  ~(NEWLINE | HASH);
 
-timeexp : FLOAT;
+increment_rc    : time? INCREMENT_RC ;
+stop            : time? STOP ;
+pause           : time? PAUSE ;
+
+time    : timeexp WHITESPACE+ ;
+timeexp : FLOAT ;
 
 comment : HASH comment_text ;
 comment_text : .*? ~NEWLINE;
 
-//syntax_error : ANY ~(HASH | NEWLINE)+;
+blank   : WHITESPACE* ;
+
+error   : .*?  ~(NEWLINE | HASH);
+
 
 fragment LETTER     : [a-zA-Z] ;
 fragment DIGIT      : [0-9] ;
@@ -60,11 +81,16 @@ fragment X:('x'|'X');
 fragment Y:('y'|'Y');
 fragment Z:('z'|'Z');
 
-BLOCK   : B L O C K ;
 WATCH   : W A T C H ;
 ALARM   : A L A R M ;
+STOP    : S T O P  ;
+PAUSE   : P A U S E ;
+BLOCK   : B L O C K ;
+END_BLOCK       : E N D SPACE BLOCK ;
+END_BLOCKS      : E N D SPACE B L O C K S ;
+INCREMENT_RC    : I N C R E M E N T SPACE R U N SPACE C O U N T E R ;
 
-IDENTIFIER: LETTER (LETTER | DIGIT | WHITESPACE)*;  // allow whitespace? For command "Inlet PU01: VA01" what is name and what is args?
+IDENTIFIER: LETTER (LETTER | DIGIT | WHITESPACE)*;
 FLOAT   : DIGIT+ (PERIOD DIGIT+)?
         | DIGIT+ (COMMA DIGIT+)?
         ;
