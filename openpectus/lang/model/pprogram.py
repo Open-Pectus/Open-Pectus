@@ -34,6 +34,7 @@ class PNode():
         self.is_root: bool = False
         self.indent: int = 0
         self.line: int = 1
+        self.errors: List[PError] | None = None
 
         if self.parent is not None and self.parent.children is not None:
             self.parent.children.append(self)
@@ -52,6 +53,19 @@ class PNode():
             if recursive:
                 children.extend(child.get_child_nodes(recursive))
         return children
+
+    def add_error(self, error: PError | str):
+        if self.errors is None:
+            self.errors = []
+        if isinstance(error , PError):
+            self.errors.append(error)
+        else:
+            self.errors.append(PError(error))
+
+    def has_error(self):
+        if self.errors is None or len(self.errors) == 0:
+            return False
+        return True
 
 
 class PProgram(PNode):
@@ -122,19 +136,7 @@ class PCommand(PInstruction):
         self.args: str = ''
 
 
-class PError(PInstruction):
+class PError:
     """ Represents an instruction that contains errors. """
-    def __init__(self, parent: PNode, replace_node: PNode | None) -> None:
-        """ If replace_node is specified, the error node will replace the provided node"""
-
-        if replace_node is not None and parent.children is not None:
-            parent.children.remove(replace_node)
-
-        super().__init__(parent)
-
-        self.children = []
-        # possibly replace the old node's chilren as well. if there could ever be any??
-        # if replace_node is not None and replace_node.children is not None:
-        #     self.children = replace_node.children
-
-        self.errors: List[str] = []
+    def __init__(self, message: str | None = None) -> None:
+        self.message: str | None = message
