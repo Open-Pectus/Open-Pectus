@@ -147,6 +147,7 @@ class PProgramBuilder(pcodeListener):
 
     def enterEnd_block(self, ctx: pcodeParser.End_blockContext):
         self.instruction = PEndBlock(self.scope)
+        self.pop_scope()
 
     def exitEnd_block(self, ctx: pcodeParser.End_blockContext):
         pass
