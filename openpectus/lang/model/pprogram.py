@@ -158,7 +158,6 @@ class PBlank(PInstruction):
     """ Represents an all-whitespace pcode line. """
     def __init__(self, parent: PNode) -> None:
         super().__init__(parent)
-        
 
 
 # --- Non-nodes ---
