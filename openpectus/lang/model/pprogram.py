@@ -62,10 +62,16 @@ class PNode():
         else:
             self.errors.append(PError(error))
 
-    def has_error(self):
-        if self.errors is None or len(self.errors) == 0:
+    def has_error(self, recursive: bool = False):
+        if not recursive:
+            if self.errors is None or len(self.errors) == 0:
+                return False
+            return True
+        else:
+            for c in self.get_child_nodes(True):
+                if c.has_error():
+                    return True
             return False
-        return True
 
 
 class PProgram(PNode):
@@ -75,8 +81,11 @@ class PProgram(PNode):
         self.children = []
         self.is_root = True
 
-    def get_instructions(self) -> List[PInstruction]:
-        return self.get_child_nodes(recursive=True)  # type: ignore
+    def get_instructions(self, include_blanks: bool = False) -> List[PInstruction]:
+        children: List[PInstruction] = self.get_child_nodes(recursive=True)  # type: ignore
+        if not include_blanks:
+            return [n for n in children if not isinstance(n, PBlank)]
+        return children
 
 
 class PInstruction(PNode):
@@ -126,6 +135,15 @@ class PAlarm(PInstruction):
         self.condition: str = ''
 
 
+class PMark(PInstruction):
+    """ Represents an Mark intruction. """
+    def __init__(self, parent: PNode) -> None:
+        super().__init__(parent)
+
+        self.children = []
+        self.name: str = ''
+
+
 class PCommand(PInstruction):
     """ Represents a Command instruction. """
     def __init__(self, parent: PNode) -> None:
@@ -135,6 +153,15 @@ class PCommand(PInstruction):
         self.name: str = ''
         self.args: str = ''
 
+
+class PBlank(PInstruction):
+    """ Represents an all-whitespace pcode line. """
+    def __init__(self, parent: PNode) -> None:
+        super().__init__(parent)
+        
+
+
+# --- Non-nodes ---
 
 class PError:
     """ Represents an instruction that contains errors. """

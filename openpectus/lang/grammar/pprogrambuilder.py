@@ -16,8 +16,10 @@ from lang.model.pprogram import (
     PEndBlocks,
     PWatch,
     PAlarm,
+    PMark,
     PCommand,
-    PError
+    PError,
+    PBlank
 )
 
 INDENTATION_SPACES = 4
@@ -106,15 +108,11 @@ class PProgramBuilder(pcodeListener):
             self.instructionError = PError(f'Bad indentation. Should be a multiple of {INDENTATION_SPACES}')
 
         # validate scope indentation
-        scope = self.scope if self.has_scope() else self.program
-
-        expected_indent = scope.indent
-        if self.last_instruction is not None:
-            if self.scope_requires_indent(scope):
-                expected_indent += INDENTATION_SPACES
-            elif self.scope_requires_outdent(scope):
-                expected_indent = max(scope.indent - INDENTATION_SPACES, 0)
-
+        expected_indent = self.scope.indent
+        if self.scope_requires_indent(self.scope):
+            expected_indent += INDENTATION_SPACES
+        elif self.scope_requires_outdent(self.scope):
+            expected_indent = max(self.scope.indent - INDENTATION_SPACES, 0)
         if not indent == expected_indent:
             self.instructionError = PError(
                 f'Bad indentation for new scope. Expected {expected_indent} spaces of indentation')
@@ -122,15 +120,16 @@ class PProgramBuilder(pcodeListener):
     def exitInstruction(self, ctx: pcodeParser.InstructionContext):
         # attach any error to current instruction
         if self.instructionError is not None:
-            if self.instruction is not None:
-                self.instruction.add_error(self.instructionError)
+            if self.instruction is None:
+                raise NotImplementedError(f"TODO Instruction not implemented: {ctx.getText()}")
+            elif isinstance(self.instruction, PBlank):
+                # skip indentation errors in blank lines
+                if 'indentation' not in (self.instructionError.message or ""):
+                    self.instruction.add_error(self.instructionError)
             else:
-                raise ValueError(f"instructionError '{self.instructionError.message}' without instruction")
+                self.instruction.add_error(self.instructionError)
 
     def enterBlock(self, ctx: pcodeParser.BlockContext):
-        if self.scope is None:
-            raise NotImplementedError("No parent for block")
-
         block = PBlock(self.scope)
         self.set_start(block, ctx)
         self.instruction = block
@@ -147,26 +146,21 @@ class PProgramBuilder(pcodeListener):
         pass
 
     def enterEnd_block(self, ctx: pcodeParser.End_blockContext):
-        if self.scope is None:
-            raise NotImplementedError("No parent for end_block")
         self.instruction = PEndBlock(self.scope)
 
     def exitEnd_block(self, ctx: pcodeParser.End_blockContext):
         pass
 
     def enterEnd_blocks(self, ctx: pcodeParser.End_blocksContext):
-        if self.scope is None:
-            raise NotImplementedError("No parent for end_blocks")
         self.instruction = PEndBlocks(self.scope)
+        self.set_start(self.instruction, ctx)
 
     def exitEnd_blocks(self, ctx: pcodeParser.End_blocksContext):
         pass
 
     def enterCommand(self, ctx: pcodeParser.CommandContext):
-        assert self.scope is not None
-        command = PCommand(self.scope)
-        self.set_start(command, ctx)
-        self.instruction = command
+        self.instruction = PCommand(self.scope)
+        self.set_start(self.instruction, ctx)
 
     def exitCommand(self, ctx: pcodeParser.CommandContext):
         pass
@@ -186,9 +180,8 @@ class PProgramBuilder(pcodeListener):
         pass
 
     def enterWatch(self, ctx: pcodeParser.WatchContext):
-        assert self.scope is not None
-        node = PWatch(self.scope)
-        self.push_scope(node, ctx)
+        self.instruction = PWatch(self.scope)
+        self.push_scope(self.instruction, ctx)
 
     def exitWatch(self, ctx: pcodeParser.WatchContext):
         pass
@@ -198,16 +191,27 @@ class PProgramBuilder(pcodeListener):
         self.scope.condition = ctx.getText()
 
     def enterAlarm(self, ctx: pcodeParser.AlarmContext):
-        assert self.scope is not None
-        node = PAlarm(self.scope)
-        self.instruction = node
-        self.push_scope(node, ctx)
+        self.instruction = PAlarm(self.scope)
+        self.push_scope(self.instruction, ctx)
 
     def exitAlarm(self, ctx: pcodeParser.AlarmContext):
         pass
 
+    def enterMark(self, ctx: pcodeParser.MarkContext):
+        self.instruction = PMark(self.scope)
+        self.set_start(self.instruction, ctx)
+
+    def exitMark(self, ctx: pcodeParser.MarkContext):
+        pass
+
+    def enterMark_name(self, ctx: pcodeParser.Mark_nameContext):
+        assert isinstance(self.instruction, PMark)
+        self.instruction.name = ctx.getText()
+
+    def exitMark_name(self, ctx: pcodeParser.Mark_nameContext):
+        pass
+
     def enterTimeexp(self, ctx: pcodeParser.TimeexpContext):
-        assert self.scope is not None
         # NOTE: there is currently a mismatch between PInstruction which have 'time' and the grammar
         # where not all instructions have 'time'.
         assert isinstance(self.instruction, PInstruction)
@@ -220,4 +224,16 @@ class PProgramBuilder(pcodeListener):
         pass
 
     def exitComment(self, ctx: pcodeParser.CommentContext):
+        pass
+
+    def enterBlank(self, ctx: pcodeParser.BlankContext):
+        self.instruction = PBlank(self.scope)
+
+    def exitBlank(self, ctx: pcodeParser.BlankContext):
+        pass
+
+    def enterError(self, ctx: pcodeParser.ErrorContext):
+        pass
+
+    def exitError(self, ctx: pcodeParser.ErrorContext):
         pass

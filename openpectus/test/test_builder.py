@@ -11,6 +11,7 @@ from lang.model.pprogram import (
     PEndBlocks,
     PWatch,
     PAlarm,
+    PMark,
     PCommand,
     PError
 )
@@ -22,7 +23,10 @@ def build(s):
     return p
 
 
-def print_program(program: PProgram):    
+def print_program(program: PProgram):
+    if program is None:
+        raise AssertionError("program is None")
+
     def print_node(node: PNode, indent: str):
         err = ''
         if node.errors is not None and len(node.errors) > 0:
@@ -40,7 +44,6 @@ class BuilderTest(unittest.TestCase):
         p = build("foo: bar=baz")
         program = p.build_model()
         p.printSyntaxTree(p.tree)
-        self.assertIsNotNone(program)
 
         command: PCommand = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(command)
@@ -52,7 +55,6 @@ class BuilderTest(unittest.TestCase):
         p = build("block: foo")
         program = p.build_model()
         p.printSyntaxTree(p.tree)
-        self.assertIsNotNone(program)
 
         block: PBlock = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(block)
@@ -64,7 +66,6 @@ class BuilderTest(unittest.TestCase):
     end block""")
         program = p.build_model()
         p.printSyntaxTree(p.tree)
-        self.assertIsNotNone(program)
 
         block: PBlock = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(block)
@@ -78,7 +79,6 @@ class BuilderTest(unittest.TestCase):
         p = build(" block: foo")
         program = p.build_model()
         p.printSyntaxTree(p.tree)
-        self.assertIsNotNone(program)
 
         block: PBlock = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(block)
@@ -90,7 +90,6 @@ class BuilderTest(unittest.TestCase):
         p = build("    block: foo")
         program = p.build_model()
         p.printSyntaxTree(p.tree)
-        self.assertIsNotNone(program)
 
         block: PBlock = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(block)
@@ -103,7 +102,6 @@ class BuilderTest(unittest.TestCase):
  end block""")
         program = p.build_model()
         p.printSyntaxTree(p.tree)
-        self.assertIsNotNone(program)
 
         block: PBlock = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(block)
@@ -119,7 +117,6 @@ class BuilderTest(unittest.TestCase):
 end block""")
         program = p.build_model()
         p.printSyntaxTree(p.tree)
-        self.assertIsNotNone(program)
 
         block: PBlock = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(block)
@@ -136,7 +133,6 @@ end block""")
     end block""")
         program = p.build_model()
         p.printSyntaxTree(p.tree)
-        self.assertIsNotNone(program)
         print_program(program)
 
         block: PBlock = program.get_instructions()[0]  # type: ignore
@@ -158,7 +154,6 @@ end block""")
         )
         program = p.build_model()
         p.printSyntaxTree(p.tree)
-        self.assertIsNotNone(program)
 
         print_program(program)
 
@@ -193,7 +188,6 @@ end block""")
         )
         program = p.build_model()
         p.printSyntaxTree(p.tree)
-        self.assertIsNotNone(program)
 
         print_program(program)
 
@@ -237,7 +231,6 @@ end block""")
 
         program = p.build_model()
         p.printSyntaxTree(p.tree)
-        self.assertIsNotNone(program)
 
         print_program(program)
 
@@ -252,6 +245,66 @@ end block""")
         instr = instructions[8]
         self.assertIsInstance(instr, PEndBlock)
         self.assertFalse(instr.has_error())
+
+    def test_mark(self):
+        p = build("Mark: A")
+        program = p.build_model()
+        p.printSyntaxTree(p.tree)
+
+        print_program(program)
+        mark = program.get_instructions()[0]
+        self.assertIsInstance(mark, PMark)
+        self.assertFalse(program.has_error(recursive=True))
+
+    def test_blanks(self):
+        p = build("""
+Mark: A
+        """)
+        program = p.build_model()
+        p.printSyntaxTree(p.tree)
+
+        print_program(program)
+
+        non_blanks = program.get_instructions()
+        self.assertEqual(1, len(non_blanks))
+        self.assertIsInstance(non_blanks[0], PMark)
+
+        all = program.get_instructions(include_blanks=True)
+        self.assertEqual(3, len(all))        
+        self.assertFalse(program.has_error(recursive=True))
+
+    def test_sequential_blocks(self):
+        p = build("""
+Block: A1
+    Mark: A1 Start
+    End block
+Block: A2
+    Mark: A2 Start
+    End block
+        """)
+        program = p.build_model()
+        p.printSyntaxTree(p.tree)
+
+        print_program(program)
+        self.assertFalse(program.has_error(recursive=True))
+
+    def test_nested_blocks(self):
+        p = build("""Block: A
+    Mark: A Start
+    Block: A1
+        Mark: A1 Start
+        End block
+    Block: A2
+        Mark: A2 Start
+        End block
+    Mark: A End
+    End block
+        """)
+        program = p.build_model()
+        p.printSyntaxTree(p.tree)
+
+        print_program(program)
+        self.assertFalse(program.has_error(recursive=True))
 
 
 if __name__ == "__main__":

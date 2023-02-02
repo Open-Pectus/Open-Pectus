@@ -152,6 +152,24 @@ class pcodeListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by pcodeParser#mark.
+    def enterMark(self, ctx:pcodeParser.MarkContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#mark.
+    def exitMark(self, ctx:pcodeParser.MarkContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#mark_name.
+    def enterMark_name(self, ctx:pcodeParser.Mark_nameContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#mark_name.
+    def exitMark_name(self, ctx:pcodeParser.Mark_nameContext):
+        pass
+
+
     # Enter a parse tree produced by pcodeParser#time.
     def enterTime(self, ctx:pcodeParser.TimeContext):
         pass
