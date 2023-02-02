@@ -23,7 +23,7 @@ def build(s):
     return p
 
 
-def print_program(program: PProgram):
+def print_program(program: PProgram, show_line: bool = False):
     if program is None:
         raise AssertionError("program is None")
 
@@ -31,12 +31,26 @@ def print_program(program: PProgram):
         err = ''
         if node.errors is not None and len(node.errors) > 0:
             err = f"| Err: {node.errors[0].message}"
-        print(indent + type(node).__name__, err)
+        out = indent + type(node).__name__ + err
+        if show_line:
+            out += f" Line: {node.line}"
+        print(out)
         for child in node.get_child_nodes():
             print_node(child, indent + "    ")
 
     print_node(program, "")
     print()
+
+
+def node_missing_start_position_count(node: PNode) -> int:
+    count = 0
+    if node.line is None:
+        count += 1
+    if node.indent is None:
+        count += 1
+    for n in node.get_child_nodes(recursive=True):
+        count += node_missing_start_position_count(n)
+    return count
 
 
 class BuilderTest(unittest.TestCase):
@@ -287,6 +301,7 @@ Block: A2
 
         print_program(program)
         self.assertFalse(program.has_error(recursive=True))
+        self.assertEquals(0, node_missing_start_position_count(program))
 
     def test_nested_blocks(self):
         p = build("""Block: A
@@ -303,8 +318,9 @@ Block: A2
         program = p.build_model()
         p.printSyntaxTree(p.tree)
 
-        print_program(program)
+        print_program(program, show_line=True)
         self.assertFalse(program.has_error(recursive=True))
+        self.assertEquals(0, node_missing_start_position_count(program))
 
 
 if __name__ == "__main__":

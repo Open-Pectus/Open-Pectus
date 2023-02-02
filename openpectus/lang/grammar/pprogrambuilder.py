@@ -32,10 +32,16 @@ class PProgramBuilder(pcodeListener):
         self.program: PProgram = PProgram()
         self.stack: List[PNode] = []
         """ Stack of scopes. """
+
         self.instruction: PInstruction | None = None
-        self.last_instruction: PInstruction | None = None
-        self.instructionError: PError | None = None
         """ The current instruction being built. """
+
+        self.instructionStart: InstructionStart | None = None
+        """ Start position of the current instruction"""
+
+        self.instructionError: PError | None = None
+        """ Error to be attached to othe current instruction """
+
 
     @property
     def scope(self) -> PNode:
@@ -62,7 +68,6 @@ class PProgramBuilder(pcodeListener):
     def push_scope(self, new_scope: PInstruction, ctx: ParserRuleContext) -> PInstruction:
         """ Add instruction as the new inner scope.
         """
-        self.set_start(new_scope, ctx)
         self.stack.append(new_scope)
 
         return new_scope
@@ -83,10 +88,6 @@ class PProgramBuilder(pcodeListener):
     #         for x in ctx.children:
     #             f(x)
 
-    def set_start(self, node: PNode, ctx: ParserRuleContext):
-        node.line = ctx.start.line  # type: ignore
-        node.indent = ctx.start.column  # type: ignore
-
     def enterProgram(self, ctx: pcodeParser.ProgramContext):
         # set program as scope
         self.program.line = ctx.start.line  # type: ignore
@@ -97,10 +98,9 @@ class PProgramBuilder(pcodeListener):
         pass
 
     def enterInstruction(self, ctx: pcodeParser.InstructionContext):
-        if self.instruction is not None:
-            self.last_instruction = self.instruction
         self.instruction = None
         self.instructionError = None
+        self.instructionStart = InstructionStart(ctx.start.line, ctx.start.column)  # type: ignore
 
         # validate indentation
         indent = int(ctx.start.column)  # type: ignore
@@ -108,6 +108,8 @@ class PProgramBuilder(pcodeListener):
             self.instructionError = PError(f'Bad indentation. Should be a multiple of {INDENTATION_SPACES}')
 
         # validate scope indentation
+        assert isinstance(self.scope.indent, int), "Expect indent always set"
+
         expected_indent = self.scope.indent
         if self.scope_requires_indent(self.scope):
             expected_indent += INDENTATION_SPACES
@@ -129,9 +131,14 @@ class PProgramBuilder(pcodeListener):
             else:
                 self.instruction.add_error(self.instructionError)
 
+        # attach start position
+        assert self.instruction is not None
+        assert self.instructionStart is not None
+        self.instruction.line = self.instructionStart.line
+        self.instruction.indent = self.instructionStart.indent
+
     def enterBlock(self, ctx: pcodeParser.BlockContext):
         block = PBlock(self.scope)
-        self.set_start(block, ctx)
         self.instruction = block
         self.push_scope(block, ctx)
 
@@ -154,14 +161,12 @@ class PProgramBuilder(pcodeListener):
 
     def enterEnd_blocks(self, ctx: pcodeParser.End_blocksContext):
         self.instruction = PEndBlocks(self.scope)
-        self.set_start(self.instruction, ctx)
 
     def exitEnd_blocks(self, ctx: pcodeParser.End_blocksContext):
         pass
 
     def enterCommand(self, ctx: pcodeParser.CommandContext):
         self.instruction = PCommand(self.scope)
-        self.set_start(self.instruction, ctx)
 
     def exitCommand(self, ctx: pcodeParser.CommandContext):
         pass
@@ -200,7 +205,6 @@ class PProgramBuilder(pcodeListener):
 
     def enterMark(self, ctx: pcodeParser.MarkContext):
         self.instruction = PMark(self.scope)
-        self.set_start(self.instruction, ctx)
 
     def exitMark(self, ctx: pcodeParser.MarkContext):
         pass
@@ -238,3 +242,9 @@ class PProgramBuilder(pcodeListener):
 
     def exitError(self, ctx: pcodeParser.ErrorContext):
         pass
+
+
+class InstructionStart():
+    def __init__(self, line: int, indent: int) -> None:
+        self.line = line
+        self.indent = indent

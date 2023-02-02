@@ -32,8 +32,8 @@ class PNode():
         """ The child nodes of the node, if any. None if the node cannot have child nodes. """
 
         self.is_root: bool = False
-        self.indent: int = 0
-        self.line: int = 1
+        self.indent: int | None = None
+        self.line: int | None = None
         self.errors: List[PError] | None = None
 
         if self.parent is not None and self.parent.children is not None:
