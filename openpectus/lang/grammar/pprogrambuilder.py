@@ -36,12 +36,17 @@ class PProgramBuilder(pcodeListener):
         self.instruction: PInstruction | None = None
         """ The current instruction being built. """
 
+        self.prev_instruction: PInstruction | None = None
+        """ The previous instruction. """
+
         self.instructionStart: InstructionStart | None = None
-        """ Start position of the current instruction"""
+        """ Start position of the current instruction. """
 
         self.instructionError: PError | None = None
-        """ Error to be attached to othe current instruction """
+        """ Error to be attached to the current instruction. """
 
+        self.expect_indent: bool = False
+        """ Flag raised by instructions that expect the next instruction to be additionally indented """
 
     @property
     def scope(self) -> PNode:
@@ -53,22 +58,11 @@ class PProgramBuilder(pcodeListener):
     def has_scope(self) -> bool:
         return len(self.stack) > 0
 
-    def scope_requires_indent(self, node: PNode):
-        if isinstance(node, PBlock):
-            return True
-        return False
-
-    def scope_requires_outdent(self, node: PNode):
-        # TODO in end block(s) possibly reference outer scope. this allows static knowledge of outdent level
-        # TODO multiple outdent not yet supported
-        if isinstance(node, PEndBlock) or isinstance(node, PEndBlocks):
-            return True
-        return False
-
     def push_scope(self, new_scope: PInstruction, ctx: ParserRuleContext) -> PInstruction:
         """ Add instruction as the new inner scope.
         """
         self.stack.append(new_scope)
+        self.expect_indent = True
 
         return new_scope
 
@@ -77,8 +71,8 @@ class PProgramBuilder(pcodeListener):
         """
         if len(self.stack) < 1:
             raise ValueError("Stack underflow")
-        parent = self.stack.pop()
-        return parent
+        parent_scope = self.stack.pop()
+        return parent_scope
 
     def get_program(self) -> PProgram:
         return self.program
@@ -98,26 +92,40 @@ class PProgramBuilder(pcodeListener):
         pass
 
     def enterInstruction(self, ctx: pcodeParser.InstructionContext):
+        self.prev_instruction = self.instruction
         self.instruction = None
         self.instructionError = None
         self.instructionStart = InstructionStart(ctx.start.line, ctx.start.column)  # type: ignore
 
-        # validate indentation
         indent = int(ctx.start.column)  # type: ignore
         if math.remainder(indent, INDENTATION_SPACES) != 0:
+            # validate indentation as multiple of INDENTATION_SPACES
             self.instructionError = PError(f'Bad indentation. Should be a multiple of {INDENTATION_SPACES}')
-
-        # validate scope indentation
-        assert isinstance(self.scope.indent, int), "Expect indent always set"
-
-        expected_indent = self.scope.indent
-        if self.scope_requires_indent(self.scope):
-            expected_indent += INDENTATION_SPACES
-        elif self.scope_requires_outdent(self.scope):
-            expected_indent = max(self.scope.indent - INDENTATION_SPACES, 0)
-        if not indent == expected_indent:
-            self.instructionError = PError(
-                f'Bad indentation for new scope. Expected {expected_indent} spaces of indentation')
+        else:
+            # validate scope indentation
+            assert isinstance(self.scope.indent, int), "Expect indent always set"
+            prev_indent = 0 \
+                if self.prev_instruction is None or self.prev_instruction.indent is None \
+                else self.prev_instruction.indent
+            # if outdented, just pop to relevant parent scope
+            if indent < prev_indent:
+                x = indent
+                while (x < prev_indent):
+                    self.pop_scope()
+                    x += INDENTATION_SPACES
+            # if additional indent, check that this matches expectation set by previous instruction
+            elif indent > prev_indent:
+                if not self.expect_indent:
+                    self.instructionError = PError(
+                        f"Bad indentation. Additional indentation unexpected. Expected {prev_indent} spaces of indentation")
+                elif indent != prev_indent + INDENTATION_SPACES:
+                    self.instructionError = PError(
+                        f"Bad indentation. Expected {prev_indent + INDENTATION_SPACES} spaces of indentation")
+                self.expect_indent = False
+            # if no change in indentation but one was expected, set error
+            elif self.expect_indent:
+                self.instructionError = PError(
+                    f"Bad indentation. Expected additional indentation to {prev_indent + INDENTATION_SPACES} spaces")
 
     def exitInstruction(self, ctx: pcodeParser.InstructionContext):
         # attach any error to current instruction
@@ -126,6 +134,7 @@ class PProgramBuilder(pcodeListener):
                 raise NotImplementedError(f"TODO Instruction not implemented: {ctx.getText()}")
             elif isinstance(self.instruction, PBlank):
                 # skip indentation errors in blank lines
+                # TODO use error code instead
                 if 'indentation' not in (self.instructionError.message or ""):
                     self.instruction.add_error(self.instructionError)
             else:
@@ -147,14 +156,13 @@ class PProgramBuilder(pcodeListener):
 
     def enterBlock_name(self, ctx: pcodeParser.Block_nameContext):
         if isinstance(self.scope, PBlock) and isinstance(self.instruction, PBlock):
-            self.scope.name = ctx.getText()
+            self.scope.name = ctx.getText()            
 
     def exitBlock_name(self, ctx: pcodeParser.Block_nameContext):
         pass
 
     def enterEnd_block(self, ctx: pcodeParser.End_blockContext):
         self.instruction = PEndBlock(self.scope)
-        self.pop_scope()
 
     def exitEnd_block(self, ctx: pcodeParser.End_blockContext):
         pass

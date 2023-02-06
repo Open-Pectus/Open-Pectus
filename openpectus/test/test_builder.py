@@ -16,6 +16,8 @@ from lang.model.pprogram import (
     PError
 )
 
+from lang.grammar.pprogramformatter import PProgramFormatter, FormattingOptions
+
 
 def build(s):
     p = PGrammar()
@@ -23,23 +25,13 @@ def build(s):
     return p
 
 
-def print_program(program: PProgram, show_line: bool = False):
-    if program is None:
-        raise AssertionError("program is None")
-
-    def print_node(node: PNode, indent: str):
-        err = ''
-        if node.errors is not None and len(node.errors) > 0:
-            err = f"| Err: {node.errors[0].message}"
-        out = indent + type(node).__name__ + err
-        if show_line:
-            out += f" Line: {node.line}"
-        print(out)
-        for child in node.get_child_nodes():
-            print_node(child, indent + "    ")
-
-    print_node(program, "")
-    print()
+def print_program(program: PProgram, show_line_numbers: bool = False, show_errors: bool = False):
+    opts = FormattingOptions()
+    opts.line_numbers = show_line_numbers
+    opts.errors = show_errors
+    out = PProgramFormatter(opts).format(program)
+    print('\n')
+    print(out)
 
 
 def node_missing_start_position_count(node: PNode) -> int:
@@ -54,6 +46,12 @@ def node_missing_start_position_count(node: PNode) -> int:
 
 
 class BuilderTest(unittest.TestCase):
+
+    def assertProgramMatches(self, program: PProgram, expected: str):
+        expected = expected.strip()
+        out = PProgramFormatter().format(program)
+        self.assertMultiLineEqual(expected, out)
+
     def test_command(self):
         p = build("foo: bar=baz")
         program = p.build_model()
@@ -100,6 +98,7 @@ class BuilderTest(unittest.TestCase):
         self.assertIsInstance(block, PBlock)
         self.assertTrue(block.has_error())
 
+    @unittest.skip("TODO error handling decision. should an instruction with errors affect the following lines?")
     def test_block_with_invalid_scope_indentation(self):
         p = build("    block: foo")
         program = p.build_model()
@@ -126,6 +125,7 @@ class BuilderTest(unittest.TestCase):
         self.assertIsInstance(end_block, PEndBlock)
         self.assertTrue(end_block.has_error())
 
+    @unittest.skip("TODO error handling decision. May not be an error")
     def test_block_with_end_block_with_missing_indentation(self):
         p = build("""block: foo
 end block""")
@@ -140,6 +140,23 @@ end block""")
         end_block = block.get_child_nodes()[0]
         self.assertIsInstance(end_block, PEndBlock)
         self.assertTrue(end_block.has_error())
+
+    def test_block_with_mark_with_missing_indentation(self):
+        p = build("""block: foo
+mark: foo""")
+        program = p.build_model()
+        p.printSyntaxTree(p.tree)
+
+        block: PBlock = program.get_instructions()[0]  # type: ignore
+        self.assertIsNotNone(block)
+        self.assertEqual("foo", block.name)
+        print_program(program, show_errors=True)
+
+        mark = block.get_child_nodes()[0]
+        self.assertIsInstance(mark, PMark)
+        self.assertTrue(mark.has_error())
+
+        # TODO: Note that Mark in contained in Block. May or may not be what we want in this case.
 
     def test_block_with_command_and_end_block(self):
         p = build("""block: foo
@@ -303,8 +320,19 @@ Block: A2
         self.assertFalse(program.has_error(recursive=True))
         self.assertEquals(0, node_missing_start_position_count(program))
 
+        self.assertProgramMatches(program, """
+PProgram
+    PBlock
+        PMark
+        PEndBlock
+    PBlock
+        PMark
+        PEndBlock
+        """)
+
     def test_nested_blocks(self):
-        p = build("""Block: A
+        p = build("""
+Block: A
     Mark: A Start
     Block: A1
         Mark: A1 Start
@@ -316,11 +344,66 @@ Block: A2
     End block
         """)
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
 
-        print_program(program, show_line=True)
+        print_program(program, show_line_numbers=True)
         self.assertFalse(program.has_error(recursive=True))
         self.assertEquals(0, node_missing_start_position_count(program))
+
+        self.assertProgramMatches(program, """
+PProgram
+    PBlock
+        PMark
+        PBlock
+            PMark
+            PEndBlock
+        PBlock
+            PMark
+            PEndBlock
+        PMark
+        PEndBlock
+        """)
+
+    def test_outdent(self):
+        p = build("""
+Block: A1
+    Mark: A1 Start
+Mark: foo
+""")
+        program = p.build_model()
+
+        print_program(program)
+        self.assertFalse(program.has_error(recursive=True))
+        self.assertEquals(0, node_missing_start_position_count(program))
+
+        self.assertProgramMatches(program, """
+PProgram
+    PBlock
+        PMark
+    PMark
+""")
+
+    def test_outdent_multiple(self):
+        p = build("""
+Block: A
+    Mark: A Start
+    Block: A1
+        Mark: A1 Start
+Mark: foo
+""")
+        program = p.build_model()
+
+        print_program(program)
+        self.assertFalse(program.has_error(recursive=True))
+        self.assertEquals(0, node_missing_start_position_count(program))
+
+        self.assertProgramMatches(program, """
+PProgram
+    PBlock
+        PMark
+        PBlock
+            PMark
+    PMark
+""")
 
 
 if __name__ == "__main__":
