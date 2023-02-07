@@ -141,22 +141,21 @@ class PProgramBuilder(pcodeListener):
                 self.instruction.add_error(self.instructionError)
 
         # attach start position
-        assert self.instruction is not None
+        assert self.instruction is not None, f"Expected an instruction from src '{ctx.getText()}'"
         assert self.instructionStart is not None
         self.instruction.line = self.instructionStart.line
         self.instruction.indent = self.instructionStart.indent
 
     def enterBlock(self, ctx: pcodeParser.BlockContext):
-        block = PBlock(self.scope)
-        self.instruction = block
-        self.push_scope(block, ctx)
+        self.instruction = PBlock(self.scope)
+        self.push_scope(self.instruction, ctx)
 
     def exitBlock(self, ctx: pcodeParser.BlockContext):
         pass
 
     def enterBlock_name(self, ctx: pcodeParser.Block_nameContext):
         if isinstance(self.scope, PBlock) and isinstance(self.instruction, PBlock):
-            self.scope.name = ctx.getText()            
+            self.scope.name = ctx.getText()
 
     def exitBlock_name(self, ctx: pcodeParser.Block_nameContext):
         pass
