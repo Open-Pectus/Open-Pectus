@@ -43,7 +43,7 @@ class PProgramFormatter():
                 self.out.write(f" | Line: {node.line}")
 
             self.out.write("\n")
-            for child in node.get_child_nodes():                    
+            for child in node.get_child_nodes():
                 print_node(child, indent + self.opts.indent)
 
         print_node(program, 0)

@@ -94,7 +94,7 @@ END_BLOCK       : E N D SPACE BLOCK ;
 END_BLOCKS      : E N D SPACE B L O C K S ;
 INCREMENT_RC    : I N C R E M E N T SPACE R U N SPACE C O U N T E R ;
 
-IDENTIFIER: LETTER (LETTER | DIGIT | WHITESPACE | UNDERSCORE)*;
+IDENTIFIER : LETTER ( (LETTER | DIGIT | WHITESPACE | UNDERSCORE)* (LETTER | DIGIT | UNDERSCORE)+ )? ;
 FLOAT   : DIGIT+ (PERIOD DIGIT+)?
         | DIGIT+ (COMMA DIGIT+)?
         ;
@@ -114,4 +114,5 @@ NEWLINE	: ( '\r' | '\n' | '\r' '\n' ) ;
 // see tips in chapter 33 https://tomassetti.me/antlr-mega-tutorial/ 
 // maybe channels for comments?
 // maybe channels for cmd_args?
+// maybe channels for conditions?
 ANY : . ;

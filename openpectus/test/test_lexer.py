@@ -3,6 +3,12 @@ import unittest
 from lang.grammar.pgrammar import PGrammar
 
 
+def get_token_texts(code):
+    p = PGrammar()
+    p.parse(code)
+    return list(t.text for t in p.tokens)
+
+
 class LexerTest(unittest.TestCase):
     def assertPTokenCountGE(self, code: str, expected_min_count: int):
         print(f"\nCode: '{code}'")
@@ -28,10 +34,17 @@ class LexerTest(unittest.TestCase):
         code = "foo #no comment"
         self.assertPTokenCountGE(code, 1)
 
-    # def test_comment(self):
-    # p = parse("foo #foo")
-    # c = p.parser.comment()
-    # self.assertGreaterEqual(len(p.tokens), 1)
+    def test_condition(self):
+        code = "foo > 3"
+        self.assertEqual(['foo', ' ', '>', ' ', '3'], get_token_texts(code))
+
+    def test_condition_2(self):
+        code = "foo=3"
+        self.assertEqual(['foo', '=', '3'], get_token_texts(code))
+
+    def test_condition_unit(self):
+        code = "foo > 3 ml"
+        self.assertEqual(['foo', ' ', '>', ' ', '3', ' ', 'ml'], get_token_texts(code))
 
 
 if __name__ == "__main__":

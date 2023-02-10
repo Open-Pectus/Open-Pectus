@@ -19,7 +19,8 @@ from lang.model.pprogram import (
     PMark,
     PCommand,
     PError,
-    PBlank
+    PBlank,
+    PCondition
 )
 
 INDENTATION_SPACES = 4
@@ -201,7 +202,7 @@ class PProgramBuilder(pcodeListener):
 
     def enterCondition(self, ctx: pcodeParser.ConditionContext):
         assert isinstance(self.scope, PWatch | PAlarm)
-        self.scope.condition = ctx.getText()
+        self.scope.condition = PCondition(ctx.getText())
 
     def enterAlarm(self, ctx: pcodeParser.AlarmContext):
         self.instruction = PAlarm(self.scope)

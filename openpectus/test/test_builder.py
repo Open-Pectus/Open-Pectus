@@ -12,6 +12,7 @@ from lang.model.pprogram import (
     # PAlarm,
     PMark,
     PCommand,
+    PCondition
 )
 
 from lang.grammar.pprogramformatter import PProgramFormatter, FormattingOptions
@@ -493,6 +494,27 @@ watch: counter > 0
         self.assertIsInstance(non_blanks[0], PMark)
         self.assertIsInstance(non_blanks[1], PWatch)
         self.assertIsInstance(non_blanks[1].get_child_nodes()[0], PMark)
+
+
+class PConditionTest(unittest.TestCase):
+    def test_parse(self):
+        c = PCondition("foo>3")
+        c.parse()
+        self.assertEqual("foo", c.lhs)
+        self.assertEqual(">", c.op)
+        self.assertEqual("3", c.rhs)
+
+        c = PCondition("foo>=3")
+        c.parse()
+        self.assertEqual("foo", c.lhs)
+        self.assertEqual(">=", c.op)
+        self.assertEqual("3", c.rhs)
+
+        c = PCondition("foo != 3 ")
+        c.parse()
+        self.assertEqual("foo", c.lhs)
+        self.assertEqual("!=", c.op)
+        self.assertEqual("3", c.rhs)
 
 
 if __name__ == "__main__":

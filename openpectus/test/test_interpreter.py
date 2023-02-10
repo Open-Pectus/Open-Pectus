@@ -24,7 +24,7 @@ def print_log(i: PInterpreter):
 
 class InterpreterTest(unittest.TestCase):
 
-    def test_incr_counter(self):
+    def test_command_incr_counter(self):
         program = build_program("""
 mark: a
 incr counter
@@ -47,7 +47,7 @@ incr counter
         self.assertEqual("1", uod.tags["counter"].get_value())
         self.assertEqual("a", i.get_marks()[0])
 
-    def test_watch_can_read_tag(self):
+    def test_watch_can_evaluate_tag(self):
         program = build_program("""
 mark: a
 watch: counter > 0
@@ -57,11 +57,10 @@ incr counter
 watch: counter > 0
     mark: d
 """)
-        print_program(program, show_errors=True, show_line_numbers=True, show_blanks=True)
-
         uod = TestUod()
         i = PInterpreter(program, uod)
         i.validate_commands()
+        print_program(program, show_errors=True, show_line_numbers=True, show_blanks=True)
         i.start()
         self.assertEqual(["a", "c", "d"], i.get_marks())
 

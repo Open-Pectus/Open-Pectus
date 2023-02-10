@@ -1,5 +1,5 @@
 
-from typing import Dict
+from typing import Dict, List
 
 
 class Tag:
@@ -15,4 +15,7 @@ class Tag:
 
 
 class TagCollection(Dict[str, Tag]):
-    pass
+    @property
+    def names(self) -> List[str]:
+        """ Return the tag names in upper case. """
+        return [k.upper() for k in self.keys()]
