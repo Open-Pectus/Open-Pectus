@@ -21,6 +21,7 @@ class PintTest(unittest.TestCase):
 
         self.assertIsInstance(distance.dimensionality, UnitsContainer)
         self.assertEqual("[length]", distance.dimensionality)
+        self.assertFalse(distance.dimensionless)
 
         velocity = 7 * ureg.meter / 1 * ureg.second
         self.assertIsInstance(velocity.dimensionality, UnitsContainer)
@@ -34,6 +35,18 @@ class PintTest(unittest.TestCase):
         self.assertEqual("liter", str(volume.units))
         self.assertEqual("[length] * [length] * [length]", volume.dimensionality)
 
+    def test_dimensionless(self):
+        count = Q_(3)
+        self.assertTrue(count.dimensionless)
+        self.assertEqual("<Quantity(3, 'dimensionless')>", "{!r}".format(count))
+
+    def test_formatting(self):
+        weight = 2 * ureg.kg
+        s = 'The magnitude is {0.magnitude} with units {0.units}'.format(weight)
+        self.assertEqual("The magnitude is 2 with units kilogram", s)
+        repr = 'The representation is {!r}'.format(weight)
+        self.assertEqual("The representation is <Quantity(2, 'kilogram')>", repr)
+
     def test_conversion(self):
         distance_km = 3.2 * ureg.kilometers
         distance_m = distance_km.to(ureg.meter)
@@ -44,6 +57,29 @@ class PintTest(unittest.TestCase):
         with self.assertRaises(DimensionalityError) as err:
             _ = distance_km.to(ureg.second)
         self.assertEqual("Cannot convert from 'kilometer' ([length]) to 'second' ([time])", str(err.exception))
+
+    def test_compatibility(self):
+        dist = Q_("310m")
+        weight = Q_("3kg")
+        temp = Q_(3, ureg.degC)
+        time = Q_("5 sec")
+
+        # NOTE: don't use ureg.is_compatible_with:
+        # self.assertFalse(ureg.is_compatible_with(dist1, weight))  # this fails
+        # Instead, use the Quantity.is_compatible_with() method:
+        self.assertFalse(dist.is_compatible_with(weight))
+        self.assertFalse(dist.is_compatible_with(temp))
+        self.assertFalse(time.is_compatible_with(temp))
+
+        # or use this for testing compability then
+        with self.assertRaises(DimensionalityError):
+            _ = dist.to(ureg.second)
+        with self.assertRaises(DimensionalityError):
+            _ = dist.to(ureg.mass)
+
+        # or maybe just check dimensionality with the check() method
+        self.assertTrue(dist.check('[length]'))
+        self.assertTrue(Q_("3kg").check('[mass]'))
 
     @unittest.skip("Not sure we need this. Requres the Babel lib")
     def test_locale(self):
@@ -71,6 +107,12 @@ class PintTest(unittest.TestCase):
         distance = 2.54 * ureg('nm')
         self.assertIsInstance(distance, Quantity)
         self.assertEqual("2.54 nanometer", str(distance))
+
+        volume = Q_("3 L")
+        self.assertEqual("<Quantity(3, 'liter')>", "{!r}".format(volume))
+
+        count = Q_(7)
+        self.assertEqual("<Quantity(7, 'dimensionless')>", "{!r}".format(count))
 
 
 if __name__ == "__main__":
