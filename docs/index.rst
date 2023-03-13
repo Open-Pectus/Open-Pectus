@@ -4,6 +4,10 @@ Open Pectus is a process control system for Unit Operations such as filtration, 
 
 OP distinguishes itself as a process control system by giving the user access to and control of the machine code that is executed. The user is free to write P-code by hand but the intention is also that P-code can be generated with high-level wizards. P-codes are executed "live" and even a running method can be changed and extended.
 
+.. note::
+
+   This project is under active development. A working state is expected sometime in 2023.
+
 Architecture
 ------------
 On a high level, Open Pectus consists of three separate parts:
@@ -43,13 +47,13 @@ The arcietecture is sketched in :numref:`open-pectus-architecture`.
 
 End User
 ^^^^^^^^
-The (end) user is someone who executes processes on the Unit Operation. The user accesses Open Pectus through a web browser such as Microsoft Edge.
+The end user is someone who executes processes on the Unit Operation. The user accesses Open Pectus through a web browser such as Microsoft Edge.
 
 Web Frontend
 ^^^^^^^^^^^^
 The web interface gives an overview of all of the available engines and their status. The user can enter into a specific engine, running or not, create and edit methods, issue machine instructions directly, start and stop execution of a method etc. A live plot shows data from the current method execution in context and a panel of tags shows current process values.
 
-The end user may be identified through a SSO such as Azure so that user preferences wrt. plot setup and tag panels can be retained.
+The end user may be identified through a SSO such as Azure so that user preferences regarding for instance plot setup and tag panels can be retained.
 
 Data is transferred between the Web Frontend and the sever through a WebSockets API.
 
@@ -64,12 +68,6 @@ The Engine executes commands, runs methods and handles I/O with the Unit Operati
 Engines are decentral and register with the central aggregator.
 
 
-Check out the :doc:`usage` section for further information, including
-how to :ref:`installation` the project.
-
-.. note::
-
-   This project is under active development.
 
 Contents
 --------
@@ -77,5 +75,4 @@ Contents
 .. toctree::
 
    Home <self>
-   usage
-   api
+   Reference
