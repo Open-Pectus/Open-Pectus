@@ -63,3 +63,24 @@ html_theme = "sphinx_rtd_theme"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = []#["_static"]
+
+
+
+from pygments.lexer import RegexLexer, bygroups
+from pygments.token import *
+
+__all__ = ['pcodeLexer']
+
+class pcodeLexer(RegexLexer):
+    name = 'p-code'
+    aliases = ['pcode']
+    filenames = ['*.pcode']
+
+    tokens = {
+        'root': [
+            (r'((?: {4})*)( )*((?:\d*(?:\.\d*)?) )?([^:#\n]+)(: (?:[^#\n]+))?(\s*#\s*(?:.*$))?(\n)?',
+            bygroups(Whitespace, Error, Literal.Number, Keyword, Name, Comment, Text)),
+        ],
+    }
+from sphinx.highlighting import lexers
+lexers['pcode'] = pcodeLexer(startinline=True)
