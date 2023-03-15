@@ -6,7 +6,7 @@ Open Pectus distinguishes itself as a process control system by giving the user 
 
 The backend of Open Pectus is written in Python and the frontend is written in Angular.
 
-Open Pectus is currently developed by Novo Nordisk A/S and Mjølner Informatics A/S and released under a GNU All-permissive license.
+Open Pectus is currently developed by Novo Nordisk A/S and Mjølner Informatics A/S and released under a GNU All-Permissive License.
 
 .. note::
 
@@ -30,7 +30,6 @@ A *method* is a series of machine instructions organized line by line that are e
 
 The Case for Open Pectus
 ------------------------
-
 Typically, a factory produces a limited range of products that are quite similar in their method of production. The unit operations that make up the factory are (hopefully!) designed to meet the goals of the factory. However, the components on the unit operation are always more general in nature. For instance a valve does not care whethere it shuts off skimmed milk or apple juice.
 
 Consequently a unit operation in a factory is typically not built to fulfill any task that the components might support. Instead it fulfills the narrow task that the factory requires. This restriction stems mostly from automation which is surprisingly even more closely coupled to the task of the factory than the physical components on the unit operation.
@@ -38,7 +37,7 @@ Consequently a unit operation in a factory is typically not built to fulfill any
 The bottom line is that the full potential of unit operations are not fully realized and often the limitations stem from the implementation of automation.
 
 This is entirely on purpose, as it is clearly described in the `S88 standard <https://en.wikipedia.org/wiki/ISA-88>`_.
-The well meaning intention is to take all of the complexity that a unit operation offers and then to condense it into a few simple *commands*. The idea is that the engineer who was to manage a lot of unit operation can manage them with high level commands instead of having to keep thousands of valves in memory.
+The well meaning intention is to take all of the complexity that a unit operation offers and then to condense it into a few simple *commands*. The idea is that the engineer who has to manage a lot of unit operations, can manage them with high level commands instead of having to keep thousands of valves in memory.
  
 This is mostly acceptable for single purpose machines such as purified water supplies, steam generators and waste discharge systems. It is however a significant disadvantage for rate-limiting unit operations where significant gains might be obtainable by relieving the operator of automation limitations.
 
@@ -143,14 +142,12 @@ P-code adopts the concept of machine codes in text format which can be modified,
 
 P-code
 ------
-
 The P-code language consists of instructions, control structures and a set of tags that encapsulate the state of the unit operation under control.
 
 While the P-code syntax and control structures are static the instruction set and tag space are not. Different unit operations serve different purposes and as such they require different instruction sets and provide different process values. The unit operation specifics are defined in a Unit Operation Definition which is loaded when an engine session is initiated, and cannot be changed during runtime.
 
 Syntax
 ^^^^^^
-
 In abstract terms a P-code instruction consists of the following:
 * Indentation (4 spaces is one level of indentation)
 * Timeline threshold (optional)
@@ -181,7 +178,6 @@ A list of instructions is called a *method*.
 
 Control Structures
 ^^^^^^^^^^^^^^^^^^
-
 In contrast to the instruction set, the set of control structures is the same for all Unit Operations and cannot be altered.
 
 The following control structures are defined:
@@ -197,12 +193,10 @@ The following control structures are defined:
 
 Tags (Process Values)
 ^^^^^^^^^^^^^^^^^^^^^
-
 P-code instructions act on tags which represent the state of the Unit Operation in question. As such, Open Pectus only defines a small number of generic tags. It is up to the Unit Operation Definition to define specific tags.
 
 Unit Operation Definition
 ^^^^^^^^^^^^^^^^^^^^^^^^^
-
 A Unit Operation Definition contains the following:
 
 * Tag types (optional)
@@ -212,7 +206,6 @@ A Unit Operation Definition contains the following:
 
 P-code Example
 --------------
-
 Consider a process in which two different substances are pumped into a vessel through a mass flow meter which can register the volume. Upon addition of the second substance, heat is generated and it is desired to stop addition when a certain temperature is reached or when a certain maximum volume has been dosed. See :numref:`p-code-example-pid` for a Piping and Instrumentation Diagram of such a machine.
 
 .. _p-code-example-pid:
@@ -249,7 +242,6 @@ The P-code method might read as follows:
 
 Walkthrough
 ^^^^^^^^^^^
-
 :code:`Base: L` is an instruction to configure the timeline to be in unit volume. It is inferred that this volume refers to the accumulated dosage measured by the flowmeter, as this is not explicitly stated in the P-code.
 
 :code:`Block: Add substance 1` invokes the Block structure which starts a new timeline. Instructions nested inside refer back to this timeline. However, neither :code:`Inlet: VA01` nor :code:`PU01: 10 %` make use of this timeline - the absence of a threshold means that these commands run immediately when the block is entered. The :code:`1.0` in the following statement, :code:`1.0 End block` means that this instruction is not executed until the accumulated volume has reached the 1.0 L mark. Until this time, the machine state does not change.
@@ -262,7 +254,6 @@ The next lines are blank, then the pump is stopped by :code:`PU01: 0 %` followed
 
 Contents
 --------
-
 .. toctree::
 
    Home <self>
