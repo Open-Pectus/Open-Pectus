@@ -126,7 +126,7 @@ class PInterpreterGen(PNodeVisitor):
         self.logs = []
         self.pause_node: PNode | None = None
         self.stack: CallStack = CallStack()
-        self.interrupts: List[ActivationRecord] = []
+        self.interrupts: List[Tuple[ActivationRecord, Generator]] = []
         self.running: bool = False
 
         self.start_time: float = 0
@@ -134,7 +134,7 @@ class PInterpreterGen(PNodeVisitor):
         self.ticks: int = 0
         self.max_ticks: int = -1
 
-        self.gen: Generator | None = None
+        self.process_instr: Generator | None = None
         self.timer = OneThreadTimer(TICK_INTERVAL, self.tick)
 
     def get_marks(self) -> List[str]:
@@ -150,19 +150,35 @@ class PInterpreterGen(PNodeVisitor):
     def _add_to_log(self, _time, unit_time, message):
         self.logs.append({"time": _time, "unit_time": unit_time, "message": message})
 
-    def validate_commands(self):
-        pass
+    def register_interrupt(self, ar: ActivationRecord, handler: Generator):
+        self.interrupts.append((ar, handler))
 
-    def _process_background_tasks(self):
-        for ar in list(self.interrupts):
-            if isinstance(ar.owner, PWatch):
-                self.stack.push(ar)
-                self.visit(ar.owner)
-                self.stack.pop()
+    def unregister_interrupt(self, ar: ActivationRecord):
+        pairs = [(x, y) for (x, y) in self.interrupts if x is ar]
+        for pair in pairs:
+            self.interrupts.remove(pair)
+
+    def _run_interrupt_handlers(self):
+        instr_count = 0
+        for ar, handler in list(self.interrupts):
+            print(f"Handler count: {len(self.interrupts)}")
+            node = ar.owner
+            if isinstance(node, PWatch):
+                print(f"Interrupt {str(node)}")
+                #self.stack.push(ar)
+                # handlers.append(handler)
+                try:
+                    next(handler)
+                    instr_count += 1
+                except StopIteration:
+                    pass
+                #self.stack.pop()
                 if ar.complete:
-                    self.interrupts.remove(ar)
+                    self.unregister_interrupt(ar)
+                    print(f"Interrupt {str(node)} done")
             else:
-                raise NotImplementedError(f"Interrupt for node type {type(ar.owner).__name__} not implemented")
+                raise NotImplementedError(f"Interrupt for node type {str(node)} not implemented")
+        return instr_count > 0
 
     def tick(self):
         self.ticks += 1
@@ -174,13 +190,31 @@ class PInterpreterGen(PNodeVisitor):
             return
         print("TICK")
 
-        if self.gen is None:
-            return
+        if self.process_instr is None:
+            self.process_instr = self.interpret()
+
+        program_end = False
+        interrupt_end = False
 
         try:
-            next(self.gen)
+            next(self.process_instr)
         except StopIteration:
-            print("Iteration complete")
+            program_end = True
+
+        work_done = self._run_interrupt_handlers()
+        if not work_done:
+            interrupt_end = True
+        # if len(interrupt_gens) == 0:
+        #     interrupt_end = True
+        # else:
+        #     for gen in interrupt_gens:
+        #         try:
+        #             next(gen)
+        #         except StopIteration:
+        #             pass
+
+        if program_end and interrupt_end:
+            print("All done")
             self.running = False
             self.timer.stop()
 
@@ -188,9 +222,6 @@ class PInterpreterGen(PNodeVisitor):
         self.ticks = 0
         self.max_ticks = max_ticks
         self.running = True
-
-        self.gen = self.interpret()
-
         self.timer.start()
 
         while self.running:
@@ -202,7 +233,7 @@ class PInterpreterGen(PNodeVisitor):
         value = int(self.uod.tags["counter"].get_value())
         return value > 0
 
-    def visit_children(self, children: List[PNode] | None, break_on_ar_complete=False):
+    def visit_children(self, children: List[PNode] | None):
         ar = self.stack.peek()
         if children is not None:
             for child in children:
@@ -218,13 +249,7 @@ class PInterpreterGen(PNodeVisitor):
             return
 
         # log all visits
-        message = type(node).__name__
-        if hasattr(node, 'name'):
-            message += ": " + node.name
-        elif hasattr(node, 'condition') and node.condition.condition_str:
-            message += ": " + node.condition.condition_str
-
-        self._add_to_log(self.tick_time, "", message)
+        self._add_to_log(self.tick_time, "", str(node))
 
         # allow visit methods to be non generators
         result = super().visit(node)
@@ -246,7 +271,8 @@ class PInterpreterGen(PNodeVisitor):
         pass
 
     def visit_PMark(self, node: PMark):
-        self._add_to_log(time.time(), node.time, node.name)        
+        self._add_to_log(time.time(), node.time, node.name)
+        print(str(node))
 
     def visit_PBlock(self, node: PBlock):
         ar = ActivationRecord(node, self.tick_time, TagCollection.create_default())
@@ -263,7 +289,7 @@ class PInterpreterGen(PNodeVisitor):
 
     def visit_PEndBlock(self, node: PEndBlock):
         ar = self.stack.pop()
-        ar.complete = True        
+        ar.complete = True
 
     def visit_PCommand(self, node: PCommand):
         try:
@@ -278,12 +304,30 @@ class PInterpreterGen(PNodeVisitor):
         # TODO determine whether command is complete...
 
     def visit_PWatch(self, node: PWatch):
+        def create_interrupt_handler(ar: ActivationRecord) -> Generator:
+            self.stack.push(ar)
+            yield from self.visit_PWatch(node)
+            self.stack.pop()
+
         ar = self.stack.peek()
-        if ar.owner != node:
-            ar = ActivationRecord(node, self.tick_time, TagCollection.create_default())
-            self.interrupts.append(ar)
+        if ar.owner is not node:
+            ar = ActivationRecord(node, self.tick_time, TagCollection.create_default())            
+            self.register_interrupt(ar, create_interrupt_handler(ar))
+            print(f"{str(node)} interrupt registered")
         else:
-            condition_result = self._evaluate_condition(node)
-            if condition_result:
-                print(f"WATCH {node.condition}")
-                yield from self.visit_children(node.children)
+            print(f"{str(node)} interrupt invoked")
+            if hasattr(node, "activated"):
+                condition_result = True
+                print(f"{str(node)} already activated")
+            else:
+                while not ar.complete and self.running:
+                    condition_result = self._evaluate_condition(node)
+                    print(f"{str(node)} condition evaluated: {condition_result}")
+                    if condition_result:
+                        node.activated = True
+                        print(f"{str(node)} executing")
+                        yield from self.visit_children(node.children)
+                        print(f"{str(node)} executed")
+                        ar.complete = True
+                    else:
+                        yield

@@ -44,6 +44,24 @@ mark: c
         sa = SemanticAnalyzer()
         sa.visit_PProgram(program)
 
+    def test_dead_code_warning(self):
+        program = build_program("""
+Block: 1
+    mark: a
+    End block
+    mark: b
+mark: c
+""")
+        raise NotImplementedError
+
+    def test_infinite_block_warning(self):
+        program = build_program("""
+Block: 1
+    mark: a
+mark: c
+""")
+        raise NotImplementedError
+
 
 class InterpreterTest(unittest.TestCase):
 
@@ -56,7 +74,7 @@ mark: c
         uod = TestUod()
         i = PInterpreterGen(program, uod)
 
-        i.run()
+        i.run(10)
         # for _ in i.interpret():
         #     pass
 
@@ -69,15 +87,11 @@ mark: a
 incr counter
 """)
         print()
-        print("Initial program")
+        print("Initial program") 
         print_program(program)
 
         uod = TestUod()
         i = PInterpreterGen(program, uod)
-        i.validate_commands()
-
-        print("Validated program")
-        print_program(program, show_errors=True)
 
         self.assertEqual("0", uod.tags["counter"].get_value())
 
@@ -98,9 +112,9 @@ watch: counter > 0
 """)
         uod = TestUod()
         i = PInterpreterGen(program, uod)
-        i.validate_commands()
-        #print_program(program, show_errors=True, show_line_numbers=True, show_blanks=True)
-        i.run()
+        i.run(15)
+
+        print_log(i)
         self.assertEqual(["a", "c", "b", "d"], i.get_marks())
 
         # TODO fix the following once we know how
@@ -123,7 +137,7 @@ Mark: A3
         uod = TestUod()
         i = PInterpreterGen(program, uod)
         i.tags[DEFAULT_TAG_BASE].set_value("sec")
-        i.validate_commands()
+
         i.run()
 
         print_log(i)
@@ -144,9 +158,9 @@ Mark: A3
 """)
         uod = TestUod()
         i = PInterpreterGen(program, uod)
-        i.validate_commands()
-        print_program(program, show_errors=True, show_line_numbers=True, show_blanks=True)
+
         i.run()
+
         self.assertEqual(["A1", "B1", "A3"], i.get_marks())
 
     def test_block_unterminated(self):
@@ -158,8 +172,7 @@ Mark: A3
 """)
         uod = TestUod()
         i = PInterpreterGen(program, uod)
-        i.validate_commands()
-        print_program(program, show_errors=True, show_line_numbers=True, show_blanks=True)
+
         i.run(max_ticks=5)
 
         self.assertEqual(["A1", "A2"], i.get_marks())

@@ -51,6 +51,9 @@ class PNode():
             return 0
         return self.parent.depth + 1
 
+    def __str__(self) -> str:
+        return type(self).__name__
+
     def __eq__(self, other):
         # TODO: Here be dragons. See issue https://github.com/Open-Pectus/Open-Pectus/issues/22 regarding
         # identity vs value equality, performance and caching.
@@ -173,6 +176,9 @@ class PBlock(PInstruction):
         self.children = []
         self.name: str = ''
 
+    def __str__(self) -> str:
+        return super().__str__() + ":" + self.name
+
 
 class PEndBlock(PInstruction):
     """ Represents an End Block intruction. """
@@ -194,6 +200,10 @@ class PWatch(PInstruction):
         self.children = []
         self.condition: PCondition | None = None
 
+    def __str__(self) -> str:
+        cnd = self.condition.condition_str if self.condition is not None else ""
+        return super().__str__() + f":{cnd} | line: {self.line}"
+
 
 class PAlarm(PInstruction):
     """ Represents an Alarm intruction. """
@@ -202,6 +212,10 @@ class PAlarm(PInstruction):
 
         self.children = []
         self.condition: PCondition | None = None
+
+    def __str__(self) -> str:
+        cnd = self.condition.condition_str if self.condition is not None else ""
+        return super().__str__() + f":{cnd} | line: {self.line}"
 
 
 class PMark(PInstruction):
@@ -212,6 +226,9 @@ class PMark(PInstruction):
         self.children = []
         self.name: str = ''
 
+    def __str__(self) -> str:        
+        return super().__str__() + ":" + self.name
+
 
 class PCommand(PInstruction):
     """ Represents a Command instruction. """
@@ -221,6 +238,9 @@ class PCommand(PInstruction):
         # self.children = [] possibly?
         self.name: str = ''
         self.args: str = ''
+
+    def __str__(self) -> str:
+        return super().__str__() + ":" + self.name
 
 
 class PBlank(PInstruction):
