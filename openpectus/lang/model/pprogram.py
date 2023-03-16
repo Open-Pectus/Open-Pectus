@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List
+from typing import Callable, List
 
 
 class TimeExp():
@@ -18,6 +18,12 @@ class TimeExp():
 
     def __str__(self) -> str:
         return f"TimeExp {{ {self.val} }}"
+
+    def is_empty(self):
+        return self.val is None
+
+    def get_value(self):
+        return self.val
 
 
 class PNode():
@@ -115,6 +121,19 @@ class PNode():
             return None
         if len(self.children) > 0:
             return self.children[0]
+
+    def iterate(self, fn: Callable[[PNode], None]):
+        fn(self)
+        if self.children is not None:
+            for child in self.children:
+                child.iterate(fn)
+
+    def has_ancestor(self, ancestor_candidate: PNode):
+        parent = self.parent
+        while parent is not None:
+            if parent == ancestor_candidate:
+                return True
+            parent = parent.parent
 
 
 class PProgram(PNode):
@@ -221,7 +240,7 @@ class PError:
 class PCondition:
     """ Represents a condition expression for alarms and watches. """
     def __init__(self, condition_str: str) -> None:
-        # TODO for now, we keep condition parsing out of the grammar
+        # Note: For now, we keep condition parsing out of the grammar
         # Also, we assume a single tag on the left hand side and that no unit is given
         self.condition_str = condition_str
         self.lhs = ""
