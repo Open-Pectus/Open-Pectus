@@ -7,13 +7,12 @@ import time
 import asyncio
 import inspect
 
-from typing import Callable, Deque, Iterable, Iterator, List, Tuple
+from typing import Callable, Deque, Generator, Iterable, Iterator, List, Tuple
 from typing_extensions import override
 from lang.model.pprogram import (
     TimeExp,
     PNode,
     PProgram,
-    PInstruction,
     PBlank,
     PBlock,
     PEndBlock,
@@ -24,17 +23,16 @@ from lang.model.pprogram import (
     PMark,
 )
 
-from lang.exec.tags import Tag, TagCollection
+from lang.exec.tags import TagCollection
 from lang.exec.uod import UnitOperationDefinitionBase
 from lang.exec.timer import OneThreadTimer
-from lang.exec.ticker import Ticker
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-TICK_INTERVAL = 2.0
+TICK_INTERVAL = 0.1
 
 # TODO add Alarm interpretation, including scope definition
 # TODO add timings (depends on units)
@@ -53,50 +51,6 @@ class PNodeVisitor:
         raise Exception('No visit_{} method'.format(type(node).__name__))
 
 
-class PNodeVisitorGen:
-    def visit(self, node):
-        method_name = 'visit_' + type(node).__name__
-        visitor = getattr(self, method_name, self.generic_visit)
-
-        # if inspect.isgeneratorfunction(visitor):
-        #     print(f"visitor function {method_name} is generator function")
-
-        result = visitor(node)
-        # if inspect.isgenerator(result):
-        #     print(f"result of {method_name} is generator")
-
-        # if inspect.isgeneratorfunction(result):
-        #     print(f"result of {method_name} is generator function")
-
-        # if inspect.isgenerator(result):
-        #     for _ in result:
-        #         yield
-        # else:
-        #     return result
-        return result
-
-    def generic_visit(self, node):
-        raise Exception('No visit_{} method'.format(type(node).__name__))
-
-
-def as_yieldable(result):
-    if inspect.isgenerator(result):
-        for _ in result:
-            yield
-    else:
-        return result
-
-
-class PNodeAsyncVisitor:
-    async def visit(self, node):
-        method_name = 'visit_' + type(node).__name__
-        visitor = getattr(self, method_name, self.generic_visit)
-        return await visitor(node)
-
-    async def generic_visit(self, node):
-        raise Exception('No visit_{} method'.format(type(node).__name__))
-
-
 class SemanticAnalyzer(PNodeVisitor):
     def visit_PProgram(self, node: PProgram):
         print("program")
@@ -111,22 +65,8 @@ class SemanticAnalyzer(PNodeVisitor):
         print("mark: " + node.name)
 
 
-class AsyncSemanticAnalyzer(PNodeAsyncVisitor):
-    async def visit_PProgram(self, node: PProgram):
-        print("program")
-        if node.children is not None:
-            for child in node.children:
-                await self.visit(child)
-
-    async def visit_PBlank(self, node: PBlank):
-        print("blank")
-
-    async def visit_PMark(self, node: PMark):
-        print("mark: " + node.name)
-
-
 class ARType(Enum):
-    PROGRAM = "Program",
+    PROGRAM = "PROGRAM",
     BLOCK = "BLOCK",
     WATCH = "WATCH",
 
@@ -138,9 +78,6 @@ class ActivationRecord:
         self.owner = owner
         self.start_time = start_time
         self.start_tags = start_tags
-        self.watches: List[PWatch] = []
-        self.alarms: List[PAlarm] = []
-        self.scheduled: Deque[PNode] = deque()
         self.complete = False
         self.artype: ARType = self._get_artype(owner)
 
@@ -153,14 +90,6 @@ class ActivationRecord:
             return ARType.WATCH
         else:
             raise NotImplementedError("ARType of node unknown")
-
-    def schedule(self, node: PNode):
-        self.scheduled.append(node)
-
-    def is_in_scope(self, node: PNode):
-        assert node.indent is not None
-        assert self.owner.indent is not None
-        return node.indent > self.owner.indent
 
 
 class CallStack:
@@ -189,29 +118,7 @@ class CallStack:
         return self.__str__()
 
 
-class NodeRunState():
-    def __init__(self) -> None:
-        self._started: bool = False
-        self._completed: bool = False
-
-    def reset(self):
-        self._started = False
-        self._completed = False
-
-    def start(self):
-        self._started = True
-
-    def is_started(self) -> bool:
-        return self._started
-
-    def complete(self):
-        self._completed = True
-
-    def is_complete(self) -> bool:
-        return self._completed
-
-
-class PInterpreterGen(PNodeVisitorGen):
+class PInterpreterGen(PNodeVisitor):
     def __init__(self, program: PProgram, uod: UnitOperationDefinitionBase) -> None:
         self.tags: TagCollection = TagCollection.create_default()
         self._program = program
@@ -227,17 +134,18 @@ class PInterpreterGen(PNodeVisitorGen):
         self.ticks: int = 0
         self.max_ticks: int = -1
 
-        self.timer = OneThreadTimer(1.0, self.tick)
+        self.gen: Generator | None = None
+        self.timer = OneThreadTimer(TICK_INTERVAL, self.tick)
 
     def get_marks(self) -> List[str]:
         return [x["message"] for x in self.logs if x["message"][0] != 'P']
 
-    def interpret(self):
+    def interpret(self) -> Generator:
         self.running = True
         tree = self._program
         if tree is None:
             return ''
-        self.visit(tree)
+        yield from self.visit(tree)
 
     def _add_to_log(self, _time, unit_time, message):
         self.logs.append({"time": _time, "unit_time": unit_time, "message": message})
@@ -255,14 +163,6 @@ class PInterpreterGen(PNodeVisitorGen):
                     self.interrupts.remove(ar)
             else:
                 raise NotImplementedError(f"Interrupt for node type {type(ar.owner).__name__} not implemented")
-        # for ar in self.stack.records:
-        #     for w in ar.watches:
-        #         result = self.visit(w)                
-        #         if inspect.isgenerator(result):
-        #             for _ in result:
-        #                 yield  # next(result)
-        #         else:
-        #             yield
 
     def tick(self):
         self.ticks += 1
@@ -274,29 +174,27 @@ class PInterpreterGen(PNodeVisitorGen):
             return
         print("TICK")
 
+        if self.gen is None:
+            return
+
+        try:
+            next(self.gen)
+        except StopIteration:
+            print("Iteration complete")
+            self.running = False
+            self.timer.stop()
+
     def run(self, max_ticks=-1):
         self.ticks = 0
         self.max_ticks = max_ticks
         self.running = True
+
+        self.gen = self.interpret()
+
         self.timer.start()
 
-        self.interpret()
-        
-        #while self.running and (max_ticks == -1 or ticks < max_ticks):
-        #for _ in self.interpret():
-            #next(self.interpret())
-            # ticks += 1
-            # if max_ticks > -1 and ticks > max_ticks:
-            #     break
-            # self._process_background_tasks()
-            # print("AWAIT TICK")
-            # next(self.ticker.tick)
-            # while self.ticks < ticks:
-            #     time.sleep(100)
-            # print("GOT TICK")
-        print("DONE")
-        self.running = False
-        self.timer.stop()
+        while self.running:
+            time.sleep(0.1)
 
     def _evaluate_condition(self, condition_node: PWatch | PAlarm) -> bool:
         # HACK to pass tests using the imaginary 'counter' tag.
@@ -304,8 +202,13 @@ class PInterpreterGen(PNodeVisitorGen):
         value = int(self.uod.tags["counter"].get_value())
         return value > 0
 
-    def _wait(self):
-        time.sleep(0.1)
+    def visit_children(self, children: List[PNode] | None, break_on_ar_complete=False):
+        ar = self.stack.peek()
+        if children is not None:
+            for child in children:
+                if ar.complete:
+                    break
+                yield from self.visit(child)
 
     # Visitor Impl
 
@@ -322,25 +225,20 @@ class PInterpreterGen(PNodeVisitorGen):
             message += ": " + node.condition.condition_str
 
         self._add_to_log(self.tick_time, "", message)
-        return super().visit(node)
+
+        # allow visit methods to be non generators
+        result = super().visit(node)
+        if inspect.isgenerator(result):
+            yield from result
+        else:
+            yield
 
     def visit_PProgram(self, node: PProgram):
         ar = ActivationRecord(node, self.tick_time, TagCollection.create_default())
         self.stack.push(ar)
         print("PROGRAM")
 
-        if node.children is not None:
-            for child in node.children:
-                print("PROGRAM CHILD")
-                self.visit(child)
-
-                # result = self.visit(child)                
-                # if inspect.isgenerator(result):
-                #     print("PROGRAM got generator")
-                #     for _ in result:
-                #         yield  # next(result)
-                # else:
-                #     yield
+        yield from self.visit_children(node.children)
 
         print("PROGRAM END")
 
@@ -348,41 +246,24 @@ class PInterpreterGen(PNodeVisitorGen):
         pass
 
     def visit_PMark(self, node: PMark):
-        self._add_to_log(time.time(), node.time, node.name)
-        pass
+        self._add_to_log(time.time(), node.time, node.name)        
 
     def visit_PBlock(self, node: PBlock):
         ar = ActivationRecord(node, self.tick_time, TagCollection.create_default())
         self.stack.push(ar)
 
-        if node.children is not None:
-            for child in node.children:
-                if ar.complete:
-                    print(f"BLOCK {node.name} AR complete")
-                    break
-
-                print("BLOCK CHILD " + type(child).__name__)
-
-                self.visit(child)
-
-                # result = self.visit(child)
-                # if inspect.isgenerator(result):
-                #     print("BLOCK got generator")
-                #     for _ in result:
-                #         yield  # next(result)
-                # else:
-                #     yield
+        yield from self.visit_children(node.children)
 
         if not ar.complete:
             print(f"BLOCK {node.name} idle")
         while not ar.complete and self.running:
-            self._wait()
+            yield
 
         print("BLOCK EXIT")
 
     def visit_PEndBlock(self, node: PEndBlock):
         ar = self.stack.pop()
-        ar.complete = True
+        ar.complete = True        
 
     def visit_PCommand(self, node: PCommand):
         try:
@@ -391,6 +272,10 @@ class PInterpreterGen(PNodeVisitorGen):
             self.uod.execute_command(node.name, node.args)
         except Exception as ex:
             print(ex)
+
+        yield
+
+        # TODO determine whether command is complete...
 
     def visit_PWatch(self, node: PWatch):
         ar = self.stack.peek()
@@ -401,18 +286,4 @@ class PInterpreterGen(PNodeVisitorGen):
             condition_result = self._evaluate_condition(node)
             if condition_result:
                 print(f"WATCH {node.condition}")
-
-                if node.children is not None:
-                    for child in node.children:
-                        print("WATCH CHILD " + type(child).__name__)
-
-                        self.visit(child)
-
-                        # result = self.visit(child)
-                        # if inspect.isgenerator(result):
-                        #     print("WATCH got generator")
-                        #     for _ in result:
-                        #         yield
-                        # else:
-                        #     yield
-
+                yield from self.visit_children(node.children)

@@ -1,6 +1,5 @@
 
 import asyncio
-import time
 import unittest
 
 from lang.grammar.pprogramformatter import print_program
@@ -8,18 +7,15 @@ from lang.grammar.pgrammar import PGrammar
 from lang.model.pprogram import (
     PProgram,
 )
-from lang.exec.ticker import TimerTicker
 from lang.exec.pinterpreter import (
     SemanticAnalyzer,
-    AsyncSemanticAnalyzer,
     PInterpreterGen,
 )
 from lang.exec.uod import UnitOperationDefinitionBase
 from lang.exec.tags import (
-    Tag, 
+    Tag,
     DEFAULT_TAG_BASE
 )
-from lang.exec.timer import OneThreadTimer
 
 
 def build_program(s) -> PProgram:
@@ -48,16 +44,6 @@ mark: c
         sa = SemanticAnalyzer()
         sa.visit_PProgram(program)
 
-    def test_sequential_marks_async(self):
-        program = build_program("""
-mark: a
-mark: b
-mark: c
-""")
-        sa = AsyncSemanticAnalyzer()
-        asyncio.run(sa.visit_PProgram(program))
-        print("done")
-
 
 class InterpreterTest(unittest.TestCase):
 
@@ -70,11 +56,9 @@ mark: c
         uod = TestUod()
         i = PInterpreterGen(program, uod)
 
-        # i.start()
-        # time.sleep(2)
-        # await_ticks(i, 4)
-
-        i.run(10)
+        i.run()
+        # for _ in i.interpret():
+        #     pass
 
         self.assertEqual(["a", "b", "c"], i.get_marks())
         print_log(i)
@@ -141,7 +125,6 @@ Mark: A3
         i.tags[DEFAULT_TAG_BASE].set_value("sec")
         i.validate_commands()
         i.run()
-        # await_ticks(i, 10)
 
         print_log(i)
 
@@ -185,23 +168,21 @@ Mark: A3
         raise NotImplementedError()
         program = build_program("""
 """)
-        i = PInterpreter(program, TestUod())
+        i = PInterpreterGen(program, TestUod())
         i.tags[DEFAULT_TAG_BASE].set_value("sec")
         i.validate_commands()
         print_program(program, show_errors=True, show_line_numbers=True, show_blanks=True)
-        i.start()
-        await_ticks(i, 10)
+        i.run()
 
     def test_command_long_running(self):
         raise NotImplementedError()
         program = build_program("""
 """)
-        i = PInterpreter(program, TestUod())
+        i = PInterpreterGen(program, TestUod())
         i.tags[DEFAULT_TAG_BASE].set_value("sec")
         i.validate_commands()
         print_program(program, show_errors=True, show_line_numbers=True, show_blanks=True)
-        i.start()
-        await_ticks(i, 10)
+        i.run()
 
     def test_change_base_in_program(self):
         # base is also available in scope
