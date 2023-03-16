@@ -182,14 +182,14 @@ In contrast to the instruction set, the set of control structures is the same fo
 
 The following control structures are defined:
 
-* Block
-  Starts a new timeline. Instructions inside the block are interpreted and executed until End block is called.
-* Macro
-  Defines a named collection of instructions that can be called with a single command.
-* Watch
-  A Watch is a Block which is executed once when a condition is satisfied.
-* Alarm
-  An Alarm is a Block which is executed whenever a condition is satisfied.
+* | Block
+  | Starts a new timeline. Instructions inside the block are interpreted and executed until End block is called.
+* | Macro
+  | Defines a named collection of instructions that can be called with a single command.
+* | Watch
+  | A Watch is a Block which is executed once when a condition is satisfied.
+* | Alarm
+  | An Alarm is a Block which is executed whenever a condition is satisfied.
 
 Tags (Process Values)
 ^^^^^^^^^^^^^^^^^^^^^
@@ -203,6 +203,82 @@ A Unit Operation Definition contains the following:
 * Tags
 * Mapping of process value tags to physical I/O
 * Unit Operation specific instructions
+
+Engine
+------
+The Engine connects with the Unit Operation I/O and executes instructions.
+The state of the engine is defined by the following parameters:
+
+* | Execute instructions flag (binary)
+  | Toggles execution of instructions and progress of the method.
+
+* | Pause flag (binary)
+  | Inhibits execution of instructions, progress of the method, injection of instructions and forces output of pre-defined safe values to I/O.
+
+* | Hold flag (binary)
+  | Inhibits progress of the loaded method as well as injection of instructions.
+
+* | Running Instructions (list of instructions)
+  | List of instructions which are executed during a scan cycle. Instructions can be added to this list by the operator or by execution of the method. Instructions disappear from the list when their "completed"-flag is set.
+
+When the engine is launched it continuously performs a scan cycle. The scan cycle is depicted in :numref:`engine-scan-cycle` and :numref:`execute-instructions`.
+
+.. _engine-scan-cycle:
+.. mermaid::
+    :caption: Engine scan cycle.
+    :align: center
+    
+    flowchart TD
+        A[Pectus Engine started]
+        --> B[Scan initiated]
+        --> C[Read Process Image I/O]
+        --> D{Started?}
+        -->|True| F[Execute instructions and progress method]
+        --> G[Write Process Image I/O]
+        --> H[Scan finished]
+        --> I[Pectus Engine stopped]
+        D -->|False| G
+        H --> B
+        style F fill:#fae8dc
+
+.. _execute-instructions:
+.. mermaid::
+    :caption: Execute instructions and progress method.
+    :align: center
+    
+    flowchart TD
+        %% Path when pause flag is set
+        A[Execute instructions and progress method]
+        --> B{Pause}
+        --> C[True]
+        --> D[Force pre-defined safe values on outputs]
+        --> E[Finished]
+
+        %% Path when hold flag is set
+        B
+        --> F[False]
+        --> G{Hold}
+        --> H[True]
+        --> V
+
+        %% Path when neither paused nor held
+        G
+        --> J[False]
+        --> tickinstr
+        subgraph tickinstr[ ]
+        R[Tick active block] -->|Instruction| U{Instruction type}
+        S[Tick active Watch blocks] -->|Instruction| U
+        T[Tick active Alarm blocks] -->|Instruction| U
+            U -->|Block| N[Assign active block]
+            U -->|End block| O[Set parent block active]
+            U -->|Watch interrupt| P[Activate watch block]
+            U -->|Alarm interrupt| Q[Activate alarm block]
+            U -->|Other| X[Append to active instructions]
+            Y[Injected instructions] --> X
+        end
+        tickinstr --> V[Execute active instructions] --> W[Remove completed instructions<br />from active instructions list] --> E
+        style A fill:#fae8dc
+    
 
 P-code Example
 --------------
