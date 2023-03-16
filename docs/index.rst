@@ -250,21 +250,17 @@ When the engine is launched it continuously performs a scan cycle. The scan cycl
         %% Path when pause flag is set
         A[Execute instructions and progress method]
         --> B{Pause}
-        --> C[True]
-        --> D[Force pre-defined safe values on outputs]
+        -->|True| D[Force pre-defined safe values on outputs]
         --> E[Finished]
 
         %% Path when hold flag is set
         B
-        --> F[False]
-        --> G{Hold}
-        --> H[True]
-        --> V
+        -->|False| G{Hold}
+        -->|True| V
 
         %% Path when neither paused nor held
         G
-        --> J[False]
-        --> tickinstr
+        -->|False| tickinstr
         subgraph tickinstr[ ]
         R[Tick active block] -->|Instruction| U{Instruction type}
         S[Tick active Watch blocks] -->|Instruction| U
