@@ -269,6 +269,7 @@ When the engine is launched it continuously performs a scan cycle. The scan cycl
             U -->|End block| O[Set parent block active]
             U -->|Watch interrupt| P[Activate watch block]
             U -->|Alarm interrupt| Q[Activate alarm block]
+            U -->|Stop| Z[Assign false<br />to started flag]
             U -->|Other| X[Append to active instructions]
             Y[Injected instructions] --> X
         end
