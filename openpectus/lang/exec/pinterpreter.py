@@ -4,7 +4,7 @@ from enum import Enum
 import logging
 import threading
 import time
-import asyncio
+import pint
 import inspect
 
 from typing import Callable, Deque, Generator, Iterable, Iterator, List, Tuple
@@ -23,11 +23,12 @@ from lang.model.pprogram import (
     PMark,
 )
 
-from lang.exec.tags import TagCollection
+from lang.exec.tags import TagCollection, DEFAULT_TAG_BLOCK_TIME
 from lang.exec.uod import UnitOperationDefinitionBase
 from lang.exec.timer import OneThreadTimer
 
-logging.basicConfig()
+
+logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -91,6 +92,9 @@ class ActivationRecord:
         else:
             raise NotImplementedError("ARType of node unknown")
 
+    def __str__(self) -> str:
+        return f"AR {self.owner} | {self.artype} | complete: {self.complete}"
+
 
 class CallStack:
     def __init__(self):
@@ -108,6 +112,9 @@ class CallStack:
 
     def peek(self) -> ActivationRecord:
         return self._records[-1]
+
+    def any(self) -> bool:
+        return len(self._records) > 0
 
     def __str__(self):
         s = '\n'.join(repr(ar) for ar in reversed(self._records))
@@ -150,33 +157,39 @@ class PInterpreterGen(PNodeVisitor):
     def _add_to_log(self, _time, unit_time, message):
         self.logs.append({"time": _time, "unit_time": unit_time, "message": message})
 
+    def _update_tags(self):
+        if self.stack.any():
+            ar = self.stack.peek()
+            elapsed = self.tick_time - ar.start_time            
+            v = pint.Quantity(f'{elapsed} sec')
+            self.tags.get(DEFAULT_TAG_BLOCK_TIME).set_value(v)
+
     def register_interrupt(self, ar: ActivationRecord, handler: Generator):
+        logger.debug(f"Interrupt handler registered for {ar}")
         self.interrupts.append((ar, handler))
 
     def unregister_interrupt(self, ar: ActivationRecord):
         pairs = [(x, y) for (x, y) in self.interrupts if x is ar]
         for pair in pairs:
             self.interrupts.remove(pair)
+            logger.debug(f"Interrupt handler unregistered for {ar}")
 
     def _run_interrupt_handlers(self):
         instr_count = 0
         for ar, handler in list(self.interrupts):
-            print(f"Handler count: {len(self.interrupts)}")
+            logger.debug(f"Handler count: {len(self.interrupts)}")
             node = ar.owner
             if isinstance(node, PWatch):
-                print(f"Interrupt {str(node)}")
-                #self.stack.push(ar)
-                # handlers.append(handler)
+                logger.debug(f"Interrupt {str(node)}")
                 try:
                     next(handler)
                     instr_count += 1
                 except StopIteration:
                     pass
-                #self.stack.pop()
                 if ar.complete:
                     self.unregister_interrupt(ar)
-                    print(f"Interrupt {str(node)} done")
             else:
+                logger.error(f"Interrupt for node type {str(node)} not implemented")
                 raise NotImplementedError(f"Interrupt for node type {str(node)} not implemented")
         return instr_count > 0
 
@@ -184,11 +197,11 @@ class PInterpreterGen(PNodeVisitor):
         self.ticks += 1
         self.tick_time = time.time()
         if self.max_ticks != -1 and self.ticks > self.max_ticks:
-            print("Stop on max_ticks")
+            logger.info(f"Stopping because max_ticks {self.max_ticks} was reached")
             self.running = False
             self.timer.stop()
             return
-        print("TICK")
+        logger.debug("Tick")
 
         if self.process_instr is None:
             self.process_instr = self.interpret()
@@ -196,29 +209,42 @@ class PInterpreterGen(PNodeVisitor):
         program_end = False
         interrupt_end = False
 
+        self._update_tags()
+
+        # TODO read uod.tags
+
         try:
             next(self.process_instr)
         except StopIteration:
             program_end = True
+        except Exception:
+            logger.error("Interpretation error", exc_info=True)
+            self.pause()
 
-        work_done = self._run_interrupt_handlers()
-        if not work_done:
-            interrupt_end = True
-        # if len(interrupt_gens) == 0:
-        #     interrupt_end = True
-        # else:
-        #     for gen in interrupt_gens:
-        #         try:
-        #             next(gen)
-        #         except StopIteration:
-        #             pass
+        try:
+            work_done = self._run_interrupt_handlers()
+            if not work_done:
+                interrupt_end = True
+        except Exception:
+            logger.error("Interpretation interrupt error", exc_info=True)
+            self.pause()
+
+        # TODO write uod.tags
 
         if program_end and interrupt_end:
-            print("All done")
-            self.running = False
-            self.timer.stop()
+            logger.info("Interpretation complete. Stopping")
+            self.stop()
+
+    def stop(self):
+        self.running = False
+        self.timer.stop()
+
+    def pause(self):
+        # TODO define pause behavior
+        self.running = False
 
     def run(self, max_ticks=-1):
+        logger.info("Interpretation started")
         self.ticks = 0
         self.max_ticks = max_ticks
         self.running = True
@@ -230,8 +256,46 @@ class PInterpreterGen(PNodeVisitor):
     def _evaluate_condition(self, condition_node: PWatch | PAlarm) -> bool:
         # HACK to pass tests using the imaginary 'counter' tag.
         # Need condition expression definition and parsing for a proper implementation.
-        value = int(self.uod.tags["counter"].get_value())
-        return value > 0
+        # TODO implement assert as analyzer check
+        c = condition_node.condition
+        assert c is not None, "Error in condition"
+        try:
+            c.parse()
+        except Exception:
+            logger.error(f"Condition parse error: {str(condition_node)}", exc_info=True)
+            return False
+
+        assert c.tag_name, "Error in condition"
+
+        tag_name = c.tag_name.upper()
+
+        # TODO implement assert as analyzer check
+        assert self.tags.has(tag_name) or self.uod.tags.has(tag_name)
+        tag = self.tags.get(tag_name) if self.tags.has(tag_name) else self.uod.tags.get(tag_name)
+        # TODO wrap in pint units
+        tag_value = tag.get_value()
+        # TODO if not unit specified, pick base unit
+        expected_value = pint.Quantity(c.rhs)
+        if isinstance(tag_value, pint.Quantity) and not tag_value.is_compatible_with(expected_value): # type: ignore
+            logger.error("Incompatible units")
+            raise ValueError("Incompatible units")
+
+        # TODO consider pushing this to a condition.evaluate() method
+        # but do we want ast nodes to depend on tags?
+        # TODO this strangely seems to work even for string ints
+        match c.op:
+            case '<':
+                return tag_value < expected_value
+            case '<=':
+                return tag_value <= expected_value
+            case '=' | '==':
+                return tag_value == expected_value
+            case '>':
+                return tag_value > expected_value
+            case '>=':
+                return tag_value >= expected_value
+            case '!=' | _:
+                return tag_value != expected_value
 
     def visit_children(self, children: List[PNode] | None):
         ar = self.stack.peek()
@@ -249,7 +313,7 @@ class PInterpreterGen(PNodeVisitor):
             return
 
         # log all visits
-        self._add_to_log(self.tick_time, "", str(node))
+        logger.debug(f"Visiting {node} at tick {self.tick_time}")
 
         # allow visit methods to be non generators
         result = super().visit(node)
@@ -258,21 +322,20 @@ class PInterpreterGen(PNodeVisitor):
         else:
             yield
 
+        logger.debug(f"Visit {node} done")
+
     def visit_PProgram(self, node: PProgram):
         ar = ActivationRecord(node, self.tick_time, TagCollection.create_default())
         self.stack.push(ar)
-        print("PROGRAM")
-
         yield from self.visit_children(node.children)
-
-        print("PROGRAM END")
+        self.stack.pop()
 
     def visit_PBlank(self, node: PBlank):
         pass
 
     def visit_PMark(self, node: PMark):
         self._add_to_log(time.time(), node.time, node.name)
-        print(str(node))
+        logger.info(f"Mark {str(node)}")
 
     def visit_PBlock(self, node: PBlock):
         ar = ActivationRecord(node, self.tick_time, TagCollection.create_default())
@@ -281,24 +344,32 @@ class PInterpreterGen(PNodeVisitor):
         yield from self.visit_children(node.children)
 
         if not ar.complete:
-            print(f"BLOCK {node.name} idle")
+            logger.debug(f"Block {node.name} idle")
         while not ar.complete and self.running:
             yield
 
-        print("BLOCK EXIT")
+        # await possible interrupt using the stack
+        while not self.stack.peek() is ar:
+            yield
+
+        # now it's safe to pop
+        self.stack.pop()
 
     def visit_PEndBlock(self, node: PEndBlock):
-        ar = self.stack.pop()
-        ar.complete = True
+        for ar in reversed(self.stack.records):
+            if ar.artype == ARType.BLOCK:
+                ar.complete = True
+                return
+        logger.warning("End block found no block to end")
 
     def visit_PCommand(self, node: PCommand):
         try:
             # TODO commands can be resident and last multiple ticks
             # see example command ?
+            logger.debug(f"Executing command {str(node)}")
             self.uod.execute_command(node.name, node.args)
-        except Exception as ex:
-            print(ex)
-
+        except Exception:
+            logger.error(f"Command {node.name} failed", exc_info=True)
         yield
 
         # TODO determine whether command is complete...
@@ -312,22 +383,22 @@ class PInterpreterGen(PNodeVisitor):
         ar = self.stack.peek()
         if ar.owner is not node:
             ar = ActivationRecord(node, self.tick_time, TagCollection.create_default())            
-            self.register_interrupt(ar, create_interrupt_handler(ar))
-            print(f"{str(node)} interrupt registered")
+            self.register_interrupt(ar, create_interrupt_handler(ar))            
         else:
-            print(f"{str(node)} interrupt invoked")
-            if hasattr(node, "activated"):
+            logger.debug(f"{str(node)} interrupt invoked")
+            if node.activated:
                 condition_result = True
-                print(f"{str(node)} already activated")
+                logger.debug(f"{str(node)} was previously activated")
             else:
                 while not ar.complete and self.running:
                     condition_result = self._evaluate_condition(node)
-                    print(f"{str(node)} condition evaluated: {condition_result}")
+                    logger.debug(f"{str(node)} condition evaluated: {condition_result}")
                     if condition_result:
                         node.activated = True
-                        print(f"{str(node)} executing")
+                        logger.debug(f"{str(node)} executing")
                         yield from self.visit_children(node.children)
-                        print(f"{str(node)} executed")
+                        logger.debug(f"{str(node)} executed")
                         ar.complete = True
+                        logger.info(f"Interrupt complete {ar}")
                     else:
                         yield

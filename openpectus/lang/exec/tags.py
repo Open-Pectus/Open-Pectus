@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import Dict, List
 
+import pint
+
 DEFAULT_TAG_BASE = "BASE"
 DEFAULT_TAG_RUN_COUNTER = "RUN COUNTER"
 DEFAULT_TAG_BLOCK_TIME = "BLOCK TIME"
@@ -11,14 +13,14 @@ DEFAULT_TAG_BLOCK_TIME = "BLOCK TIME"
 # set when interpretation state is one or more of stopped/paused/on hold
 
 class Tag:
-    def __init__(self, name: str = "", value: str = "") -> None:
+    def __init__(self, name: str = "", value: str | pint.Quantity = "") -> None:
         self.name: str = name
         self.value: str = value
 
-    def set_value(self, val: str) -> None:
+    def set_value(self, val: str | pint.Quantity) -> None:
         self.value = val
 
-    def get_value(self) -> str:
+    def get_value(self) -> str | pint.Quantity:
         return self.value
 
     def clone(self) -> Tag:

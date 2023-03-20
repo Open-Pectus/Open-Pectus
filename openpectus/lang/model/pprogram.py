@@ -177,7 +177,7 @@ class PBlock(PInstruction):
         self.name: str = ''
 
     def __str__(self) -> str:
-        return super().__str__() + ":" + self.name
+        return super().__str__() + ": " + self.name
 
 
 class PEndBlock(PInstruction):
@@ -199,10 +199,11 @@ class PWatch(PInstruction):
 
         self.children = []
         self.condition: PCondition | None = None
+        self.activated: bool = False
 
     def __str__(self) -> str:
         cnd = self.condition.condition_str if self.condition is not None else ""
-        return super().__str__() + f":{cnd} | line: {self.line}"
+        return super().__str__() + f": {cnd} | line: {self.line}"
 
 
 class PAlarm(PInstruction):
@@ -215,7 +216,7 @@ class PAlarm(PInstruction):
 
     def __str__(self) -> str:
         cnd = self.condition.condition_str if self.condition is not None else ""
-        return super().__str__() + f":{cnd} | line: {self.line}"
+        return super().__str__() + f": {cnd} | line: {self.line}"
 
 
 class PMark(PInstruction):
@@ -227,7 +228,7 @@ class PMark(PInstruction):
         self.name: str = ''
 
     def __str__(self) -> str:        
-        return super().__str__() + ":" + self.name
+        return super().__str__() + ": " + self.name
 
 
 class PCommand(PInstruction):
@@ -240,7 +241,7 @@ class PCommand(PInstruction):
         self.args: str = ''
 
     def __str__(self) -> str:
-        return super().__str__() + ":" + self.name
+        return super().__str__() + ": " + self.name
 
 
 class PBlank(PInstruction):

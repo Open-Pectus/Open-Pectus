@@ -1,5 +1,4 @@
 
-import asyncio
 import unittest
 
 from lang.grammar.pprogramformatter import print_program
@@ -116,15 +115,30 @@ watch: counter > 0
 
         print_log(i)
         self.assertEqual(["a", "c", "b", "d"], i.get_marks())
-
-        # TODO fix the following once we know how
-        # problem is that PMark C shedules its next_following() even though that is outside
-        # the PWatch body. We either need to correct that or not make it happen in the first place
-        # PAlarm will have same problem.
-
-        # await_ticks(i, 5)
+        # Note that first watch is also activated and its body executed 
+        # even though it is not activated when first run. This represents the
+        # interrupt nature of watches and alarms. So the behavior is not like this:
         # self.assertEqual(["a", "c", "d"], i.get_marks())
-        # self.assertEqual(["a", "c", "b", "d"], i.get_marks())
+
+    def test_watch_nested(self):
+        program = build_program("""
+mark: a
+watch: counter > 0
+    mark: b
+    watch: counter > 1
+        mark: e
+mark: c
+incr counter
+incr counter
+watch: counter > 0
+    mark: d
+""")
+        uod = TestUod()
+        i = PInterpreterGen(program, uod)
+        i.run(15)
+
+        print_log(i)
+        self.assertEqual(["a", "c", "b", "e", "d"], i.get_marks())
 
     def test_block(self):
         program = build_program("""
@@ -176,6 +190,22 @@ Mark: A3
         i.run(max_ticks=5)
 
         self.assertEqual(["A1", "A2"], i.get_marks())
+
+    def test_block_time_watch(self):
+        program = build_program("""
+Block: A
+    Mark: A1
+    Watch: Block time > 1 sec
+        End block
+    Mark: A2
+Mark: A3
+""")
+        uod = TestUod()
+        i = PInterpreterGen(program, uod)
+
+        i.run(max_ticks=30)
+
+        self.assertEqual(["A1", "A2", "A3"], i.get_marks())
 
     def test_(self):
         raise NotImplementedError()
