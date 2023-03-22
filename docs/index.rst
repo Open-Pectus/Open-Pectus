@@ -300,8 +300,8 @@ The Unit Operation Definition defines tags, mapping of tags to physical I/O, use
 
 Tags
 """"
-#. :code:`VA01`. Categorial tag with two possible states: :code:`Open or :code:`Closed`. Defaults to :code:`Closed`.
-#. :code:`VA02`. Categorial tag with two possible states: :code:`Open or :code:`Closed`. Defaults to :code:`Closed`.
+#. :code:`VA01`. Categorial tag with two possible states: :code:`Open` or :code:`Closed`. Defaults to :code:`Closed`.
+#. :code:`VA02`. Categorial tag with two possible states: :code:`Open` or :code:`Closed`. Defaults to :code:`Closed`.
 #. :code:`PU01`. Analog output tag. Unit of %. Defaults to value of 0 %.
 #. :code:`TT01`. Analog input tag. Unit of degC.
 #. :code:`Totalizer`. Analog input tag. Unit of L.
