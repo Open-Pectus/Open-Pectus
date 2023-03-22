@@ -305,7 +305,7 @@ Tags
 #. :code:`PU01`. Analog output tag. Unit of %. Defaults to value of 0 %.
 #. :code:`TT01`. Analog input tag. Unit of degC.
 #. :code:`Totalizer`. Analog input tag. Unit of L.
-#. :code:`Inlet`. Categorial tag with three states: :code:`VA01`, :code:`VA02` or :code:`Closed`. Defaults to `Closed`. Manipulation of this tag will in turn manipulate :code:`VA01` and :code:`VA02` tags.
+#. :code:`Inlet`. Categorial tag with three states: :code:`VA01`, :code:`VA02` or :code:`Closed`. Defaults to :code:`Closed`. Manipulation of this tag will in turn manipulate :code:`VA01` and :code:`VA02` tags.
 
 Notice that in this list of tags only 1 through 5 are physical. The :code:`Inlet` tag is a convenience to make it easier to manage the :code:`VA01` and :code:`VA02` tags. This is in line with the hierarchial structure proposed in S88.
 
