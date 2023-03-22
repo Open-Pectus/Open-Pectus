@@ -12,6 +12,10 @@ Open Pectus is currently developed by Novo Nordisk A/S and Mjølner Informatics 
 
    This project is under active development. A working state is expected sometime in 2023.
 
+.. contents:: Table of Contents
+  :local:
+  :depth: 3
+
 Terms in Process Engineering
 ----------------------------
 Open Pectus is developed to suit the needs of unit operations in the process manufacturing industry. This is deeply embedded in Open Pectus and the P-code language. The following gives a brief introduction to the terms, concepts and notions in this field.
@@ -282,15 +286,45 @@ P-code Example
 Consider a process in which two different substances are pumped into a vessel through a mass flow meter which can register the volume. Upon addition of the second substance, heat is generated and it is desired to stop addition when a certain temperature is reached or when a certain maximum volume has been dosed. See :numref:`p-code-example-pid` for a Piping and Instrumentation Diagram of such a machine.
 
 .. _p-code-example-pid:
-.. figure:: static/p-code-example-process.jpg
+.. figure:: static/P-code-example-process.svg
+    :class: no-scaled-link
     :align: center
-    :width: 442px
-    :height: 199px
+    :width: 450px
     :alt: Example process and instrumentation diagram
     
     Piping and Instrumentation Diagram.
 
+Unit Operation Definition
+^^^^^^^^^^^^^^^^^^^^^^^^^
+The Unit Operation Definition defines tags, mapping of tags to physical I/O, user interface presentation of the unit operation and instructions.
 
+Tags
+""""
+#. :code:`VA01`. Categorial tag with two possible states: :code:`Open or :code:`Closed`. Defaults to :code:`Closed`.
+#. :code:`VA02`. Categorial tag with two possible states: :code:`Open or :code:`Closed`. Defaults to :code:`Closed`.
+#. :code:`PU01`. Analog output tag. Unit of %. Defaults to value of 0 %.
+#. :code:`TT01`. Analog input tag. Unit of degC.
+#. :code:`Totalizer`. Analog input tag. Unit of L.
+#. :code:`Inlet`. Categorial tag with three states: :code:`VA01`, :code:`VA02` or :code:`Closed`. Defaults to `Closed`. Manipulation of this tag will in turn manipulate :code:`VA01` and :code:`VA02` tags.
+
+Notice that in this list of tags only 1 through 5 are physical. The :code:`Inlet` tag is a convenience to make it easier to manage the :code:`VA01` and :code:`VA02` tags. This is in line with the hierarchial structure proposed in S88.
+
+
+Physical I/O Mapping
+"""""""
+In this example the physical I/O mapping is irrelevant.
+
+User Interface
+""""""""""""""
+In this example the user interface is irrelevant.
+
+Instructions
+""""""""""""
+#. :code:`Inlet` command with either of the following arguments: :code:`VA01`, :code:`VA02` or :code:`Closed`. The command assigns its argument to the :code:`Inlet` tag.
+#. :code:`PU01` command with a percentage as argument. The command assigns its argument to the :code:`PU01` tag.
+
+Method
+^^^^^^
 The P-code method might read as follows:
 
 .. code-block:: pcode
