@@ -7,6 +7,16 @@ from lang.model.pprogram import (
 )
 
 
+def print_program(program: PProgram, show_line_numbers: bool = False, show_errors: bool = False, show_blanks: bool = False):
+    """ Print program to stdout using the provided options. """
+    opts = FormattingOptions()
+    opts.line_numbers = show_line_numbers
+    opts.errors = show_errors
+    opts.blanks = show_blanks
+    out = PProgramFormatter(opts).format(program)
+    print(out)
+
+
 class FormattingOptions():
     def __init__(self) -> None:
         self.indent: int = 4
@@ -33,7 +43,7 @@ class PProgramFormatter():
                 self.out.write(f" | Line: {node.line}")
 
             self.out.write("\n")
-            for child in node.get_child_nodes():                    
+            for child in node.get_child_nodes():
                 print_node(child, indent + self.opts.indent)
 
         print_node(program, 0)
