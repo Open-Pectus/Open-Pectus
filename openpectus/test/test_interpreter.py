@@ -8,13 +8,14 @@ from lang.model.pprogram import (
 )
 from lang.exec.pinterpreter import (
     SemanticAnalyzer,
-    PInterpreterGen,
+    PInterpreter,
 )
 from lang.exec.uod import UnitOperationDefinitionBase
 from lang.exec.tags import (
     Tag,
     DEFAULT_TAG_BASE
 )
+import pint
 
 
 def build_program(s) -> PProgram:
@@ -23,7 +24,7 @@ def build_program(s) -> PProgram:
     return p.build_model()
 
 
-def print_log(i: PInterpreterGen):
+def print_log(i: PInterpreter):
     print('\n'.join(str(x['time']) + '\t' + str(x['unit_time']) + '\t' + x['message'] for x in i.logs))
 
 
@@ -43,6 +44,7 @@ mark: c
         sa = SemanticAnalyzer()
         sa.visit_PProgram(program)
 
+    @unittest.skip("TODO")
     def test_dead_code_warning(self):
         program = build_program("""
 Block: 1
@@ -53,11 +55,27 @@ mark: c
 """)
         raise NotImplementedError
 
+    @unittest.skip("TODO")
     def test_infinite_block_warning(self):
         program = build_program("""
 Block: 1
     mark: a
 mark: c
+""")
+        raise NotImplementedError
+
+    @unittest.skip("TODO")
+    def test_condition_incompatible_units_warning(self):
+        program = build_program("""
+Watch: Block time > 3 L
+    mark: a
+""")
+
+    @unittest.skip("TODO")
+    def test_condition_undefined_tag_warning(self):
+        program = build_program("""
+Watch: Foo > 3
+    mark: a
 """)
         raise NotImplementedError
 
@@ -71,7 +89,7 @@ mark: b
 mark: c
 """)
         uod = TestUod()
-        i = PInterpreterGen(program, uod)
+        i = PInterpreter(program, uod)
 
         i.run(10)
         # for _ in i.interpret():
@@ -90,13 +108,13 @@ incr counter
         print_program(program)
 
         uod = TestUod()
-        i = PInterpreterGen(program, uod)
+        i = PInterpreter(program, uod)
 
-        self.assertEqual("0", uod.tags["counter"].get_value())
+        self.assertEqual(0, uod.tags["counter"].as_number())
 
         i.run()
 
-        self.assertEqual("1", uod.tags["counter"].get_value())
+        self.assertEqual(1, uod.tags["counter"].as_number())
         self.assertEqual("a", i.get_marks()[0])
 
     def test_watch_can_evaluate_tag(self):
@@ -110,7 +128,7 @@ watch: counter > 0
     mark: d
 """)
         uod = TestUod()
-        i = PInterpreterGen(program, uod)
+        i = PInterpreter(program, uod)
         i.run(15)
 
         print_log(i)
@@ -134,7 +152,7 @@ watch: counter > 0
     mark: d
 """)
         uod = TestUod()
-        i = PInterpreterGen(program, uod)
+        i = PInterpreter(program, uod)
         i.run(15)
 
         print_log(i)
@@ -149,7 +167,7 @@ Block: A
 Mark: A3
 """)
         uod = TestUod()
-        i = PInterpreterGen(program, uod)
+        i = PInterpreter(program, uod)
         i.tags[DEFAULT_TAG_BASE].set_value("sec")
 
         i.run()
@@ -171,7 +189,7 @@ Block: A
 Mark: A3
 """)
         uod = TestUod()
-        i = PInterpreterGen(program, uod)
+        i = PInterpreter(program, uod)
 
         i.run()
 
@@ -185,7 +203,7 @@ Block: A
 Mark: A3
 """)
         uod = TestUod()
-        i = PInterpreterGen(program, uod)
+        i = PInterpreter(program, uod)
 
         i.run(max_ticks=5)
 
@@ -201,36 +219,40 @@ Block: A
 Mark: A3
 """)
         uod = TestUod()
-        i = PInterpreterGen(program, uod)
+        i = PInterpreter(program, uod)
 
         i.run(max_ticks=30)
 
         self.assertEqual(["A1", "A2", "A3"], i.get_marks())
 
+    @unittest.skip("TODO")
     def test_(self):
         raise NotImplementedError()
         program = build_program("""
 """)
-        i = PInterpreterGen(program, TestUod())
+        i = PInterpreter(program, TestUod())
         i.tags[DEFAULT_TAG_BASE].set_value("sec")
         i.validate_commands()
         print_program(program, show_errors=True, show_line_numbers=True, show_blanks=True)
         i.run()
 
+    @unittest.skip("TODO")
     def test_command_long_running(self):
         raise NotImplementedError()
         program = build_program("""
 """)
-        i = PInterpreterGen(program, TestUod())
+        i = PInterpreter(program, TestUod())
         i.tags[DEFAULT_TAG_BASE].set_value("sec")
         i.validate_commands()
         print_program(program, show_errors=True, show_line_numbers=True, show_blanks=True)
         i.run()
 
+    @unittest.skip("TODO")
     def test_change_base_in_program(self):
         # base is also available in scope
         raise NotImplementedError()
 
+    @unittest.skip("TODO")
     def test_change_base_in_scope(self):
         # base is global, a change should remain in place after scope completes
         raise NotImplementedError()
@@ -243,7 +265,7 @@ if __name__ == "__main__":
 class TestUod(UnitOperationDefinitionBase):
     def __init__(self) -> None:
         super().__init__()
-        self.tags.add(Tag("counter", "0"))
+        self.tags.add(Tag("counter", 0))
 
         self.command_names.append("incr counter")
 
@@ -261,6 +283,6 @@ class TestUod(UnitOperationDefinitionBase):
 
     def incr_counter(self):
         counter = self.tags["counter"]
-        count = int(counter.get_value())
-        count += 1
-        counter.set_value(str(count))
+        count = counter.as_number()
+        count = count + 1  # type: ignore
+        counter.set_value(count)

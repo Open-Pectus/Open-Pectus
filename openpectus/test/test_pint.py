@@ -40,6 +40,10 @@ class PintTest(unittest.TestCase):
         self.assertTrue(count.dimensionless)
         self.assertEqual("<Quantity(3, 'dimensionless')>", "{!r}".format(count))
 
+        count = Q_(3, None)
+        self.assertTrue(count.dimensionless)
+        self.assertEqual("<Quantity(3, 'dimensionless')>", "{!r}".format(count))
+
     def test_formatting(self):
         weight = 2 * ureg.kg
         s = 'The magnitude is {0.magnitude} with units {0.units}'.format(weight)
@@ -113,6 +117,15 @@ class PintTest(unittest.TestCase):
 
         count = Q_(7)
         self.assertEqual("<Quantity(7, 'dimensionless')>", "{!r}".format(count))
+
+    def test_comparison(self):
+        a = Q_("10 cm")
+        b = Q_("20 cm")
+        c = Q_("0.2 m")
+        self.assertTrue(a < b)
+        self.assertTrue(a < c)
+        self.assertEqual(b, c)
+
 
 
 if __name__ == "__main__":

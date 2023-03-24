@@ -1,34 +1,67 @@
 from __future__ import annotations
+from enum import Enum
+from numbers import Number
 from typing import Dict, List
 
 import pint
+from pint import UnitRegistry, Quantity
+
+ureg = UnitRegistry()
+Q_ = Quantity
+
 
 DEFAULT_TAG_BASE = "BASE"
 DEFAULT_TAG_RUN_COUNTER = "RUN COUNTER"
 DEFAULT_TAG_BLOCK_TIME = "BLOCK TIME"
+DEFAULT_TAG_RUN_TIME = "RUN TIME"
+
+
+class TagDirection(Enum):
+    READ = 'READ',
+    WRITE = 'WRITE',
+    READ_WRITE = 'READ_WRITE'
 
 
 # TODO refactor to support pint units. Consider whether to hide pint or expose it.
 # TODO add support for 'safe' values, ie. to allow specifying a value that is automatically
 # set when interpretation state is one or more of stopped/paused/on hold
+# TODO add support for choices tags (unit type or sub class?)
+# TODO add support for direction, read/write/read-write
 
 class Tag:
-    def __init__(self, name: str = "", value: str | pint.Quantity = "") -> None:
-        self.name: str = name
-        self.value: str = value
+    def __init__(
+            self,
+            name: str,
+            value=None,
+            unit=None,
+            direction: TagDirection = TagDirection.READ,
+            choices: List[str] | None = None) -> None:
 
-    def set_value(self, val: str | pint.Quantity) -> None:
+        self.name: str = name
+        self.value = value
+        self.unit = unit
+
+    def set_value(self, val) -> None:
         self.value = val
 
-    def get_value(self) -> str | pint.Quantity:
+    def get_value(self):
         return self.value
 
+    def as_quantity(self) -> pint.Quantity:
+        return pint.Quantity(self.value, self.unit)
+
+    def as_number(self) -> Number:
+        if not isinstance(self.value, Number):
+            raise ValueError(f"Value is not numerical: '{self.value}'")
+        return self.value
+
+    def set_quantity(self, q: pint.Quantity):
+        self.unit = None if q.dimensionless else q.units
+        self.set_value(q.magnitude)
+
     def clone(self) -> Tag:
-        return Tag(self.name, self.value)
+        return Tag(self.name, self.value, self.unit)
 
-
-# TODO probably add keys in upper case for case insensitive lookup
-# TODO consider support for frozen tags, e.g. such that UOD is not allowed to mutate standard tags
 
 class TagCollection():
     """ Represents a case insensitive name/tag dictionary. """
@@ -95,9 +128,10 @@ class TagCollection():
     def create_default() -> TagCollection:
         tags = TagCollection()
         defaults = [
-            (DEFAULT_TAG_BASE, "min"),
-            (DEFAULT_TAG_RUN_COUNTER, "0"),
-            (DEFAULT_TAG_BLOCK_TIME, "0"),
+            (DEFAULT_TAG_BASE, "min"), # TODO this should not be wrapped in pint quantity
+            (DEFAULT_TAG_RUN_COUNTER, 0),
+            (DEFAULT_TAG_BLOCK_TIME, 0),
+            (DEFAULT_TAG_RUN_TIME, 0),
         ]
         for k, v in defaults:
             tags.add(Tag(k, v))

@@ -1,13 +1,11 @@
 from __future__ import annotations
-from collections import deque
 from enum import Enum
 import logging
-import threading
 import time
 import pint
 import inspect
 
-from typing import Callable, Deque, Generator, Iterable, Iterator, List, Tuple
+from typing import Generator, List, Tuple
 from typing_extensions import override
 from lang.model.pprogram import (
     TimeExp,
@@ -23,7 +21,11 @@ from lang.model.pprogram import (
     PMark,
 )
 
-from lang.exec.tags import TagCollection, DEFAULT_TAG_BLOCK_TIME
+from lang.exec.tags import (
+    TagCollection,
+    DEFAULT_TAG_BLOCK_TIME,
+    DEFAULT_TAG_RUN_TIME,
+)
 from lang.exec.uod import UnitOperationDefinitionBase
 from lang.exec.timer import OneThreadTimer
 
@@ -125,7 +127,7 @@ class CallStack:
         return self.__str__()
 
 
-class PInterpreterGen(PNodeVisitor):
+class PInterpreter(PNodeVisitor):
     def __init__(self, program: PProgram, uod: UnitOperationDefinitionBase) -> None:
         self.tags: TagCollection = TagCollection.create_default()
         self._program = program
@@ -159,10 +161,18 @@ class PInterpreterGen(PNodeVisitor):
 
     def _update_tags(self):
         if self.stack.any():
-            ar = self.stack.peek()
-            elapsed = self.tick_time - ar.start_time            
-            v = pint.Quantity(f'{elapsed} sec')
-            self.tags.get(DEFAULT_TAG_BLOCK_TIME).set_value(v)
+            ar_program = self.stack.records[0]
+            program_elapsed = self.tick_time - ar_program.start_time
+            q_program = pint.Quantity(f'{program_elapsed} sec')
+            self.tags.get(DEFAULT_TAG_RUN_TIME).set_quantity(q_program)
+
+            ar_block = self.stack.peek()
+            # TODO block time should not include pause and hold time
+            block_elapsed = self.tick_time - ar_block.start_time
+            q_block = pint.Quantity(f'{block_elapsed} sec')
+            self.tags.get(DEFAULT_TAG_BLOCK_TIME).set_quantity(q_block)
+
+            # TODO implement remaining tags, e.g. SYSTEM STATE, RUN COUNTER
 
     def register_interrupt(self, ar: ActivationRecord, handler: Generator):
         logger.debug(f"Interrupt handler registered for {ar}")
@@ -209,6 +219,7 @@ class PInterpreterGen(PNodeVisitor):
         program_end = False
         interrupt_end = False
 
+        # update interpreter tags
         self._update_tags()
 
         # TODO read uod.tags
@@ -254,9 +265,9 @@ class PInterpreterGen(PNodeVisitor):
             time.sleep(0.1)
 
     def _evaluate_condition(self, condition_node: PWatch | PAlarm) -> bool:
-        # HACK to pass tests using the imaginary 'counter' tag.
-        # Need condition expression definition and parsing for a proper implementation.
+        # TODO Need condition expression definition and parsing for a proper implementation.
         # TODO implement assert as analyzer check
+        # TODO implement unit compability as analyzer check
         c = condition_node.condition
         assert c is not None, "Error in condition"
         try:
@@ -266,23 +277,21 @@ class PInterpreterGen(PNodeVisitor):
             return False
 
         assert c.tag_name, "Error in condition"
-
         tag_name = c.tag_name.upper()
 
         # TODO implement assert as analyzer check
         assert self.tags.has(tag_name) or self.uod.tags.has(tag_name)
         tag = self.tags.get(tag_name) if self.tags.has(tag_name) else self.uod.tags.get(tag_name)
-        # TODO wrap in pint units
-        tag_value = tag.get_value()
+        tag_value = tag.as_quantity()
         # TODO if not unit specified, pick base unit
+        # TODO add analyzer check for unit compability
         expected_value = pint.Quantity(c.rhs)
-        if isinstance(tag_value, pint.Quantity) and not tag_value.is_compatible_with(expected_value): # type: ignore
+        if not tag_value.is_compatible_with(expected_value):  # type: ignore
             logger.error("Incompatible units")
             raise ValueError("Incompatible units")
 
         # TODO consider pushing this to a condition.evaluate() method
         # but do we want ast nodes to depend on tags?
-        # TODO this strangely seems to work even for string ints
         match c.op:
             case '<':
                 return tag_value < expected_value
@@ -294,8 +303,10 @@ class PInterpreterGen(PNodeVisitor):
                 return tag_value > expected_value
             case '>=':
                 return tag_value >= expected_value
-            case '!=' | _:
+            case '!=':
                 return tag_value != expected_value
+            case  _:
+                raise ValueError(f"Unsupported operation: '{c.op}'")
 
     def visit_children(self, children: List[PNode] | None):
         ar = self.stack.peek()
