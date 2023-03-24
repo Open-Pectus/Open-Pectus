@@ -334,7 +334,7 @@ Block: A2
 
         print_program(program)
         self.assertFalse(program.has_error(recursive=True))
-        self.assertEquals(0, node_missing_start_position_count(program))
+        self.assertEqual(0, node_missing_start_position_count(program))
 
         self.assertProgramMatches(
             program,
@@ -368,7 +368,7 @@ Block: A
 
         print_program(program, show_line_numbers=True)
         self.assertFalse(program.has_error(recursive=True))
-        self.assertEquals(0, node_missing_start_position_count(program))
+        self.assertEqual(0, node_missing_start_position_count(program))
 
         self.assertProgramMatches(
             program,
@@ -399,7 +399,7 @@ Mark: foo
 
         print_program(program)
         self.assertFalse(program.has_error(recursive=True))
-        self.assertEquals(0, node_missing_start_position_count(program))
+        self.assertEqual(0, node_missing_start_position_count(program))
 
         self.assertProgramMatches(
             program,
@@ -425,7 +425,7 @@ Mark: foo
 
         print_program(program)
         self.assertFalse(program.has_error(recursive=True))
-        self.assertEquals(0, node_missing_start_position_count(program))
+        self.assertEqual(0, node_missing_start_position_count(program))
 
         self.assertProgramMatches(
             program,

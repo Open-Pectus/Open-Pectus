@@ -127,6 +127,5 @@ class PintTest(unittest.TestCase):
         self.assertEqual(b, c)
 
 
-
 if __name__ == "__main__":
     unittest.main()
