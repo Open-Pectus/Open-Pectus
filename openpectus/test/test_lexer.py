@@ -46,6 +46,10 @@ class LexerTest(unittest.TestCase):
         code = "foo > 3 ml"
         self.assertEqual(['foo', ' ', '>', ' ', '3', ' ', 'ml'], get_token_texts(code))
 
+    def test_watch_condition(self):
+        code = "watch:foo > 3 ml"
+        self.assertEqual(['watch', ':', 'foo', ' ', '>', ' ', '3', ' ', 'ml'], get_token_texts(code))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -34,7 +34,16 @@ command_args    : .*?  ~(NEWLINE | HASH);
 
 watch           : time? WATCH (COLON WHITESPACE* condition)?;
 alarm           : time? ALARM (COLON WHITESPACE* condition)?;
-condition       : .*?  ~(NEWLINE | HASH);
+ 
+condition       : condition_tag WHITESPACE* compare_op WHITESPACE* condition_value (WHITESPACE* condition_unit)? WHITESPACE*
+//condition       : condition_tag WHITESPACE* compare_op WHITESPACE* condition_value WHITESPACE* condition_unit?
+                | condition_error;
+condition_tag   : IDENTIFIER;
+compare_op      : COMPARE_OP;
+condition_value : FLOAT;
+condition_unit  : CONDITION_UNIT; 
+
+condition_error : .*?  ~(NEWLINE | HASH);
 
 increment_rc    : time? INCREMENT_RC ;
 stop            : time? STOP ;
@@ -94,10 +103,14 @@ END_BLOCK       : E N D SPACE BLOCK ;
 END_BLOCKS      : E N D SPACE B L O C K S ;
 INCREMENT_RC    : I N C R E M E N T SPACE R U N SPACE C O U N T E R ;
 
+CONDITION_UNIT  : M L;
+
 IDENTIFIER : LETTER ( (LETTER | DIGIT | WHITESPACE | UNDERSCORE)* (LETTER | DIGIT | UNDERSCORE)+ )? ;
 FLOAT   : DIGIT+ (PERIOD DIGIT+)?
         | DIGIT+ (COMMA DIGIT+)?
         ;
+
+COMPARE_OP : '=' | '==' | '<=' | '<' | '>=' | '>' | '!=';
 
 WHITESPACE: SPACE | TAB ;
 UNDERSCORE: '_' ;

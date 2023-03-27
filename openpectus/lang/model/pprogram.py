@@ -265,9 +265,13 @@ class PCondition:
         # Also, we assume a single tag on the left hand side and that no unit is given
         self.condition_str = condition_str
         self.lhs = ""
-        self.op = ""
         self.rhs = ""
+
+        self.op = ""
         self.tag_name = ""
+        self.tag_value = ""
+        self.tag_unit: str | None = None
+        self.error: bool = False
 
     def evaluate(self, tags) -> bool:  # should possibly take a "context" with more info than just the tags
         raise NotImplementedError()

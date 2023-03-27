@@ -5,6 +5,7 @@ from lang.model.pprogram import (
     TimeExp,
     PNode,
     PProgram,
+    PBlank,
     PBlock,
     PEndBlock,
     # PEndBlocks,
@@ -15,24 +16,13 @@ from lang.model.pprogram import (
     PCondition
 )
 
-from lang.grammar.pprogramformatter import PProgramFormatter, FormattingOptions
+from lang.grammar.pprogramformatter import PProgramFormatter, print_program
 
 
 def build(s):
     p = PGrammar()
     p.parse(s)
     return p
-
-
-def print_program(
-    program: PProgram, show_line_numbers: bool = False, show_errors: bool = False
-):
-    opts = FormattingOptions()
-    opts.line_numbers = show_line_numbers
-    opts.errors = show_errors
-    out = PProgramFormatter(opts).format(program)
-    print("\n")
-    print(out)
 
 
 def node_missing_start_position_count(node: PNode) -> int:
@@ -466,7 +456,7 @@ Watch: 1
         )
         program = p.build_model()
 
-        print_program(program)
+        print_program(program, show_line_numbers=True, show_errors=True)
 
         non_blanks = program.get_instructions()
         self.assertIsInstance(non_blanks[0], PWatch)
@@ -474,7 +464,36 @@ Watch: 1
         self.assertIsInstance(mark, PMark)
         self.assertFalse(program.has_error(recursive=True))
 
-    def test_watch2(self):
+    def test_watch_unit(self):
+        p = build(
+            """
+mark: a
+watch: counter > 0 ml
+    mark: b
+mark: c
+incr counter
+watch: counter > 0 ml
+    mark: d
+        """
+        )
+        program = p.build_model()
+
+        p.printSyntaxTree(p.tree)
+        print_program(program, show_line_numbers=True, show_errors=True)
+        self.assertFalse(program.has_error(recursive=True))
+        non_blanks = program.get_instructions()
+        self.assertIsInstance(non_blanks[0], PMark)
+        self.assertIsInstance(non_blanks[1], PWatch)
+        self.assertIsInstance(non_blanks[1].get_child_nodes()[0], PMark)
+        assert isinstance(non_blanks[1], PWatch)
+        condition = non_blanks[1].condition
+        assert condition is not None
+        self.assertEqual("counter", condition.tag_name)
+        self.assertEqual(">", condition.op)
+        self.assertEqual("0", condition.tag_value)
+        self.assertEqual("ml", condition.tag_unit)
+
+    def test_watch_unitless(self):
         p = build(
             """
 mark: a
@@ -488,12 +507,72 @@ watch: counter > 0
         )
         program = p.build_model()
 
-        print_program(program)
+        p.printSyntaxTree(p.tree)
+        print_program(program, show_line_numbers=True, show_errors=True)
         self.assertFalse(program.has_error(recursive=True))
         non_blanks = program.get_instructions()
         self.assertIsInstance(non_blanks[0], PMark)
         self.assertIsInstance(non_blanks[1], PWatch)
         self.assertIsInstance(non_blanks[1].get_child_nodes()[0], PMark)
+        assert isinstance(non_blanks[1], PWatch)
+        condition = non_blanks[1].condition
+        assert condition is not None
+        self.assertEqual("counter", condition.tag_name)
+        self.assertEqual(">", condition.op)
+        self.assertEqual("0", condition.tag_value)
+        self.assertEqual(None, condition.tag_unit)
+
+    def test_navigation(self):
+        p = build(
+            """
+mark: a
+watch: counter > 0
+    mark: b
+mark: c
+incr counter
+watch: counter > 0 ml
+    mark: d
+
+        """
+        )
+
+        program = p.build_model()
+
+        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        self.assertFalse(program.has_error(recursive=True))
+        all = program.get_instructions(include_blanks=True)
+
+        blank_1, mark_a, watch_1, mark_b, mark_c, incr, watch_2, mark_d, blank_2, blank_3 = all
+
+        self.assertIsInstance(blank_1, PBlank)
+        self.assertEqual(1, blank_1.line)
+
+        self.assertIsInstance(mark_a, PMark)
+        self.assertEqual(2, mark_a.line)
+
+        self.assertIsInstance(watch_1, PWatch)
+        self.assertEqual(3, watch_1.line)
+
+        self.assertIsInstance(mark_b, PMark)
+        self.assertEqual(4, mark_b.line)
+
+        self.assertIsInstance(mark_c, PMark)
+        self.assertEqual(5, mark_c.line)
+
+        self.assertIsInstance(incr, PCommand)
+        self.assertEqual(6, incr.line)
+
+        self.assertIsInstance(watch_2, PWatch)
+        self.assertEqual(7, watch_2.line)
+
+        self.assertIsInstance(mark_d, PMark)
+        self.assertEqual(8, mark_d.line)
+
+        self.assertIsInstance(blank_2, PBlank)
+        self.assertEqual(9, blank_2.line)
+
+        self.assertIsInstance(blank_3, PBlank)
+        self.assertEqual(10, blank_3.line)
 
 
 class PConditionTest(unittest.TestCase):

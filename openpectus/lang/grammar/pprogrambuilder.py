@@ -204,6 +204,44 @@ class PProgramBuilder(pcodeListener):
         assert isinstance(self.scope, PWatch | PAlarm)
         self.scope.condition = PCondition(ctx.getText())
 
+    def exitCondition(self, ctx: pcodeParser.ConditionContext):
+        pass
+
+    def enterCondition_tag(self, ctx: pcodeParser.Condition_tagContext):
+        if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
+            self.scope.condition.tag_name = ctx.getText()
+
+    def exitCondition_tag(self, ctx: pcodeParser.Condition_tagContext):
+        pass
+
+    def enterCompare_op(self, ctx: pcodeParser.Compare_opContext):
+        if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
+            self.scope.condition.op = ctx.getText()
+
+    def exitCompare_op(self, ctx: pcodeParser.Compare_opContext):
+        pass
+
+    def enterCondition_value(self, ctx: pcodeParser.Condition_valueContext):
+        if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
+            self.scope.condition.tag_value = ctx.getText()
+
+    def exitCondition_value(self, ctx: pcodeParser.Condition_valueContext):
+        pass
+
+    def enterCondition_unit(self, ctx: pcodeParser.Condition_unitContext):
+        if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
+            self.scope.condition.tag_unit = ctx.getText()
+
+    def exitCondition_unit(self, ctx: pcodeParser.Condition_unitContext):
+        pass
+
+    def enterCondition_error(self, ctx: pcodeParser.Condition_errorContext):
+        if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
+            self.scope.condition.error = True
+
+    def exitCondition_error(self, ctx: pcodeParser.Condition_errorContext):
+        pass
+
     def enterAlarm(self, ctx: pcodeParser.AlarmContext):
         self.instruction = PAlarm(self.scope)
         self.push_scope(self.instruction, ctx)
