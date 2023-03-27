@@ -128,7 +128,7 @@ class TagCollection():
     def create_default() -> TagCollection:
         tags = TagCollection()
         defaults = [
-            (DEFAULT_TAG_BASE, "min"), # TODO this should not be wrapped in pint quantity
+            (DEFAULT_TAG_BASE, "min"),  # TODO this should not be wrapped in pint quantity
             (DEFAULT_TAG_RUN_COUNTER, 0),
             (DEFAULT_TAG_BLOCK_TIME, 0),
             (DEFAULT_TAG_RUN_TIME, 0),

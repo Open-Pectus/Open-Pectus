@@ -7,7 +7,6 @@ from lang.model.pprogram import (
     PProgram,
 )
 from lang.exec.pinterpreter import (
-    SemanticAnalyzer,
     PInterpreter,
 )
 from lang.exec.uod import UnitOperationDefinitionBase
@@ -15,7 +14,6 @@ from lang.exec.tags import (
     Tag,
     DEFAULT_TAG_BASE
 )
-import pint
 
 
 def build_program(s) -> PProgram:
@@ -26,58 +24,6 @@ def build_program(s) -> PProgram:
 
 def print_log(i: PInterpreter):
     print('\n'.join(str(x['time']) + '\t' + str(x['unit_time']) + '\t' + x['message'] for x in i.logs))
-
-
-# def await_ticks(interpreter: PInterpreter, ticks: int):
-#     for _ in range(ticks):
-#         time.sleep(0.5)
-#         interpreter.tick()
-
-
-class SemanticAnalyzerTest(unittest.TestCase):
-    def test_sequential_marks(self):
-        program = build_program("""
-mark: a
-mark: b
-mark: c
-""")
-        sa = SemanticAnalyzer()
-        sa.visit_PProgram(program)
-
-    @unittest.skip("TODO")
-    def test_dead_code_warning(self):
-        program = build_program("""
-Block: 1
-    mark: a
-    End block
-    mark: b
-mark: c
-""")
-        raise NotImplementedError
-
-    @unittest.skip("TODO")
-    def test_infinite_block_warning(self):
-        program = build_program("""
-Block: 1
-    mark: a
-mark: c
-""")
-        raise NotImplementedError
-
-    @unittest.skip("TODO")
-    def test_condition_incompatible_units_warning(self):
-        program = build_program("""
-Watch: Block time > 3 L
-    mark: a
-""")
-
-    @unittest.skip("TODO")
-    def test_condition_undefined_tag_warning(self):
-        program = build_program("""
-Watch: Foo > 3
-    mark: a
-""")
-        raise NotImplementedError
 
 
 class InterpreterTest(unittest.TestCase):

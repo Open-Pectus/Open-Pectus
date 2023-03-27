@@ -54,20 +54,6 @@ class PNodeVisitor:
         raise Exception('No visit_{} method'.format(type(node).__name__))
 
 
-class SemanticAnalyzer(PNodeVisitor):
-    def visit_PProgram(self, node: PProgram):
-        print("program")
-        if node.children is not None:
-            for child in node.children:
-                self.visit(child)
-
-    def visit_PBlank(self, node: PBlank):
-        print("blank")
-
-    def visit_PMark(self, node: PMark):
-        print("mark: " + node.name)
-
-
 class ARType(Enum):
     PROGRAM = "PROGRAM",
     BLOCK = "BLOCK",
