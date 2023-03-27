@@ -19,7 +19,7 @@ def get_first_child(ctx: ParserRuleContext, type):
                 return child
             val = get_first_child(child, type)
             if val:
-                return val    
+                return val
 
 
 class ParserTest(unittest.TestCase):
@@ -78,8 +78,6 @@ watch: A > 2 ml
     mark: a
 """)
         program = p.parser.program()  # type: ignore
-        
-        p.printSyntaxTree(program)
         watch = get_first_child(program, pcodeParser.WatchContext)
         self.assertIsInstance(watch, pcodeParser.WatchContext)
         self.assertIsWatchWithCondition(watch, "A > 2 ml")  # type: ignore
@@ -92,7 +90,6 @@ watch: A > 2 ml
         p = parse("X > 10 ml")
         c = p.parser.condition()  # type: ignore
         self.assertIsNotNone(c)
-        p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.ConditionContext)
         self.assertConditionValue(c, "X", ">", "10", "ml")
 
@@ -183,7 +180,7 @@ watch: A > 2 ml
 
     def test_alarm_with_condition(self):
         p = parse("alarm: X > 10 ml")
-        c = p.parser.alarm()  # type: ignore        
+        c = p.parser.alarm()  # type: ignore
         condition = c.condition()
         assert isinstance(condition, pcodeParser.ConditionContext)
         self.assertIsNotNone(c)

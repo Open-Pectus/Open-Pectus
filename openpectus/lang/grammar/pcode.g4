@@ -103,7 +103,26 @@ END_BLOCK       : E N D SPACE BLOCK ;
 END_BLOCKS      : E N D SPACE B L O C K S ;
 INCREMENT_RC    : I N C R E M E N T SPACE R U N SPACE C O U N T E R ;
 
-CONDITION_UNIT  : M L;
+CONDITION_UNIT  : VOLUME_UNIT
+                | MASS_UNIT
+                | DISTANCE_UNIT
+                | DURATION_UNIT
+                | OTHER_UNIT
+                ;
+
+VOLUME_UNIT     : L | M L ;
+MASS_UNIT       : K G | G ;
+DISTANCE_UNIT   : M | C M ;
+DURATION_UNIT   : H | M I N | S | S E C;
+OTHER_UNIT      : '%' | C V | A U | L '/' H | K G '/' H | M S '/' C M ;
+/*
+Known units:
+L|min|h|CV|s|mL        
+CV|L|h|min|s|AU|L\/h|\%|bar|mS\/cm|g
+CV|L|h|min|s|AU|L\/h|\%|bar|mS\/cm|g|kg\/h
+h|min|s|L|CV|AU|L\/h|\%|bar|mS\/cm|g|kg\/h
+duration_unit: h|min|s|L|CV
+ */
 
 IDENTIFIER : LETTER ( (LETTER | DIGIT | WHITESPACE | UNDERSCORE)* (LETTER | DIGIT | UNDERSCORE)+ )? ;
 FLOAT   : DIGIT+ (PERIOD DIGIT+)?

@@ -12,8 +12,7 @@ from lang.model.pprogram import (
     PWatch,
     # PAlarm,
     PMark,
-    PCommand,
-    PCondition
+    PCommand
 )
 
 from lang.grammar.pprogramformatter import PProgramFormatter, print_program
@@ -573,27 +572,6 @@ watch: counter > 0 ml
 
         self.assertIsInstance(blank_3, PBlank)
         self.assertEqual(10, blank_3.line)
-
-
-class PConditionTest(unittest.TestCase):
-    def test_parse(self):
-        c = PCondition("foo>3")
-        c.parse()
-        self.assertEqual("foo", c.lhs)
-        self.assertEqual(">", c.op)
-        self.assertEqual("3", c.rhs)
-
-        c = PCondition("foo>=3")
-        c.parse()
-        self.assertEqual("foo", c.lhs)
-        self.assertEqual(">=", c.op)
-        self.assertEqual("3", c.rhs)
-
-        c = PCondition("foo != 3 ")
-        c.parse()
-        self.assertEqual("foo", c.lhs)
-        self.assertEqual("!=", c.op)
-        self.assertEqual("3", c.rhs)
 
 
 if __name__ == "__main__":

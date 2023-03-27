@@ -261,41 +261,16 @@ class PError:
 class PCondition:
     """ Represents a condition expression for alarms and watches. """
     def __init__(self, condition_str: str) -> None:
-        # Note: For now, we keep condition parsing out of the grammar
-        # Also, we assume a single tag on the left hand side and that no unit is given
         self.condition_str = condition_str
-        self.lhs = ""
-        self.rhs = ""
-
         self.op = ""
         self.tag_name = ""
         self.tag_value = ""
         self.tag_unit: str | None = None
         self.error: bool = False
 
+    @property
+    def tag_value_numeric(self) -> float:
+        return float(self.tag_value)
+
     def evaluate(self, tags) -> bool:  # should possibly take a "context" with more info than just the tags
         raise NotImplementedError()
-
-    def parse(self):
-        ops = ["<", "<=", ">", ">=", "=", "==", "!="]
-        # pick longest op string contained in expression
-        matching_ops = [op for op in ops if op in self.condition_str]
-        matching_ops_len1 = [op for op in matching_ops if len(op) == 1]
-        matching_ops_len2 = [op for op in matching_ops if len(op) == 2]
-        if len(matching_ops) == 0:
-            raise ValueError(f"Parse error in expression '{self.condition_str}'. Operator not found")
-        elif len(matching_ops_len2) == 0 and len(matching_ops_len1) > 1:
-            raise ValueError(f"Parse error in expression '{self.condition_str}'. Multiple operators found")
-        elif len(matching_ops_len2) > 1:
-            raise ValueError(f"Parse error in expression '{self.condition_str}'. Multiple operators found")
-        else:
-            if len(matching_ops_len2) == 1:
-                op = matching_ops_len2[0]
-            else:
-                op = matching_ops_len1[0]
-
-        self.op = op
-        op_index = self.condition_str.index(op)
-        self.lhs = self.condition_str[: op_index].strip()
-        self.rhs = self.condition_str[op_index + len(op) :].strip()
-        self.tag_name = self.lhs

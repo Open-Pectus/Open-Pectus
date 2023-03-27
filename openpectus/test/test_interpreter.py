@@ -50,7 +50,7 @@ mark: a
 incr counter
 """)
         print()
-        print("Initial program") 
+        print("Initial program")
         print_program(program)
 
         uod = TestUod()
@@ -79,7 +79,7 @@ watch: counter > 0
 
         print_log(i)
         self.assertEqual(["a", "c", "b", "d"], i.get_marks())
-        # Note that first watch is also activated and its body executed 
+        # Note that first watch is also activated and its body executed
         # even though it is not activated when first run. This represents the
         # interrupt nature of watches and alarms. So the behavior is not like this:
         # self.assertEqual(["a", "c", "d"], i.get_marks())

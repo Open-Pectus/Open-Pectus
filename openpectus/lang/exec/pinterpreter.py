@@ -251,48 +251,55 @@ class PInterpreter(PNodeVisitor):
             time.sleep(0.1)
 
     def _evaluate_condition(self, condition_node: PWatch | PAlarm) -> bool:
-        # TODO Need condition expression definition and parsing for a proper implementation.
         # TODO implement assert as analyzer check
         # TODO implement unit compability as analyzer check
         c = condition_node.condition
         assert c is not None, "Error in condition"
-        try:
-            c.parse()
-        except Exception:
-            logger.error(f"Condition parse error: {str(condition_node)}", exc_info=True)
-            return False
-
-        assert c.tag_name, "Error in condition"
-        tag_name = c.tag_name.upper()
+        assert not c.error, "Error parsing condition"
+        assert c.tag_name, "Error in condition tag"
+        assert c.tag_value, "Error in condition value"
 
         # TODO implement assert as analyzer check
-        assert self.tags.has(tag_name) or self.uod.tags.has(tag_name)
-        tag = self.tags.get(tag_name) if self.tags.has(tag_name) else self.uod.tags.get(tag_name)
+        assert self.tags.has(c.tag_name) or self.uod.tags.has(c.tag_name)
+        tag = self.tags.get(c.tag_name) if self.tags.has(c.tag_name) \
+            else self.uod.tags.get(c.tag_name)
         tag_value = tag.as_quantity()
         # TODO if not unit specified, pick base unit
         # TODO add analyzer check for unit compability
-        expected_value = pint.Quantity(c.rhs)
+        expected_value = pint.Quantity(c.tag_value_numeric, c.tag_unit)
         if not tag_value.is_compatible_with(expected_value):  # type: ignore
             logger.error("Incompatible units")
             raise ValueError("Incompatible units")
 
         # TODO consider pushing this to a condition.evaluate() method
-        # but do we want ast nodes to depend on tags?
-        match c.op:
-            case '<':
-                return tag_value < expected_value
-            case '<=':
-                return tag_value <= expected_value
-            case '=' | '==':
-                return tag_value == expected_value
-            case '>':
-                return tag_value > expected_value
-            case '>=':
-                return tag_value >= expected_value
-            case '!=':
-                return tag_value != expected_value
-            case  _:
-                raise ValueError(f"Unsupported operation: '{c.op}'")
+        # but we don't want ast nodes to depend on tags so we need an
+        # abstraction - once we're sure TagCollection is complete
+        result = None
+        try:
+            match c.op:
+                case '<':
+                    result = tag_value < expected_value
+                case '<=':
+                    result = tag_value <= expected_value
+                case '=' | '==':
+                    result = tag_value == expected_value
+                case '>':
+                    result = tag_value > expected_value
+                case '>=':
+                    result = tag_value >= expected_value
+                case '!=':
+                    result = tag_value != expected_value
+                case  _:
+                    pass
+        except TypeError:
+            msg = "Conversion error for values {!r} and {!r}".format(tag_value, expected_value)
+            logger.error(msg, exc_info=True)
+            raise ValueError("Conversion error")
+
+        if result is None:
+            raise ValueError(f"Unsupported operation: '{c.op}'")
+
+        return result
 
     def visit_children(self, children: List[PNode] | None):
         ar = self.stack.peek()
@@ -380,7 +387,7 @@ class PInterpreter(PNodeVisitor):
         ar = self.stack.peek()
         if ar.owner is not node:
             ar = ActivationRecord(node, self.tick_time, TagCollection.create_default())            
-            self.register_interrupt(ar, create_interrupt_handler(ar))            
+            self.register_interrupt(ar, create_interrupt_handler(ar))
         else:
             logger.debug(f"{str(node)} interrupt invoked")
             if node.activated:
