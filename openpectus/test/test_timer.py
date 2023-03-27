@@ -28,7 +28,7 @@ class TimerTest(unittest.TestCase):
         timer.start()
         print('timer.start() returned')
 
-        time.sleep(10.5)
+        time.sleep(5.5)
         timer.stop()
         print('timer.stopped')
 
