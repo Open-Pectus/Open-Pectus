@@ -109,6 +109,14 @@ watch: A > 2 ml
         self.assertIsInstance(c, pcodeParser.ConditionContext)
         self.assertConditionValue(c, "X", ">", "10", None)
 
+    def test_condition_negative_value(self):
+        p = parse("X > -10")
+        c = p.parser.condition()  # type: ignore
+        self.assertIsNotNone(c)
+        p.printSyntaxTree(c)
+        self.assertIsInstance(c, pcodeParser.ConditionContext)
+        self.assertConditionValue(c, "X", ">", "-10", None)
+
     def test_condition_error(self):
         p = parse("X > ab ml")
         c = p.parser.condition()  # type: ignore
@@ -117,6 +125,13 @@ watch: A > 2 ml
         self.assertIsInstance(c, pcodeParser.ConditionContext)
         self.assertConditionError(c)
 
+    def test_condition_error_2(self):
+        p = parse("X > -ab ml")
+        c = p.parser.condition()  # type: ignore
+        self.assertIsNotNone(c)
+        p.printSyntaxTree(c)
+        self.assertIsInstance(c, pcodeParser.ConditionContext)
+        self.assertConditionError(c)
     def assertIsWatchWithCondition(self, c: ParserRuleContext, condition: str):
         self.assertIsNotNone(c)
         self.assertIsInstance(c, pcodeParser.WatchContext)

@@ -40,7 +40,8 @@ condition       : condition_tag WHITESPACE* compare_op WHITESPACE* condition_val
                 | condition_error;
 condition_tag   : IDENTIFIER;
 compare_op      : COMPARE_OP;
-condition_value : FLOAT;
+//condition_value : FLOAT;
+condition_value : POSITIVE_FLOAT | MINUS POSITIVE_FLOAT ;
 condition_unit  : CONDITION_UNIT; 
 
 condition_error : .*?  ~(NEWLINE | HASH);
@@ -53,7 +54,7 @@ mark            : time? MARK COLON WHITESPACE* mark_name?;
 mark_name       : IDENTIFIER ;
 
 time    : timeexp WHITESPACE+ ;
-timeexp : FLOAT ;
+timeexp : POSITIVE_FLOAT ;
 
 comment : HASH comment_text ;
 comment_text : .*? ~NEWLINE;
@@ -125,9 +126,10 @@ duration_unit: h|min|s|L|CV
  */
 
 IDENTIFIER : LETTER ( (LETTER | DIGIT | WHITESPACE | UNDERSCORE)* (LETTER | DIGIT | UNDERSCORE)+ )? ;
-FLOAT   : DIGIT+ (PERIOD DIGIT+)?
-        | DIGIT+ (COMMA DIGIT+)?
-        ;
+
+POSITIVE_FLOAT   : DIGIT+ (PERIOD DIGIT+)?
+                 | DIGIT+ (COMMA DIGIT+)?
+                 ;
 
 COMPARE_OP : '=' | '==' | '<=' | '<' | '>=' | '>' | '!=';
 
@@ -139,6 +141,7 @@ SPACE   : ' ' ;
 TAB     : '\t' ;
 HASH    : '#' ;
 COLON   : ':' ;
+MINUS   : '-' ;
 
 NEWLINE	: ( '\r' | '\n' | '\r' '\n' ) ;
 
