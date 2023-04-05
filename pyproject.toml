@@ -4,5 +4,5 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "Open Pectus"
-authors = [{name = "Eskild Schroll-Fleischer", email = "eyfl@novonordisk.com"}, {name = "Morten Passow Odgaard", email = "mpo@mjolner.dk"}]
+authors = [{name = "Eskild Schroll-Fleischer", email = "eyfl@novonordisk.com"}, {name = "Morten Passow Odgaard", email = "mpo@mjolner.dk"}, {name = "Jan H. Knudsen", email = "jhk@mjolner.dk"}]
 dynamic = ["version", "description"]
