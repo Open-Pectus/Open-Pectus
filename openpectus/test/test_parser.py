@@ -23,6 +23,13 @@ def get_first_child(ctx: ParserRuleContext, type):
 
 
 class ParserTest(unittest.TestCase):
+    def test_mark(self):
+        p = parse("Mark:   a  ")
+        c = p.parser.mark()  # type: ignore
+        self.assertIsNotNone(c)
+        p.printSyntaxTree(c)
+        self.assertIsInstance(c, pcodeParser.MarkContext)
+
     def test_block(self):
         p = parse("block: foo")
         c = p.parser.block()  # type: ignore
@@ -132,6 +139,7 @@ watch: A > 2 ml
         p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.ConditionContext)
         self.assertConditionError(c)
+
     def assertIsWatchWithCondition(self, c: ParserRuleContext, condition: str):
         self.assertIsNotNone(c)
         self.assertIsInstance(c, pcodeParser.WatchContext)
@@ -319,6 +327,16 @@ watch: A > 2 ml
 
         test("Inlet PU01: VA01", "Inlet PU01", "VA01")
         test("PU01: 77.64 %", "PU01", "77.64 %")
+
+    def test_program_ws(self):
+        code = """
+Block
+    Mark : 1
+        """
+        p = parse(code)
+        ctx = p.parser.program()  # type: ignore
+
+        p.printSyntaxTree(ctx)
 
 
 if __name__ == "__main__":

@@ -2,7 +2,9 @@
 grammar pcode;
 
 
-program : WHITESPACE* instruction (NEWLINE WHITESPACE* instruction)* EOF;
+program : WHITESPACE* instruction WHITESPACE*
+          (NEWLINE WHITESPACE* instruction WHITESPACE*)*
+          EOF;
 
 instruction
         : builtin_command comment?
@@ -36,14 +38,11 @@ watch           : time? WATCH (COLON WHITESPACE* condition)?;
 alarm           : time? ALARM (COLON WHITESPACE* condition)?;
  
 condition       : condition_tag WHITESPACE* compare_op WHITESPACE* condition_value (WHITESPACE* condition_unit)? WHITESPACE*
-//condition       : condition_tag WHITESPACE* compare_op WHITESPACE* condition_value WHITESPACE* condition_unit?
                 | condition_error;
 condition_tag   : IDENTIFIER;
 compare_op      : COMPARE_OP;
-//condition_value : FLOAT;
-condition_value : POSITIVE_FLOAT | MINUS POSITIVE_FLOAT ;
+condition_value : POSITIVE_FLOAT | MINUS POSITIVE_FLOAT ; // TODO support text 
 condition_unit  : CONDITION_UNIT; 
-
 condition_error : .*?  ~(NEWLINE | HASH);
 
 increment_rc    : time? INCREMENT_RC ;

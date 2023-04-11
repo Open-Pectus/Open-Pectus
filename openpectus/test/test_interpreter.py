@@ -104,6 +104,64 @@ watch: counter > 0
         print_log(i)
         self.assertEqual(["a", "c", "b", "e", "d"], i.get_marks())
 
+    def test_watch_long_running_order(self):
+        # specify order of highly overlapping instructions
+        # between main program and a single interrupt handler
+        program = build_program("""
+mark: a
+watch: Run counter > -1
+    mark: a1
+    mark: a2
+    mark: a3
+mark: b
+mark: b1
+mark: b2
+mark: b3
+""")
+        uod = TestUod()
+        i = PInterpreter(program, uod)
+        i.run(50)
+
+        print_log(i)
+        self.assertEqual(["a", "b", "a1", "b1", "a2", "b2", "a3", "b3"], i.get_marks())
+
+    @unittest.skip("TODO")
+    def test_watch_block_long_running_block_time(self):
+        # question for another test: is Block time defined for alarm without block? Yes
+
+        # specify block time for block in interrupt handler
+
+        program = build_program("""
+mark: a
+watch: Run counter > -1
+    Block: A
+        mark: a1
+        watch: Block time > 0.5 sec
+            mark: a2
+        watch: Block time > 1.0 sec
+            mark: a3
+        watch: Block time > 1.2 sec
+            mark: a32
+        watch: Block time > 1.3 sec
+            mark: a33
+        watch: Block time > 1.4 sec
+            mark: a34
+        watch: Block time > 1.5 sec
+            mark: a4
+            End block
+mark: b
+""")
+        print_program(program)
+
+        uod = TestUod()
+        i = PInterpreter(program, uod)
+        i.run(50)
+
+        # TODO fix intepretation error, watch instruction(s) not being executed
+
+        print_log(i)
+        self.assertEqual(["a", "b", "a1", "a2", "a3", "a4"], i.get_marks())
+
     def test_block(self):
         program = build_program("""
 Block: A
@@ -181,6 +239,19 @@ Mark: A3
         i.validate_commands()
         print_program(program, show_errors=True, show_line_numbers=True, show_blanks=True)
         i.run()
+
+    @unittest.skip("TODO")
+    def test_watch_tag_categorized_value(self):
+        program = build_program("""
+watch: LT01 = Full
+    mark: a1
+mark: b
+""")
+        uod = TestUod()
+        i = PInterpreter(program, uod)
+        i.run(5)
+
+        print_log(i)
 
     @unittest.skip("TODO")
     def test_command_long_running(self):

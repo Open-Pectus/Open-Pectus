@@ -12,7 +12,9 @@ from lang.model.pprogram import (
     PWatch,
     # PAlarm,
     PMark,
-    PCommand
+    PCommand,
+    PErrorInstruction,
+    PCondition
 )
 
 from lang.grammar.pprogramformatter import PProgramFormatter, print_program
@@ -89,9 +91,6 @@ class BuilderTest(unittest.TestCase):
         self.assertIsInstance(block, PBlock)
         self.assertTrue(block.has_error())
 
-    @unittest.skip(
-        "TODO error handling decision. should an instruction with errors affect the following lines?"
-    )
     def test_block_with_invalid_scope_indentation(self):
         p = build("    block: foo")
         program = p.build_model()
@@ -120,19 +119,24 @@ class BuilderTest(unittest.TestCase):
         self.assertIsInstance(end_block, PEndBlock)
         self.assertTrue(end_block.has_error())
 
-    @unittest.skip("TODO error handling decision. May not be an error")
     def test_block_with_end_block_with_missing_indentation(self):
         p = build(
-            """block: foo
-end block"""
+            """Block: foo
+End block"""
         )
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
 
         block: PBlock = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(block)
         self.assertEqual("foo", block.name)
-        print_program(program)
+        print_program(program, show_errors=True)
+
+        # TODO clarify - do we allow empty blocks?
+        # Note: This may not be an error. It is an empty Block, followed
+        # by an End block which happens to do nothing. An analyzer
+        # might issue a warning about it.
+        # The current implementation disallows empty blocks and thus
+        # gives an indentation error on End block
 
         end_block = block.get_child_nodes()[0]
         self.assertIsInstance(end_block, PEndBlock)
@@ -572,6 +576,69 @@ watch: counter > 0 ml
 
         self.assertIsInstance(blank_3, PBlank)
         self.assertEqual(10, blank_3.line)
+
+    def test_program_mark(self):
+        p = build(
+            """
+Mark:  a  
+        """
+        )
+
+        program = p.build_model()
+        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        self.assertFalse(program.has_error(recursive=True))
+
+    def test_program_watch(self):
+        p = build(
+            """
+Watch A > 0     # missing colon
+    Mark: a
+        """
+        )
+
+        program = p.build_model()
+        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        self.assertTrue(program.has_error(recursive=True))
+
+    def test_program_errors(self):
+        p = build(
+            """
+Mark:  a  
+Mark  b  # comment
+watch: counter >  
+    Mark: c
+Bad command
+        """
+        )
+
+        program = p.build_model()
+
+        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        self.assertFalse(program.has_error(recursive=True))
+        all = program.get_instructions(include_blanks=True)
+
+        blank_1, mark_a, mark_b, watch, mark_c, bad, blank_2 = all        
+
+        self.assertIsInstance(blank_1, PBlank)
+        self.assertEqual(1, blank_1.line)
+
+        self.assertIsInstance(mark_a, PMark)
+        self.assertEqual(2, mark_a.line)
+
+        self.assertIsInstance(mark_b, PErrorInstruction)
+        self.assertEqual(3, mark_b.line)
+
+        self.assertIsInstance(watch, PWatch)
+        self.assertEqual(4, watch.line)
+        assert isinstance(watch, PWatch)
+        assert isinstance(watch.condition, PCondition)
+        self.assertTrue(watch.condition.error)
+
+        self.assertIsInstance(mark_c, PMark)
+        self.assertEqual(5, mark_c.line)
+
+        self.assertIsInstance(bad, PCommand)
+        self.assertEqual(6, bad.line)
 
 
 if __name__ == "__main__":

@@ -3,6 +3,8 @@ from enum import Enum
 import logging
 from typing import List
 
+import pint
+
 from lang.model.pprogram import (
     PNode,
     PProgram,
@@ -16,12 +18,8 @@ from lang.model.pprogram import (
     PMark,
 )
 
-from lang.exec.tags import (
-    TagCollection,
-    DEFAULT_TAG_BLOCK_TIME,
-    DEFAULT_TAG_RUN_TIME,
-)
-from lang.exec.uod import UnitOperationDefinitionBase
+from lang.exec.tags import TagCollection
+from lang.exec.commands import CommandCollection
 from lang.exec.pinterpreter import PNodeVisitor
 
 
@@ -83,6 +81,9 @@ class AnalyzerVisitorBase(PNodeVisitor):
         pass
 
     def visit_PWatch(self, node: PWatch):
+        self.visit_children(node.children)
+
+    def visit_PAlarm(self, node: PAlarm):
         self.visit_children(node.children)
 
 
@@ -166,38 +167,134 @@ class InfiniteBlockVisitor(AnalyzerVisitorBase):
         self.check_global_end_block(node)
 
 
-class TagsAnalyzerVisitor(AnalyzerVisitorBase):
+class ConditionAnalyzerVisitor(AnalyzerVisitorBase):
     def __init__(self, tags: TagCollection) -> None:
         super().__init__()
         self.tags = tags
 
-    def create_undefined(self, node: PNode, tag_name: str):
-        return AnalyzerItem(
-            "UndefinedTag",
-            "Undefined tag",
-            node,
-            AnalyzerItemType.WARNING,
-            f"The tag '{tag_name}' is not defined"
-        )
-
     def visit_PWatch(self, node: PWatch):
-        # TODO now is the time to add conditions to grammar/AST
-        raise NotImplementedError()
-        # node.condition.tag_name
-        # self.visit_children(node.children)
+        self.analyze_condition(node)
+        super().visit_PWatch(node)
+
+    def visit_PAlarm(self, node: PAlarm):
+        self.analyze_condition(node)
+        super().visit_PAlarm(node)
+
+    def analyze_condition(self, node: PWatch | PAlarm):
+        if node.condition is None:
+            self.add_item(AnalyzerItem(
+                "ConditionMissing",
+                "Condition missing",
+                node,
+                AnalyzerItemType.ERROR,
+                "A condition is required"
+            ))
+            return
+        condition = node.condition
+
+        tag_name = condition.tag_name
+        if tag_name is None or tag_name.strip() == '':
+            self.add_item(AnalyzerItem(
+                "MissingTag",
+                "Missing tag",
+                node,
+                AnalyzerItemType.ERROR,
+                "A condition must start with a tag name"
+            ))
+            return
+
+        if not self.tags.has(tag_name):
+            self.add_item(AnalyzerItem(
+                "UndefinedTag",
+                "Undefined tag",
+                node,
+                AnalyzerItemType.ERROR,
+                f"The tag name '{tag_name}' is not valid"
+            ))
+            return
+
+        tag = self.tags.get(tag_name)
+
+        if tag.unit is None and condition.tag_unit is not None:
+            self.add_item(AnalyzerItem(
+                "UnexpectedUnit",
+                "Unexpected tag unit",
+                node,
+                AnalyzerItemType.ERROR,
+                f"Unit '{condition.tag_unit}' was specified for a tag with no unit"
+            ))
+            return
+
+        if tag.unit is not None and condition.tag_unit is None:
+            self.add_item(AnalyzerItem(
+                "MissingUnit",
+                "Missing tag unit",
+                node,
+                AnalyzerItemType.ERROR,
+                "The tag requires that a unit is provided"
+            ))
+            return
+
+        if tag.unit is not None:
+            tag_unit = tag.get_pint_unit()
+            assert tag_unit is not None
+            condition_unit = pint.Unit(condition.tag_unit)
+            if not tag_unit.is_compatible_with(condition_unit):
+                self.add_item(AnalyzerItem(
+                    "IncompatibleUnits",
+                    "Incompatible units",
+                    node,
+                    AnalyzerItemType.ERROR,
+                    f"The tag unit '{tag_unit}' is not compatible with the provided unit '{condition_unit}'"
+                ))
+                return
 
 
-class SemanticAnalyzer(PNodeVisitor):
-    def __init__(self) -> None:
+class CommandAnalyzerVisitor(AnalyzerVisitorBase):
+    def __init__(self, commands: CommandCollection) -> None:
+        super().__init__()
+        self.commands = commands
+
+    def visit_PCommand(self, node: PCommand):
+        assert node.name is not None
+        name = node.name
+
+        if not self.commands.has(name):
+            self.add_item(AnalyzerItem(
+                "UndefinedCommand",
+                "Undefined command",
+                node,
+                AnalyzerItemType.ERROR,
+                f"The command name '{name}' is not valid"
+            ))
+            return
+
+        command = self.commands.get(name)
+        if not command.validate_args(node.args):
+            self.add_item(AnalyzerItem(
+                "CommandArgsInvalid",
+                "Invalid command arguments",
+                node,
+                AnalyzerItemType.ERROR,
+                f"The command argument '{node.args}' is not valid"
+            ))
+            return
+
+
+class SemanticAnalyzer():
+    def __init__(self, tags: TagCollection, commands: CommandCollection) -> None:
         super().__init__()
         self.items: List[AnalyzerItem] = []
         self.analyzers = [
-            UnreachableCodeVisitor()
+            UnreachableCodeVisitor(),
+            InfiniteBlockVisitor(),
+            ConditionAnalyzerVisitor(tags),
+            CommandAnalyzerVisitor(commands)
         ]
 
     def analyze(self, program: PProgram):
-        self.visit(program)
         for analyzer in self.analyzers:
+            analyzer.visit(program)
             self.items.extend(analyzer.items)
 
     @property
@@ -207,23 +304,3 @@ class SemanticAnalyzer(PNodeVisitor):
     @property
     def warnings(self) -> List[AnalyzerItem]:
         return list([i for i in self.items if i.type == AnalyzerItemType.ERROR])
-
-    def visit_children(self, children: List[PNode] | None):
-        if children is not None:
-            for child in children:
-                self.visit(child)
-
-    def visit_PProgram(self, node: PProgram):
-        self.visit_children(node.children)
-
-    def visit_PBlank(self, node: PBlank):
-        pass
-
-    def visit_PMark(self, node: PMark):
-        pass
-
-    def visit_PBlock(self, node: PBlock):
-        self.visit_children(node.children)
-
-    def visit_PEndBlock(self, node: PEndBlock):
-        pass

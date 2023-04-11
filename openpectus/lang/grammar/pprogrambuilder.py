@@ -20,7 +20,8 @@ from lang.model.pprogram import (
     PCommand,
     PError,
     PBlank,
-    PCondition
+    PCondition,
+    PErrorInstruction
 )
 
 INDENTATION_SPACES = 4
@@ -142,8 +143,10 @@ class PProgramBuilder(pcodeListener):
                 self.instruction.add_error(self.instructionError)
 
         # attach start position
-        assert self.instruction is not None, f"Expected an instruction from src '{ctx.getText()}'"
         assert self.instructionStart is not None
+        if self.instruction is None:
+            self.instruction = PErrorInstruction(self.scope, ctx.getText())
+
         self.instruction.line = self.instructionStart.line
         self.instruction.indent = self.instructionStart.indent
 

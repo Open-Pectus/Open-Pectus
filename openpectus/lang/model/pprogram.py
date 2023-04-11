@@ -227,7 +227,7 @@ class PMark(PInstruction):
         self.children = []
         self.name: str = ''
 
-    def __str__(self) -> str:        
+    def __str__(self) -> str:
         return super().__str__() + ": " + self.name
 
 
@@ -248,6 +248,17 @@ class PBlank(PInstruction):
     """ Represents an all-whitespace pcode line. """
     def __init__(self, parent: PNode) -> None:
         super().__init__(parent)
+
+
+class PErrorInstruction(PInstruction):
+    """ Represents a non-parsable instruction pcode line """
+    def __init__(self, parent: PNode, code: str) -> None:
+        super().__init__(parent)
+        self.children = []
+        self.code: str = code
+
+    def __str__(self) -> str:
+        return super().__str__() + ": Code: " + self.code
 
 
 # --- Non-nodes ---

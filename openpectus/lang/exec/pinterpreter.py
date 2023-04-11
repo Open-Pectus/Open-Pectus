@@ -136,6 +136,7 @@ class PInterpreter(PNodeVisitor):
         return [x["message"] for x in self.logs if x["message"][0] != 'P']
 
     def interpret(self) -> Generator:
+        """ Create generator for interpreting the main program. """
         self.running = True
         tree = self._program
         if tree is None:
@@ -165,7 +166,7 @@ class PInterpreter(PNodeVisitor):
         self.interrupts.append((ar, handler))
 
     def unregister_interrupt(self, ar: ActivationRecord):
-        pairs = [(x, y) for (x, y) in self.interrupts if x is ar]
+        pairs = list([(x, y) for (x, y) in self.interrupts if x is ar])
         for pair in pairs:
             self.interrupts.remove(pair)
             logger.debug(f"Interrupt handler unregistered for {ar}")
@@ -380,12 +381,15 @@ class PInterpreter(PNodeVisitor):
 
     def visit_PWatch(self, node: PWatch):
         def create_interrupt_handler(ar: ActivationRecord) -> Generator:
+            # TODO will this work with nested interrupt handlers,
+            # possibly including blocks?
             self.stack.push(ar)
             yield from self.visit_PWatch(node)
             self.stack.pop()
 
         ar = self.stack.peek()
         if ar.owner is not node:
+            # TODO the ar get the current time. Is this correct?
             ar = ActivationRecord(node, self.tick_time, TagCollection.create_default())            
             self.register_interrupt(ar, create_interrupt_handler(ar))
         else:
