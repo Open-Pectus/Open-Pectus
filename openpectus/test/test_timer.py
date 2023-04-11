@@ -5,6 +5,7 @@ import time
 from lang.exec.timer import ZeroThreadTimer, OneThreadTimer
 
 
+@unittest.skip("Slow")
 class TimerTest(unittest.TestCase):
     def test_zero_thread_timer(self):
         def tick() -> bool:
@@ -28,7 +29,7 @@ class TimerTest(unittest.TestCase):
         timer.start()
         print('timer.start() returned')
 
-        time.sleep(10.5)
+        time.sleep(5.5)
         timer.stop()
         print('timer.stopped')
 

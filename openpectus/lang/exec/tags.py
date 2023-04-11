@@ -9,6 +9,7 @@ from pint import UnitRegistry, Quantity
 ureg = UnitRegistry()
 Q_ = Quantity
 
+# Represents tag API towards interpreter
 
 DEFAULT_TAG_BASE = "BASE"
 DEFAULT_TAG_RUN_COUNTER = "RUN COUNTER"
@@ -16,36 +17,40 @@ DEFAULT_TAG_BLOCK_TIME = "BLOCK TIME"
 DEFAULT_TAG_RUN_TIME = "RUN TIME"
 
 
+# seems only relevant in hw interface
 class TagDirection(Enum):
     READ = 'READ',
     WRITE = 'WRITE',
     READ_WRITE = 'READ_WRITE'
 
 
-# TODO refactor to support pint units. Consider whether to hide pint or expose it.
 # TODO add support for 'safe' values, ie. to allow specifying a value that is automatically
 # set when interpretation state is one or more of stopped/paused/on hold
 # TODO add support for choices tags (unit type or sub class?)
-# TODO add support for direction, read/write/read-write
 
 class Tag:
     def __init__(
             self,
             name: str,
             value=None,
-            unit=None,
-            direction: TagDirection = TagDirection.READ,
+            unit: str | None = None,
             choices: List[str] | None = None) -> None:
 
         self.name: str = name
         self.value = value
         self.unit = unit
+        assert unit is None or isinstance(unit, str)
 
     def set_value(self, val) -> None:
         self.value = val
 
     def get_value(self):
         return self.value
+
+    def get_pint_unit(self):
+        if self.unit is None:
+            return None
+        return pint.Unit(self.unit)
 
     def as_quantity(self) -> pint.Quantity:
         return pint.Quantity(self.value, self.unit)
@@ -95,6 +100,10 @@ class TagCollection():
 
         self.tags[tag.name.upper()] = tag
 
+    def with_tag(self, tag: Tag):
+        self.add(tag)
+        return self
+
     def has(self, tag_name: str) -> bool:
         if tag_name is None or tag_name.strip() == '':
             raise ValueError("tag_name is None or empty")
@@ -128,7 +137,7 @@ class TagCollection():
     def create_default() -> TagCollection:
         tags = TagCollection()
         defaults = [
-            (DEFAULT_TAG_BASE, "min"), # TODO this should not be wrapped in pint quantity
+            (DEFAULT_TAG_BASE, "min"),  # TODO this should not be wrapped in pint quantity
             (DEFAULT_TAG_RUN_COUNTER, 0),
             (DEFAULT_TAG_BLOCK_TIME, 0),
             (DEFAULT_TAG_RUN_TIME, 0),

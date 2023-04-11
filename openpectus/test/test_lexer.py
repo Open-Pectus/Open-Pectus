@@ -6,7 +6,8 @@ from lang.grammar.pgrammar import PGrammar
 def get_token_texts(code):
     p = PGrammar()
     p.parse(code)
-    return list(t.text for t in p.tokens)
+    tokens = list(p.tokens)
+    return list(t.text for t in tokens)
 
 
 class LexerTest(unittest.TestCase):
@@ -42,9 +43,17 @@ class LexerTest(unittest.TestCase):
         code = "foo=3"
         self.assertEqual(['foo', '=', '3'], get_token_texts(code))
 
+    def test_condition_negative_value(self):
+        code = "foo=-3"
+        self.assertEqual(['foo', '=', '-', '3'], get_token_texts(code))
+
     def test_condition_unit(self):
         code = "foo > 3 ml"
         self.assertEqual(['foo', ' ', '>', ' ', '3', ' ', 'ml'], get_token_texts(code))
+
+    def test_watch_condition(self):
+        code = "watch:foo > 3 ml"
+        self.assertEqual(['watch', ':', 'foo', ' ', '>', ' ', '3', ' ', 'ml'], get_token_texts(code))
 
 
 if __name__ == "__main__":

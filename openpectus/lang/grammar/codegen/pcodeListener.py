@@ -125,6 +125,51 @@ class pcodeListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by pcodeParser#condition_tag.
+    def enterCondition_tag(self, ctx:pcodeParser.Condition_tagContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#condition_tag.
+    def exitCondition_tag(self, ctx:pcodeParser.Condition_tagContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#compare_op.
+    def enterCompare_op(self, ctx:pcodeParser.Compare_opContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#compare_op.
+    def exitCompare_op(self, ctx:pcodeParser.Compare_opContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#condition_value.
+    def enterCondition_value(self, ctx:pcodeParser.Condition_valueContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#condition_value.
+    def exitCondition_value(self, ctx:pcodeParser.Condition_valueContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#condition_unit.
+    def enterCondition_unit(self, ctx:pcodeParser.Condition_unitContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#condition_unit.
+    def exitCondition_unit(self, ctx:pcodeParser.Condition_unitContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#condition_error.
+    def enterCondition_error(self, ctx:pcodeParser.Condition_errorContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#condition_error.
+    def exitCondition_error(self, ctx:pcodeParser.Condition_errorContext):
+        pass
+
+
     # Enter a parse tree produced by pcodeParser#increment_rc.
     def enterIncrement_rc(self, ctx:pcodeParser.Increment_rcContext):
         pass

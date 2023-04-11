@@ -1,15 +1,17 @@
 import unittest
 from pint import UnitRegistry, Quantity, Unit, DimensionalityError
+import pint
 from pint.util import UnitsContainer
 
 
 ureg = UnitRegistry()
 Q_ = Quantity
+U_ = Unit
 
 
 class PintTest(unittest.TestCase):
 
-    def test_basics(self):
+    def test_basics_quantity(self):
         distance = 24.0 * ureg.meter
         self.assertIsInstance(distance, Quantity)
         self.assertEqual("24.0 meter", str(distance))
@@ -35,6 +37,14 @@ class PintTest(unittest.TestCase):
         self.assertEqual("liter", str(volume.units))
         self.assertEqual("[length] * [length] * [length]", volume.dimensionality)
 
+    def test_basics_unit(self):
+        u = U_("s")
+        self.assertFalse(u.dimensionless)
+        print("{!r}".format(u))
+
+        q = 5 * u
+        print("{!r}".format(q))
+
     def test_dimensionless(self):
         count = Q_(3)
         self.assertTrue(count.dimensionless)
@@ -44,12 +54,18 @@ class PintTest(unittest.TestCase):
         self.assertTrue(count.dimensionless)
         self.assertEqual("<Quantity(3, 'dimensionless')>", "{!r}".format(count))
 
+        u1 = U_("")  # must use empty string, not None or no argument
+        self.assertTrue(u1.dimensionless)
+        self.assertEqual("<Unit('dimensionless')>", u1.__repr__())
+
     def test_formatting(self):
         weight = 2 * ureg.kg
         s = 'The magnitude is {0.magnitude} with units {0.units}'.format(weight)
         self.assertEqual("The magnitude is 2 with units kilogram", s)
         repr = 'The representation is {!r}'.format(weight)
         self.assertEqual("The representation is <Quantity(2, 'kilogram')>", repr)
+        # or just use __repr__()
+        self.assertEqual("<Quantity(2, 'kilogram')>", weight.__repr__())
 
     def test_conversion(self):
         distance_km = 3.2 * ureg.kilometers
@@ -62,7 +78,7 @@ class PintTest(unittest.TestCase):
             _ = distance_km.to(ureg.second)
         self.assertEqual("Cannot convert from 'kilometer' ([length]) to 'second' ([time])", str(err.exception))
 
-    def test_compatibility(self):
+    def test_compatibility_quantity(self):
         dist = Q_("310m")
         weight = Q_("3kg")
         temp = Q_(3, ureg.degC)
@@ -84,6 +100,14 @@ class PintTest(unittest.TestCase):
         # or maybe just check dimensionality with the check() method
         self.assertTrue(dist.check('[length]'))
         self.assertTrue(Q_("3kg").check('[mass]'))
+
+    def test_compatibility_unit(self):
+        second = pint.Unit("sec")  # the default constructor
+        hour = U_("h")  # or the short hand
+        kg = U_("kg")
+
+        self.assertTrue(second.is_compatible_with(hour))
+        self.assertFalse(second.is_compatible_with(kg))
 
     @unittest.skip("Not sure we need this. Requres the Babel lib")
     def test_locale(self):

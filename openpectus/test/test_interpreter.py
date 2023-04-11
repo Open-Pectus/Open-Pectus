@@ -7,7 +7,6 @@ from lang.model.pprogram import (
     PProgram,
 )
 from lang.exec.pinterpreter import (
-    SemanticAnalyzer,
     PInterpreter,
 )
 from lang.exec.uod import UnitOperationDefinitionBase
@@ -15,7 +14,6 @@ from lang.exec.tags import (
     Tag,
     DEFAULT_TAG_BASE
 )
-import pint
 
 
 def build_program(s) -> PProgram:
@@ -26,58 +24,6 @@ def build_program(s) -> PProgram:
 
 def print_log(i: PInterpreter):
     print('\n'.join(str(x['time']) + '\t' + str(x['unit_time']) + '\t' + x['message'] for x in i.logs))
-
-
-# def await_ticks(interpreter: PInterpreter, ticks: int):
-#     for _ in range(ticks):
-#         time.sleep(0.5)
-#         interpreter.tick()
-
-
-class SemanticAnalyzerTest(unittest.TestCase):
-    def test_sequential_marks(self):
-        program = build_program("""
-mark: a
-mark: b
-mark: c
-""")
-        sa = SemanticAnalyzer()
-        sa.visit_PProgram(program)
-
-    @unittest.skip("TODO")
-    def test_dead_code_warning(self):
-        program = build_program("""
-Block: 1
-    mark: a
-    End block
-    mark: b
-mark: c
-""")
-        raise NotImplementedError
-
-    @unittest.skip("TODO")
-    def test_infinite_block_warning(self):
-        program = build_program("""
-Block: 1
-    mark: a
-mark: c
-""")
-        raise NotImplementedError
-
-    @unittest.skip("TODO")
-    def test_condition_incompatible_units_warning(self):
-        program = build_program("""
-Watch: Block time > 3 L
-    mark: a
-""")
-
-    @unittest.skip("TODO")
-    def test_condition_undefined_tag_warning(self):
-        program = build_program("""
-Watch: Foo > 3
-    mark: a
-""")
-        raise NotImplementedError
 
 
 class InterpreterTest(unittest.TestCase):
@@ -104,7 +50,7 @@ mark: a
 incr counter
 """)
         print()
-        print("Initial program") 
+        print("Initial program")
         print_program(program)
 
         uod = TestUod()
@@ -133,7 +79,7 @@ watch: counter > 0
 
         print_log(i)
         self.assertEqual(["a", "c", "b", "d"], i.get_marks())
-        # Note that first watch is also activated and its body executed 
+        # Note that first watch is also activated and its body executed
         # even though it is not activated when first run. This represents the
         # interrupt nature of watches and alarms. So the behavior is not like this:
         # self.assertEqual(["a", "c", "d"], i.get_marks())
@@ -157,6 +103,64 @@ watch: counter > 0
 
         print_log(i)
         self.assertEqual(["a", "c", "b", "e", "d"], i.get_marks())
+
+    def test_watch_long_running_order(self):
+        # specify order of highly overlapping instructions
+        # between main program and a single interrupt handler
+        program = build_program("""
+mark: a
+watch: Run counter > -1
+    mark: a1
+    mark: a2
+    mark: a3
+mark: b
+mark: b1
+mark: b2
+mark: b3
+""")
+        uod = TestUod()
+        i = PInterpreter(program, uod)
+        i.run(50)
+
+        print_log(i)
+        self.assertEqual(["a", "b", "a1", "b1", "a2", "b2", "a3", "b3"], i.get_marks())
+
+    @unittest.skip("TODO")
+    def test_watch_block_long_running_block_time(self):
+        # question for another test: is Block time defined for alarm without block? Yes
+
+        # specify block time for block in interrupt handler
+
+        program = build_program("""
+mark: a
+watch: Run counter > -1
+    Block: A
+        mark: a1
+        watch: Block time > 0.5 sec
+            mark: a2
+        watch: Block time > 1.0 sec
+            mark: a3
+        watch: Block time > 1.2 sec
+            mark: a32
+        watch: Block time > 1.3 sec
+            mark: a33
+        watch: Block time > 1.4 sec
+            mark: a34
+        watch: Block time > 1.5 sec
+            mark: a4
+            End block
+mark: b
+""")
+        print_program(program)
+
+        uod = TestUod()
+        i = PInterpreter(program, uod)
+        i.run(50)
+
+        # TODO fix intepretation error, watch instruction(s) not being executed
+
+        print_log(i)
+        self.assertEqual(["a", "b", "a1", "a2", "a3", "a4"], i.get_marks())
 
     def test_block(self):
         program = build_program("""
@@ -235,6 +239,19 @@ Mark: A3
         i.validate_commands()
         print_program(program, show_errors=True, show_line_numbers=True, show_blanks=True)
         i.run()
+
+    @unittest.skip("TODO")
+    def test_watch_tag_categorized_value(self):
+        program = build_program("""
+watch: LT01 = Full
+    mark: a1
+mark: b
+""")
+        uod = TestUod()
+        i = PInterpreter(program, uod)
+        i.run(5)
+
+        print_log(i)
 
     @unittest.skip("TODO")
     def test_command_long_running(self):
