@@ -7,7 +7,6 @@ from lang.grammar.codegen.pcodeParser import pcodeParser
 from lang.grammar.codegen.pcodeListener import pcodeListener
 
 from lang.model.pprogram import (
-    TimeExp,
     PNode,
     PProgram,
     PInstruction,
@@ -269,7 +268,8 @@ class PProgramBuilder(pcodeListener):
         # NOTE: there is currently a mismatch between PInstruction which have 'time' and the grammar
         # where not all instructions have 'time'.
         assert isinstance(self.instruction, PInstruction)
-        self.instruction.time = TimeExp(ctx.getText())
+        time = ctx.getText()
+        self.instruction.time = None if time is None or time.strip() == '' else float(time)
 
     def exitTimeexp(self, ctx: pcodeParser.TimeexpContext):
         pass

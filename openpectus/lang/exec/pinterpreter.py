@@ -5,12 +5,12 @@ import time
 import pint
 import inspect
 
-from typing import Generator, List, Tuple
+from typing import Callable, Generator, List, Tuple
 from typing_extensions import override
 from lang.model.pprogram import (
-    TimeExp,
     PNode,
     PProgram,
+    PInstruction,
     PBlank,
     PBlock,
     PEndBlock,
@@ -113,12 +113,19 @@ class CallStack:
         return self.__str__()
 
 
+class LogEntry():
+    def __init__(self, time: float, unit_time: float | None = None, message: str = '') -> None:
+        self.time: float = time
+        self.unit_time: float | None = unit_time
+        self.message: str = message
+
+
 class PInterpreter(PNodeVisitor):
     def __init__(self, program: PProgram, uod: UnitOperationDefinitionBase) -> None:
         self.tags: TagCollection = TagCollection.create_default()
         self._program = program
         self.uod = uod
-        self.logs = []
+        self.logs: List[LogEntry] = []
         self.pause_node: PNode | None = None
         self.stack: CallStack = CallStack()
         self.interrupts: List[Tuple[ActivationRecord, Generator]] = []
@@ -133,7 +140,7 @@ class PInterpreter(PNodeVisitor):
         self.timer = OneThreadTimer(TICK_INTERVAL, self.tick)
 
     def get_marks(self) -> List[str]:
-        return [x["message"] for x in self.logs if x["message"][0] != 'P']
+        return [x.message for x in self.logs if x.message[0] != 'P']    
 
     def interpret(self) -> Generator:
         """ Create generator for interpreting the main program. """
@@ -143,8 +150,18 @@ class PInterpreter(PNodeVisitor):
             return ''
         yield from self.visit(tree)
 
-    def _add_to_log(self, _time, unit_time, message):
-        self.logs.append({"time": _time, "unit_time": unit_time, "message": message})
+    def _add_to_log(self, _time: float, unit_time: float | None, message: str):
+        self.logs.append(LogEntry(
+            time=_time,
+            unit_time=unit_time,
+            message=message)
+        )
+
+    def _warmup(self):
+        # pint takes forever to initialize - long enough
+        # to throw off timing of the first instruction.
+        # se we do this first
+        _ = pint.Quantity("0 sec")
 
     def _update_tags(self):
         if self.stack.any():
@@ -242,6 +259,7 @@ class PInterpreter(PNodeVisitor):
         self.running = False
 
     def run(self, max_ticks=-1):
+        self._warmup()
         logger.info("Interpretation started")
         self.ticks = 0
         self.max_ticks = max_ticks
@@ -250,6 +268,17 @@ class PInterpreter(PNodeVisitor):
 
         while self.running:
             time.sleep(0.1)
+
+    def _is_awaiting_threshold(self, node: PNode):
+        if isinstance(node, PInstruction):
+            if node.time is not None:
+                block_elapsed = self.tags.get(DEFAULT_TAG_BLOCK_TIME).as_quantity()
+                time_quantity = pint.Quantity(node.time, "sec")
+                if block_elapsed < time_quantity:
+                    logger.debug(f"Awaiting threshold: {time_quantity}, current: {block_elapsed}, time: {self.tick_time}")
+                    return True
+                logger.debug(f"Done awaiting time: {self.tick_time}")
+        return False
 
     def _evaluate_condition(self, condition_node: PWatch | PAlarm) -> bool:
         # TODO implement assert as analyzer check
@@ -320,6 +349,10 @@ class PInterpreter(PNodeVisitor):
         # log all visits
         logger.debug(f"Visiting {node} at tick {self.tick_time}")
 
+        # await any current node threshold to expire
+        while self._is_awaiting_threshold(node):
+            yield
+
         # allow visit methods to be non generators
         result = super().visit(node)
         if inspect.isgenerator(result):
@@ -330,6 +363,7 @@ class PInterpreter(PNodeVisitor):
         logger.debug(f"Visit {node} done")
 
     def visit_PProgram(self, node: PProgram):
+        self._add_to_log(time.time(), time.time(), "PProgram")
         ar = ActivationRecord(node, self.tick_time, TagCollection.create_default())
         self.stack.push(ar)
         yield from self.visit_children(node.children)

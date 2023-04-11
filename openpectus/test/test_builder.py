@@ -2,7 +2,6 @@ import unittest
 
 from lang.grammar.pgrammar import PGrammar
 from lang.model.pprogram import (
-    TimeExp,
     PNode,
     PProgram,
     PBlank,
@@ -202,14 +201,14 @@ mark: foo"""
         block: PBlock = instructions[0]  # type: ignore
         self.assertEqual("Equilibration", block.name)
         self.assertEqual(0, block.indent)
-        self.assertEqual(TimeExp.Empty(), block.time)
+        self.assertIsNone(block.time)
         self.assertFalse(block.has_error())
 
         cmd1: PCommand = instructions[1]  # type: ignore
         self.assertEqual("Inlet PU01", cmd1.name)
         self.assertEqual("VA01", cmd1.args)
         self.assertEqual(4, cmd1.indent)
-        self.assertEqual(TimeExp("0.96"), cmd1.time)
+        self.assertEqual(0.96, cmd1.time)
         self.assertFalse(cmd1.has_error())
 
     def test_block_Equilibration_partial(self):
@@ -236,20 +235,20 @@ mark: foo"""
         block: PBlock = instructions[0]  # type: ignore
         self.assertEqual("Equilibration", block.name)
         self.assertEqual(0, block.indent)
-        self.assertEqual(TimeExp.Empty(), block.time)
+        self.assertIsNone(block.time)
 
         cmd1: PCommand = instructions[1]  # type: ignore
         self.assertEqual("Inlet PU01", cmd1.name)
         self.assertEqual("VA01", cmd1.args)
         self.assertEqual(4, cmd1.indent)
-        self.assertEqual(TimeExp("0.0"), cmd1.time)
+        self.assertEqual(0.0, cmd1.time)
         self.assertFalse(cmd1.has_error())
 
         cmd2: PCommand = instructions[2]  # type: ignore
         self.assertEqual("Inlet PU02", cmd2.name)
         self.assertEqual("VA06", cmd2.args)
         self.assertEqual(4, cmd2.indent)
-        self.assertEqual(TimeExp("0.0"), cmd2.time)
+        self.assertEqual(0.0, cmd2.time)
         self.assertFalse(cmd2.has_error())
 
     def test_block_Equilibration(self):

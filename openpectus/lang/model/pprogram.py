@@ -2,32 +2,8 @@ from __future__ import annotations
 from typing import Callable, List
 
 
-class TimeExp():
-    def __init__(self, val: str | None) -> None:
-        self.val: str | None = val
-
-    @staticmethod
-    def Empty() -> TimeExp:
-        """ Return an empty time expression. """
-        return TimeExp(None)
-
-    def __eq__(self, other):
-        if type(other) is type(self):
-            return self.__dict__ == other.__dict__
-        return False
-
-    def __str__(self) -> str:
-        return f"TimeExp {{ {self.val} }}"
-
-    def is_empty(self):
-        return self.val is None
-
-    def get_value(self):
-        return self.val
-
-
 class PNode():
-    """ Represents a node in a pectus runtime model object tree. """
+    """ Represents an AST node in a pectus runtime model object tree. """
     def __init__(self, parent: PNode | None) -> None:
         """ Create new node with specified parent or None for the root node. If parent is given,
             the created node is added as child of the parent.
@@ -94,37 +70,6 @@ class PNode():
                     return True
             return False
 
-    def next_following(self) -> PNode | None:
-        """ Return the next following node in the tree (in XPath axis terminology) """
-        def following(node: PNode, parent: PNode | None):
-            if parent is None:
-                return None
-            assert parent.children is not None, "We navigate upwards so children cannot be None (or empty)"
-
-            inx = -1
-            for i, child in enumerate(parent.children):
-                # TODO currently using "is" check rather than value equality
-                # because __eq__ sometimes fails. See Note in __eq__.
-                if child is node:
-                    inx = i
-                    break
-            assert inx != -1, "Child index not found"
-            if inx + 1 < len(parent.children):
-                next_sibling = parent.children[inx+1]
-                return next_sibling
-            else:
-                return following(node=parent, parent=parent.parent)
-
-        return following(node=self, parent=self.parent)
-
-    def next_descendant(self) -> PNode | None:
-        """ Return the next descendant node in the tree (in XPath axis terminology) """
-
-        if self.children is None or len(self.children) == 0:
-            return None
-        if len(self.children) > 0:
-            return self.children[0]
-
     def iterate(self, fn: Callable[[PNode], None]):
         fn(self)
         if self.children is not None:
@@ -165,7 +110,8 @@ class PInstruction(PNode):
     def __init__(self, parent: PNode) -> None:
         super().__init__(parent)
 
-        self.time: TimeExp = TimeExp.Empty()
+        self.time: float | None = None
+        """ The delay threshold specified for the instruction. """
 
 
 class PBlock(PInstruction):

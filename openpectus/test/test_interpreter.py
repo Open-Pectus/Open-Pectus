@@ -8,6 +8,7 @@ from lang.model.pprogram import (
 )
 from lang.exec.pinterpreter import (
     PInterpreter,
+    TICK_INTERVAL
 )
 from lang.exec.uod import UnitOperationDefinitionBase
 from lang.exec.tags import (
@@ -23,7 +24,9 @@ def build_program(s) -> PProgram:
 
 
 def print_log(i: PInterpreter):
-    print('\n'.join(str(x['time']) + '\t' + str(x['unit_time']) + '\t' + x['message'] for x in i.logs))
+    start = min([x.time for x in i.logs])
+    print('\n'.join(
+        f"{(x.time-start):.2f}\t{x.time:.2f}\t{x.unit_time}\t{x.message}" for x in i.logs))
 
 
 class InterpreterTest(unittest.TestCase):
@@ -228,6 +231,106 @@ Mark: A3
         i.run(max_ticks=30)
 
         self.assertEqual(["A1", "A2", "A3"], i.get_marks())
+
+    @unittest.skip("Review with Eskild")
+    def test_block_time_watch_2(self):
+        program = build_program("""
+Block: A
+    Mark: A1
+    Watch: Block time > 0 sec
+        End block
+    Mark: X
+    Mark: A2
+Mark: A3
+""")
+        # TODO review case with Eskild
+        # We'll need look-ahead to avoid X being executed
+
+        uod = TestUod()
+        i = PInterpreter(program, uod)
+
+        i.run(max_ticks=30)
+
+        self.assertEqual(["A1", "A3"], i.get_marks())
+
+    def test_threshold_time(self):
+        program = build_program("""
+0.0 Mark: a
+0.3 Mark: b
+0.8 Mark: c
+""")
+        uod = TestUod()
+        i = PInterpreter(program, uod)
+
+        i.run(max_ticks=100)
+
+        self.assertEqual(["a", "b", "c"], i.get_marks())
+        print_log(i)
+
+        log_a = next(x for x in i.logs if x.message == 'a')
+        log_b = next(x for x in i.logs if x.message == 'b')
+        log_c = next(x for x in i.logs if x.message == 'c')
+        with self.subTest("a, b"):
+            self.assert_time_equal(log_a.time + .3, log_b.time)
+        with self.subTest("a, c"):
+            self.assert_time_equal(log_a.time + .8, log_c.time)
+
+    def test_assert_time_equal(self):
+        self.assert_time_equal(1, 1.2, 200)
+        self.assert_time_equal(1.8, 1.5, 300)
+        self.assertRaises(
+            AssertionError,
+            lambda: self.assert_time_equal(1.8, 1.3, 400)
+        )
+
+    def assert_time_equal(self, time_a: float, time_b: float, milis=200):
+        """
+        Assert that time difference is less than milis miliseconds.
+
+        Note that the default value depends on the interpreter timer interval.
+        """
+        diff_milis = round(1000 * abs(time_a - time_b))
+        if diff_milis > milis:
+            s = f"Difference exceeded {milis} ms.\n" + \
+                f"Difference: {diff_milis} ms.\n" + \
+                f"time_a:      {time_a:.2f} s.\n" + \
+                f"time_b:      {time_b:.2f} s.\n"
+            raise AssertionError(s)
+        else:
+            print(f"Diff {diff_milis} accepted")
+
+    def test_threshold_block_time(self):
+        program = build_program("""
+Mark: a
+Block: A
+    0.3 Mark: b
+    End block
+Block: B
+    0.8 Mark: c
+    End block
+Mark: d
+""")
+        uod = TestUod()
+        i = PInterpreter(program, uod)
+
+        i.run(max_ticks=100)
+        print_log(i)
+
+        self.assertEqual(["a", "b", "c", "d"], i.get_marks())
+
+        log_a = next(x for x in i.logs if x.message == 'a')
+        log_b = next(x for x in i.logs if x.message == 'b')
+        log_c = next(x for x in i.logs if x.message == 'c')
+        log_d = next(x for x in i.logs if x.message == 'd')
+        with self.subTest("a / b"):
+            self.assert_time_equal(log_a.time + 0.3 + TICK_INTERVAL, log_b.time)
+        with self.subTest("b / c"):
+            self.assert_time_equal(log_b.time + .8 + TICK_INTERVAL, log_c.time)
+        with self.subTest("c / d"):
+            self.assert_time_equal(log_c.time + TICK_INTERVAL, log_d.time)
+        with self.subTest("a / d"):
+            self.assert_time_equal(log_a.time + 1.1 + 6*TICK_INTERVAL, log_d.time)
+
 
     @unittest.skip("TODO")
     def test_(self):
