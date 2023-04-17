@@ -13,7 +13,6 @@ import { reducers, metaReducers } from './ngrx';
   imports: [
     BrowserModule,
     AppRoutingModule,
-    StoreModule.forRoot({}, {}),
     StoreModule.forRoot(reducers, {
       metaReducers
     })
