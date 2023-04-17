@@ -1,18 +1,13 @@
+import { ActionReducerMap, MetaReducer } from '@ngrx/store';
 import { isDevMode } from '@angular/core';
-import {
-  ActionReducer,
-  ActionReducerMap,
-  createFeatureSelector,
-  createSelector,
-  MetaReducer
-} from '@ngrx/store';
+import { appFeatureKey, appReducer, AppState } from './app.reducer';
 
 export interface State {
-
+  [appFeatureKey]: AppState;
 }
 
 export const reducers: ActionReducerMap<State> = {
-
+  [appFeatureKey]: appReducer
 };
 
 
