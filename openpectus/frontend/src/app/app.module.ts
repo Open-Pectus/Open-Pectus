@@ -11,15 +11,18 @@ import { AppEffects } from './ngrx/app.effects';
 import { RouterState, StoreRouterConnectingModule } from '@ngrx/router-store';
 import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 import { TestComponent } from './test.component';
+import { ApiModule } from './api';
+import { HttpClientModule } from '@angular/common/http';
 
 @NgModule({
   declarations: [
     AppComponent,
-    TestComponent
+    TestComponent,
   ],
   imports: [
     BrowserModule,
     AppRoutingModule,
+    HttpClientModule,
     StoreModule.forRoot(reducers, {
       metaReducers,
       runtimeChecks: {
@@ -37,10 +40,11 @@ import { TestComponent } from './test.component';
     StoreDevtoolsModule.instrument({
       maxAge: 25,
       logOnly: !isDevMode(),
-      actionsBlocklist: ['@ngrx']
-    })
+      actionsBlocklist: ['@ngrx'],
+    }),
+    ApiModule,
   ],
   providers: [],
-  bootstrap: [AppComponent]
+  bootstrap: [AppComponent],
 })
 export class AppModule {}

@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { Store } from '@ngrx/store';
+import { DashboardActions } from '../ngrx/dashboard.actions';
 
 @Component({
   selector: 'app-dashboard',
@@ -7,8 +9,13 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
     <p>
       dashboard works!
     </p>
-  `
+  `,
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit {
+  constructor(private store: Store) {}
+
+  ngOnInit() {
+    this.store.dispatch(DashboardActions.pageInitialized());
+  }
 
 }
