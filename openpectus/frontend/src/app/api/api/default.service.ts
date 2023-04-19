@@ -19,15 +19,15 @@ import { CustomHttpParameterCodec }                          from '../encoder';
 import { Observable }                                        from 'rxjs';
 
 // @ts-ignore
-import { Batch } from '../model/batch';
+import { BatchJob } from '../model/batchJob';
 // @ts-ignore
 import { HTTPValidationError } from '../model/hTTPValidationError';
 // @ts-ignore
-import { Tag } from '../model/tag';
+import { ProcessUnit } from '../model/processUnit';
 // @ts-ignore
-import { TagUpdate } from '../model/tagUpdate';
+import { ProcessValue } from '../model/processValue';
 // @ts-ignore
-import { Unit } from '../model/unit';
+import { ProcessValueUpdate } from '../model/processValueUpdate';
 
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS }                     from '../variables';
@@ -105,12 +105,12 @@ export class DefaultService {
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
      */
-    public getBatchBatchIdGet(id: number, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<Batch>;
-    public getBatchBatchIdGet(id: number, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<HttpResponse<Batch>>;
-    public getBatchBatchIdGet(id: number, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<HttpEvent<Batch>>;
-    public getBatchBatchIdGet(id: number, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<any> {
+    public getBatchBatchJobIdGet(id: number, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<BatchJob>;
+    public getBatchBatchJobIdGet(id: number, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<HttpResponse<BatchJob>>;
+    public getBatchBatchJobIdGet(id: number, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<HttpEvent<BatchJob>>;
+    public getBatchBatchJobIdGet(id: number, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<any> {
         if (id === null || id === undefined) {
-            throw new Error('Required parameter id was null or undefined when calling getBatchBatchIdGet.');
+            throw new Error('Required parameter id was null or undefined when calling getBatchBatchJobIdGet.');
         }
 
         let localVarHeaders = this.defaultHeaders;
@@ -144,8 +144,8 @@ export class DefaultService {
             }
         }
 
-        let localVarPath = `/batch/${this.configuration.encodeParam({name: "id", value: id, in: "path", style: "simple", explode: false, dataType: "number", dataFormat: undefined})}`;
-        return this.httpClient.request<Batch>('get', `${this.configuration.basePath}${localVarPath}`,
+        let localVarPath = `/batch_job/${this.configuration.encodeParam({name: "id", value: id, in: "path", style: "simple", explode: false, dataType: "number", dataFormat: undefined})}`;
+        return this.httpClient.request<BatchJob>('get', `${this.configuration.basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 responseType: <any>responseType_,
@@ -163,12 +163,12 @@ export class DefaultService {
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
      */
-    public getProcessValuesUnitIdTagsGet(id: number, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<Array<Tag>>;
-    public getProcessValuesUnitIdTagsGet(id: number, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<HttpResponse<Array<Tag>>>;
-    public getProcessValuesUnitIdTagsGet(id: number, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<HttpEvent<Array<Tag>>>;
-    public getProcessValuesUnitIdTagsGet(id: number, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<any> {
+    public getProcessValuesProcessUnitIdProcessValuesGet(id: number, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<Array<ProcessValue>>;
+    public getProcessValuesProcessUnitIdProcessValuesGet(id: number, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<HttpResponse<Array<ProcessValue>>>;
+    public getProcessValuesProcessUnitIdProcessValuesGet(id: number, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<HttpEvent<Array<ProcessValue>>>;
+    public getProcessValuesProcessUnitIdProcessValuesGet(id: number, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<any> {
         if (id === null || id === undefined) {
-            throw new Error('Required parameter id was null or undefined when calling getProcessValuesUnitIdTagsGet.');
+            throw new Error('Required parameter id was null or undefined when calling getProcessValuesProcessUnitIdProcessValuesGet.');
         }
 
         let localVarHeaders = this.defaultHeaders;
@@ -202,8 +202,8 @@ export class DefaultService {
             }
         }
 
-        let localVarPath = `/unit/${this.configuration.encodeParam({name: "id", value: id, in: "path", style: "simple", explode: false, dataType: "number", dataFormat: undefined})}/tags`;
-        return this.httpClient.request<Array<Tag>>('get', `${this.configuration.basePath}${localVarPath}`,
+        let localVarPath = `/process_unit/${this.configuration.encodeParam({name: "id", value: id, in: "path", style: "simple", explode: false, dataType: "number", dataFormat: undefined})}/process_values`;
+        return this.httpClient.request<Array<ProcessValue>>('get', `${this.configuration.basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 responseType: <any>responseType_,
@@ -221,12 +221,12 @@ export class DefaultService {
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
      */
-    public getUnitUnitIdGet(id: number, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<Unit>;
-    public getUnitUnitIdGet(id: number, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<HttpResponse<Unit>>;
-    public getUnitUnitIdGet(id: number, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<HttpEvent<Unit>>;
-    public getUnitUnitIdGet(id: number, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<any> {
+    public getUnitProcessUnitIdGet(id: number, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<ProcessUnit>;
+    public getUnitProcessUnitIdGet(id: number, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<HttpResponse<ProcessUnit>>;
+    public getUnitProcessUnitIdGet(id: number, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<HttpEvent<ProcessUnit>>;
+    public getUnitProcessUnitIdGet(id: number, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<any> {
         if (id === null || id === undefined) {
-            throw new Error('Required parameter id was null or undefined when calling getUnitUnitIdGet.');
+            throw new Error('Required parameter id was null or undefined when calling getUnitProcessUnitIdGet.');
         }
 
         let localVarHeaders = this.defaultHeaders;
@@ -260,8 +260,8 @@ export class DefaultService {
             }
         }
 
-        let localVarPath = `/unit/${this.configuration.encodeParam({name: "id", value: id, in: "path", style: "simple", explode: false, dataType: "number", dataFormat: undefined})}`;
-        return this.httpClient.request<Unit>('get', `${this.configuration.basePath}${localVarPath}`,
+        let localVarPath = `/process_unit/${this.configuration.encodeParam({name: "id", value: id, in: "path", style: "simple", explode: false, dataType: "number", dataFormat: undefined})}`;
+        return this.httpClient.request<ProcessUnit>('get', `${this.configuration.basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 responseType: <any>responseType_,
@@ -278,10 +278,10 @@ export class DefaultService {
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
      */
-    public getUnitsUnitsGet(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<Array<Unit>>;
-    public getUnitsUnitsGet(observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<HttpResponse<Array<Unit>>>;
-    public getUnitsUnitsGet(observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<HttpEvent<Array<Unit>>>;
-    public getUnitsUnitsGet(observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<any> {
+    public getUnitsProcessUnitsGet(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<Array<ProcessUnit>>;
+    public getUnitsProcessUnitsGet(observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<HttpResponse<Array<ProcessUnit>>>;
+    public getUnitsProcessUnitsGet(observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<HttpEvent<Array<ProcessUnit>>>;
+    public getUnitsProcessUnitsGet(observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<any> {
 
         let localVarHeaders = this.defaultHeaders;
 
@@ -314,8 +314,8 @@ export class DefaultService {
             }
         }
 
-        let localVarPath = `/units`;
-        return this.httpClient.request<Array<Unit>>('get', `${this.configuration.basePath}${localVarPath}`,
+        let localVarPath = `/process_units`;
+        return this.httpClient.request<Array<ProcessUnit>>('get', `${this.configuration.basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 responseType: <any>responseType_,
@@ -330,19 +330,19 @@ export class DefaultService {
     /**
      * Set Process Value
      * @param id 
-     * @param tagUpdate 
+     * @param processValueUpdate 
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
      */
-    public setProcessValueUnitIdTagsPost(id: number, tagUpdate: TagUpdate, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<any>;
-    public setProcessValueUnitIdTagsPost(id: number, tagUpdate: TagUpdate, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<HttpResponse<any>>;
-    public setProcessValueUnitIdTagsPost(id: number, tagUpdate: TagUpdate, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<HttpEvent<any>>;
-    public setProcessValueUnitIdTagsPost(id: number, tagUpdate: TagUpdate, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<any> {
+    public setProcessValueProcessUnitIdProcessValuePost(id: number, processValueUpdate: ProcessValueUpdate, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<any>;
+    public setProcessValueProcessUnitIdProcessValuePost(id: number, processValueUpdate: ProcessValueUpdate, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<HttpResponse<any>>;
+    public setProcessValueProcessUnitIdProcessValuePost(id: number, processValueUpdate: ProcessValueUpdate, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<HttpEvent<any>>;
+    public setProcessValueProcessUnitIdProcessValuePost(id: number, processValueUpdate: ProcessValueUpdate, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext}): Observable<any> {
         if (id === null || id === undefined) {
-            throw new Error('Required parameter id was null or undefined when calling setProcessValueUnitIdTagsPost.');
+            throw new Error('Required parameter id was null or undefined when calling setProcessValueProcessUnitIdProcessValuePost.');
         }
-        if (tagUpdate === null || tagUpdate === undefined) {
-            throw new Error('Required parameter tagUpdate was null or undefined when calling setProcessValueUnitIdTagsPost.');
+        if (processValueUpdate === null || processValueUpdate === undefined) {
+            throw new Error('Required parameter processValueUpdate was null or undefined when calling setProcessValueProcessUnitIdProcessValuePost.');
         }
 
         let localVarHeaders = this.defaultHeaders;
@@ -385,11 +385,11 @@ export class DefaultService {
             }
         }
 
-        let localVarPath = `/unit/${this.configuration.encodeParam({name: "id", value: id, in: "path", style: "simple", explode: false, dataType: "number", dataFormat: undefined})}/tags`;
+        let localVarPath = `/process_unit/${this.configuration.encodeParam({name: "id", value: id, in: "path", style: "simple", explode: false, dataType: "number", dataFormat: undefined})}/process_value`;
         return this.httpClient.request<any>('post', `${this.configuration.basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
-                body: tagUpdate,
+                body: processValueUpdate,
                 responseType: <any>responseType_,
                 withCredentials: this.configuration.withCredentials,
                 headers: localVarHeaders,
