@@ -22,6 +22,7 @@
     "@ngrx/router-store": "^15.4.0",
     "@ngrx/store": "^15.4.0",
     "@ngrx/store-devtools": "^15.4.0",
+    "@vscode/codicons": "^0.0.32",
     "immer": "^9.0.21",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
