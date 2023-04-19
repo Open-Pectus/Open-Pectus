@@ -13,11 +13,13 @@ import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 import { TestComponent } from './test.component';
 import { ApiModule, Configuration } from './api';
 import { HttpClientModule } from '@angular/common/http';
+import { TopBarComponent } from './top-bar.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     TestComponent,
+    TopBarComponent,
   ],
   imports: [
     BrowserModule,
