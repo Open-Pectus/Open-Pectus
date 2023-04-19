@@ -7,8 +7,10 @@ import { DashboardActions } from '../ngrx/dashboard.actions';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="flex flex-col max-w-5xl m-auto">
-      <!-- recent batchjobs -->
-      <app-dashboard-process-units></app-dashboard-process-units>
+      <div class="text-xl font-semibold my-6 text-gray-500">Process Units:</div>
+      <app-dashboard-process-units class="mb-6"></app-dashboard-process-units>
+      <div class="text-xl font-semibold my-6 text-gray-500">Recent Batch Jobs:</div>
+      <app-recent-batch-jobs></app-recent-batch-jobs>
     </div>
   `,
 })

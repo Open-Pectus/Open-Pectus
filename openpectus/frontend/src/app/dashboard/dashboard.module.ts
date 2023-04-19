@@ -10,6 +10,7 @@ import { DashboardProcessUnitsComponent } from './process-units/dashboard-proces
 import { ProcessUnitCardComponent } from './process-units/process-unit-card.component';
 import { PushModule } from '@ngrx/component';
 import { SharedModule } from '../shared/shared.module';
+import { RecentBatchJobsComponent } from './recent-batch-jobs/recent-batch-jobs.component';
 
 
 @NgModule({
@@ -17,6 +18,7 @@ import { SharedModule } from '../shared/shared.module';
     DashboardComponent,
     DashboardProcessUnitsComponent,
     ProcessUnitCardComponent,
+    RecentBatchJobsComponent,
   ],
   imports: [
     CommonModule,
