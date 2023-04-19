@@ -6,9 +6,10 @@ import { DashboardActions } from '../ngrx/dashboard.actions';
   selector: 'app-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <p>
-      dashboard works!
-    </p>
+    <div class="flex flex-col max-w-5xl m-auto">
+      <!-- recent batchjobs -->
+      <app-dashboard-process-units></app-dashboard-process-units>
+    </div>
   `,
 })
 export class DashboardComponent implements OnInit {

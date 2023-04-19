@@ -6,17 +6,23 @@ import { StoreModule } from '@ngrx/store';
 import { dashboardFeatureKey, dashboardReducer } from '../ngrx/dashboard.reducer';
 import { EffectsModule } from '@ngrx/effects';
 import { DashboardEffects } from '../ngrx/dashboard.effects';
+import { DashboardProcessUnitsComponent } from './process-units/dashboard-process-units.component';
+import { ProcessUnitCardComponent } from './process-units/process-unit-card.component';
+import { PushModule } from '@ngrx/component';
 
 
 @NgModule({
   declarations: [
     DashboardComponent,
+    DashboardProcessUnitsComponent,
+    ProcessUnitCardComponent,
   ],
   imports: [
     CommonModule,
     DashboardRoutingModule,
     StoreModule.forFeature(dashboardFeatureKey, dashboardReducer),
     EffectsModule.forFeature([DashboardEffects]),
+    PushModule,
   ],
 })
 export class DashboardModule {}
