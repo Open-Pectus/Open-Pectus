@@ -9,7 +9,7 @@ import { detailsUrlPart } from '../../app-routing.module';
   selector: 'app-dashboard-process-units',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex">
+    <div class="grid grid-cols-3 gap-6">
       <app-process-unit-card *ngFor="let processUnit of (processUnits | ngrxPush)" [processUnit]="processUnit" class="w-80"
                              (click)="onCardClick(processUnit.id)"></app-process-unit-card>
     </div>

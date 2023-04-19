@@ -18,7 +18,7 @@ export const handlers = [
           },
         },
         {
-          name: 'Some other unit',
+          name: 'Some other unit with a long title',
           id: 2,
           location: 'Some place else',
           runtime_msec: 456498,
@@ -36,6 +36,17 @@ export const handlers = [
           state: {
             state: ProcessUnitStateEnum.NotOnline,
             progress_pct: 90,
+            last_seen_date: new Date().toJSON(),
+          },
+        },
+        {
+          name: 'A fourth for linebreak',
+          id: 4,
+          location: 'Narnia',
+          runtime_msec: 85264,
+          state: {
+            state: ProcessUnitStateEnum.NotOnline,
+            progress_pct: 0,
             last_seen_date: new Date().toJSON(),
           },
         },
