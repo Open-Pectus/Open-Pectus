@@ -14,8 +14,9 @@ import { ProcessUnit, ProcessUnitStateEnum } from '../../api';
         ></div>
       </div>
       <div class="px-5 py-4 ">
-        <div>{{processUnit?.state?.state}}</div>
-        <div>{{processUnit?.location}}</div>
+        <div>State: {{processUnit?.state?.state}}</div>
+        <div>Location: {{processUnit?.location}}</div>
+        <div>Runtime: {{processUnit?.runtime_msec | formatDurationMsec}}</div>
       </div>
 
 

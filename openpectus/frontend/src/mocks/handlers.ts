@@ -10,6 +10,7 @@ export const handlers = [
           name: 'Some unit',
           id: 1,
           location: 'Some place',
+          runtime_msec: 59999,
           state: {
             state: ProcessUnitStateEnum.InProgress,
             progress_pct: 30,
@@ -20,6 +21,7 @@ export const handlers = [
           name: 'Some other unit',
           id: 2,
           location: 'Some place else',
+          runtime_msec: 456498,
           state: {
             state: ProcessUnitStateEnum.Ready,
             progress_pct: 90,
@@ -30,6 +32,7 @@ export const handlers = [
           name: 'Some third unit',
           id: 3,
           location: 'Some third place',
+          runtime_msec: 12365,
           state: {
             state: ProcessUnitStateEnum.NotOnline,
             progress_pct: 90,

@@ -9,6 +9,7 @@ import { DashboardEffects } from '../ngrx/dashboard.effects';
 import { DashboardProcessUnitsComponent } from './process-units/dashboard-process-units.component';
 import { ProcessUnitCardComponent } from './process-units/process-unit-card.component';
 import { PushModule } from '@ngrx/component';
+import { SharedModule } from '../shared/shared.module';
 
 
 @NgModule({
@@ -23,6 +24,7 @@ import { PushModule } from '@ngrx/component';
     StoreModule.forFeature(dashboardFeatureKey, dashboardReducer),
     EffectsModule.forFeature([DashboardEffects]),
     PushModule,
+    SharedModule,
   ],
 })
 export class DashboardModule {}
