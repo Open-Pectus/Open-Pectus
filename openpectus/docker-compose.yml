@@ -1,0 +1,13 @@
+﻿version: '2'
+services:
+  pectus-aggregator:
+    build: aggregator # path to Dockerfile
+    image: pectus-aggregator
+    container_name: pectus-aggregator-local
+    ports:
+      - "8300:8300"   
+    networks:      
+      - pectus-net
+networks:  
+  pectus-net:    
+    driver: bridge
