@@ -16,4 +16,8 @@ export const handlers = [
       }]),
     );
   }),
+
+  rest.get('https://fonts.googleapis.com/css2?family=Open+Sans:wght@200..900', (req, res, ctx) => {
+    return req.passthrough();
+  }),
 ];
