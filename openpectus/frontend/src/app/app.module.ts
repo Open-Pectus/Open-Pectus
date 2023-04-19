@@ -11,7 +11,7 @@ import { AppEffects } from './ngrx/app.effects';
 import { RouterState, StoreRouterConnectingModule } from '@ngrx/router-store';
 import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 import { TestComponent } from './test.component';
-import { ApiModule } from './api';
+import { ApiModule, Configuration } from './api';
 import { HttpClientModule } from '@angular/common/http';
 
 @NgModule({
@@ -42,7 +42,7 @@ import { HttpClientModule } from '@angular/common/http';
       logOnly: !isDevMode(),
       actionsBlocklist: ['@ngrx'],
     }),
-    ApiModule,
+    ApiModule.forRoot(() => new Configuration({basePath: window.location.origin})),
   ],
   providers: [],
   bootstrap: [AppComponent],
