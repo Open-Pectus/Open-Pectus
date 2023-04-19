@@ -10,7 +10,6 @@ import { EffectsModule } from '@ngrx/effects';
 import { AppEffects } from './ngrx/app.effects';
 import { RouterState, StoreRouterConnectingModule } from '@ngrx/router-store';
 import { StoreDevtoolsModule } from '@ngrx/store-devtools';
-import { TestComponent } from './test.component';
 import { ApiModule, Configuration } from './api';
 import { HttpClientModule } from '@angular/common/http';
 import { TopBarComponent } from './top-bar.component';
@@ -18,7 +17,6 @@ import { TopBarComponent } from './top-bar.component';
 @NgModule({
   declarations: [
     AppComponent,
-    TestComponent,
     TopBarComponent,
   ],
   imports: [

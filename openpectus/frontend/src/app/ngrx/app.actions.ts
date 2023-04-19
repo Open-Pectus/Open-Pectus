@@ -1,8 +1,6 @@
-import { createActionGroup, props } from '@ngrx/store';
+import { createActionGroup } from '@ngrx/store';
 
 export const AppActions = createActionGroup({
   source: 'App',
-  events: {
-    'A Test Action': props<{ aString: string }>()
-  }
+  events: {},
 });
