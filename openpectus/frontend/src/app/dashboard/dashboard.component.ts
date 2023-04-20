@@ -6,11 +6,13 @@ import { DashboardActions } from '../ngrx/dashboard.actions';
   selector: 'app-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex flex-col max-w-5xl m-auto">
-      <div class="text-xl font-semibold my-6 text-gray-500">Process Units:</div>
-      <app-dashboard-process-units class="mb-6"></app-dashboard-process-units>
-      <div class="text-xl font-semibold my-6 text-gray-500">Recent Batch Jobs:</div>
-      <app-recent-batch-jobs></app-recent-batch-jobs>
+    <div class="flex justify-center">
+      <div class="flex flex-col max-w-5xl mx-8">
+        <div class="text-xl font-semibold my-6 text-gray-500">Process Units:</div>
+        <app-dashboard-process-units class="mb-6"></app-dashboard-process-units>
+        <div class="text-xl font-semibold my-6 text-gray-500">Recent Batch Jobs:</div>
+        <app-recent-batch-jobs></app-recent-batch-jobs>
+      </div>
     </div>
   `,
 })
