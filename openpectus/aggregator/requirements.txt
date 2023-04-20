@@ -1,7 +1,0 @@
-antlr4-python3-runtime==4.9.2
-pint
-typing-extensions
-flake8  # dev
-black   # dev
-fastapi
-uvicorn[standard]

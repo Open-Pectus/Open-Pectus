@@ -5,3 +5,4 @@ flake8  # dev
 black   # dev
 fastapi
 uvicorn[standard]
+httpx   # for tests with fastapi.testclient

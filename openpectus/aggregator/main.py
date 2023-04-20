@@ -6,6 +6,12 @@ from fastapi import FastAPI
 from pydantic import BaseModel, Field
 import fastapi.logger
 
+# TODO
+# - add lsp thingys
+# - start (manage) lsp server instance for each client
+# - aggregator-engine protocol
+
+
 # Start env in docker
 # ../docker compose up --build
 
