@@ -2,8 +2,15 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import type { ProcessUnitStateEnum } from './ProcessUnitStateEnum';
-
 export type Ready = {
-    state?: ProcessUnitStateEnum;
+    state: Ready.state;
 };
+
+export namespace Ready {
+
+    export enum state {
+        READY = 'ready',
+    }
+
+
+}

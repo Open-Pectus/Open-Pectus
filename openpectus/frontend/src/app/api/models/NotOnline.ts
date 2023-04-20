@@ -2,9 +2,16 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import type { ProcessUnitStateEnum } from './ProcessUnitStateEnum';
-
 export type NotOnline = {
-    state?: ProcessUnitStateEnum;
+    state: NotOnline.state;
     last_seen_date: string;
 };
+
+export namespace NotOnline {
+
+    export enum state {
+        NOT_ONLINE = 'not_online',
+    }
+
+
+}

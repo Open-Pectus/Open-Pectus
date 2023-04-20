@@ -8,14 +8,13 @@ export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { BatchJob } from './models/BatchJob';
 export type { HTTPValidationError } from './models/HTTPValidationError';
-export type { InProgress } from './models/InProgress';
-export type { NotOnline } from './models/NotOnline';
+export { InProgress } from './models/InProgress';
+export { NotOnline } from './models/NotOnline';
 export type { ProcessUnit } from './models/ProcessUnit';
-export { ProcessUnitStateEnum } from './models/ProcessUnitStateEnum';
 export type { ProcessValue } from './models/ProcessValue';
 export { ProcessValueType } from './models/ProcessValueType';
 export type { ProcessValueUpdate } from './models/ProcessValueUpdate';
-export type { Ready } from './models/Ready';
+export { Ready } from './models/Ready';
 export type { ValidationError } from './models/ValidationError';
 
 export { DefaultService } from './services/DefaultService';

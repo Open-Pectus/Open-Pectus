@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
-import { ProcessUnit, ProcessUnitStateEnum } from '../../api';
+import { InProgress, NotOnline, ProcessUnit, Ready } from '../../api';
 import { UtilMethods } from '../../shared/util-methods';
 
 @Component({
@@ -21,18 +21,17 @@ import { UtilMethods } from '../../shared/util-methods';
 })
 export class ProcessUnitCardComponent {
   @Input() processUnit?: ProcessUnit;
-  protected readonly ProcessUnitStateEnum = ProcessUnitStateEnum;
 
   get statusIcon() {
-    const state = this.processUnit?.state?.state;
+    const state = this.processUnit?.state.state;
     switch(state) {
       case undefined:
         return '';
-      case ProcessUnitStateEnum.IN_PROGRESS:
+      case InProgress.state.IN_PROGRESS:
         return 'codicon-play-circle';
-      case ProcessUnitStateEnum.READY:
+      case Ready.state.READY:
         return 'codicon-pass';
-      case ProcessUnitStateEnum.NOT_ONLINE:
+      case NotOnline.state.NOT_ONLINE:
         return 'codicon-circle-slash';
       default:
         return UtilMethods.assertNever(state);

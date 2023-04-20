@@ -2,9 +2,16 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import type { ProcessUnitStateEnum } from './ProcessUnitStateEnum';
-
 export type InProgress = {
-    state?: ProcessUnitStateEnum;
+    state: InProgress.state;
     progress_pct: number;
 };
+
+export namespace InProgress {
+
+    export enum state {
+        IN_PROGRESS = 'in_progress',
+    }
+
+
+}
