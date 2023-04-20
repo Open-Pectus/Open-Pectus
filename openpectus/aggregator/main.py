@@ -41,14 +41,14 @@ class ProcessUnitStateEnum(StrEnum):
 
 class ProcessUnitState():
     class Ready(BaseModel):
-        state: ProcessUnitStateEnum = ProcessUnitStateEnum.READY
+        state: Literal[ProcessUnitStateEnum.READY]
 
     class InProgress(BaseModel):
-        state: ProcessUnitStateEnum = ProcessUnitStateEnum.IN_PROGRESS
+        state: Literal[ProcessUnitStateEnum.IN_PROGRESS]
         progress_pct: int
 
     class NotOnline(BaseModel):
-        state: ProcessUnitStateEnum = ProcessUnitStateEnum.NOT_ONLINE
+        state: Literal[ProcessUnitStateEnum.NOT_ONLINE]
         last_seen_date: datetime
 
 
@@ -62,6 +62,9 @@ class ProcessUnit(BaseModel):
     runtime_msec: int | None
     # users: List[User] ?
 
+# @app.get("/to_expose_process_unit_state_enum_in_openapi")
+# def to_expose_process_unit_state_enum_in_openapi() -> ProcessUnitStateEnum:
+#     return Type[ProcessUnitStateEnum]
 
 @app.get("/process_unit/{id}")
 def get_unit(id: int) -> ProcessUnit:
