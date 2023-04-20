@@ -8,7 +8,7 @@ from aggregator.main import app
 
 client = TestClient(app)
 
-project_path = os.path.join(os.path.dirname(__file__) , "../../")
+project_path = os.path.join(os.path.dirname(__file__) , "..", "..")
 
 
 class AggregatorApiTest(unittest.TestCase):
@@ -29,7 +29,7 @@ class AggregatorOpenAPIApiTest(unittest.TestCase):
     def test_write_openapi_spec_to_file(self):
         response = client.get("/openapi.json")
         self.assertEqual(200, response.status_code)
-        openapi_file = os.path.join(project_path,  "aggregator/aggregator-openapi-spec.json")
+        openapi_file = os.path.join(project_path,  "aggregator", "aggregator-openapi-spec.json")
 
         # raw dump
         # with open(openapi_file, "wb") as f:
