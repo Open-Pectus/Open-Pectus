@@ -14,8 +14,8 @@ dependencies:
   - pint # docs: https://pint.readthedocs.io/en/stable/getting/index.html
   # aggregator - api
   - fastapi
-  - httpx # for testing with fastapi.testclient
   - uvicorn[standard]
+  - httpx # for testing with fastapi.testclient
   # aggregator - lsp TODO
 
 # manage conda environment with:
