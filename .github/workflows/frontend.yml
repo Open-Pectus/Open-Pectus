@@ -3,11 +3,6 @@
 
 name: Build Frontend
 
-defaults:
-  run:
-    working-directory: openpectus/frontend
-
-
 on:
   push:
     branches: [ "main", "jhk/31-build-frontend-with-github-actions" ]
@@ -17,6 +12,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "openpectus/frontend"
     strategy:
       matrix:
         node-version: [18.16]
