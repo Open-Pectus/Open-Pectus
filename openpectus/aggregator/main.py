@@ -62,8 +62,8 @@ class ProcessUnit(BaseModel):
     runtime_msec: int | None
     # users: List[User] ?
 
-# @app.get("/dummy_url")
-# def get_dummy() -> ProcessUnitStateEnum:
+# @app.get("/to_expose_process_unit_state_enum_in_openapi")
+# def to_expose_process_unit_state_enum_in_openapi() -> ProcessUnitStateEnum:
 #     return Type[ProcessUnitStateEnum]
 
 @app.get("/process_unit/{id}")
