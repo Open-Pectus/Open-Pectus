@@ -31,7 +31,7 @@ jobs:
         npm ci
         npm run build
     - name: Archive production artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: frontend dist folder
-          path: dist
+      uses: actions/upload-artifact@v3
+      with:
+        name: frontend dist folder
+        path: dist
