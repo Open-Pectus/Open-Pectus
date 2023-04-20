@@ -10,7 +10,6 @@ import { EffectsModule } from '@ngrx/effects';
 import { AppEffects } from './ngrx/app.effects';
 import { RouterState, StoreRouterConnectingModule } from '@ngrx/router-store';
 import { StoreDevtoolsModule } from '@ngrx/store-devtools';
-import { ApiModule, Configuration } from './api';
 import { HttpClientModule } from '@angular/common/http';
 import { TopBarComponent } from './top-bar.component';
 
@@ -42,7 +41,6 @@ import { TopBarComponent } from './top-bar.component';
       logOnly: !isDevMode(),
       actionsBlocklist: ['@ngrx'],
     }),
-    ApiModule.forRoot(() => new Configuration({basePath: window.location.origin})),
   ],
   providers: [],
   bootstrap: [AppComponent],

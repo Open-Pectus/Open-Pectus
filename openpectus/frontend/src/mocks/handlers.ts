@@ -12,7 +12,7 @@ export const handlers = [
           location: 'Some place',
           runtime_msec: 59999,
           state: {
-            state: ProcessUnitStateEnum.InProgress,
+            state: ProcessUnitStateEnum.IN_PROGRESS,
             progress_pct: 30,
             last_seen_date: new Date().toJSON(),
           },
@@ -23,7 +23,7 @@ export const handlers = [
           location: 'Some place else',
           runtime_msec: 456498,
           state: {
-            state: ProcessUnitStateEnum.Ready,
+            state: ProcessUnitStateEnum.READY,
             progress_pct: 90,
             last_seen_date: new Date().toJSON(),
           },
@@ -34,7 +34,7 @@ export const handlers = [
           location: 'Some third place',
           runtime_msec: 12365,
           state: {
-            state: ProcessUnitStateEnum.NotOnline,
+            state: ProcessUnitStateEnum.NOT_ONLINE,
             progress_pct: 90,
             last_seen_date: new Date().toJSON(),
           },
@@ -45,7 +45,7 @@ export const handlers = [
           location: 'Narnia',
           runtime_msec: 85264,
           state: {
-            state: ProcessUnitStateEnum.NotOnline,
+            state: ProcessUnitStateEnum.NOT_ONLINE,
             progress_pct: 0,
             last_seen_date: new Date().toJSON(),
           },

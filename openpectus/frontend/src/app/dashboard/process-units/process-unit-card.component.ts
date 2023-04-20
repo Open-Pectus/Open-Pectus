@@ -28,11 +28,11 @@ export class ProcessUnitCardComponent {
     switch(state) {
       case undefined:
         return '';
-      case ProcessUnitStateEnum.InProgress:
+      case ProcessUnitStateEnum.IN_PROGRESS:
         return 'codicon-play-circle';
-      case ProcessUnitStateEnum.Ready:
+      case ProcessUnitStateEnum.READY:
         return 'codicon-pass';
-      case ProcessUnitStateEnum.NotOnline:
+      case ProcessUnitStateEnum.NOT_ONLINE:
         return 'codicon-circle-slash';
       default:
         return UtilMethods.assertNever(state);
