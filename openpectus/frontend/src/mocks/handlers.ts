@@ -1,5 +1,5 @@
 import { rest } from 'msw';
-import { ProcessUnit, ProcessUnitStateEnum } from '../app/api';
+import { InProgress, NotOnline, ProcessUnit, Ready } from '../app/api';
 
 export const handlers = [
   rest.get('/process_units', (req, res, ctx) => {
@@ -12,9 +12,8 @@ export const handlers = [
           location: 'Some place',
           runtime_msec: 59999,
           state: {
-            state: ProcessUnitStateEnum.InProgress,
+            state: InProgress.state.IN_PROGRESS,
             progress_pct: 30,
-            last_seen_date: new Date().toJSON(),
           },
         },
         {
@@ -23,9 +22,7 @@ export const handlers = [
           location: 'Some place else',
           runtime_msec: 456498,
           state: {
-            state: ProcessUnitStateEnum.Ready,
-            progress_pct: 90,
-            last_seen_date: new Date().toJSON(),
+            state: Ready.state.READY,
           },
         },
         {
@@ -34,8 +31,7 @@ export const handlers = [
           location: 'Some third place',
           runtime_msec: 12365,
           state: {
-            state: ProcessUnitStateEnum.NotOnline,
-            progress_pct: 90,
+            state: NotOnline.state.NOT_ONLINE,
             last_seen_date: new Date().toJSON(),
           },
         },
@@ -45,8 +41,7 @@ export const handlers = [
           location: 'Narnia',
           runtime_msec: 85264,
           state: {
-            state: ProcessUnitStateEnum.NotOnline,
-            progress_pct: 0,
+            state: NotOnline.state.NOT_ONLINE,
             last_seen_date: new Date().toJSON(),
           },
         },
