@@ -1,12 +1,12 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 @Component({
-  selector: 'app-root',
+  selector: 'app-recent-batch-jobs',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-top-bar></app-top-bar>
-    <router-outlet></router-outlet>
+    <div class="w-full h-96 bg-vscode-backgroundgrey"></div>
   `,
 })
-export class AppComponent {
+export class RecentBatchJobsComponent {
+
 }

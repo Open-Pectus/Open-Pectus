@@ -1,12 +1,14 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 @Component({
-  selector: 'app-root',
+  selector: 'app-unit-details',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-top-bar></app-top-bar>
-    <router-outlet></router-outlet>
+    <p>
+      unit-details works!
+    </p>
   `,
 })
-export class AppComponent {
+export class UnitDetailsComponent {
+
 }
