@@ -21,4 +21,3 @@ dependencies:
 # manage conda environment with:
 # conda env remove --name pectus
 # conda env create --name pectus --file=environment.yml
-
