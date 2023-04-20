@@ -53,8 +53,7 @@
             "inlineStyleLanguage": "scss",
             "assets": [
               "src/favicon.ico",
-              "src/assets",
-              "src/mockServiceWorker.js"
+              "src/assets"
             ],
             "styles": [
               "src/styles.scss",
@@ -84,7 +83,10 @@
               "vendorChunk": true,
               "extractLicenses": false,
               "sourceMap": true,
-              "namedChunks": true
+              "namedChunks": true,
+              "assets": [
+                "src/mockServiceWorker.js"
+              ]
             }
           },
           "defaultConfiguration": "production"
