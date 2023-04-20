@@ -1,4 +1,5 @@
 import json
+import os
 import unittest
 
 from fastapi.testclient import TestClient
@@ -26,7 +27,7 @@ class AggregatorOpenAPIApiTest(unittest.TestCase):
     def test_write_openapi_spec_to_file(self):
         response = client.get("/openapi.json")
         self.assertEqual(200, response.status_code)
-        openapi_file = "openpectus/aggregator/aggregator-openapi-spec.json"
+        openapi_file = os.path.abspath("openpectus/aggregator/aggregator-openapi-spec.json")
 
         # raw dump
         # with open(openapi_file, "wb") as f:
