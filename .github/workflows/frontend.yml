@@ -3,6 +3,11 @@
 
 name: Build Frontend
 
+defaults:
+  run:
+    working-directory: openpectus/frontend
+
+
 on:
   push:
     branches: [ "main", "jhk/31-build-frontend-with-github-actions" ]
