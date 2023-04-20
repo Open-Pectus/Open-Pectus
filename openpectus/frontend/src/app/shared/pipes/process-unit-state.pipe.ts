@@ -1,13 +1,12 @@
 import { Pipe, PipeTransform } from '@angular/core';
 import { UtilMethods } from '../util-methods';
-import { ProcessUnitStateEnum } from '../../typings';
 import { InProgress, NotOnline, Ready } from '../../api';
+import { ProcessUnitStateEnum } from '../../typings';
 
 @Pipe({
   name: 'processUnitState',
 })
 export class ProcessUnitStatePipe implements PipeTransform {
-
   transform(value: ProcessUnitStateEnum | undefined, ...args: unknown[]): string {
     if(value === undefined) return '';
     switch(value) {
