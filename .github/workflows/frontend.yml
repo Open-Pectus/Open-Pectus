@@ -12,9 +12,6 @@ on:
 jobs:
   build_frontend:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: "openpectus/frontend"
     strategy:
       matrix:
         node-version: [18.16]
@@ -27,6 +24,7 @@ jobs:
         cache: 'npm'
         cache-dependency-path: 'openpectus/frontend/package-lock.json'
     - name: npm ci, build
+      working-directory: "openpectus/frontend"
       run: |
         npm ci
         npm run build
@@ -34,4 +32,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: frontend dist folder
-        path: dist
+        path: "openpectus/frontend/dist"
