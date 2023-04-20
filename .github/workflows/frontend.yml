@@ -26,5 +26,12 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
         cache-dependency-path: 'openpectus/frontend/package-lock.json'
-    - run: npm ci
-    - run: npm run build
+    - name: npm ci, build
+      run: |
+        npm ci
+        npm run build
+    - name: Archive production artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend dist folder
+          path: dist
