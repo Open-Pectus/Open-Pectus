@@ -5,7 +5,7 @@ name: Build Frontend
 
 on:
   push:
-    branches: [ "main", "jhk/31-build-frontend-with-github-actions" ]
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
