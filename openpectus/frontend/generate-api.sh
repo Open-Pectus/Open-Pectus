@@ -1,1 +1,0 @@
-npx @openapitools/openapi-generator-cli generate -i openapi.json -g typescript-angular -o src/app/api --additional-properties=stringEnums=true,supportsES6=true,ngVersion=15.2,disallowAdditionalPropertiesIfNotPresent=false,legacyDiscriminatorBehavior=false
