@@ -5,7 +5,7 @@ import time
 import pint
 import inspect
 
-from typing import Callable, Generator, List, Tuple
+from typing import Generator, List, Tuple
 from typing_extensions import override
 from lang.model.pprogram import (
     PNode,
@@ -37,11 +37,8 @@ logger.setLevel(logging.DEBUG)
 
 TICK_INTERVAL = 0.1
 
+# TODO define pause + hold behavior
 # TODO add Alarm interpretation, including scope definition
-# TODO add timings (depends on units)
-# TODO condition expressions when defined in grammar
-# TODO validate condition expression identifiers against known tags
-# TODO if tags have an SI unit, validate the unit against that, eg. 'Watch: TT01 > 50 degC'
 
 
 class PNodeVisitor:
@@ -137,12 +134,12 @@ class PInterpreter(PNodeVisitor):
         self.max_ticks: int = -1
 
         self.process_instr: Generator | None = None
-        self.timer = OneThreadTimer(TICK_INTERVAL, self.tick)
+        self.timer = OneThreadTimer(TICK_INTERVAL, self._tick)
 
     def get_marks(self) -> List[str]:
-        return [x.message for x in self.logs if x.message[0] != 'P']    
+        return [x.message for x in self.logs if x.message[0] != 'P']
 
-    def interpret(self) -> Generator:
+    def _interpret(self) -> Generator:
         """ Create generator for interpreting the main program. """
         self.running = True
         tree = self._program
@@ -178,11 +175,11 @@ class PInterpreter(PNodeVisitor):
 
             # TODO implement remaining tags, e.g. SYSTEM STATE, RUN COUNTER
 
-    def register_interrupt(self, ar: ActivationRecord, handler: Generator):
+    def _register_interrupt(self, ar: ActivationRecord, handler: Generator):
         logger.debug(f"Interrupt handler registered for {ar}")
         self.interrupts.append((ar, handler))
 
-    def unregister_interrupt(self, ar: ActivationRecord):
+    def _unregister_interrupt(self, ar: ActivationRecord):
         pairs = list([(x, y) for (x, y) in self.interrupts if x is ar])
         for pair in pairs:
             self.interrupts.remove(pair)
@@ -201,13 +198,13 @@ class PInterpreter(PNodeVisitor):
                 except StopIteration:
                     pass
                 if ar.complete:
-                    self.unregister_interrupt(ar)
+                    self._unregister_interrupt(ar)
             else:
                 logger.error(f"Interrupt for node type {str(node)} not implemented")
                 raise NotImplementedError(f"Interrupt for node type {str(node)} not implemented")
         return instr_count > 0
 
-    def tick(self):
+    def _tick(self):
         self.ticks += 1
         self.tick_time = time.time()
         if self.max_ticks != -1 and self.ticks > self.max_ticks:
@@ -218,7 +215,7 @@ class PInterpreter(PNodeVisitor):
         logger.debug("Tick")
 
         if self.process_instr is None:
-            self.process_instr = self.interpret()
+            self.process_instr = self._interpret()
 
         program_end = False
         interrupt_end = False
@@ -258,6 +255,10 @@ class PInterpreter(PNodeVisitor):
         # TODO define pause behavior
         self.running = False
 
+    def hold(self):
+        # TODO define hold behavior
+        pass
+
     def run(self, max_ticks=-1):
         self._warmup()
         logger.info("Interpretation started")
@@ -270,40 +271,31 @@ class PInterpreter(PNodeVisitor):
             time.sleep(0.1)
 
     def _is_awaiting_threshold(self, node: PNode):
-        if isinstance(node, PInstruction):
-            if node.time is not None:
-                block_elapsed = self.tags.get(DEFAULT_TAG_BLOCK_TIME).as_quantity()
-                time_quantity = pint.Quantity(node.time, "sec")
-                if block_elapsed < time_quantity:
-                    logger.debug(f"Awaiting threshold: {time_quantity}, current: {block_elapsed}, time: {self.tick_time}")
-                    return True
-                logger.debug(f"Done awaiting time: {self.tick_time}")
+        if isinstance(node, PInstruction) and node.time is not None:
+            block_elapsed = self.tags.get(DEFAULT_TAG_BLOCK_TIME).as_quantity()
+            time_quantity = pint.Quantity(node.time, "sec")
+            if block_elapsed < time_quantity:
+                logger.debug(f"Awaiting threshold: {time_quantity}, current: {block_elapsed}, time: {self.tick_time}")
+                return True
+            logger.debug(f"Done awaiting time: {self.tick_time}")
         return False
 
     def _evaluate_condition(self, condition_node: PWatch | PAlarm) -> bool:
-        # TODO implement assert as analyzer check
-        # TODO implement unit compability as analyzer check
         c = condition_node.condition
         assert c is not None, "Error in condition"
         assert not c.error, "Error parsing condition"
         assert c.tag_name, "Error in condition tag"
         assert c.tag_value, "Error in condition value"
-
-        # TODO implement assert as analyzer check
         assert self.tags.has(c.tag_name) or self.uod.tags.has(c.tag_name)
         tag = self.tags.get(c.tag_name) if self.tags.has(c.tag_name) \
             else self.uod.tags.get(c.tag_name)
         tag_value = tag.as_quantity()
         # TODO if not unit specified, pick base unit
-        # TODO add analyzer check for unit compability
         expected_value = pint.Quantity(c.tag_value_numeric, c.tag_unit)
         if not tag_value.is_compatible_with(expected_value):  # type: ignore
             logger.error("Incompatible units")
             raise ValueError("Incompatible units")
 
-        # TODO consider pushing this to a condition.evaluate() method
-        # but we don't want ast nodes to depend on tags so we need an
-        # abstraction - once we're sure TagCollection is complete
         result = None
         try:
             match c.op:
@@ -331,7 +323,7 @@ class PInterpreter(PNodeVisitor):
 
         return result
 
-    def visit_children(self, children: List[PNode] | None):
+    def _visit_children(self, children: List[PNode] | None):
         ar = self.stack.peek()
         if children is not None:
             for child in children:
@@ -349,12 +341,14 @@ class PInterpreter(PNodeVisitor):
         # log all visits
         logger.debug(f"Visiting {node} at tick {self.tick_time}")
 
-        # await any current node threshold to expire
+        # possibly wait for node threshold to expire
         while self._is_awaiting_threshold(node):
             yield
 
-        # allow visit methods to be non generators
+        # delegate to concrete visitor via base method
         result = super().visit(node)
+
+        # allow visit methods to be non generators
         if inspect.isgenerator(result):
             yield from result
         else:
@@ -366,7 +360,7 @@ class PInterpreter(PNodeVisitor):
         self._add_to_log(time.time(), time.time(), "PProgram")
         ar = ActivationRecord(node, self.tick_time, TagCollection.create_default())
         self.stack.push(ar)
-        yield from self.visit_children(node.children)
+        yield from self._visit_children(node.children)
         self.stack.pop()
 
     def visit_PBlank(self, node: PBlank):
@@ -380,7 +374,7 @@ class PInterpreter(PNodeVisitor):
         ar = ActivationRecord(node, self.tick_time, TagCollection.create_default())
         self.stack.push(ar)
 
-        yield from self.visit_children(node.children)
+        yield from self._visit_children(node.children)
 
         if not ar.complete:
             logger.debug(f"Block {node.name} idle")
@@ -424,8 +418,8 @@ class PInterpreter(PNodeVisitor):
         ar = self.stack.peek()
         if ar.owner is not node:
             # TODO the ar get the current time. Is this correct?
-            ar = ActivationRecord(node, self.tick_time, TagCollection.create_default())            
-            self.register_interrupt(ar, create_interrupt_handler(ar))
+            ar = ActivationRecord(node, self.tick_time, TagCollection.create_default())
+            self._register_interrupt(ar, create_interrupt_handler(ar))
         else:
             logger.debug(f"{str(node)} interrupt invoked")
             if node.activated:
@@ -438,7 +432,7 @@ class PInterpreter(PNodeVisitor):
                     if condition_result:
                         node.activated = True
                         logger.debug(f"{str(node)} executing")
-                        yield from self.visit_children(node.children)
+                        yield from self._visit_children(node.children)
                         logger.debug(f"{str(node)} executed")
                         ar.complete = True
                         logger.info(f"Interrupt complete {ar}")
