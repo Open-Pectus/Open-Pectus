@@ -2,16 +2,19 @@
 grammar pcode;
 
 
-program : WHITESPACE* instruction WHITESPACE*
-          (NEWLINE WHITESPACE* instruction WHITESPACE*)*
+program : instruction_line 
+          (NEWLINE instruction_line)*
           EOF;
 
+instruction_line: WHITESPACE* instruction WHITESPACE* comment?
+        ;
+
 instruction
-        : builtin_command comment?
-        | command comment?
+        : builtin_command
+        | command
         | comment
         | blank
-        | error comment?
+        | error
         ;
 
 builtin_command
