@@ -113,6 +113,8 @@ class PInstruction(PNode):
         self.time: float | None = None
         """ The delay threshold specified for the instruction. """
 
+        self.comment: str = ''
+
 
 class PBlock(PInstruction):
     """ Represents a Block intruction. """
@@ -196,6 +198,12 @@ class PBlank(PInstruction):
         super().__init__(parent)
 
 
+class PComment(PInstruction):
+    """ Represents a comment instruction. """
+    def __init__(self, parent: PNode) -> None:
+        super().__init__(parent)
+
+
 class PErrorInstruction(PInstruction):
     """ Represents a non-parsable instruction pcode line """
     def __init__(self, parent: PNode, code: str) -> None:
@@ -210,7 +218,7 @@ class PErrorInstruction(PInstruction):
 # --- Non-nodes ---
 
 class PError:
-    """ Represents an instruction that contains errors. """
+    """ Represents an error in an instruction. """
     def __init__(self, message: str | None = None) -> None:
         self.message: str | None = message
 

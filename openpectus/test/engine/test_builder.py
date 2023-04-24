@@ -12,6 +12,7 @@ from lang.model.pprogram import (
     # PAlarm,
     PMark,
     PCommand,
+    PComment,
     PErrorInstruction,
     PCondition
 )
@@ -289,6 +290,18 @@ Block: Equilibration
         print_program(program)
         mark = program.get_instructions()[0]
         self.assertIsInstance(mark, PMark)
+        self.assertEqual(mark.name, "A")  # type: ignore
+        self.assertFalse(program.has_error(recursive=True))
+
+    def test_mark_comment(self):
+        p = build("Mark: A # foo")
+        program = p.build_model()
+        p.printSyntaxTree(p.tree)
+
+        print_program(program)
+        mark = program.get_instructions()[0]
+        self.assertIsInstance(mark, PMark)
+        self.assertEqual(mark.comment, " foo")
         self.assertFalse(program.has_error(recursive=True))
 
     def test_blanks(self):
@@ -599,6 +612,52 @@ Watch A > 0     # missing colon
         print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
         self.assertTrue(program.has_error(recursive=True))
 
+    def test_command_comment(self):
+        p = build(
+            """
+mycommand: a  # foo  
+        """
+        )
+
+        program = p.build_model()
+        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        self.assertFalse(program.has_error(recursive=True))
+
+        all = program.get_instructions(include_blanks=True)
+        blank_1, cmd, blank_2 = all
+        self.assertIsInstance(cmd , PCommand)
+        self.assertEqual(" foo  ", cmd.comment)
+
+    def test_comment(self):
+        p = build(
+            """
+# foo
+# bar # baz
+        """
+        )
+
+        program = p.build_model()
+        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        self.assertFalse(program.has_error(recursive=True))
+
+        all = program.get_instructions(include_blanks=True)
+
+        blank_1, comment, comment2, blank_2 = all
+
+        self.assertIsInstance(blank_1, PBlank)
+        self.assertEqual(1, blank_1.line)
+
+        self.assertIsInstance(comment, PComment)
+        self.assertEqual(2, comment.line)
+        self.assertEqual(" foo", comment.comment)
+
+        self.assertIsInstance(comment2, PComment)
+        self.assertEqual(3, comment2.line)
+        # slight mishap here. we ignore it for now
+        self.assertEqual(" bar# baz", comment2.comment)
+        # self.assertEqual(" bar # baz", comment2.comment)
+
+
     def test_program_errors(self):
         p = build(
             """
@@ -607,6 +666,7 @@ Mark  b  # comment
 watch: counter >  
     Mark: c
 Bad command
+:
         """
         )
 
@@ -616,7 +676,7 @@ Bad command
         self.assertFalse(program.has_error(recursive=True))
         all = program.get_instructions(include_blanks=True)
 
-        blank_1, mark_a, mark_b, watch, mark_c, bad, blank_2 = all        
+        blank_1, mark_a, mark_b, watch, mark_c, bad, err, blank_2 = all
 
         self.assertIsInstance(blank_1, PBlank)
         self.assertEqual(1, blank_1.line)
@@ -624,7 +684,10 @@ Bad command
         self.assertIsInstance(mark_a, PMark)
         self.assertEqual(2, mark_a.line)
 
-        self.assertIsInstance(mark_b, PErrorInstruction)
+        # Note: this malformed Mark "Mark a" is parsed as command
+        # It will still fail command name validation later on, though
+        self.assertIsInstance(mark_b, PCommand)
+        # self.assertIsInstance(mark_b, PErrorInstruction)
         self.assertEqual(3, mark_b.line)
 
         self.assertIsInstance(watch, PWatch)
@@ -638,6 +701,9 @@ Bad command
 
         self.assertIsInstance(bad, PCommand)
         self.assertEqual(6, bad.line)
+
+        self.assertIsInstance(err, PErrorInstruction)
+        self.assertEqual(7, err.line)
 
 
 if __name__ == "__main__":

@@ -17,6 +17,15 @@ class pcodeListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by pcodeParser#instruction_line.
+    def enterInstruction_line(self, ctx:pcodeParser.Instruction_lineContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#instruction_line.
+    def exitInstruction_line(self, ctx:pcodeParser.Instruction_lineContext):
+        pass
+
+
     # Enter a parse tree produced by pcodeParser#instruction.
     def enterInstruction(self, ctx:pcodeParser.InstructionContext):
         pass

@@ -20,6 +20,7 @@ from lang.model.pprogram import (
     PError,
     PBlank,
     PCondition,
+    PComment,
     PErrorInstruction
 )
 
@@ -40,10 +41,10 @@ class PProgramBuilder(pcodeListener):
         self.prev_instruction: PInstruction | None = None
         """ The previous instruction. """
 
-        self.instructionStart: InstructionStart | None = None
+        self.instruction_start: InstructionStart | None = None
         """ Start position of the current instruction. """
 
-        self.instructionError: PError | None = None
+        self.instruction_error: PError | None = None
         """ Error to be attached to the current instruction. """
 
         self.expect_indent: bool = False
@@ -89,19 +90,28 @@ class PProgramBuilder(pcodeListener):
         self.program.indent = ctx.start.column  # type: ignore
         self.stack.append(self.program)
 
-    def exitProgram(self, ctx: pcodeParser.ProgramContext):
-        pass
-
     def enterInstruction(self, ctx: pcodeParser.InstructionContext):
-        self.prev_instruction = self.instruction
+
+        instruction_text = ctx.getText()
+        instruction_text = "" if instruction_text is None else instruction_text.strip()
+
+        def is_blank_or_comment():            
+            if instruction_text == "":
+                return True
+            elif instruction_text.startswith("#"):
+                return True
+            return False
+
+        if not isinstance(self.instruction, (PBlank, PComment)):
+            self.prev_instruction = self.instruction
         self.instruction = None
-        self.instructionError = None
-        self.instructionStart = InstructionStart(ctx.start.line, ctx.start.column)  # type: ignore
+        self.instruction_error = None
+        self.instruction_start = InstructionStart(ctx.start.line, ctx.start.column)  # type: ignore
 
         indent = int(ctx.start.column)  # type: ignore
         if math.remainder(indent, INDENTATION_SPACES) != 0:
             # validate indentation as multiple of INDENTATION_SPACES
-            self.instructionError = PError(f'Bad indentation. Should be a multiple of {INDENTATION_SPACES}')
+            self.instruction_error = PError(f'Bad indentation. Should be a multiple of {INDENTATION_SPACES}')
         else:
             # validate scope indentation
             assert isinstance(self.scope.indent, int), "Expect indent always set"
@@ -109,160 +119,111 @@ class PProgramBuilder(pcodeListener):
                 if self.prev_instruction is None or self.prev_instruction.indent is None \
                 else self.prev_instruction.indent
             # if outdented, just pop to relevant parent scope
-            if indent < prev_indent:
-                x = indent
-                while (x < prev_indent):
-                    self.pop_scope()
-                    x += INDENTATION_SPACES
-            # if additional indent, check that this matches expectation set by previous instruction
-            elif indent > prev_indent:
-                if not self.expect_indent:
-                    self.instructionError = PError(
-                        f"Bad indentation. Additional indentation unexpected. Expected {prev_indent} spaces of indentation")
-                elif indent != prev_indent + INDENTATION_SPACES:
-                    self.instructionError = PError(
-                        f"Bad indentation. Expected {prev_indent + INDENTATION_SPACES} spaces of indentation")
-                self.expect_indent = False
-            # if no change in indentation but one was expected, set error
-            elif self.expect_indent:
-                self.instructionError = PError(
-                    f"Bad indentation. Expected additional indentation to {prev_indent + INDENTATION_SPACES} spaces")
+            # unless it's a blank or comment
+            if not is_blank_or_comment():
+                if indent < prev_indent:
+                    x = indent
+                    while (x < prev_indent):
+                        self.pop_scope()
+                        x += INDENTATION_SPACES
+                # if additional indent, check that this matches expectation set by previous instruction
+                elif indent > prev_indent:
+                    if not self.expect_indent:
+                        self.instruction_error = PError(
+                            f"Bad indentation. Additional indentation unexpected. Expected {prev_indent} spaces of indentation")
+                    elif indent != prev_indent + INDENTATION_SPACES:
+                        self.instruction_error = PError(
+                            f"Bad indentation. Expected {prev_indent + INDENTATION_SPACES} spaces of indentation")
+                    self.expect_indent = False
+                # if no change in indentation but one was expected, set error
+                elif self.expect_indent:
+                    self.instruction_error = PError(
+                        f"Bad indentation. Expected additional indentation to {prev_indent + INDENTATION_SPACES} spaces")
 
     def exitInstruction(self, ctx: pcodeParser.InstructionContext):
         # attach any error to current instruction
-        if self.instructionError is not None:
+        if self.instruction_error is not None:
             if self.instruction is None:
                 raise NotImplementedError(f"TODO Instruction not implemented: {ctx.getText()}")
             elif isinstance(self.instruction, PBlank):
                 # skip indentation errors in blank lines
                 # TODO use error code instead
-                if 'indentation' not in (self.instructionError.message or ""):
-                    self.instruction.add_error(self.instructionError)
+                if 'indentation' not in (self.instruction_error.message or ""):
+                    self.instruction.add_error(self.instruction_error)
             else:
-                self.instruction.add_error(self.instructionError)
+                self.instruction.add_error(self.instruction_error)
 
         # attach start position
-        assert self.instructionStart is not None
+        assert self.instruction_start is not None
         if self.instruction is None:
             self.instruction = PErrorInstruction(self.scope, ctx.getText())
 
-        self.instruction.line = self.instructionStart.line
-        self.instruction.indent = self.instructionStart.indent
+        self.instruction.line = self.instruction_start.line
+        self.instruction.indent = self.instruction_start.indent
 
     def enterBlock(self, ctx: pcodeParser.BlockContext):
         self.instruction = PBlock(self.scope)
         self.push_scope(self.instruction, ctx)
 
-    def exitBlock(self, ctx: pcodeParser.BlockContext):
-        pass
-
     def enterBlock_name(self, ctx: pcodeParser.Block_nameContext):
         if isinstance(self.scope, PBlock) and isinstance(self.instruction, PBlock):
             self.scope.name = ctx.getText()
 
-    def exitBlock_name(self, ctx: pcodeParser.Block_nameContext):
-        pass
-
     def enterEnd_block(self, ctx: pcodeParser.End_blockContext):
         self.instruction = PEndBlock(self.scope)
-
-    def exitEnd_block(self, ctx: pcodeParser.End_blockContext):
-        pass
 
     def enterEnd_blocks(self, ctx: pcodeParser.End_blocksContext):
         self.instruction = PEndBlocks(self.scope)
 
-    def exitEnd_blocks(self, ctx: pcodeParser.End_blocksContext):
-        pass
-
     def enterCommand(self, ctx: pcodeParser.CommandContext):
         self.instruction = PCommand(self.scope)
-
-    def exitCommand(self, ctx: pcodeParser.CommandContext):
-        pass
 
     def enterCommand_name(self, ctx: pcodeParser.Command_nameContext):
         assert isinstance(self.instruction, PCommand)
         self.instruction.name = ctx.getText()
 
-    def exitCommand_name(self, ctx: pcodeParser.Command_nameContext):
-        pass
-
     def enterCommand_args(self, ctx: pcodeParser.Command_argsContext):
         assert isinstance(self.instruction, PCommand)
         self.instruction.args = ctx.getText()
-
-    def exitCommand_args(self, ctx: pcodeParser.Command_argsContext):
-        pass
 
     def enterWatch(self, ctx: pcodeParser.WatchContext):
         self.instruction = PWatch(self.scope)
         self.push_scope(self.instruction, ctx)
 
-    def exitWatch(self, ctx: pcodeParser.WatchContext):
-        pass
-
     def enterCondition(self, ctx: pcodeParser.ConditionContext):
         assert isinstance(self.scope, PWatch | PAlarm)
         self.scope.condition = PCondition(ctx.getText())
-
-    def exitCondition(self, ctx: pcodeParser.ConditionContext):
-        pass
 
     def enterCondition_tag(self, ctx: pcodeParser.Condition_tagContext):
         if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
             self.scope.condition.tag_name = ctx.getText()
 
-    def exitCondition_tag(self, ctx: pcodeParser.Condition_tagContext):
-        pass
-
     def enterCompare_op(self, ctx: pcodeParser.Compare_opContext):
         if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
             self.scope.condition.op = ctx.getText()
-
-    def exitCompare_op(self, ctx: pcodeParser.Compare_opContext):
-        pass
 
     def enterCondition_value(self, ctx: pcodeParser.Condition_valueContext):
         if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
             self.scope.condition.tag_value = ctx.getText()
 
-    def exitCondition_value(self, ctx: pcodeParser.Condition_valueContext):
-        pass
-
     def enterCondition_unit(self, ctx: pcodeParser.Condition_unitContext):
         if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
             self.scope.condition.tag_unit = ctx.getText()
-
-    def exitCondition_unit(self, ctx: pcodeParser.Condition_unitContext):
-        pass
 
     def enterCondition_error(self, ctx: pcodeParser.Condition_errorContext):
         if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
             self.scope.condition.error = True
 
-    def exitCondition_error(self, ctx: pcodeParser.Condition_errorContext):
-        pass
-
     def enterAlarm(self, ctx: pcodeParser.AlarmContext):
         self.instruction = PAlarm(self.scope)
         self.push_scope(self.instruction, ctx)
 
-    def exitAlarm(self, ctx: pcodeParser.AlarmContext):
-        pass
-
     def enterMark(self, ctx: pcodeParser.MarkContext):
         self.instruction = PMark(self.scope)
-
-    def exitMark(self, ctx: pcodeParser.MarkContext):
-        pass
 
     def enterMark_name(self, ctx: pcodeParser.Mark_nameContext):
         assert isinstance(self.instruction, PMark)
         self.instruction.name = ctx.getText()
-
-    def exitMark_name(self, ctx: pcodeParser.Mark_nameContext):
-        pass
 
     def enterTimeexp(self, ctx: pcodeParser.TimeexpContext):
         # NOTE: there is currently a mismatch between PInstruction which have 'time' and the grammar
@@ -271,25 +232,22 @@ class PProgramBuilder(pcodeListener):
         time = ctx.getText()
         self.instruction.time = None if time is None or time.strip() == '' else float(time)
 
-    def exitTimeexp(self, ctx: pcodeParser.TimeexpContext):
-        pass
-
     def enterComment(self, ctx: pcodeParser.CommentContext):
-        pass
+        if self.instruction is None:
+            self.instruction = PComment(self.scope)
 
-    def exitComment(self, ctx: pcodeParser.CommentContext):
-        pass
+        if self.instruction.comment == "":
+            comment = ctx.getText()
+            comment = "" if comment is None else comment[1:]
+            self.instruction.comment = comment
+        else:
+            # account for multiple comments on same line
+            self.instruction.comment += ctx.getText()
 
     def enterBlank(self, ctx: pcodeParser.BlankContext):
         self.instruction = PBlank(self.scope)
 
-    def exitBlank(self, ctx: pcodeParser.BlankContext):
-        pass
-
     def enterError(self, ctx: pcodeParser.ErrorContext):
-        pass
-
-    def exitError(self, ctx: pcodeParser.ErrorContext):
         pass
 
 
