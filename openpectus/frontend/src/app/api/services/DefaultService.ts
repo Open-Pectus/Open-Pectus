@@ -1,24 +1,16 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import type { Observable } from 'rxjs';
-
 import type { BatchJob } from '../models/BatchJob';
 import type { ProcessUnit } from '../models/ProcessUnit';
 import type { ProcessValue } from '../models/ProcessValue';
 import type { ProcessValueUpdate } from '../models/ProcessValueUpdate';
 
+import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 
-@Injectable({
-  providedIn: 'root',
-})
 export class DefaultService {
-
-    constructor(public readonly http: HttpClient) {}
 
     /**
      * Get Unit
@@ -26,10 +18,10 @@ export class DefaultService {
      * @returns ProcessUnit Successful Response
      * @throws ApiError
      */
-    public getUnitProcessUnitIdGet(
+    public static getUnitProcessUnitIdGet(
 id: number,
-): Observable<ProcessUnit> {
-        return __request(OpenAPI, this.http, {
+): CancelablePromise<ProcessUnit> {
+        return __request(OpenAPI, {
             method: 'GET',
             url: '/process_unit/{id}',
             path: {
@@ -46,8 +38,8 @@ id: number,
      * @returns ProcessUnit Successful Response
      * @throws ApiError
      */
-    public getUnitsProcessUnitsGet(): Observable<Array<ProcessUnit>> {
-        return __request(OpenAPI, this.http, {
+    public static getUnitsProcessUnitsGet(): CancelablePromise<Array<ProcessUnit>> {
+        return __request(OpenAPI, {
             method: 'GET',
             url: '/process_units',
         });
@@ -59,10 +51,10 @@ id: number,
      * @returns BatchJob Successful Response
      * @throws ApiError
      */
-    public getBatchBatchJobIdGet(
+    public static getBatchBatchJobIdGet(
 id: number,
-): Observable<BatchJob> {
-        return __request(OpenAPI, this.http, {
+): CancelablePromise<BatchJob> {
+        return __request(OpenAPI, {
             method: 'GET',
             url: '/batch_job/{id}',
             path: {
@@ -80,10 +72,10 @@ id: number,
      * @returns ProcessValue Successful Response
      * @throws ApiError
      */
-    public getProcessValuesProcessUnitIdProcessValuesGet(
+    public static getProcessValuesProcessUnitIdProcessValuesGet(
 id: number,
-): Observable<Array<ProcessValue>> {
-        return __request(OpenAPI, this.http, {
+): CancelablePromise<Array<ProcessValue>> {
+        return __request(OpenAPI, {
             method: 'GET',
             url: '/process_unit/{id}/process_values',
             path: {
@@ -102,11 +94,11 @@ id: number,
      * @returns any Successful Response
      * @throws ApiError
      */
-    public setProcessValueProcessUnitIdProcessValuePost(
+    public static setProcessValueProcessUnitIdProcessValuePost(
 id: number,
 requestBody: ProcessValueUpdate,
-): Observable<any> {
-        return __request(OpenAPI, this.http, {
+): CancelablePromise<any> {
+        return __request(OpenAPI, {
             method: 'POST',
             url: '/process_unit/{id}/process_value',
             path: {
