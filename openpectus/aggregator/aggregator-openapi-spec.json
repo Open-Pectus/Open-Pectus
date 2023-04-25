@@ -252,17 +252,17 @@
       "InProgress": {
         "title": "InProgress",
         "required": [
+          "state",
           "progress_pct"
         ],
         "type": "object",
         "properties": {
           "state": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ProcessUnitStateEnum"
-              }
+            "title": "State",
+            "enum": [
+              "in_progress"
             ],
-            "default": "in_progress"
+            "type": "string"
           },
           "progress_pct": {
             "title": "Progress Pct",
@@ -273,17 +273,17 @@
       "NotOnline": {
         "title": "NotOnline",
         "required": [
+          "state",
           "last_seen_date"
         ],
         "type": "object",
         "properties": {
           "state": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ProcessUnitStateEnum"
-              }
+            "title": "State",
+            "enum": [
+              "not_online"
             ],
-            "default": "not_online"
+            "type": "string"
           },
           "last_seen_date": {
             "title": "Last Seen Date",
@@ -333,16 +333,6 @@
           }
         },
         "description": "Represents a process unit. "
-      },
-      "ProcessUnitStateEnum": {
-        "title": "ProcessUnitStateEnum",
-        "enum": [
-          "ready",
-          "in_progress",
-          "not_online"
-        ],
-        "type": "string",
-        "description": "Represents the state of a process unit. "
       },
       "ProcessValue": {
         "title": "ProcessValue",
@@ -432,15 +422,17 @@
       },
       "Ready": {
         "title": "Ready",
+        "required": [
+          "state"
+        ],
         "type": "object",
         "properties": {
           "state": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ProcessUnitStateEnum"
-              }
+            "title": "State",
+            "enum": [
+              "ready"
             ],
-            "default": "ready"
+            "type": "string"
           }
         }
       },

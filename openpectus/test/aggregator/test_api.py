@@ -1,6 +1,7 @@
 import json
 import os
 import unittest
+import hashlib
 
 from fastapi.testclient import TestClient
 from aggregator.main import app
@@ -26,18 +27,28 @@ class AggregatorOpenAPIApiTest(unittest.TestCase):
         spec = response.json()
         self.assertEqual(app.title, spec["info"]["title"])
 
-    def test_write_openapi_spec_to_file(self):
+    def test_write_openapi_spec_to_file_and_compare_with_existing(self):
         response = client.get("/openapi.json")
         self.assertEqual(200, response.status_code)
         openapi_file = os.path.join(project_path,  "aggregator", "aggregator-openapi-spec.json")
-
-        # raw dump
-        # with open(openapi_file, "wb") as f:
-        #     f.write(response.read())
+        current_md5, updated_md5 = "", ""
+        with open(openapi_file, "rb") as f:
+            current_md5 = hashlib.md5(f.read()).hexdigest()    
 
         # parsed and pretty printed
         with open(openapi_file, "wt") as f:
             json.dump(response.json(), f, indent=2)
+
+        with open(openapi_file, "rb") as f:
+            updated_md5 = hashlib.md5(f.read()).hexdigest()
+
+        self.assertEqual(current_md5, updated_md5, f"""
+The generated Aggregator API specification does not match the one stored in:
+{openapi_file}
+
+You probably forgot to update it using the update script:
+(pectus) aggregator> python generate_openapi_spec_and_typescript_interfaces.py
+""")
 
 
 if __name__ == "__main__":

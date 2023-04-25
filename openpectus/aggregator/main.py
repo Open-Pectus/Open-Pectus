@@ -1,10 +1,9 @@
-from datetime import date, datetime
-from enum import Enum, StrEnum, auto
-from typing import Literal, Optional, Union, List, Final
+from datetime import datetime
+from enum import StrEnum, auto
+from typing import List, Literal
 
 from fastapi import FastAPI
-from pydantic import BaseModel, Field
-import fastapi.logger
+from pydantic import BaseModel
 
 # TODO
 # - add lsp thingys
@@ -71,7 +70,7 @@ def get_unit(id: int) -> ProcessUnit:
     return ProcessUnit(
         id=3,
         name="Foo",
-        state=ProcessUnitState.Ready(),
+        state=ProcessUnitState.Ready(),  # type: ignore
         location="H21.5",
         runtime_msec=189309,
     )
@@ -83,7 +82,7 @@ def get_units() -> List[ProcessUnit]:
         ProcessUnit(
             id=3,
             name="Foo",
-            state=ProcessUnitState.InProgress(progress_pct=75),
+            state=ProcessUnitState.InProgress(progress_pct=75),  # type: ignore
             location="H21.5",
             runtime_msec=189309,
         )]
