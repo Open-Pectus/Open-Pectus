@@ -1,11 +1,15 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import type { HttpResponse, HttpErrorResponse } from '@angular/common/http';
+import { forkJoin, of, throwError } from 'rxjs';
+import { catchError, map, switchMap } from 'rxjs/operators';
+import type { Observable } from 'rxjs';
+
 import { ApiError } from './ApiError';
 import type { ApiRequestOptions } from './ApiRequestOptions';
 import type { ApiResult } from './ApiResult';
-import { CancelablePromise } from './CancelablePromise';
-import type { OnCancel } from './CancelablePromise';
 import type { OpenAPIConfig } from './OpenAPI';
 
 const isDefined = <T>(value: T | null | undefined): value is Exclude<T, null | undefined> => {
@@ -135,49 +139,53 @@ const resolve = async <T>(options: ApiRequestOptions, resolver?: T | Resolver<T>
     return resolver;
 };
 
-const getHeaders = async (config: OpenAPIConfig, options: ApiRequestOptions): Promise<Headers> => {
-    const token = await resolve(options, config.TOKEN);
-    const username = await resolve(options, config.USERNAME);
-    const password = await resolve(options, config.PASSWORD);
-    const additionalHeaders = await resolve(options, config.HEADERS);
+const getHeaders = (config: OpenAPIConfig, options: ApiRequestOptions): Observable<HttpHeaders> => {
+    return forkJoin({
+        token: resolve(options, config.TOKEN),
+        username: resolve(options, config.USERNAME),
+        password: resolve(options, config.PASSWORD),
+        additionalHeaders: resolve(options, config.HEADERS),
+    }).pipe(
+        map(({ token, username, password, additionalHeaders }) => {
+            const headers = Object.entries({
+                Accept: 'application/json',
+                ...additionalHeaders,
+                ...options.headers,
+            })
+                .filter(([_, value]) => isDefined(value))
+                .reduce((headers, [key, value]) => ({
+                    ...headers,
+                    [key]: String(value),
+                }), {} as Record<string, string>);
 
-    const headers = Object.entries({
-        Accept: 'application/json',
-        ...additionalHeaders,
-        ...options.headers,
-    })
-        .filter(([_, value]) => isDefined(value))
-        .reduce((headers, [key, value]) => ({
-            ...headers,
-            [key]: String(value),
-        }), {} as Record<string, string>);
+            if (isStringWithValue(token)) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
 
-    if (isStringWithValue(token)) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
+            if (isStringWithValue(username) && isStringWithValue(password)) {
+                const credentials = base64(`${username}:${password}`);
+                headers['Authorization'] = `Basic ${credentials}`;
+            }
 
-    if (isStringWithValue(username) && isStringWithValue(password)) {
-        const credentials = base64(`${username}:${password}`);
-        headers['Authorization'] = `Basic ${credentials}`;
-    }
+            if (options.body) {
+                if (options.mediaType) {
+                    headers['Content-Type'] = options.mediaType;
+                } else if (isBlob(options.body)) {
+                    headers['Content-Type'] = options.body.type || 'application/octet-stream';
+                } else if (isString(options.body)) {
+                    headers['Content-Type'] = 'text/plain';
+                } else if (!isFormData(options.body)) {
+                    headers['Content-Type'] = 'application/json';
+                }
+            }
 
-    if (options.body) {
-        if (options.mediaType) {
-            headers['Content-Type'] = options.mediaType;
-        } else if (isBlob(options.body)) {
-            headers['Content-Type'] = options.body.type || 'application/octet-stream';
-        } else if (isString(options.body)) {
-            headers['Content-Type'] = 'text/plain';
-        } else if (!isFormData(options.body)) {
-            headers['Content-Type'] = 'application/json';
-        }
-    }
-
-    return new Headers(headers);
+            return new HttpHeaders(headers);
+        }),
+    );
 };
 
 const getRequestBody = (options: ApiRequestOptions): any => {
-    if (options.body !== undefined) {
+    if (options.body) {
         if (options.mediaType?.includes('/json')) {
             return JSON.stringify(options.body)
         } else if (isString(options.body) || isBlob(options.body) || isFormData(options.body)) {
@@ -189,59 +197,36 @@ const getRequestBody = (options: ApiRequestOptions): any => {
     return undefined;
 };
 
-export const sendRequest = async (
+export const sendRequest = <T>(
     config: OpenAPIConfig,
     options: ApiRequestOptions,
+    http: HttpClient,
     url: string,
     body: any,
     formData: FormData | undefined,
-    headers: Headers,
-    onCancel: OnCancel
-): Promise<Response> => {
-    const controller = new AbortController();
-
-    const request: RequestInit = {
+    headers: HttpHeaders
+): Observable<HttpResponse<T>> => {
+    return http.request<T>(options.method, url, {
         headers,
         body: body ?? formData,
-        method: options.method,
-        signal: controller.signal,
-    };
-
-    if (config.WITH_CREDENTIALS) {
-        request.credentials = config.CREDENTIALS;
-    }
-
-    onCancel(() => controller.abort());
-
-    return await fetch(url, request);
+        withCredentials: config.WITH_CREDENTIALS,
+        observe: 'response',
+    });
 };
 
-const getResponseHeader = (response: Response, responseHeader?: string): string | undefined => {
+const getResponseHeader = <T>(response: HttpResponse<T>, responseHeader?: string): string | undefined => {
     if (responseHeader) {
-        const content = response.headers.get(responseHeader);
-        if (isString(content)) {
-            return content;
+        const value = response.headers.get(responseHeader);
+        if (isString(value)) {
+            return value;
         }
     }
     return undefined;
 };
 
-const getResponseBody = async (response: Response): Promise<any> => {
-    if (response.status !== 204) {
-        try {
-            const contentType = response.headers.get('Content-Type');
-            if (contentType) {
-                const jsonTypes = ['application/json', 'application/problem+json']
-                const isJSON = jsonTypes.some(type => contentType.toLowerCase().startsWith(type));
-                if (isJSON) {
-                    return await response.json();
-                } else {
-                    return await response.text();
-                }
-            }
-        } catch (error) {
-            console.error(error);
-        }
+const getResponseBody = <T>(response: HttpResponse<T>): T | undefined => {
+    if (response.status !== 204 && response.body !== null) {
+        return response.body;
     }
     return undefined;
 };
@@ -271,37 +256,49 @@ const catchErrorCodes = (options: ApiRequestOptions, result: ApiResult): void =>
 /**
  * Request method
  * @param config The OpenAPI configuration object
+ * @param http The Angular HTTP client
  * @param options The request options from the service
- * @returns CancelablePromise<T>
+ * @returns Observable<T>
  * @throws ApiError
  */
-export const request = <T>(config: OpenAPIConfig, options: ApiRequestOptions): CancelablePromise<T> => {
-    return new CancelablePromise(async (resolve, reject, onCancel) => {
-        try {
-            const url = getUrl(config, options);
-            const formData = getFormData(options);
-            const body = getRequestBody(options);
-            const headers = await getHeaders(config, options);
+export const request = <T>(config: OpenAPIConfig, http: HttpClient, options: ApiRequestOptions): Observable<T> => {
+    const url = getUrl(config, options);
+    const formData = getFormData(options);
+    const body = getRequestBody(options);
 
-            if (!onCancel.isCancelled) {
-                const response = await sendRequest(config, options, url, body, formData, headers, onCancel);
-                const responseBody = await getResponseBody(response);
-                const responseHeader = getResponseHeader(response, options.responseHeader);
-
-                const result: ApiResult = {
-                    url,
-                    ok: response.ok,
-                    status: response.status,
-                    statusText: response.statusText,
-                    body: responseHeader ?? responseBody,
-                };
-
-                catchErrorCodes(options, result);
-
-                resolve(result.body);
+    return getHeaders(config, options).pipe(
+        switchMap(headers => {
+            return sendRequest<T>(config, options, http, url, formData, body, headers);
+        }),
+        map(response => {
+            const responseBody = getResponseBody(response);
+            const responseHeader = getResponseHeader(response, options.responseHeader);
+            return {
+                url,
+                ok: response.ok,
+                status: response.status,
+                statusText: response.statusText,
+                body: responseHeader ?? responseBody,
+            } as ApiResult;
+        }),
+        catchError((error: HttpErrorResponse) => {
+            if (!error.status) {
+                return throwError(error);
             }
-        } catch (error) {
-            reject(error);
-        }
-    });
+            return of({
+                url,
+                ok: error.ok,
+                status: error.status,
+                statusText: error.statusText,
+                body: error.error ?? error.statusText,
+            } as ApiResult);
+        }),
+        map(result => {
+            catchErrorCodes(options, result);
+            return result.body as T;
+        }),
+        catchError((error: ApiError) => {
+            return throwError(error);
+        }),
+    );
 };
