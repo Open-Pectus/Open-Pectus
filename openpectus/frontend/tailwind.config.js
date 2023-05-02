@@ -8,9 +8,9 @@ module.exports = {
       colors: {
         'vscode-darkblue': '#04395E',
         'vscode-mediumblue': '#007ACC',
-        'vscode-backgroundgrey': '#F3F3F3',
-        'vscode-backgroundgrey-hover': '#DBDBDB',
-        'vscode-backgrounddark': '#2C2C2C',
+        'vscode-background-grey': '#F3F3F3',
+        'vscode-background-grey-hover': '#DBDBDB',
+        'vscode-background-dark': '#2C2C2C',
       },
     },
   },

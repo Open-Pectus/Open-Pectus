@@ -6,7 +6,7 @@ import { UtilMethods } from '../../shared/util-methods';
   selector: 'app-process-unit-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="rounded-md shadow-md cursor-pointer bg-vscode-backgroundgrey hover:brightness-95">
+    <div class="rounded-md shadow-md cursor-pointer bg-vscode-background-grey hover:brightness-95">
       <div class="px-5 py-3 text-xl bg-vscode-mediumblue text-white rounded-t-md flex justify-between">
         <div>{{processUnit?.name}}</div>
         <div class="ml-2 codicon !text-xl" [ngClass]="statusIcon"></div>
