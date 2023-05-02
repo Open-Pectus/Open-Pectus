@@ -112,7 +112,7 @@ export class MonacoEditorComponent implements AfterViewInit {
           range: new Range(lineNumber, 0, lineNumber, 0),
           options: {
             // after: {content: 'fdas'},
-            before: {content: 'dfsa'},
+            // before: {content: 'dfsa'},
             className: 'injectedLine',
             isWholeLine: true,
             hoverMessage: {value: 'This line has been injected and is not part of the method.'},
@@ -128,7 +128,7 @@ export class MonacoEditorComponent implements AfterViewInit {
       decorationIds.push(...decorationId);
     });
 
-    console.log(decorationIds);
+    // console.log(decorationIds);
     // editor.removeDecorations([decorationIds[1]]);
   }
 }
