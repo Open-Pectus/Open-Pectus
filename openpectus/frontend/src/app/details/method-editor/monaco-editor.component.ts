@@ -1,9 +1,11 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
+import { Store } from '@ngrx/store';
 import { editor as MonacoEditor, languages, Range, Uri } from 'monaco-editor';
 import { MonacoLanguageClient, MonacoServices } from 'monaco-languageclient';
 import { Subject, take } from 'rxjs';
 import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient/lib/common/client';
 import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
+import { DetailsActions } from '../../ngrx/details.actions';
 
 @Component({
   selector: 'app-monaco-editor',
@@ -17,6 +19,8 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   @ViewChild('editor', {static: true}) editorElement!: ElementRef<HTMLDivElement>;
   private componentDestroyed = new Subject<void>();
   private editor?: MonacoEditor.IStandaloneCodeEditor;
+
+  constructor(private store: Store) {}
 
   ngAfterViewInit() {
     this.registerLanguages();
@@ -104,6 +108,12 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       model: MonacoEditor.createModel(modelValue, 'json', Uri.parse('inmemory://model.json')),
       fontSize: 20,
       lineNumbers: lineNumberFn,
+    });
+
+    editor.onDidChangeModelContent(() => {
+      const model = editor.getModel()?.getValue();
+      if(model === undefined) return;
+      this.store.dispatch(DetailsActions.methodEditorModelChanged({model}));
     });
 
     this.componentDestroyed.pipe(take(1)).subscribe(() => {
