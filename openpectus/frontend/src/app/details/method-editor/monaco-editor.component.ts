@@ -26,6 +26,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     this.registerLanguages();
     this.editor = this.createEditor();
     this.setupMonacoLanguageClient();
+    this.store.dispatch(DetailsActions.methodEditorInitialized({model: this.editor.getModel()?.getValue() ?? ''}));
   }
 
   setupMonacoLanguageClient() {
@@ -146,6 +147,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
     // console.log(decorationIds);
     // editor.removeDecorations([decorationIds[1]]);
+
     return editor;
   }
 }
