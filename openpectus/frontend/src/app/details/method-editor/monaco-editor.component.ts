@@ -1,19 +1,9 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
 import { editor as MonacoEditor, languages, Range, Uri } from 'monaco-editor';
-import { buildWorkerDefinition } from 'monaco-editor-workers';
 import { MonacoLanguageClient, MonacoServices } from 'monaco-languageclient';
+import { Subject, take } from 'rxjs';
 import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient/lib/common/client';
 import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
-import getDialogsServiceOverride from 'vscode/service-override/dialogs';
-import getNotificationServiceOverride from 'vscode/service-override/notifications';
-import { StandaloneServices } from 'vscode/services';
-
-StandaloneServices.initialize({
-  ...getNotificationServiceOverride(),
-  ...getDialogsServiceOverride(),
-});
-
-buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.origin, false);
 
 @Component({
   selector: 'app-monaco-editor',
@@ -23,12 +13,14 @@ buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.
   `,
   styleUrls: ['monaco-editor.component.scss'],
 })
-export class MonacoEditorComponent implements AfterViewInit {
+export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   @ViewChild('editor', {static: true}) editorElement!: ElementRef<HTMLDivElement>;
+  private componentDestroyed = new Subject<void>();
+  private editor?: MonacoEditor.IStandaloneCodeEditor;
 
   ngAfterViewInit() {
     this.registerLanguages();
-    this.createEditor();
+    this.editor = this.createEditor();
     this.setupMonacoLanguageClient();
   }
 
@@ -49,6 +41,9 @@ export class MonacoEditorComponent implements AfterViewInit {
         writer,
       });
       languageClient.start().then();
+      this.componentDestroyed.pipe(take(1)).subscribe(() => {
+        setTimeout(() => languageClient.stop().then(), 100);
+      });
       reader.onClose(() => languageClient.stop());
     };
   }
@@ -74,7 +69,13 @@ export class MonacoEditorComponent implements AfterViewInit {
     });
   }
 
+  ngOnDestroy() {
+    this.componentDestroyed.next();
+  }
+
   private registerLanguages() {
+    // const isAlreadyRegistered = languages.getLanguages().some(language => language.id === 'json');
+    // if(isAlreadyRegistered) return;
     languages.register({
       id: 'json',
       extensions: ['.json', '.jsonc'],
@@ -105,6 +106,11 @@ export class MonacoEditorComponent implements AfterViewInit {
       lineNumbers: lineNumberFn,
     });
 
+    this.componentDestroyed.pipe(take(1)).subscribe(() => {
+      editor.getModel()?.dispose();
+      editor.dispose();
+    });
+
     const decorationIds: string[] = [];
     injectedLines.forEach(lineNumber => {
       const decorationId = editor.deltaDecorations([], [
@@ -130,5 +136,6 @@ export class MonacoEditorComponent implements AfterViewInit {
 
     // console.log(decorationIds);
     // editor.removeDecorations([decorationIds[1]]);
+    return editor;
   }
 }
