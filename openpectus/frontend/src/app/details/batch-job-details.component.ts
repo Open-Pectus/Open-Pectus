@@ -4,9 +4,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   selector: 'app-batch-job-details',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <p>
-      batch-job-details works!
-    </p>
+    batch-job-details work!
   `,
 })
 export class BatchJobDetailsComponent {
