@@ -21,6 +21,7 @@ buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.
   template: `
     <div #editor class="w-full h-full"></div>
   `,
+  styleUrls: ['monaco-editor.component.scss'],
 })
 export class MonacoEditorComponent implements AfterViewInit {
   @ViewChild('editor', {static: true}) editorElement!: ElementRef<HTMLDivElement>;
@@ -120,7 +121,7 @@ export class MonacoEditorComponent implements AfterViewInit {
         {
           range: new Range(lineNumber, 0, lineNumber, 0),
           options: {
-            linesDecorationsClassName: 'codicon-export codicon flex items-center justify-center',
+            linesDecorationsClassName: 'codicon-export codicon',
           },
         },
       ]);
