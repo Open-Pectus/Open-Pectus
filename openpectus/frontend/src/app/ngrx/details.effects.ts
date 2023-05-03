@@ -1,10 +1,12 @@
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { of, switchMap } from 'rxjs';
+import { map, of, switchMap } from 'rxjs';
 import { DefaultService } from '../api';
+import { unitIdParamName } from '../details/details-routing.module';
 import { DetailsActions } from './details.actions';
 import { DetailsSelectors } from './details.selectors';
+import { selectRouteParam } from './router.selectors';
 
 @Injectable()
 export class DetailsEffects {
@@ -15,6 +17,18 @@ export class DetailsEffects {
       /* save model to backend */
       alert(`model saved! ${content}`);
       return of(DetailsActions.methodEditorModelSaved());
+    }),
+  ));
+
+  loadProcessValuesWhenComponentInitialized = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.processValuesInitialized),
+    concatLatestFrom(() => this.store.select(selectRouteParam(unitIdParamName))),
+    switchMap(([_, unitId]) => {
+      const unitIdAsNumber = parseInt(unitId ?? '');
+      if(isNaN(unitIdAsNumber)) return of(DetailsActions.processValuesFailedToLoad());
+      return this.apiService.getProcessValuesProcessUnitIdProcessValuesGet(unitIdAsNumber).pipe(
+        map(processValues => DetailsActions.processValuesLoaded({processValues})),
+      );
     }),
   ));
 

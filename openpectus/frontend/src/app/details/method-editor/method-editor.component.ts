@@ -7,7 +7,7 @@ import { DetailsSelectors } from '../../ngrx/details.selectors';
   selector: 'app-method-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex flex-col bg-vscode-mediumblue p-1.5 rounded-md m-6 shadow-lg">
+    <div class="flex flex-col bg-sky-700 p-1.5 rounded-md m-6 shadow-lg">
       <div class="flex justify-between pb-2 m-2">
 
         <div class="flex gap-4">
@@ -23,7 +23,7 @@ import { DetailsSelectors } from '../../ngrx/details.selectors';
         </div>
       </div>
 
-      <app-monaco-editor class="h-96"></app-monaco-editor>
+      <app-monaco-editor class="h-96 rounded-sm overflow-hidden"></app-monaco-editor>
     </div>
   `,
 })

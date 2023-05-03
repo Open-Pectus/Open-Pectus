@@ -7,7 +7,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
     <div class="flex justify-center">
       <div class="flex flex-col max-w-5xl w-full mx-8">
         <!-- Name, Controls, Role -->
-        <!-- Process Values -->
+        <app-process-values></app-process-values>
         <app-method-editor></app-method-editor>
         <!-- Plot -->
         <!-- Process Diagram -->
