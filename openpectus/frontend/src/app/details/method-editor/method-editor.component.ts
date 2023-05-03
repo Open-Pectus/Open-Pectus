@@ -7,7 +7,7 @@ import { DetailsSelectors } from '../../ngrx/details.selectors';
   selector: 'app-method-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex flex-col bg-vscode-mediumblue p-1.5 rounded-md m-6 shadow-lg">
+    <div class="flex flex-col bg-sky-700 p-1.5 rounded-md m-6 shadow-lg">
       <div class="flex justify-between pb-2 m-2">
 
         <div class="flex gap-4">

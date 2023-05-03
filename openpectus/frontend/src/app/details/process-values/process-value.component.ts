@@ -12,7 +12,7 @@ import { UtilMethods } from '../../shared/util-methods';
         {{processValue?.value}} {{processValue?.value_unit}}
 
         <div class="relative" *ngIf="showInput">
-          <div class="absolute bg-vscode-mediumblue p-2 rounded-md top-1 left-1/2 -translate-x-1/2 flex shadow-lg shadow-gray-400">
+          <div class="absolute bg-sky-300 p-2 rounded-md top-1 left-1/2 -translate-x-1/2 flex shadow-lg shadow-gray-400">
             <input #inputElement class="p-1 outline-none rounded-l-sm w-32" [type]="inputType" [value]="processValue?.value"
                    (blur)="onBlur($event)"
                    (keyup.enter)="onSaveInput(inputElement.value)">
