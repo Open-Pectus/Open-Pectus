@@ -8,7 +8,6 @@ import { ProcessUnitStateEnum } from '../../typings';
 })
 export class ProcessUnitStatePipe implements PipeTransform {
   transform(value: ProcessUnitStateEnum | undefined, ...args: unknown[]): string {
-    if(value === undefined) return '';
     switch(value) {
       case Ready.state.READY:
         return 'Ready';
@@ -16,6 +15,8 @@ export class ProcessUnitStatePipe implements PipeTransform {
         return 'In Progress';
       case NotOnline.state.NOT_ONLINE:
         return 'Not Online';
+      case undefined:
+        return '';
       default:
         return UtilMethods.assertNever(value);
     }
