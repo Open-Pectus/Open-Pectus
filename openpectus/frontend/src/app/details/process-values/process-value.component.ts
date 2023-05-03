@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, Input, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, Input, ViewChild } from '@angular/core';
 import { ProcessValue, ProcessValueType } from '../../api';
 import { UtilMethods } from '../../shared/util-methods';
 
@@ -33,8 +33,6 @@ export class ProcessValueComponent {
   @ViewChild('saveButtonElement', {static: false}) saveButtonElement?: ElementRef<HTMLButtonElement>;
 
   showInput = false;
-
-  constructor(private cd: ChangeDetectorRef) {}
 
   get inputType() {
     const valueType = this.processValue?.value_type;

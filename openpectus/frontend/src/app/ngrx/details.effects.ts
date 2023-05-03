@@ -26,9 +26,9 @@ export class DetailsEffects {
     switchMap(([_, unitId]) => {
       const unitIdAsNumber = parseInt(unitId ?? '');
       if(isNaN(unitIdAsNumber)) return of(DetailsActions.processValuesFailedToLoad());
-      return this.apiService.getProcessValuesProcessUnitIdProcessValuesGet(unitIdAsNumber).pipe(map(processValues => {
-        return DetailsActions.processValuesLoaded({processValues});
-      }));
+      return this.apiService.getProcessValuesProcessUnitIdProcessValuesGet(unitIdAsNumber).pipe(
+        map(processValues => DetailsActions.processValuesLoaded({processValues})),
+      );
     }),
   ));
 
