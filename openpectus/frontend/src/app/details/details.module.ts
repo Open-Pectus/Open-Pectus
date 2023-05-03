@@ -14,6 +14,8 @@ import { DetailsRoutingModule } from './details-routing.module';
 import { MethodEditorComponent } from './method-editor/method-editor.component';
 import { MonacoEditorComponent } from './method-editor/monaco-editor.component';
 import { UnitDetailsComponent } from './unit-details.component';
+import { ProcessValuesComponent } from './process-values/process-values.component';
+import { ProcessValueComponent } from './process-values/process-value.component';
 
 StandaloneServices.initialize({
   ...getNotificationServiceOverride(),
@@ -28,6 +30,8 @@ buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.
     BatchJobDetailsComponent,
     MethodEditorComponent,
     MonacoEditorComponent,
+    ProcessValuesComponent,
+    ProcessValueComponent,
   ],
   imports: [
     CommonModule,

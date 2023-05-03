@@ -23,7 +23,7 @@ import { DetailsSelectors } from '../../ngrx/details.selectors';
         </div>
       </div>
 
-      <app-monaco-editor class="h-96"></app-monaco-editor>
+      <app-monaco-editor class="h-96 rounded-sm overflow-hidden"></app-monaco-editor>
     </div>
   `,
 })

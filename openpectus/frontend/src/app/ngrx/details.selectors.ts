@@ -5,4 +5,5 @@ export class DetailsSelectors {
   static selectFeature = createFeatureSelector<DetailsState>(detailsFeatureKey);
   static methodEditorIsDirty = createSelector(this.selectFeature, state => state.methodEditorIsDirty);
   static methodEditorContent = createSelector(this.selectFeature, state => state.methodEditorContent);
+  static processValues = createSelector(this.selectFeature, state => state.processValues);
 }

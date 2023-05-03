@@ -12,7 +12,8 @@ if(process.env['NODE_ENV'] === 'development') {
       if(pathname.startsWith('/assets') ||
          pathname.startsWith('/node_modules') ||
          pathname.startsWith('/src') ||
-         pathname === '/codicon.ttf'
+         pathname === '/codicon.ttf' ||
+         pathname === '/favicon.ico'
       ) {
         return;
       }

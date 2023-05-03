@@ -1,5 +1,5 @@
 import { rest } from 'msw';
-import { InProgress, NotOnline, ProcessUnit, Ready } from '../app/api';
+import { InProgress, NotOnline, ProcessUnit, ProcessValue, ProcessValueType, Ready } from '../app/api';
 
 export const handlers = [
   rest.get('/process_units', (req, res, ctx) => {
@@ -44,6 +44,41 @@ export const handlers = [
             state: NotOnline.state.NOT_ONLINE,
             last_seen_date: new Date().toJSON(),
           },
+        },
+      ]),
+    );
+  }),
+
+  rest.get('/process_unit/:processUnitId/process_values', (req, res, ctx) => {
+    return res(
+      ctx.status(200),
+      ctx.json<ProcessValue[]>([
+        {
+          value_type: ProcessValueType.INT,
+          name: 'some process value',
+          value: 123,
+          writable: false,
+        }, {
+          value_type: ProcessValueType.STRING,
+          name: 'Some other Process Value',
+          value: 'So very valuable',
+          writable: false,
+        }, {
+          value_type: ProcessValueType.INT,
+          name: 'A value with unit',
+          value: 1000,
+          value_unit: 'm',
+          writable: false,
+        }, {
+          value_type: ProcessValueType.STRING,
+          name: 'Many Data',
+          value: 'HANDLE IT',
+          writable: false,
+        }, {
+          value_type: ProcessValueType.INT,
+          name: 'A writable value',
+          value: 123,
+          writable: true,
         },
       ]),
     );
