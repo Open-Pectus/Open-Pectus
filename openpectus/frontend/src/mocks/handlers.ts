@@ -79,6 +79,11 @@ export const handlers = [
           name: 'A writable value',
           value: 123,
           writable: true,
+        }, {
+          value_type: ProcessValueType.STRING,
+          name: 'A writable text value',
+          value: 'VaLuE',
+          writable: true,
         },
       ]),
     );
