@@ -15,6 +15,7 @@ export interface ValueAndUnit {
              (input)="onInput(inputElement.value)"
              [value]="processValueAsString(processValue)" (blur)="onBlur($event)" (keyup.enter)="onSaveInput(inputElement.value)">
       <button #saveButtonElement class="px-2.5 rounded-r bg-green-500 text-gray-900 font-semibold flex items-center gap-1.5"
+              [class.bg-vscode-background-grey-hover]="!isValid"
               (click)="$event.stopPropagation(); onSaveInput(inputElement.value)" (blur)="onBlur($event)">
         <i class="codicon codicon-save"></i> Save
       </button>
@@ -57,8 +58,8 @@ export class ProcessValueEditorComponent implements AfterViewInit {
   }
 
   onSaveInput(value: string) {
-    const valueAndUnit = this.toValueAndUnit(value);
-    this.shouldClose.emit(this.isValid ? valueAndUnit : undefined);
+    if(!this.isValid) return;
+    this.shouldClose.emit(this.toValueAndUnit(value));
 
     // TODO: call backend through action/effect. This is just to show.
     if(this.processValue === undefined) return;
