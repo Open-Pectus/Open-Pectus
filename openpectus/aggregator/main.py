@@ -114,8 +114,9 @@ class ProcessValue(BaseModel):
     name: str
     value: str | float | int | None
     value_unit: str | None
-    valid_value_units: List[str]
     """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
+    valid_value_units: List[str] | None
+    """ For values with a unit, provides the list valid alternative units """
     value_type: ProcessValueType
     """ Specifies the type of allowed values. """
     writable: bool

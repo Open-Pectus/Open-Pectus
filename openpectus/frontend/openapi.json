@@ -338,7 +338,6 @@
         "title": "ProcessValue",
         "required": [
           "name",
-          "valid_value_units",
           "value_type",
           "writable"
         ],
