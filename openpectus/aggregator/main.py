@@ -115,6 +115,8 @@ class ProcessValue(BaseModel):
     value: str | float | int | None
     value_unit: str | None
     """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
+    valid_value_units: List[str] | None
+    """ For values with a unit, provides the list valid alternative units """
     value_type: ProcessValueType
     """ Specifies the type of allowed values. """
     writable: bool
@@ -123,8 +125,8 @@ class ProcessValue(BaseModel):
 
 @app.get("/process_unit/{id}/process_values")
 def get_process_values(id: int) -> List[ProcessValue]:  # naming?, parm last_seen
-    return [ProcessValue(name="A-Flow", value=54, value_unit="L", writable=False, options=None,
-            value_type=ProcessValueType.STRING)]
+    return [ProcessValue(name="A-Flow", value=54, value_unit="L", valid_value_units=["L", "m3"], writable=False,
+                         options=None, value_type=ProcessValueType.STRING)]
 
 
 class ProcessValueUpdate(BaseModel):

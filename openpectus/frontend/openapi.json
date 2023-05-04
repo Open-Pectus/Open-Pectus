@@ -365,6 +365,13 @@
             "title": "Value Unit",
             "type": "string"
           },
+          "valid_value_units": {
+            "title": "Valid Value Units",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "value_type": {
             "$ref": "#/components/schemas/ProcessValueType"
           },
