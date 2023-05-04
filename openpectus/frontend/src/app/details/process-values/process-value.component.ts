@@ -8,7 +8,7 @@ import { ValueAndUnit } from './process-value-editor.component';
   template: `
     <div class="flex bg-vscode-background-grey-hover p-2 items-center gap-2 rounded">
       <div class="mx-1 font-semibold">{{processValue?.name}}</div>
-      <div class="bg-vscode-background-grey rounded py-0.5 px-2 whitespace-nowrap" (click)="onClick()">
+      <div class="bg-vscode-background-grey rounded py-0.5 px-2 whitespace-nowrap min-h-[1.75rem]" (click)="onClick()">
         {{processValue?.value}} {{processValue?.value_unit}}
 
         <app-process-value-editor [processValue]="processValue" class="relative" *ngIf="showEditor"

@@ -1,9 +1,9 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
-import { ProcessValue } from '../../api';
+import { ProcessValue, ProcessValueType } from '../../api';
 
 export interface ValueAndUnit {
   value: string;
-  unit: string;
+  unit?: string;
 }
 
 @Component({
@@ -11,7 +11,8 @@ export interface ValueAndUnit {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="absolute bg-sky-300 p-2 rounded-md top-1 left-1/2 -translate-x-1/2 flex shadow-lg shadow-gray-400">
-      <input #inputElement class="p-1 outline-none rounded-l-sm w-32" type="text"
+      <input #inputElement class="p-1 outline-none rounded-l-sm w-32" type="text" [class.bg-red-500]="!isValid"
+             (input)="onInput(inputElement.value)"
              [value]="processValueAsString(processValue)" (blur)="onBlur($event)" (keyup.enter)="onSaveInput(inputElement.value)">
       <button #saveButtonElement class="px-2.5 rounded-r bg-green-500 text-gray-900 font-semibold flex items-center gap-1.5"
               (click)="$event.stopPropagation(); onSaveInput(inputElement.value)" (blur)="onBlur($event)">
@@ -36,21 +37,28 @@ export class ProcessValueEditorComponent implements AfterViewInit {
 
   ngAfterViewInit() {
     this.inputElement?.nativeElement.focus();
+    const valueLength = this.processValue?.value?.toString().length;
+    if(valueLength !== undefined) this.inputElement?.nativeElement.setSelectionRange(0, valueLength);
   }
 
-  toValueAndUnit(asString: string): ValueAndUnit {
-    const matchArray = /^\s*(?<value>[0-9,.]+)\s*(?<unit>[^0-9,.]*)\s*$/.exec(asString);
-    if(matchArray === null) {
-      this.isValid = false;
-      return {value: asString, unit: ''};
+  toValueAndUnit(asString: string): ValueAndUnit | undefined {
+    switch(this.processValue?.value_type) {
+      case ProcessValueType.INT:
+      case ProcessValueType.FLOAT:
+        const matchArray = /^\s*(?<value>[0-9,.]+)\s*(?<unit>[^0-9,.]*)\s*$/.exec(asString);
+        if(matchArray === null) return undefined;
+        const [_, value, unit] = matchArray;
+        return {value, unit};
+      case ProcessValueType.STRING:
+        return {value: asString};
+      case undefined:
+        return undefined;
     }
-    const [_, value, unit] = matchArray;
-    if(!this.processValue?.value_unit?.includes(unit)) this.isValid = false;
-    return {value, unit};
   }
 
   onSaveInput(value: string) {
-    this.shouldClose.emit(this.toValueAndUnit(value));
+    const valueAndUnit = this.toValueAndUnit(value);
+    this.shouldClose.emit(this.isValid ? valueAndUnit : undefined);
 
     // TODO: call backend through action/effect. This is just to show.
     if(this.processValue === undefined) return;
@@ -60,5 +68,16 @@ export class ProcessValueEditorComponent implements AfterViewInit {
   onBlur(event?: FocusEvent) {
     if(event?.relatedTarget === this.saveButtonElement?.nativeElement || event?.relatedTarget === this.inputElement?.nativeElement) return;
     this.shouldClose.emit();
+  }
+
+  onInput(value: string) {
+    this.isValid = this.validate(value);
+  }
+
+  validate(value: string): boolean {
+    const valueAndUnit = this.toValueAndUnit(value);
+    if(valueAndUnit === undefined || this.processValue === undefined) return false;
+    if(valueAndUnit.unit === undefined) return this.processValue.valid_value_units === undefined;
+    return this.processValue.valid_value_units?.includes(valueAndUnit.unit) ?? false;
   }
 }
