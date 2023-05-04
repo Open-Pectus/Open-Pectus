@@ -68,7 +68,8 @@ export const handlers = [
           name: 'A value with unit',
           value: 1000,
           value_unit: 'm',
-          writable: false,
+          valid_value_units: ['m', 'cm', 'mm', 'km'],
+          writable: true,
         }, {
           value_type: ProcessValueType.STRING,
           name: 'Many Data',

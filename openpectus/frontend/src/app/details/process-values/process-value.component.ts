@@ -1,70 +1,39 @@
-import { ChangeDetectionStrategy, Component, ElementRef, Input, ViewChild } from '@angular/core';
-import { ProcessValue, ProcessValueType } from '../../api';
-import { UtilMethods } from '../../shared/util-methods';
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ProcessValue } from '../../api';
+import { ValueAndUnit } from './process-value-editor.component';
 
 @Component({
   selector: 'app-process-value',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex bg-vscode-background-grey-hover p-2 items-center gap-2 rounded">
+    <div class="flex bg-vscode-background-grey-hover p-2 items-center gap-2 rounded" (dblclick)="onClick()">
       <div class="mx-1 font-semibold">{{processValue?.name}}</div>
-      <div class="bg-vscode-background-grey rounded py-0.5 px-2 whitespace-nowrap" (click)="onClick()">
+      <div class="bg-vscode-background-grey rounded py-0.5 px-2 whitespace-nowrap min-h-[1.75rem] relative">
         {{processValue?.value}} {{processValue?.value_unit}}
 
-        <div class="relative" *ngIf="showInput">
-          <div class="absolute bg-sky-300 p-2 rounded-md top-1 left-1/2 -translate-x-1/2 flex shadow-lg shadow-gray-400">
-            <input #inputElement class="p-1 outline-none rounded-l-sm w-32" [type]="inputType" [value]="processValue?.value"
-                   (blur)="onBlur($event)"
-                   (keyup.enter)="onSaveInput(inputElement.value)">
-            <button #saveButtonElement class="px-2.5 rounded-r bg-green-500 text-gray-900 font-semibold flex items-center gap-1.5"
-                    (click)="$event.stopPropagation(); onSaveInput(inputElement.value)" (blur)="onBlur($event)">
-              <i class="codicon codicon-save"></i> Save
-            </button>
-          </div>
-        </div>
+        <div *ngIf="processValue?.writable"
+             class="absolute -top-2 -right-2 p-[3px] codicon codicon-edit !text-[0.55rem] bg-vscode-background-grey-hover rounded-full"></div>
 
+        <app-process-value-editor [processValue]="processValue" *ngIf="showEditor"
+                                  (shouldClose)="onClose($event)"></app-process-value-editor>
       </div>
     </div>
   `,
 })
 export class ProcessValueComponent {
   @Input() processValue?: ProcessValue;
-  @ViewChild('inputElement', {static: false}) inputElement?: ElementRef<HTMLInputElement>;
-  @ViewChild('saveButtonElement', {static: false}) saveButtonElement?: ElementRef<HTMLButtonElement>;
 
-  showInput = false;
-
-  get inputType() {
-    const valueType = this.processValue?.value_type;
-    switch(valueType) {
-      case undefined:
-        return undefined;
-      case ProcessValueType.INT:
-      case ProcessValueType.FLOAT:
-        return 'number';
-      case ProcessValueType.STRING:
-        return 'text';
-      default:
-        UtilMethods.assertNever(valueType);
-    }
-  }
+  showEditor = false;
 
   onClick() {
     if(!this.processValue?.writable) return;
-    this.showInput = true;
-    setTimeout(() => this.inputElement?.nativeElement.focus());
+    this.showEditor = true;
   }
 
-  onSaveInput(value: string) {
-    this.showInput = false;
 
-    // TODO: call backend through action/effect. This is just to show.
-    if(this.processValue === undefined) return;
-    this.processValue = {...this.processValue, value};
-  }
-
-  onBlur(event?: FocusEvent) {
-    if(event?.relatedTarget === this.saveButtonElement?.nativeElement || event?.relatedTarget === this.inputElement?.nativeElement) return;
-    this.showInput = false;
+  onClose(event: ValueAndUnit | void) {
+    this.showEditor = false;
+    if(event === undefined || this.processValue === undefined) return;
+    this.processValue = {...this.processValue, value: event.value, value_unit: event.unit};
   }
 }

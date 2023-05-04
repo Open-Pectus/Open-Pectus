@@ -16,6 +16,7 @@ import { MonacoEditorComponent } from './method-editor/monaco-editor.component';
 import { UnitDetailsComponent } from './unit-details.component';
 import { ProcessValuesComponent } from './process-values/process-values.component';
 import { ProcessValueComponent } from './process-values/process-value.component';
+import { ProcessValueEditorComponent } from './process-values/process-value-editor.component';
 
 StandaloneServices.initialize({
   ...getNotificationServiceOverride(),
@@ -32,6 +33,7 @@ buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.
     MonacoEditorComponent,
     ProcessValuesComponent,
     ProcessValueComponent,
+    ProcessValueEditorComponent,
   ],
   imports: [
     CommonModule,
