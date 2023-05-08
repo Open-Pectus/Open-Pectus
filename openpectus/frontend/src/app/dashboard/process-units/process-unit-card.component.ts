@@ -7,8 +7,8 @@ import { UtilMethods } from '../../shared/util-methods';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="rounded-md shadow-md cursor-pointer bg-vscode-background-grey hover:brightness-95">
-      <div class="px-5 py-3 text-xl bg-sky-700 text-white rounded-t-md flex justify-between">
-        <div>{{processUnit?.name}}</div>
+      <div class="px-5 py-3 bg-sky-700 text-white rounded-t-md flex justify-between">
+        <div class="font-semibold text-lg">{{processUnit?.name}}</div>
         <div class="ml-2 codicon !text-xl" [ngClass]="statusIcon"></div>
       </div>
       <div class="px-5 py-4 ">

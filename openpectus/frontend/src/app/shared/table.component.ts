@@ -25,7 +25,7 @@ export interface DefaultTableSort<T> {
       <table class="w-full table-auto border-collapse">
         <thead>
         <tr class="bg-sky-700 text-white cursor-pointer select-none">
-          <th *ngFor="let column of columns" class="p-2" (click)="setSortByColumn(column)">
+          <th *ngFor="let column of columns" class="p-3" (click)="setSortByColumn(column)">
             <span>{{column.header}}</span>
             <ng-container *ngIf="sortColumn === column">
               <span *ngIf="sortDir === TableSortDirection.Descending" class="codicon codicon-arrow-up ml-1 -mr-5"></span>
@@ -36,7 +36,7 @@ export interface DefaultTableSort<T> {
         </thead>
         <tbody class="cursor-pointer">
         <tr *ngFor="let row of data" class="border-y last-of-type:border-none border-slate-500" (click)="rowClicked.emit(row)">
-          <td *ngFor="let column of columns" class="text-center p-2">
+          <td *ngFor="let column of columns" class="text-center p-3">
             <span *ngIf="column.isDate; else defaultFormat">{{toDate(row[column.key]) | date}}</span>
             <ng-template #defaultFormat>{{format(row[column.key])}}</ng-template>
           </td>
