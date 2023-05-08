@@ -36,10 +36,10 @@ export class RecentBatchJobsComponent {
   ];
 
   protected readonly data: BatchJob[] = [
-    {id: 1, unit_id: 1, unit_name: 'Some Name', completed_date: new Date().toISOString(), contributors: ['Eskild']},
-    {id: 2, unit_id: 2, unit_name: 'Some Name', completed_date: randomDate1, contributors: ['Eskild', 'Morten']},
-    {id: 3, unit_id: 3, unit_name: 'Some Name', completed_date: randomDate3, contributors: ['Eskild']},
-    {id: 4, unit_id: 4, unit_name: 'Some Name', completed_date: tenMinutesAgo, contributors: ['Eskild']},
+    {id: 1, unit_id: 1, unit_name: 'Some Name 1', completed_date: new Date().toISOString(), contributors: ['Eskild']},
+    {id: 2, unit_id: 2, unit_name: 'Some Name 2', completed_date: randomDate1, contributors: ['Eskild', 'Morten']},
+    {id: 3, unit_id: 3, unit_name: 'Some Name 3', completed_date: randomDate3, contributors: ['Eskild']},
+    {id: 4, unit_id: 4, unit_name: 'Some Name 4', completed_date: tenMinutesAgo, contributors: ['Eskild']},
   ];
 
   constructor(private router: Router) {}
