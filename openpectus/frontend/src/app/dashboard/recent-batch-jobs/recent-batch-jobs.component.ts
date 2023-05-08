@@ -4,7 +4,7 @@ import { sub } from 'date-fns';
 import { BatchJob } from '../../api';
 import { detailsUrlPart } from '../../app-routing.module';
 import { batchJobUrlPart } from '../../details/details-routing.module';
-import { TableColumn } from '../../shared/table.component';
+import { DefaultTableSort, TableColumn, TableSortDirection } from '../../shared/table.component';
 
 
 const randomDate1 = sub(new Date(), {seconds: Math.random() * 1000000}).toISOString();
@@ -15,10 +15,12 @@ const tenMinutesAgo = sub(new Date(), {seconds: Math.random() * 1000000}).toISOS
   selector: 'app-recent-batch-jobs',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-table class="w-full h-96" [columns]="columns" [data]="data" (rowClicked)="navigateToBatchJob($event)"></app-table>
+    <app-table class="w-full h-96" [columns]="columns" [data]="data" (rowClicked)="navigateToBatchJob($event)"
+               [defaultSort]="defaultSort"></app-table>
   `,
 })
 export class RecentBatchJobsComponent {
+  protected readonly defaultSort: DefaultTableSort<BatchJob> = {columnKey: 'completed_date', direction: TableSortDirection.Descending};
   protected readonly columns: TableColumn<BatchJob>[] = [
     {
       header: 'Unit',
@@ -34,7 +36,6 @@ export class RecentBatchJobsComponent {
       key: 'contributors',
     },
   ];
-
   protected readonly data: BatchJob[] = [
     {id: 1, unit_id: 1, unit_name: 'Some Name 1', completed_date: new Date().toISOString(), contributors: ['Eskild']},
     {id: 2, unit_id: 2, unit_name: 'Some Name 2', completed_date: randomDate1, contributors: ['Eskild', 'Morten']},

@@ -7,9 +7,14 @@ export interface TableColumn<T> {
   isDate?: boolean;
 }
 
-enum TableSortDirection {
+export enum TableSortDirection {
   Ascending = 'ascending',
   Descending = 'descending',
+}
+
+export interface DefaultTableSort<T> {
+  columnKey: keyof T;
+  direction: TableSortDirection;
 }
 
 @Component({
@@ -20,11 +25,11 @@ enum TableSortDirection {
       <table class="w-full table-auto border-collapse">
         <thead>
         <tr class="bg-sky-700 text-white cursor-pointer select-none">
-          <th *ngFor="let column of columns" class="p-2" (click)="sortByColumn(column)">
-            {{column.header}}
+          <th *ngFor="let column of columns" class="p-2" (click)="setSortByColumn(column)">
+            <span>{{column.header}}</span>
             <ng-container *ngIf="sortColumn === column">
-              <span *ngIf="sortDir === TableSortDirection.Descending" class="codicon codicon-arrow-up"></span>
-              <span *ngIf="sortDir === TableSortDirection.Ascending" class="codicon codicon-arrow-down"></span>
+              <span *ngIf="sortDir === TableSortDirection.Descending" class="codicon codicon-arrow-up ml-1 -mr-5"></span>
+              <span *ngIf="sortDir === TableSortDirection.Ascending" class="codicon codicon-arrow-down ml-1 -mr-5"></span>
             </ng-container>
           </th>
         </tr>
@@ -39,21 +44,24 @@ enum TableSortDirection {
         </tbody>
       </table>
     </div>
-
-
   `,
 })
 export class TableComponent<T> {
   @Input() columns?: TableColumn<T>[];
   @Output() rowClicked = new EventEmitter<T>();
-  protected sortDir?: TableSortDirection;
+  protected sortDir = TableSortDirection.Ascending;
   protected sortColumn?: TableColumn<T>;
   protected readonly TableSortDirection = TableSortDirection;
+
+  @Input() set defaultSort(defaultSort: DefaultTableSort<T>) {
+    this.sortColumn = this.columns?.find((column => column.key === defaultSort.columnKey));
+    this.sortDir = defaultSort.direction;
+  }
 
   private _data?: T[];
 
   get data(): T[] | undefined {
-    if(this.sortDir !== undefined && this.sortColumn !== undefined) this.sortData(this.sortColumn);
+    if(this.sortColumn !== undefined) this.sortData(this.sortColumn);
     return this._data;
   }
 
@@ -71,16 +79,13 @@ export class TableComponent<T> {
     return value;
   }
 
-  sortByColumn(column: TableColumn<T>) {
+  setSortByColumn(column: TableColumn<T>) {
     if(this.sortColumn === column) {
       switch(this.sortDir) {
         case TableSortDirection.Ascending:
           this.sortDir = TableSortDirection.Descending;
           break;
         case TableSortDirection.Descending:
-          this.sortDir = undefined;
-          break;
-        case undefined:
           this.sortDir = TableSortDirection.Ascending;
           break;
       }
@@ -88,8 +93,6 @@ export class TableComponent<T> {
       this.sortColumn = column;
       this.sortDir = TableSortDirection.Ascending;
     }
-
-
   }
 
   private sortData(sortColumn: TableColumn<T>) {
