@@ -1,9 +1,11 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { Router } from '@angular/router';
+import { Store } from '@ngrx/store';
 import { sub } from 'date-fns';
 import { BatchJob } from '../../api';
 import { detailsUrlPart } from '../../app-routing.module';
 import { batchJobUrlPart } from '../../details/details-routing.module';
+import { DashboardSelectors } from '../../ngrx/dashboard.selectors';
 import { DefaultTableSort, TableColumn, TableSortDirection } from '../../shared/table.component';
 
 
@@ -15,12 +17,12 @@ const tenMinutesAgo = sub(new Date(), {seconds: Math.random() * 1000000}).toISOS
   selector: 'app-recent-batch-jobs',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <input #filterInput type="text" placeholder="Filter" (input)="filter = filterInput.value">
     <app-table class="w-full h-96" [columns]="columns" [data]="data" (rowClicked)="navigateToBatchJob($event)"
-               [defaultSort]="defaultSort" [filter]="filter"></app-table>
+               [defaultSort]="defaultSort" [filter]="recenterBatchJobFilter | ngrxPush"></app-table>
   `,
 })
 export class RecentBatchJobsComponent {
+  protected readonly recenterBatchJobFilter = this.store.select(DashboardSelectors.recentBatchJobFilter);
   protected readonly defaultSort: DefaultTableSort<BatchJob> = {columnKey: 'completed_date', direction: TableSortDirection.Descending};
   protected readonly columns: TableColumn<BatchJob>[] = [
     {
@@ -43,9 +45,8 @@ export class RecentBatchJobsComponent {
     {id: 3, unit_id: 3, unit_name: 'Some Name 3', completed_date: randomDate3, contributors: ['Eskild']},
     {id: 4, unit_id: 4, unit_name: 'Some Name 4', completed_date: tenMinutesAgo, contributors: ['Eskild']},
   ];
-  protected filter?: string;
 
-  constructor(private router: Router) {}
+  constructor(private router: Router, private store: Store) {}
 
   navigateToBatchJob(batchJob: BatchJob) {
     this.router.navigate([detailsUrlPart, batchJobUrlPart, batchJob.id]).then();

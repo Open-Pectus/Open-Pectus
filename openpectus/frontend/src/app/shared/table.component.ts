@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
 import { compareAsc, compareDesc } from 'date-fns';
 
 export interface TableColumn<T> {
@@ -54,7 +54,7 @@ export class TableComponent<T> {
   protected sortColumn?: TableColumn<T>;
   protected readonly TableSortDirection = TableSortDirection;
 
-  constructor(private datePipe: DatePipe) {}
+  constructor(private datePipe: DatePipe, private cd: ChangeDetectorRef) {}
 
   @Input() set defaultSort(defaultSort: DefaultTableSort<T>) {
     this.sortColumn = this.columns?.find((column => column.key === defaultSort.columnKey));
@@ -67,6 +67,7 @@ export class TableComponent<T> {
     let data = this._data;
     if(this.filter !== undefined) data = this.filterData(data, this.filter);
     if(this.sortColumn !== undefined) data = this.sortData(data, this.sortColumn);
+    this.cd.markForCheck();
     return data;
   }
 
@@ -102,7 +103,7 @@ export class TableComponent<T> {
   }
 
   private sortData(data: T[] | undefined, sortColumn: TableColumn<T>) {
-    const clonedDate = structuredClone(this._data);
+    const clonedDate = structuredClone(data);
     clonedDate?.sort((a, b) => {
       const aValue = a[sortColumn.key];
       const bValue = b[sortColumn.key];
@@ -153,9 +154,7 @@ export class TableComponent<T> {
         } else if(typeof value === 'number' || typeof value === 'string' || Array.isArray(value)) {
           stringValue = value.toString();
         }
-        const result = stringValue.toUpperCase().includes(filter.toUpperCase());
-        console.log(result);
-        return result;
+        return stringValue.toUpperCase().includes(filter.toUpperCase());
       });
     });
   }

@@ -6,5 +6,6 @@ export const DashboardActions = createActionGroup({
   events: {
     'Page initialized': emptyProps(),
     'Process Units loaded': props<{ processUnits: ProcessUnit[] }>(),
+    'Recent Batch Job Filter Changed': props<{ filter: string }>(),
   },
 });
