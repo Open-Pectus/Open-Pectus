@@ -1,4 +1,4 @@
-import { DATE_PIPE_DEFAULT_OPTIONS, registerLocaleData } from '@angular/common';
+import { DATE_PIPE_DEFAULT_OPTIONS, DatePipe, registerLocaleData } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
 import localeDa from '@angular/common/locales/da';
 import { isDevMode, LOCALE_ID, NgModule } from '@angular/core';
@@ -48,6 +48,7 @@ registerLocaleData(localeDa);
   ],
   providers: [
     {provide: LOCALE_ID, useValue: 'da-DK'},
+    DatePipe,
     {provide: DATE_PIPE_DEFAULT_OPTIONS, useValue: {dateFormat: 'd. MMM y HH:mm:ss'}},
   ],
   bootstrap: [AppComponent],

@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { compareAsc, compareDesc } from 'date-fns';
 
@@ -37,8 +38,7 @@ export interface DefaultTableSort<T> {
         <tbody class="cursor-pointer">
         <tr *ngFor="let row of data" class="border-y last-of-type:border-none border-slate-500" (click)="rowClicked.emit(row)">
           <td *ngFor="let column of columns" class="text-center p-3">
-            <span *ngIf="column.isDate; else defaultFormat">{{toDate(row[column.key]) | date}}</span>
-            <ng-template #defaultFormat>{{format(row[column.key])}}</ng-template>
+            {{format(row[column.key], column)}}
           </td>
         </tr>
         </tbody>
@@ -48,10 +48,13 @@ export interface DefaultTableSort<T> {
 })
 export class TableComponent<T> {
   @Input() columns?: TableColumn<T>[];
+  @Input() filter?: string;
   @Output() rowClicked = new EventEmitter<T>();
   protected sortDir = TableSortDirection.Ascending;
   protected sortColumn?: TableColumn<T>;
   protected readonly TableSortDirection = TableSortDirection;
+
+  constructor(private datePipe: DatePipe) {}
 
   @Input() set defaultSort(defaultSort: DefaultTableSort<T>) {
     this.sortColumn = this.columns?.find((column => column.key === defaultSort.columnKey));
@@ -61,8 +64,10 @@ export class TableComponent<T> {
   private _data?: T[];
 
   get data(): T[] | undefined {
-    if(this.sortColumn !== undefined) this.sortData(this.sortColumn);
-    return this._data;
+    let data = this._data;
+    if(this.filter !== undefined) data = this.filterData(data, this.filter);
+    if(this.sortColumn !== undefined) data = this.sortData(data, this.sortColumn);
+    return data;
   }
 
   @Input() set data(value: T[] | undefined) {
@@ -74,7 +79,8 @@ export class TableComponent<T> {
     return new Date(value);
   }
 
-  format(value: T[keyof T]): string | T[keyof T] {
+  format(value: T[keyof T], column: TableColumn<T>): string | T[keyof T] | undefined {
+    if(column.isDate) return this.datePipe.transform(this.toDate(value))?.toString();
     if(Array.isArray(value)) return value.join(', ');
     return value;
   }
@@ -95,8 +101,9 @@ export class TableComponent<T> {
     }
   }
 
-  private sortData(sortColumn: TableColumn<T>) {
-    this._data?.sort((a, b) => {
+  private sortData(data: T[] | undefined, sortColumn: TableColumn<T>) {
+    const clonedDate = structuredClone(this._data);
+    clonedDate?.sort((a, b) => {
       const aValue = a[sortColumn.key];
       const bValue = b[sortColumn.key];
       if(sortColumn.isDate) {
@@ -132,6 +139,24 @@ export class TableComponent<T> {
         }
       }
       return 0;
+    });
+    return clonedDate;
+  }
+
+  private filterData(data: T[] | undefined, filter: string) {
+    return data?.filter(row => {
+      return this.columns?.some(column => {
+        const value = row[column.key];
+        let stringValue = '';
+        if(column.isDate) {
+          stringValue = this.datePipe.transform(this.toDate(value)) ?? '';
+        } else if(typeof value === 'number' || typeof value === 'string' || Array.isArray(value)) {
+          stringValue = value.toString();
+        }
+        const result = stringValue.toUpperCase().includes(filter.toUpperCase());
+        console.log(result);
+        return result;
+      });
     });
   }
 }

@@ -15,8 +15,9 @@ const tenMinutesAgo = sub(new Date(), {seconds: Math.random() * 1000000}).toISOS
   selector: 'app-recent-batch-jobs',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    <input #filterInput type="text" placeholder="Filter" (input)="filter = filterInput.value">
     <app-table class="w-full h-96" [columns]="columns" [data]="data" (rowClicked)="navigateToBatchJob($event)"
-               [defaultSort]="defaultSort"></app-table>
+               [defaultSort]="defaultSort" [filter]="filter"></app-table>
   `,
 })
 export class RecentBatchJobsComponent {
@@ -42,6 +43,7 @@ export class RecentBatchJobsComponent {
     {id: 3, unit_id: 3, unit_name: 'Some Name 3', completed_date: randomDate3, contributors: ['Eskild']},
     {id: 4, unit_id: 4, unit_name: 'Some Name 4', completed_date: tenMinutesAgo, contributors: ['Eskild']},
   ];
+  protected filter?: string;
 
   constructor(private router: Router) {}
 
