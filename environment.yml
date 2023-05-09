@@ -16,6 +16,8 @@ dependencies:
   - fastapi
   - uvicorn[standard]
   - httpx # for testing with fastapi.testclient
+  - pip 
+    - fastapi_websocket_pubsub
   # aggregator - lsp TODO
 
 # manage conda environment with:

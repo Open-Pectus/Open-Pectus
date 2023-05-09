@@ -6,3 +6,4 @@ black   # dev
 fastapi
 uvicorn[standard]
 httpx   # for tests with fastapi.testclient
+fastapi_websocket_pubsub

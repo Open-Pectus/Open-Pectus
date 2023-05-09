@@ -62,3 +62,45 @@ the following responsibilities:
 # Protocols
 
 
+## Engine - Aggregator
+
+
+```mermaid
+sequenceDiagram
+autonumber
+    participant E as Engine
+    participant A as Aggregator        
+%%note left of E: Check-in    
+    Note right of A: REST
+    E ->> A: init [engine_name, uod_name]
+    A ->> E: [engine_id]
+    Note over E,A: A now knows E is available
+
+%%note left of E: Engine start    
+    Note right of A: REST
+    E ->> A: start [engine_id]
+    A ->> E: [web socket url]
+    Note over E,A: A now knows E is running and will likely connect<br>    via Web socketURL to supply live equipment data
+
+%%note left of E: Engine running    
+    Note right of A: Web Socket    
+    E ->> A: connect [engine_id]
+    Note over E,A: A now knows E is ready to receive commands
+    
+    loop Every second
+    E ->> A: state_changed [tag_state, seq]    
+    end
+
+    alt User: update tag
+    A ->> E: update_tag [tag_name, tag_value, seq]
+    end
+
+    alt User: Change run state
+    A ->> E: update_run_state [run_state, seq]
+    end
+
+    alt User: Run command
+    A ->> E: invoke_command [run_state, seq]
+    end
+
+```
