@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import { ProcessValue } from '../api';
+import { ProcessUnit, ProcessValue, ProcessValueCommand } from '../api';
 
 export const DetailsActions = createActionGroup({
   source: 'Details',
@@ -11,5 +11,8 @@ export const DetailsActions = createActionGroup({
     'Process Values Initialized': emptyProps(),
     'Process Values Loaded': props<{ processValues: ProcessValue[] }>(),
     'Process Values Failed to load': emptyProps(),
+    'Process Value Command Clicked': props<{ command: ProcessValueCommand, processValueName: string }>(),
+    'Details Page Initialized': emptyProps(),
+    'Process Unit Loaded': props<{ processUnit: ProcessUnit }>(),
   },
 });

@@ -114,6 +114,11 @@ class ProcessValueType(StrEnum):
     INT = auto()
 
 
+class ProcessValueCommand(BaseModel):
+    name: str
+    command: str
+
+
 class ProcessValue(BaseModel):
     """ Represents a process value. """
     name: str
@@ -125,7 +130,7 @@ class ProcessValue(BaseModel):
     value_type: ProcessValueType
     """ Specifies the type of allowed values. """
     writable: bool
-    options: List[str] | None
+    commands: List[ProcessValueCommand] | None  # TODO: have backend verify that no ProcessValue ever is both writable and has commands.
 
 
 @app.get("/process_unit/{id}/process_values")
@@ -139,6 +144,23 @@ class ProcessValueUpdate(BaseModel):
     value: str | float | int
 
 
-@app.post("/process_unit/{id}/process_value")
-def set_process_value(id: int, update: ProcessValueUpdate):
+@app.post("/process_unit/{unit_id}/process_value")
+def set_process_value(unit_id: int, update: ProcessValueUpdate):
+    pass
+
+
+class CommandSource(StrEnum):
+    PROCESS_VALUE = auto()
+    MANUALLY_ENTERED = auto()
+    UNIT_BUTTON = auto()
+
+
+class ExecutableCommand(BaseModel):
+    command: str
+    source: CommandSource
+    name: str | None
+
+
+@app.post("/process_unit/{unit_id}/execute_command")
+def execute_process_value_command(unit_id: int, command: ExecutableCommand):
     pass

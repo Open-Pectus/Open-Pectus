@@ -10,7 +10,7 @@ export interface ValueAndUnit {
   selector: 'app-process-value-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="absolute bg-sky-300 p-2 rounded-md top-8 left-1/2 -translate-x-1/2 flex shadow-lg shadow-gray-400">
+    <div class="absolute bg-white border border-slate-500 p-2 rounded-md top-8 left-1/2 -translate-x-1/2 flex shadow-lg shadow-gray-400">
       <input #inputElement class="p-1 outline-none rounded-l-sm w-32" type="text" [class.bg-red-500]="!isValid"
              (input)="onInput(inputElement.value)"
              [value]="processValueAsString(processValue)" (blur)="onBlur($event)" (keyup.enter)="onSaveInput(inputElement.value)">
@@ -26,7 +26,7 @@ export class ProcessValueEditorComponent implements AfterViewInit {
   @Input() processValue?: ProcessValue;
   @ViewChild('inputElement', {static: false}) inputElement?: ElementRef<HTMLInputElement>;
   @ViewChild('saveButtonElement', {static: false}) saveButtonElement?: ElementRef<HTMLButtonElement>;
-  @Output() shouldClose = new EventEmitter<ValueAndUnit | void>();
+  @Output() shouldClose = new EventEmitter<ValueAndUnit | undefined>();
 
   isValid = true;
 
@@ -60,10 +60,6 @@ export class ProcessValueEditorComponent implements AfterViewInit {
   onSaveInput(value: string) {
     if(!this.isValid) return;
     this.shouldClose.emit(this.toValueAndUnit(value));
-
-    // TODO: call backend through action/effect. This is just to show.
-    if(this.processValue === undefined) return;
-    this.processValue = {...this.processValue, value};
   }
 
   onBlur(event?: FocusEvent) {

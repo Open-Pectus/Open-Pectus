@@ -1,6 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import produce from 'immer';
-import { ProcessValue } from '../api';
+import { ProcessUnit, ProcessValue } from '../api';
 import { DetailsActions } from './details.actions';
 
 export const detailsFeatureKey = 'details';
@@ -9,6 +9,7 @@ export interface DetailsState {
   methodEditorIsDirty: boolean;
   methodEditorContent: string;
   processValues: ProcessValue[];
+  processUnit?: ProcessUnit;
 }
 
 const initialState: DetailsState = {
@@ -31,6 +32,9 @@ export const detailsReducer = createReducer(initialState,
   })),
   on(DetailsActions.processValuesLoaded, (state, {processValues}) => produce(state, draft => {
     draft.processValues = processValues;
+  })),
+  on(DetailsActions.processUnitLoaded, (state, {processUnit}) => produce(state, draft => {
+    draft.processUnit = processUnit;
   })),
 );
 

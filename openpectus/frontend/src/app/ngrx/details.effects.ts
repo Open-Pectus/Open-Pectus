@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { map, of, switchMap } from 'rxjs';
-import { DefaultService } from '../api';
+import { CommandSource, DefaultService } from '../api';
 import { unitIdParamName } from '../details/details-routing.module';
 import { DetailsActions } from './details.actions';
 import { DetailsSelectors } from './details.selectors';
@@ -31,6 +31,27 @@ export class DetailsEffects {
       );
     }),
   ));
+
+  loadProcessUnitWhenPageInitialized = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.detailsPageInitialized),
+    concatLatestFrom(() => this.store.select(selectRouteParam(unitIdParamName))),
+    switchMap(([_, unitId]) => {
+      const unitIdAsNumber = parseInt(unitId ?? '');
+      return this.apiService.getUnitProcessUnitIdGet(unitIdAsNumber).pipe(
+        map(processUnit => DetailsActions.processUnitLoaded({processUnit})),
+      );
+    }),
+  ));
+
+  executeCommandWhenCommandButtonClicked = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.processValueCommandClicked),
+    concatLatestFrom(() => this.store.select(selectRouteParam(unitIdParamName))),
+    switchMap(([{command, processValueName}, unitId]) => {
+      const unitIdAsNumber = parseInt(unitId ?? '');
+      return this.apiService.executeProcessValueCommandProcessUnitUnitIdExecuteCommandPost(
+        unitIdAsNumber, {...command, source: CommandSource.PROCESS_VALUE});
+    }),
+  ), {dispatch: false});
 
   constructor(private actions: Actions, private store: Store, private apiService: DefaultService) {}
 }

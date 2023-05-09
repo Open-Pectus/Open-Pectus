@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 
 import type { BatchJob } from '../models/BatchJob';
+import type { ExecutableCommand } from '../models/ExecutableCommand';
 import type { ProcessUnit } from '../models/ProcessUnit';
 import type { ProcessValue } from '../models/ProcessValue';
 import type { ProcessValueUpdate } from '../models/ProcessValueUpdate';
@@ -109,20 +110,45 @@ id: number,
 
     /**
      * Set Process Value
-     * @param id 
+     * @param unitId 
      * @param requestBody 
      * @returns any Successful Response
      * @throws ApiError
      */
-    public setProcessValueProcessUnitIdProcessValuePost(
-id: number,
+    public setProcessValueProcessUnitUnitIdProcessValuePost(
+unitId: number,
 requestBody: ProcessValueUpdate,
 ): Observable<any> {
         return __request(OpenAPI, this.http, {
             method: 'POST',
-            url: '/process_unit/{id}/process_value',
+            url: '/process_unit/{unit_id}/process_value',
             path: {
-                'id': id,
+                'unit_id': unitId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
+    /**
+     * Execute Process Value Command
+     * @param unitId 
+     * @param requestBody 
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public executeProcessValueCommandProcessUnitUnitIdExecuteCommandPost(
+unitId: number,
+requestBody: ExecutableCommand,
+): Observable<any> {
+        return __request(OpenAPI, this.http, {
+            method: 'POST',
+            url: '/process_unit/{unit_id}/execute_command',
+            path: {
+                'unit_id': unitId,
             },
             body: requestBody,
             mediaType: 'application/json',
