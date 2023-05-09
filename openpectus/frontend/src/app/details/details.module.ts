@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
-import { PushModule } from '@ngrx/component';
+import { LetModule, PushModule } from '@ngrx/component';
 import { EffectsModule } from '@ngrx/effects';
 import { StoreModule } from '@ngrx/store';
 import { buildWorkerDefinition } from 'monaco-editor-workers';
@@ -13,11 +13,11 @@ import { BatchJobDetailsComponent } from './batch-job-details.component';
 import { DetailsRoutingModule } from './details-routing.module';
 import { MethodEditorComponent } from './method-editor/method-editor.component';
 import { MonacoEditorComponent } from './method-editor/monaco-editor.component';
-import { UnitDetailsComponent } from './unit-details.component';
-import { ProcessValuesComponent } from './process-values/process-values.component';
-import { ProcessValueComponent } from './process-values/process-value.component';
-import { ProcessValueEditorComponent } from './process-values/process-value-editor.component';
 import { ProcessValueCommandsComponent } from './process-values/process-value-commands.component';
+import { ProcessValueEditorComponent } from './process-values/process-value-editor.component';
+import { ProcessValueComponent } from './process-values/process-value.component';
+import { ProcessValuesComponent } from './process-values/process-values.component';
+import { UnitDetailsComponent } from './unit-details.component';
 
 StandaloneServices.initialize({
   ...getNotificationServiceOverride(),
@@ -43,6 +43,7 @@ buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.
     PushModule,
     StoreModule.forFeature(detailsFeatureKey, detailsReducer),
     EffectsModule.forFeature([DetailsEffects]),
+    LetModule,
   ],
 })
 export class DetailsModule {}

@@ -134,13 +134,13 @@ requestBody: ProcessValueUpdate,
     }
 
     /**
-     * Execute Process Value Command
+     * Execute Command
      * @param unitId 
      * @param requestBody 
      * @returns any Successful Response
      * @throws ApiError
      */
-    public executeProcessValueCommandProcessUnitUnitIdExecuteCommandPost(
+    public executeCommandProcessUnitUnitIdExecuteCommandPost(
 unitId: number,
 requestBody: ExecutableCommand,
 ): Observable<any> {
