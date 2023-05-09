@@ -170,18 +170,18 @@
         }
       }
     },
-    "/process_unit/{id}/process_value": {
+    "/process_unit/{unit_id}/process_value": {
       "post": {
         "summary": "Set Process Value",
-        "operationId": "set_process_value_process_unit__id__process_value_post",
+        "operationId": "set_process_value_process_unit__unit_id__process_value_post",
         "parameters": [
           {
             "required": true,
             "schema": {
-              "title": "Id",
+              "title": "Unit Id",
               "type": "integer"
             },
-            "name": "id",
+            "name": "unit_id",
             "in": "path"
           }
         ],
@@ -190,6 +190,62 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ProcessValueUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/process_unit/{unit_id}/process_value/{process_value_name}": {
+      "post": {
+        "summary": "Execute Process Value Command",
+        "operationId": "execute_process_value_command_process_unit__unit_id__process_value__process_value_name__post",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Unit Id",
+              "type": "integer"
+            },
+            "name": "unit_id",
+            "in": "path"
+          },
+          {
+            "required": true,
+            "schema": {
+              "title": "Process Value Name",
+              "type": "string"
+            },
+            "name": "process_value_name",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessValueCommand"
               }
             }
           },
@@ -401,15 +457,33 @@
             "title": "Writable",
             "type": "boolean"
           },
-          "options": {
-            "title": "Options",
+          "commands": {
+            "title": "Commands",
             "type": "array",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/ProcessValueCommand"
             }
           }
         },
         "description": "Represents a process value. "
+      },
+      "ProcessValueCommand": {
+        "title": "ProcessValueCommand",
+        "required": [
+          "name",
+          "command"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "command": {
+            "title": "Command",
+            "type": "string"
+          }
+        }
       },
       "ProcessValueType": {
         "title": "ProcessValueType",

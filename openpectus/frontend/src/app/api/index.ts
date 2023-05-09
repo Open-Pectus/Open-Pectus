@@ -12,6 +12,7 @@ export { InProgress } from './models/InProgress';
 export { NotOnline } from './models/NotOnline';
 export type { ProcessUnit } from './models/ProcessUnit';
 export type { ProcessValue } from './models/ProcessValue';
+export type { ProcessValueCommand } from './models/ProcessValueCommand';
 export { ProcessValueType } from './models/ProcessValueType';
 export type { ProcessValueUpdate } from './models/ProcessValueUpdate';
 export { Ready } from './models/Ready';

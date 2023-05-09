@@ -2,6 +2,7 @@
 /* tslint:disable */
 /* eslint-disable */
 
+import type { ProcessValueCommand } from './ProcessValueCommand';
 import type { ProcessValueType } from './ProcessValueType';
 
 /**
@@ -14,5 +15,5 @@ export type ProcessValue = {
     valid_value_units?: Array<string>;
     value_type: ProcessValueType;
     writable: boolean;
-    options?: Array<string>;
+    commands?: Array<ProcessValueCommand>;
 };

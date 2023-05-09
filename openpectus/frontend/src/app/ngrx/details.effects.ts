@@ -32,5 +32,26 @@ export class DetailsEffects {
     }),
   ));
 
+  loadProcessUnitWhenPageInitialized = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.detailsPageInitialized),
+    concatLatestFrom(() => this.store.select(selectRouteParam(unitIdParamName))),
+    switchMap(([_, unitId]) => {
+      const unitIdAsNumber = parseInt(unitId ?? '');
+      return this.apiService.getUnitProcessUnitIdGet(unitIdAsNumber).pipe(
+        map(processUnit => DetailsActions.processUnitLoaded({processUnit})),
+      );
+    }),
+  ));
+
+  executeCommandWhenCommandButtonClicked = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.processValueCommandClicked),
+    concatLatestFrom(() => this.store.select(selectRouteParam(unitIdParamName))),
+    switchMap(([{command, processValueName}, unitId]) => {
+      const unitIdAsNumber = parseInt(unitId ?? '');
+      return this.apiService.executeProcessValueCommandProcessUnitUnitIdProcessValueProcessValueNamePost(
+        unitIdAsNumber, processValueName, command);
+    }),
+  ), {dispatch: false});
+
   constructor(private actions: Actions, private store: Store, private apiService: DefaultService) {}
 }

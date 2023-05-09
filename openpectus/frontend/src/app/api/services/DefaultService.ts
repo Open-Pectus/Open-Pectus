@@ -8,6 +8,7 @@ import type { Observable } from 'rxjs';
 import type { BatchJob } from '../models/BatchJob';
 import type { ProcessUnit } from '../models/ProcessUnit';
 import type { ProcessValue } from '../models/ProcessValue';
+import type { ProcessValueCommand } from '../models/ProcessValueCommand';
 import type { ProcessValueUpdate } from '../models/ProcessValueUpdate';
 
 import { OpenAPI } from '../core/OpenAPI';
@@ -109,20 +110,48 @@ id: number,
 
     /**
      * Set Process Value
-     * @param id 
+     * @param unitId 
      * @param requestBody 
      * @returns any Successful Response
      * @throws ApiError
      */
-    public setProcessValueProcessUnitIdProcessValuePost(
-id: number,
+    public setProcessValueProcessUnitUnitIdProcessValuePost(
+unitId: number,
 requestBody: ProcessValueUpdate,
 ): Observable<any> {
         return __request(OpenAPI, this.http, {
             method: 'POST',
-            url: '/process_unit/{id}/process_value',
+            url: '/process_unit/{unit_id}/process_value',
             path: {
-                'id': id,
+                'unit_id': unitId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
+    /**
+     * Execute Process Value Command
+     * @param unitId 
+     * @param processValueName 
+     * @param requestBody 
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public executeProcessValueCommandProcessUnitUnitIdProcessValueProcessValueNamePost(
+unitId: number,
+processValueName: string,
+requestBody: ProcessValueCommand,
+): Observable<any> {
+        return __request(OpenAPI, this.http, {
+            method: 'POST',
+            url: '/process_unit/{unit_id}/process_value/{process_value_name}',
+            path: {
+                'unit_id': unitId,
+                'process_value_name': processValueName,
             },
             body: requestBody,
             mediaType: 'application/json',

@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { Store } from '@ngrx/store';
+import { DetailsActions } from '../ngrx/details.actions';
 
 @Component({
   selector: 'app-unit-details',
@@ -16,5 +18,8 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   `,
 })
 export class UnitDetailsComponent {
+  constructor(private store: Store) {
+    this.store.dispatch(DetailsActions.detailsPageInitialized());
+  }
 
 }
