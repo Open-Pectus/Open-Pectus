@@ -16,8 +16,8 @@ from fastapi_websocket_rpc.schemas import RpcResponse
 from fastapi_websocket_pubsub import PubSubClient
 from fastapi_websocket_pubsub.rpc_event_methods import RpcEventClientMethods
 from fastapi_websocket_rpc import RpcChannel
-from clienthandler import ClientHandler, WsClientHandler
-from protocol import (
+from protocol.clienthandler import ClientHandler, WsClientHandler
+from protocol.messages import (
     deserialize_msg,
     MessageBase,
     RegisterEngineMsg
@@ -44,14 +44,11 @@ class RpcClientHandler(RpcEventClientMethods):
         self._send_callback = callback
 
 
-async def on_events(data, topic):
-    print(f"got event on topic '{topic}' with data: '{data}'")
-
-
 class Client():
     def __init__(self) -> None:
         self.rpc_handler: RpcClientHandler | None = None
         self.client_handler: ClientHandler | None = None
+        self.connected: bool = False
 
     def set_rpc_handler(self, handler: RpcClientHandler):
         self.rpc_handler = handler
@@ -60,8 +57,9 @@ class Client():
     def set_client_handler(self, handler: ClientHandler):
         self.client_handler = handler
 
-    async def on_connect(self, channel: RpcChannel):  # registered as handler on RpcEndpoint
+    async def on_connect(self, ps_client: PubSubClient, channel: RpcChannel):  # registered as handler on RpcEndpoint
         logger.debug("connected on channel: " + channel.id)
+        self.connected = True
 
     async def handle_message(self, channel_id: str, msg: MessageBase):
         logger.debug(f"handle_message type {type(msg).__name__}: {msg.__repr__()}")
@@ -72,10 +70,25 @@ class Client():
         else:
             await handler(channel_id, msg)
 
-    async def on_disconnect(self, channel: RpcChannel): # registered as handler on RpcEndpoint
+    async def on_disconnect(self, channel: RpcChannel):  # registered as handler on RpcEndpoint
         logger.debug("disconnected channel: " + channel.id)
+        self.connected = False
        
     # TODO on_error(self, Exception): 
+
+
+async def on_events(data, topic):
+    print(f"got event on topic '{topic}' with data: '{data}'")
+
+
+def create_client():
+    client = Client()
+    ps_client = PubSubClient(on_connect=[client.on_connect], on_disconnect=[client.on_disconnect])
+#    client_handler = WsClientHandler(ps_client)
+
+#    client.set_rpc_handler(ps_client._methods)  # type: ignore
+#    client.set_client_handler(client_handler)
+    return client, ps_client
 
 
 async def main():

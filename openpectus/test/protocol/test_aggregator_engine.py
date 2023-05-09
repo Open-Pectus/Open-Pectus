@@ -20,15 +20,17 @@ sys.path.append(
 )
 
 from protocol.aggregator import (
-    app as fastApiApp,
+    app as server_app,
+    endpoint as server_endpoint,
     server
 )
+from protocol.engine import create_client
 
 
 logger = get_logger("Test")
 
 PORT = 7990
-uri = f"ws://localhost:{PORT}/pubsub"
+ws_url = f"ws://localhost:{PORT}/pubsub"
 trigger_url = f"http://localhost:{PORT}/trigger"
 health_url = f"http://localhost:{PORT}/health"
 
@@ -46,22 +48,11 @@ def setup_server_rest_route(app: FastAPI, endpoint: PubSubEndpoint):
         return "triggered"
 
 
-agg_server = None
-
 def setup_server():
-    #app = FastAPI()
-    print("setup_server")
-
-    #from protocol.aggregator import app  #, server, endpoint
-    # global agg_server
-    # agg_server = server
-    # PubSub websocket endpoint
-    #endpoint = PubSubEndpoint()
-    #endpoint.register_route(app, path="/pubsub")
     # Regular REST endpoint - that publishes to PubSub
-    #setup_server_rest_route(app, endpoint)
-    #uvicorn.run(app, port=PORT)
-    uvicorn.run(fastApiApp, port=PORT)
+    setup_server_rest_route(server_app, server_endpoint)
+    uvicorn.run(server_app, port=PORT)
+
 
 def start_server_process():
     # Run the server as a separate process
@@ -71,10 +62,29 @@ def start_server_process():
     proc.kill()  # Cleanup after test
 
 
-class AggregatorServerTest(IsolatedAsyncioTestCase):
+class AsyncServerTestCase(IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
+        logger.info("asyncSetUp")
+        try:
+            _ = httpx.get(health_url)
+            self.assertFalse(True, "Server should not be running. Test setup failed")
+        except Exception:
+            pass
+
         # start server
-        next(start_server_process())
+        self.proc = next(start_server_process())
+
+    async def asyncTearDown(self):
+        logger.info("asyncTearDown")
+        p = getattr(self, 'proc', None)
+        if p is not None:
+            assert isinstance(p, Process)
+            if p.is_alive():
+                logger.error("Server process still running on TearDown - killing it")
+                p.kill()
+
+
+class AggregatorServerTest(AsyncServerTestCase):
 
     def test_can_start_aggregator(self):
         response = httpx.get(health_url)
@@ -85,18 +95,52 @@ class AggregatorServerTest(IsolatedAsyncioTestCase):
         # print(f"test_can_start done, client count: {len(agg_server.channel_map)}")
 
 
-class IntegrationTest(IsolatedAsyncioTestCase):
-    async def asyncSetUp(self):
-        next(start_server_process())
+class IntegrationTest(AsyncServerTestCase):
 
-    def test_can_start_aggregator(self):
+    def test_can_start_server(self):
         response = httpx.get(health_url)
         self.assertEqual(200, response.status_code)
         self.assertEqual('"healthy"', response.text)
 
-    async def test_can_register_engine(self):
-        self.assertIsNotNone(agg_server)
-        pass
+    # async def test_can_register_engine(self):
+    #     self.assertIsNotNone(server)
+    #     pass
+
+    async def test_can_connect_client(self):
+
+        client, ps_client = create_client()
+        ps_client.start_client(ws_url)
+        self.assertFalse(client.connected)
+        await ps_client.wait_until_ready()
+
+        # FIXME - maybe we'll need a local handler where we can set a finish event
+        await asyncio.sleep(1)
+
+        self.assertTrue(client.connected)
+        # print(f"client.connected 1: {client.connected}")
+        await ps_client.disconnect()
+        # print(f"client.connected 2: {client.connected}")
+        await ps_client.wait_until_done()
+        # print(f"client.connected 3: {client.connected}")
+
+    async def test_can_connect_ps_client(self):
+        finish = asyncio.Event()
+
+        async with PubSubClient() as ps_client:
+            async def on_event(data, topic):
+                self.assertEqual(data, DATA)
+                finish.set()
+
+            ps_client.subscribe(EVENT_TOPIC, on_event)
+            ps_client.start_client(ws_url)
+            await ps_client.wait_until_ready()
+
+            # trigger publish via rest call
+            response = httpx.get(trigger_url)
+            self.assertEqual(200, response.status_code)
+
+            # wait for finish trigger
+            await asyncio.wait_for(finish.wait(), 5)
 
 
 if __name__ == "__main__":
