@@ -1,28 +1,25 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { sub } from 'date-fns';
 import { BatchJob } from '../../api';
 import { detailsUrlPart } from '../../app-routing.module';
 import { batchJobUrlPart } from '../../details/details-routing.module';
+import { DashboardActions } from '../../ngrx/dashboard.actions';
 import { DashboardSelectors } from '../../ngrx/dashboard.selectors';
 import { DefaultTableSort, TableColumn, TableSortDirection } from '../../shared/table.component';
 
-
-const randomDate1 = sub(new Date(), {seconds: Math.random() * 1000000}).toISOString();
-const randomDate3 = sub(new Date(), {seconds: Math.random() * 1000000}).toISOString();
-const tenMinutesAgo = sub(new Date(), {seconds: Math.random() * 1000000}).toISOString();
 
 @Component({
   selector: 'app-recent-batch-jobs',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-table class="w-full h-96" [columns]="columns" [data]="data" (rowClicked)="navigateToBatchJob($event)"
+    <app-table class="w-full h-96" [columns]="columns" [data]="recentBatchJobs | ngrxPush" (rowClicked)="navigateToBatchJob($event)"
                [defaultSort]="defaultSort" [filter]="recenterBatchJobFilter | ngrxPush"></app-table>
   `,
 })
-export class RecentBatchJobsComponent {
+export class RecentBatchJobsComponent implements OnInit {
   protected readonly recenterBatchJobFilter = this.store.select(DashboardSelectors.recentBatchJobFilter);
+  protected readonly recentBatchJobs = this.store.select(DashboardSelectors.recentBatchJobs);
   protected readonly defaultSort: DefaultTableSort<BatchJob> = {columnKey: 'completed_date', direction: TableSortDirection.Descending};
   protected readonly columns: TableColumn<BatchJob>[] = [
     {
@@ -39,14 +36,13 @@ export class RecentBatchJobsComponent {
       key: 'contributors',
     },
   ];
-  protected readonly data: BatchJob[] = [
-    {id: 1, unit_id: 1, unit_name: 'Some Name 1', completed_date: new Date().toISOString(), contributors: ['Eskild']},
-    {id: 2, unit_id: 2, unit_name: 'Some Name 2', completed_date: randomDate1, contributors: ['Eskild', 'Morten']},
-    {id: 3, unit_id: 3, unit_name: 'Some Name 3', completed_date: randomDate3, contributors: ['Eskild']},
-    {id: 4, unit_id: 4, unit_name: 'Some Name 4', completed_date: tenMinutesAgo, contributors: ['Eskild']},
-  ];
+
 
   constructor(private router: Router, private store: Store) {}
+
+  ngOnInit() {
+    this.store.dispatch(DashboardActions.recentBatchJobsInitialized());
+  }
 
   navigateToBatchJob(batchJob: BatchJob) {
     this.router.navigate([detailsUrlPart, batchJobUrlPart, batchJob.id]).then();
