@@ -217,10 +217,10 @@
         }
       }
     },
-    "/process_unit/{unit_id}/process_value/{process_value_name}": {
+    "/process_unit/{unit_id}/execute_command": {
       "post": {
         "summary": "Execute Process Value Command",
-        "operationId": "execute_process_value_command_process_unit__unit_id__process_value__process_value_name__post",
+        "operationId": "execute_process_value_command_process_unit__unit_id__execute_command_post",
         "parameters": [
           {
             "required": true,
@@ -230,22 +230,13 @@
             },
             "name": "unit_id",
             "in": "path"
-          },
-          {
-            "required": true,
-            "schema": {
-              "title": "Process Value Name",
-              "type": "string"
-            },
-            "name": "process_value_name",
-            "in": "path"
           }
         ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ProcessValueCommand"
+                "$ref": "#/components/schemas/ExecutableCommand"
               }
             }
           },
@@ -313,6 +304,37 @@
           }
         },
         "description": "Represents a current or historical run of a process unit. "
+      },
+      "CommandSource": {
+        "title": "CommandSource",
+        "enum": [
+          "process_value",
+          "manually_entered",
+          "unit_button"
+        ],
+        "type": "string",
+        "description": "An enumeration."
+      },
+      "ExecutableCommand": {
+        "title": "ExecutableCommand",
+        "required": [
+          "command",
+          "source"
+        ],
+        "type": "object",
+        "properties": {
+          "command": {
+            "title": "Command",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/CommandSource"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        }
       },
       "HTTPValidationError": {
         "title": "HTTPValidationError",

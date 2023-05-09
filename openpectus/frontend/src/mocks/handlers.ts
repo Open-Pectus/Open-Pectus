@@ -129,7 +129,7 @@ export const handlers = [
     );
   }),
 
-  rest.post('/process_unit/:unitId/process_value/:processValueName', (req, res, context) => {
+  rest.post('/process_unit/:unitId/execute_command', (req, res, context) => {
     return res(
       context.status(200),
     );

@@ -149,6 +149,18 @@ def set_process_value(unit_id: int, update: ProcessValueUpdate):
     pass
 
 
-@app.post("/process_unit/{unit_id}/process_value/{process_value_name}")
-def execute_process_value_command(unit_id: int, process_value_name: str, command: ProcessValueCommand):
+class CommandSource(StrEnum):
+    PROCESS_VALUE = auto()
+    MANUALLY_ENTERED = auto()
+    UNIT_BUTTON = auto()
+
+
+class ExecutableCommand(BaseModel):
+    command: str
+    source: CommandSource
+    name: str | None
+
+
+@app.post("/process_unit/{unit_id}/execute_command")
+def execute_process_value_command(unit_id: int, command: ExecutableCommand):
     pass

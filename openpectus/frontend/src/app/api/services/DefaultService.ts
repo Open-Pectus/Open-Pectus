@@ -6,9 +6,9 @@ import { HttpClient } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 
 import type { BatchJob } from '../models/BatchJob';
+import type { ExecutableCommand } from '../models/ExecutableCommand';
 import type { ProcessUnit } from '../models/ProcessUnit';
 import type { ProcessValue } from '../models/ProcessValue';
-import type { ProcessValueCommand } from '../models/ProcessValueCommand';
 import type { ProcessValueUpdate } from '../models/ProcessValueUpdate';
 
 import { OpenAPI } from '../core/OpenAPI';
@@ -136,22 +136,19 @@ requestBody: ProcessValueUpdate,
     /**
      * Execute Process Value Command
      * @param unitId 
-     * @param processValueName 
      * @param requestBody 
      * @returns any Successful Response
      * @throws ApiError
      */
-    public executeProcessValueCommandProcessUnitUnitIdProcessValueProcessValueNamePost(
+    public executeProcessValueCommandProcessUnitUnitIdExecuteCommandPost(
 unitId: number,
-processValueName: string,
-requestBody: ProcessValueCommand,
+requestBody: ExecutableCommand,
 ): Observable<any> {
         return __request(OpenAPI, this.http, {
             method: 'POST',
-            url: '/process_unit/{unit_id}/process_value/{process_value_name}',
+            url: '/process_unit/{unit_id}/execute_command',
             path: {
                 'unit_id': unitId,
-                'process_value_name': processValueName,
             },
             body: requestBody,
             mediaType: 'application/json',
