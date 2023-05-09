@@ -75,6 +75,18 @@ id: number,
     }
 
     /**
+     * Get Recent Batch Jobs
+     * @returns BatchJob Successful Response
+     * @throws ApiError
+     */
+    public getRecentBatchJobsRecentBatchJobsGet(): Observable<Array<BatchJob>> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/recent_batch_jobs',
+        });
+    }
+
+    /**
      * Get Process Values
      * @param id 
      * @returns ProcessValue Successful Response

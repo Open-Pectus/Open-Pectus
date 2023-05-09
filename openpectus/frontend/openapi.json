@@ -105,6 +105,28 @@
         }
       }
     },
+    "/recent_batch_jobs": {
+      "get": {
+        "summary": "Get Recent Batch Jobs",
+        "operationId": "get_recent_batch_jobs_recent_batch_jobs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Get Recent Batch Jobs Recent Batch Jobs Get",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BatchJob"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/process_unit/{id}/process_values": {
       "get": {
         "summary": "Get Process Values",
