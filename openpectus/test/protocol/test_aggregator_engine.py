@@ -114,7 +114,7 @@ class IntegrationTest(AsyncServerTestCase):
         await ps_client.wait_until_ready()
 
         # FIXME - maybe we'll need a local handler where we can set a finish event
-        await asyncio.sleep(1)
+        await asyncio.sleep(.1)
 
         self.assertTrue(client.connected)
         # print(f"client.connected 1: {client.connected}")

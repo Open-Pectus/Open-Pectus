@@ -9,6 +9,9 @@ import httpx
 import uvicorn
 from fastapi import FastAPI
 from fastapi_websocket_pubsub import PubSubClient, PubSubEndpoint
+from fastapi_websocket_pubsub.rpc_event_methods import RpcEventServerMethods, RpcEventClientMethods
+from fastapi_websocket_rpc import RpcChannel
+from fastapi_websocket_rpc.schemas import RpcResponse
 from fastapi_websocket_rpc.logger import get_logger
 from fastapi_websocket_rpc.utils import gen_uid
 
@@ -20,7 +23,7 @@ sys.path.append(
 logger = get_logger("Test")
 
 PORT = 7990
-uri = f"ws://localhost:{PORT}/pubsub"
+ws_url = f"ws://localhost:{PORT}/pubsub"
 trigger_url = f"http://localhost:{PORT}/trigger"
 
 DATA = "MAGIC"
@@ -37,10 +40,22 @@ def setup_server_rest_route(app, endpoint: PubSubEndpoint):
         return "triggered"
 
 
+class TestServerRpcMethods(RpcEventServerMethods):
+    async def to_upper(self, x: str) -> str:
+        await asyncio.sleep(0.1)
+        return x.upper()
+
+
+class TestClientRpcMethods(RpcEventClientMethods):
+    async def to_upper(self, x: str) -> str:
+        await asyncio.sleep(0.1)
+        return x.upper()
+
+
 def setup_server():
     app = FastAPI()
     # PubSub websocket endpoint
-    endpoint = PubSubEndpoint()
+    endpoint = PubSubEndpoint(methods_class=TestServerRpcMethods)
     endpoint.register_route(app, path="/pubsub")
     # Regular REST endpoint - that publishes to PubSub
     setup_server_rest_route(app, endpoint)
@@ -74,7 +89,7 @@ class TestPubSub(IsolatedAsyncioTestCase):
             # subscribe for the event
             client.subscribe(EVENT_TOPIC, on_event)
             # start listentining
-            client.start_client(uri)
+            client.start_client(ws_url)
             # wait for the client to be ready to receive events
             await client.wait_until_ready()
             # publish events (with sync=False to avoid deadlocks waiting on the publish to ourselves)
@@ -99,10 +114,10 @@ class TestPubSub(IsolatedAsyncioTestCase):
                 finish.set()
 
             client.subscribe(EVENT_TOPIC, on_event)
-            client.start_client(uri)
+            client.start_client(ws_url)
             await client.wait_until_ready()
             
-            client2.start_client(uri)
+            client2.start_client(ws_url)
             await client2.wait_until_ready()
 
             # publish events (with sync=False to avoid deadlocks waiting on the publish to ourselves)
@@ -124,7 +139,7 @@ class TestPubSub(IsolatedAsyncioTestCase):
                 finish.set()
 
             client.subscribe(EVENT_TOPIC, on_event)
-            client.start_client(uri)
+            client.start_client(ws_url)
             await client.wait_until_ready()
 
             # trigger publish via rest call
@@ -133,6 +148,28 @@ class TestPubSub(IsolatedAsyncioTestCase):
 
             # wait for finish trigger
             await asyncio.wait_for(finish.wait(), 5)
+
+
+class TestRpc(IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        next(server())
+
+    async def test_invoke_server(self):
+        async with PubSubClient() as ps_client:
+            ps_client.start_client(ws_url)
+            self.assertIsNone(ps_client._rpc_channel)
+            await ps_client.wait_until_ready()
+            assert isinstance(ps_client._rpc_channel, RpcChannel), "Actual type: " + type(ps_client._rpc_channel).__name__
+            result: RpcResponse = await ps_client._rpc_channel.other.to_upper(x="bar")
+            self.assertEqual("BAR", result.result)
+
+    # async def test_invoke_client(self):
+    #     async with PubSubClient() as ps_client:
+    #         ps_client.start_client(ws_url)
+    #         self.assertIsNone(ps_client._rpc_channel)
+    #         await ps_client.wait_until_ready()            
+    #         assert isinstance(ps_client._rpc_channel, RpcChannel), "Actual type: " + type(ps_client._rpc_channel).__name__
+    #         client_id = ps_client._rpc_channel.id
 
 
 if __name__ == "__main__":
