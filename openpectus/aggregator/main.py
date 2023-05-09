@@ -103,6 +103,11 @@ def get_batch(id: int) -> BatchJob:
     return BatchJob(id=id, unit_id=3, unit_name="Foo", completed_date=dt, contributors=[])
 
 
+@app.get("/recent_batch_jobs")
+def get_recent_batch_jobs() -> List[BatchJob]:
+    return []
+
+
 class ProcessValueType(StrEnum):
     STRING = auto()
     FLOAT = auto()

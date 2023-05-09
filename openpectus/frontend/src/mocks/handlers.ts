@@ -1,5 +1,6 @@
+import { sub } from 'date-fns';
 import { rest } from 'msw';
-import { InProgress, NotOnline, ProcessUnit, ProcessValue, ProcessValueType, Ready } from '../app/api';
+import { BatchJob, InProgress, NotOnline, ProcessUnit, ProcessValue, ProcessValueType, Ready } from '../app/api';
 
 export const handlers = [
   rest.get('/process_units', (req, res, ctx) => {
@@ -86,6 +87,28 @@ export const handlers = [
           value: 'VaLuE',
           writable: true,
         },
+      ]),
+    );
+  }),
+
+  rest.get('/recent_batch_jobs', (req, res, ctx) => {
+    function getCompletedDate() {
+      return sub(new Date(), {seconds: Math.random() * 1000000}).toISOString();
+    }
+
+    return res(
+      ctx.status(200),
+      ctx.json<BatchJob[]>([
+        {
+          id: 1,
+          unit_id: 1,
+          unit_name: 'Some Name 1 that is very long, and way longer than it should be.',
+          completed_date: getCompletedDate(),
+          contributors: ['Eskild'],
+        },
+        {id: 2, unit_id: 2, unit_name: 'Some Name 2', completed_date: getCompletedDate(), contributors: ['Eskild', 'Morten']},
+        {id: 3, unit_id: 3, unit_name: 'Some Name 3', completed_date: getCompletedDate(), contributors: ['Eskild']},
+        {id: 4, unit_id: 4, unit_name: 'Some Name 4', completed_date: getCompletedDate(), contributors: ['Eskild']},
       ]),
     );
   }),

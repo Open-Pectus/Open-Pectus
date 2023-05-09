@@ -1,17 +1,21 @@
-import { isDevMode, NgModule } from '@angular/core';
+import { DATE_PIPE_DEFAULT_OPTIONS, DatePipe, registerLocaleData } from '@angular/common';
+import { HttpClientModule } from '@angular/common/http';
+import localeDa from '@angular/common/locales/da';
+import { isDevMode, LOCALE_ID, NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { PushModule } from '@ngrx/component';
+import { EffectsModule } from '@ngrx/effects';
+import { RouterState, StoreRouterConnectingModule } from '@ngrx/router-store';
+import { StoreModule } from '@ngrx/store';
+import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
-import { StoreModule } from '@ngrx/store';
 import { metaReducers, reducers } from './ngrx/';
-import { PushModule } from '@ngrx/component';
-import { EffectsModule } from '@ngrx/effects';
 import { AppEffects } from './ngrx/app.effects';
-import { RouterState, StoreRouterConnectingModule } from '@ngrx/router-store';
-import { StoreDevtoolsModule } from '@ngrx/store-devtools';
-import { HttpClientModule } from '@angular/common/http';
 import { TopBarComponent } from './top-bar.component';
+
+registerLocaleData(localeDa);
 
 @NgModule({
   declarations: [
@@ -42,7 +46,11 @@ import { TopBarComponent } from './top-bar.component';
       actionsBlocklist: ['@ngrx'],
     }),
   ],
-  providers: [],
+  providers: [
+    {provide: LOCALE_ID, useValue: 'da-DK'},
+    DatePipe,
+    {provide: DATE_PIPE_DEFAULT_OPTIONS, useValue: {dateFormat: 'd. MMMM y HH:mm:ss'}},
+  ],
   bootstrap: [AppComponent],
 })
 export class AppModule {}

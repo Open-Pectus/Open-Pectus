@@ -6,4 +6,6 @@ export class DashboardSelectors {
   static processUnits = createSelector(this.selectFeature,
     state => state.processUnits,
   );
+  static recentBatchJobFilter = createSelector(this.selectFeature, state => state.recentBatchJobFilter);
+  static recentBatchJobs = createSelector(this.selectFeature, state => state.recentBatchJobs);
 }
