@@ -23,7 +23,7 @@ export interface DefaultTableSort<T> {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="bg-vscode-background-grey rounded-lg shadow-lg overflow-hidden">
-      <table class="w-full table-auto border-collapse">
+      <table class="w-full table-fixed border-collapse">
         <thead>
         <tr class="bg-sky-700 text-white cursor-pointer select-none">
           <th *ngFor="let column of columns" class="p-3" (click)="setSortByColumn(column)">
