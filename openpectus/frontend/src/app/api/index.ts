@@ -12,6 +12,7 @@ export type { ExecutableCommand } from './models/ExecutableCommand';
 export type { HTTPValidationError } from './models/HTTPValidationError';
 export { InProgress } from './models/InProgress';
 export { NotOnline } from './models/NotOnline';
+export type { ProcessDiagram } from './models/ProcessDiagram';
 export type { ProcessUnit } from './models/ProcessUnit';
 export type { ProcessValue } from './models/ProcessValue';
 export type { ProcessValueCommand } from './models/ProcessValueCommand';

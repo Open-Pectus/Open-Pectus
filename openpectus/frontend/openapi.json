@@ -263,6 +263,45 @@
           }
         }
       }
+    },
+    "/process_unit/{unit_id}/process_diagram": {
+      "get": {
+        "summary": "Get Process Diagram",
+        "operationId": "get_process_diagram_process_unit__unit_id__process_diagram_get",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Unit Id",
+              "type": "integer"
+            },
+            "name": "unit_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessDiagram"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -389,6 +428,19 @@
             "title": "Last Seen Date",
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "ProcessDiagram": {
+        "title": "ProcessDiagram",
+        "required": [
+          "svg"
+        ],
+        "type": "object",
+        "properties": {
+          "svg": {
+            "title": "Svg",
+            "type": "string"
           }
         }
       },

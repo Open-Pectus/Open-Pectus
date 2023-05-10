@@ -173,3 +173,12 @@ class ExecutableCommand(BaseModel):
 @app.post("/process_unit/{unit_id}/execute_command")
 def execute_command(unit_id: int, command: ExecutableCommand):
     pass
+
+
+class ProcessDiagram(BaseModel):
+    svg: str
+
+
+@app.get("/process_unit/{unit_id}/process_diagram")
+def get_process_diagram(unit_id: int) -> ProcessDiagram:
+    return ProcessDiagram(svg='')
