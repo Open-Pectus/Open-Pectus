@@ -5,7 +5,7 @@ import { MonacoLanguageClient, MonacoServices } from 'monaco-languageclient';
 import { Subject, take } from 'rxjs';
 import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient/lib/common/client';
 import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
-import { DetailsActions } from '../../ngrx/details.actions';
+import { DetailsActions } from '../ngrx/details.actions';
 
 @Component({
   selector: 'app-monaco-editor',

@@ -1,4 +1,7 @@
 import { createFeatureSelector, createSelector } from '@ngrx/store';
+import { AppSelectors } from '../../ngrx/app.selectors';
+import { selectRouteParam } from '../../ngrx/router.selectors';
+import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
 import { detailsFeatureKey, DetailsState } from './details.reducer';
 
 export class DetailsSelectors {
@@ -6,5 +9,8 @@ export class DetailsSelectors {
   static methodEditorIsDirty = createSelector(this.selectFeature, state => state.methodEditorIsDirty);
   static methodEditorContent = createSelector(this.selectFeature, state => state.methodEditorContent);
   static processValues = createSelector(this.selectFeature, state => state.processValues);
-  static processUnit = createSelector(this.selectFeature, state => state.processUnit);
+  static processUnit = createSelector(AppSelectors.processUnits, selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName),
+    (processUnits, unitId) => {
+      return processUnits.find(processUnit => processUnit.id.toString() === unitId);
+    });
 }

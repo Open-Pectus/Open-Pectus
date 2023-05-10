@@ -1,6 +1,6 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { DashboardActions } from '../ngrx/dashboard.actions';
+import { DashboardActions } from './ngrx/dashboard.actions';
 
 @Component({
   selector: 'app-dashboard',
@@ -20,12 +20,8 @@ import { DashboardActions } from '../ngrx/dashboard.actions';
     </div>
   `,
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent {
   constructor(private store: Store) {}
-
-  ngOnInit() {
-    this.store.dispatch(DashboardActions.pageInitialized());
-  }
 
   filterChange(filter: string) {
     this.store.dispatch(DashboardActions.recentBatchJobFilterChanged({filter}));

@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { CommandSource, ExecutableCommand } from '../api';
-import { DetailsActions } from '../ngrx/details.actions';
-import { DetailsSelectors } from '../ngrx/details.selectors';
+import { DetailsActions } from './ngrx/details.actions';
+import { DetailsSelectors } from './ngrx/details.selectors';
 
 @Component({
   selector: 'app-unit-details',
@@ -12,7 +12,7 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
       <div class="flex flex-col max-w-5xl w-full px-8">
         <div class="flex justify-between items-start gap-4 mt-8">
           <div class="text-slate-700" *ngrxLet="processUnit as processUnit">
-            <h1 class="text-5xl font-bold -mt-[3px]">{{processUnit?.name}}</h1>
+            <h1 class="text-4xl font-bold">{{processUnit?.name}}</h1>
             <span class="text-sm">{{processUnit?.current_user_role}}</span>
           </div>
 
@@ -53,9 +53,7 @@ export class UnitDetailsComponent {
     source: CommandSource.UNIT_BUTTON,
   }];
 
-  constructor(private store: Store) {
-    this.store.dispatch(DetailsActions.detailsPageInitialized());
-  }
+  constructor(private store: Store) {}
 
   getIcon(command: ExecutableCommand) {
     switch(command.name) {

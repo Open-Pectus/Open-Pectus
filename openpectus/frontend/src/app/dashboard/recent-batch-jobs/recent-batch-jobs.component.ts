@@ -3,10 +3,10 @@ import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { BatchJob } from '../../api';
 import { detailsUrlPart } from '../../app-routing.module';
-import { batchJobUrlPart } from '../../details/details-routing.module';
-import { DashboardActions } from '../../ngrx/dashboard.actions';
-import { DashboardSelectors } from '../../ngrx/dashboard.selectors';
+import { DetailsRoutingUrlParts } from '../../details/details-routing-url-parts';
 import { DefaultTableSort, TableColumn, TableSortDirection } from '../../shared/table.component';
+import { DashboardActions } from '../ngrx/dashboard.actions';
+import { DashboardSelectors } from '../ngrx/dashboard.selectors';
 
 
 @Component({
@@ -45,6 +45,6 @@ export class RecentBatchJobsComponent implements OnInit {
   }
 
   navigateToBatchJob(batchJob: BatchJob) {
-    this.router.navigate([detailsUrlPart, batchJobUrlPart, batchJob.id]).then();
+    this.router.navigate([detailsUrlPart, DetailsRoutingUrlParts.batchJobUrlPart, batchJob.id]).then();
   }
 }

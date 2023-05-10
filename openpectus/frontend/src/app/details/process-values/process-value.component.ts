@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { ProcessValue, ProcessValueCommand } from '../../api';
-import { DetailsActions } from '../../ngrx/details.actions';
+import { DetailsActions } from '../ngrx/details.actions';
 import { ValueAndUnit } from './process-value-editor.component';
 
 @Component({
