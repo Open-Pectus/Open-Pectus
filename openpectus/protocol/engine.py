@@ -16,6 +16,7 @@ from fastapi_websocket_rpc.schemas import RpcResponse
 from fastapi_websocket_pubsub import PubSubClient
 from fastapi_websocket_pubsub.rpc_event_methods import RpcEventClientMethods
 from fastapi_websocket_rpc import RpcChannel
+from openpectus.protocol.exceptions import ProtocolException
 from protocol.clienthandler import ClientHandler, WsClientHandler
 from protocol.messages import (
     deserialize_msg,
@@ -48,7 +49,7 @@ class Client():
     def __init__(self) -> None:
         self.rpc_handler: RpcClientHandler | None = None
         self.client_handler: ClientHandler | None = None
-        self.connected: bool = False
+        self.connected_event = asyncio.Event()
 
     def set_rpc_handler(self, handler: RpcClientHandler):
         self.rpc_handler = handler
@@ -59,7 +60,24 @@ class Client():
 
     async def on_connect(self, ps_client: PubSubClient, channel: RpcChannel):  # registered as handler on RpcEndpoint
         logger.debug("connected on channel: " + channel.id)
-        self.connected = True
+        self.ps_client = ps_client
+        self.connected_event.set()
+
+    @property
+    def connected(self):
+        return self.connected_event.is_set()
+
+    async def wait_start_connect(self, ws_url: str, ps_client: PubSubClient):
+        self.connected_event.clear()
+        ps_client.start_client(ws_url)
+        if self.connected:
+            raise ProtocolException("Already connected")
+
+        await ps_client.wait_until_ready()
+        await asyncio.wait_for(self.connected_event.wait(), 5)
+
+    # async def register(self, on_register=None):
+    #     self.ps_client.run
 
     async def handle_message(self, channel_id: str, msg: MessageBase):
         logger.debug(f"handle_message type {type(msg).__name__}: {msg.__repr__()}")
@@ -81,9 +99,18 @@ async def on_events(data, topic):
     print(f"got event on topic '{topic}' with data: '{data}'")
 
 
-def create_client():
+def create_client(on_connect_callback=None, on_disconnect_callback=None):
     client = Client()
-    ps_client = PubSubClient(on_connect=[client.on_connect], on_disconnect=[client.on_disconnect])
+
+    _on_conn = [client.on_connect]
+    if on_connect_callback is not None:
+        _on_conn.append(on_connect_callback)
+
+    _on_disconnn = [client.on_disconnect]
+    if on_disconnect_callback is not None:
+        _on_disconnn.append(on_disconnect_callback)
+
+    ps_client = PubSubClient(on_connect=_on_conn, on_disconnect=_on_disconnn)
 #    client_handler = WsClientHandler(ps_client)
 
 #    client.set_rpc_handler(ps_client._methods)  # type: ignore

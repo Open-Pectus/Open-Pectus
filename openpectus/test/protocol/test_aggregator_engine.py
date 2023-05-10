@@ -84,44 +84,12 @@ class AsyncServerTestCase(IsolatedAsyncioTestCase):
                 p.kill()
 
 
-class AggregatorServerTest(AsyncServerTestCase):
-
-    def test_can_start_aggregator(self):
-        response = httpx.get(health_url)
-        self.assertEqual(200, response.status_code)
-        self.assertEqual('"healthy"', response.text)
-
-        # self.assertIsNotNone(agg_server)
-        # print(f"test_can_start done, client count: {len(agg_server.channel_map)}")
-
-
 class IntegrationTest(AsyncServerTestCase):
 
     def test_can_start_server(self):
         response = httpx.get(health_url)
         self.assertEqual(200, response.status_code)
         self.assertEqual('"healthy"', response.text)
-
-    # async def test_can_register_engine(self):
-    #     self.assertIsNotNone(server)
-    #     pass
-
-    async def test_can_connect_client(self):
-
-        client, ps_client = create_client()
-        ps_client.start_client(ws_url)
-        self.assertFalse(client.connected)
-        await ps_client.wait_until_ready()
-
-        # FIXME - maybe we'll need a local handler where we can set a finish event
-        await asyncio.sleep(.1)
-
-        self.assertTrue(client.connected)
-        # print(f"client.connected 1: {client.connected}")
-        await ps_client.disconnect()
-        # print(f"client.connected 2: {client.connected}")
-        await ps_client.wait_until_done()
-        # print(f"client.connected 3: {client.connected}")
 
     async def test_can_connect_ps_client(self):
         finish = asyncio.Event()
@@ -141,6 +109,51 @@ class IntegrationTest(AsyncServerTestCase):
 
             # wait for finish trigger
             await asyncio.wait_for(finish.wait(), 5)
+
+    async def test_can_connect_client(self):
+        connected_event = asyncio.Event()
+
+        async def on_connect(x, y):
+            logger.info("client connected")
+            connected_event.set()
+            await asyncio.sleep(.1)  # not strictly necessary but yields a warning if no await
+
+        client, ps_client = create_client(on_connect_callback=on_connect)
+        ps_client.start_client(ws_url)
+        self.assertFalse(client.connected)
+        await ps_client.wait_until_ready()
+
+        await asyncio.wait_for(connected_event.wait(), 5)
+
+        self.assertTrue(client.connected)
+        await ps_client.disconnect()
+        await ps_client.wait_until_done()
+
+    async def test_can_connect_client_simple(self):
+
+        client, ps_client = create_client()
+        await client.wait_start_connect(ws_url, ps_client)
+
+        self.assertTrue(client.connected)
+        await ps_client.disconnect()
+        await ps_client.wait_until_done()
+
+    # async def test_can_register_client(self):
+    #     client, ps_client = create_client()
+
+    #     registered_event = asyncio.Event()
+
+    #     async def on_register(x,y):
+    #         logger.info("client registered")
+    #         registered_event.set()
+
+    #     await client.wait_start_connect(ws_url, ps_client)
+    #     await client.register(on_register=on_register)
+
+    #     await asyncio.wait_for(registered_event.wait(), 5)
+
+    #     await ps_client.disconnect()
+    #     await ps_client.wait_until_done()
 
 
 if __name__ == "__main__":
