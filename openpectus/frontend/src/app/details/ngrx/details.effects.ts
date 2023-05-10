@@ -2,11 +2,11 @@ import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { map, of, switchMap } from 'rxjs';
-import { CommandSource, DefaultService } from '../api';
-import { unitIdParamName } from '../details/details-routing.module';
+import { CommandSource, DefaultService } from '../../api';
+import { selectRouteParam } from '../../ngrx/router.selectors';
+import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
 import { DetailsActions } from './details.actions';
 import { DetailsSelectors } from './details.selectors';
-import { selectRouteParam } from './router.selectors';
 
 @Injectable()
 export class DetailsEffects {
@@ -22,7 +22,7 @@ export class DetailsEffects {
 
   loadProcessValuesWhenComponentInitialized = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processValuesInitialized),
-    concatLatestFrom(() => this.store.select(selectRouteParam(unitIdParamName))),
+    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([_, unitId]) => {
       const unitIdAsNumber = parseInt(unitId ?? '');
       if(isNaN(unitIdAsNumber)) return of(DetailsActions.processValuesFailedToLoad());
@@ -32,20 +32,9 @@ export class DetailsEffects {
     }),
   ));
 
-  loadProcessUnitWhenPageInitialized = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.detailsPageInitialized),
-    concatLatestFrom(() => this.store.select(selectRouteParam(unitIdParamName))),
-    switchMap(([_, unitId]) => {
-      const unitIdAsNumber = parseInt(unitId ?? '');
-      return this.apiService.getUnitProcessUnitIdGet(unitIdAsNumber).pipe(
-        map(processUnit => DetailsActions.processUnitLoaded({processUnit})),
-      );
-    }),
-  ));
-
   executeProcessValueCommandWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processValueCommandClicked),
-    concatLatestFrom(() => this.store.select(selectRouteParam(unitIdParamName))),
+    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([{command, processValueName}, unitId]) => {
       const unitIdAsNumber = parseInt(unitId ?? '');
       return this.apiService.executeCommandProcessUnitUnitIdExecuteCommandPost(
@@ -55,7 +44,7 @@ export class DetailsEffects {
 
   executeUnitControlCommandWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processUnitCommandButtonClicked),
-    concatLatestFrom(() => this.store.select(selectRouteParam(unitIdParamName))),
+    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([{command}, unitId]) => {
       const unitIdAsNumber = parseInt(unitId ?? '');
       return this.apiService.executeCommandProcessUnitUnitIdExecuteCommandPost(

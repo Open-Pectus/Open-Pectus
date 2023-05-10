@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { DetailsActions } from '../../ngrx/details.actions';
-import { DetailsSelectors } from '../../ngrx/details.selectors';
+import { DetailsActions } from '../ngrx/details.actions';
+import { DetailsSelectors } from '../ngrx/details.selectors';
 
 @Component({
   selector: 'app-method-editor',

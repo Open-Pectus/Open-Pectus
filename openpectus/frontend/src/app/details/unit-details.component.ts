@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { CommandSource, ExecutableCommand } from '../api';
-import { DetailsActions } from '../ngrx/details.actions';
-import { DetailsSelectors } from '../ngrx/details.selectors';
+import { DetailsActions } from './ngrx/details.actions';
+import { DetailsSelectors } from './ngrx/details.selectors';
 
 @Component({
   selector: 'app-unit-details',
@@ -53,9 +53,7 @@ export class UnitDetailsComponent {
     source: CommandSource.UNIT_BUTTON,
   }];
 
-  constructor(private store: Store) {
-    this.store.dispatch(DetailsActions.detailsPageInitialized());
-  }
+  constructor(private store: Store) {}
 
   getIcon(command: ExecutableCommand) {
     switch(command.name) {
