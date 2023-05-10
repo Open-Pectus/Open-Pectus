@@ -84,6 +84,7 @@ class Client():
 
         success = False
         try:
+            # explicit register method - consider using handle_message instead
             resp = await self.channel.other.register(client_id="foo")
             success = resp.result
         except Exception as ex:
