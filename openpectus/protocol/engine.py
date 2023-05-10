@@ -50,6 +50,7 @@ class Client():
         self.rpc_handler: RpcClientHandler | None = None
         self.client_handler: ClientHandler | None = None
         self.connected_event = asyncio.Event()
+        self.channel: RpcChannel | None = None
 
     def set_rpc_handler(self, handler: RpcClientHandler):
         self.rpc_handler = handler
@@ -61,6 +62,7 @@ class Client():
     async def on_connect(self, ps_client: PubSubClient, channel: RpcChannel):  # registered as handler on RpcEndpoint
         logger.debug("connected on channel: " + channel.id)
         self.ps_client = ps_client
+        self.channel = channel
         self.connected_event.set()
 
     @property
@@ -76,8 +78,22 @@ class Client():
         await ps_client.wait_until_ready()
         await asyncio.wait_for(self.connected_event.wait(), 5)
 
-    # async def register(self, on_register=None):
-    #     self.ps_client.run
+    async def register(self, on_register=None):
+        if self.channel is None:
+            raise ProtocolException("Cannot register when no channel is set")
+
+        success = False
+        try:
+            resp = await self.channel.other.register(client_id="foo")
+            success = resp.result
+        except Exception as ex:
+            logger.error("Failed to invoke server.register", exc_info=True)
+            raise ProtocolException("Registration failed", ex)
+
+        if success and on_register is not None:
+            await on_register()
+
+        return success
 
     async def handle_message(self, channel_id: str, msg: MessageBase):
         logger.debug(f"handle_message type {type(msg).__name__}: {msg.__repr__()}")
@@ -90,9 +106,9 @@ class Client():
 
     async def on_disconnect(self, channel: RpcChannel):  # registered as handler on RpcEndpoint
         logger.debug("disconnected channel: " + channel.id)
-        self.connected = False
-       
-    # TODO on_error(self, Exception): 
+        self.connected_event.clear()
+
+    # TODO on_error(self, Exception):
 
 
 async def on_events(data, topic):

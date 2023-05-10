@@ -138,22 +138,23 @@ class IntegrationTest(AsyncServerTestCase):
         await ps_client.disconnect()
         await ps_client.wait_until_done()
 
-    # async def test_can_register_client(self):
-    #     client, ps_client = create_client()
+    async def test_can_register_client(self):
+        client, ps_client = create_client()
 
-    #     registered_event = asyncio.Event()
+        registered_event = asyncio.Event()
 
-    #     async def on_register(x,y):
-    #         logger.info("client registered")
-    #         registered_event.set()
+        async def on_register():
+            logger.info("client registered")
+            registered_event.set()
 
-    #     await client.wait_start_connect(ws_url, ps_client)
-    #     await client.register(on_register=on_register)
+        await client.wait_start_connect(ws_url, ps_client)
+        register_success = await client.register(on_register=on_register)
+        self.assertTrue(register_success)
 
-    #     await asyncio.wait_for(registered_event.wait(), 5)
+        await asyncio.wait_for(registered_event.wait(), 5)
 
-    #     await ps_client.disconnect()
-    #     await ps_client.wait_until_done()
+        await ps_client.disconnect()
+        await ps_client.wait_until_done()
 
 
 if __name__ == "__main__":
