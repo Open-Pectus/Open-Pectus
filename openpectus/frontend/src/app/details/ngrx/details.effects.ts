@@ -45,12 +45,23 @@ export class DetailsEffects {
   executeUnitControlCommandWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processUnitCommandButtonClicked),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
-    switchMap(([{command}, unitId]) => {
+    map(([{command}, unitId]) => {
       const unitIdAsNumber = parseInt(unitId ?? '');
-      return this.apiService.executeCommandProcessUnitUnitIdExecuteCommandPost(
+      this.apiService.executeCommandProcessUnitUnitIdExecuteCommandPost(
         unitIdAsNumber, {...command});
     }),
   ), {dispatch: false});
+
+  loadProcessDiagramWhenComponentInitialized = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.processDiagramInitialized),
+    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
+    switchMap(([_, unitId]) => {
+      const unitIdAsNumber = parseInt(unitId ?? '');
+      return this.apiService.getProcessDiagramProcessUnitUnitIdProcessDiagramGet(unitIdAsNumber).pipe(
+        map(processDiagram => DetailsActions.processDiagramFetched({processDiagram})),
+      );
+    }),
+  ));
 
   constructor(private actions: Actions, private store: Store, private apiService: DefaultService) {}
 }

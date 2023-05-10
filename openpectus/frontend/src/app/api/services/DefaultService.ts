@@ -7,6 +7,7 @@ import type { Observable } from 'rxjs';
 
 import type { BatchJob } from '../models/BatchJob';
 import type { ExecutableCommand } from '../models/ExecutableCommand';
+import type { ProcessDiagram } from '../models/ProcessDiagram';
 import type { ProcessUnit } from '../models/ProcessUnit';
 import type { ProcessValue } from '../models/ProcessValue';
 import type { ProcessValueUpdate } from '../models/ProcessValueUpdate';
@@ -152,6 +153,27 @@ requestBody: ExecutableCommand,
             },
             body: requestBody,
             mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
+    /**
+     * Get Process Diagram
+     * @param unitId 
+     * @returns ProcessDiagram Successful Response
+     * @throws ApiError
+     */
+    public getProcessDiagramProcessUnitUnitIdProcessDiagramGet(
+unitId: number,
+): Observable<ProcessDiagram> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/process_unit/{unit_id}/process_diagram',
+            path: {
+                'unit_id': unitId,
+            },
             errors: {
                 422: `Validation Error`,
             },

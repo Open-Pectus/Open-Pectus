@@ -1,19 +1,19 @@
 import { createReducer, on } from '@ngrx/store';
 import produce from 'immer';
-import { ProcessValue } from '../../api';
+import { ProcessDiagram, ProcessValue } from '../../api';
 import { DetailsActions } from './details.actions';
 
 export const detailsFeatureKey = 'details';
 
 export interface DetailsState {
   methodEditorIsDirty: boolean;
-  methodEditorContent: string;
+  methodEditorContent?: string;
   processValues: ProcessValue[];
+  processDiagram?: ProcessDiagram;
 }
 
 const initialState: DetailsState = {
   methodEditorIsDirty: false,
-  methodEditorContent: '',
   processValues: [],
 };
 
@@ -31,6 +31,9 @@ export const detailsReducer = createReducer(initialState,
   })),
   on(DetailsActions.processValuesLoaded, (state, {processValues}) => produce(state, draft => {
     draft.processValues = processValues;
+  })),
+  on(DetailsActions.processDiagramFetched, (state, {processDiagram}) => produce(state, draft => {
+    draft.processDiagram = processDiagram;
   })),
 );
 

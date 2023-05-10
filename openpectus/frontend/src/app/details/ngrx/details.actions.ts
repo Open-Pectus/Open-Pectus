@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import { ExecutableCommand, ProcessUnit, ProcessValue, ProcessValueCommand } from '../../api';
+import { ExecutableCommand, ProcessDiagram, ProcessUnit, ProcessValue, ProcessValueCommand } from '../../api';
 
 export const DetailsActions = createActionGroup({
   source: 'Details',
@@ -14,5 +14,7 @@ export const DetailsActions = createActionGroup({
     'Process Value Command Clicked': props<{ command: ProcessValueCommand, processValueName: string }>(),
     'Process Unit Loaded': props<{ processUnit: ProcessUnit }>(),
     'Process Unit Command Button Clicked': props<{ command: ExecutableCommand }>(),
+    'Process Diagram Initialized': emptyProps(),
+    'Process Diagram Fetched': props<{ processDiagram: ProcessDiagram }>(),
   },
 });
