@@ -51,6 +51,11 @@ class ProcessUnitState():
         last_seen_date: datetime
 
 
+class UserRole(StrEnum):
+    VIEWER = auto()
+    ADMIN = auto()
+
+
 class ProcessUnit(BaseModel):
     """Represents a process unit. """
 
@@ -59,11 +64,13 @@ class ProcessUnit(BaseModel):
     state: ProcessUnitState.Ready | ProcessUnitState.InProgress | ProcessUnitState.NotOnline
     location: str | None
     runtime_msec: int | None
+    current_user_role: UserRole
     # users: List[User] ?
 
 # @app.get("/to_expose_process_unit_state_enum_in_openapi")
 # def to_expose_process_unit_state_enum_in_openapi() -> ProcessUnitStateEnum:
 #     return Type[ProcessUnitStateEnum]
+
 
 @app.get("/process_unit/{id}")
 def get_unit(id: int) -> ProcessUnit:
@@ -73,6 +80,7 @@ def get_unit(id: int) -> ProcessUnit:
         state=ProcessUnitState.Ready(),  # type: ignore
         location="H21.5",
         runtime_msec=189309,
+        user_role=UserRole.ADMIN
     )
 
 
@@ -85,6 +93,7 @@ def get_units() -> List[ProcessUnit]:
             state=ProcessUnitState.InProgress(progress_pct=75),  # type: ignore
             location="H21.5",
             runtime_msec=189309,
+            user_role=UserRole.ADMIN
         )]
 
 
@@ -162,5 +171,5 @@ class ExecutableCommand(BaseModel):
 
 
 @app.post("/process_unit/{unit_id}/execute_command")
-def execute_process_value_command(unit_id: int, command: ExecutableCommand):
+def execute_command(unit_id: int, command: ExecutableCommand):
     pass

@@ -219,8 +219,8 @@
     },
     "/process_unit/{unit_id}/execute_command": {
       "post": {
-        "summary": "Execute Process Value Command",
-        "operationId": "execute_process_value_command_process_unit__unit_id__execute_command_post",
+        "summary": "Execute Command",
+        "operationId": "execute_command_process_unit__unit_id__execute_command_post",
         "parameters": [
           {
             "required": true,
@@ -397,7 +397,8 @@
         "required": [
           "id",
           "name",
-          "state"
+          "state",
+          "current_user_role"
         ],
         "type": "object",
         "properties": {
@@ -430,6 +431,9 @@
           "runtime_msec": {
             "title": "Runtime Msec",
             "type": "integer"
+          },
+          "current_user_role": {
+            "$ref": "#/components/schemas/UserRole"
           }
         },
         "description": "Represents a process unit. "
@@ -560,6 +564,15 @@
             "type": "string"
           }
         }
+      },
+      "UserRole": {
+        "title": "UserRole",
+        "enum": [
+          "viewer",
+          "admin"
+        ],
+        "type": "string",
+        "description": "An enumeration."
       },
       "ValidationError": {
         "title": "ValidationError",

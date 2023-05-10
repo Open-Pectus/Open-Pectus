@@ -1,8 +1,8 @@
 import { sub } from 'date-fns';
 import { rest } from 'msw';
-import { BatchJob, InProgress, NotOnline, ProcessUnit, ProcessValue, ProcessValueType, Ready } from '../app/api';
+import { BatchJob, InProgress, NotOnline, ProcessUnit, ProcessValue, ProcessValueType, Ready, UserRole } from '../app/api';
 
-const processUnits = [
+const processUnits: ProcessUnit[] = [
   {
     name: 'Some unit',
     id: 1,
@@ -12,6 +12,7 @@ const processUnits = [
       state: InProgress.state.IN_PROGRESS,
       progress_pct: 30,
     },
+    current_user_role: UserRole.ADMIN,
   },
   {
     name: 'Some other unit with a long title',
@@ -21,6 +22,7 @@ const processUnits = [
     state: {
       state: Ready.state.READY,
     },
+    current_user_role: UserRole.ADMIN,
   },
   {
     name: 'Some third unit',
@@ -31,6 +33,7 @@ const processUnits = [
       state: NotOnline.state.NOT_ONLINE,
       last_seen_date: new Date().toJSON(),
     },
+    current_user_role: UserRole.ADMIN,
   },
   {
     name: 'A fourth for linebreak',
@@ -41,6 +44,7 @@ const processUnits = [
       state: NotOnline.state.NOT_ONLINE,
       last_seen_date: new Date().toJSON(),
     },
+    current_user_role: UserRole.VIEWER,
   },
 ];
 

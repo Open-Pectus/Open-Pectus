@@ -43,13 +43,23 @@ export class DetailsEffects {
     }),
   ));
 
-  executeCommandWhenCommandButtonClicked = createEffect(() => this.actions.pipe(
+  executeProcessValueCommandWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processValueCommandClicked),
     concatLatestFrom(() => this.store.select(selectRouteParam(unitIdParamName))),
     switchMap(([{command, processValueName}, unitId]) => {
       const unitIdAsNumber = parseInt(unitId ?? '');
-      return this.apiService.executeProcessValueCommandProcessUnitUnitIdExecuteCommandPost(
+      return this.apiService.executeCommandProcessUnitUnitIdExecuteCommandPost(
         unitIdAsNumber, {...command, source: CommandSource.PROCESS_VALUE});
+    }),
+  ), {dispatch: false});
+
+  executeUnitControlCommandWhenButtonClicked = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.processUnitCommandButtonClicked),
+    concatLatestFrom(() => this.store.select(selectRouteParam(unitIdParamName))),
+    switchMap(([{command}, unitId]) => {
+      const unitIdAsNumber = parseInt(unitId ?? '');
+      return this.apiService.executeCommandProcessUnitUnitIdExecuteCommandPost(
+        unitIdAsNumber, {...command});
     }),
   ), {dispatch: false});
 
