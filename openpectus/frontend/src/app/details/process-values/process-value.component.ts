@@ -1,3 +1,4 @@
+import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { ProcessValue, ProcessValueCommand, ProcessValueType } from '../../api';
@@ -19,9 +20,9 @@ import { ValueAndUnit } from './process-value-editor.component';
              [class.codicon-edit]="processValue?.writable" [class.codicon-wand]="hasCommands(processValue)"
              class="absolute -top-2 -right-2 p-[2.5px] codicon !text-[0.6rem] bg-vscode-background-grey-hover rounded-full"></div>
 
-        <app-process-value-editor [processValue]="processValue" *ngIf="showEditor"
+        <app-process-value-editor [processValue]="processValueCopy" *ngIf="showEditor"
                                   (shouldClose)="onCloseEditor($event)"></app-process-value-editor>
-        <app-process-value-commands *ngIf="showCommands" [processValueCommands]="processValue?.commands"
+        <app-process-value-commands *ngIf="showCommands" [processValueCommands]="processValueCopy?.commands"
                                     (shouldClose)="onCloseCommands($event)"></app-process-value-commands>
       </div>
     </div>
@@ -29,15 +30,22 @@ import { ValueAndUnit } from './process-value-editor.component';
 })
 export class ProcessValueComponent {
   @Input() processValue?: ProcessValue;
+  protected processValueCopy?: ProcessValue;
   protected readonly ProcessValueType = ProcessValueType;
   protected showEditor = false;
   protected showCommands = false;
 
-  constructor(private store: Store) {}
+  constructor(private store: Store, private decimalPipe: DecimalPipe) {}
 
   onClick() {
-    if(this.processValue?.writable) this.showEditor = true;
-    if(this.processValue?.commands !== undefined && this.processValue?.commands.length !== 0) this.showCommands = true;
+    this.processValueCopy = structuredClone(this.processValue);
+    if(this.processValueCopy !== undefined && this.processValueCopy.writable) {
+      this.showEditor = true;
+      if(this.processValueCopy?.value_type !== ProcessValueType.STRING) {
+        this.processValueCopy.value = this.decimalPipe.transform(this.processValueCopy.value, '1.0-2') ?? '';
+      }
+    }
+    if(this.processValueCopy?.commands !== undefined && this.processValueCopy?.commands.length !== 0) this.showCommands = true;
   }
 
   onCloseCommands(command?: ProcessValueCommand) {
