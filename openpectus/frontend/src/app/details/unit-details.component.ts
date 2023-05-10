@@ -12,7 +12,7 @@ import { DetailsSelectors } from './ngrx/details.selectors';
       <div class="flex flex-col max-w-5xl w-full px-8">
         <div class="flex justify-between items-start gap-4 mt-8">
           <div class="text-slate-700" *ngrxLet="processUnit as processUnit">
-            <h1 class="text-5xl font-bold -mt-[3px]">{{processUnit?.name}}</h1>
+            <h1 class="text-4xl font-bold">{{processUnit?.name}}</h1>
             <span class="text-sm">{{processUnit?.current_user_role}}</span>
           </div>
 
