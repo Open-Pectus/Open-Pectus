@@ -69,11 +69,12 @@ export const handlers = [
   rest.get('/process_unit/:processUnitId/process_values', (req, res, ctx) => {
     return res(
       ctx.status(200),
+      ctx.delay(),
       ctx.json<ProcessValue[]>([
         {
           value_type: ProcessValueType.FLOAT,
           name: 'PU01 Speed',
-          value: 123,
+          value: 123 + Math.random() * 2,
           writable: false,
           value_unit: '%',
         }, {
@@ -100,7 +101,7 @@ export const handlers = [
         }, {
           value_type: ProcessValueType.FLOAT,
           name: 'FT01 Flow',
-          value: 123,
+          value: 123 + Math.random() * 2,
           writable: true,
           value_unit: 'L/h',
           valid_value_units: ['L/h', 'm3/h', 'L/m', 'm3/m'],
@@ -112,7 +113,7 @@ export const handlers = [
         }, {
           value_type: ProcessValueType.FLOAT,
           name: 'TT01',
-          value: 23.4,
+          value: 23.4 + Math.random() * 2,
           writable: false,
           value_unit: 'degC',
           valid_value_units: ['degC', 'degF'],

@@ -10,11 +10,13 @@ export interface DetailsState {
   methodEditorContent?: string;
   processValues: ProcessValue[];
   processDiagram?: ProcessDiagram;
+  shouldPollProcessValues: boolean;
 }
 
 const initialState: DetailsState = {
   methodEditorIsDirty: false,
   processValues: [],
+  shouldPollProcessValues: false,
 };
 
 export const detailsReducer = createReducer(initialState,
@@ -34,6 +36,12 @@ export const detailsReducer = createReducer(initialState,
   })),
   on(DetailsActions.processDiagramFetched, (state, {processDiagram}) => produce(state, draft => {
     draft.processDiagram = processDiagram;
+  })),
+  on(DetailsActions.processValuesInitialized, (state) => produce(state, draft => {
+    draft.shouldPollProcessValues = true;
+  })),
+  on(DetailsActions.processValuesDestroyed, (state) => produce(state, draft => {
+    draft.shouldPollProcessValues = false;
   })),
 );
 
