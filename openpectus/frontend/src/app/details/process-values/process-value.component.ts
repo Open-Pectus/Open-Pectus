@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { ProcessValue, ProcessValueCommand } from '../../api';
+import { ProcessValue, ProcessValueCommand, ProcessValueType } from '../../api';
 import { DetailsActions } from '../ngrx/details.actions';
 import { ValueAndUnit } from './process-value-editor.component';
 
@@ -12,7 +12,8 @@ import { ValueAndUnit } from './process-value-editor.component';
          [class.cursor-pointer]="hasAction(processValue)" (click)="onClick()">
       <div class="mx-1 font-semibold">{{processValue?.name}}</div>
       <div class="bg-vscode-background-grey rounded py-0.5 px-2 whitespace-nowrap min-h-[1.75rem] relative">
-        {{processValue?.value}} {{processValue?.value_unit}}
+        {{processValue?.value_type === ProcessValueType.STRING ? processValue?.value : processValue?.value | number:'1.0-2'}}
+        {{processValue?.value_unit}}
 
         <div *ngIf="hasAction(processValue)"
              [class.codicon-edit]="processValue?.writable" [class.codicon-wand]="hasCommands(processValue)"
@@ -28,6 +29,7 @@ import { ValueAndUnit } from './process-value-editor.component';
 })
 export class ProcessValueComponent {
   @Input() processValue?: ProcessValue;
+  protected readonly ProcessValueType = ProcessValueType;
   protected showEditor = false;
   protected showCommands = false;
 

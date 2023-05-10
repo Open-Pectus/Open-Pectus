@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { map, of, switchMap } from 'rxjs';
+import { map, of, skipWhile, switchMap } from 'rxjs';
 import { CommandSource, DefaultService } from '../../api';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
@@ -24,6 +24,22 @@ export class DetailsEffects {
     ofType(DetailsActions.processValuesInitialized),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([_, unitId]) => {
+      const unitIdAsNumber = parseInt(unitId ?? '');
+      if(isNaN(unitIdAsNumber)) return of(DetailsActions.processValuesFailedToLoad());
+      return this.apiService.getProcessValuesProcessUnitIdProcessValuesGet(unitIdAsNumber).pipe(
+        map(processValues => DetailsActions.processValuesLoaded({processValues})),
+      );
+    }),
+  ));
+
+  continuouslyPollProcessValues = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.processValuesLoaded),
+    concatLatestFrom(() => [
+      this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName)),
+      this.store.select(DetailsSelectors.shouldPollProcessValues),
+    ]),
+    skipWhile(([_, __, shouldPoll]) => !shouldPoll),
+    switchMap(([_, unitId, __]) => {
       const unitIdAsNumber = parseInt(unitId ?? '');
       if(isNaN(unitIdAsNumber)) return of(DetailsActions.processValuesFailedToLoad());
       return this.apiService.getProcessValuesProcessUnitIdProcessValuesGet(unitIdAsNumber).pipe(

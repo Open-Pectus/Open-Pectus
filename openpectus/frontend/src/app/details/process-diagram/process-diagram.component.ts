@@ -1,3 +1,4 @@
+import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Store } from '@ngrx/store';
@@ -24,14 +25,16 @@ export class ProcessDiagramComponent implements OnInit {
     map(([processDiagram, processValues]) => {
       return processDiagram?.svg?.replaceAll(/{{(?<processValueName>[^}]+)}}/g, (match, processValueName) => {
         const matchingProcessValue = processValues.find(processValue => processValue.name === processValueName.trim());
-        const valueWithUnit = `${matchingProcessValue?.value} ${matchingProcessValue?.value_unit}`;
-        return valueWithUnit ?? '';
+        if(matchingProcessValue === undefined) return '';
+        return `${this.numberPipe.transform(matchingProcessValue.value, '1.0-2')} ${matchingProcessValue.value_unit}`;
       }) ?? '';
     }),
     map(processDiagramString => this.domSanitizer.bypassSecurityTrustHtml(processDiagramString)),
   );
 
-  constructor(private store: Store, private domSanitizer: DomSanitizer) {}
+  constructor(private store: Store,
+              private domSanitizer: DomSanitizer,
+              private numberPipe: DecimalPipe) {}
 
   ngOnInit() {
     this.store.dispatch(DetailsActions.processDiagramInitialized());
