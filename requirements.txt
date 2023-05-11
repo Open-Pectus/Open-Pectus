@@ -6,3 +6,9 @@ black   # dev
 fastapi
 uvicorn[standard]
 httpx   # for tests with fastapi.testclient
+
+# simulation server
+opcua   
+numpy
+scipy
+cryptography
