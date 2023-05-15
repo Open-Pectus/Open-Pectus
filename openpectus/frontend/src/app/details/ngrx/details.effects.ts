@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { map, of, skipWhile, switchMap } from 'rxjs';
+import { map, mergeMap, of, skipWhile, switchMap } from 'rxjs';
 import { CommandSource, DefaultService } from '../../api';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
@@ -61,9 +61,9 @@ export class DetailsEffects {
   executeUnitControlCommandWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processUnitCommandButtonClicked),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
-    map(([{command}, unitId]) => {
+    mergeMap(([{command}, unitId]) => {
       const unitIdAsNumber = parseInt(unitId ?? '');
-      this.apiService.executeCommandProcessUnitUnitIdExecuteCommandPost(
+      return this.apiService.executeCommandProcessUnitUnitIdExecuteCommandPost(
         unitIdAsNumber, {...command});
     }),
   ), {dispatch: false});

@@ -13,7 +13,7 @@ import { ValueAndUnit } from './process-value-editor.component';
          [class.cursor-pointer]="hasAction(processValue)" (click)="onClick()">
       <div class="mx-1 font-semibold">{{processValue?.name}}</div>
       <div class="bg-vscode-background-grey rounded py-0.5 px-2 whitespace-nowrap min-h-[1.75rem] relative">
-        {{processValue?.value_type === ProcessValueType.STRING ? processValue?.value : processValue?.value | number:'1.0-2'}}
+        {{processValue?.value_type === ProcessValueType.STRING ? processValue?.value : processValue?.value | number:'1.2-2'}}
         {{processValue?.value_unit}}
 
         <div *ngIf="hasAction(processValue)"
@@ -42,7 +42,7 @@ export class ProcessValueComponent {
     if(this.processValueCopy !== undefined && this.processValueCopy.writable) {
       this.showEditor = true;
       if(this.processValueCopy?.value_type !== ProcessValueType.STRING) {
-        this.processValueCopy.value = this.decimalPipe.transform(this.processValueCopy.value, '1.0-2') ?? '';
+        this.processValueCopy.value = this.decimalPipe.transform(this.processValueCopy.value, '1.2-2') ?? '';
       }
     }
     if(this.processValueCopy?.commands !== undefined && this.processValueCopy?.commands.length !== 0) this.showCommands = true;
