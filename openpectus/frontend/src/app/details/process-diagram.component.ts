@@ -3,8 +3,8 @@ import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Store } from '@ngrx/store';
 import { combineLatest, map } from 'rxjs';
-import { DetailsActions } from '../ngrx/details.actions';
-import { DetailsSelectors } from '../ngrx/details.selectors';
+import { DetailsActions } from './ngrx/details.actions';
+import { DetailsSelectors } from './ngrx/details.selectors';
 
 @Component({
   selector: 'app-process-diagram',
