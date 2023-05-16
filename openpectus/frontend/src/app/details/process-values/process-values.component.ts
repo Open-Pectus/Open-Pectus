@@ -8,13 +8,12 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
   selector: 'app-process-values',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex flex-col bg-sky-700 p-1.5 rounded-md shadow-lg">
-      <span class="text-2xl font-bold text-gray-100 pb-2 m-2">Process Values</span>
-      <div class="flex gap-2 bg-vscode-background-grey rounded-sm p-2 items-start flex-wrap">
+    <app-collapsible-element [name]="'Process Values'">
+      <div class="flex gap-2 p-2 items-start flex-wrap" content>
         <app-process-value *ngFor="let processValue of (processValues | ngrxPush); trackBy: trackBy"
                            [processValue]="processValue"></app-process-value>
       </div>
-    </div>
+    </app-collapsible-element>
   `,
 })
 export class ProcessValuesComponent implements OnInit, OnDestroy {

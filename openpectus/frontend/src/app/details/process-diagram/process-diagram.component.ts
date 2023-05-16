@@ -10,11 +10,9 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
   selector: 'app-process-diagram',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex flex-col bg-sky-700 p-1.5 rounded-md shadow-lg">
-      <span class="text-2xl font-bold text-gray-100 pb-2 m-2">Process Diagram</span>
-      <div class="bg-white rounded-sm p-2" [innerHTML]="diagramWithValues | ngrxPush">
-      </div>
-    </div>
+    <app-collapsible-element [name]="'Process Diagram'">
+      <div class="bg-white rounded-sm p-2" [innerHTML]="diagramWithValues | ngrxPush" content></div>
+    </app-collapsible-element>
   `,
 })
 export class ProcessDiagramComponent implements OnInit {
