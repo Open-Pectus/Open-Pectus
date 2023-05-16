@@ -302,6 +302,49 @@
           }
         }
       }
+    },
+    "/process_unit/{unit_id}/command_examples": {
+      "get": {
+        "summary": "Get Command Examples",
+        "operationId": "get_command_examples_process_unit__unit_id__command_examples_get",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Unit Id",
+              "type": "integer"
+            },
+            "name": "unit_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Get Command Examples Process Unit  Unit Id  Command Examples Get",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CommandExample"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -343,6 +386,24 @@
           }
         },
         "description": "Represents a current or historical run of a process unit. "
+      },
+      "CommandExample": {
+        "title": "CommandExample",
+        "required": [
+          "name",
+          "example"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "example": {
+            "title": "Example",
+            "type": "string"
+          }
+        }
       },
       "CommandSource": {
         "title": "CommandSource",
