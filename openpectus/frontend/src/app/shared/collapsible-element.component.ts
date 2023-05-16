@@ -4,12 +4,16 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
   selector: 'app-collapsible-element',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex flex-col bg-sky-700 p-1.5 rounded-md shadow-lg cursor-pointer" (click)="collapsed = !collapsed">
-      <div class="flex justify-between items-center text-gray-100 m-2">
+    <div class="flex flex-col bg-sky-700 p-1.5 rounded-md shadow-lg cursor-pointer">
+      <div class="flex justify-between items-center text-gray-100 m-2" (click)="collapsed = !collapsed">
         <span class="text-2xl font-bold">{{name}}</span>
-        <div class="codicon !text-2xl !font-bold" [class.codicon-chevron-right]="collapsed" [class.codicon-chevron-down]="!collapsed"></div>
+        <div class="flex gap-4" (click)="$event.stopPropagation()">
+          <ng-content select="button"></ng-content>
+          <div class="codicon !text-2xl !font-bold" [class.codicon-chevron-right]="collapsed" [class.codicon-chevron-down]="!collapsed"
+               (click)="collapsed = !collapsed"></div>
+        </div>
       </div>
-      <div class="bg-white rounded-sm overflow-hidden mt-1.5" *ngIf="!collapsed">
+      <div class="bg-white rounded-sm mt-1.5" *ngIf="!collapsed">
         <ng-content select="[content]"></ng-content>
       </div>
     </div>

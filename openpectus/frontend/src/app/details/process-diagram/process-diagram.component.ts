@@ -11,7 +11,9 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-collapsible-element [name]="'Process Diagram'">
-      <div class="bg-white rounded-sm p-2" [innerHTML]="diagramWithValues | ngrxPush" content></div>
+      <div class="flex justify-center" content>
+        <div class="bg-white rounded-sm p-2" [innerHTML]="diagramWithValues | ngrxPush"></div>
+      </div>
     </app-collapsible-element>
   `,
 })
