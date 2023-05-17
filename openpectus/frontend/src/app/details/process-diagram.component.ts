@@ -3,18 +3,18 @@ import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Store } from '@ngrx/store';
 import { combineLatest, map } from 'rxjs';
-import { DetailsActions } from '../ngrx/details.actions';
-import { DetailsSelectors } from '../ngrx/details.selectors';
+import { DetailsActions } from './ngrx/details.actions';
+import { DetailsSelectors } from './ngrx/details.selectors';
 
 @Component({
   selector: 'app-process-diagram',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex flex-col bg-sky-700 p-1.5 rounded-md shadow-lg">
-      <span class="text-2xl font-bold text-gray-100 pb-2 m-2">Process Diagram</span>
-      <div class="bg-white rounded-sm p-2" [innerHTML]="diagramWithValues | ngrxPush">
+    <app-collapsible-element [name]="'Process Diagram'">
+      <div class="flex justify-center" content>
+        <div class="bg-white rounded-sm p-2" [innerHTML]="diagramWithValues | ngrxPush"></div>
       </div>
-    </div>
+    </app-collapsible-element>
   `,
 })
 export class ProcessDiagramComponent implements OnInit {
@@ -26,7 +26,7 @@ export class ProcessDiagramComponent implements OnInit {
       return processDiagram?.svg?.replaceAll(/{{(?<processValueName>[^}]+)}}/g, (match, processValueName) => {
         const matchingProcessValue = processValues.find(processValue => processValue.name === processValueName.trim());
         if(matchingProcessValue === undefined) return '';
-        return `${this.numberPipe.transform(matchingProcessValue.value, '1.0-2')} ${matchingProcessValue.value_unit}`;
+        return `${this.numberPipe.transform(matchingProcessValue.value, '1.2-2')} ${matchingProcessValue.value_unit}`;
       }) ?? '';
     }),
     map(processDiagramString => this.domSanitizer.bypassSecurityTrustHtml(processDiagramString)),

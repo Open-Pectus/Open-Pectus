@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { map, of, skipWhile, switchMap } from 'rxjs';
+import { debounceTime, map, mergeMap, of, skipWhile, switchMap } from 'rxjs';
 import { CommandSource, DefaultService } from '../../api';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
@@ -20,30 +20,31 @@ export class DetailsEffects {
     }),
   ));
 
-  loadProcessValuesWhenComponentInitialized = createEffect(() => this.actions.pipe(
+  fetchProcessValuesWhenComponentInitialized = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processValuesInitialized),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([_, unitId]) => {
       const unitIdAsNumber = parseInt(unitId ?? '');
       if(isNaN(unitIdAsNumber)) return of(DetailsActions.processValuesFailedToLoad());
       return this.apiService.getProcessValuesProcessUnitIdProcessValuesGet(unitIdAsNumber).pipe(
-        map(processValues => DetailsActions.processValuesLoaded({processValues})),
+        map(processValues => DetailsActions.processValuesFetched({processValues})),
       );
     }),
   ));
 
   continuouslyPollProcessValues = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.processValuesLoaded),
+    ofType(DetailsActions.processValuesFetched),
     concatLatestFrom(() => [
       this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName)),
       this.store.select(DetailsSelectors.shouldPollProcessValues),
     ]),
+    debounceTime(500),
     skipWhile(([_, __, shouldPoll]) => !shouldPoll),
     switchMap(([_, unitId, __]) => {
       const unitIdAsNumber = parseInt(unitId ?? '');
       if(isNaN(unitIdAsNumber)) return of(DetailsActions.processValuesFailedToLoad());
       return this.apiService.getProcessValuesProcessUnitIdProcessValuesGet(unitIdAsNumber).pipe(
-        map(processValues => DetailsActions.processValuesLoaded({processValues})),
+        map(processValues => DetailsActions.processValuesFetched({processValues})),
       );
     }),
   ));
@@ -61,20 +62,41 @@ export class DetailsEffects {
   executeUnitControlCommandWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processUnitCommandButtonClicked),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
-    map(([{command}, unitId]) => {
+    mergeMap(([{command}, unitId]) => {
       const unitIdAsNumber = parseInt(unitId ?? '');
-      this.apiService.executeCommandProcessUnitUnitIdExecuteCommandPost(
+      return this.apiService.executeCommandProcessUnitUnitIdExecuteCommandPost(
         unitIdAsNumber, {...command});
     }),
   ), {dispatch: false});
 
-  loadProcessDiagramWhenComponentInitialized = createEffect(() => this.actions.pipe(
+  executeManuallyEnteredCommandWhenButtonClicked = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.commandsComponentExecuteClicked),
+    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
+    switchMap(([{command}, unitId]) => {
+      const unitIdAsNumber = parseInt(unitId ?? '');
+      return this.apiService.executeCommandProcessUnitUnitIdExecuteCommandPost(
+        unitIdAsNumber, {...command});
+    }),
+  ), {dispatch: false});
+
+  fetchProcessDiagramWhenComponentInitialized = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processDiagramInitialized),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([_, unitId]) => {
       const unitIdAsNumber = parseInt(unitId ?? '');
       return this.apiService.getProcessDiagramProcessUnitUnitIdProcessDiagramGet(unitIdAsNumber).pipe(
         map(processDiagram => DetailsActions.processDiagramFetched({processDiagram})),
+      );
+    }),
+  ));
+
+  fetchCommandExamplesWhenComponentInitialized = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.commandsComponentInitialized),
+    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
+    switchMap(([_, unitId]) => {
+      const unitIdAsNumber = parseInt(unitId ?? '');
+      return this.apiService.getCommandExamplesProcessUnitUnitIdCommandExamplesGet(unitIdAsNumber).pipe(
+        map(commandExamples => DetailsActions.commandExamplesFetched({commandExamples})),
       );
     }),
   ));

@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 
 import type { BatchJob } from '../models/BatchJob';
+import type { CommandExample } from '../models/CommandExample';
 import type { ExecutableCommand } from '../models/ExecutableCommand';
 import type { ProcessDiagram } from '../models/ProcessDiagram';
 import type { ProcessUnit } from '../models/ProcessUnit';
@@ -171,6 +172,27 @@ unitId: number,
         return __request(OpenAPI, this.http, {
             method: 'GET',
             url: '/process_unit/{unit_id}/process_diagram',
+            path: {
+                'unit_id': unitId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
+    /**
+     * Get Command Examples
+     * @param unitId 
+     * @returns CommandExample Successful Response
+     * @throws ApiError
+     */
+    public getCommandExamplesProcessUnitUnitIdCommandExamplesGet(
+unitId: number,
+): Observable<Array<CommandExample>> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/process_unit/{unit_id}/command_examples',
             path: {
                 'unit_id': unitId,
             },
