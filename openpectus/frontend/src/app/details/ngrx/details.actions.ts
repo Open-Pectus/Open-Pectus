@@ -23,5 +23,6 @@ export const DetailsActions = createActionGroup({
 
     'Commands Component Initialized': emptyProps(),
     'Command Examples Fetched': props<{ commandExamples: CommandExample[] }>(),
+    'Commands Component Execute Clicked': props<{ command: ExecutableCommand }>(),
   },
 });

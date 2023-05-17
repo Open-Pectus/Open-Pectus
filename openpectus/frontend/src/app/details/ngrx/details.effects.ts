@@ -69,6 +69,16 @@ export class DetailsEffects {
     }),
   ), {dispatch: false});
 
+  executeManuallyEnteredCommandWhenButtonClicked = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.commandsComponentExecuteClicked),
+    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
+    switchMap(([{command}, unitId]) => {
+      const unitIdAsNumber = parseInt(unitId ?? '');
+      return this.apiService.executeCommandProcessUnitUnitIdExecuteCommandPost(
+        unitIdAsNumber, {...command});
+    }),
+  ), {dispatch: false});
+
   fetchProcessDiagramWhenComponentInitialized = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processDiagramInitialized),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
