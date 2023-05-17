@@ -165,46 +165,28 @@ export const handlers = [
       context.json<CommandExample[]>([
         {
           name: 'Some Command',
-          example:
-            `some 
-multiline
-example`,
+          example: `some\nmultiline\nexample\nwith\nmany\nlines\nto\ncause\nscrollbar\nto\nappear\nso\nit\ncan\nbe\ntested`,
         }, {
           name: 'Some Other Command',
-          example:
-            `some 
-multiline
-example`,
+          example: `some other\n example`,
         }, {
           name: 'Some Advanced Command',
-          example:
-            `some 
-multiline
-example`,
+          example: `some\nAdvanced\nexample`,
         }, {
           name: 'Some Silly Command',
-          example:
-            `some 
-multiline
-example`,
+          example: `some\nSilly\nexample`,
         }, {
           name: 'Some Command, just to have more',
-          example:
-            `some 
-multiline
-example`,
+          example: `some\nexample, just to have more`,
         }, {
           name: 'Some Command with a very long name that probably should wrap somehow',
-          example:
-            `some 
-multiline
-example`,
+          example: `some very long example that maybe should wrap somehow`,
         }, {
           name: 'Yet another command',
-          example:
-            `some 
-multiline
-example`,
+          example: `yet another example`,
+        }, {
+          name: 'Yet another, another command',
+          example: `yet another, another example`,
         },
       ]),
     );
