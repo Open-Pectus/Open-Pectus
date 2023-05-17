@@ -165,7 +165,7 @@ export const handlers = [
       context.json<CommandExample[]>([
         {
           name: 'Some Command',
-          example: `some\nmultiline\nexample\nwith\nmany\nlines\nto\ncause\nscrollbar\nto\nappear\nso\nit\ncan\nbe\ntested`,
+          example: `SoMe\nmultiline\nexample\nwith\nmany\nlines\nto\ncause\nscrollbar\nto\nappear\nso\nit\ncan\nbe\ntested\nin\nthe\nbrowser`,
         }, {
           name: 'Some Other Command',
           example: `some other\n example`,

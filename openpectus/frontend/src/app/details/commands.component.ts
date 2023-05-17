@@ -9,8 +9,8 @@ import { DetailsSelectors } from './ngrx/details.selectors';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-collapsible-element [name]="'Commands'" [collapsed]="false">
-      <div content class="flex m-2 max-h-96 bg-vscode-background-grey">
-        <div class="flex flex-col gap-1 max-w-[16rem] overflow-y-auto -my-2 py-2" [style.scrollbar-width]="'none'">
+      <div content class="flex max-h-96">
+        <div class="flex flex-col gap-1 max-w-[16rem] overflow-y-auto pl-2 py-2" [style.scrollbar-width]="'none'">
           <button *ngFor="let commandExample of commandExamples | ngrxPush"
                   class="rounded-l-2xl p-2 bg-slate-200 select-none border border-r-0 border-slate-500"
                   [class.!bg-white]="commandExample === chosenExample"
@@ -26,14 +26,14 @@ import { DetailsSelectors } from './ngrx/details.selectors';
           <!--            <path fill="none" stroke-width="1" d="M0.5,0V9M0.5,0A8.5,8.5,0,0,0,9,8.5"></path>-->
           <!--          </svg>-->
 
-          <textarea class="resize-none outline-none whitespace-pre flex-1 px-2 border border-slate-500 -ml-[1px] rounded-r-lg"
+          <textarea class="resize-none outline-none whitespace-pre flex-1 px-2 py-1.5 border-l border-r border-slate-500 -ml-[1px]"
                     placeholder="Example to copy from" readonly>{{chosenExample?.example}}</textarea>
-          <textarea class="resize-none outline-none whitespace-pre flex-1 px-2" #commandToExecute
+          <textarea class="resize-none outline-none whitespace-pre flex-1 mx-2 py-1.5" #commandToExecute
                     placeholder="Paste or write here to execute"></textarea>
-          <button class="absolute right-1 bottom-1 rounded bg-green-400 text-gray-800 p-2 flex items-center"
-                  (click)="onExecute(commandToExecute.value)">
+          <button class="absolute right-3 bottom-3 rounded-md bg-green-400 text-gray-800 p-2 flex items-center"
+                  (click)="onExecute(commandToExecute.value); commandToExecute.value = ''">
             <div class="codicon codicon-symbol-event"></div>
-            <span>Execute!</span>
+            <span class="font-semibold ml-1">Execute!</span>
           </button>
         </div>
       </div>
