@@ -5,7 +5,6 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 
-import type { BatchJob } from '../models/BatchJob';
 import type { CommandExample } from '../models/CommandExample';
 import type { ExecutableCommand } from '../models/ExecutableCommand';
 import type { ProcessDiagram } from '../models/ProcessDiagram';
@@ -19,7 +18,7 @@ import { request as __request } from '../core/request';
 @Injectable({
   providedIn: 'root',
 })
-export class DefaultService {
+export class ProcessUnitService {
 
     constructor(public readonly http: HttpClient) {}
 
@@ -29,12 +28,12 @@ export class DefaultService {
      * @returns ProcessUnit Successful Response
      * @throws ApiError
      */
-    public getUnitProcessUnitIdGet(
+    public processUnitGetUnit(
 id: number,
 ): Observable<ProcessUnit> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/process_unit/{id}',
+            url: '/api/process_unit/{id}',
             path: {
                 'id': id,
             },
@@ -49,43 +48,10 @@ id: number,
      * @returns ProcessUnit Successful Response
      * @throws ApiError
      */
-    public getUnitsProcessUnitsGet(): Observable<Array<ProcessUnit>> {
+    public processUnitGetUnits(): Observable<Array<ProcessUnit>> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/process_units',
-        });
-    }
-
-    /**
-     * Get Batch
-     * @param id 
-     * @returns BatchJob Successful Response
-     * @throws ApiError
-     */
-    public getBatchBatchJobIdGet(
-id: number,
-): Observable<BatchJob> {
-        return __request(OpenAPI, this.http, {
-            method: 'GET',
-            url: '/batch_job/{id}',
-            path: {
-                'id': id,
-            },
-            errors: {
-                422: `Validation Error`,
-            },
-        });
-    }
-
-    /**
-     * Get Recent Batch Jobs
-     * @returns BatchJob Successful Response
-     * @throws ApiError
-     */
-    public getRecentBatchJobsRecentBatchJobsGet(): Observable<Array<BatchJob>> {
-        return __request(OpenAPI, this.http, {
-            method: 'GET',
-            url: '/recent_batch_jobs',
+            url: '/api/process_units',
         });
     }
 
@@ -95,12 +61,12 @@ id: number,
      * @returns ProcessValue Successful Response
      * @throws ApiError
      */
-    public getProcessValuesProcessUnitIdProcessValuesGet(
+    public processUnitGetProcessValues(
 id: number,
 ): Observable<Array<ProcessValue>> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/process_unit/{id}/process_values',
+            url: '/api/process_unit/{id}/process_values',
             path: {
                 'id': id,
             },
@@ -117,13 +83,13 @@ id: number,
      * @returns any Successful Response
      * @throws ApiError
      */
-    public setProcessValueProcessUnitUnitIdProcessValuePost(
+    public processUnitSetProcessValue(
 unitId: number,
 requestBody: ProcessValueUpdate,
 ): Observable<any> {
         return __request(OpenAPI, this.http, {
             method: 'POST',
-            url: '/process_unit/{unit_id}/process_value',
+            url: '/api/process_unit/{unit_id}/process_value',
             path: {
                 'unit_id': unitId,
             },
@@ -142,13 +108,13 @@ requestBody: ProcessValueUpdate,
      * @returns any Successful Response
      * @throws ApiError
      */
-    public executeCommandProcessUnitUnitIdExecuteCommandPost(
+    public processUnitExecuteCommand(
 unitId: number,
 requestBody: ExecutableCommand,
 ): Observable<any> {
         return __request(OpenAPI, this.http, {
             method: 'POST',
-            url: '/process_unit/{unit_id}/execute_command',
+            url: '/api/process_unit/{unit_id}/execute_command',
             path: {
                 'unit_id': unitId,
             },
@@ -166,12 +132,12 @@ requestBody: ExecutableCommand,
      * @returns ProcessDiagram Successful Response
      * @throws ApiError
      */
-    public getProcessDiagramProcessUnitUnitIdProcessDiagramGet(
+    public processUnitGetProcessDiagram(
 unitId: number,
 ): Observable<ProcessDiagram> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/process_unit/{unit_id}/process_diagram',
+            url: '/api/process_unit/{unit_id}/process_diagram',
             path: {
                 'unit_id': unitId,
             },
@@ -187,12 +153,12 @@ unitId: number,
      * @returns CommandExample Successful Response
      * @throws ApiError
      */
-    public getCommandExamplesProcessUnitUnitIdCommandExamplesGet(
+    public processUnitGetCommandExamples(
 unitId: number,
 ): Observable<Array<CommandExample>> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/process_unit/{unit_id}/command_examples',
+            url: '/api/process_unit/{unit_id}/command_examples',
             path: {
                 'unit_id': unitId,
             },
