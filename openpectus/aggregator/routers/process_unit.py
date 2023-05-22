@@ -133,7 +133,7 @@ class ProcessDiagram(BaseModel):
 
 @router.get("/process_unit/{unit_id}/process_diagram")
 def get_process_diagram(unit_id: int) -> ProcessDiagram:
-    return ProcessDiagram(svg='')
+    return ProcessDiagram(svg="")
 
 
 class CommandExample(BaseModel):
@@ -143,4 +143,6 @@ class CommandExample(BaseModel):
 
 @router.get('/process_unit/{unit_id}/command_examples')
 def get_command_examples(unit_id: int) -> List[CommandExample]:
-    return []
+    return [
+        CommandExample(name="Some Example", example="Some example text")
+    ]
