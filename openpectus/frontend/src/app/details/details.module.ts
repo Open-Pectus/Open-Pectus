@@ -9,6 +9,7 @@ import getNotificationServiceOverride from 'vscode/service-override/notification
 import { StandaloneServices } from 'vscode/services';
 import { SharedModule } from '../shared/shared.module';
 import { BatchJobDetailsComponent } from './batch-job-details.component';
+import { CommandsComponent } from './commands/commands.component';
 import { DetailsRoutingModule } from './details-routing.module';
 import { MethodEditorComponent } from './method-editor/method-editor.component';
 import { MonacoEditorComponent } from './method-editor/monaco-editor.component';
@@ -20,7 +21,7 @@ import { ProcessValueEditorComponent } from './process-values/process-value-edit
 import { ProcessValueComponent } from './process-values/process-value.component';
 import { ProcessValuesComponent } from './process-values/process-values.component';
 import { UnitDetailsComponent } from './unit-details.component';
-import { CommandsComponent } from './commands.component';
+import { CommandExamplesListComponent } from './commands/command-examples-list.component';
 
 StandaloneServices.initialize({
   ...getNotificationServiceOverride(),
@@ -41,6 +42,7 @@ buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.
     ProcessValueCommandsComponent,
     ProcessDiagramComponent,
     CommandsComponent,
+    CommandExamplesListComponent,
   ],
   imports: [
     CommonModule,
