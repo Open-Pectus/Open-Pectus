@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { debounceTime, map, mergeMap, of, skipWhile, switchMap } from 'rxjs';
-import { CommandSource, DefaultService } from '../../api';
+import { CommandSource, ProcessUnitService } from '../../api';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
 import { DetailsActions } from './details.actions';
@@ -26,7 +26,7 @@ export class DetailsEffects {
     switchMap(([_, unitId]) => {
       const unitIdAsNumber = parseInt(unitId ?? '');
       if(isNaN(unitIdAsNumber)) return of(DetailsActions.processValuesFailedToLoad());
-      return this.apiService.getProcessValuesProcessUnitIdProcessValuesGet(unitIdAsNumber).pipe(
+      return this.processUnitService.getProcessValues(unitIdAsNumber).pipe(
         map(processValues => DetailsActions.processValuesFetched({processValues})),
       );
     }),
@@ -43,7 +43,7 @@ export class DetailsEffects {
     switchMap(([_, unitId, __]) => {
       const unitIdAsNumber = parseInt(unitId ?? '');
       if(isNaN(unitIdAsNumber)) return of(DetailsActions.processValuesFailedToLoad());
-      return this.apiService.getProcessValuesProcessUnitIdProcessValuesGet(unitIdAsNumber).pipe(
+      return this.processUnitService.getProcessValues(unitIdAsNumber).pipe(
         map(processValues => DetailsActions.processValuesFetched({processValues})),
       );
     }),
@@ -54,7 +54,7 @@ export class DetailsEffects {
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([{command, processValueName}, unitId]) => {
       const unitIdAsNumber = parseInt(unitId ?? '');
-      return this.apiService.executeCommandProcessUnitUnitIdExecuteCommandPost(
+      return this.processUnitService.executeCommand(
         unitIdAsNumber, {...command, source: CommandSource.PROCESS_VALUE});
     }),
   ), {dispatch: false});
@@ -64,7 +64,7 @@ export class DetailsEffects {
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     mergeMap(([{command}, unitId]) => {
       const unitIdAsNumber = parseInt(unitId ?? '');
-      return this.apiService.executeCommandProcessUnitUnitIdExecuteCommandPost(
+      return this.processUnitService.executeCommand(
         unitIdAsNumber, {...command});
     }),
   ), {dispatch: false});
@@ -74,7 +74,7 @@ export class DetailsEffects {
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([{command}, unitId]) => {
       const unitIdAsNumber = parseInt(unitId ?? '');
-      return this.apiService.executeCommandProcessUnitUnitIdExecuteCommandPost(
+      return this.processUnitService.executeCommand(
         unitIdAsNumber, {...command});
     }),
   ), {dispatch: false});
@@ -84,7 +84,7 @@ export class DetailsEffects {
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([_, unitId]) => {
       const unitIdAsNumber = parseInt(unitId ?? '');
-      return this.apiService.getProcessDiagramProcessUnitUnitIdProcessDiagramGet(unitIdAsNumber).pipe(
+      return this.processUnitService.getProcessDiagram(unitIdAsNumber).pipe(
         map(processDiagram => DetailsActions.processDiagramFetched({processDiagram})),
       );
     }),
@@ -95,11 +95,11 @@ export class DetailsEffects {
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([_, unitId]) => {
       const unitIdAsNumber = parseInt(unitId ?? '');
-      return this.apiService.getCommandExamplesProcessUnitUnitIdCommandExamplesGet(unitIdAsNumber).pipe(
+      return this.processUnitService.getCommandExamples(unitIdAsNumber).pipe(
         map(commandExamples => DetailsActions.commandExamplesFetched({commandExamples})),
       );
     }),
   ));
 
-  constructor(private actions: Actions, private store: Store, private apiService: DefaultService) {}
+  constructor(private actions: Actions, private store: Store, private processUnitService: ProcessUnitService) {}
 }

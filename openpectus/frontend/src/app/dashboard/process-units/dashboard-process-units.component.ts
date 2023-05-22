@@ -13,6 +13,7 @@ import { AppSelectors } from '../../ngrx/app.selectors';
       <app-process-unit-card *ngFor="let processUnit of (processUnits | ngrxPush)" [processUnit]="processUnit"
                              (click)="onCardClick(processUnit.id)"></app-process-unit-card>
     </div>
+    <div class="text-center" *ngIf="(processUnits | ngrxPush)?.length === 0">No process units available</div>
   `,
 })
 export class DashboardProcessUnitsComponent {

@@ -50,14 +50,14 @@ const processUnits: ProcessUnit[] = [
 
 
 export const handlers = [
-  rest.get('/process_units', (req, res, ctx) => {
+  rest.get('/api/process_units', (req, res, ctx) => {
     return res(
       ctx.status(200),
       ctx.json<ProcessUnit[]>(processUnits),
     );
   }),
 
-  rest.get('/process_unit/:processUnitId', (req, res, ctx) => {
+  rest.get('/api/process_unit/:processUnitId', (req, res, ctx) => {
     const processUnit = processUnits.find(processUnit => processUnit.id.toString() === req.params['processUnitId']);
     if(processUnit === undefined) return res(ctx.status(404));
     return res(
@@ -66,7 +66,7 @@ export const handlers = [
     );
   }),
 
-  rest.get('/process_unit/:processUnitId/process_values', (req, res, ctx) => {
+  rest.get('/api/process_unit/:processUnitId/process_values', (req, res, ctx) => {
     return res(
       ctx.status(200),
       ctx.delay(),
@@ -122,7 +122,7 @@ export const handlers = [
     );
   }),
 
-  rest.get('/recent_batch_jobs', (req, res, ctx) => {
+  rest.get('/api/recent_batch_jobs', (req, res, ctx) => {
     function getCompletedDate() {
       return sub(new Date(), {seconds: Math.random() * 1000000}).toISOString();
     }
@@ -144,13 +144,13 @@ export const handlers = [
     );
   }),
 
-  rest.post('/process_unit/:unitId/execute_command', (req, res, context) => {
+  rest.post('/api/process_unit/:unitId/execute_command', (req, res, context) => {
     return res(
       context.status(200),
     );
   }),
 
-  rest.get('/process_unit/:unitId/process_diagram', (req, res, context) => {
+  rest.get('/api/process_unit/:unitId/process_diagram', (req, res, context) => {
     return res(
       context.status(200),
       context.json({
@@ -159,7 +159,7 @@ export const handlers = [
     );
   }),
 
-  rest.get('process_unit/:unitId/command_examples', (req, res, context) => {
+  rest.get('/api/process_unit/:unitId/command_examples', (req, res, context) => {
     return res(
       context.status(200),
       context.json<CommandExample[]>([

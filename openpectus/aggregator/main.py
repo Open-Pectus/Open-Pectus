@@ -1,9 +1,8 @@
-from datetime import datetime
-from enum import StrEnum, auto
-from typing import List, Literal
-
 from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi.routing import APIRoute
+
+from aggregator.routers.batch_job import router as batch_job_router
+from aggregator.routers.process_unit import router as process_unit_router
 
 # TODO
 # - add lsp thingys
@@ -26,169 +25,14 @@ from pydantic import BaseModel
 # Look into this https://stackoverflow.com/questions/74137116/how-to-hide-a-pydantic-discriminator-field-from-fastapi-docs
 # Final / Literal ...
 
+
+def custom_generate_unique_id(route: APIRoute):
+    return f"{route.name}"
+
+
 title = "Pectus Aggregator"
+prefix = "/api"
 print(f"*** {title} ***")
-app = FastAPI(title=title)
-
-
-class ProcessUnitStateEnum(StrEnum):
-    """ Represents the state of a process unit. """
-    READY = auto()
-    IN_PROGRESS = auto()
-    NOT_ONLINE = auto()
-
-
-class ProcessUnitState():
-    class Ready(BaseModel):
-        state: Literal[ProcessUnitStateEnum.READY]
-
-    class InProgress(BaseModel):
-        state: Literal[ProcessUnitStateEnum.IN_PROGRESS]
-        progress_pct: int
-
-    class NotOnline(BaseModel):
-        state: Literal[ProcessUnitStateEnum.NOT_ONLINE]
-        last_seen_date: datetime
-
-
-class UserRole(StrEnum):
-    VIEWER = auto()
-    ADMIN = auto()
-
-
-class ProcessUnit(BaseModel):
-    """Represents a process unit. """
-
-    id: int
-    name: str
-    state: ProcessUnitState.Ready | ProcessUnitState.InProgress | ProcessUnitState.NotOnline
-    location: str | None
-    runtime_msec: int | None
-    current_user_role: UserRole
-    # users: List[User] ?
-
-# @app.get("/to_expose_process_unit_state_enum_in_openapi")
-# def to_expose_process_unit_state_enum_in_openapi() -> ProcessUnitStateEnum:
-#     return Type[ProcessUnitStateEnum]
-
-
-@app.get("/process_unit/{id}")
-def get_unit(id: int) -> ProcessUnit:
-    return ProcessUnit(
-        id=3,
-        name="Foo",
-        state=ProcessUnitState.Ready(),  # type: ignore
-        location="H21.5",
-        runtime_msec=189309,
-        user_role=UserRole.ADMIN
-    )
-
-
-@app.get("/process_units")
-def get_units() -> List[ProcessUnit]:
-    return [
-        ProcessUnit(
-            id=3,
-            name="Foo",
-            state=ProcessUnitState.InProgress(progress_pct=75),  # type: ignore
-            location="H21.5",
-            runtime_msec=189309,
-            user_role=UserRole.ADMIN
-        )]
-
-
-class BatchJob(BaseModel):
-    """ Represents a current or historical run of a process unit. """
-    id: int
-    unit_id: int
-    unit_name: str
-    completed_date: datetime
-    contributors: List[str] = []
-
-
-@app.get("/batch_job/{id}")
-def get_batch(id: int) -> BatchJob:
-    dt = datetime(2023, 3, 21, 12, 31, 57, 0)
-    return BatchJob(id=id, unit_id=3, unit_name="Foo", completed_date=dt, contributors=[])
-
-
-@app.get("/recent_batch_jobs")
-def get_recent_batch_jobs() -> List[BatchJob]:
-    return []
-
-
-class ProcessValueType(StrEnum):
-    STRING = auto()
-    FLOAT = auto()
-    INT = auto()
-
-
-class ProcessValueCommand(BaseModel):
-    name: str
-    command: str
-
-
-class ProcessValue(BaseModel):
-    """ Represents a process value. """
-    name: str
-    value: str | float | int | None
-    value_unit: str | None
-    """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
-    valid_value_units: List[str] | None
-    """ For values with a unit, provides the list valid alternative units """
-    value_type: ProcessValueType
-    """ Specifies the type of allowed values. """
-    writable: bool
-    commands: List[ProcessValueCommand] | None  # TODO: have backend verify that no ProcessValue ever is both writable and has commands.
-
-
-@app.get("/process_unit/{id}/process_values")
-def get_process_values(id: int) -> List[ProcessValue]:  # naming?, parm last_seen
-    return [ProcessValue(name="A-Flow", value=54, value_unit="L", valid_value_units=["L", "m3"], writable=False,
-                         options=None, value_type=ProcessValueType.STRING)]
-
-
-class ProcessValueUpdate(BaseModel):
-    name: str
-    value: str | float | int
-
-
-@app.post("/process_unit/{unit_id}/process_value")
-def set_process_value(unit_id: int, update: ProcessValueUpdate):
-    pass
-
-
-class CommandSource(StrEnum):
-    PROCESS_VALUE = auto()
-    MANUALLY_ENTERED = auto()
-    UNIT_BUTTON = auto()
-
-
-class ExecutableCommand(BaseModel):
-    command: str
-    source: CommandSource
-    name: str | None
-
-
-@app.post("/process_unit/{unit_id}/execute_command")
-def execute_command(unit_id: int, command: ExecutableCommand):
-    pass
-
-
-class ProcessDiagram(BaseModel):
-    svg: str
-
-
-@app.get("/process_unit/{unit_id}/process_diagram")
-def get_process_diagram(unit_id: int) -> ProcessDiagram:
-    return ProcessDiagram(svg='')
-
-
-class CommandExample(BaseModel):
-    name: str
-    example: str
-
-
-@app.get('/process_unit/{unit_id}/command_examples')
-def get_command_examples(unit_id: int) -> List[CommandExample]:
-    return []
+app = FastAPI(title=title, generate_unique_id_function=custom_generate_unique_id)
+app.include_router(process_unit_router, prefix=prefix)
+app.include_router(batch_job_router, prefix=prefix)

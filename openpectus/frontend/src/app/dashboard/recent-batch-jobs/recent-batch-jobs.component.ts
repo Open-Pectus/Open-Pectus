@@ -15,6 +15,7 @@ import { DashboardSelectors } from '../ngrx/dashboard.selectors';
   template: `
     <app-table class="w-full h-96" [columns]="columns" [data]="recentBatchJobs | ngrxPush" (rowClicked)="navigateToBatchJob($event)"
                [defaultSort]="defaultSort" [filter]="recenterBatchJobFilter | ngrxPush"></app-table>
+    <div class="text-center p-2" *ngIf="(recentBatchJobs | ngrxPush)?.length === 0">No recent batch jobs available</div>
   `,
 })
 export class RecentBatchJobsComponent implements OnInit {
