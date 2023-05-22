@@ -11,6 +11,7 @@ import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
+import { MswEnablementComponent } from './msw-enablement.component';
 import { metaReducers, reducers } from './ngrx/';
 import { AppEffects } from './ngrx/app.effects';
 import { TopBarComponent } from './top-bar.component';
@@ -21,6 +22,7 @@ registerLocaleData(localeDa);
   declarations: [
     AppComponent,
     TopBarComponent,
+    MswEnablementComponent,
   ],
   imports: [
     BrowserModule,
