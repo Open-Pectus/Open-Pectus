@@ -5,7 +5,8 @@ import { CommandExample } from '../../api';
   selector: 'app-command-examples-list',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex flex-col gap-1 max-w-[16rem] overflow-y-auto h-full pl-2 py-2" [style.scrollbar-width]="'none'">
+    <div class="flex flex-col gap-1 w-64 overflow-y-auto h-full pl-2 py-2" [style.scrollbar-width]="'none'">
+      <div *ngIf="(commandExamples | ngrxPush)?.length === 0" class="m-auto">No examples available</div>
       <button *ngFor="let commandExample of commandExamples | ngrxPush"
               class="rounded-l-2xl p-2 bg-slate-200 select-none border border-r-0 border-slate-500"
               [class.!bg-white]="commandExample === chosenExample"

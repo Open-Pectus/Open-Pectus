@@ -10,6 +10,7 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
   template: `
     <app-collapsible-element [name]="'Process Values'">
       <div class="flex gap-2 p-2 items-start flex-wrap" content>
+        <div class="m-auto" *ngIf="(processValues | ngrxPush)?.length === 0">No process values available</div>
         <app-process-value *ngFor="let processValue of (processValues | ngrxPush); trackBy: trackBy"
                            [processValue]="processValue"></app-process-value>
       </div>
