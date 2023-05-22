@@ -28,9 +28,9 @@ import { DetailsSelectors } from './ngrx/details.selectors';
 
           <textarea class="resize-none outline-none whitespace-pre flex-1 px-2 py-1.5 border-l border-r border-slate-500 -ml-[1px]"
                     placeholder="Example to copy from" readonly>{{chosenExample?.example}}</textarea>
-          <textarea class="resize-none outline-none whitespace-pre flex-1 mx-2 py-1.5" #commandToExecute
+          <textarea class="resize-none outline-none whitespace-pre flex-1 px-2 py-1.5" #commandToExecute
                     placeholder="Paste or write here to execute"></textarea>
-          <button class="absolute right-3 bottom-3 rounded-md bg-green-400 text-gray-800 p-2 flex items-center"
+          <button class="absolute right-4 bottom-4 rounded-md bg-green-400 text-gray-800 p-2 flex items-center"
                   (click)="onExecute(commandToExecute.value); commandToExecute.value = ''">
             <div class="codicon codicon-symbol-event"></div>
             <span class="font-semibold ml-1">Execute!</span>
