@@ -9,7 +9,7 @@ export class DashboardEffects {
   loadRecentBatchJobsOnComponentInitialization = createEffect(() => this.actions.pipe(
     ofType(DashboardActions.recentBatchJobsInitialized),
     switchMap(() => {
-      return this.batchJobService.batchJobGetRecentBatchJobs().pipe(
+      return this.batchJobService.getRecentBatchJobs().pipe(
         map(recentBatchJobs => DashboardActions.recentBatchJobsLoaded({recentBatchJobs})));
     }),
   ));

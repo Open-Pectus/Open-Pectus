@@ -23,7 +23,7 @@ export class BatchJobService {
      * @returns BatchJob Successful Response
      * @throws ApiError
      */
-    public batchJobGetBatch(
+    public getBatch(
 id: number,
 ): Observable<BatchJob> {
         return __request(OpenAPI, this.http, {
@@ -43,7 +43,7 @@ id: number,
      * @returns BatchJob Successful Response
      * @throws ApiError
      */
-    public batchJobGetRecentBatchJobs(): Observable<Array<BatchJob>> {
+    public getRecentBatchJobs(): Observable<Array<BatchJob>> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
             url: '/api/recent_batch_jobs',

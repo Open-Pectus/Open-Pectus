@@ -11,7 +11,7 @@
           "process_unit"
         ],
         "summary": "Get Unit",
-        "operationId": "process_unit-get_unit",
+        "operationId": "get_unit",
         "parameters": [
           {
             "required": true,
@@ -53,14 +53,14 @@
           "process_unit"
         ],
         "summary": "Get Units",
-        "operationId": "process_unit-get_units",
+        "operationId": "get_units",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Process Unit-Get Units",
+                  "title": "Response Get Units",
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/ProcessUnit"
@@ -78,7 +78,7 @@
           "process_unit"
         ],
         "summary": "Get Process Values",
-        "operationId": "process_unit-get_process_values",
+        "operationId": "get_process_values",
         "parameters": [
           {
             "required": true,
@@ -96,7 +96,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Process Unit-Get Process Values",
+                  "title": "Response Get Process Values",
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/ProcessValue"
@@ -124,7 +124,7 @@
           "process_unit"
         ],
         "summary": "Set Process Value",
-        "operationId": "process_unit-set_process_value",
+        "operationId": "set_process_value",
         "parameters": [
           {
             "required": true,
@@ -174,7 +174,7 @@
           "process_unit"
         ],
         "summary": "Execute Command",
-        "operationId": "process_unit-execute_command",
+        "operationId": "execute_command",
         "parameters": [
           {
             "required": true,
@@ -224,7 +224,7 @@
           "process_unit"
         ],
         "summary": "Get Process Diagram",
-        "operationId": "process_unit-get_process_diagram",
+        "operationId": "get_process_diagram",
         "parameters": [
           {
             "required": true,
@@ -266,7 +266,7 @@
           "process_unit"
         ],
         "summary": "Get Command Examples",
-        "operationId": "process_unit-get_command_examples",
+        "operationId": "get_command_examples",
         "parameters": [
           {
             "required": true,
@@ -284,7 +284,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Process Unit-Get Command Examples",
+                  "title": "Response Get Command Examples",
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/CommandExample"
@@ -312,7 +312,7 @@
           "batch_job"
         ],
         "summary": "Get Batch",
-        "operationId": "batch_job-get_batch",
+        "operationId": "get_batch",
         "parameters": [
           {
             "required": true,
@@ -354,14 +354,14 @@
           "batch_job"
         ],
         "summary": "Get Recent Batch Jobs",
-        "operationId": "batch_job-get_recent_batch_jobs",
+        "operationId": "get_recent_batch_jobs",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Batch Job-Get Recent Batch Jobs",
+                  "title": "Response Get Recent Batch Jobs",
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/BatchJob"

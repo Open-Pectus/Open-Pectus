@@ -28,7 +28,7 @@ export class ProcessUnitService {
      * @returns ProcessUnit Successful Response
      * @throws ApiError
      */
-    public processUnitGetUnit(
+    public getUnit(
 id: number,
 ): Observable<ProcessUnit> {
         return __request(OpenAPI, this.http, {
@@ -48,7 +48,7 @@ id: number,
      * @returns ProcessUnit Successful Response
      * @throws ApiError
      */
-    public processUnitGetUnits(): Observable<Array<ProcessUnit>> {
+    public getUnits(): Observable<Array<ProcessUnit>> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
             url: '/api/process_units',
@@ -61,7 +61,7 @@ id: number,
      * @returns ProcessValue Successful Response
      * @throws ApiError
      */
-    public processUnitGetProcessValues(
+    public getProcessValues(
 id: number,
 ): Observable<Array<ProcessValue>> {
         return __request(OpenAPI, this.http, {
@@ -83,7 +83,7 @@ id: number,
      * @returns any Successful Response
      * @throws ApiError
      */
-    public processUnitSetProcessValue(
+    public setProcessValue(
 unitId: number,
 requestBody: ProcessValueUpdate,
 ): Observable<any> {
@@ -108,7 +108,7 @@ requestBody: ProcessValueUpdate,
      * @returns any Successful Response
      * @throws ApiError
      */
-    public processUnitExecuteCommand(
+    public executeCommand(
 unitId: number,
 requestBody: ExecutableCommand,
 ): Observable<any> {
@@ -132,7 +132,7 @@ requestBody: ExecutableCommand,
      * @returns ProcessDiagram Successful Response
      * @throws ApiError
      */
-    public processUnitGetProcessDiagram(
+    public getProcessDiagram(
 unitId: number,
 ): Observable<ProcessDiagram> {
         return __request(OpenAPI, this.http, {
@@ -153,7 +153,7 @@ unitId: number,
      * @returns CommandExample Successful Response
      * @throws ApiError
      */
-    public processUnitGetCommandExamples(
+    public getCommandExamples(
 unitId: number,
 ): Observable<Array<CommandExample>> {
         return __request(OpenAPI, this.http, {

@@ -9,7 +9,7 @@ export class AppEffects {
   loadProcessUnitsOnPageInitialization = createEffect(() => this.actions.pipe(
     ofType(AppActions.pageInitialized),
     switchMap(() => {
-      return this.processUnitService.processUnitGetUnits().pipe(map(processUnits => AppActions.processUnitsLoaded({processUnits})));
+      return this.processUnitService.getUnits().pipe(map(processUnits => AppActions.processUnitsLoaded({processUnits})));
     }),
   ));
 
