@@ -10,7 +10,7 @@ import { DetailsSelectors } from './ngrx/details.selectors';
   template: `
     <app-collapsible-element [name]="'Commands'" [collapsed]="false">
       <div content class="flex max-h-96">
-        <div class="flex flex-col gap-1 max-w-[16rem] overflow-y-auto pl-2 py-2" [style.scrollbar-width]="'none'">
+        <div class="flex flex-col gap-1 max-w-[16rem] overflow-y-auto pl-2 py-2 tab-list" [style.scrollbar-width]="'none'">
           <button *ngFor="let commandExample of commandExamples | ngrxPush"
                   class="rounded-l-2xl p-2 bg-slate-200 select-none border border-r-0 border-slate-500"
                   [class.!bg-white]="commandExample === chosenExample"
@@ -40,7 +40,7 @@ import { DetailsSelectors } from './ngrx/details.selectors';
     </app-collapsible-element>
   `,
   styles: [
-    '::-webkit-scrollbar { display: none; }',
+    '.tab-list::-webkit-scrollbar { display: none; }',
   ],
 })
 export class CommandsComponent implements OnInit {
