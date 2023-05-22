@@ -10,7 +10,7 @@ import { DetailsSelectors } from './ngrx/details.selectors';
   template: `
     <app-collapsible-element [name]="'Commands'" [collapsed]="false">
       <div content class="flex max-h-96">
-        <div class="flex flex-col gap-1 max-w-[16rem] overflow-y-auto pl-2 py-2" [style.scrollbar-width]="'none'">
+        <div class="flex flex-col gap-1 max-w-[16rem] overflow-y-auto pl-2 py-2 tab-list" [style.scrollbar-width]="'none'">
           <button *ngFor="let commandExample of commandExamples | ngrxPush"
                   class="rounded-l-2xl p-2 bg-slate-200 select-none border border-r-0 border-slate-500"
                   [class.!bg-white]="commandExample === chosenExample"
@@ -28,9 +28,9 @@ import { DetailsSelectors } from './ngrx/details.selectors';
 
           <textarea class="resize-none outline-none whitespace-pre flex-1 px-2 py-1.5 border-l border-r border-slate-500 -ml-[1px]"
                     placeholder="Example to copy from" readonly>{{chosenExample?.example}}</textarea>
-          <textarea class="resize-none outline-none whitespace-pre flex-1 mx-2 py-1.5" #commandToExecute
+          <textarea class="resize-none outline-none whitespace-pre flex-1 px-2 py-1.5" #commandToExecute
                     placeholder="Paste or write here to execute"></textarea>
-          <button class="absolute right-3 bottom-3 rounded-md bg-green-400 text-gray-800 p-2 flex items-center"
+          <button class="absolute right-4 bottom-4 rounded-md bg-green-400 text-gray-800 p-2 flex items-center"
                   (click)="onExecute(commandToExecute.value); commandToExecute.value = ''">
             <div class="codicon codicon-symbol-event"></div>
             <span class="font-semibold ml-1">Execute!</span>
@@ -40,7 +40,7 @@ import { DetailsSelectors } from './ngrx/details.selectors';
     </app-collapsible-element>
   `,
   styles: [
-    '::-webkit-scrollbar { display: none; }',
+    '.tab-list::-webkit-scrollbar { display: none; }',
   ],
 })
 export class CommandsComponent implements OnInit {
