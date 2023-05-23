@@ -130,3 +130,4 @@ dmypy.json
 
 # Antlr internal files
 openpectus/lang/grammar/.antlr
+frontend-dist

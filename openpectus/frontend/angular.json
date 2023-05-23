@@ -43,7 +43,7 @@
         "build": {
           "builder": "@angular-builders/custom-webpack:browser",
           "options": {
-            "outputPath": "dist/frontend",
+            "outputPath": "../aggregator/frontend-dist",
             "index": "src/index.html",
             "main": "src/main.ts",
             "polyfills": [
