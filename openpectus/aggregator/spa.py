@@ -9,7 +9,7 @@ class SinglePageApplication(StaticFiles):
     """Acts similar to the bripkens/connect-history-api-fallback
     NPM package."""
 
-    def __init__(self, directory: os.PathLike, index='index.html') -> None:
+    def __init__(self, directory: str, index='index.html') -> None:
         self.index = index
 
         # set html=True to resolve the index even when no

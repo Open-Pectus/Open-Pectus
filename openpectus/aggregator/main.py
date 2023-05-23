@@ -1,6 +1,12 @@
+import os
+print(os.getcwd())
+print(os.listdir(os.getcwd()))
+
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
-
+# import sys
+# sys.path.append(os.path.join(os.path.dirname(__file__)))
+# sys.path.append('..')
 from routers import batch_job, process_unit
 from spa import SinglePageApplication
 
@@ -37,4 +43,6 @@ print(f"*** {title} ***")
 app = FastAPI(title=title, generate_unique_id_function=custom_generate_unique_id)
 app.include_router(process_unit.router, prefix=prefix)
 app.include_router(batch_job.router, prefix=prefix)
-app.mount("/", SinglePageApplication(directory='frontend-dist'))
+
+app.mount("/", SinglePageApplication(directory=os.path.join(os.path.dirname(__file__), "frontend-dist")))
+
