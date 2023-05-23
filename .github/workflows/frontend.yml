@@ -5,7 +5,7 @@ name: Build Frontend
 
 on:
   push:
-    branches: [ "main", "85-build-docker-containers-serving-frontend-and-aggregator" ]
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
