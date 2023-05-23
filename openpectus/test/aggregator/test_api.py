@@ -4,16 +4,15 @@ import sys
 import unittest
 import hashlib
 
-# print(os.getcwd())
-# print(os.listdir(os.getcwd()))
-sys.path.append('aggregator')
 from fastapi.testclient import TestClient
-from aggregator.main import app
 
+sys.path.append('aggregator')
+from aggregator.main import app
 
 client = TestClient(app)
 
 project_path = os.path.join(os.path.dirname(__file__), "..", "..")
+
 
 class AggregatorApiTest(unittest.TestCase):
     pass
