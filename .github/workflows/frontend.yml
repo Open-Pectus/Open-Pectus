@@ -5,31 +5,37 @@ name: Build Frontend
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "85-build-docker-containers-serving-frontend-and-aggregator" ]
   pull_request:
     branches: [ "main" ]
 
 jobs:
   build_frontend:
+
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
         node-version: [18.16]
+
     steps:
     - uses: actions/checkout@v3
+      
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
         cache-dependency-path: 'openpectus/frontend/package-lock.json'
+        
     - name: npm ci, build
       working-directory: "openpectus/frontend"
       run: |
         npm ci
         npm run build
+
     - name: Archive production artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: frontend dist folder
+        name: frontend-dist
         path: "openpectus/frontend/dist"

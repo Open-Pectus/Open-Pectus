@@ -5,7 +5,7 @@ name: Python application
 
 on:
   push:
-    branches: [ "main", "41-add-comment-runtime-model" ]
+    branches: [ "main", "85-build-docker-containers-serving-frontend-and-aggregator" ]
   pull_request:
     branches: [ "main" ]
 
@@ -13,20 +13,23 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  build_aggregator:
 
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v3
+      
     - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
         python-version: "3.11"
+        
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        
     - name: Lint with flake8
       run: |
         # use configuration from ./.flake8
@@ -35,16 +38,25 @@ jobs:
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings.
         #flake8 . --count --exit-zero --statistics
+        
     - name: Lint with flake8 (warnings)
       run: |
         # use configuration from ./.flake8
         cd openpectus
         if ! flake8 . --count --statistics; then
           echo "::warning::Flake8 Lint Warning"
-        fi      
+        fi
+        
     - name: Test with unittest
       run: |
         cd openpectus
         python -m unittest
         
-    
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: aggregator
+        path: |
+          openpectus/aggregator/**/*.py
+          openpectus/aggregator/Dockerfile
+          openpectus/aggregator/requirements.txt
