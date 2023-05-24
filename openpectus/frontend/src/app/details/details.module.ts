@@ -22,6 +22,7 @@ import { ProcessValueComponent } from './process-values/process-value.component'
 import { ProcessValuesComponent } from './process-values/process-values.component';
 import { UnitDetailsComponent } from './unit-details.component';
 import { CommandExamplesListComponent } from './commands/command-examples-list.component';
+import { UnitHeaderComponent } from './unit-header.component';
 
 StandaloneServices.initialize({
   ...getNotificationServiceOverride(),
@@ -43,6 +44,7 @@ buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.
     ProcessDiagramComponent,
     CommandsComponent,
     CommandExamplesListComponent,
+    UnitHeaderComponent,
   ],
   imports: [
     CommonModule,
