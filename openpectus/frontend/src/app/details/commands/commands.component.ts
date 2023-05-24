@@ -8,8 +8,8 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
   selector: 'app-commands',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-collapsible-element [name]="'Commands'" [collapsed]="false">
-      <div content class="flex max-h-96 min-h-[20rem] overflow-hidden">
+    <app-collapsible-element [name]="'Commands'" [resizableHeight]="true" (contentHeightChanged)="onContentHeightChanged($event)">
+      <div content class="flex overflow-hidden" [style.height.px]="contentHeight">
         <app-command-examples-list [commandExamples]="commandExamples | ngrxPush" [chosenExample]="chosenExample"
                                    (exampleChosen)="chosenExample = $event"></app-command-examples-list>
         <div class="flex justify-between flex-1 relative">
@@ -30,6 +30,7 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
 export class CommandsComponent implements OnInit {
   commandExamples = this.store.select(DetailsSelectors.commandExamples);
   chosenExample?: CommandExample;
+  contentHeight = 400;
 
   constructor(private store: Store) {}
 
@@ -44,5 +45,9 @@ export class CommandsComponent implements OnInit {
         source: CommandSource.MANUALLY_ENTERED,
       },
     }));
+  }
+
+  onContentHeightChanged(newHeight: number) {
+    this.contentHeight = newHeight;
   }
 }
