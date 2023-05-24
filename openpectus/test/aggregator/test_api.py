@@ -1,15 +1,17 @@
 import json
 import os
+import sys
 import unittest
 import hashlib
 
 from fastapi.testclient import TestClient
-from aggregator.main import app
 
+sys.path.append('aggregator')
+from aggregator.main import app
 
 client = TestClient(app)
 
-project_path = os.path.join(os.path.dirname(__file__) , "..", "..")
+project_path = os.path.join(os.path.dirname(__file__), "..", "..")
 
 
 class AggregatorApiTest(unittest.TestCase):
@@ -33,7 +35,7 @@ class AggregatorOpenAPIApiTest(unittest.TestCase):
         openapi_file = os.path.join(project_path, "frontend", "openapi.json")
         current_md5, updated_md5 = "", ""
         with open(openapi_file, "rb") as f:
-            current_md5 = hashlib.md5(f.read()).hexdigest()    
+            current_md5 = hashlib.md5(f.read()).hexdigest()
 
         # parsed and pretty printed
         with open(openapi_file, "wt") as f:

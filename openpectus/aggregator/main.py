@@ -1,8 +1,9 @@
+import os
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
+from routers import batch_job, process_unit
+from spa import SinglePageApplication
 
-from aggregator.routers.batch_job import router as batch_job_router
-from aggregator.routers.process_unit import router as process_unit_router
 
 # TODO
 # - add lsp thingys
@@ -31,8 +32,12 @@ def custom_generate_unique_id(route: APIRoute):
 
 
 title = "Pectus Aggregator"
-prefix = "/api"
 print(f"*** {title} ***")
+
 app = FastAPI(title=title, generate_unique_id_function=custom_generate_unique_id)
-app.include_router(process_unit_router, prefix=prefix)
-app.include_router(batch_job_router, prefix=prefix)
+
+prefix = "/api"
+app.include_router(process_unit.router, prefix=prefix)
+app.include_router(batch_job.router, prefix=prefix)
+
+app.mount("/", SinglePageApplication(directory=os.path.join(os.path.dirname(__file__), "frontend-dist")))
