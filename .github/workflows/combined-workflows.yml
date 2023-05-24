@@ -12,6 +12,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/main' }}
+  NODE_VERSION: 18.16
 
 jobs:
 
@@ -58,15 +59,12 @@ jobs:
 
   build_frontend:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [18.16]
     steps:
       - uses: actions/checkout@v3
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: 'openpectus/frontend/package-lock.json'
       - name: npm ci, build
