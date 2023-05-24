@@ -101,6 +101,6 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: true
-          tags: ${{ env.REPO }}:0.1
+          tags: ghcr.io/${{ env.REPO }}:latest # ${{ github.sha }}
           context: .
           file: ./Dockerfile
