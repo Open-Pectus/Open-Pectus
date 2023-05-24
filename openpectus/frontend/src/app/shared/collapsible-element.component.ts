@@ -16,9 +16,11 @@ import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Ou
       <div class="bg-white rounded-sm mt-1.5 h-full" #content *ngIf="!collapsed">
         <ng-content select="[content]"></ng-content>
       </div>
-      <div class="absolute bottom-0 left-0 w-full h-1.5" [class.cursor-ns-resize]="resizableHeight" [draggable]="resizableHeight"
-           (dragstart)="onDragStart($event)"
-           (drag)="resizeHeight($event)" (dragleave)="resizeHeight($event)"></div>
+      <div class="absolute bottom-0 left-0 w-full h-1.5" [style.height.px]="widenDragHandler ? 20 : null"
+           [class.cursor-ns-resize]="resizableHeight"
+           [draggable]="resizableHeight"
+           (dragstart)="onDragStart($event)" (mousedown)="onMouseDown()" (mouseleave)="onMouseLeave()"
+           (drag)="onDrag($event)"></div>
     </div>
   `,
 })
@@ -28,15 +30,15 @@ export class CollapsibleElementComponent {
   @Input() resizableHeight = false;
   @Output() contentHeightChanged = new EventEmitter<number>();
   @ViewChild('content') contentElementRef?: ElementRef<HTMLDivElement>;
+  protected widenDragHandler = false;
 
-  resizeHeight(event: DragEvent) {
+  onDrag(event: DragEvent) {
     if(!this.resizableHeight) return;
     const element = event.target as HTMLDivElement;
     const parentElement = element.parentElement as HTMLDivElement;
-    const contentTop = this.contentElementRef?.nativeElement.offsetTop;
-    if(contentTop === undefined) return;
     const top = parentElement.offsetTop;
-    if(top === undefined) return;
+    const contentTop = this.contentElementRef?.nativeElement.offsetTop;
+    if(top === undefined || contentTop === undefined) return;
     const height = event.pageY - top - contentTop;
     if(height < 100) return;
     this.contentHeightChanged.emit(height);
@@ -47,5 +49,13 @@ export class CollapsibleElementComponent {
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.dropEffect = 'move';
     event.dataTransfer.setDragImage(new Image(), 0, 0);
+  }
+
+  onMouseDown() {
+    this.widenDragHandler = true;
+  }
+
+  onMouseLeave() {
+    this.widenDragHandler = false;
   }
 }
