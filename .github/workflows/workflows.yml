@@ -1,4 +1,5 @@
 # because github actions are shit, we need to combine every workflow in one file in order to be able to have jobs depend correctly on other jobs
+
 name: Workflows
 
 on:
@@ -100,6 +101,6 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: true
-          tags: ghcr.io/${{ env.REPO }}:${{ github.sha }}
+          tags: ${{ env.REPO }}:0.1
           context: .
           file: ./Dockerfile
