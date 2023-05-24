@@ -17,8 +17,8 @@ import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Ou
         <ng-content select="[content]"></ng-content>
       </div>
       <div class="absolute bottom-0 left-0 w-full h-1.5" [style.height.px]="widenDragHandler ? 20 : null"
-           [class.cursor-ns-resize]="resizableHeight"
-           [draggable]="resizableHeight"
+           [class.cursor-ns-resize]="heightResizable"
+           [draggable]="heightResizable"
            (dragstart)="onDragStart($event)" (mousedown)="onMouseDown()" (mouseleave)="onMouseLeave()"
            (drag)="onDrag($event)"></div>
     </div>
@@ -27,13 +27,13 @@ import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Ou
 export class CollapsibleElementComponent {
   @Input() name?: string;
   @Input() collapsed = false;
-  @Input() resizableHeight = false;
+  @Input() heightResizable = false;
   @Output() contentHeightChanged = new EventEmitter<number>();
   @ViewChild('content') contentElementRef?: ElementRef<HTMLDivElement>;
   protected widenDragHandler = false;
 
   onDrag(event: DragEvent) {
-    if(!this.resizableHeight) return;
+    if(!this.heightResizable) return;
     const element = event.target as HTMLDivElement;
     const parentElement = element.parentElement as HTMLDivElement;
     const top = parentElement.offsetTop;

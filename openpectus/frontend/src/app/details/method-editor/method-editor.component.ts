@@ -8,7 +8,7 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
   selector: 'app-method-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-collapsible-element [name]="'Method Editor'" [resizableHeight]="true" (contentHeightChanged)="onContentHeightChanged($event)">
+    <app-collapsible-element [name]="'Method Editor'" [heightResizable]="true" (contentHeightChanged)="onContentHeightChanged($event)">
       <button *ngIf="methodEditorIsDirty | ngrxPush" (click)="onSaveButtonClicked()"
               class="bg-green-500 flex items-center text-slate-800 px-2.5 rounded-md">
         <span class="codicon codicon-save !text-xl"></span>
