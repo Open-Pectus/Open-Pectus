@@ -4,7 +4,7 @@ name: Combined Workflows
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "87-investigate-publishing-docker-image" ]
   pull_request:
     branches: [ "main" ]
 
@@ -77,7 +77,6 @@ jobs:
 
 
   publish_docker_image:
-    if: ${{ false }} # disable for now
     needs: [build_frontend, build_aggregator]
     runs-on: ubuntu-latest
     steps:
