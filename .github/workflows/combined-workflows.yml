@@ -1,10 +1,10 @@
 # because github actions are shit, we need to combine every workflow in one file in order to be able to have jobs depend correctly on other jobs
 
-name: Workflows
+name: Combined Workflows
 
 on:
   push:
-    branches: [ "main", "85-build-docker-containers-serving-frontend-and-aggregator" ]
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
@@ -77,6 +77,7 @@ jobs:
 
 
   publish_docker_image:
+    if: ${{ false }} # disable for now
     needs: [build_frontend, build_aggregator]
     runs-on: ubuntu-latest
     steps:
