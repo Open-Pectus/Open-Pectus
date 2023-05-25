@@ -9,8 +9,8 @@ from lang.exec.tags import Tag, TagDirection, TagCollection
 import logging
 
 from engine.hardware import HardwareLayerException
-from openpectus.engine.hardware import HardwareLayerBase
-from openpectus.lang.exec.tags import ChangeListener
+from engine.hardware import HardwareLayerBase
+from lang.exec.tags import ChangeListener
 
 
 logging.basicConfig()
