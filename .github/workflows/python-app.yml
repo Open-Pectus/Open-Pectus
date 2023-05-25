@@ -5,7 +5,7 @@ name: Python application
 
 on:
   push:
-    branches: [ "main", "41-add-comment-runtime-model" ]
+    branches: [ "main", "71-build-uod-simulation-example" ]
   pull_request:
     branches: [ "main" ]
 
