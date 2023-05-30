@@ -4,11 +4,9 @@ import { AppModule } from './app/app.module';
 import { handlers } from './msw/handlers';
 import { MswEnablement } from './msw/msw-enablement';
 
-
-// if(process.env['NODE_ENV'] === 'development') {
 if(MswEnablement.isEnabled) {
   const worker = setupWorker(...handlers);
-  worker.start({
+  await worker.start({
     onUnhandledRequest: (request: MockedRequest) => {
       const pathname = request.url.pathname;
       if(pathname.startsWith('/assets') ||
@@ -21,7 +19,7 @@ if(MswEnablement.isEnabled) {
       }
       console.warn(`url ${request.url} was not mocked by MSW`);
     },
-  }).then();
+  });
 }
 
 platformBrowserDynamic().bootstrapModule(AppModule)
