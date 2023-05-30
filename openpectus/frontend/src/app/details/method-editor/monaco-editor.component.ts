@@ -1,8 +1,8 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, OnDestroy, ViewChild } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { editor as MonacoEditor, languages, Range, Uri } from 'monaco-editor';
 import { MonacoLanguageClient, MonacoServices } from 'monaco-languageclient';
-import { Subject, take } from 'rxjs';
+import { Observable, Subject, take, takeUntil } from 'rxjs';
 import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient/lib/common/client';
 import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
 import { DetailsActions } from '../ngrx/details.actions';
@@ -16,6 +16,7 @@ import { DetailsActions } from '../ngrx/details.actions';
   styleUrls: ['monaco-editor.component.scss'],
 })
 export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
+  @Input() editorSizeChange?: Observable<void>;
   @ViewChild('editor', {static: true}) editorElement!: ElementRef<HTMLDivElement>;
   private componentDestroyed = new Subject<void>();
   private editor?: MonacoEditor.IStandaloneCodeEditor;
@@ -25,7 +26,10 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   ngAfterViewInit() {
     this.registerLanguages();
     this.editor = this.createEditor();
+
     this.setupMonacoLanguageClient();
+    this.editorSizeChange?.pipe(takeUntil(this.componentDestroyed)).subscribe(() => this.editor?.layout());
+    window.onresize = () => this.editor?.layout();
     this.store.dispatch(DetailsActions.methodEditorInitialized({model: this.editor.getModel()?.getValue() ?? ''}));
   }
 
