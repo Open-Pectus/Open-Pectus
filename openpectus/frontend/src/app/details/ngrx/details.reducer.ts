@@ -1,5 +1,5 @@
 import { createReducer, on } from '@ngrx/store';
-import produce from 'immer';
+import { produce } from 'immer';
 import { CommandExample, ProcessDiagram, ProcessValue } from '../../api';
 import { DetailsActions } from './details.actions';
 
