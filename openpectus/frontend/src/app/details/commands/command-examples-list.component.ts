@@ -18,7 +18,7 @@ import { CommandExample } from '../../api';
     <div class="h-full absolute right-0 top-0 w-0.5 bg-gradient-to-r from-transparent to-slate-500"></div>
   `,
   styles: [
-    '::-webkit-scrollbar { display: none; }',
+    ':host ::ng-deep ::-webkit-scrollbar { display: none; }',
     ':host { position: relative }',
   ],
 })
