@@ -1,7 +1,7 @@
 from __future__ import annotations
 from enum import StrEnum, auto
 from numbers import Number
-from typing import Dict, Iterable, List, Set, TypeVar, Generic
+from typing import Dict, Iterable, List, Set
 
 import pint
 from pint import UnitRegistry, Quantity
@@ -170,7 +170,6 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
 
     def __init__(self) -> None:
         super().__init__()
-        #self.tag_listener = ChangeListener()
         self.tags: Dict[str, Tag] = {}
 
     # propagate tag changes to collection changes
@@ -187,6 +186,9 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
 
     def __getitem__(self, tag_name: str):
         return self.tags[tag_name.upper()]
+
+    def __len__(self) -> int:
+        return len(self.tags)
 
     def get(self, tag_name: str) -> Tag:
         if tag_name is None or tag_name.strip() == '':
@@ -205,7 +207,6 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
             raise ValueError(f"A tag named {tag.name} already exists")
 
         self.tags[tag.name.upper()] = tag
-        #tag.add_listener(self.tag_listener)
         tag.add_listener(self)
 
     def with_tag(self, tag: Tag):

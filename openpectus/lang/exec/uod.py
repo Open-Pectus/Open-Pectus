@@ -111,7 +111,7 @@ class UnitOperationDefinitionBase:
                 raise ValueError(f"Invalid arguments '{command_args}' provided for command '{cmd.name}'")
             else:
                 cmd.execute(parsed_args, self)
-                
+
                 if cmd.is_complete:
                     # TODO reset the command - possibly a reset() method
                     cmd.iterations = 0

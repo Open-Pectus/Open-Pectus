@@ -5,7 +5,7 @@ from queue import Empty
 import time
 from typing import Iterable
 from lang.exec.uod import UnitOperationDefinitionBase
-from lang.exec.tags import Tag, TagDirection, TagCollection
+from lang.exec.tags import Tag, TagCollection
 import logging
 
 from engine.hardware import HardwareLayerException
@@ -24,7 +24,7 @@ class UodReader():
 
 
 # Engine-interpreter interface?
-#  built-in commands vs uod commands? do they need separate definitions. 
+#  built-in commands vs uod commands? do they need separate definitions.
 #   The builtins don't really need any - not for the interpreter - but for the UI they do
 #   Change interpreter - is should not directly execute uod commands - should hand them to engine for execution
 
@@ -47,7 +47,7 @@ class AggregatorClient():
     def on_command_request(self, cmd_name, cmd_args):
         pass
 
-    #how about start/stop/pause/hold - are they commands or tags?
+    # how about start/stop/pause/hold - are they commands or tags?
 
 
 class EngineCommand():
@@ -109,8 +109,8 @@ class Engine():
     def tick(self):
         """ Performs a scan cycle tick. """
 
-        sys_tags = self.system_tags.clone()  # TODO clone does not currently support the subclasses
-        uod_tags = self.uod.tags.clone()
+        # sys_tags = self.system_tags.clone()  # TODO clone does not currently support the subclasses
+        # uod_tags = self.uod.tags.clone()
 
         # read
         self.read_process_image()
@@ -151,8 +151,7 @@ class Engine():
         # for tag, value in zip(readable_tags, values):
         #     tag.set_value(value)
 
-
-        hwl: HardwareLayerBase = self.uod.hwl
+        hwl: HardwareLayerBase = self.uod.hwl  # type: ignore
 
         # assert isinstance(self.uod.hwl, HardwareLayerBase) is True
         if not isinstance(hwl, HardwareLayerBase):
@@ -207,7 +206,7 @@ class Engine():
             self.tag_updates.put(tag)
 
     def write_process_image(self):
-        hwl: HardwareLayerBase = self.uod.hwl
+        hwl: HardwareLayerBase = self.uod.hwl  # type: ignore
 
         register_values = []
         register_list = list(hwl.registers.values())
@@ -223,7 +222,7 @@ class Engine():
 
 # Tag.Select (self.hw_value = self.read)
 # Tag state     'Reset'   'N/A'
-# io value  
+# io value
 # pio value     1       0
 
 # Tag.ValveNC (hw_value: return 0 if r == self.safe_state else return 1)

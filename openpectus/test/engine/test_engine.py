@@ -1,5 +1,3 @@
-import asyncio
-from numbers import Number
 import threading
 import time
 from typing import Any, List
@@ -11,13 +9,6 @@ from engine.engine import Engine, EngineCommand
 from lang.exec import tags
 from lang.exec.uod import UodCommand
 from engine.hardware import HardwareLayerBase, Register, RegisterDirection
-
-
-def create_engine() -> Engine:
-    uod = TestUod()
-    e = Engine(uod)
-    e._configure()
-    return e
 
 
 class TestHardwareLayer(unittest.TestCase):
@@ -47,17 +38,33 @@ class TestHardwareLayer(unittest.TestCase):
         self.assertEqual('foo', hwl.register_values['FT01'])
 
 
+def create_engine() -> Engine:
+    uod = TestUod()
+    e = Engine(uod)
+    e._configure()
+    return e
+
+
 class TestEngine(unittest.TestCase):
     def test_create_engine(self):
         uod = TestUod()
         e = Engine(uod)
         self.assertIsNotNone(e)
 
-    @unittest.skip("Not implemented")
+    def test_configure_uod(self):
+        uod = TestUod()
+        e = Engine(uod)
+        e._configure()
+
+        self.assertEqual(1, len(uod.commands))
+        self.assertTrue(len(uod.instrument) > 0)
+        self.assertTrue(len(uod.tags) > 0)
+
+    @unittest.skip("not implemented")
     def test_load_uod(self):
         pass
 
-    def test_start(self):
+    def test_engine_start(self):
         e = create_engine()
 
         t = threading.Thread(target=e.run)
@@ -148,7 +155,7 @@ class TestEngine(unittest.TestCase):
         self.assertEqual(22, hwl.register_values['FT01'])
         self.assertEqual(1, hwl.register_values['Reset'])
 
-    def test_can_execute_valid_uod_command(self):
+    def test_uod_command_can_execute_valid_command(self):
         e = create_engine()
 
         self.assertEqual("N/A", e.uod.tags['Reset'].get_value())
@@ -157,6 +164,68 @@ class TestEngine(unittest.TestCase):
         e._execute_command(req)
 
         self.assertEqual("Reset", e.uod.tags['Reset'].get_value())
+
+    @unittest.skip("not implemented")
+    def test_uod_commands_multiple_iterations(self):
+        pass
+
+    @unittest.skip("not implemented")
+    def test_overlapping_uod_commands(self):
+        pass
+
+    @unittest.skip("not implemented")
+    def test_internal_command_can_execute_valid_command(self):
+        e = create_engine()
+
+        req = EngineCommand("INCREMENT RUN COUNTER", None)
+        e._execute_command(req)
+
+    @unittest.skip("not implemented")
+    def test_internal_commands_multiple_iterations(self):
+        pass
+
+    @unittest.skip("not implemented")
+    def test_clocks(self):
+        pass
+
+    @unittest.skip("not implemented")
+    def test_set_program(self):
+        pass
+
+    @unittest.skip("not implemented, needs input")
+    def test_get_status(self):
+        # program progress
+        # status that enable ProcessUnit:
+        # name, state=ProcessUnitState (READY, IN_PROGRESS , NOT_ONLINE) , location="H21.5", runtime_msec=189309,
+        pass
+
+    @unittest.skip("not implemented")
+    def test_get_runlog(self):
+        pass
+
+    @unittest.skip("not implemented")
+    def test_runstate_stop(self):
+        pass
+
+    @unittest.skip("not implemented")
+    def test_runstate_start(self):
+        pass
+
+    @unittest.skip("not implemented")
+    def test_runstate_pause(self):
+        pass
+
+    @unittest.skip("not implemented")
+    def test_runstate_unpause(self):
+        pass
+
+    @unittest.skip("not implemented")
+    def test_runstate_hold(self):
+        pass
+
+    @unittest.skip("not implemented")
+    def test_runstate_unhold(self):
+        pass
 
 
 # Test helpers
@@ -209,7 +278,6 @@ class TestUod(UnitOperationDefinitionBase):
         #                     .build())
 
         self.define_command(ResetCommand())
-            
 
     # def valve_fn(self, x: int | float) -> bool:
     #     return x > 0
