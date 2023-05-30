@@ -5,9 +5,9 @@ services:
     image: pectus-aggregator
     container_name: pectus-aggregator-local
     ports:
-      - "8300:8300"   
-    networks:      
+      - "8300:8300"
+    networks:
       - pectus-net
-networks:  
-  pectus-net:    
+networks:
+  pectus-net:
     driver: bridge

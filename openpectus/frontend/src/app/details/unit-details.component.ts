@@ -9,8 +9,8 @@ import { DetailsSelectors } from './ngrx/details.selectors';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="flex justify-center">
-      <div class="flex flex-col max-w-5xl w-full px-8">
-        <div class="flex justify-between items-start gap-4 mt-8">
+      <div class="flex flex-col max-w-5xl w-full p-8 gap-8">
+        <div class="flex justify-between items-start gap-4">
           <div class="text-slate-700" *ngrxLet="processUnit as processUnit">
             <h1 class="text-4xl font-bold">{{processUnit?.name}}</h1>
             <span class="text-sm">{{processUnit?.current_user_role}}</span>
@@ -24,10 +24,11 @@ import { DetailsSelectors } from './ngrx/details.selectors';
             </button>
           </div>
         </div>
-        <app-process-values class="mt-7"></app-process-values>
-        <app-method-editor class="mt-11"></app-method-editor>
+        <app-process-values></app-process-values>
+        <app-method-editor></app-method-editor>
+        <app-commands></app-commands>
         <!-- Plot -->
-        <!-- Process Diagram -->
+        <app-process-diagram></app-process-diagram>
       </div>
     </div>
   `,
@@ -36,8 +37,8 @@ export class UnitDetailsComponent {
   processUnit = this.store.select(DetailsSelectors.processUnit);
 
   protected readonly controlCommands: ExecutableCommand[] = [{
-    command: 'play',
-    name: 'Play',
+    command: 'start',
+    name: 'Start',
     source: CommandSource.UNIT_BUTTON,
   }, {
     command: 'pause',
@@ -57,7 +58,7 @@ export class UnitDetailsComponent {
 
   getIcon(command: ExecutableCommand) {
     switch(command.name) {
-      case 'Play':
+      case 'Start':
         return 'play';
       case 'Pause':
         return 'debug-pause';

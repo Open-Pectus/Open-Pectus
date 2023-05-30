@@ -13,4 +13,7 @@ export class DetailsSelectors {
     (processUnits, unitId) => {
       return processUnits.find(processUnit => processUnit.id.toString() === unitId);
     });
+  static processDiagram = createSelector(this.selectFeature, state => state.processDiagram);
+  static shouldPollProcessValues = createSelector(this.selectFeature, state => state.shouldPollProcessValues);
+  static commandExamples = createSelector(this.selectFeature, state => state.commandExamples);
 }

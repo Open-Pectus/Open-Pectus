@@ -7,17 +7,21 @@ import { buildWorkerDefinition } from 'monaco-editor-workers';
 import getDialogsServiceOverride from 'vscode/service-override/dialogs';
 import getNotificationServiceOverride from 'vscode/service-override/notifications';
 import { StandaloneServices } from 'vscode/services';
+import { SharedModule } from '../shared/shared.module';
 import { BatchJobDetailsComponent } from './batch-job-details.component';
+import { CommandsComponent } from './commands/commands.component';
 import { DetailsRoutingModule } from './details-routing.module';
 import { MethodEditorComponent } from './method-editor/method-editor.component';
 import { MonacoEditorComponent } from './method-editor/monaco-editor.component';
 import { DetailsEffects } from './ngrx/details.effects';
 import { detailsFeatureKey, detailsReducer } from './ngrx/details.reducer';
+import { ProcessDiagramComponent } from './process-diagram.component';
 import { ProcessValueCommandsComponent } from './process-values/process-value-commands.component';
 import { ProcessValueEditorComponent } from './process-values/process-value-editor.component';
 import { ProcessValueComponent } from './process-values/process-value.component';
 import { ProcessValuesComponent } from './process-values/process-values.component';
 import { UnitDetailsComponent } from './unit-details.component';
+import { CommandExamplesListComponent } from './commands/command-examples-list.component';
 
 StandaloneServices.initialize({
   ...getNotificationServiceOverride(),
@@ -36,6 +40,9 @@ buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.
     ProcessValueComponent,
     ProcessValueEditorComponent,
     ProcessValueCommandsComponent,
+    ProcessDiagramComponent,
+    CommandsComponent,
+    CommandExamplesListComponent,
   ],
   imports: [
     CommonModule,
@@ -44,6 +51,7 @@ buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.
     StoreModule.forFeature(detailsFeatureKey, detailsReducer),
     EffectsModule.forFeature([DetailsEffects]),
     LetModule,
+    SharedModule,
   ],
 })
 export class DetailsModule {}

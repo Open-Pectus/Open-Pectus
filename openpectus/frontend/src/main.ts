@@ -1,11 +1,13 @@
 import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
-import { MockedRequest } from 'msw';
+import { MockedRequest, setupWorker } from 'msw';
 import { AppModule } from './app/app.module';
-import { worker } from './mocks/browser';
+import { handlers } from './msw/handlers';
+import { MswEnablement } from './msw/msw-enablement';
 
 
-if(process.env['NODE_ENV'] === 'development') {
-  const {worker} = require('./mocks/browser');
+// if(process.env['NODE_ENV'] === 'development') {
+if(MswEnablement.isEnabled) {
+  const worker = setupWorker(...handlers);
   worker.start({
     onUnhandledRequest: (request: MockedRequest) => {
       const pathname = request.url.pathname;

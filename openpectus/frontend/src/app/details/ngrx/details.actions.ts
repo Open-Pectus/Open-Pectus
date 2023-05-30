@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import { ExecutableCommand, ProcessUnit, ProcessValue, ProcessValueCommand } from '../../api';
+import { CommandExample, ExecutableCommand, ProcessDiagram, ProcessUnit, ProcessValue, ProcessValueCommand } from '../../api';
 
 export const DetailsActions = createActionGroup({
   source: 'Details',
@@ -8,11 +8,21 @@ export const DetailsActions = createActionGroup({
     'Method Editor Model Changed': props<{ model: string }>(),
     'Method Editor Model Save Requested': emptyProps(),
     'Method Editor Model Saved': emptyProps(),
+
     'Process Values Initialized': emptyProps(),
-    'Process Values Loaded': props<{ processValues: ProcessValue[] }>(),
+    'Process Values Destroyed': emptyProps(),
+    'Process Values Fetched': props<{ processValues: ProcessValue[] }>(),
     'Process Values Failed to load': emptyProps(),
     'Process Value Command Clicked': props<{ command: ProcessValueCommand, processValueName: string }>(),
+
     'Process Unit Loaded': props<{ processUnit: ProcessUnit }>(),
     'Process Unit Command Button Clicked': props<{ command: ExecutableCommand }>(),
+
+    'Process Diagram Initialized': emptyProps(),
+    'Process Diagram Fetched': props<{ processDiagram: ProcessDiagram }>(),
+
+    'Commands Component Initialized': emptyProps(),
+    'Command Examples Fetched': props<{ commandExamples: CommandExample[] }>(),
+    'Commands Component Execute Clicked': props<{ command: ExecutableCommand }>(),
   },
 });

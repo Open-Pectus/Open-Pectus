@@ -1,4 +1,4 @@
-import { DATE_PIPE_DEFAULT_OPTIONS, DatePipe, registerLocaleData } from '@angular/common';
+import { DATE_PIPE_DEFAULT_OPTIONS, DatePipe, DecimalPipe, registerLocaleData } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
 import localeDa from '@angular/common/locales/da';
 import { isDevMode, LOCALE_ID, NgModule } from '@angular/core';
@@ -11,6 +11,7 @@ import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
+import { MswEnablementComponent } from './msw-enablement.component';
 import { metaReducers, reducers } from './ngrx/';
 import { AppEffects } from './ngrx/app.effects';
 import { TopBarComponent } from './top-bar.component';
@@ -21,6 +22,7 @@ registerLocaleData(localeDa);
   declarations: [
     AppComponent,
     TopBarComponent,
+    MswEnablementComponent,
   ],
   imports: [
     BrowserModule,
@@ -49,6 +51,7 @@ registerLocaleData(localeDa);
   providers: [
     {provide: LOCALE_ID, useValue: 'da-DK'},
     DatePipe,
+    DecimalPipe,
     {provide: DATE_PIPE_DEFAULT_OPTIONS, useValue: {dateFormat: 'd. MMMM y HH:mm:ss'}},
   ],
   bootstrap: [AppComponent],

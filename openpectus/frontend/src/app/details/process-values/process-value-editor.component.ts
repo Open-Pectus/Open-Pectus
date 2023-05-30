@@ -10,7 +10,7 @@ export interface ValueAndUnit {
   selector: 'app-process-value-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="absolute bg-white border border-slate-500 p-2 rounded-md top-8 left-1/2 -translate-x-1/2 flex shadow-lg shadow-gray-400">
+    <div class="absolute bg-white border border-slate-500 p-2 rounded-md top-8 left-1/2 -translate-x-1/2 flex shadow-lg shadow-gray-600 z-10">
       <input #inputElement class="p-1 outline-none rounded-l-sm w-32" type="text" [class.bg-red-500]="!isValid"
              (input)="onInput(inputElement.value)"
              [value]="processValueAsString(processValue)" (blur)="onBlur($event)" (keyup.enter)="onSaveInput(inputElement.value)">

@@ -7,11 +7,13 @@ export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { BatchJob } from './models/BatchJob';
+export type { CommandExample } from './models/CommandExample';
 export { CommandSource } from './models/CommandSource';
 export type { ExecutableCommand } from './models/ExecutableCommand';
 export type { HTTPValidationError } from './models/HTTPValidationError';
 export { InProgress } from './models/InProgress';
 export { NotOnline } from './models/NotOnline';
+export type { ProcessDiagram } from './models/ProcessDiagram';
 export type { ProcessUnit } from './models/ProcessUnit';
 export type { ProcessValue } from './models/ProcessValue';
 export type { ProcessValueCommand } from './models/ProcessValueCommand';
@@ -21,4 +23,5 @@ export { Ready } from './models/Ready';
 export { UserRole } from './models/UserRole';
 export type { ValidationError } from './models/ValidationError';
 
-export { DefaultService } from './services/DefaultService';
+export { BatchJobService } from './services/BatchJobService';
+export { ProcessUnitService } from './services/ProcessUnitService';
