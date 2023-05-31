@@ -65,6 +65,74 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     this.componentDestroyed.next();
   }
 
+  private async initServices() {
+    if(!this.initDone) {
+      await initServices({
+        enableThemeService: true,
+        enableModelEditorService: true,
+        modelEditorServiceConfig: {
+          useDefaultFunction: true,
+        },
+        debugLogging: true,
+      });
+      this.initDone = true;
+    }
+  }
+
+  private registerLanguages() {
+    languages.register({
+      id: this.languageId,
+      extensions: ['.json', '.jsonc'],
+      aliases: ['JSON', 'json'],
+      mimetypes: ['application/json'],
+    });
+  }
+
+  private createDefaultJsonContent() {
+    return `{
+  "some key": "some value",
+  "injected": "line",
+  "another key": "another value",
+  "another injected": "line"
+}`;
+  }
+
+  private async createEditor() {
+    const uri = Uri.parse('/tmp/model.json');
+    const modelRef = await createModelReference(uri, this.createDefaultJsonContent());
+    modelRef.object.setLanguageId(this.languageId);
+    const injectedLines: number[] = [3, 5];
+
+    // const editor = MonacoEditor.create(this.editorElement.nativeElement, {
+    //   model: MonacoEditor.createModel(this.createDefaultJsonContent(), 'json', Uri.parse('inmemory://model.json')),
+    //   fontSize: 20,
+    //   lineNumbers: this.getLineNumberFunction(injectedLines),
+    // });
+
+    const editor = createConfiguredEditor(this.editorElement.nativeElement, {
+      model: modelRef.object.textEditorModel,
+      fontSize: 18,
+      lineNumbers: this.getLineNumberFunction(injectedLines),
+      glyphMargin: false,
+    });
+
+    editor.onDidChangeModelContent(() => {
+      const model = editor.getModel()?.getValue();
+      if(model === undefined) return;
+      this.store.dispatch(DetailsActions.methodEditorModelChanged({model}));
+    });
+
+    this.componentDestroyed.pipe(take(1)).subscribe(() => {
+      modelRef.dispose();
+      // editor.getModel()?.dispose();
+      editor.dispose();
+    });
+
+    this.decorateInjectedLines(injectedLines, editor);
+
+    return editor;
+  }
+
   private setupWebSocket(url: string) {
     const webSocket = new WebSocket(url);
 
@@ -82,49 +150,6 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       });
       reader.onClose(() => languageClient.stop());
     };
-  }
-
-  private registerLanguages() {
-    languages.register({
-      id: this.languageId,
-      extensions: ['.json', '.jsonc'],
-      aliases: ['JSON', 'json'],
-      mimetypes: ['application/json'],
-    });
-  }
-
-  private async createEditor() {
-    const uri = Uri.parse('/tmp/model.json');
-    const modelRef = await createModelReference(uri, this.createDefaultJsonContent());
-    modelRef.object.setLanguageId(this.languageId);
-    const injectedLines: number[] = [3, 5];
-
-    // const editor = MonacoEditor.create(this.editorElement.nativeElement, {
-    //   model: MonacoEditor.createModel(this.createDefaultJsonContent(), 'json', Uri.parse('inmemory://model.json')),
-    //   fontSize: 20,
-    //   lineNumbers: this.getLineNumberFunction(injectedLines),
-    // });
-
-    const editor = createConfiguredEditor(this.editorElement.nativeElement, {
-      model: modelRef.object.textEditorModel,
-      fontSize: 20,
-      lineNumbers: this.getLineNumberFunction(injectedLines),
-    });
-
-    editor.onDidChangeModelContent(() => {
-      const model = editor.getModel()?.getValue();
-      if(model === undefined) return;
-      this.store.dispatch(DetailsActions.methodEditorModelChanged({model}));
-    });
-
-    this.componentDestroyed.pipe(take(1)).subscribe(() => {
-      editor.getModel()?.dispose();
-      editor.dispose();
-    });
-
-    this.decorateInjectedLines(injectedLines, editor);
-
-    return editor;
   }
 
   private getLineNumberFunction(injectedLines: number[]) {
@@ -162,29 +187,5 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
     // console.log(decorationIds);
     // editor.removeDecorations([decorationIds[1]]);
-  }
-
-  private createDefaultJsonContent() {
-    return `{
-  "some key": "some value",
-  "injected": "line",
-  "another key": "another value",
-  "another injected": "line"
-}`;
-  }
-
-  private async initServices() {
-    if(!this.initDone) {
-      await initServices({
-        enableThemeService: true,
-        enableModelEditorService: true,
-        modelEditorServiceConfig: {
-          useDefaultFunction: true,
-        },
-
-        debugLogging: true,
-      });
-      this.initDone = true;
-    }
   }
 }
