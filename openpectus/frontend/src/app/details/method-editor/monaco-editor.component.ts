@@ -1,11 +1,15 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, OnDestroy, ViewChild } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { editor as MonacoEditor, languages, Range, Uri } from 'monaco-editor';
-import { MonacoLanguageClient, MonacoServices } from 'monaco-languageclient';
+import { buildWorkerDefinition } from 'monaco-editor-workers';
+import { initServices, MonacoLanguageClient } from 'monaco-languageclient';
 import { Observable, Subject, take, takeUntil } from 'rxjs';
 import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient/lib/common/client';
 import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
+import { createConfiguredEditor, createModelReference } from 'vscode/monaco';
 import { DetailsActions } from '../ngrx/details.actions';
+
+buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.origin, false);
 
 @Component({
   selector: 'app-monaco-editor',
@@ -20,41 +24,20 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   @ViewChild('editor', {static: true}) editorElement!: ElementRef<HTMLDivElement>;
   private componentDestroyed = new Subject<void>();
   private editor?: MonacoEditor.IStandaloneCodeEditor;
+  private initDone = false;
+  private readonly languageId = 'json';
 
   constructor(private store: Store) {}
 
-  ngAfterViewInit() {
+  async ngAfterViewInit() {
+    await this.initServices();
     this.registerLanguages();
-    this.editor = this.createEditor();
+    this.editor = await this.createEditor();
+    this.setupWebSocket(`ws://localhost:3000/sampleServer`);
 
-    this.setupMonacoLanguageClient();
     this.editorSizeChange?.pipe(takeUntil(this.componentDestroyed)).subscribe(() => this.editor?.layout());
     window.onresize = () => this.editor?.layout();
     this.store.dispatch(DetailsActions.methodEditorInitialized({model: this.editor.getModel()?.getValue() ?? ''}));
-  }
-
-  setupMonacoLanguageClient() {
-    // install Monaco language client services
-    MonacoServices.install();
-
-    // create the web socket
-    const url = `ws://localhost:3000/sampleServer`;
-    const webSocket = new WebSocket(url);
-
-    webSocket.onopen = () => {
-      const socket = toSocket(webSocket);
-      const reader = new WebSocketMessageReader(socket);
-      const writer = new WebSocketMessageWriter(socket);
-      const languageClient = this.createLanguageClient({
-        reader,
-        writer,
-      });
-      languageClient.start().then();
-      this.componentDestroyed.pipe(take(1)).subscribe(() => {
-        setTimeout(() => languageClient.stop().then(), 100);
-      });
-      reader.onClose(() => languageClient.stop());
-    };
   }
 
   createLanguageClient(transports: MessageTransports): MonacoLanguageClient {
@@ -62,7 +45,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       name: 'Sample Language Client',
       clientOptions: {
         // use a language id as a document selector
-        documentSelector: ['json'],
+        documentSelector: [this.languageId],
         // disable the default error handler
         errorHandler: {
           error: () => ({action: ErrorAction.Continue}),
@@ -82,37 +65,50 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     this.componentDestroyed.next();
   }
 
+  private setupWebSocket(url: string) {
+    const webSocket = new WebSocket(url);
+
+    webSocket.onopen = () => {
+      const socket = toSocket(webSocket);
+      const reader = new WebSocketMessageReader(socket);
+      const writer = new WebSocketMessageWriter(socket);
+      const languageClient = this.createLanguageClient({
+        reader,
+        writer,
+      });
+      languageClient.start().then();
+      this.componentDestroyed.pipe(take(1)).subscribe(() => {
+        setTimeout(() => languageClient.stop().then(), 100);
+      });
+      reader.onClose(() => languageClient.stop());
+    };
+  }
+
   private registerLanguages() {
-    // const isAlreadyRegistered = languages.getLanguages().some(language => language.id === 'json');
-    // if(isAlreadyRegistered) return;
     languages.register({
-      id: 'json',
+      id: this.languageId,
       extensions: ['.json', '.jsonc'],
       aliases: ['JSON', 'json'],
       mimetypes: ['application/json'],
     });
   }
 
-  private createEditor() {
-    const modelValue = `{
-  "some key": "some value",
-  "injected": "line",
-  "another key": "another value",
-  "another injected": "line"
-}`;
-
+  private async createEditor() {
+    const uri = Uri.parse('/tmp/model.json');
+    const modelRef = await createModelReference(uri, this.createDefaultJsonContent());
+    modelRef.object.setLanguageId(this.languageId);
     const injectedLines: number[] = [3, 5];
-    const lineNumberFn = (lineNumber: number) => {
-      if(injectedLines.includes(lineNumber)) return '';
-      const injectedLinesBeforeThis = injectedLines.filter(injectedLineNumber => injectedLineNumber < lineNumber);
-      const lineNumberWithoutInjectedLines = lineNumber - injectedLinesBeforeThis.length;
-      return lineNumberWithoutInjectedLines.toString();
-    };
 
-    const editor = MonacoEditor.create(this.editorElement.nativeElement, {
-      model: MonacoEditor.createModel(modelValue, 'json', Uri.parse('inmemory://model.json')),
+    // const editor = MonacoEditor.create(this.editorElement.nativeElement, {
+    //   model: MonacoEditor.createModel(this.createDefaultJsonContent(), 'json', Uri.parse('inmemory://model.json')),
+    //   fontSize: 20,
+    //   lineNumbers: this.getLineNumberFunction(injectedLines),
+    // });
+
+    const editor = createConfiguredEditor(this.editorElement.nativeElement, {
+      model: modelRef.object.textEditorModel,
       fontSize: 20,
-      lineNumbers: lineNumberFn,
+      lineNumbers: this.getLineNumberFunction(injectedLines),
     });
 
     editor.onDidChangeModelContent(() => {
@@ -126,6 +122,21 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       editor.dispose();
     });
 
+    this.decorateInjectedLines(injectedLines, editor);
+
+    return editor;
+  }
+
+  private getLineNumberFunction(injectedLines: number[]) {
+    return (lineNumber: number) => {
+      if(injectedLines.includes(lineNumber)) return '';
+      const injectedLinesBeforeThis = injectedLines.filter(injectedLineNumber => injectedLineNumber < lineNumber);
+      const lineNumberWithoutInjectedLines = lineNumber - injectedLinesBeforeThis.length;
+      return lineNumberWithoutInjectedLines.toString();
+    };
+  }
+
+  private decorateInjectedLines(injectedLines: number[], editor: MonacoEditor.IStandaloneCodeEditor) {
     const decorationIds: string[] = [];
     injectedLines.forEach(lineNumber => {
       const decorationId = editor.deltaDecorations([], [
@@ -151,7 +162,29 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
     // console.log(decorationIds);
     // editor.removeDecorations([decorationIds[1]]);
+  }
 
-    return editor;
+  private createDefaultJsonContent() {
+    return `{
+  "some key": "some value",
+  "injected": "line",
+  "another key": "another value",
+  "another injected": "line"
+}`;
+  }
+
+  private async initServices() {
+    if(!this.initDone) {
+      await initServices({
+        enableThemeService: true,
+        enableModelEditorService: true,
+        modelEditorServiceConfig: {
+          useDefaultFunction: true,
+        },
+
+        debugLogging: true,
+      });
+      this.initDone = true;
+    }
   }
 }

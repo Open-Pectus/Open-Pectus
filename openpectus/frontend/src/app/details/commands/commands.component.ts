@@ -19,7 +19,7 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
                     placeholder="Paste or write here to execute"></textarea>
           <button class="absolute right-4 bottom-4 rounded-md bg-green-400 text-gray-800 p-2 flex items-center"
                   (click)="onExecute(commandToExecute.value); commandToExecute.value = ''">
-            <div class="codicon codicon-symbol-event"></div>
+            <div class="codicon codicon-symbol-event !text-gray-800"></div>
             <span class="font-semibold ml-1">Execute!</span>
           </button>
         </div>
