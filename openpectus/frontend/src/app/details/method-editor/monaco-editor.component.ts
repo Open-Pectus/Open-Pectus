@@ -76,7 +76,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
           useDefaultFunction: true,
         },
         enableLanguagesService: true,
-        debugLogging: true,
+        debugLogging: false,
       });
       this.initDone = true;
     }
@@ -105,12 +105,6 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     const modelRef = await createModelReference(uri, this.createDefaultJsonContent());
     modelRef.object.setLanguageId(this.languageId);
     const injectedLines: number[] = [3, 5];
-
-    // const editor = MonacoEditor.create(this.editorElement.nativeElement, {
-    //   model: MonacoEditor.createModel(this.createDefaultJsonContent(), 'json', Uri.parse('inmemory://model.json')),
-    //   fontSize: 20,
-    //   lineNumbers: this.getLineNumberFunction(injectedLines),
-    // });
 
     const editor = createConfiguredEditor(this.editorElement.nativeElement, {
       model: modelRef.object.textEditorModel,
