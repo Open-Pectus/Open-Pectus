@@ -20,6 +20,10 @@ module.exports = {
         test: /\.(mp3|wasm|ttf)$/i,
         type: 'asset/resource',
       },
+      {
+        test: /\.wasm$/,
+        type: 'asset/inline',
+      },
     ],
     // this fixes the ttf url loading issue
     // parser: {

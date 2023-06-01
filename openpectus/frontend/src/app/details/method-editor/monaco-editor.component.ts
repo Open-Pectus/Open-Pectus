@@ -6,6 +6,8 @@ import { initServices, MonacoLanguageClient } from 'monaco-languageclient';
 import { Observable, Subject, take, takeUntil } from 'rxjs';
 import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient/lib/common/client';
 import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
+import 'vscode/default-extensions/json';
+import 'vscode/default-extensions/theme-defaults';
 import { createConfiguredEditor, createModelReference } from 'vscode/monaco';
 import { DetailsActions } from '../ngrx/details.actions';
 
@@ -73,6 +75,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
         modelEditorServiceConfig: {
           useDefaultFunction: true,
         },
+        enableLanguagesService: true,
         debugLogging: true,
       });
       this.initDone = true;
@@ -124,7 +127,6 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
     this.componentDestroyed.pipe(take(1)).subscribe(() => {
       modelRef.dispose();
-      // editor.getModel()?.dispose();
       editor.dispose();
     });
 
