@@ -13,7 +13,9 @@ if(MswEnablement.isEnabled) {
          pathname.startsWith('/node_modules') ||
          pathname.startsWith('/src') ||
          pathname === '/codicon.ttf' ||
-         pathname === '/favicon.ico'
+         pathname === '/favicon.ico' ||
+         pathname.endsWith('.js') ||
+         pathname.endsWith('.wasm')
       ) {
         return;
       }

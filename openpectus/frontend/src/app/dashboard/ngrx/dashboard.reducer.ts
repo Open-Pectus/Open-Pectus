@@ -1,5 +1,5 @@
 import { createReducer, on } from '@ngrx/store';
-import produce from 'immer';
+import { produce } from 'immer';
 import { BatchJob } from '../../api';
 import { DashboardActions } from './dashboard.actions';
 
