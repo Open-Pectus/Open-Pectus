@@ -3,12 +3,9 @@ import { NgModule } from '@angular/core';
 import { LetModule, PushModule } from '@ngrx/component';
 import { EffectsModule } from '@ngrx/effects';
 import { StoreModule } from '@ngrx/store';
-import { buildWorkerDefinition } from 'monaco-editor-workers';
-import getDialogsServiceOverride from 'vscode/service-override/dialogs';
-import getNotificationServiceOverride from 'vscode/service-override/notifications';
-import { StandaloneServices } from 'vscode/services';
 import { SharedModule } from '../shared/shared.module';
 import { BatchJobDetailsComponent } from './batch-job-details.component';
+import { CommandExamplesListComponent } from './commands/command-examples-list.component';
 import { CommandsComponent } from './commands/commands.component';
 import { DetailsRoutingModule } from './details-routing.module';
 import { MethodEditorComponent } from './method-editor/method-editor.component';
@@ -21,14 +18,7 @@ import { ProcessValueEditorComponent } from './process-values/process-value-edit
 import { ProcessValueComponent } from './process-values/process-value.component';
 import { ProcessValuesComponent } from './process-values/process-values.component';
 import { UnitDetailsComponent } from './unit-details.component';
-import { CommandExamplesListComponent } from './commands/command-examples-list.component';
-
-StandaloneServices.initialize({
-  ...getNotificationServiceOverride(),
-  ...getDialogsServiceOverride(),
-});
-
-buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.origin, false);
+import { UnitHeaderComponent } from './unit-header.component';
 
 @NgModule({
   declarations: [
@@ -43,6 +33,7 @@ buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.
     ProcessDiagramComponent,
     CommandsComponent,
     CommandExamplesListComponent,
+    UnitHeaderComponent,
   ],
   imports: [
     CommonModule,
