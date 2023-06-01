@@ -1,6 +1,5 @@
 from __future__ import annotations
 from enum import StrEnum, auto
-from numbers import Number
 from typing import Dict, Iterable, List, Set
 
 import pint
@@ -15,6 +14,7 @@ DEFAULT_TAG_BASE = "BASE"
 DEFAULT_TAG_RUN_COUNTER = "RUN COUNTER"
 DEFAULT_TAG_BLOCK_TIME = "BLOCK TIME"
 DEFAULT_TAG_RUN_TIME = "RUN TIME"
+DEFAULT_TAG_CLOCK = "CLOCK"
 
 
 class ChangeListener():
@@ -105,8 +105,8 @@ class Tag(ChangeSubject):
     def as_quantity(self) -> pint.Quantity:
         return pint.Quantity(self.value, self.unit)
 
-    def as_number(self) -> Number:
-        if not isinstance(self.value, Number):
+    def as_number(self) -> int | float:
+        if not isinstance(self.value, (int, float)):
             raise ValueError(f"Value is not numerical: '{self.value}'")
         return self.value
 
@@ -246,11 +246,12 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
     def create_system_tags() -> TagCollection:
         tags = TagCollection()
         defaults = [
-            (DEFAULT_TAG_BASE, "min"),  # TODO this should not be wrapped in pint quantity
-            (DEFAULT_TAG_RUN_COUNTER, 0),
-            (DEFAULT_TAG_BLOCK_TIME, 0),
-            (DEFAULT_TAG_RUN_TIME, 0),
+            (DEFAULT_TAG_BASE, "min", None),  # TODO this should not be wrapped in pint quantity
+            (DEFAULT_TAG_RUN_COUNTER, 0, None),
+            (DEFAULT_TAG_BLOCK_TIME, 0.0, "s"),
+            (DEFAULT_TAG_RUN_TIME, 0.0, "s"),
+            (DEFAULT_TAG_CLOCK, 0.0, "s"),
         ]
-        for k, v in defaults:
-            tags.add(Tag(k, v))
+        for name, value, unit in defaults:
+            tags.add(Tag(name, value, unit))
         return tags

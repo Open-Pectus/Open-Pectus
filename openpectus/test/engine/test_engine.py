@@ -5,7 +5,7 @@ from typing_extensions import override
 import unittest
 
 from lang.exec.uod import UnitOperationDefinitionBase
-from engine.engine import Engine, EngineCommand
+from engine.engine import Engine, EngineCommand, EngineInternalCommand
 from lang.exec import tags
 from lang.exec.uod import UodCommand
 from engine.hardware import HardwareLayerBase, Register, RegisterDirection
@@ -68,12 +68,26 @@ class TestEngine(unittest.TestCase):
         e = create_engine()
 
         t = threading.Thread(target=e.run)
-        t.setDaemon(True)
+        t.daemon = True
         t.start()
 
         time.sleep(1)
-        e.started = False
+        e._running = False
         t.join()
+
+    def test_engine_started_runs_scan_cycle(self):
+        e = create_engine()
+
+        t = threading.Thread(target=e.run)
+        t.daemon = True
+        t.start()
+
+        #assert loop running
+
+        time.sleep(1)
+        e._running = False
+        t.join()
+
 
     def test_read_process_image_marks_assigned_tags_dirty(self):
         e = create_engine()
@@ -167,11 +181,11 @@ class TestEngine(unittest.TestCase):
 
     @unittest.skip("not implemented")
     def test_uod_commands_multiple_iterations(self):
-        pass
+        raise NotImplementedError()
 
     @unittest.skip("not implemented")
     def test_overlapping_uod_commands(self):
-        pass
+        raise NotImplementedError()
 
     @unittest.skip("not implemented")
     def test_internal_command_can_execute_valid_command(self):
@@ -182,51 +196,89 @@ class TestEngine(unittest.TestCase):
 
     @unittest.skip("not implemented")
     def test_internal_commands_multiple_iterations(self):
-        pass
+        raise NotImplementedError()
 
-    @unittest.skip("not implemented")
     def test_clocks(self):
-        pass
+        e = create_engine()
+
+        self.assertTrue(e._system_tags.has("Clock"))
+
+        # raise NotImplementedError()
 
     @unittest.skip("not implemented")
     def test_set_program(self):
-        pass
+        raise NotImplementedError()
 
     @unittest.skip("not implemented, needs input")
     def test_get_status(self):
         # program progress
         # status that enable ProcessUnit:
         # name, state=ProcessUnitState (READY, IN_PROGRESS , NOT_ONLINE) , location="H21.5", runtime_msec=189309,
-        pass
+        raise NotImplementedError()
 
     @unittest.skip("not implemented")
     def test_get_runlog(self):
-        pass
+        raise NotImplementedError()
 
-    @unittest.skip("not implemented")
-    def test_runstate_stop(self):
-        pass
-
-    @unittest.skip("not implemented")
     def test_runstate_start(self):
-        pass
+        e = create_engine()
+
+        e.cmd_queue.put(EngineCommand("START"))
+        e.tick()
+
+        self.assertTrue(e._runstate_started)
+
+    def test_clocks_start_stop(self):
+        e = create_engine()
+
+        clock = e._system_tags.get(tags.DEFAULT_TAG_CLOCK)
+        self.assertEqual(0.0, clock.as_number())
+
+        e._runstate_started = True
+        e.tick()
+
+        clock_value = clock.as_number()
+        self.assertGreater(clock_value, 0.0)
+
+        e._runstate_started = False
+        e.tick()
+
+        self.assertEqual(clock_value, clock.as_number())
+
+    def test_runstate_stop(self):
+        e = create_engine()
+        e.cmd_queue.put(EngineCommand("START"))
+        e.tick()
+        self.assertTrue(e._runstate_started)
+
+        e.cmd_queue.put(EngineCommand("STOP"))
+        e.tick()
+        self.assertFalse(e._runstate_started)
+
 
     @unittest.skip("not implemented")
     def test_runstate_pause(self):
-        pass
+        raise NotImplementedError()
 
     @unittest.skip("not implemented")
     def test_runstate_unpause(self):
-        pass
+        raise NotImplementedError()
 
     @unittest.skip("not implemented")
     def test_runstate_hold(self):
-        pass
+        raise NotImplementedError()
 
     @unittest.skip("not implemented")
     def test_runstate_unhold(self):
-        pass
+        raise NotImplementedError()
 
+    @unittest.skip("not implemented")
+    def test_safe_values(self):
+        raise NotImplementedError()
+
+    def test_enum_has(self):
+        self.assertTrue(EngineInternalCommand.has_value("STOP"))
+        self.assertFalse(EngineInternalCommand.has_value("stop"))
 
 # Test helpers
 

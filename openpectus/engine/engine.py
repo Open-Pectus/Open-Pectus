@@ -1,16 +1,21 @@
 
+from enum import StrEnum, auto
 import itertools
 from multiprocessing import Queue
 from queue import Empty
+import logging
 import time
 from typing import Iterable
 from lang.exec.uod import UnitOperationDefinitionBase
-from lang.exec.tags import Tag, TagCollection
-import logging
+from lang.exec.tags import (
+    Tag,
+    TagCollection,
+    ChangeListener,
+    DEFAULT_TAG_CLOCK
+)
 
-from engine.hardware import HardwareLayerException
-from engine.hardware import HardwareLayerBase
-from lang.exec.tags import ChangeListener
+from lang.exec.timer import OneThreadTimer
+from engine.hardware import HardwareLayerBase, HardwareLayerException
 
 
 logging.basicConfig()
@@ -52,9 +57,21 @@ class AggregatorClient():
 
 class EngineCommand():
     """ Represents a command request for engine to execute. """
-    def __init__(self, name: str, args: str | None) -> None:
+    def __init__(self, name: str, args: str | None = None) -> None:
         self.name: str = name
         self.args: str | None = args
+
+
+class EngineInternalCommand(StrEnum):
+    START = auto()
+    STOP = auto()
+    PAUSE = auto()
+    HOLD = auto()
+
+    @staticmethod
+    def has_value(value: str):
+        """ Determine if enum has this string value defined. Case sensitive. """
+        return hasattr(EngineInternalCommand, value)
 
 
 class Engine():
@@ -66,27 +83,42 @@ class Engine():
     """
     def __init__(self, uod: UnitOperationDefinitionBase) -> None:
         self.uod = uod
-        self.started: bool = False
-        self.system_tags = TagCollection.create_system_tags()  # TODO does the uod need to know about these?
-        self.cmd_queue: Queue[EngineCommand] = Queue()  # hw commands to execute, coming from interpreter and from aggregator
-        self.tag_updates: Queue[Tag] = Queue()  # tags updated in last tick
-        self._tag_names_dirty: list[str] = []
-        self.uod_listener = ChangeListener()
+        self._running: bool = False
+        """ Indicates whether the scan cycle loop is running, set to False to shut down"""
+
+        self._tick_time: float = 0.0
+        """ The time of the last tick """
+
+        # TODO does the uod need to know about these? Yes - we should make them available as read only
+        self._system_tags = TagCollection.create_system_tags()
+
+        self.cmd_queue: Queue[EngineCommand] = Queue()
+        """ Commands to execute, coming from interpreter and from aggregator """
+        self.tag_updates: Queue[Tag] = Queue()
+        """ Tags updated in last tick """
+
+        self._tag_names_dirty: list[str] = []  # not sure we need these
+
+        self._uod_listener = ChangeListener()
+        self._tick_timer = OneThreadTimer(0.1, self.tick)
+
+        self._runstate_started: bool = False
+        """ Indicates the surrent Start/Stop state"""
 
     def _iter_all_tags(self) -> Iterable[Tag]:
-        return itertools.chain(self.system_tags, self.uod.tags)
+        return itertools.chain(self._system_tags, self.uod.tags)
 
     def _configure(self):
         # configure uod
         self.uod.define()
         self.uod.validate_configuration()
-        self.uod.tags.add_listener(self.uod_listener)
+        self.uod.tags.add_listener(self._uod_listener)
 
     def run(self):
         self._configure()
         self._run()
 
-    def _run(self, max_ticks=0):
+    def _run(self):
         """ Starts the scan cycle """
 
         assert self.uod is not None
@@ -98,16 +130,17 @@ class Engine():
             logger.error("Hardware connect error", exc_info=True)
             return  # TODO retry/reconnect
 
-        self.started = True
-
-        while self.started:
-            self.tick()
-
-            # TODO replace with OneThreadTimer for accurate timing
-            time.sleep(0.1)
+        self._running = True
+        self._tick_timer.start()
 
     def tick(self):
         """ Performs a scan cycle tick. """
+
+        if not self._running:
+            self._tick_timer.stop()
+            # TODO shutdown
+
+        self._tick_time = time.time()
 
         # sys_tags = self.system_tags.clone()  # TODO clone does not currently support the subclasses
         # uod_tags = self.uod.tags.clone()
@@ -115,10 +148,16 @@ class Engine():
         # read
         self.read_process_image()
 
-        # execute commands
+        # update calculated tags
+        # TODO
 
         # excecute interpreter tick
+        # TODO
 
+        # update clocks
+        self.update_clocks()
+
+        # execute queued commands
         self.execute_commands()
 
         # notify of tag changes
@@ -128,7 +167,7 @@ class Engine():
         self.write_process_image()
 
     def read_process_image(self):
-        """ Read data from hw into tags"""
+        """ Read data from relevant hw registers into tags"""
 
         # call poi.read(requested_tags)
         # this does in OPCUA:
@@ -157,7 +196,7 @@ class Engine():
         if not isinstance(hwl, HardwareLayerBase):
             logger.error("Hmm")  # TODO this is really weird. figure out why this happens
 
-        self.uod_listener.clear_changes()
+        self._uod_listener.clear_changes()
         self._tag_names_dirty.clear()
 
         registers = hwl.registers
@@ -168,37 +207,56 @@ class Engine():
             if "to_tag" in r.options:
                 tag_value = r.options["to_tag"](tag_value)
             tag.set_value(tag_value)
-            # self._tags_dirty.append(tag)
 
-        self._tag_names_dirty = self.uod_listener.changes
+        self._tag_names_dirty = self._uod_listener.changes
+
+    def update_clocks(self):
+        if self._runstate_started:
+            clock = self._system_tags.get(DEFAULT_TAG_CLOCK)
+            clock.set_value(self._tick_time)
 
     def execute_commands(self):
-        while self.cmd_queue.qsize() > 0:
+        done = False
+        while self.cmd_queue.qsize() > 0 and not done:
             try:
                 c = self.cmd_queue.get()
                 self._execute_command(c)
             except Empty:
-                break
+                done = True
 
-        self._tag_names_dirty = self.uod_listener.changes
-        self.uod_listener.clear_changes()
+        # TODO _tag_names_dirty may be unnecessary. why not just use listener directly to notify
+        self._tag_names_dirty = self._uod_listener.changes
+        self._uod_listener.clear_changes()
 
     def _execute_command(self, cmd_request: EngineCommand):
         logger.debug("Executing command request: " + cmd_request.name)
-        if not self.uod.validate_command_name(cmd_request.name):
-            # TODO handle internal commands also
-            logger.error("No such uod command")
-            raise ValueError("No such command")
+        if cmd_request.name is None or len(cmd_request.name.strip()) == 0:
+            logger.error("Command name empty")
+            raise ValueError("Command name empty")
 
-        if not self.uod.validate_command_args(cmd_request.name, cmd_request.args):
-            logger.error(f"Invalid argument string: '{cmd_request.args}' for command '{cmd_request.name}'")
-            raise ValueError("Invalid arguments")
+        cmd_name = cmd_request.name.upper()
+        if EngineInternalCommand.has_value(cmd_name):
+            if cmd_name == EngineInternalCommand.START.upper():
+                self._runstate_started = True
+            elif cmd_name == EngineInternalCommand.STOP.upper():
+                self._runstate_started = False
+            else:
+                raise NotImplementedError()
+        else:
+            if not self.uod.validate_command_name(cmd_request.name):
+                # TODO handle internal commands also
+                logger.error("No such uod command")
+                raise ValueError("No such command")
 
-        try:
-            logger.debug(f"Executing uod command: '{cmd_request.name}' with args '{cmd_request.args}'")
-            self.uod.execute_command(cmd_request.name, cmd_request.args)
-        except Exception:
-            logger.error("Command execution failed", exc_info=True)
+            if not self.uod.validate_command_args(cmd_request.name, cmd_request.args):
+                logger.error(f"Invalid argument string: '{cmd_request.args}' for command '{cmd_request.name}'")
+                raise ValueError("Invalid arguments")
+
+            try:
+                logger.debug(f"Executing uod command: '{cmd_request.name}' with args '{cmd_request.args}'")
+                self.uod.execute_command(cmd_request.name, cmd_request.args)
+            except Exception:
+                logger.error("Command execution failed", exc_info=True)
 
     def notify_tag_updates(self):
         for tag_name in self._tag_names_dirty:
