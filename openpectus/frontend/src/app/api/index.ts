@@ -20,6 +20,7 @@ export type { ProcessValueCommand } from './models/ProcessValueCommand';
 export { ProcessValueType } from './models/ProcessValueType';
 export type { ProcessValueUpdate } from './models/ProcessValueUpdate';
 export { Ready } from './models/Ready';
+export type { RunLogLine } from './models/RunLogLine';
 export { UserRole } from './models/UserRole';
 export type { ValidationError } from './models/ValidationError';
 

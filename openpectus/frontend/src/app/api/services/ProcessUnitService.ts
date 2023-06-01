@@ -11,6 +11,7 @@ import type { ProcessDiagram } from '../models/ProcessDiagram';
 import type { ProcessUnit } from '../models/ProcessUnit';
 import type { ProcessValue } from '../models/ProcessValue';
 import type { ProcessValueUpdate } from '../models/ProcessValueUpdate';
+import type { RunLogLine } from '../models/RunLogLine';
 
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -159,6 +160,27 @@ unitId: number,
         return __request(OpenAPI, this.http, {
             method: 'GET',
             url: '/api/process_unit/{unit_id}/command_examples',
+            path: {
+                'unit_id': unitId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
+    /**
+     * Get Run Log
+     * @param unitId 
+     * @returns RunLogLine Successful Response
+     * @throws ApiError
+     */
+    public getRunLog(
+unitId: number,
+): Observable<Array<RunLogLine>> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/process_unit/{unit_id}/run_log',
             path: {
                 'unit_id': unitId,
             },

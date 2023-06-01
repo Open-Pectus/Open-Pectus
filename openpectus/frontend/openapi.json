@@ -306,6 +306,52 @@
         }
       }
     },
+    "/api/process_unit/{unit_id}/run_log": {
+      "get": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Get Run Log",
+        "operationId": "get_run_log",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Unit Id",
+              "type": "integer"
+            },
+            "name": "unit_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Get Run Log",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RunLogLine"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/batch_job/{id}": {
       "get": {
         "tags": [
@@ -702,6 +748,28 @@
               "ready"
             ],
             "type": "string"
+          }
+        }
+      },
+      "RunLogLine": {
+        "title": "RunLogLine",
+        "required": [
+          "command",
+          "start",
+          "end"
+        ],
+        "type": "object",
+        "properties": {
+          "command": {
+            "$ref": "#/components/schemas/ExecutableCommand"
+          },
+          "start": {
+            "title": "Start",
+            "type": "integer"
+          },
+          "end": {
+            "title": "End",
+            "type": "integer"
           }
         }
       },

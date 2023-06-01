@@ -1,6 +1,18 @@
 import { sub } from 'date-fns';
 import { rest } from 'msw';
-import { BatchJob, CommandExample, InProgress, NotOnline, ProcessUnit, ProcessValue, ProcessValueType, Ready, UserRole } from '../app/api';
+import {
+  BatchJob,
+  CommandExample,
+  CommandSource,
+  InProgress,
+  NotOnline,
+  ProcessUnit,
+  ProcessValue,
+  ProcessValueType,
+  Ready,
+  RunLogLine,
+  UserRole,
+} from '../app/api';
 
 const processUnits: ProcessUnit[] = [
   {
@@ -187,6 +199,29 @@ export const handlers = [
         }, {
           name: 'Yet another, another command',
           example: `yet another, another example`,
+        },
+      ]),
+    );
+  }),
+
+  rest.get('/api/process_unit/:unitId/run_log', (req, res, context) => {
+    return res(
+      context.status(200),
+      context.json<RunLogLine[]>([
+        {
+          start: Date.now().valueOf(),
+          end: Date.now().valueOf() + 1000,
+          command: {
+            command: 'Some Command',
+            source: CommandSource.MANUALLY_ENTERED,
+          },
+        }, {
+          start: Date.now().valueOf() + 2000,
+          end: Date.now().valueOf() + 20000,
+          command: {
+            command: 'Some Other Command',
+            source: CommandSource.MANUALLY_ENTERED,
+          },
         },
       ]),
     );

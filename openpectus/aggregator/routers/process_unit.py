@@ -146,3 +146,14 @@ def get_command_examples(unit_id: int) -> List[CommandExample]:
     return [
         CommandExample(name="Some Example", example="Some example text")
     ]
+
+
+class RunLogLine(BaseModel):
+    command: ExecutableCommand
+    start: int
+    end: int
+
+
+@router.get('/process_unit/{unit_id}/run_log')
+def get_run_log(unit_id: int) -> List[RunLogLine]:
+    return []
