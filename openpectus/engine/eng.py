@@ -81,7 +81,7 @@ class Engine():
     - signals state changes via tag_updates queue (to aggregator via websockets, natively async)
     - accepts commands from cmd_queue (from interpreter and from aggregator)
     """
-    def __init__(self, uod: UnitOperationDefinitionBase) -> None:
+    def __init__(self, uod: UnitOperationDefinitionBase, tick_interval=0.1) -> None:
         self.uod = uod
         self._running: bool = False
         """ Indicates whether the scan cycle loop is running, set to False to shut down"""
@@ -100,7 +100,7 @@ class Engine():
         self._tag_names_dirty: list[str] = []  # not sure we need these
 
         self._uod_listener = ChangeListener()
-        self._tick_timer = OneThreadTimer(0.1, self.tick)
+        self._tick_timer = OneThreadTimer(tick_interval, self.tick)
 
         self._runstate_started: bool = False
         """ Indicates the surrent Start/Stop state"""
@@ -126,6 +126,7 @@ class Engine():
 
         try:
             self.uod.hwl.connect()
+            logger.info("Hardware connected")
         except HardwareLayerException:
             logger.error("Hardware connect error", exc_info=True)
             return  # TODO retry/reconnect
@@ -135,6 +136,7 @@ class Engine():
 
     def tick(self):
         """ Performs a scan cycle tick. """
+        logger.debug("tick")
 
         if not self._running:
             self._tick_timer.stop()
