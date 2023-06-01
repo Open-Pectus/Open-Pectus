@@ -5,15 +5,17 @@ import { RunLogLine } from '../../api';
   selector: 'app-run-log-line',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="">
-      {{runLogLine?.start | date}}
-      {{runLogLine?.end | date}}
-      {{runLogLine?.command?.command}}
+    <div class="grid grid-cols-3 gap-2 px-3 py-2" [style.grid]="gridFormat" [class.bg-slate-100]="index % 2 === 1">
+      <p>{{runLogLine?.start | date}}</p>
+      <p>{{runLogLine?.end | date}}</p>
+      <p>{{runLogLine?.command?.command}}</p>
     </div>
   `,
 })
 export class RunLogLineComponent {
   @Input() runLogLine?: RunLogLine;
+  @Input() index: number = 0;
+  @Input() gridFormat: string = 'auto / 1fr 1fr 1fr';
 
 
 }

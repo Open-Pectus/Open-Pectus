@@ -209,17 +209,24 @@ export const handlers = [
       context.status(200),
       context.json<RunLogLine[]>([
         {
-          start: Date.now().valueOf(),
-          end: Date.now().valueOf() + 1000,
+          start: Date.now().valueOf() - 1000000,
+          end: Date.now().valueOf() - 1000000 + 5000,
           command: {
             command: 'Some Command',
             source: CommandSource.MANUALLY_ENTERED,
           },
         }, {
-          start: Date.now().valueOf() + 2000,
-          end: Date.now().valueOf() + 20000,
+          start: Date.now().valueOf() - 200000000,
+          end: Date.now().valueOf() - 200000000 + 5000,
           command: {
             command: 'Some Other Command',
+            source: CommandSource.MANUALLY_ENTERED,
+          },
+        }, {
+          start: Date.now().valueOf() - 300000000,
+          end: Date.now().valueOf() - 300000000 + 5000,
+          command: {
+            command: 'Some Third Command',
             source: CommandSource.MANUALLY_ENTERED,
           },
         },
