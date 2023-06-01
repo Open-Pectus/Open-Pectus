@@ -16,7 +16,7 @@ from fastapi_websocket_rpc.schemas import RpcResponse
 from fastapi_websocket_pubsub import PubSubClient
 from fastapi_websocket_pubsub.rpc_event_methods import RpcEventClientMethods
 from fastapi_websocket_rpc import RpcChannel
-from openpectus.protocol.exceptions import ProtocolException
+from protocol.exceptions import ProtocolException
 from protocol.clienthandler import ClientHandler, WsClientHandler
 from protocol.messages import (
     deserialize_msg,
