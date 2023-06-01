@@ -6,17 +6,27 @@ dependencies:
   # main
   - python=3.11
   - typing-extensions
+
   # dev
   - flake8
   - black
+  
   # engine - lang
   - antlr4-python3-runtime=4.9.2
   - pint # docs: https://pint.readthedocs.io/en/stable/getting/index.html
+
   # aggregator - api
   - fastapi
   - uvicorn[standard]
-  - httpx # for testing with fastapi.testclient
+  - httpx # for testing with fastapi.testclient  
+  
   # aggregator - lsp TODO
+
+# engine simulation
+  - opcua
+  - numpy
+  - scipy
+  - cryptography  
 
 # manage conda environment with:
 # conda env remove --name pectus

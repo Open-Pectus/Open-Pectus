@@ -5,6 +5,7 @@ extend-ignore =
 exclude = 
     .git,
     __pycache__,
+    frontend,
     lang/grammar/codegen,
     docs/source/conf.py,
     build,
@@ -12,3 +13,5 @@ exclude =
 
 max-complexity = 10
 max-line-length = 125
+per-file-ignores =
+    engine/p1/*.py: E231, E265, E261, E301, E302, E305, E501, W291, W292, W293

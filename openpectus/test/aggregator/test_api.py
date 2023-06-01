@@ -6,12 +6,11 @@ import hashlib
 
 from fastapi.testclient import TestClient
 
-sys.path.append('aggregator')
+project_path = os.path.join(os.path.dirname(__file__), "..", "..")
+sys.path.append(os.path.join(project_path, 'aggregator'))
 from aggregator.main import app
 
 client = TestClient(app)
-
-project_path = os.path.join(os.path.dirname(__file__), "..", "..")
 
 
 class AggregatorApiTest(unittest.TestCase):
