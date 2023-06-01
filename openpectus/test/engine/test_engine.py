@@ -5,7 +5,7 @@ from typing_extensions import override
 import unittest
 
 from lang.exec.uod import UnitOperationDefinitionBase
-from engine.engine import Engine, EngineCommand, EngineInternalCommand
+from engine.eng import Engine, EngineCommand, EngineInternalCommand
 from lang.exec import tags
 from lang.exec.uod import UodCommand
 from engine.hardware import HardwareLayerBase, Register, RegisterDirection
@@ -78,16 +78,17 @@ class TestEngine(unittest.TestCase):
     def test_engine_started_runs_scan_cycle(self):
         e = create_engine()
 
-        t = threading.Thread(target=e.run)
+        t = threading.Thread(target=e._run)  # dont configure twice
         t.daemon = True
         t.start()
 
-        #assert loop running
+        # assert loop running
+        time.sleep(.5)
+        self.assertTrue(e._running)
 
-        time.sleep(1)
+        time.sleep(.5)
         e._running = False
         t.join()
-
 
     def test_read_process_image_marks_assigned_tags_dirty(self):
         e = create_engine()
@@ -254,7 +255,6 @@ class TestEngine(unittest.TestCase):
         e.cmd_queue.put(EngineCommand("STOP"))
         e.tick()
         self.assertFalse(e._runstate_started)
-
 
     @unittest.skip("not implemented")
     def test_runstate_pause(self):
