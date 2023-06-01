@@ -97,9 +97,8 @@ class Engine():
         self.tag_updates: Queue[Tag] = Queue()
         """ Tags updated in last tick """
 
-        self._tag_names_dirty: list[str] = []  # not sure we need these
-
         self._uod_listener = ChangeListener()
+        self._system_listener = ChangeListener()
         self._tick_timer = OneThreadTimer(tick_interval, self.tick)
 
         self._runstate_started: bool = False
@@ -108,11 +107,21 @@ class Engine():
     def _iter_all_tags(self) -> Iterable[Tag]:
         return itertools.chain(self._system_tags, self.uod.tags)
 
+    @property
+    def _tag_names_dirty(self) -> list[str]:
+        dirty = set()
+        for tag_name in self._system_listener.changes:
+            dirty.add(tag_name)
+        for tag_name in self._uod_listener.changes:
+            dirty.add(tag_name)
+        return list(dirty)
+
     def _configure(self):
         # configure uod
         self.uod.define()
         self.uod.validate_configuration()
         self.uod.tags.add_listener(self._uod_listener)
+        self._system_tags.add_listener(self._system_listener)
 
     def run(self):
         self._configure()
@@ -198,9 +207,6 @@ class Engine():
         if not isinstance(hwl, HardwareLayerBase):
             logger.error("Hmm")  # TODO this is really weird. figure out why this happens
 
-        self._uod_listener.clear_changes()
-        self._tag_names_dirty.clear()
-
         registers = hwl.registers
         register_values = hwl.read_batch(list(registers.values()))
         for i, r in enumerate(registers.values()):
@@ -209,8 +215,6 @@ class Engine():
             if "to_tag" in r.options:
                 tag_value = r.options["to_tag"](tag_value)
             tag.set_value(tag_value)
-
-        self._tag_names_dirty = self._uod_listener.changes
 
     def update_clocks(self):
         if self._runstate_started:
@@ -225,10 +229,6 @@ class Engine():
                 self._execute_command(c)
             except Empty:
                 done = True
-
-        # TODO _tag_names_dirty may be unnecessary. why not just use listener directly to notify
-        self._tag_names_dirty = self._uod_listener.changes
-        self._uod_listener.clear_changes()
 
     def _execute_command(self, cmd_request: EngineCommand):
         logger.debug("Executing command request: " + cmd_request.name)
@@ -261,9 +261,15 @@ class Engine():
                 logger.error("Command execution failed", exc_info=True)
 
     def notify_tag_updates(self):
-        for tag_name in self._tag_names_dirty:
+        for tag_name in self._system_listener.changes:
+            tag = self._system_tags[tag_name]
+            self.tag_updates.put(tag)
+        self._system_listener.clear_changes()
+
+        for tag_name in self._uod_listener.changes:
             tag = self.uod.tags[tag_name]
             self.tag_updates.put(tag)
+        self._uod_listener.clear_changes()
 
     def write_process_image(self):
         hwl: HardwareLayerBase = self.uod.hwl  # type: ignore

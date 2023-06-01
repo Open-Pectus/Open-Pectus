@@ -140,7 +140,7 @@ class TestEngine(unittest.TestCase):
     def test_notify_tag_updates_publishes_dirty_tag(self):
         e = create_engine()
         t = e.uod.tags['FT01']
-        e._tag_names_dirty.append(t.name)
+        e._uod_listener.notify_change(t.name)
 
         e.notify_tag_updates()
 
