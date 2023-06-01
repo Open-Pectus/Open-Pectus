@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { Store } from '@ngrx/store';
-import { DashboardSelectors } from '../../ngrx/dashboard.selectors';
 import { Router } from '@angular/router';
-import { processUnitUrlPart } from '../../details/details-routing.module';
+import { Store } from '@ngrx/store';
 import { detailsUrlPart } from '../../app-routing.module';
+import { DetailsRoutingUrlParts } from '../../details/details-routing-url-parts';
+import { AppSelectors } from '../../ngrx/app.selectors';
 
 @Component({
   selector: 'app-dashboard-process-units',
@@ -13,14 +13,15 @@ import { detailsUrlPart } from '../../app-routing.module';
       <app-process-unit-card *ngFor="let processUnit of (processUnits | ngrxPush)" [processUnit]="processUnit"
                              (click)="onCardClick(processUnit.id)"></app-process-unit-card>
     </div>
+    <div class="text-center" *ngIf="(processUnits | ngrxPush)?.length === 0">No process units available</div>
   `,
 })
 export class DashboardProcessUnitsComponent {
-  processUnits = this.store.select(DashboardSelectors.processUnits);
+  processUnits = this.store.select(AppSelectors.processUnits);
 
   constructor(private store: Store, private router: Router) {}
 
   onCardClick(id: number) {
-    this.router.navigate([detailsUrlPart, processUnitUrlPart, id]).then();
+    this.router.navigate([detailsUrlPart, DetailsRoutingUrlParts.processUnitUrlPart, id]).then();
   }
 }

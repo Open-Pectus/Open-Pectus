@@ -5,10 +5,13 @@
     "version": "0.1.0"
   },
   "paths": {
-    "/process_unit/{id}": {
+    "/api/process_unit/{id}": {
       "get": {
+        "tags": [
+          "process_unit"
+        ],
         "summary": "Get Unit",
-        "operationId": "get_unit_process_unit__id__get",
+        "operationId": "get_unit",
         "parameters": [
           {
             "required": true,
@@ -44,17 +47,20 @@
         }
       }
     },
-    "/process_units": {
+    "/api/process_units": {
       "get": {
+        "tags": [
+          "process_unit"
+        ],
         "summary": "Get Units",
-        "operationId": "get_units_process_units_get",
+        "operationId": "get_units",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Get Units Process Units Get",
+                  "title": "Response Get Units",
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/ProcessUnit"
@@ -66,10 +72,247 @@
         }
       }
     },
-    "/batch_job/{id}": {
+    "/api/process_unit/{id}/process_values": {
       "get": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Get Process Values",
+        "operationId": "get_process_values",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            },
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Get Process Values",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProcessValue"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/process_unit/{unit_id}/process_value": {
+      "post": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Set Process Value",
+        "operationId": "set_process_value",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Unit Id",
+              "type": "integer"
+            },
+            "name": "unit_id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessValueUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/process_unit/{unit_id}/execute_command": {
+      "post": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Execute Command",
+        "operationId": "execute_command",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Unit Id",
+              "type": "integer"
+            },
+            "name": "unit_id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecutableCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/process_unit/{unit_id}/process_diagram": {
+      "get": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Get Process Diagram",
+        "operationId": "get_process_diagram",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Unit Id",
+              "type": "integer"
+            },
+            "name": "unit_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessDiagram"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/process_unit/{unit_id}/command_examples": {
+      "get": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Get Command Examples",
+        "operationId": "get_command_examples",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Unit Id",
+              "type": "integer"
+            },
+            "name": "unit_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Get Command Examples",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CommandExample"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/batch_job/{id}": {
+      "get": {
+        "tags": [
+          "batch_job"
+        ],
         "summary": "Get Batch",
-        "operationId": "get_batch_batch_job__id__get",
+        "operationId": "get_batch",
         "parameters": [
           {
             "required": true,
@@ -105,89 +348,24 @@
         }
       }
     },
-    "/process_unit/{id}/process_values": {
+    "/api/recent_batch_jobs": {
       "get": {
-        "summary": "Get Process Values",
-        "operationId": "get_process_values_process_unit__id__process_values_get",
-        "parameters": [
-          {
-            "required": true,
-            "schema": {
-              "title": "Id",
-              "type": "integer"
-            },
-            "name": "id",
-            "in": "path"
-          }
+        "tags": [
+          "batch_job"
         ],
+        "summary": "Get Recent Batch Jobs",
+        "operationId": "get_recent_batch_jobs",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Get Process Values Process Unit  Id  Process Values Get",
+                  "title": "Response Get Recent Batch Jobs",
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ProcessValue"
+                    "$ref": "#/components/schemas/BatchJob"
                   }
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/process_unit/{id}/process_value": {
-      "post": {
-        "summary": "Set Process Value",
-        "operationId": "set_process_value_process_unit__id__process_value_post",
-        "parameters": [
-          {
-            "required": true,
-            "schema": {
-              "title": "Id",
-              "type": "integer"
-            },
-            "name": "id",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ProcessValueUpdate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -235,6 +413,55 @@
           }
         },
         "description": "Represents a current or historical run of a process unit. "
+      },
+      "CommandExample": {
+        "title": "CommandExample",
+        "required": [
+          "name",
+          "example"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "example": {
+            "title": "Example",
+            "type": "string"
+          }
+        }
+      },
+      "CommandSource": {
+        "title": "CommandSource",
+        "enum": [
+          "process_value",
+          "manually_entered",
+          "unit_button"
+        ],
+        "type": "string",
+        "description": "An enumeration."
+      },
+      "ExecutableCommand": {
+        "title": "ExecutableCommand",
+        "required": [
+          "command",
+          "source"
+        ],
+        "type": "object",
+        "properties": {
+          "command": {
+            "title": "Command",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/CommandSource"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        }
       },
       "HTTPValidationError": {
         "title": "HTTPValidationError",
@@ -292,12 +519,26 @@
           }
         }
       },
+      "ProcessDiagram": {
+        "title": "ProcessDiagram",
+        "required": [
+          "svg"
+        ],
+        "type": "object",
+        "properties": {
+          "svg": {
+            "title": "Svg",
+            "type": "string"
+          }
+        }
+      },
       "ProcessUnit": {
         "title": "ProcessUnit",
         "required": [
           "id",
           "name",
-          "state"
+          "state",
+          "current_user_role"
         ],
         "type": "object",
         "properties": {
@@ -330,6 +571,9 @@
           "runtime_msec": {
             "title": "Runtime Msec",
             "type": "integer"
+          },
+          "current_user_role": {
+            "$ref": "#/components/schemas/UserRole"
           }
         },
         "description": "Represents a process unit. "
@@ -379,15 +623,33 @@
             "title": "Writable",
             "type": "boolean"
           },
-          "options": {
-            "title": "Options",
+          "commands": {
+            "title": "Commands",
             "type": "array",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/ProcessValueCommand"
             }
           }
         },
         "description": "Represents a process value. "
+      },
+      "ProcessValueCommand": {
+        "title": "ProcessValueCommand",
+        "required": [
+          "name",
+          "command"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "command": {
+            "title": "Command",
+            "type": "string"
+          }
+        }
       },
       "ProcessValueType": {
         "title": "ProcessValueType",
@@ -442,6 +704,15 @@
             "type": "string"
           }
         }
+      },
+      "UserRole": {
+        "title": "UserRole",
+        "enum": [
+          "viewer",
+          "admin"
+        ],
+        "type": "string",
+        "description": "An enumeration."
       },
       "ValidationError": {
         "title": "ValidationError",

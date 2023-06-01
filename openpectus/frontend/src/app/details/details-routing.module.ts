@@ -1,20 +1,16 @@
-import { RouterModule, Routes } from '@angular/router';
 import { NgModule } from '@angular/core';
-import { UnitDetailsComponent } from './unit-details.component';
+import { RouterModule, Routes } from '@angular/router';
 import { BatchJobDetailsComponent } from './batch-job-details.component';
-
-export const processUnitUrlPart = 'process_unit';
-export const batchJobUrlPart = 'batch_job';
-export const unitIdParamName = 'unit_id';
-export const batchJobIdParamName = 'batch_job_id';
+import { DetailsRoutingUrlParts } from './details-routing-url-parts';
+import { UnitDetailsComponent } from './unit-details.component';
 
 const routes: Routes = [
   {
-    path: `${processUnitUrlPart}/:${unitIdParamName}`,
+    path: `${DetailsRoutingUrlParts.processUnitUrlPart}/:${DetailsRoutingUrlParts.processUnitIdParamName}`,
     component: UnitDetailsComponent,
   },
   {
-    path: `${batchJobUrlPart}/:${batchJobIdParamName}`,
+    path: `${DetailsRoutingUrlParts.batchJobUrlPart}/:${DetailsRoutingUrlParts.batchJobIdParamName}`,
     component: BatchJobDetailsComponent,
   },
 ];

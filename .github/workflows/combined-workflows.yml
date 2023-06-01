@@ -1,0 +1,115 @@
+# because github actions are shit, we need to combine every workflow in one file in order to be able to have jobs depend correctly on other jobs
+
+name: Combined Workflows
+
+on:
+  push:
+    branches: [ "main", "71-build-uod-simulation-example" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/main' }}
+  NODE_VERSION: 18.16
+
+jobs:
+
+  build_aggregator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f openpectus/aggregator/requirements.txt ]; then pip install -r openpectus/aggregator/requirements.txt; fi
+      - name: Lint with flake8
+        run: |
+          # use configuration from ./.flake8
+          cd openpectus
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings.
+          #flake8 . --count --exit-zero --statistics
+      - name: Lint with flake8 (warnings)
+        run: |
+          # use configuration from ./.flake8
+          cd openpectus
+          if ! flake8 . --count --statistics; then
+            echo "::warning::Flake8 Lint Warning"
+          fi
+      - name: Test with unittest
+        run: |
+          cd openpectus
+          python -m unittest
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: aggregator
+          path: |
+            openpectus/aggregator/**/*.py
+            openpectus/aggregator/Dockerfile
+            openpectus/aggregator/requirements.txt
+
+
+  build_frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'openpectus/frontend/package-lock.json'
+      - name: npm ci, build
+        working-directory: "openpectus/frontend"
+        run: |
+          npm ci
+          npm run build
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-dist
+          path: "openpectus/frontend/dist"
+
+
+  publish_docker_image:
+    needs: [build_frontend, build_aggregator]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: aggregator
+      - uses: actions/download-artifact@v3
+        with:
+          name: frontend-dist
+          path: frontend-dist
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+      - name: Log in to GitHub container registry
+        if: ${{ env.SHOULD_PUBLISH_IMAGE }}
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push container image to registry
+        uses: docker/build-push-action@v4
+        with:
+          push: ${{ env.SHOULD_PUBLISH_IMAGE }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          context: .
+          file: ./Dockerfile

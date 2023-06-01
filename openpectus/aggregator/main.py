@@ -1,9 +1,9 @@
-from datetime import datetime
-from enum import StrEnum, auto
-from typing import List, Literal
-
+import os
 from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi.routing import APIRoute
+from routers import batch_job, process_unit
+from spa import SinglePageApplication
+
 
 # TODO
 # - add lsp thingys
@@ -26,114 +26,18 @@ from pydantic import BaseModel
 # Look into this https://stackoverflow.com/questions/74137116/how-to-hide-a-pydantic-discriminator-field-from-fastapi-docs
 # Final / Literal ...
 
+
+def custom_generate_unique_id(route: APIRoute):
+    return f"{route.name}"
+
+
 title = "Pectus Aggregator"
 print(f"*** {title} ***")
-app = FastAPI(title=title)
 
+app = FastAPI(title=title, generate_unique_id_function=custom_generate_unique_id)
 
-class ProcessUnitStateEnum(StrEnum):
-    """ Represents the state of a process unit. """
-    READY = auto()
-    IN_PROGRESS = auto()
-    NOT_ONLINE = auto()
+prefix = "/api"
+app.include_router(process_unit.router, prefix=prefix)
+app.include_router(batch_job.router, prefix=prefix)
 
-
-class ProcessUnitState():
-    class Ready(BaseModel):
-        state: Literal[ProcessUnitStateEnum.READY]
-
-    class InProgress(BaseModel):
-        state: Literal[ProcessUnitStateEnum.IN_PROGRESS]
-        progress_pct: int
-
-    class NotOnline(BaseModel):
-        state: Literal[ProcessUnitStateEnum.NOT_ONLINE]
-        last_seen_date: datetime
-
-
-class ProcessUnit(BaseModel):
-    """Represents a process unit. """
-
-    id: int
-    name: str
-    state: ProcessUnitState.Ready | ProcessUnitState.InProgress | ProcessUnitState.NotOnline
-    location: str | None
-    runtime_msec: int | None
-    # users: List[User] ?
-
-# @app.get("/to_expose_process_unit_state_enum_in_openapi")
-# def to_expose_process_unit_state_enum_in_openapi() -> ProcessUnitStateEnum:
-#     return Type[ProcessUnitStateEnum]
-
-@app.get("/process_unit/{id}")
-def get_unit(id: int) -> ProcessUnit:
-    return ProcessUnit(
-        id=3,
-        name="Foo",
-        state=ProcessUnitState.Ready(),  # type: ignore
-        location="H21.5",
-        runtime_msec=189309,
-    )
-
-
-@app.get("/process_units")
-def get_units() -> List[ProcessUnit]:
-    return [
-        ProcessUnit(
-            id=3,
-            name="Foo",
-            state=ProcessUnitState.InProgress(progress_pct=75),  # type: ignore
-            location="H21.5",
-            runtime_msec=189309,
-        )]
-
-
-class BatchJob(BaseModel):
-    """ Represents a current or historical run of a process unit. """
-    id: int
-    unit_id: int
-    unit_name: str
-    completed_date: datetime
-    contributors: List[str] = []
-
-
-@app.get("/batch_job/{id}")
-def get_batch(id: int) -> BatchJob:
-    dt = datetime(2023, 3, 21, 12, 31, 57, 0)
-    return BatchJob(id=id, unit_id=3, unit_name="Foo", completed_date=dt, contributors=[])
-
-
-class ProcessValueType(StrEnum):
-    STRING = auto()
-    FLOAT = auto()
-    INT = auto()
-
-
-class ProcessValue(BaseModel):
-    """ Represents a process value. """
-    name: str
-    value: str | float | int | None
-    value_unit: str | None
-    """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
-    valid_value_units: List[str] | None
-    """ For values with a unit, provides the list valid alternative units """
-    value_type: ProcessValueType
-    """ Specifies the type of allowed values. """
-    writable: bool
-    options: List[str] | None
-
-
-@app.get("/process_unit/{id}/process_values")
-def get_process_values(id: int) -> List[ProcessValue]:  # naming?, parm last_seen
-    return [ProcessValue(name="A-Flow", value=54, value_unit="L", valid_value_units=["L", "m3"], writable=False,
-                         options=None, value_type=ProcessValueType.STRING)]
-
-
-class ProcessValueUpdate(BaseModel):
-    name: str
-    value: str | float | int
-
-
-@app.post("/process_unit/{id}/process_value")
-def set_process_value(id: int, update: ProcessValueUpdate):
-    pass
+app.mount("/", SinglePageApplication(directory=os.path.join(os.path.dirname(__file__), "frontend-dist")))
