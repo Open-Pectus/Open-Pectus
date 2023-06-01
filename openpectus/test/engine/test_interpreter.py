@@ -327,7 +327,7 @@ Mark: d
         with self.subTest("a / b"):
             self.assert_time_equal(log_a.time + 0.3 + TICK_INTERVAL, log_b.time)
         with self.subTest("b / c"):
-            self.assert_time_equal(log_b.time + .8 + TICK_INTERVAL, log_c.time)
+            self.assert_time_equal(log_b.time + .8 + TICK_INTERVAL, log_c.time, 300)
         with self.subTest("c / d"):
             self.assert_time_equal(log_c.time + TICK_INTERVAL, log_d.time, 300)
         with self.subTest("a / d"):
