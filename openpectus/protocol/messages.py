@@ -1,5 +1,7 @@
 from __future__ import annotations
-from typing import List
+from dataclasses import dataclass
+import json
+from typing import List, Tuple, Optional
 from pydantic import BaseModel
 import protocol.messages
 
@@ -31,6 +33,10 @@ class ErrorMessage(MessageBase):
     exception_message: str | None = None
 
 
+class ProtocolErrorMessage(ErrorMessage):
+    protocol_mgs: str
+
+
 class RegisterEngineMsg(MessageBase):
     engine_name: str
     uod_name: str
@@ -46,6 +52,10 @@ class TagValue(MessageBase):
     value: str | int | float | None = None
 
 
+# Note: required for instantiation of TagsUpdatedMsg to work
+TagsUpdatedMsg.update_forward_refs()
+
+
 class UodSpecMsg(MessageBase):
     name: str
     tags: List[TagSpec] = []
@@ -56,11 +66,21 @@ class TagSpec(MessageBase):
     tag_unit: str | None
 
 
-def serialize_msg(msg: MessageBase) -> dict:
-    return msg.dict()
+def serialize_msg(msg: MessageBase) -> Tuple[str, dict]:
+    return type(msg).__name__, msg.dict()
+
+
+def serialize_msg_to_json(msg: MessageBase) -> str:
+    wrapper = {'t': type(msg).__name__, 'd': msg.dict()}
+    return json.dumps(wrapper)
 
 
 def deserialize_msg(msg_cls_name, init_dict: dict) -> MessageBase:
     cls = getattr(protocol.messages, msg_cls_name)
     msg = cls(**init_dict)
     return msg
+
+
+def deserialize_msg_from_json(val: str) -> MessageBase:
+    wrapper = json.loads(val)
+    return deserialize_msg(wrapper['t'], wrapper['d'])

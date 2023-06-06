@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import sys
 import unittest
@@ -8,11 +9,17 @@ import httpx
 import uvicorn
 from fastapi import FastAPI
 from fastapi_websocket_rpc.logger import get_logger
-from fastapi_websocket_rpc.utils import gen_uid
 
 from unittest import IsolatedAsyncioTestCase
 from fastapi_websocket_pubsub import PubSubClient, PubSubEndpoint
-from fastapi_websocket_pubsub.event_notifier import ALL_TOPICS
+from protocol.messages import (
+    RegisterEngineMsg,
+    SuccessMessage,
+    TagValue,
+    TagsUpdatedMsg,
+    serialize_msg_to_json,
+    deserialize_msg_from_json
+)
 
 # Add parent path to use local src as package for tests
 sys.path.append(
@@ -21,13 +28,13 @@ sys.path.append(
 
 from protocol.aggregator import (
     app as server_app,
-    endpoint as server_endpoint,
-    server
+    endpoint as server_endpoint
 )
 from protocol.engine import create_client
 
-
+logging.basicConfig()
 logger = get_logger("Test")
+logger.setLevel(logging.DEBUG)
 
 PORT = 7990
 ws_url = f"ws://localhost:{PORT}/pubsub"
@@ -58,30 +65,33 @@ def start_server_process():
     # Run the server as a separate process
     proc = Process(target=setup_server, args=(), daemon=True)
     proc.start()
-    yield proc
-    proc.kill()  # Cleanup after test
+    return proc
 
 
 class AsyncServerTestCase(IsolatedAsyncioTestCase):
+    def __init__(self, methodName: str = "runTest") -> None:
+        super().__init__(methodName)
+        self.proc : Process | None = None
+
     async def asyncSetUp(self):
         logger.info("asyncSetUp")
         try:
             _ = httpx.get(health_url)
             self.assertFalse(True, "Server should not be running. Test setup failed")
-        except Exception:
+        except httpx.ConnectError:
             pass
 
-        # start server
-        self.proc = next(start_server_process())
+        await asyncio.sleep(.05)
+
+        self.proc = start_server_process()
 
     async def asyncTearDown(self):
         logger.info("asyncTearDown")
-        p = getattr(self, 'proc', None)
-        if p is not None:
-            assert isinstance(p, Process)
-            if p.is_alive():
-                logger.error("Server process still running on TearDown - killing it")
-                p.kill()
+
+        if self.proc is not None:
+            if self.proc.is_alive():
+                logger.debug("Server process still running on TearDown - killing it")
+                self.proc.kill()
 
 
 class IntegrationTest(AsyncServerTestCase):
@@ -142,19 +152,73 @@ class IntegrationTest(AsyncServerTestCase):
         client, ps_client = create_client()
 
         registered_event = asyncio.Event()
+        client_registered = False
+        client_failed = False
 
-        async def on_register():
+        def on_register():
             logger.info("client registered")
+            nonlocal client_registered
+            client_registered = True
             registered_event.set()
 
+        def on_error(ex: Exception | None = None):
+            nonlocal client_failed
+            client_failed = True
+            logger.error("Error sending: " + str(ex))
+
         await client.wait_start_connect(ws_url, ps_client)
-        register_success = await client.register(on_register=on_register)
+        msg = RegisterEngineMsg(engine_name="test-eng", uod_name="test-uod")
+        register_success = await client.send(msg, on_success=on_register, on_error=on_error)
         self.assertTrue(register_success)
 
         await asyncio.wait_for(registered_event.wait(), 5)
+        self.assertTrue(client_registered)
+        self.assertFalse(client_failed)
 
         await ps_client.disconnect()
         await ps_client.wait_until_done()
+
+    async def test_client_can_send_message(self):
+        client, ps_client = create_client()
+
+        await client.wait_start_connect(ws_url, ps_client)
+        msg = TagsUpdatedMsg(tags=[TagValue(name="foo", value="bar")])
+        result = await client.send(msg)
+        self.assertIsInstance(result, SuccessMessage)
+
+        await ps_client.disconnect()
+        await ps_client.wait_until_done()
+
+
+class SerializationTest(unittest.TestCase):
+    def test_serialization_RegisterEngineMsg(self):
+        reg = RegisterEngineMsg(engine_name="foo", uod_name="bar")
+        reg_s = serialize_msg_to_json(reg)
+        self.assertIsNotNone(reg_s)        
+
+    def test_round_trip_RegisterEngineMsg(self):
+        reg = RegisterEngineMsg(engine_name="foo", uod_name="bar")
+        reg_s = serialize_msg_to_json(reg)
+        reg_d = deserialize_msg_from_json(reg_s)
+        self.assertIsNotNone(reg_d)
+        self.assertIsInstance(reg_d, RegisterEngineMsg)
+        self.assertEqual(reg.engine_name, reg_d.engine_name)
+        self.assertEqual(reg.uod_name, reg_d.uod_name)
+
+    def test_serialization_TagsUpdatedMsg(self):        
+        tu = TagsUpdatedMsg(tags=[TagValue(name="foo", value="bar")])
+        tu_s = serialize_msg_to_json(tu)
+        self.assertIsNotNone(tu_s)
+
+    def test_round_trip_TagsUpdatedMsg(self):
+        tu = TagsUpdatedMsg(tags=[TagValue(name="foo", value="bar")])
+        tu_s = serialize_msg_to_json(tu)
+        self.assertIsNotNone(tu_s)
+
+        tu_d = deserialize_msg_from_json(tu_s)
+        self.assertIsNotNone(tu_d)
+        self.assertIsInstance(tu_d, TagsUpdatedMsg)
+        self.assertEqual(tu_d.tags[0].name, tu.tags[0].name)
 
 
 if __name__ == "__main__":
