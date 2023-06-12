@@ -215,7 +215,10 @@ export const handlers = [
         }, {
           header: 'Less amazing string value',
           type: ProcessValueType.STRING,
-          unit: 'lav',
+        }, {
+          header: 'Soso int value',
+          type: ProcessValueType.INT,
+          unit: 'siv',
         }],
         lines: [
           {
@@ -225,7 +228,7 @@ export const handlers = [
               command: 'Some Command',
               source: CommandSource.MANUALLY_ENTERED,
             },
-            additional_values: [1.43253342, 'WAAAGH!'],
+            additional_values: [1.43253342, 'WAAAGH!', 6789],
           }, {
             start: sub(Date.now(), {days: 0, hours: 2, seconds: 20}).toISOString(),
             end: sub(Date.now(), {days: 0, hours: 2, seconds: 15}).toISOString(),
@@ -233,7 +236,7 @@ export const handlers = [
               command: 'Some Other Command',
               source: CommandSource.MANUALLY_ENTERED,
             },
-            additional_values: [2, '... and things'],
+            additional_values: [2, '... and things', 1337],
           }, {
             start: sub(Date.now(), {days: 0, hours: 1, seconds: 10}).toISOString(),
             end: sub(Date.now(), {days: 0, hours: 1}).toISOString(),
@@ -241,7 +244,7 @@ export const handlers = [
               command: 'Some Third Command',
               source: CommandSource.MANUALLY_ENTERED,
             },
-            additional_values: [3.001, 'soso'],
+            additional_values: [3.001, 'soso', 28008],
           },
         ],
       }),

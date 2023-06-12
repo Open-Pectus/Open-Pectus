@@ -9,7 +9,7 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-collapsible-element [name]="'Run Log'" [heightResizable]="true" (contentHeightChanged)="onContentHeightChanged($event)">
-      <div content *ngrxLet="runLog as runLog">
+      <div content *ngrxLet="runLog as runLog" class="text-sm">
         <div class="grid bg-slate-200 gap-2 px-3 py-2" [style.grid]="gridFormat | ngrxPush">
           <b>Start</b>
           <b>End</b>
@@ -28,7 +28,7 @@ export class RunLogComponent implements OnInit {
   contentHeight = 400;
   runLog = this.store.select(DetailsSelectors.runLog);
   gridFormat = this.runLog.pipe(map(runLog => {
-    return `auto / 1fr 1fr 2fr repeat(${runLog.additional_columns.length}, 1fr)`;
+    return `auto / 13ch 13ch 2fr repeat(${runLog.additional_columns.length}, 1fr)`;
   }));
 
   constructor(private store: Store) {}
