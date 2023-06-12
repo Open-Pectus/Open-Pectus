@@ -10,7 +10,7 @@ import {
   ProcessValue,
   ProcessValueType,
   Ready,
-  RunLogLine,
+  RunLog,
   UserRole,
 } from '../app/api';
 
@@ -207,30 +207,36 @@ export const handlers = [
   rest.get('/api/process_unit/:unitId/run_log', (req, res, context) => {
     return res(
       context.status(200),
-      context.json<RunLogLine[]>([
-        {
-          start: Date.now().valueOf() - 1000000,
-          end: Date.now().valueOf() - 1000000 + 5000,
-          command: {
-            command: 'Some Command',
-            source: CommandSource.MANUALLY_ENTERED,
+      context.json<RunLog>({
+        additional_columns: [],
+        lines: [
+          {
+            start: sub(Date.now(), {days: 1, hours: 3, seconds: 30}).toISOString(),
+            end: sub(Date.now(), {days: 1, hours: 3}).toISOString(),
+            command: {
+              command: 'Some Command',
+              source: CommandSource.MANUALLY_ENTERED,
+            },
+            additional_values: [],
+          }, {
+            start: sub(Date.now(), {days: 0, hours: 2, seconds: 20}).toISOString(),
+            end: sub(Date.now(), {days: 0, hours: 2, seconds: 15}).toISOString(),
+            command: {
+              command: 'Some Other Command',
+              source: CommandSource.MANUALLY_ENTERED,
+            },
+            additional_values: [],
+          }, {
+            start: sub(Date.now(), {days: 0, hours: 1, seconds: 10}).toISOString(),
+            end: sub(Date.now(), {days: 0, hours: 1}).toISOString(),
+            command: {
+              command: 'Some Third Command',
+              source: CommandSource.MANUALLY_ENTERED,
+            },
+            additional_values: [],
           },
-        }, {
-          start: Date.now().valueOf() - 200000000,
-          end: Date.now().valueOf() - 200000000 + 5000,
-          command: {
-            command: 'Some Other Command',
-            source: CommandSource.MANUALLY_ENTERED,
-          },
-        }, {
-          start: Date.now().valueOf() - 300000000,
-          end: Date.now().valueOf() - 300000000 + 5000,
-          command: {
-            command: 'Some Third Command',
-            source: CommandSource.MANUALLY_ENTERED,
-          },
-        },
-      ]),
+        ],
+      }),
     );
   }),
 ];

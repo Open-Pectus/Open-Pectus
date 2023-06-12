@@ -1,6 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { CommandExample, ProcessDiagram, ProcessValue, RunLogLine } from '../../api';
+import { CommandExample, ProcessDiagram, ProcessValue, RunLog } from '../../api';
 import { DetailsActions } from './details.actions';
 
 export const detailsFeatureKey = 'details';
@@ -12,7 +12,7 @@ export interface DetailsState {
   processDiagram?: ProcessDiagram;
   shouldPollProcessValues: boolean;
   commandExamples: CommandExample[];
-  runLogLines: RunLogLine[];
+  runLog: RunLog;
 }
 
 const initialState: DetailsState = {
@@ -20,7 +20,7 @@ const initialState: DetailsState = {
   processValues: [],
   shouldPollProcessValues: false,
   commandExamples: [],
-  runLogLines: [],
+  runLog: {additional_columns: [], lines: []},
 };
 
 export const detailsReducer = createReducer(initialState,
@@ -50,8 +50,8 @@ export const detailsReducer = createReducer(initialState,
   on(DetailsActions.commandExamplesFetched, (state, {commandExamples}) => produce(state, draft => {
     draft.commandExamples = commandExamples;
   })),
-  on(DetailsActions.runLogLinesFetched, (state, {runLogLines}) => produce(state, draft => {
-    draft.runLogLines = runLogLines;
+  on(DetailsActions.runLogFetched, (state, {runLog}) => produce(state, draft => {
+    draft.runLog = runLog;
   })),
 );
 

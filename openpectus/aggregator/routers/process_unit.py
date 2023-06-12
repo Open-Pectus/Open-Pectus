@@ -148,12 +148,29 @@ def get_command_examples(unit_id: int) -> List[CommandExample]:
     ]
 
 
+class RunLogColumnType(StrEnum):
+    STRING = auto()
+    NUMBER = auto()  # do we want NUMBER_WITH_UNIT and such?
+    DATE = auto()
+
+
+class RunLogColumn(BaseModel):
+    header: str
+    type: RunLogColumnType
+
+
 class RunLogLine(BaseModel):
     command: ExecutableCommand
-    start: int
-    end: int
+    start: datetime
+    end: datetime
+    additional_values: List
+
+
+class RunLog(BaseModel):
+    additional_columns: List[RunLogColumn]
+    lines: List[RunLogLine]
 
 
 @router.get('/process_unit/{unit_id}/run_log')
-def get_run_log(unit_id: int) -> List[RunLogLine]:
-    return []
+def get_run_log(unit_id: int) -> RunLog:
+    return RunLog(additional_columns=[], lines=[])

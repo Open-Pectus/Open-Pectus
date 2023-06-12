@@ -6,6 +6,7 @@ import type { ExecutableCommand } from './ExecutableCommand';
 
 export type RunLogLine = {
     command: ExecutableCommand;
-    start: number;
-    end: number;
+    start: string;
+    end: string;
+    additional_values: Array<any>;
 };

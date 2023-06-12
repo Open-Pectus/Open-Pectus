@@ -330,11 +330,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Get Run Log",
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/RunLogLine"
-                  }
+                  "$ref": "#/components/schemas/RunLog"
                 }
               }
             }
@@ -751,12 +747,64 @@
           }
         }
       },
+      "RunLog": {
+        "title": "RunLog",
+        "required": [
+          "additional_columns",
+          "lines"
+        ],
+        "type": "object",
+        "properties": {
+          "additional_columns": {
+            "title": "Additional Columns",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunLogColumn"
+            }
+          },
+          "lines": {
+            "title": "Lines",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunLogLine"
+            }
+          }
+        }
+      },
+      "RunLogColumn": {
+        "title": "RunLogColumn",
+        "required": [
+          "header",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "header": {
+            "title": "Header",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/RunLogColumnType"
+          }
+        }
+      },
+      "RunLogColumnType": {
+        "title": "RunLogColumnType",
+        "enum": [
+          "string",
+          "number",
+          "date"
+        ],
+        "type": "string",
+        "description": "An enumeration."
+      },
       "RunLogLine": {
         "title": "RunLogLine",
         "required": [
           "command",
           "start",
-          "end"
+          "end",
+          "additional_values"
         ],
         "type": "object",
         "properties": {
@@ -765,11 +813,18 @@
           },
           "start": {
             "title": "Start",
-            "type": "integer"
+            "type": "string",
+            "format": "date-time"
           },
           "end": {
             "title": "End",
-            "type": "integer"
+            "type": "string",
+            "format": "date-time"
+          },
+          "additional_values": {
+            "title": "Additional Values",
+            "type": "array",
+            "items": {}
           }
         }
       },

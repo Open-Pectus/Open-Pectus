@@ -14,16 +14,15 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
           <b>End</b>
           <b>Command</b>
         </div>
-        <app-run-log-line *ngFor="let runLogLine of (runLogLines | ngrxPush); let index = index" [runLogLine]="runLogLine" [index]="index"
+        <app-run-log-line *ngFor="let runLogLine of (runLog | ngrxPush)?.lines; let index = index" [runLogLine]="runLogLine" [index]="index"
                           [gridFormat]="gridFormat"></app-run-log-line>
       </div>
     </app-collapsible-element>
   `,
-  // styles: [':host ::ng-deep app-run-log-line:nth-child(odd) .grid { @apply bg-slate-200; }'],
 })
 export class RunLogComponent implements OnInit {
   contentHeight = 400;
-  runLogLines = this.store.select(DetailsSelectors.runLogLines);
+  runLog = this.store.select(DetailsSelectors.runLog);
   gridFormat = 'auto / 1fr 1fr 2fr';
 
   constructor(private store: Store) {}

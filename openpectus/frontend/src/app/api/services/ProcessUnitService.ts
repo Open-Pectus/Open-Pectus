@@ -11,7 +11,7 @@ import type { ProcessDiagram } from '../models/ProcessDiagram';
 import type { ProcessUnit } from '../models/ProcessUnit';
 import type { ProcessValue } from '../models/ProcessValue';
 import type { ProcessValueUpdate } from '../models/ProcessValueUpdate';
-import type { RunLogLine } from '../models/RunLogLine';
+import type { RunLog } from '../models/RunLog';
 
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -172,12 +172,12 @@ unitId: number,
     /**
      * Get Run Log
      * @param unitId 
-     * @returns RunLogLine Successful Response
+     * @returns RunLog Successful Response
      * @throws ApiError
      */
     public getRunLog(
 unitId: number,
-): Observable<Array<RunLogLine>> {
+): Observable<RunLog> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
             url: '/api/process_unit/{unit_id}/run_log',

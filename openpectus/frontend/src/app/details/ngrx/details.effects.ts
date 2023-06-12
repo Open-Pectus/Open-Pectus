@@ -107,7 +107,7 @@ export class DetailsEffects {
     switchMap(([_, unitId]) => {
       const unitIdAsNumber = parseInt(unitId ?? '');
       return this.processUnitService.getRunLog(unitIdAsNumber).pipe(
-        map(runLogLines => DetailsActions.runLogLinesFetched({runLogLines})),
+        map(runLog => DetailsActions.runLogFetched({runLog})),
       );
     }),
   ));
