@@ -14,15 +14,12 @@ from fastapi_websocket_pubsub import PubSubClient
 op_path = os.path.join(os.path.dirname(__file__), "..")
 sys.path.append(op_path)
 
-from protocol.engine import Client
+from protocol.engine import Client, create_client
 from engine.eng import Engine, EngineCommand
 from engine.hardware import HardwareLayerBase, Register, RegisterDirection
 from lang.exec import tags
 from lang.exec.uod import UnitOperationDefinitionBase, UodCommand
-from protocol.engine import create_client
-from protocol.messages import (
-    RegisterEngineMsg, SuccessMessage, ErrorMessage, TagsUpdatedMsg, TagValue
-    )
+from protocol.messages import RegisterEngineMsg, SuccessMessage, ErrorMessage, TagsUpdatedMsg, TagValue
 
 
 def get_args():
@@ -133,10 +130,9 @@ class EngineWebSocketListener():
 
         await client.wait_start_connect(ws_url=self.ws_url, ps_client=self.ps_client)
 
-        #TODO register callback to handle incoming messages
-        #is self.client.set_rpc_handler called or do we need this
-        handler = Rpc 
-        
+        # TODO register callback to handle incoming messages
+        # is self.client.set_rpc_handler called or do we need this
+        # handler = Rpc
 
     async def register(self):
         if self.client is None:
