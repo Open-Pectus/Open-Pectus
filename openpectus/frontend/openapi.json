@@ -818,7 +818,19 @@
           "additional_values": {
             "title": "Additional Values",
             "type": "array",
-            "items": {}
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            }
           }
         }
       },

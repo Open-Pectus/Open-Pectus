@@ -158,7 +158,7 @@ class RunLogLine(BaseModel):
     command: ExecutableCommand
     start: datetime
     end: datetime
-    additional_values: List
+    additional_values: List[str | int | float]
 
 
 class RunLog(BaseModel):

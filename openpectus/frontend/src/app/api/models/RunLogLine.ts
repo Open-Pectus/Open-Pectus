@@ -8,5 +8,5 @@ export type RunLogLine = {
     command: ExecutableCommand;
     start: string;
     end: string;
-    additional_values: Array<any>;
+    additional_values: Array<(string | number)>;
 };
