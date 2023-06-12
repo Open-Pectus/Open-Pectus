@@ -148,15 +148,10 @@ def get_command_examples(unit_id: int) -> List[CommandExample]:
     ]
 
 
-class RunLogColumnType(StrEnum):
-    STRING = auto()
-    NUMBER = auto()  # do we want NUMBER_WITH_UNIT and such?
-    DATE = auto()
-
-
 class RunLogColumn(BaseModel):
     header: str
-    type: RunLogColumnType
+    type: ProcessValueType
+    unit: str | None
 
 
 class RunLogLine(BaseModel):

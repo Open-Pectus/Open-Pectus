@@ -2,9 +2,10 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import type { RunLogColumnType } from './RunLogColumnType';
+import type { ProcessValueType } from './ProcessValueType';
 
 export type RunLogColumn = {
     header: string;
-    type: RunLogColumnType;
+    type: ProcessValueType;
+    unit?: string;
 };

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
-import { RunLogLine } from '../../api';
+import { RunLogColumn, RunLogLine } from '../../api';
 
 @Component({
   selector: 'app-run-log-line',
@@ -9,13 +9,16 @@ import { RunLogLine } from '../../api';
       <p>{{runLogLine?.start | date}}</p>
       <p>{{runLogLine?.end | date}}</p>
       <p>{{runLogLine?.command?.command}}</p>
+      <p *ngFor="let additionalValue of runLogLine?.additional_values; let index = index">
+        {{additionalValue | processValuePipe:additionalColumns?.[index]?.type:additionalColumns?.[index]?.unit}}
+      </p>
     </div>
   `,
 })
 export class RunLogLineComponent {
   @Input() runLogLine?: RunLogLine;
   @Input() index: number = 0;
+  @Input() additionalColumns?: RunLogColumn[];
   @Input() gridFormat: string = 'auto / 1fr 1fr 1fr';
-
 
 }

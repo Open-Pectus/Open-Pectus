@@ -784,19 +784,13 @@
             "type": "string"
           },
           "type": {
-            "$ref": "#/components/schemas/RunLogColumnType"
+            "$ref": "#/components/schemas/ProcessValueType"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
           }
         }
-      },
-      "RunLogColumnType": {
-        "title": "RunLogColumnType",
-        "enum": [
-          "string",
-          "number",
-          "date"
-        ],
-        "type": "string",
-        "description": "An enumeration."
       },
       "RunLogLine": {
         "title": "RunLogLine",
