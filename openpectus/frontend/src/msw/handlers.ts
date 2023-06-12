@@ -208,7 +208,15 @@ export const handlers = [
     return res(
       context.status(200),
       context.json<RunLog>({
-        additional_columns: [],
+        additional_columns: [{
+          header: 'Amazing float value',
+          type: ProcessValueType.FLOAT,
+          unit: 'av',
+        }, {
+          header: 'Less amazing string value',
+          type: ProcessValueType.STRING,
+          unit: 'lav',
+        }],
         lines: [
           {
             start: sub(Date.now(), {days: 1, hours: 3, seconds: 30}).toISOString(),
@@ -217,7 +225,7 @@ export const handlers = [
               command: 'Some Command',
               source: CommandSource.MANUALLY_ENTERED,
             },
-            additional_values: [],
+            additional_values: [1.43253342, 'WAAAGH!'],
           }, {
             start: sub(Date.now(), {days: 0, hours: 2, seconds: 20}).toISOString(),
             end: sub(Date.now(), {days: 0, hours: 2, seconds: 15}).toISOString(),
@@ -225,7 +233,7 @@ export const handlers = [
               command: 'Some Other Command',
               source: CommandSource.MANUALLY_ENTERED,
             },
-            additional_values: [],
+            additional_values: [2, '... and things'],
           }, {
             start: sub(Date.now(), {days: 0, hours: 1, seconds: 10}).toISOString(),
             end: sub(Date.now(), {days: 0, hours: 1}).toISOString(),
@@ -233,7 +241,7 @@ export const handlers = [
               command: 'Some Third Command',
               source: CommandSource.MANUALLY_ENTERED,
             },
-            additional_values: [],
+            additional_values: [3.001, 'soso'],
           },
         ],
       }),

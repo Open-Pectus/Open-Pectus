@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
+import { map } from 'rxjs';
 import { DetailsActions } from '../ngrx/details.actions';
 import { DetailsSelectors } from '../ngrx/details.selectors';
 
@@ -9,7 +10,7 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
   template: `
     <app-collapsible-element [name]="'Run Log'" [heightResizable]="true" (contentHeightChanged)="onContentHeightChanged($event)">
       <div content *ngrxLet="runLog as runLog">
-        <div class="grid grid-cols-3 bg-slate-200 gap-2 px-3 py-2" [style.grid]="gridFormat">
+        <div class="grid bg-slate-200 gap-2 px-3 py-2" [style.grid]="gridFormat | ngrxPush">
           <b>Start</b>
           <b>End</b>
           <b>Command</b>
@@ -18,7 +19,7 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
           </b>
         </div>
         <app-run-log-line *ngFor="let runLogLine of runLog.lines; let index = index" [runLogLine]="runLogLine" [index]="index"
-                          [gridFormat]="gridFormat" [additionalColumns]="runLog.additional_columns"></app-run-log-line>
+                          [gridFormat]="gridFormat | ngrxPush" [additionalColumns]="runLog.additional_columns"></app-run-log-line>
       </div>
     </app-collapsible-element>
   `,
@@ -26,7 +27,9 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
 export class RunLogComponent implements OnInit {
   contentHeight = 400;
   runLog = this.store.select(DetailsSelectors.runLog);
-  gridFormat = 'auto / 1fr 1fr 2fr';
+  gridFormat = this.runLog.pipe(map(runLog => {
+    return `auto / 1fr 1fr 2fr repeat(${runLog.additional_columns.length}, 1fr)`;
+  }));
 
   constructor(private store: Store) {}
 
