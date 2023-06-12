@@ -1,8 +1,8 @@
-import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Store } from '@ngrx/store';
 import { combineLatest, map } from 'rxjs';
+import { ProcessValuePipePipe } from '../shared/pipes/auto-format.pipe';
 import { DetailsActions } from './ngrx/details.actions';
 import { DetailsSelectors } from './ngrx/details.selectors';
 
@@ -28,10 +28,12 @@ export class ProcessDiagramComponent implements OnInit {
 
   diagramWithValues = combineLatest([this.processDiagram, this.processValues]).pipe(
     map(([processDiagram, processValues]) => {
-      return processDiagram?.svg?.replaceAll(/{{(?<processValueName>[^}]+)}}/g, (match, processValueName) => {
-        const matchingProcessValue = processValues.find(processValue => processValue.name === processValueName.trim());
+      return processDiagram?.svg?.replaceAll(/{{(?<processValueName>[^}]+)}}/g, (match, processValueName: string) => {
+        const processValueNameWithoutSvgTags = processValueName.replaceAll(/<.+>/g, '').trim();
+        const matchingProcessValue = processValues.find(processValue => processValue.name === processValueNameWithoutSvgTags);
         if(matchingProcessValue === undefined) return '';
-        return `${this.numberPipe.transform(matchingProcessValue.value, '1.2-2')} ${matchingProcessValue.value_unit}`;
+        return `${this.processValuePipe.transform(matchingProcessValue.value, matchingProcessValue.value_type,
+          matchingProcessValue.value_unit)}`;
       }) ?? '';
     }),
     map(processDiagramString => this.domSanitizer.bypassSecurityTrustHtml(processDiagramString)),
@@ -39,7 +41,7 @@ export class ProcessDiagramComponent implements OnInit {
 
   constructor(private store: Store,
               private domSanitizer: DomSanitizer,
-              private numberPipe: DecimalPipe) {}
+              private processValuePipe: ProcessValuePipePipe) {}
 
   ngOnInit() {
     this.store.dispatch(DetailsActions.processDiagramInitialized());
