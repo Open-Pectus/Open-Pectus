@@ -56,9 +56,14 @@ class TagValue(MessageBase):
 TagsUpdatedMsg.update_forward_refs()
 
 
-class UodSpecMsg(MessageBase):
-    name: str
-    tags: List[TagSpec] = []
+class InvokeCommandMsg(MessageBase):
+    name: str = ""
+    arguments: str | None = None
+
+
+# class UodSpecMsg(MessageBase):
+#     name: str
+#     tags: List[TagSpec] = []
 
 
 class TagSpec(MessageBase):
