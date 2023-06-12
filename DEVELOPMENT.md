@@ -11,12 +11,21 @@ OpenAPI spec: http://localhost:8300/openapi.json
 
 
 ## Flake
+Flake is a python linter.
+
 Run flake locally:
 flake must be run from the proper directory in order to read its configuration. Otherwise it uses default
 configuration which outputs many errors that are not relevant.
 
 cd Open-Pectus\openpectus
 flake8
+
+## Diagram generation
+
+To get started with diagram generation, run the following command from the `openpectus` directory:
+`pyreverse -k .`
+Pyreverse is installed as part of pylint (which is somehow already installed).
+
 
 ## Code generation from API spec
 

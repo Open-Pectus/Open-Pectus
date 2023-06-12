@@ -46,23 +46,23 @@ class BuilderTest(unittest.TestCase):
     def test_command(self):
         p = build("foo: bar=baz")
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
+        # p.printSyntaxTree(p.tree)
 
         command: PCommand = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(command)
         self.assertEqual("foo", command.name)
         self.assertEqual("bar=baz", command.args)
-        print_program(program)
+        # print_program(program)
 
     def test_block(self):
         p = build("block: foo")
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
+        # p.printSyntaxTree(p.tree)
 
         block: PBlock = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(block)
         self.assertEqual("foo", block.name)
-        print_program(program)
+        # print_program(program)
 
     def test_block_with_end_block(self):
         p = build(
@@ -70,12 +70,12 @@ class BuilderTest(unittest.TestCase):
     end block"""
         )
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
+        # p.printSyntaxTree(p.tree)
 
         block: PBlock = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(block)
         self.assertEqual("foo", block.name)
-        print_program(program)
+        # print_program(program)
 
         end_block = block.get_child_nodes()[0]
         self.assertIsInstance(end_block, PEndBlock)
@@ -83,22 +83,22 @@ class BuilderTest(unittest.TestCase):
     def test_block_with_invalid_indentation(self):
         p = build(" block: foo")
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
+        # p.printSyntaxTree(p.tree)
 
         block: PBlock = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(block)
-        print_program(program)
+        # print_program(program)
         self.assertIsInstance(block, PBlock)
         self.assertTrue(block.has_error())
 
     def test_block_with_invalid_scope_indentation(self):
         p = build("    block: foo")
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
+        # p.printSyntaxTree(p.tree)
 
         block: PBlock = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(block)
-        print_program(program)
+        # print_program(program)
         self.assertIsInstance(block, PBlock)
         self.assertTrue(block.has_error())
 
@@ -108,12 +108,12 @@ class BuilderTest(unittest.TestCase):
  end block"""
         )
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
+        # p.printSyntaxTree(p.tree)
 
         block: PBlock = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(block)
         self.assertEqual("foo", block.name)
-        print_program(program)
+        # print_program(program)
 
         end_block = block.get_child_nodes()[0]
         self.assertIsInstance(end_block, PEndBlock)
@@ -129,7 +129,7 @@ End block"""
         block: PBlock = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(block)
         self.assertEqual("foo", block.name)
-        print_program(program, show_errors=True)
+        # print_program(program, show_errors=True)
 
         # TODO clarify - do we allow empty blocks?
         # Note: This may not be an error. It is an empty Block, followed
@@ -148,12 +148,12 @@ End block"""
 mark: foo"""
         )
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
+        # p.printSyntaxTree(p.tree)
 
         block: PBlock = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(block)
         self.assertEqual("foo", block.name)
-        print_program(program, show_errors=True)
+        # print_program(program, show_errors=True)
 
         mark = block.get_child_nodes()[0]
         self.assertIsInstance(mark, PMark)
@@ -168,8 +168,8 @@ mark: foo"""
     end block"""
         )
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
-        print_program(program)
+        # p.printSyntaxTree(p.tree)
+        # print_program(program)
 
         block: PBlock = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(block)
@@ -189,9 +189,8 @@ mark: foo"""
     0.96 Inlet PU01: VA01"""
         )
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
-
-        print_program(program)
+        # p.printSyntaxTree(p.tree)
+        # print_program(program)
 
         instructions = program.get_instructions()
         # TODO should program have both instructions? probably not. may have an iterator though
@@ -223,9 +222,8 @@ mark: foo"""
     0.0 PU04: 12.36 %"""
         )
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
-
-        print_program(program)
+        # p.printSyntaxTree(p.tree)
+        # print_program(program)
 
         instructions = program.get_instructions()
         self.assertEqual(7, len(instructions))
@@ -266,9 +264,8 @@ Block: Equilibration
     """)
 
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
-
-        print_program(program)
+        # p.printSyntaxTree(p.tree)
+        # print_program(program)
 
         # check wiki for updated expressions
 
@@ -285,9 +282,8 @@ Block: Equilibration
     def test_mark(self):
         p = build("Mark: A")
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
-
-        print_program(program)
+        # p.printSyntaxTree(p.tree)
+        # print_program(program)
         mark = program.get_instructions()[0]
         self.assertIsInstance(mark, PMark)
         self.assertEqual(mark.name, "A")  # type: ignore
@@ -296,9 +292,8 @@ Block: Equilibration
     def test_mark_comment(self):
         p = build("Mark: A # foo")
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
-
-        print_program(program)
+        # p.printSyntaxTree(p.tree)
+        # print_program(program)
         mark = program.get_instructions()[0]
         self.assertIsInstance(mark, PMark)
         self.assertEqual(mark.comment, " foo")
@@ -311,9 +306,8 @@ Mark: A
         """
         )
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
-
-        print_program(program)
+        # p.printSyntaxTree(p.tree)
+        # print_program(program)
 
         non_blanks = program.get_instructions()
         self.assertEqual(1, len(non_blanks))
@@ -335,9 +329,8 @@ Block: A2
         """
         )
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
-
-        print_program(program)
+        # p.printSyntaxTree(p.tree)
+        # print_program(program)
         self.assertFalse(program.has_error(recursive=True))
         self.assertEqual(0, node_missing_start_position_count(program))
 
@@ -371,7 +364,7 @@ Block: A
         )
         program = p.build_model()
 
-        print_program(program, show_line_numbers=True)
+        # print_program(program, show_line_numbers=True)
         self.assertFalse(program.has_error(recursive=True))
         self.assertEqual(0, node_missing_start_position_count(program))
 
@@ -402,7 +395,7 @@ Mark: foo
         )
         program = p.build_model()
 
-        print_program(program)
+        # print_program(program)
         self.assertFalse(program.has_error(recursive=True))
         self.assertEqual(0, node_missing_start_position_count(program))
 
@@ -428,7 +421,7 @@ Mark: foo
         )
         program = p.build_model()
 
-        print_program(program)
+        # print_program(program)
         self.assertFalse(program.has_error(recursive=True))
         self.assertEqual(0, node_missing_start_position_count(program))
 
@@ -458,7 +451,7 @@ Incr counter: foo='bar',2
         # Note: grammer seems to require cmd_args with colon - otherwise the following line break causes error
         # This may be a problem when typing live
         program = p.build_model()
-        print_program(program)
+        # print_program(program)
         cmds = program.get_commands()
         self.assertEqual(6, len(cmds))
 
@@ -471,7 +464,7 @@ Watch: 1
         )
         program = p.build_model()
 
-        print_program(program, show_line_numbers=True, show_errors=True)
+        # print_program(program, show_line_numbers=True, show_errors=True)
 
         non_blanks = program.get_instructions()
         self.assertIsInstance(non_blanks[0], PWatch)
@@ -493,8 +486,8 @@ watch: counter > 0 ml
         )
         program = p.build_model()
 
-        p.printSyntaxTree(p.tree)
-        print_program(program, show_line_numbers=True, show_errors=True)
+        # p.printSyntaxTree(p.tree)
+        # print_program(program, show_line_numbers=True, show_errors=True)
         self.assertFalse(program.has_error(recursive=True))
         non_blanks = program.get_instructions()
         self.assertIsInstance(non_blanks[0], PMark)
@@ -522,8 +515,8 @@ watch: counter > 0
         )
         program = p.build_model()
 
-        p.printSyntaxTree(p.tree)
-        print_program(program, show_line_numbers=True, show_errors=True)
+        # p.printSyntaxTree(p.tree)
+        # print_program(program, show_line_numbers=True, show_errors=True)
         self.assertFalse(program.has_error(recursive=True))
         non_blanks = program.get_instructions()
         self.assertIsInstance(non_blanks[0], PMark)
@@ -553,7 +546,7 @@ watch: counter > 0 ml
 
         program = p.build_model()
 
-        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
         self.assertFalse(program.has_error(recursive=True))
         all = program.get_instructions(include_blanks=True)
 
@@ -597,7 +590,7 @@ Mark:  a
         )
 
         program = p.build_model()
-        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
         self.assertFalse(program.has_error(recursive=True))
 
     def test_program_watch(self):
@@ -609,7 +602,7 @@ Watch A > 0     # missing colon
         )
 
         program = p.build_model()
-        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
         self.assertTrue(program.has_error(recursive=True))
 
     def test_command_comment(self):
@@ -620,7 +613,7 @@ mycommand: a  # foo
         )
 
         program = p.build_model()
-        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
         self.assertFalse(program.has_error(recursive=True))
 
         all = program.get_instructions(include_blanks=True)
@@ -637,7 +630,7 @@ mycommand: a  # foo
         )
 
         program = p.build_model()
-        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
         self.assertFalse(program.has_error(recursive=True))
 
         all = program.get_instructions(include_blanks=True)
@@ -672,7 +665,7 @@ Bad command
 
         program = p.build_model()
 
-        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
         self.assertFalse(program.has_error(recursive=True))
         all = program.get_instructions(include_blanks=True)
 

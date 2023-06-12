@@ -119,7 +119,7 @@ class LogEntry():
 
 class PInterpreter(PNodeVisitor):
     def __init__(self, program: PProgram, uod: UnitOperationDefinitionBase) -> None:
-        self.tags: TagCollection = TagCollection.create_default()
+        self.tags: TagCollection = TagCollection.create_system_tags()
         self._program = program
         self.uod = uod
         self.logs: List[LogEntry] = []
@@ -358,7 +358,7 @@ class PInterpreter(PNodeVisitor):
 
     def visit_PProgram(self, node: PProgram):
         self._add_to_log(time.time(), time.time(), "PProgram")
-        ar = ActivationRecord(node, self.tick_time, TagCollection.create_default())
+        ar = ActivationRecord(node, self.tick_time, TagCollection.create_system_tags())
         self.stack.push(ar)
         yield from self._visit_children(node.children)
         self.stack.pop()
@@ -371,7 +371,7 @@ class PInterpreter(PNodeVisitor):
         logger.info(f"Mark {str(node)}")
 
     def visit_PBlock(self, node: PBlock):
-        ar = ActivationRecord(node, self.tick_time, TagCollection.create_default())
+        ar = ActivationRecord(node, self.tick_time, TagCollection.create_system_tags())
         self.stack.push(ar)
 
         yield from self._visit_children(node.children)
@@ -418,7 +418,7 @@ class PInterpreter(PNodeVisitor):
         ar = self.stack.peek()
         if ar.owner is not node:
             # TODO the ar get the current time. Is this correct?
-            ar = ActivationRecord(node, self.tick_time, TagCollection.create_default())
+            ar = ActivationRecord(node, self.tick_time, TagCollection.create_system_tags())
             self._register_interrupt(ar, create_interrupt_handler(ar))
         else:
             logger.debug(f"{str(node)} interrupt invoked")

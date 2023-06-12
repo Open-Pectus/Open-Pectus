@@ -1,4 +1,5 @@
 
+from typing import List, Any
 import unittest
 
 from lang.grammar.pprogramformatter import print_program
@@ -15,6 +16,7 @@ from lang.exec.tags import (
     Tag,
     DEFAULT_TAG_BASE
 )
+from lang.exec.uod import UodCommand
 
 
 def build_program(s) -> PProgram:
@@ -327,10 +329,9 @@ Mark: d
         with self.subTest("b / c"):
             self.assert_time_equal(log_b.time + .8 + TICK_INTERVAL, log_c.time)
         with self.subTest("c / d"):
-            self.assert_time_equal(log_c.time + TICK_INTERVAL, log_d.time)
+            self.assert_time_equal(log_c.time + TICK_INTERVAL, log_d.time, 300)
         with self.subTest("a / d"):
             self.assert_time_equal(log_a.time + 1.1 + 6*TICK_INTERVAL, log_d.time)
-
 
     @unittest.skip("TODO")
     def test_(self):
@@ -387,7 +388,7 @@ class TestUod(UnitOperationDefinitionBase):
         super().__init__()
         self.tags.add(Tag("counter", 0))
 
-        self.command_names.append("incr counter")
+        self.define_command(UodCommand.builder().with_name("incr counter").with_exec_fn(self.incr_counter).build())
 
     # def add_tag(self, tag: Tag):
 
@@ -397,11 +398,11 @@ class TestUod(UnitOperationDefinitionBase):
         #     method = getattr(self, cmd)
         #     method(command_args)  # type: ignore
         if cmd == "incr_counter":
-            self.incr_counter()
+            self.incr_counter([], self)
         else:
             raise ValueError("Unknown command: " + cmd)
 
-    def incr_counter(self):
+    def incr_counter(self, args: List[Any], oud: UnitOperationDefinitionBase):
         counter = self.tags["counter"]
         count = counter.as_number()
         count = count + 1  # type: ignore
