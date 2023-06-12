@@ -13,13 +13,15 @@ import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Ou
                (click)="collapsed = !collapsed"></div>
         </div>
       </div>
-      <div class="bg-white rounded-sm mt-1.5 h-full" #content *ngIf="!collapsed">
+      <div class="bg-white rounded-sm overflow-hidden mt-1.5 h-full" [class.transition-[height]]="!isDragging" #content
+           [style.height.px]="height">
         <ng-content select="[content]"></ng-content>
       </div>
       <div class="absolute bottom-0 left-0 w-full h-1.5" [style.height.px]="widenDragHandler ? 20 : null"
            [class.cursor-ns-resize]="heightResizable"
            [draggable]="heightResizable"
-           (dragstart)="onDragStart($event)" (mousedown)="onMouseDown()" (mouseleave)="onMouseLeave()"
+           (dragstart)="onDragStart($event)" (dragend)="onDragEnd($event)"
+           (mousedown)="onMouseDown()" (mouseleave)="onMouseLeave()"
            (drag)="onDrag($event)"></div>
     </div>
   `,
@@ -30,7 +32,14 @@ export class CollapsibleElementComponent {
   @Input() heightResizable = false;
   @Output() contentHeightChanged = new EventEmitter<number>();
   @ViewChild('content') contentElementRef?: ElementRef<HTMLDivElement>;
+  @Input() contentHeight = 0;
   protected widenDragHandler = false;
+  protected isDragging = false;
+
+  get height() {
+    if(this.collapsed) return 0;
+    return this.heightResizable ? this.contentHeight : this.contentElementRef?.nativeElement.scrollHeight;
+  }
 
   onDrag(event: DragEvent) {
     if(!this.heightResizable) return;
@@ -41,6 +50,7 @@ export class CollapsibleElementComponent {
     if(top === undefined || contentTop === undefined) return;
     const height = event.pageY - top - contentTop;
     if(height < 100) return;
+    this.contentHeight = height;
     this.contentHeightChanged.emit(height);
   }
 
@@ -49,6 +59,11 @@ export class CollapsibleElementComponent {
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.dropEffect = 'move';
     event.dataTransfer.setDragImage(new Image(), 0, 0);
+    this.isDragging = true;
+  }
+
+  onDragEnd(event: DragEvent) {
+    this.isDragging = false;
   }
 
   onMouseDown() {
