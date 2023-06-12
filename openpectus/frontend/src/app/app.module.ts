@@ -1,6 +1,6 @@
-import { DATE_PIPE_DEFAULT_OPTIONS, DatePipe, DecimalPipe, registerLocaleData } from '@angular/common';
+import { DATE_PIPE_DEFAULT_OPTIONS, DatePipe, DecimalPipe } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
-import localeDa from '@angular/common/locales/da';
+import '@angular/common/locales/global/da';
 import { isDevMode, LOCALE_ID, NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { PushModule } from '@ngrx/component';
@@ -16,7 +16,6 @@ import { metaReducers, reducers } from './ngrx/';
 import { AppEffects } from './ngrx/app.effects';
 import { TopBarComponent } from './top-bar.component';
 
-registerLocaleData(localeDa);
 
 @NgModule({
   declarations: [

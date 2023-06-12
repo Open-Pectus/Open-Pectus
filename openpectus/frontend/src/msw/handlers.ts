@@ -1,6 +1,18 @@
 import { sub } from 'date-fns';
 import { rest } from 'msw';
-import { BatchJob, CommandExample, InProgress, NotOnline, ProcessUnit, ProcessValue, ProcessValueType, Ready, UserRole } from '../app/api';
+import {
+  BatchJob,
+  CommandExample,
+  CommandSource,
+  InProgress,
+  NotOnline,
+  ProcessUnit,
+  ProcessValue,
+  ProcessValueType,
+  Ready,
+  RunLog,
+  UserRole,
+} from '../app/api';
 
 const processUnits: ProcessUnit[] = [
   {
@@ -189,6 +201,53 @@ export const handlers = [
           example: `yet another, another example`,
         },
       ]),
+    );
+  }),
+
+  rest.get('/api/process_unit/:unitId/run_log', (req, res, context) => {
+    return res(
+      context.status(200),
+      context.json<RunLog>({
+        additional_columns: [{
+          header: 'Amazing float value',
+          type: ProcessValueType.FLOAT,
+          unit: 'av',
+        }, {
+          header: 'Less amazing string value',
+          type: ProcessValueType.STRING,
+        }, {
+          header: 'Soso int value',
+          type: ProcessValueType.INT,
+          unit: 'siv',
+        }],
+        lines: [
+          {
+            start: sub(Date.now(), {days: 1, hours: 3, seconds: 30}).toISOString(),
+            end: sub(Date.now(), {days: 1, hours: 3}).toISOString(),
+            command: {
+              command: 'Some Command',
+              source: CommandSource.MANUALLY_ENTERED,
+            },
+            additional_values: [1.43253342, 'WAAAGH!', 6789],
+          }, {
+            start: sub(Date.now(), {days: 0, hours: 2, seconds: 20}).toISOString(),
+            end: sub(Date.now(), {days: 0, hours: 2, seconds: 15}).toISOString(),
+            command: {
+              command: 'Some Other Command',
+              source: CommandSource.MANUALLY_ENTERED,
+            },
+            additional_values: [2, '... and things', 1337],
+          }, {
+            start: sub(Date.now(), {days: 0, hours: 1, seconds: 10}).toISOString(),
+            end: sub(Date.now(), {days: 0, hours: 1}).toISOString(),
+            command: {
+              command: 'Some Third Command',
+              source: CommandSource.MANUALLY_ENTERED,
+            },
+            additional_values: [3.001, 'soso', 28008],
+          },
+        ],
+      }),
     );
   }),
 ];

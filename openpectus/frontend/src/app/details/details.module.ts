@@ -17,8 +17,10 @@ import { ProcessValueCommandsComponent } from './process-values/process-value-co
 import { ProcessValueEditorComponent } from './process-values/process-value-editor.component';
 import { ProcessValueComponent } from './process-values/process-value.component';
 import { ProcessValuesComponent } from './process-values/process-values.component';
+import { RunLogComponent } from './run-log/run-log.component';
 import { UnitDetailsComponent } from './unit-details.component';
 import { UnitHeaderComponent } from './unit-header.component';
+import { RunLogLineComponent } from './run-log/run-log-line.component';
 
 @NgModule({
   declarations: [
@@ -34,6 +36,8 @@ import { UnitHeaderComponent } from './unit-header.component';
     CommandsComponent,
     CommandExamplesListComponent,
     UnitHeaderComponent,
+    RunLogComponent,
+    RunLogLineComponent,
   ],
   imports: [
     CommonModule,

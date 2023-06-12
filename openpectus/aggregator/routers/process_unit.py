@@ -146,3 +146,26 @@ def get_command_examples(unit_id: int) -> List[CommandExample]:
     return [
         CommandExample(name="Some Example", example="Some example text")
     ]
+
+
+class RunLogColumn(BaseModel):
+    header: str
+    type: ProcessValueType
+    unit: str | None
+
+
+class RunLogLine(BaseModel):
+    command: ExecutableCommand
+    start: datetime
+    end: datetime
+    additional_values: List[str | int | float]
+
+
+class RunLog(BaseModel):
+    additional_columns: List[RunLogColumn]
+    lines: List[RunLogLine]
+
+
+@router.get('/process_unit/{unit_id}/run_log')
+def get_run_log(unit_id: int) -> RunLog:
+    return RunLog(additional_columns=[], lines=[])
