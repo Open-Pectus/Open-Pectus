@@ -4,6 +4,7 @@ import Plotly, { LayoutAxis, PlotData } from 'plotly.js-basic-dist-min';
 import { combineLatest, Subject, takeUntil } from 'rxjs';
 import { ProcessValue } from '../api';
 import { DetailsSelectors } from './ngrx/details.selectors';
+import { PlotlyDefaults } from './plotly-defaults';
 
 @Component({
   selector: 'app-process-plot',
@@ -18,7 +19,7 @@ export class ProcessPlotComponent implements AfterViewInit, OnDestroy {
   processValuesLog = this.store.select(DetailsSelectors.processValuesLog);
   @ViewChild('plot', {static: true}) plotElement?: ElementRef<HTMLDivElement>;
   private componentDestroyed = new Subject<void>();
-  private processValueNames = ['FT01 Flow', 'TT01'];
+  private processValueNames = ['FT01 Flow', 'TT01', 'FT01 Flow.PV'];
 
   constructor(private store: Store) {}
 
@@ -34,6 +35,8 @@ export class ProcessPlotComponent implements AfterViewInit, OnDestroy {
           autosize: true,
           title: processUnit?.name,
           ...yAxes,
+          xaxis: {domain: [0, 0.9]},
+          legend: {y: 1.4, x: 0},
         });
       });
   }
@@ -66,8 +69,12 @@ export class ProcessPlotComponent implements AfterViewInit, OnDestroy {
       Object.assign(object, {
         ['yaxis' + (index > 0 ? index + 1 : '')]: {
           title,
-          side: (index ? 'right' : 'left'),
-          overlaying: index === 0 ? 'free' : index === 1 ? 'y' : 'y' + index + 1,
+          side: (index > 0 ? 'right' : 'left'),
+          overlaying: index > 0 ? 'y' : 'free',
+          anchor: index > 1 ? 'free' : undefined,
+          position: index > 1 ? 1 : undefined,
+          titlefont: {color: PlotlyDefaults.colors[index]},
+          tickfont: {color: PlotlyDefaults.colors[index]},
         } as Partial<LayoutAxis>,
       });
     });
