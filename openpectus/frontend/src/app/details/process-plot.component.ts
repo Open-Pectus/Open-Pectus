@@ -35,8 +35,11 @@ export class ProcessPlotComponent implements AfterViewInit, OnDestroy {
           autosize: true,
           title: processUnit?.name,
           ...yAxes,
-          xaxis: {domain: [0, 0.9]},
-          legend: {y: 1.4, x: 0},
+          xaxis: {domain: [0, this.processValueNames.length > 2 ? 1 - (this.processValueNames.length - 2) * .1 : 1]},
+          legend: {y: 100, x: 0},
+          uirevision: 'true',
+        }, {
+          responsive: true,
         });
       });
   }
