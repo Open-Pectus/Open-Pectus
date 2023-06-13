@@ -3,7 +3,7 @@ import sys
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 import uvicorn
-from routers import batch_job, process_unit, test_job
+from routers import batch_job, process_unit
 from spa import SinglePageApplication
 
 # TODO replace hack with pip install -e, eg https://stackoverflow.com/questions/30306099/pip-install-editable-vs-python-setup-py-develop

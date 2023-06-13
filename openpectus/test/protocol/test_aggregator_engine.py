@@ -8,7 +8,7 @@ from multiprocessing import Process
 import httpx
 import uvicorn
 from fastapi import Depends, FastAPI
-from fastapi.responses import Response, JSONResponse, PlainTextResponse
+from fastapi.responses import Response, PlainTextResponse
 from fastapi_websocket_rpc.logger import get_logger
 
 # Add parent path to use local src as package for tests
@@ -32,14 +32,12 @@ from protocol.messages import (
 
 from protocol.aggregator import (
     Aggregator,
+    TagsInfo,
     app as server_app,
 )
 import aggregator.deps as agg_deps
-from protocol.engine import create_client
+from protocol.engine import create_client, Client
 
-
-# TODO handle test errors better
-#  if an assertion fails, make sure to disconnect clients - find a decent pattern for this
 
 logging.basicConfig()
 logger = get_logger("Test")
@@ -139,6 +137,7 @@ class AsyncServerTestCase(IsolatedAsyncioTestCase):
     def __init__(self, methodName: str = "runTest") -> None:
         super().__init__(methodName)
         self.proc : Process | None = None
+        self.client: Client | None = None
 
     async def asyncSetUp(self):
         logger.info("asyncSetUp")
@@ -158,6 +157,15 @@ class AsyncServerTestCase(IsolatedAsyncioTestCase):
     async def asyncTearDown(self):
         logger.info("asyncTearDown")
 
+        # handle failed tests that may have left their client connected
+        if self.client is not None and self.client.connected:
+            try:
+                logger.debug("Disconnecting client")
+                await self.client.disconnect_wait_async()
+            except Exception:
+                logger.error("Failed to disconnect client", exc_info=True)
+                pass
+
         try:
             _ = httpx.get(clear_state_url)
         except Exception:
@@ -170,6 +178,10 @@ class AsyncServerTestCase(IsolatedAsyncioTestCase):
 
 
 class IntegrationTest(AsyncServerTestCase):
+
+    def create_test_client(self, on_connect_callback=None) -> Client:
+        self.client = create_client(on_connect_callback=on_connect_callback)
+        return self.client
 
     def test_can_start_server(self):
         response = httpx.get(health_url)
@@ -203,7 +215,7 @@ class IntegrationTest(AsyncServerTestCase):
             connected_event.set()
             await asyncio.sleep(.1)  # not strictly necessary but yields a warning if no await
 
-        client = create_client(on_connect_callback=on_connect)
+        client = self.create_test_client(on_connect_callback=on_connect)
         assert client.ps_client is not None
         client.ps_client.start_client(ws_url)
         self.assertFalse(client.connected)
@@ -216,14 +228,14 @@ class IntegrationTest(AsyncServerTestCase):
         await client.ps_client.wait_until_done()
 
     async def test_can_connect_client_simple(self):
-        client = create_client()
+        client = self.create_test_client()
         await client.start_connect_wait_async(ws_url)
 
         self.assertTrue(client.connected)
         await client.disconnect_wait_async()
 
     async def test_can_register_client(self):
-        client = create_client()
+        client = self.create_test_client()
 
         registered_event = asyncio.Event()
         client_registered = False
@@ -252,7 +264,7 @@ class IntegrationTest(AsyncServerTestCase):
         await client.disconnect_wait_async()
 
     async def test_client_can_send_message(self):
-        client = create_client()
+        client = self.create_test_client()
 
         await client.start_connect_wait_async(ws_url)
         msg = TagsUpdatedMsg(tags=[TagValue(name="foo", value="bar", value_unit=None)])
@@ -268,7 +280,7 @@ class IntegrationTest(AsyncServerTestCase):
         self.assertEqual(200, send_ok)
 
     async def test_client_can_receive_server_message(self):
-        client = create_client()
+        client = self.create_test_client()
         await client.start_connect_wait_async(ws_url)
         register_msg = RegisterEngineMsg(engine_name="test-eng", uod_name="test-uod")
         resp_msg = await client.send_to_server(register_msg)
@@ -290,9 +302,8 @@ class IntegrationTest(AsyncServerTestCase):
 
         await asyncio.wait_for(event.wait(), 5)
 
-    @unittest.skip("race condition with other tests")
     async def test_server_can_receive_tag_update(self):
-        client = create_client()
+        client = self.create_test_client()
         await client.start_connect_wait_async(ws_url)
         register_msg = RegisterEngineMsg(engine_name="eng", uod_name="uod")
         await client.send_to_server(register_msg)
@@ -307,12 +318,13 @@ class IntegrationTest(AsyncServerTestCase):
 
         response = httpx.get(tags_url + "/" + client_id)
         self.assertEqual(200, response.status_code)
-        
-        # self.assertIsNotNone(tags)
-        # tag = tags.get("foo")
-        # self.assertIsNotNone(tag)
-        # self.assertEqual(tag.name, "foo")
-        # self.assertEqual(tag.value, "foo")
+
+        tags = TagsInfo.parse_raw(response.content)
+        self.assertIsNotNone(tags)
+        tag = tags.get("foo")
+        self.assertIsNotNone(tag)
+        self.assertEqual(tag.name, "foo")  # type: ignore
+        self.assertEqual(tag.value, "bar")  # type: ignore
 
         await client.disconnect_wait_async()
 
@@ -329,23 +341,23 @@ class SerializationTest(unittest.TestCase):
         reg_d = deserialize_msg_from_json(reg_s)
         self.assertIsNotNone(reg_d)
         self.assertIsInstance(reg_d, RegisterEngineMsg)
-        self.assertEqual(reg.engine_name, reg_d.engine_name)
-        self.assertEqual(reg.uod_name, reg_d.uod_name)
+        self.assertEqual(reg.engine_name, reg_d.engine_name)  # type: ignore
+        self.assertEqual(reg.uod_name, reg_d.uod_name)  # type: ignore
 
     def test_serialization_TagsUpdatedMsg(self):        
-        tu = TagsUpdatedMsg(tags=[TagValue(name="foo", value="bar")])
+        tu = TagsUpdatedMsg(tags=[TagValue(name="foo", value="bar", value_unit="m")])
         tu_s = serialize_msg_to_json(tu)
         self.assertIsNotNone(tu_s)
 
     def test_round_trip_TagsUpdatedMsg(self):
-        tu = TagsUpdatedMsg(tags=[TagValue(name="foo", value="bar")])
+        tu = TagsUpdatedMsg(tags=[TagValue(name="foo", value="bar", value_unit=None)])
         tu_s = serialize_msg_to_json(tu)
         self.assertIsNotNone(tu_s)
 
         tu_d = deserialize_msg_from_json(tu_s)
         self.assertIsNotNone(tu_d)
         self.assertIsInstance(tu_d, TagsUpdatedMsg)
-        self.assertEqual(tu_d.tags[0].name, tu.tags[0].name)
+        self.assertEqual(tu_d.tags[0].name, tu.tags[0].name)  # type: ignore
 
 
 if __name__ == "__main__":
