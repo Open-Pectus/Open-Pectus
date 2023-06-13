@@ -1,4 +1,3 @@
-
 import asyncio
 import os
 from queue import Empty
@@ -8,7 +7,6 @@ from argparse import ArgumentParser
 from threading import Thread
 from typing import Any, List
 from typing_extensions import override
-from fastapi_websocket_pubsub import PubSubClient
 
 # TODO replace hack with pip install -e, eg https://stackoverflow.com/questions/30306099/pip-install-editable-vs-python-setup-py-develop
 op_path = os.path.join(os.path.dirname(__file__), "..")
@@ -19,15 +17,24 @@ from engine.eng import Engine, EngineCommand
 from engine.hardware import HardwareLayerBase, Register, RegisterDirection
 from lang.exec import tags
 from lang.exec.uod import UnitOperationDefinitionBase, UodCommand
-from protocol.messages import RegisterEngineMsg, SuccessMessage, ErrorMessage, TagsUpdatedMsg, TagValue
+from protocol.messages import (
+    RegisterEngineMsg,
+    MessageBase,
+    SuccessMessage,
+    ErrorMessage,
+    TagsUpdatedMsg,
+    TagValue,
+    InvokeCommandMsg
+)
 
 
 def get_args():
     parser = ArgumentParser("Start Pectus Engine")
-    parser.add_argument("-ws", "--aggregator_ws_url", required=False, default="ws://localhost:7980/pubsub",
-                        help="Address to aggregator service")
+    parser.add_argument("-ws", "--aggregator_ws_url", required=False, default="ws://127.0.0.1:9800/pubsub",  # default="ws://localhost:9800/pubsub",
+                        # default="ws://localhost:9800/websocket/pubsub",
+                        help="Address to aggregator web socket service")
     parser.add_argument("-uod", "--uod", required=False, default="DemoUod", help="The UOD to use")
-    parser.add_argument("-l", "--listener", required=False, default="DemoTagListener",
+    parser.add_argument("-l", "--listener", required=False, default="EngineWebSocketListener",
                         choices=['EngineWebSocketListener', 'DemoTagListener'],
                         help="The event listener to use")
     return parser.parse_args()
@@ -120,15 +127,13 @@ class EngineWebSocketListener():
     def __init__(self, engine: Engine, ws_url: str) -> None:
         self.engine = engine
         self.client: Client | None = None
-        self.ps_client: PubSubClient | None = None
         self.ws_url = ws_url
 
     async def connect(self):
-        client, ps_client = create_client()
+        client = create_client()
         self.client = client
-        self.ps_client = ps_client
 
-        await client.wait_start_connect(ws_url=self.ws_url, ps_client=self.ps_client)
+        await client.start_connect_wait_async(ws_url=self.ws_url)
 
         # TODO register callback to handle incoming messages
         # is self.client.set_rpc_handler called or do we need this
@@ -143,6 +148,8 @@ class EngineWebSocketListener():
         if not isinstance(response, SuccessMessage):
             print("Failed to Register")
 
+        self.client.set_message_handler("InvokeCommandMsg", self._schedule_command)
+
     async def send_tag_updates(self):
         if self.client is None:
             raise ValueError("Client is not connected")
@@ -151,15 +158,18 @@ class EngineWebSocketListener():
         try:
             for _ in range(100):
                 tag = self.engine.tag_updates.get_nowait()
-                tags.append(TagValue(name=tag.name, value=tag.get_value()))
+                tags.append(TagValue(name=tag.name, value=tag.get_value(), value_unit=tag.unit))
         except Empty:
             pass
         if len(tags) > 0:
             msg = TagsUpdatedMsg(tags=tags)
             await self.client.send_to_server(msg)
 
-    async def dispatch_commands(self):
-        raise NotImplementedError()
+    async def _schedule_command(self, msg: MessageBase) -> MessageBase:
+        assert isinstance(msg, InvokeCommandMsg)
+        cmd = EngineCommand(name=msg.name, args=msg.arguments)
+        self.engine.cmd_queue.put_nowait(cmd)
+        return SuccessMessage()
 
 
 async def main(args):
@@ -207,14 +217,13 @@ async def main(args):
 
     else:
 
-        listener = EngineWebSocketListener(e, args.ws)
+        listener = EngineWebSocketListener(e, args.aggregator_ws_url)
         await listener.connect()
         await listener.register()
 
         while True:
             await asyncio.sleep(0.1)
             await listener.send_tag_updates()
-            await listener.dispatch_commands()
 
 
 if __name__ == "__main__":

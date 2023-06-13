@@ -4,9 +4,6 @@ from enum import StrEnum, auto
 from typing import Awaitable, Callable, Dict
 from fastapi_websocket_pubsub.event_notifier import EventNotifier
 from pydantic import BaseModel
-import uvicorn
-from fastapi import FastAPI
-from fastapi.routing import APIRouter
 from fastapi_websocket_pubsub import PubSubEndpoint
 from fastapi_websocket_rpc import RpcChannel
 from fastapi_websocket_rpc.schemas import RpcResponse
@@ -27,17 +24,10 @@ from protocol.messages import (
 )
 import logging
 
-app = FastAPI()
-router = APIRouter()
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-
-@app.get("/health")
-def health():
-    return "healthy"
 
 
 ServerMessageHandler = Callable[[str, MessageBase], Awaitable[MessageBase]]
@@ -92,7 +82,7 @@ class ChannelInfo:
 
 
 TagValueType = int | float | str | None
-""" Represents the valid type of a tag value"""
+""" Represents the possible types of a tag value"""
 
 
 class TagInfo(BaseModel):
@@ -241,9 +231,7 @@ class Aggregator:
             tags.upsert(ti.name, ti.value, ti.value_unit)
         return SuccessMessage()
 
-    async def on_disconnect(
-        self, channel: RpcChannel
-    ):  # registered as handler on RpcEndpoint
+    async def on_disconnect(self, channel: RpcChannel):  # registered as handler on RpcEndpoint
         logger.debug("disconnected channel: " + channel.id)
         if channel.id in self.channel_map.keys():
             self.channel_map[channel.id].status = ChannelStatusEnum.Disconnected
@@ -265,12 +253,7 @@ class Aggregator:
         self.tags_map[client_id] = tags
         return tags
 
-    async def send_to_client(
-        self,
-        client_id: str,
-        msg: MessageBase
-    ) -> MessageBase:
-
+    async def send_to_client(self, client_id: str, msg: MessageBase) -> MessageBase:
         logger.debug("send_to_client begin")
         ci = self.get_client_channel(client_id)
         if ci is None:
@@ -307,9 +290,16 @@ class Aggregator:
 
 
 _server : Aggregator | None = None
+# singleton instance
 
 
-def create_aggregator() -> Aggregator:
+def _get_aggregator() -> Aggregator:
+    if _server is None:
+        raise Exception("DI error. Aggregator has not been initialized")
+    return _server
+
+
+def _create_aggregator(router) -> Aggregator:
     global _server
     if _server is not None:
         return _server
@@ -317,20 +307,11 @@ def create_aggregator() -> Aggregator:
         _server = Aggregator()
         print("GLOBAL: Creating aggregator server")
 
-    # fix this instantiation order nonsense with DI
     endpoint = PubSubEndpoint(  # cannot mutate these handlers later
         on_connect=[_server.on_connect],  # type: ignore
         on_disconnect=[_server.on_disconnect],  # type: ignore
         methods_class=RpcServerHandler,
     )
     _server.set_endpoint(endpoint)
-
     endpoint.register_route(router, path="/pubsub")
-    app.include_router(router)
-
     return _server
-
-
-if __name__ == "__main__":
-    PORT = 9800
-    uvicorn.run(app, host="127.0.0.1", port=PORT)

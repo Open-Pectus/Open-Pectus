@@ -12,9 +12,7 @@ from fastapi.responses import Response, PlainTextResponse
 from fastapi_websocket_rpc.logger import get_logger
 
 # Add parent path to use local src as package for tests
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from unittest import IsolatedAsyncioTestCase
 from fastapi_websocket_pubsub import PubSubClient, PubSubEndpoint
@@ -30,13 +28,14 @@ from protocol.messages import (
     deserialize_msg_from_json
 )
 
-from protocol.aggregator import (
-    Aggregator,
-    TagsInfo,
-    app as server_app,
-)
+from protocol.aggregator import Aggregator, TagsInfo
 import aggregator.deps as agg_deps
 from protocol.engine import create_client, Client
+from aggregator.routers import aggregator_websocket
+
+
+server_app = FastAPI()
+router = aggregator_websocket.router
 
 
 logging.basicConfig()
@@ -70,42 +69,43 @@ def setup_server_rest_routes(app: FastAPI, endpoint: PubSubEndpoint):
         cmd_name: str
 
     @app.post("/trigger_send")
-    async def trigger_send_command(cmd: SimpleCommandToClient, server=Depends(agg_deps.get_aggregator)) -> Response:
+    async def trigger_send_command(cmd: SimpleCommandToClient, aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
         if cmd.client_id is None or cmd.client_id == "" or cmd.cmd_name is None or cmd.cmd_name == "":
-            return Response(status_code=400)
+            return Response("Bad command", status_code=400)
 
         logger.debug("trigger_send command: " + cmd.cmd_name)
         # can't await this call or the test would deadlock so we fire'n'forget it
         msg = InvokeCommandMsg(name=cmd.cmd_name)
-        asyncio.create_task(server.send_to_client(cmd.client_id, msg))
+        asyncio.create_task(aggregator.send_to_client(cmd.client_id, msg))
         return PlainTextResponse("OK")
 
     @app.get("/tags/{client_id}")
-    async def tags(client_id: str, server: Aggregator = Depends(agg_deps.get_aggregator)):
-        tags = server.get_client_tags(client_id)
+    async def tags(client_id: str, aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
+        tags = aggregator.get_client_tags(client_id)
         print("tags", tags)
         if tags is None:
             return Response("No tags found for client_id " + client_id, status_code=400)
         return tags
 
     @app.get("/debug_channels")
-    async def debug_channels(server: Aggregator = Depends(agg_deps.get_aggregator)):
+    async def debug_channels(aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
         print("Server channel map (channel, ch. closed, client_id, status):")
-        for x in server.channel_map.values():
+        for x in aggregator.channel_map.values():
             print(f"{x.channel.id}\t{x.channel.isClosed()}\t{x.client_id}\t{x.status}")
 
     @app.get("/clear_state")
-    async def clear_state(server: Aggregator = Depends(agg_deps.get_aggregator)):
+    async def clear_state(aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
         logger.info("/clear_state")
-        server.channel_map.clear()
-        server.tags_map.clear()
+        aggregator.channel_map.clear()
+        aggregator.tags_map.clear()
 
 
 def setup_server():
-    aggregator = agg_deps.create_aggregator()
+    aggregator = agg_deps.create_aggregator(router)
+    server_app.include_router(router)
     assert aggregator.endpoint is not None
     # Regular REST endpoint - that publishes to PubSub
-    setup_server_rest_routes(server_app, aggregator.endpoint)
+    setup_server_rest_routes(server_app, aggregator.endpoint)    
     uvicorn.run(server_app, port=PORT)
 
 
@@ -116,17 +116,20 @@ def start_server_process():
     return proc
 
 
-def send_message_to_client(client_id: str, msg: InvokeCommandMsg) -> int:
+def send_message_to_client(client_id: str, msg: InvokeCommandMsg):
     """ Use server http test interface ot have it send a message to the given client using its websocket protocol """
-    #m = MessageToClient(client_id=client_id, msg=msg)
     # we do not support args at this time
     response = httpx.post(trigger_send_url,  json={'client_id': client_id, 'cmd_name': msg.name})
-    return response.status_code
+    if not response.is_success:
+        print("Error response text", response.text)
+        raise Exception(f"Server returned non-success status code: {response.status_code}")
 
 
-def make_server_print_channels() -> int:
+def make_server_print_channels():
     response = httpx.get(debug_channels_url)
-    return response.status_code
+    if not response.is_success:
+        print("Error response text", response.text)
+        raise Exception(f"Server returned non-success status code: {response.status_code}")
 
 
 class AsyncServerTestCase(IsolatedAsyncioTestCase):
@@ -276,8 +279,7 @@ class IntegrationTest(AsyncServerTestCase):
 
     async def test_can_send_command_trigger(self):
         cmd_msg = InvokeCommandMsg(name="START")
-        send_ok = send_message_to_client(client_id="foo", msg=cmd_msg)
-        self.assertEqual(200, send_ok)
+        send_message_to_client(client_id="foo", msg=cmd_msg)
 
     async def test_client_can_receive_server_message(self):
         client = self.create_test_client()
@@ -297,8 +299,8 @@ class IntegrationTest(AsyncServerTestCase):
 
         # trigger server sent command via rest call
         cmd_msg = InvokeCommandMsg(name="START")
-        send_ok = send_message_to_client(client_id=Aggregator.get_client_id(register_msg), msg=cmd_msg)
-        self.assertEqual(200, send_ok)
+        client_id = Aggregator.get_client_id(register_msg)
+        send_message_to_client(client_id, msg=cmd_msg)
 
         await asyncio.wait_for(event.wait(), 5)
 
@@ -308,8 +310,7 @@ class IntegrationTest(AsyncServerTestCase):
         register_msg = RegisterEngineMsg(engine_name="eng", uod_name="uod")
         await client.send_to_server(register_msg)
 
-        status_code = make_server_print_channels()
-        self.assertEqual(200, status_code)
+        make_server_print_channels()
 
         client_id = Aggregator.get_client_id(register_msg)
         msg = TagsUpdatedMsg(tags=[TagValue(name="foo", value="bar", value_unit=None)])

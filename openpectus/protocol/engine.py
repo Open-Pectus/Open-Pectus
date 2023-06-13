@@ -115,6 +115,7 @@ class Client:
         return self.connected_event.is_set()
 
     async def start_connect_wait_async(self, ws_url: str):
+        logger.info(f"Opening WS connection to aggregator @ {ws_url}")
         self.connected_event.clear()
         if self.ps_client is None:
             raise ValueError("ps_client not set")
@@ -204,9 +205,6 @@ def create_client(on_connect_callback=None, on_disconnect_callback=None) -> Clie
 
     def logerror(retry_state: tenacity.RetryCallState):
         logger.exception(retry_state.outcome.exception())  # type: ignore
-
-    def true(_):
-        return True
 
     def create_retry_config():
         from tenacity import retry, wait
