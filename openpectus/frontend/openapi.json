@@ -372,6 +372,25 @@
           }
         }
       }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "aggregator"
+        ],
+        "summary": "Health",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
