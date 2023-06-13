@@ -50,6 +50,7 @@ class TagsUpdatedMsg(MessageBase):
 class TagValue(MessageBase):
     name: str = ""
     value: str | int | float | None = None
+    value_unit: str | None
 
 
 # Note: required for instantiation of TagsUpdatedMsg to work

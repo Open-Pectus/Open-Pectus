@@ -1,11 +1,16 @@
 import os
+import sys
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
-from routers import batch_job, process_unit
+import uvicorn
+from routers import batch_job, process_unit, test_job
 from spa import SinglePageApplication
 
+# TODO replace hack with pip install -e, eg https://stackoverflow.com/questions/30306099/pip-install-editable-vs-python-setup-py-develop
+op_path = os.path.join(os.path.dirname(__file__), "..")
+sys.path.append(op_path)
 
-# TODO
+
 # - add lsp thingys
 # - start (manage) lsp server instance for each client
 # - aggregator-engine protocol
@@ -41,3 +46,8 @@ app.include_router(process_unit.router, prefix=prefix)
 app.include_router(batch_job.router, prefix=prefix)
 
 app.mount("/", SinglePageApplication(directory=os.path.join(os.path.dirname(__file__), "frontend-dist")))
+
+
+if __name__ == "__main__":
+    PORT = 9800    
+    uvicorn.run(app, host="127.0.0.1", port=PORT)

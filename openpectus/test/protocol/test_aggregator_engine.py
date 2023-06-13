@@ -2,21 +2,27 @@ import asyncio
 import logging
 import os
 import sys
-from typing import Any
+import time
 import unittest
 from multiprocessing import Process
 import httpx
-
 import uvicorn
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
+from fastapi.responses import Response, JSONResponse, PlainTextResponse
 from fastapi_websocket_rpc.logger import get_logger
-from protocol.aggregator import Server
+
+# Add parent path to use local src as package for tests
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+)
+
 from unittest import IsolatedAsyncioTestCase
 from fastapi_websocket_pubsub import PubSubClient, PubSubEndpoint
 from protocol.messages import (
     MessageBase,
     RegisterEngineMsg,
     SuccessMessage,
+    ErrorMessage,
     TagValue,
     TagsUpdatedMsg,
     InvokeCommandMsg,
@@ -24,16 +30,16 @@ from protocol.messages import (
     deserialize_msg_from_json
 )
 
-# Add parent path to use local src as package for tests
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-)
-
 from protocol.aggregator import (
+    Aggregator,
     app as server_app,
-    endpoint as server_endpoint
 )
+import aggregator.deps as agg_deps
 from protocol.engine import create_client
+
+
+# TODO handle test errors better
+#  if an assertion fails, make sure to disconnect clients - find a decent pattern for this
 
 logging.basicConfig()
 logger = get_logger("Test")
@@ -44,11 +50,12 @@ ws_url = f"ws://localhost:{PORT}/pubsub"
 trigger_url = f"http://localhost:{PORT}/trigger"
 trigger_send_url = f"http://localhost:{PORT}/trigger_send"
 health_url = f"http://localhost:{PORT}/health"
+debug_channels_url = f"http://localhost:{PORT}/debug_channels"
+tags_url = f"http://localhost:{PORT}/tags"
+shutdown_url = f"http://localhost:{PORT}/shutdown"
 
 DATA = "MAGIC"
 EVENT_TOPIC = "event/has-happened"
-
-
 
 
 def setup_server_rest_routes(app: FastAPI, endpoint: PubSubEndpoint):
@@ -60,16 +67,54 @@ def setup_server_rest_routes(app: FastAPI, endpoint: PubSubEndpoint):
         asyncio.create_task(endpoint.publish([EVENT_TOPIC], data=DATA))
         return "triggered"
 
+    class SimpleCommandToClient(MessageBase):
+        client_id: str
+        cmd_name: str
+
+    @app.post("/trigger_send")
+    async def trigger_send_command(cmd: SimpleCommandToClient, server=Depends(agg_deps.get_aggregator)) -> Response:
+        if cmd.client_id is None or cmd.client_id == "" or cmd.cmd_name is None or cmd.cmd_name == "":
+            return Response(status_code=400)
+
+        logger.debug("trigger_send command: " + cmd.cmd_name)
+        # can't await this call or the test would deadlock so we fire'n'forget it
+        msg = InvokeCommandMsg(name=cmd.cmd_name)
+        asyncio.create_task(server.send_to_client(cmd.client_id, msg))
+        return PlainTextResponse("OK")
+
+    @app.get("/tags/{client_id}")
+    async def tags(client_id: str, server: Aggregator = Depends(agg_deps.get_aggregator)):
+        tags = server.get_client_tags(client_id)
+        print("tags", tags)
+        if tags is None:
+            return Response("No tags found for client_id " + client_id, status_code=400)
+        return tags
+
+    @app.get("/debug_channels")
+    async def debug_channels(server: Aggregator = Depends(agg_deps.get_aggregator)):
+        print("Server channel map (channel, ch. closed, client_id, status):")
+        for x in server.channel_map.values():
+            print(f"{x.channel.id}\t{x.channel.isClosed()}\t{x.client_id}\t{x.status}")
+
+    @app.get("/shutdown")
+    async def shutdown(server: Aggregator = Depends(agg_deps.get_aggregator)):
+        logger.info("/shutdown called")
+        server.channel_map.clear()
+        server.tags_map.clear()
+        sys.exit(4)
+
 
 def setup_server():
+    aggregator = agg_deps.create_aggregator()
+    assert aggregator.endpoint is not None
     # Regular REST endpoint - that publishes to PubSub
-    setup_server_rest_routes(server_app, server_endpoint)
+    setup_server_rest_routes(server_app, aggregator.endpoint)
     uvicorn.run(server_app, port=PORT)
 
 
 def start_server_process():
     # Run the server as a separate process
-    proc = Process(target=setup_server, args=(), daemon=True)
+    proc = Process(target=setup_server, args=(), daemon=True, name="uvicorn unit test server")
     proc.start()
     return proc
 
@@ -79,6 +124,11 @@ def send_message_to_client(client_id: str, msg: InvokeCommandMsg) -> int:
     #m = MessageToClient(client_id=client_id, msg=msg)
     # we do not support args at this time
     response = httpx.post(trigger_send_url,  json={'client_id': client_id, 'cmd_name': msg.name})
+    return response.status_code
+
+
+def make_server_print_channels() -> int:
+    response = httpx.get(debug_channels_url)
     return response.status_code
 
 
@@ -95,17 +145,19 @@ class AsyncServerTestCase(IsolatedAsyncioTestCase):
         logger.info("asyncSetUp")
         try:
             _ = httpx.get(health_url)
-            self.assertFalse(True, "Server should not be running. Test setup failed")
+
+            logger.error("Server running on asyncSetUp. Killing via /shutdown endpoint")
+            _ = httpx.get(shutdown_url)
+
+            time.sleep(2)
+
         except httpx.ConnectError:
             pass
-
-        await asyncio.sleep(.05)
 
         self.proc = start_server_process()
 
     async def asyncTearDown(self):
         logger.info("asyncTearDown")
-
         if self.proc is not None:
             if self.proc.is_alive():
                 logger.debug("Server process still running on TearDown - killing it")
@@ -146,28 +198,27 @@ class IntegrationTest(AsyncServerTestCase):
             connected_event.set()
             await asyncio.sleep(.1)  # not strictly necessary but yields a warning if no await
 
-        client, ps_client = create_client(on_connect_callback=on_connect)
-        ps_client.start_client(ws_url)
+        client = create_client(on_connect_callback=on_connect)
+        assert client.ps_client is not None
+        client.ps_client.start_client(ws_url)
         self.assertFalse(client.connected)
-        await ps_client.wait_until_ready()
+        await client.ps_client.wait_until_ready()
 
         await asyncio.wait_for(connected_event.wait(), 5)
 
         self.assertTrue(client.connected)
-        await ps_client.disconnect()
-        await ps_client.wait_until_done()
+        await client.ps_client.disconnect()
+        await client.ps_client.wait_until_done()
 
     async def test_can_connect_client_simple(self):
-
-        client, ps_client = create_client()
-        await client.wait_start_connect(ws_url, ps_client)
+        client = create_client()
+        await client.start_connect_wait_async(ws_url)
 
         self.assertTrue(client.connected)
-        await ps_client.disconnect()
-        await ps_client.wait_until_done()
+        await client.disconnect_wait_async()
 
     async def test_can_register_client(self):
-        client, ps_client = create_client()
+        client = create_client()
 
         registered_event = asyncio.Event()
         client_registered = False
@@ -184,7 +235,7 @@ class IntegrationTest(AsyncServerTestCase):
             client_failed = True
             logger.error("Error sending: " + str(ex))
 
-        await client.wait_start_connect(ws_url, ps_client)
+        await client.start_connect_wait_async(ws_url)
         msg = RegisterEngineMsg(engine_name="test-eng", uod_name="test-uod")
         resp_msg = await client.send_to_server(msg, on_success=on_register, on_error=on_error)
         self.assertIsInstance(resp_msg, SuccessMessage)
@@ -193,19 +244,18 @@ class IntegrationTest(AsyncServerTestCase):
         self.assertTrue(client_registered)
         self.assertFalse(client_failed)
 
-        await ps_client.disconnect()
-        await ps_client.wait_until_done()
+        await client.disconnect_wait_async()
 
     async def test_client_can_send_message(self):
-        client, ps_client = create_client()
+        client = create_client()
 
-        await client.wait_start_connect(ws_url, ps_client)
-        msg = TagsUpdatedMsg(tags=[TagValue(name="foo", value="bar")])
+        await client.start_connect_wait_async(ws_url)
+        msg = TagsUpdatedMsg(tags=[TagValue(name="foo", value="bar", value_unit=None)])
         result = await client.send_to_server(msg)
-        self.assertIsInstance(result, SuccessMessage)
+        self.assertIsInstance(result, ErrorMessage)
+        self.assertEqual(result.message, "Client not registered")  # type: ignore
 
-        await ps_client.disconnect()
-        await ps_client.wait_until_done()
+        await client.disconnect_wait_async()
 
     async def test_can_send_command_trigger(self):
         cmd_msg = InvokeCommandMsg(name="START")
@@ -213,8 +263,8 @@ class IntegrationTest(AsyncServerTestCase):
         self.assertEqual(200, send_ok)
 
     async def test_client_can_receive_server_message(self):
-        client, ps_client = create_client()
-        await client.wait_start_connect(ws_url, ps_client)
+        client = create_client()
+        await client.start_connect_wait_async(ws_url)
         register_msg = RegisterEngineMsg(engine_name="test-eng", uod_name="test-uod")
         resp_msg = await client.send_to_server(register_msg)
         self.assertIsInstance(resp_msg, SuccessMessage)
@@ -230,10 +280,35 @@ class IntegrationTest(AsyncServerTestCase):
 
         # trigger server sent command via rest call
         cmd_msg = InvokeCommandMsg(name="START")
-        send_ok = send_message_to_client(client_id=Server.get_client_id(register_msg), msg=cmd_msg)
+        send_ok = send_message_to_client(client_id=Aggregator.get_client_id(register_msg), msg=cmd_msg)
         self.assertEqual(200, send_ok)
 
         await asyncio.wait_for(event.wait(), 5)
+
+    async def test_server_can_receive_tag_update(self):
+        client = create_client()
+        await client.start_connect_wait_async(ws_url)
+        register_msg = RegisterEngineMsg(engine_name="eng", uod_name="uod")
+        await client.send_to_server(register_msg)
+
+        status_code = make_server_print_channels()
+        self.assertEqual(200, status_code)
+
+        client_id = Aggregator.get_client_id(register_msg)
+        msg = TagsUpdatedMsg(tags=[TagValue(name="foo", value="bar", value_unit=None)])
+        result = await client.send_to_server(msg)
+        self.assertIsInstance(result, SuccessMessage)
+
+        response = httpx.get(tags_url + "/" + client_id)
+        self.assertEqual(200, response.status_code)
+        
+        # self.assertIsNotNone(tags)
+        # tag = tags.get("foo")
+        # self.assertIsNotNone(tag)
+        # self.assertEqual(tag.name, "foo")
+        # self.assertEqual(tag.value, "foo")
+
+        await client.disconnect_wait_async()
 
 
 class SerializationTest(unittest.TestCase):

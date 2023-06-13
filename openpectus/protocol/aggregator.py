@@ -1,8 +1,9 @@
-import asyncio
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum, auto
 from typing import Awaitable, Callable, Dict
 from fastapi_websocket_pubsub.event_notifier import EventNotifier
+from pydantic import BaseModel
 import uvicorn
 from fastapi import FastAPI
 from fastapi.routing import APIRouter
@@ -21,21 +22,17 @@ from protocol.messages import (
     SuccessMessage,
     ErrorMessage,
     RegisterEngineMsg,
+    TagsUpdatedMsg,
     InvokeCommandMsg,
 )
 import logging
 
-
 app = FastAPI()
 router = APIRouter()
-
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-
-PORT = 9800
 
 
 @app.get("/health")
@@ -43,32 +40,18 @@ def health():
     return "healthy"
 
 
-@app.get("/debug")
-async def show_debug_info():
-    print("Server channel map (channel, ch. closed, client_id, status):")
-    for x in server.channel_map.values():
-        print(f"{x.channel.id}\t{x.channel.isClosed}\t{x.client_id}\t{x.status}")
+ServerMessageHandler = Callable[[str, MessageBase], Awaitable[MessageBase]]
+""" Represents the type of callbacks that handle incoming messages from clients """
 
 
 class RpcServerHandler(RpcEventServerMethods):
-    """Represents the server's RPC interface"""
+    """Represents the aggregator server's RPC interface"""
 
-    def __init__(
-        self, event_notifier: EventNotifier, rpc_channel_get_remote_id: bool = False
-    ):
+    def __init__(self, event_notifier: EventNotifier, rpc_channel_get_remote_id: bool = False):
         super().__init__(event_notifier, rpc_channel_get_remote_id)
-        # self._callback: Callable[[str, str], bool] | None = None
-        self._message_handler: Callable[
-            [str, MessageBase], Awaitable[MessageBase]
-        ] | None = None
-        logger.debug("RpcServerHandler init")
+        self._message_handler: ServerMessageHandler | None = None
 
-    # def set_callback(self, callback: Callable[[str, str], bool]):
-    #     self._callback = callback
-
-    def set_message_handler(
-        self, handler: Callable[[str, MessageBase], Awaitable[MessageBase]]
-    ):
+    def set_message_handler(self, handler: ServerMessageHandler):
         self._message_handler = handler
 
     async def on_client_message(self, msg_type: str, msg_dict: dict):
@@ -102,57 +85,103 @@ class ChannelStatusEnum(StrEnum):
 @dataclass
 class ChannelInfo:
     client_id: str | None
+    engine_name: str
+    uod_name: str
     channel: RpcChannel
     status: ChannelStatusEnum = ChannelStatusEnum.Unknown
 
 
-class Server:
-    def __init__(self) -> None:
-        self.channel_map: Dict[str, ChannelInfo] = {}
-        logger.debug("Server init")
+TagValueType = int | float | str | None
+""" Represents the valid type of a tag value"""
 
-    def set_rpc_handler(self, handler: RpcServerHandler):
-        handler.set_message_handler(self.handle_message)
+
+class TagInfo(BaseModel):
+    name: str
+    value: TagValueType
+    unit: str | None
+    updated: datetime
+
+
+class TagsInfo(BaseModel):
+    map: Dict[str, TagInfo]
+
+    def get(self, tag_name: str):
+        return self.map.get(tag_name)
+
+    def upsert(self, name: str, value: TagValueType, unit: str | None):
+        current = self.map.get(name)
+        now = datetime.now()
+        if current is None:
+            current = TagInfo(name=name, value=value, unit=unit, updated=now)
+            self.map[name] = current
+        else:
+            if current.value != value:
+                current.value = value
+                current.updated = now
+
+            if current.unit != unit:
+                logger.warning(f"Tag '{name}' changed unit from '{current.unit}' to '{unit}'. This is unexpected")
+
+
+TagsInfo.update_forward_refs()
+
+
+class Aggregator:
+    def __init__(self) -> None:
+        logger.debug("Server init")
+        self.channel_map: Dict[str, ChannelInfo] = {}
+        self.tags_map: Dict[str, TagsInfo] = {}
+        self.endpoint: PubSubEndpoint | None = None
+
+    def set_endpoint(self, endpoint: PubSubEndpoint):
+        self.endpoint = endpoint
+        assert isinstance(endpoint.methods, RpcServerHandler)
+        endpoint.methods.set_message_handler(self.handle_message)
 
     async def on_connect(
         self, channel: RpcChannel
-    ):  # registered as handler on RpcEndpoint
+    ):
         self.channel_map[channel.id] = ChannelInfo(
-            client_id=None, channel=channel, status=ChannelStatusEnum.Connected
+            client_id=None,
+            engine_name="(Unregistered)",
+            uod_name="(Unregistered)",
+            channel=channel,
+            status=ChannelStatusEnum.Connected
         )
         logger.debug("Client connected on channel: " + channel.id)
 
     async def handle_message(self, channel_id: str, msg: MessageBase) -> MessageBase:
+        """ Handle message from Engine by invoking the designated handler method """
         logger.debug(f"handle_message type {type(msg).__name__}: {msg.__repr__()}")
         handler_name = "handle_" + type(msg).__name__
         handler = getattr(self, handler_name, None)
         if handler is None:
-            err = f"Handler name {handler_name} is not defined"
+            err = f"Handler method name {handler_name} is not defined"
             logger.error(err)
             return ProtocolErrorMessage(protocol_mgs=err)
         else:
             try:
                 result = await handler(channel_id, msg)
             except Exception:
-                err = f"Handler '{handler_name}' raised exception"
+                err = f"Handler method '{handler_name}' raised exception"
                 logger.error(err, exc_info=True)
                 return ErrorMessage(exception_message=err)
             if not isinstance(result, MessageBase):
-                err = f"Handler returned an invalid result type '{type(result).__name__}', should be MessageBase"
+                err = f"Handler method returned an invalid result type '{type(result).__name__}', should be MessageBase"
                 logger.error(err)
                 return ProtocolErrorMessage(protocol_mgs=err)
             return result
 
     @staticmethod
     def get_client_id(msg: RegisterEngineMsg):
+        """ Defines the generation of the client_id that is uniquely assinged to each engine client. """
         return msg.engine_name + "_" + msg.uod_name
 
-    async def handle_RegisterEngineMsg(
+    async def handle_RegisterEngineMsg(            
         self, channel_id, msg: RegisterEngineMsg
     ) -> SuccessMessage | ErrorMessage:
-        logger.debug("handle_RegisterEngineMsg")
-
-        client_id = Server.get_client_id(msg)
+        """ Registers engine """
+        client_id = Aggregator.get_client_id(msg)
         if channel_id not in self.channel_map.keys():
             logger.error(
                 f"Registration failed for client_id {client_id} and channel_id {channel_id}. Channel not found"
@@ -189,22 +218,27 @@ class Server:
         #     await False
 
         channelInfo.client_id = client_id
+        channelInfo.engine_name = msg.engine_name
+        channelInfo.uod_name = msg.uod_name
         channelInfo.status = ChannelStatusEnum.Registered
-        logger.debug(
-            f"Registration successful of client {client_id} on channel {channel_id}"
-        )
+        logger.debug(f"Registration successful of client {client_id} on channel {channel_id}")
         return SuccessMessage()
 
-    async def handle_TagsUpdatedMsg(
-        self, channel_id, msg: RegisterEngineMsg
-    ) -> SuccessMessage | ErrorMessage:
-        if channel_id not in self.channel_map.keys():
+    async def handle_TagsUpdatedMsg(self, channel_id, msg: TagsUpdatedMsg) -> SuccessMessage | ErrorMessage:
+        ci = self.get_channel(channel_id)
+        if ci is None:
             logger.error(f"Channel '{channel_id}' not found")
-            return ErrorMessage(message="Registration error")
+            return ErrorMessage(message="Client unknown")
+        if ci.client_id is None or ci.status != ChannelStatusEnum.Registered:
+            logger.error(f"Channel '{channel_id}' has invalid status {ci.status} for this operation")
+            return ErrorMessage(message="Client not registered")
 
         logger.info(f"Got update from client: {str(msg)}")
-        # TODO update internal state
-
+        tags = self.get_client_tags(ci.client_id)
+        if tags is None:
+            tags = self.init_client_tags(ci.client_id)
+        for ti in msg.tags:
+            tags.upsert(ti.name, ti.value, ti.value_unit)
         return SuccessMessage()
 
     async def on_disconnect(
@@ -214,11 +248,22 @@ class Server:
         if channel.id in self.channel_map.keys():
             self.channel_map[channel.id].status = ChannelStatusEnum.Disconnected
 
+    def get_channel(self, channel_id: str) -> ChannelInfo | None:
+        return self.channel_map.get(channel_id)
+
     def get_client_channel(self, client_id: str) -> ChannelInfo | None:
         for ci in self.channel_map.values():
             if ci.client_id == client_id:
                 return ci
         return None
+
+    def get_client_tags(self, client_id: str) -> TagsInfo | None:
+        return self.tags_map.get(client_id)
+
+    def init_client_tags(self, client_id: str) -> TagsInfo:
+        tags = TagsInfo(map={})
+        self.tags_map[client_id] = tags
+        return tags
 
     async def send_to_client(
         self,
@@ -261,38 +306,31 @@ class Server:
             return ErrorMessage(exception_message=err)
 
 
-server = Server()
-
-# fix this instantiation order nonsense with DI
-endpoint = PubSubEndpoint(  # cannot mutate these handlers later
-    on_connect=[server.on_connect],  # type: ignore
-    on_disconnect=[server.on_disconnect],  # type: ignore
-    methods_class=RpcServerHandler,
-)
-server.set_rpc_handler(endpoint.methods)  # type: ignore
-
-endpoint.register_route(router, path="/pubsub")
-app.include_router(router)
+_server : Aggregator | None = None
 
 
-# TODO consider if this can be implemented in the test
-class SimpleCommandToClient(MessageBase):
-    client_id: str
-    cmd_name: str
+def create_aggregator() -> Aggregator:
+    global _server
+    if _server is not None:
+        return _server
+    else:
+        _server = Aggregator()
+        print("GLOBAL: Creating aggregator server")
 
-
-@app.post("/trigger_send")
-async def trigger_send_command(cmd: SimpleCommandToClient):
-    if cmd.client_id is None or cmd.client_id == "" or cmd.cmd_name is None or cmd.cmd_name == "":
-        return "Bad message", 400
-    logger.debug("trigger_send command: " + cmd.cmd_name)
-
-    # can't await this call or the test would deadlock
-    asyncio.create_task(
-        server.send_to_client(cmd.client_id, InvokeCommandMsg(name=cmd.cmd_name))
+    # fix this instantiation order nonsense with DI
+    endpoint = PubSubEndpoint(  # cannot mutate these handlers later
+        on_connect=[_server.on_connect],  # type: ignore
+        on_disconnect=[_server.on_disconnect],  # type: ignore
+        methods_class=RpcServerHandler,
     )
-    return "OK"
+    _server.set_endpoint(endpoint)
+
+    endpoint.register_route(router, path="/pubsub")
+    app.include_router(router)
+
+    return _server
 
 
 if __name__ == "__main__":
+    PORT = 9800
     uvicorn.run(app, host="127.0.0.1", port=PORT)

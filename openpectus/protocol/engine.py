@@ -17,6 +17,7 @@ from fastapi_websocket_rpc.schemas import RpcResponse
 from fastapi_websocket_pubsub import PubSubClient
 from fastapi_websocket_pubsub.rpc_event_methods import RpcEventClientMethods
 from fastapi_websocket_rpc import RpcChannel
+import tenacity
 from protocol.exceptions import ProtocolException
 from protocol.messages import (    
     MessageBase,
@@ -83,12 +84,20 @@ class Client:
         self.connected_event = asyncio.Event()
         self.channel: RpcChannel | None = None
         self.message_handlers: Dict[str, ClientMessageHandler] = {}
+        self.ps_client: PubSubClient | None = None
 
-    def set_rpc_handler(self, handler: RpcClientHandler):
-        handler.set_client(self)
+    def set_ps_client(self, ps_client: PubSubClient):
+        self.ps_client = ps_client
+        assert isinstance(ps_client._methods, RpcClientHandler)
+        ps_client._methods.set_client(self)
 
     def set_message_handler(self, message_type, handler: ClientMessageHandler):
         self.message_handlers[message_type] = handler
+
+    async def disconnect_wait_async(self):
+        if self.ps_client is not None:
+            await self.ps_client.disconnect()
+            await self.ps_client.wait_until_done()
 
     # def set_client_handler(self, handler: ClientHandler):
     #     self.client_handler = handler
@@ -105,13 +114,15 @@ class Client:
     def connected(self):
         return self.connected_event.is_set()
 
-    async def wait_start_connect(self, ws_url: str, ps_client: PubSubClient):
+    async def start_connect_wait_async(self, ws_url: str):
         self.connected_event.clear()
-        ps_client.start_client(ws_url)
+        if self.ps_client is None:
+            raise ValueError("ps_client not set")
+        self.ps_client.start_client(ws_url)
         if self.connected:
             raise ProtocolException("Already connected")
 
-        await ps_client.wait_until_ready()
+        await self.ps_client.wait_until_ready()
         await asyncio.wait_for(self.connected_event.wait(), 5)
 
     async def handle_message(self, channel_id: str, msg: MessageBase) -> MessageBase:
@@ -139,7 +150,7 @@ class Client:
     ) -> MessageBase:
         """Send message to server"""
 
-        logger.debug("Send begin")
+        # logger.debug("Send begin")
         if self.channel is None:
             raise ProtocolException("Cannot send when no channel is set")
 
@@ -177,9 +188,7 @@ async def on_events(data, topic):
     print(f"got event on topic '{topic}' with data: '{data}'")
 
 
-def create_client(
-    on_connect_callback=None, on_disconnect_callback=None
-) -> Tuple[Client, PubSubClient]:
+def create_client(on_connect_callback=None, on_disconnect_callback=None) -> Client:
     client = Client()
 
     _on_conn = [client.on_connect]
@@ -190,15 +199,40 @@ def create_client(
     if on_disconnect_callback is not None:
         _on_disconnn.append(on_disconnect_callback)
 
+    #Tenacity (https://tenacity.readthedocs.io/) retry kwargs. Defaults to  {'wait': wait.wait_random_exponential(max=45)}
+    #reraise=True, stop=stop_after_attempt(1)
+
+    def logerror(retry_state: tenacity.RetryCallState):
+        logger.exception(retry_state.outcome.exception())  # type: ignore
+
+    def true(_):
+        return True
+
+    def create_retry_config():
+        from tenacity import retry, wait
+        from tenacity.retry import retry_if_exception, retry_never
+        from tenacity.stop import stop_after_attempt
+
+        # DEFAULT_RETRY_CONFIG = {
+        #     'wait': wait.wait_random_exponential(min=0.1, max=120),
+        #     'retry': retry_if_exception(isNotForbbiden),
+        #     'reraise': True,
+        #     "retry_error_callback": logerror
+        # }
+        cfg = {'retry': retry_never, "retry_error_callback": logerror, "stop": stop_after_attempt(1)}
+        return cfg
+
+    retry_config = create_retry_config()
     # Note: Instantiation order issue. handlers for connect/disconnest must be set in PubSubClient ctor.
     # For that reason we need these weird backwards assignments. Fix with DI
     ps_client = PubSubClient(
         on_connect=_on_conn,
         on_disconnect=_on_disconnn,
-        methods_class=RpcClientHandler)  # type: ignore RpcClientHandler
-    client.set_rpc_handler(ps_client._methods)  # type: ignore RpcClientHandler
+        methods_class=RpcClientHandler,  # type: ignore RpcClientHandler
+        retry_config=retry_config)
+    client.set_ps_client(ps_client)
 
-    return client, ps_client
+    return client
 
 
 async def main():

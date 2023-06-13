@@ -1,8 +1,17 @@
+import sys
+import os
+
+op_path = os.path.join(os.path.dirname(__file__), "..", "..")
+sys.path.append(op_path)
+
+from protocol.aggregator import Aggregator, ChannelInfo
+import aggregator.deps as agg_deps
+
 from datetime import datetime
 from enum import StrEnum, auto
 from typing import Literal, List
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 router = APIRouter(tags=["process_unit"])
@@ -44,6 +53,18 @@ class ProcessUnit(BaseModel):
     # users: List[User] ?
 
 
+def create_pu(item: ChannelInfo) -> ProcessUnit:
+    # TODO define source of all pu fields
+    unit = ProcessUnit(
+            id=10,
+            name=f"{item.engine_name} ({item.uod_name})",
+            state=ProcessUnitState.Ready(state=ProcessUnitStateEnum.READY),
+            location="Unknown location",
+            runtime_msec=189309,
+            current_user_role=UserRole.ADMIN)
+    return unit
+
+
 @router.get("/process_unit/{id}")
 def get_unit(id: int) -> ProcessUnit:
     return ProcessUnit(
@@ -52,21 +73,17 @@ def get_unit(id: int) -> ProcessUnit:
         state=ProcessUnitState.Ready(state=ProcessUnitStateEnum.READY),  # type: ignore
         location="H21.5",
         runtime_msec=189309,
-        user_role=UserRole.ADMIN
+        current_user_role=UserRole.ADMIN
     )
 
 
 @router.get("/process_units")
-def get_units() -> List[ProcessUnit]:
-    return [
-        ProcessUnit(
-            id=3,
-            name="Foo",
-            state=ProcessUnitState.InProgress(state=ProcessUnitStateEnum.IN_PROGRESS, progress_pct=75),  # type: ignore
-            location="H21.5",
-            runtime_msec=189309,
-            current_user_role=UserRole.ADMIN
-        )]
+def get_units(aggregator: Aggregator = Depends(agg_deps.get_aggregator)) -> List[ProcessUnit]:
+    units: List[ProcessUnit] = []
+    for channel_id, item in aggregator.channel_map.items():
+        unit = create_pu(item)
+        units.append(unit)
+    return units
 
 
 class ProcessValueType(StrEnum):
