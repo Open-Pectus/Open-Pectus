@@ -4,7 +4,7 @@ name: Combined Workflows
 
 on:
   push:
-    branches: [ "main", "71-build-uod-simulation-example" ]
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
