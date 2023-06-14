@@ -306,6 +306,48 @@
         }
       }
     },
+    "/api/process_unit/{unit_id}/run_log": {
+      "get": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Get Run Log",
+        "operationId": "get_run_log",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Unit Id",
+              "type": "integer"
+            },
+            "name": "unit_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunLog"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/batch_job/{id}": {
       "get": {
         "tags": [
@@ -721,6 +763,93 @@
               "ready"
             ],
             "type": "string"
+          }
+        }
+      },
+      "RunLog": {
+        "title": "RunLog",
+        "required": [
+          "additional_columns",
+          "lines"
+        ],
+        "type": "object",
+        "properties": {
+          "additional_columns": {
+            "title": "Additional Columns",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunLogColumn"
+            }
+          },
+          "lines": {
+            "title": "Lines",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunLogLine"
+            }
+          }
+        }
+      },
+      "RunLogColumn": {
+        "title": "RunLogColumn",
+        "required": [
+          "header",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "header": {
+            "title": "Header",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ProcessValueType"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        }
+      },
+      "RunLogLine": {
+        "title": "RunLogLine",
+        "required": [
+          "command",
+          "start",
+          "end",
+          "additional_values"
+        ],
+        "type": "object",
+        "properties": {
+          "command": {
+            "$ref": "#/components/schemas/ExecutableCommand"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string",
+            "format": "date-time"
+          },
+          "end": {
+            "title": "End",
+            "type": "string",
+            "format": "date-time"
+          },
+          "additional_values": {
+            "title": "Additional Values",
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            }
           }
         }
       },

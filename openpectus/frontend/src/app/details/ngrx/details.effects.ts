@@ -101,5 +101,16 @@ export class DetailsEffects {
     }),
   ));
 
+  fetchRunLogWhenComponentInitialized = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.runLogComponentInitialized),
+    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
+    switchMap(([_, unitId]) => {
+      const unitIdAsNumber = parseInt(unitId ?? '');
+      return this.processUnitService.getRunLog(unitIdAsNumber).pipe(
+        map(runLog => DetailsActions.runLogFetched({runLog})),
+      );
+    }),
+  ));
+
   constructor(private actions: Actions, private store: Store, private processUnitService: ProcessUnitService) {}
 }
