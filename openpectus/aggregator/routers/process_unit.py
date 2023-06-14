@@ -56,7 +56,7 @@ class ProcessUnit(BaseModel):
 def create_pu(item: ChannelInfo) -> ProcessUnit:
     # TODO define source of all pu fields
     unit = ProcessUnit(
-            id=10,
+            id=10,  # TODO change id to str and use client_id
             name=f"{item.engine_name} ({item.uod_name})",
             state=ProcessUnitState.Ready(state=ProcessUnitStateEnum.READY),
             location="Unknown location",
@@ -78,9 +78,9 @@ def get_unit(id: int) -> ProcessUnit:
 
 
 @router.get("/process_units")
-def get_units(aggregator: Aggregator = Depends(agg_deps.get_aggregator)) -> List[ProcessUnit]:
+def get_units(agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[ProcessUnit]:
     units: List[ProcessUnit] = []
-    for channel_id, item in aggregator.channel_map.items():
+    for channel_id, item in agg.channel_map.items():
         unit = create_pu(item)
         units.append(unit)
     return units
@@ -111,7 +111,7 @@ class ProcessValue(BaseModel):
     commands: List[ProcessValueCommand] | None  # TODO: have backend verify that no ProcessValue ever is both writable and has commands.
 
 
-@router.get("/process_unit/{id}/process_values")
+@router.get("/process_unit/{id}/process_values")  # TODO rename arg from id to unit_id
 def get_process_values(id: int) -> List[ProcessValue]:  # naming?, parm last_seen
     return [ProcessValue(name="A-Flow", value=54, value_unit="L", valid_value_units=["L", "m3"], writable=False,
                          options=None, value_type=ProcessValueType.STRING)]
@@ -123,7 +123,7 @@ class ProcessValueUpdate(BaseModel):
 
 
 @router.post("/process_unit/{unit_id}/process_value")
-def set_process_value(unit_id: int, update: ProcessValueUpdate):
+def set_process_value(unit_id: int, update: ProcessValueUpdate, agg: Aggregator = Depends(agg_deps.get_aggregator)):
     pass
 
 

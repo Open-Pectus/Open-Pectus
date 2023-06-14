@@ -295,7 +295,7 @@ _server : Aggregator | None = None
 
 def _get_aggregator() -> Aggregator:
     if _server is None:
-        raise Exception("DI error. Aggregator has not been initialized")
+        raise Exception("DI configuration error. Aggregator has not been initialized")
     return _server
 
 
