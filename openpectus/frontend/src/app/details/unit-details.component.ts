@@ -11,7 +11,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
         <app-method-editor></app-method-editor>
         <app-commands></app-commands>
         <app-run-log></app-run-log>
-        <!-- Plot -->
+        <app-process-plot></app-process-plot>
         <app-process-diagram></app-process-diagram>
       </div>
     </div>

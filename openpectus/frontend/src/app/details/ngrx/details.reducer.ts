@@ -9,6 +9,7 @@ export interface DetailsState {
   methodEditorIsDirty: boolean;
   methodEditorContent?: string;
   processValues: ProcessValue[];
+  processValuesLog: ProcessValue[][];
   processDiagram?: ProcessDiagram;
   shouldPollProcessValues: boolean;
   commandExamples: CommandExample[];
@@ -18,6 +19,7 @@ export interface DetailsState {
 const initialState: DetailsState = {
   methodEditorIsDirty: false,
   processValues: [],
+  processValuesLog: [],
   shouldPollProcessValues: false,
   commandExamples: [],
   runLog: {additional_columns: [], lines: []},
@@ -37,6 +39,7 @@ export const detailsReducer = createReducer(initialState,
   })),
   on(DetailsActions.processValuesFetched, (state, {processValues}) => produce(state, draft => {
     draft.processValues = processValues;
+    draft.processValuesLog.push(processValues);
   })),
   on(DetailsActions.processDiagramFetched, (state, {processDiagram}) => produce(state, draft => {
     draft.processDiagram = processDiagram;
