@@ -11,7 +11,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/main' || github.head_ref == '106-github-docker-image-cannot-expose-port-in-docker-desktop-gui' }}
+  SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/main' }}
   NODE_VERSION: 18.16
 
 jobs:
