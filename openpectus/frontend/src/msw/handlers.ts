@@ -17,7 +17,7 @@ import {
 const processUnits: ProcessUnit[] = [
   {
     name: 'Some unit',
-    id: '1',
+    id: 'some_unit',
     location: 'Some place',
     runtime_msec: 59999,
     state: {
@@ -28,7 +28,7 @@ const processUnits: ProcessUnit[] = [
   },
   {
     name: 'Some other unit with a long title',
-    id: '2',
+    id: 'some_other_unit',
     location: 'Some place else',
     runtime_msec: 456498,
     state: {
@@ -38,7 +38,7 @@ const processUnits: ProcessUnit[] = [
   },
   {
     name: 'Some third unit',
-    id: '3',
+    id: 'some_third_unit',
     location: 'Some third place',
     runtime_msec: 12365,
     state: {
@@ -49,7 +49,7 @@ const processUnits: ProcessUnit[] = [
   },
   {
     name: 'A fourth for linebreak',
-    id: '4',
+    id: 'a_fourth',
     location: 'Narnia',
     runtime_msec: 85264,
     state: {
@@ -144,14 +144,14 @@ export const handlers = [
       ctx.json<BatchJob[]>([
         {
           id: 1,
-          unit_id: 1,
+          unit_id: '1',
           unit_name: 'Some Name 1 that is very long, and way longer than it should be.',
           completed_date: getCompletedDate(),
           contributors: ['Eskild'],
         },
-        {id: 2, unit_id: 2, unit_name: 'Some Name 2', completed_date: getCompletedDate(), contributors: ['Eskild', 'Morten']},
-        {id: 3, unit_id: 3, unit_name: 'Some Name 3', completed_date: getCompletedDate(), contributors: ['Eskild']},
-        {id: 4, unit_id: 4, unit_name: 'Some Name 4', completed_date: getCompletedDate(), contributors: ['Eskild']},
+        {id: 2, unit_id: '2', unit_name: 'Some Name 2', completed_date: getCompletedDate(), contributors: ['Eskild', 'Morten']},
+        {id: 3, unit_id: '3', unit_name: 'Some Name 3', completed_date: getCompletedDate(), contributors: ['Eskild']},
+        {id: 4, unit_id: '4', unit_name: 'Some Name 4', completed_date: getCompletedDate(), contributors: ['Eskild']},
       ]),
     );
   }),

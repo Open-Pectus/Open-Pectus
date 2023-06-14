@@ -110,7 +110,7 @@ requestBody: ProcessValueUpdate,
      * @throws ApiError
      */
     public executeCommand(
-unitId: number,
+unitId: string,
 requestBody: ExecutableCommand,
 ): Observable<any> {
         return __request(OpenAPI, this.http, {
@@ -134,7 +134,7 @@ requestBody: ExecutableCommand,
      * @throws ApiError
      */
     public getProcessDiagram(
-unitId: number,
+unitId: string,
 ): Observable<ProcessDiagram> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
@@ -155,7 +155,7 @@ unitId: number,
      * @throws ApiError
      */
     public getCommandExamples(
-unitId: number,
+unitId: string,
 ): Observable<Array<CommandExample>> {
         return __request(OpenAPI, this.http, {
             method: 'GET',

@@ -180,7 +180,7 @@
             "required": true,
             "schema": {
               "title": "Unit Id",
-              "type": "integer"
+              "type": "string"
             },
             "name": "unit_id",
             "in": "path"
@@ -230,7 +230,7 @@
             "required": true,
             "schema": {
               "title": "Unit Id",
-              "type": "integer"
+              "type": "string"
             },
             "name": "unit_id",
             "in": "path"
@@ -272,7 +272,7 @@
             "required": true,
             "schema": {
               "title": "Unit Id",
-              "type": "integer"
+              "type": "string"
             },
             "name": "unit_id",
             "in": "path"
@@ -453,7 +453,7 @@
           },
           "unit_id": {
             "title": "Unit Id",
-            "type": "integer"
+            "type": "string"
           },
           "unit_name": {
             "title": "Unit Name",

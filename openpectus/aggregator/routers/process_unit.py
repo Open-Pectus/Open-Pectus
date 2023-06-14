@@ -154,7 +154,7 @@ class ExecutableCommand(BaseModel):
 
 
 @router.post("/process_unit/{unit_id}/execute_command")
-def execute_command(unit_id: int, command: ExecutableCommand):
+def execute_command(unit_id: str, command: ExecutableCommand):
     pass
 
 
@@ -163,7 +163,7 @@ class ProcessDiagram(BaseModel):
 
 
 @router.get("/process_unit/{unit_id}/process_diagram")
-def get_process_diagram(unit_id: int) -> ProcessDiagram:
+def get_process_diagram(unit_id: str) -> ProcessDiagram:
     return ProcessDiagram(svg="")
 
 
@@ -173,7 +173,7 @@ class CommandExample(BaseModel):
 
 
 @router.get('/process_unit/{unit_id}/command_examples')
-def get_command_examples(unit_id: int) -> List[CommandExample]:
+def get_command_examples(unit_id: str) -> List[CommandExample]:
     return [
         CommandExample(name="Some Example", example="Some example text")
     ]
