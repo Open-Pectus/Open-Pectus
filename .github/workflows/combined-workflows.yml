@@ -4,14 +4,14 @@ name: Combined Workflows
 
 on:
   push:
-    branches: [ "main", "71-build-uod-simulation-example" ]
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/main' }}
+  SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/106-github-docker-image-cannot-expose-port-in-docker-desktop-gui' }}
   NODE_VERSION: 18.16
 
 jobs:
