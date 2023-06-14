@@ -25,18 +25,18 @@ export class ProcessUnitService {
 
     /**
      * Get Unit
-     * @param id 
+     * @param unitId 
      * @returns ProcessUnit Successful Response
      * @throws ApiError
      */
     public getUnit(
-id: number,
+unitId: string,
 ): Observable<ProcessUnit> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/process_unit/{id}',
+            url: '/api/process_unit/{unit_id}',
             path: {
-                'id': id,
+                'unit_id': unitId,
             },
             errors: {
                 422: `Validation Error`,
@@ -58,18 +58,18 @@ id: number,
 
     /**
      * Get Process Values
-     * @param id 
+     * @param unitId 
      * @returns ProcessValue Successful Response
      * @throws ApiError
      */
     public getProcessValues(
-id: number,
+unitId: string,
 ): Observable<Array<ProcessValue>> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/process_unit/{id}/process_values',
+            url: '/api/process_unit/{unit_id}/process_values',
             path: {
-                'id': id,
+                'unit_id': unitId,
             },
             errors: {
                 422: `Validation Error`,
@@ -85,7 +85,7 @@ id: number,
      * @throws ApiError
      */
     public setProcessValue(
-unitId: number,
+unitId: string,
 requestBody: ProcessValueUpdate,
 ): Observable<any> {
         return __request(OpenAPI, this.http, {
@@ -176,7 +176,7 @@ unitId: number,
      * @throws ApiError
      */
     public getRunLog(
-unitId: number,
+unitId: string,
 ): Observable<RunLog> {
         return __request(OpenAPI, this.http, {
             method: 'GET',

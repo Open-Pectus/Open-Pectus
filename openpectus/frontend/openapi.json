@@ -5,7 +5,7 @@
     "version": "0.1.0"
   },
   "paths": {
-    "/api/process_unit/{id}": {
+    "/api/process_unit/{unit_id}": {
       "get": {
         "tags": [
           "process_unit"
@@ -16,10 +16,10 @@
           {
             "required": true,
             "schema": {
-              "title": "Id",
-              "type": "integer"
+              "title": "Unit Id",
+              "type": "string"
             },
-            "name": "id",
+            "name": "unit_id",
             "in": "path"
           }
         ],
@@ -72,7 +72,7 @@
         }
       }
     },
-    "/api/process_unit/{id}/process_values": {
+    "/api/process_unit/{unit_id}/process_values": {
       "get": {
         "tags": [
           "process_unit"
@@ -83,10 +83,10 @@
           {
             "required": true,
             "schema": {
-              "title": "Id",
-              "type": "integer"
+              "title": "Unit Id",
+              "type": "string"
             },
-            "name": "id",
+            "name": "unit_id",
             "in": "path"
           }
         ],
@@ -130,7 +130,7 @@
             "required": true,
             "schema": {
               "title": "Unit Id",
-              "type": "integer"
+              "type": "string"
             },
             "name": "unit_id",
             "in": "path"
@@ -318,7 +318,7 @@
             "required": true,
             "schema": {
               "title": "Unit Id",
-              "type": "integer"
+              "type": "string"
             },
             "name": "unit_id",
             "in": "path"
@@ -605,7 +605,7 @@
         "properties": {
           "id": {
             "title": "Id",
-            "type": "integer"
+            "type": "string"
           },
           "name": {
             "title": "Name",

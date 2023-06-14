@@ -11,7 +11,7 @@ import type { UserRole } from './UserRole';
  * Represents a process unit. 
  */
 export type ProcessUnit = {
-    id: number;
+    id: string;
     name: string;
     state: (Ready | InProgress | NotOnline);
     location?: string;
