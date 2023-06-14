@@ -26,5 +26,6 @@ export type { RunLogLine } from './models/RunLogLine';
 export { UserRole } from './models/UserRole';
 export type { ValidationError } from './models/ValidationError';
 
+export { AggregatorService } from './services/AggregatorService';
 export { BatchJobService } from './services/BatchJobService';
 export { ProcessUnitService } from './services/ProcessUnitService';

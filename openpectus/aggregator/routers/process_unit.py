@@ -4,7 +4,7 @@ import os
 op_path = os.path.join(os.path.dirname(__file__), "..", "..")
 sys.path.append(op_path)
 
-from protocol.aggregator import Aggregator, ChannelInfo
+from protocol.aggregator import Aggregator, ChannelInfo, TagInfo
 import aggregator.deps as agg_deps
 
 from datetime import datetime
@@ -44,7 +44,7 @@ class UserRole(StrEnum):
 
 class ProcessUnit(BaseModel):
     """Represents a process unit. """
-    id: int
+    id: str
     name: str
     state: ProcessUnitState.Ready | ProcessUnitState.InProgress | ProcessUnitState.NotOnline
     location: str | None
@@ -54,9 +54,9 @@ class ProcessUnit(BaseModel):
 
 
 def create_pu(item: ChannelInfo) -> ProcessUnit:
-    # TODO define source of all pu fields
+    # TODO define source of all fields
     unit = ProcessUnit(
-            id=10,  # TODO change id to str and use client_id
+            id=item.client_id or "(error)",
             name=f"{item.engine_name} ({item.uod_name})",
             state=ProcessUnitState.Ready(state=ProcessUnitStateEnum.READY),
             location="Unknown location",
@@ -65,17 +65,12 @@ def create_pu(item: ChannelInfo) -> ProcessUnit:
     return unit
 
 
-@router.get("/process_unit/{id}")
-def get_unit(id: int) -> ProcessUnit:
-    return ProcessUnit(
-        id=id,
-        name="Foo",
-        state=ProcessUnitState.Ready(state=ProcessUnitStateEnum.READY),  # type: ignore
-        location="H21.5",
-        runtime_msec=189309,
-        current_user_role=UserRole.ADMIN
-    )
-
+@router.get("/process_unit/{unit_id}")
+def get_unit(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> ProcessUnit | None:
+    ci = agg.get_client_channel(client_id=unit_id)
+    if ci is None:
+        return None
+    return create_pu(ci)
 
 @router.get("/process_units")
 def get_units(agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[ProcessUnit]:
@@ -111,10 +106,29 @@ class ProcessValue(BaseModel):
     commands: List[ProcessValueCommand] | None  # TODO: have backend verify that no ProcessValue ever is both writable and has commands.
 
 
-@router.get("/process_unit/{id}/process_values")  # TODO rename arg from id to unit_id
-def get_process_values(id: int) -> List[ProcessValue]:  # naming?, parm last_seen
-    return [ProcessValue(name="A-Flow", value=54, value_unit="L", valid_value_units=["L", "m3"], writable=False,
-                         options=None, value_type=ProcessValueType.STRING)]
+def create_pv(ti: TagInfo) -> ProcessValue:
+    # TODO define source of all fields
+
+    def get_ProcessValueType_from_value(value: str | float | int | None) -> ProcessValueType:
+        return ProcessValueType.STRING
+
+    return ProcessValue(
+        name=ti.name,
+        value=ti.value,
+        value_unit=ti.value_unit,
+        valid_value_units=[],
+        value_type=get_ProcessValueType_from_value(ti.value),
+        writable=True,
+        commands=[])
+
+
+@router.get("/process_unit/{unit_id}/process_values")
+def get_process_values(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[ProcessValue]:  # naming?, parm last_seen
+    tags = agg.get_client_tags(client_id=unit_id)
+    if tags is None:
+        return []
+
+    return [create_pv(ti) for ti in tags.map.values()]
 
 
 class ProcessValueUpdate(BaseModel):
@@ -123,7 +137,7 @@ class ProcessValueUpdate(BaseModel):
 
 
 @router.post("/process_unit/{unit_id}/process_value")
-def set_process_value(unit_id: int, update: ProcessValueUpdate, agg: Aggregator = Depends(agg_deps.get_aggregator)):
+def set_process_value(unit_id: str, update: ProcessValueUpdate, agg: Aggregator = Depends(agg_deps.get_aggregator)):
     pass
 
 
@@ -184,5 +198,5 @@ class RunLog(BaseModel):
 
 
 @router.get('/process_unit/{unit_id}/run_log')
-def get_run_log(unit_id: int) -> RunLog:
+def get_run_log(unit_id: str) -> RunLog:
     return RunLog(additional_columns=[], lines=[])
