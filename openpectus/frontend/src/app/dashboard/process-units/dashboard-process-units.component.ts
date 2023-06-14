@@ -21,7 +21,7 @@ export class DashboardProcessUnitsComponent {
 
   constructor(private store: Store, private router: Router) {}
 
-  onCardClick(id: number) {
+  onCardClick(id: string) {
     this.router.navigate([detailsUrlPart, DetailsRoutingUrlParts.processUnitUrlPart, id]).then();
   }
 }

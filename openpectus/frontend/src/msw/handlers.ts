@@ -17,7 +17,7 @@ import {
 const processUnits: ProcessUnit[] = [
   {
     name: 'Some unit',
-    id: 1,
+    id: '1',
     location: 'Some place',
     runtime_msec: 59999,
     state: {
@@ -28,7 +28,7 @@ const processUnits: ProcessUnit[] = [
   },
   {
     name: 'Some other unit with a long title',
-    id: 2,
+    id: '2',
     location: 'Some place else',
     runtime_msec: 456498,
     state: {
@@ -38,7 +38,7 @@ const processUnits: ProcessUnit[] = [
   },
   {
     name: 'Some third unit',
-    id: 3,
+    id: '3',
     location: 'Some third place',
     runtime_msec: 12365,
     state: {
@@ -49,7 +49,7 @@ const processUnits: ProcessUnit[] = [
   },
   {
     name: 'A fourth for linebreak',
-    id: 4,
+    id: '4',
     location: 'Narnia',
     runtime_msec: 85264,
     state: {

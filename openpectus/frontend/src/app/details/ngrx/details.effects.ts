@@ -24,9 +24,8 @@ export class DetailsEffects {
     ofType(DetailsActions.processValuesInitialized),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([_, unitId]) => {
-      const unitIdAsNumber = parseInt(unitId ?? '');
-      if(isNaN(unitIdAsNumber)) return of(DetailsActions.processValuesFailedToLoad());
-      return this.processUnitService.getProcessValues(unitIdAsNumber).pipe(
+      if(unitId === undefined) return of(DetailsActions.processValuesFailedToLoad());
+      return this.processUnitService.getProcessValues(unitId).pipe(
         map(processValues => DetailsActions.processValuesFetched({processValues})),
       );
     }),
@@ -41,9 +40,8 @@ export class DetailsEffects {
     debounceTime(500),
     skipWhile(([_, __, shouldPoll]) => !shouldPoll),
     switchMap(([_, unitId, __]) => {
-      const unitIdAsNumber = parseInt(unitId ?? '');
-      if(isNaN(unitIdAsNumber)) return of(DetailsActions.processValuesFailedToLoad());
-      return this.processUnitService.getProcessValues(unitIdAsNumber).pipe(
+      if(unitId === undefined) return of(DetailsActions.processValuesFailedToLoad());
+      return this.processUnitService.getProcessValues(unitId).pipe(
         map(processValues => DetailsActions.processValuesFetched({processValues})),
       );
     }),
@@ -105,8 +103,8 @@ export class DetailsEffects {
     ofType(DetailsActions.runLogComponentInitialized),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([_, unitId]) => {
-      const unitIdAsNumber = parseInt(unitId ?? '');
-      return this.processUnitService.getRunLog(unitIdAsNumber).pipe(
+      if(unitId === undefined) return of();
+      return this.processUnitService.getRunLog(unitId).pipe(
         map(runLog => DetailsActions.runLogFetched({runLog})),
       );
     }),
