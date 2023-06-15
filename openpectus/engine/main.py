@@ -34,8 +34,8 @@ def get_args():
                         # default="ws://localhost:9800/websocket/pubsub",
                         help="Address to aggregator web socket service")
     parser.add_argument("-uod", "--uod", required=False, default="DemoUod", help="The UOD to use")
-    parser.add_argument("-l", "--listener", required=False, default="EngineWebSocketListener",
-                        choices=['EngineWebSocketListener', 'DemoTagListener'],
+    parser.add_argument("-r", "--runner", required=False, default="WebSocketRPCEngineRunner",
+                        choices=['WebSocketRPCEngineRunner', 'DemoEngineRunner'],
                         help="The event listener to use")
     return parser.parse_args()
 
@@ -96,12 +96,56 @@ class DemoResetCommand(UodCommand):
             self.iterations = 0
 
 
-class DemoTagListener():
+class EngineRunner:
+    def __init__(self, engine: Engine) -> None:
+        self.engine = engine
+
+    async def connect_async(self):
+        raise NotImplementedError()
+
+    async def disconnect_async(self):
+        raise NotImplementedError()
+
+    async def register_async(self):
+        raise NotImplementedError()
+
+    async def notify_initial_tags_async(self):
+        self.engine.notify_initial_tags()
+        await self.send_tag_updates_async()
+
+    async def send_tag_updates_async(self):
+        raise NotImplementedError()
+
+    async def run_loop(self):
+        try:
+            await self.connect_async()
+            await self.register_async()
+            await self.notify_initial_tags_async()
+
+            while True:
+                await asyncio.sleep(0.1)
+                await self.send_tag_updates_async()
+        except KeyboardInterrupt:
+            await self.disconnect_async()
+        except asyncio.CancelledError:
+            return
+
+
+class DemoEngineRunner():
     def __init__(self, e: Engine) -> None:
         self.e = e
         self.running = False
 
-    def run(self):
+    async def connect_async(self):
+        pass
+
+    async def disconnect_async(self):
+        self.running = False
+
+    async def register_async(self):
+        pass
+
+    async def run_loop(self):
         self.running = True
         try:
             while self.running:
@@ -117,29 +161,21 @@ class DemoTagListener():
                     print(f"Tag updated: {tag.name}:\t{tag.get_value()}")
 
         except KeyboardInterrupt:
-            self.stop()
-
-    def stop(self):
-        self.running = False
+            await self.disconnect_async()
 
 
-class EngineWebSocketListener():
+class WebSocketRPCEngineRunner(EngineRunner):
     def __init__(self, engine: Engine, ws_url: str) -> None:
         self.engine = engine
         self.client: Client | None = None
         self.ws_url = ws_url
 
-    async def connect(self):
+    async def connect_async(self):
         client = create_client()
         self.client = client
+        await self.client.start_connect_wait_async(ws_url=self.ws_url)
 
-        await client.start_connect_wait_async(ws_url=self.ws_url)
-
-        # TODO register callback to handle incoming messages
-        # is self.client.set_rpc_handler called or do we need this
-        # handler = Rpc
-
-    async def register(self):
+    async def register_async(self):
         if self.client is None:
             raise ValueError("Client is not connected")
 
@@ -150,7 +186,7 @@ class EngineWebSocketListener():
 
         self.client.set_message_handler("InvokeCommandMsg", self._schedule_command)
 
-    async def send_tag_updates(self):
+    async def send_tag_updates_async(self):
         if self.client is None:
             raise ValueError("Client is not connected")
 
@@ -167,9 +203,19 @@ class EngineWebSocketListener():
 
     async def _schedule_command(self, msg: MessageBase) -> MessageBase:
         assert isinstance(msg, InvokeCommandMsg)
+
+        # as side effect, start engine on first START command
+        # TODO verify this is intended behavior
+        if not self.engine.is_running() and msg.name.upper() == "START":
+            self.engine.run()
+
         cmd = EngineCommand(name=msg.name, args=msg.arguments)
         self.engine.cmd_queue.put_nowait(cmd)
         return SuccessMessage()
+
+    async def disconnect_async(self):
+        if self.client is not None:
+            await self.client.disconnect_wait_async()
 
 
 async def main(args):
@@ -181,9 +227,11 @@ async def main(args):
 
     e = Engine(uod, tick_interval=1)
 
-    if args.listener == "DemoTagListener":
-        listener = DemoTagListener(e)
-        listener_thread = Thread(target=listener.run, daemon=True, name=listener.__class__.__name__)
+    if args.runner == "DemoTagListener":
+        runner = DemoEngineRunner(e)
+        await runner.run_loop()
+
+        listener_thread = Thread(target=runner.run, daemon=True, name=runner.__class__.__name__)
 
         print("Starting engine")
         listener_thread.start()
@@ -212,18 +260,13 @@ async def main(args):
         except KeyboardInterrupt:
             # TODO
             # e.shutdown()
-            listener.stop()
+            runner.stop()
             print("Engine stopped")
 
     else:
 
-        listener = EngineWebSocketListener(e, args.aggregator_ws_url)
-        await listener.connect()
-        await listener.register()
-
-        while True:
-            await asyncio.sleep(0.1)
-            await listener.send_tag_updates()
+        runner = WebSocketRPCEngineRunner(e, args.aggregator_ws_url)
+        await runner.run_loop()
 
 
 if __name__ == "__main__":

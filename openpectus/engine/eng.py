@@ -127,6 +127,9 @@ class Engine():
         self._configure()
         self._run()
 
+    def is_running(self) -> bool:
+        return self._running
+
     def _run(self):
         """ Starts the scan cycle """
 
@@ -259,6 +262,10 @@ class Engine():
                 self.uod.execute_command(cmd_request.name, cmd_request.args)
             except Exception:
                 logger.error("Command execution failed", exc_info=True)
+
+    def notify_initial_tags(self):
+        for tag in self._iter_all_tags():
+            self.tag_updates.put(tag)
 
     def notify_tag_updates(self):
         for tag_name in self._system_listener.changes:

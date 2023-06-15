@@ -151,7 +151,6 @@ class Client:
     ) -> MessageBase:
         """Send message to server"""
 
-        # logger.debug("Send begin")
         if self.channel is None:
             raise ProtocolException("Cannot send when no channel is set")
 

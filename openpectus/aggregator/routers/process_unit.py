@@ -1,3 +1,4 @@
+import asyncio
 import sys
 import os
 
@@ -5,6 +6,7 @@ op_path = os.path.join(os.path.dirname(__file__), "..", "..")
 sys.path.append(op_path)
 
 from protocol.aggregator import Aggregator, ChannelInfo, TagInfo
+from protocol.messages import InvokeCommandMsg
 import aggregator.deps as agg_deps
 
 from datetime import datetime
@@ -110,7 +112,16 @@ def create_pv(ti: TagInfo) -> ProcessValue:
     # TODO define source of all fields
 
     def get_ProcessValueType_from_value(value: str | float | int | None) -> ProcessValueType:
-        return ProcessValueType.STRING
+        if value is None:
+            return ProcessValueType.STRING  # hmm
+        if isinstance(value, str):
+            return ProcessValueType.STRING
+        elif isinstance(value, int):
+            return ProcessValueType.INT
+        elif isinstance(value, float):
+            return ProcessValueType.FLOAT
+        else:
+            raise ValueError("Invalid value type: " + type(value).__name__)
 
     return ProcessValue(
         name=ti.name,
@@ -148,14 +159,23 @@ class CommandSource(StrEnum):
 
 
 class ExecutableCommand(BaseModel):
-    command: str
+    command: str  # full command string, e.g. "start" or "foo: bar"
     source: CommandSource
     name: str | None
 
 
 @router.post("/process_unit/{unit_id}/execute_command")
-def execute_command(unit_id: str, command: ExecutableCommand):
-    pass
+async def execute_command(unit_id: str, command: ExecutableCommand, agg: Aggregator = Depends(agg_deps.get_aggregator)):
+    print("command", str(command))
+    cmd_line = command.command
+    if ":" in cmd_line:
+        split = command.command.split(":", maxsplit=1)
+        cmd_name, cmd_args = split[0], split[1]  # TODO watch out for "" vs None as cmd_args
+    else:
+        cmd_name, cmd_args = cmd_line, None
+    
+    msg = InvokeCommandMsg(name=cmd_name, arguments=cmd_args)
+    await agg.send_to_client(client_id=unit_id, msg=msg)
 
 
 class ProcessDiagram(BaseModel):

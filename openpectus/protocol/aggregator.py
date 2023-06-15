@@ -164,7 +164,16 @@ class Aggregator:
 
     @staticmethod
     def get_client_id(msg: RegisterEngineMsg):
-        """ Defines the generation of the client_id that is uniquely assinged to each engine client. """
+        """ Defines the generation of the client_id that is uniquely assigned to each engine client.
+
+        TODO: Considerations:
+            - engine name should be machine name
+            - uod hash should probably be included
+
+        Implications of the registration process
+        - historical data; we should not corrupt historical data by accidentially reusing client_id
+        - number of cards shown; we should not show many irrelevant cards in frontend of superseeded client_ids
+        """
         return msg.engine_name + "_" + msg.uod_name
 
     async def handle_RegisterEngineMsg(            
