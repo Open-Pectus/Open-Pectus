@@ -7,7 +7,7 @@
  */
 export type BatchJob = {
     id: number;
-    unit_id: number;
+    unit_id: string;
     unit_name: string;
     completed_date: string;
     contributors?: Array<string>;

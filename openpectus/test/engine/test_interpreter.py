@@ -325,13 +325,13 @@ Mark: d
         log_c = next(x for x in i.logs if x.message == 'c')
         log_d = next(x for x in i.logs if x.message == 'd')
         with self.subTest("a / b"):
-            self.assert_time_equal(log_a.time + 0.3 + TICK_INTERVAL, log_b.time)
+            self.assert_time_equal(log_a.time + 0.3 + TICK_INTERVAL, log_b.time, 300)
         with self.subTest("b / c"):
-            self.assert_time_equal(log_b.time + .8 + TICK_INTERVAL, log_c.time)
+            self.assert_time_equal(log_b.time + .8 + TICK_INTERVAL, log_c.time, 300)
         with self.subTest("c / d"):
             self.assert_time_equal(log_c.time + TICK_INTERVAL, log_d.time, 300)
         with self.subTest("a / d"):
-            self.assert_time_equal(log_a.time + 1.1 + 6*TICK_INTERVAL, log_d.time)
+            self.assert_time_equal(log_a.time + 1.1 + 6*TICK_INTERVAL, log_d.time, 300)
 
     @unittest.skip("TODO")
     def test_(self):

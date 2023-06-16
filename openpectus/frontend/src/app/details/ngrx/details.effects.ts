@@ -24,9 +24,8 @@ export class DetailsEffects {
     ofType(DetailsActions.processValuesInitialized),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([_, unitId]) => {
-      const unitIdAsNumber = parseInt(unitId ?? '');
-      if(isNaN(unitIdAsNumber)) return of(DetailsActions.processValuesFailedToLoad());
-      return this.processUnitService.getProcessValues(unitIdAsNumber).pipe(
+      if(unitId === undefined) return of(DetailsActions.processValuesFailedToLoad());
+      return this.processUnitService.getProcessValues(unitId).pipe(
         map(processValues => DetailsActions.processValuesFetched({processValues})),
       );
     }),
@@ -41,9 +40,8 @@ export class DetailsEffects {
     debounceTime(500),
     skipWhile(([_, __, shouldPoll]) => !shouldPoll),
     switchMap(([_, unitId, __]) => {
-      const unitIdAsNumber = parseInt(unitId ?? '');
-      if(isNaN(unitIdAsNumber)) return of(DetailsActions.processValuesFailedToLoad());
-      return this.processUnitService.getProcessValues(unitIdAsNumber).pipe(
+      if(unitId === undefined) return of(DetailsActions.processValuesFailedToLoad());
+      return this.processUnitService.getProcessValues(unitId).pipe(
         map(processValues => DetailsActions.processValuesFetched({processValues})),
       );
     }),
@@ -53,9 +51,8 @@ export class DetailsEffects {
     ofType(DetailsActions.processValueCommandClicked),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([{command, processValueName}, unitId]) => {
-      const unitIdAsNumber = parseInt(unitId ?? '');
-      return this.processUnitService.executeCommand(
-        unitIdAsNumber, {...command, source: CommandSource.PROCESS_VALUE});
+      if(unitId === undefined) return of();
+      return this.processUnitService.executeCommand(unitId, {...command, source: CommandSource.PROCESS_VALUE});
     }),
   ), {dispatch: false});
 
@@ -63,9 +60,8 @@ export class DetailsEffects {
     ofType(DetailsActions.processUnitCommandButtonClicked),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     mergeMap(([{command}, unitId]) => {
-      const unitIdAsNumber = parseInt(unitId ?? '');
-      return this.processUnitService.executeCommand(
-        unitIdAsNumber, {...command});
+      if(unitId === undefined) return of();
+      return this.processUnitService.executeCommand(unitId, {...command});
     }),
   ), {dispatch: false});
 
@@ -73,9 +69,8 @@ export class DetailsEffects {
     ofType(DetailsActions.commandsComponentExecuteClicked),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([{command}, unitId]) => {
-      const unitIdAsNumber = parseInt(unitId ?? '');
-      return this.processUnitService.executeCommand(
-        unitIdAsNumber, {...command});
+      if(unitId === undefined) return of();
+      return this.processUnitService.executeCommand(unitId, {...command});
     }),
   ), {dispatch: false});
 
@@ -83,8 +78,8 @@ export class DetailsEffects {
     ofType(DetailsActions.processDiagramInitialized),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([_, unitId]) => {
-      const unitIdAsNumber = parseInt(unitId ?? '');
-      return this.processUnitService.getProcessDiagram(unitIdAsNumber).pipe(
+      if(unitId === undefined) return of();
+      return this.processUnitService.getProcessDiagram(unitId).pipe(
         map(processDiagram => DetailsActions.processDiagramFetched({processDiagram})),
       );
     }),
@@ -94,8 +89,8 @@ export class DetailsEffects {
     ofType(DetailsActions.commandsComponentInitialized),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([_, unitId]) => {
-      const unitIdAsNumber = parseInt(unitId ?? '');
-      return this.processUnitService.getCommandExamples(unitIdAsNumber).pipe(
+      if(unitId === undefined) return of();
+      return this.processUnitService.getCommandExamples(unitId).pipe(
         map(commandExamples => DetailsActions.commandExamplesFetched({commandExamples})),
       );
     }),
@@ -105,8 +100,8 @@ export class DetailsEffects {
     ofType(DetailsActions.runLogComponentInitialized),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([_, unitId]) => {
-      const unitIdAsNumber = parseInt(unitId ?? '');
-      return this.processUnitService.getRunLog(unitIdAsNumber).pipe(
+      if(unitId === undefined) return of();
+      return this.processUnitService.getRunLog(unitId).pipe(
         map(runLog => DetailsActions.runLogFetched({runLog})),
       );
     }),
