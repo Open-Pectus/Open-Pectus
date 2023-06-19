@@ -1,6 +1,4 @@
 import asyncio
-import os
-import sys
 import unittest
 from multiprocessing import Process
 from unittest import IsolatedAsyncioTestCase
@@ -15,10 +13,6 @@ from fastapi_websocket_rpc.schemas import RpcResponse
 from fastapi_websocket_rpc.logger import get_logger
 from fastapi_websocket_rpc.utils import gen_uid
 
-# Add parent path to use local src as package for tests
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
-)
 
 logger = get_logger("Test")
 

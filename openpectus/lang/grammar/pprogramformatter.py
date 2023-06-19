@@ -1,6 +1,6 @@
 
 from io import StringIO
-from lang.model.pprogram import (
+from openpectus.lang.model.pprogram import (
     PNode,
     PProgram,
     PBlank

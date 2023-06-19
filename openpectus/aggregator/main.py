@@ -1,15 +1,11 @@
 from argparse import ArgumentParser
 import os
-import sys
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 import uvicorn
-from routers import batch_job, process_unit, aggregator_websocket
-from spa import SinglePageApplication
 
-# TODO replace hack with pip install -e, eg https://stackoverflow.com/questions/30306099/pip-install-editable-vs-python-setup-py-develop
-op_path = os.path.join(os.path.dirname(__file__), "..")
-sys.path.append(op_path)
+from openpectus.aggregator.spa import SinglePageApplication
+from openpectus.aggregator.routers import batch_job, process_unit, aggregator_websocket
 
 
 # - add lsp thingys

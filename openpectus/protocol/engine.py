@@ -1,25 +1,15 @@
 from __future__ import annotations
-"""
-The engine connects with the Aggregator
-and registers itself.
-After registration it will periodically
-send data to the aggregator.
-"""
-
-
-# Adapted from this source:
-# https://github.com/permitio/fastapi_websocket_pubsub/blob/master/examples/pubsub_client_example.py
-
 import asyncio
 import logging
-from typing import Awaitable, Callable, Dict, List, Tuple
+from typing import Awaitable, Callable, Dict
 from fastapi_websocket_rpc.schemas import RpcResponse
 from fastapi_websocket_pubsub import PubSubClient
 from fastapi_websocket_pubsub.rpc_event_methods import RpcEventClientMethods
 from fastapi_websocket_rpc import RpcChannel
 import tenacity
-from protocol.exceptions import ProtocolException
-from protocol.messages import (    
+
+from openpectus.protocol.exceptions import ProtocolException
+from openpectus.protocol.messages import (    
     MessageBase,
     RegisterEngineMsg,
     ErrorMessage,
@@ -225,55 +215,8 @@ def create_client(on_connect_callback=None, on_disconnect_callback=None) -> Clie
     ps_client = PubSubClient(
         on_connect=_on_conn,
         on_disconnect=_on_disconnn,
-        methods_class=RpcClientHandler,  # type: ignore RpcClientHandler
+        methods_class=RpcClientHandler,  # type: ignore # RpcClientHandler
         retry_config=retry_config)
     client.set_ps_client(ps_client)
 
     return client
-
-
-async def main():
-    # Create a client and subscribe to topics
-    ps_client = PubSubClient(
-        ["guns", "germs"], callback=on_events, methods_class=RpcClientHandler  # type: ignore RpcClientHandler
-    )
-    #client_handler = WsClientHandler(ps_client)
-    client = Client()
-    client.set_rpc_handler(ps_client._methods)  # type: ignore
-    #client.set_client_handler(client_handler)
-
-    ps_client.start_client(f"ws://127.0.0.1:{PORT}/pubsub")
-
-    #msg = RegisterEngineMsg(engine_name="eng1", uod_name="uod1")
-    # result = await client.client_handler.send(msg=msg)
-    #result = await client.rpc_handler
-
-    # async def on_steel(data, topic):
-    #     print("running callback steel!")
-    #     print("Got data", data, " on topic ", topic)
-    #     asyncio.create_task(ps_client.disconnect())
-
-    # ps_client.subscribe("steel", on_steel)
-    # ps_client.start_client(f"ws://127.0.0.1:{PORT}/pubsub")
-    # logger.debug("client started")
-    # await asyncio.sleep(1)
-    # logger.debug("Registering...")
-    # # Note: For RPC calls one MUST use argument name(s). Otherwise it fails with a weird error
-    # # Also, there is not deserialization going on. Must be missing something (register returns a bool)
-    # # value : RpcResponse = await client._rpc_channel.other.register(client_id="foo")  # type: ignore
-    # # assert isinstance(value.result, bool)
-    # # if value.result:  # == str(True):  # Not much type help here
-    # #     logger.debug("Registration successful")
-    # # else:
-    # #     logger.warning("Registration failed")
-
-    # logger.debug("Sending RegisterEngineMsg")
-    # msg = RegisterEngineMsg(engine_name="eng1", uod_name="uod1")
-    # value = await ps_client._rpc_channel.other.send(msg_type=type(msg).__name__, msg_dict=msg.dict())
-    # logger.debug(f"msg sent. result: {value}")
-
-    await ps_client.wait_until_done()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())

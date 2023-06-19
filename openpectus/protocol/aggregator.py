@@ -8,8 +8,10 @@ from fastapi_websocket_pubsub import PubSubEndpoint
 from fastapi_websocket_rpc import RpcChannel
 from fastapi_websocket_rpc.schemas import RpcResponse
 from fastapi_websocket_pubsub.rpc_event_methods import RpcEventServerMethods
-from protocol.exceptions import ProtocolException
-from protocol.messages import (
+import logging
+
+from openpectus.protocol.exceptions import ProtocolException
+from openpectus.protocol.messages import (
     deserialize_msg,
     deserialize_msg_from_json,
     serialize_msg,
@@ -20,9 +22,7 @@ from protocol.messages import (
     ErrorMessage,
     RegisterEngineMsg,
     TagsUpdatedMsg,
-    InvokeCommandMsg,
 )
-import logging
 
 
 logging.basicConfig()

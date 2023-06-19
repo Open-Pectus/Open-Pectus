@@ -1,8 +1,26 @@
 [build-system]
-requires = ["flit_core >=3.2,<4"]
-build-backend = "flit_core.buildapi"
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
 
 [project]
-name = "Open Pectus"
+name = "OpenPectus"
+version = "0.0.1"
 authors = [{name = "Eskild Schroll-Fleischer", email = "eyfl@novonordisk.com"}, {name = "Morten Passow Odgaard", email = "mpo@mjolner.dk"}, {name = "Jan H. Knudsen", email = "jhk@mjolner.dk"}]
-dynamic = ["version", "description"]
+#dynamic = ["version", "description"]
+#dependencies = ['antlr4-python3-runtime="4.9.2"', 'pint', 'fastapi', 'uvicorn[standard]']
+
+
+[tool.mypy]
+files = [
+    "./openpectus"
+]
+exclude = [
+    '^openpectus/lang/grammar/codegen/*',  # TOML literal string (single-quotes, no escaping necessary)    
+    '^openpectus/engine/p1/*',
+]
+
+warn_return_any = true
+warn_unused_configs = true
+
+
+# Per-module options:

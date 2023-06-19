@@ -1,27 +1,20 @@
 import asyncio
-import os
 from queue import Empty
-import sys
 import time
 from argparse import ArgumentParser
 from threading import Thread
 from typing import Any, List
 from typing_extensions import override
 
-# TODO replace hack with pip install -e, eg https://stackoverflow.com/questions/30306099/pip-install-editable-vs-python-setup-py-develop
-op_path = os.path.join(os.path.dirname(__file__), "..")
-sys.path.append(op_path)
-
-from protocol.engine import Client, create_client
-from engine.eng import Engine, EngineCommand
-from engine.hardware import HardwareLayerBase, Register, RegisterDirection
-from lang.exec import tags
-from lang.exec.uod import UnitOperationDefinitionBase, UodCommand
-from protocol.messages import (
+from openpectus.protocol.engine import Client, create_client
+from openpectus.engine.eng import Engine, EngineCommand
+from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
+from openpectus.lang.exec import tags
+from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand
+from openpectus.protocol.messages import (
     RegisterEngineMsg,
     MessageBase,
     SuccessMessage,
-    ErrorMessage,
     TagsUpdatedMsg,
     TagValue,
     InvokeCommandMsg

@@ -1,4 +1,3 @@
-
 from enum import StrEnum, auto
 import itertools
 from multiprocessing import Queue
@@ -6,16 +5,16 @@ from queue import Empty
 import logging
 import time
 from typing import Iterable
-from lang.exec.uod import UnitOperationDefinitionBase
-from lang.exec.tags import (
+
+from openpectus.lang.exec.timer import OneThreadTimer
+from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException
+from openpectus.lang.exec.uod import UnitOperationDefinitionBase
+from openpectus.lang.exec.tags import (
     Tag,
     TagCollection,
     ChangeListener,
     DEFAULT_TAG_CLOCK
 )
-
-from lang.exec.timer import OneThreadTimer
-from engine.hardware import HardwareLayerBase, HardwareLayerException
 
 
 logging.basicConfig()
@@ -26,33 +25,6 @@ logger.setLevel(logging.DEBUG)
 class UodReader():
     def read(self) -> UnitOperationDefinitionBase:
         raise NotImplementedError()
-
-
-# Engine-interpreter interface?
-#  built-in commands vs uod commands? do they need separate definitions.
-#   The builtins don't really need any - not for the interpreter - but for the UI they do
-#   Change interpreter - is should not directly execute uod commands - should hand them to engine for execution
-
-class InterpreterEngine():
-    def queue_command(self, cmd_name, cmd_args):  # which type should command have here?
-        pass
-
-
-class AggregatorClient():
-    """ Send state changes to aggregator and execute commands from aggregator. Should possibly do async-to-sync via queue.
-    Could possibly also just be queues for command input and tag/status output
-    """
-
-    def tag_updated(self, tag):  # includes blocks
-        pass
-
-    def code_line_updated(self, line_number: int):  # ?
-        pass
-
-    def on_command_request(self, cmd_name, cmd_args):
-        pass
-
-    # how about start/stop/pause/hold - are they commands or tags?
 
 
 class EngineCommand():

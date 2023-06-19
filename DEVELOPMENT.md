@@ -10,6 +10,14 @@ OpenAPI UI: http://localhost:8300/docs
 OpenAPI spec: http://localhost:8300/openapi.json
 
 
+# Setup
+
+To build dist:
+...\Open-Pectus> python -m build
+
+To set up a development environment, run
+...\Open-Pectus> pip install -e .
+
 ## Flake
 Flake is a python linter.
 

@@ -1,15 +1,12 @@
 import json
 import os
-import sys
 import unittest
 import hashlib
-
 from fastapi.testclient import TestClient
 
-project_path = os.path.join(os.path.dirname(__file__), "..", "..")
-sys.path.append(os.path.join(project_path, 'aggregator'))
-from aggregator.main import app
+from openpectus.aggregator.main import app
 
+project_path = os.path.join(os.path.dirname(__file__), "..", "..")
 client = TestClient(app)
 
 

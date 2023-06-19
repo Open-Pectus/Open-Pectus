@@ -1,12 +1,7 @@
-import sys
-import os
 from fastapi import APIRouter, Depends
 
-op_path = os.path.join(os.path.dirname(__file__), "..", "..")
-sys.path.append(op_path)
-
-from protocol.aggregator import Aggregator
-import aggregator.deps as agg_deps
+import openpectus.aggregator.deps as agg_deps
+from openpectus.protocol.aggregator import Aggregator
 
 
 router = APIRouter(tags=["aggregator"])

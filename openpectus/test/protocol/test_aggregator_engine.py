@@ -1,7 +1,5 @@
 import asyncio
 import logging
-import os
-import sys
 import time
 import unittest
 from multiprocessing import Process
@@ -10,13 +8,14 @@ import uvicorn
 from fastapi import Depends, FastAPI
 from fastapi.responses import Response, PlainTextResponse
 from fastapi_websocket_rpc.logger import get_logger
-
-# Add parent path to use local src as package for tests
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-
 from unittest import IsolatedAsyncioTestCase
 from fastapi_websocket_pubsub import PubSubClient, PubSubEndpoint
-from protocol.messages import (
+
+import openpectus.aggregator.deps as agg_deps
+from openpectus.aggregator.routers import aggregator_websocket
+from openpectus.protocol.engine import create_client, Client
+from openpectus.protocol.aggregator import Aggregator, TagsInfo
+from openpectus.protocol.messages import (
     MessageBase,
     RegisterEngineMsg,
     SuccessMessage,
@@ -27,11 +26,6 @@ from protocol.messages import (
     serialize_msg_to_json,
     deserialize_msg_from_json
 )
-
-from protocol.aggregator import Aggregator, TagsInfo
-import aggregator.deps as agg_deps
-from protocol.engine import create_client, Client
-from aggregator.routers import aggregator_websocket
 
 
 server_app = FastAPI()
@@ -180,7 +174,7 @@ class AsyncServerTestCase(IsolatedAsyncioTestCase):
                 self.proc.kill()
 
 
-@unittest.skip("TODO fix")
+@unittest.skip("TODO fix on CI build")
 class IntegrationTest(AsyncServerTestCase):
 
     def create_test_client(self, on_connect_callback=None) -> Client:

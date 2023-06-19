@@ -1,20 +1,13 @@
-import asyncio
-import sys
-import os
-
-op_path = os.path.join(os.path.dirname(__file__), "..", "..")
-sys.path.append(op_path)
-
-from protocol.aggregator import Aggregator, ChannelInfo, TagInfo
-from protocol.messages import InvokeCommandMsg
-import aggregator.deps as agg_deps
-
 from datetime import datetime
 from enum import StrEnum, auto
 from typing import Literal, List
-
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+
+import openpectus.aggregator.deps as agg_deps
+from openpectus.protocol.aggregator import Aggregator, ChannelInfo, TagInfo
+from openpectus.protocol.messages import InvokeCommandMsg
+
 
 router = APIRouter(tags=["process_unit"])
 
