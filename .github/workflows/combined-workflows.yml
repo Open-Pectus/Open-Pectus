@@ -4,7 +4,7 @@ name: Combined Workflows
 
 on:
   push:
-    branches: [ "main", "49-define-initial-aggregator-engine-protocol" ]
+    branches: [ "main", "112-standard-tags" ]
   pull_request:
     branches: [ "main" ]
 
