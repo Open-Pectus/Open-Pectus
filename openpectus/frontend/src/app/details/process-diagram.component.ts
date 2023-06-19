@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Store } from '@ngrx/store';
 import { combineLatest, map } from 'rxjs';
-import { ProcessValuePipePipe } from '../shared/pipes/auto-format.pipe';
+import { ProcessValuePipe } from '../shared/pipes/process-value.pipe';
 import { DetailsActions } from './ngrx/details.actions';
 import { DetailsSelectors } from './ngrx/details.selectors';
 
@@ -40,7 +40,7 @@ export class ProcessDiagramComponent implements OnInit {
 
   constructor(private store: Store,
               private domSanitizer: DomSanitizer,
-              private processValuePipe: ProcessValuePipePipe) {}
+              private processValuePipe: ProcessValuePipe) {}
 
   ngOnInit() {
     this.store.dispatch(DetailsActions.processDiagramInitialized());

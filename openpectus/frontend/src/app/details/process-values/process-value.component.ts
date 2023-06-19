@@ -13,7 +13,7 @@ import { ValueAndUnit } from './process-value-editor.component';
          [class.cursor-pointer]="hasAction(processValue)" (click)="onClick()">
       <div class="mx-1 font-semibold">{{processValue?.name}}</div>
       <div class="bg-vscode-background-grey rounded py-0.5 px-2 whitespace-nowrap min-h-[1.75rem] relative">
-        {{processValue?.value | processValuePipe:processValue?.value_type:processValue?.value_unit}}
+        {{processValue?.value | processValue:processValue?.value_type:processValue?.value_unit}}
 
         <div *ngIf="hasAction(processValue)"
              [class.codicon-edit]="processValue?.writable" [class.codicon-wand]="hasCommands(processValue)"

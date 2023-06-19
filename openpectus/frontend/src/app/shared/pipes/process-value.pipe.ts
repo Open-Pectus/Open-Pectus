@@ -3,9 +3,9 @@ import { Pipe, PipeTransform } from '@angular/core';
 import { ProcessValueType } from '../../api';
 
 @Pipe({
-  name: 'processValuePipe',
+  name: 'processValue',
 })
-export class ProcessValuePipePipe implements PipeTransform {
+export class ProcessValuePipe implements PipeTransform {
   constructor(private decimalPipe: DecimalPipe) {}
 
   transform(value: any, type?: ProcessValueType, unit?: string): string | null {
