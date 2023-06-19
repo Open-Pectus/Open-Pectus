@@ -3,13 +3,14 @@ import { Store } from '@ngrx/store';
 import { editor as MonacoEditor, languages, Range, Uri } from 'monaco-editor';
 import { buildWorkerDefinition } from 'monaco-editor-workers';
 import { initServices, MonacoLanguageClient } from 'monaco-languageclient';
-import { Observable, Subject, take, takeUntil } from 'rxjs';
+import { firstValueFrom, Observable, Subject, take, takeUntil } from 'rxjs';
 import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient/lib/common/client';
 import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
 import 'vscode/default-extensions/json';
 import 'vscode/default-extensions/theme-defaults';
 import { createConfiguredEditor, createModelReference } from 'vscode/monaco';
 import { DetailsActions } from '../ngrx/details.actions';
+import { DetailsSelectors } from '../ngrx/details.selectors';
 
 buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.origin, false);
 
@@ -26,7 +27,6 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   @ViewChild('editor', {static: true}) editorElement!: ElementRef<HTMLDivElement>;
   private componentDestroyed = new Subject<void>();
   private editor?: MonacoEditor.IStandaloneCodeEditor;
-  private initDone = false;
   private readonly languageId = 'json';
 
   constructor(private store: Store) {}
@@ -68,18 +68,17 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   private async initServices() {
-    if(!this.initDone) {
-      await initServices({
-        enableThemeService: true,
-        enableModelEditorService: true,
-        modelEditorServiceConfig: {
-          useDefaultFunction: true,
-        },
-        enableLanguagesService: true,
-        debugLogging: false,
-      });
-      this.initDone = true;
-    }
+    const alreadyInitialized = await firstValueFrom(this.store.select(DetailsSelectors.monacoServicesInitialized));
+    if(alreadyInitialized) return;
+    await initServices({
+      enableThemeService: true,
+      enableModelEditorService: true,
+      modelEditorServiceConfig: {
+        useDefaultFunction: true,
+      },
+      enableLanguagesService: true,
+      debugLogging: false,
+    });
   }
 
   private registerLanguages() {
