@@ -10,7 +10,7 @@ import { RunLogColumn, RunLogLine } from '../../api';
       <p>{{runLogLine?.end | date:dateFormat}}</p>
       <p>{{runLogLine?.command?.command}}</p>
       <p *ngFor="let additionalValue of runLogLine?.additional_values; let index = index">
-        {{additionalValue | processValuePipe:additionalColumns?.[index]?.type:additionalColumns?.[index]?.unit}}
+        {{additionalValue | processValue:additionalColumns?.[index]?.type:additionalColumns?.[index]?.unit}}
       </p>
     </div>
   `,

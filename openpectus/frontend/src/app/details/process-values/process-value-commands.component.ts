@@ -6,9 +6,9 @@ import { ProcessValueCommand } from '../../api';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div tabindex="0" #element
-         class="absolute left-1/2 -translate-x-1/2 top-8 z-10 flex gap-2 bg-white border border-slate-500 outline-none rounded-md p-2"
+         class="absolute left-1/2 -translate-x-1/2 top-0.5 z-10 flex gap-2 bg-white border border-slate-500 outline-none rounded-md p-2"
          (blur)="onBlur($event)">
-      <button class="bg-sky-500 rounded-lg p-2" *ngFor="let command of processValueCommands"
+      <button class="bg-green-400 text-gray-800 rounded-lg py-2 px-3 whitespace-pre font-semibold" *ngFor="let command of processValueCommands"
               (click)="$event.stopPropagation(); onButtonClick(command)">{{command.name}}</button>
     </div>
   `,

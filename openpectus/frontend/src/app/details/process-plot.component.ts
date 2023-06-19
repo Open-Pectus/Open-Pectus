@@ -63,7 +63,7 @@ export class ProcessPlotComponent implements AfterViewInit, OnDestroy {
   }
 
   private extractUnitsFromLog(processValuesLog: ProcessValue[][], name: string) {
-    return processValuesLog[0].find(processValue => processValue.name === name)?.value_unit;
+    return processValuesLog[0]?.find(processValue => processValue.name === name)?.value_unit;
   }
 
   private convertToAxes(titles: (string | undefined)[]) {

@@ -111,6 +111,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       fontSize: 18,
       lineNumbers: this.getLineNumberFunction(injectedLines),
       glyphMargin: false,
+      fixedOverflowWidgets: true,
     });
 
     editor.onDidChangeModelContent(() => {

@@ -23,6 +23,10 @@ import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Ou
            (dragstart)="onDragStart($event)" (dragend)="onDragEnd($event)"
            (mousedown)="onMouseDown()" (mouseleave)="onMouseLeave()"
            (drag)="onDrag($event)"></div>
+
+      <div class="absolute top-0 left-0">
+        <ng-content select="[popover]"></ng-content>
+      </div>
     </div>
   `,
 })
