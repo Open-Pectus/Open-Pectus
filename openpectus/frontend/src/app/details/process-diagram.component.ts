@@ -29,8 +29,8 @@ export class ProcessDiagramComponent implements OnInit {
     map(([processDiagram, processValues]) => {
       return processDiagram?.svg?.replaceAll(/{{(?<inCurlyBraces>[^}]+)}}/g, (match, inCurlyBraces: string) => {
         const withoutSvgTags = inCurlyBraces.replaceAll(/<.+>/g, '').trim();
-        const isJustValue = withoutSvgTags.endsWith('.PV');
-        const isJustUnit = withoutSvgTags.endsWith('.unit');
+        const isJustValue = withoutSvgTags.toLowerCase().endsWith('.pv');
+        const isJustUnit = withoutSvgTags.toLowerCase().endsWith('.unit');
         const withoutDotNotation = withoutSvgTags.substring(0, withoutSvgTags.lastIndexOf('.'));
         const processValueName = (isJustValue || isJustUnit) ? withoutDotNotation : withoutSvgTags;
 
