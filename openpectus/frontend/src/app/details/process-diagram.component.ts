@@ -27,11 +27,21 @@ export class ProcessDiagramComponent implements OnInit {
 
   diagramWithValues = combineLatest([this.processDiagram, this.processValues]).pipe(
     map(([processDiagram, processValues]) => {
-      return processDiagram?.svg?.replaceAll(/{{(?<processValueName>[^}]+)}}/g, (match, processValueName: string) => {
-        const processValueNameWithoutSvgTags = processValueName.replaceAll(/<.+>/g, '').trim();
-        const matchingProcessValue = processValues.find(processValue => processValue.name === processValueNameWithoutSvgTags);
+      return processDiagram?.svg?.replaceAll(/{{(?<inCurlyBraces>[^}]+)}}/g, (match, inCurlyBraces: string) => {
+        const withoutSvgTags = inCurlyBraces.replaceAll(/<.+>/g, '').trim();
+        const isJustValue = withoutSvgTags.endsWith('.PV');
+        const isJustUnit = withoutSvgTags.endsWith('.unit');
+        const withoutDotNotation = withoutSvgTags.substring(0, withoutSvgTags.lastIndexOf('.'));
+        const processValueName = (isJustValue || isJustUnit) ? withoutDotNotation : withoutSvgTags;
+
+        const matchingProcessValue = processValues.find(processValue => processValue.name === processValueName);
         if(matchingProcessValue === undefined) return '';
-        return `${this.processValuePipe.transform(matchingProcessValue)}`;
+
+        const formattedProcessValue = this.processValuePipe.transform(matchingProcessValue) ?? '';
+        const indexOfSpace = formattedProcessValue.indexOf(' ');
+        if(isJustValue) return formattedProcessValue.substring(0, indexOfSpace);
+        if(isJustUnit) return formattedProcessValue.substring(indexOfSpace + 1);
+        return formattedProcessValue;
       }) ?? '';
     }),
     map(processDiagramString => this.domSanitizer.bypassSecurityTrustHtml(processDiagramString)),
