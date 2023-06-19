@@ -13,6 +13,7 @@ export const DetailsActions = createActionGroup({
     'Process Values Destroyed': emptyProps(),
     'Process Values Fetched': props<{ processValues: ProcessValue[] }>(),
     'Process Values Failed to load': emptyProps(),
+    'Process Value Edited': props<{ processValue: ProcessValue }>(),
     'Process Value Command Clicked': props<{ command: ProcessValueCommand, processValueName: string }>(),
 
     'Process Unit Loaded': props<{ processUnit: ProcessUnit }>(),

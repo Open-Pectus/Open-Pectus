@@ -1,5 +1,6 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import { ProcessValue, ProcessValueType } from '../../api';
+import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 
 export interface ValueAndUnit {
   value: string;
@@ -10,11 +11,12 @@ export interface ValueAndUnit {
   selector: 'app-process-value-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="absolute bg-white border border-slate-500 p-2 rounded-md top-8 left-1/2 -translate-x-1/2 flex shadow-lg shadow-gray-600 z-10">
+    <div class="absolute left-1/2 -translate-x-1/2 top-0.5 bg-white border border-slate-500 p-2 rounded-md flex shadow-lg shadow-gray-600 z-10">
       <input #inputElement class="p-1 outline-none rounded-l-sm w-32" type="text" [class.bg-red-500]="!isValid"
              (input)="onInput(inputElement.value)"
-             [value]="processValueAsString(processValue)" (blur)="onBlur($event)" (keyup.enter)="onSaveInput(inputElement.value)">
-      <button #saveButtonElement class="px-2.5 rounded-r bg-green-500 text-gray-900 font-semibold flex items-center gap-1.5"
+             [value]="processValue | processValue" (blur)="onBlur($event)"
+             (keyup.enter)="onSaveInput(inputElement.value)">
+      <button #saveButtonElement class="px-2.5 rounded-r bg-green-400 text-gray-800 font-semibold flex items-center gap-1.5"
               [class.bg-vscode-background-grey-hover]="!isValid"
               (click)="$event.stopPropagation(); onSaveInput(inputElement.value)" (blur)="onBlur($event)">
         <i class="codicon codicon-save"></i> Save
@@ -30,15 +32,12 @@ export class ProcessValueEditorComponent implements AfterViewInit {
 
   isValid = true;
 
-  processValueAsString(processValue: ProcessValue | undefined) {
-    let string = processValue?.value?.toString();
-    if(processValue?.value_unit !== undefined) string += ' ' + processValue?.value_unit;
-    return string;
-  }
+  constructor(private processValuePipe: ProcessValuePipe) {}
 
   ngAfterViewInit() {
     this.inputElement?.nativeElement.focus();
-    const valueLength = this.processValue?.value?.toString().length;
+    const formattedValue = this.processValuePipe.transform(this.processValue);
+    const valueLength = formattedValue?.indexOf(' ');
     if(valueLength !== undefined) this.inputElement?.nativeElement.setSelectionRange(0, valueLength);
   }
 

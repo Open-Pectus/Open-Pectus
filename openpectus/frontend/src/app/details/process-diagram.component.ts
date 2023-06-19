@@ -31,8 +31,7 @@ export class ProcessDiagramComponent implements OnInit {
         const processValueNameWithoutSvgTags = processValueName.replaceAll(/<.+>/g, '').trim();
         const matchingProcessValue = processValues.find(processValue => processValue.name === processValueNameWithoutSvgTags);
         if(matchingProcessValue === undefined) return '';
-        return `${this.processValuePipe.transform(matchingProcessValue.value, matchingProcessValue.value_type,
-          matchingProcessValue.value_unit)}`;
+        return `${this.processValuePipe.transform(matchingProcessValue)}`;
       }) ?? '';
     }),
     map(processDiagramString => this.domSanitizer.bypassSecurityTrustHtml(processDiagramString)),

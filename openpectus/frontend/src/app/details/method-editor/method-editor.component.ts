@@ -11,7 +11,7 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
     <app-collapsible-element [name]="'Method Editor'" [heightResizable]="true" (contentHeightChanged)="onContentHeightChanged()"
                              [contentHeight]="400">
       <button *ngIf="methodEditorIsDirty | ngrxPush" (click)="onSaveButtonClicked()"
-              class="bg-green-500 flex items-center text-slate-800 px-2.5 rounded-md">
+              class="bg-green-400 flex items-center text-gray-800 px-2.5 rounded-md">
         <span class="codicon codicon-save !text-xl"></span>
         <span class="ml-2 font-semibold">Save</span>
       </button>
