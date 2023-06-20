@@ -5,7 +5,7 @@ import { RunLogColumn, RunLogLine } from '../../api';
   selector: 'app-run-log-line',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div [class.!bg-slate-100]="rowIndex % 2 === 1" class="bg-white border-b border-white cursor-pointer" (click)="toggleCollapse()">
+    <div [class.!bg-gray-200]="rowIndex % 2 === 1" class="bg-gray-100 border-b border-white cursor-pointer" (click)="toggleCollapse()">
       <div class="grid gap-2 px-3 py-2" [style.grid]="gridFormat">
         <p>{{runLogLine?.start | date:dateFormat}}</p>
         <p>{{runLogLine?.end | date:dateFormat}}</p>
@@ -14,9 +14,9 @@ import { RunLogColumn, RunLogLine } from '../../api';
       <div [style.height.px]="height" class="w-full transition-[height] overflow-hidden">
         <div #additionalValues class="grid grid-rows-1 px-2 grid-flow-col justify-end">
           <div *ngFor="let additionalValue of runLogLine?.additional_values; let valueIndex = index"
-               class="m-2 p-2 border border-slate-300 rounded-md text-right">
-            <p class="font-semibold">{{additionalColumns?.[valueIndex]?.header}}</p>
-            <p>{{additionalValue | processValue:additionalColumns?.[valueIndex]?.type:additionalColumns?.[valueIndex]?.unit}}</p>
+               class="mx-2 mb-2 border border-gray-500 rounded-md text-right overflow-hidden">
+            <p class="bg-gray-500 text-white px-2 py-0.5">{{additionalColumns?.[valueIndex]?.header}}</p>
+            <p class="px-2 py-0.5 bg-white ">{{additionalValue | processValue:additionalColumns?.[valueIndex]?.type:additionalColumns?.[valueIndex]?.unit}}</p>
           </div>
         </div>
       </div>

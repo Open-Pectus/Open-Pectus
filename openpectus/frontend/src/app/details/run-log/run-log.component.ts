@@ -10,7 +10,7 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
   template: `
     <app-collapsible-element [name]="'Run Log'" [heightResizable]="true" [contentHeight]="400">
       <div content *ngrxLet="runLog as runLog" class="h-full">
-        <div class="grid bg-slate-500 text-white gap-2 px-3 py-2" [style.grid]="gridFormat | ngrxPush">
+        <div class="grid bg-gray-500 text-white gap-2 px-3 py-2" [style.grid]="gridFormat | ngrxPush">
           <b>Start</b>
           <b>End</b>
           <b>Command</b>
