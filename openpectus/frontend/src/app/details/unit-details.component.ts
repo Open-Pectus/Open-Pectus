@@ -17,6 +17,4 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
     </div>
   `,
 })
-export class UnitDetailsComponent {
-
-}
+export class UnitDetailsComponent {}

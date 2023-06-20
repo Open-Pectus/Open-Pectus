@@ -18,12 +18,13 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
            [style.height.px]="height" (transitionend)="onTransitionEndContentContainer($event)">
         <ng-content select="[content]"></ng-content>
       </div>
-      <div class="absolute bottom-0 left-0 w-full h-1.5" [style.height.px]="widenDragHandler ? 20 : null"
+      <div class="absolute bottom-0 left-0 w-full h-1.5" [class.-mb-8]="widenDragHandler"
+           [style.height.rem]="widenDragHandler ? 4 : null"
            [class.cursor-ns-resize]="heightResizable"
            [draggable]="heightResizable"
            (dragstart)="onDragStartHandle($event)" (dragend)="onDragEndHandle()"
-           (mousedown)="onMouseDownHandle()" (mouseleave)="onMouseLeaveHandle()"
-           (drag)="onDragHandle($event)"></div>
+           (mousedown)="onMouseDownHandle()" (mouseup)="onMouseUpHandle()"
+           (drag)="onDragHandle($event)" (dragover)="allowDragOver($event)"></div>
 
       <div class="absolute top-0 left-0">
         <ng-content select="[popover]"></ng-content>
@@ -40,6 +41,7 @@ export class CollapsibleElementComponent implements OnInit {
   protected collapsed = false;
   protected widenDragHandler = false;
   protected isDragging = false;
+  private minHeight = 100;
 
   constructor(private collapsibleElementStorageService: CollapsibleElementStorageService) {}
 
@@ -59,6 +61,10 @@ export class CollapsibleElementComponent implements OnInit {
     this.getCollapsedStateFromStorage();
   }
 
+  allowDragOver(event: DragEvent) {
+    event.preventDefault(); // to avoid "not allowed" cursor and extra 0 clientY drag event.
+  }
+
   protected onDragHandle(event: DragEvent) {
     if(!this.heightResizable) return;
     const element = event.target as HTMLDivElement;
@@ -66,14 +72,13 @@ export class CollapsibleElementComponent implements OnInit {
     const top = parentElement.offsetTop;
     const contentTop = this.contentElementRef?.nativeElement.offsetTop;
     if(top === undefined || contentTop === undefined) return;
-    const height = event.pageY - top - contentTop;
-    if(height < 100) return;
+    const height = event.pageY - top - contentTop - 3; // 3 is half the draghandler height when not widened;
+    if(height < this.minHeight) return;
     this.height = height;
   }
 
   protected onDragStartHandle(event: DragEvent) {
     if(event.dataTransfer === null) return;
-    event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.dropEffect = 'move';
     event.dataTransfer.setDragImage(new Image(), 0, 0);
     this.isDragging = true;
@@ -81,6 +86,7 @@ export class CollapsibleElementComponent implements OnInit {
 
   protected onDragEndHandle() {
     this.isDragging = false;
+    this.widenDragHandler = false;
     this.collapsibleElementStorageService.saveHeight(this.name, this.contentHeight);
   }
 
@@ -88,7 +94,7 @@ export class CollapsibleElementComponent implements OnInit {
     this.widenDragHandler = true;
   }
 
-  protected onMouseLeaveHandle() {
+  protected onMouseUpHandle() {
     this.widenDragHandler = false;
   }
 
