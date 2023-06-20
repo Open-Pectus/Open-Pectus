@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
+import { ElementHeightStorageService } from './element-height-storage.service';
 
 @Component({
   selector: 'app-collapsible-element',
@@ -30,7 +31,7 @@ import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Ou
     </div>
   `,
 })
-export class CollapsibleElementComponent {
+export class CollapsibleElementComponent implements OnInit {
   @Input() name?: string;
   @Input() collapsed = false;
   @Input() heightResizable = false;
@@ -40,9 +41,20 @@ export class CollapsibleElementComponent {
   protected widenDragHandler = false;
   protected isDragging = false;
 
-  get height() {
+  constructor(private elementHeightStorageService: ElementHeightStorageService) {}
+
+  get height(): number {
     if(this.collapsed) return 0;
-    return this.heightResizable ? this.contentHeight : this.contentElementRef?.nativeElement.scrollHeight;
+    return this.heightResizable ? this.contentHeight : this.contentElementRef?.nativeElement.scrollHeight ?? 0;
+  }
+
+  private set height(height: number) {
+    this.contentHeight = height;
+    this.contentHeightChanged.emit(this.contentHeight);
+  }
+
+  ngOnInit() {
+    this.getHeightFromStorage();
   }
 
   onDrag(event: DragEvent) {
@@ -54,8 +66,7 @@ export class CollapsibleElementComponent {
     if(top === undefined || contentTop === undefined) return;
     const height = event.pageY - top - contentTop;
     if(height < 100) return;
-    this.contentHeight = height;
-    this.contentHeightChanged.emit(height);
+    this.height = height;
   }
 
   onDragStart(event: DragEvent) {
@@ -68,6 +79,7 @@ export class CollapsibleElementComponent {
 
   onDragEnd(event: DragEvent) {
     this.isDragging = false;
+    this.elementHeightStorageService.saveHeight(this.name, this.contentHeight);
   }
 
   onMouseDown() {
@@ -76,5 +88,12 @@ export class CollapsibleElementComponent {
 
   onMouseLeave() {
     this.widenDragHandler = false;
+  }
+
+  private getHeightFromStorage() {
+    if(this.name === undefined) throw Error('Name of CollapsibleElementComponent should be defined');
+    const height = this.elementHeightStorageService.getHeight(this.name);
+    if(height === null) return;
+    this.height = height;
   }
 }
