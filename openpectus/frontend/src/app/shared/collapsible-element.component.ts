@@ -43,12 +43,13 @@ export class CollapsibleElementComponent implements OnInit {
 
   constructor(private elementHeightStorageService: ElementHeightStorageService) {}
 
-  get height(): number {
+  get height() {
     if(this.collapsed) return 0;
-    return this.heightResizable ? this.contentHeight : this.contentElementRef?.nativeElement.scrollHeight ?? 0;
+    return this.heightResizable ? this.contentHeight : this.contentElementRef?.nativeElement.scrollHeight;
   }
 
-  private set height(height: number) {
+  private set height(height: number | undefined) {
+    if(height === undefined) return;
     this.contentHeight = height;
     this.contentHeightChanged.emit(this.contentHeight);
   }
