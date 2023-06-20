@@ -9,16 +9,13 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-collapsible-element [name]="'Run Log'" [heightResizable]="true" [contentHeight]="400">
-      <div content *ngrxLet="runLog as runLog" class="text-sm h-full">
-        <div class="grid bg-slate-200 gap-2 px-3 py-2" [style.grid]="gridFormat | ngrxPush">
+      <div content *ngrxLet="runLog as runLog" class="h-full">
+        <div class="grid bg-slate-500 text-white gap-2 px-3 py-2" [style.grid]="gridFormat | ngrxPush">
           <b>Start</b>
           <b>End</b>
           <b>Command</b>
-          <b *ngFor="let additionalColumn of runLog.additional_columns">
-            {{additionalColumn.header}}
-          </b>
         </div>
-        <app-run-log-line *ngFor="let runLogLine of runLog.lines; let index = index" [runLogLine]="runLogLine" [index]="index"
+        <app-run-log-line *ngFor="let runLogLine of runLog.lines; let index = index" [runLogLine]="runLogLine" [rowIndex]="index"
                           [gridFormat]="gridFormat | ngrxPush" [additionalColumns]="runLog.additional_columns"></app-run-log-line>
       </div>
     </app-collapsible-element>
@@ -27,7 +24,7 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
 export class RunLogComponent implements OnInit {
   runLog = this.store.select(DetailsSelectors.runLog);
   gridFormat = this.runLog.pipe(map(runLog => {
-    return `auto / 13ch 13ch 2fr repeat(${runLog.additional_columns.length}, 1fr)`;
+    return `auto / 14ch 14ch 1fr`;
   }));
 
   constructor(private store: Store) {}
