@@ -112,12 +112,9 @@ jobs:
           registry: ${{ secrets.ACR_ENDPOINT }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
-      - name : echo1
-        run : "echo ${{ steps.meta.outputs.tags }}"
-      - name : echo2
-        run : "echo ${{ secrets.ACR_ENDPOINT }}"
-      - name : echo3
-        run : "echo ${{ steps.tag.outputs.tag }}"
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
       - name: Build and push container image to registry
         uses: docker/build-push-action@v4
         with:
