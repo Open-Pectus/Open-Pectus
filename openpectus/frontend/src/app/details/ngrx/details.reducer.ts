@@ -24,7 +24,7 @@ const initialState: DetailsState = {
   processValuesLog: [],
   shouldPollProcessValues: false,
   commandExamples: [],
-  runLog: {additional_columns: [], lines: []},
+  runLog: {lines: []},
 };
 
 export const detailsReducer = createReducer(initialState,

@@ -208,43 +208,50 @@ export const handlers = [
     return res(
       context.status(200),
       context.json<RunLog>({
-        additional_columns: [{
-          header: 'Amazing float value',
-          type: ProcessValueType.FLOAT,
-          unit: 'av',
-        }, {
-          header: 'Less amazing string value',
-          type: ProcessValueType.STRING,
-        }, {
-          header: 'Soso int value',
-          type: ProcessValueType.INT,
-          unit: 'siv',
-        }],
         lines: [
           {
-            start: sub(Date.now(), {days: 1, hours: 3, seconds: 30}).toISOString(),
-            end: sub(Date.now(), {days: 1, hours: 3}).toISOString(),
-            command: {
-              command: 'Some Command',
-              source: CommandSource.MANUALLY_ENTERED,
-            },
-            additional_values: [1.43253342, 'WAAAGH!', 6789],
-          }, {
             start: sub(Date.now(), {days: 0, hours: 2, seconds: 20}).toISOString(),
-            end: sub(Date.now(), {days: 0, hours: 2, seconds: 15}).toISOString(),
             command: {
               command: 'Some Other Command',
               source: CommandSource.MANUALLY_ENTERED,
             },
-            additional_values: [2, '... and things', 1337],
+            start_values: [{
+              name: 'Amazing float value',
+              value: 1.43253342,
+              value_type: ProcessValueType.FLOAT,
+              writable: false,
+              value_unit: 'afv',
+            }],
+            end_values: [],
           }, {
             start: sub(Date.now(), {days: 0, hours: 1, seconds: 10}).toISOString(),
-            end: sub(Date.now(), {days: 0, hours: 1}).toISOString(),
+            progress: 0.66,
             command: {
               command: 'Some Third Command',
               source: CommandSource.MANUALLY_ENTERED,
             },
-            additional_values: [3.001, 'soso', 28008],
+            start_values: [
+              {name: 'Amazing float value', value: 999, value_type: ProcessValueType.FLOAT, writable: false, value_unit: 'afv'},
+              {name: 'Best value', value: 19.99, value_type: ProcessValueType.FLOAT, writable: false, value_unit: 'afv'},
+              {name: 'Such prices', value: 4299, value_type: ProcessValueType.FLOAT, writable: false, value_unit: 'afv'},
+              {name: 'Very affordable', value: 0.99, value_type: ProcessValueType.FLOAT, writable: false, value_unit: 'afv'},
+            ],
+            end_values: [],
+          }, {
+            start: sub(Date.now(), {days: 1, hours: 3, seconds: 30}).toISOString(),
+            end: sub(Date.now(), {days: 1, hours: 3}).toISOString(),
+            command: {
+              command: 'Supply the dakka',
+              source: CommandSource.MANUALLY_ENTERED,
+            },
+            start_values: [
+              {name: 'Waaagh?', value: 'No waagh', value_type: ProcessValueType.STRING, writable: false},
+              {name: 'Dakka?', value: 'No dakka 🙁', value_type: ProcessValueType.STRING, writable: false},
+            ],
+            end_values: [
+              {name: 'Waaagh?', value: 'WAAAGH!', value_type: ProcessValueType.STRING, writable: false},
+              {name: 'Dakka?', value: 'DAKKA! 😀', value_type: ProcessValueType.STRING, writable: false},
+            ],
           },
         ],
       }),
