@@ -112,16 +112,13 @@ jobs:
           registry: ${{ secrets.ACR_ENDPOINT }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
-      - name: Get tag
-        id: tag
-        uses: dawidd6/action-get-tag@v1
       - name: Build and push container image to registry
         uses: docker/build-push-action@v4
         with:
           push: ${{ env.SHOULD_PUBLISH_IMAGE }}
           tags: |
             ${{ steps.meta.outputs.tags }}
-            ${{ secrets.ACR_ENDPOINT }}/open-pectus:${{ steps.tag.outputs.tag }}
+            ${{ secrets.ACR_ENDPOINT }}/open-pectus:test
           labels: ${{ steps.meta.outputs.labels }}
           context: .
           file: ./Dockerfile
