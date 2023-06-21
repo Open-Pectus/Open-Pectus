@@ -118,7 +118,7 @@ jobs:
           push: ${{ env.SHOULD_PUBLISH_IMAGE }}
           tags: |
             ${{ steps.meta.outputs.tags }}
-            ${{ secrets.ACR_ENDPOINT }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
+            ${{ secrets.ACR_ENDPOINT }}/open-pectus:${{ steps.tag.outputs.tag }}
           labels: ${{ steps.meta.outputs.labels }}
           context: .
           file: ./Dockerfile
