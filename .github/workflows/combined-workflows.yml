@@ -118,7 +118,7 @@ jobs:
           push: ${{ env.SHOULD_PUBLISH_IMAGE }}
           tags: |
             ${{ steps.meta.outputs.tags }}
-            ${{ secrets.ACR_ENDPOINT }}/open-pectus:test
+            ${{ secrets.ACR_ENDPOINT }}/open-pectus:latest
           labels: ${{ steps.meta.outputs.labels }}
           context: .
           file: ./Dockerfile
