@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, ElementRef, Input, ViewChild } from '@angular/core';
-import { RunLogColumn, RunLogLine } from '../../api';
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { RunLogLine } from '../../api';
 
 @Component({
   selector: 'app-run-log-line',
@@ -13,13 +13,14 @@ import { RunLogColumn, RunLogLine } from '../../api';
                   [style.border-color]="'revert'" *ngIf="runLogLine?.end === undefined"></progress>
         <p>{{runLogLine?.command?.command}}</p>
       </div>
-      <div [style.height.px]="height" class="w-full transition-[height] overflow-hidden">
-        <div #additionalValues class="grid grid-rows-1 px-2 grid-flow-col justify-end">
-          <div *ngFor="let additionalValue of runLogLine?.additional_values; let valueIndex = index"
-               class="mx-2 mb-2 border border-sky-700 rounded-md text-right overflow-hidden">
-            <p class="bg-sky-700 text-white px-2 py-0.5">{{additionalColumns?.[valueIndex]?.header}}</p>
-            <p class="px-2 py-0.5 bg-white ">{{additionalValue | processValue:additionalColumns?.[valueIndex]?.type:additionalColumns?.[valueIndex]?.unit}}</p>
-          </div>
+      <div [style.height.px]="collapsed ? 0 : additionalValues.scrollHeight" class="w-full transition-[height] overflow-hidden">
+        <div #additionalValues>
+          <p class="text-end p-2" *ngIf="!runLogLine?.start_values?.length && !runLogLine?.end_values?.length">No additional values
+            available.</p>
+          <app-run-log-additional-values *ngIf="runLogLine?.start_values?.length" [name]="'Start'"
+                                         [values]="runLogLine?.start_values"></app-run-log-additional-values>
+          <app-run-log-additional-values *ngIf="runLogLine?.end_values?.length" [name]="'End'"
+                                         [values]="runLogLine?.end_values"></app-run-log-additional-values>
         </div>
       </div>
     </div>
@@ -28,15 +29,9 @@ import { RunLogColumn, RunLogLine } from '../../api';
 export class RunLogLineComponent {
   @Input() runLogLine?: RunLogLine;
   @Input() rowIndex: number = 0;
-  @Input() additionalColumns?: RunLogColumn[];
   @Input() gridFormat?: string = 'auto / 1fr 1fr 1fr';
-  @ViewChild('additionalValues', {static: true}) additionalValuesElement!: ElementRef<HTMLDivElement>;
-  dateFormat = 'dd/MM HH:mm:ss';
+  dateFormat = 'MM-dd HH:mm:ss';
   protected collapsed = true;
-
-  get height() {
-    return this.collapsed ? 0 : this.additionalValuesElement.nativeElement.scrollHeight;
-  }
 
   toggleCollapse() {
     this.collapsed = !this.collapsed;

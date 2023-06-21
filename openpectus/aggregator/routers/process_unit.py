@@ -199,22 +199,16 @@ def get_command_examples(unit_id: str) -> List[CommandExample]:
     ]
 
 
-class RunLogColumn(BaseModel):
-    header: str
-    type: ProcessValueType
-    unit: str | None
-
-
 class RunLogLine(BaseModel):
     command: ExecutableCommand
     start: datetime
     end: datetime | None
-    progress: float | None
-    additional_values: List[str | int | float]
+    progress: float | None # between 0 and 1
+    start_values: List[ProcessValue]
+    end_values: List[ProcessValue]
 
 
 class RunLog(BaseModel):
-    additional_columns: List[RunLogColumn]
     lines: List[RunLogLine]
 
 

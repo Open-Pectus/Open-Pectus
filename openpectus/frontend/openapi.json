@@ -769,18 +769,10 @@
       "RunLog": {
         "title": "RunLog",
         "required": [
-          "additional_columns",
           "lines"
         ],
         "type": "object",
         "properties": {
-          "additional_columns": {
-            "title": "Additional Columns",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RunLogColumn"
-            }
-          },
           "lines": {
             "title": "Lines",
             "type": "array",
@@ -790,33 +782,13 @@
           }
         }
       },
-      "RunLogColumn": {
-        "title": "RunLogColumn",
-        "required": [
-          "header",
-          "type"
-        ],
-        "type": "object",
-        "properties": {
-          "header": {
-            "title": "Header",
-            "type": "string"
-          },
-          "type": {
-            "$ref": "#/components/schemas/ProcessValueType"
-          },
-          "unit": {
-            "title": "Unit",
-            "type": "string"
-          }
-        }
-      },
       "RunLogLine": {
         "title": "RunLogLine",
         "required": [
           "command",
           "start",
-          "additional_values"
+          "start_values",
+          "end_values"
         ],
         "type": "object",
         "properties": {
@@ -837,21 +809,18 @@
             "title": "Progress",
             "type": "number"
           },
-          "additional_values": {
-            "title": "Additional Values",
+          "start_values": {
+            "title": "Start Values",
             "type": "array",
             "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "number"
-                }
-              ]
+              "$ref": "#/components/schemas/ProcessValue"
+            }
+          },
+          "end_values": {
+            "title": "End Values",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProcessValue"
             }
           }
         }
