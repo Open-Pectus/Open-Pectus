@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
 import { RunLogLine } from '../../api';
 
 @Component({
@@ -31,10 +31,24 @@ export class RunLogLineComponent {
   @Input() runLogLine?: RunLogLine;
   @Input() rowIndex: number = 0;
   @Input() gridFormat?: string = 'auto / 1fr 1fr 1fr';
-  dateFormat = 'MM-dd HH:mm:ss';
-  protected collapsed = true;
+  @Output() collapseToggled = new EventEmitter<boolean>();
+  protected readonly dateFormat = 'MM-dd HH:mm:ss';
 
-  toggleCollapse() {
+  constructor(private cd: ChangeDetectorRef) {}
+
+  private _collapsed = true;
+
+  get collapsed(): boolean {
+    return this._collapsed;
+  }
+
+  set collapsed(value: boolean) {
+    this._collapsed = value;
+    this.cd.markForCheck();
+  }
+
+  protected toggleCollapse() {
     this.collapsed = !this.collapsed;
+    this.collapseToggled.emit(this.collapsed);
   }
 }
