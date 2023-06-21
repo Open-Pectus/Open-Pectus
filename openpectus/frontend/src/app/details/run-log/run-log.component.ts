@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, ElementRef, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { produce } from 'immer';
 import { map } from 'rxjs';
@@ -11,14 +12,14 @@ import { RunLogLineComponent } from './run-log-line.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-collapsible-element [name]="'Run Log'" [heightResizable]="true" [contentHeight]="400">
-      <div buttons class="outline-1 outline rounded px-1 outline-slate-300">
-
-        <label class="flex items-center gap-1 cursor-pointer">
-          <input type="checkbox" #onlyRunning
-                 class="w-4 h-4 appearance-none font-bold text-transparent checked:text-white codicon codicon-pass cursor-pointer">
-          Only running
-        </label>
-      </div>
+      <input buttons type="text" placeholder="Filter Run Log" size="20"
+             class="border-none outline-none rounded p-1 text-gray-900 h-8"
+             #filterText (input)="cd.markForCheck()">
+      <label buttons class="flex items-center gap-1 cursor-pointer border rounded px-1 border-slate-300 h-8">
+        Only running
+        <input type="checkbox" #onlyRunning
+               class="w-5 !text-xl appearance-none font-bold text-transparent checked:text-white codicon codicon-pass cursor-pointer">
+      </label>
       <div content *ngrxLet="runLog as runLog" class="h-full overflow-y-auto">
         <div class="grid bg-gray-700 text-white gap-2 px-3 py-2" [style.grid]="gridFormat">
           <b>Start</b>
@@ -34,24 +35,36 @@ import { RunLogLineComponent } from './run-log-line.component';
           </button>
         </div>
         <app-run-log-line *ngFor="let runLogLine of runLog.lines; let index = index" [runLogLine]="runLogLine" [rowIndex]="index"
-                          [gridFormat]="gridFormat"></app-run-log-line>
+                          [gridFormat]="gridFormat" [dateFormat]="dateFormat"></app-run-log-line>
         <p class="text-center p-2 font-semibold" *ngIf="runLog.lines.length === 0">
-          No Run Log available.
+          No Run Log available or all have been filtered.
         </p>
       </div>
     </app-collapsible-element>
   `,
 })
 export class RunLogComponent implements OnInit {
-  gridFormat = 'auto / 15ch 15ch 1fr auto auto';
   @ViewChild('onlyRunning', {static: true}) onlyRunningCheckbox!: ElementRef<HTMLInputElement>;
+  @ViewChild('filterText', {static: true}) filterText!: ElementRef<HTMLInputElement>;
   @ViewChildren(RunLogLineComponent) runLogLines?: QueryList<RunLogLineComponent>;
+  protected readonly gridFormat = 'auto / 15ch 15ch 1fr auto auto';
+  protected readonly dateFormat = 'MM-dd HH:mm:ss';
 
-  constructor(private store: Store) {}
+  constructor(private store: Store,
+              private datePipe: DatePipe,
+              protected cd: ChangeDetectorRef) {}
 
   get runLog() {
     return this.store.select(DetailsSelectors.runLog).pipe(map(runLog => produce(runLog, draft => {
       if(this.onlyRunningCheckbox.nativeElement.checked) draft.lines = draft.lines.filter(line => line.end === undefined);
+      if(this.filterText.nativeElement.value !== undefined) {
+        draft.lines = draft.lines.filter(line => {
+          const filterText = this.filterText.nativeElement.value;
+          return this.datePipe.transform(line.end, this.dateFormat)?.includes(filterText) ||
+                 this.datePipe.transform(line.start, this.dateFormat)?.includes(filterText) ||
+                 line.command.command.toLowerCase().includes(filterText.toLowerCase());
+        });
+      }
       draft.lines.sort((a, b) => new Date(a.start).valueOf() - new Date(b.start).valueOf());
     })));
   }

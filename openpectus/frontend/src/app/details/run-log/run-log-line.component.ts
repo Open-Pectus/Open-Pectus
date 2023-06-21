@@ -33,7 +33,7 @@ export class RunLogLineComponent {
   @Input() rowIndex: number = 0;
   @Input() gridFormat?: string = 'auto / 1fr 1fr 1fr';
   @Output() collapseToggled = new EventEmitter<boolean>();
-  protected readonly dateFormat = 'MM-dd HH:mm:ss';
+  @Input() dateFormat = 'MM-dd HH:mm:ss';
   protected readonly AdditionalValueType = AdditionalValueType;
 
   constructor(private cd: ChangeDetectorRef) {}

@@ -9,7 +9,9 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
       <div class="flex justify-between items-center text-gray-100 p-2 cursor-pointer select-none" (click)="toggleCollapsed()">
         <span class="text-2xl font-bold">{{name}}</span>
         <div class="flex gap-4 items-center" (click)="$event.stopPropagation()">
-          <ng-content select="[buttons]"></ng-content>
+          <ng-container *ngIf="!collapsed">
+            <ng-content select="[buttons]"></ng-content>
+          </ng-container>
           <div class="codicon !text-2xl !font-bold" [class.codicon-chevron-right]="collapsed" [class.codicon-chevron-down]="!collapsed"
                (click)="toggleCollapsed()"></div>
         </div>
