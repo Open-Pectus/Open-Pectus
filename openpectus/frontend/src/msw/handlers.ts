@@ -230,7 +230,12 @@ export const handlers = [
               command: 'Some Third Command',
               source: CommandSource.MANUALLY_ENTERED,
             },
-            start_values: [{name: 'Amazing float value', value: 999, value_type: ProcessValueType.FLOAT, writable: false, value_unit: 'afv'}],
+            start_values: [
+              {name: 'Amazing float value', value: 999, value_type: ProcessValueType.FLOAT, writable: false, value_unit: 'afv'},
+              {name: 'Best value', value: 19.99, value_type: ProcessValueType.FLOAT, writable: false, value_unit: 'afv'},
+              {name: 'Such prices', value: 4299, value_type: ProcessValueType.FLOAT, writable: false, value_unit: 'afv'},
+              {name: 'Very affordable', value: 0.99, value_type: ProcessValueType.FLOAT, writable: false, value_unit: 'afv'},
+            ],
             end_values: [],
           }, {
             start: sub(Date.now(), {days: 1, hours: 3, seconds: 30}).toISOString(),

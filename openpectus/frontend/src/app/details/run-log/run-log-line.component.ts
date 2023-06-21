@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
 import { RunLogLine } from '../../api';
+import { AdditionalValueType } from './run-log-additional-values.component';
 
 @Component({
   selector: 'app-run-log-line',
@@ -18,9 +19,9 @@ import { RunLogLine } from '../../api';
           <p class="text-end p-2" *ngIf="!runLogLine?.start_values?.length && !runLogLine?.end_values?.length">
             No additional values available.
           </p>
-          <app-run-log-additional-values *ngIf="runLogLine?.start_values?.length" [name]="'Start'"
+          <app-run-log-additional-values *ngIf="runLogLine?.start_values?.length" [type]="AdditionalValueType.Start"
                                          [values]="runLogLine?.start_values"></app-run-log-additional-values>
-          <app-run-log-additional-values *ngIf="runLogLine?.end_values?.length" [name]="'End'"
+          <app-run-log-additional-values *ngIf="runLogLine?.end_values?.length" [type]="AdditionalValueType.End"
                                          [values]="runLogLine?.end_values"></app-run-log-additional-values>
         </div>
       </div>
@@ -33,6 +34,7 @@ export class RunLogLineComponent {
   @Input() gridFormat?: string = 'auto / 1fr 1fr 1fr';
   @Output() collapseToggled = new EventEmitter<boolean>();
   protected readonly dateFormat = 'MM-dd HH:mm:ss';
+  protected readonly AdditionalValueType = AdditionalValueType;
 
   constructor(private cd: ChangeDetectorRef) {}
 
