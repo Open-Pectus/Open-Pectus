@@ -231,7 +231,6 @@ export const handlers = [
             additional_values: [1.43253342, 'WAAAGH!', 6789],
           }, {
             start: sub(Date.now(), {days: 0, hours: 2, seconds: 20}).toISOString(),
-            end: sub(Date.now(), {days: 0, hours: 2, seconds: 15}).toISOString(),
             command: {
               command: 'Some Other Command',
               source: CommandSource.MANUALLY_ENTERED,
@@ -239,7 +238,7 @@ export const handlers = [
             additional_values: [2, '... and things', 1337],
           }, {
             start: sub(Date.now(), {days: 0, hours: 1, seconds: 10}).toISOString(),
-            end: sub(Date.now(), {days: 0, hours: 1}).toISOString(),
+            progress: 0.66,
             command: {
               command: 'Some Third Command',
               source: CommandSource.MANUALLY_ENTERED,

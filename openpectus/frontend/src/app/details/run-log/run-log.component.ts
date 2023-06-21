@@ -10,7 +10,7 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
   template: `
     <app-collapsible-element [name]="'Run Log'" [heightResizable]="true" [contentHeight]="400">
       <div content *ngrxLet="runLog as runLog" class="h-full">
-        <div class="grid bg-gray-500 text-white gap-2 px-3 py-2" [style.grid]="gridFormat | ngrxPush">
+        <div class="grid bg-gray-700 text-white gap-2 px-3 py-2" [style.grid]="gridFormat | ngrxPush">
           <b>Start</b>
           <b>End</b>
           <b>Command</b>
@@ -24,7 +24,7 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
 export class RunLogComponent implements OnInit {
   runLog = this.store.select(DetailsSelectors.runLog);
   gridFormat = this.runLog.pipe(map(runLog => {
-    return `auto / 14ch 14ch 1fr`;
+    return `auto / 15ch 15ch 1fr`;
   }));
 
   constructor(private store: Store) {}

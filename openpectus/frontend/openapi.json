@@ -816,7 +816,6 @@
         "required": [
           "command",
           "start",
-          "end",
           "additional_values"
         ],
         "type": "object",
@@ -833,6 +832,10 @@
             "title": "End",
             "type": "string",
             "format": "date-time"
+          },
+          "progress": {
+            "title": "Progress",
+            "type": "number"
           },
           "additional_values": {
             "title": "Additional Values",
