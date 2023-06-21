@@ -13,7 +13,7 @@ export interface PvAndPosition {
     <div class="flex bg-vscode-background-grey-hover p-2 items-center gap-2 rounded select-none"
          [class.cursor-pointer]="hasAction(processValue)" (click)="onClick()">
       <div class="mx-1 font-semibold">{{processValue?.name}}</div>
-      <div class="bg-vscode-background-grey rounded py-0.5 px-2 whitespace-nowrap min-h-[1.75rem] relative">
+      <div class="bg-white rounded py-0.5 px-2 whitespace-nowrap min-h-[1.75rem] relative">
         {{processValue | processValue}}
 
         <div *ngIf="hasAction(processValue)"

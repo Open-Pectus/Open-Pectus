@@ -173,7 +173,7 @@ async def execute_command(unit_id: str, command: ExecutableCommand, agg: Aggrega
         cmd_name, cmd_args = split[0], split[1]  # TODO watch out for "" vs None as cmd_args
     else:
         cmd_name, cmd_args = cmd_line, None
-    
+
     msg = InvokeCommandMsg(name=cmd_name, arguments=cmd_args)
     await agg.send_to_client(client_id=unit_id, msg=msg)
 
@@ -199,21 +199,16 @@ def get_command_examples(unit_id: str) -> List[CommandExample]:
     ]
 
 
-class RunLogColumn(BaseModel):
-    header: str
-    type: ProcessValueType
-    unit: str | None
-
-
 class RunLogLine(BaseModel):
     command: ExecutableCommand
     start: datetime
-    end: datetime
-    additional_values: List[str | int | float]
+    end: datetime | None
+    progress: float | None # between 0 and 1
+    start_values: List[ProcessValue]
+    end_values: List[ProcessValue]
 
 
 class RunLog(BaseModel):
-    additional_columns: List[RunLogColumn]
     lines: List[RunLogLine]
 
 

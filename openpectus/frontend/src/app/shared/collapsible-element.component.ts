@@ -5,11 +5,13 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
   selector: 'app-collapsible-element',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex flex-col bg-sky-700 p-1.5 rounded-md shadow-lg relative">
+    <div class="flex flex-col bg-sky-700 p-1.5 rounded-md shadow-lg relative transition-[padding-bottom]" [class.pb-0]="collapsed">
       <div class="flex justify-between items-center text-gray-100 p-2 cursor-pointer select-none" (click)="toggleCollapsed()">
         <span class="text-2xl font-bold">{{name}}</span>
-        <div class="flex gap-4" (click)="$event.stopPropagation()">
-          <ng-content select="button"></ng-content>
+        <div class="flex gap-4 items-center" (click)="$event.stopPropagation()">
+          <ng-container *ngIf="!collapsed">
+            <ng-content select="[buttons]"></ng-content>
+          </ng-container>
           <div class="codicon !text-2xl !font-bold" [class.codicon-chevron-right]="collapsed" [class.codicon-chevron-down]="!collapsed"
                (click)="toggleCollapsed()"></div>
         </div>
