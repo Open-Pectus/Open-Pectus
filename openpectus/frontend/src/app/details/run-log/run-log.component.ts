@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, QueryList, ViewChildren } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { produce } from 'immer';
 import { map } from 'rxjs';
@@ -11,7 +11,15 @@ import { RunLogLineComponent } from './run-log-line.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-collapsible-element [name]="'Run Log'" [heightResizable]="true" [contentHeight]="400">
-      <div content *ngrxLet="runLog as runLog" class="h-full">
+      <div buttons class="outline-1 outline rounded px-1 outline-slate-300">
+
+        <label class="flex items-center gap-1 cursor-pointer">
+          <input type="checkbox" #onlyRunning
+                 class="w-4 h-4 appearance-none font-bold text-transparent checked:text-white codicon codicon-pass cursor-pointer">
+          Only running
+        </label>
+      </div>
+      <div content *ngrxLet="runLog as runLog" class="h-full overflow-y-auto">
         <div class="grid bg-gray-700 text-white gap-2 px-3 py-2" [style.grid]="gridFormat">
           <b>Start</b>
           <b>End</b>
@@ -35,14 +43,18 @@ import { RunLogLineComponent } from './run-log-line.component';
   `,
 })
 export class RunLogComponent implements OnInit {
-  runLog = this.store.select(DetailsSelectors.runLog).pipe(map(runLog => produce(runLog, draft => {
-      draft.lines.sort((a, b) => new Date(a.start).valueOf() - new Date(b.start).valueOf());
-    }),
-  ));
   gridFormat = 'auto / 15ch 15ch 1fr auto auto';
+  @ViewChild('onlyRunning', {static: true}) onlyRunningCheckbox!: ElementRef<HTMLInputElement>;
   @ViewChildren(RunLogLineComponent) runLogLines?: QueryList<RunLogLineComponent>;
 
   constructor(private store: Store) {}
+
+  get runLog() {
+    return this.store.select(DetailsSelectors.runLog).pipe(map(runLog => produce(runLog, draft => {
+      if(this.onlyRunningCheckbox.nativeElement.checked) draft.lines = draft.lines.filter(line => line.end === undefined);
+      draft.lines.sort((a, b) => new Date(a.start).valueOf() - new Date(b.start).valueOf());
+    })));
+  }
 
   ngOnInit() {
     this.store.dispatch(DetailsActions.runLogComponentInitialized());
