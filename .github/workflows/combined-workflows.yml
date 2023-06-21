@@ -115,7 +115,9 @@ jobs:
       - name : echo1
         run : "echo ${{ steps.meta.outputs.tags }}"
       - name : echo2
-        run : "${{ secrets.ACR_ENDPOINT }}/open-pectus:${{ steps.tag.outputs.tag }}T"
+        run : "echo ${{ secrets.ACR_ENDPOINT }}"
+      - name : echo3
+        run : "echo ${{ steps.tag.outputs.tag }}"
       - name: Build and push container image to registry
         uses: docker/build-push-action@v4
         with:
