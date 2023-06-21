@@ -17,6 +17,9 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
         </div>
         <app-run-log-line *ngFor="let runLogLine of runLog.lines; let index = index" [runLogLine]="runLogLine" [rowIndex]="index"
                           [gridFormat]="gridFormat | ngrxPush" [additionalColumns]="runLog.additional_columns"></app-run-log-line>
+        <p class="text-center p-2 font-semibold" *ngIf="runLog.lines.length === 0">
+          No Run Log available.
+        </p>
       </div>
     </app-collapsible-element>
   `,
