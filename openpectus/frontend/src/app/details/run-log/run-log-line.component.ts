@@ -9,14 +9,15 @@ import { RunLogLine } from '../../api';
       <div class="grid gap-2 px-3 py-2" [style.grid]="gridFormat">
         <p>{{runLogLine?.start | date:dateFormat}}</p>
         <p *ngIf="runLogLine?.end !== undefined">{{runLogLine?.end | date:dateFormat}}</p>
-        <progress [value]="runLogLine?.progress" class="h-full w-28" [style.border-width]="'revert'" [style.border-style]="'revert'"
+        <progress [attr.value]="runLogLine?.progress" class="h-full w-28" [style.border-width]="'revert'" [style.border-style]="'revert'"
                   [style.border-color]="'revert'" *ngIf="runLogLine?.end === undefined"></progress>
         <p>{{runLogLine?.command?.command}}</p>
       </div>
       <div [style.height.px]="collapsed ? 0 : additionalValues.scrollHeight" class="w-full transition-[height] overflow-hidden">
         <div #additionalValues>
-          <p class="text-end p-2" *ngIf="!runLogLine?.start_values?.length && !runLogLine?.end_values?.length">No additional values
-            available.</p>
+          <p class="text-end p-2" *ngIf="!runLogLine?.start_values?.length && !runLogLine?.end_values?.length">
+            No additional values available.
+          </p>
           <app-run-log-additional-values *ngIf="runLogLine?.start_values?.length" [name]="'Start'"
                                          [values]="runLogLine?.start_values"></app-run-log-additional-values>
           <app-run-log-additional-values *ngIf="runLogLine?.end_values?.length" [name]="'End'"

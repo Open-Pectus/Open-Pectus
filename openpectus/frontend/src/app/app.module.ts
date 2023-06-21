@@ -45,7 +45,7 @@ import { TopBarComponent } from './top-bar.component';
     StoreDevtoolsModule.instrument({
       maxAge: 25,
       logOnly: !isDevMode(),
-      actionsBlocklist: ['@ngrx'],
+      actionsBlocklist: ['@ngrx', 'Process Values Fetched'],
     }),
   ],
   providers: [

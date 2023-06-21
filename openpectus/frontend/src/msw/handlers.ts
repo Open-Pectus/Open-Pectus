@@ -210,21 +210,6 @@ export const handlers = [
       context.json<RunLog>({
         lines: [
           {
-            start: sub(Date.now(), {days: 1, hours: 3, seconds: 30}).toISOString(),
-            end: sub(Date.now(), {days: 1, hours: 3}).toISOString(),
-            command: {
-              command: 'Supply the dakka',
-              source: CommandSource.MANUALLY_ENTERED,
-            },
-            start_values: [
-              {name: 'Waaagh?', value: 'No waagh', value_type: ProcessValueType.STRING, writable: false},
-              {name: 'Dakka?', value: 'No dakka 🙁', value_type: ProcessValueType.STRING, writable: false},
-            ],
-            end_values: [
-              {name: 'Waaagh?', value: 'WAAAGH!', value_type: ProcessValueType.STRING, writable: false},
-              {name: 'Dakka?', value: 'DAKKA! 😀', value_type: ProcessValueType.STRING, writable: false},
-            ],
-          }, {
             start: sub(Date.now(), {days: 0, hours: 2, seconds: 20}).toISOString(),
             command: {
               command: 'Some Other Command',
@@ -247,6 +232,21 @@ export const handlers = [
             },
             start_values: [{name: 'Amazing float value', value: 999, value_type: ProcessValueType.FLOAT, writable: false, value_unit: 'afv'}],
             end_values: [],
+          }, {
+            start: sub(Date.now(), {days: 1, hours: 3, seconds: 30}).toISOString(),
+            end: sub(Date.now(), {days: 1, hours: 3}).toISOString(),
+            command: {
+              command: 'Supply the dakka',
+              source: CommandSource.MANUALLY_ENTERED,
+            },
+            start_values: [
+              {name: 'Waaagh?', value: 'No waagh', value_type: ProcessValueType.STRING, writable: false},
+              {name: 'Dakka?', value: 'No dakka 🙁', value_type: ProcessValueType.STRING, writable: false},
+            ],
+            end_values: [
+              {name: 'Waaagh?', value: 'WAAAGH!', value_type: ProcessValueType.STRING, writable: false},
+              {name: 'Dakka?', value: 'DAKKA! 😀', value_type: ProcessValueType.STRING, writable: false},
+            ],
           },
         ],
       }),
