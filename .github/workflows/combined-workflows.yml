@@ -30,10 +30,10 @@ jobs:
           if [ -f openpectus/requirements.txt ]; then pip install -r openpectus/requirements.txt; fi
       - name: Build OpenPectus
         run: |
-          python -m build
+          python -m build -o openpectus/dist          
       - name: Install OpenPectus
         run: |
-          pip install .\dist\OpenPectus-0.0.1.tar.gz
+          pip install openpectus/dist/OpenPectus-0.0.1.tar.gz
       - name: Lint with flake8
         run: |
           # use configuration from ./.flake8
