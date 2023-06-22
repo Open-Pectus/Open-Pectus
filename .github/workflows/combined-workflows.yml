@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f openpectus/aggregator/requirements.txt ]; then pip install -r openpectus/aggregator/requirements.txt; fi
+          if [ -f openpectus/requirements.txt ]; then pip install -r openpectus/requirements.txt; fi
       - name: Lint with flake8
         run: |
           # use configuration from ./.flake8
@@ -52,9 +52,9 @@ jobs:
         with:
           name: aggregator
           path: |
-            openpectus/aggregator/**/*.py
-            openpectus/aggregator/Dockerfile
-            openpectus/aggregator/requirements.txt
+            openpectus/**/*.py
+            openpectus/Dockerfile
+            openpectus/requirements.txt
 
 
   build_frontend:
