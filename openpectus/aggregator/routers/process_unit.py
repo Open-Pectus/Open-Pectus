@@ -67,6 +67,7 @@ def get_unit(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -
         return None
     return create_pu(ci)
 
+
 @router.get("/process_units")
 def get_units(agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[ProcessUnit]:
     units: List[ProcessUnit] = []
@@ -166,7 +167,7 @@ async def execute_command(unit_id: str, command: ExecutableCommand, agg: Aggrega
         cmd_name, cmd_args = split[0], split[1]  # TODO watch out for "" vs None as cmd_args
     else:
         cmd_name, cmd_args = cmd_line, None
-    
+
     msg = InvokeCommandMsg(name=cmd_name, arguments=cmd_args)
     await agg.send_to_client(client_id=unit_id, msg=msg)
 

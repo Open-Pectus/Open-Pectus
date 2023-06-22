@@ -6,8 +6,6 @@ build-backend = "setuptools.build_meta"
 name = "OpenPectus"
 version = "0.0.1"
 authors = [{name = "Eskild Schroll-Fleischer", email = "eyfl@novonordisk.com"}, {name = "Morten Passow Odgaard", email = "mpo@mjolner.dk"}, {name = "Jan H. Knudsen", email = "jhk@mjolner.dk"}]
-#dynamic = ["version", "description"]
-#dependencies = ['antlr4-python3-runtime="4.9.2"', 'pint', 'fastapi', 'uvicorn[standard]']
 
 
 [tool.mypy]

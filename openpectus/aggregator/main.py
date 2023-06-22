@@ -52,7 +52,8 @@ app.include_router(process_unit.router, prefix=prefix)
 app.include_router(batch_job.router, prefix=prefix)
 app.include_router(aggregator_websocket.router)  # , prefix="/websocket")
 
-app.mount("/", SinglePageApplication(directory=os.path.join(os.path.dirname(__file__), "frontend-dist")))
+frontend_dist_dir = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+app.mount("/", SinglePageApplication(directory=frontend_dist_dir))
 
 
 if __name__ == "__main__":

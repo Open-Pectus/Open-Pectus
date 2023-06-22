@@ -6,9 +6,17 @@ from openpectus.protocol.aggregator import Aggregator
 
 router = APIRouter(tags=["aggregator"])
 
-
-# make sure aggregator is created before web server starts
+# (1) So, this works
+# make sure the singleton aggregator is created before web server starts
 agg_deps.create_aggregator(router)
+
+# (2) But this does not. It causes the engine websocket connection to fail with a 500 Internal server error. weird.
+# The server error turns up as an assertion failure:
+# assert scope["type"] == "http"
+# @router.on_event("startup")
+# async def startup():
+#     # make sure the singleton aggregator is created during web server startup
+#     _ = agg_deps.create_aggregator(router)
 
 
 @router.get("/health")
