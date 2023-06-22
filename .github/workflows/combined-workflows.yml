@@ -59,6 +59,7 @@ jobs:
           name: aggregator
           path: |
             openpectus/**/*.py
+            openpectus/dist
             openpectus/Dockerfile
             openpectus/requirements.txt
 
