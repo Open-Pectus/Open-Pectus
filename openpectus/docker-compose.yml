@@ -1,7 +1,7 @@
 ﻿version: '2'
 services:
   pectus-aggregator:
-    build: aggregator # path to Dockerfile
+    build: .
     image: pectus-aggregator
     container_name: pectus-aggregator-local
     ports:

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Store } from '@ngrx/store';
 import { combineLatest, map } from 'rxjs';
-import { ProcessValuePipePipe } from '../shared/pipes/auto-format.pipe';
+import { ProcessValuePipe } from '../shared/pipes/process-value.pipe';
 import { DetailsActions } from './ngrx/details.actions';
 import { DetailsSelectors } from './ngrx/details.selectors';
 
@@ -27,12 +27,21 @@ export class ProcessDiagramComponent implements OnInit {
 
   diagramWithValues = combineLatest([this.processDiagram, this.processValues]).pipe(
     map(([processDiagram, processValues]) => {
-      return processDiagram?.svg?.replaceAll(/{{(?<processValueName>[^}]+)}}/g, (match, processValueName: string) => {
-        const processValueNameWithoutSvgTags = processValueName.replaceAll(/<.+>/g, '').trim();
-        const matchingProcessValue = processValues.find(processValue => processValue.name === processValueNameWithoutSvgTags);
+      return processDiagram?.svg?.replaceAll(/{{(?<inCurlyBraces>[^}]+)}}/g, (match, inCurlyBraces: string) => {
+        const withoutSvgTags = inCurlyBraces.replaceAll(/<.+>/g, '').trim();
+        const isJustValue = withoutSvgTags.toLowerCase().endsWith('.pv');
+        const isJustUnit = withoutSvgTags.toLowerCase().endsWith('.unit');
+        const withoutDotNotation = withoutSvgTags.substring(0, withoutSvgTags.lastIndexOf('.'));
+        const processValueName = (isJustValue || isJustUnit) ? withoutDotNotation : withoutSvgTags;
+
+        const matchingProcessValue = processValues.find(processValue => processValue.name === processValueName);
         if(matchingProcessValue === undefined) return '';
-        return `${this.processValuePipe.transform(matchingProcessValue.value, matchingProcessValue.value_type,
-          matchingProcessValue.value_unit)}`;
+
+        const formattedProcessValue = this.processValuePipe.transform(matchingProcessValue) ?? '';
+        const indexOfSpace = formattedProcessValue.indexOf(' ');
+        if(isJustValue) return formattedProcessValue.substring(0, indexOfSpace);
+        if(isJustUnit) return formattedProcessValue.substring(indexOfSpace + 1);
+        return formattedProcessValue;
       }) ?? '';
     }),
     map(processDiagramString => this.domSanitizer.bypassSecurityTrustHtml(processDiagramString)),
@@ -40,7 +49,7 @@ export class ProcessDiagramComponent implements OnInit {
 
   constructor(private store: Store,
               private domSanitizer: DomSanitizer,
-              private processValuePipe: ProcessValuePipePipe) {}
+              private processValuePipe: ProcessValuePipe) {}
 
   ngOnInit() {
     this.store.dispatch(DetailsActions.processDiagramInitialized());

@@ -14,7 +14,7 @@ import { AppComponent } from './app.component';
 import { MswEnablementComponent } from './msw-enablement.component';
 import { metaReducers, reducers } from './ngrx/';
 import { AppEffects } from './ngrx/app.effects';
-import { ProcessValuePipePipe } from './shared/pipes/auto-format.pipe';
+import { ProcessValuePipe } from './shared/pipes/process-value.pipe';
 import { TopBarComponent } from './top-bar.component';
 
 
@@ -45,14 +45,14 @@ import { TopBarComponent } from './top-bar.component';
     StoreDevtoolsModule.instrument({
       maxAge: 25,
       logOnly: !isDevMode(),
-      actionsBlocklist: ['@ngrx'],
+      actionsBlocklist: ['@ngrx', 'Process Values Fetched'],
     }),
   ],
   providers: [
     {provide: LOCALE_ID, useValue: 'da-DK'},
     DatePipe,
     DecimalPipe,
-    ProcessValuePipePipe,
+    ProcessValuePipe,
     {provide: DATE_PIPE_DEFAULT_OPTIONS, useValue: {dateFormat: 'd. MMMM y HH:mm:ss'}},
   ],
   bootstrap: [AppComponent],

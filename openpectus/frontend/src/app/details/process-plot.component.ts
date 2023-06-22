@@ -19,7 +19,7 @@ export class ProcessPlotComponent implements AfterViewInit, OnDestroy {
   processValuesLog = this.store.select(DetailsSelectors.processValuesLog);
   @ViewChild('plot', {static: true}) plotElement?: ElementRef<HTMLDivElement>;
   private componentDestroyed = new Subject<void>();
-  private processValueNames = ['FT01 Flow', 'TT01', 'FT01 Flow.PV'];
+  private processValueNames = ['FT01 Flow', 'TT01', 'PU01 Speed'];
 
   constructor(private store: Store) {}
 
@@ -63,7 +63,7 @@ export class ProcessPlotComponent implements AfterViewInit, OnDestroy {
   }
 
   private extractUnitsFromLog(processValuesLog: ProcessValue[][], name: string) {
-    return processValuesLog[0].find(processValue => processValue.name === name)?.value_unit;
+    return processValuesLog[0]?.find(processValue => processValue.name === name)?.value_unit;
   }
 
   private convertToAxes(titles: (string | undefined)[]) {

@@ -6,6 +6,7 @@ import { DetailsActions } from './details.actions';
 export const detailsFeatureKey = 'details';
 
 export interface DetailsState {
+  monacoServicesInitialized: boolean;
   methodEditorIsDirty: boolean;
   methodEditorContent?: string;
   processValues: ProcessValue[];
@@ -17,16 +18,18 @@ export interface DetailsState {
 }
 
 const initialState: DetailsState = {
+  monacoServicesInitialized: false,
   methodEditorIsDirty: false,
   processValues: [],
   processValuesLog: [],
   shouldPollProcessValues: false,
   commandExamples: [],
-  runLog: {additional_columns: [], lines: []},
+  runLog: {lines: []},
 };
 
 export const detailsReducer = createReducer(initialState,
   on(DetailsActions.methodEditorInitialized, (state, {model}) => produce(state, draft => {
+    draft.monacoServicesInitialized = true;
     draft.methodEditorIsDirty = false;
     draft.methodEditorContent = model;
   })),
