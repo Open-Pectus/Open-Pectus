@@ -53,6 +53,8 @@ app.include_router(batch_job.router, prefix=prefix)
 app.include_router(aggregator_websocket.router)  # , prefix="/websocket")
 
 frontend_dist_dir = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+if not os.path.exists(frontend_dist_dir):
+    raise FileNotFoundError(f"frontend_dist_dir directory '{frontend_dist_dir}' was not found")
 app.mount("/", SinglePageApplication(directory=frontend_dist_dir))
 
 
