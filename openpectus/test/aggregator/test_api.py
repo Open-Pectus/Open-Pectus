@@ -4,14 +4,12 @@ import unittest
 import hashlib
 from fastapi.testclient import TestClient
 
-from openpectus.aggregator.main import app
+from openpectus.aggregator.main import create_app
+
 
 project_path = os.path.join(os.path.dirname(__file__), "..", "..")
+app = create_app()
 client = TestClient(app)
-
-
-class AggregatorApiTest(unittest.TestCase):
-    pass
 
 
 class AggregatorOpenAPIApiTest(unittest.TestCase):
