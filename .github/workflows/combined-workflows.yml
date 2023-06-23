@@ -112,7 +112,7 @@ jobs:
       contents: read
     steps:
       - name: Download openpectus-dist artifact
-      - uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v3
         with:
           name: openpectus-dist          
       - name: Extract metadata (tags, labels) for Docker
