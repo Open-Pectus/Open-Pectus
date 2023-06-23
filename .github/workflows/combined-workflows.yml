@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f openpectus/requirements.txt ]; then pip install -r openpectus/requirements.txt; fi
+          pip install -r openpectus/requirements.txt
       - name: Install OpenPectus (as editable)
         run: |
           pip install -e .
@@ -85,7 +85,7 @@ jobs:
       - name: Install openpectus python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r openpectus/requirements.txt; fi
+          pip install -r openpectus/requirements.txt
       - name: Download frontend dist into aggregator
         uses: actions/download-artifact@v3
         with:
