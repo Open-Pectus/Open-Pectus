@@ -1,5 +1,5 @@
 from enum import Flag, auto
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable
 
 
 class RegisterDirection(Flag):

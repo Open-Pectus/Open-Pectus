@@ -1,14 +1,14 @@
 
 import unittest
-from lang.exec.analyzer import (
+from openpectus.lang.exec.analyzer import (
     SemanticAnalyzer,
     UnreachableCodeVisitor,
     InfiniteBlockVisitor,
     ConditionAnalyzerVisitor,
     CommandAnalyzerVisitor,
 )
-from lang.exec.tags import TagCollection, Tag
-from lang.exec.commands import CommandCollection, Command
+from openpectus.lang.exec.tags import TagCollection, Tag
+from openpectus.lang.exec.commands import CommandCollection, Command
 
 from .test_interpreter import build_program
 

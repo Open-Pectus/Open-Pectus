@@ -1,7 +1,7 @@
 import unittest
 
-from lang.grammar.pgrammar import PGrammar
-from lang.model.pprogram import (
+from openpectus.lang.grammar.pgrammar import PGrammar
+from openpectus.lang.model.pprogram import (
     PNode,
     PProgram,
     PBlank,
@@ -17,7 +17,7 @@ from lang.model.pprogram import (
     PCondition
 )
 
-from lang.grammar.pprogramformatter import PProgramFormatter, print_program
+from openpectus.lang.grammar.pprogramformatter import PProgramFormatter, print_program
 
 
 def build(s):

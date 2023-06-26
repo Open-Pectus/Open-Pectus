@@ -1,6 +1,6 @@
 import unittest
 
-from lang.grammar.pgrammar import PGrammar
+from openpectus.lang.grammar.pgrammar import PGrammar
 
 
 def get_token_texts(code):

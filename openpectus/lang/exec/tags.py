@@ -75,7 +75,8 @@ class Tag(ChangeSubject):
             self,
             name: str,
             value=None,
-            unit: str | None = None) -> None:
+            unit: str | None = None,
+            direction: TagDirection = TagDirection.NA) -> None:
 
         super().__init__()
 
@@ -120,18 +121,16 @@ class Tag(ChangeSubject):
 
 class Reading(Tag):
     def __init__(self, name: str, unit: str | None = None) -> None:
-        super().__init__(name, value=0.0, unit=unit)
-        self.direction = TagDirection.INPUT
+        super().__init__(name, value=0.0, unit=unit, direction=TagDirection.INPUT)
 
 
 class Select(Tag):
     def __init__(self, name: str, value, unit: str | None ,
                  choices: List[str], direction: TagDirection = TagDirection.NA) -> None:
-        super().__init__(name, value, unit)
+        super().__init__(name, value, unit, direction)
         if choices is None or len(choices) == 0:
             raise ValueError("choices must be non-empty")
         self.choices = choices
-        self.direction = direction
 
 # TODO consider builder pattern for Tag - may replace so many tags - or at least make ctor args managable
 
@@ -253,5 +252,6 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
             (DEFAULT_TAG_CLOCK, 0.0, "s"),
         ]
         for name, value, unit in defaults:
-            tags.add(Tag(name, value, unit))
+            tag = Tag(name, value, unit, TagDirection.NA)
+            tags.add(tag)
         return tags

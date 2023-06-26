@@ -5,7 +5,7 @@ from typing import List
 
 import pint
 
-from lang.model.pprogram import (
+from openpectus.lang.model.pprogram import (
     PNode,
     PProgram,
     PBlank,
@@ -18,9 +18,9 @@ from lang.model.pprogram import (
     PMark,
 )
 
-from lang.exec.tags import TagCollection
-from lang.exec.commands import CommandCollection
-from lang.exec.pinterpreter import PNodeVisitor
+from openpectus.lang.exec.tags import TagCollection
+from openpectus.lang.exec.commands import CommandCollection
+from openpectus.lang.exec.pinterpreter import PNodeVisitor
 
 
 logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')

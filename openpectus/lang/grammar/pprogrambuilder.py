@@ -3,10 +3,10 @@ from typing import List
 
 from antlr4 import ParserRuleContext
 
-from lang.grammar.codegen.pcodeParser import pcodeParser
-from lang.grammar.codegen.pcodeListener import pcodeListener
+from openpectus.lang.grammar.codegen.pcodeParser import pcodeParser
+from openpectus.lang.grammar.codegen.pcodeListener import pcodeListener
 
-from lang.model.pprogram import (
+from openpectus.lang.model.pprogram import (
     PNode,
     PProgram,
     PInstruction,

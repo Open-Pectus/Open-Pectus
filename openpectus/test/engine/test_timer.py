@@ -2,7 +2,7 @@
 
 import unittest
 import time
-from lang.exec.timer import ZeroThreadTimer, OneThreadTimer
+from openpectus.lang.exec.timer import ZeroThreadTimer, OneThreadTimer
 
 
 @unittest.skip("Slow")
