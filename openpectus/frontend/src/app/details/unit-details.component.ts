@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { DetailsActions } from './ngrx/details.actions';
 
@@ -19,10 +19,14 @@ import { DetailsActions } from './ngrx/details.actions';
     </div>
   `,
 })
-export class UnitDetailsComponent implements OnInit {
+export class UnitDetailsComponent implements OnInit, OnDestroy {
   constructor(private store: Store) {}
 
   ngOnInit() {
     this.store.dispatch(DetailsActions.unitDetailsInitialized());
+  }
+
+  ngOnDestroy() {
+    this.store.dispatch(DetailsActions.unitDetailsDestroyed());
   }
 }

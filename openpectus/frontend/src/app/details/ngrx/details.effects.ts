@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { debounceTime, map, mergeMap, of, skipWhile, switchMap } from 'rxjs';
+import { debounceTime, filter, map, mergeMap, of, switchMap } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { CommandSource, ProcessUnitService } from '../../api';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
@@ -20,29 +21,31 @@ export class DetailsEffects {
     }),
   ));
 
-  fetchProcessValuesWhenComponentInitialized = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.processValuesInitialized),
+  fetchProcessValuesWhenPageInitialized = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.unitDetailsInitialized),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([_, unitId]) => {
       if(unitId === undefined) return of(DetailsActions.processValuesFailedToLoad());
       return this.processUnitService.getProcessValues(unitId).pipe(
         map(processValues => DetailsActions.processValuesFetched({processValues})),
+        catchError(() => of(DetailsActions.processValuesFailedToLoad())),
       );
     }),
   ));
 
   continuouslyPollProcessValues = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.processValuesFetched),
+    ofType(DetailsActions.processValuesFetched, DetailsActions.processValuesFailedToLoad),
     concatLatestFrom(() => [
       this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName)),
       this.store.select(DetailsSelectors.shouldPollProcessValues),
     ]),
     debounceTime(500),
-    skipWhile(([_, __, shouldPoll]) => !shouldPoll),
+    filter(([_, __, shouldPoll]) => shouldPoll),
     switchMap(([_, unitId, __]) => {
       if(unitId === undefined) return of(DetailsActions.processValuesFailedToLoad());
       return this.processUnitService.getProcessValues(unitId).pipe(
         map(processValues => DetailsActions.processValuesFetched({processValues})),
+        catchError(() => of(DetailsActions.processValuesFailedToLoad())),
       );
     }),
   ));
