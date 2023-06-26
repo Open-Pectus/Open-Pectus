@@ -8,20 +8,12 @@ import { BatchJobDetailsComponent } from './batch-job-details.component';
 import { CommandExamplesListComponent } from './commands/command-examples-list.component';
 import { CommandsComponent } from './commands/commands.component';
 import { DetailsRoutingModule } from './details-routing.module';
-import { MethodEditorComponent } from './method-editor/method-editor.component';
-import { MonacoEditorComponent } from './method-editor/monaco-editor.component';
-import { MethodEditorEffects } from './method-editor/ngrx/method-editor.effects';
-import { methodEditorSlice } from './method-editor/ngrx/method-editor.reducer';
+import { MethodEditorModule } from './method-editor/method-editor.module';
 import { DetailsEffects } from './ngrx/details.effects';
 import { detailsSlice } from './ngrx/details.reducer';
 import { ProcessDiagramComponent } from './process-diagram.component';
 import { ProcessPlotComponent } from './process-plot.component';
-import { ProcessValuesEffects } from './process-values/ngrx/process-values.effects';
-import { processValuesSlice } from './process-values/ngrx/process-values.reducer';
-import { ProcessValueCommandsComponent } from './process-values/process-value-commands.component';
-import { ProcessValueEditorComponent } from './process-values/process-value-editor.component';
-import { ProcessValueComponent } from './process-values/process-value.component';
-import { ProcessValuesComponent } from './process-values/process-values.component';
+import { ProcessValuesModule } from './process-values/process-values.module';
 import { RunLogAdditionalValuesComponent } from './run-log/run-log-additional-values.component';
 import { RunLogLineComponent } from './run-log/run-log-line.component';
 import { RunLogComponent } from './run-log/run-log.component';
@@ -32,12 +24,6 @@ import { UnitHeaderComponent } from './unit-header.component';
   declarations: [
     UnitDetailsComponent,
     BatchJobDetailsComponent,
-    MethodEditorComponent,
-    MonacoEditorComponent,
-    ProcessValuesComponent,
-    ProcessValueComponent,
-    ProcessValueEditorComponent,
-    ProcessValueCommandsComponent,
     ProcessDiagramComponent,
     CommandsComponent,
     CommandExamplesListComponent,
@@ -51,9 +37,9 @@ import { UnitHeaderComponent } from './unit-header.component';
     CommonModule,
     DetailsRoutingModule,
     StoreModule.forFeature(detailsSlice),
-    StoreModule.forFeature(methodEditorSlice),
-    StoreModule.forFeature(processValuesSlice),
-    EffectsModule.forFeature([DetailsEffects, MethodEditorEffects, ProcessValuesEffects]),
+    EffectsModule.forFeature([DetailsEffects]),
+    ProcessValuesModule,
+    MethodEditorModule,
     SharedModule,
     LetDirective,
     PushPipe,
