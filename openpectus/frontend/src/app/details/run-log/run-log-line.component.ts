@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
+import { Store } from '@ngrx/store';
 import { RunLogLine } from '../../api';
+import { RunLogSelectors } from './ngrx/run-log.selectors';
 import { AdditionalValueType } from './run-log-additional-values.component';
 
 @Component({
@@ -8,8 +10,8 @@ import { AdditionalValueType } from './run-log-additional-values.component';
   template: `
     <div [class.!bg-gray-200]="rowIndex % 2 === 1" class="bg-gray-100 border-b border-white cursor-pointer" (click)="toggleCollapse()">
       <div class="grid gap-2 px-3 py-2" [style.grid]="gridFormat">
-        <p>{{runLogLine?.start | date:dateFormat}}</p>
-        <p *ngIf="runLogLine?.end !== undefined">{{runLogLine?.end | date:dateFormat}}</p>
+        <p>{{runLogLine?.start ?? '' | date:(dateFormat | ngrxPush)}}</p>
+        <p *ngIf="runLogLine?.end !== undefined">{{runLogLine?.end ?? '' | date:(dateFormat | ngrxPush)}}</p>
         <progress [attr.value]="runLogLine?.progress" class="h-full w-28" [style.border-width]="'revert'" [style.border-style]="'revert'"
                   [style.border-color]="'revert'" *ngIf="runLogLine?.end === undefined"></progress>
         <p>{{runLogLine?.command?.command}}</p>
@@ -33,10 +35,10 @@ export class RunLogLineComponent {
   @Input() rowIndex: number = 0;
   @Input() gridFormat?: string = 'auto / 1fr 1fr 1fr';
   @Output() collapseToggled = new EventEmitter<boolean>();
-  @Input() dateFormat = 'MM-dd HH:mm:ss';
+  dateFormat = this.store.select(RunLogSelectors.dateFormat);
   protected readonly AdditionalValueType = AdditionalValueType;
 
-  constructor(private cd: ChangeDetectorRef) {}
+  constructor(private store: Store, private cd: ChangeDetectorRef) {}
 
   private _collapsed = true;
 
