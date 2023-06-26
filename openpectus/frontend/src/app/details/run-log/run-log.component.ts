@@ -12,11 +12,15 @@ import { RunLogLineComponent } from './run-log-line.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-collapsible-element [name]="'Run Log'" [heightResizable]="true" [contentHeight]="400">
-      <input buttons type="text" placeholder="Filter Run Log" size="20"
-             class="border-none outline-none rounded p-1 text-gray-900 h-8"
-             #filterText (input)="cd.markForCheck()">
-      <label buttons class="flex items-center gap-1 cursor-pointer border rounded px-1 border-slate-300 h-8">
-        Only running
+      <label buttons class="relative">
+        <input type="text" placeholder="Filter Run Log" size="20"
+               class="border border-slate-200 placeholder:text-slate-400 text-white bg-transparent outline-none rounded p-1 h-8"
+               #filterText (input)="cd.markForCheck()">
+        <button *ngIf="filterText.value.length !== 0" class="p-2 codicon codicon-chrome-close absolute right-0"
+                (click)="filterText.value = ''"></button>
+      </label>
+      <label buttons class="flex items-center gap-1 cursor-pointer border rounded px-1 border-slate-200 h-8">
+        In progress only
         <input type="checkbox" #onlyRunning
                class="w-5 !text-xl appearance-none font-bold text-transparent checked:text-white codicon codicon-pass cursor-pointer">
       </label>
