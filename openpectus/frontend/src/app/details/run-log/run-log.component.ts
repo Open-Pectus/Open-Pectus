@@ -13,19 +13,7 @@ import { RunLogLineComponent } from './run-log-line.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-collapsible-element [name]="'Run Log'" [heightResizable]="true" [contentHeight]="400" (collapseStateChanged)="collapsed = $event">
-      <label buttons class="relative">
-        <input type="text" placeholder="Filter Run Log" size="20"
-               class="border border-slate-200 placeholder:text-slate-400 text-white bg-transparent outline-none rounded p-1 h-8"
-               #filterInput (input)="filterText.next(filterInput.value)">
-        <button *ngIf="filterInput.value.length !== 0" class="p-2 codicon codicon-chrome-close absolute right-0"
-                (click)="filterInput.value = ''"></button>
-      </label>
-      <label buttons class="flex items-center gap-1 cursor-pointer border rounded px-1 border-slate-200 h-8">
-        In progress only
-        <input type="checkbox" (input)="onlyRunning.next(onlyRunningCheckbox.checked)" #onlyRunningCheckbox
-               [class.codicon-pass]="onlyRunningCheckbox.checked" [class.codicon-circle-large]="!onlyRunningCheckbox.checked"
-               class="w-5 !text-xl appearance-none font-bold opacity-25 text-white checked:opacity-100 codicon cursor-pointer">
-      </label>
+      <app-run-log-filters buttons (filterText)="filterText.next($event)" (onlyRunning)="onlyRunning.next($event)"></app-run-log-filters>
       <div content *ngIf="!collapsed" class="h-full overflow-y-auto">
         <app-run-log-header [gridFormat]="gridFormat" (expandAll)="expandAll()" (collapseAll)="collapseAll()"></app-run-log-header>
         <app-run-log-line *ngFor="let runLogLine of (runLog | ngrxPush)?.lines; let index = index" [runLogLine]="runLogLine" [rowIndex]="index"
