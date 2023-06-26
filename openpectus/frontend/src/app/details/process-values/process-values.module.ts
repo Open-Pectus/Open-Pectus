@@ -22,7 +22,7 @@ import { ProcessValuesComponent } from './process-values.component';
   imports: [
     CommonModule,
     StoreModule.forFeature(processValuesSlice),
-    EffectsModule.forFeature([ProcessValuesEffects]),
+    EffectsModule.forFeature(ProcessValuesEffects),
     LetDirective,
     PushPipe,
     SharedModule,

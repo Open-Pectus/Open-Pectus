@@ -4,8 +4,8 @@ import { Store } from '@ngrx/store';
 import { produce } from 'immer';
 import { BehaviorSubject, combineLatest, map } from 'rxjs';
 import { RunLog } from '../../api';
-import { DetailsActions } from '../ngrx/details.actions';
-import { DetailsSelectors } from '../ngrx/details.selectors';
+import { RunLogActions } from './ngrx/run-log.actions';
+import { RunLogSelectors } from './ngrx/run-log.selectors';
 import { RunLogLineComponent } from './run-log-line.component';
 
 @Component({
@@ -33,7 +33,7 @@ export class RunLogComponent implements OnInit {
   protected readonly gridFormat = 'auto / 15ch 15ch 1fr auto auto';
   protected readonly dateFormat = 'MM-dd HH:mm:ss';
   protected runLog = combineLatest([
-    this.store.select(DetailsSelectors.runLog),
+    this.store.select(RunLogSelectors.runLog),
     this.onlyRunning,
     this.filterText,
   ]).pipe<RunLog>(map(([runLog, checked, filterText]) => produce(runLog, draft => {
@@ -52,7 +52,7 @@ export class RunLogComponent implements OnInit {
               private datePipe: DatePipe) {}
 
   ngOnInit() {
-    this.store.dispatch(DetailsActions.runLogComponentInitialized());
+    this.store.dispatch(RunLogActions.runLogComponentInitialized());
   }
 
   expandAll() {

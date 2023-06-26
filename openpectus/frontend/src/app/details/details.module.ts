@@ -14,13 +14,9 @@ import { detailsSlice } from './ngrx/details.reducer';
 import { ProcessDiagramComponent } from './process-diagram.component';
 import { ProcessPlotComponent } from './process-plot.component';
 import { ProcessValuesModule } from './process-values/process-values.module';
-import { RunLogAdditionalValuesComponent } from './run-log/run-log-additional-values.component';
-import { RunLogLineComponent } from './run-log/run-log-line.component';
-import { RunLogComponent } from './run-log/run-log.component';
+import { RunLogModule } from './run-log/run-log.module';
 import { UnitDetailsComponent } from './unit-details.component';
 import { UnitHeaderComponent } from './unit-header.component';
-import { RunLogHeaderComponent } from './run-log/run-log-header.component';
-import { RunLogFiltersComponent } from './run-log/run-log-filters.component';
 
 @NgModule({
   declarations: [
@@ -30,20 +26,16 @@ import { RunLogFiltersComponent } from './run-log/run-log-filters.component';
     CommandsComponent,
     CommandExamplesListComponent,
     UnitHeaderComponent,
-    RunLogComponent,
-    RunLogLineComponent,
     ProcessPlotComponent,
-    RunLogAdditionalValuesComponent,
-    RunLogHeaderComponent,
-    RunLogFiltersComponent,
   ],
   imports: [
     CommonModule,
     DetailsRoutingModule,
     StoreModule.forFeature(detailsSlice),
-    EffectsModule.forFeature([DetailsEffects]),
+    EffectsModule.forFeature(DetailsEffects),
     ProcessValuesModule,
     MethodEditorModule,
+    RunLogModule,
     SharedModule,
     LetDirective,
     PushPipe,

@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import { CommandExample, ExecutableCommand, ProcessDiagram, ProcessUnit, ProcessValue, RunLog } from '../../api';
+import { CommandExample, ExecutableCommand, ProcessDiagram, ProcessUnit, ProcessValue } from '../../api';
 
 export const DetailsActions = createActionGroup({
   source: 'Details',
@@ -18,8 +18,5 @@ export const DetailsActions = createActionGroup({
     'Commands Component Initialized': emptyProps(),
     'Command Examples Fetched': props<{ commandExamples: CommandExample[] }>(),
     'Commands Component Execute Clicked': props<{ command: ExecutableCommand }>(),
-
-    'Run Log Component Initialized': emptyProps(),
-    'Run Log Fetched': props<{ runLog: RunLog }>(),
   },
 });

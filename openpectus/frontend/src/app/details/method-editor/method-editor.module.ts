@@ -18,7 +18,7 @@ import { methodEditorSlice } from './ngrx/method-editor.reducer';
   imports: [
     CommonModule,
     StoreModule.forFeature(methodEditorSlice),
-    EffectsModule.forFeature([MethodEditorEffects]),
+    EffectsModule.forFeature(MethodEditorEffects),
     LetDirective,
     PushPipe,
     SharedModule,
