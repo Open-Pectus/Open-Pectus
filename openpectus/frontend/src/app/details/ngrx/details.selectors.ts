@@ -6,9 +6,6 @@ import { detailsFeatureKey, DetailsState } from './details.reducer';
 
 export class DetailsSelectors {
   static selectFeature = createFeatureSelector<DetailsState>(detailsFeatureKey);
-  static monacoServicesInitialized = createSelector(this.selectFeature, state => state.monacoServicesInitialized);
-  static methodEditorIsDirty = createSelector(this.selectFeature, state => state.methodEditorIsDirty);
-  static methodEditorContent = createSelector(this.selectFeature, state => state.methodEditorContent);
   static processValues = createSelector(this.selectFeature, state => state.processValues);
   static processUnit = createSelector(AppSelectors.processUnits, selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName),
     (processUnits, unitId) => {

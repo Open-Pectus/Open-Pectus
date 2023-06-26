@@ -6,9 +6,6 @@ import { DetailsActions } from './details.actions';
 export const detailsFeatureKey = 'details';
 
 export interface DetailsState {
-  monacoServicesInitialized: boolean;
-  methodEditorIsDirty: boolean;
-  methodEditorContent?: string;
   processValues: ProcessValue[];
   processValuesLog: ProcessValue[][];
   processDiagram?: ProcessDiagram;
@@ -18,8 +15,6 @@ export interface DetailsState {
 }
 
 const initialState: DetailsState = {
-  monacoServicesInitialized: false,
-  methodEditorIsDirty: false,
   processValues: [],
   processValuesLog: [],
   shouldPollProcessValues: false,
@@ -30,28 +25,9 @@ const initialState: DetailsState = {
 export const detailsReducer = createReducer(initialState,
   on(DetailsActions.unitDetailsInitialized, state => produce(state, draft => {
     draft.shouldPollProcessValues = true;
-
-    // TODO: content should be fetched
-    draft.methodEditorIsDirty = false;
-    draft.methodEditorContent = `{
-  "some key": "some value",
-  "injected": "line",
-  "another key": "another value",
-  "another injected": "line"
-}`;
   })),
   on(DetailsActions.unitDetailsDestroyed, state => produce(state, draft => {
     draft.shouldPollProcessValues = false;
-  })),
-  on(DetailsActions.methodEditorInitialized, state => produce(state, draft => {
-    draft.monacoServicesInitialized = true;
-  })),
-  on(DetailsActions.methodEditorModelSaved, state => produce(state, draft => {
-    draft.methodEditorIsDirty = false;
-  })),
-  on(DetailsActions.methodEditorModelChanged, (state, {model}) => produce(state, draft => {
-    draft.methodEditorIsDirty = true;
-    draft.methodEditorContent = model;
   })),
   on(DetailsActions.processValuesFetched, (state, {processValues}) => produce(state, draft => {
     draft.processValues = processValues;

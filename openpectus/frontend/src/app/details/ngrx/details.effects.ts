@@ -11,16 +11,6 @@ import { DetailsSelectors } from './details.selectors';
 
 @Injectable()
 export class DetailsEffects {
-  saveMethodEditorModel = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.methodEditorModelSaveRequested),
-    concatLatestFrom(() => this.store.select(DetailsSelectors.methodEditorContent)),
-    switchMap(([_, content]) => {
-      /* save model to backend */
-      alert(`model saved! ${content}`);
-      return of(DetailsActions.methodEditorModelSaved());
-    }),
-  ));
-
   fetchProcessValuesWhenPageInitialized = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.unitDetailsInitialized),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),

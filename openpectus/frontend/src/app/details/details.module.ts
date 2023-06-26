@@ -10,6 +10,8 @@ import { CommandsComponent } from './commands/commands.component';
 import { DetailsRoutingModule } from './details-routing.module';
 import { MethodEditorComponent } from './method-editor/method-editor.component';
 import { MonacoEditorComponent } from './method-editor/monaco-editor.component';
+import { MethodEditorEffects } from './method-editor/ngrx/method-editor.effects';
+import { methodEditorSlice } from './method-editor/ngrx/method-editor.reducer';
 import { DetailsEffects } from './ngrx/details.effects';
 import { detailsFeatureKey, detailsReducer } from './ngrx/details.reducer';
 import { ProcessDiagramComponent } from './process-diagram.component';
@@ -47,7 +49,8 @@ import { UnitHeaderComponent } from './unit-header.component';
     CommonModule,
     DetailsRoutingModule,
     StoreModule.forFeature(detailsFeatureKey, detailsReducer),
-    EffectsModule.forFeature([DetailsEffects]),
+    StoreModule.forFeature(methodEditorSlice),
+    EffectsModule.forFeature([DetailsEffects, MethodEditorEffects]),
     SharedModule,
     LetDirective,
     PushPipe,

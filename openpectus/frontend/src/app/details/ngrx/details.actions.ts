@@ -7,11 +7,6 @@ export const DetailsActions = createActionGroup({
     'Unit Details Initialized': emptyProps(),
     'Unit Details Destroyed': emptyProps(),
 
-    'Method Editor Initialized': emptyProps(),
-    'Method Editor Model Changed': props<{ model: string }>(),
-    'Method Editor Model Save Requested': emptyProps(),
-    'Method Editor Model Saved': emptyProps(),
-
     'Process Values Initialized': emptyProps(),
     'Process Values Destroyed': emptyProps(),
     'Process Values Fetched': props<{ processValues: ProcessValue[] }>(),
