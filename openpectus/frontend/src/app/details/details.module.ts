@@ -16,6 +16,8 @@ import { DetailsEffects } from './ngrx/details.effects';
 import { detailsSlice } from './ngrx/details.reducer';
 import { ProcessDiagramComponent } from './process-diagram.component';
 import { ProcessPlotComponent } from './process-plot.component';
+import { ProcessValuesEffects } from './process-values/ngrx/process-values.effects';
+import { processValuesSlice } from './process-values/ngrx/process-values.reducer';
 import { ProcessValueCommandsComponent } from './process-values/process-value-commands.component';
 import { ProcessValueEditorComponent } from './process-values/process-value-editor.component';
 import { ProcessValueComponent } from './process-values/process-value.component';
@@ -50,7 +52,8 @@ import { UnitHeaderComponent } from './unit-header.component';
     DetailsRoutingModule,
     StoreModule.forFeature(detailsSlice),
     StoreModule.forFeature(methodEditorSlice),
-    EffectsModule.forFeature([DetailsEffects, MethodEditorEffects]),
+    StoreModule.forFeature(processValuesSlice),
+    EffectsModule.forFeature([DetailsEffects, MethodEditorEffects, ProcessValuesEffects]),
     SharedModule,
     LetDirective,
     PushPipe,

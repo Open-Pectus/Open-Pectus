@@ -3,7 +3,7 @@ import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { debounceTime, filter, map, mergeMap, of, switchMap } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { CommandSource, ProcessUnitService } from '../../api';
+import { ProcessUnitService } from '../../api';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
 import { DetailsActions } from './details.actions';
@@ -39,15 +39,6 @@ export class DetailsEffects {
       );
     }),
   ));
-
-  executeProcessValueCommandWhenButtonClicked = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.processValueCommandClicked),
-    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
-    switchMap(([{command, processValueName}, unitId]) => {
-      if(unitId === undefined) return of();
-      return this.processUnitService.executeCommand(unitId, {...command, source: CommandSource.PROCESS_VALUE});
-    }),
-  ), {dispatch: false});
 
   executeUnitControlCommandWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processUnitCommandButtonClicked),
