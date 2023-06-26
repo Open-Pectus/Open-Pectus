@@ -1,7 +1,7 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
 import { Store } from '@ngrx/store';
 import Plotly, { LayoutAxis, PlotData } from 'plotly.js-basic-dist-min';
-import { combineLatest, Subject, takeUntil } from 'rxjs';
+import { combineLatest, filter, Subject, takeUntil } from 'rxjs';
 import { ProcessValue } from '../api';
 import { DetailsSelectors } from './ngrx/details.selectors';
 import { PlotlyDefaults } from './plotly-defaults';
@@ -10,28 +10,31 @@ import { PlotlyDefaults } from './plotly-defaults';
   selector: 'app-process-plot',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-collapsible-element [name]="'Process Plot'" [heightResizable]="true" [contentHeight]="400">
-      <div content class="h-full" #plot></div>
+    <app-collapsible-element [name]="'Process Plot'" [heightResizable]="true" [contentHeight]="400" (collapseStateChanged)="collapsed = $event">
+      <div content class="h-full" #plot *ngIf="!collapsed"></div>
     </app-collapsible-element>`,
 })
 export class ProcessPlotComponent implements AfterViewInit, OnDestroy {
   processUnit = this.store.select(DetailsSelectors.processUnit);
   processValuesLog = this.store.select(DetailsSelectors.processValuesLog);
-  @ViewChild('plot', {static: true}) plotElement?: ElementRef<HTMLDivElement>;
+  @ViewChild('plot', {static: false}) plotElement?: ElementRef<HTMLDivElement>;
+  protected collapsed = false;
   private componentDestroyed = new Subject<void>();
   private processValueNames = ['FT01 Flow', 'TT01', 'PU01 Speed'];
 
   constructor(private store: Store) {}
 
   ngAfterViewInit() {
-    if(this.plotElement === undefined) throw Error('Missing plot div element!');
-    const plotElement = this.plotElement;
-    combineLatest([this.processValuesLog, this.processUnit]).pipe(takeUntil(this.componentDestroyed)).subscribe(
+    combineLatest([this.processValuesLog, this.processUnit]).pipe(
+      filter(() => !this.collapsed),
+      takeUntil(this.componentDestroyed),
+    ).subscribe(
       ([processValuesLog, processUnit]) => {
+        if(this.plotElement === undefined) return;
         const values = this.processValueNames.map((name, index) => this.extractPlotDataFromLog(processValuesLog, name, index));
         const units = this.processValueNames.map(name => this.extractUnitsFromLog(processValuesLog, name));
         const yAxes = this.convertToAxes(units);
-        Plotly.react(plotElement.nativeElement, values, {
+        Plotly.react(this.plotElement.nativeElement, values, {
           autosize: true,
           title: processUnit?.name,
           ...yAxes,

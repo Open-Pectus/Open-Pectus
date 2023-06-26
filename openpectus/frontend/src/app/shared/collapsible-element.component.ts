@@ -39,6 +39,7 @@ export class CollapsibleElementComponent implements OnInit {
   @Input() heightResizable = false;
   @Input() contentHeight = 0;
   @Output() contentHeightChanged = new EventEmitter<number>();
+  @Output() collapseStateChanged = new EventEmitter<boolean>();
   @ViewChild('content') contentElementRef?: ElementRef<HTMLDivElement>;
   protected collapsed = false;
   protected widenDragHandler = false;
@@ -103,6 +104,7 @@ export class CollapsibleElementComponent implements OnInit {
   protected toggleCollapsed() {
     this.collapsed = !this.collapsed;
     this.collapsibleElementStorageService.saveCollapsedState(this.name, this.collapsed);
+    this.collapseStateChanged.emit(this.collapsed);
   }
 
   protected onTransitionEndContentContainer(event: TransitionEvent) {
