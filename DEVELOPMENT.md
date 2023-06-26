@@ -5,7 +5,7 @@ Notes:
 ## Project setup / update
 
 `cd Open-Pectus/openpectus/frontend`
-`npm ci` 
+`npm ci`
 `npm run build`
 
 
@@ -14,6 +14,8 @@ Notes:
 ## Setup
 
 TODO: How to update conda env
+`cd Open-Pectus`
+`conda env update -n=pectus --file=environment.yml --prune`
 
 To build dist:
 
@@ -32,7 +34,7 @@ To start aggregator services in docker, run the following command.
 Note: This depends on the frontend and backend builds being up to date.
 
 `cd Open-Pectus/openpectus`
-`docker compose up --build` 
+`docker compose up --build`
 
 When the container is running, the aggregator services are available, including:
 Frontend:       http://localhost:8300/
@@ -76,7 +78,7 @@ Pyreverse is installed as part of pylint (which is somehow already installed).
 
 ### Pectus UI and Aggregator API
 
-The frontend generates typescript skeleton interfaces from the Aggregator API spec. 
+The frontend generates typescript skeleton interfaces from the Aggregator API spec.
 
 To ensure compability between the implemented backend, the API specification file and the typescript interfaces all match, the flow for modification is as follows:
 1. A change is made in the Aggregator API implementation.
@@ -105,7 +107,7 @@ There is one Aggregator service in a pectus system. It has the following respons
 
 ## Engine
 
-An Engine service instance is required for each piece of process unit hardware. It has 
+An Engine service instance is required for each piece of process unit hardware. It has
 the following responsibilities:
 
 - Communicate with the hardware
@@ -123,26 +125,26 @@ the following responsibilities:
 sequenceDiagram
 autonumber
     participant E as Engine
-    participant A as Aggregator        
-%%note left of E: Check-in    
+    participant A as Aggregator
+%%note left of E: Check-in
     Note right of A: REST
     E ->> A: init [engine_name, uod_name]
     A ->> E: [engine_id]
     Note over E,A: A now knows E is available
 
-%%note left of E: Engine start    
+%%note left of E: Engine start
     Note right of A: REST
     E ->> A: start [engine_id]
     A ->> E: [web socket url]
     Note over E,A: A now knows E is running and will likely connect<br>    via Web socketURL to supply live equipment data
 
-%%note left of E: Engine running    
-    Note right of A: Web Socket    
+%%note left of E: Engine running
+    Note right of A: Web Socket
     E ->> A: connect [engine_id]
     Note over E,A: A now knows E is ready to receive commands
-    
+
     loop Every second
-    E ->> A: state_changed [tag_state, seq]    
+    E ->> A: state_changed [tag_state, seq]
     end
 
     alt User: update tag
