@@ -1,8 +1,8 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, QueryList, ViewChildren } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { produce } from 'immer';
-import { map } from 'rxjs';
+import { BehaviorSubject, combineLatest, map } from 'rxjs';
 import { DetailsActions } from '../ngrx/details.actions';
 import { DetailsSelectors } from '../ngrx/details.selectors';
 import { RunLogLineComponent } from './run-log-line.component';
@@ -15,13 +15,14 @@ import { RunLogLineComponent } from './run-log-line.component';
       <label buttons class="relative">
         <input type="text" placeholder="Filter Run Log" size="20"
                class="border border-slate-200 placeholder:text-slate-400 text-white bg-transparent outline-none rounded p-1 h-8"
-               #filterText (input)="cd.markForCheck()">
-        <button *ngIf="filterText.value.length !== 0" class="p-2 codicon codicon-chrome-close absolute right-0"
-                (click)="filterText.value = ''"></button>
+               #filterInput (input)="filterText.next(filterInput.value)">
+        <button *ngIf="filterInput.value.length !== 0" class="p-2 codicon codicon-chrome-close absolute right-0"
+                (click)="filterInput.value = ''"></button>
       </label>
       <label buttons class="flex items-center gap-1 cursor-pointer border rounded px-1 border-slate-200 h-8">
         In progress only
-        <input type="checkbox" #onlyRunning [class.codicon-pass]="onlyRunning.checked" [class.codicon-circle-large]="!onlyRunning.checked"
+        <input type="checkbox" (input)="onlyRunning.next(onlyRunningCheckbox.checked)" #onlyRunningCheckbox
+               [class.codicon-pass]="onlyRunningCheckbox.checked" [class.codicon-circle-large]="!onlyRunningCheckbox.checked"
                class="w-5 !text-xl appearance-none font-bold opacity-25 text-white checked:opacity-100 codicon cursor-pointer">
       </label>
       <div content *ngrxLet="runLog as runLog" class="h-full overflow-y-auto">
@@ -48,30 +49,29 @@ import { RunLogLineComponent } from './run-log-line.component';
   `,
 })
 export class RunLogComponent implements OnInit {
-  @ViewChild('onlyRunning', {static: true}) onlyRunningCheckbox!: ElementRef<HTMLInputElement>;
-  @ViewChild('filterText', {static: true}) filterText!: ElementRef<HTMLInputElement>;
   @ViewChildren(RunLogLineComponent) runLogLines?: QueryList<RunLogLineComponent>;
+  protected onlyRunning = new BehaviorSubject<boolean>(false);
+  protected filterText = new BehaviorSubject<string>('');
   protected readonly gridFormat = 'auto / 15ch 15ch 1fr auto auto';
   protected readonly dateFormat = 'MM-dd HH:mm:ss';
+  protected runLog = combineLatest([
+    this.store.select(DetailsSelectors.runLog),
+    this.onlyRunning,
+    this.filterText,
+  ]).pipe(map(([runLog, checked, filterText]) => produce(runLog, draft => {
+    if(checked) draft.lines = draft.lines.filter(line => line.end === undefined);
+    if(filterText !== '') {
+      draft.lines = draft.lines.filter(line => {
+        return this.datePipe.transform(line.end, this.dateFormat)?.includes(filterText) ||
+               this.datePipe.transform(line.start, this.dateFormat)?.includes(filterText) ||
+               line.command.command.toLowerCase().includes(filterText.toLowerCase());
+      });
+    }
+    draft.lines.sort((a, b) => new Date(a.start).valueOf() - new Date(b.start).valueOf());
+  })));
 
   constructor(private store: Store,
-              private datePipe: DatePipe,
-              protected cd: ChangeDetectorRef) {}
-
-  get runLog() {
-    return this.store.select(DetailsSelectors.runLog).pipe(map(runLog => produce(runLog, draft => {
-      if(this.onlyRunningCheckbox.nativeElement.checked) draft.lines = draft.lines.filter(line => line.end === undefined);
-      if(this.filterText.nativeElement.value !== undefined) {
-        draft.lines = draft.lines.filter(line => {
-          const filterText = this.filterText.nativeElement.value;
-          return this.datePipe.transform(line.end, this.dateFormat)?.includes(filterText) ||
-                 this.datePipe.transform(line.start, this.dateFormat)?.includes(filterText) ||
-                 line.command.command.toLowerCase().includes(filterText.toLowerCase());
-        });
-      }
-      draft.lines.sort((a, b) => new Date(a.start).valueOf() - new Date(b.start).valueOf());
-    })));
-  }
+              private datePipe: DatePipe) {}
 
   ngOnInit() {
     this.store.dispatch(DetailsActions.runLogComponentInitialized());
