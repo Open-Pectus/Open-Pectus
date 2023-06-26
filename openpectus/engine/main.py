@@ -211,7 +211,7 @@ class WebSocketRPCEngineRunner(EngineRunner):
             await self.client.disconnect_wait_async()
 
 
-async def main(args):
+async def async_main(args):
     uod = None
     if args.uod == 'DemoUod':
         uod = DemoUod()
@@ -262,6 +262,10 @@ async def main(args):
         await runner.run_loop()
 
 
-if __name__ == "__main__":
+def main():
     args = get_args()
-    asyncio.run(main(args))
+    asyncio.run(async_main(args))
+
+
+if __name__ == "__main__":
+    main()

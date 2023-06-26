@@ -64,7 +64,11 @@ def create_app(frontend_dist_dir: str = default_frontend_dist_dir):
     return app
 
 
-if __name__ == "__main__":
+def main():
     args = get_args()
     app = create_app(args.frontend_dist_dir)
     uvicorn.run(app, host=args.host, port=args.port)
+
+
+if __name__ == "__main__":
+    main()

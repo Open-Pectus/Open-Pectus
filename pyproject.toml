@@ -20,8 +20,8 @@ exclude = [
 ]
 
 [project.scripts]
-pectus-aggregator = "openpectus.aggregator:main"
-pectus-engine = "openpectus.engine:main"
+pectus-aggregator = "openpectus.aggregator.main:main"
+pectus-engine = "openpectus.engine.main:main"
 
 [tool.flit.external-data]
 directory = "openpectus/aggregator/frontend-dist/"
