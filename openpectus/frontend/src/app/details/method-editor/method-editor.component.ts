@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { Subject } from 'rxjs';
 import { MethodEditorActions } from './ngrx/method-editor.actions';
@@ -20,12 +20,16 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
     </app-collapsible-element>
   `,
 })
-export class MethodEditorComponent {
+export class MethodEditorComponent implements OnInit {
   protected methodEditorIsDirty = this.store.select(MethodEditorSelectors.methodEditorIsDirty);
   protected editorSizeChange = new Subject<void>();
   protected collapsed = false;
 
   constructor(private store: Store) {}
+
+  ngOnInit() {
+    this.store.dispatch(MethodEditorActions.methodEditorComponentInitialized());
+  }
 
   onSaveButtonClicked() {
     this.store.dispatch(MethodEditorActions.modelSaveRequested());

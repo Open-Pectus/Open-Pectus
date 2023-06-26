@@ -67,6 +67,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy() {
     this.componentDestroyed.next();
+    this.store.dispatch(MethodEditorActions.monacoEditorComponentDestroyed());
   }
 
   private async initServices() {

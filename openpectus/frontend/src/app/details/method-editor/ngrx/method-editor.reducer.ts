@@ -1,6 +1,5 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { DetailsActions } from '../../ngrx/details.actions';
 import { MethodEditorActions } from './method-editor.actions';
 
 export interface MethodEditorState {
@@ -15,18 +14,15 @@ const initialState: MethodEditorState = {
 };
 
 const reducer = createReducer(initialState,
-  on(DetailsActions.unitDetailsInitialized, state => produce(state, draft => {
-    // TODO: content should be fetched
+  on(MethodEditorActions.methodFetched, (state, {method}) => produce(state, draft => {
     draft.methodEditorIsDirty = false;
-    draft.methodEditorContent = `{
-"some key": "some value",
-"injected": "line",
-"another key": "another value",
-"another injected": "line"
-}`;
+    draft.methodEditorContent = method;
   })),
   on(MethodEditorActions.monacoEditorComponentInitialized, state => produce(state, draft => {
     draft.monacoServicesInitialized = true;
+  })),
+  on(MethodEditorActions.monacoEditorComponentDestroyed, state => produce(state, draft => {
+    draft.methodEditorContent = undefined;
   })),
   on(MethodEditorActions.modelSaved, state => produce(state, draft => {
     draft.methodEditorIsDirty = false;

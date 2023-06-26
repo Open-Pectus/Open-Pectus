@@ -210,3 +210,8 @@ class RunLog(BaseModel):
 @router.get('/process_unit/{unit_id}/run_log')
 def get_run_log(unit_id: str) -> RunLog:
     return RunLog(additional_columns=[], lines=[])
+
+
+@router.get('/process_unit/{unit_id}/method')
+def get_method(unit_id: str) -> str:
+    return ''
