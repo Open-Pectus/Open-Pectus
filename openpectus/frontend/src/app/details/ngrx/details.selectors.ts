@@ -2,10 +2,10 @@ import { createFeatureSelector, createSelector } from '@ngrx/store';
 import { AppSelectors } from '../../ngrx/app.selectors';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
-import { detailsFeatureKey, DetailsState } from './details.reducer';
+import { detailsSlice, DetailsState } from './details.reducer';
 
 export class DetailsSelectors {
-  static selectFeature = createFeatureSelector<DetailsState>(detailsFeatureKey);
+  static selectFeature = createFeatureSelector<DetailsState>(detailsSlice.name);
   static processValues = createSelector(this.selectFeature, state => state.processValues);
   static processUnit = createSelector(AppSelectors.processUnits, selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName),
     (processUnits, unitId) => {

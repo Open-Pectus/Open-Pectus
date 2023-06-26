@@ -13,7 +13,7 @@ import { MonacoEditorComponent } from './method-editor/monaco-editor.component';
 import { MethodEditorEffects } from './method-editor/ngrx/method-editor.effects';
 import { methodEditorSlice } from './method-editor/ngrx/method-editor.reducer';
 import { DetailsEffects } from './ngrx/details.effects';
-import { detailsFeatureKey, detailsReducer } from './ngrx/details.reducer';
+import { detailsSlice } from './ngrx/details.reducer';
 import { ProcessDiagramComponent } from './process-diagram.component';
 import { ProcessPlotComponent } from './process-plot.component';
 import { ProcessValueCommandsComponent } from './process-values/process-value-commands.component';
@@ -48,7 +48,7 @@ import { UnitHeaderComponent } from './unit-header.component';
   imports: [
     CommonModule,
     DetailsRoutingModule,
-    StoreModule.forFeature(detailsFeatureKey, detailsReducer),
+    StoreModule.forFeature(detailsSlice),
     StoreModule.forFeature(methodEditorSlice),
     EffectsModule.forFeature([DetailsEffects, MethodEditorEffects]),
     SharedModule,
