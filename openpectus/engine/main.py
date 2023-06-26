@@ -23,9 +23,9 @@ from openpectus.protocol.messages import (
 
 def get_args():
     parser = ArgumentParser("Start Pectus Engine")
-    parser.add_argument("-ws", "--aggregator_ws_url", required=False, default="ws://127.0.0.1:9800/pubsub",
+    parser.add_argument("-ws", "--aggregator_ws_url", required=False, default="ws://127.0.0.1:8300/pubsub",
                         # default="ws://localhost:9800/pubsub",
-                        help="Address to aggregator web socket service. Default is ws://127.0.0.1:9800/pubsub")
+                        help="Address to aggregator web socket service. Default is ws://127.0.0.1:8300/pubsub")
     parser.add_argument("-uod", "--uod", required=False, default="DemoUod", help="The UOD to use")
     parser.add_argument("-r", "--runner", required=False, default="WebSocketRPCEngineRunner",
                         choices=['WebSocketRPCEngineRunner', 'DemoEngineRunner'],

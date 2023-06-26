@@ -32,7 +32,7 @@ default_frontend_dist_dir = os.path.join(os.path.dirname(__file__), "frontend-di
 
 
 def get_args():
-    parser = ArgumentParser("Start Aggregator server")    
+    parser = ArgumentParser("Start Aggregator server")
     parser.add_argument("-host", "--host", required=False, default="127.0.0.1",
                         help="Host address to bind web socket to")
     parser.add_argument("-p", "--port", required=False, type=int, default="9800",
