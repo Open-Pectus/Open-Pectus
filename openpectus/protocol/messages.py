@@ -1,9 +1,9 @@
 from __future__ import annotations
-from dataclasses import dataclass
 import json
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 from pydantic import BaseModel
-import protocol.messages
+
+import openpectus.protocol.messages as messages_namescape
 
 # Topics
 
@@ -82,7 +82,7 @@ def serialize_msg_to_json(msg: MessageBase) -> str:
 
 
 def deserialize_msg(msg_cls_name, init_dict: dict) -> MessageBase:
-    cls = getattr(protocol.messages, msg_cls_name)
+    cls = getattr(messages_namescape, msg_cls_name)
     msg = cls(**init_dict)
     return msg
 

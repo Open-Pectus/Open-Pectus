@@ -1,30 +1,8 @@
 from __future__ import annotations
 from typing import Any, Callable, Dict, List
 
-from lang.exec.tags import Tag, TagCollection
-from engine.hardware import HardwareLayerBase, Register, RegisterDirection
-
-
-class TagHWMapping():
-    def hw_value(self, t: Tag):
-        return t.as_number()
-
-    # def write(self, state):
-    #     if isinstance(state, int):
-    #         if state < len(self.states):
-    #             state = self.states[state]
-    #     if state in self.states:
-    #         if self.state != state:
-    #             self.state = state
-    #             self.notify()
-    # def safe(self):
-    #     self.write(self.safe_state)
-    # def hw_value(self):
-    #     r = self.read()
-    #     if r == self.safe_state:
-    #         return 0
-    #     else:
-    #         return 1
+from openpectus.lang.exec.tags import Tag, TagCollection
+from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
 
 
 class UnitOperationDefinitionBase:
@@ -144,6 +122,8 @@ class UodCommand():
             raise ValueError(f"Command '{self.name}' has no execution function defined")
         else:
             return self.exec_fn(args, uod)
+        
+    # TODO initialize(), finalize(), completed(), cancelled()
 
     def parse_args(self, args: str | None, uod: UnitOperationDefinitionBase) -> List[Any] | None:
         """ Parse argument input to concrete values. Return None to indicate invalid arguments. """

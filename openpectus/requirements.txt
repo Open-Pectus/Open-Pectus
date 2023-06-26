@@ -3,6 +3,7 @@ pint
 typing-extensions
 flake8  # dev
 black   # dev
+build   # dev
 fastapi
 uvicorn[standard]
 httpx   # for tests with fastapi.testclient

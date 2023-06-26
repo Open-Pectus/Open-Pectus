@@ -4,10 +4,10 @@ import logging
 import time
 import pint
 import inspect
-
 from typing import Generator, List, Tuple
 from typing_extensions import override
-from lang.model.pprogram import (
+
+from openpectus.lang.model.pprogram import (
     PNode,
     PProgram,
     PInstruction,
@@ -75,7 +75,7 @@ class ActivationRecord:
         elif isinstance(node, PWatch):
             return ARType.WATCH
         else:
-            raise NotImplementedError("ARType of node unknown")
+            raise NotImplementedError(f"ARType of node type '{type(node).__name__}' unknown")
 
     def __str__(self) -> str:
         return f"AR {self.owner} | {self.artype} | complete: {self.complete}"

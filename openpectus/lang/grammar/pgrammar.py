@@ -3,10 +3,10 @@ from typing import List
 from antlr4 import InputStream, CommonTokenStream, Token, ParserRuleContext
 from antlr4.tree.Tree import ParseTree, ParseTreeWalker
 
-from lang.grammar.codegen.pcodeLexer import pcodeLexer
-from lang.grammar.codegen.pcodeParser import pcodeParser
-from lang.model.pprogram import PProgram
-from lang.grammar.pprogrambuilder import PProgramBuilder
+from openpectus.lang.grammar.codegen.pcodeLexer import pcodeLexer
+from openpectus.lang.grammar.codegen.pcodeParser import pcodeParser
+from openpectus.lang.model.pprogram import PProgram
+from openpectus.lang.grammar.pprogrambuilder import PProgramBuilder
 
 
 class PGrammar:
@@ -15,7 +15,7 @@ class PGrammar:
         self.parser = pcodeParser
 
     def parse(self, code: str):  # code: TextIOWrapper):
-        input = InputStream(code)  # type: ignore , TODO clean this up
+        input = InputStream(code)  # type: ignore
         self.lexer = pcodeLexer(input)
         stream = CommonTokenStream(self.lexer)
         self.parser = pcodeParser(stream)
@@ -29,7 +29,7 @@ class PGrammar:
 
     @property
     def tokens(self) -> List[Token]:
-        return list(self.lexer.getAllTokens())  # type: ignore ,this must be a Pylance bug?
+        return list(self.lexer.getAllTokens())  # type: ignore
 
     @staticmethod
     def _recursive(aRoot: ParseTree, buf: List[str], offset: int, ruleNames: List[str]):

@@ -4,11 +4,11 @@ from typing import Any, List
 from typing_extensions import override
 import unittest
 
-from lang.exec.uod import UnitOperationDefinitionBase
-from engine.eng import Engine, EngineCommand, EngineInternalCommand
-from lang.exec import tags
-from lang.exec.uod import UodCommand
-from engine.hardware import HardwareLayerBase, Register, RegisterDirection
+from openpectus.lang.exec.uod import UnitOperationDefinitionBase
+from openpectus.engine.eng import Engine, EngineCommand, EngineInternalCommand
+from openpectus.lang.exec import tags
+from openpectus.lang.exec.uod import UodCommand
+from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
 
 
 class TestHardwareLayer(unittest.TestCase):

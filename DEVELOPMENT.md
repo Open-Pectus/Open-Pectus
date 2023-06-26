@@ -1,13 +1,54 @@
 Notes:
 
+# Frontend
+
+## Project setup / update
+
+`cd Open-Pectus/openpectus/frontend`
+`npm ci` 
+`npm run build`
+
+
+# Backend (Aggregator)
+
+## Setup
+
+TODO: How to update conda env
+
+To build dist:
+
+`cd Open-Pectus`
+`python -m build -o openpectus/dist`
+
+To set up a development environment, run
+
+`cd Open-Pectus`
+`pip install -e .`
+
+
 # Docker
 
-To start all services in docker, run the following command from the `openpectus` directory:
+To start aggregator services in docker, run the following command.
+Note: This depends on the frontend and backend builds being up to date.
+
+`cd Open-Pectus/openpectus`
 `docker compose up --build` 
 
 When the container is running, the aggregator services are available, including:
-OpenAPI UI: http://localhost:8300/docs
-OpenAPI spec: http://localhost:8300/openapi.json
+Frontend:       http://localhost:8300/
+OpenAPI UI:     http://localhost:8300/docs
+OpenAPI spec:   http://localhost:8300/openapi.json
+
+To start a test engine in docker:
+Start a terminal in the container using Docker Desktop or
+`cd /usr/src/app/engine`
+`python main.py -ws ws://127.0.0.1:8300/pubsub`
+
+The frontend can now be used to verify that the engine is connected to the aggregator and to interact
+with the engine.
+
+The same command can be run locally to connect a local engine to the Docker aggregator.
+
 
 
 ## Flake
@@ -17,8 +58,12 @@ Run flake locally:
 flake must be run from the proper directory in order to read its configuration. Otherwise it uses default
 configuration which outputs many errors that are not relevant.
 
-cd Open-Pectus\openpectus
-flake8
+`cd Open-Pectus/openpectus`
+`flake8`
+
+
+
+
 
 ## Diagram generation
 

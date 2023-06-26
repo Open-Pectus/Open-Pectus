@@ -2,21 +2,13 @@
 from typing import List, Any
 import unittest
 
-from lang.grammar.pprogramformatter import print_program
-from lang.grammar.pgrammar import PGrammar
-from lang.model.pprogram import (
-    PProgram,
-)
-from lang.exec.pinterpreter import (
-    PInterpreter,
-    TICK_INTERVAL
-)
-from lang.exec.uod import UnitOperationDefinitionBase
-from lang.exec.tags import (
-    Tag,
-    DEFAULT_TAG_BASE
-)
-from lang.exec.uod import UodCommand
+from openpectus.lang.grammar.pprogramformatter import print_program
+from openpectus.lang.grammar.pgrammar import PGrammar
+from openpectus.lang.model.pprogram import PProgram
+from openpectus.lang.exec.pinterpreter import PInterpreter, TICK_INTERVAL
+from openpectus.lang.exec.uod import UnitOperationDefinitionBase
+from openpectus.lang.exec.tags import Tag, DEFAULT_TAG_BASE
+from openpectus.lang.exec.uod import UodCommand
 
 
 def build_program(s) -> PProgram:
@@ -39,6 +31,7 @@ mark: a
 mark: b
 mark: c
 """)
+        print_program(program)
         uod = TestUod()
         i = PInterpreter(program, uod)
 
