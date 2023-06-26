@@ -14,4 +14,4 @@ RUN pip install dist/openpectus-0.0.1.tar.gz
 EXPOSE 8300
 #CMD python3 -m uvicorn openpectus.aggregator.main:app --host 0.0.0.0 --port 8300
 #CMD python3 main.py --host 0.0.0.0 --port 8300
-CMD pectus-aggregator
+CMD pectus-aggregator --host 0.0.0.0 --port 8300
