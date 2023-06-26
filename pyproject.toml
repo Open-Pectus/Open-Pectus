@@ -19,6 +19,10 @@ exclude = [
     "openpectus/docker-compose.yml"
 ]
 
+[project.scripts]
+pectus-aggregator = "openpectus.aggregator:main"
+pectus-engine = "openpectus.engine:main"
+
 [tool.flit.external-data]
 directory = "openpectus/aggregator/frontend-dist/"
 
