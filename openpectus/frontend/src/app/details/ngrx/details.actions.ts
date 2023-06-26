@@ -4,7 +4,10 @@ import { CommandExample, ExecutableCommand, ProcessDiagram, ProcessUnit, Process
 export const DetailsActions = createActionGroup({
   source: 'Details',
   events: {
-    'Method Editor Initialized': props<{ model: string }>(),
+    'Unit Details Initialized': emptyProps(),
+    'Unit Details Destroyed': emptyProps(),
+
+    'Method Editor Initialized': emptyProps(),
     'Method Editor Model Changed': props<{ model: string }>(),
     'Method Editor Model Save Requested': emptyProps(),
     'Method Editor Model Saved': emptyProps(),

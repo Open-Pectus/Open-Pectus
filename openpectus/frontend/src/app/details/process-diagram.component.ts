@@ -10,8 +10,9 @@ import { DetailsSelectors } from './ngrx/details.selectors';
   selector: 'app-process-diagram',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-collapsible-element [name]="'Process Diagram'" [heightResizable]="true" [contentHeight]="400">
-      <div class="flex justify-center h-full" content>
+    <app-collapsible-element [name]="'Process Diagram'" [heightResizable]="true" [contentHeight]="400"
+                             (collapseStateChanged)="collapsed = $event">
+      <div class="flex justify-center h-full" content *ngIf="!collapsed">
         <div class="m-auto" *ngIf="(processDiagram | ngrxPush)?.svg === ''">No diagram available</div>
         <div class="bg-white rounded-sm p-2" [innerHTML]="diagramWithValues | ngrxPush"></div>
       </div>
@@ -24,7 +25,6 @@ import { DetailsSelectors } from './ngrx/details.selectors';
 export class ProcessDiagramComponent implements OnInit {
   processDiagram = this.store.select(DetailsSelectors.processDiagram);
   processValues = this.store.select(DetailsSelectors.processValues);
-
   diagramWithValues = combineLatest([this.processDiagram, this.processValues]).pipe(
     map(([processDiagram, processValues]) => {
       return processDiagram?.svg?.replaceAll(/{{(?<inCurlyBraces>[^}]+)}}/g, (match, inCurlyBraces: string) => {
@@ -46,6 +46,7 @@ export class ProcessDiagramComponent implements OnInit {
     }),
     map(processDiagramString => this.domSanitizer.bypassSecurityTrustHtml(processDiagramString)),
   );
+  protected collapsed = false;
 
   constructor(private store: Store,
               private domSanitizer: DomSanitizer,

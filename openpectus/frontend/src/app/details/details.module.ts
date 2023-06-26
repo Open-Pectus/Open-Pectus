@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
-import { LetModule, PushModule } from '@ngrx/component';
+import { LetDirective, PushPipe } from '@ngrx/component';
 import { EffectsModule } from '@ngrx/effects';
 import { StoreModule } from '@ngrx/store';
 import { SharedModule } from '../shared/shared.module';
@@ -13,16 +13,16 @@ import { MonacoEditorComponent } from './method-editor/monaco-editor.component';
 import { DetailsEffects } from './ngrx/details.effects';
 import { detailsFeatureKey, detailsReducer } from './ngrx/details.reducer';
 import { ProcessDiagramComponent } from './process-diagram.component';
+import { ProcessPlotComponent } from './process-plot.component';
 import { ProcessValueCommandsComponent } from './process-values/process-value-commands.component';
 import { ProcessValueEditorComponent } from './process-values/process-value-editor.component';
 import { ProcessValueComponent } from './process-values/process-value.component';
 import { ProcessValuesComponent } from './process-values/process-values.component';
+import { RunLogAdditionalValuesComponent } from './run-log/run-log-additional-values.component';
+import { RunLogLineComponent } from './run-log/run-log-line.component';
 import { RunLogComponent } from './run-log/run-log.component';
 import { UnitDetailsComponent } from './unit-details.component';
 import { UnitHeaderComponent } from './unit-header.component';
-import { RunLogLineComponent } from './run-log/run-log-line.component';
-import { ProcessPlotComponent } from './process-plot.component';
-import { RunLogAdditionalValuesComponent } from './run-log/run-log-additional-values.component';
 
 @NgModule({
   declarations: [
@@ -46,11 +46,11 @@ import { RunLogAdditionalValuesComponent } from './run-log/run-log-additional-va
   imports: [
     CommonModule,
     DetailsRoutingModule,
-    PushModule,
     StoreModule.forFeature(detailsFeatureKey, detailsReducer),
     EffectsModule.forFeature([DetailsEffects]),
-    LetModule,
     SharedModule,
+    LetDirective,
+    PushPipe,
   ],
 })
 export class DetailsModule {}
