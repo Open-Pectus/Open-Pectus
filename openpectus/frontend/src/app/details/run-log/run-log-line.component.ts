@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
 import { Store } from '@ngrx/store';
+import { map } from 'rxjs';
 import { RunLogLine } from '../../api';
+import { RunLogActions } from './ngrx/run-log.actions';
 import { RunLogSelectors } from './ngrx/run-log.selectors';
 import { AdditionalValueType } from './run-log-additional-values.component';
 
@@ -8,7 +10,8 @@ import { AdditionalValueType } from './run-log-additional-values.component';
   selector: 'app-run-log-line',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div [class.!bg-gray-200]="rowIndex % 2 === 1" class="bg-gray-100 border-b border-white cursor-pointer" (click)="toggleCollapse()">
+    <div [class.!bg-gray-200]="rowIndex % 2 === 1" class="bg-gray-100 border-b border-white cursor-pointer"
+         *ngrxLet="expanded as expanded" (click)="toggleCollapse(expanded)">
       <div class="grid gap-2 px-3 py-2" [style.grid]="gridFormat">
         <p>{{runLogLine?.start ?? '' | date:(dateFormat | ngrxPush)}}</p>
         <p *ngIf="runLogLine?.end !== undefined">{{runLogLine?.end ?? '' | date:(dateFormat | ngrxPush)}}</p>
@@ -16,7 +19,9 @@ import { AdditionalValueType } from './run-log-additional-values.component';
                   [style.border-color]="'revert'" *ngIf="runLogLine?.end === undefined"></progress>
         <p>{{runLogLine?.command?.command}}</p>
       </div>
-      <div [style.height.px]="collapsed ? 0 : additionalValues.scrollHeight" class="w-full transition-[height] overflow-hidden">
+      <div [style.height.px]="expanded && additionalValuesElementHasHeight ? additionalValues.scrollHeight : 0"
+           [class.transition-[height]]="initialHeightAchieved"
+           class="w-full overflow-hidden">
         <div #additionalValues>
           <p class="text-end p-2" *ngIf="!runLogLine?.start_values?.length && !runLogLine?.end_values?.length">
             No additional values available.
@@ -30,29 +35,36 @@ import { AdditionalValueType } from './run-log-additional-values.component';
     </div>
   `,
 })
-export class RunLogLineComponent {
+export class RunLogLineComponent implements AfterViewInit {
   @Input() runLogLine?: RunLogLine;
   @Input() rowIndex: number = 0;
   @Input() gridFormat?: string = 'auto / 1fr 1fr 1fr';
   @Output() collapseToggled = new EventEmitter<boolean>();
-  dateFormat = this.store.select(RunLogSelectors.dateFormat);
   protected readonly AdditionalValueType = AdditionalValueType;
+  protected readonly dateFormat = this.store.select(RunLogSelectors.dateFormat);
+  protected readonly expanded = this.store.select(RunLogSelectors.expandedLines).pipe(
+    map(lineIds => lineIds.some(lineId => lineId === this.runLogLine?.id)),
+  );
+  protected additionalValuesElementHasHeight = false;
+  protected initialHeightAchieved = false;
 
   constructor(private store: Store, private cd: ChangeDetectorRef) {}
 
-  private _collapsed = true;
-
-  get collapsed(): boolean {
-    return this._collapsed;
+  ngAfterViewInit() {
+    setTimeout(() => {
+      this.additionalValuesElementHasHeight = true;
+      this.cd.markForCheck();
+      setTimeout(() => {
+        this.initialHeightAchieved = true;
+        this.cd.markForCheck();
+      });
+    });
   }
 
-  set collapsed(value: boolean) {
-    this._collapsed = value;
-    this.cd.markForCheck();
-  }
-
-  protected toggleCollapse() {
-    this.collapsed = !this.collapsed;
-    this.collapseToggled.emit(this.collapsed);
+  protected toggleCollapse(expanded: boolean) {
+    if(this.runLogLine === undefined) return;
+    this.store.dispatch(expanded
+                        ? RunLogActions.collapseLine({id: this.runLogLine.id})
+                        : RunLogActions.expandLine({id: this.runLogLine.id}));
   }
 }

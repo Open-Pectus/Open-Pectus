@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, QueryList, ViewChildren } from '@angular/core';
 import { Store } from '@ngrx/store';
+import { RunLogLine } from '../../api';
 import { RunLogActions } from './ngrx/run-log.actions';
 import { RunLogSelectors } from './ngrx/run-log.selectors';
 import { RunLogLineComponent } from './run-log-line.component';
@@ -12,7 +13,8 @@ import { RunLogLineComponent } from './run-log-line.component';
       <app-run-log-filters buttons></app-run-log-filters>
       <div content *ngIf="!collapsed" class="h-full overflow-y-auto">
         <app-run-log-header [gridFormat]="gridFormat" (expandAll)="expandAll()" (collapseAll)="collapseAll()"></app-run-log-header>
-        <app-run-log-line *ngFor="let runLogLine of (runLog | ngrxPush)?.lines; let index = index" [runLogLine]="runLogLine" [rowIndex]="index"
+        <app-run-log-line *ngFor="let runLogLine of (runLog | ngrxPush)?.lines; let index = index; trackBy: trackBy" [runLogLine]="runLogLine"
+                          [rowIndex]="index"
                           [gridFormat]="gridFormat"></app-run-log-line>
         <p class="text-center p-2 font-semibold" *ngIf="(runLog | ngrxPush)?.lines?.length === 0">
           No Run Log available or all have been filtered.
@@ -29,15 +31,19 @@ export class RunLogComponent implements OnInit {
 
   constructor(private store: Store) {}
 
+  trackBy(_: number, runLogLine: RunLogLine) {
+    return runLogLine.id;
+  }
+
   ngOnInit() {
     this.store.dispatch(RunLogActions.runLogComponentInitialized());
   }
 
   expandAll() {
-    this.runLogLines?.forEach(runLogLineComponent => runLogLineComponent.collapsed = false);
+    this.store.dispatch(RunLogActions.expandAll());
   }
 
   collapseAll() {
-    this.runLogLines?.forEach(runLogLineComponent => runLogLineComponent.collapsed = true);
+    this.store.dispatch(RunLogActions.collapseAll());
   }
 }

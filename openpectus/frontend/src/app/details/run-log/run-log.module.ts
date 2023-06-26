@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
-import { PushPipe } from '@ngrx/component';
+import { LetDirective, PushPipe } from '@ngrx/component';
 import { EffectsModule } from '@ngrx/effects';
 import { StoreModule } from '@ngrx/store';
 import { SharedModule } from '../../shared/shared.module';
@@ -27,6 +27,7 @@ import { RunLogComponent } from './run-log.component';
     EffectsModule.forFeature(RunLogEffects),
     SharedModule,
     PushPipe,
+    LetDirective,
   ],
   exports: [
     RunLogComponent,

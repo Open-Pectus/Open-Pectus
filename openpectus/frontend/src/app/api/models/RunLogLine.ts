@@ -6,6 +6,7 @@ import type { ExecutableCommand } from './ExecutableCommand';
 import type { ProcessValue } from './ProcessValue';
 
 export type RunLogLine = {
+    id: number;
     command: ExecutableCommand;
     start: string;
     end?: string;

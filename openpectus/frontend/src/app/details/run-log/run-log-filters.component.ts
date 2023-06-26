@@ -27,10 +27,10 @@ export class RunLogFiltersComponent {
   constructor(private store: Store) {}
 
   filterTextChanged(filterText: string) {
-    this.store.dispatch(RunLogActions.runLogFilterTextChanged({filterText}));
+    this.store.dispatch(RunLogActions.filterTextChanged({filterText}));
   }
 
   onlyRunningChanged(onlyRunning: boolean) {
-    this.store.dispatch(RunLogActions.runLogOnlyRunningFilterChanged({onlyRunning}));
+    this.store.dispatch(RunLogActions.onlyRunningFilterChanged({onlyRunning}));
   }
 }

@@ -200,10 +200,11 @@ def get_command_examples(unit_id: str) -> List[CommandExample]:
 
 
 class RunLogLine(BaseModel):
+    id: int
     command: ExecutableCommand
     start: datetime
     end: datetime | None
-    progress: float | None # between 0 and 1
+    progress: float | None  # between 0 and 1
     start_values: List[ProcessValue]
     end_values: List[ProcessValue]
 

@@ -785,6 +785,7 @@
       "RunLogLine": {
         "title": "RunLogLine",
         "required": [
+          "id",
           "command",
           "start",
           "start_values",
@@ -792,6 +793,10 @@
         ],
         "type": "object",
         "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
           "command": {
             "$ref": "#/components/schemas/ExecutableCommand"
           },
