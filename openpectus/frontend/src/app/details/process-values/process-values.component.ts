@@ -10,8 +10,8 @@ import { PvAndPosition } from './process-value.component';
   selector: 'app-process-values',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-collapsible-element [name]="'Process Values'">
-      <div class="flex gap-2 p-2 items-start flex-wrap" content>
+    <app-collapsible-element [name]="'Process Values'" (collapseStateChanged)="collapsed = $event">
+      <div class="flex gap-2 p-2 items-start flex-wrap" content *ngIf="!collapsed">
         <div class="m-auto" *ngIf="(processValues | ngrxPush)?.length === 0">No process values available</div>
         <app-process-value *ngFor="let processValue of (processValues | ngrxPush); trackBy: trackBy"
                            [processValue]="processValue" (openEditor)="onOpenEditor($event)"
@@ -28,7 +28,6 @@ import { PvAndPosition } from './process-value.component';
                                   (shouldClose)="onCloseCommands($event)"
                                   [style.left.px]="pvAndPositionForPopover?.position?.x"
                                   [style.top.px]="pvAndPositionForPopover?.position?.y"></app-process-value-commands>
-
     </app-collapsible-element>
   `,
 })
@@ -37,6 +36,7 @@ export class ProcessValuesComponent implements OnInit, OnDestroy {
   protected showEditor = false;
   protected showCommands = false;
   protected pvAndPositionForPopover?: PvAndPosition;
+  protected collapsed = false;
 
   constructor(private store: Store) {}
 
