@@ -21,8 +21,8 @@ import { RunLogLineComponent } from './run-log-line.component';
       </label>
       <label buttons class="flex items-center gap-1 cursor-pointer border rounded px-1 border-slate-200 h-8">
         In progress only
-        <input type="checkbox" #onlyRunning
-               class="w-5 !text-xl appearance-none font-bold text-transparent checked:text-white codicon codicon-pass cursor-pointer">
+        <input type="checkbox" #onlyRunning [class.codicon-pass]="onlyRunning.checked" [class.codicon-circle-large]="!onlyRunning.checked"
+               class="w-5 !text-xl appearance-none font-bold opacity-25 text-white checked:opacity-100 codicon cursor-pointer">
       </label>
       <div content *ngrxLet="runLog as runLog" class="h-full overflow-y-auto">
         <div class="grid bg-gray-700 text-white gap-2 px-3 py-2" [style.grid]="gridFormat">
