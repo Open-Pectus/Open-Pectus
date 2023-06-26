@@ -28,10 +28,23 @@ const initialState: DetailsState = {
 };
 
 export const detailsReducer = createReducer(initialState,
-  on(DetailsActions.methodEditorInitialized, (state, {model}) => produce(state, draft => {
-    draft.monacoServicesInitialized = true;
+  on(DetailsActions.unitDetailsInitialized, state => produce(state, draft => {
+    draft.shouldPollProcessValues = true;
+
+    // TODO: content should be fetched
     draft.methodEditorIsDirty = false;
-    draft.methodEditorContent = model;
+    draft.methodEditorContent = `{
+  "some key": "some value",
+  "injected": "line",
+  "another key": "another value",
+  "another injected": "line"
+}`;
+  })),
+  on(DetailsActions.unitDetailsDestroyed, state => produce(state, draft => {
+    draft.shouldPollProcessValues = false;
+  })),
+  on(DetailsActions.methodEditorInitialized, state => produce(state, draft => {
+    draft.monacoServicesInitialized = true;
   })),
   on(DetailsActions.methodEditorModelSaved, state => produce(state, draft => {
     draft.methodEditorIsDirty = false;
@@ -46,12 +59,6 @@ export const detailsReducer = createReducer(initialState,
   })),
   on(DetailsActions.processDiagramFetched, (state, {processDiagram}) => produce(state, draft => {
     draft.processDiagram = processDiagram;
-  })),
-  on(DetailsActions.processValuesInitialized, (state) => produce(state, draft => {
-    draft.shouldPollProcessValues = true;
-  })),
-  on(DetailsActions.processValuesDestroyed, (state) => produce(state, draft => {
-    draft.shouldPollProcessValues = false;
   })),
   on(DetailsActions.commandExamplesFetched, (state, {commandExamples}) => produce(state, draft => {
     draft.commandExamples = commandExamples;

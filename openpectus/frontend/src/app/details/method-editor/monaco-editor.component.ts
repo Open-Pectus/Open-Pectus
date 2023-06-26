@@ -28,6 +28,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   private componentDestroyed = new Subject<void>();
   private editor?: MonacoEditor.IStandaloneCodeEditor;
   private readonly languageId = 'json';
+  private methodEditorContent = this.store.select(DetailsSelectors.methodEditorContent);
 
   constructor(private store: Store) {}
 
@@ -39,7 +40,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
     this.editorSizeChange?.pipe(takeUntil(this.componentDestroyed)).subscribe(() => this.editor?.layout());
     window.onresize = () => this.editor?.layout();
-    this.store.dispatch(DetailsActions.methodEditorInitialized({model: this.editor.getModel()?.getValue() ?? ''}));
+    this.store.dispatch(DetailsActions.methodEditorInitialized());
   }
 
   createLanguageClient(transports: MessageTransports): MonacoLanguageClient {
@@ -90,18 +91,9 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  private createDefaultJsonContent() {
-    return `{
-  "some key": "some value",
-  "injected": "line",
-  "another key": "another value",
-  "another injected": "line"
-}`;
-  }
-
   private async createEditor() {
     const uri = Uri.parse('/tmp/model.json');
-    const modelRef = await createModelReference(uri, this.createDefaultJsonContent());
+    const modelRef = await createModelReference(uri, await firstValueFrom(this.methodEditorContent));
     modelRef.object.setLanguageId(this.languageId);
     const injectedLines: number[] = [3, 5];
 
@@ -120,6 +112,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     });
 
     this.componentDestroyed.pipe(take(1)).subscribe(() => {
+      modelRef.object.dispose();
       modelRef.dispose();
       editor.dispose();
     });

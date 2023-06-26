@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { Store } from '@ngrx/store';
+import { DetailsActions } from './ngrx/details.actions';
 
 @Component({
   selector: 'app-unit-details',
@@ -17,4 +19,10 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
     </div>
   `,
 })
-export class UnitDetailsComponent {}
+export class UnitDetailsComponent implements OnInit {
+  constructor(private store: Store) {}
+
+  ngOnInit() {
+    this.store.dispatch(DetailsActions.unitDetailsInitialized());
+  }
+}

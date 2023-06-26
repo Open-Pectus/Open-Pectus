@@ -8,8 +8,8 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
   selector: 'app-commands',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-collapsible-element [name]="'Commands'" [heightResizable]="true" [contentHeight]="400">
-      <div content class="flex h-full">
+    <app-collapsible-element [name]="'Commands'" [heightResizable]="true" [contentHeight]="400" (collapseStateChanged)="collapsed = $event">
+      <div content class="flex h-full" *ngIf="!collapsed">
         <app-command-examples-list [commandExamples]="commandExamples | ngrxPush" [chosenExample]="chosenExample"
                                    (exampleChosen)="chosenExample = $event"></app-command-examples-list>
         <div class="flex justify-between flex-1 relative">
@@ -28,8 +28,9 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
   `,
 })
 export class CommandsComponent implements OnInit {
-  commandExamples = this.store.select(DetailsSelectors.commandExamples);
-  chosenExample?: CommandExample;
+  protected collapsed = false;
+  protected commandExamples = this.store.select(DetailsSelectors.commandExamples);
+  protected chosenExample?: CommandExample;
 
   constructor(private store: Store) {}
 
