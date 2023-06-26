@@ -27,19 +27,7 @@ import { RunLogLineComponent } from './run-log-line.component';
                class="w-5 !text-xl appearance-none font-bold opacity-25 text-white checked:opacity-100 codicon cursor-pointer">
       </label>
       <div content *ngIf="!collapsed" class="h-full overflow-y-auto">
-        <div class="grid bg-gray-700 text-white gap-2 px-3 py-2" [style.grid]="gridFormat">
-          <b>Start</b>
-          <b>End</b>
-          <b>Command</b>
-          <button class="bg-gray-500 rounded px-2 flex items-center" (click)="expandAll()">
-            <div class="codicon codicon-unfold mr-1"></div>
-            Expand all
-          </button>
-          <button class="bg-gray-500 rounded px-2 flex items-center" (click)="collapseAll()">
-            <div class="codicon codicon-fold mr-1"></div>
-            Collapse all
-          </button>
-        </div>
+        <app-run-log-header [gridFormat]="gridFormat" (expandAll)="expandAll()" (collapseAll)="collapseAll()"></app-run-log-header>
         <app-run-log-line *ngFor="let runLogLine of (runLog | ngrxPush)?.lines; let index = index" [runLogLine]="runLogLine" [rowIndex]="index"
                           [gridFormat]="gridFormat" [dateFormat]="dateFormat"></app-run-log-line>
         <p class="text-center p-2 font-semibold" *ngIf="(runLog | ngrxPush)?.lines?.length === 0">

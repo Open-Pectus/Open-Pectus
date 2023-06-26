@@ -19,6 +19,7 @@ import { RunLogLineComponent } from './run-log/run-log-line.component';
 import { RunLogComponent } from './run-log/run-log.component';
 import { UnitDetailsComponent } from './unit-details.component';
 import { UnitHeaderComponent } from './unit-header.component';
+import { RunLogHeaderComponent } from './run-log/run-log-header.component';
 
 @NgModule({
   declarations: [
@@ -32,6 +33,7 @@ import { UnitHeaderComponent } from './unit-header.component';
     RunLogLineComponent,
     ProcessPlotComponent,
     RunLogAdditionalValuesComponent,
+    RunLogHeaderComponent,
   ],
   imports: [
     CommonModule,
