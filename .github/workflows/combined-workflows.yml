@@ -12,7 +12,8 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   #SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/main' }}
-  SHOULD_PUBLISH_IMAGE: ${{ github.ref == '112-standard-tags' }}
+  SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/112-standard-tags' }}
+  #SHOULD_PUBLISH_IMAGE: ${{ github.head_ref == '112-standard-tags' }}
   NODE_VERSION: 18.16
 
 jobs:

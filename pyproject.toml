@@ -1,11 +1,26 @@
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
 
 [project]
-name = "OpenPectus"
-version = "0.0.1"
+name = "openpectus"
 authors = [{name = "Eskild Schroll-Fleischer", email = "eyfl@novonordisk.com"}, {name = "Morten Passow Odgaard", email = "mpo@mjolner.dk"}, {name = "Jan H. Knudsen", email = "jhk@mjolner.dk"}]
+dynamic = ["version", "description"]
+
+[tool.flit.sdist]
+include = ["openpectus"]
+exclude = [
+    "openpectus/frontend*",
+    "openpectus/test*",
+    "openpectus/engine/p1*",
+    "openpectus/.flake8*",
+    "openpectus/.idea*",
+    "openpectus/Dockerfile",
+    "openpectus/docker-compose.yml"
+]
+
+[tool.flit.external-data]
+directory = "openpectus/aggregator/frontend-dist/"
 
 
 [tool.mypy]
@@ -13,7 +28,7 @@ files = [
     "./openpectus"
 ]
 exclude = [
-    '^openpectus/lang/grammar/codegen/*',  # TOML literal string (single-quotes, no escaping necessary)    
+    '^openpectus/lang/grammar/codegen/*',  # TOML literal string (single-quotes, no escaping necessary)
     '^openpectus/engine/p1/*',
 ]
 
