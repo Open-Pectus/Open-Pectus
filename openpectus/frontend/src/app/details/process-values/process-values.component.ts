@@ -45,11 +45,11 @@ export class ProcessValuesComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.store.dispatch(ProcessValuesActions.processValuesInitialized());
+    this.store.dispatch(ProcessValuesActions.processValuesComponentInitialized());
   }
 
   ngOnDestroy() {
-    this.store.dispatch(ProcessValuesActions.processValuesDestroyed());
+    this.store.dispatch(ProcessValuesActions.processValuesComponentDestroyed());
   }
 
   onCloseCommands(command?: ProcessValueCommand) {

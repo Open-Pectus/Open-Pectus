@@ -25,13 +25,13 @@ const reducer = createReducer(initialState,
 "another injected": "line"
 }`;
   })),
-  on(MethodEditorActions.methodEditorInitialized, state => produce(state, draft => {
+  on(MethodEditorActions.monacoEditorComponentInitialized, state => produce(state, draft => {
     draft.monacoServicesInitialized = true;
   })),
-  on(MethodEditorActions.methodEditorModelSaved, state => produce(state, draft => {
+  on(MethodEditorActions.modelSaved, state => produce(state, draft => {
     draft.methodEditorIsDirty = false;
   })),
-  on(MethodEditorActions.methodEditorModelChanged, (state, {model}) => produce(state, draft => {
+  on(MethodEditorActions.modelChanged, (state, {model}) => produce(state, draft => {
     draft.methodEditorIsDirty = true;
     draft.methodEditorContent = model;
   })),

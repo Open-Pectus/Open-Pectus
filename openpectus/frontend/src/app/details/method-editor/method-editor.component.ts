@@ -28,7 +28,7 @@ export class MethodEditorComponent {
   constructor(private store: Store) {}
 
   onSaveButtonClicked() {
-    this.store.dispatch(MethodEditorActions.methodEditorModelSaveRequested());
+    this.store.dispatch(MethodEditorActions.modelSaveRequested());
   }
 
   onContentHeightChanged() {

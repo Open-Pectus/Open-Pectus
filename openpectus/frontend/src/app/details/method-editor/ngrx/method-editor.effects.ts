@@ -8,12 +8,12 @@ import { MethodEditorSelectors } from './method-editor.selectors';
 @Injectable()
 export class MethodEditorEffects {
   saveMethodEditorModel = createEffect(() => this.actions.pipe(
-    ofType(MethodEditorActions.methodEditorModelSaveRequested),
+    ofType(MethodEditorActions.modelSaveRequested),
     concatLatestFrom(() => this.store.select(MethodEditorSelectors.methodEditorContent)),
     switchMap(([_, content]) => {
       /* save model to backend */
       alert(`model saved! ${content}`);
-      return of(MethodEditorActions.methodEditorModelSaved());
+      return of(MethodEditorActions.modelSaved());
     }),
   ));
 

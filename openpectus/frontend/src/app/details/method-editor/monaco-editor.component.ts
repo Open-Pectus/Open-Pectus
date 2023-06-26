@@ -29,6 +29,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   private editor?: MonacoEditor.IStandaloneCodeEditor;
   private readonly languageId = 'json';
   private methodEditorContent = this.store.select(MethodEditorSelectors.methodEditorContent);
+  private monacoServicesInitialized = this.store.select(MethodEditorSelectors.monacoServicesInitialized);
 
   constructor(private store: Store) {}
 
@@ -40,7 +41,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
     this.editorSizeChange?.pipe(takeUntil(this.componentDestroyed)).subscribe(() => this.editor?.layout());
     window.onresize = () => this.editor?.layout();
-    this.store.dispatch(MethodEditorActions.methodEditorInitialized());
+    this.store.dispatch(MethodEditorActions.monacoEditorComponentInitialized());
   }
 
   createLanguageClient(transports: MessageTransports): MonacoLanguageClient {
@@ -69,7 +70,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   private async initServices() {
-    const alreadyInitialized = await firstValueFrom(this.store.select(MethodEditorSelectors.monacoServicesInitialized));
+    const alreadyInitialized = await firstValueFrom(this.monacoServicesInitialized);
     if(alreadyInitialized) return;
     await initServices({
       enableThemeService: true,
@@ -108,7 +109,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     editor.onDidChangeModelContent(() => {
       const model = editor.getModel()?.getValue();
       if(model === undefined) return;
-      this.store.dispatch(MethodEditorActions.methodEditorModelChanged({model}));
+      this.store.dispatch(MethodEditorActions.modelChanged({model}));
     });
 
     this.componentDestroyed.pipe(take(1)).subscribe(() => {
