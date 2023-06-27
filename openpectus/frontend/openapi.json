@@ -391,6 +391,48 @@
         }
       }
     },
+    "/api/process_unit/{unit_id}/plot_configuration": {
+      "get": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Get Plot Configuration",
+        "operationId": "get_plot_configuration",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Unit Id",
+              "type": "string"
+            },
+            "name": "unit_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlotConfiguration"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/batch_job/{id}": {
       "get": {
         "tags": [
@@ -620,6 +662,96 @@
             "title": "Last Seen Date",
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "PlotAxis": {
+        "title": "PlotAxis",
+        "required": [
+          "label",
+          "process_value_names",
+          "y_max",
+          "y_min"
+        ],
+        "type": "object",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "process_value_names": {
+            "title": "Process Value Names",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "y_max": {
+            "title": "Y Max",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          },
+          "y_min": {
+            "title": "Y Min",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          }
+        }
+      },
+      "PlotColorRegion": {
+        "title": "PlotColorRegion",
+        "required": [
+          "process_value_name",
+          "value_color_map"
+        ],
+        "type": "object",
+        "properties": {
+          "process_value_name": {
+            "title": "Process Value Name",
+            "type": "string"
+          },
+          "value_color_map": {
+            "title": "Value Color Map",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "PlotConfiguration": {
+        "title": "PlotConfiguration",
+        "required": [
+          "color_regions",
+          "sub_plots"
+        ],
+        "type": "object",
+        "properties": {
+          "color_regions": {
+            "title": "Color Regions",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlotColorRegion"
+            }
+          },
+          "sub_plots": {
+            "title": "Sub Plots",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubPlot"
+            }
           }
         }
       },
@@ -870,6 +1002,34 @@
             "items": {
               "$ref": "#/components/schemas/ProcessValue"
             }
+          }
+        }
+      },
+      "SubPlot": {
+        "title": "SubPlot",
+        "required": [
+          "axes",
+          "ratio"
+        ],
+        "type": "object",
+        "properties": {
+          "axes": {
+            "title": "Axes",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlotAxis"
+            }
+          },
+          "ratio": {
+            "title": "Ratio",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ]
           }
         }
       },

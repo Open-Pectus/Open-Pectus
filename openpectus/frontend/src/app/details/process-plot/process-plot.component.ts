@@ -1,9 +1,10 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Store } from '@ngrx/store';
 import Plotly, { LayoutAxis, PlotData } from 'plotly.js-basic-dist-min';
 import { combineLatest, filter, Subject, takeUntil } from 'rxjs';
-import { ProcessValue } from '../api';
-import { DetailsSelectors } from './ngrx/details.selectors';
+import { ProcessValue } from '../../api';
+import { DetailsSelectors } from '../ngrx/details.selectors';
+import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { PlotlyDefaults } from './plotly-defaults';
 
 @Component({
@@ -14,7 +15,7 @@ import { PlotlyDefaults } from './plotly-defaults';
       <div content class="h-full" #plot *ngIf="!collapsed"></div>
     </app-collapsible-element>`,
 })
-export class ProcessPlotComponent implements AfterViewInit, OnDestroy {
+export class ProcessPlotComponent implements OnInit, AfterViewInit, OnDestroy {
   processUnit = this.store.select(DetailsSelectors.processUnit);
   processValuesLog = this.store.select(DetailsSelectors.processValuesLog);
   @ViewChild('plot', {static: false}) plotElement?: ElementRef<HTMLDivElement>;
@@ -23,6 +24,10 @@ export class ProcessPlotComponent implements AfterViewInit, OnDestroy {
   private processValueNames = ['FT01 Flow', 'TT01', 'PU01 Speed'];
 
   constructor(private store: Store) {}
+
+  ngOnInit() {
+    this.store.dispatch(ProcessPlotActions.processPlotComponentInitialized());
+  }
 
   ngAfterViewInit() {
     combineLatest([this.processValuesLog, this.processUnit]).pipe(

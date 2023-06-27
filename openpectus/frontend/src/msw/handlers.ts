@@ -6,6 +6,7 @@ import {
   CommandSource,
   InProgress,
   NotOnline,
+  PlotConfiguration,
   ProcessUnit,
   ProcessValue,
   ProcessValueType,
@@ -270,6 +271,28 @@ export const handlers = [
 "another key": "another value",
 "another injected": "line"
 }`),
+    );
+  }),
+
+  rest.get('/api/process_unit/:unitId/plot_configuration', (req, res, context) => {
+    return res(
+      context.status(200),
+      context.json<PlotConfiguration>({
+        color_regions: [],
+        sub_plots: [
+          {
+            axes: [
+              {
+                label: 'some Label',
+                process_value_names: ['PU01 Speed'],
+                y_min: 120,
+                y_max: 130,
+              },
+            ],
+            ratio: 1,
+          },
+        ],
+      }),
     );
   }),
 ];
