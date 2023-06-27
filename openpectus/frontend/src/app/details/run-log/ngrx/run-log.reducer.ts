@@ -20,6 +20,10 @@ const initialState: RunLogState = {
 };
 
 const reducer = createReducer(initialState,
+  on(RunLogActions.runLogComponentInitialized, state => produce(state, draft => {
+    draft.filterText = '';
+    draft.onlyRunning = false;
+  })),
   on(RunLogActions.runLogFetched, (state, {runLog}) => produce(state, draft => {
     draft.runLog = runLog;
   })),
