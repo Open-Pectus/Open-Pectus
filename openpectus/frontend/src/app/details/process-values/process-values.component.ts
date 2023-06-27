@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { ProcessValue, ProcessValueCommand } from '../../api';
-import { DetailsActions } from '../ngrx/details.actions';
 import { DetailsSelectors } from '../ngrx/details.selectors';
+import { ProcessValuesActions } from './ngrx/process-values.actions';
 import { ValueAndUnit } from './process-value-editor.component';
 import { PvAndPosition } from './process-value.component';
 
@@ -45,17 +45,17 @@ export class ProcessValuesComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.store.dispatch(DetailsActions.processValuesInitialized());
+    this.store.dispatch(ProcessValuesActions.processValuesComponentInitialized());
   }
 
   ngOnDestroy() {
-    this.store.dispatch(DetailsActions.processValuesDestroyed());
+    this.store.dispatch(ProcessValuesActions.processValuesComponentDestroyed());
   }
 
   onCloseCommands(command?: ProcessValueCommand) {
     this.showCommands = false;
     if(command === undefined || this.pvAndPositionForPopover === undefined) return;
-    this.store.dispatch(DetailsActions.processValueCommandClicked(
+    this.store.dispatch(ProcessValuesActions.processValueCommandClicked(
       {processValueName: this.pvAndPositionForPopover.processValue.name, command: command},
     ));
   }
@@ -63,7 +63,7 @@ export class ProcessValuesComponent implements OnInit, OnDestroy {
   onCloseEditor(valueAndUnit?: ValueAndUnit) {
     this.showEditor = false;
     if(valueAndUnit === undefined || this.pvAndPositionForPopover === undefined) return;
-    this.store.dispatch(DetailsActions.processValueEdited(
+    this.store.dispatch(ProcessValuesActions.processValueEdited(
       {processValue: {...this.pvAndPositionForPopover.processValue, value: valueAndUnit.value, value_unit: valueAndUnit.unit}},
     ));
   }

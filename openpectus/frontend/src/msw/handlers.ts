@@ -210,6 +210,7 @@ export const handlers = [
       context.json<RunLog>({
         lines: [
           {
+            id: 1,
             start: sub(Date.now(), {days: 0, hours: 2, seconds: 20}).toISOString(),
             command: {
               command: 'Some Other Command',
@@ -224,6 +225,7 @@ export const handlers = [
             }],
             end_values: [],
           }, {
+            id: 2,
             start: sub(Date.now(), {days: 0, hours: 1, seconds: 10}).toISOString(),
             progress: 0.66,
             command: {
@@ -238,6 +240,7 @@ export const handlers = [
             ],
             end_values: [],
           }, {
+            id: 3,
             start: sub(Date.now(), {days: 1, hours: 3, seconds: 30}).toISOString(),
             end: sub(Date.now(), {days: 1, hours: 3}).toISOString(),
             command: {
@@ -255,6 +258,18 @@ export const handlers = [
           },
         ],
       }),
+    );
+  }),
+
+  rest.get('/api/process_unit/:unitId/method', (req, res, context) => {
+    return res(
+      context.status(200),
+      context.json<string>(`{
+"some key": "some value",
+"injected": "line",
+"another key": "another value",
+"another injected": "line"
+}`),
     );
   }),
 ];

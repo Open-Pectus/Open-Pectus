@@ -3,7 +3,7 @@ import json
 import subprocess
 import os
 from fastapi.testclient import TestClient
-from main import app
+from openpectus.aggregator.main import create_app
 
 # check we're running from the right place
 cwd = os.getcwd().lower()
@@ -14,7 +14,7 @@ if not (cwd.endswith("openpectus/aggregator") or cwd.endswith("openpectus\\aggre
 frontend_path = "../frontend"
 openapi_file = os.path.join(frontend_path, "openapi.json")
 print("Generate update openapi spec file " + openapi_file)
-client = TestClient(app)
+client = TestClient(create_app())
 response = client.get("/openapi.json")
 assert response.status_code == 200
 with open(openapi_file, "wt") as f:

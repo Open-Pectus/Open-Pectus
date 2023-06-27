@@ -190,4 +190,25 @@ unitId: string,
         });
     }
 
+    /**
+     * Get Method
+     * @param unitId 
+     * @returns string Successful Response
+     * @throws ApiError
+     */
+    public getMethod(
+unitId: string,
+): Observable<string> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/process_unit/{unit_id}/method',
+            path: {
+                'unit_id': unitId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
 }

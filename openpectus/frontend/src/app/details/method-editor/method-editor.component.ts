@@ -1,8 +1,8 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { Subject } from 'rxjs';
-import { DetailsActions } from '../ngrx/details.actions';
-import { DetailsSelectors } from '../ngrx/details.selectors';
+import { MethodEditorActions } from './ngrx/method-editor.actions';
+import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
 
 @Component({
   selector: 'app-method-editor',
@@ -20,15 +20,19 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
     </app-collapsible-element>
   `,
 })
-export class MethodEditorComponent {
-  protected methodEditorIsDirty = this.store.select(DetailsSelectors.methodEditorIsDirty);
+export class MethodEditorComponent implements OnInit {
+  protected methodEditorIsDirty = this.store.select(MethodEditorSelectors.methodEditorIsDirty);
   protected editorSizeChange = new Subject<void>();
   protected collapsed = false;
 
   constructor(private store: Store) {}
 
+  ngOnInit() {
+    this.store.dispatch(MethodEditorActions.methodEditorComponentInitialized());
+  }
+
   onSaveButtonClicked() {
-    this.store.dispatch(DetailsActions.methodEditorModelSaveRequested());
+    this.store.dispatch(MethodEditorActions.modelSaveRequested());
   }
 
   onContentHeightChanged() {

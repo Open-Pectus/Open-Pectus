@@ -194,10 +194,11 @@ def get_command_examples(unit_id: str) -> List[CommandExample]:
 
 
 class RunLogLine(BaseModel):
+    id: int
     command: ExecutableCommand
     start: datetime
     end: datetime | None
-    progress: float | None # between 0 and 1
+    progress: float | None  # between 0 and 1
     start_values: List[ProcessValue]
     end_values: List[ProcessValue]
 
@@ -209,3 +210,8 @@ class RunLog(BaseModel):
 @router.get('/process_unit/{unit_id}/run_log')
 def get_run_log(unit_id: str) -> RunLog:
     return RunLog(additional_columns=[], lines=[])
+
+
+@router.get('/process_unit/{unit_id}/method')
+def get_method(unit_id: str) -> str:
+    return ''

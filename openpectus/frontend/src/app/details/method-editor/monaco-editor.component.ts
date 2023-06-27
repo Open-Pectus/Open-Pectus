@@ -9,8 +9,8 @@ import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode
 import 'vscode/default-extensions/json';
 import 'vscode/default-extensions/theme-defaults';
 import { createConfiguredEditor, createModelReference } from 'vscode/monaco';
-import { DetailsActions } from '../ngrx/details.actions';
-import { DetailsSelectors } from '../ngrx/details.selectors';
+import { MethodEditorActions } from './ngrx/method-editor.actions';
+import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
 
 buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.origin, false);
 
@@ -28,7 +28,8 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   private componentDestroyed = new Subject<void>();
   private editor?: MonacoEditor.IStandaloneCodeEditor;
   private readonly languageId = 'json';
-  private methodEditorContent = this.store.select(DetailsSelectors.methodEditorContent);
+  private methodEditorContent = this.store.select(MethodEditorSelectors.methodEditorContent);
+  private monacoServicesInitialized = this.store.select(MethodEditorSelectors.monacoServicesInitialized);
 
   constructor(private store: Store) {}
 
@@ -40,7 +41,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
     this.editorSizeChange?.pipe(takeUntil(this.componentDestroyed)).subscribe(() => this.editor?.layout());
     window.onresize = () => this.editor?.layout();
-    this.store.dispatch(DetailsActions.methodEditorInitialized());
+    this.store.dispatch(MethodEditorActions.monacoEditorComponentInitialized());
   }
 
   createLanguageClient(transports: MessageTransports): MonacoLanguageClient {
@@ -66,10 +67,11 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy() {
     this.componentDestroyed.next();
+    this.store.dispatch(MethodEditorActions.monacoEditorComponentDestroyed());
   }
 
   private async initServices() {
-    const alreadyInitialized = await firstValueFrom(this.store.select(DetailsSelectors.monacoServicesInitialized));
+    const alreadyInitialized = await firstValueFrom(this.monacoServicesInitialized);
     if(alreadyInitialized) return;
     await initServices({
       enableThemeService: true,
@@ -108,7 +110,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     editor.onDidChangeModelContent(() => {
       const model = editor.getModel()?.getValue();
       if(model === undefined) return;
-      this.store.dispatch(DetailsActions.methodEditorModelChanged({model}));
+      this.store.dispatch(MethodEditorActions.modelChanged({model}));
     });
 
     this.componentDestroyed.pipe(take(1)).subscribe(() => {
