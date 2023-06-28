@@ -281,15 +281,24 @@ export const handlers = [
         color_regions: [],
         sub_plots: [
           {
+            ratio: 1,
             axes: [
               {
                 label: 'some Label',
-                process_value_names: ['PU01 Speed'],
-                y_min: 120,
+                process_value_names: ['PU01 Speed', 'FT01 Flow'],
                 y_max: 130,
+                y_min: 120,
               },
             ],
+          },
+          {
             ratio: 1,
+            axes: [{
+              label: 'some other label',
+              process_value_names: ['TT01'],
+              y_max: 130,
+              y_min: 120,
+            }],
           },
         ],
       }),
