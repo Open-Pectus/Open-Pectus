@@ -15,7 +15,7 @@ import { ValueAndUnit } from './process-value-editor.component';
         <app-process-value-editor *ngIf="command.value !== undefined" class="" [command]="command" (inputBlur)="onBlur($event)"
                                   (save)="onEditorSave($event, command)"></app-process-value-editor>
         <button *ngIf="command.value === undefined" [attr.disabled]="command.disabled" [class.!bg-gray-400]="command.disabled"
-                class="bg-green-400 text-gray-800 rounded-lg py-2 px-3 whitespace-pre font-semibold"
+                class="bg-green-400 text-gray-800 rounded-md py-2 px-3 whitespace-pre font-semibold"
                 (click)="$event.stopPropagation(); onButtonClick(command)">{{command.name}}</button>
       </ng-container>
     </div>
@@ -32,7 +32,6 @@ export class ProcessValueCommandsComponent implements AfterViewInit {
 
   onBlur(event: FocusEvent) {
     // only close if it is not one of our subelements buttons or editors receiving focus.
-    console.log((event.relatedTarget as Element | null)?.compareDocumentPosition(this.element.nativeElement));
     if((event.relatedTarget as Element | null)?.compareDocumentPosition(this.element.nativeElement) === 10) return;
     this.shouldClose.emit();
   }

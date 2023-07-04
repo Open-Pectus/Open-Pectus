@@ -146,16 +146,6 @@ def get_process_values(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggr
     return [create_pv(ti) for ti in tags.map.values()]
 
 
-class ProcessValueUpdate(BaseModel):
-    name: str
-    value: str | float | int
-
-
-@router.post("/process_unit/{unit_id}/process_value")
-def set_process_value(unit_id: str, update: ProcessValueUpdate, agg: Aggregator = Depends(agg_deps.get_aggregator)):
-    pass
-
-
 class CommandSource(StrEnum):
     PROCESS_VALUE = auto()
     MANUALLY_ENTERED = auto()

@@ -12,11 +12,12 @@ export interface ValueAndUnit {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="flex">
-      <input #inputElement class="p-1 outline-none rounded-l-sm w-32" type="text" [class.bg-red-500]="!isValid"
+      <input #inputElement class="p-1 pl-2 outline-none border-l border-y border-gray-300 rounded-l-md w-32" type="text"
+             [class.bg-red-500]="!isValid"
              (input)="onInput(inputElement.value)" (blur)="inputBlur.emit($event)"
              [value]="command?.value | processValue" (focus)="onFocusInput()"
              (keyup.enter)="onSaveInput(inputElement.value)">
-      <button #saveButtonElement class="px-3 py-2 rounded-r bg-green-400 text-gray-800 font-semibold"
+      <button #saveButtonElement class="px-3 py-2 rounded-r-md bg-green-400 text-gray-800 font-semibold"
               [class.bg-vscode-background-grey-hover]="!isValid"
               (click)="$event.stopPropagation(); onSaveInput(inputElement.value)">
         {{command?.name}}

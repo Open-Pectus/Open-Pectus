@@ -150,6 +150,15 @@ export const handlers = [
             name: 'something disabled',
             command: 'something disabled',
             disabled: true,
+          }, {
+            name: 'number',
+            command: 'set number',
+            value: {
+              value: '123',
+              value_unit: 'no',
+              valid_value_units: ['no'],
+              value_type: ProcessValueType.INT,
+            },
           }],
         }, {
           value_type: ProcessValueType.FLOAT,
