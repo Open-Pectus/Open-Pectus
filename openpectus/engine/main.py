@@ -47,9 +47,7 @@ class DemoHW(HardwareLayerBase):
 
 
 class DemoUod(UnitOperationDefinitionBase):
-    def define(self, system_tags: tags.TagCollection):
-        super().define(system_tags)
-
+    def define(self):
         self.define_instrument("TestUod")
         self.define_hardware_layer(DemoHW())
 
