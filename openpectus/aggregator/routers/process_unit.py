@@ -95,7 +95,7 @@ class ProcessValueCommandNumberValue(BaseModel):
 
 class ProcessValueCommandFreeTextValue(BaseModel):
     value: str
-    value_type: Literal[ProcessValueType.STRING] | Literal[ProcessValueType.STRING]
+    value_type: Literal[ProcessValueType.STRING]
 
 
 class ProcessValueCommandChoiceValue(BaseModel):
