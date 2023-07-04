@@ -20,7 +20,7 @@ TODO: How to update conda env
 To build dist:
 
 `cd Open-Pectus`
-`python -m build -o openpectus/dist`
+`python -m build`
 
 To set up a development environment, run
 

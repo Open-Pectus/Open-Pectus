@@ -90,6 +90,7 @@ class Engine():
 
     def _configure(self):
         # configure uod
+        self.uod.define_system_tags(self._system_tags)
         self.uod.define()
         self.uod.validate_configuration()
         self.uod.tags.add_listener(self._uod_listener)

@@ -3,29 +3,25 @@ from queue import Empty
 import time
 from argparse import ArgumentParser
 from threading import Thread
-from typing import Any, List
+from typing import Any, Dict, List
 from typing_extensions import override
+
+import httpx
 
 from openpectus.protocol.engine import Client, create_client
 from openpectus.engine.eng import Engine, EngineCommand
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
 from openpectus.lang.exec import tags
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand
-from openpectus.protocol.messages import (
-    RegisterEngineMsg,
-    MessageBase,
-    SuccessMessage,
-    TagsUpdatedMsg,
-    TagValue,
-    InvokeCommandMsg
-)
+from openpectus.lang.exec import readings as R
+import openpectus.protocol.messages as M
 
 
 def get_args():
     parser = ArgumentParser("Start Pectus Engine")
-    parser.add_argument("-ws", "--aggregator_ws_url", required=False, default="ws://127.0.0.1:8300/pubsub",
-                        # default="ws://localhost:9800/pubsub",
-                        help="Address to aggregator web socket service. Default is ws://127.0.0.1:8300/pubsub")
+    parser.add_argument("-ah", "--aggregator_host", required=False, default="127.0.0.1",
+                        help="Aggregator websocket host name")
+    parser.add_argument("-ap", "--aggregator_port", required=False, default="9800", help="Aggregator websocket port number")
     parser.add_argument("-uod", "--uod", required=False, default="DemoUod", help="The UOD to use")
     parser.add_argument("-r", "--runner", required=False, default="WebSocketRPCEngineRunner",
                         choices=['WebSocketRPCEngineRunner', 'DemoEngineRunner'],
@@ -36,7 +32,7 @@ def get_args():
 class DemoHW(HardwareLayerBase):
     def __init__(self) -> None:
         super().__init__()
-        self.register_values = {}
+        self.register_values: Dict[str, Any] = {}
 
     @override
     def read(self, r: Register) -> Any:
@@ -51,7 +47,9 @@ class DemoHW(HardwareLayerBase):
 
 
 class DemoUod(UnitOperationDefinitionBase):
-    def define(self):
+    def define(self, system_tags: tags.TagCollection):
+        super().define(system_tags)
+
         self.define_instrument("TestUod")
         self.define_hardware_layer(DemoHW())
 
@@ -62,6 +60,9 @@ class DemoUod(UnitOperationDefinitionBase):
 
         self.define_tag(tags.Reading("FT01", "L/h"))
         self.define_tag(tags.Select("Reset", value="N/A", unit=None, choices=['Reset', "N/A"]))
+
+        self.define_reading(R.Reading(label="FT01"))
+        self.define_reading(R.Reading(label="Reset"))
 
         # start = time.time()
 
@@ -106,6 +107,9 @@ class EngineRunner:
         self.engine.notify_initial_tags()
         await self.send_tag_updates_async()
 
+    async def send_uod_info_async(self):
+        raise NotImplementedError()
+
     async def send_tag_updates_async(self):
         raise NotImplementedError()
 
@@ -113,6 +117,7 @@ class EngineRunner:
         try:
             await self.connect_async()
             await self.register_async()
+            await self.send_uod_info_async()
             await self.notify_initial_tags_async()
 
             while True:
@@ -163,6 +168,8 @@ class WebSocketRPCEngineRunner(EngineRunner):
         self.client: Client | None = None
         self.ws_url = ws_url
 
+        self.engine.run()
+
     async def connect_async(self):
         client = create_client()
         self.client = client
@@ -172,12 +179,28 @@ class WebSocketRPCEngineRunner(EngineRunner):
         if self.client is None:
             raise ValueError("Client is not connected")
 
-        msg = RegisterEngineMsg(engine_name="test-eng", uod_name=self.engine.uod.instrument)
+        msg = M.RegisterEngineMsg(engine_name="test-eng", uod_name=self.engine.uod.instrument)
         response = await self.client.send_to_server(msg)  # , on_success=on_register, on_error=on_error)
-        if not isinstance(response, SuccessMessage):
+        if not isinstance(response, M.SuccessMessage):
             print("Failed to Register")
 
         self.client.set_message_handler("InvokeCommandMsg", self._schedule_command)
+
+    async def send_uod_info_async(self):
+        if self.client is None:
+            raise ValueError("Client is not connected")
+
+        readings: List[M.ReadingInfo] = []
+        for r in self.engine.uod.readings:
+            ri = M.ReadingInfo(
+                label=r.label,
+                tag_name=r.tag_name,
+                valid_value_units=r.valid_value_units,
+                commands=[M.ReadingCommand(name=c.name, command=c.command) for c in r.commands])
+            readings.append(ri)
+
+        msg = M.UodInfo(readings=readings)
+        await self.client.send_to_server(msg)
 
     async def send_tag_updates_async(self):
         if self.client is None:
@@ -187,15 +210,15 @@ class WebSocketRPCEngineRunner(EngineRunner):
         try:
             for _ in range(100):
                 tag = self.engine.tag_updates.get_nowait()
-                tags.append(TagValue(name=tag.name, value=tag.get_value(), value_unit=tag.unit))
+                tags.append(M.TagValue(name=tag.name, value=tag.get_value(), value_unit=tag.unit))
         except Empty:
             pass
         if len(tags) > 0:
-            msg = TagsUpdatedMsg(tags=tags)
+            msg = M.TagsUpdatedMsg(tags=tags)
             await self.client.send_to_server(msg)
 
-    async def _schedule_command(self, msg: MessageBase) -> MessageBase:
-        assert isinstance(msg, InvokeCommandMsg)
+    async def _schedule_command(self, msg: M.MessageBase) -> M.MessageBase:
+        assert isinstance(msg, M.InvokeCommandMsg)
 
         # as side effect, start engine on first START command
         # TODO verify this is intended behavior
@@ -204,7 +227,7 @@ class WebSocketRPCEngineRunner(EngineRunner):
 
         cmd = EngineCommand(name=msg.name, args=msg.arguments)
         self.engine.cmd_queue.put_nowait(cmd)
-        return SuccessMessage()
+        return M.SuccessMessage()
 
     async def disconnect_async(self):
         if self.client is not None:
@@ -224,7 +247,7 @@ async def async_main(args):
         runner = DemoEngineRunner(e)
         await runner.run_loop()
 
-        listener_thread = Thread(target=runner.run, daemon=True, name=runner.__class__.__name__)
+        listener_thread = Thread(target=runner.run_loop, daemon=True, name=runner.__class__.__name__)
 
         print("Starting engine")
         listener_thread.start()
@@ -253,12 +276,27 @@ async def async_main(args):
         except KeyboardInterrupt:
             # TODO
             # e.shutdown()
-            runner.stop()
+            # runner.stop()
             print("Engine stopped")
 
     else:
-
-        runner = WebSocketRPCEngineRunner(e, args.aggregator_ws_url)
+        aggregator_health_url = f"http://{args.aggregator_host}:{args.aggregator_port}/health"
+        try:
+            resp = httpx.get(aggregator_health_url)
+        except httpx.ConnectError as ex:
+            print("Connection to Aggregator status end point failed.")
+            print(f"Status url: {aggregator_health_url}")
+            print(f"Error: {ex}")
+            print("Pectus Engine cannot start.")
+            exit(1)
+        if resp.is_error:
+            print("Aggregator status end point returned an unsuccessful result.")
+            print(f"Status url: {aggregator_health_url}")
+            print(f"HTTP status code returned: {resp.status_code}")
+            print("Pectus Engine cannot start.")
+            exit(1)
+        aggregator_ws_url = f"ws://{args.aggregator_host}:{args.aggregator_port}/pubsub"
+        runner = WebSocketRPCEngineRunner(e, aggregator_ws_url)
         await runner.run_loop()
 
 

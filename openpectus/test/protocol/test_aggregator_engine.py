@@ -75,7 +75,10 @@ def setup_server_rest_routes(app: FastAPI, endpoint: PubSubEndpoint):
 
     @app.get("/tags/{client_id}")
     async def tags(client_id: str, aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
-        tags = aggregator.get_client_tags(client_id)
+        client_data = aggregator.client_data_map.get(client_id)
+        if client_data is None:
+            return Response("No data found for client_id " + client_id, status_code=400)
+        tags = client_data.tags_info
         print("tags", tags)
         if tags is None:
             return Response("No tags found for client_id " + client_id, status_code=400)
@@ -91,7 +94,7 @@ def setup_server_rest_routes(app: FastAPI, endpoint: PubSubEndpoint):
     async def clear_state(aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
         logger.info("/clear_state")
         aggregator.channel_map.clear()
-        aggregator.tags_map.clear()
+        aggregator.client_data_map.clear()
 
 
 def setup_server():
@@ -99,7 +102,7 @@ def setup_server():
     server_app.include_router(router)
     assert aggregator.endpoint is not None
     # Regular REST endpoint - that publishes to PubSub
-    setup_server_rest_routes(server_app, aggregator.endpoint)    
+    setup_server_rest_routes(server_app, aggregator.endpoint)
     uvicorn.run(server_app, port=PORT)
 
 
@@ -294,7 +297,7 @@ class IntegrationTest(AsyncServerTestCase):
 
         # trigger server sent command via rest call
         cmd_msg = InvokeCommandMsg(name="START")
-        client_id = Aggregator.get_client_id(register_msg)
+        client_id = Aggregator.create_client_id(register_msg)
         send_message_to_client(client_id, msg=cmd_msg)
 
         await asyncio.wait_for(event.wait(), 5)
@@ -307,7 +310,7 @@ class IntegrationTest(AsyncServerTestCase):
 
         make_server_print_channels()
 
-        client_id = Aggregator.get_client_id(register_msg)
+        client_id = Aggregator.create_client_id(register_msg)
         msg = TagsUpdatedMsg(tags=[TagValue(name="foo", value="bar", value_unit=None)])
         result = await client.send_to_server(msg)
         self.assertIsInstance(result, SuccessMessage)
@@ -329,7 +332,7 @@ class SerializationTest(unittest.TestCase):
     def test_serialization_RegisterEngineMsg(self):
         reg = RegisterEngineMsg(engine_name="foo", uod_name="bar")
         reg_s = serialize_msg_to_json(reg)
-        self.assertIsNotNone(reg_s)        
+        self.assertIsNotNone(reg_s)
 
     def test_round_trip_RegisterEngineMsg(self):
         reg = RegisterEngineMsg(engine_name="foo", uod_name="bar")
@@ -340,7 +343,7 @@ class SerializationTest(unittest.TestCase):
         self.assertEqual(reg.engine_name, reg_d.engine_name)  # type: ignore
         self.assertEqual(reg.uod_name, reg_d.uod_name)  # type: ignore
 
-    def test_serialization_TagsUpdatedMsg(self):        
+    def test_serialization_TagsUpdatedMsg(self):
         tu = TagsUpdatedMsg(tags=[TagValue(name="foo", value="bar", value_unit="m")])
         tu_s = serialize_msg_to_json(tu)
         self.assertIsNotNone(tu_s)
