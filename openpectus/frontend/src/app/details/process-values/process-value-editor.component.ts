@@ -18,7 +18,7 @@ export interface ValueAndUnit {
              [value]="command?.value | processValue" (focus)="onFocusInput()"
              (keyup.enter)="onSaveInput(inputElement.value)">
       <button #saveButtonElement class="px-3 py-2 rounded-r-md bg-green-400 text-gray-800 font-semibold"
-              [class.bg-vscode-background-grey-hover]="!isValid"
+              [class.bg-vscode-background-grey-hover]="!isValid" tabindex="-1"
               (click)="$event.stopPropagation(); onSaveInput(inputElement.value)">
         {{command?.name}}
       </button>
