@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
-import { ProcessValueCommand, ProcessValueType } from '../../api';
+import { ProcessValueCommand, ProcessValueCommandChoiceValue, ProcessValueCommandFreeTextValue } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 
 export interface ValueAndUnit {
@@ -37,7 +37,7 @@ export class ProcessValueEditorComponent {
   constructor(private processValuePipe: ProcessValuePipe) {}
 
   onFocusInput() {
-    if(this.command?.value?.value_type === ProcessValueType.STRING) return this.inputElement?.nativeElement.select();
+    if(this.command?.value?.value_type === ProcessValueCommandFreeTextValue.value_type.STRING) return this.inputElement?.nativeElement.select();
     const formattedValue = this.processValuePipe.transform(this.command?.value);
     const valueLength = formattedValue?.indexOf(' ');
     if(valueLength !== undefined) this.inputElement?.nativeElement.setSelectionRange(0, valueLength);
@@ -45,14 +45,16 @@ export class ProcessValueEditorComponent {
 
   toValueAndUnit(asString: string): ValueAndUnit | undefined {
     switch(this.command?.value?.value_type) {
-      case ProcessValueType.INT:
-      case ProcessValueType.FLOAT:
+      case 'int':
+      case 'float':
         const matchArray = /^\s*(?<value>[0-9,.]+)\s*(?<unit>[^0-9,.]*)\s*$/.exec(asString);
         if(matchArray === null) return undefined;
         const [_, value, unit] = matchArray;
         return {value, unit};
-      case ProcessValueType.STRING:
+      case ProcessValueCommandFreeTextValue.value_type.STRING:
         return {value: asString};
+      case ProcessValueCommandChoiceValue.value_type.CHOICE:
+        return {value: asString}; // TODO: probably not right
       case undefined:
         return undefined;
     }
@@ -71,7 +73,10 @@ export class ProcessValueEditorComponent {
   validate(value: string): boolean {
     const valueAndUnit = this.toValueAndUnit(value);
     if(valueAndUnit === undefined || this.command === undefined) return false;
-    if(valueAndUnit.unit === undefined) return this.command?.value?.valid_value_units === undefined;
-    return this.command?.value?.valid_value_units?.includes(valueAndUnit.unit) ?? false;
+    if(this.command?.value?.value_type === 'int' || this.command?.value?.value_type === 'float') {
+      if(valueAndUnit.unit === undefined) return false;
+      return this.command?.value?.valid_value_units?.includes(valueAndUnit.unit) ?? false;
+    }
+    return true;
   }
 }

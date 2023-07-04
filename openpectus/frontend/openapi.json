@@ -118,56 +118,6 @@
         }
       }
     },
-    "/api/process_unit/{unit_id}/process_value": {
-      "post": {
-        "tags": [
-          "process_unit"
-        ],
-        "summary": "Set Process Value",
-        "operationId": "set_process_value",
-        "parameters": [
-          {
-            "required": true,
-            "schema": {
-              "title": "Unit Id",
-              "type": "string"
-            },
-            "name": "unit_id",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ProcessValueUpdate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/process_unit/{unit_id}/execute_command": {
       "post": {
         "tags": [
@@ -746,13 +696,75 @@
             "type": "boolean"
           },
           "value": {
-            "$ref": "#/components/schemas/ProcessValueCommandValue"
+            "title": "Value",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProcessValueCommandNumberValue"
+              },
+              {
+                "$ref": "#/components/schemas/ProcessValueCommandFreeTextValue"
+              },
+              {
+                "$ref": "#/components/schemas/ProcessValueCommandChoiceValue"
+              }
+            ]
           }
         }
       },
-      "ProcessValueCommandValue": {
-        "title": "ProcessValueCommandValue",
+      "ProcessValueCommandChoiceValue": {
+        "title": "ProcessValueCommandChoiceValue",
         "required": [
+          "value",
+          "value_type",
+          "options"
+        ],
+        "type": "object",
+        "properties": {
+          "value": {
+            "title": "Value",
+            "type": "string"
+          },
+          "value_type": {
+            "title": "Value Type",
+            "enum": [
+              "choice"
+            ],
+            "type": "string"
+          },
+          "options": {
+            "title": "Options",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ProcessValueCommandFreeTextValue": {
+        "title": "ProcessValueCommandFreeTextValue",
+        "required": [
+          "value",
+          "value_type"
+        ],
+        "type": "object",
+        "properties": {
+          "value": {
+            "title": "Value",
+            "type": "string"
+          },
+          "value_type": {
+            "title": "Value Type",
+            "enum": [
+              "string"
+            ],
+            "type": "string"
+          }
+        }
+      },
+      "ProcessValueCommandNumberValue": {
+        "title": "ProcessValueCommandNumberValue",
+        "required": [
+          "value",
           "value_type"
         ],
         "type": "object",
@@ -760,9 +772,6 @@
           "value": {
             "title": "Value",
             "anyOf": [
-              {
-                "type": "string"
-              },
               {
                 "type": "number"
               },
@@ -783,7 +792,21 @@
             }
           },
           "value_type": {
-            "$ref": "#/components/schemas/ProcessValueType"
+            "title": "Value Type",
+            "anyOf": [
+              {
+                "enum": [
+                  "int"
+                ],
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "float"
+                ],
+                "type": "string"
+              }
+            ]
           }
         }
       },
@@ -792,38 +815,11 @@
         "enum": [
           "string",
           "float",
-          "int"
+          "int",
+          "choice"
         ],
         "type": "string",
         "description": "An enumeration."
-      },
-      "ProcessValueUpdate": {
-        "title": "ProcessValueUpdate",
-        "required": [
-          "name",
-          "value"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "value": {
-            "title": "Value",
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "number"
-              },
-              {
-                "type": "integer"
-              }
-            ]
-          }
-        }
       },
       "Ready": {
         "title": "Ready",

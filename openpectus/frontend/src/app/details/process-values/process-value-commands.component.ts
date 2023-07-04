@@ -1,6 +1,6 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import { produce } from 'immer';
-import { ProcessValueCommand } from '../../api';
+import { ProcessValueCommand, ProcessValueCommandChoiceValue, ProcessValueType } from '../../api';
 import { ValueAndUnit } from './process-value-editor.component';
 
 @Component({
@@ -12,8 +12,10 @@ import { ValueAndUnit } from './process-value-editor.component';
          (blur)="onBlur($event)">
 
       <ng-container *ngFor="let command of processValueCommands">
-        <app-process-value-editor *ngIf="command.value !== undefined" class="" [command]="command" (inputBlur)="onBlur($event)"
+        <app-process-value-editor *ngIf="shouldUseEditor(command)" [command]="command" (inputBlur)="onBlur($event)"
                                   (save)="onEditorSave($event, command)"></app-process-value-editor>
+        <app-process-value-command-choice [command]="command" *ngIf="shouldUseChoice(command)"
+                                          (choiceMade)="onChoiceMade($event, command)"></app-process-value-command-choice>
         <button *ngIf="command.value === undefined" [attr.disabled]="command.disabled" [class.!bg-gray-400]="command.disabled"
                 class="bg-green-400 text-gray-800 rounded-md py-2 px-3 whitespace-pre font-semibold"
                 (click)="$event.stopPropagation(); onButtonClick(command)">{{command.name}}</button>
@@ -45,7 +47,25 @@ export class ProcessValueCommandsComponent implements AfterViewInit {
     const editedCommand = produce(command, draft => {
       if(draft.value === undefined) return;
       draft.value.value = valueAndUnit.value;
-      draft.value.value_unit = valueAndUnit.unit;
+      if(draft.value.value_type === ProcessValueType.INT || draft.value.value_type === ProcessValueType.FLOAT) {
+        draft.value.value_unit = valueAndUnit.unit;
+      }
+    });
+    this.shouldClose.emit(editedCommand);
+  }
+
+  shouldUseEditor(command: ProcessValueCommand) {
+    return command.value?.value_type !== undefined && command.value?.value_type !== ProcessValueCommandChoiceValue.value_type.CHOICE;
+  }
+
+  shouldUseChoice(command: ProcessValueCommand) {
+    return command.value?.value_type === ProcessValueCommandChoiceValue.value_type.CHOICE;
+  }
+
+  onChoiceMade(optionChosen: string, command: ProcessValueCommand) {
+    const editedCommand = produce(command, draft => {
+      if(draft.value === undefined) return;
+      draft.value.value = optionChosen;
     });
     this.shouldClose.emit(editedCommand);
   }

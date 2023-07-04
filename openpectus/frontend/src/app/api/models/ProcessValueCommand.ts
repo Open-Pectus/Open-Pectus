@@ -2,11 +2,13 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import type { ProcessValueCommandValue } from './ProcessValueCommandValue';
+import type { ProcessValueCommandChoiceValue } from './ProcessValueCommandChoiceValue';
+import type { ProcessValueCommandFreeTextValue } from './ProcessValueCommandFreeTextValue';
+import type { ProcessValueCommandNumberValue } from './ProcessValueCommandNumberValue';
 
 export type ProcessValueCommand = {
     name: string;
     command: string;
     disabled?: boolean;
-    value?: ProcessValueCommandValue;
+    value?: (ProcessValueCommandNumberValue | ProcessValueCommandFreeTextValue | ProcessValueCommandChoiceValue);
 };

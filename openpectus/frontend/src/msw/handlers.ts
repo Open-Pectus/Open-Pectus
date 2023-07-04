@@ -8,6 +8,8 @@ import {
   NotOnline,
   ProcessUnit,
   ProcessValue,
+  ProcessValueCommandChoiceValue,
+  ProcessValueCommandFreeTextValue,
   ProcessValueType,
   Ready,
   RunLog,
@@ -141,7 +143,7 @@ export const handlers = [
             command: 'jiojio',
             value: {
               value: 'Writable text',
-              value_type: ProcessValueType.STRING,
+              value_type: ProcessValueCommandFreeTextValue.value_type.STRING,
             },
           }, {
             name: 'something',
@@ -154,10 +156,18 @@ export const handlers = [
             name: 'number',
             command: 'set number',
             value: {
-              value: '123',
+              value: 123,
               value_unit: 'no',
               valid_value_units: ['no'],
               value_type: ProcessValueType.INT,
+            },
+          }, {
+            name: 'choice',
+            command: 'choice',
+            value: {
+              value_type: ProcessValueCommandChoiceValue.value_type.CHOICE,
+              value: 'first',
+              options: ['first', 'second', 'third'],
             },
           }],
         }, {

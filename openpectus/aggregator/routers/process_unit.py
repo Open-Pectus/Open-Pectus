@@ -81,24 +81,35 @@ class ProcessValueType(StrEnum):
     STRING = auto()
     FLOAT = auto()
     INT = auto()
+    CHOICE = auto()
 
-
-class ProcessValueCommandValue(BaseModel):
-    value: str | float | int | None
+class ProcessValueCommandNumberValue(BaseModel):
+    value: float | int
     value_unit: str | None
     """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
     valid_value_units: List[str] | None
     """ For values with a unit, provides the list valid alternative units """
-    value_type: ProcessValueType
+    value_type: Literal[ProcessValueType.INT] | Literal[ProcessValueType.FLOAT]
     """ Specifies the type of allowed values. """
+
+
+class ProcessValueCommandFreeTextValue(BaseModel):
+    value: str
+    value_type: Literal[ProcessValueType.STRING] | Literal[ProcessValueType.STRING]
+
+
+class ProcessValueCommandChoiceValue(BaseModel):
+    value: str
+    value_type: Literal[ProcessValueType.CHOICE]
+    options: List[str]
 
 
 class ProcessValueCommand(BaseModel):
     name: str
     command: str
     disabled: bool | None
-    """ Indicates whether the command button should be disabled. E.g. if it would set the value it already has """
-    value: ProcessValueCommandValue | None
+    """ Indicates whether the command button should be disabled. """
+    value: ProcessValueCommandNumberValue | ProcessValueCommandFreeTextValue | ProcessValueCommandChoiceValue | None
 
 
 class ProcessValue(BaseModel):
