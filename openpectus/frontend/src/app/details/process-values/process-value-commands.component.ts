@@ -1,7 +1,18 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  EventEmitter,
+  Input,
+  Output,
+  QueryList,
+  ViewChild,
+  ViewChildren,
+} from '@angular/core';
 import { produce } from 'immer';
 import { ProcessValueCommand, ProcessValueCommandChoiceValue, ProcessValueType } from '../../api';
-import { ValueAndUnit } from './process-value-editor.component';
+import { ProcessValueEditorComponent, ValueAndUnit } from './process-value-editor.component';
 
 @Component({
   selector: 'app-process-value-commands',
@@ -27,9 +38,10 @@ export class ProcessValueCommandsComponent implements AfterViewInit {
   @Output() shouldClose = new EventEmitter<ProcessValueCommand | undefined>();
   @Input() processValueCommands?: ProcessValueCommand[];
   @ViewChild('element', {static: true}) element!: ElementRef<HTMLDivElement>;
+  @ViewChildren(ProcessValueEditorComponent) editors!: QueryList<ProcessValueEditorComponent>;
 
   ngAfterViewInit() {
-    this.element?.nativeElement.focus();
+    this.editors.first.focus();
   }
 
   onBlur(event: FocusEvent) {

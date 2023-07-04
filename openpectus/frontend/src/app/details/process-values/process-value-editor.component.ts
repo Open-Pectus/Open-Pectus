@@ -36,6 +36,10 @@ export class ProcessValueEditorComponent {
 
   constructor(private processValuePipe: ProcessValuePipe) {}
 
+  focus() {
+    this.inputElement?.nativeElement.focus();
+  }
+
   onFocusInput() {
     if(this.command?.value?.value_type === ProcessValueCommandFreeTextValue.value_type.STRING) return this.inputElement?.nativeElement.select();
     const formattedValue = this.processValuePipe.transform(this.command?.value);
