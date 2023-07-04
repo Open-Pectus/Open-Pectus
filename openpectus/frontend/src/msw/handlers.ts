@@ -134,15 +134,22 @@ export const handlers = [
           ],
         }, {
           value_type: ProcessValueType.STRING,
-          name: 'A writable text value',
+          name: 'Writable text',
           value: 'VaLuE',
           commands: [{
             name: 'jiojio',
             command: 'jiojio',
             value: {
-              value: 'A writable text value',
+              value: 'Writable text',
               value_type: ProcessValueType.STRING,
             },
+          }, {
+            name: 'something',
+            command: 'something',
+          }, {
+            name: 'something disabled',
+            command: 'something disabled',
+            disabled: true,
           }],
         }, {
           value_type: ProcessValueType.FLOAT,
