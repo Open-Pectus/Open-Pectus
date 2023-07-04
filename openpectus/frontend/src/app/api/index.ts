@@ -17,6 +17,7 @@ export type { ProcessDiagram } from './models/ProcessDiagram';
 export type { ProcessUnit } from './models/ProcessUnit';
 export type { ProcessValue } from './models/ProcessValue';
 export type { ProcessValueCommand } from './models/ProcessValueCommand';
+export type { ProcessValueCommandValue } from './models/ProcessValueCommandValue';
 export { ProcessValueType } from './models/ProcessValueType';
 export type { ProcessValueUpdate } from './models/ProcessValueUpdate';
 export { Ready } from './models/Ready';

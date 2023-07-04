@@ -83,9 +83,22 @@ class ProcessValueType(StrEnum):
     INT = auto()
 
 
+class ProcessValueCommandValue(BaseModel):
+    value: str | float | int | None
+    value_unit: str | None
+    """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
+    valid_value_units: List[str] | None
+    """ For values with a unit, provides the list valid alternative units """
+    value_type: ProcessValueType
+    """ Specifies the type of allowed values. """
+
+
 class ProcessValueCommand(BaseModel):
     name: str
     command: str
+    disabled: bool | None
+    """ Indicates whether the command button should be disabled. E.g. if it would set the value it already has """
+    value: ProcessValueCommandValue | None
 
 
 class ProcessValue(BaseModel):
@@ -94,12 +107,9 @@ class ProcessValue(BaseModel):
     value: str | float | int | None
     value_unit: str | None
     """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
-    valid_value_units: List[str] | None
-    """ For values with a unit, provides the list valid alternative units """
     value_type: ProcessValueType
     """ Specifies the type of allowed values. """
-    writable: bool
-    commands: List[ProcessValueCommand] | None  # TODO: have backend verify that no ProcessValue ever is both writable and has commands.
+    commands: List[ProcessValueCommand] | None
 
 
 def create_pv(ti: TagInfo) -> ProcessValue:

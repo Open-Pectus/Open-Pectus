@@ -686,8 +686,7 @@
         "title": "ProcessValue",
         "required": [
           "name",
-          "value_type",
-          "writable"
+          "value_type"
         ],
         "type": "object",
         "properties": {
@@ -695,6 +694,69 @@
             "title": "Name",
             "type": "string"
           },
+          "value": {
+            "title": "Value",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "value_unit": {
+            "title": "Value Unit",
+            "type": "string"
+          },
+          "value_type": {
+            "$ref": "#/components/schemas/ProcessValueType"
+          },
+          "commands": {
+            "title": "Commands",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProcessValueCommand"
+            }
+          }
+        },
+        "description": "Represents a process value. "
+      },
+      "ProcessValueCommand": {
+        "title": "ProcessValueCommand",
+        "required": [
+          "name",
+          "command"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "command": {
+            "title": "Command",
+            "type": "string"
+          },
+          "disabled": {
+            "title": "Disabled",
+            "type": "boolean"
+          },
+          "value": {
+            "$ref": "#/components/schemas/ProcessValueCommandValue"
+          }
+        }
+      },
+      "ProcessValueCommandValue": {
+        "title": "ProcessValueCommandValue",
+        "required": [
+          "value_type"
+        ],
+        "type": "object",
+        "properties": {
           "value": {
             "title": "Value",
             "anyOf": [
@@ -722,36 +784,6 @@
           },
           "value_type": {
             "$ref": "#/components/schemas/ProcessValueType"
-          },
-          "writable": {
-            "title": "Writable",
-            "type": "boolean"
-          },
-          "commands": {
-            "title": "Commands",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProcessValueCommand"
-            }
-          }
-        },
-        "description": "Represents a process value. "
-      },
-      "ProcessValueCommand": {
-        "title": "ProcessValueCommand",
-        "required": [
-          "name",
-          "command"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "command": {
-            "title": "Command",
-            "type": "string"
           }
         }
       },
