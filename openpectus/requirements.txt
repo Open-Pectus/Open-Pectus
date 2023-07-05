@@ -4,7 +4,7 @@ typing-extensions
 flake8  # dev
 black   # dev
 build   # dev
-fastapi
+fastapi==0.99.0
 uvicorn[standard]
 httpx   # for tests with fastapi.testclient
 fastapi_websocket_rpc

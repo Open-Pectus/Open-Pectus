@@ -18,7 +18,7 @@ dependencies:
   - pint # docs: https://pint.readthedocs.io/en/stable/getting/index.html
 
   # aggregator - api
-  - fastapi
+  - fastapi=0.99.0
   - uvicorn[standard]
   - httpx # for testing with fastapi.testclient  
   - pip:
