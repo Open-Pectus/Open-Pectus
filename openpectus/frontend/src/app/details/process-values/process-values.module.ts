@@ -10,6 +10,7 @@ import { ProcessValueCommandsComponent } from './process-value-commands.componen
 import { ProcessValueEditorComponent } from './process-value-editor.component';
 import { ProcessValueComponent } from './process-value.component';
 import { ProcessValuesComponent } from './process-values.component';
+import { ProcessValueCommandChoiceComponent } from './process-value-command-choice.component';
 
 
 @NgModule({
@@ -18,6 +19,7 @@ import { ProcessValuesComponent } from './process-values.component';
     ProcessValueComponent,
     ProcessValueEditorComponent,
     ProcessValueCommandsComponent,
+    ProcessValueCommandChoiceComponent,
   ],
   imports: [
     CommonModule,

@@ -82,11 +82,36 @@ class ProcessValueType(StrEnum):
     STRING = auto()
     FLOAT = auto()
     INT = auto()
+    CHOICE = auto()
+
+
+class ProcessValueCommandNumberValue(BaseModel):
+    value: float | int
+    value_unit: str | None
+    """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
+    valid_value_units: List[str] | None
+    """ For values with a unit, provides the list valid alternative units """
+    value_type: Literal[ProcessValueType.INT] | Literal[ProcessValueType.FLOAT]
+    """ Specifies the type of allowed values. """
+
+
+class ProcessValueCommandFreeTextValue(BaseModel):
+    value: str
+    value_type: Literal[ProcessValueType.STRING]
+
+
+class ProcessValueCommandChoiceValue(BaseModel):
+    value: str
+    value_type: Literal[ProcessValueType.CHOICE]
+    options: List[str]
 
 
 class ProcessValueCommand(BaseModel):
     name: str
     command: str
+    disabled: bool | None
+    """ Indicates whether the command button should be disabled. """
+    value: ProcessValueCommandNumberValue | ProcessValueCommandFreeTextValue | ProcessValueCommandChoiceValue | None
 
 
 def get_ProcessValueType_from_value(value: str | float | int | None) -> ProcessValueType:
@@ -108,12 +133,9 @@ class ProcessValue(BaseModel):
     value: str | float | int | None
     value_unit: str | None
     """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
-    valid_value_units: List[str] | None
-    """ For values with a unit, provides the list of valid alternative units """
     value_type: ProcessValueType
     """ Specifies the type of allowed values. """
-    writable: bool
-    commands: List[ProcessValueCommand] | None  # TODO: consolidate with Reading/-Commands
+    commands: List[ProcessValueCommand] | None
 
     @staticmethod
     def from_message(r: ReadingDef, ti: TagInfo) -> ProcessValue:
@@ -122,9 +144,8 @@ class ProcessValue(BaseModel):
                 value=ti.value,
                 value_type=get_ProcessValueType_from_value(ti.value),
                 value_unit=ti.value_unit,
-                valid_value_units=r.valid_value_units,
-                writable=False,
-                commands=[ProcessValueCommand(name=c.name, command=c.command) for c in r.commands])
+                commands=[])
+                # commands=[ProcessValueCommand(name=c.name, command=c.command) for c in r.commands])
 
 
 @router.get("/process_unit/{unit_id}/process_values")
@@ -149,16 +170,6 @@ def get_process_values(unit_id: str, response: Response, agg: Aggregator = Depen
         if ti is not None:
             pvs.append(ProcessValue.from_message(r, ti))
     return pvs
-
-
-class ProcessValueUpdate(BaseModel):
-    name: str
-    value: str | float | int
-
-
-@router.post("/process_unit/{unit_id}/process_value")
-def set_process_value(unit_id: str, update: ProcessValueUpdate, agg: Aggregator = Depends(agg_deps.get_aggregator)):
-    pass
 
 
 class CommandSource(StrEnum):
