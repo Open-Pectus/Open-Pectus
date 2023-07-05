@@ -1,6 +1,11 @@
 {
   "/api": {
-    "target": "http://127.0.0.1:8300",
+    "target": "http://127.0.0.1:9800",
+    "secure": false
+  },
+  "/ws": {
+    "target": "ws://127.0.0.1:9800",
+    "ws": true,
     "secure": false
   }
 }

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
+import { WebsocketRpcClient } from '../fastapi_websocket/websocket-rpc-client';
 import { AppActions } from './ngrx/app.actions';
 
 @Component({
@@ -15,5 +16,8 @@ export class AppComponent implements OnInit {
 
   ngOnInit() {
     this.store.dispatch(AppActions.pageInitialized());
+
+    const rpcClient = new WebsocketRpcClient('ws://localhost:4200/ws');
+    rpcClient.waitForReady().then(() => console.log('something'));
   }
 }
