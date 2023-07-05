@@ -9,4 +9,5 @@ export enum ProcessValueType {
     STRING = 'string',
     FLOAT = 'float',
     INT = 'int',
+    CHOICE = 'choice',
 }

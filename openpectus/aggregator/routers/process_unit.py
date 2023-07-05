@@ -81,11 +81,35 @@ class ProcessValueType(StrEnum):
     STRING = auto()
     FLOAT = auto()
     INT = auto()
+    CHOICE = auto()
+
+class ProcessValueCommandNumberValue(BaseModel):
+    value: float | int
+    value_unit: str | None
+    """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
+    valid_value_units: List[str] | None
+    """ For values with a unit, provides the list valid alternative units """
+    value_type: Literal[ProcessValueType.INT] | Literal[ProcessValueType.FLOAT]
+    """ Specifies the type of allowed values. """
+
+
+class ProcessValueCommandFreeTextValue(BaseModel):
+    value: str
+    value_type: Literal[ProcessValueType.STRING]
+
+
+class ProcessValueCommandChoiceValue(BaseModel):
+    value: str
+    value_type: Literal[ProcessValueType.CHOICE]
+    options: List[str]
 
 
 class ProcessValueCommand(BaseModel):
     name: str
     command: str
+    disabled: bool | None
+    """ Indicates whether the command button should be disabled. """
+    value: ProcessValueCommandNumberValue | ProcessValueCommandFreeTextValue | ProcessValueCommandChoiceValue | None
 
 
 class ProcessValue(BaseModel):
@@ -94,12 +118,9 @@ class ProcessValue(BaseModel):
     value: str | float | int | None
     value_unit: str | None
     """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
-    valid_value_units: List[str] | None
-    """ For values with a unit, provides the list valid alternative units """
     value_type: ProcessValueType
     """ Specifies the type of allowed values. """
-    writable: bool
-    commands: List[ProcessValueCommand] | None  # TODO: have backend verify that no ProcessValue ever is both writable and has commands.
+    commands: List[ProcessValueCommand] | None
 
 
 def create_pv(ti: TagInfo) -> ProcessValue:
@@ -134,16 +155,6 @@ def get_process_values(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggr
         return []
 
     return [create_pv(ti) for ti in tags.map.values()]
-
-
-class ProcessValueUpdate(BaseModel):
-    name: str
-    value: str | float | int
-
-
-@router.post("/process_unit/{unit_id}/process_value")
-def set_process_value(unit_id: str, update: ProcessValueUpdate, agg: Aggregator = Depends(agg_deps.get_aggregator)):
-    pass
 
 
 class CommandSource(StrEnum):
