@@ -11,8 +11,8 @@ export interface RpcResponse<T> {
 }
 
 export interface RpcMessage<T = any> {
-  request?: RpcRequest,
-  response?: RpcResponse<T>
+  request?: RpcRequest | null,
+  response?: RpcResponse<T> | null
 }
 
 export enum WebSocketFrameType {

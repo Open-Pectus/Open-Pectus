@@ -1,3 +1,4 @@
+import { RpcMessage, RpcResponse } from './fastapi_websocket_rpc.typings';
 import { RpcChannel } from './rpc-channel';
 import { RpcMethodsBase } from './rpc-methods-base';
 
@@ -15,7 +16,7 @@ export class WebsocketRpcClient {
 
 
   constructor(private uri: string, private methods: RpcMethodsBase = new RpcMethodsBase()) {
-    this.ws.onmessage = this.reader.bind(this);
+    this.ws.addEventListener('message', this.reader.bind(this));
   }
 
   async waitForReady() {
@@ -23,25 +24,25 @@ export class WebsocketRpcClient {
   }
 
   private reader(message: MessageEvent) {
-
+    const parsedMessage = JSON.parse(message.data) as RpcMessage;
+    if(parsedMessage.request !== null) console.log('new request: ' + parsedMessage.request);
   }
 
   private async waitForRpcReady() {
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
       this.ws.onopen = async () => {
-        let receivedResponse = undefined;
+        let receivedResponse: RpcResponse<string> | undefined;
         let attemptCount = 0;
         while(receivedResponse === undefined && attemptCount < 5) {
           await this.ping().then(result => receivedResponse = result).catch(_ => attemptCount += 1);
-          console.log(receivedResponse);
         }
-        resolve(receivedResponse);
-        console.log(attemptCount);
+        if(receivedResponse?.result === 'pong') resolve(receivedResponse);
+        reject();
       };
     });
   }
 
   private async ping() {
-    return await this.channel.call('_ping_');
+    return await this.channel.call<string>('_ping_');
   }
 }

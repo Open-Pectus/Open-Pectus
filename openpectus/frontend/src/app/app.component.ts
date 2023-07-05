@@ -18,6 +18,8 @@ export class AppComponent implements OnInit {
     this.store.dispatch(AppActions.pageInitialized());
 
     const rpcClient = new WebsocketRpcClient('ws://localhost:4200/ws');
-    rpcClient.waitForReady().then(() => console.log('something'));
+    rpcClient.waitForReady()
+      .then(() => console.log('rpcClient ready!'))
+      .catch(() => console.log('rpcClient failed to ready!'));
   }
 }
