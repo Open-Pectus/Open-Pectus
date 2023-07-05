@@ -4,7 +4,7 @@ name: Combined Workflows
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "147-pin-python-package-version-numbers" ]
   pull_request:
     branches: [ "main" ]
 
