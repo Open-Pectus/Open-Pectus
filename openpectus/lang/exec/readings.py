@@ -18,7 +18,7 @@ class Reading():
         if label == "":
             raise ValueError("Name must not be non-empty")
         self.label: str = label
-        self.tag_name = tag_name or label
+        self.tag_name = (tag_name or label).upper()
         self.commands = commands  # might need both name and argument
 
         self.tag: Tag | None = None

@@ -41,13 +41,15 @@ class PintTest(unittest.TestCase):
         self.assertEqual("minute", str(time.units))
         self.assertEqual("[time]", time.dimensionality)
 
-        time = Q_("1 m")
-        self.assertEqual("meter", str(time.units))
-        self.assertEqual("[length]", time.dimensionality)
+        length = Q_("1 m")
+        self.assertEqual("meter", str(length.units))
+        self.assertEqual("[length]", length.dimensionality)
 
     def test_basics_unit(self):
         u = U_("s")
         self.assertFalse(u.dimensionless)
+        self.assertEqual("second", str(u))
+        self.assertEqual("[time]", str(u.dimensionality))
         print("{!r}".format(u))
 
         q = 5 * u

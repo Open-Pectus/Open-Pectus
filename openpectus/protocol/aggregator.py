@@ -28,7 +28,7 @@ from openpectus.protocol.messages import (
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 ServerMessageHandler = Callable[[str, MessageBase], Awaitable[MessageBase]]
@@ -241,7 +241,7 @@ class Aggregator:
             self.client_data_map[client_id] = ClientData(client_id=client_id, readings=[], tags_info=TagsInfo(map={}))
         return SuccessMessage()
 
-    async def handle_UodInfo(self, channel_id: str, msg: UodInfoMsg) -> SuccessMessage | ErrorMessage:
+    async def handle_UodInfoMsg(self, channel_id: str, msg: UodInfoMsg) -> SuccessMessage | ErrorMessage:
         ci = self.get_channel(channel_id)
         if ci is None:
             logger.error(f"Channel '{channel_id}' not found")

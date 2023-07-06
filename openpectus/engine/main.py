@@ -60,6 +60,7 @@ class DemoUod(UnitOperationDefinitionBase):
         self.define_tag(tags.Reading("FT01", "L/h"))
         self.define_tag(tags.Select("Reset", value="N/A", unit=None, choices=['Reset', "N/A"]))
 
+        self.define_reading(R.Reading(label="Run time"))
         self.define_reading(R.Reading(label="FT01"))
         self.define_reading(R.Reading(label="Reset"))
 

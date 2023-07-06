@@ -23,7 +23,7 @@ DEFAULT_TAG_CLOCK = "CLOCK"
 TAG_UNITS = {
     'length': ['m', 'cm'],
     'mass': ['kg', 'g'],
-    'time': ['s', 'm', 'h', 'ms'],
+    '[time]': ['s', 'm', 'h', 'ms'],
     'flow': ['L/h', 'L/min', 'L/d'],  # Pint parses L/m as liter/meter
 }
 
@@ -45,9 +45,9 @@ def _get_compatible_unit_names(tag: Tag):
     else:
         dims = pu.dimensionality
         if len(dims) == 1:
-            unit_names = TAG_UNITS.get(dims[0])
+            unit_names = TAG_UNITS.get(str(dims))
             if unit_names is None:
-                raise NotImplementedError(f"Unit {pu} has no defined compatible units")
+                raise NotImplementedError(f"Unit {pu} with dimensionality {dims} has no defined compatible units")
             else:
                 return unit_names
         else:
@@ -131,7 +131,7 @@ class Tag(ChangeSubject):
 
         self.name: str = name
         self.value: TagValueType = value  # Do we need default also? sometimes it is used as safe but are the other uses?
-        self.unit = unit
+        self.unit: str | None = unit
         self.choices: List[str] | None = None
         self.direction: TagDirection = direction
         self.safe_value = None
@@ -153,7 +153,7 @@ class Tag(ChangeSubject):
         return _get_compatible_unit_names(self)
 
     def as_quantity(self) -> pint.Quantity:
-        return pint.Quantity(self.value, self.unit)
+        return pint.Quantity(self.value, self.unit)  # type: ignore
 
     def as_number(self) -> int | float:
         if not isinstance(self.value, (int, float)):
