@@ -19,7 +19,10 @@ export class AppComponent implements OnInit {
 
     const rpcClient = new WebsocketRpcClient('ws://localhost:4200/ws');
     rpcClient.waitForReady()
-      .then(() => console.log('rpcClient ready!'))
-      .catch(() => console.log('rpcClient failed to ready!'));
+      .catch(() => console.log('rpcClient failed to ready!'))
+      .then(() => {
+        console.log('rpcClient ready!');
+        rpcClient.call('concat', {a: 'first ', b: 'second'}).then(result => console.log(result));
+      });
   }
 }

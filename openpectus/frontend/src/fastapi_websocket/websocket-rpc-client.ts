@@ -20,15 +20,6 @@ export class WebsocketRpcClient {
   }
 
   async waitForReady() {
-    await this.waitForRpcReady();
-  }
-
-  private reader(message: MessageEvent) {
-    const parsedMessage = JSON.parse(message.data) as RpcMessage;
-    if(parsedMessage.request !== null) console.log('new request: ' + parsedMessage.request);
-  }
-
-  private async waitForRpcReady() {
     return new Promise((resolve, reject) => {
       this.ws.onopen = async () => {
         let receivedResponse: RpcResponse<string> | undefined;
@@ -40,6 +31,15 @@ export class WebsocketRpcClient {
         reject();
       };
     });
+  }
+
+  async call(method: string, args: Object = {}) {
+    return await this.channel.call(method, args);
+  }
+
+  private reader(message: MessageEvent) {
+    const parsedMessage = JSON.parse(message.data) as RpcMessage;
+    if(parsedMessage.request !== null) console.log('new request: ' + parsedMessage.request);
   }
 
   private async ping() {
