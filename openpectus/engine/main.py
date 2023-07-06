@@ -20,8 +20,9 @@ import openpectus.protocol.messages as M
 def get_args():
     parser = ArgumentParser("Start Pectus Engine")
     parser.add_argument("-ah", "--aggregator_host", required=False, default="127.0.0.1",
-                        help="Aggregator websocket host name")
-    parser.add_argument("-ap", "--aggregator_port", required=False, default="9800", help="Aggregator websocket port number")
+                        help="Aggregator websocket host name. Default is 127.0.0.1")
+    parser.add_argument("-ap", "--aggregator_port", required=False, default="9800",
+                        help="Aggregator websocket port number. Default is 9800")
     parser.add_argument("-uod", "--uod", required=False, default="DemoUod", help="The UOD to use")
     parser.add_argument("-r", "--runner", required=False, default="WebSocketRPCEngineRunner",
                         choices=['WebSocketRPCEngineRunner', 'DemoEngineRunner'],
@@ -197,7 +198,7 @@ class WebSocketRPCEngineRunner(EngineRunner):
                 commands=[M.ReadingCommand(name=c.name, command=c.command) for c in r.commands])
             readings.append(ri)
 
-        msg = M.UodInfo(readings=readings)
+        msg = M.UodInfoMsg(readings=readings)
         await self.client.send_to_server(msg)
 
     async def send_tag_updates_async(self):

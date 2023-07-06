@@ -55,7 +55,7 @@ class ReadingInfo(MessageBase):
     commands: List[ReadingCommand]
 
 
-class UodInfo(MessageBase):
+class UodInfoMsg(MessageBase):
     readings: List[ReadingInfo]
 
 

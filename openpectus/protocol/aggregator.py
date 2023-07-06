@@ -12,7 +12,7 @@ import logging
 
 from openpectus.protocol.exceptions import ProtocolException
 from openpectus.protocol.messages import (
-    UodInfo,
+    UodInfoMsg,
     deserialize_msg,
     deserialize_msg_from_json,
     serialize_msg,
@@ -241,7 +241,7 @@ class Aggregator:
             self.client_data_map[client_id] = ClientData(client_id=client_id, readings=[], tags_info=TagsInfo(map={}))
         return SuccessMessage()
 
-    async def handle_UodInfo(self, channel_id: str, msg: UodInfo) -> SuccessMessage | ErrorMessage:
+    async def handle_UodInfo(self, channel_id: str, msg: UodInfoMsg) -> SuccessMessage | ErrorMessage:
         ci = self.get_channel(channel_id)
         if ci is None:
             logger.error(f"Channel '{channel_id}' not found")
