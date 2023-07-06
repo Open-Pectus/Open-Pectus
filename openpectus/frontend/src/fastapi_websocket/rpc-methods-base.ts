@@ -1,19 +1,28 @@
-import { RpcChannel } from './rpc-channel';
+// export interface RpcMethods {
+//   [P: string]: Function;
+// }
 
 export interface RpcMethods {
-  ping(): string;
+  // ping(): string;
 
-  getChannelId(): string | undefined;
+  // getChannelId(): string;
+  [P: string]: Function;
 }
 
-export class RpcMethodsBase implements RpcMethods {
-  channel?: RpcChannel;
+// export class RpcMethodsBase implements RpcMethods {
+//
+//   ping() {
+//     return 'pong';
+//   }
+//
+//   // getChannelId() {
+//   //   return this['channelId']();
+//   // }
+//
+//   [P: string]: Function;
+// }
 
-  ping() {
-    return 'pong';
-  }
 
-  getChannelId() {
-    return this.channel?.id;
-  }
+export function extendWithBaseMethods(methods: RpcMethods) {
+  return {...methods, ping: () => 'pong'};
 }

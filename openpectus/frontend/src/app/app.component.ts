@@ -17,7 +17,11 @@ export class AppComponent implements OnInit {
   ngOnInit() {
     this.store.dispatch(AppActions.pageInitialized());
 
-    const rpcClient = new WebsocketRpcClient('ws://localhost:4200/ws');
+    const rpcClient = new WebsocketRpcClient('ws://localhost:4200/ws', {
+      concat(a: string, b: string) {
+        return a + b;
+      },
+    });
     rpcClient.waitForReady()
       .catch(() => console.log('rpcClient failed to ready!'))
       .then(() => {

@@ -1,6 +1,6 @@
 import { RpcMessage, RpcResponse } from './fastapi_websocket_rpc.typings';
 import { RpcChannel } from './rpc-channel';
-import { RpcMethodsBase } from './rpc-methods-base';
+import { extendWithBaseMethods, RpcMethods } from './rpc-methods-base';
 
 export class WebsocketRpcClient {
   private readonly ws = new WebSocket(this.uri);
@@ -12,10 +12,12 @@ export class WebsocketRpcClient {
    * - keep alive
    * - more logging
    * - retry tactic and config
+   * - channel id
    */
 
 
-  constructor(private uri: string, private methods: RpcMethodsBase = new RpcMethodsBase()) {
+  constructor(private uri: string, private readonly methods: RpcMethods) {
+    this.methods = extendWithBaseMethods(methods);
     this.ws.addEventListener('message', this.reader.bind(this));
   }
 
