@@ -1,100 +1,158 @@
 Notes:
 
-# Frontend
+# 1. Content
 
-## Project setup / update
-
-`cd Open-Pectus/openpectus/frontend`
-`npm ci`
-`npm run build`
-
-
-# Backend (Aggregator)
-
-## Setup
-
-TODO: How to update conda env
-`cd Open-Pectus`
-`conda env update -n=pectus --file=environment.yml --prune`
-
-To build dist:
-
-`cd Open-Pectus`
-`python -m build -o openpectus/dist`
-
-To set up a development environment, run
-
-`cd Open-Pectus`
-`pip install -e .`
+- [1. Content](#1-content)
+- [2. Installation](#2-installation)
+  - [2.1. Frontend installation](#21-frontend-installation)
+  - [2.2. Backend installation](#22-backend-installation)
+- [3. Running Open Pectus](#3-running-open-pectus)
+  - [3.1. Aggregator](#31-aggregator)
+  - [3.2. Engine](#32-engine)
+  - [3.3. Docker](#33-docker)
+- [4. Componets](#4-componets)
+  - [4.1. Pectus UI](#41-pectus-ui)
+  - [4.2. Aggregator](#42-aggregator)
+  - [4.3. Engine](#43-engine)
+- [5. Build validation](#5-build-validation)
+  - [5.1. Flake](#51-flake)
+  - [5.2. Mypy](#52-mypy)
+  - [5.3. Code generation from API spec](#53-code-generation-from-api-spec)
+- [6. Protocols](#6-protocols)
+  - [6.1. Engine - Aggregator](#61-engine---aggregator)
 
 
-# Docker
+# 2. Installation
+
+This chapter describes how to set up a development environment to run and develop Open Pectus.
+
+
+## 2.1. Frontend installation
+
+Prerequisites: Node (and npm) must be installed.
+
+```
+cd Open-Pectus/openpectus/frontend
+npm ci
+npm run build
+```
+
+## 2.2. Backend installation
+
+Prerequisites:
+- A conda installation. <a href="https://docs.conda.io/en/latest/miniconda.html">Miniconda</a> is recommended.
+- Note: It is possible to install openpectus without conda but this will affect the global python environment on the developer pc
+  so this in not recommended.
+
+To create a new conda environment and install all dependencies:
+```
+cd Open-Pectus
+conda env create -n=pectus --file=environment.yml
+```
+
+
+How to update an existing conda environment with all dependencies:
+```
+cd Open-Pectus
+conda env update -n=pectus --file=environment.yml --prune
+```
+
+To install openpectus in the environment, run
+
+```
+cd Open-Pectus
+pip install -e .
+```
+
+To install without conda (not recommended), run
+
+```
+cd Open-Pectus
+pip install -r openpectus/requirements.txt
+pip install -e .
+```
+
+
+The build server builds a distribution. This is not normally needed in a developer environment.
+To build a distribution:
+
+```
+cd Open-Pectus
+python -m build
+```
+
+
+# 3. Running Open Pectus
+
+## 3.1. Aggregator
+
+To start a local aggregator service:
+
+Prerequisites:
+- [2.1. Frontend installation](#21-frontend-installation)
+- [2.2. Backend installation](#22-backend-installation)
+
+Run Aggregator to serve frontend from its default build directory. This also starts the 
+websocket protocol allowing Engines to connect.
+
+```
+cd Open-Pectus
+pectus-aggregator -fdd .\openpectus\frontend\dist\
+```
+
+When Aggregator is running, the aggregator services are available, including:
+Frontend:       http://localhost:9800/
+OpenAPI UI:     http://localhost:9800/docs
+OpenAPI spec:   http://localhost:9800/openapi.json
+
+
+## 3.2. Engine
+Run Engine to connect a local engine to the Aggregator above:
+
+```
+cd Open-Pectus
+pectus-engine --aggregator_host localhost --aggregator_port 9800
+```
+
+
+
+## 3.3. Docker
+
+Prerequisites:
+- [2.1. Frontend installation](#21-frontend-installation)
+- [2.2. Backend installation](#22-backend-installation)
 
 To start aggregator services in docker, run the following command.
 Note: This depends on the frontend and backend builds being up to date.
 
-`cd Open-Pectus/openpectus`
-`docker compose up --build`
+```
+cd Open-Pectus/openpectus
+docker compose up --build
+```
 
 When the container is running, the aggregator services are available, including:
 Frontend:       http://localhost:8300/
 OpenAPI UI:     http://localhost:8300/docs
 OpenAPI spec:   http://localhost:8300/openapi.json
 
-To start a test engine in docker:
-Start a terminal in the container using Docker Desktop or
-`cd /usr/src/app/engine`
-`python main.py -ws ws://127.0.0.1:8300/pubsub`
 
 The frontend can now be used to verify that the engine is connected to the aggregator and to interact
 with the engine.
 
-The same command can be run locally to connect a local engine to the Docker aggregator.
+An Engine can be started in the docker container using
+```
+pectus-engine --aggregator_host localhost --aggregator_port 8300
+```
 
 
+# 4. Componets
 
-## Flake
-Flake is a python linter.
-
-Run flake locally:
-flake must be run from the proper directory in order to read its configuration. Otherwise it uses default
-configuration which outputs many errors that are not relevant.
-
-`cd Open-Pectus/openpectus`
-`flake8`
-
-
-
-
-
-## Diagram generation
-
-To get started with diagram generation, run the following command from the `openpectus` directory:
-`pyreverse -k .`
-Pyreverse is installed as part of pylint (which is somehow already installed).
-
-
-## Code generation from API spec
-
-### Pectus UI and Aggregator API
-
-The frontend generates typescript skeleton interfaces from the Aggregator API spec.
-
-To ensure compability between the implemented backend, the API specification file and the typescript interfaces all match, the flow for modification is as follows:
-1. A change is made in the Aggregator API implementation.
-2. The script update_api_spec_and_typescript.sh in manually invoked. This updates the api spec file and generates updated typescript interfaces from it. These changes should all be committed to git.
-3. The frontend build uses the updated interfaces. If the frontend build fails, the whole build fails. This indicates an integration error caused by an incompatible API change. This should be fixed before the branch is merged, either by updating the frontend to support the API change or by reworking the API change to be compatible with the frontend.
-
-To ensure that step 2. is not forgotten, the aggregator test suite contains a test that checks that generates a new api spec file and checks that it matches the spec file last generated by the script. If it doesn't, the test fails as does the aggregator build.
-
-# Componets
-
-## Pectus UI
+## 4.1. Pectus UI
 
 This is a web application that allows users to view and interact with the Pectus system,
 including runnings engines and process unit hardware attached to them.
 
-## Aggregator
+## 4.2. Aggregator
 
 There is one Aggregator service in a pectus system. It has the following responsibilities:
 
@@ -105,7 +163,7 @@ There is one Aggregator service in a pectus system. It has the following respons
 - Expose a Language Server Protocol web-socket API for the Pectus UI code editor
 - Parse and analyze pectus code (requires no running engine, only knowledge of the UOD)
 
-## Engine
+## 4.3. Engine
 
 An Engine service instance is required for each piece of process unit hardware. It has
 the following responsibilities:
@@ -115,48 +173,83 @@ the following responsibilities:
 - Expose hardware interaction as Commands
 - Parse(?), analyze(?) and run pectus code
 
-# Protocols
+# 5. Build validation
+
+## 5.1. Flake
+Flake is a python linter.
+
+It is run by the build system to help ensure a decent code base. It outputs warnings and errors. The build will 
+fail if flake returns errors.
+
+Run flake (note the directory - this matters):
+
+```
+cd Open-Pectus/openpectus
+flake8
+```
+
+## 5.2. Mypy
+Mypy is a static type checker.
+
+The Backend code base is annotated with type hints, such that Mypy can check the types. The build does not yet include this step
+as there are still problems being worked out.
+
+<!-- ## 3.5. Diagram generation
+
+To get started with diagram generation, run the following command from the `openpectus` directory:
+`pyreverse -k .`
+Pyreverse is installed as part of pylint (which is somehow already installed).
+ -->
+
+## 5.3. Code generation from API spec
+
+The frontend generates and uses typescript skeleton interfaces from the Aggregator API spec.
+
+To ensure that the implemented backend, the API specification file and the typescript interfaces all match, the flow for modification is as follows:
+1. A change is made in the Aggregator API implementation.
+2. The script `update_api_spec_and_typescript.sh` must be manually invoked. This updates the api spec file and generates updated typescript interfaces from it.
+3. The frontend build must be run to check the updated interfaces. If the frontend build fails, the build server build will fail. This indicates an integration error caused 
+   by an incompatible API change. This should be fixed before the branch is merged, either by updating the frontend to support the API change or by reworking the API change to be compatible with the frontend.
+4. Steps 1-3 must be repeated until both frontend and backend build successfully.
+5. All changes must be committed to Git.
+
+To ensure that step 2. is not forgotten, the aggregator test suite contains a test that checks that generates a new api spec file and checks that it matches the spec file last generated by the script. If it doesn't, the test fails and with it the Backend build.
 
 
-## Engine - Aggregator
+# 6. Protocols
 
+This chapter documents the Open Pectus web socket protocols.
+
+## 6.1. Engine - Aggregator
 
 ```mermaid
 sequenceDiagram
 autonumber
     participant E as Engine
     participant A as Aggregator
-%%note left of E: Check-in
-    Note right of A: REST
-    E ->> A: init [engine_name, uod_name]
+%%note left of E: Registration
+    Note right of A: Web Socket
+    E ->> A: connect    
+    E ->> A: RegisterEngineMsg
     A ->> E: [engine_id]
-    Note over E,A: A now knows E is available
+    Note over A,E: A knows E is running
+    E ->> A: UodInfoMsg
+    E ->> A: TagsUpdatedMsg
+    Note over A,E: A knows the process values of E
 
-%%note left of E: Engine start
-    Note right of A: REST
-    E ->> A: start [engine_id]
-    A ->> E: [web socket url]
-    Note over E,A: A now knows E is running and will likely connect<br>    via Web socketURL to supply live equipment data
 
 %%note left of E: Engine running
-    Note right of A: Web Socket
-    E ->> A: connect [engine_id]
-    Note over E,A: A now knows E is ready to receive commands
-
+    
     loop Every second
-    E ->> A: state_changed [tag_state, seq]
-    end
-
-    alt User: update tag
-    A ->> E: update_tag [tag_name, tag_value, seq]
-    end
-
-    alt User: Change run state
-    A ->> E: update_run_state [run_state, seq]
+    E ->> A: TagsUpdatedMsg
     end
 
     alt User: Run command
-    A ->> E: invoke_command [run_state, seq]
+    A ->> E: InvokeCommandMsg
+    end
+
+    alt User: Change run state
+    A ->> E: InvokeCommandMsg
     end
 
 ```

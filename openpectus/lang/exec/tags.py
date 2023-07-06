@@ -5,8 +5,9 @@ from typing import Dict, Iterable, List, Set
 import pint
 from pint import UnitRegistry, Quantity
 
-ureg = UnitRegistry()
+ureg = UnitRegistry(cache_folder=":auto:")
 Q_ = Quantity
+
 
 # Represents tag API towards interpreter
 
@@ -15,6 +16,51 @@ DEFAULT_TAG_RUN_COUNTER = "RUN COUNTER"
 DEFAULT_TAG_BLOCK_TIME = "BLOCK TIME"
 DEFAULT_TAG_RUN_TIME = "RUN TIME"
 DEFAULT_TAG_CLOCK = "CLOCK"
+
+
+# Define the dimensions and units we want to use and the conversions we want to provide.
+# Pint has way too many built in to be usable for this and it is simpler than customizing it
+TAG_UNITS = {
+    'length': ['m', 'cm'],
+    'mass': ['kg', 'g'],
+    '[time]': ['s', 'm', 'h', 'ms'],
+    'flow': ['L/h', 'L/min', 'L/d'],  # Pint parses L/m as liter/meter
+}
+
+TAG_UNIT_DIMS = {
+    'liter / hour': 'flow'
+}
+
+
+def _get_compatible_unit_names(tag: Tag):
+    # TODO define the difference between None and [""]
+    if tag.unit is None:
+        return [""]
+
+    pu = tag.get_pint_unit()
+    if pu is None:
+        return [""]
+    elif pu.dimensionless:
+        return [""]
+    else:
+        dims = pu.dimensionality
+        if len(dims) == 1:
+            unit_names = TAG_UNITS.get(str(dims))
+            if unit_names is None:
+                raise NotImplementedError(f"Unit {pu} with dimensionality {dims} has no defined compatible units")
+            else:
+                return unit_names
+        else:
+            dim_name = TAG_UNIT_DIMS.get(str(pu))
+            if dim_name is None:
+                raise NotImplementedError(f"Unit {pu} has no defined compatible units")
+            unit_names = TAG_UNITS.get(dim_name)
+            if unit_names is None:
+                raise NotImplementedError(f"Unit {pu} has no defined compatible units for dimension {dim_name}")
+            return unit_names
+
+
+TagValueType = int | float | str | None
 
 
 class ChangeListener():
@@ -74,7 +120,7 @@ class Tag(ChangeSubject):
     def __init__(
             self,
             name: str,
-            value=None,
+            value: TagValueType = None,
             unit: str | None = None,
             direction: TagDirection = TagDirection.NA) -> None:
 
@@ -84,10 +130,10 @@ class Tag(ChangeSubject):
             raise ValueError("unit must be None or a string")
 
         self.name: str = name
-        self.value = value  # Do we need default also? sometimes it is used as safe but are the other uses?
-        self.unit = unit
+        self.value: TagValueType = value  # Do we need default also? sometimes it is used as safe but are the other uses?
+        self.unit: str | None = unit
         self.choices: List[str] | None = None
-        self.direction: TagDirection = TagDirection.UNSPECIFIED
+        self.direction: TagDirection = direction
         self.safe_value = None
 
     def set_value(self, val) -> None:
@@ -103,8 +149,11 @@ class Tag(ChangeSubject):
             return None
         return pint.Unit(self.unit)
 
+    def get_compatible_units(self):
+        return _get_compatible_unit_names(self)
+
     def as_quantity(self) -> pint.Quantity:
-        return pint.Quantity(self.value, self.unit)
+        return pint.Quantity(self.value, self.unit)  # type: ignore
 
     def as_number(self) -> int | float:
         if not isinstance(self.value, (int, float)):
@@ -183,7 +232,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
     def __iter__(self):
         yield from self.tags.values()
 
-    def __getitem__(self, tag_name: str):
+    def __getitem__(self, tag_name: str) -> Tag:
         return self.tags[tag_name.upper()]
 
     def __len__(self) -> int:
@@ -194,7 +243,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
             raise ValueError("tag_name is None or empty")
         if not tag_name.upper() in self.tags.keys():
             raise ValueError(f"Tag name {tag_name} not found")
-        return self[tag_name]
+        return self[tag_name]  # type: ignore
 
     def add(self, tag: Tag, exist_ok: bool = True):
         """ Add tag to collection. If tag name already exists and exist_ok is False, a ValueError is raised. """
@@ -217,7 +266,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
             raise ValueError("tag_name is None or empty")
         return tag_name.upper() in self.tags.keys()
 
-    def get_value_or_default(self, tag_name) -> str | None:
+    def get_value_or_default(self, tag_name) -> TagValueType:
         if not self.has(tag_name):
             return None
         return self.tags[tag_name].get_value()

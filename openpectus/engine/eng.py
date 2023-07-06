@@ -10,6 +10,7 @@ from openpectus.lang.exec.timer import OneThreadTimer
 from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 from openpectus.lang.exec.tags import (
+    DEFAULT_TAG_RUN_TIME,
     Tag,
     TagCollection,
     ChangeListener,
@@ -75,6 +76,7 @@ class Engine():
 
         self._runstate_started: bool = False
         """ Indicates the surrent Start/Stop state"""
+        self._runstate_started_time: float = 0
 
     def _iter_all_tags(self) -> Iterable[Tag]:
         return itertools.chain(self._system_tags, self.uod.tags)
@@ -90,6 +92,7 @@ class Engine():
 
     def _configure(self):
         # configure uod
+        self.uod.define_system_tags(self._system_tags)
         self.uod.define()
         self.uod.validate_configuration()
         self.uod.tags.add_listener(self._uod_listener)
@@ -195,6 +198,8 @@ class Engine():
         if self._runstate_started:
             clock = self._system_tags.get(DEFAULT_TAG_CLOCK)
             clock.set_value(self._tick_time)
+            run_time = self._system_tags.get(DEFAULT_TAG_RUN_TIME)
+            run_time.set_value(self._tick_time - self._runstate_started_time)
 
     def execute_commands(self):
         done = False
@@ -215,6 +220,7 @@ class Engine():
         if EngineInternalCommand.has_value(cmd_name):
             if cmd_name == EngineInternalCommand.START.upper():
                 self._runstate_started = True
+                self._runstate_started_time = time.time()
             elif cmd_name == EngineInternalCommand.STOP.upper():
                 self._runstate_started = False
             else:
