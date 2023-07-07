@@ -30,15 +30,36 @@ export class RpcChannel {
   private onMessage(msgEvent: MessageEvent) {
     const parsedData = JSON.parse(msgEvent.data) as RpcMessage;
     if(parsedData.request === null || parsedData.request === undefined) return;
-    if(!Object.keys(this.methods).includes(parsedData.request.method)) return;
     const method = this.methods[parsedData.request.method];
-    const result = parsedData.request.arguments === undefined
-                   ? method()
-                   : method(...Object.values(parsedData.request.arguments));
-    const resultType = result === undefined ? undefined : 'str';
+    if(method === undefined) return;
+    const result = method(...Object.values(parsedData.request.arguments ?? {}));
     const resultMsg: RpcMessage = {
-      response: {result, call_id: parsedData.request.call_id, result_type: resultType},
+      response: {
+        result,
+        result_type: this.calculateResultType(result),
+        call_id: parsedData.request.call_id,
+      },
     };
     this.socket.send(JSON.stringify(resultMsg));
+  }
+
+  private calculateResultType(result: unknown): string | undefined {
+    switch(typeof result) {
+      case 'undefined':
+        return undefined;
+      case 'boolean':
+        return 'bool';
+      case 'bigint':
+      case 'number':
+        return 'float';
+      case 'string':
+      case 'object':
+        return 'str';
+      case 'function':
+      case 'symbol':
+        console.error('Rpc result of incompatible type:', result);
+        return 'unknown-type';
+
+    }
   }
 }
