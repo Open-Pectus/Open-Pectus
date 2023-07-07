@@ -17,16 +17,13 @@ export class AppComponent implements OnInit {
   ngOnInit() {
     this.store.dispatch(AppActions.pageInitialized());
 
-    const rpcClient = new WebsocketRpcClient('ws://localhost:4200/ws', {
+    const rpcClient = new WebsocketRpcClient(`ws://${window.location.host}/ws`, {
       concat(a: string, b: string) {
         return a + b;
       },
     });
-    rpcClient.waitForReady()
-      .catch(() => console.log('rpcClient failed to ready!'))
-      .then(() => {
-        console.log('rpcClient ready!');
-        rpcClient.call('concat', {a: 'first ', b: 'second'}).then(result => console.log(result));
-      });
+    rpcClient.waitForReady().then(() => {
+      rpcClient.call('concat', {a: 'first ', b: 'second'}).then(result => console.debug('concat call result:', result));
+    });
   }
 }

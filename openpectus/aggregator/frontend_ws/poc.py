@@ -9,13 +9,10 @@ class ConcatServer(RpcMethodsBase):
 
 
 async def on_connect(channel):
-    # Wait a bit
-    await asyncio.sleep(1)
     asyncio.create_task(callConcat(channel))
-    # asyncio.create_task(print(await channel.other.concat(a='first', b='second')))
-    # callConcat(channel)
 
 async def callConcat(channel):
+    await asyncio.sleep(1)
     result = await channel.other.concat(a='first', b='second')
     print(result)
 

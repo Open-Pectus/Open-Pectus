@@ -27,10 +27,17 @@ export class WebsocketRpcClient {
         let receivedResponse: RpcResponse<string> | undefined;
         let attemptCount = 0;
         while(receivedResponse === undefined && attemptCount < 5) {
-          await this.ping().then(result => receivedResponse = result).catch(_ => attemptCount += 1);
+          await this.ping().then(result => receivedResponse = result).catch(_ => {
+            console.debug('ping failed, trying again');
+            attemptCount += 1;
+          });
         }
-        if(receivedResponse?.result === 'pong') resolve(receivedResponse);
-        reject();
+        if(receivedResponse?.result === 'pong') {
+          console.debug('rpcClient ready!');
+          return resolve(receivedResponse);
+        }
+        console.warn('Rpc waitForReady failed');
+        return reject();
       };
     });
   }
@@ -41,7 +48,7 @@ export class WebsocketRpcClient {
 
   private reader(message: MessageEvent) {
     const parsedMessage = JSON.parse(message.data) as RpcMessage;
-    if(parsedMessage.request !== null) console.log('new request: ' + parsedMessage.request);
+    if(parsedMessage.request !== null) console.debug('new request from backend:', parsedMessage.request);
   }
 
   private async ping() {
