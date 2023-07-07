@@ -1,11 +1,12 @@
+from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum, auto
 from typing import Literal, List
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel
 
 import openpectus.aggregator.deps as agg_deps
-from openpectus.protocol.aggregator import Aggregator, ChannelInfo, TagInfo
+from openpectus.protocol.aggregator import Aggregator, ChannelInfo, ReadingDef, TagInfo
 from openpectus.protocol.messages import InvokeCommandMsg
 
 
@@ -83,6 +84,7 @@ class ProcessValueType(StrEnum):
     INT = auto()
     CHOICE = auto()
 
+
 class ProcessValueCommandNumberValue(BaseModel):
     value: float | int
     value_unit: str | None
@@ -112,6 +114,19 @@ class ProcessValueCommand(BaseModel):
     value: ProcessValueCommandNumberValue | ProcessValueCommandFreeTextValue | ProcessValueCommandChoiceValue | None
 
 
+def get_ProcessValueType_from_value(value: str | float | int | None) -> ProcessValueType:
+    if value is None:
+        return ProcessValueType.STRING  # hmm
+    if isinstance(value, str):
+        return ProcessValueType.STRING
+    elif isinstance(value, int):
+        return ProcessValueType.INT
+    elif isinstance(value, float):
+        return ProcessValueType.FLOAT
+    else:
+        raise ValueError("Invalid value type: " + type(value).__name__)
+
+
 class ProcessValue(BaseModel):
     """ Represents a process value. """
     name: str
@@ -122,39 +137,39 @@ class ProcessValue(BaseModel):
     """ Specifies the type of allowed values. """
     commands: List[ProcessValueCommand] | None
 
-
-def create_pv(ti: TagInfo) -> ProcessValue:
-    # TODO define source of all fields
-
-    def get_ProcessValueType_from_value(value: str | float | int | None) -> ProcessValueType:
-        if value is None:
-            return ProcessValueType.STRING  # hmm
-        if isinstance(value, str):
-            return ProcessValueType.STRING
-        elif isinstance(value, int):
-            return ProcessValueType.INT
-        elif isinstance(value, float):
-            return ProcessValueType.FLOAT
-        else:
-            raise ValueError("Invalid value type: " + type(value).__name__)
-
-    return ProcessValue(
-        name=ti.name,
-        value=ti.value,
-        value_unit=ti.value_unit,
-        valid_value_units=[],
-        value_type=get_ProcessValueType_from_value(ti.value),
-        writable=True,
-        commands=[])
+    @staticmethod
+    def from_message(r: ReadingDef, ti: TagInfo) -> ProcessValue:
+        return ProcessValue(
+                name=r.label,
+                value=ti.value,
+                value_type=get_ProcessValueType_from_value(ti.value),
+                value_unit=ti.value_unit,
+                commands=[])
+                # commands=[ProcessValueCommand(name=c.name, command=c.command) for c in r.commands])
 
 
 @router.get("/process_unit/{unit_id}/process_values")
-def get_process_values(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[ProcessValue]:  # naming?, parm last_seen
-    tags = agg.get_client_tags(client_id=unit_id)
-    if tags is None:
+def get_process_values(unit_id: str, response: Response, agg: Aggregator = Depends(agg_deps.get_aggregator)) \
+        -> List[ProcessValue]:
+    # parm last_seen
+
+    response.headers["Cache-Control"] = "no-store"
+
+    client_data = agg.client_data_map.get(unit_id)
+    if client_data is None:
         return []
 
-    return [create_pv(ti) for ti in tags.map.values()]
+    tags_info = client_data.tags_info.map
+
+    print("Readings", client_data.readings)
+    print("Tags", tags_info)
+
+    pvs: List[ProcessValue] = []
+    for r in client_data.readings:
+        ti = tags_info.get(r.tag_name)
+        if ti is not None:
+            pvs.append(ProcessValue.from_message(r, ti))
+    return pvs
 
 
 class CommandSource(StrEnum):
@@ -220,7 +235,7 @@ class RunLog(BaseModel):
 
 @router.get('/process_unit/{unit_id}/run_log')
 def get_run_log(unit_id: str) -> RunLog:
-    return RunLog(additional_columns=[], lines=[])
+    return RunLog(lines=[])
 
 
 @router.get('/process_unit/{unit_id}/method')
