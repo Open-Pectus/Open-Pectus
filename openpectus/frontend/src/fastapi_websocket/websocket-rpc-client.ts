@@ -5,6 +5,7 @@ import { extendWithBaseMethods, RpcMethods } from './rpc-methods-base';
 export class WebsocketRpcClient {
   private readonly ws = new WebSocket(this.uri);
   private readonly channel = new RpcChannel(this.methods, this.ws);
+  private readyPromise?: Promise<void>;
 
   /* Stuff skipped and maybe TODO:
    * - passing arguments directly to ws
@@ -22,7 +23,9 @@ export class WebsocketRpcClient {
   }
 
   async waitForReady() {
-    return new Promise((resolve, reject) => {
+    if(this.ws.readyState === WebSocket.OPEN) return Promise.resolve();
+    if(this.readyPromise !== undefined) return this.readyPromise;
+    this.readyPromise = new Promise((resolve, reject) => {
       this.ws.onopen = async () => {
         let receivedResponse: RpcResponse<string> | undefined;
         let attemptCount = 0;
@@ -34,16 +37,19 @@ export class WebsocketRpcClient {
         }
         if(receivedResponse?.result === 'pong') {
           console.debug('rpcClient ready!');
-          return resolve(receivedResponse);
+          this.readyPromise = undefined;
+          return resolve();
         }
         console.warn('Rpc waitForReady failed');
+        this.readyPromise = undefined;
         return reject();
       };
     });
+    return this.readyPromise;
   }
 
   async call(method: string, args: Object = {}) {
-    return await this.channel.call(method, args);
+    return this.waitForReady().then(() => this.channel.call(method, args));
   }
 
   private reader(message: MessageEvent) {

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
+import { PubSubClient } from '../fastapi_websocket/pub-sub-client';
 import { WebsocketRpcClient } from '../fastapi_websocket/websocket-rpc-client';
 import { AppActions } from './ngrx/app.actions';
 
@@ -17,6 +18,11 @@ export class AppComponent implements OnInit {
   ngOnInit() {
     this.store.dispatch(AppActions.pageInitialized());
 
+    // this.testRpcClient();
+    this.testPubSubClient();
+  }
+
+  private testRpcClient() {
     const rpcClient = new WebsocketRpcClient(`ws://${window.location.host}/ws`, {
       concat(a: string, b: string) {
         return a + b;
@@ -24,6 +30,16 @@ export class AppComponent implements OnInit {
     });
     rpcClient.waitForReady().then(() => {
       rpcClient.call('concat', {a: 'first ', b: 'second'}).then(result => console.debug('concat call result:', result));
+    });
+  }
+
+  private testPubSubClient() {
+    const pubSubClient = new PubSubClient(['guns', 'germs'], (data, topic) => {
+      console.debug('callback for', topic);
+    });
+
+    pubSubClient.subscribe('steel', (data, topic) => {
+      console.debug(`callback for ${topic} with data`, data);
     });
   }
 }

@@ -357,5 +357,5 @@ def _create_aggregator(router) -> Aggregator:
         methods_class=RpcServerHandler,
     )
     _server.set_endpoint(endpoint)
-    endpoint.register_route(router, path="/pubsub")
+    endpoint.register_route(router, path="/engine-pubsub")
     return _server

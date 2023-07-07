@@ -35,8 +35,9 @@ export class RpcChannel {
     const result = parsedData.request.arguments === undefined
                    ? method()
                    : method(...Object.values(parsedData.request.arguments));
+    const resultType = result === undefined ? undefined : 'str';
     const resultMsg: RpcMessage = {
-      response: {result, call_id: parsedData.request.call_id, result_type: 'str'},
+      response: {result, call_id: parsedData.request.call_id, result_type: resultType},
     };
     this.socket.send(JSON.stringify(resultMsg));
   }

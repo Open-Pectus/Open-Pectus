@@ -6,7 +6,7 @@ import uvicorn
 
 from openpectus.aggregator.spa import SinglePageApplication
 from openpectus.aggregator.routers import batch_job, process_unit, aggregator_websocket
-from frontend_ws.poc import poc_endpoint
+from openpectus.aggregator.frontend_ws import poc
 
 
 # - add lsp thingys
@@ -59,7 +59,7 @@ def create_app(frontend_dist_dir: str = default_frontend_dist_dir):
     app.include_router(process_unit.router, prefix=prefix)
     app.include_router(batch_job.router, prefix=prefix)
     app.include_router(aggregator_websocket.router)
-    poc_endpoint.register_route(app)
+    app.include_router(poc.router, prefix=prefix)
 
     app.mount("/", SinglePageApplication(directory=frontend_dist_dir))
 
