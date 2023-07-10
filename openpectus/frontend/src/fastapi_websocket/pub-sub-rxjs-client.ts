@@ -10,15 +10,17 @@ export class PubSubRxjsClient {
 
   forTopic(topic: string): Observable<PubSubCallbackParameters> {
     return new Observable(subscriber => {
-      this.promiseClient.subscribe(topic, subscriber.next.bind(subscriber)).catch(subscriber.error);
-      return {unsubscribe: () => this.promiseClient.unsubscribe(topic)};
+      const callback = subscriber.next.bind(subscriber);
+      this.promiseClient.subscribe(topic, callback).catch(subscriber.error);
+      return {unsubscribe: () => this.promiseClient.unsubscribe(topic, callback)};
     });
   }
 
   forTopics(topics: string[]): Observable<PubSubCallbackParameters> {
     return new Observable(subscriber => {
-      this.promiseClient.subscribeMany(topics, subscriber.next.bind(subscriber)).catch(subscriber.error);
-      return {unsubscribe: () => this.promiseClient.unsubscribeMany(topics)};
+      const callback = subscriber.next.bind(subscriber);
+      this.promiseClient.subscribeMany(topics, callback).catch(subscriber.error);
+      return {unsubscribe: () => this.promiseClient.unsubscribeMany(topics, callback)};
     });
   }
 }
