@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { PubSubClient } from '../fastapi_websocket/pub-sub-client';
+import { PubSubRxjsClient } from '../fastapi_websocket/pub-sub-rxjs-client';
 import { WebsocketRpcClient } from '../fastapi_websocket/websocket-rpc-client';
 import { AppActions } from './ngrx/app.actions';
 
@@ -20,6 +21,7 @@ export class AppComponent implements OnInit {
 
     // this.testRpcClient();
     this.testPubSubClient();
+    this.testPubSubRxjsClient();
   }
 
   private testRpcClient() {
@@ -34,11 +36,23 @@ export class AppComponent implements OnInit {
   }
 
   private testPubSubClient() {
-    const pubSubClient = new PubSubClient(['guns', 'germs'], (data, topic) => {
-      console.debug('callback for', topic);
+    const pubSubClient = new PubSubClient({uri: `ws://${window.location.host}/api/frontend-pubsub`});
+    pubSubClient.subscribeMany(['guns', 'germs'], ({topic}) => {
+      console.debug(`callback for ${topic}`);
+    }).then();
+
+    pubSubClient.subscribe('steel', ({data, topic}) => {
+      console.debug(`callback for ${topic} with data`, data);
+    }).then();
+  }
+
+  private testPubSubRxjsClient() {
+    const pubSubRxjsClient = new PubSubRxjsClient({uri: `ws://${window.location.host}/api/frontend-pubsub`});
+    pubSubRxjsClient.forTopics(['guns', 'germs']).subscribe(({topic}) => {
+      console.debug(`callback for ${topic}`);
     });
 
-    pubSubClient.subscribe('steel', (data, topic) => {
+    pubSubRxjsClient.forTopic('steel').subscribe(({data, topic}) => {
       console.debug(`callback for ${topic} with data`, data);
     });
   }

@@ -1,19 +1,21 @@
 import { WebsocketRpcClient } from './websocket-rpc-client';
 
-export type PubSubCallback = (data: Object, topic: string) => void
+export type PubSubCallback = (value: { data: unknown, topic: string }) => void
+
+export interface PubSubPromiseClientConfig {
+  uri: string;
+}
 
 export class PubSubClient {
   // TODO: handle subscriptions on ALL_TOPICS key
-  callbacks: { [topic: string]: Function | undefined } = {};
-  rpcClient = new WebsocketRpcClient(`ws://${window.location.host}/api/frontend-pubsub`, {
+  callbacks: { [topic: string]: PubSubCallback | undefined } = {};
+  rpcClient = new WebsocketRpcClient(this.config.uri, {
     notify: (subscription: { topic: string }, data: Object) => {
-      this.callbacks[subscription.topic]?.(data, subscription.topic);
+      this.callbacks[subscription.topic]?.({data, topic: subscription.topic});
     },
   });
 
-  constructor(topics: string[], callback: PubSubCallback) {
-    this.subscribeMany(topics, callback).then();
-  }
+  constructor(private config: PubSubPromiseClientConfig) {}
 
   subscribe(topic: string, callback: PubSubCallback) {
     this.setCallbackForTopic(topic, callback);
@@ -38,7 +40,7 @@ export class PubSubClient {
     this.callbacks[topic] = undefined;
   }
 
-  private setCallbackForTopic(topic: string, callback: (data: Object, topic: string) => void) {
+  private setCallbackForTopic(topic: string, callback: PubSubCallback) {
     if(this.callbacks[topic] !== undefined) console.warn(`Callback for topic ${topic} overwritten!`);
     this.callbacks[topic] = callback;
   }
