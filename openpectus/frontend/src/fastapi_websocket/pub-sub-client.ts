@@ -1,6 +1,12 @@
+import { RpcSubscription } from './fastapi_websocket_rpc.typings';
 import { WebsocketRpcClient } from './websocket-rpc-client';
 
-export type PubSubCallback = (value: { data: unknown, topic: string }) => void
+export interface PubSubCallbackParameters {
+  data: unknown,
+  topic: string
+}
+
+export type PubSubCallback = (_: PubSubCallbackParameters) => void
 
 export interface PubSubPromiseClientConfig {
   uri: string;
@@ -10,7 +16,7 @@ export class PubSubClient {
   // TODO: handle subscriptions on ALL_TOPICS key
   callbacks: { [topic: string]: PubSubCallback | undefined } = {};
   rpcClient = new WebsocketRpcClient(this.config.uri, {
-    notify: (subscription: { topic: string }, data: Object) => {
+    notify: (subscription: RpcSubscription, data: unknown) => {
       this.callbacks[subscription.topic]?.({data, topic: subscription.topic});
     },
   });
