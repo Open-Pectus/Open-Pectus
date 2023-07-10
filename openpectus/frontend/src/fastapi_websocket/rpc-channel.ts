@@ -2,8 +2,6 @@ import { RpcMessage, RpcResponse } from './fastapi_websocket_rpc.typings';
 import { RpcMethods } from './rpc-methods-base';
 
 export class RpcChannel {
-  // other = new Proxy<{[P: string]: Function}>(RpcMethodsBase, new RpcCaller(this));
-
   constructor(private methods: RpcMethods, private socket: WebSocket, public id: string = crypto.randomUUID()) {
     this.socket.addEventListener('message', this.onMessage.bind(this));
   }

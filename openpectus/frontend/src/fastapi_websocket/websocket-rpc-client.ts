@@ -1,4 +1,4 @@
-import { RpcMessage, RpcResponse } from './fastapi_websocket_rpc.typings';
+import { RpcResponse } from './fastapi_websocket_rpc.typings';
 import { RpcChannel } from './rpc-channel';
 import { extendWithBaseMethods, RpcMethods } from './rpc-methods-base';
 
@@ -11,7 +11,6 @@ export class WebsocketRpcClient {
    * - passing arguments directly to ws
    * - on_connect and on_disconnect handlers
    * - keep alive
-   * - more logging
    * - retry tactic and config
    * - channel id
    */
@@ -19,13 +18,27 @@ export class WebsocketRpcClient {
 
   constructor(private uri: string, private readonly methods: RpcMethods) {
     this.methods = extendWithBaseMethods(methods);
-    this.ws.addEventListener('message', this.reader.bind(this));
   }
 
   async waitForReady() {
-    if(this.ws.readyState === WebSocket.OPEN) return Promise.resolve();
-    if(this.readyPromise !== undefined) return this.readyPromise;
-    this.readyPromise = new Promise((resolve, reject) => {
+    switch(this.ws.readyState) {
+      case WebSocket.OPEN:
+        return Promise.resolve();
+      case WebSocket.CLOSED:
+      case WebSocket.CLOSING:
+        return Promise.reject(new Error('WebsocketRpcClient WebSocket is already closed or closing!'));
+      case WebSocket.CONNECTING:
+        if(this.readyPromise === undefined) this.readyPromise = this.createReadyPromise();
+        return this.readyPromise;
+    }
+  }
+
+  call(method: string, args: Object = {}) {
+    return this.waitForReady().then(() => this.channel.call(method, args));
+  }
+
+  private createReadyPromise() {
+    return new Promise<void>((resolve, reject) => {
       this.ws.onopen = async () => {
         let receivedResponse: RpcResponse<string> | undefined;
         let attemptCount = 0;
@@ -36,28 +49,16 @@ export class WebsocketRpcClient {
           });
         }
         if(receivedResponse?.result === 'pong') {
-          console.debug('rpcClient ready!');
           this.readyPromise = undefined;
           return resolve();
         }
-        console.warn('Rpc waitForReady failed');
         this.readyPromise = undefined;
-        return reject();
+        return reject('Rpc waitForReady failed');
       };
     });
-    return this.readyPromise;
   }
 
-  async call(method: string, args: Object = {}) {
-    return this.waitForReady().then(() => this.channel.call(method, args));
-  }
-
-  private reader(message: MessageEvent) {
-    const parsedMessage = JSON.parse(message.data) as RpcMessage;
-    if(parsedMessage.request !== null) console.debug('new request from backend:', parsedMessage.request);
-  }
-
-  private async ping() {
-    return await this.channel.call<string>('_ping_');
+  private ping() {
+    return this.channel.call<string>('_ping_');
   }
 }
