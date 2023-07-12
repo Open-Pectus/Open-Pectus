@@ -16,7 +16,8 @@ def SinglePageApplication(directory: str):
     app.config['SESSION_TYPE'] = 'filesystem'
     app.config['SERVER_NAME'] = os.getenv('OPENPECTUS_DOMAIN_NAME')
     app.config['REQUIRE_AUTHENTICATON'] = application_client_id and directory_tenant_id and client_secret
-    app.config['PREFERRED_URL_SCHEME'] = 'https' if app.config['REQUIRE_AUTHENTICATON'] else 'http' # Azure authentication requires https
+    # Azure authentication requires https. Not required for local development without auth.
+    app.config['PREFERRED_URL_SCHEME'] = 'https' if app.config['REQUIRE_AUTHENTICATON'] else 'http'
     Session(app)
 
     from werkzeug.middleware.proxy_fix import ProxyFix
@@ -35,7 +36,8 @@ def SinglePageApplication(directory: str):
         '''
         def inner(*args, **kwargs):
             if app.config['REQUIRE_AUTHENTICATON'] and not auth.get_user():
-                auth_process = auth.log_in(redirect_uri=url_for('msal_token', _external=True))
+                # Pass in the decorated function's name as state so we can redirect back to the origin of the auth request.
+                auth_process = auth.log_in(redirect_uri=url_for('msal_token', _external=True), state=func.__name__)
                 return redirect(auth_process['auth_uri'])
             return func(*args, **kwargs)
         inner.__name__ = func.__name__ # https://stackoverflow.com/questions/17256602/
@@ -52,7 +54,10 @@ def SinglePageApplication(directory: str):
             #render_template('auth_error.html', result=result)
             return result
         else:
-            return redirect(url_for('index'))
+            if 'state' in request.args:
+                return redirect(url_for(request.args['state']))
+            else:
+                return redirect(url_for('index'))
 
     @app.route('/logout', methods=['GET'])
     def logout():
@@ -63,6 +68,7 @@ def SinglePageApplication(directory: str):
         return redirect(auth.log_out(url_for('index', _external=True)))
         '''
         del session['_logged_in_user']
+        return {'message': 'You have been logged out.'}
         return redirect(url_for('index'))
 
     @app.route('/id', methods=['GET'])
