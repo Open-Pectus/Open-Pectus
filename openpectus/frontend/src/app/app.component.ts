@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
+import { TestWebsocketService } from '../fastapi_websocket/test-websocket.service';
 import { AppActions } from './ngrx/app.actions';
-import { TestWebsocketService } from './shared/test-websocket.service';
 
 @Component({
   selector: 'app-root',

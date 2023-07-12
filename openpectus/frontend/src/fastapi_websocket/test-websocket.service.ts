@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { take } from 'rxjs';
-import { PubSubClient } from '../../fastapi_websocket/pub-sub-client';
-import { PubSubRxjsClient } from '../../fastapi_websocket/pub-sub-rxjs-client';
-import { WebsocketRpcClient } from '../../fastapi_websocket/websocket-rpc-client';
+import { PubSubClient } from './pub-sub-client';
+import { PubSubRxjsClient } from './pub-sub-rxjs-client';
+import { WebsocketRpcClient } from './websocket-rpc-client';
 
 @Injectable({
   providedIn: 'root',
