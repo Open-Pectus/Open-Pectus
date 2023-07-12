@@ -2,6 +2,8 @@ import { RpcMessage, RpcResponse } from './fastapi_websocket_rpc.typings';
 import { RpcMethods } from './rpc-methods-base';
 
 export class RpcChannel {
+  private readonly callTimeout = 5000;
+
   constructor(private methods: RpcMethods, private socket: WebSocket, public id: string = crypto.randomUUID()) {
     this.socket.addEventListener('message', this.onMessage.bind(this));
   }
@@ -19,7 +21,7 @@ export class RpcChannel {
       setTimeout(() => {
         this.socket.removeEventListener('message', onmessage);
         reject('timeout');
-      }, 1000);
+      }, this.callTimeout);
       this.socket.addEventListener('message', onmessage);
       this.socket.send(JSON.stringify(message));
     });
@@ -48,6 +50,7 @@ export class RpcChannel {
       case 'boolean':
         return 'bool';
       case 'bigint':
+        return 'int';
       case 'number':
         return 'float';
       case 'string':
@@ -57,7 +60,6 @@ export class RpcChannel {
       case 'symbol':
         console.error('Rpc result of incompatible type:', result);
         return 'unknown-type';
-
     }
   }
 }

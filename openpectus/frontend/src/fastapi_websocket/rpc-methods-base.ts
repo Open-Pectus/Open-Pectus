@@ -1,5 +1,5 @@
 export interface RpcMethods {
-  [P: string]: Function;
+  [methodName: string]: Function;
 }
 
 export function extendWithBaseMethods(methods: RpcMethods) {

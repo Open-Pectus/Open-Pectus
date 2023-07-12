@@ -32,13 +32,13 @@ rpc_endpoint = WebsocketRPCEndpoint(ConcatServer(), on_connect=[on_rpc_connect])
 
 
 class MethodsWithUnsubscribe(RpcEventServerMethods):
+    """ We need to add our own unsubscribe method to support this for the frontend client """
     async def unsubscribe(self, topics: TopicList = []) -> bool:
         await self.event_notifier.unsubscribe(self.channel.id, topics)
         return True
 
 
-notifier = WebSocketRpcEventNotifier()
-pubsub_endpoint = PubSubEndpoint(notifier=notifier, methods_class=MethodsWithUnsubscribe)
+pubsub_endpoint = PubSubEndpoint(methods_class=MethodsWithUnsubscribe)
 
 
 
