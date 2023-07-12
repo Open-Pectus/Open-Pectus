@@ -30,8 +30,8 @@ from openpectus.aggregator.routers import batch_job, process_unit, aggregator_we
 # Final / Literal ...
 
 default_frontend_dist_dirs = [
-Path(__file__).parent/'frontend-dist',
 Path(__file__).parent.parent/'frontend'/'dist',
+Path(__file__).parent/'frontend-dist',
 ]
 
 def get_args():
