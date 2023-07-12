@@ -17,7 +17,7 @@ from fastapi_websocket_rpc.utils import gen_uid
 logger = get_logger("Test")
 
 PORT = 7990
-ws_url = f"ws://localhost:{PORT}/pubsub"
+ws_url = f"ws://localhost:{PORT}/engine-pubsub"
 trigger_url = f"http://localhost:{PORT}/trigger"
 
 DATA = "MAGIC"
@@ -50,7 +50,7 @@ def setup_server():
     app = FastAPI()
     # PubSub websocket endpoint
     endpoint = PubSubEndpoint(methods_class=TestServerRpcMethods)
-    endpoint.register_route(app, path="/pubsub")
+    endpoint.register_route(app, path="/engine-pubsub")
     # Regular REST endpoint - that publishes to PubSub
     setup_server_rest_route(app, endpoint)
     uvicorn.run(app, port=PORT)

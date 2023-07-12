@@ -426,6 +426,25 @@
           }
         }
       }
+    },
+    "/api/trigger-pubsub": {
+      "get": {
+        "tags": [
+          "frontend_pubsub"
+        ],
+        "summary": "Trigger Pubsub",
+        "operationId": "trigger_pubsub",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
