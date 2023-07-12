@@ -5,6 +5,10 @@ flake8==6.0.0   # dev
 black==23.3.0   # dev
 build==0.10.0   # dev
 fastapi==0.99.0
+flask
+flask-session
+identity
+requests
 uvicorn[standard]==0.22.0
 httpx==0.24.1
 fastapi_websocket_rpc==0.1.24
