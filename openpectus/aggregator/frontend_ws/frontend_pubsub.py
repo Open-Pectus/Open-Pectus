@@ -13,7 +13,7 @@ from fastapi_websocket_pubsub.event_notifier import TopicList
 from fastapi_websocket_rpc.logger import logging_config, LoggingModes
 logging_config.set_mode(LoggingModes.UVICORN)
 
-router = APIRouter()
+router = APIRouter(tags=["frontend_pubsub"])
 
 
 class ConcatServer(RpcMethodsBase):

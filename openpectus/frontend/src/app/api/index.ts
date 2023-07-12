@@ -29,4 +29,5 @@ export type { ValidationError } from './models/ValidationError';
 
 export { AggregatorService } from './services/AggregatorService';
 export { BatchJobService } from './services/BatchJobService';
+export { FrontendPubsubService } from './services/FrontendPubsubService';
 export { ProcessUnitService } from './services/ProcessUnitService';
