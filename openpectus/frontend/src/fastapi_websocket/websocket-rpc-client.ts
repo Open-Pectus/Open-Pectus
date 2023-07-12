@@ -1,4 +1,3 @@
-import { UtilMethods } from '../app/shared/util-methods';
 import { RpcResponse } from './fastapi_websocket_rpc.typings';
 import { RpcChannel } from './rpc-channel';
 import { extendWithBaseMethods, RpcMethods } from './rpc-methods-base';
@@ -33,6 +32,10 @@ export class WebsocketRpcClient {
     return this.waitForReady().then(() => this.channel.call(method, args));
   }
 
+  private async delay(delayMs: number) {
+    return new Promise(resolve => setTimeout(resolve, delayMs));
+  }
+
   private createReadyPromise() {
     return new Promise<void>((resolve, reject) => {
       this.ws.onopen = async () => {
@@ -43,7 +46,7 @@ export class WebsocketRpcClient {
             console.debug('ping failed, trying again');
             attemptCount += 1;
           });
-          if(receivedResponse === undefined) await UtilMethods.delay(this.delayBetweenReadyPingsMs);
+          if(receivedResponse === undefined) await this.delay(this.delayBetweenReadyPingsMs);
         }
         if(receivedResponse?.result === 'pong') {
           return resolve();
