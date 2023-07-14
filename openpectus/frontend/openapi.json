@@ -668,6 +668,10 @@
               }
             ],
             "title": "Y Min"
+          },
+          "color": {
+            "type": "string",
+            "title": "Color"
           }
         },
         "type": "object",
@@ -675,7 +679,8 @@
           "label",
           "process_value_names",
           "y_max",
-          "y_min"
+          "y_min",
+          "color"
         ],
         "title": "PlotAxis"
       },

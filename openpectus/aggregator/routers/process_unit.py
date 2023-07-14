@@ -253,6 +253,7 @@ class PlotAxis(BaseModel):
     process_value_names: List[str]
     y_max: int | float
     y_min: int | float
+    color: str
 
 
 class SubPlot(BaseModel):

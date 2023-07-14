@@ -7,4 +7,5 @@ export type PlotAxis = {
     process_value_names: Array<string>;
     y_max: number;
     y_min: number;
+    color: string;
 };
