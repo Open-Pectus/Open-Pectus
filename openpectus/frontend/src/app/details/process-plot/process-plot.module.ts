@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
+import { PushPipe } from '@ngrx/component';
 import { EffectsModule } from '@ngrx/effects';
 import { StoreModule } from '@ngrx/store';
 import { SharedModule } from '../../shared/shared.module';
@@ -19,6 +20,7 @@ import { ProcessPlotPlotlyComponent } from './process-plot-plotly.component';
     SharedModule,
     StoreModule.forFeature(processPlotSlice),
     EffectsModule.forFeature(ProcessPlotEffects),
+    PushPipe,
   ],
   exports: [
     ProcessPlotPlotlyComponent,

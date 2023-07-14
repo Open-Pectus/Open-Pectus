@@ -79,7 +79,7 @@ export class ProcessPlotChartjsComponent implements OnInit, AfterViewInit, OnDes
   }
 
   private produceScales(plotConfiguration: PlotConfiguration) {
-    return Object.assign({}, ...plotConfiguration.sub_plots[0].axes.map((axis, axisIndex) => {
+    return Object.assign({}, ...plotConfiguration.sub_plots.flatMap((subPlot, subPlotIndex) => subPlot.axes.map((axis, axisIndex) => {
       return {
         [axis.label]: {
           type: 'linear',
@@ -87,6 +87,8 @@ export class ProcessPlotChartjsComponent implements OnInit, AfterViewInit, OnDes
           position: axisIndex === 0 ? 'left' : 'right',
           min: axis.y_min,
           max: axis.y_max,
+          stack: 'stack',
+          stackWeight: subPlot.ratio,
           title: {
             text: axis.label,
             color: axis.color,
@@ -96,25 +98,35 @@ export class ProcessPlotChartjsComponent implements OnInit, AfterViewInit, OnDes
           ticks: {color: axis.color},
         }, // as Partial<ScaleOptionsByType<ChartTypeRegistry[ChartType]['scales']>>,
       };
-    }));
+    })));
   }
 
   private updateData(processValueLog: ProcessValue[][], plotConfiguration: PlotConfiguration) {
     if(this.chart === undefined) return;
     this.chart.data = {
       labels: processValueLog.map((_, index) => index),
-      datasets: plotConfiguration.sub_plots[0].axes.flatMap(axis => axis.process_value_names.map(name => ({
-        type: 'line',
-        label: name,
-        pointStyle: false,
-        borderColor: axis.color,
-        borderWidth: 1,
-        data: processValueLog
-          .map(processValues => processValues.find(processValue => processValue.name === name)?.value)
-          .filter(UtilMethods.isNotNullOrUndefined).filter(UtilMethods.isNumber),
-        yAxisID: axis.label,
-      }))),
+      datasets: this.produceDataSets(plotConfiguration, processValueLog),
     };
     this.chart.update();
+  }
+
+  private produceDataSets(plotConfiguration: PlotConfiguration, processValueLog: ProcessValue[][]) {
+    return plotConfiguration.sub_plots.flatMap((subPlot, subPlotIndex) => {
+      return subPlot.axes.flatMap(axis => {
+        return axis.process_value_names.map(name => {
+          return {
+            type: 'line',
+            label: name,
+            pointStyle: false,
+            borderColor: axis.color,
+            borderWidth: 1,
+            data: processValueLog
+              .map(processValues => processValues.find(processValue => processValue.name === name)?.value)
+              .filter(UtilMethods.isNotNullOrUndefined).filter(UtilMethods.isNumber),
+            yAxisID: axis.label,
+          } as const;
+        });
+      });
+    });
   }
 }
