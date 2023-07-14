@@ -6,4 +6,8 @@ export class UtilMethods {
   static assertNever(x: never): never {
     throw Error(`${x} was not handled`);
   }
+
+  static async delay(delayMs: number) {
+    return new Promise(resolve => setTimeout(resolve, delayMs));
+  }
 }

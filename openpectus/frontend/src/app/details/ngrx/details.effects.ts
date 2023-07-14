@@ -29,7 +29,7 @@ export class DetailsEffects {
       this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName)),
       this.store.select(DetailsSelectors.shouldPollProcessValues),
     ]),
-    debounceTime(500),
+    debounceTime(100), // delay() in MSW doesn't work in Firefox, so to avoid freezing the application in FF, we debounce
     filter(([_, __, shouldPoll]) => shouldPoll),
     switchMap(([_, unitId, __]) => {
       if(unitId === undefined) return of(DetailsActions.processValuesFailedToLoad());

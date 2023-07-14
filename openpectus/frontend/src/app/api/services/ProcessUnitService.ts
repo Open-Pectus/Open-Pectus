@@ -11,7 +11,6 @@ import type { PlotConfiguration } from '../models/PlotConfiguration';
 import type { ProcessDiagram } from '../models/ProcessDiagram';
 import type { ProcessUnit } from '../models/ProcessUnit';
 import type { ProcessValue } from '../models/ProcessValue';
-import type { ProcessValueUpdate } from '../models/ProcessValueUpdate';
 import type { RunLog } from '../models/RunLog';
 
 import { OpenAPI } from '../core/OpenAPI';
@@ -72,31 +71,6 @@ unitId: string,
             path: {
                 'unit_id': unitId,
             },
-            errors: {
-                422: `Validation Error`,
-            },
-        });
-    }
-
-    /**
-     * Set Process Value
-     * @param unitId 
-     * @param requestBody 
-     * @returns any Successful Response
-     * @throws ApiError
-     */
-    public setProcessValue(
-unitId: string,
-requestBody: ProcessValueUpdate,
-): Observable<any> {
-        return __request(OpenAPI, this.http, {
-            method: 'POST',
-            url: '/api/process_unit/{unit_id}/process_value',
-            path: {
-                'unit_id': unitId,
-            },
-            body: requestBody,
-            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },

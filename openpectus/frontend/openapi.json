@@ -1,5 +1,5 @@
 {
-  "openapi": "3.0.2",
+  "openapi": "3.1.0",
   "info": {
     "title": "Pectus Aggregator",
     "version": "0.1.0"
@@ -16,8 +16,8 @@
           {
             "required": true,
             "schema": {
-              "title": "Unit Id",
-              "type": "string"
+              "type": "string",
+              "title": "Unit Id"
             },
             "name": "unit_id",
             "in": "path"
@@ -60,11 +60,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Get Units",
-                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/ProcessUnit"
-                  }
+                  },
+                  "type": "array",
+                  "title": "Response Get Units"
                 }
               }
             }
@@ -83,8 +83,8 @@
           {
             "required": true,
             "schema": {
-              "title": "Unit Id",
-              "type": "string"
+              "type": "string",
+              "title": "Unit Id"
             },
             "name": "unit_id",
             "in": "path"
@@ -96,62 +96,12 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Get Process Values",
-                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/ProcessValue"
-                  }
+                  },
+                  "type": "array",
+                  "title": "Response Get Process Values"
                 }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/process_unit/{unit_id}/process_value": {
-      "post": {
-        "tags": [
-          "process_unit"
-        ],
-        "summary": "Set Process Value",
-        "operationId": "set_process_value",
-        "parameters": [
-          {
-            "required": true,
-            "schema": {
-              "title": "Unit Id",
-              "type": "string"
-            },
-            "name": "unit_id",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ProcessValueUpdate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
               }
             }
           },
@@ -179,8 +129,8 @@
           {
             "required": true,
             "schema": {
-              "title": "Unit Id",
-              "type": "string"
+              "type": "string",
+              "title": "Unit Id"
             },
             "name": "unit_id",
             "in": "path"
@@ -229,8 +179,8 @@
           {
             "required": true,
             "schema": {
-              "title": "Unit Id",
-              "type": "string"
+              "type": "string",
+              "title": "Unit Id"
             },
             "name": "unit_id",
             "in": "path"
@@ -271,8 +221,8 @@
           {
             "required": true,
             "schema": {
-              "title": "Unit Id",
-              "type": "string"
+              "type": "string",
+              "title": "Unit Id"
             },
             "name": "unit_id",
             "in": "path"
@@ -284,11 +234,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Get Command Examples",
-                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/CommandExample"
-                  }
+                  },
+                  "type": "array",
+                  "title": "Response Get Command Examples"
                 }
               }
             }
@@ -317,8 +267,8 @@
           {
             "required": true,
             "schema": {
-              "title": "Unit Id",
-              "type": "string"
+              "type": "string",
+              "title": "Unit Id"
             },
             "name": "unit_id",
             "in": "path"
@@ -359,8 +309,8 @@
           {
             "required": true,
             "schema": {
-              "title": "Unit Id",
-              "type": "string"
+              "type": "string",
+              "title": "Unit Id"
             },
             "name": "unit_id",
             "in": "path"
@@ -372,8 +322,8 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Get Method",
-                  "type": "string"
+                  "type": "string",
+                  "title": "Response Get Method"
                 }
               }
             }
@@ -444,8 +394,8 @@
           {
             "required": true,
             "schema": {
-              "title": "Id",
-              "type": "integer"
+              "type": "integer",
+              "title": "Id"
             },
             "name": "id",
             "in": "path"
@@ -488,11 +438,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Get Recent Batch Jobs",
-                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/BatchJob"
-                  }
+                  },
+                  "type": "array",
+                  "title": "Response Get Recent Batch Jobs"
                 }
               }
             }
@@ -518,152 +468,171 @@
           }
         }
       }
+    },
+    "/api/trigger-pubsub": {
+      "get": {
+        "tags": [
+          "frontend_pubsub"
+        ],
+        "summary": "Trigger Pubsub",
+        "operationId": "trigger_pubsub",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
       "BatchJob": {
-        "title": "BatchJob",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "unit_name": {
+            "type": "string",
+            "title": "Unit Name"
+          },
+          "completed_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Completed Date"
+          },
+          "contributors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Contributors",
+            "default": []
+          }
+        },
+        "type": "object",
         "required": [
           "id",
           "unit_id",
           "unit_name",
           "completed_date"
         ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "title": "Id",
-            "type": "integer"
-          },
-          "unit_id": {
-            "title": "Unit Id",
-            "type": "string"
-          },
-          "unit_name": {
-            "title": "Unit Name",
-            "type": "string"
-          },
-          "completed_date": {
-            "title": "Completed Date",
-            "type": "string",
-            "format": "date-time"
-          },
-          "contributors": {
-            "title": "Contributors",
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "default": []
-          }
-        },
+        "title": "BatchJob",
         "description": "Represents a current or historical run of a process unit. "
       },
       "CommandExample": {
-        "title": "CommandExample",
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "example": {
+            "type": "string",
+            "title": "Example"
+          }
+        },
+        "type": "object",
         "required": [
           "name",
           "example"
         ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "example": {
-            "title": "Example",
-            "type": "string"
-          }
-        }
+        "title": "CommandExample"
       },
       "CommandSource": {
-        "title": "CommandSource",
+        "type": "string",
         "enum": [
           "process_value",
           "manually_entered",
           "unit_button"
         ],
-        "type": "string",
+        "title": "CommandSource",
         "description": "An enumeration."
       },
       "ExecutableCommand": {
-        "title": "ExecutableCommand",
-        "required": [
-          "command",
-          "source"
-        ],
-        "type": "object",
         "properties": {
           "command": {
-            "title": "Command",
-            "type": "string"
+            "type": "string",
+            "title": "Command"
           },
           "source": {
             "$ref": "#/components/schemas/CommandSource"
           },
           "name": {
-            "title": "Name",
-            "type": "string"
+            "type": "string",
+            "title": "Name"
           }
-        }
+        },
+        "type": "object",
+        "required": [
+          "command",
+          "source"
+        ],
+        "title": "ExecutableCommand"
       },
       "HTTPValidationError": {
-        "title": "HTTPValidationError",
-        "type": "object",
         "properties": {
           "detail": {
-            "title": "Detail",
-            "type": "array",
             "items": {
               "$ref": "#/components/schemas/ValidationError"
-            }
+            },
+            "type": "array",
+            "title": "Detail"
           }
-        }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
       },
       "InProgress": {
-        "title": "InProgress",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "in_progress"
+            ],
+            "title": "State"
+          },
+          "progress_pct": {
+            "type": "integer",
+            "title": "Progress Pct"
+          }
+        },
+        "type": "object",
         "required": [
           "state",
           "progress_pct"
         ],
-        "type": "object",
-        "properties": {
-          "state": {
-            "title": "State",
-            "enum": [
-              "in_progress"
-            ],
-            "type": "string"
-          },
-          "progress_pct": {
-            "title": "Progress Pct",
-            "type": "integer"
-          }
-        }
+        "title": "InProgress"
       },
       "NotOnline": {
-        "title": "NotOnline",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "not_online"
+            ],
+            "title": "State"
+          },
+          "last_seen_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Seen Date"
+          }
+        },
+        "type": "object",
         "required": [
           "state",
           "last_seen_date"
         ],
-        "type": "object",
-        "properties": {
-          "state": {
-            "title": "State",
-            "enum": [
-              "not_online"
-            ],
-            "type": "string"
-          },
-          "last_seen_date": {
-            "title": "Last Seen Date",
-            "type": "string",
-            "format": "date-time"
-          }
-        }
+        "title": "NotOnline"
       },
       "PlotAxis": {
         "title": "PlotAxis",
@@ -756,38 +725,29 @@
         }
       },
       "ProcessDiagram": {
-        "title": "ProcessDiagram",
+        "properties": {
+          "svg": {
+            "type": "string",
+            "title": "Svg"
+          }
+        },
+        "type": "object",
         "required": [
           "svg"
         ],
-        "type": "object",
-        "properties": {
-          "svg": {
-            "title": "Svg",
-            "type": "string"
-          }
-        }
+        "title": "ProcessDiagram"
       },
       "ProcessUnit": {
-        "title": "ProcessUnit",
-        "required": [
-          "id",
-          "name",
-          "state",
-          "current_user_role"
-        ],
-        "type": "object",
         "properties": {
           "id": {
-            "title": "Id",
-            "type": "string"
+            "type": "string",
+            "title": "Id"
           },
           "name": {
-            "title": "Name",
-            "type": "string"
+            "type": "string",
+            "title": "Name"
           },
           "state": {
-            "title": "State",
             "anyOf": [
               {
                 "$ref": "#/components/schemas/Ready"
@@ -798,37 +758,38 @@
               {
                 "$ref": "#/components/schemas/NotOnline"
               }
-            ]
+            ],
+            "title": "State"
           },
           "location": {
-            "title": "Location",
-            "type": "string"
+            "type": "string",
+            "title": "Location"
           },
           "runtime_msec": {
-            "title": "Runtime Msec",
-            "type": "integer"
+            "type": "integer",
+            "title": "Runtime Msec"
           },
           "current_user_role": {
             "$ref": "#/components/schemas/UserRole"
           }
         },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "state",
+          "current_user_role"
+        ],
+        "title": "ProcessUnit",
         "description": "Represents a process unit. "
       },
       "ProcessValue": {
-        "title": "ProcessValue",
-        "required": [
-          "name",
-          "value_type",
-          "writable"
-        ],
-        "type": "object",
         "properties": {
           "name": {
-            "title": "Name",
-            "type": "string"
+            "type": "string",
+            "title": "Name"
           },
           "value": {
-            "title": "Value",
             "anyOf": [
               {
                 "type": "string"
@@ -839,126 +800,249 @@
               {
                 "type": "integer"
               }
-            ]
+            ],
+            "title": "Value"
           },
           "value_unit": {
-            "title": "Value Unit",
-            "type": "string"
-          },
-          "valid_value_units": {
-            "title": "Valid Value Units",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": "string",
+            "title": "Value Unit"
           },
           "value_type": {
             "$ref": "#/components/schemas/ProcessValueType"
           },
-          "writable": {
-            "title": "Writable",
-            "type": "boolean"
-          },
           "commands": {
-            "title": "Commands",
-            "type": "array",
             "items": {
               "$ref": "#/components/schemas/ProcessValueCommand"
-            }
+            },
+            "type": "array",
+            "title": "Commands"
           }
         },
+        "type": "object",
+        "required": [
+          "name",
+          "value_type"
+        ],
+        "title": "ProcessValue",
         "description": "Represents a process value. "
       },
       "ProcessValueCommand": {
-        "title": "ProcessValueCommand",
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "command": {
+            "type": "string",
+            "title": "Command"
+          },
+          "disabled": {
+            "type": "boolean",
+            "title": "Disabled"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProcessValueCommandNumberValue"
+              },
+              {
+                "$ref": "#/components/schemas/ProcessValueCommandFreeTextValue"
+              },
+              {
+                "$ref": "#/components/schemas/ProcessValueCommandChoiceValue"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "type": "object",
         "required": [
           "name",
           "command"
         ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "command": {
-            "title": "Command",
-            "type": "string"
-          }
-        }
+        "title": "ProcessValueCommand"
       },
-      "ProcessValueType": {
-        "title": "ProcessValueType",
-        "enum": [
-          "string",
-          "float",
-          "int"
-        ],
-        "type": "string",
-        "description": "An enumeration."
-      },
-      "ProcessValueUpdate": {
-        "title": "ProcessValueUpdate",
-        "required": [
-          "name",
-          "value"
-        ],
-        "type": "object",
+      "ProcessValueCommandChoiceValue": {
         "properties": {
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
           "value": {
-            "title": "Value",
+            "type": "string",
+            "title": "Value"
+          },
+          "value_type": {
+            "type": "string",
+            "enum": [
+              "choice"
+            ],
+            "title": "Value Type"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "value_type",
+          "options"
+        ],
+        "title": "ProcessValueCommandChoiceValue"
+      },
+      "ProcessValueCommandFreeTextValue": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "value_type": {
+            "type": "string",
+            "enum": [
+              "string"
+            ],
+            "title": "Value Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "value_type"
+        ],
+        "title": "ProcessValueCommandFreeTextValue"
+      },
+      "ProcessValueCommandNumberValue": {
+        "properties": {
+          "value": {
             "anyOf": [
-              {
-                "type": "string"
-              },
               {
                 "type": "number"
               },
               {
                 "type": "integer"
               }
-            ]
+            ],
+            "title": "Value"
+          },
+          "value_unit": {
+            "type": "string",
+            "title": "Value Unit"
+          },
+          "valid_value_units": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Valid Value Units"
+          },
+          "value_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "int"
+                ]
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "float"
+                ]
+              }
+            ],
+            "title": "Value Type"
           }
-        }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "value_type"
+        ],
+        "title": "ProcessValueCommandNumberValue"
+      },
+      "ProcessValueType": {
+        "type": "string",
+        "enum": [
+          "string",
+          "float",
+          "int",
+          "choice"
+        ],
+        "title": "ProcessValueType",
+        "description": "An enumeration."
       },
       "Ready": {
-        "title": "Ready",
-        "required": [
-          "state"
-        ],
-        "type": "object",
         "properties": {
           "state": {
-            "title": "State",
+            "type": "string",
             "enum": [
               "ready"
             ],
-            "type": "string"
+            "title": "State"
           }
-        }
+        },
+        "type": "object",
+        "required": [
+          "state"
+        ],
+        "title": "Ready"
       },
       "RunLog": {
-        "title": "RunLog",
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/RunLogLine"
+            },
+            "type": "array",
+            "title": "Lines"
+          }
+        },
+        "type": "object",
         "required": [
           "lines"
         ],
-        "type": "object",
-        "properties": {
-          "lines": {
-            "title": "Lines",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RunLogLine"
-            }
-          }
-        }
+        "title": "RunLog"
       },
       "RunLogLine": {
-        "title": "RunLogLine",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "command": {
+            "$ref": "#/components/schemas/ExecutableCommand"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End"
+          },
+          "progress": {
+            "type": "number",
+            "title": "Progress"
+          },
+          "start_values": {
+            "items": {
+              "$ref": "#/components/schemas/ProcessValue"
+            },
+            "type": "array",
+            "title": "Start Values"
+          },
+          "end_values": {
+            "items": {
+              "$ref": "#/components/schemas/ProcessValue"
+            },
+            "type": "array",
+            "title": "End Values"
+          }
+        },
+        "type": "object",
         "required": [
           "id",
           "command",
@@ -966,44 +1050,7 @@
           "start_values",
           "end_values"
         ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "title": "Id",
-            "type": "integer"
-          },
-          "command": {
-            "$ref": "#/components/schemas/ExecutableCommand"
-          },
-          "start": {
-            "title": "Start",
-            "type": "string",
-            "format": "date-time"
-          },
-          "end": {
-            "title": "End",
-            "type": "string",
-            "format": "date-time"
-          },
-          "progress": {
-            "title": "Progress",
-            "type": "number"
-          },
-          "start_values": {
-            "title": "Start Values",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProcessValue"
-            }
-          },
-          "end_values": {
-            "title": "End Values",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProcessValue"
-            }
-          }
-        }
+        "title": "RunLogLine"
       },
       "SubPlot": {
         "title": "SubPlot",
@@ -1034,26 +1081,17 @@
         }
       },
       "UserRole": {
-        "title": "UserRole",
+        "type": "string",
         "enum": [
           "viewer",
           "admin"
         ],
-        "type": "string",
+        "title": "UserRole",
         "description": "An enumeration."
       },
       "ValidationError": {
-        "title": "ValidationError",
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "type": "object",
         "properties": {
           "loc": {
-            "title": "Location",
-            "type": "array",
             "items": {
               "anyOf": [
                 {
@@ -1063,17 +1101,26 @@
                   "type": "integer"
                 }
               ]
-            }
+            },
+            "type": "array",
+            "title": "Location"
           },
           "msg": {
-            "title": "Message",
-            "type": "string"
+            "type": "string",
+            "title": "Message"
           },
           "type": {
-            "title": "Error Type",
-            "type": "string"
+            "type": "string",
+            "title": "Error Type"
           }
-        }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
       }
     }
   }

@@ -43,6 +43,22 @@ class RegisterEngineMsg(MessageBase):
     # uod file hash, file change date
 
 
+class ReadingCommand(MessageBase):
+    name: str
+    command: str
+
+
+class ReadingInfo(MessageBase):
+    label: str
+    tag_name: str
+    valid_value_units: List[str] | None
+    commands: List[ReadingCommand]
+
+
+class UodInfoMsg(MessageBase):
+    readings: List[ReadingInfo]
+
+
 class TagsUpdatedMsg(MessageBase):
     tags: List[TagValue] = []
 
@@ -84,6 +100,7 @@ def serialize_msg_to_json(msg: MessageBase) -> str:
 def deserialize_msg(msg_cls_name, init_dict: dict) -> MessageBase:
     cls = getattr(messages_namescape, msg_cls_name)
     msg = cls(**init_dict)
+    assert isinstance(msg, MessageBase)
     return msg
 
 

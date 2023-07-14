@@ -1,8 +1,13 @@
 from __future__ import annotations
 from typing import Any, Callable, Dict, List
-
+import logging
+from openpectus.lang.exec.errors import UodValidationError
+from openpectus.lang.exec.readings import Reading, ReadingCollection
 from openpectus.lang.exec.tags import Tag, TagCollection
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
+
+
+logger = logging.getLogger(__name__)
 
 
 class UnitOperationDefinitionBase:
@@ -12,16 +17,18 @@ class UnitOperationDefinitionBase:
     It consists of two parts - the machine definition part (interpreter) and the execution part (engine).
 
     The interface specifies:
-        Process values (tags)
         Custom tags
         Custom commands
         Mapping of process value tags to physical I/O
+        Process values (which tags as displayed and possibly a command to modify them)
     """
     def __init__(self) -> None:
         self.instrument = ""
         self.hwl: HardwareLayerBase | None = None
         self.tags = TagCollection()
+        self.system_tags: TagCollection | None = None
         self.commands: Dict[str, UodCommand] = {}
+        self.readings = ReadingCollection()
         self.io_map: Dict[str, Dict] = {}
 
     def define_instrument(self, instrument: str):
@@ -47,14 +54,42 @@ class UnitOperationDefinitionBase:
             raise ValueError(f"Command name {c.name} is already defined")
         self.commands[c.name.lower()] = c
 
+    def define_reading(self, r: Reading):
+        self.readings.add(r)
+
+    def define_system_tags(self, system_tags: TagCollection):
+        self.system_tags = system_tags
+
     def define(self):
-        raise NotImplementedError()
+        pass
 
     def validate_configuration(self):
+        fatal = False
+
+        def log_fatal(msg: str):
+            nonlocal fatal
+            if not fatal:
+                logger.fatal("An error occured while validating the Unit Operation Definition. Pectus Engine cannot start.")
+            fatal = True
+            logger.fatal(msg)
+
         if self.instrument is None or self.instrument.strip() == "":
-            raise ValueError("instrument is not configured")
+            log_fatal("Instrument is not configured")
         if self.hwl is None:
-            raise ValueError("hwl is not configured")
+            log_fatal("Hardware Layer is not configured")
+
+        if self.system_tags is None:
+            log_fatal("System tags have not been set")
+        else:
+            tags = self.tags.merge_with(self.system_tags)
+            for r in self.readings:
+                try:
+                    r.match_with_tags(tags)
+                except UodValidationError as vex:
+                    logging.error(vex.args[0])
+
+        if fatal:
+            exit(1)
 
     def get_command(self, name: str) -> UodCommand | None:
         if name is None or name.strip() == "":
@@ -122,7 +157,7 @@ class UodCommand():
             raise ValueError(f"Command '{self.name}' has no execution function defined")
         else:
             return self.exec_fn(args, uod)
-        
+
     # TODO initialize(), finalize(), completed(), cancelled()
 
     def parse_args(self, args: str | None, uod: UnitOperationDefinitionBase) -> List[Any] | None:

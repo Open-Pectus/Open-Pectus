@@ -9,6 +9,8 @@ import {
   PlotConfiguration,
   ProcessUnit,
   ProcessValue,
+  ProcessValueCommandChoiceValue,
+  ProcessValueCommandFreeTextValue,
   ProcessValueType,
   Ready,
   RunLog,
@@ -88,13 +90,11 @@ export const handlers = [
           value_type: ProcessValueType.FLOAT,
           name: 'PU01 Speed',
           value: 123 + Math.random() * 2,
-          writable: false,
           value_unit: '%',
         }, {
           value_type: ProcessValueType.STRING,
           name: 'Some other Process Value',
           value: 'So very valuable',
-          writable: false,
           commands: [
             {command: 'some_command', name: 'Some Command'},
             {command: 'some_other_command', name: 'Some Other Command'},
@@ -104,32 +104,88 @@ export const handlers = [
           name: 'A value with unit',
           value: 1000,
           value_unit: 'm',
-          valid_value_units: ['m', 'cm', 'mm', 'km'],
-          writable: true,
+          commands: [
+            {
+              command: 'fdsa', name: 'fdsa', value: {
+                value: 1000,
+                value_type: ProcessValueType.INT,
+                value_unit: 'm',
+                valid_value_units: ['m', 'cm', 'mm', 'km'],
+              },
+            },
+          ],
         }, {
           value_type: ProcessValueType.STRING,
           name: 'Many Data',
           value: 'HANDLE IT',
-          writable: false,
         }, {
           value_type: ProcessValueType.FLOAT,
           name: 'FT01 Flow',
           value: 123 + Math.random() * 2,
-          writable: true,
           value_unit: 'L/h',
-          valid_value_units: ['L/h', 'm3/h', 'L/m', 'm3/m'],
+          commands: [
+            {
+              command: 'fdsafsa',
+              name: 'Set',
+              value: {
+                value: 123 + Math.random() * 2,
+                value_unit: 'L/h',
+                valid_value_units: ['L/h', 'm3/h', 'L/m', 'm3/m'],
+                value_type: ProcessValueType.FLOAT,
+              },
+            },
+          ],
         }, {
           value_type: ProcessValueType.STRING,
-          name: 'A writable text value',
+          name: 'Writable text',
           value: 'VaLuE',
-          writable: true,
+          commands: [{
+            name: 'jiojio',
+            command: 'jiojio',
+            value: {
+              value: 'Writable text',
+              value_type: ProcessValueCommandFreeTextValue.value_type.STRING,
+            },
+          }, {
+            name: 'something',
+            command: 'something',
+          }, {
+            name: 'something disabled',
+            command: 'something disabled',
+            disabled: true,
+          }, {
+            name: 'number',
+            command: 'set number',
+            value: {
+              value: 123,
+              value_unit: 'no',
+              valid_value_units: ['no'],
+              value_type: ProcessValueType.INT,
+            },
+          }, {
+            name: 'choice',
+            command: 'choice',
+            value: {
+              value_type: ProcessValueCommandChoiceValue.value_type.CHOICE,
+              value: 'first',
+              options: ['first', 'second', 'third'],
+            },
+          }],
         }, {
           value_type: ProcessValueType.FLOAT,
           name: 'TT01',
           value: 23.4 + Math.random() * 2,
-          writable: false,
           value_unit: 'degC',
-          valid_value_units: ['degC', 'degF'],
+          commands: [{
+            name: 'Set target temperature',
+            command: 'set_target_temperature',
+            value: {
+              value: 23.4 + Math.random() * 2,
+              value_unit: 'degC',
+              valid_value_units: ['degC', 'degF'],
+              value_type: ProcessValueType.FLOAT,
+            },
+          }],
         },
       ]),
     );
@@ -221,7 +277,6 @@ export const handlers = [
               name: 'Amazing float value',
               value: 1.43253342,
               value_type: ProcessValueType.FLOAT,
-              writable: false,
               value_unit: 'afv',
             }],
             end_values: [],
@@ -234,10 +289,10 @@ export const handlers = [
               source: CommandSource.MANUALLY_ENTERED,
             },
             start_values: [
-              {name: 'Amazing float value', value: 999, value_type: ProcessValueType.FLOAT, writable: false, value_unit: 'afv'},
-              {name: 'Best value', value: 19.99, value_type: ProcessValueType.FLOAT, writable: false, value_unit: 'afv'},
-              {name: 'Such prices', value: 4299, value_type: ProcessValueType.FLOAT, writable: false, value_unit: 'afv'},
-              {name: 'Very affordable', value: 0.99, value_type: ProcessValueType.FLOAT, writable: false, value_unit: 'afv'},
+              {name: 'Amazing float value', value: 999, value_type: ProcessValueType.FLOAT, value_unit: 'afv'},
+              {name: 'Best value', value: 19.99, value_type: ProcessValueType.FLOAT, value_unit: 'afv'},
+              {name: 'Such prices', value: 4299, value_type: ProcessValueType.FLOAT, value_unit: 'afv'},
+              {name: 'Very affordable', value: 0.99, value_type: ProcessValueType.FLOAT, value_unit: 'afv'},
             ],
             end_values: [],
           }, {
@@ -249,12 +304,12 @@ export const handlers = [
               source: CommandSource.MANUALLY_ENTERED,
             },
             start_values: [
-              {name: 'Waaagh?', value: 'No waagh', value_type: ProcessValueType.STRING, writable: false},
-              {name: 'Dakka?', value: 'No dakka 🙁', value_type: ProcessValueType.STRING, writable: false},
+              {name: 'Waaagh?', value: 'No waagh', value_type: ProcessValueType.STRING},
+              {name: 'Dakka?', value: 'No dakka 🙁', value_type: ProcessValueType.STRING},
             ],
             end_values: [
-              {name: 'Waaagh?', value: 'WAAAGH!', value_type: ProcessValueType.STRING, writable: false},
-              {name: 'Dakka?', value: 'DAKKA! 😀', value_type: ProcessValueType.STRING, writable: false},
+              {name: 'Waaagh?', value: 'WAAAGH!', value_type: ProcessValueType.STRING},
+              {name: 'Dakka?', value: 'DAKKA! 😀', value_type: ProcessValueType.STRING},
             ],
           },
         ],

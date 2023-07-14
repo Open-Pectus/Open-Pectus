@@ -20,8 +20,10 @@ export type { ProcessDiagram } from './models/ProcessDiagram';
 export type { ProcessUnit } from './models/ProcessUnit';
 export type { ProcessValue } from './models/ProcessValue';
 export type { ProcessValueCommand } from './models/ProcessValueCommand';
+export { ProcessValueCommandChoiceValue } from './models/ProcessValueCommandChoiceValue';
+export { ProcessValueCommandFreeTextValue } from './models/ProcessValueCommandFreeTextValue';
+export type { ProcessValueCommandNumberValue } from './models/ProcessValueCommandNumberValue';
 export { ProcessValueType } from './models/ProcessValueType';
-export type { ProcessValueUpdate } from './models/ProcessValueUpdate';
 export { Ready } from './models/Ready';
 export type { RunLog } from './models/RunLog';
 export type { RunLogLine } from './models/RunLogLine';
@@ -31,4 +33,5 @@ export type { ValidationError } from './models/ValidationError';
 
 export { AggregatorService } from './services/AggregatorService';
 export { BatchJobService } from './services/BatchJobService';
+export { FrontendPubsubService } from './services/FrontendPubsubService';
 export { ProcessUnitService } from './services/ProcessUnitService';

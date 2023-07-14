@@ -38,6 +38,21 @@ exclude = [
 
 warn_return_any = true
 warn_unused_configs = true
-
+#ignore_missing_imports = true
 
 # Per-module options:
+[[tool.mypy.overrides]]
+module = [
+    "pint",
+    "fastapi_websocket_rpc.schemas",
+    "fastapi_websocket_pubsub",
+    "fastapi_websocket_pubsub.rpc_event_methods",
+    "fastapi_websocket_rpc",
+    "pydantic",
+    "tenacity", "tenacity.stop", "tenacity.retry", 
+]
+
+ignore_missing_imports = true
+
+#[mypy-lang.exec.tags]
+#type = ignore
