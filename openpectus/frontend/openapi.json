@@ -352,8 +352,8 @@
           {
             "required": true,
             "schema": {
-              "title": "Unit Id",
-              "type": "string"
+              "type": "string",
+              "title": "Unit Id"
             },
             "name": "unit_id",
             "in": "path"
@@ -635,94 +635,94 @@
         "title": "NotOnline"
       },
       "PlotAxis": {
-        "title": "PlotAxis",
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "process_value_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Process Value Names"
+          },
+          "y_max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Y Max"
+          },
+          "y_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Y Min"
+          }
+        },
+        "type": "object",
         "required": [
           "label",
           "process_value_names",
           "y_max",
           "y_min"
         ],
-        "type": "object",
-        "properties": {
-          "label": {
-            "title": "Label",
-            "type": "string"
-          },
-          "process_value_names": {
-            "title": "Process Value Names",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "y_max": {
-            "title": "Y Max",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "number"
-              }
-            ]
-          },
-          "y_min": {
-            "title": "Y Min",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "number"
-              }
-            ]
-          }
-        }
+        "title": "PlotAxis"
       },
       "PlotColorRegion": {
-        "title": "PlotColorRegion",
+        "properties": {
+          "process_value_name": {
+            "type": "string",
+            "title": "Process Value Name"
+          },
+          "value_color_map": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Value Color Map"
+          }
+        },
+        "type": "object",
         "required": [
           "process_value_name",
           "value_color_map"
         ],
-        "type": "object",
-        "properties": {
-          "process_value_name": {
-            "title": "Process Value Name",
-            "type": "string"
-          },
-          "value_color_map": {
-            "title": "Value Color Map",
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          }
-        }
+        "title": "PlotColorRegion"
       },
       "PlotConfiguration": {
-        "title": "PlotConfiguration",
+        "properties": {
+          "color_regions": {
+            "items": {
+              "$ref": "#/components/schemas/PlotColorRegion"
+            },
+            "type": "array",
+            "title": "Color Regions"
+          },
+          "sub_plots": {
+            "items": {
+              "$ref": "#/components/schemas/SubPlot"
+            },
+            "type": "array",
+            "title": "Sub Plots"
+          }
+        },
+        "type": "object",
         "required": [
           "color_regions",
           "sub_plots"
         ],
-        "type": "object",
-        "properties": {
-          "color_regions": {
-            "title": "Color Regions",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PlotColorRegion"
-            }
-          },
-          "sub_plots": {
-            "title": "Sub Plots",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/SubPlot"
-            }
-          }
-        }
+        "title": "PlotConfiguration"
       },
       "ProcessDiagram": {
         "properties": {
@@ -1053,22 +1053,15 @@
         "title": "RunLogLine"
       },
       "SubPlot": {
-        "title": "SubPlot",
-        "required": [
-          "axes",
-          "ratio"
-        ],
-        "type": "object",
         "properties": {
           "axes": {
-            "title": "Axes",
-            "type": "array",
             "items": {
               "$ref": "#/components/schemas/PlotAxis"
-            }
+            },
+            "type": "array",
+            "title": "Axes"
           },
           "ratio": {
-            "title": "Ratio",
             "anyOf": [
               {
                 "type": "integer"
@@ -1076,9 +1069,16 @@
               {
                 "type": "number"
               }
-            ]
+            ],
+            "title": "Ratio"
           }
-        }
+        },
+        "type": "object",
+        "required": [
+          "axes",
+          "ratio"
+        ],
+        "title": "SubPlot"
       },
       "UserRole": {
         "type": "string",
