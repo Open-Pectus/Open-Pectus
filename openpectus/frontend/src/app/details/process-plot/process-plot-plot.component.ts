@@ -15,7 +15,6 @@ import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
     <app-collapsible-element [name]="'Process Plot'" [heightResizable]="true" [contentHeight]="400"
                              (collapseStateChanged)="isCollapsed = $event">
       <div content class="h-full" #plot *ngIf="!isCollapsed"></div>
-
     </app-collapsible-element>
   `,
 })

@@ -16,7 +16,8 @@ import { DetailsActions } from './ngrx/details.actions';
         <app-process-diagram></app-process-diagram>
         <!--        <app-process-plot-plotly class="2xl:col-span-2"></app-process-plot-plotly>-->
         <!--        <app-process-plot-chartjs class="2xl:col-span-2"></app-process-plot-chartjs>-->
-        <app-process-plot-plot class="2xl:col-span-2"></app-process-plot-plot>
+        <!--        <app-process-plot-plot class="2xl:col-span-2"></app-process-plot-plot>-->
+        <app-process-plot-d3 class="2xl:col-span-2"></app-process-plot-d3>
 
       </div>
     </div>
