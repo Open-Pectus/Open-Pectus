@@ -7,6 +7,7 @@ import { SharedModule } from '../../shared/shared.module';
 import { ProcessPlotEffects } from './ngrx/process-plot.effects';
 import { processPlotSlice } from './ngrx/process-plot.reducer';
 import { ProcessPlotChartjsComponent } from './process-plot-chartjs.component';
+import { ProcessPlotPlotComponent } from './process-plot-plot.component';
 import { ProcessPlotPlotlyComponent } from './process-plot-plotly.component';
 
 
@@ -14,6 +15,7 @@ import { ProcessPlotPlotlyComponent } from './process-plot-plotly.component';
   declarations: [
     ProcessPlotPlotlyComponent,
     ProcessPlotChartjsComponent,
+    ProcessPlotPlotComponent,
   ],
   imports: [
     CommonModule,
@@ -25,6 +27,7 @@ import { ProcessPlotPlotlyComponent } from './process-plot-plotly.component';
   exports: [
     ProcessPlotPlotlyComponent,
     ProcessPlotChartjsComponent,
+    ProcessPlotPlotComponent,
   ],
 })
 export class ProcessPlotModule {}

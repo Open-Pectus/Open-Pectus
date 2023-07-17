@@ -25,6 +25,7 @@
     "@ngrx/router-store": "^16.0.0",
     "@ngrx/store": "^16.0.0",
     "@ngrx/store-devtools": "^16.0.0",
+    "@observablehq/plot": "^0.6.9",
     "@vscode/codicons": "^0.0.33",
     "chart.js": "^4.3.0",
     "date-fns": "^2.29.3",

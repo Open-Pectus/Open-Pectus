@@ -339,24 +339,31 @@ export const handlers = [
             ratio: 1.5,
             axes: [
               {
-                label: 'some Label',
+                label: 'Red',
                 process_value_names: ['PU01 Speed', 'FT01 Flow'],
                 y_max: 126,
                 y_min: 123,
                 color: '#ff3333',
               }, {
-                label: 'Label label',
+                label: 'Blue',
                 process_value_names: ['TT01'],
                 y_max: 26,
                 y_min: 20,
                 color: '#1144ff',
+              },
+              {
+                label: 'Teal label',
+                process_value_names: ['TT01'],
+                y_max: 32,
+                y_min: 22,
+                color: '#43c5b7',
               },
             ],
           },
           {
             ratio: 1,
             axes: [{
-              label: 'some other label',
+              label: 'Green',
               process_value_names: ['TT01'],
               y_max: 26,
               y_min: 20,
