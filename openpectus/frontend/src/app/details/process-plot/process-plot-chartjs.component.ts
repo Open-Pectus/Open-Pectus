@@ -1,9 +1,21 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { concatLatestFrom } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { CategoryScale, Chart, LinearScale, LineController, LineElement, PointElement, TitleOptions, Tooltip } from 'chart.js';
+import {
+  CategoryScale,
+  Chart,
+  ChartType,
+  ChartTypeRegistry,
+  LinearScale,
+  LineController,
+  LineElement,
+  PointElement,
+  ScaleOptionsByType,
+  TitleOptions,
+  Tooltip,
+} from 'chart.js';
 import { combineLatest, filter, Subject, take, takeUntil } from 'rxjs';
-import { PlotConfiguration, ProcessValue } from '../../api';
+import { PlotAxis, PlotConfiguration, ProcessValue, SubPlot } from '../../api';
 import { UtilMethods } from '../../shared/util-methods';
 import { DetailsSelectors } from '../ngrx/details.selectors';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
@@ -79,26 +91,49 @@ export class ProcessPlotChartjsComponent implements OnInit, AfterViewInit, OnDes
   }
 
   private produceScales(plotConfiguration: PlotConfiguration) {
-    return Object.assign({}, ...plotConfiguration.sub_plots.flatMap((subPlot, subPlotIndex) => subPlot.axes.map((axis, axisIndex) => {
-      return {
-        [axis.label]: {
-          type: 'linear',
-          axis: 'y',
-          position: axisIndex === 0 ? 'left' : 'right',
-          min: axis.y_min,
-          max: axis.y_max,
-          stack: 'stack',
-          stackWeight: subPlot.ratio,
-          title: {
-            text: axis.label,
-            color: axis.color,
-            display: true,
-          } as Partial<TitleOptions>,
-          border: {color: axis.color},
-          ticks: {color: axis.color},
-        }, // as Partial<ScaleOptionsByType<ChartTypeRegistry[ChartType]['scales']>>,
-      };
-    })));
+    const maxYAxes = Math.max(...plotConfiguration.sub_plots.map(subPlot => subPlot.axes.length));
+
+    const scales = Object.assign({}, ...plotConfiguration.sub_plots.flatMap(subPlot => {
+      const realAxes = subPlot.axes.map((axis, axisIndex) => {
+        return this.produceScale(axis, axisIndex, subPlot);
+      });
+
+      // const paddingAxes: Partial<ScaleOptionsByType<ChartTypeRegistry[ChartType]['scales']>>[] = [];
+      for(let i = subPlot.axes.length; i < maxYAxes; i++) {
+        realAxes.push(this.produceScale(subPlot.axes[0], i, subPlot, true));
+      }
+      // const paddingAxes = new Array(maxYAxes - subPlot.axes.length).fill(undefined).map((_, index) => {
+      //   return this.produceScale(subPlot.axes[0], index, subPlot);
+      // });
+      return realAxes; // .concat(paddingAxes);
+    }));
+    return scales;
+  }
+
+  private produceScale(axis: PlotAxis, axisIndex: number,
+                       subPlot: SubPlot, isPadding: boolean = false): Partial<ScaleOptionsByType<ChartTypeRegistry[ChartType]['scales']>> {
+    const color = isPadding ? '#555555' : axis.color;
+    const label = isPadding ? `${axis.label}_padding_${axisIndex}` : `${axis.label}`;
+    return {
+      [label]: {
+        type: 'linear',
+        axis: 'y',
+        position: axisIndex === 0 ? 'left' : 'right',
+        grid: {display: axisIndex === 0},
+        min: axis.y_min,
+        max: axis.y_max,
+        stack: 'stack',
+        stackWeight: subPlot.ratio,
+        parsing: false,
+        title: {
+          text: label,
+          color: color,
+          display: true,
+        } as Partial<TitleOptions>,
+        border: {color: color},
+        ticks: {color: color},
+      }, // as Partial<ScaleOptionsByType<ChartTypeRegistry[ChartType]['scales']>>,
+    };
   }
 
   private updateData(processValueLog: ProcessValue[][], plotConfiguration: PlotConfiguration) {

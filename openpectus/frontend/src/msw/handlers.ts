@@ -336,7 +336,7 @@ export const handlers = [
         color_regions: [],
         sub_plots: [
           {
-            ratio: 1,
+            ratio: 1.5,
             axes: [
               {
                 label: 'some Label',
