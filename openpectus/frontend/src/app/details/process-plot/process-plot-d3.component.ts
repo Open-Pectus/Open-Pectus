@@ -60,8 +60,11 @@ export class ProcessPlotD3Component implements OnInit, OnDestroy, AfterViewInit 
   }
 
 
-  produceData(plotConfiguration: PlotConfiguration,
-              processValuesLog: ProcessValue[][]) {
+  private produceData(plotConfiguration: PlotConfiguration,
+                      processValuesLog: ProcessValue[][]) {
+    if(this.svg === undefined) return;
+    const svg = this.svg;
+
     return plotConfiguration.sub_plots.flatMap((subPlot, subPlotIndex) => {
       if(subPlotIndex !== 0) return; // TODO: multiple subplots
       const values = subPlot.axes.flatMap((axis, axisIndex) => {
@@ -72,18 +75,14 @@ export class ProcessPlotD3Component implements OnInit, OnDestroy, AfterViewInit 
             .map<[number, number]>((processValue, valueIndex) => [valueIndex, processValue]);
         });
 
-        this.svg?.select<SVGGElement>('.graph')
-          .selectAll('path')
-          .data(values)
-          .join('path')
+        svg.select<SVGGElement>(`.subplot-${subPlotIndex} .line-${axisIndex}`)
+          .selectAll('path').data(values).join('path')
           .attr('d', d => line()
             .x(d => this.xScale(d[0]))
             .y(d => this.yScales[axisIndex](d[1]))
             (d),
           )
-          .attr('stroke', '#333')
-          .attr('stroke-width', 1)
-          .attr('fill', 'none');
+          .attr('stroke-width', 1).attr('fill', 'none');
 
         return values;
       });
@@ -91,22 +90,32 @@ export class ProcessPlotD3Component implements OnInit, OnDestroy, AfterViewInit 
       // TODO: multiple subplots
       const maxXValue = Math.max(...values[0].map(([valueIndex, _]) => valueIndex), 0);
       this.xScale.domain([0, maxXValue]);
-      this.svg?.select<SVGGElement>('.x-axis').call(axisBottom(this.xScale));
+      svg.select<SVGGElement>('.x-axis').call(axisBottom(this.xScale));
     });
   }
 
   private firstTimeSetup(plotConfiguration: PlotConfiguration) {
+    if(this.svg === undefined) return;
+    const svg = this.svg;
+
     // TODO: multiple subplots
     this.yScales = plotConfiguration.sub_plots[0].axes.map(axis => scaleLinear()
       .domain([axis.y_min, axis.y_max]),
     );
 
-    this.svg?.append('g').attr('class', 'x-axis');
+    svg.append('g').attr('class', 'x-axis');
     plotConfiguration.sub_plots[0].axes.forEach((axis, axisIndex) => {
-      this.svg?.append('g').attr('class', `y-axis y-axis-${axisIndex}`);
+      svg.append('g').attr('class', `y-axis y-axis-${axisIndex}`)
+        .style('color', axis.color);
     });
 
-    this.svg?.append('g').attr('class', 'graph');
+    plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
+      const subPlotG = svg.append('g').attr('class', `subplot subplot-${subPlotIndex}`);
+      subPlot.axes.forEach((axis, axisIndex) => {
+        subPlotG.append('g').attr('class', `line line-${axisIndex}`).attr('stroke', axis.color);
+      });
+    });
+
 
     this.onResize(plotConfiguration);
   }
