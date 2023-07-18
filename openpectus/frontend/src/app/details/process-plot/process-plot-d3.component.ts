@@ -58,6 +58,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       // when collapsing, contentRect is 0 width and height, and errors will occur if we try placing elements.
       if(entries.some(entry => entry.contentRect.height === 0)) return;
       this.updateElementPlacements(plotConfiguration);
+      this.processValuesLog.pipe(take(1)).subscribe(processValueLog => this.plotData(plotConfiguration, processValueLog));
     });
     resizeObserver.observe(element);
   }
