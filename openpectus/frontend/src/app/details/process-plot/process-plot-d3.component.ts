@@ -113,6 +113,7 @@ export class ProcessPlotD3Component implements OnInit, OnDestroy, AfterViewInit 
       subPlot.axes.forEach((axis, axisIndex) => {
         subPlotG.append('g').attr('class', `y-axis y-axis-${axisIndex}`).style('color', axis.color);
         subPlotG.append('g').attr('class', `line line-${axisIndex}`).attr('stroke', axis.color);
+        subPlotG.append('rect').attr('class', 'subplot-border');
       });
     });
 
@@ -156,6 +157,8 @@ export class ProcessPlotD3Component implements OnInit, OnDestroy, AfterViewInit 
       const subPlotEndOffset = (followingSubPlotsRatio / totalRatio) * svgPlotsHeight;
       const subPlotTop = this.margin.top + subPlotStartOffset;
       const subPlotBottom = svgHeight - this.margin.bottom - xAxisHeight - subPlotEndOffset;
+      const subPlotLeft = this.margin.left + widestLeftSideYAxisWidth;
+      const subPlotRight = svgWidth - this.margin.right - maxRightSideYAxisWidth;
       this.yScales[subPlotIndex].forEach(yScale => yScale.range([subPlotTop, subPlotBottom]));
 
       // Draw y axes
@@ -166,14 +169,22 @@ export class ProcessPlotD3Component implements OnInit, OnDestroy, AfterViewInit 
                                            .map(yAxis => yAxis.getBoundingClientRect().width)
                                            .reduce((current, previous) => current + previous + this.axisGap, 0) ?? 0;
 
-        const xTransform = axisIndex === 0
-                           ? this.margin.left + widestLeftSideYAxisWidth // left side
-                           : svgWidth - this.margin.right - maxRightSideYAxisWidth + otherRightSideYAxesWidth; // right side
+        const xTransform = axisIndex === 0 ? subPlotLeft : subPlotRight + otherRightSideYAxesWidth; // right side
 
         subPlotG.selectChild<SVGGElement>(`.y-axis-${axisIndex}`)
           .call(axisIndex === 0 ? axisLeft(yScale) : axisRight(yScale))
           .attr('transform', `translate(${[xTransform, 0]})`);
       });
+
+      // Draw a rectangle around subplot
+      subPlotG.selectChild<SVGGElement>('.subplot-border')
+        .attr('stroke-width', 1)
+        .attr('stroke', 'black')
+        .attr('fill', 'none')
+        .attr('x', subPlotLeft)
+        .attr('y', subPlotTop)
+        .attr('height', subPlotBottom - subPlotTop)
+        .attr('width', subPlotRight - subPlotLeft);
     });
 
     // Scale x-axis
