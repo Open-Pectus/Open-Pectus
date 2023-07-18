@@ -29,8 +29,9 @@ export class ProcessPlotD3Component implements OnInit, OnDestroy, AfterViewInit 
   private componentDestroyed = new Subject<void>();
 
   // Configurable values
-  private margin = {left: 5, top: 10, right: 5, bottom: 5};
-  private axisGap = 10;
+  private readonly subPlotGap = 20; // also adds to top margin
+  private readonly margin = {left: 5, top: 10 - this.subPlotGap, right: 5, bottom: 5};
+  private readonly axisGap = 10;
 
   constructor(private store: Store) {}
 
@@ -155,7 +156,7 @@ export class ProcessPlotD3Component implements OnInit, OnDestroy, AfterViewInit 
       );
       const subPlotStartOffset = (previousSubPlotsRatio / totalRatio) * svgPlotsHeight;
       const subPlotEndOffset = (followingSubPlotsRatio / totalRatio) * svgPlotsHeight;
-      const subPlotTop = this.margin.top + subPlotStartOffset;
+      const subPlotTop = this.margin.top + subPlotStartOffset + this.subPlotGap;
       const subPlotBottom = svgHeight - this.margin.bottom - xAxisHeight - subPlotEndOffset;
       const subPlotLeft = this.margin.left + widestLeftSideYAxisWidth;
       const subPlotRight = svgWidth - this.margin.right - maxRightSideYAxisWidth;
