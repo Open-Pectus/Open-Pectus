@@ -1,26 +1,22 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, OnDestroy, ViewChild } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { axisBottom, axisLeft, axisRight, line, ScaleLinear, scaleLinear, select, Selection, sum } from 'd3';
 import { filter, Subject, take, takeUntil } from 'rxjs';
 import { PlotConfiguration, ProcessValue } from '../../api';
 import { UtilMethods } from '../../shared/util-methods';
 import { DetailsSelectors } from '../ngrx/details.selectors';
-import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
 
 @Component({
   selector: 'app-process-plot-d3',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-collapsible-element [name]="'Process Plot'" [heightResizable]="true" [contentHeight]="400"
-                             (collapseStateChanged)="isCollapsed = $event">
-      <svg content class="h-full w-full" #plot *ngIf="!isCollapsed"></svg>
-    </app-collapsible-element>
+    <svg class="h-full w-full" #plot></svg>
   `,
 })
-export class ProcessPlotD3Component implements OnInit, OnDestroy, AfterViewInit {
+export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   @ViewChild('plot', {static: false}) plotElement?: ElementRef<SVGSVGElement>;
-  protected isCollapsed = false;
+  @Input() isCollapsed = false;
   private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(filter(UtilMethods.isNotNullOrUndefined));
   private processValuesLog = this.store.select(DetailsSelectors.processValuesLog);
   private xScale = scaleLinear();
@@ -34,10 +30,6 @@ export class ProcessPlotD3Component implements OnInit, OnDestroy, AfterViewInit 
   private readonly axisGap = 10;
 
   constructor(private store: Store) {}
-
-  ngOnInit() {
-    this.store.dispatch(ProcessPlotActions.processPlotComponentInitialized());
-  }
 
   ngOnDestroy() {
     this.componentDestroyed.next();
@@ -62,7 +54,9 @@ export class ProcessPlotD3Component implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private setupOnResize(plotConfiguration: PlotConfiguration, element: Element) {
-    const resizeObserver = new ResizeObserver(() => {
+    const resizeObserver = new ResizeObserver((entries) => {
+      // when collapsing, contentRect is 0 width and height, and errors will occur if we try placing elements.
+      if(entries.some(entry => entry.contentRect.height === 0)) return;
       this.updateElementPlacements(plotConfiguration);
     });
     resizeObserver.observe(element);
@@ -184,8 +178,9 @@ export class ProcessPlotD3Component implements OnInit, OnDestroy, AfterViewInit 
         .attr('fill', 'none')
         .attr('x', subPlotLeft)
         .attr('y', subPlotTop)
-        .attr('height', subPlotBottom - subPlotTop)
-        .attr('width', subPlotRight - subPlotLeft);
+        // Math.abs() avoids errors with negative values while container is collapsing
+        .attr('height', Math.abs(subPlotBottom - subPlotTop))
+        .attr('width', Math.abs(subPlotRight - subPlotLeft));
     });
 
     // Scale x-axis
