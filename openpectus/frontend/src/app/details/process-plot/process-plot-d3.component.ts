@@ -26,7 +26,7 @@ export class ProcessPlotD3Component implements OnInit, OnDestroy, AfterViewInit 
   private plots = combineLatest([this.plotConfiguration, this.processValuesLog]);
   private xScale = scaleLinear();
   private yScales: ScaleLinear<number, number>[] = [];
-  private insideMargin?: Selection<SVGGElement, unknown, null, any>;
+  private svg?: Selection<SVGSVGElement, unknown, null, any>;
   private componentDestroyed = new Subject<void>();
 
   constructor(private store: Store) {}
@@ -42,23 +42,29 @@ export class ProcessPlotD3Component implements OnInit, OnDestroy, AfterViewInit 
   ngAfterViewInit() {
     this.plots.pipe(take(1)).subscribe(([plotConfiguration, processValuesLog]) => {
       if(this.plotElement === undefined) return;
-      const svg = select<SVGSVGElement, unknown>(this.plotElement?.nativeElement);
-      this.firstTimeSetup(svg, plotConfiguration, processValuesLog);
+      this.svg = select<SVGSVGElement, unknown>(this.plotElement?.nativeElement);
+
+      const resizeObserver = new ResizeObserver(() => {
+        this.onResize(plotConfiguration);
+      });
+      resizeObserver.observe(this.plotElement?.nativeElement);
+
+      this.firstTimeSetup(plotConfiguration);
 
       this.processValuesLog.pipe(takeUntil(this.componentDestroyed)).subscribe((processValuesLog) => {
         this.xScale.domain([0, processValuesLog.length]);
 
-        this.produceData(svg, plotConfiguration, processValuesLog);
+        this.produceData(plotConfiguration, processValuesLog);
       });
     });
   }
 
 
-  produceData(svg: Selection<SVGSVGElement, unknown, null, any>,
-              plotConfiguration: PlotConfiguration,
+  produceData(plotConfiguration: PlotConfiguration,
               processValuesLog: ProcessValue[][]) {
     return plotConfiguration.sub_plots.flatMap((subPlot, subPlotIndex) => {
-      return subPlot.axes.flatMap((axis, axisIndex) => {
+      if(subPlotIndex !== 0) return; // TODO: multiple subplots
+      const values = subPlot.axes.flatMap((axis, axisIndex) => {
         const values = axis.process_value_names.map(name => {
           return processValuesLog
             .map(processValues => processValues.find(processValue => processValue.name === name)?.value)
@@ -66,52 +72,65 @@ export class ProcessPlotD3Component implements OnInit, OnDestroy, AfterViewInit 
             .map<[number, number]>((processValue, valueIndex) => [valueIndex, processValue]);
         });
 
-        this.insideMargin?.selectAll('path')
+        this.svg?.select<SVGGElement>('.graph')
+          .selectAll('path')
           .data(values)
-          .attr('d', d => {
-            return line()
-              .x(d => this.xScale(d[0]))
-              .y(d => this.yScales[axisIndex](d[1]))
-              (d);
-          })
+          .join('path')
+          .attr('d', d => line()
+            .x(d => this.xScale(d[0]))
+            .y(d => this.yScales[axisIndex](d[1]))
+            (d),
+          )
           .attr('stroke', '#333')
           .attr('stroke-width', 1)
           .attr('fill', 'none');
+
+        return values;
       });
+
+      // TODO: multiple subplots
+      const maxXValue = Math.max(...values[0].map(([valueIndex, _]) => valueIndex));
+      this.xScale.domain([0, maxXValue]);
+      this.svg?.select<SVGGElement>('.x-axis').call(axisBottom(this.xScale));
     });
   }
 
-  private firstTimeSetup(svg: Selection<SVGSVGElement, unknown, null, any>,
-                         plotConfiguration: PlotConfiguration,
-                         processValuesLog: ProcessValue[][]) {
-    const height = svg.node()?.width.baseVal.value ?? 0;
-    const width = svg.node()?.height.baseVal.value ?? 0;
-    const margin = {left: 10, top: 10, right: 10, bottom: 10};
-    const padding = 10;
-
-    this.insideMargin = svg.append('g')
-      .attr('transform', 'translate(' + [margin.left, margin.top] + ')');
-
-    // Scales
+  private firstTimeSetup(plotConfiguration: PlotConfiguration) {
+    // TODO: multiple subplots
     this.yScales = plotConfiguration.sub_plots[0].axes.map(axis => scaleLinear()
-      .domain([axis.y_min, axis.y_max])
-      .range([0, height]),
+      .domain([axis.y_min, axis.y_max]),
     );
-    this.xScale.range([0, width]);
 
-    // Axes
-    this.insideMargin.append('g')
-      .attr('transform', `translate(${[0, height]})`)
-      .call(axisBottom(this.xScale));
-
+    this.svg?.append('g').attr('class', 'x-axis');
     plotConfiguration.sub_plots[0].axes.forEach((axis, axisIndex) => {
-      const yScale = this.yScales[axisIndex];
-      const x = axisIndex === 0 ? 0 : width - margin.right;
-      this.insideMargin?.append('g')
-        .attr('transform', `translate(${[x, padding]})`)
-        .call(axisIndex === 0 ? axisLeft(yScale) : axisRight(yScale));
+      this.svg?.append('g').attr('class', `y-axis-${axisIndex}`);
     });
 
+    this.svg?.append('g').attr('class', 'graph');
 
+    this.onResize(plotConfiguration);
+  }
+
+  private onResize(plotConfiguration: PlotConfiguration) {
+    const height = this.svg?.node()?.height.baseVal.value ?? 0;
+    const width = this.svg?.node()?.width.baseVal.value ?? 0;
+    const margin = {left: 0, top: 10, right: 0, bottom: 0};
+    const axisSpace = 35;
+
+    this.yScales.forEach(yScale => yScale.range([margin.top, height - margin.bottom - axisSpace]));
+    this.xScale.range([margin.left + axisSpace, width - margin.right - axisSpace]);
+
+    this.svg?.select<SVGGElement>('.x-axis')
+      .attr('transform', `translate(${[0, height - margin.bottom - axisSpace]})`)
+      .call(axisBottom(this.xScale));
+
+    // TODO: multiple subplots
+    plotConfiguration.sub_plots[0].axes.forEach((axis, axisIndex) => {
+      const yScale = this.yScales[axisIndex];
+      const xTransform = axisIndex === 0 ? margin.left + axisSpace : width - margin.right - axisSpace;
+      this.svg?.select<SVGGElement>(`.y-axis-${axisIndex}`)
+        .attr('transform', `translate(${[xTransform, 0]})`)
+        .call(axisIndex === 0 ? axisLeft(yScale) : axisRight(yScale));
+    });
   }
 }
