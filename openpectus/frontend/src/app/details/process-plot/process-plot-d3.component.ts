@@ -130,7 +130,16 @@ export class ProcessPlotD3Component implements OnInit, OnDestroy, AfterViewInit 
                                        .map(yAxis => yAxis.getBoundingClientRect().width)
                                        .reduce((current, previous) => current + previous + this.axisGap, 0) - this.axisGap;
 
-    const rightSideYAxesWidths = plotConfiguration.sub_plots.map((subPlot, subPlotIndex) => {
+    const rightSideYAxesWidths = plotConfiguration.sub_plots.map((_, subPlotIndex) => {
+      const subPlotG = svg.selectChild(`.subplot-${subPlotIndex}`);
+      return subPlotG.selectChildren<SVGGElement, unknown>('.y-axis').nodes()
+               .filter((_, index) => index > 0)
+               .map(yAxis => yAxis.getBoundingClientRect().width)
+               .reduce((current, previous) => current + previous + this.axisGap, 0) - this.axisGap;
+    });
+    const maxRightSideYAxisWidth = Math.max(...rightSideYAxesWidths, 0);
+
+    plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
       const subPlotG = svg.selectChild(`.subplot-${subPlotIndex}`);
 
       // Y axes heights
@@ -145,42 +154,30 @@ export class ProcessPlotD3Component implements OnInit, OnDestroy, AfterViewInit 
       );
       const subPlotStartOffset = (previousSubPlotsRatio / totalRatio) * svgPlotsHeight;
       const subPlotEndOffset = (followingSubPlotsRatio / totalRatio) * svgPlotsHeight;
-      this.yScales[subPlotIndex].forEach(yScale =>
-        yScale.range([this.margin.top + subPlotStartOffset, svgHeight - this.margin.bottom - xAxisHeight - subPlotEndOffset]),
-      );
-
-      // Y axes widths
-      const rightSideYAxesWidth = subPlotG.selectChildren<SVGGElement, unknown>('.y-axis').nodes()
-                                    .filter((_, index) => index > 0)
-                                    .map(yAxis => yAxis.getBoundingClientRect().width)
-                                    .reduce((current, previous) => current + previous + this.axisGap, 0) - this.axisGap;
+      const subPlotTop = this.margin.top + subPlotStartOffset;
+      const subPlotBottom = svgHeight - this.margin.bottom - xAxisHeight - subPlotEndOffset;
+      this.yScales[subPlotIndex].forEach(yScale => yScale.range([subPlotTop, subPlotBottom]));
 
       // Draw y axes
       subPlot.axes.forEach((axis, axisIndex) => {
         const yScale = this.yScales[subPlotIndex][axisIndex];
         const otherRightSideYAxesWidth = subPlotG.selectChildren<SVGGElement, unknown>('.y-axis').nodes()
-                                           .filter((_, otherAxisIndex) => otherAxisIndex > axisIndex)
+                                           .filter((_, otherAxisIndex) => otherAxisIndex !== 0 && otherAxisIndex < axisIndex)
                                            .map(yAxis => yAxis.getBoundingClientRect().width)
                                            .reduce((current, previous) => current + previous + this.axisGap, 0) ?? 0;
 
+        const xTransform = axisIndex === 0
+                           ? this.margin.left + widestLeftSideYAxisWidth // left side
+                           : svgWidth - this.margin.right - maxRightSideYAxisWidth + otherRightSideYAxesWidth; // right side
+
         subPlotG.selectChild<SVGGElement>(`.y-axis-${axisIndex}`)
           .call(axisIndex === 0 ? axisLeft(yScale) : axisRight(yScale))
-          .attr('transform', (_, __, selection) => {
-            const thisAxisWidth = selection[0].getBoundingClientRect().width;
-            const xTransform = axisIndex === 0
-                               ? this.margin.left + widestLeftSideYAxisWidth // left side
-                               : svgWidth - this.margin.right - thisAxisWidth - otherRightSideYAxesWidth; // right side
-            return `translate(${[xTransform, 0]})`;
-          });
+          .attr('transform', `translate(${[xTransform, 0]})`);
       });
-
-      return rightSideYAxesWidth;
     });
 
     // Scale x-axis
-    // const maxLeftYAxisWidth = Math.max(...yAxesWidths.map(([left, _]) => left), 0);
-    const maxRightYAxisWidth = Math.max(...rightSideYAxesWidths, 0);
-    this.xScale.range([this.margin.left + widestLeftSideYAxisWidth, svgWidth - this.margin.right - maxRightYAxisWidth]);
+    this.xScale.range([this.margin.left + widestLeftSideYAxisWidth, svgWidth - this.margin.right - maxRightSideYAxisWidth]);
 
     // Draw x-axis
     svg.selectChild<SVGGElement>('.x-axis')

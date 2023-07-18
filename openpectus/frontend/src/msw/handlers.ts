@@ -368,6 +368,12 @@ export const handlers = [
               y_max: 26,
               y_min: 20,
               color: '#33ff33',
+            }, {
+              label: 'orange',
+              process_value_names: ['TT01'],
+              y_max: 29,
+              y_min: 19,
+              color: '#ff8000',
             }],
           },
         ],
