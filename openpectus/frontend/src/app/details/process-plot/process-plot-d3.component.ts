@@ -89,7 +89,7 @@ export class ProcessPlotD3Component implements OnInit, OnDestroy, AfterViewInit 
       });
 
       // TODO: multiple subplots
-      const maxXValue = Math.max(...values[0].map(([valueIndex, _]) => valueIndex));
+      const maxXValue = Math.max(...values[0].map(([valueIndex, _]) => valueIndex), 0);
       this.xScale.domain([0, maxXValue]);
       this.svg?.select<SVGGElement>('.x-axis').call(axisBottom(this.xScale));
     });
@@ -103,7 +103,7 @@ export class ProcessPlotD3Component implements OnInit, OnDestroy, AfterViewInit 
 
     this.svg?.append('g').attr('class', 'x-axis');
     plotConfiguration.sub_plots[0].axes.forEach((axis, axisIndex) => {
-      this.svg?.append('g').attr('class', `y-axis-${axisIndex}`);
+      this.svg?.append('g').attr('class', `y-axis y-axis-${axisIndex}`);
     });
 
     this.svg?.append('g').attr('class', 'graph');
@@ -112,24 +112,45 @@ export class ProcessPlotD3Component implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private onResize(plotConfiguration: PlotConfiguration) {
-    const height = this.svg?.node()?.height.baseVal.value ?? 0;
-    const width = this.svg?.node()?.width.baseVal.value ?? 0;
-    const margin = {left: 0, top: 10, right: 0, bottom: 0};
-    const axisSpace = 35;
+    if(this.svg === undefined) return;
+    const svgHeight = this.svg.node()?.height.baseVal.value ?? 0;
+    const svgWidth = this.svg.node()?.width.baseVal.value ?? 0;
+    const margin = {left: 5, top: 10, right: 5, bottom: 5};
+    const axisGap = 10;
 
-    this.yScales.forEach(yScale => yScale.range([margin.top, height - margin.bottom - axisSpace]));
-    this.xScale.range([margin.left + axisSpace, width - margin.right - axisSpace]);
+    const xAxisHeight = this.svg.selectChild<SVGGElement>('.x-axis').node()?.getBoundingClientRect().height ?? 0;
+    const leftSideYAxisWidth = this.svg.selectChildren<SVGGElement, unknown>('.y-axis').nodes()[0].getBoundingClientRect().width;
+    const rightSideYAxisWidth = this.svg?.selectChildren<SVGGElement, unknown>('.y-axis').nodes()
+                                  .filter((yAxis, index) => index > 0)
+                                  .map(yAxis => yAxis.getBoundingClientRect().width)
+                                  .reduce((current, previous) => current + previous + axisGap, 0) - axisGap ?? 0;
 
-    this.svg?.select<SVGGElement>('.x-axis')
-      .attr('transform', `translate(${[0, height - margin.bottom - axisSpace]})`)
+    this.yScales.forEach(yScale => yScale.range([margin.top, svgHeight - margin.bottom - xAxisHeight]));
+    this.xScale.range([margin.left + leftSideYAxisWidth, svgWidth - margin.right - rightSideYAxisWidth]);
+
+    this.svg.selectChild<SVGGElement>('.x-axis')
+      .attr('transform', (_, __, selection) => {
+        const thisAxisHeight = selection[0].getBoundingClientRect().height;
+        return `translate(${[0, svgHeight - margin.bottom - thisAxisHeight]})`;
+      })
       .call(axisBottom(this.xScale));
 
     // TODO: multiple subplots
     plotConfiguration.sub_plots[0].axes.forEach((axis, axisIndex) => {
       const yScale = this.yScales[axisIndex];
-      const xTransform = axisIndex === 0 ? margin.left + axisSpace : width - margin.right - axisSpace;
-      this.svg?.select<SVGGElement>(`.y-axis-${axisIndex}`)
-        .attr('transform', `translate(${[xTransform, 0]})`)
+      const otherRightSideYAxisWidths = this.svg?.selectChildren<SVGGElement, unknown>('.y-axis').nodes()
+                                          .filter((_, otherAxisIndex) => otherAxisIndex > axisIndex)
+                                          .map(yAxis => yAxis.getBoundingClientRect().width)
+                                          .reduce((current, previous) => current + previous + axisGap, 0) ?? 0;
+
+      this.svg?.selectChild<SVGGElement>(`.y-axis-${axisIndex}`)
+        .attr('transform', (_, __, selection) => {
+          const thisAxisWidth = selection[0].getBoundingClientRect().width;
+          const xTransform = axisIndex === 0
+                             ? margin.left + thisAxisWidth // left side
+                             : svgWidth - margin.right - thisAxisWidth - otherRightSideYAxisWidths; // right side
+          return `translate(${[xTransform, 0]})`;
+        })
         .call(axisIndex === 0 ? axisLeft(yScale) : axisRight(yScale));
     });
   }
