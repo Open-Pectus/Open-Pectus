@@ -12,11 +12,12 @@ interface TopBottom {
 }
 
 export class ProcessPlotD3Placement {
+  readonly axisLabelHeight = 12;
   // Configurable values
   private readonly subPlotGap = 20; // also adds to top margin
   private readonly margin = {left: 5, top: 10 - this.subPlotGap, right: 5, bottom: 5};
-  private readonly axisGap = 10;
-  private readonly axisLabelHeight = 11;
+  private readonly axisGap = 14;
+  private readonly labelMargin = 8;
 
   updateElementPlacements(plotConfiguration: PlotConfiguration, svg: Selection<SVGSVGElement, unknown, null, any> | undefined,
                           xScale: ScaleLinear<number, number>, yScales: ScaleLinear<number, number>[][]) {
@@ -39,28 +40,44 @@ export class ProcessPlotD3Placement {
                      yScales: ScaleLinear<number, number>[][], leftRight: LeftRight, topBottom: TopBottom) {
     yScales[subPlotIndex].forEach(yScale => yScale.range([topBottom.top, topBottom.bottom]));
     subPlot.axes.forEach((axis, axisIndex) => {
-      const yScale = yScales[subPlotIndex][axisIndex];
-      const otherRightSideYAxesWidth = subPlotG.selectChildren<SVGGElement, unknown>('.y-axis').nodes()
-                                         .filter((_, otherAxisIndex) => otherAxisIndex !== 0 && otherAxisIndex < axisIndex)
-                                         .map(yAxis => yAxis.getBoundingClientRect().width)
-                                         .reduce((current, previous) => current + previous + this.axisGap, 0) ?? 0;
-
-      const isLeftAxis = axisIndex === 0;
-      const axisXTransform = isLeftAxis ? leftRight.left : leftRight.right + otherRightSideYAxesWidth; // right side
-
-      const axisG = subPlotG.selectChild<SVGGElement>(`.y-axis-${axisIndex}`)
-        .call(isLeftAxis ? axisLeft(yScale) : axisRight(yScale))
-        .attr('transform', `translate(${[axisXTransform, 0]})`);
-
-      const axisWidth = axisG.node()?.getBoundingClientRect().width ?? 0;
-      const axisHeight = topBottom.bottom - topBottom.top;
-      const labelWidth = axisG.selectChild<SVGGElement>('text').node()?.getBoundingClientRect().width ?? 0;
-      const labelXTransform = isLeftAxis ? -axisWidth : axisWidth;
-      const labelYTransform = topBottom.top + axisHeight / 2 - labelWidth / 2;
-      const labelRotation = isLeftAxis ? -90 : 90;
-      axisG.selectChild('text').text(axis.label)
-        .attr('transform', `translate(${[labelXTransform, labelYTransform]})` + `rotate(${labelRotation})`);
+      const axisXTransform = this.placeYAxis(yScales, subPlotIndex, axisIndex, subPlotG, leftRight);
+      this.placeAxisLabel(axisIndex, subPlotG, topBottom, axisXTransform);
     });
+  }
+
+  private placeYAxis(yScales: ScaleLinear<number, number>[][], subPlotIndex: number, axisIndex: number,
+                     subPlotG: Selection<SVGGElement, unknown, null, any>, leftRight: LeftRight) {
+    const yScale = yScales[subPlotIndex][axisIndex];
+    const otherRightSideYAxesWidth = subPlotG.selectChildren<SVGGElement, unknown>('.y-axis').nodes()
+                                       .filter((_, otherAxisIndex) => otherAxisIndex !== 0 && otherAxisIndex < axisIndex)
+                                       .map(this.mapYAxisWidth.bind(this))
+                                       .reduce((current, previous) => current + previous, 0) ?? 0;
+
+    const isLeftAxis = axisIndex === 0;
+    const axisXTransform = isLeftAxis ? leftRight.left : leftRight.right + otherRightSideYAxesWidth; // right side
+    subPlotG.selectChild<SVGGElement>(`.y-axis-${axisIndex}`)
+      .call(isLeftAxis ? axisLeft(yScale) : axisRight(yScale))
+      .attr('transform', `translate(${[axisXTransform, 0]})`);
+    // noinspection JSSuspiciousNameCombination
+    return axisXTransform;
+  }
+
+  private mapYAxisWidth(yAxis: SVGGElement) {
+    return yAxis.getBoundingClientRect().width + this.axisGap + this.axisLabelHeight + this.labelMargin;
+  }
+
+  private placeAxisLabel(axisIndex: number, subPlotG: Selection<SVGGElement, unknown, null, any>, topBottom: TopBottom,
+                         axisXTransform: number) {
+    const isLeftAxis = axisIndex === 0;
+    const axisWidth = subPlotG.selectChild<SVGGElement>(`.y-axis-${axisIndex}`).node()?.getBoundingClientRect().width ?? 0;
+    const axisHeight = topBottom.bottom - topBottom.top;
+    const labelWidth = subPlotG.selectChild<SVGGElement>(`.axis-label-${axisIndex}`).node()?.getBoundingClientRect().height ?? 0;
+    console.log({labelWidth});
+    const labelRotation = isLeftAxis ? -90 : 90;
+    const labelXTransform = axisXTransform + (isLeftAxis ? -axisWidth - this.labelMargin : axisWidth + this.labelMargin);
+    const labelYTransform = topBottom.top + (axisHeight / 2) + (isLeftAxis ? (labelWidth / 2) : -(labelWidth / 2));
+    subPlotG.selectChild(`.axis-label-${axisIndex}`)
+      .attr('transform', `translate(${[labelXTransform, labelYTransform]}) rotate(${labelRotation})`);
   }
 
   private placeXAxis(svg: Selection<SVGSVGElement, unknown, null, any>, svgHeight: number, xScale: ScaleLinear<number, number>,
@@ -89,10 +106,10 @@ export class ProcessPlotD3Placement {
 
   private calculatePlotLeftRight(svg: Selection<SVGSVGElement, unknown, null, any>, plotConfiguration: PlotConfiguration, svgWidth: number) {
     const widestLeftSideYAxisWidth = this.calculateWidestLeftSideYAxisWidth(svg);
-    const widestRightSideYAxisWidth = this.calculateWidestRightSideYAxisWidth(plotConfiguration, svg);
+    const widestRightSideYAxesWidth = this.calculateWidestRightSideYAxesWidth(plotConfiguration, svg);
     return {
       left: this.margin.left + widestLeftSideYAxisWidth,
-      right: svgWidth - this.margin.right - widestRightSideYAxisWidth,
+      right: svgWidth - this.margin.right - widestRightSideYAxesWidth,
     };
   }
 
@@ -117,17 +134,17 @@ export class ProcessPlotD3Placement {
 
   private calculateWidestLeftSideYAxisWidth(svg: Selection<SVGSVGElement, unknown, null, any>) {
     return svg.select<SVGGElement>('.y-axis-0').nodes()
-             .map(yAxis => yAxis.getBoundingClientRect().width)
-             .reduce((current, previous) => current + previous + this.axisGap + this.axisLabelHeight, 0) - this.axisGap;
+             .map(this.mapYAxisWidth.bind(this))
+             .reduce((current, previous) => previous + current, 0) - this.axisGap;
   }
 
-  private calculateWidestRightSideYAxisWidth(plotConfiguration: PlotConfiguration, svg: Selection<SVGSVGElement, unknown, null, any>) {
+  private calculateWidestRightSideYAxesWidth(plotConfiguration: PlotConfiguration, svg: Selection<SVGSVGElement, unknown, null, any>) {
     const rightSideYAxesWidths = plotConfiguration.sub_plots.map((_, subPlotIndex) => {
-      const subPlotG = svg.selectChild(`.subplot-${subPlotIndex}`);
+      const subPlotG = svg.selectChild<SVGGElement>(`.subplot-${subPlotIndex}`);
       return subPlotG.selectChildren<SVGGElement, unknown>('.y-axis').nodes()
                .filter((_, index) => index > 0)
-               .map(yAxis => yAxis.getBoundingClientRect().width)
-               .reduce((current, previous) => current + previous + this.axisGap + this.axisLabelHeight, 0) - this.axisGap;
+               .map(this.mapYAxisWidth.bind(this))
+               .reduce((current, previous) => previous + current, 0) - this.axisGap;
     });
     return Math.max(...rightSideYAxesWidths, 0);
   }
