@@ -2,7 +2,7 @@ import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, O
 import { Store } from '@ngrx/store';
 import { axisBottom, line, ScaleLinear, scaleLinear, select, Selection } from 'd3';
 import { filter, Subject, take, takeUntil } from 'rxjs';
-import { PlotConfiguration, ProcessValue } from '../../api';
+import { PlotAxis, PlotConfiguration, ProcessValue } from '../../api';
 import { UtilMethods } from '../../shared/util-methods';
 import { DetailsSelectors } from '../ngrx/details.selectors';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
@@ -37,16 +37,8 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       if(this.plotElement === undefined) return;
       this.svg = select<SVGSVGElement, unknown>(this.plotElement.nativeElement);
       this.setupOnResize(plotConfiguration, this.plotElement.nativeElement);
-      this.firstTimeSetup(plotConfiguration);
-      this.setupPlotDataOnDataChange(plotConfiguration);
-    });
-  }
-
-  private setupPlotDataOnDataChange(plotConfiguration: PlotConfiguration) {
-    this.processValuesLog.pipe(
-      takeUntil(this.componentDestroyed),
-    ).subscribe((processValuesLog) => {
-      this.plotData(plotConfiguration, processValuesLog);
+      this.oneTimeSetup(plotConfiguration);
+      this.setupOnDataChange(plotConfiguration);
     });
   }
 
@@ -60,18 +52,21 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     resizeObserver.observe(element);
   }
 
-  private firstTimeSetup(plotConfiguration: PlotConfiguration) {
+  private oneTimeSetup(plotConfiguration: PlotConfiguration) {
     if(this.svg === undefined) return;
-    const svg = this.svg;
+    this.yScales = this.createYScales(plotConfiguration);
+    this.insertSvgElements(this.svg, plotConfiguration);
+    this.placement.updateElementPlacements(plotConfiguration, this.svg, this.xScale, this.yScales);
+  }
 
-    this.yScales = plotConfiguration.sub_plots.map(subPlot => {
-      return subPlot.axes.map(axis => {
-        return scaleLinear().domain([axis.y_min, axis.y_max]);
-      });
-    });
+  private createYScales(plotConfiguration: PlotConfiguration) {
+    return plotConfiguration.sub_plots.map(subPlot => subPlot.axes.map(axis => {
+      return scaleLinear().domain([axis.y_min, axis.y_max]);
+    }));
+  }
 
+  private insertSvgElements(svg: Selection<SVGSVGElement, unknown, null, any>, plotConfiguration: PlotConfiguration) {
     svg.append('g').attr('class', 'x-axis');
-
     plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
       const subPlotG = svg.append('g').attr('class', `subplot subplot-${subPlotIndex}`);
       subPlot.axes.forEach((axis, axisIndex) => {
@@ -80,40 +75,50 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
         subPlotG.append('rect').attr('class', 'subplot-border');
       });
     });
+  }
 
-    this.placement.updateElementPlacements(plotConfiguration, this.svg, this.xScale, this.yScales);
+  private setupOnDataChange(plotConfiguration: PlotConfiguration) {
+    this.processValuesLog.pipe(takeUntil(this.componentDestroyed)).subscribe(processValuesLog => {
+      this.plotData(plotConfiguration, processValuesLog);
+    });
   }
 
   private plotData(plotConfiguration: PlotConfiguration,
                    processValuesLog: ProcessValue[][]) {
-    if(this.svg === undefined) return;
-    const svg = this.svg;
+    if(this.svg === undefined) throw Error('no Svg selection when plotting data!');
+    this.updateXScaleDomain(processValuesLog, this.svg);
+    this.plotLines(plotConfiguration, processValuesLog, this.svg);
+  }
 
+  private updateXScaleDomain(processValuesLog: ProcessValue[][], svg: Selection<SVGSVGElement, unknown, null, any>) {
     const maxXValue = processValuesLog.length - 1; // TODO: when x is time instead of index, change this to match.
     this.xScale.domain([0, maxXValue]);
     svg.select<SVGGElement>('.x-axis').call(axisBottom(this.xScale));
+  }
 
+  private plotLines(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValue[][],
+                    svg: Selection<SVGSVGElement, unknown, null, any>) {
     plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
       subPlot.axes.forEach((axis, axisIndex) => {
-        const valuesPerProcessValue = axis.process_value_names.map(name => {
-          return this.getValuesForSingleProcessValue(processValuesLog, name);
-        });
-
         svg.select<SVGGElement>(`.subplot-${subPlotIndex} .line-${axisIndex}`)
-          .selectAll('path').data(valuesPerProcessValue).join('path')
+          .selectAll('path')
+          .data(this.formatDataForAxis(processValuesLog, axis))
+          .join('path')
           .attr('d', line()
             .x(d => this.xScale(d[0]))
             .y(d => this.yScales[subPlotIndex][axisIndex](d[1])),
           )
-          .attr('stroke-width', 1).attr('fill', 'none');
+          .attr('stroke-width', 1)
+          .attr('fill', 'none');
       });
     });
   }
 
-  private getValuesForSingleProcessValue(processValuesLog: ProcessValue[][], name: string) {
-    return processValuesLog
+  private formatDataForAxis(processValuesLog: ProcessValue[][], axis: PlotAxis) {
+    return axis.process_value_names.map(name => processValuesLog
       .map(processValues => processValues.find(processValue => processValue.name === name)?.value)
       .filter(UtilMethods.isNotNullOrUndefined).filter(UtilMethods.isNumber)
-      .map<[number, number]>((processValue, valueIndex) => [valueIndex, processValue]);
+      .map<[number, number]>((processValue, valueIndex) => [valueIndex, processValue]),
+    );
   }
 }

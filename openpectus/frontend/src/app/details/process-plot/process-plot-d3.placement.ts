@@ -27,8 +27,6 @@ export class ProcessPlotD3Placement {
 
     plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
       const subPlotG = svg.selectChild<SVGGElement>(`.subplot-${subPlotIndex}`);
-
-      // Y axes heights
       const subPlotTopBottom = this.calculateSubPlotTopBottom(plotConfiguration, subPlotIndex, svgHeight, xAxisHeight);
       this.placeYAxes(subPlot, subPlotG, subPlotIndex, yScales, subPlotLeftRight, subPlotTopBottom);
       this.placeSubPlotBorder(subPlotG, subPlotLeftRight, subPlotTopBottom);
@@ -39,8 +37,6 @@ export class ProcessPlotD3Placement {
   private placeYAxes(subPlot: SubPlot, subPlotG: Selection<SVGGElement, unknown, null, any>, subPlotIndex: number,
                      yScales: ScaleLinear<number, number>[][], leftRight: LeftRight, topBottom: TopBottom) {
     yScales[subPlotIndex].forEach(yScale => yScale.range([topBottom.top, topBottom.bottom]));
-
-    // Draw y axes
     subPlot.axes.forEach((axis, axisIndex) => {
       const yScale = yScales[subPlotIndex][axisIndex];
       const otherRightSideYAxesWidth = subPlotG.selectChildren<SVGGElement, unknown>('.y-axis').nodes()
@@ -58,10 +54,7 @@ export class ProcessPlotD3Placement {
 
   private placeXAxis(svg: Selection<SVGSVGElement, unknown, null, any>, svgHeight: number, xScale: ScaleLinear<number, number>,
                      leftRight: LeftRight) {
-    // Scale x-axis
     xScale.range([leftRight.left, leftRight.right]);
-
-    // Draw x-axis
     svg.selectChild<SVGGElement>('.x-axis')
       .call(axisBottom(xScale))
       .attr('transform', (_, __, selection) => {
