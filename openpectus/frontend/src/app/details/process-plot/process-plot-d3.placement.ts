@@ -16,6 +16,7 @@ export class ProcessPlotD3Placement {
   private readonly subPlotGap = 20; // also adds to top margin
   private readonly margin = {left: 5, top: 10 - this.subPlotGap, right: 5, bottom: 5};
   private readonly axisGap = 10;
+  private readonly axisLabelHeight = 11;
 
   updateElementPlacements(plotConfiguration: PlotConfiguration, svg: Selection<SVGSVGElement, unknown, null, any> | undefined,
                           xScale: ScaleLinear<number, number>, yScales: ScaleLinear<number, number>[][]) {
@@ -44,11 +45,21 @@ export class ProcessPlotD3Placement {
                                          .map(yAxis => yAxis.getBoundingClientRect().width)
                                          .reduce((current, previous) => current + previous + this.axisGap, 0) ?? 0;
 
-      const xTransform = axisIndex === 0 ? leftRight.left : leftRight.right + otherRightSideYAxesWidth; // right side
+      const isLeftAxis = axisIndex === 0;
+      const axisXTransform = isLeftAxis ? leftRight.left : leftRight.right + otherRightSideYAxesWidth; // right side
 
-      subPlotG.selectChild<SVGGElement>(`.y-axis-${axisIndex}`)
-        .call(axisIndex === 0 ? axisLeft(yScale) : axisRight(yScale))
-        .attr('transform', `translate(${[xTransform, 0]})`);
+      const axisG = subPlotG.selectChild<SVGGElement>(`.y-axis-${axisIndex}`)
+        .call(isLeftAxis ? axisLeft(yScale) : axisRight(yScale))
+        .attr('transform', `translate(${[axisXTransform, 0]})`);
+
+      const axisWidth = axisG.node()?.getBoundingClientRect().width ?? 0;
+      const axisHeight = topBottom.bottom - topBottom.top;
+      const labelWidth = axisG.selectChild<SVGGElement>('text').node()?.getBoundingClientRect().width ?? 0;
+      const labelXTransform = isLeftAxis ? -axisWidth : axisWidth;
+      const labelYTransform = topBottom.top + axisHeight / 2 - labelWidth / 2;
+      const labelRotation = isLeftAxis ? -90 : 90;
+      axisG.selectChild('text').text(axis.label)
+        .attr('transform', `translate(${[labelXTransform, labelYTransform]})` + `rotate(${labelRotation})`);
     });
   }
 
@@ -107,7 +118,7 @@ export class ProcessPlotD3Placement {
   private calculateWidestLeftSideYAxisWidth(svg: Selection<SVGSVGElement, unknown, null, any>) {
     return svg.select<SVGGElement>('.y-axis-0').nodes()
              .map(yAxis => yAxis.getBoundingClientRect().width)
-             .reduce((current, previous) => current + previous + this.axisGap, 0) - this.axisGap;
+             .reduce((current, previous) => current + previous + this.axisGap + this.axisLabelHeight, 0) - this.axisGap;
   }
 
   private calculateWidestRightSideYAxisWidth(plotConfiguration: PlotConfiguration, svg: Selection<SVGSVGElement, unknown, null, any>) {
@@ -116,7 +127,7 @@ export class ProcessPlotD3Placement {
       return subPlotG.selectChildren<SVGGElement, unknown>('.y-axis').nodes()
                .filter((_, index) => index > 0)
                .map(yAxis => yAxis.getBoundingClientRect().width)
-               .reduce((current, previous) => current + previous + this.axisGap, 0) - this.axisGap;
+               .reduce((current, previous) => current + previous + this.axisGap + this.axisLabelHeight, 0) - this.axisGap;
     });
     return Math.max(...rightSideYAxesWidths, 0);
   }
