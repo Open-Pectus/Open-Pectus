@@ -71,6 +71,8 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
       const subPlotG = root.append('g').attr('class', `subplot subplot-${subPlotIndex}`);
       subPlot.axes.forEach((axis, axisIndex) => {
+        subPlotG.append('g').attr('class', `x-grid-lines`).style('color', '#cccccc');
+        subPlotG.append('g').attr('class', `y-grid-lines`).style('color', '#cccccc');
         subPlotG.append('g').attr('class', `y-axis y-axis-${axisIndex}`).style('color', axis.color);
         subPlotG.append('text').attr('class', `axis-label axis-label-${axisIndex}`).attr('fill', axis.color)
           .style('font-size', this.placement.axisLabelHeight).text(axis.label);
@@ -89,14 +91,18 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private plotData(plotConfiguration: PlotConfiguration,
                    processValuesLog: ProcessValueLog) {
     if(this.svg === undefined) throw Error('no Svg selection when plotting data!');
-    this.updateXScaleDomain(processValuesLog, this.svg);
+    this.updateXScaleDomain(plotConfiguration, processValuesLog, this.svg);
     this.plotLines(plotConfiguration, processValuesLog, this.svg);
   }
 
-  private updateXScaleDomain(processValuesLog: ProcessValueLog, svg: Selection<SVGSVGElement, unknown, null, any>) {
+  private updateXScaleDomain(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValueLog,
+                             svg: Selection<SVGSVGElement, unknown, null, any>) {
     const maxXValue = (Object.values(processValuesLog)[0]?.length ?? 1) - 1; // TODO: when x is time instead of index, change this to match.
     this.xScale.domain([0, maxXValue]);
     svg.select<SVGGElement>('.x-axis').call(axisBottom(this.xScale));
+    plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
+      svg.select<SVGGElement>(`.subplot-${subPlotIndex} .x-grid-lines`).call(this.placement.xGridLineAxisGenerators[subPlotIndex]);
+    });
   }
 
   private plotLines(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValueLog,
