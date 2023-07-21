@@ -19,7 +19,7 @@ export class ProcessPlotD3Placement {
   private readonly margin = {left: 5, top: 10 - this.subPlotGap, right: 5, bottom: 5};
   private readonly axisGap = 14;
   private readonly labelMargin = 8;
-  private readonly yScaleTicks = 9;
+  private readonly pixelsPerTick = 42;
 
   updateElementPlacements(plotConfiguration: PlotConfiguration, svg: Selection<SVGSVGElement, unknown, null, any> | undefined,
                           xScale: ScaleLinear<number, number>, yScales: ScaleLinear<number, number>[][]) {
@@ -68,8 +68,10 @@ export class ProcessPlotD3Placement {
 
   private getTickValues(yScale: ScaleLinear<number, number>) {
     const [domainMin, domainMax] = yScale.domain();
-    const domainSlice = (domainMax - domainMin) / (this.yScaleTicks - 1);
-    return new Array(this.yScaleTicks).fill(undefined).map((_, index) => domainMin + index * domainSlice);
+    const [rangeMin, rangeMax] = yScale.range();
+    const ticksAmount = Math.floor((rangeMax - rangeMin) / this.pixelsPerTick);
+    const domainSlice = (domainMax - domainMin) / (ticksAmount - 1);
+    return new Array(ticksAmount).fill(undefined).map((_, index) => domainMin + index * domainSlice);
   }
 
   private mapYAxisWidth(yAxis: SVGGElement) {
