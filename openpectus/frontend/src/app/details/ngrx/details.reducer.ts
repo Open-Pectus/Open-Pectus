@@ -5,7 +5,6 @@ import { DetailsActions } from './details.actions';
 
 export interface DetailsState {
   processValues: ProcessValue[];
-  processValuesLog: ProcessValue[][];
   processDiagram?: ProcessDiagram;
   shouldPollProcessValues: boolean;
   commandExamples: CommandExample[];
@@ -13,7 +12,6 @@ export interface DetailsState {
 
 const initialState: DetailsState = {
   processValues: [],
-  processValuesLog: [],
   shouldPollProcessValues: false,
   commandExamples: [],
 };
@@ -27,7 +25,6 @@ const reducer = createReducer(initialState,
   })),
   on(DetailsActions.processValuesFetched, (state, {processValues}) => produce(state, draft => {
     draft.processValues = processValues;
-    draft.processValuesLog.push(processValues);
   })),
   on(DetailsActions.processDiagramFetched, (state, {processDiagram}) => produce(state, draft => {
     draft.processDiagram = processDiagram;
