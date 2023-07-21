@@ -22,18 +22,19 @@ export class ProcessPlotD3Placement {
   updateElementPlacements(plotConfiguration: PlotConfiguration, svg: Selection<SVGSVGElement, unknown, null, any> | undefined,
                           xScale: ScaleLinear<number, number>, yScales: ScaleLinear<number, number>[][]) {
     if(svg === undefined) throw Error('no SVG element during placement!');
-    const svgHeight = svg.node()?.height.baseVal.value ?? 0;
-    const svgWidth = svg.node()?.width.baseVal.value ?? 0;
-    const xAxisHeight = svg.select<SVGGElement>('.x-axis').node()?.getBoundingClientRect().height ?? 0;
-    const subPlotLeftRight = this.calculatePlotLeftRight(svg, plotConfiguration, svgWidth);
+    const rootHeight = (svg.node()?.height.baseVal.value ?? 0) - this.margin.top - this.margin.bottom;
+    const rootWidth = (svg.node()?.width.baseVal.value ?? 0) - this.margin.left - this.margin.right;
+    const root = svg.selectChild<SVGGElement>('.root').attr('transform', `translate(${[this.margin.left, this.margin.top]})`);
+    const xAxisHeight = root.select<SVGGElement>('.x-axis').node()?.getBoundingClientRect().height ?? 0;
+    const subPlotLeftRight = this.calculatePlotLeftRight(root, plotConfiguration, rootWidth);
 
     plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
-      const subPlotG = svg.selectChild<SVGGElement>(`.subplot-${subPlotIndex}`);
-      const subPlotTopBottom = this.calculateSubPlotTopBottom(plotConfiguration, subPlotIndex, svgHeight, xAxisHeight);
+      const subPlotG = root.selectChild<SVGGElement>(`.subplot-${subPlotIndex}`);
+      const subPlotTopBottom = this.calculateSubPlotTopBottom(plotConfiguration, subPlotIndex, rootHeight, xAxisHeight);
       this.placeYAxes(subPlot, subPlotG, subPlotIndex, yScales, subPlotLeftRight, subPlotTopBottom);
       this.placeSubPlotBorder(subPlotG, subPlotLeftRight, subPlotTopBottom);
     });
-    this.placeXAxis(svg, svgHeight, xScale, subPlotLeftRight);
+    this.placeXAxis(root, rootHeight, xScale, subPlotLeftRight);
   }
 
   private placeYAxes(subPlot: SubPlot, subPlotG: Selection<SVGGElement, unknown, null, any>, subPlotIndex: number,
@@ -80,14 +81,14 @@ export class ProcessPlotD3Placement {
       .attr('transform', `translate(${[labelXTransform, labelYTransform]}) rotate(${labelRotation})`);
   }
 
-  private placeXAxis(svg: Selection<SVGSVGElement, unknown, null, any>, svgHeight: number, xScale: ScaleLinear<number, number>,
+  private placeXAxis(root: Selection<SVGGElement, unknown, null, any>, rootHeight: number, xScale: ScaleLinear<number, number>,
                      leftRight: LeftRight) {
     xScale.range([leftRight.left, leftRight.right]);
-    svg.selectChild<SVGGElement>('.x-axis')
+    root.selectChild<SVGGElement>('.x-axis')
       .call(axisBottom(xScale))
       .attr('transform', (_, __, selection) => {
         const thisAxisHeight = selection[0].getBoundingClientRect().height;
-        return `translate(${[0, svgHeight - this.margin.bottom - thisAxisHeight]})`;
+        return `translate(${[0, rootHeight - thisAxisHeight]})`;
       });
   }
 
@@ -104,16 +105,16 @@ export class ProcessPlotD3Placement {
       .attr('width', Math.abs(leftRight.right - leftRight.left));
   }
 
-  private calculatePlotLeftRight(svg: Selection<SVGSVGElement, unknown, null, any>, plotConfiguration: PlotConfiguration, svgWidth: number) {
-    const widestLeftSideYAxisWidth = this.calculateWidestLeftSideYAxisWidth(svg);
-    const widestRightSideYAxesWidth = this.calculateWidestRightSideYAxesWidth(plotConfiguration, svg);
+  private calculatePlotLeftRight(root: Selection<SVGGElement, unknown, null, any>, plotConfiguration: PlotConfiguration, rootWidth: number) {
+    const widestLeftSideYAxisWidth = this.calculateWidestLeftSideYAxisWidth(root);
+    const widestRightSideYAxesWidth = this.calculateWidestRightSideYAxesWidth(plotConfiguration, root);
     return {
-      left: this.margin.left + widestLeftSideYAxisWidth,
-      right: svgWidth - this.margin.right - widestRightSideYAxesWidth,
+      left: widestLeftSideYAxisWidth,
+      right: rootWidth - widestRightSideYAxesWidth,
     };
   }
 
-  private calculateSubPlotTopBottom(plotConfiguration: PlotConfiguration, subPlotIndex: number, svgHeight: number,
+  private calculateSubPlotTopBottom(plotConfiguration: PlotConfiguration, subPlotIndex: number, rootHeight: number,
                                     xAxisHeight: number): TopBottom {
     const totalRatio = sum(plotConfiguration.sub_plots.map(subPlot => subPlot.ratio));
     const previousSubPlotsRatio = sum(plotConfiguration.sub_plots
@@ -124,23 +125,23 @@ export class ProcessPlotD3Placement {
       .filter((_, index) => index > subPlotIndex)
       .map(subPlot => subPlot.ratio),
     );
-    const svgPlotsHeight = svgHeight - this.margin.top - this.margin.bottom - xAxisHeight;
-    const subPlotStartOffset = (previousSubPlotsRatio / totalRatio) * svgPlotsHeight;
-    const subPlotEndOffset = (followingSubPlotsRatio / totalRatio) * svgPlotsHeight;
-    const subPlotTop = this.margin.top + subPlotStartOffset + this.subPlotGap;
-    const subPlotBottom = svgHeight - this.margin.bottom - xAxisHeight - subPlotEndOffset;
+    const allPlotsHeight = rootHeight - xAxisHeight;
+    const subPlotStartOffset = (previousSubPlotsRatio / totalRatio) * allPlotsHeight;
+    const subPlotEndOffset = (followingSubPlotsRatio / totalRatio) * allPlotsHeight;
+    const subPlotTop = subPlotStartOffset + this.subPlotGap;
+    const subPlotBottom = rootHeight - xAxisHeight - subPlotEndOffset;
     return {top: subPlotTop, bottom: subPlotBottom};
   }
 
-  private calculateWidestLeftSideYAxisWidth(svg: Selection<SVGSVGElement, unknown, null, any>) {
-    return svg.select<SVGGElement>('.y-axis-0').nodes()
+  private calculateWidestLeftSideYAxisWidth(root: Selection<SVGGElement, unknown, null, any>) {
+    return root.select<SVGGElement>('.y-axis-0').nodes()
              .map(this.mapYAxisWidth.bind(this))
              .reduce((current, previous) => previous + current, 0) - this.axisGap;
   }
 
-  private calculateWidestRightSideYAxesWidth(plotConfiguration: PlotConfiguration, svg: Selection<SVGSVGElement, unknown, null, any>) {
+  private calculateWidestRightSideYAxesWidth(plotConfiguration: PlotConfiguration, root: Selection<SVGGElement, unknown, null, any>) {
     const rightSideYAxesWidths = plotConfiguration.sub_plots.map((_, subPlotIndex) => {
-      const subPlotG = svg.selectChild<SVGGElement>(`.subplot-${subPlotIndex}`);
+      const subPlotG = root.selectChild<SVGGElement>(`.subplot-${subPlotIndex}`);
       return subPlotG.selectChildren<SVGGElement, unknown>('.y-axis').nodes()
                .filter((_, index) => index > 0)
                .map(this.mapYAxisWidth.bind(this))

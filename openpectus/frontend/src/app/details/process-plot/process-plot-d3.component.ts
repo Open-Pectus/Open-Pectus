@@ -66,9 +66,10 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   }
 
   private insertSvgElements(svg: Selection<SVGSVGElement, unknown, null, any>, plotConfiguration: PlotConfiguration) {
-    svg.append('g').attr('class', 'x-axis');
+    const root = svg.append('g').attr('class', 'root');
+    root.append('g').attr('class', 'x-axis');
     plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
-      const subPlotG = svg.append('g').attr('class', `subplot subplot-${subPlotIndex}`);
+      const subPlotG = root.append('g').attr('class', `subplot subplot-${subPlotIndex}`);
       subPlot.axes.forEach((axis, axisIndex) => {
         subPlotG.append('g').attr('class', `y-axis y-axis-${axisIndex}`).style('color', axis.color);
         subPlotG.append('text').attr('class', `axis-label axis-label-${axisIndex}`).attr('fill', axis.color)
