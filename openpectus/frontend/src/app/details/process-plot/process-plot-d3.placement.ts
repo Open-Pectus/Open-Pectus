@@ -19,6 +19,7 @@ export class ProcessPlotD3Placement {
   private readonly margin = {left: 5, top: 10 - this.subPlotGap, right: 5, bottom: 5};
   private readonly axisGap = 14;
   private readonly labelMargin = 8;
+  private readonly yScaleTicks = 9;
 
   updateElementPlacements(plotConfiguration: PlotConfiguration, svg: Selection<SVGSVGElement, unknown, null, any> | undefined,
                           xScale: ScaleLinear<number, number>, yScales: ScaleLinear<number, number>[][]) {
@@ -55,14 +56,20 @@ export class ProcessPlotD3Placement {
                                        .filter((_, otherAxisIndex) => otherAxisIndex !== 0 && otherAxisIndex < axisIndex)
                                        .map(this.mapYAxisWidth.bind(this))
                                        .reduce((current, previous) => current + previous, 0) ?? 0;
-
+    const tickValues = this.getTickValues(yScale);
     const isLeftAxis = axisIndex === 0;
     const axisXTransform = isLeftAxis ? leftRight.left : leftRight.right + otherRightSideYAxesWidth; // right side
     subPlotG.selectChild<SVGGElement>(`.y-axis-${axisIndex}`)
-      .call(isLeftAxis ? axisLeft(yScale) : axisRight(yScale))
+      .call(isLeftAxis ? axisLeft(yScale).tickValues(tickValues) : axisRight(yScale).tickValues(tickValues))
       .attr('transform', `translate(${[axisXTransform, 0]})`);
     // noinspection JSSuspiciousNameCombination
     return axisXTransform;
+  }
+
+  private getTickValues(yScale: ScaleLinear<number, number>) {
+    const [domainMin, domainMax] = yScale.domain();
+    const domainSlice = (domainMax - domainMin) / (this.yScaleTicks - 1);
+    return new Array(this.yScaleTicks).fill(undefined).map((_, index) => domainMin + index * domainSlice);
   }
 
   private mapYAxisWidth(yAxis: SVGGElement) {
@@ -160,10 +167,12 @@ export class ProcessPlotD3Placement {
       .call(this.xGridLineAxisGenerators[subPlotIndex])
       .attr('transform', `translate(${[0, subPlotTopBottom.top]})`);
 
+    const yScale = yScales[subPlotIndex][0];
     subPlotG.select<SVGGElement>('.y-grid-lines')
-      .call(axisLeft(yScales[subPlotIndex][0])
+      .call(axisLeft(yScale)
         .tickSize(-subPlotWidth)
-        .tickFormat(() => ''))
+        .tickFormat(() => '')
+        .tickValues(this.getTickValues(yScale)))
       .attr('transform', `translate(${[subPlotLeftRight.left, 0]})`);
 
   }
