@@ -143,15 +143,19 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           context: .
           file: ./Dockerfile
+      - name: 'Login via Azure CLI'
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.ACR_DEPLOY_CREDENTIALS }}
       - name: Deploy to Azure Container Instances
         uses: azure/aci-deploy@v1
         with:
-          resource-group: ${{ secrets.ACR_RESOURCE_GROUP }}
+          resource-group: ${{ secrets.ACR_DEPLOY_RESOURCE_GROUP }}
           dns-name-label: url-for-container
           image: ${{ secrets.ACR_ENDPOINT }}/open-pectus:github-action-deploy-container-instance
-          registry-login-server: ${{ secrets.ACR_ENDPOINT }}
-          registry-username: ${{ secrets.ACR_USERNAME }}
-          registry-password: ${{ secrets.ACR_PASSWORD }}
+          registry-login-server: ${{ secrets.ACR_DEPLOY_LOGIN_SERVER }}
+          registry-username: ${{ secrets.ACR_DEPLOY_USERNAME }}
+          registry-password: ${{ secrets.ACR_DEPLOY_SECRET }}
           name: open-pectus-github
           environment-variables: AGGREGATOR_PORT=80
           location: 'west europe'
