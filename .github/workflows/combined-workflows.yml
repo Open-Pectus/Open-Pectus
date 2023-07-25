@@ -143,6 +143,14 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           context: .
           file: ./Dockerfile
+  
+  deploy_image:
+    needs: [publish_docker_image]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
       - name: 'Login via Azure CLI'
         uses: azure/login@v1
         with:
@@ -157,5 +165,4 @@ jobs:
           registry-username: ${{ secrets.ACR_DEPLOY_USERNAME }}
           registry-password: ${{ secrets.ACR_DEPLOY_SECRET }}
           name: open-pectus-github
-          environment-variables: AGGREGATOR_PORT=80
           location: 'west europe'
