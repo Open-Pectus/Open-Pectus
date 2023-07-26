@@ -189,7 +189,7 @@ export const handlers = [
         }, {
           value_type: ProcessValueType.STRING,
           name: 'Flow path',
-          value: (getSeconds(Date.now()) % 10 < 3) ? 'Bypass' : (getSeconds(Date.now()) % 10 < 6) ? 'Prime' : undefined,
+          value: (getSeconds(Date.now()) % 10 < 3) ? 'Bypass' : (getSeconds(Date.now()) % 10 < 6) ? 'Prime' : 'Secondary',
         },
       ]),
     );
