@@ -137,6 +137,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
         const colorRegionSelection = svg.select<SVGGElement>(`.subplot-${subPlotIndex} .color-region-${colorRegionIndex}`);
         const subPlotTop = this.yScales[subPlotIndex][0].range()[1];
         const subPlotBottom = this.yScales[subPlotIndex][0].range()[0];
+        if(subPlotBottom < 0) return; // while expanding, this can be temporarily negative throwing errors in console. So let's avoid that.
 
         // Rectangle
         colorRegionSelection.selectAll('rect')

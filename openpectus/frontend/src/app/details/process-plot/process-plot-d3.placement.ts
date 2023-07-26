@@ -70,6 +70,7 @@ export class ProcessPlotD3Placement {
     const [domainMin, domainMax] = yScale.domain();
     const [rangeMaxY, rangeMinY] = yScale.range(); // max before min because svg y 0 is at the top, so the range goes from high y to low y.
     const ticksAmount = Math.floor((rangeMaxY - rangeMinY) / this.pixelsPerTick);
+    if(ticksAmount < 0) return []; // while expanding, this can be temporarily negative throwing errors in console. So let's avoid that.
     const domainSlice = (domainMax - domainMin) / (ticksAmount - 1);
     return new Array(ticksAmount).fill(undefined).map((_, index) => domainMin + index * domainSlice);
   }

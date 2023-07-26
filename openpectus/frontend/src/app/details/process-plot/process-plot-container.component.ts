@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
 
@@ -12,7 +12,7 @@ import { ProcessPlotActions } from './ngrx/process-plot.actions';
     </app-collapsible-element>
   `,
 })
-export class ProcessPlotContainerComponent {
+export class ProcessPlotContainerComponent implements OnInit {
   protected isCollapsed = false;
 
   constructor(private store: Store) {}
