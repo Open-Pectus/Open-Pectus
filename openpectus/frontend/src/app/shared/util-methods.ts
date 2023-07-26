@@ -3,6 +3,14 @@ export class UtilMethods {
     return value !== null && value !== undefined;
   }
 
+  static isNumber(value: unknown): value is number {
+    return typeof value === 'number';
+  }
+
+  static isString(value: unknown): value is string {
+    return typeof value === 'string';
+  }
+
   static assertNever(x: never): never {
     throw Error(`${x} was not handled`);
   }

@@ -13,7 +13,7 @@ export class TestWebsocketService {
     // only test one at a time, as they can interfere.
     // this.testRpcClient();
     // this.testPubSubClient();
-    this.testPubSubRxjsClient();
+    // this.testPubSubRxjsClient();
   }
 
   testRpcClient() {

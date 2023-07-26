@@ -1,4 +1,4 @@
-import { sub } from 'date-fns';
+import { getSeconds, sub } from 'date-fns';
 import { rest } from 'msw';
 import {
   BatchJob,
@@ -6,6 +6,7 @@ import {
   CommandSource,
   InProgress,
   NotOnline,
+  PlotConfiguration,
   ProcessUnit,
   ProcessValue,
   ProcessValueCommandChoiceValue,
@@ -185,6 +186,10 @@ export const handlers = [
               value_type: ProcessValueType.FLOAT,
             },
           }],
+        }, {
+          value_type: ProcessValueType.STRING,
+          name: 'Flow path',
+          value: (getSeconds(Date.now()) % 10 < 3) ? 'Bypass' : (getSeconds(Date.now()) % 10 < 6) ? 'Prime' : 'Secondary',
         },
       ]),
     );
@@ -325,6 +330,64 @@ export const handlers = [
 "another key": "another value",
 "another injected": "line"
 }`),
+    );
+  }),
+
+  rest.get('/api/process_unit/:unitId/plot_configuration', (req, res, context) => {
+    return res(
+      context.status(200),
+      context.json<PlotConfiguration>({
+        color_regions: [{
+          process_value_name: 'Flow path',
+          value_color_map: {
+            'Bypass': '#3366dd33',
+            'Prime': '#33aa6633',
+          },
+        }],
+        sub_plots: [
+          {
+            ratio: 1.5,
+            axes: [
+              {
+                label: 'Red',
+                process_value_names: ['PU01 Speed', 'FT01 Flow'],
+                y_max: 126,
+                y_min: 123,
+                color: '#ff3333',
+              }, {
+                label: 'Blue',
+                process_value_names: ['TT01'],
+                y_max: 26,
+                y_min: 20,
+                color: '#1144ff',
+              },
+              {
+                label: 'Teal label',
+                process_value_names: ['TT01'],
+                y_max: 32,
+                y_min: 22,
+                color: '#43c5b7',
+              },
+            ],
+          },
+          {
+            ratio: 1,
+            axes: [{
+              label: 'Green',
+              process_value_names: ['TT01'],
+              y_max: 26,
+              y_min: 20,
+              color: '#33ff33',
+            }, {
+              label: 'orange',
+              process_value_names: ['TT01'],
+              y_max: 29,
+              y_min: 19,
+              color: '#ff8000',
+            }],
+          },
+        ],
+      }),
     );
   }),
 ];

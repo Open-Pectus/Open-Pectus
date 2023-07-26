@@ -13,8 +13,9 @@ import { DetailsActions } from './ngrx/details.actions';
         <app-method-editor></app-method-editor>
         <app-commands></app-commands>
         <app-run-log></app-run-log>
-        <app-process-plot></app-process-plot>
         <app-process-diagram></app-process-diagram>
+        <app-process-plot-container class="2xl:col-span-2"></app-process-plot-container>
+
       </div>
     </div>
   `,
