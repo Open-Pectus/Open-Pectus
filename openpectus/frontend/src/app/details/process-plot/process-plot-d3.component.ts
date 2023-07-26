@@ -161,31 +161,23 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private formatRectData(colorRegion: PlotColorRegion, processValueLog: ProcessValueLog) {
     const processValueData = processValueLog[colorRegion.process_value_name];
     if(processValueData === undefined) return []; // throw Error(`missing processValue in data: ${colorRegion.process_value_name}`);
-    const processValueValues = processValueData.map(processValue => processValue.value).filter(UtilMethods.isString);
-    let workingValue: string | undefined = undefined;
+    const processValueValues = processValueData.map(processValue => processValue.value);
     let start: number = 0;
     const coloredRegionRects: ColoredRegionRect[] = [];
     for(let i = 0; i < processValueValues.length; i++) {
       const currentValue = processValueValues[i];
-      if(currentValue === workingValue) continue; // same value, just skip ahead
-      if(workingValue === undefined) { // currentValue is not undefined (or they would be equal, see above), so start a rect
-        workingValue = currentValue;
-        start = i;
-        continue;
+      const previousValue = processValueValues[i - 1];
+      if(currentValue === previousValue) continue; // same value, just skip ahead
+      if(previousValue !== undefined) {
+        coloredRegionRects.push({start, end: i, color: colorRegion.value_color_map[previousValue]});
       }
-      if(currentValue === undefined) { // workingValue is not undefined (or they would be equal), so end a rect
-        coloredRegionRects.push({start: start, end: i, color: colorRegion.value_color_map[workingValue]});
-        workingValue = currentValue;
-        continue;
-      }
-      if(currentValue !== workingValue) { // change from one color to another
-        coloredRegionRects.push({start: start, end: i, color: colorRegion.value_color_map[workingValue]});
-        workingValue = currentValue;
+      if(currentValue !== undefined) {
         start = i;
       }
     }
-    if(workingValue !== undefined) { // we ran past end, but was drawing a rect, so push that into array
-      coloredRegionRects.push({start: start, end: processValueData.length - 1, color: colorRegion.value_color_map[workingValue]});
+    const valueAtEnd = processValueData[processValueData.length - 1].value;
+    if(valueAtEnd !== undefined) { // we ran past end, but was drawing a rect, so push that into array
+      coloredRegionRects.push({start, end: processValueData.length - 1, color: colorRegion.value_color_map[valueAtEnd]});
     }
     return coloredRegionRects;
   }
