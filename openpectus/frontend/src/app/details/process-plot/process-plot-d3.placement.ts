@@ -42,7 +42,7 @@ export class ProcessPlotD3Placement {
 
   private placeYAxes(subPlot: SubPlot, subPlotG: Selection<SVGGElement, unknown, null, any>, subPlotIndex: number,
                      yScales: ScaleLinear<number, number>[][], leftRight: LeftRight, topBottom: TopBottom) {
-    yScales[subPlotIndex].forEach(yScale => yScale.range([topBottom.top, topBottom.bottom]));
+    yScales[subPlotIndex].forEach(yScale => yScale.range([topBottom.bottom, topBottom.top]));
     subPlot.axes.forEach((axis, axisIndex) => {
       const axisXTransform = this.placeYAxis(yScales, subPlotIndex, axisIndex, subPlotG, leftRight);
       this.placeAxisLabels(axisIndex, subPlotG, topBottom, axisXTransform);
@@ -56,20 +56,20 @@ export class ProcessPlotD3Placement {
                                        .filter((_, otherAxisIndex) => otherAxisIndex !== 0 && otherAxisIndex < axisIndex)
                                        .map(this.mapYAxisWidth.bind(this))
                                        .reduce((current, previous) => current + previous, 0) ?? 0;
-    const tickValues = this.getTickValues(yScale);
     const isLeftAxis = axisIndex === 0;
-    const axisXTransform = isLeftAxis ? leftRight.left : leftRight.right + otherRightSideYAxesWidth; // right side
+    const yAxisXTransform = isLeftAxis ? leftRight.left : leftRight.right + otherRightSideYAxesWidth; // right side
+    const axisGenerator = isLeftAxis ? axisLeft(yScale) : axisRight(yScale);
+    axisGenerator.tickValues(this.getTickValues(yScale));
     subPlotG.selectChild<SVGGElement>(`.y-axis-${axisIndex}`)
-      .call(isLeftAxis ? axisLeft(yScale).tickValues(tickValues) : axisRight(yScale).tickValues(tickValues))
-      .attr('transform', `translate(${[axisXTransform, 0]})`);
-    // noinspection JSSuspiciousNameCombination
-    return axisXTransform;
+      .call(axisGenerator)
+      .attr('transform', `translate(${[yAxisXTransform, 0]})`);
+    return yAxisXTransform;
   }
 
   private getTickValues(yScale: ScaleLinear<number, number>) {
     const [domainMin, domainMax] = yScale.domain();
-    const [rangeMin, rangeMax] = yScale.range();
-    const ticksAmount = Math.floor((rangeMax - rangeMin) / this.pixelsPerTick);
+    const [rangeMaxY, rangeMinY] = yScale.range(); // max before min because svg y 0 is at the top, so the range goes from high y to low y.
+    const ticksAmount = Math.floor((rangeMaxY - rangeMinY) / this.pixelsPerTick);
     const domainSlice = (domainMax - domainMin) / (ticksAmount - 1);
     return new Array(ticksAmount).fill(undefined).map((_, index) => domainMin + index * domainSlice);
   }
