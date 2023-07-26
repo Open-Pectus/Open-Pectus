@@ -7,6 +7,10 @@ export class UtilMethods {
     return typeof value === 'number';
   }
 
+  static isString(value: unknown): value is string {
+    return typeof value === 'string';
+  }
+
   static assertNever(x: never): never {
     throw Error(`${x} was not handled`);
   }

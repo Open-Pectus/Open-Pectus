@@ -1,4 +1,4 @@
-import { sub } from 'date-fns';
+import { getSeconds, sub } from 'date-fns';
 import { rest } from 'msw';
 import {
   BatchJob,
@@ -186,6 +186,10 @@ export const handlers = [
               value_type: ProcessValueType.FLOAT,
             },
           }],
+        }, {
+          value_type: ProcessValueType.STRING,
+          name: 'Flow path',
+          value: (getSeconds(Date.now()) < 20) ? 'Bypass' : (getSeconds(Date.now()) > 40) ? 'Prime' : 'something else',
         },
       ]),
     );
@@ -333,7 +337,13 @@ export const handlers = [
     return res(
       context.status(200),
       context.json<PlotConfiguration>({
-        color_regions: [],
+        color_regions: [{
+          process_value_name: 'Flow path',
+          value_color_map: {
+            'Bypass': '#3366dd33',
+            'Prime': '#33aa6633',
+          },
+        }],
         sub_plots: [
           {
             ratio: 1.5,

@@ -35,7 +35,7 @@ export class ProcessPlotD3Placement {
       const subPlotG = root.selectChild<SVGGElement>(`.subplot-${subPlotIndex}`);
       const subPlotTopBottom = this.calculateSubPlotTopBottom(plotConfiguration, subPlotIndex, rootHeight, xAxisHeight);
       this.placeYAxes(subPlot, subPlotG, subPlotIndex, yScales, subPlotLeftRight, subPlotTopBottom);
-      this.placeGridLines(subPlot, subPlotG, subPlotIndex, xScale, yScales, subPlotLeftRight, subPlotTopBottom);
+      this.placeGridLines(subPlotG, subPlotIndex, xScale, yScales, subPlotLeftRight, subPlotTopBottom);
       this.placeSubPlotBorder(subPlotG, subPlotLeftRight, subPlotTopBottom);
     });
   }
@@ -157,9 +157,9 @@ export class ProcessPlotD3Placement {
     return Math.max(...rightSideYAxesWidths, 0);
   }
 
-  private placeGridLines(subPlot: SubPlot, subPlotG: Selection<SVGGElement, unknown, null, any>, subPlotIndex: number,
-                         xScale: ScaleLinear<number, number>, yScales: ScaleLinear<number, number>[][],
-                         subPlotLeftRight: { left: number; right: number }, subPlotTopBottom: TopBottom) {
+  private placeGridLines(subPlotG: Selection<SVGGElement, unknown, null, any>, subPlotIndex: number, xScale: ScaleLinear<number, number>,
+                         yScales: ScaleLinear<number, number>[][], subPlotLeftRight: { left: number; right: number },
+                         subPlotTopBottom: TopBottom) {
     const subPlotWidth = subPlotLeftRight.right - subPlotLeftRight.left;
     const subPlotHeight = subPlotTopBottom.bottom - subPlotTopBottom.top;
     this.xGridLineAxisGenerators[subPlotIndex] = axisTop(xScale)

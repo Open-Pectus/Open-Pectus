@@ -2,7 +2,7 @@ import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, O
 import { Store } from '@ngrx/store';
 import { axisBottom, line, ScaleLinear, scaleLinear, select, Selection } from 'd3';
 import { filter, Subject, take, takeUntil } from 'rxjs';
-import { PlotAxis, PlotConfiguration } from '../../api';
+import { PlotAxis, PlotColorRegion, PlotConfiguration } from '../../api';
 import { UtilMethods } from '../../shared/util-methods';
 import { ProcessValueLog } from './ngrx/process-plot.reducer';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
@@ -70,6 +70,9 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     root.append('g').attr('class', 'x-axis');
     plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
       const subPlotG = root.append('g').attr('class', `subplot subplot-${subPlotIndex}`);
+      plotConfiguration.color_regions.forEach((colorRegion, colorRegionIndex) => {
+        subPlotG.append('g').attr('class', `color-region-${colorRegionIndex}`);
+      });
       subPlot.axes.forEach((axis, axisIndex) => {
         subPlotG.append('g').attr('class', `x-grid-lines`).style('color', '#cccccc');
         subPlotG.append('g').attr('class', `y-grid-lines`).style('color', '#cccccc');
@@ -93,6 +96,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     if(this.svg === undefined) throw Error('no Svg selection when plotting data!');
     this.updateXScaleDomain(plotConfiguration, processValuesLog, this.svg);
     this.plotLines(plotConfiguration, processValuesLog, this.svg);
+    this.plotRectangles(plotConfiguration, processValuesLog, this.svg);
   }
 
   private updateXScaleDomain(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValueLog,
@@ -111,7 +115,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       subPlot.axes.forEach((axis, axisIndex) => {
         svg.select<SVGGElement>(`.subplot-${subPlotIndex} .line-${axisIndex}`)
           .selectAll('path')
-          .data(this.formatDataForAxis(processValuesLog, axis))
+          .data(this.formatLineDataForAxis(processValuesLog, axis))
           .join('path')
           .attr('d', line()
             .x(d => this.xScale(d[0]))
@@ -123,7 +127,28 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     });
   }
 
-  private formatDataForAxis(processValuesLog: ProcessValueLog, axis: PlotAxis): [number, number][][] {
+  private plotRectangles(plotConfiguration: PlotConfiguration, processValueLog: ProcessValueLog,
+                         svg: Selection<SVGSVGElement, unknown, null, any>) {
+    plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
+      plotConfiguration.color_regions.forEach((colorRegion, colorRegionIndex) => {
+        const colorRegionSelection = svg.select<SVGGElement>(`.subplot-${subPlotIndex} .color-region-${colorRegionIndex}`);
+        const formattedRectData = this.formatRectData(colorRegion, processValueLog);
+        const top = this.yScales[subPlotIndex][0].range()[1];
+        const bottom = this.yScales[subPlotIndex][0].range()[0];
+        colorRegionSelection.selectAll('rect')
+          .data(formattedRectData)
+          .join('rect')
+          .attr('x', d => this.xScale(d.start))
+          .attr('y', top)
+          .attr('width', d => this.xScale(d.end) - this.xScale(d.start))
+          .attr('height', bottom - top)
+          .attr('fill', d => d.color ?? 'transparent');
+      });
+    });
+
+  }
+
+  private formatLineDataForAxis(processValuesLog: ProcessValueLog, axis: PlotAxis): [number, number][][] {
     return axis.process_value_names
       .map(processValueName => processValuesLog[processValueName])
       .filter(UtilMethods.isNotNullOrUndefined)
@@ -132,4 +157,43 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
         .map((processValueValue, index) => [index, processValueValue]),
       );
   }
+
+  private formatRectData(colorRegion: PlotColorRegion, processValueLog: ProcessValueLog) {
+    const processValueData = processValueLog[colorRegion.process_value_name];
+    if(processValueData === undefined) return []; // throw Error(`missing processValue in data: ${colorRegion.process_value_name}`);
+    const processValueValues = processValueData.map(processValue => processValue.value).filter(UtilMethods.isString);
+    let workingValue: string | undefined = undefined;
+    let start: number = 0;
+    const coloredRegionRects: ColoredRegionRect[] = [];
+    for(let i = 0; i < processValueValues.length; i++) {
+      const currentValue = processValueValues[i];
+      if(currentValue === workingValue) continue; // same value, just skip ahead
+      if(workingValue === undefined) { // currentValue is not undefined (or they would be equal, see above), so start a rect
+        workingValue = currentValue;
+        start = i;
+        continue;
+      }
+      if(currentValue === undefined) { // workingValue is not undefined (or they would be equal), so end a rect
+        coloredRegionRects.push({start: start, end: i, color: colorRegion.value_color_map[workingValue]});
+        workingValue = currentValue;
+        continue;
+      }
+      if(currentValue !== workingValue) { // change from one color to another
+        coloredRegionRects.push({start: start, end: i, color: colorRegion.value_color_map[workingValue]});
+        workingValue = currentValue;
+        start = i;
+      }
+    }
+    if(workingValue !== undefined) { // we ran past end, but was drawing a rect, so push that into array
+      coloredRegionRects.push({start: start, end: processValueData.length - 1, color: colorRegion.value_color_map[workingValue]});
+    }
+    return coloredRegionRects;
+  }
+}
+
+
+interface ColoredRegionRect {
+  start: number;
+  end: number;
+  color: string;
 }
