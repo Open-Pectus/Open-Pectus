@@ -129,21 +129,43 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
 
   private plotRectangles(plotConfiguration: PlotConfiguration, processValueLog: ProcessValueLog,
                          svg: Selection<SVGSVGElement, unknown, null, any>) {
-    plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
-      plotConfiguration.color_regions.forEach((colorRegion, colorRegionIndex) => {
+    plotConfiguration.color_regions.forEach((colorRegion, colorRegionIndex) => {
+      const topColorRegionSelection = svg.select<SVGGElement>(`.color-region-${colorRegionIndex}`);
+      const formattedRectData = this.formatRectData(colorRegion, processValueLog);
+      const top = this.yScales[0][0].range()[1];
+      plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
         const colorRegionSelection = svg.select<SVGGElement>(`.subplot-${subPlotIndex} .color-region-${colorRegionIndex}`);
-        const formattedRectData = this.formatRectData(colorRegion, processValueLog);
-        const top = this.yScales[subPlotIndex][0].range()[1];
-        const bottom = this.yScales[subPlotIndex][0].range()[0];
+        const subPlotTop = this.yScales[subPlotIndex][0].range()[1];
+        const subPlotBottom = this.yScales[subPlotIndex][0].range()[0];
+
+        // Rectangle
         colorRegionSelection.selectAll('rect')
           .data(formattedRectData)
           .join('rect')
           .attr('x', d => this.xScale(d.start))
-          .attr('y', top)
+          .attr('y', subPlotTop)
           .attr('width', d => this.xScale(d.end) - this.xScale(d.start))
-          .attr('height', bottom - top)
+          .attr('height', subPlotBottom - subPlotTop)
           .attr('fill', d => d.color);
       });
+
+      // Arrow
+      topColorRegionSelection.selectAll('path')
+        .data(formattedRectData)
+        .join('path')
+        .attr('transform', d => `translate(${[this.xScale(d.end) - (this.xScale(d.end) - this.xScale(d.start)) / 2, top]})`)
+        .attr('d', 'M -6 -12 0 -9 6 -12 0 0')
+        .attr('fill', 'black');
+
+      // Label
+      topColorRegionSelection.selectAll('text')
+        .data(formattedRectData)
+        .join('text')
+        .attr('transform',
+          d => `translate(${[this.xScale(d.end) - (this.xScale(d.end) - this.xScale(d.start)) / 2 + 3, top - 14]}) rotate(-90)`)
+        .style('font-size', 11)
+        .text(d => d.value ?? '')
+        .attr('fill', 'black');
     });
 
   }
@@ -168,12 +190,15 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       const currentValueColor = colorRegion.value_color_map[processValueValues[i] ?? -1];
       const previousValueColor = colorRegion.value_color_map[processValueValues[i - 1] ?? -1];
       if(currentValueColor === previousValueColor) continue; // same value, just skip ahead
-      if(previousValueColor !== undefined) coloredRegionRects.push({start, end: i, color: previousValueColor});
+      if(previousValueColor !== undefined) {
+        coloredRegionRects.push({start, end: i, color: previousValueColor, value: processValueValues[i - 1]});
+      }
       if(currentValueColor !== undefined) start = i;
     }
-    const colorAtEnd = colorRegion.value_color_map[processValueData[processValueData.length - 1].value ?? -1];
+    const valueAtEnd = processValueValues[processValueData.length - 1];
+    const colorAtEnd = colorRegion.value_color_map[valueAtEnd ?? -1];
     if(colorAtEnd !== undefined) { // we ran past end, but was drawing a rect, so push that into array
-      coloredRegionRects.push({start, end: processValueData.length - 1, color: colorAtEnd});
+      coloredRegionRects.push({start, end: processValueData.length - 1, color: colorAtEnd, value: valueAtEnd});
     }
     return coloredRegionRects;
   }
@@ -184,4 +209,5 @@ interface ColoredRegionRect {
   start: number;
   end: number;
   color: string;
+  value: string | number | undefined;
 }

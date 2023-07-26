@@ -16,7 +16,7 @@ export class ProcessPlotD3Placement {
   xGridLineAxisGenerators: Axis<NumberValue>[] = [];
   // Configurable values
   private readonly subPlotGap = 20; // also adds to top margin
-  private readonly margin = {left: 5, top: 10 - this.subPlotGap, right: 5, bottom: 5};
+  private readonly margin = {left: 5, top: 60 - this.subPlotGap, right: 5, bottom: 5};
   private readonly axisGap = 14;
   private readonly labelMargin = 8;
   private readonly pixelsPerTick = 42;
