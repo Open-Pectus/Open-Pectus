@@ -113,7 +113,7 @@ class EngineRunner:
     async def send_tag_updates_async(self):
         raise NotImplementedError()
 
-    async def run_loop(self):
+    async def run_loop_async(self):
         try:
             await self.connect_async()
             await self.register_async()
@@ -284,20 +284,20 @@ async def async_main(args):
         try:
             resp = httpx.get(aggregator_health_url)
         except httpx.ConnectError as ex:
-            print("Connection to Aggregator status end point failed.")
+            print("Connection to Aggregator health end point failed.")
             print(f"Status url: {aggregator_health_url}")
             print(f"Error: {ex}")
-            print("Pectus Engine cannot start.")
+            print("OpenPectus Engine cannot start.")
             exit(1)
         if resp.is_error:
-            print("Aggregator status end point returned an unsuccessful result.")
+            print("Aggregator health end point returned an unsuccessful result.")
             print(f"Status url: {aggregator_health_url}")
             print(f"HTTP status code returned: {resp.status_code}")
-            print("Pectus Engine cannot start.")
+            print("OpenPectus Engine cannot start.")
             exit(1)
         aggregator_ws_url = f"ws://{args.aggregator_host}:{args.aggregator_port}/pubsub"
         runner = WebSocketRPCEngineRunner(e, aggregator_ws_url)
-        await runner.run_loop()
+        await runner.run_loop_async()
 
 
 def main():

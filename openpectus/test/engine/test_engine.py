@@ -61,6 +61,14 @@ class TestEngine(unittest.TestCase):
         self.assertTrue(len(uod.tags) > 0)
 
     @unittest.skip("not implemented")
+    def test_uod_reading_to_process_values(self):
+        uod = TestUod()
+        e = Engine(uod)
+        e._configure()
+
+        # assert process values match the defined readings
+
+    @unittest.skip("not implemented")
     def test_load_uod(self):
         pass
 
@@ -78,8 +86,7 @@ class TestEngine(unittest.TestCase):
     def test_engine_started_runs_scan_cycle(self):
         e = create_engine()
 
-        t = threading.Thread(target=e._run)  # dont configure twice
-        t.daemon = True
+        t = threading.Thread(target=e._run, daemon=True)  # dont configure twice
         t.start()
 
         # assert loop running
