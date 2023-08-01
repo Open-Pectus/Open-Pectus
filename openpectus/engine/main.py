@@ -295,7 +295,7 @@ async def async_main(args):
             print(f"HTTP status code returned: {resp.status_code}")
             print("OpenPectus Engine cannot start.")
             exit(1)
-        aggregator_ws_url = f"ws://{args.aggregator_host}:{args.aggregator_port}/pubsub"
+        aggregator_ws_url = f"ws://{args.aggregator_host}:{args.aggregator_port}/engine-pubsub"
         runner = WebSocketRPCEngineRunner(e, aggregator_ws_url)
         await runner.run_loop_async()
 

@@ -241,3 +241,31 @@ def get_run_log(unit_id: str) -> RunLog:
 @router.get('/process_unit/{unit_id}/method')
 def get_method(unit_id: str) -> str:
     return ''
+
+
+class PlotColorRegion(BaseModel):
+    process_value_name: str
+    value_color_map: dict[str | int | float, str]  # color string compatible with css e.g.: '#aa33bb', 'rgb(0,0,0)', 'rgba(0,0,0,0)', 'red'
+
+
+class PlotAxis(BaseModel):
+    label: str
+    process_value_names: List[str]
+    y_max: int | float
+    y_min: int | float
+    color: str
+
+
+class SubPlot(BaseModel):
+    axes: List[PlotAxis]
+    ratio: int | float
+
+
+class PlotConfiguration(BaseModel):
+    color_regions: List[PlotColorRegion]
+    sub_plots: List[SubPlot]
+
+
+@router.get('/process_unit/{unit_id}/plot_configuration')
+def get_plot_configuration(unit_id: str) -> PlotConfiguration:
+    return PlotConfiguration(color_regions=[], sub_plots=[])

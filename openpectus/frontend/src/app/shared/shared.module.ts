@@ -4,6 +4,7 @@ import { CollapsibleElementComponent } from './collapsible-element.component';
 import { FormatDurationMsecPipe } from './pipes/format-duration-msec.pipe';
 import { ProcessUnitStatePipe } from './pipes/process-unit-state.pipe';
 import { ProcessValuePipe } from './pipes/process-value.pipe';
+import { SafeHtmlPipe } from './pipes/safe-html.pipe';
 import { TableComponent } from './table.component';
 
 
@@ -14,6 +15,7 @@ import { TableComponent } from './table.component';
     TableComponent,
     CollapsibleElementComponent,
     ProcessValuePipe,
+    SafeHtmlPipe,
   ],
   exports: [
     FormatDurationMsecPipe,
@@ -21,6 +23,7 @@ import { TableComponent } from './table.component';
     TableComponent,
     CollapsibleElementComponent,
     ProcessValuePipe,
+    SafeHtmlPipe,
   ],
   imports: [
     CommonModule,
