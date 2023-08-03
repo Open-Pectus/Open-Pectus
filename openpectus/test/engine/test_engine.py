@@ -5,7 +5,7 @@ from typing_extensions import override
 import unittest
 
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
-from openpectus.engine.eng import Engine, EngineCommand, EngineInternalCommand
+from openpectus.engine.eng import ExecutionEngine, EngineCommand, EngineInternalCommand
 from openpectus.lang.exec import tags
 from openpectus.lang.exec.uod import UodCommand
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
@@ -38,9 +38,9 @@ class TestHardwareLayer(unittest.TestCase):
         self.assertEqual('foo', hwl.register_values['FT01'])
 
 
-def create_engine() -> Engine:
+def create_engine() -> ExecutionEngine:
     uod = TestUod()
-    e = Engine(uod)
+    e = ExecutionEngine(uod)
     e._configure()
     return e
 
@@ -48,12 +48,12 @@ def create_engine() -> Engine:
 class TestEngine(unittest.TestCase):
     def test_create_engine(self):
         uod = TestUod()
-        e = Engine(uod)
+        e = ExecutionEngine(uod)
         self.assertIsNotNone(e)
 
     def test_configure_uod(self):
         uod = TestUod()
-        e = Engine(uod)
+        e = ExecutionEngine(uod)
         e._configure()
 
         self.assertEqual(1, len(uod.commands))
@@ -63,7 +63,7 @@ class TestEngine(unittest.TestCase):
     @unittest.skip("not implemented")
     def test_uod_reading_to_process_values(self):
         uod = TestUod()
-        e = Engine(uod)
+        e = ExecutionEngine(uod)
         e._configure()
 
         # assert process values match the defined readings

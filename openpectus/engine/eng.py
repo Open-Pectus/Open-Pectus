@@ -1,3 +1,4 @@
+from __future__ import annotations
 from enum import StrEnum, auto
 import itertools
 from multiprocessing import Queue
@@ -47,7 +48,10 @@ class EngineInternalCommand(StrEnum):
         return hasattr(EngineInternalCommand, value)
 
 
-class Engine():
+# TODO be able to create interpreter
+# TODO advance interpreter - it should no longe have its own timer
+
+class ExecutionEngine():
     """ Main engine class. Handles
     - io loop, reads and writes hardware process image (sync)
     - invokes interpreter if a program is loaded (sync, generator based)
@@ -216,6 +220,16 @@ class Engine():
             logger.error("Command name empty")
             raise ValueError("Command name empty")
 
+        # Command types
+        # 1. Engine internal, i.e. START
+        # 2. Uod, ie. RESET
+        # 3. Interpreter, i.e. MARK
+
+        # TODO - how do we execute a type 3. ?
+        # TODO consider command types and callers:
+        # caller==interpreter -> should only call with engine and uod commands
+        # caller==frontend -> command could be anything
+
         cmd_name = cmd_request.name.upper()
         if EngineInternalCommand.has_value(cmd_name):
             if cmd_name == EngineInternalCommand.START.upper():
@@ -270,6 +284,9 @@ class Engine():
 
         hwl.write_batch(register_values, register_list)
 
+    def schedule_execution(self, name: str, args: str) -> None:
+        command = EngineCommand(name, args)
+        self.cmd_queue.put_nowait(command)
 
 # Tag.Select (self.hw_value = self.read)
 # Tag state     'Reset'   'N/A'

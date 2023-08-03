@@ -26,7 +26,7 @@ from lang.exec.tags import (
     DEFAULT_TAG_BLOCK_TIME,
     DEFAULT_TAG_RUN_TIME,
 )
-from lang.exec.uod import UnitOperationDefinitionBase
+
 from lang.exec.timer import OneThreadTimer
 
 
@@ -117,11 +117,21 @@ class LogEntry():
         self.message: str = message
 
 
+class InterpreterContext():
+    """ Defines the context of program interpretation"""
+
+    @property
+    def tags(self) -> TagCollection:
+        raise NotImplementedError()
+
+    def schedule_execution(self, name: str, args: str) -> None:
+        raise NotImplementedError()
+
+
 class PInterpreter(PNodeVisitor):
-    def __init__(self, program: PProgram, uod: UnitOperationDefinitionBase) -> None:
-        self.tags: TagCollection = TagCollection.create_system_tags()
+    def __init__(self, program: PProgram, context: InterpreterContext) -> None:
         self._program = program
-        self.uod = uod
+        self.context = context
         self.logs: List[LogEntry] = []
         self.pause_node: PNode | None = None
         self.stack: CallStack = CallStack()
@@ -161,17 +171,18 @@ class PInterpreter(PNodeVisitor):
         _ = pint.Quantity("0 sec")
 
     def _update_tags(self):
+        # TODO remove - this is engine's responsibility
         if self.stack.any():
             ar_program = self.stack.records[0]
             program_elapsed = self.tick_time - ar_program.start_time
             q_program = pint.Quantity(f'{program_elapsed} sec')
-            self.tags.get(DEFAULT_TAG_RUN_TIME).set_quantity(q_program)
+            self.context.tags.get(DEFAULT_TAG_RUN_TIME).set_quantity(q_program)
 
             ar_block = self.stack.peek()
             # TODO block time should not include pause and hold time
             block_elapsed = self.tick_time - ar_block.start_time
             q_block = pint.Quantity(f'{block_elapsed} sec')
-            self.tags.get(DEFAULT_TAG_BLOCK_TIME).set_quantity(q_block)
+            self.context.tags.get(DEFAULT_TAG_BLOCK_TIME).set_quantity(q_block)
 
             # TODO implement remaining tags, e.g. SYSTEM STATE, RUN COUNTER
 
@@ -272,7 +283,7 @@ class PInterpreter(PNodeVisitor):
 
     def _is_awaiting_threshold(self, node: PNode):
         if isinstance(node, PInstruction) and node.time is not None:
-            block_elapsed = self.tags.get(DEFAULT_TAG_BLOCK_TIME).as_quantity()
+            block_elapsed = self.context.tags.get(DEFAULT_TAG_BLOCK_TIME).as_quantity()
             time_quantity = pint.Quantity(node.time, "sec")
             if block_elapsed < time_quantity:
                 logger.debug(f"Awaiting threshold: {time_quantity}, current: {block_elapsed}, time: {self.tick_time}")
@@ -286,9 +297,8 @@ class PInterpreter(PNodeVisitor):
         assert not c.error, "Error parsing condition"
         assert c.tag_name, "Error in condition tag"
         assert c.tag_value, "Error in condition value"
-        assert self.tags.has(c.tag_name) or self.uod.tags.has(c.tag_name)
-        tag = self.tags.get(c.tag_name) if self.tags.has(c.tag_name) \
-            else self.uod.tags.get(c.tag_name)
+        assert self.context.tags.has(c.tag_name)
+        tag = self.context.tags.get(c.tag_name)
         tag_value = tag.as_quantity()
         # TODO if not unit specified, pick base unit
         expected_value = pint.Quantity(c.tag_value_numeric, c.tag_unit)
@@ -321,7 +331,7 @@ class PInterpreter(PNodeVisitor):
         if result is None:
             raise ValueError(f"Unsupported operation: '{c.op}'")
 
-        return result
+        return result  # type: ignore
 
     def _visit_children(self, children: List[PNode] | None):
         ar = self.stack.peek()
@@ -400,7 +410,7 @@ class PInterpreter(PNodeVisitor):
             # TODO commands can be resident and last multiple ticks
             # see example command ?
             logger.debug(f"Executing command {str(node)}")
-            self.uod.execute_command(node.name, node.args)
+            self.context.schedule_execution(node.name, node.args)
         except Exception:
             logger.error(f"Command {node.name} failed", exc_info=True)
         yield

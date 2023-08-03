@@ -5,9 +5,9 @@ import unittest
 from openpectus.lang.grammar.pprogramformatter import print_program
 from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.model.pprogram import PProgram
-from openpectus.lang.exec.pinterpreter import PInterpreter, TICK_INTERVAL
+from openpectus.lang.exec.pinterpreter import InterpreterContext, PInterpreter, TICK_INTERVAL
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
-from openpectus.lang.exec.tags import Tag, DEFAULT_TAG_BASE
+from openpectus.lang.exec.tags import Tag, DEFAULT_TAG_BASE, TagCollection
 from openpectus.lang.exec.uod import UodCommand
 
 
@@ -23,6 +23,16 @@ def print_log(i: PInterpreter):
         f"{(x.time-start):.2f}\t{x.time:.2f}\t{x.unit_time}\t{x.message}" for x in i.logs))
 
 
+def create_interpreter(program: PProgram, uod: UnitOperationDefinitionBase | None = None, context: InterpreterContext | None = None) -> PInterpreter:
+    if uod is None:
+        uod = TestUod()
+
+    if context is None:
+        context = TestInterpreterContext(uod)
+
+    return PInterpreter(program, context)
+
+
 class InterpreterTest(unittest.TestCase):
 
     def test_sequential_marks(self):
@@ -32,8 +42,7 @@ mark: b
 mark: c
 """)
         print_program(program)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
+        i = create_interpreter(program)
 
         i.run(10)
         # for _ in i.interpret():
@@ -52,7 +61,7 @@ incr counter
         print_program(program)
 
         uod = TestUod()
-        i = PInterpreter(program, uod)
+        i = create_interpreter(program=program, uod=uod)
 
         self.assertEqual(0, uod.tags["counter"].as_number())
 
@@ -71,8 +80,7 @@ incr counter
 watch: counter > 0
     mark: d
 """)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
+        i = create_interpreter(program=program)
         i.run(15)
 
         print_log(i)
@@ -95,8 +103,7 @@ incr counter
 watch: counter > 0
     mark: d
 """)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
+        i = create_interpreter(program=program)
         i.run(15)
 
         print_log(i)
@@ -116,8 +123,7 @@ mark: b1
 mark: b2
 mark: b3
 """)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
+        i = create_interpreter(program=program)
         i.run(50)
 
         print_log(i)
@@ -151,8 +157,7 @@ mark: b
 """)
         print_program(program)
 
-        uod = TestUod()
-        i = PInterpreter(program, uod)
+        i = create_interpreter(program=program)
         i.run(50)
 
         # TODO fix intepretation error, watch instruction(s) not being executed
@@ -169,8 +174,9 @@ Block: A
 Mark: A3
 """)
         uod = TestUod()
-        i = PInterpreter(program, uod)
-        i.tags[DEFAULT_TAG_BASE].set_value("sec")
+        assert uod.system_tags is not None
+        uod.system_tags[DEFAULT_TAG_BASE].set_value("sec")
+        i = create_interpreter(program=program, uod=uod)
 
         i.run()
 
@@ -190,9 +196,7 @@ Block: A
     Mark: A2
 Mark: A3
 """)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
-
+        i = create_interpreter(program=program)
         i.run()
 
         self.assertEqual(["A1", "B1", "A3"], i.get_marks())
@@ -204,9 +208,7 @@ Block: A
     Mark: A2
 Mark: A3
 """)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
-
+        i = create_interpreter(program=program)
         i.run(max_ticks=5)
 
         self.assertEqual(["A1", "A2"], i.get_marks())
@@ -220,9 +222,7 @@ Block: A
     Mark: A2
 Mark: A3
 """)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
-
+        i = create_interpreter(program=program)
         i.run(max_ticks=30)
 
         self.assertEqual(["A1", "A2", "A3"], i.get_marks())
@@ -241,9 +241,7 @@ Mark: A3
         # TODO review case with Eskild
         # We'll need look-ahead to avoid X being executed
 
-        uod = TestUod()
-        i = PInterpreter(program, uod)
-
+        i = create_interpreter(program=program)
         i.run(max_ticks=30)
 
         self.assertEqual(["A1", "A3"], i.get_marks())
@@ -254,9 +252,7 @@ Mark: A3
 0.3 Mark: b
 0.8 Mark: c
 """)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
-
+        i = create_interpreter(program=program)
         i.run(max_ticks=100)
 
         self.assertEqual(["a", "b", "c"], i.get_marks())
@@ -305,9 +301,7 @@ Block: B
     End block
 Mark: d
 """)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
-
+        i = create_interpreter(program=program)
         i.run(max_ticks=100)
         print_log(i)
 
@@ -344,8 +338,7 @@ watch: LT01 = Full
     mark: a1
 mark: b
 """)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
+        i = create_interpreter(program=program)
         i.run(5)
 
         print_log(i)
@@ -376,9 +369,27 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class TestInterpreterContext(InterpreterContext):
+    def __init__(self, uod: UnitOperationDefinitionBase) -> None:
+        super().__init__()
+        if uod.system_tags is None or uod.tags is None:
+            raise ValueError("uod not properly initialized")
+
+        self.uod = uod
+        self._tags = uod.system_tags.merge_with(uod.tags)
+
+    @property
+    def tags(self) -> TagCollection:
+        return self._tags
+
+    def schedule_execution(self, name: str, args: str) -> None:
+        return self.uod.execute_command(name, args)
+
+
 class TestUod(UnitOperationDefinitionBase):
     def __init__(self) -> None:
         super().__init__()
+        self.define_system_tags(TagCollection.create_system_tags())
         self.tags.add(Tag("counter", 0))
 
         self.define_command(UodCommand.builder().with_name("incr counter").with_exec_fn(self.incr_counter).build())

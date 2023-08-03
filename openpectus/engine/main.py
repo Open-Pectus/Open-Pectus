@@ -9,7 +9,7 @@ from typing_extensions import override
 import httpx
 
 from openpectus.protocol.engine import Client, create_client
-from openpectus.engine.eng import Engine, EngineCommand
+from openpectus.engine.eng import ExecutionEngine, EngineCommand
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
 from openpectus.lang.exec import tags
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand
@@ -91,7 +91,7 @@ class DemoResetCommand(UodCommand):
 
 
 class EngineRunner:
-    def __init__(self, engine: Engine) -> None:
+    def __init__(self, engine: ExecutionEngine) -> None:
         self.engine = engine
 
     async def connect_async(self):
@@ -130,7 +130,7 @@ class EngineRunner:
 
 
 class DemoEngineRunner():
-    def __init__(self, e: Engine) -> None:
+    def __init__(self, e: ExecutionEngine) -> None:
         self.e = e
         self.running = False
 
@@ -143,7 +143,7 @@ class DemoEngineRunner():
     async def register_async(self):
         pass
 
-    async def run_loop(self):
+    async def run_loop_async(self):
         self.running = True
         try:
             while self.running:
@@ -163,7 +163,7 @@ class DemoEngineRunner():
 
 
 class WebSocketRPCEngineRunner(EngineRunner):
-    def __init__(self, engine: Engine, ws_url: str) -> None:
+    def __init__(self, engine: ExecutionEngine, ws_url: str) -> None:
         self.engine = engine
         self.client: Client | None = None
         self.ws_url = ws_url
@@ -241,13 +241,13 @@ async def async_main(args):
     if uod is None:
         raise ValueError("Uod not configured")
 
-    e = Engine(uod, tick_interval=1)
+    e = ExecutionEngine(uod, tick_interval=1)
 
     if args.runner == "DemoTagListener":
         runner = DemoEngineRunner(e)
-        await runner.run_loop()
+        await runner.run_loop_async()
 
-        listener_thread = Thread(target=runner.run_loop, daemon=True, name=runner.__class__.__name__)
+        listener_thread = Thread(target=runner.run_loop_async, daemon=True, name=runner.__class__.__name__)
 
         print("Starting engine")
         listener_thread.start()
