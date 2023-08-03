@@ -8,7 +8,6 @@ https://github.com/structurizr/dsl/tree/master/docs/cookbook
 */
 
 
-
 workspace {
 
     model {
@@ -25,7 +24,8 @@ workspace {
             }
         }
 
-        
+        hw = softwareSystem "Hardware" "Unit Operation hardware"
+
 
         user -> frontend "Uses"
 
@@ -39,6 +39,8 @@ workspace {
 
         executionEngine -> uod "Uses"
         executionEngine -> interpreter "Controls"
+
+        engine -> hw "Controls [opcua over TCP/IP]"
     }
 
     views {
