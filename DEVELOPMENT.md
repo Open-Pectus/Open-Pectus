@@ -194,6 +194,12 @@ Mypy is a static type checker.
 The Backend code base is annotated with type hints, such that Mypy can check the types. The build does not yet include this step
 as there are still problems being worked out.
 
+To manually invoke, run
+```
+cd Open-Pectus
+mypy
+```
+
 <!-- ## 3.5. Diagram generation
 
 To get started with diagram generation, run the following command from the `openpectus` directory:

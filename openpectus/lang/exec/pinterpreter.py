@@ -21,13 +21,13 @@ from openpectus.lang.model.pprogram import (
     PMark,
 )
 
-from lang.exec.tags import (
+from openpectus.lang.exec.tags import (
     TagCollection,
     DEFAULT_TAG_BLOCK_TIME,
     DEFAULT_TAG_RUN_TIME,
 )
 
-from lang.exec.timer import OneThreadTimer
+from openpectus.lang.exec.timer import OneThreadTimer
 
 
 logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')

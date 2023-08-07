@@ -28,28 +28,53 @@ directory = "openpectus/aggregator/frontend-dist/"
 
 
 [tool.mypy]
-files = [
-    "./openpectus"
-]
-exclude = [
-    '^openpectus/lang/grammar/codegen/*',  # TOML literal string (single-quotes, no escaping necessary)
-    '^openpectus/engine/p1/*',
-]
-
-warn_return_any = true
-warn_unused_configs = true
+#warn_return_any = true
+#warn_unused_configs = true
 #ignore_missing_imports = true
+#check_untyped_defs = true
+#disallow_untyped_defs = true
+
+files = [ "./openpectus" ]
+#exclude = [] # use [[tool.mypy.overrides]] instead
+
 
 # Per-module options:
+
+[[tool.mypy.overrides]]
+# Note: 'exclude' does not work with 'files'. This works around that. See
+# https://github.com/python/mypy/issues/11760
+# https://stackoverflow.com/questions/72125692/how-to-exclude-multiples-folders-from-mypy-checking-by-using-pyproject-toml-conf
+module = [
+    "openpectus.lang.grammar.codegen.*",
+    "openpectus.engine.p1.*",
+]
+ignore_errors = true
+
 [[tool.mypy.overrides]]
 module = [
+    "antlr4",
+    "antlr4.tree.Tree",
     "pint",
+    "pint.util",
+    "fastapi",
+    "fastapi.routing",
+    "fastapi.responses",
+    "fastapi.testclient",
+    "fastapi_websocket_rpc",
     "fastapi_websocket_rpc.schemas",
+    "fastapi_websocket_rpc.rpc_methods",
+    "fastapi_websocket_rpc.logger",
+    "fastapi_websocket_rpc.websocket_rpc_endpoint",
+    "fastapi_websocket_rpc.utils",
     "fastapi_websocket_pubsub",
     "fastapi_websocket_pubsub.rpc_event_methods",
-    "fastapi_websocket_rpc",
+    "fastapi_websocket_pubsub.websocket_rpc_event_notifier",
+    "fastapi_websocket_pubsub.event_notifier",
+    "httpx",
+    "uvicorn",
     "pydantic",
     "tenacity", "tenacity.stop", "tenacity.retry", 
+    "starlette.staticfiles",
 ]
 
 ignore_missing_imports = true
