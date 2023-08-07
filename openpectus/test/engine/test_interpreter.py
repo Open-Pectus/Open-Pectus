@@ -23,7 +23,11 @@ def print_log(i: PInterpreter):
         f"{(x.time-start):.2f}\t{x.time:.2f}\t{x.unit_time}\t{x.message}" for x in i.logs))
 
 
-def create_interpreter(program: PProgram, uod: UnitOperationDefinitionBase | None = None, context: InterpreterContext | None = None) -> PInterpreter:
+def create_interpreter(
+        program: PProgram,
+        uod: UnitOperationDefinitionBase | None = None,
+        context: InterpreterContext | None = None) -> PInterpreter:
+
     if uod is None:
         uod = TestUod()
 
@@ -398,9 +402,6 @@ class TestUod(UnitOperationDefinitionBase):
 
     def execute_command(self, command_name: str, command_args: str | None = None) -> None:
         cmd = command_name.replace(" ", "_")
-        # if hasattr(self, cmd):
-        #     method = getattr(self, cmd)
-        #     method(command_args)  # type: ignore
         if cmd == "incr_counter":
             self.incr_counter([], self)
         else:
@@ -409,5 +410,5 @@ class TestUod(UnitOperationDefinitionBase):
     def incr_counter(self, args: List[Any], oud: UnitOperationDefinitionBase):
         counter = self.tags["counter"]
         count = counter.as_number()
-        count = count + 1  # type: ignore
+        count = count + 1
         counter.set_value(count)

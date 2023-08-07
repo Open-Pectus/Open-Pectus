@@ -73,7 +73,7 @@ class WsServerHandler(ServerHandler):
     def register_direct_handler(self, handler: Callable[[MessageBase], None]):
         self.direct_handler = handler
 
-    async def on_direct_message(self, msg: MessageBase):
+    async def on_direct_message(self, client_id: str, msg: MessageBase):
         if self.direct_handler is not None:
             self.direct_handler(msg)
 

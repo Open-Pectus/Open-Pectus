@@ -81,3 +81,38 @@ ignore_missing_imports = true
 
 #[mypy-lang.exec.tags]
 #type = ignore
+
+
+
+[tool.pyright]
+include = ["openpectus"]
+exclude = ["**/node_modules",
+    "**/__pycache__",
+    "openpectus/frontend",
+    "openpectus/lang/grammar/codegen/**",
+    "openpectus/engine/p1/**",
+    "openpectus/aggregator/frontend_ws/**",     #TODO fix
+    "openpectus/aggregator/spa.py",             #TODO fix
+]
+defineConstant = { DEBUG = true }
+venv = "env367"
+
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportImportCycles = true
+reportIncompatibleMethodOverride = true
+reportIncompatibleVariableOverride = true
+
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+
+reportMissingTypeArgument = true
+#reportUnnecessaryComparison = true # TODO consider enabling this
+reportImplicitStringConcatenation = true
+reportUnnecessaryTypeIgnoreComment = true
+reportMatchNotExhaustive = true
+#reportImplicitOverride = true # TODO consider enabling this
+reportShadowedImports = true
+
+pythonVersion = "3.11"
+pythonPlatform = "Linux"

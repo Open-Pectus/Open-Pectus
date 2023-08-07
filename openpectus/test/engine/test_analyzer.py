@@ -67,7 +67,7 @@ Watch: A > 2
         analyzer = ConditionAnalyzerVisitor(tags)
         analyzer.visit(program)
         self.assertEqual(0, len(analyzer.items))
-    
+
     def test_tag_name_undefined(self):
         program = build_program("""
 Watch: A > 2

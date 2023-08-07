@@ -44,7 +44,7 @@ class PGrammar:
                     PGrammar._recursive(child, buf, offset + 1, ruleNames)
 
     def printSyntaxTree(self, root: ParseTree, initial_newline: bool = True):
-        buf = []
+        buf: List[str] = []
         self._recursive(root, buf, 0, list(self.parser.ruleNames))
         if initial_newline:
             print()
