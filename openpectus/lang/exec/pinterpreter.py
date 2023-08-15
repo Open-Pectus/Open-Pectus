@@ -27,15 +27,11 @@ from openpectus.lang.exec.tags import (
     DEFAULT_TAG_RUN_TIME,
 )
 
-from openpectus.lang.exec.timer import OneThreadTimer
-
 
 logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-
-TICK_INTERVAL = 0.1
 
 # TODO define pause + hold behavior
 # TODO add Alarm interpretation, including scope definition
@@ -58,16 +54,17 @@ class ARType(Enum):
 
 
 class ActivationRecord:
+    # TODO do we need tags here? Is Base global?
     def __init__(
         self, owner: PNode, start_time: float, start_tags: TagCollection
     ) -> None:
-        self.owner = owner
-        self.start_time = start_time
+        self.owner: PNode = owner
+        self.start_time: float = start_time
         self.start_tags = start_tags
-        self.complete = False
+        self.complete: bool = False
         self.artype: ARType = self._get_artype(owner)
 
-    def _get_artype(self, node: PNode):
+    def _get_artype(self, node: PNode) -> ARType:
         if isinstance(node, PProgram):
             return ARType.PROGRAM
         elif isinstance(node, PBlock):
@@ -143,11 +140,8 @@ class PInterpreter(PNodeVisitor):
 
         self.start_time: float = 0
         self.tick_time: float = 0
-        self.ticks: int = 0
-        self.max_ticks: int = -1
 
         self.process_instr: GenerationType = None
-        self.timer = OneThreadTimer(TICK_INTERVAL, self._tick)
 
     def get_marks(self) -> List[str]:
         return [x.message for x in self.logs if x.message[0] != 'P']
@@ -167,14 +161,11 @@ class PInterpreter(PNodeVisitor):
             message=message)
         )
 
-    def _warmup(self):
-        # pint takes forever to initialize - long enough
-        # to throw off timing of the first instruction.
-        # se we do this first
-        _ = pint.Quantity("0 sec")
-
     def _update_tags(self):
-        # TODO remove - this is engine's responsibility
+        # TODO move to ExecutionEngine
+        # Engine has no concept of scopes - or at least only program and current block.
+        # What about intermediate blocks/scopes?
+        # Does this relate to RunLog? Should that show intermediate scope times?
         if self.stack.any():
             ar_program = self.stack.records[0]
             program_elapsed = self.tick_time - ar_program.start_time
@@ -219,14 +210,9 @@ class PInterpreter(PNodeVisitor):
                 raise NotImplementedError(f"Interrupt for node type {str(node)} not implemented")
         return instr_count > 0
 
-    def _tick(self):
-        self.ticks += 1
-        self.tick_time = time.time()
-        if self.max_ticks != -1 and self.ticks > self.max_ticks:
-            logger.info(f"Stopping because max_ticks {self.max_ticks} was reached")
-            self.running = False
-            self.timer.stop()
-            return
+    def tick(self, tick_time: float):
+        self.tick_time = tick_time
+
         logger.debug("Tick")
 
         if self.process_instr is None:
@@ -265,7 +251,6 @@ class PInterpreter(PNodeVisitor):
 
     def stop(self):
         self.running = False
-        self.timer.stop()
 
     def pause(self):
         # TODO define pause behavior
@@ -274,17 +259,6 @@ class PInterpreter(PNodeVisitor):
     def hold(self):
         # TODO define hold behavior
         pass
-
-    def run(self, max_ticks=-1):
-        self._warmup()
-        logger.info("Interpretation started")
-        self.ticks = 0
-        self.max_ticks = max_ticks
-        self.running = True
-        self.timer.start()
-
-        while self.running:
-            time.sleep(0.1)
 
     def _is_awaiting_threshold(self, node: PNode):
         if isinstance(node, PInstruction) and node.time is not None:
@@ -432,7 +406,7 @@ class PInterpreter(PNodeVisitor):
 
         ar = self.stack.peek()
         if ar.owner is not node:
-            # TODO the ar get the current time. Is this correct?
+            # TODO the ar gets the creation tick time. Is this correct?
             ar = ActivationRecord(node, self.tick_time, TagCollection.create_system_tags())
             self._register_interrupt(ar, create_interrupt_handler(ar))
         else:

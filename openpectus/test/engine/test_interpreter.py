@@ -1,14 +1,26 @@
 
+import time
 from typing import List, Any
 import unittest
+
+import pint
 
 from openpectus.lang.grammar.pprogramformatter import print_program
 from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.model.pprogram import PProgram
-from openpectus.lang.exec.pinterpreter import InterpreterContext, PInterpreter, TICK_INTERVAL
+from openpectus.lang.exec.pinterpreter import InterpreterContext, PInterpreter
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 from openpectus.lang.exec.tags import Tag, DEFAULT_TAG_BASE, TagCollection
 from openpectus.lang.exec.uod import UodCommand
+
+TICK_INTERVAL = 0.1
+
+
+# def warmup_pint(self):
+# pint takes forever to initialize - long enough
+# to throw off timing of the first instruction.
+# so we initialize it first
+_ = pint.Quantity("0 sec")
 
 
 def build_program(s) -> PProgram:
@@ -37,6 +49,24 @@ def create_interpreter(
     return PInterpreter(program, context)
 
 
+def run_interpreter(interpreter: PInterpreter, max_ticks: int = -1):
+    print("Interpretation started")
+    ticks = 0
+    max_ticks = max_ticks
+    interpreter.running = True
+
+    while interpreter.running:
+        ticks += 1
+        if max_ticks != -1 and ticks > max_ticks:
+            print(f"Stopping because max_ticks {max_ticks} was reached")
+            interpreter.running = False
+            return
+
+        time.sleep(0.1)
+        tick_time = time.time()
+        interpreter.tick(tick_time)
+
+
 class InterpreterTest(unittest.TestCase):
 
     def test_sequential_marks(self):
@@ -48,7 +78,7 @@ mark: c
         print_program(program)
         i = create_interpreter(program)
 
-        i.run(10)
+        run_interpreter(i, 10)
         # for _ in i.interpret():
         #     pass
 
@@ -69,7 +99,7 @@ incr counter
 
         self.assertEqual(0, uod.tags["counter"].as_number())
 
-        i.run()
+        run_interpreter(i, )
 
         self.assertEqual(1, uod.tags["counter"].as_number())
         self.assertEqual("a", i.get_marks()[0])
@@ -85,7 +115,7 @@ watch: counter > 0
     mark: d
 """)
         i = create_interpreter(program=program)
-        i.run(15)
+        run_interpreter(i, 15)
 
         print_log(i)
         self.assertEqual(["a", "c", "b", "d"], i.get_marks())
@@ -108,7 +138,7 @@ watch: counter > 0
     mark: d
 """)
         i = create_interpreter(program=program)
-        i.run(15)
+        run_interpreter(i, 15)
 
         print_log(i)
         self.assertEqual(["a", "c", "b", "e", "d"], i.get_marks())
@@ -128,7 +158,7 @@ mark: b2
 mark: b3
 """)
         i = create_interpreter(program=program)
-        i.run(50)
+        run_interpreter(i, 50)
 
         print_log(i)
         self.assertEqual(["a", "b", "a1", "b1", "a2", "b2", "a3", "b3"], i.get_marks())
@@ -162,7 +192,7 @@ mark: b
         print_program(program)
 
         i = create_interpreter(program=program)
-        i.run(50)
+        run_interpreter(i, 50)
 
         # TODO fix intepretation error, watch instruction(s) not being executed
 
@@ -182,7 +212,7 @@ Mark: A3
         uod.system_tags[DEFAULT_TAG_BASE].set_value("sec")
         i = create_interpreter(program=program, uod=uod)
 
-        i.run()
+        run_interpreter(i, )
 
         print_log(i)
 
@@ -201,7 +231,7 @@ Block: A
 Mark: A3
 """)
         i = create_interpreter(program=program)
-        i.run()
+        run_interpreter(i, )
 
         self.assertEqual(["A1", "B1", "A3"], i.get_marks())
 
@@ -213,7 +243,7 @@ Block: A
 Mark: A3
 """)
         i = create_interpreter(program=program)
-        i.run(max_ticks=5)
+        run_interpreter(i, max_ticks=5)
 
         self.assertEqual(["A1", "A2"], i.get_marks())
 
@@ -227,7 +257,7 @@ Block: A
 Mark: A3
 """)
         i = create_interpreter(program=program)
-        i.run(max_ticks=30)
+        run_interpreter(i, max_ticks=30)
 
         self.assertEqual(["A1", "A2", "A3"], i.get_marks())
 
@@ -246,7 +276,7 @@ Mark: A3
         # We'll need look-ahead to avoid X being executed
 
         i = create_interpreter(program=program)
-        i.run(max_ticks=30)
+        run_interpreter(i, max_ticks=30)
 
         self.assertEqual(["A1", "A3"], i.get_marks())
 
@@ -257,7 +287,7 @@ Mark: A3
 0.8 Mark: c
 """)
         i = create_interpreter(program=program)
-        i.run(max_ticks=100)
+        run_interpreter(i, max_ticks=100)
 
         self.assertEqual(["a", "b", "c"], i.get_marks())
         print_log(i)
@@ -306,7 +336,7 @@ Block: B
 Mark: d
 """)
         i = create_interpreter(program=program)
-        i.run(max_ticks=100)
+        run_interpreter(i, max_ticks=100)
         print_log(i)
 
         self.assertEqual(["a", "b", "c", "d"], i.get_marks())
@@ -333,7 +363,7 @@ Mark: d
         i.tags[DEFAULT_TAG_BASE].set_value("sec")
         i.validate_commands()
         print_program(program, show_errors=True, show_line_numbers=True, show_blanks=True)
-        i.run()
+        run_interpreter(i, )
 
     @unittest.skip("TODO")
     def test_watch_tag_categorized_value(self):
@@ -343,7 +373,7 @@ watch: LT01 = Full
 mark: b
 """)
         i = create_interpreter(program=program)
-        i.run(5)
+        run_interpreter(i, 5)
 
         print_log(i)
 
@@ -356,7 +386,7 @@ mark: b
         i.tags[DEFAULT_TAG_BASE].set_value("sec")
         i.validate_commands()
         print_program(program, show_errors=True, show_line_numbers=True, show_blanks=True)
-        i.run()
+        run_interpreter(i, )
 
     @unittest.skip("TODO")
     def test_change_base_in_program(self):
@@ -396,16 +426,12 @@ class TestUod(UnitOperationDefinitionBase):
         self.define_system_tags(TagCollection.create_system_tags())
         self.tags.add(Tag("counter", 0))
 
-        self.define_command(UodCommand.builder().with_name("incr counter").with_exec_fn(self.incr_counter).build())
-
-    # def add_tag(self, tag: Tag):
-
-    def execute_command(self, command_name: str, command_args: str | None = None) -> None:
-        cmd = command_name.replace(" ", "_")
-        if cmd == "incr_counter":
-            self.incr_counter([], self)
-        else:
-            raise ValueError("Unknown command: " + cmd)
+        self.define_command(
+            UodCommand.builder()
+            .with_name("incr counter")
+            .with_exec_fn(self.incr_counter)
+            .build()
+        )
 
     def incr_counter(self, args: List[Any], oud: UnitOperationDefinitionBase):
         counter = self.tags["counter"]
