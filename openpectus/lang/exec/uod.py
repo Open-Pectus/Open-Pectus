@@ -29,16 +29,12 @@ class UnitOperationDefinitionBase:
         self.system_tags: TagCollection | None = None
         self.commands: Dict[str, UodCommand] = {}
         self.readings = ReadingCollection()
-        self.io_map: Dict[str, Dict] = {}
 
     def define_instrument(self, instrument: str):
         self.instrument = instrument
 
     def define_hardware_layer(self, hwl: HardwareLayerBase):
         self.hwl = hwl
-
-    def define_io(self, name: str, data: dict):
-        self.io_map[name] = data
 
     def define_tag(self, t: Tag):
         self.tags.add(t)

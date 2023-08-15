@@ -14,7 +14,7 @@ from openpectus.lang.model.pprogram import (
     PBlank,
     PBlock,
     PEndBlock,
-    PEndBlocks,
+    # PEndBlocks,
     PWatch,
     PAlarm,
     PCommand,
@@ -128,6 +128,9 @@ class InterpreterContext():
         raise NotImplementedError()
 
 
+GenerationType = Generator[None, None, None] | None
+
+
 class PInterpreter(PNodeVisitor):
     def __init__(self, program: PProgram, context: InterpreterContext) -> None:
         self._program = program
@@ -135,7 +138,7 @@ class PInterpreter(PNodeVisitor):
         self.logs: List[LogEntry] = []
         self.pause_node: PNode | None = None
         self.stack: CallStack = CallStack()
-        self.interrupts: List[Tuple[ActivationRecord, Generator]] = []
+        self.interrupts: List[Tuple[ActivationRecord, GenerationType]] = []
         self.running: bool = False
 
         self.start_time: float = 0
@@ -143,18 +146,18 @@ class PInterpreter(PNodeVisitor):
         self.ticks: int = 0
         self.max_ticks: int = -1
 
-        self.process_instr: Generator | None = None
+        self.process_instr: GenerationType = None
         self.timer = OneThreadTimer(TICK_INTERVAL, self._tick)
 
     def get_marks(self) -> List[str]:
         return [x.message for x in self.logs if x.message[0] != 'P']
 
-    def _interpret(self) -> Generator:
+    def _interpret(self) -> GenerationType:
         """ Create generator for interpreting the main program. """
         self.running = True
         tree = self._program
         if tree is None:
-            return ''
+            return None
         yield from self.visit(tree)
 
     def _add_to_log(self, _time: float, unit_time: float | None, message: str):
@@ -186,7 +189,7 @@ class PInterpreter(PNodeVisitor):
 
             # TODO implement remaining tags, e.g. SYSTEM STATE, RUN COUNTER
 
-    def _register_interrupt(self, ar: ActivationRecord, handler: Generator):
+    def _register_interrupt(self, ar: ActivationRecord, handler: GenerationType):
         logger.debug(f"Interrupt handler registered for {ar}")
         self.interrupts.append((ar, handler))
 
@@ -204,6 +207,7 @@ class PInterpreter(PNodeVisitor):
             if isinstance(node, PWatch):
                 logger.debug(f"Interrupt {str(node)}")
                 try:
+                    assert handler is not None, "Handler is None"
                     next(handler)
                     instr_count += 1
                 except StopIteration:
@@ -236,6 +240,7 @@ class PInterpreter(PNodeVisitor):
 
         # TODO read uod.tags
 
+        assert self.process_instr is not None, "self.process_instr is None"
         try:
             next(self.process_instr)
         except StopIteration:
@@ -302,7 +307,7 @@ class PInterpreter(PNodeVisitor):
         tag_value = tag.as_quantity()
         # TODO if not unit specified, pick base unit
         expected_value = pint.Quantity(c.tag_value_numeric, c.tag_unit)
-        if not tag_value.is_compatible_with(expected_value):  # type: ignore
+        if not tag_value.is_compatible_with(expected_value):
             logger.error("Incompatible units")
             raise ValueError("Incompatible units")
 
@@ -418,7 +423,7 @@ class PInterpreter(PNodeVisitor):
         # TODO determine whether command is complete...
 
     def visit_PWatch(self, node: PWatch):
-        def create_interrupt_handler(ar: ActivationRecord) -> Generator:
+        def create_interrupt_handler(ar: ActivationRecord) -> GenerationType:
             # TODO will this work with nested interrupt handlers,
             # possibly including blocks?
             self.stack.push(ar)

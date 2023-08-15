@@ -235,10 +235,13 @@ class ConditionAnalyzerVisitor(AnalyzerVisitorBase):
             ))
             return
 
+        def create_pint_unit(unit: str | None) -> pint.Unit:
+            return pint.Unit(unit)   # type: ignore
+
         if tag.unit is not None:
             tag_unit = tag.get_pint_unit()
             assert tag_unit is not None
-            condition_unit = pint.Unit(condition.tag_unit)
+            condition_unit = create_pint_unit(condition.tag_unit)
             if not tag_unit.is_compatible_with(condition_unit):
                 self.add_item(AnalyzerItem(
                     "IncompatibleUnits",
