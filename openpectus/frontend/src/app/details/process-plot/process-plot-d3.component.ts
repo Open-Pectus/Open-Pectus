@@ -70,7 +70,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     root.append('g').attr('class', 'x-axis');
     plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
       const subPlotG = root.append('g').attr('class', `subplot subplot-${subPlotIndex}`);
-      plotConfiguration.color_regions.forEach((colorRegion, colorRegionIndex) => {
+      plotConfiguration.color_regions.forEach((_, colorRegionIndex) => {
         subPlotG.append('g').attr('class', `color-region-${colorRegionIndex}`);
       });
       subPlot.axes.forEach((axis, axisIndex) => {
@@ -133,7 +133,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       const topColorRegionSelection = svg.select<SVGGElement>(`.color-region-${colorRegionIndex}`);
       const formattedRectData = this.formatRectData(colorRegion, processValueLog);
       const top = this.yScales[0][0].range()[1];
-      plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
+      plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
         const colorRegionSelection = svg.select<SVGGElement>(`.subplot-${subPlotIndex} .color-region-${colorRegionIndex}`);
         const subPlotTop = this.yScales[subPlotIndex][0].range()[1];
         const subPlotBottom = this.yScales[subPlotIndex][0].range()[0];

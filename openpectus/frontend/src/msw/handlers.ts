@@ -189,7 +189,7 @@ export const handlers = [
         }, {
           value_type: ProcessValueType.STRING,
           name: 'Flow path',
-          value: (getSeconds(Date.now()) % 10 < 3) ? 'Bypass' : (getSeconds(Date.now()) % 10 < 6) ? 'Prime' : 'Secondary',
+          value: (getSeconds(Date.now()) % 10 < 3) ? 'Bypass' : (getSeconds(Date.now()) % 10 < 6) ? 'Prime with a long name' : 'Secondary',
         },
       ]),
     );
@@ -341,7 +341,7 @@ export const handlers = [
           process_value_name: 'Flow path',
           value_color_map: {
             'Bypass': '#3366dd33',
-            'Prime': '#33aa6633',
+            'Prime with a long name': '#33aa6633',
           },
         }],
         sub_plots: [
