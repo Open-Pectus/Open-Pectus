@@ -88,6 +88,21 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private setupOnDataChange(plotConfiguration: PlotConfiguration) {
     this.processValuesLog.pipe(takeUntil(this.componentDestroyed)).subscribe(processValuesLog => {
       this.plotData(plotConfiguration, processValuesLog);
+      this.updatePlacementsOnNewColoredRegionLabel(plotConfiguration, processValuesLog);
+    });
+  }
+
+  private updatePlacementsOnNewColoredRegionLabel(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValueLog) {
+    plotConfiguration.color_regions.map(colorRegion => {
+      const colorRegionData = processValuesLog[colorRegion.process_value_name];
+      if(colorRegionData === undefined) return;
+      const newestValue = colorRegionData[colorRegionData.length - 1].value;
+      const olderValues = colorRegionData.slice(0, colorRegionData.length - 1).map(value => value.value);
+      if(!olderValues.includes(newestValue)) {
+        // new color region value, label height could therefore have changed, so update placement of elements and re-plot;
+        this.placement.updateElementPlacements(plotConfiguration, this.svg, this.xScale, this.yScales);
+        this.plotData(plotConfiguration, processValuesLog);
+      }
     });
   }
 
@@ -96,7 +111,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     if(this.svg === undefined) throw Error('no Svg selection when plotting data!');
     this.updateXScaleDomain(plotConfiguration, processValuesLog, this.svg);
     this.plotLines(plotConfiguration, processValuesLog, this.svg);
-    this.plotRectangles(plotConfiguration, processValuesLog, this.svg);
+    this.plotColoredRegions(plotConfiguration, processValuesLog, this.svg);
   }
 
   private updateXScaleDomain(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValueLog,
@@ -127,8 +142,8 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     });
   }
 
-  private plotRectangles(plotConfiguration: PlotConfiguration, processValueLog: ProcessValueLog,
-                         svg: Selection<SVGSVGElement, unknown, null, any>) {
+  private plotColoredRegions(plotConfiguration: PlotConfiguration, processValueLog: ProcessValueLog,
+                             svg: Selection<SVGSVGElement, unknown, null, any>) {
     plotConfiguration.color_regions.forEach((colorRegion, colorRegionIndex) => {
       const topColorRegionSelection = svg.select<SVGGElement>(`.color-region-${colorRegionIndex}`);
       const formattedRectData = this.formatRectData(colorRegion, processValueLog);
@@ -168,7 +183,6 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
         .text(d => d.value ?? '')
         .attr('fill', 'black');
     });
-
   }
 
   private formatLineDataForAxis(processValuesLog: ProcessValueLog, axis: PlotAxis): [number, number][][] {

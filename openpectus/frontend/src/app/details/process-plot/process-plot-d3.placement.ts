@@ -18,7 +18,7 @@ export class ProcessPlotD3Placement {
   private readonly subPlotGap = 20; // also adds to top margin
   private readonly margin = {left: 5, top: 10, right: 5, bottom: 5};
   private readonly axisGap = 14;
-  private readonly labelMargin = 8;
+  private readonly yAxisLabelMargin = 8;
   private readonly pixelsPerTick = 42;
 
   updateElementPlacements(plotConfiguration: PlotConfiguration, svg: Selection<SVGSVGElement, unknown, null, any> | undefined,
@@ -29,9 +29,9 @@ export class ProcessPlotD3Placement {
     const root = svg.selectChild<SVGGElement>('.root').attr('transform', `translate(${[this.margin.left, this.margin.top]})`);
     const xAxisHeight = root.select<SVGGElement>('.x-axis').node()?.getBoundingClientRect().height ?? 0;
     const subPlotLeftRight = this.calculatePlotLeftRight(root, plotConfiguration, rootWidth);
+    this.placeXAxis(root, rootHeight, xScale, subPlotLeftRight, xAxisHeight);
     const coloredRegionLabelHeight = this.calculateColorRegionLabelsHeight(root, plotConfiguration);
 
-    this.placeXAxis(root, rootHeight, xScale, subPlotLeftRight, xAxisHeight);
     plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
       const subPlotG = root.selectChild<SVGGElement>(`.subplot-${subPlotIndex}`);
       const subPlotTopBottom = this.calculateSubPlotTopBottom(plotConfiguration, subPlotIndex, rootHeight, xAxisHeight,
@@ -78,7 +78,7 @@ export class ProcessPlotD3Placement {
   }
 
   private mapYAxisWidth(yAxis: SVGGElement) {
-    return yAxis.getBoundingClientRect().width + this.axisGap + this.axisLabelHeight + this.labelMargin;
+    return yAxis.getBoundingClientRect().width + this.axisGap + this.axisLabelHeight + this.yAxisLabelMargin;
   }
 
   private placeAxisLabels(axisIndex: number, subPlotG: Selection<SVGGElement, unknown, null, any>, topBottom: TopBottom,
@@ -88,7 +88,7 @@ export class ProcessPlotD3Placement {
     const axisHeight = topBottom.bottom - topBottom.top;
     const labelWidth = subPlotG.selectChild<SVGGElement>(`.axis-label-${axisIndex}`).node()?.getBoundingClientRect().height ?? 0;
     const labelRotation = isLeftAxis ? -90 : 90;
-    const labelXTransform = axisXTransform + (isLeftAxis ? -axisWidth - this.labelMargin : axisWidth + this.labelMargin);
+    const labelXTransform = axisXTransform + (isLeftAxis ? -axisWidth - this.yAxisLabelMargin : axisWidth + this.yAxisLabelMargin);
     const labelYTransform = topBottom.top + (axisHeight / 2) + (isLeftAxis ? (labelWidth / 2) : -(labelWidth / 2));
     subPlotG.selectChild(`.axis-label-${axisIndex}`)
       .attr('transform', `translate(${[labelXTransform, labelYTransform]}) rotate(${labelRotation})`);
@@ -149,7 +149,9 @@ export class ProcessPlotD3Placement {
       const colorRegionG = root.select<SVGGElement>(`.color-region-${colorRegionIndex}`);
       const rect = colorRegionG.select<SVGRectElement>('rect');
       const totalHeight = colorRegionG.node()?.getBoundingClientRect()?.height ?? 0;
-      const rectHeight = rect.node()?.getBoundingClientRect()?.height ?? 0;
+      const rectBoundingRectangle = rect.node()?.getBoundingClientRect();
+      // if the rect width is 0 it will not actually contribute to the totalHeight, but will return full height from boundingRectangle. So disregard the value when width is 0
+      const rectHeight = rectBoundingRectangle?.width === 0 ? 0 : rectBoundingRectangle?.height ?? 0;
       return totalHeight - rectHeight;
     });
     return Math.max(...heights);
