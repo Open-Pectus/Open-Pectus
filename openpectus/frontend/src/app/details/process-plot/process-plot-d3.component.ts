@@ -265,7 +265,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       const processValueData = processValueLog[processValueNameToAnnotate];
       if(processValueData === undefined) return [];
       return processValueData.reduce<Annotation[]>((accumulator, value, index) => {
-        if(typeof value.value !== 'string') throw new Error('Annotation data should be string!');
+        if(typeof value.value !== 'string') return accumulator;
         if(accumulator.at(-1)?.label === value.value) return accumulator;
         accumulator.push({x: index, label: value.value}); // TODO: index should be some time value
         return accumulator;
