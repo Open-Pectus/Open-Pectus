@@ -74,6 +74,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       subPlotG.append('g').attr('class', 'annotations')
         .attr('fill', 'blue')
         .attr('stroke-dasharray', 1.5)
+        .attr('stroke-width', 1.5)
         .style('font-size', 11);
       plotConfiguration.color_regions.forEach((_, colorRegionIndex) => {
         subPlotG.append('g').attr('class', `color-region-${colorRegionIndex}`)
@@ -94,22 +95,27 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private setupOnDataChange(plotConfiguration: PlotConfiguration) {
     this.processValuesLog.pipe(takeUntil(this.componentDestroyed)).subscribe(processValuesLog => {
       this.plotData(plotConfiguration, processValuesLog);
-      this.updatePlacementsOnNewColoredRegionLabel(plotConfiguration, processValuesLog);
+      this.updatePlacementsOnNewTopLabel(plotConfiguration, processValuesLog);
     });
   }
 
-  private updatePlacementsOnNewColoredRegionLabel(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValueLog) {
-    plotConfiguration.color_regions.map(colorRegion => {
-      const colorRegionData = processValuesLog[colorRegion.process_value_name];
+  private updatePlacementsOnNewTopLabel(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValueLog) {
+    const processValueNamesToConsider = plotConfiguration.process_value_names_to_annotate
+      .concat(plotConfiguration.color_regions.map(colorRegion => colorRegion.process_value_name));
+
+    const hasNewValue = processValueNamesToConsider.map(processValueName => {
+      const colorRegionData = processValuesLog[processValueName];
       if(colorRegionData === undefined) return;
       const newestValue = colorRegionData[colorRegionData.length - 1].value;
       const olderValues = colorRegionData.slice(0, colorRegionData.length - 1).map(value => value.value);
-      if(!olderValues.includes(newestValue)) {
-        // new color region value, label height could therefore have changed, so update placement of elements and re-plot;
-        this.placement.updateElementPlacements(plotConfiguration, this.svg, this.xScale, this.yScales);
-        this.plotData(plotConfiguration, processValuesLog);
-      }
-    });
+      return !olderValues.includes(newestValue);
+    }).some(value => value);
+
+    if(hasNewValue) {
+      // new color region value, label height could therefore have changed, so update placement of elements and re-plot;
+      this.placement.updateElementPlacements(plotConfiguration, this.svg, this.xScale, this.yScales);
+      this.plotData(plotConfiguration, processValuesLog);
+    }
   }
 
   private plotData(plotConfiguration: PlotConfiguration,

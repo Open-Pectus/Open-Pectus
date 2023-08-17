@@ -145,7 +145,8 @@ export class ProcessPlotD3Placement {
   }
 
   private calculateColorRegionLabelsHeight(root: Selection<SVGGElement, unknown, null, any>, plotConfiguration: PlotConfiguration) {
-    const heights = plotConfiguration.color_regions.map((_, colorRegionIndex) => {
+    // measure height of colored region labels
+    const colorRegionHeights = plotConfiguration.color_regions.map((_, colorRegionIndex) => {
       const colorRegionG = root.select<SVGGElement>(`.color-region-${colorRegionIndex}`);
       const rect = colorRegionG.select<SVGRectElement>('rect');
       const totalHeight = colorRegionG.node()?.getBoundingClientRect()?.height ?? 0;
@@ -154,7 +155,16 @@ export class ProcessPlotD3Placement {
       const rectHeight = rectBoundingRectangle?.width === 0 ? 0 : rectBoundingRectangle?.height ?? 0;
       return totalHeight - rectHeight;
     });
-    return Math.max(...heights);
+
+    // measure height of annotation labels
+    const annotationsSelection = root.select<SVGGElement>('.annotations');
+    const annotationLineSelection = annotationsSelection.select<SVGLineElement>('line');
+    const totalHeight = annotationsSelection.node()?.getBoundingClientRect()?.height ?? 0;
+    const lineHeight = annotationLineSelection.node()?.getBoundingClientRect()?.height ?? 0;
+    const annotationsHeight = totalHeight - lineHeight;
+
+    // return max height, ensuring -Infinity is not possible.
+    return Math.max(...colorRegionHeights, annotationsHeight, 0);
   }
 
   private calculateWidestLeftSideYAxisWidth(root: Selection<SVGGElement, unknown, null, any>) {
