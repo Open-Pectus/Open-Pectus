@@ -70,6 +70,8 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     root.append('g').attr('class', 'x-axis');
     plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
       const subPlotG = root.append('g').attr('class', `subplot subplot-${subPlotIndex}`);
+      subPlotG.append('rect').attr('class', 'subplot-border');
+      subPlotG.append('g').attr('class', 'annotations').attr('stroke', 'blue').attr('stroke-dasharray', 1.5);
       plotConfiguration.color_regions.forEach((_, colorRegionIndex) => {
         subPlotG.append('g').attr('class', `color-region-${colorRegionIndex}`);
       });
@@ -80,7 +82,6 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
         subPlotG.append('text').attr('class', `axis-label axis-label-${axisIndex}`).attr('fill', axis.color)
           .style('font-size', this.placement.axisLabelHeight).text(axis.label);
         subPlotG.append('g').attr('class', `line line-${axisIndex}`).attr('stroke', axis.color);
-        subPlotG.append('rect').attr('class', 'subplot-border');
       });
     });
   }
@@ -112,6 +113,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     this.updateXScaleDomain(plotConfiguration, processValuesLog, this.svg);
     this.plotLines(plotConfiguration, processValuesLog, this.svg);
     this.plotColoredRegions(plotConfiguration, processValuesLog, this.svg);
+    this.plotAnnotations(plotConfiguration, processValuesLog, this.svg);
   }
 
   private updateXScaleDomain(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValueLog,
@@ -185,6 +187,23 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     });
   }
 
+  private plotAnnotations(plotConfiguration: PlotConfiguration, processValueLog: ProcessValueLog,
+                          svg: Selection<SVGSVGElement, unknown, null, any>) {
+    const annotationData = this.formatAnnotationData(processValueLog, plotConfiguration.process_value_names_to_annotate);
+    plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
+      const subPlotSelection = svg.select<SVGGElement>(`.subplot-${subPlotIndex} .annotations`);
+      const subPlotTop = this.yScales[subPlotIndex][0].range()[1];
+      const subPlotBottom = this.yScales[subPlotIndex][0].range()[0];
+
+      subPlotSelection.selectAll('line')
+        .data(annotationData)
+        .join('line')
+        .attr('y1', subPlotTop)
+        .attr('y2', subPlotBottom)
+        .attr('transform', d => `translate(${[this.xScale(d.x), 0]})`);
+    });
+  }
+
   private formatLineDataForAxis(processValuesLog: ProcessValueLog, axis: PlotAxis): [number, number][][] {
     return axis.process_value_names
       .map(processValueName => processValuesLog[processValueName])
@@ -195,7 +214,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       );
   }
 
-  private formatRectData(colorRegion: PlotColorRegion, processValueLog: ProcessValueLog) {
+  private formatRectData(colorRegion: PlotColorRegion, processValueLog: ProcessValueLog): ColoredRegionRect[] {
     const processValueData = processValueLog[colorRegion.process_value_name];
     if(processValueData === undefined) return [];
     const processValueValues = processValueData.map(processValue => processValue.value);
@@ -217,6 +236,19 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     }
     return coloredRegionRects;
   }
+
+  private formatAnnotationData(processValueLog: ProcessValueLog, processValueNamesToAnnotate: string[]): Annotation[] {
+    return processValueNamesToAnnotate.flatMap(processValueNameToAnnotate => {
+      const processValueData = processValueLog[processValueNameToAnnotate];
+      if(processValueData === undefined) return [];
+      return processValueData.reduce<Annotation[]>((accumulator, value, index) => {
+        if(typeof value.value !== 'string') throw new Error('Annotation data should be string!');
+        if(accumulator.at(-1)?.label === value.value) return accumulator;
+        accumulator.push({x: index, label: value.value}); // TODO: index should be some time value
+        return accumulator;
+      }, []);
+    });
+  }
 }
 
 
@@ -225,4 +257,10 @@ interface ColoredRegionRect {
   end: number;
   color: string;
   value: string | number | undefined;
+}
+
+
+interface Annotation {
+  x: number;
+  label: string;
 }

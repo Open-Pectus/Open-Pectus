@@ -337,6 +337,7 @@ export const handlers = [
     return res(
       context.status(200),
       context.json<PlotConfiguration>({
+        process_value_names_to_annotate: ['Flow path'],
         color_regions: [{
           process_value_name: 'Flow path',
           value_color_map: {
