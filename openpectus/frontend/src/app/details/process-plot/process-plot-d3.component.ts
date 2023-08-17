@@ -71,9 +71,14 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
       const subPlotG = root.append('g').attr('class', `subplot subplot-${subPlotIndex}`);
       subPlotG.append('rect').attr('class', 'subplot-border');
-      subPlotG.append('g').attr('class', 'annotations').attr('stroke', 'blue').attr('stroke-dasharray', 1.5);
+      subPlotG.append('g').attr('class', 'annotations')
+        .attr('fill', 'blue')
+        .attr('stroke-dasharray', 1.5)
+        .style('font-size', 11);
       plotConfiguration.color_regions.forEach((_, colorRegionIndex) => {
-        subPlotG.append('g').attr('class', `color-region-${colorRegionIndex}`);
+        subPlotG.append('g').attr('class', `color-region-${colorRegionIndex}`)
+          .style('font-size', 11)
+          .attr('fill', 'black');
       });
       subPlot.axes.forEach((axis, axisIndex) => {
         subPlotG.append('g').attr('class', `x-grid-lines`).style('color', '#cccccc');
@@ -172,8 +177,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
         .data(formattedRectData)
         .join('path')
         .attr('transform', d => `translate(${[this.xScale(d.end) - (this.xScale(d.end) - this.xScale(d.start)) / 2, top]})`)
-        .attr('d', 'M -6 -12 0 -9 6 -12 0 0')
-        .attr('fill', 'black');
+        .attr('d', 'M -6 -12 0 -9 6 -12 0 0');
 
       // Label
       topColorRegionSelection.selectAll('text')
@@ -181,15 +185,15 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
         .join('text')
         .attr('transform',
           d => `translate(${[this.xScale(d.end) - (this.xScale(d.end) - this.xScale(d.start)) / 2 + 3, top - 14]}) rotate(-90)`)
-        .style('font-size', 11)
-        .text(d => d.value ?? '')
-        .attr('fill', 'black');
+        .text(d => d.value ?? '');
     });
   }
 
   private plotAnnotations(plotConfiguration: PlotConfiguration, processValueLog: ProcessValueLog,
                           svg: Selection<SVGSVGElement, unknown, null, any>) {
     const annotationData = this.formatAnnotationData(processValueLog, plotConfiguration.process_value_names_to_annotate);
+    const topAnnotationSelection = svg.select<SVGGElement>(`.annotations`);
+    const top = this.yScales[0][0].range()[1];
     plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
       const subPlotSelection = svg.select<SVGGElement>(`.subplot-${subPlotIndex} .annotations`);
       const subPlotTop = this.yScales[subPlotIndex][0].range()[1];
@@ -200,8 +204,21 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
         .join('line')
         .attr('y1', subPlotTop)
         .attr('y2', subPlotBottom)
+        .attr('stroke', 'blue')
         .attr('transform', d => `translate(${[this.xScale(d.x), 0]})`);
     });
+
+    topAnnotationSelection.selectAll('text')
+      .data(annotationData)
+      .join('text')
+      .text(d => d.label)
+      .attr('transform', d => `translate(${[this.xScale(d.x) + 3, top - 14]}) rotate(-90)`);
+
+    topAnnotationSelection.selectAll('path')
+      .data(annotationData)
+      .join('path')
+      .attr('transform', d => `translate(${[this.xScale(d.x), top]})`)
+      .attr('d', 'M -6 -12 0 -9 6 -12 0 0');
   }
 
   private formatLineDataForAxis(processValuesLog: ProcessValueLog, axis: PlotAxis): [number, number][][] {
