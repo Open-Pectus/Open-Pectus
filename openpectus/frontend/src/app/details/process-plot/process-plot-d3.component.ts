@@ -7,6 +7,7 @@ import { UtilMethods } from '../../shared/util-methods';
 import { ProcessValueLog } from './ngrx/process-plot.reducer';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
 import { ProcessPlotD3Placement } from './process-plot-d3.placement';
+import { ProcessPlotDashArrays } from './process-plot-dash-arrays';
 
 @Component({
   selector: 'app-process-plot-d3',
@@ -84,10 +85,16 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       subPlot.axes.forEach((axis, axisIndex) => {
         subPlotG.append('g').attr('class', `x-grid-lines`).style('color', '#cccccc');
         subPlotG.append('g').attr('class', `y-grid-lines`).style('color', '#cccccc');
-        subPlotG.append('g').attr('class', `y-axis y-axis-${axisIndex}`).style('color', axis.color);
-        subPlotG.append('text').attr('class', `axis-label axis-label-${axisIndex}`).attr('fill', axis.color)
-          .style('font-size', this.placement.axisLabelHeight).text(axis.label);
-        subPlotG.append('g').attr('class', `line line-${axisIndex}`).attr('stroke', axis.color);
+        subPlotG.append('g').attr('class', `y-axis y-axis-${axisIndex}`)
+          .style('color', axis.color);
+        subPlotG.append('text').attr('class', `axis-label axis-label-${axisIndex}`)
+          .attr('fill', axis.color)
+          .style('font-size', this.placement.axisLabelHeight)
+          .text(axis.label);
+        subPlotG.append('g').attr('class', `line line-${axisIndex}`)
+          .attr('stroke', axis.color)
+          .attr('fill', 'none')
+          .attr('stroke-width', 1);
       });
     });
   }
@@ -149,8 +156,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
             .x(d => this.xScale(d[0]))
             .y(d => this.yScales[subPlotIndex][axisIndex](d[1])),
           )
-          .attr('stroke-width', 1)
-          .attr('fill', 'none');
+          .attr('stroke-dasharray', (_, index) => ProcessPlotDashArrays[index]);
       });
     });
   }

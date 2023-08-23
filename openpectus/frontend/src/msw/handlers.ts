@@ -89,9 +89,35 @@ export const handlers = [
         {
           value_type: ProcessValueType.FLOAT,
           name: 'PU01 Speed',
-          value: 123 + Math.random() * 2,
+          value: 120,
           value_unit: '%',
         }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'PU02 Speed',
+          value: 121,
+          value_unit: '%',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'PU03 Speed',
+          value: 122,
+          value_unit: '%',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'PU04 Speed',
+          value: 123,
+          value_unit: '%',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'PU05 Speed',
+          value: 124,
+          value_unit: '%',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'PU06 Speed',
+          value: 125,
+          value_unit: '%',
+        },
+        {
           value_type: ProcessValueType.STRING,
           name: 'Some other Process Value',
           value: 'So very valuable',
@@ -351,11 +377,12 @@ export const handlers = [
             axes: [
               {
                 label: 'Red',
-                process_value_names: ['PU01 Speed', 'FT01 Flow'],
+                process_value_names: ['PU01 Speed', 'PU02 Speed', 'PU03 Speed', 'PU04 Speed', 'PU05 Speed', 'PU06 Speed'],
                 y_max: 126,
-                y_min: 123,
+                y_min: 119,
                 color: '#ff3333',
-              }, {
+              },
+              {
                 label: 'Blue',
                 process_value_names: ['TT01'],
                 y_max: 26,
