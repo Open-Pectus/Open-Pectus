@@ -159,7 +159,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
                              svg: Selection<SVGSVGElement, unknown, null, any>) {
     plotConfiguration.color_regions.forEach((colorRegion, colorRegionIndex) => {
       const topColorRegionSelection = svg.select<SVGGElement>(`.color-region-${colorRegionIndex}`);
-      const formattedRectData = this.formatRectData(colorRegion, processValueLog);
+      const formattedRectData = this.formatColoredRegionsData(colorRegion, processValueLog);
       const top = this.yScales[0][0].range()[1];
       plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
         const colorRegionSelection = svg.select<SVGGElement>(`.subplot-${subPlotIndex} .color-region-${colorRegionIndex}`);
@@ -217,7 +217,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     topAnnotationSelection.selectAll('text')
       .data(annotationData)
       .join('text')
-      .text(d => d.label)
+      .text(d => d.label ?? null)
       .attr('transform', d => `translate(${[this.xScale(d.x) + 3, top - 14]}) rotate(-90)`);
 
     topAnnotationSelection.selectAll('path')
@@ -237,7 +237,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       );
   }
 
-  private formatRectData(colorRegion: PlotColorRegion, processValueLog: ProcessValueLog): ColoredRegionRect[] {
+  private formatColoredRegionsData(colorRegion: PlotColorRegion, processValueLog: ProcessValueLog): ColoredRegionRect[] {
     const processValueData = processValueLog[colorRegion.process_value_name];
     if(processValueData === undefined) return [];
     const processValueValues = processValueData.map(processValue => processValue.value);
@@ -265,7 +265,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       const processValueData = processValueLog[processValueNameToAnnotate];
       if(processValueData === undefined) return [];
       return processValueData.reduce<Annotation[]>((accumulator, value, index) => {
-        if(typeof value.value !== 'string') return accumulator;
+        if(typeof value.value !== 'string' && value.value !== undefined) return accumulator;
         if(accumulator.at(-1)?.label === value.value) return accumulator;
         accumulator.push({x: index, label: value.value}); // TODO: index should be some time value
         return accumulator;
@@ -285,5 +285,5 @@ interface ColoredRegionRect {
 
 interface Annotation {
   x: number;
-  label: string;
+  label?: string;
 }
