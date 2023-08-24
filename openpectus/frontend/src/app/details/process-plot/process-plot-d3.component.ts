@@ -1,6 +1,6 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, OnDestroy, ViewChild } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { axisBottom, ScaleLinear, scaleLinear, select, Selection } from 'd3';
+import { axisBottom, ScaleLinear, scaleLinear, select } from 'd3';
 import { filter, Subject, take, takeUntil } from 'rxjs';
 import { PlotConfiguration } from '../../api';
 import { UtilMethods } from '../../shared/util-methods';
@@ -10,6 +10,7 @@ import { ProcessPlotD3Annotations } from './process-plot-d3.annotations';
 import { ProcessPlotD3ColoredRegions } from './process-plot-d3.colored-regions';
 import { ProcessPlotD3Lines } from './process-plot-d3.lines';
 import { ProcessPlotD3Placement } from './process-plot-d3.placement';
+import { D3Selection } from './process-plot-d3.types';
 
 @Component({
   selector: 'app-process-plot-d3',
@@ -25,7 +26,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private processValuesLog = this.store.select(ProcessPlotSelectors.processValuesLog);
   private xScale = scaleLinear();
   private yScales: ScaleLinear<number, number>[][] = [];
-  private svg?: Selection<SVGSVGElement, unknown, null, any>;
+  private svg?: D3Selection<SVGSVGElement>;
   private componentDestroyed = new Subject<void>();
   private placement = new ProcessPlotD3Placement();
   private lines = new ProcessPlotD3Lines();
@@ -71,9 +72,10 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     }));
   }
 
-  private insertSvgElements(svg: Selection<SVGSVGElement, unknown, null, any>, plotConfiguration: PlotConfiguration) {
+  private insertSvgElements(svg: D3Selection<SVGSVGElement>, plotConfiguration: PlotConfiguration) {
     const root = svg.append('g').attr('class', 'root');
     root.append('g').attr('class', 'x-axis');
+    root.append('g').attr('class', 'tooltip');
     plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
       const subPlotG = root.append('g').attr('class', `subplot subplot-${subPlotIndex}`);
       subPlotG.append('rect').attr('class', 'subplot-border');
@@ -140,7 +142,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   }
 
   private updateXScaleDomain(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValueLog,
-                             svg: Selection<SVGSVGElement, unknown, null, any>) {
+                             svg: D3Selection<SVGSVGElement>) {
     const maxXValue = (Object.values(processValuesLog)[0]?.length ?? 1) - 1; // TODO: when x is time instead of index, change this to match.
     this.xScale.domain([0, maxXValue]);
     svg.select<SVGGElement>('.x-axis').call(axisBottom(this.xScale));

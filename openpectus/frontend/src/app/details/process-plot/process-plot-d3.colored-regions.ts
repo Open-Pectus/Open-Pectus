@@ -1,10 +1,11 @@
-import { ScaleLinear, Selection } from 'd3';
+import { ScaleLinear } from 'd3';
 import { PlotColorRegion, PlotConfiguration } from '../../api';
 import { ProcessValueLog } from './ngrx/process-plot.reducer';
+import { ColoredRegionRect, D3Selection } from './process-plot-d3.types';
 
 export class ProcessPlotD3ColoredRegions {
   plotColoredRegions(plotConfiguration: PlotConfiguration, processValueLog: ProcessValueLog,
-                     svg: Selection<SVGSVGElement, unknown, null, any>,
+                     svg: D3Selection<SVGSVGElement>,
                      xScale: ScaleLinear<number, number>,
                      yScales: ScaleLinear<number, number>[][]) {
     plotConfiguration.color_regions.forEach((colorRegion, colorRegionIndex) => {
@@ -67,12 +68,4 @@ export class ProcessPlotD3ColoredRegions {
     }
     return coloredRegionRects;
   }
-}
-
-
-interface ColoredRegionRect {
-  start: number;
-  end: number;
-  color: string;
-  value: string | number | undefined;
 }

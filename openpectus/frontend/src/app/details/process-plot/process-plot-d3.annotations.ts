@@ -1,10 +1,11 @@
-import { ScaleLinear, Selection } from 'd3';
+import { ScaleLinear } from 'd3';
 import { PlotConfiguration } from '../../api';
 import { ProcessValueLog } from './ngrx/process-plot.reducer';
+import { Annotation, D3Selection } from './process-plot-d3.types';
 
 export class ProcessPlotD3Annotations {
   plotAnnotations(plotConfiguration: PlotConfiguration, processValueLog: ProcessValueLog,
-                  svg: Selection<SVGSVGElement, unknown, null, any>,
+                  svg: D3Selection<SVGSVGElement>,
                   xScale: ScaleLinear<number, number>,
                   yScales: ScaleLinear<number, number>[][]) {
     const annotationData = this.formatAnnotationData(processValueLog, plotConfiguration.process_value_names_to_annotate);
@@ -49,10 +50,4 @@ export class ProcessPlotD3Annotations {
       }, []);
     });
   }
-}
-
-
-interface Annotation {
-  x: number;
-  label?: string;
 }

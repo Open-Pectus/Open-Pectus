@@ -1,13 +1,14 @@
-import { line, ScaleLinear, Selection } from 'd3';
+import { line, ScaleLinear } from 'd3';
 import { PlotAxis, PlotConfiguration } from '../../api';
 import { UtilMethods } from '../../shared/util-methods';
 import { ProcessValueLog } from './ngrx/process-plot.reducer';
+import { D3Selection } from './process-plot-d3.types';
 import { ProcessPlotDashArrays } from './process-plot-dash-arrays';
 
 export class ProcessPlotD3Lines {
 
   plotLines(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValueLog,
-            svg: Selection<SVGSVGElement, unknown, null, any>, xScale: ScaleLinear<number, number>,
+            svg: D3Selection<SVGSVGElement>, xScale: ScaleLinear<number, number>,
             yScales: ScaleLinear<number, number>[][]) {
     plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
       subPlot.axes.forEach((axis, axisIndex) => {
