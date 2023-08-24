@@ -829,12 +829,18 @@
             },
             "type": "array",
             "title": "Commands"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
           }
         },
         "type": "object",
         "required": [
           "name",
-          "value_type"
+          "value_type",
+          "timestamp"
         ],
         "title": "ProcessValue",
         "description": "Represents a process value. "

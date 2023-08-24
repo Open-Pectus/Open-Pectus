@@ -135,6 +135,7 @@ class ProcessValue(BaseModel):
     value_type: ProcessValueType
     """ Specifies the type of allowed values. """
     commands: List[ProcessValueCommand] | None
+    timestamp: datetime # to get some kind of x-value for the plot. It is not necesarrily a timestamp according to the example plot image I have (jhk)
 
     @staticmethod
     def from_message(r: ReadingDef, ti: TagInfo) -> ProcessValue:

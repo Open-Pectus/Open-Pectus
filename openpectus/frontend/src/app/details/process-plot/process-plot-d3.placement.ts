@@ -1,4 +1,4 @@
-import { Axis, axisBottom, axisLeft, axisRight, axisTop, NumberValue, ScaleLinear, sum } from 'd3';
+import { Axis, axisBottom, axisLeft, axisRight, axisTop, NumberValue, ScaleLinear, ScaleTime, sum } from 'd3';
 import { PlotConfiguration, SubPlot } from '../../api';
 import { D3Selection, LeftRight, TopBottom } from './process-plot-d3.types';
 
@@ -13,7 +13,7 @@ export class ProcessPlotD3Placement {
   private readonly pixelsPerTick = 42;
 
   updateElementPlacements(plotConfiguration: PlotConfiguration, svg: D3Selection<SVGSVGElement> | undefined,
-                          xScale: ScaleLinear<number, number>, yScales: ScaleLinear<number, number>[][]) {
+                          xScale: ScaleTime<number, number>, yScales: ScaleLinear<number, number>[][]) {
     if(svg === undefined) throw Error('no SVG element during placement!');
     const rootHeight = (svg.node()?.height.baseVal.value ?? 0) - this.margin.top - this.margin.bottom;
     const rootWidth = (svg.node()?.width.baseVal.value ?? 0) - this.margin.left - this.margin.right;
@@ -85,7 +85,7 @@ export class ProcessPlotD3Placement {
       .attr('transform', `translate(${[labelXTransform, labelYTransform]}) rotate(${labelRotation})`);
   }
 
-  private placeXAxis(root: D3Selection<SVGGElement>, rootHeight: number, xScale: ScaleLinear<number, number>,
+  private placeXAxis(root: D3Selection<SVGGElement>, rootHeight: number, xScale: ScaleTime<number, number>,
                      leftRight: LeftRight, xAxisHeight: number) {
     xScale.range([leftRight.left, leftRight.right]);
     root.selectChild<SVGGElement>('.x-axis')
@@ -175,7 +175,7 @@ export class ProcessPlotD3Placement {
     return Math.max(...rightSideYAxesWidths, 0);
   }
 
-  private placeGridLines(subPlotG: D3Selection<SVGGElement>, subPlotIndex: number, xScale: ScaleLinear<number, number>,
+  private placeGridLines(subPlotG: D3Selection<SVGGElement>, subPlotIndex: number, xScale: ScaleTime<number, number>,
                          yScales: ScaleLinear<number, number>[][], subPlotLeftRight: { left: number; right: number },
                          subPlotTopBottom: TopBottom) {
     const subPlotWidth = subPlotLeftRight.right - subPlotLeftRight.left;

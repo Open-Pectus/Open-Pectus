@@ -1,6 +1,6 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, OnDestroy, ViewChild } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { axisBottom, ScaleLinear, scaleLinear, select } from 'd3';
+import { axisBottom, ScaleLinear, scaleLinear, scaleTime, select } from 'd3';
 import { filter, Subject, take, takeUntil } from 'rxjs';
 import { PlotConfiguration } from '../../api';
 import { UtilMethods } from '../../shared/util-methods';
@@ -10,6 +10,7 @@ import { ProcessPlotD3Annotations } from './process-plot-d3.annotations';
 import { ProcessPlotD3ColoredRegions } from './process-plot-d3.colored-regions';
 import { ProcessPlotD3Lines } from './process-plot-d3.lines';
 import { ProcessPlotD3Placement } from './process-plot-d3.placement';
+import { ProcessPlotD3Tooltip } from './process-plot-d3.tooltip';
 import { D3Selection } from './process-plot-d3.types';
 
 @Component({
@@ -24,7 +25,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   @Input() isCollapsed = false;
   private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(filter(UtilMethods.isNotNullOrUndefined));
   private processValuesLog = this.store.select(ProcessPlotSelectors.processValuesLog);
-  private xScale = scaleLinear();
+  private xScale = scaleTime();
   private yScales: ScaleLinear<number, number>[][] = [];
   private svg?: D3Selection<SVGSVGElement>;
   private componentDestroyed = new Subject<void>();
@@ -32,6 +33,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private lines = new ProcessPlotD3Lines();
   private coloredRegions = new ProcessPlotD3ColoredRegions();
   private annotations = new ProcessPlotD3Annotations();
+  private tooltip = new ProcessPlotD3Tooltip(this.processValuesLog);
 
   constructor(private store: Store) {}
 
@@ -46,6 +48,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       this.setupOnResize(plotConfiguration, this.plotElement.nativeElement);
       this.oneTimeSetup(plotConfiguration);
       this.setupOnDataChange(plotConfiguration);
+      this.tooltip.setupTooltip(this.svg, this.xScale);
     });
   }
 
@@ -75,7 +78,9 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private insertSvgElements(svg: D3Selection<SVGSVGElement>, plotConfiguration: PlotConfiguration) {
     const root = svg.append('g').attr('class', 'root');
     root.append('g').attr('class', 'x-axis');
-    root.append('g').attr('class', 'tooltip');
+    root.append('g').attr('class', 'tooltip')
+      .style('pointer-events', 'none')
+      .style('font', '12px sans-serif');
     plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
       const subPlotG = root.append('g').attr('class', `subplot subplot-${subPlotIndex}`);
       subPlotG.append('rect').attr('class', 'subplot-border');

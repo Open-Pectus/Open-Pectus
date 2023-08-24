@@ -82,6 +82,7 @@ export const handlers = [
   }),
 
   rest.get('/api/process_unit/:processUnitId/process_values', (req, res, ctx) => {
+    const timestamp = new Date().toISOString();
     return res(
       ctx.status(200),
       ctx.delay(),
@@ -91,36 +92,43 @@ export const handlers = [
           name: 'PU01 Speed',
           value: 120,
           value_unit: '%',
+          timestamp,
         }, {
           value_type: ProcessValueType.FLOAT,
           name: 'PU02 Speed',
           value: 121,
           value_unit: '%',
+          timestamp,
         }, {
           value_type: ProcessValueType.FLOAT,
           name: 'PU03 Speed',
           value: 122,
           value_unit: '%',
+          timestamp,
         }, {
           value_type: ProcessValueType.FLOAT,
           name: 'PU04 Speed',
           value: 123,
           value_unit: '%',
+          timestamp,
         }, {
           value_type: ProcessValueType.FLOAT,
           name: 'PU05 Speed',
           value: 124,
           value_unit: '%',
+          timestamp,
         }, {
           value_type: ProcessValueType.FLOAT,
           name: 'PU06 Speed',
           value: 125,
           value_unit: '%',
+          timestamp,
         },
         {
           value_type: ProcessValueType.STRING,
           name: 'Some other Process Value',
           value: 'So very valuable',
+          timestamp,
           commands: [
             {command: 'some_command', name: 'Some Command'},
             {command: 'some_other_command', name: 'Some Other Command'},
@@ -130,6 +138,7 @@ export const handlers = [
           name: 'A value with unit',
           value: 1000,
           value_unit: 'm',
+          timestamp,
           commands: [
             {
               command: 'fdsa', name: 'fdsa', value: {
@@ -144,11 +153,13 @@ export const handlers = [
           value_type: ProcessValueType.STRING,
           name: 'Many Data',
           value: 'HANDLE IT',
+          timestamp,
         }, {
           value_type: ProcessValueType.FLOAT,
           name: 'FT01 Flow',
           value: 123 + Math.random() * 2,
           value_unit: 'L/h',
+          timestamp,
           commands: [
             {
               command: 'fdsafsa',
@@ -165,6 +176,7 @@ export const handlers = [
           value_type: ProcessValueType.STRING,
           name: 'Writable text',
           value: 'VaLuE',
+          timestamp,
           commands: [{
             name: 'jiojio',
             command: 'jiojio',
@@ -202,6 +214,7 @@ export const handlers = [
           name: 'TT01',
           value: 23.4 + Math.random() * 2,
           value_unit: 'degC',
+          timestamp,
           commands: [{
             name: 'Set target temperature',
             command: 'set_target_temperature',
@@ -216,6 +229,7 @@ export const handlers = [
           value_type: ProcessValueType.STRING,
           name: 'Flow path',
           value: (getSeconds(Date.now()) % 10 < 3) ? 'Bypass' : (getSeconds(Date.now()) % 10 < 6) ? 'Prime with a long name' : undefined,
+          timestamp,
         },
       ]),
     );
@@ -292,6 +306,7 @@ export const handlers = [
   }),
 
   rest.get('/api/process_unit/:unitId/run_log', (req, res, context) => {
+    const timestamp = new Date().toISOString();
     return res(
       context.status(200),
       context.json<RunLog>({
@@ -308,6 +323,7 @@ export const handlers = [
               value: 1.43253342,
               value_type: ProcessValueType.FLOAT,
               value_unit: 'afv',
+              timestamp,
             }],
             end_values: [],
           }, {
@@ -319,10 +335,34 @@ export const handlers = [
               source: CommandSource.MANUALLY_ENTERED,
             },
             start_values: [
-              {name: 'Amazing float value', value: 999, value_type: ProcessValueType.FLOAT, value_unit: 'afv'},
-              {name: 'Best value', value: 19.99, value_type: ProcessValueType.FLOAT, value_unit: 'afv'},
-              {name: 'Such prices', value: 4299, value_type: ProcessValueType.FLOAT, value_unit: 'afv'},
-              {name: 'Very affordable', value: 0.99, value_type: ProcessValueType.FLOAT, value_unit: 'afv'},
+              {
+                name: 'Amazing float value',
+                value: 999,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+                timestamp,
+              },
+              {
+                name: 'Best value',
+                value: 19.99,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+                timestamp,
+              },
+              {
+                name: 'Such prices',
+                value: 4299,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+                timestamp,
+              },
+              {
+                name: 'Very affordable',
+                value: 0.99,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+                timestamp,
+              },
             ],
             end_values: [],
           }, {
@@ -334,12 +374,32 @@ export const handlers = [
               source: CommandSource.MANUALLY_ENTERED,
             },
             start_values: [
-              {name: 'Waaagh?', value: 'No waagh', value_type: ProcessValueType.STRING},
-              {name: 'Dakka?', value: 'No dakka 🙁', value_type: ProcessValueType.STRING},
+              {
+                name: 'Waaagh?',
+                value: 'No waagh',
+                value_type: ProcessValueType.STRING,
+                timestamp,
+              },
+              {
+                name: 'Dakka?',
+                value: 'No dakka 🙁',
+                value_type: ProcessValueType.STRING,
+                timestamp,
+              },
             ],
             end_values: [
-              {name: 'Waaagh?', value: 'WAAAGH!', value_type: ProcessValueType.STRING},
-              {name: 'Dakka?', value: 'DAKKA! 😀', value_type: ProcessValueType.STRING},
+              {
+                name: 'Waaagh?',
+                value: 'WAAAGH!',
+                value_type: ProcessValueType.STRING,
+                timestamp,
+              },
+              {
+                name: 'Dakka?',
+                value: 'DAKKA! 😀',
+                value_type: ProcessValueType.STRING,
+                timestamp,
+              },
             ],
           },
         ],
