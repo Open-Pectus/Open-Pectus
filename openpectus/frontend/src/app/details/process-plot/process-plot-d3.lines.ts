@@ -29,9 +29,10 @@ export class ProcessPlotD3Lines {
     return axis.process_value_names
       .map(processValueName => processValuesLog[processValueName])
       .filter(UtilMethods.isNotNullOrUndefined)
-      .map(processValueLine => processValueLine.map(processValue => processValue.value)
-        .filter(UtilMethods.isNumber)
-        .map((processValueValue, index) => [index, processValueValue]),
+      .map(processValueLine => processValueLine.map(processValue => {
+          if(typeof processValue.value !== 'number') return undefined;
+          return [new Date(processValue.timestamp).valueOf(), processValue.value] as [number, number];
+        }).filter(UtilMethods.isNotNullOrUndefined),
       );
   }
 }

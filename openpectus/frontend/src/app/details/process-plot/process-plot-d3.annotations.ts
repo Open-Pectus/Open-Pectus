@@ -42,10 +42,10 @@ export class ProcessPlotD3Annotations {
     return processValueNamesToAnnotate.flatMap(processValueNameToAnnotate => {
       const processValueData = processValueLog[processValueNameToAnnotate];
       if(processValueData === undefined) return [];
-      return processValueData.reduce<Annotation[]>((accumulator, value, index) => {
+      return processValueData.reduce<Annotation[]>((accumulator, value) => {
         if(typeof value.value !== 'string' && value.value !== undefined) return accumulator;
         if(accumulator.at(-1)?.label === value.value) return accumulator;
-        accumulator.push({x: index, label: value.value}); // TODO: index should be some time value
+        accumulator.push({x: new Date(value.timestamp).valueOf(), label: value.value});
         return accumulator;
       }, []);
     });

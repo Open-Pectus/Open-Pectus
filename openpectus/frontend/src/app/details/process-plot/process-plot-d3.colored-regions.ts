@@ -50,21 +50,23 @@ export class ProcessPlotD3ColoredRegions {
     const processValueData = processValueLog[colorRegion.process_value_name];
     if(processValueData === undefined) return [];
     const processValueValues = processValueData.map(processValue => processValue.value);
-    let start: number = 0;
+    let start: number = new Date(processValueData[0].timestamp).valueOf();
     const coloredRegionRects: ColoredRegionRect[] = [];
     for(let i = 0; i < processValueValues.length; i++) {
       const currentValueColor = colorRegion.value_color_map[processValueValues[i] ?? -1];
       const previousValueColor = colorRegion.value_color_map[processValueValues[i - 1] ?? -1];
       if(currentValueColor === previousValueColor) continue; // same value, just skip ahead
+      const endTimestamp = new Date(processValueData[i].timestamp).valueOf();
       if(previousValueColor !== undefined) {
-        coloredRegionRects.push({start, end: i, color: previousValueColor, value: processValueValues[i - 1]});
+        coloredRegionRects.push({start, end: endTimestamp, color: previousValueColor, value: processValueValues[i - 1]});
       }
-      if(currentValueColor !== undefined) start = i;
+      if(currentValueColor !== undefined) start = endTimestamp;
     }
     const valueAtEnd = processValueValues[processValueData.length - 1];
     const colorAtEnd = colorRegion.value_color_map[valueAtEnd ?? -1];
     if(colorAtEnd !== undefined) { // we ran past end, but was drawing a rect, so push that into array
-      coloredRegionRects.push({start, end: processValueData.length - 1, color: colorAtEnd, value: valueAtEnd});
+      const endTimestamp = new Date(processValueData[processValueData.length - 1].timestamp).valueOf();
+      coloredRegionRects.push({start, end: endTimestamp, color: colorAtEnd, value: valueAtEnd});
     }
     return coloredRegionRects;
   }

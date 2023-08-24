@@ -148,8 +148,10 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
 
   private updateXScaleDomain(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValueLog,
                              svg: D3Selection<SVGSVGElement>) {
-    const maxXValue = (Object.values(processValuesLog)[0]?.length ?? 1) - 1; // TODO: when x is time instead of index, change this to match.
-    this.xScale.domain([0, maxXValue]);
+    const firstProcessValueLine = Object.values(processValuesLog)?.[0];
+    const minXValue = new Date(firstProcessValueLine?.[0]?.timestamp ?? 0);
+    const maxXValue = new Date(firstProcessValueLine?.[firstProcessValueLine?.length - 1]?.timestamp ?? 0);
+    this.xScale.domain([minXValue, maxXValue]);
     svg.select<SVGGElement>('.x-axis').call(axisBottom(this.xScale));
     plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
       svg.select<SVGGElement>(`.subplot-${subPlotIndex} .x-grid-lines`).call(this.placement.xGridLineAxisGenerators[subPlotIndex]);
