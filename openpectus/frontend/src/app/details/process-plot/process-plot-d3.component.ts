@@ -78,12 +78,9 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private insertSvgElements(svg: D3Selection<SVGSVGElement>, plotConfiguration: PlotConfiguration) {
     const root = svg.append('g').attr('class', 'root');
     root.append('g').attr('class', 'x-axis');
-    root.append('g').attr('class', 'tooltip')
-      .style('pointer-events', 'none')
-      .style('font', '12px sans-serif');
     plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
-      const subPlotG = root.append('g').attr('class', `subplot subplot-${subPlotIndex}`);
-      subPlotG.append('rect').attr('class', 'subplot-border');
+      const subPlotG = root.append('g')
+        .attr('class', `subplot subplot-${subPlotIndex}`);
       subPlotG.append('g').attr('class', 'annotations')
         .attr('fill', 'blue')
         .attr('stroke-dasharray', 1.5)
@@ -108,7 +105,15 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
           .attr('fill', 'none')
           .attr('stroke-width', 1);
       });
+
+      subPlotG.append('rect').attr('class', 'subplot-border')
+        .attr('stroke-width', 1)
+        .attr('stroke', 'black')
+        .attr('fill', 'transparent');
     });
+    root.append('g').attr('class', 'tooltip')
+      .style('pointer-events', 'none')
+      .style('font', '12px sans-serif');
   }
 
   private setupOnDataChange(plotConfiguration: PlotConfiguration) {

@@ -9,7 +9,8 @@ export class ProcessPlotD3Tooltip {
 
   setupTooltip(svg: D3Selection<SVGSVGElement>, xScale: ScaleTime<number, number>) {
     const tooltip = svg.select<SVGGElement>('.tooltip');
-    svg.on('touchmove mousemove', async (event: MouseEvent) => {
+    const subplotBorders = svg.selectAll('.subplot-border');
+    subplotBorders.on('touchmove mousemove', async (event: MouseEvent) => {
       if(event === undefined) return;
       const data = await firstValueFrom(this.processValueLog);
       const relativeMousePosition = pointer(event);
@@ -20,7 +21,7 @@ export class ProcessPlotD3Tooltip {
         .call(this.callout, bisected);
     });
 
-    svg.on('touchend mouseleave', () => tooltip.call(this.callout));
+    subplotBorders.on('touchend mouseleave', () => tooltip.call(this.callout));
   }
 
   private bisectX<T extends { timestamp: string }>(domainData: T[][], xScale: ScaleTime<number, number>, mouseX: number): T[] | undefined {

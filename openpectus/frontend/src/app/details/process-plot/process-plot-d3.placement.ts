@@ -96,9 +96,6 @@ export class ProcessPlotD3Placement {
   private placeSubPlotBorder(subPlotG: D3Selection<SVGGElement>,
                              leftRight: LeftRight, topBottom: TopBottom) {
     subPlotG.selectChild<SVGGElement>('.subplot-border')
-      .attr('stroke-width', 1)
-      .attr('stroke', 'black')
-      .attr('fill', 'none')
       .attr('x', leftRight.left)
       .attr('y', topBottom.top)
       // Math.abs() avoids errors with negative values while container is collapsing
