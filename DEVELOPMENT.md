@@ -221,6 +221,11 @@ cd Open-Pectus
 pyright
 ```
 
+It is updated very frequently. To update it, run
+```
+pip install -U pyright
+```
+
 ### 5.2.3. Comparison
 
 MyPy

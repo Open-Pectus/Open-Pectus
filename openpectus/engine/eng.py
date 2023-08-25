@@ -5,7 +5,8 @@ from multiprocessing import Queue
 from queue import Empty
 import logging
 import time
-from typing import Iterable
+from typing import Iterable, List
+from openpectus.lang.exec.pinterpreter import PInterpreter
 
 from openpectus.lang.exec.timer import OneThreadTimer
 from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException
@@ -17,6 +18,8 @@ from openpectus.lang.exec.tags import (
     ChangeListener,
     DEFAULT_TAG_CLOCK
 )
+from openpectus.lang.grammar.pgrammar import PGrammar
+from openpectus.lang.model.pprogram import PProgram
 
 
 logging.basicConfig()
@@ -24,16 +27,26 @@ logger = logging.getLogger("Engine")
 logger.setLevel(logging.DEBUG)
 
 
+def parse_pcode(pcode: str) -> PProgram:
+    p = PGrammar()
+    p.parse(pcode)
+    return p.build_model()
+
+
 class UodReader():
     def read(self) -> UnitOperationDefinitionBase:
         raise NotImplementedError()
 
 
-class EngineCommand():
+class CommandRequest():
+    # TODO extend to support general pcode and injection flag?
     """ Represents a command request for engine to execute. """
     def __init__(self, name: str, args: str | None = None) -> None:
         self.name: str = name
         self.args: str | None = args
+
+    def __str__(self) -> str:
+        return f"EngineCommand {self.name} | args: {self.args}"
 
 
 class EngineInternalCommand(StrEnum):
@@ -48,8 +61,14 @@ class EngineInternalCommand(StrEnum):
         return hasattr(EngineInternalCommand, value)
 
 
+class RunLogItem():
+    def __init__(self) -> None:
+        pass
+        # self.command =
+
 # TODO be able to create interpreter
 # TODO advance interpreter - it should no longe have its own timer
+
 
 class ExecutionEngine():
     """ Main engine class. Handles
@@ -69,8 +88,10 @@ class ExecutionEngine():
         # TODO does the uod need to know about these? Yes - we should make them available as read only
         self._system_tags = TagCollection.create_system_tags()
 
-        self.cmd_queue: Queue[EngineCommand] = Queue()
+        self.cmd_queue: Queue[CommandRequest] = Queue()
         """ Commands to execute, coming from interpreter and from aggregator """
+        self.cmd_executing: List[CommandRequest] = []
+        """ Uod commands currently being excuted """
         self.tag_updates: Queue[Tag] = Queue()
         """ Tags updated in last tick """
 
@@ -79,8 +100,11 @@ class ExecutionEngine():
         self._tick_timer = OneThreadTimer(tick_interval, self.tick)
 
         self._runstate_started: bool = False
-        """ Indicates the surrent Start/Stop state"""
+        """ Indicates the current Start/Stop state"""
         self._runstate_started_time: float = 0
+
+        self._interpreter: PInterpreter | None = None
+        """ The interpreter executing the current program, if any. """
 
     def _iter_all_tags(self) -> Iterable[Tag]:
         return itertools.chain(self._system_tags, self.uod.tags)
@@ -95,9 +119,6 @@ class ExecutionEngine():
         return list(dirty)
 
     def _configure(self):
-        # configure uod
-        self.uod.define_system_tags(self._system_tags)
-        self.uod.define()
         self.uod.validate_configuration()
         self.uod.tags.add_listener(self._uod_listener)
         self._system_tags.add_listener(self._system_listener)
@@ -145,7 +166,8 @@ class ExecutionEngine():
         # TODO
 
         # excecute interpreter tick
-        # TODO
+        if self._interpreter is not None:
+            self._interpreter.tick(self._tick_time)
 
         # update clocks
         self.update_clocks()
@@ -183,7 +205,7 @@ class ExecutionEngine():
         # for tag, value in zip(readable_tags, values):
         #     tag.set_value(value)
 
-        hwl: HardwareLayerBase = self.uod.hwl  # type: ignore
+        hwl: HardwareLayerBase = self.uod.hwl
 
         # assert isinstance(self.uod.hwl, HardwareLayerBase) is True
         if not isinstance(hwl, HardwareLayerBase):
@@ -207,18 +229,39 @@ class ExecutionEngine():
 
     def execute_commands(self):
         done = False
+        # add command request from incoming queue
+
+        # TODO decide whether to parse or not
+        # program = parse_pcode("")
+        # instructions = program.get_instructions(include_blanks=False)
+        # if len(instructions) == 1 and isinstance(instructions[0], PCommand)
+
         while self.cmd_queue.qsize() > 0 and not done:
             try:
-                c = self.cmd_queue.get()
-                self._execute_command(c)
+                engine_command = self.cmd_queue.get()
+                self.cmd_executing.insert(0, engine_command)
             except Empty:
                 done = True
 
-    def _execute_command(self, cmd_request: EngineCommand):
-        logger.debug("Executing command request: " + cmd_request.name)
+        # execute a tick of each running command
+        for c in self.cmd_executing:
+            try:
+                self._execute_command(c)
+            except Exception:
+                logger.error("Error executing command: {c}", exc_info=True)
+                # TODO stop or pause or something
+                break
+
+    def _execute_command(self, cmd_request: CommandRequest):
+        # TODO decide whether to parse or not
+        # TODO create state diagram of command execution/iterations/cancellation
+        # TODO add command to force condition and add interpreter api for it
+        # TODO add helper methods on PProgram to determine simple commands
+
+        logger.debug("Executing uod command: " + cmd_request.name)
         if cmd_request.name is None or len(cmd_request.name.strip()) == 0:
             logger.error("Command name empty")
-            raise ValueError("Command name empty")
+            return
 
         # Command types
         # 1. Engine internal, i.e. START
@@ -235,23 +278,66 @@ class ExecutionEngine():
             if cmd_name == EngineInternalCommand.START.upper():
                 self._runstate_started = True
                 self._runstate_started_time = time.time()
+                self.cmd_executing.remove(cmd_request)
             elif cmd_name == EngineInternalCommand.STOP.upper():
                 self._runstate_started = False
+                self.cmd_executing.remove(cmd_request)
             else:
-                raise NotImplementedError()
+                raise NotImplementedError(f"EngineInternalCommand {cmd_name} execution not implemented")
+        elif False:
+            # TODO internal commands
+            pass
         else:
-            if not self.uod.validate_command_name(cmd_request.name):
-                # TODO handle internal commands also
-                logger.error("No such uod command")
-                raise ValueError("No such command")
+            assert self.uod.has_command_name(cmd_request.name), f"Expected Uod to have command named {cmd_request.name}"
 
-            if not self.uod.validate_command_args(cmd_request.name, cmd_request.args):
+            uod_command = self.uod.get_or_create_command(cmd_request.name)
+            assert uod_command is not None, "Should always be able to get or create command"
+
+            args = uod_command.parse_args(cmd_request.args, uod_command.context)  # TODO remove uod from method signature
+            if args is None:
                 logger.error(f"Invalid argument string: '{cmd_request.args}' for command '{cmd_request.name}'")
                 raise ValueError("Invalid arguments")
 
             try:
-                logger.debug(f"Executing uod command: '{cmd_request.name}' with args '{cmd_request.args}'")
-                self.uod.execute_command(cmd_request.name, cmd_request.args)
+                # cancel any existing instance
+                for c in self.cmd_executing:
+                    if c.name == cmd_request.name and not c == cmd_request:
+                        self.cmd_executing.remove(c)
+                        uod_command.cancel()
+                        # TODO mark cancelled in run log
+
+                # cancel any overlapping instance
+                # TODO
+
+                try:
+                    logger.debug(f"Executing uod command: '{cmd_request.name}' with args '{cmd_request.args}'")
+                    if uod_command.is_cancelled():
+                        if not uod_command.is_finalized():
+                            uod_command.finalize()
+                        #handle cancelled
+
+                    if not uod_command.is_initialized():
+                        uod_command.initialize()
+
+                    if not uod_command.is_execution_started():
+                        uod_command.execute(args)
+
+                    if uod_command.is_execution_complete() and not uod_command.is_finalized():
+                        uod_command.finalize()
+
+                except Exception:
+                    logger.error(f"Command execution failed. Command: '{cmd_request.name}', "
+                                 + "argument string: '{cmd_request.args}'", exc_info=True)
+                    return
+
+                # TODO decide responsibilities:
+                # Engine:
+                #   invoke initialize, execute, finalize, cancel on Uod
+                #      only execute is non-synchronous
+                #   update iterations after each execute call
+                # Uod:
+                #   set progress, set complete
+
             except Exception:
                 logger.error("Command execution failed", exc_info=True)
 
@@ -271,7 +357,7 @@ class ExecutionEngine():
         self._uod_listener.clear_changes()
 
     def write_process_image(self):
-        hwl: HardwareLayerBase = self.uod.hwl  # type: ignore
+        hwl: HardwareLayerBase = self.uod.hwl
 
         register_values = []
         register_list = list(hwl.registers.values())
@@ -284,9 +370,32 @@ class ExecutionEngine():
 
         hwl.write_batch(register_values, register_list)
 
+    # differentiate between injected commands (which are to be executed asap without modifying the program)
+    # and non-injected which are already part of the program
+
     def schedule_execution(self, name: str, args: str) -> None:
-        command = EngineCommand(name, args)
+        """ Schedule execution of named command, possibly with arguments"""
+        # TODO might want to check that no threshold is provided. this is not supported here
+        command = CommandRequest(name, args)
         self.cmd_queue.put_nowait(command)
+
+    def inject_command(self, name: str, args: str):
+        """ Inject a command to run in the current scope of the current program. """
+        # TODO might want to check that no threshold is provided. this is not supported here
+        raise NotImplementedError()
+
+    def inject_snippet(self, pcode: str):
+        """ Inject a general code snippet to run in the current scope of the current program. """
+        raise NotImplementedError()
+
+    # code manipulation api
+    def set_program(self, pcode: str):
+        """ Set new program. This will replace the current program. """
+        raise NotImplementedError()
+
+    # set_code, update_line
+    # undo/revert(?)
+
 
 # Tag.Select (self.hw_value = self.read)
 # Tag state     'Reset'   'N/A'
