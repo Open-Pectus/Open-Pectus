@@ -26,12 +26,12 @@ export class ProcessPlotD3Tooltip {
       tooltip.attr('transform', `translate(${relativeMousePosition})`)
         .call(this.callout.bind(this), bisected);
       eventTargetParentElement = select((event.target as SVGRectElement).parentNode as SVGGElement);
-      eventTargetParentElement.call(this.line, xScale, bisected);
+      eventTargetParentElement.call(this.line.bind(this), xScale, bisected);
     });
 
     subplotBorders.on('touchend mouseleave', () => {
       tooltip.call(this.callout.bind(this));
-      eventTargetParentElement.call(this.line, xScale);
+      eventTargetParentElement.call(this.line.bind(this), xScale);
     });
   }
 
@@ -86,7 +86,7 @@ export class ProcessPlotD3Tooltip {
       .attr('x1', d => xScale(new Date(d.timestamp)))
       .attr('x2', d => xScale(new Date(d.timestamp)))
       .attr('y1', rectBBox?.y ?? 0)
-      .attr('y2', rectBBox?.height ?? 0)
+      .attr('y2', (rectBBox?.y ?? 0) + (rectBBox?.height ?? 0))
       .attr('stroke', 'black');
   }
 }
