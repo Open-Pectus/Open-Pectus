@@ -17,14 +17,12 @@ export class ProcessPlotD3Tooltip {
     const tooltip = svg.select<SVGGElement>('.tooltip');
     const subplotBorders = svg.selectAll('.subplot-border');
     let eventTargetParentElement: D3Selection<SVGGElement>;
-    subplotBorders.on('touchmove mousemove', async (event: MouseEvent) => {
+    subplotBorders.on('mousemove', async (event: MouseEvent) => {
       if(event === undefined) return;
       const data = await firstValueFrom(this.processValueLog);
       const plotConfiguration = await firstValueFrom(this.plotConfiguration);
       const subplotBorderG = (event.target as SVGRectElement).parentNode as SVGGElement;
-      eventTargetParentElement = select(subplotBorderG);
-      // TODO: is there really no better way to find the subplotIndex?
-      const subplotIndex = Array.prototype.indexOf.call(subplotBorderG.parentNode?.parentNode?.children, subplotBorderG.parentNode) - 1;
+      const subplotIndex = parseInt(/subplot-(\d+)/.exec(subplotBorderG.parentElement?.classList.toString() ?? '')?.[1] ?? '');
       const subplotProcessValueNames = plotConfiguration.sub_plots[subplotIndex].axes.flatMap(axis => axis.process_value_names);
       const subplotData = Object.values(data).filter(processValues => subplotProcessValueNames.includes(processValues[0].name));
 
@@ -34,10 +32,11 @@ export class ProcessPlotD3Tooltip {
 
       tooltip.attr('transform', `translate(${relativeMousePosition})`)
         .call(this.callout.bind(this), bisected, plotConfiguration);
+      eventTargetParentElement = select(subplotBorderG);
       eventTargetParentElement.call(this.line.bind(this), xScale, bisected);
     });
 
-    subplotBorders.on('touchend mouseleave', () => {
+    subplotBorders.on('mouseleave', () => {
       tooltip.call(this.callout.bind(this));
       eventTargetParentElement.call(this.line.bind(this), xScale);
     });
