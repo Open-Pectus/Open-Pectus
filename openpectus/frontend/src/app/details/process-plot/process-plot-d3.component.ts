@@ -3,6 +3,7 @@ import { Store } from '@ngrx/store';
 import { axisBottom, ScaleLinear, scaleLinear, scaleTime, select } from 'd3';
 import { filter, Subject, take, takeUntil } from 'rxjs';
 import { PlotConfiguration } from '../../api';
+import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 import { UtilMethods } from '../../shared/util-methods';
 import { ProcessValueLog } from './ngrx/process-plot.reducer';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
@@ -33,9 +34,9 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private lines = new ProcessPlotD3Lines();
   private coloredRegions = new ProcessPlotD3ColoredRegions();
   private annotations = new ProcessPlotD3Annotations();
-  private tooltip = new ProcessPlotD3Tooltip(this.processValuesLog);
+  private tooltip = new ProcessPlotD3Tooltip(this.processValuesLog, this.processValuePipe);
 
-  constructor(private store: Store) {}
+  constructor(private store: Store, private processValuePipe: ProcessValuePipe) {}
 
   ngOnDestroy() {
     this.componentDestroyed.next();
@@ -106,14 +107,23 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
           .attr('stroke-width', 1);
       });
 
-      subPlotG.append('rect').attr('class', 'subplot-border')
+      subPlotG.append('g').attr('class', 'subplot-border')
+        .append('rect')
         .attr('stroke-width', 1)
         .attr('stroke', 'black')
         .attr('fill', 'transparent');
     });
-    root.append('g').attr('class', 'tooltip')
+    const tooltipG = root.append('g').attr('class', 'tooltip')
       .style('pointer-events', 'none')
-      .style('font', '12px sans-serif');
+      .style('font', `${ProcessPlotD3Tooltip.fontSize}px sans-serif`);
+    tooltipG.append('rect').attr('class', 'background')
+      .attr('fill', 'white')
+      .attr('stroke', 'gray')
+      .attr('stroke-width', '1')
+      .attr('rx', 6)
+      .attr('ry', 6);
+    tooltipG.append('text')
+      .attr('dominant-baseline', 'hanging');
   }
 
   private setupOnDataChange(plotConfiguration: PlotConfiguration) {

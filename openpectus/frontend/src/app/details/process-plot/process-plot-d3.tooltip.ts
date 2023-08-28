@@ -1,15 +1,21 @@
-import { bisector, pointer, ScaleTime } from 'd3';
+import { bisector, pointer, ScaleTime, select } from 'd3';
 import { firstValueFrom, Observable } from 'rxjs';
 import { ProcessValue } from '../../api';
+import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 import { ProcessValueLog } from './ngrx/process-plot.reducer';
 import { D3Selection } from './process-plot-d3.types';
 
 export class ProcessPlotD3Tooltip {
-  constructor(private processValueLog: Observable<ProcessValueLog>) {}
+  static margin = {x: 10, y: 8};
+  static fontSize = 12;
+
+  constructor(private processValueLog: Observable<ProcessValueLog>,
+              private processValuePipe: ProcessValuePipe) {}
 
   setupTooltip(svg: D3Selection<SVGSVGElement>, xScale: ScaleTime<number, number>) {
     const tooltip = svg.select<SVGGElement>('.tooltip');
     const subplotBorders = svg.selectAll('.subplot-border');
+    let eventTargetParentElement: D3Selection<SVGGElement>;
     subplotBorders.on('touchmove mousemove', async (event: MouseEvent) => {
       if(event === undefined) return;
       const data = await firstValueFrom(this.processValueLog);
@@ -18,10 +24,15 @@ export class ProcessPlotD3Tooltip {
       if(bisected === undefined) return;
 
       tooltip.attr('transform', `translate(${relativeMousePosition})`)
-        .call(this.callout, bisected);
+        .call(this.callout.bind(this), bisected);
+      eventTargetParentElement = select((event.target as SVGRectElement).parentNode as SVGGElement);
+      eventTargetParentElement.call(this.line, xScale, bisected);
     });
 
-    subplotBorders.on('touchend mouseleave', () => tooltip.call(this.callout));
+    subplotBorders.on('touchend mouseleave', () => {
+      tooltip.call(this.callout.bind(this));
+      eventTargetParentElement.call(this.line, xScale);
+    });
   }
 
   private bisectX<T extends { timestamp: string }>(domainData: T[][], xScale: ScaleTime<number, number>, mouseX: number): T[] | undefined {
@@ -41,10 +52,41 @@ export class ProcessPlotD3Tooltip {
       return;
     }
     tooltipG.style('display', null);
-    tooltipG.selectAll('text')
-      .data(processValues)
-      .join('text')
-      .attr('transform', (_, index) => `translate(${[0, index * 12]})`)
-      .text((processValue) => processValue.value ?? '');
+
+    const text = tooltipG.selectChild('text')
+      .attr('transform', `translate(${[ProcessPlotD3Tooltip.margin.x, ProcessPlotD3Tooltip.margin.y + 2]})`)
+      .call(txt => txt
+        .selectAll('tspan')
+        .data(processValues)
+        .join('tspan')
+        .attr('x', 0)
+        .attr('y', (_, i) => `${i * ProcessPlotD3Tooltip.fontSize}pt`)
+        .text((processValue) => {
+          return `${processValue.name}: ${this.processValuePipe.transform(processValue)}`;
+        }),
+      );
+
+    const textNode = text.node() as SVGTextElement;
+    const {width, height} = textNode.getBBox();
+    tooltipG.selectChild('rect.background')
+      .attr('width', width + 2 * ProcessPlotD3Tooltip.margin.x)
+      .attr('height', height + 2 * ProcessPlotD3Tooltip.margin.y);
+  }
+
+  private line(subPlotBorder: D3Selection<SVGGElement>, xScale: ScaleTime<number, number>, processValues?: ProcessValue[]) {
+    const lineSelection = subPlotBorder.selectAll('line');
+    if(processValues === undefined) {
+      lineSelection.style('display', 'none');
+      return;
+    }
+    lineSelection.style('display', null);
+    const rectBBox = subPlotBorder.selectChild<SVGRectElement>('rect').node()?.getBBox();
+    lineSelection.data([processValues[0]])
+      .join('line')
+      .attr('x1', d => xScale(new Date(d.timestamp)))
+      .attr('x2', d => xScale(new Date(d.timestamp)))
+      .attr('y1', rectBBox?.y ?? 0)
+      .attr('y2', rectBBox?.height ?? 0)
+      .attr('stroke', 'black');
   }
 }
