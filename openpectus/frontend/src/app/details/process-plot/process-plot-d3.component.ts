@@ -34,7 +34,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private lines = new ProcessPlotD3Lines();
   private coloredRegions = new ProcessPlotD3ColoredRegions();
   private annotations = new ProcessPlotD3Annotations();
-  private tooltip = new ProcessPlotD3Tooltip(this.processValuesLog, this.processValuePipe);
+  private tooltip = new ProcessPlotD3Tooltip(this.processValuesLog, this.processValuePipe, this.plotConfiguration);
 
   constructor(private store: Store, private processValuePipe: ProcessValuePipe) {}
 

@@ -226,6 +226,24 @@ export const handlers = [
             },
           }],
         }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'TT02',
+          value: 23.4 + Math.random() * 2,
+          value_unit: 'degC',
+          timestamp,
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'TT03',
+          value: 23.4 + Math.random() * 2,
+          value_unit: 'degC',
+          timestamp,
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'TT04',
+          value: 23.4 + Math.random() * 2,
+          value_unit: 'degC',
+          timestamp,
+        }, {
           value_type: ProcessValueType.STRING,
           name: 'Flow path',
           value: (getSeconds(Date.now()) % 10 < 3) ? 'Bypass' : (getSeconds(Date.now()) % 10 < 6) ? 'Prime with a long name' : undefined,
@@ -451,7 +469,7 @@ export const handlers = [
               },
               {
                 label: 'Teal label',
-                process_value_names: ['TT01'],
+                process_value_names: ['TT02'],
                 y_max: 32,
                 y_min: 22,
                 color: '#43c5b7',
@@ -462,13 +480,13 @@ export const handlers = [
             ratio: 1,
             axes: [{
               label: 'Green',
-              process_value_names: ['TT01'],
+              process_value_names: ['TT03'],
               y_max: 26,
               y_min: 20,
               color: '#33ff33',
             }, {
               label: 'orange',
-              process_value_names: ['TT01'],
+              process_value_names: ['TT04'],
               y_max: 29,
               y_min: 19,
               color: '#ff8000',
