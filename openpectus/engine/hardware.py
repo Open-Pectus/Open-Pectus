@@ -84,3 +84,15 @@ class HardwareLayerBase():
     def disconnect(self):
         """ Connect to hardware. Throw HardwareLayerException on error. """
         pass
+
+
+class NullHardware(HardwareLayerBase):
+    """ Represents no hardware. Used by tests. """
+    def __init__(self) -> None:
+        super().__init__()
+
+    def read(self, r: Register) -> Any:
+        return None
+
+    def write(self, value: Any, r: Register):
+        pass

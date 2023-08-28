@@ -253,12 +253,7 @@ class PInterpreter(PNodeVisitor):
         self.running = False
 
     def pause(self):
-        # TODO define pause behavior
-        self.running = False
-
-    def hold(self):
-        # TODO define hold behavior
-        pass
+        self.context.schedule_execution("PAUSE", "")
 
     def _is_awaiting_threshold(self, node: PNode):
         if isinstance(node, PInstruction) and node.time is not None:
@@ -386,15 +381,15 @@ class PInterpreter(PNodeVisitor):
 
     def visit_PCommand(self, node: PCommand):
         try:
-            # TODO commands can be resident and last multiple ticks
-            # see example command ?
+            # Note: Commands can be resident and last multiple ticks.
+            # The context (ExecutionEngine) keeps track of this and 
+            # we just move on to the next tick when tick() is invoked
+
             logger.debug(f"Executing command {str(node)}")
             self.context.schedule_execution(node.name, node.args)
         except Exception:
             logger.error(f"Command {node.name} failed", exc_info=True)
         yield
-
-        # TODO determine whether command is complete...
 
     def visit_PWatch(self, node: PWatch):
         def create_interrupt_handler(ar: ActivationRecord) -> GenerationType:

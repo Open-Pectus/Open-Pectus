@@ -4,7 +4,7 @@ import logging
 from openpectus.lang.exec.errors import UodValidationError
 from openpectus.lang.exec.readings import Reading, ReadingCollection
 from openpectus.lang.exec.tags import Tag, TagCollection
-from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
+from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
 from openpectus.engine.commands import EngineCommand
 
 logger = logging.getLogger(__name__)
@@ -12,10 +12,6 @@ logger = logging.getLogger(__name__)
 
 class UnitOperationDefinitionBase:
     # TODO decide on casing behavior for names of tags, registers and commands
-    # TODO Define a builder for constructing the Uod. This is only needed by tests and entry point to set it up,
-    # and not by all other references.
-    # This will remove the clutter from the uod interface and also make it immutable
-    #   (only its structure, commands and tags - not its values)
     """ Represets the Unit Operation Definition interface used by the Pectus engine and intepreter.
 
     It consists of two parts - the machine definition part (interpreter) and the execution part (engine).
@@ -98,14 +94,20 @@ class UnitOperationDefinitionBase:
         factory = self.command_factories.get(name)
         if factory is None:
             raise ValueError(f"Command {name} not found")
-        return factory.build(self)
+        instance = factory.build(self)
+        self.command_instances[name] = instance
+        return instance
+
+    def dispose_command(self, cmd: UodCommand):
+        if self.has_command_instance(cmd.name):
+            self.command_instances.pop(cmd.name)
 
     def get_command(self, name: str) -> UodCommand | None:
         if name.strip() == "":
             raise ValueError("Command name is None or empty")
         if self.has_command_instance(name):
-            return self.get_command(name)
-        return None
+            return self.command_instances[name]
+        raise ValueError(f"Command instance named '{name}' not found")
 
     def get_or_create_command(self, name: str) -> UodCommand:
         if name.strip() == "":
@@ -170,11 +172,17 @@ class UodCommand(EngineCommand[UnitOperationDefinitionBase]):
         super().execute(args)
         self.exec_fn(args)
 
+    def cancel(self):
+        super().cancel()
+        self.context.dispose_command(self)
+
     def finalize(self):
         super().finalize()
 
         if self.finalize_fn is not None:
             self.finalize_fn()
+
+        self.context.dispose_command(self)
 
     def parse_args(self, args: str | None, uod: UnitOperationDefinitionBase) -> List[Any] | None:
         """ Parse argument input to concrete values. Return None to indicate invalid arguments. """
@@ -279,6 +287,10 @@ class UodBuilder():
         if name in self.hwl.registers.keys():
             raise ValueError(f"Register {name} already defined")
         self.hwl.registers[name] = Register(name, direction, **options)
+        return self
+
+    def with_no_hardware(self):
+        self.hwl = NullHardware()
         return self
 
     def with_tag(self, tag: Tag) -> UodBuilder:

@@ -49,4 +49,4 @@ class EngineCommand(Generic[TContext]):
         self._progress = progress
 
     def set_complete(self):
-        self._complete = True
+        self._exec_complete = True

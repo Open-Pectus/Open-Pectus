@@ -6,8 +6,8 @@ from queue import Empty
 import logging
 import time
 from typing import Iterable, List
-from openpectus.lang.exec.pinterpreter import PInterpreter
 
+from openpectus.lang.exec.pinterpreter import InterpreterContext, PInterpreter
 from openpectus.lang.exec.timer import OneThreadTimer
 from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
@@ -108,6 +108,12 @@ class ExecutionEngine():
 
     def _iter_all_tags(self) -> Iterable[Tag]:
         return itertools.chain(self._system_tags, self.uod.tags)
+
+    @property
+    def interpreter(self) -> PInterpreter:
+        if self._interpreter is None:
+            raise ValueError("No interpreter set")
+        return self._interpreter
 
     @property
     def _tag_names_dirty(self) -> list[str]:
@@ -258,7 +264,7 @@ class ExecutionEngine():
         # TODO add command to force condition and add interpreter api for it
         # TODO add helper methods on PProgram to determine simple commands
 
-        logger.debug("Executing uod command: " + cmd_request.name)
+        logger.debug("Executing command: " + cmd_request.name)
         if cmd_request.name is None or len(cmd_request.name.strip()) == 0:
             logger.error("Command name empty")
             return
@@ -298,48 +304,52 @@ class ExecutionEngine():
                 logger.error(f"Invalid argument string: '{cmd_request.args}' for command '{cmd_request.name}'")
                 raise ValueError("Invalid arguments")
 
+            # cancel any existing instance
+            for c in self.cmd_executing:
+                if c.name == cmd_request.name and not c == cmd_request:
+                    self.cmd_executing.remove(c)
+                    uod_command.cancel()
+                    logger.debug(f"Existing running command {c.name} cancelled because another was started")
+                    # TODO mark cancelled in run log
+
+            # cancel any overlapping instance
+            # TODO
+
             try:
-                # cancel any existing instance
-                for c in self.cmd_executing:
-                    if c.name == cmd_request.name and not c == cmd_request:
-                        self.cmd_executing.remove(c)
-                        uod_command.cancel()
-                        # TODO mark cancelled in run log
-
-                # cancel any overlapping instance
-                # TODO
-
-                try:
-                    logger.debug(f"Executing uod command: '{cmd_request.name}' with args '{cmd_request.args}'")
-                    if uod_command.is_cancelled():
-                        if not uod_command.is_finalized():
-                            uod_command.finalize()
-                        #handle cancelled
-
-                    if not uod_command.is_initialized():
-                        uod_command.initialize()
-
-                    if not uod_command.is_execution_started():
-                        uod_command.execute(args)
-
-                    if uod_command.is_execution_complete() and not uod_command.is_finalized():
+                logger.debug(f"Executing uod command: '{cmd_request.name}' with args '{cmd_request.args}', " +
+                             f"iteration {uod_command._exec_iterations}")
+                if uod_command.is_cancelled():
+                    if not uod_command.is_finalized():
+                        self.cmd_executing.remove(cmd_request)
                         uod_command.finalize()
 
-                except Exception:
-                    logger.error(f"Command execution failed. Command: '{cmd_request.name}', "
-                                 + "argument string: '{cmd_request.args}'", exc_info=True)
-                    return
+                if not uod_command.is_initialized():
+                    uod_command.initialize()
+                    logger.debug(f"Command {cmd_request.name} initialized")
 
-                # TODO decide responsibilities:
-                # Engine:
-                #   invoke initialize, execute, finalize, cancel on Uod
-                #      only execute is non-synchronous
-                #   update iterations after each execute call
-                # Uod:
-                #   set progress, set complete
+                if not uod_command.is_execution_started():
+                    uod_command.execute(args)
+                    logger.debug(f"Command {cmd_request.name} excuted iteration {uod_command._exec_iterations}")
 
-            except Exception:
-                logger.error("Command execution failed", exc_info=True)
+                if uod_command.is_execution_complete() and not uod_command.is_finalized():
+                    self.cmd_executing.remove(cmd_request)
+                    uod_command.finalize()
+                    logger.debug(f"Command {cmd_request.name} finalized")
+
+            except Exception as ex:
+                logger.error(f"Uod command execution failed. Command: '{cmd_request.name}', " +
+                             f"argument string: '{cmd_request.args}'", exc_info=True)
+                # TODO possibly stop/pause
+                # TODO unschedule
+                raise ex
+
+            # TODO decide responsibilities:
+            # Engine:
+            #   invoke initialize, execute, finalize, cancel on Uod
+            #      only execute is non-synchronous
+            #   update iterations after each execute call
+            # Uod:
+            #   set progress, set complete
 
     def notify_initial_tags(self):
         for tag in self._iter_all_tags():
@@ -391,7 +401,28 @@ class ExecutionEngine():
     # code manipulation api
     def set_program(self, pcode: str):
         """ Set new program. This will replace the current program. """
-        raise NotImplementedError()
+
+        if self._interpreter is not None:
+            self._interpreter.stop()
+            # TODO possible clean up more stuff
+            logger.info("Interpreter stopped")
+
+        try:
+            program = parse_pcode(pcode=pcode)
+            self._interpreter = PInterpreter(program, EngineInterpreterContext(self))
+        except Exception:
+            logger.error("Failed to set code", exc_info=True)
+            raise ValueError()
+
+    def set_pprogram(self, program: PProgram):
+        """ Set new program. This will replace the current program. """
+
+        if self._interpreter is not None:
+            self._interpreter.stop()
+            # TODO possible clean up more stuff
+            logger.info("Interpreter stopped")
+
+        self._interpreter = PInterpreter(program, EngineInterpreterContext(self))
 
     # set_code, update_line
     # undo/revert(?)
@@ -410,3 +441,17 @@ class ExecutionEngine():
 # Tag.Text (hw_value=read)
 
 # Tag.Output (self.hw_value=self.float)
+
+class EngineInterpreterContext(InterpreterContext):
+    def __init__(self, engine: ExecutionEngine) -> None:
+        super().__init__()
+
+        self.engine = engine
+        self._tags = engine.uod.system_tags.merge_with(engine.uod.tags)
+
+    @property
+    def tags(self) -> TagCollection:
+        return self._tags
+
+    def schedule_execution(self, name: str, args: str) -> None:
+        self.engine.schedule_execution(name, args)
