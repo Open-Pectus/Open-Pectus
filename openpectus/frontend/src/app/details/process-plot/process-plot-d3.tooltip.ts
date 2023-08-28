@@ -8,6 +8,7 @@ import { D3Selection } from './process-plot-d3.types';
 export class ProcessPlotD3Tooltip {
   static margin = {x: 10, y: 8};
   static fontSize = 12;
+  placementRelativeToMouse = {x: 2, y: 12};
 
   constructor(private processValueLog: Observable<ProcessValueLog>,
               private processValuePipe: ProcessValuePipe,
@@ -30,7 +31,10 @@ export class ProcessPlotD3Tooltip {
       const bisected = this.bisectX(subplotData, xScale, relativeMousePosition[0]);
       if(bisected === undefined) return;
 
-      tooltip.attr('transform', `translate(${relativeMousePosition})`)
+      tooltip.attr('transform', `translate(${[
+        relativeMousePosition[0] + this.placementRelativeToMouse.x,
+        relativeMousePosition[1] + this.placementRelativeToMouse.y,
+      ]})`)
         .call(this.callout.bind(this), bisected, plotConfiguration);
       eventTargetParentElement = select(subplotBorderG);
       eventTargetParentElement.call(this.line.bind(this), xScale, bisected);
@@ -98,7 +102,6 @@ export class ProcessPlotD3Tooltip {
       .attr('x1', d => xScale(new Date(d.timestamp)))
       .attr('x2', d => xScale(new Date(d.timestamp)))
       .attr('y1', rectBBox?.y ?? 0)
-      .attr('y2', (rectBBox?.y ?? 0) + (rectBBox?.height ?? 0))
-      .attr('stroke', 'black');
+      .attr('y2', (rectBBox?.y ?? 0) + (rectBBox?.height ?? 0));
   }
 }
