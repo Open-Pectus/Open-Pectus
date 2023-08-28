@@ -1,4 +1,4 @@
-import { bisector, pointer, ScaleTime, select } from 'd3';
+import { bisector, pointer, ScaleLinear, select } from 'd3';
 import { firstValueFrom, Observable } from 'rxjs';
 import { PlotConfiguration, ProcessValue } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
@@ -14,30 +14,31 @@ export class ProcessPlotD3Tooltip {
               private processValuePipe: ProcessValuePipe,
               private plotConfiguration: Observable<PlotConfiguration>) {}
 
-  setupTooltip(svg: D3Selection<SVGSVGElement>, xScale: ScaleTime<number, number>) {
+  setupTooltip(svg: D3Selection<SVGSVGElement>, xScale: ScaleLinear<number, number>) {
     const tooltip = svg.select<SVGGElement>('.tooltip');
     const subplotBorders = svg.selectAll('.subplot-border');
     let eventTargetParentElement: D3Selection<SVGGElement>;
     subplotBorders.on('mousemove', async (event: MouseEvent) => {
       if(event === undefined) return;
-      const data = await firstValueFrom(this.processValueLog);
+      const processValueLog = await firstValueFrom(this.processValueLog);
       const plotConfiguration = await firstValueFrom(this.plotConfiguration);
       const subplotBorderG = (event.target as SVGRectElement).parentNode as SVGGElement;
       const subplotIndex = parseInt(/subplot-(\d+)/.exec(subplotBorderG.parentElement?.classList.toString() ?? '')?.[1] ?? '');
       const subplotProcessValueNames = plotConfiguration.sub_plots[subplotIndex].axes.flatMap(axis => axis.process_value_names);
-      const subplotData = Object.values(data).filter(processValues => subplotProcessValueNames.includes(processValues[0].name));
-
+      const subplotData = Object.values(processValueLog).filter(processValues => subplotProcessValueNames.includes(processValues[0].name));
+      const xAxisData = processValueLog[plotConfiguration.x_axis_process_value_name];
       const relativeMousePosition = pointer(event);
-      const bisected = this.bisectX(subplotData, xScale, relativeMousePosition[0]);
-      if(bisected === undefined) return;
+      const bisectedIndex = this.bisectX(xAxisData, xScale, relativeMousePosition[0]);
+      if(bisectedIndex === undefined) return;
+      const bisectedData = subplotData.flatMap(processValues => processValues[bisectedIndex]);
 
       tooltip.attr('transform', `translate(${[
         relativeMousePosition[0] + this.placementRelativeToMouse.x,
         relativeMousePosition[1] + this.placementRelativeToMouse.y,
       ]})`)
-        .call(this.callout.bind(this), bisected, plotConfiguration);
+        .call(this.callout.bind(this), bisectedData, plotConfiguration);
       eventTargetParentElement = select(subplotBorderG);
-      eventTargetParentElement.call(this.line.bind(this), xScale, bisected);
+      eventTargetParentElement.call(this.line.bind(this), xScale, xAxisData[bisectedIndex]);
     });
 
     subplotBorders.on('mouseleave', () => {
@@ -46,15 +47,10 @@ export class ProcessPlotD3Tooltip {
     });
   }
 
-  private bisectX<T extends { timestamp: string }>(domainData: T[][], xScale: ScaleTime<number, number>, mouseX: number): T[] | undefined {
-    if(domainData.length === 0) return;
+  private bisectX(xAxisData: ProcessValue[], xScale: ScaleLinear<number, number>, mouseX: number): number | undefined {
+    if(xAxisData.length === 0) return;
     const xValue = xScale.invert(mouseX);
-    return domainData.map(processValues => {
-      const index = bisector((d: T) => new Date(d.timestamp).valueOf()).left(processValues, xValue, 1);
-      const a = processValues[index - 1];
-      const b = processValues[index];
-      return b && (xValue.valueOf() - new Date(a.timestamp).valueOf() > new Date(b.timestamp).valueOf() - xValue.valueOf()) ? b : a;
-    });
+    return bisector((d: ProcessValue) => d.value).center(xAxisData, xValue);
   }
 
   private callout(tooltipG: D3Selection<SVGGElement>, processValues?: ProcessValue[], plotConfiguration?: PlotConfiguration) {
@@ -89,18 +85,18 @@ export class ProcessPlotD3Tooltip {
       .attr('height', height + 2 * ProcessPlotD3Tooltip.margin.y);
   }
 
-  private line(subPlotBorder: D3Selection<SVGGElement>, xScale: ScaleTime<number, number>, processValues?: ProcessValue[]) {
+  private line(subPlotBorder: D3Selection<SVGGElement>, xScale: ScaleLinear<number, number>, xAxisDatum?: ProcessValue) {
     const lineSelection = subPlotBorder.selectAll('line');
-    if(processValues === undefined) {
+    if(xAxisDatum === undefined) {
       lineSelection.style('display', 'none');
       return;
     }
     lineSelection.style('display', null);
     const rectBBox = subPlotBorder.selectChild<SVGRectElement>('rect').node()?.getBBox();
-    lineSelection.data([processValues[0]])
+    lineSelection.data([xAxisDatum])
       .join('line')
-      .attr('x1', d => xScale(new Date(d.timestamp)))
-      .attr('x2', d => xScale(new Date(d.timestamp)))
+      .attr('x1', d => xScale(d.value as number))
+      .attr('x2', d => xScale(d.value as number))
       .attr('y1', rectBBox?.y ?? 0)
       .attr('y2', (rectBBox?.y ?? 0) + (rectBBox?.height ?? 0));
   }

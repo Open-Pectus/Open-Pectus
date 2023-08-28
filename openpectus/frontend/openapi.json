@@ -727,13 +727,18 @@
             },
             "type": "array",
             "title": "Sub Plots"
+          },
+          "x_axis_process_value_name": {
+            "type": "string",
+            "title": "X Axis Process Value Name"
           }
         },
         "type": "object",
         "required": [
           "process_value_names_to_annotate",
           "color_regions",
-          "sub_plots"
+          "sub_plots",
+          "x_axis_process_value_name"
         ],
         "title": "PlotConfiguration"
       },
@@ -829,18 +834,12 @@
             },
             "type": "array",
             "title": "Commands"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Timestamp"
           }
         },
         "type": "object",
         "required": [
           "name",
-          "value_type",
-          "timestamp"
+          "value_type"
         ],
         "title": "ProcessValue",
         "description": "Represents a process value. "

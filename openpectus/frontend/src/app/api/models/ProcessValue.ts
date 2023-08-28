@@ -14,5 +14,4 @@ export type ProcessValue = {
     value_unit?: string;
     value_type: ProcessValueType;
     commands?: Array<ProcessValueCommand>;
-    timestamp: string;
 };

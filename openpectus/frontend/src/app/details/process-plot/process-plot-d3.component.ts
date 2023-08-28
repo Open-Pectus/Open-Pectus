@@ -1,6 +1,6 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, OnDestroy, ViewChild } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { axisBottom, ScaleLinear, scaleLinear, scaleTime, select } from 'd3';
+import { axisBottom, ScaleLinear, scaleLinear, select } from 'd3';
 import { filter, Subject, take, takeUntil } from 'rxjs';
 import { PlotConfiguration } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
@@ -26,7 +26,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   @Input() isCollapsed = false;
   private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(filter(UtilMethods.isNotNullOrUndefined));
   private processValuesLog = this.store.select(ProcessPlotSelectors.processValuesLog);
-  private xScale = scaleTime();
+  private xScale = scaleLinear();
   private yScales: ScaleLinear<number, number>[][] = [];
   private svg?: D3Selection<SVGSVGElement>;
   private componentDestroyed = new Subject<void>();
@@ -166,9 +166,11 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
 
   private updateXScaleDomain(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValueLog,
                              svg: D3Selection<SVGSVGElement>) {
-    const firstProcessValueLine = Object.values(processValuesLog)?.[0];
-    const minXValue = new Date(firstProcessValueLine?.[0]?.timestamp ?? 0);
-    const maxXValue = new Date(firstProcessValueLine?.[firstProcessValueLine?.length - 1]?.timestamp ?? 0);
+    const xAxisProcessValues = processValuesLog[plotConfiguration.x_axis_process_value_name];
+    if(xAxisProcessValues === undefined) return;
+    const minXValue = xAxisProcessValues.at(0)?.value ?? 0;
+    const maxXValue = xAxisProcessValues.at(-1)?.value ?? minXValue;
+    if(typeof minXValue !== 'number' || typeof maxXValue !== 'number') throw Error('Process Value chosen for x-axis was not a number!');
     this.xScale.domain([minXValue, maxXValue]);
     svg.select<SVGGElement>('.x-axis').call(axisBottom(this.xScale));
     plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {

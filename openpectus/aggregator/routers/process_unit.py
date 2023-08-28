@@ -135,7 +135,6 @@ class ProcessValue(BaseModel):
     value_type: ProcessValueType
     """ Specifies the type of allowed values. """
     commands: List[ProcessValueCommand] | None
-    timestamp: datetime # to get some kind of x-value for the plot. It is not necesarrily a timestamp according to the example plot image I have (jhk)
 
     @staticmethod
     def from_message(r: ReadingDef, ti: TagInfo) -> ProcessValue:
@@ -265,6 +264,7 @@ class PlotConfiguration(BaseModel):
     process_value_names_to_annotate: List[str]
     color_regions: List[PlotColorRegion]
     sub_plots: List[SubPlot]
+    x_axis_process_value_name: str
 
 
 @router.get('/process_unit/{unit_id}/plot_configuration')
