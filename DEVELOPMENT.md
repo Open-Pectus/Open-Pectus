@@ -73,12 +73,19 @@ pip install -e .
 ```
 
 
-The build server builds a distribution. This is not normally needed in a developer environment.
+The build server builds a distribution. This is not normally needed in a developer environment
+but can be necessary to test building docker images.
 To build a distribution:
+
+Optionally, to include frontend in the build, build the frontend and copy the contents of 
+openpectus/frontend/dist
+into
+openpectus/aggregator/frontend-dist
+
 
 ```
 cd Open-Pectus
-python -m build
+python -m build -o openpectus/dist
 ```
 
 
