@@ -1,4 +1,4 @@
-from lang.exec.timer import OneThreadTimer
+from openpectus.lang.exec.timer import OneThreadTimer
 
 
 class Ticker:

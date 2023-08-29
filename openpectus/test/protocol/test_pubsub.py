@@ -154,7 +154,7 @@ class TestRpc(IsolatedAsyncioTestCase):
             self.assertIsNone(ps_client._rpc_channel)
             await ps_client.wait_until_ready()
             assert isinstance(ps_client._rpc_channel, RpcChannel), "Actual type: " + type(ps_client._rpc_channel).__name__
-            result: RpcResponse = await ps_client._rpc_channel.other.to_upper(x="bar")
+            result: RpcResponse[str] = await ps_client._rpc_channel.other.to_upper(x="bar")
             self.assertEqual("BAR", result.result)
 
     async def test_invoke_client(self):

@@ -16,7 +16,10 @@ Notes:
   - [4.3. Engine](#43-engine)
 - [5. Build validation](#5-build-validation)
   - [5.1. Flake](#51-flake)
-  - [5.2. Mypy](#52-mypy)
+  - [5.2. Type checking](#52-type-checking)
+    - [5.2.1. Mypy](#521-mypy)
+    - [5.2.2. Pyright](#522-pyright)
+    - [5.2.3. Comparison](#523-comparison)
   - [5.3. Code generation from API spec](#53-code-generation-from-api-spec)
 - [6. Protocols](#6-protocols)
   - [6.1. Engine - Aggregator](#61-engine---aggregator)
@@ -188,11 +191,59 @@ cd Open-Pectus/openpectus
 flake8
 ```
 
-## 5.2. Mypy
+## 5.2. Type checking
+
+
+### 5.2.1. Mypy
 Mypy is a static type checker.
 
 The Backend code base is annotated with type hints, such that Mypy can check the types. The build does not yet include this step
 as there are still problems being worked out.
+
+It is configured in pyproject.toml.
+
+To manually invoke, run
+```
+cd Open-Pectus
+mypy
+```
+
+### 5.2.2. Pyright
+Pyright is another static type checker.
+
+Work in underway to assess it. Once assessed, we will use either Mypy or Pyright, not both.
+
+It is configured in pyproject.toml. Configuration reference: https://github.com/microsoft/pyright/blob/main/docs/configuration.md
+
+To manually invoke, run
+```
+cd Open-Pectus
+pyright
+```
+
+It is updated very frequently. To update it, run
+```
+pip install -U pyright
+```
+
+### 5.2.3. Comparison
+
+MyPy
+* Pros
+  * Standard in Python land
+* Cons
+  * Has quite a few issues with no good solutions, e.g. StrEnum, auto()
+  * Seems to have lots of legacy, e.g. troublesome configuration.
+Pyright
+* Pro
+  * VS Code uses itso it reports the same issues
+  * Easy configuration
+  * VS Code understand its configuration, even in pyproject.toml. So config changes apply immidiately
+  * Does not report errors for StrEnum, auto()
+* Con
+  * Non-standard in Python land
+  * Seems a little heavy on deps - node installs stuff on first start
+  * Remains to be seen if it catches the same errors that Mypy does
 
 <!-- ## 3.5. Diagram generation
 
