@@ -707,6 +707,13 @@
       },
       "PlotConfiguration": {
         "properties": {
+          "process_value_names_to_annotate": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Process Value Names To Annotate"
+          },
           "color_regions": {
             "items": {
               "$ref": "#/components/schemas/PlotColorRegion"
@@ -720,12 +727,18 @@
             },
             "type": "array",
             "title": "Sub Plots"
+          },
+          "x_axis_process_value_name": {
+            "type": "string",
+            "title": "X Axis Process Value Name"
           }
         },
         "type": "object",
         "required": [
+          "process_value_names_to_annotate",
           "color_regions",
-          "sub_plots"
+          "sub_plots",
+          "x_axis_process_value_name"
         ],
         "title": "PlotConfiguration"
       },

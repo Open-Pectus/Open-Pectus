@@ -87,11 +87,42 @@ export const handlers = [
       ctx.delay(),
       ctx.json<ProcessValue[]>([
         {
+          value_type: ProcessValueType.INT,
+          name: 'timestamp',
+          value: new Date().valueOf(),
+        },
+        {
           value_type: ProcessValueType.FLOAT,
           name: 'PU01 Speed',
-          value: 123 + Math.random() * 2,
+          value: 120,
           value_unit: '%',
         }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'PU02 Speed',
+          value: 121,
+          value_unit: '%',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'PU03 Speed',
+          value: 122,
+          value_unit: '%',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'PU04 Speed',
+          value: 123,
+          value_unit: '%',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'PU05 Speed',
+          value: 124,
+          value_unit: '%',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'PU06 Speed',
+          value: 125,
+          value_unit: '%',
+        },
+        {
           value_type: ProcessValueType.STRING,
           name: 'Some other Process Value',
           value: 'So very valuable',
@@ -187,9 +218,24 @@ export const handlers = [
             },
           }],
         }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'TT02',
+          value: 23.4 + Math.random() * 2,
+          value_unit: 'degC',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'TT03',
+          value: 23.4 + Math.random() * 2,
+          value_unit: 'degC',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'TT04',
+          value: 23.4 + Math.random() * 2,
+          value_unit: 'degC',
+        }, {
           value_type: ProcessValueType.STRING,
           name: 'Flow path',
-          value: (getSeconds(Date.now()) % 10 < 3) ? 'Bypass' : (getSeconds(Date.now()) % 10 < 6) ? 'Prime' : 'Secondary',
+          value: (getSeconds(Date.now()) % 10 < 3) ? 'Bypass' : (getSeconds(Date.now()) % 10 < 6) ? 'Prime with a long name' : undefined,
         },
       ]),
     );
@@ -266,6 +312,7 @@ export const handlers = [
   }),
 
   rest.get('/api/process_unit/:unitId/run_log', (req, res, context) => {
+    const timestamp = new Date().toISOString();
     return res(
       context.status(200),
       context.json<RunLog>({
@@ -293,10 +340,30 @@ export const handlers = [
               source: CommandSource.MANUALLY_ENTERED,
             },
             start_values: [
-              {name: 'Amazing float value', value: 999, value_type: ProcessValueType.FLOAT, value_unit: 'afv'},
-              {name: 'Best value', value: 19.99, value_type: ProcessValueType.FLOAT, value_unit: 'afv'},
-              {name: 'Such prices', value: 4299, value_type: ProcessValueType.FLOAT, value_unit: 'afv'},
-              {name: 'Very affordable', value: 0.99, value_type: ProcessValueType.FLOAT, value_unit: 'afv'},
+              {
+                name: 'Amazing float value',
+                value: 999,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+              },
+              {
+                name: 'Best value',
+                value: 19.99,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+              },
+              {
+                name: 'Such prices',
+                value: 4299,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+              },
+              {
+                name: 'Very affordable',
+                value: 0.99,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+              },
             ],
             end_values: [],
           }, {
@@ -308,12 +375,28 @@ export const handlers = [
               source: CommandSource.MANUALLY_ENTERED,
             },
             start_values: [
-              {name: 'Waaagh?', value: 'No waagh', value_type: ProcessValueType.STRING},
-              {name: 'Dakka?', value: 'No dakka 🙁', value_type: ProcessValueType.STRING},
+              {
+                name: 'Waaagh?',
+                value: 'No waagh',
+                value_type: ProcessValueType.STRING,
+              },
+              {
+                name: 'Dakka?',
+                value: 'No dakka 🙁',
+                value_type: ProcessValueType.STRING,
+              },
             ],
             end_values: [
-              {name: 'Waaagh?', value: 'WAAAGH!', value_type: ProcessValueType.STRING},
-              {name: 'Dakka?', value: 'DAKKA! 😀', value_type: ProcessValueType.STRING},
+              {
+                name: 'Waaagh?',
+                value: 'WAAAGH!',
+                value_type: ProcessValueType.STRING,
+              },
+              {
+                name: 'Dakka?',
+                value: 'DAKKA! 😀',
+                value_type: ProcessValueType.STRING,
+              },
             ],
           },
         ],
@@ -337,11 +420,13 @@ export const handlers = [
     return res(
       context.status(200),
       context.json<PlotConfiguration>({
+        x_axis_process_value_name: 'timestamp',
+        process_value_names_to_annotate: ['Flow path'],
         color_regions: [{
           process_value_name: 'Flow path',
           value_color_map: {
             'Bypass': '#3366dd33',
-            'Prime': '#33aa6633',
+            'Prime with a long name': '#33aa6633',
           },
         }],
         sub_plots: [
@@ -350,11 +435,12 @@ export const handlers = [
             axes: [
               {
                 label: 'Red',
-                process_value_names: ['PU01 Speed', 'FT01 Flow'],
+                process_value_names: ['PU01 Speed', 'PU02 Speed', 'PU03 Speed', 'PU04 Speed', 'PU05 Speed', 'PU06 Speed'],
                 y_max: 126,
-                y_min: 123,
+                y_min: 119,
                 color: '#ff3333',
-              }, {
+              },
+              {
                 label: 'Blue',
                 process_value_names: ['TT01'],
                 y_max: 26,
@@ -363,7 +449,7 @@ export const handlers = [
               },
               {
                 label: 'Teal label',
-                process_value_names: ['TT01'],
+                process_value_names: ['TT02'],
                 y_max: 32,
                 y_min: 22,
                 color: '#43c5b7',
@@ -374,13 +460,13 @@ export const handlers = [
             ratio: 1,
             axes: [{
               label: 'Green',
-              process_value_names: ['TT01'],
+              process_value_names: ['TT03'],
               y_max: 26,
               y_min: 20,
               color: '#33ff33',
             }, {
               label: 'orange',
-              process_value_names: ['TT01'],
+              process_value_names: ['TT04'],
               y_max: 29,
               y_min: 19,
               color: '#ff8000',

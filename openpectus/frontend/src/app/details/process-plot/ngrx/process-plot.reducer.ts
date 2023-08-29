@@ -4,9 +4,7 @@ import { PlotConfiguration, ProcessValue } from '../../../api';
 import { DetailsActions } from '../../ngrx/details.actions';
 import { ProcessPlotActions } from './process-plot.actions';
 
-export interface ProcessValueLog {
-  [K: string]: ProcessValue[] | undefined;
-}
+export type ProcessValueLog = Record<string, ProcessValue[]>
 
 export interface ProcessPlotState {
   plotConfiguration?: PlotConfiguration;
