@@ -14,28 +14,24 @@ from openpectus.lang.model.pprogram import (
     PBlank,
     PBlock,
     PEndBlock,
-    PEndBlocks,
+    # PEndBlocks,
     PWatch,
     PAlarm,
     PCommand,
     PMark,
 )
 
-from lang.exec.tags import (
+from openpectus.lang.exec.tags import (
     TagCollection,
     DEFAULT_TAG_BLOCK_TIME,
     DEFAULT_TAG_RUN_TIME,
 )
-from lang.exec.uod import UnitOperationDefinitionBase
-from lang.exec.timer import OneThreadTimer
 
 
 logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-
-TICK_INTERVAL = 0.1
 
 # TODO define pause + hold behavior
 # TODO add Alarm interpretation, including scope definition
@@ -58,16 +54,17 @@ class ARType(Enum):
 
 
 class ActivationRecord:
+    # TODO do we need tags here? Is Base global?
     def __init__(
         self, owner: PNode, start_time: float, start_tags: TagCollection
     ) -> None:
-        self.owner = owner
-        self.start_time = start_time
+        self.owner: PNode = owner
+        self.start_time: float = start_time
         self.start_tags = start_tags
-        self.complete = False
+        self.complete: bool = False
         self.artype: ARType = self._get_artype(owner)
 
-    def _get_artype(self, node: PNode):
+    def _get_artype(self, node: PNode) -> ARType:
         if isinstance(node, PProgram):
             return ARType.PROGRAM
         elif isinstance(node, PBlock):
@@ -117,34 +114,44 @@ class LogEntry():
         self.message: str = message
 
 
+class InterpreterContext():
+    """ Defines the context of program interpretation"""
+
+    @property
+    def tags(self) -> TagCollection:
+        raise NotImplementedError()
+
+    def schedule_execution(self, name: str, args: str) -> None:
+        raise NotImplementedError()
+
+
+GenerationType = Generator[None, None, None] | None
+
+
 class PInterpreter(PNodeVisitor):
-    def __init__(self, program: PProgram, uod: UnitOperationDefinitionBase) -> None:
-        self.tags: TagCollection = TagCollection.create_system_tags()
+    def __init__(self, program: PProgram, context: InterpreterContext) -> None:
         self._program = program
-        self.uod = uod
+        self.context = context
         self.logs: List[LogEntry] = []
         self.pause_node: PNode | None = None
         self.stack: CallStack = CallStack()
-        self.interrupts: List[Tuple[ActivationRecord, Generator]] = []
+        self.interrupts: List[Tuple[ActivationRecord, GenerationType]] = []
         self.running: bool = False
 
         self.start_time: float = 0
         self.tick_time: float = 0
-        self.ticks: int = 0
-        self.max_ticks: int = -1
 
-        self.process_instr: Generator | None = None
-        self.timer = OneThreadTimer(TICK_INTERVAL, self._tick)
+        self.process_instr: GenerationType = None
 
     def get_marks(self) -> List[str]:
         return [x.message for x in self.logs if x.message[0] != 'P']
 
-    def _interpret(self) -> Generator:
+    def _interpret(self) -> GenerationType:
         """ Create generator for interpreting the main program. """
         self.running = True
         tree = self._program
         if tree is None:
-            return ''
+            return None
         yield from self.visit(tree)
 
     def _add_to_log(self, _time: float, unit_time: float | None, message: str):
@@ -154,28 +161,26 @@ class PInterpreter(PNodeVisitor):
             message=message)
         )
 
-    def _warmup(self):
-        # pint takes forever to initialize - long enough
-        # to throw off timing of the first instruction.
-        # se we do this first
-        _ = pint.Quantity("0 sec")
-
     def _update_tags(self):
+        # TODO move to ExecutionEngine
+        # Engine has no concept of scopes - or at least only program and current block.
+        # What about intermediate blocks/scopes?
+        # Does this relate to RunLog? Should that show intermediate scope times?
         if self.stack.any():
             ar_program = self.stack.records[0]
             program_elapsed = self.tick_time - ar_program.start_time
             q_program = pint.Quantity(f'{program_elapsed} sec')
-            self.tags.get(DEFAULT_TAG_RUN_TIME).set_quantity(q_program)
+            self.context.tags.get(DEFAULT_TAG_RUN_TIME).set_quantity(q_program)
 
             ar_block = self.stack.peek()
             # TODO block time should not include pause and hold time
             block_elapsed = self.tick_time - ar_block.start_time
             q_block = pint.Quantity(f'{block_elapsed} sec')
-            self.tags.get(DEFAULT_TAG_BLOCK_TIME).set_quantity(q_block)
+            self.context.tags.get(DEFAULT_TAG_BLOCK_TIME).set_quantity(q_block)
 
             # TODO implement remaining tags, e.g. SYSTEM STATE, RUN COUNTER
 
-    def _register_interrupt(self, ar: ActivationRecord, handler: Generator):
+    def _register_interrupt(self, ar: ActivationRecord, handler: GenerationType):
         logger.debug(f"Interrupt handler registered for {ar}")
         self.interrupts.append((ar, handler))
 
@@ -193,6 +198,7 @@ class PInterpreter(PNodeVisitor):
             if isinstance(node, PWatch):
                 logger.debug(f"Interrupt {str(node)}")
                 try:
+                    assert handler is not None, "Handler is None"
                     next(handler)
                     instr_count += 1
                 except StopIteration:
@@ -204,14 +210,9 @@ class PInterpreter(PNodeVisitor):
                 raise NotImplementedError(f"Interrupt for node type {str(node)} not implemented")
         return instr_count > 0
 
-    def _tick(self):
-        self.ticks += 1
-        self.tick_time = time.time()
-        if self.max_ticks != -1 and self.ticks > self.max_ticks:
-            logger.info(f"Stopping because max_ticks {self.max_ticks} was reached")
-            self.running = False
-            self.timer.stop()
-            return
+    def tick(self, tick_time: float):
+        self.tick_time = tick_time
+
         logger.debug("Tick")
 
         if self.process_instr is None:
@@ -225,6 +226,7 @@ class PInterpreter(PNodeVisitor):
 
         # TODO read uod.tags
 
+        assert self.process_instr is not None, "self.process_instr is None"
         try:
             next(self.process_instr)
         except StopIteration:
@@ -249,30 +251,13 @@ class PInterpreter(PNodeVisitor):
 
     def stop(self):
         self.running = False
-        self.timer.stop()
 
     def pause(self):
-        # TODO define pause behavior
-        self.running = False
-
-    def hold(self):
-        # TODO define hold behavior
-        pass
-
-    def run(self, max_ticks=-1):
-        self._warmup()
-        logger.info("Interpretation started")
-        self.ticks = 0
-        self.max_ticks = max_ticks
-        self.running = True
-        self.timer.start()
-
-        while self.running:
-            time.sleep(0.1)
+        self.context.schedule_execution("PAUSE", "")
 
     def _is_awaiting_threshold(self, node: PNode):
         if isinstance(node, PInstruction) and node.time is not None:
-            block_elapsed = self.tags.get(DEFAULT_TAG_BLOCK_TIME).as_quantity()
+            block_elapsed = self.context.tags.get(DEFAULT_TAG_BLOCK_TIME).as_quantity()
             time_quantity = pint.Quantity(node.time, "sec")
             if block_elapsed < time_quantity:
                 logger.debug(f"Awaiting threshold: {time_quantity}, current: {block_elapsed}, time: {self.tick_time}")
@@ -286,13 +271,12 @@ class PInterpreter(PNodeVisitor):
         assert not c.error, "Error parsing condition"
         assert c.tag_name, "Error in condition tag"
         assert c.tag_value, "Error in condition value"
-        assert self.tags.has(c.tag_name) or self.uod.tags.has(c.tag_name)
-        tag = self.tags.get(c.tag_name) if self.tags.has(c.tag_name) \
-            else self.uod.tags.get(c.tag_name)
+        assert self.context.tags.has(c.tag_name)
+        tag = self.context.tags.get(c.tag_name)
         tag_value = tag.as_quantity()
         # TODO if not unit specified, pick base unit
         expected_value = pint.Quantity(c.tag_value_numeric, c.tag_unit)
-        if not tag_value.is_compatible_with(expected_value):  # type: ignore
+        if not tag_value.is_compatible_with(expected_value):
             logger.error("Incompatible units")
             raise ValueError("Incompatible units")
 
@@ -321,7 +305,7 @@ class PInterpreter(PNodeVisitor):
         if result is None:
             raise ValueError(f"Unsupported operation: '{c.op}'")
 
-        return result
+        return result  # type: ignore
 
     def _visit_children(self, children: List[PNode] | None):
         ar = self.stack.peek()
@@ -397,18 +381,18 @@ class PInterpreter(PNodeVisitor):
 
     def visit_PCommand(self, node: PCommand):
         try:
-            # TODO commands can be resident and last multiple ticks
-            # see example command ?
+            # Note: Commands can be resident and last multiple ticks.
+            # The context (ExecutionEngine) keeps track of this and 
+            # we just move on to the next tick when tick() is invoked
+
             logger.debug(f"Executing command {str(node)}")
-            self.uod.execute_command(node.name, node.args)
+            self.context.schedule_execution(node.name, node.args)
         except Exception:
             logger.error(f"Command {node.name} failed", exc_info=True)
         yield
 
-        # TODO determine whether command is complete...
-
     def visit_PWatch(self, node: PWatch):
-        def create_interrupt_handler(ar: ActivationRecord) -> Generator:
+        def create_interrupt_handler(ar: ActivationRecord) -> GenerationType:
             # TODO will this work with nested interrupt handlers,
             # possibly including blocks?
             self.stack.push(ar)
@@ -417,7 +401,7 @@ class PInterpreter(PNodeVisitor):
 
         ar = self.stack.peek()
         if ar.owner is not node:
-            # TODO the ar get the current time. Is this correct?
+            # TODO the ar gets the creation tick time. Is this correct?
             ar = ActivationRecord(node, self.tick_time, TagCollection.create_system_tags())
             self._register_interrupt(ar, create_interrupt_handler(ar))
         else:

@@ -42,7 +42,7 @@ class PNode():
         return self.__dict__ == other.__dict__
 
     def get_child_nodes(self, recursive: bool = False) -> List[PNode]:
-        children = []
+        children: List[PNode] = []
         if self.children is None:
             return children
         for child in self.children:

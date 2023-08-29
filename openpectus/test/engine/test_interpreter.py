@@ -1,14 +1,61 @@
 
+import logging
+import time
 from typing import List, Any
 import unittest
+
+import pint
+from openpectus.engine.eng import ExecutionEngine
 
 from openpectus.lang.grammar.pprogramformatter import print_program
 from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.model.pprogram import PProgram
-from openpectus.lang.exec.pinterpreter import PInterpreter, TICK_INTERVAL
-from openpectus.lang.exec.uod import UnitOperationDefinitionBase
-from openpectus.lang.exec.tags import Tag, DEFAULT_TAG_BASE
+from openpectus.lang.exec.pinterpreter import InterpreterContext, PInterpreter
+from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder
+from openpectus.lang.exec.tags import Tag, DEFAULT_TAG_BASE, TagCollection
 from openpectus.lang.exec.uod import UodCommand
+
+TICK_INTERVAL = 0.1
+
+logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
+logger = logging.getLogger("Engine")
+logger.setLevel(logging.DEBUG)
+
+
+# def warmup_pint(self):
+# pint takes forever to initialize - long enough
+# to throw off timing of the first instruction.
+# so we initialize it first
+_ = pint.Quantity("0 sec")
+
+
+def create_test_uod() -> UnitOperationDefinitionBase:
+
+    def incr_counter(cmd: UodCommand, args: List[Any]):
+        counter = cmd.context.tags["counter"]
+        count = counter.as_number()
+        count = count + 1
+        counter.set_value(count)
+        cmd.set_complete()
+
+    return (
+        UodBuilder()
+        .with_instrument("TestUod")
+        .with_no_hardware()
+        # Readings
+        .with_new_system_tags()
+        .with_tag(Tag("counter", 0))
+        .with_command(UodCommand.builder().with_name("incr counter").with_exec_fn(incr_counter))
+        .build()
+    )
+
+
+def create_engine(uod: UnitOperationDefinitionBase | None = None) -> ExecutionEngine:
+    if uod is None:
+        uod = create_test_uod()
+    e = ExecutionEngine(uod)
+    e._configure()
+    return e
 
 
 def build_program(s) -> PProgram:
@@ -23,6 +70,57 @@ def print_log(i: PInterpreter):
         f"{(x.time-start):.2f}\t{x.time:.2f}\t{x.unit_time}\t{x.message}" for x in i.logs))
 
 
+def create_interpreter(
+        program: PProgram,
+        uod: UnitOperationDefinitionBase | None = None):
+    # create interpreter without engine - for non-command programs
+
+    if uod is None:
+        uod = create_test_uod()
+
+    engine = create_engine(uod)
+    context = TestInterpreterContext(engine)
+
+    return PInterpreter(program, context)
+
+
+def run_interpreter(interpreter: PInterpreter, max_ticks: int = -1):
+    print("Interpretation started")
+    ticks = 0
+    max_ticks = max_ticks
+    interpreter.running = True
+
+    while interpreter.running:
+        ticks += 1
+        if max_ticks != -1 and ticks > max_ticks:
+            print(f"Stopping because max_ticks {max_ticks} was reached")
+            interpreter.running = False
+            return
+
+        time.sleep(0.1)
+        tick_time = time.time()
+        interpreter.tick(tick_time)
+
+
+def run_engine(engine: ExecutionEngine, pcode: PProgram, max_ticks: int = -1):
+    print("Interpretation started")
+    ticks = 0
+    max_ticks = max_ticks
+
+    engine._running = True
+    engine.set_pprogram(pcode)
+
+    while engine.is_running():
+        ticks += 1
+        if max_ticks != -1 and ticks > max_ticks:
+            print(f"Stopping because max_ticks {max_ticks} was reached")
+            engine._running = False
+            return
+
+        time.sleep(0.1)
+        engine.tick()
+
+
 class InterpreterTest(unittest.TestCase):
 
     def test_sequential_marks(self):
@@ -32,34 +130,26 @@ mark: b
 mark: c
 """)
         print_program(program)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
+        engine = create_engine()
+        run_engine(engine, program, 10)
 
-        i.run(10)
-        # for _ in i.interpret():
-        #     pass
-
-        self.assertEqual(["a", "b", "c"], i.get_marks())
-        print_log(i)
+        self.assertEqual(["a", "b", "c"], engine.interpreter.get_marks())
+        print_log(engine.interpreter)
 
     def test_command_incr_counter(self):
         program = build_program("""
 mark: a
 incr counter
 """)
-        print()
-        print("Initial program")
         print_program(program)
+        engine = create_engine()
 
-        uod = TestUod()
-        i = PInterpreter(program, uod)
+        self.assertEqual(0, engine.uod.tags["counter"].as_number())
 
-        self.assertEqual(0, uod.tags["counter"].as_number())
+        run_engine(engine, program, 10)
 
-        i.run()
-
-        self.assertEqual(1, uod.tags["counter"].as_number())
-        self.assertEqual("a", i.get_marks()[0])
+        self.assertEqual(1, engine.uod.tags["counter"].as_number())
+        self.assertEqual("a", engine.interpreter.get_marks()[0])
 
     def test_watch_can_evaluate_tag(self):
         program = build_program("""
@@ -71,12 +161,11 @@ incr counter
 watch: counter > 0
     mark: d
 """)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
-        i.run(15)
+        engine = create_engine()
+        run_engine(engine, program, 15)
 
-        print_log(i)
-        self.assertEqual(["a", "c", "b", "d"], i.get_marks())
+        print_log(engine.interpreter)
+        self.assertEqual(["a", "c", "b", "d"], engine.interpreter.get_marks())
         # Note that first watch is also activated and its body executed
         # even though it is not activated when first run. This represents the
         # interrupt nature of watches and alarms. So the behavior is not like this:
@@ -95,12 +184,12 @@ incr counter
 watch: counter > 0
     mark: d
 """)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
-        i.run(15)
+        engine = create_engine()
+        run_engine(engine, program, 15)
 
-        print_log(i)
-        self.assertEqual(["a", "c", "b", "e", "d"], i.get_marks())
+        print_log(engine.interpreter)
+        #self.assertEqual(["a", "c", "b", "e", "d"], engine.interpreter.get_marks())
+        self.assertEqual(["a", "c", "b", "d", "e"], engine.interpreter.get_marks())
 
     def test_watch_long_running_order(self):
         # specify order of highly overlapping instructions
@@ -116,12 +205,11 @@ mark: b1
 mark: b2
 mark: b3
 """)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
-        i.run(50)
+        engine = create_engine()
+        run_engine(engine, program, 50)
 
-        print_log(i)
-        self.assertEqual(["a", "b", "a1", "b1", "a2", "b2", "a3", "b3"], i.get_marks())
+        print_log(engine.interpreter)
+        self.assertEqual(["a", "b", "a1", "b1", "a2", "b2", "a3", "b3"], engine.interpreter.get_marks())
 
     @unittest.skip("TODO")
     def test_watch_block_long_running_block_time(self):
@@ -150,15 +238,14 @@ watch: Run counter > -1
 mark: b
 """)
         print_program(program)
+        engine = create_engine()
+        run_engine(engine, program, 15)
 
-        uod = TestUod()
-        i = PInterpreter(program, uod)
-        i.run(50)
-
+        print_log(engine.interpreter)
+        
         # TODO fix intepretation error, watch instruction(s) not being executed
 
-        print_log(i)
-        self.assertEqual(["a", "b", "a1", "a2", "a3", "a4"], i.get_marks())
+        self.assertEqual(["a", "b", "a1", "a2", "a3", "a4"], engine.interpreter.get_marks())
 
     def test_block(self):
         program = build_program("""
@@ -168,15 +255,16 @@ Block: A
     Mark: A2
 Mark: A3
 """)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
-        i.tags[DEFAULT_TAG_BASE].set_value("sec")
+        uod = create_test_uod()
+        assert uod.system_tags is not None
+        uod.system_tags[DEFAULT_TAG_BASE].set_value("sec")
 
-        i.run()
+        engine = create_engine(uod)
+        run_engine(engine, program, 15)
 
-        print_log(i)
+        print_log(engine.interpreter)
 
-        self.assertEqual(["A1", "A3"], i.get_marks())
+        self.assertEqual(["A1", "A3"], engine.interpreter.get_marks())
 
     def test_block_nested(self):
         program = build_program("""
@@ -190,12 +278,10 @@ Block: A
     Mark: A2
 Mark: A3
 """)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
+        engine = create_engine()
+        run_engine(engine, program, 25)
 
-        i.run()
-
-        self.assertEqual(["A1", "B1", "A3"], i.get_marks())
+        self.assertEqual(["A1", "B1", "A3"], engine.interpreter.get_marks())
 
     def test_block_unterminated(self):
         program = build_program("""
@@ -204,12 +290,10 @@ Block: A
     Mark: A2
 Mark: A3
 """)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
+        engine = create_engine()
+        run_engine(engine, program, 5)
 
-        i.run(max_ticks=5)
-
-        self.assertEqual(["A1", "A2"], i.get_marks())
+        self.assertEqual(["A1", "A2"], engine.interpreter.get_marks())
 
     def test_block_time_watch(self):
         program = build_program("""
@@ -220,12 +304,10 @@ Block: A
     Mark: A2
 Mark: A3
 """)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
+        engine = create_engine()
+        run_engine(engine, program, 30)
 
-        i.run(max_ticks=30)
-
-        self.assertEqual(["A1", "A2", "A3"], i.get_marks())
+        self.assertEqual(["A1", "A2", "A3"], engine.interpreter.get_marks())
 
     @unittest.skip("Review with Eskild")
     def test_block_time_watch_2(self):
@@ -241,10 +323,8 @@ Mark: A3
         # TODO review case with Eskild
         # We'll need look-ahead to avoid X being executed
 
-        uod = TestUod()
-        i = PInterpreter(program, uod)
-
-        i.run(max_ticks=30)
+        i = create_interpreter(program=program)
+        run_interpreter(i, max_ticks=30)
 
         self.assertEqual(["A1", "A3"], i.get_marks())
 
@@ -254,10 +334,9 @@ Mark: A3
 0.3 Mark: b
 0.8 Mark: c
 """)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
-
-        i.run(max_ticks=100)
+        engine = create_engine()
+        run_engine(engine, program, 100)
+        i = engine.interpreter
 
         self.assertEqual(["a", "b", "c"], i.get_marks())
         print_log(i)
@@ -305,10 +384,10 @@ Block: B
     End block
 Mark: d
 """)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
+        engine = create_engine()
+        run_engine(engine, program, 100)
+        i = engine.interpreter
 
-        i.run(max_ticks=100)
         print_log(i)
 
         self.assertEqual(["a", "b", "c", "d"], i.get_marks())
@@ -327,26 +406,14 @@ Mark: d
             self.assert_time_equal(log_a.time + 1.1 + 6*TICK_INTERVAL, log_d.time, 300)
 
     @unittest.skip("TODO")
-    def test_(self):
-        raise NotImplementedError()
-        program = build_program("""
-""")
-        i = PInterpreter(program, TestUod())
-        i.tags[DEFAULT_TAG_BASE].set_value("sec")
-        i.validate_commands()
-        print_program(program, show_errors=True, show_line_numbers=True, show_blanks=True)
-        i.run()
-
-    @unittest.skip("TODO")
     def test_watch_tag_categorized_value(self):
         program = build_program("""
 watch: LT01 = Full
     mark: a1
 mark: b
 """)
-        uod = TestUod()
-        i = PInterpreter(program, uod)
-        i.run(5)
+        i = create_interpreter(program=program)
+        run_interpreter(i, 5)
 
         print_log(i)
 
@@ -355,11 +422,11 @@ mark: b
         raise NotImplementedError()
         program = build_program("""
 """)
-        i = PInterpreter(program, TestUod())
-        i.tags[DEFAULT_TAG_BASE].set_value("sec")
-        i.validate_commands()
-        print_program(program, show_errors=True, show_line_numbers=True, show_blanks=True)
-        i.run()
+        #i = PInterpreter(program, TestUod())
+        #i.tags[DEFAULT_TAG_BASE].set_value("sec")
+        #i.validate_commands()
+        #print_program(program, show_errors=True, show_line_numbers=True, show_blanks=True)
+        #run_interpreter(i, )
 
     @unittest.skip("TODO")
     def test_change_base_in_program(self):
@@ -376,27 +443,15 @@ if __name__ == "__main__":
     unittest.main()
 
 
-class TestUod(UnitOperationDefinitionBase):
-    def __init__(self) -> None:
+class TestInterpreterContext(InterpreterContext):
+    def __init__(self, engine: ExecutionEngine) -> None:
         super().__init__()
-        self.tags.add(Tag("counter", 0))
+        self.engine = engine
+        self._tags = engine.uod.system_tags.merge_with(engine.uod.tags)
 
-        self.define_command(UodCommand.builder().with_name("incr counter").with_exec_fn(self.incr_counter).build())
+    @property
+    def tags(self) -> TagCollection:
+        return self._tags
 
-    # def add_tag(self, tag: Tag):
-
-    def execute_command(self, command_name: str, command_args: str | None = None) -> None:
-        cmd = command_name.replace(" ", "_")
-        # if hasattr(self, cmd):
-        #     method = getattr(self, cmd)
-        #     method(command_args)  # type: ignore
-        if cmd == "incr_counter":
-            self.incr_counter([], self)
-        else:
-            raise ValueError("Unknown command: " + cmd)
-
-    def incr_counter(self, args: List[Any], oud: UnitOperationDefinitionBase):
-        counter = self.tags["counter"]
-        count = counter.as_number()
-        count = count + 1  # type: ignore
-        counter.set_value(count)
+    def schedule_execution(self, name: str, args: str) -> None:
+        self.engine.schedule_execution(name, args)

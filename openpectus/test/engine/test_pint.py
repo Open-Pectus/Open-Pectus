@@ -91,7 +91,7 @@ class PintTest(unittest.TestCase):
     def test_compatibility_quantity(self):
         dist = Q_("310m")
         weight = Q_("3kg")
-        temp = Q_(3, ureg.degC)
+        temp = Q_(3, ureg.degC)  # type: ignore
         time = Q_("5 sec")
 
         # NOTE: don't use ureg.is_compatible_with:
@@ -134,7 +134,7 @@ class PintTest(unittest.TestCase):
         # this works. but beware of deltas. temperature calculus is tricky
         # alternatively, use ureg = UnitRegistry(autoconvert_offset_to_baseunit = True)
         # to perform automatic conversions
-        temperature = Q_(25.4, ureg.degC)
+        temperature = Q_(25.4, ureg.degC)  # type: ignore
         self.assertEqual("25.4 degree_Celsius", str(temperature))
 
     def test_higher_dimensionality(self):
@@ -176,7 +176,7 @@ class PintTest(unittest.TestCase):
 
     def test_list_compatible_units(self):
         a = Q_("10 cm")
-        result = ureg.get_compatible_units(a.units)
+        result = ureg.get_compatible_units(a.units)  # type: ignore
         print(result)
         # Returns lots of useless values like parsec, nautical mile, angstrom_star, light_year and such
         # and a few useful ones, like meter. Need to rool our own or customize pint defaults
