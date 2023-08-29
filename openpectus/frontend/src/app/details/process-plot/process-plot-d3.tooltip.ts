@@ -47,6 +47,13 @@ export class ProcessPlotD3Tooltip {
     });
   }
 
+  updateLineXPosition(svg: D3Selection<SVGSVGElement>, xScale: ScaleLinear<number, number>) {
+    svg.selectAll('.subplot-border').selectAll<SVGLineElement, ProcessValue>('line')
+      .filter(d => d !== undefined)
+      .attr('x1', d => xScale(d.value as number))
+      .attr('x2', d => xScale(d.value as number));
+  }
+
   private bisectX(xAxisData: ProcessValue[], xScale: ScaleLinear<number, number>, mouseX: number): number | undefined {
     if(xAxisData.length === 0) return;
     const xValue = xScale.invert(mouseX);

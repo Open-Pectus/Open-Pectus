@@ -162,6 +162,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     this.lines.plotLines(plotConfiguration, processValuesLog, this.svg, this.xScale, this.yScales);
     this.coloredRegions.plotColoredRegions(plotConfiguration, processValuesLog, this.svg, this.xScale, this.yScales);
     this.annotations.plotAnnotations(plotConfiguration, processValuesLog, this.svg, this.xScale, this.yScales);
+    this.tooltip.updateLineXPosition(this.svg, this.xScale);
   }
 
   private updateXScaleDomain(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValueLog,
