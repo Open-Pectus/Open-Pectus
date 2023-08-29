@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Callable
 from fastapi_websocket_pubsub import PubSubClient
-from protocol.messages import MessageBase
+from openpectus.protocol.messages import MessageBase
 
 
 class ClientHandler():

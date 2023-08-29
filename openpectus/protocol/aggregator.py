@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum, auto
-from typing import Awaitable, Callable, Dict, List
+from typing import Any, Awaitable, Callable, Dict, List
 from fastapi_websocket_pubsub.event_notifier import EventNotifier
 from pydantic import BaseModel
 from fastapi_websocket_pubsub import PubSubEndpoint
@@ -45,7 +45,7 @@ class RpcServerHandler(RpcEventServerMethods):
     def set_message_handler(self, handler: ServerMessageHandler):
         self._message_handler = handler
 
-    async def on_client_message(self, msg_type: str, msg_dict: dict):
+    async def on_client_message(self, msg_type: str, msg_dict: Dict[str, Any]):
         """Implements the server proxy's method. Is invoked by a client by its server proxy."""
         logger.debug(f"on_client_message was called with msg_type: {msg_type}, msg_dict: {msg_dict}")
         assert isinstance(self.channel, RpcChannel)

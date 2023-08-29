@@ -9,10 +9,10 @@ from typing_extensions import override
 import httpx
 
 from openpectus.protocol.engine import Client, create_client
-from openpectus.engine.eng import Engine, EngineCommand
+from openpectus.engine.eng import ExecutionEngine, CommandRequest
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
 from openpectus.lang.exec import tags
-from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand
+from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
 from openpectus.lang.exec import readings as R
 import openpectus.protocol.messages as M
 
@@ -30,68 +30,36 @@ def get_args():
     return parser.parse_args()
 
 
-class DemoHW(HardwareLayerBase):
-    def __init__(self) -> None:
-        super().__init__()
-        self.register_values: Dict[str, Any] = {}
+def create_demo_uod() -> UnitOperationDefinitionBase:
 
-    @override
-    def read(self, r: Register) -> Any:
-        if r.name in self.registers.keys() and r.name in self.register_values.keys():
-            return self.register_values[r.name]
-        return None
+    def reset(cmd: UodCommand, args: List[Any]) -> None:
+        if cmd._exec_iterations == 0:
+            cmd.context.tags.get("Reset").set_value("Reset")
+        elif cmd._exec_iterations == 5:
+            cmd.context.tags.get("Reset").set_value("N/A")
+            cmd.set_complete()
 
-    @override
-    def write(self, value: Any, r: Register):
-        if r.name in self.registers.keys():
-            self.register_values[r.name] = value
-
-
-class DemoUod(UnitOperationDefinitionBase):
-    def define(self):
-        self.define_instrument("TestUod")
-        self.define_hardware_layer(DemoHW())
-
-        self.define_register("FT01", RegisterDirection.Both, path='Objects;2:System;2:FT01')
-        self.define_register("Reset", RegisterDirection.Both, path='Objects;2:System;2:RESET',
-                             from_tag=lambda x: 1 if x == 'Reset' else 0,
-                             to_tag=lambda x: "Reset" if x == 1 else "N/A")
-
-        self.define_tag(tags.Reading("FT01", "L/h"))
-        self.define_tag(tags.Select("Reset", value="N/A", unit=None, choices=['Reset', "N/A"]))
-
-        self.define_reading(R.Reading(label="Run time"))
-        self.define_reading(R.Reading(label="FT01"))
-        self.define_reading(R.Reading(label="Reset"))
-
-        # start = time.time()
-
-        # def x():
-        #     elapsed = time.time() - start
-        #     return elapsed
-
-        # self.tags["FT01"].get_value = x
-
-        self.define_command(DemoResetCommand())
-
-
-class DemoResetCommand(UodCommand):
-    def __init__(self) -> None:
-        super().__init__()
-        self.name = "Reset"
-        self.is_complete = False
-
-    def execute(self, args: List[Any], uod: UnitOperationDefinitionBase) -> None:
-        if self.iterations == 0:
-            uod.tags.get("Reset").set_value("Reset")
-        elif self.iterations == 5:
-            uod.tags.get("Reset").set_value("N/A")
-            self.is_complete = True
-            self.iterations = 0
+    return (
+        UodBuilder()
+        .with_instrument("DemoUod")
+        .with_no_hardware()
+        .with_hardware_register("FT01", RegisterDirection.Both, path='Objects;2:System;2:FT01')
+        .with_hardware_register("Reset", RegisterDirection.Both, path='Objects;2:System;2:RESET',
+                                from_tag=lambda x: 1 if x == 'Reset' else 0,
+                                to_tag=lambda x: "Reset" if x == 1 else "N/A")
+        .with_new_system_tags()
+        .with_tag(tags.Reading("FT01", "L/h"))
+        .with_tag(tags.Select("Reset", value="N/A", unit=None, choices=['Reset', "N/A"]))
+        .with_command(UodCommand.builder().with_name("Reset").with_exec_fn(reset))
+        .with_process_value(R.Reading(label="Run time"))
+        .with_process_value(R.Reading(label="FT01"))
+        .with_process_value(R.Reading(label="Reset"))
+        .build()
+    )
 
 
 class EngineRunner:
-    def __init__(self, engine: Engine) -> None:
+    def __init__(self, engine: ExecutionEngine) -> None:
         self.engine = engine
 
     async def connect_async(self):
@@ -113,7 +81,7 @@ class EngineRunner:
     async def send_tag_updates_async(self):
         raise NotImplementedError()
 
-    async def run_loop(self):
+    async def run_loop_async(self):
         try:
             await self.connect_async()
             await self.register_async()
@@ -130,7 +98,7 @@ class EngineRunner:
 
 
 class DemoEngineRunner():
-    def __init__(self, e: Engine) -> None:
+    def __init__(self, e: ExecutionEngine) -> None:
         self.e = e
         self.running = False
 
@@ -143,7 +111,7 @@ class DemoEngineRunner():
     async def register_async(self):
         pass
 
-    async def run_loop(self):
+    async def run_loop_async(self):
         self.running = True
         try:
             while self.running:
@@ -163,7 +131,7 @@ class DemoEngineRunner():
 
 
 class WebSocketRPCEngineRunner(EngineRunner):
-    def __init__(self, engine: Engine, ws_url: str) -> None:
+    def __init__(self, engine: ExecutionEngine, ws_url: str) -> None:
         self.engine = engine
         self.client: Client | None = None
         self.ws_url = ws_url
@@ -222,10 +190,11 @@ class WebSocketRPCEngineRunner(EngineRunner):
 
         # as side effect, start engine on first START command
         # TODO verify this is intended behavior
+        # TODO - move this into ExecutionEngine
         if not self.engine.is_running() and msg.name.upper() == "START":
             self.engine.run()
 
-        cmd = EngineCommand(name=msg.name, args=msg.arguments)
+        cmd = CommandRequest(name=msg.name, args=msg.arguments)
         self.engine.cmd_queue.put_nowait(cmd)
         return M.SuccessMessage()
 
@@ -237,17 +206,17 @@ class WebSocketRPCEngineRunner(EngineRunner):
 async def async_main(args):
     uod = None
     if args.uod == 'DemoUod':
-        uod = DemoUod()
+        uod = create_demo_uod()
     if uod is None:
         raise ValueError("Uod not configured")
 
-    e = Engine(uod, tick_interval=1)
+    e = ExecutionEngine(uod, tick_interval=1)
 
     if args.runner == "DemoTagListener":
         runner = DemoEngineRunner(e)
-        await runner.run_loop()
+        await runner.run_loop_async()
 
-        listener_thread = Thread(target=runner.run_loop, daemon=True, name=runner.__class__.__name__)
+        listener_thread = Thread(target=runner.run_loop_async, daemon=True, name=runner.__class__.__name__)
 
         print("Starting engine")
         listener_thread.start()
@@ -262,15 +231,15 @@ async def async_main(args):
                 time.sleep(.1)
 
                 if e._tick_time > secs_start:
-                    e.cmd_queue.put(EngineCommand("START"))
+                    e.cmd_queue.put(CommandRequest("START"))
                     secs_start = never
 
                 if e._tick_time > secs_reset:
-                    e.cmd_queue.put(EngineCommand("RESET"))
+                    e.cmd_queue.put(CommandRequest("RESET"))
                     secs_reset = never
 
                 if e._tick_time > secs_stop:
-                    e.cmd_queue.put(EngineCommand("STOP"))
+                    e.cmd_queue.put(CommandRequest("STOP"))
                     secs_stop = never
 
         except KeyboardInterrupt:
@@ -284,20 +253,20 @@ async def async_main(args):
         try:
             resp = httpx.get(aggregator_health_url)
         except httpx.ConnectError as ex:
-            print("Connection to Aggregator status end point failed.")
+            print("Connection to Aggregator health end point failed.")
             print(f"Status url: {aggregator_health_url}")
             print(f"Error: {ex}")
-            print("Pectus Engine cannot start.")
+            print("OpenPectus Engine cannot start.")
             exit(1)
         if resp.is_error:
-            print("Aggregator status end point returned an unsuccessful result.")
+            print("Aggregator health end point returned an unsuccessful result.")
             print(f"Status url: {aggregator_health_url}")
             print(f"HTTP status code returned: {resp.status_code}")
-            print("Pectus Engine cannot start.")
+            print("OpenPectus Engine cannot start.")
             exit(1)
         aggregator_ws_url = f"ws://{args.aggregator_host}:{args.aggregator_port}/engine-pubsub"
         runner = WebSocketRPCEngineRunner(e, aggregator_ws_url)
-        await runner.run_loop()
+        await runner.run_loop_async()
 
 
 def main():

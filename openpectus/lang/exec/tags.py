@@ -1,13 +1,15 @@
 from __future__ import annotations
 from enum import StrEnum, auto
-from typing import Dict, Iterable, List, Set
+from typing import Any, Dict, Iterable, List, Set
 
 import pint
 from pint import UnitRegistry, Quantity
+from pint.facets.plain import PlainQuantity
 
 ureg = UnitRegistry(cache_folder=":auto:")
 Q_ = Quantity
 
+QuantityType = pint.Quantity | PlainQuantity[Any]
 
 # Represents tag API towards interpreter
 
@@ -144,7 +146,7 @@ class Tag(ChangeSubject):
     def get_value(self):
         return self.value
 
-    def get_pint_unit(self):
+    def get_pint_unit(self) -> pint.Unit | None:
         if self.unit is None:
             return None
         return pint.Unit(self.unit)
@@ -160,8 +162,8 @@ class Tag(ChangeSubject):
             raise ValueError(f"Value is not numerical: '{self.value}'")
         return self.value
 
-    def set_quantity(self, q: pint.Quantity):
-        self.unit = None if q.dimensionless else q.units
+    def set_quantity(self, q: QuantityType):
+        self.unit = None if q.dimensionless else str(q.units)
         self.set_value(q.magnitude)
 
     def clone(self) -> Tag:
@@ -243,7 +245,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
             raise ValueError("tag_name is None or empty")
         if not tag_name.upper() in self.tags.keys():
             raise ValueError(f"Tag name {tag_name} not found")
-        return self[tag_name]  # type: ignore
+        return self[tag_name]
 
     def add(self, tag: Tag, exist_ok: bool = True):
         """ Add tag to collection. If tag name already exists and exist_ok is False, a ValueError is raised. """
