@@ -20,10 +20,12 @@ export class ProcessPlotD3Annotations {
       subPlotSelection.selectAll('line')
         .data(annotationData)
         .join('line')
+        .attr('clip-path', `url(#subplot-clip-path-${subPlotIndex})`)
         .attr('y1', subPlotTop)
         .attr('y2', subPlotBottom)
-        .attr('stroke', 'blue')
-        .attr('transform', d => `translate(${[xScale(d.x), 0]})`);
+        .attr('x1', d => xScale(d.x))
+        .attr('x2', d => xScale(d.x))
+        .attr('stroke', 'blue');
     });
 
     topAnnotationSelection.selectAll('text')

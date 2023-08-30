@@ -23,6 +23,7 @@ export class ProcessPlotD3ColoredRegions {
         colorRegionSelection.selectAll('rect')
           .data(formattedRectData)
           .join('rect')
+          .attr('clip-path', `url(#subplot-clip-path-${subPlotIndex})`)
           .attr('x', d => xScale(d.start))
           .attr('y', subPlotTop)
           .attr('width', d => xScale(d.end) - xScale(d.start))

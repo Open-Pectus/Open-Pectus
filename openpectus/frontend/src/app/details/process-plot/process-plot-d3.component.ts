@@ -96,7 +96,6 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
         .style('font-size', 11);
       plotConfiguration.color_regions.forEach((_, colorRegionIndex) => {
         subPlotG.append('g').attr('class', `color-region-${colorRegionIndex}`)
-          .attr('clip-path', `url(#subplot-clip-path-${subPlotIndex})`)
           .style('font-size', 11)
           .attr('fill', 'black');
       });
