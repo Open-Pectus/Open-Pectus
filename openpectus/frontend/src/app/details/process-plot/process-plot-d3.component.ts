@@ -1,4 +1,5 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, OnDestroy, ViewChild } from '@angular/core';
+import { concatLatestFrom } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { axisBottom, ScaleLinear, scaleLinear, select } from 'd3';
 import { filter, Subject, take, takeUntil } from 'rxjs';
@@ -36,7 +37,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private coloredRegions = new ProcessPlotD3ColoredRegions();
   private annotations = new ProcessPlotD3Annotations();
   private tooltip = new ProcessPlotD3Tooltip(this.processValuesLog, this.processValuePipe, this.plotConfiguration);
-  private zoom = new ProcessPlotD3Zoom();
+  private zoom = new ProcessPlotD3Zoom(this.store);
 
   constructor(private store: Store, private processValuePipe: ProcessValuePipe) {}
 
@@ -133,13 +134,18 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   }
 
   private setupOnDataChange(plotConfiguration: PlotConfiguration) {
-    this.processValuesLog.pipe(takeUntil(this.componentDestroyed)).subscribe(processValuesLog => {
-      this.plotData(plotConfiguration, processValuesLog);
-      this.updatePlacementsOnNewTopLabel(plotConfiguration, processValuesLog);
+    this.processValuesLog.pipe(
+      concatLatestFrom(() => this.store.select(ProcessPlotSelectors.zoomed)),
+      takeUntil(this.componentDestroyed),
+    ).subscribe(([processValuesLog, isZoomed]) => {
+      this.plotData(plotConfiguration, processValuesLog, !isZoomed);
+      this.updatePlacementsOnNewTopLabel(plotConfiguration, processValuesLog, !isZoomed);
     });
   }
 
-  private updatePlacementsOnNewTopLabel(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValueLog) {
+  private updatePlacementsOnNewTopLabel(plotConfiguration: PlotConfiguration,
+                                        processValuesLog: ProcessValueLog,
+                                        fitXScaleToData = true) {
     const processValueNamesToConsider = plotConfiguration.process_value_names_to_annotate
       .concat(plotConfiguration.color_regions.map(colorRegion => colorRegion.process_value_name));
 
@@ -154,28 +160,32 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     if(hasNewValue) {
       // new color region value, label height could therefore have changed, so update placement of elements and re-plot;
       this.placement.updateElementPlacements(plotConfiguration, this.svg, this.xScale, this.yScales);
-      this.plotData(plotConfiguration, processValuesLog);
+      this.plotData(plotConfiguration, processValuesLog, fitXScaleToData);
     }
   }
 
   private plotData(plotConfiguration: PlotConfiguration,
-                   processValuesLog: ProcessValueLog) {
+                   processValuesLog: ProcessValueLog,
+                   fitXScaleToData = true) {
     if(this.svg === undefined) throw Error('no Svg selection when plotting data!');
-    this.updateXScaleDomain(plotConfiguration, processValuesLog, this.svg);
+    if(fitXScaleToData) this.fitXScaleToData(plotConfiguration, processValuesLog);
+    this.drawXAxis(this.svg, plotConfiguration);
     this.lines.plotLines(plotConfiguration, processValuesLog, this.svg, this.xScale, this.yScales);
     this.coloredRegions.plotColoredRegions(plotConfiguration, processValuesLog, this.svg, this.xScale, this.yScales);
     this.annotations.plotAnnotations(plotConfiguration, processValuesLog, this.svg, this.xScale, this.yScales);
     this.tooltip.updateLineXPosition(this.svg, this.xScale);
   }
 
-  private updateXScaleDomain(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValueLog,
-                             svg: D3Selection<SVGSVGElement>) {
+  private fitXScaleToData(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValueLog) {
     const xAxisProcessValues = processValuesLog[plotConfiguration.x_axis_process_value_name];
     if(xAxisProcessValues === undefined) return;
     const minXValue = xAxisProcessValues.at(0)?.value ?? 0;
     const maxXValue = xAxisProcessValues.at(-1)?.value ?? minXValue;
     if(typeof minXValue !== 'number' || typeof maxXValue !== 'number') throw Error('Process Value chosen for x-axis was not a number!');
     this.xScale.domain([minXValue, maxXValue]);
+  }
+
+  private drawXAxis(svg: D3Selection<SVGSVGElement>, plotConfiguration: PlotConfiguration) {
     svg.select<SVGGElement>('.x-axis').call(axisBottom(this.xScale));
     plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
       svg.select<SVGGElement>(`.subplot-${subPlotIndex} .x-grid-lines`).call(this.placement.xGridLineAxisGenerators[subPlotIndex]);
