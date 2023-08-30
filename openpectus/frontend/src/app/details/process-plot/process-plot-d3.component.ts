@@ -93,6 +93,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
         .style('font-size', 11);
       plotConfiguration.color_regions.forEach((_, colorRegionIndex) => {
         subPlotG.append('g').attr('class', `color-region-${colorRegionIndex}`)
+          .attr('clip-path', `url(#subplot-clip-path-${subPlotIndex})`)
           .style('font-size', 11)
           .attr('fill', 'black');
       });
@@ -106,12 +107,14 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
           .style('font-size', this.placement.axisLabelHeight)
           .text(axis.label);
         subPlotG.append('g').attr('class', `line line-${axisIndex}`)
+          .attr('clip-path', `url(#subplot-clip-path-${subPlotIndex})`)
           .attr('stroke', axis.color)
           .attr('fill', 'none')
           .attr('stroke-width', 1);
       });
 
       const subPlotBorderG = subPlotG.append('g').attr('class', 'subplot-border');
+      subPlotBorderG.append('clipPath').attr('id', `subplot-clip-path-${subPlotIndex}`).append('rect');
       subPlotBorderG.append('rect') // actual border
         .attr('stroke-width', 1)
         .attr('stroke', 'black')

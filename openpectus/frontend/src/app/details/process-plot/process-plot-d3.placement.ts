@@ -95,12 +95,17 @@ export class ProcessPlotD3Placement {
 
   private placeSubPlotBorder(subPlotG: D3Selection<SVGGElement>,
                              leftRight: LeftRight, topBottom: TopBottom) {
-    subPlotG.selectChild<SVGGElement>('.subplot-border').selectChild<SVGRectElement>('rect')
-      .attr('x', leftRight.left)
-      .attr('y', topBottom.top)
-      // Math.abs() avoids errors with negative values while container is collapsing
-      .attr('height', Math.abs(topBottom.bottom - topBottom.top))
-      .attr('width', Math.abs(leftRight.right - leftRight.left));
+    const borderSelection = subPlotG.selectChild<SVGGElement>('.subplot-border');
+    [borderSelection.selectChild<SVGRectElement>('rect'),
+      borderSelection.selectChild<SVGClipPathElement>('clipPath').selectChild<SVGRectElement>('rect'),
+    ].forEach(rect => {
+      rect
+        .attr('x', leftRight.left)
+        .attr('y', topBottom.top)
+        // Math.abs() avoids errors with negative values while container is collapsing
+        .attr('height', Math.abs(topBottom.bottom - topBottom.top))
+        .attr('width', Math.abs(leftRight.right - leftRight.left));
+    });
   }
 
   private calculatePlotLeftRight(root: D3Selection<SVGGElement>, plotConfiguration: PlotConfiguration, rootWidth: number) {
