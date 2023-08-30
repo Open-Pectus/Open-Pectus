@@ -13,6 +13,7 @@ import { ProcessPlotD3Lines } from './process-plot-d3.lines';
 import { ProcessPlotD3Placement } from './process-plot-d3.placement';
 import { ProcessPlotD3Tooltip } from './process-plot-d3.tooltip';
 import { D3Selection } from './process-plot-d3.types';
+import { ProcessPlotD3Zoom } from './process-plot-d3.zoom';
 
 @Component({
   selector: 'app-process-plot-d3',
@@ -35,6 +36,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private coloredRegions = new ProcessPlotD3ColoredRegions();
   private annotations = new ProcessPlotD3Annotations();
   private tooltip = new ProcessPlotD3Tooltip(this.processValuesLog, this.processValuePipe, this.plotConfiguration);
+  private zoom = new ProcessPlotD3Zoom();
 
   constructor(private store: Store, private processValuePipe: ProcessValuePipe) {}
 
@@ -50,6 +52,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       this.oneTimeSetup(plotConfiguration);
       this.setupOnDataChange(plotConfiguration);
       this.tooltip.setupTooltip(this.svg, this.xScale);
+      this.zoom.setupZoom(this.svg, plotConfiguration, this.xScale, this.yScales);
     });
   }
 
