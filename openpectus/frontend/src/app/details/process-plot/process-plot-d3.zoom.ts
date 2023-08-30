@@ -57,12 +57,12 @@ export class ProcessPlotD3Zoom {
     return (mouseUpEvent: MouseEvent) => {
       svg.on('mousemove mouseup', null);
       svg.select('path.zoom').remove();
-      const xs = [pathSelection.datum().offsetX, mouseUpEvent.offsetX].sort().map(
+      const xs = [pathSelection.datum().offsetX, mouseUpEvent.offsetX].sort((a, b) => a - b).map(
         (offset) => xScale.invert(offset - 5 /* margin, maybe needed? */));
       if(xs[0] === xs[1]) return; // protect against zooming to a single data point
       xScale.domain(xs);
       yScales[subPlotIndex].forEach((yScale) => {
-        const ys = [pathSelection.datum().offsetY, mouseUpEvent.offsetY].sort().map(
+        const ys = [pathSelection.datum().offsetY, mouseUpEvent.offsetY].sort((a, b) => a - b).map(
           (offset) => yScale.invert(offset - 10 /* margin, maybe needed? */));
         yScale.domain([ys[1], ys[0]]);
       });
