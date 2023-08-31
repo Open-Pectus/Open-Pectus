@@ -11,12 +11,14 @@ export interface ProcessPlotState {
   processValuesLog: ProcessValueLog;
   zoomedSubplotIndices: number[];
   markedDirty: boolean;
+  scalesMarkedDirty: boolean;
 }
 
 const initialState: ProcessPlotState = {
   processValuesLog: {},
   zoomedSubplotIndices: [],
   markedDirty: false,
+  scalesMarkedDirty: false,
 };
 
 const reducer = createReducer(initialState,
@@ -32,14 +34,21 @@ const reducer = createReducer(initialState,
   on(ProcessPlotActions.processPlotElementsPlaced, state => produce(state, draft => {
     draft.markedDirty = false;
   })),
-  on(ProcessPlotActions.processPlotZoomed,
-    ProcessPlotActions.processPlotZoomReset,
+  on(ProcessPlotActions.processPlotAxesUpdated, state => produce(state, draft => {
+    draft.scalesMarkedDirty = false;
+  })),
+  on(
     ProcessPlotActions.processPlotResized,
     ProcessPlotActions.newAnnotatedValueAppeared,
     ProcessPlotActions.processPlotInitialized,
-    ProcessPlotActions.processPlotPanned,
     state => produce(state, draft => {
       draft.markedDirty = true;
+    })),
+  on(ProcessPlotActions.processPlotZoomed,
+    ProcessPlotActions.processPlotZoomReset,
+    ProcessPlotActions.processPlotPanned,
+    state => produce(state, draft => {
+      draft.scalesMarkedDirty = true;
     })),
   on(DetailsActions.processValuesFetched, (state, {processValues}) => produce(state, draft => {
     processValues.forEach(processValue => {

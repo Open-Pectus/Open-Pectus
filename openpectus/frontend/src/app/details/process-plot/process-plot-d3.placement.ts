@@ -34,6 +34,20 @@ export class ProcessPlotD3Placement {
     });
   }
 
+  updateAxes() {
+    this.svg.selectChild<SVGGElement>('.x-axis').call(axisBottom(this.xScale));
+    this.plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
+      const subPlotG = this.svg.selectChild<SVGGElement>(`.subplot-${subPlotIndex}`);
+      subPlot.axes.forEach((_, axisIndex) => {
+        const yScale = this.yScales[subPlotIndex][axisIndex];
+        const isLeftAxis = axisIndex === 0;
+        const axisGenerator = isLeftAxis ? axisLeft(yScale) : axisRight(yScale);
+        axisGenerator.tickValues(this.getTickValues(yScale));
+        subPlotG.selectChild<SVGGElement>(`.y-axis-${axisIndex}`).call(axisGenerator);
+      });
+    });
+  }
+
   private placeYAxes(subPlot: SubPlot, subPlotG: D3Selection<SVGGElement>,
                      subPlotIndex: number,
                      leftRight: LeftRight,
@@ -42,6 +56,7 @@ export class ProcessPlotD3Placement {
     subPlot.axes.forEach((_, axisIndex) => {
       const axisXTransform = this.placeYAxis(subPlotIndex, axisIndex, subPlotG, leftRight);
       this.placeAxisLabels(axisIndex, subPlotG, topBottom, axisXTransform);
+
     });
   }
 

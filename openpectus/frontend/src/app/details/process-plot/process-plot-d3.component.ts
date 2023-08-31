@@ -30,6 +30,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(filter(UtilMethods.isNotNullOrUndefined));
   private processValuesLog = this.store.select(ProcessPlotSelectors.processValuesLog);
   private markedDirty = this.store.select(ProcessPlotSelectors.markedDirty);
+  private scalesMarkedDirty = this.store.select(ProcessPlotSelectors.scalesMarkedDirty);
   private isZoomed = this.store.select(ProcessPlotSelectors.anySubplotZoomed);
   private xScale = scaleLinear();
   private yScales: ScaleLinear<number, number>[][] = [];
@@ -197,14 +198,22 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   }
 
   private setupOnMarkedDirty(plotConfiguration: PlotConfiguration) {
-    this.markedDirty.pipe(
-      filter(identity),
+    this.markedDirty.pipe(filter(identity),
       concatLatestFrom(() => this.store.select(ProcessPlotSelectors.processValuesLog)),
       takeUntil(this.componentDestroyed),
     ).subscribe(async ([_, processValuesLog]) => {
       this.placement?.updateElementPlacements();
       await this.plotData(plotConfiguration, processValuesLog);
       this.store.dispatch(ProcessPlotActions.processPlotElementsPlaced());
+    });
+
+    this.scalesMarkedDirty.pipe(filter(identity),
+      concatLatestFrom(() => this.store.select(ProcessPlotSelectors.processValuesLog)),
+      takeUntil(this.componentDestroyed),
+    ).subscribe(async ([_, processValuesLog]) => {
+      this.placement?.updateAxes();
+      await this.plotData(plotConfiguration, processValuesLog);
+      this.store.dispatch(ProcessPlotActions.processPlotAxesUpdated());
     });
   }
 }
