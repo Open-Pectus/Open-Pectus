@@ -9,19 +9,19 @@ import { UtilMethods } from '../../shared/util-methods';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessValueLog } from './ngrx/process-plot.reducer';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
+import { ProcessPlotD3ZoomAndPan } from './process-plot-d3-zoom-and.pan';
 import { ProcessPlotD3Annotations } from './process-plot-d3.annotations';
 import { ProcessPlotD3ColoredRegions } from './process-plot-d3.colored-regions';
 import { ProcessPlotD3Lines } from './process-plot-d3.lines';
 import { ProcessPlotD3Placement } from './process-plot-d3.placement';
 import { ProcessPlotD3Tooltip } from './process-plot-d3.tooltip';
 import { D3Selection } from './process-plot-d3.types';
-import { ProcessPlotD3Zoom } from './process-plot-d3.zoom';
 
 @Component({
   selector: 'app-process-plot-d3',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <svg class="h-full w-full overflow-visible" #plot></svg>
+    <svg class="h-full w-full overflow-visible select-none" #plot></svg>
   `,
 })
 export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
@@ -30,7 +30,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(filter(UtilMethods.isNotNullOrUndefined));
   private processValuesLog = this.store.select(ProcessPlotSelectors.processValuesLog);
   private markedDirty = this.store.select(ProcessPlotSelectors.markedDirty);
-  private isZoomed = this.store.select(ProcessPlotSelectors.zoomed);
+  private isZoomed = this.store.select(ProcessPlotSelectors.anySubplotZoomed);
   private xScale = scaleLinear();
   private yScales: ScaleLinear<number, number>[][] = [];
   private svg?: D3Selection<SVGSVGElement>;
@@ -40,7 +40,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private coloredRegions = new ProcessPlotD3ColoredRegions();
   private annotations = new ProcessPlotD3Annotations();
   private tooltip = new ProcessPlotD3Tooltip(this.processValuesLog, this.processValuePipe, this.plotConfiguration);
-  private zoom?: ProcessPlotD3Zoom;
+  private zoomAndPan?: ProcessPlotD3ZoomAndPan;
 
   constructor(private store: Store,
               private processValuePipe: ProcessValuePipe,
@@ -58,13 +58,13 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       this.insertSvgElements(this.svg, plotConfiguration);
 
       this.placement = new ProcessPlotD3Placement(plotConfiguration, this.svg, this.xScale, this.yScales);
-      this.zoom = new ProcessPlotD3Zoom(this.store);
+      this.zoomAndPan = new ProcessPlotD3ZoomAndPan(this.store);
 
       this.setupOnResize(this.plotElement.nativeElement);
       this.setupOnDataChange(plotConfiguration);
       this.setupOnMarkedDirty(plotConfiguration);
       this.tooltip.setupTooltip(this.svg, this.xScale);
-      this.zoom.setupZoom(this.svg, plotConfiguration, this.xScale, this.yScales);
+      this.zoomAndPan.setupZoom(this.svg, plotConfiguration, this.xScale, this.yScales);
       this.store.dispatch(ProcessPlotActions.processPlotInitialized());
     });
   }
@@ -139,7 +139,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
 
   private setupOnDataChange(plotConfiguration: PlotConfiguration) {
     this.processValuesLog.pipe(
-      concatLatestFrom(() => this.store.select(ProcessPlotSelectors.zoomed)),
+      concatLatestFrom(() => this.store.select(ProcessPlotSelectors.anySubplotZoomed)),
       takeUntil(this.componentDestroyed),
     ).subscribe(async ([processValuesLog, isZoomed]) => {
       if(isZoomed) return;

@@ -5,11 +5,12 @@ const source = '[Process Plot] ';
 
 export class ProcessPlotActions {
   static processPlotComponentInitialized = createAction(source + 'Process Plot Component Initialized');
-  static processPlotZoomed = createAction(source + 'Process Plot Zoomed');
+  static processPlotZoomed = createAction(source + 'Process Plot Zoomed', props<{ subPlotIndex: number }>());
   static processPlotZoomReset = createAction(source + 'Process Plot Zoom Reset');
   static processPlotElementsPlaced = createAction(source + 'Process Plot Elements Placed');
   static plotConfigurationFetched = createAction(source + 'Plot Configuration Fetched', props<{ configuration: PlotConfiguration }>());
   static processPlotResized = createAction(source + 'Process Plot Resized');
   static newAnnotatedValueAppeared = createAction(source + 'New Annotated Value appeared');
   static processPlotInitialized = createAction(source + 'Process Plot Initialized');
+  static processPlotPanned = createAction(source + 'Process Plot Panned');
 }

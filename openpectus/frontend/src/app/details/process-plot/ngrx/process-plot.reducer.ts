@@ -9,13 +9,13 @@ export type ProcessValueLog = Record<string, ProcessValue[]>
 export interface ProcessPlotState {
   plotConfiguration?: PlotConfiguration;
   processValuesLog: ProcessValueLog;
-  zoomed: boolean;
+  zoomedSubplotIndices: number[];
   markedDirty: boolean;
 }
 
 const initialState: ProcessPlotState = {
   processValuesLog: {},
-  zoomed: false,
+  zoomedSubplotIndices: [],
   markedDirty: false,
 };
 
@@ -23,11 +23,11 @@ const reducer = createReducer(initialState,
   on(ProcessPlotActions.plotConfigurationFetched, (state, {configuration}) => produce(state, draft => {
     draft.plotConfiguration = configuration;
   })),
-  on(ProcessPlotActions.processPlotZoomed, (state) => produce(state, draft => {
-    draft.zoomed = true;
+  on(ProcessPlotActions.processPlotZoomed, (state, {subPlotIndex}) => produce(state, draft => {
+    draft.zoomedSubplotIndices.push(subPlotIndex);
   })),
   on(ProcessPlotActions.processPlotZoomReset, (state) => produce(state, draft => {
-    draft.zoomed = false;
+    draft.zoomedSubplotIndices = [];
   })),
   on(ProcessPlotActions.processPlotElementsPlaced, state => produce(state, draft => {
     draft.markedDirty = false;
@@ -37,6 +37,7 @@ const reducer = createReducer(initialState,
     ProcessPlotActions.processPlotResized,
     ProcessPlotActions.newAnnotatedValueAppeared,
     ProcessPlotActions.processPlotInitialized,
+    ProcessPlotActions.processPlotPanned,
     state => produce(state, draft => {
       draft.markedDirty = true;
     })),
