@@ -8,7 +8,8 @@ import { ProcessPlotActions } from './ngrx/process-plot.actions';
   template: `
     <app-collapsible-element [name]="'Process Plot'" [heightResizable]="true" [contentHeight]="400"
                              (collapseStateChanged)="isCollapsed = $event">
-      <app-process-plot-d3 content class="h-full w-full" *ngIf="!isCollapsed" [isCollapsed]="isCollapsed"></app-process-plot-d3>
+      <app-process-plot-d3 content class="block w-full h-full px-2 py-4" *ngIf="!isCollapsed"
+                           [isCollapsed]="isCollapsed"></app-process-plot-d3>
     </app-collapsible-element>
   `,
 })

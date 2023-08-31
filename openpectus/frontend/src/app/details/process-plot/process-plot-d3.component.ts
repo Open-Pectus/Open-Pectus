@@ -21,7 +21,7 @@ import { ProcessPlotD3Zoom } from './process-plot-d3.zoom';
   selector: 'app-process-plot-d3',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <svg class="h-full w-full" #plot></svg>
+    <svg class="h-full w-full overflow-visible" #plot></svg>
   `,
 })
 export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
@@ -85,10 +85,9 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   }
 
   private insertSvgElements(svg: D3Selection<SVGSVGElement>, plotConfiguration: PlotConfiguration) {
-    const root = svg.append('g').attr('class', 'root');
-    root.append('g').attr('class', 'x-axis');
+    svg.append('g').attr('class', 'x-axis');
     plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
-      const subPlotG = root.append('g')
+      const subPlotG = svg.append('g')
         .attr('class', `subplot subplot-${subPlotIndex}`);
       subPlotG.append('g').attr('class', 'annotations')
         .attr('fill', 'blue')
@@ -125,7 +124,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
         .attr('stroke', 'black')
         .attr('stroke-width', 1.5);
     });
-    const tooltipG = root.append('g').attr('class', 'tooltip')
+    const tooltipG = svg.append('g').attr('class', 'tooltip')
       .style('pointer-events', 'none')
       .style('font', `${ProcessPlotD3Tooltip.fontSize}px sans-serif`);
     tooltipG.append('rect').attr('class', 'background')

@@ -7,7 +7,6 @@ export class ProcessPlotD3Placement {
   private readonly axisLabelHeight = 12;
   // Configurable values
   private readonly subPlotGap = 20;
-  private readonly margin = {left: 5, top: 10, right: 5, bottom: 5};
   private readonly axisGap = 14;
   private readonly yAxisLabelMargin = 8;
   private readonly pixelsPerTick = 42;
@@ -18,17 +17,16 @@ export class ProcessPlotD3Placement {
               private yScales: ScaleLinear<number, number>[][]) {}
 
   updateElementPlacements() {
-    const rootHeight = (this.svg.node()?.height.baseVal.value ?? 0) - this.margin.top - this.margin.bottom;
-    const rootWidth = (this.svg.node()?.width.baseVal.value ?? 0) - this.margin.left - this.margin.right;
-    const root = this.svg.selectChild<SVGGElement>('.root').attr('transform', `translate(${[this.margin.left, this.margin.top]})`);
-    const xAxisHeight = root.select<SVGGElement>('.x-axis').node()?.getBoundingClientRect().height ?? 0;
-    const subPlotLeftRight = this.calculatePlotLeftRight(root, this.plotConfiguration, rootWidth);
-    this.placeXAxis(root, rootHeight, subPlotLeftRight, xAxisHeight);
-    const coloredRegionLabelHeight = this.calculateColorRegionLabelsHeight(root, this.plotConfiguration);
+    const svgHeight = this.svg.node()?.height.baseVal.value ?? 0;
+    const svgWidth = this.svg.node()?.width.baseVal.value ?? 0;
+    const xAxisHeight = this.svg.select<SVGGElement>('.x-axis').node()?.getBoundingClientRect().height ?? 0;
+    const subPlotLeftRight = this.calculatePlotLeftRight(this.svg, this.plotConfiguration, svgWidth);
+    this.placeXAxis(this.svg, svgHeight, subPlotLeftRight, xAxisHeight);
+    const coloredRegionLabelHeight = this.calculateColorRegionLabelsHeight(this.svg, this.plotConfiguration);
 
     this.plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
-      const subPlotG = root.selectChild<SVGGElement>(`.subplot-${subPlotIndex}`);
-      const subPlotTopBottom = this.calculateSubPlotTopBottom(this.plotConfiguration, subPlotIndex, rootHeight, xAxisHeight,
+      const subPlotG = this.svg.selectChild<SVGGElement>(`.subplot-${subPlotIndex}`);
+      const subPlotTopBottom = this.calculateSubPlotTopBottom(this.plotConfiguration, subPlotIndex, svgHeight, xAxisHeight,
         coloredRegionLabelHeight);
       this.placeYAxes(subPlot, subPlotG, subPlotIndex, subPlotLeftRight, subPlotTopBottom);
       this.placeGridLines(subPlotG, subPlotIndex, subPlotLeftRight, subPlotTopBottom);
@@ -91,12 +89,12 @@ export class ProcessPlotD3Placement {
       .style('font-size', this.axisLabelHeight);
   }
 
-  private placeXAxis(root: D3Selection<SVGGElement>, rootHeight: number,
+  private placeXAxis(svg: D3Selection<SVGSVGElement>, svgHeight: number,
                      leftRight: LeftRight, xAxisHeight: number) {
     this.xScale.range([leftRight.left, leftRight.right]);
-    root.selectChild<SVGGElement>('.x-axis')
+    svg.selectChild<SVGGElement>('.x-axis')
       .call(axisBottom(this.xScale))
-      .attr('transform', `translate(${[0, rootHeight - xAxisHeight]})`);
+      .attr('transform', `translate(${[0, svgHeight - xAxisHeight]})`);
   }
 
   private placeSubPlotBorder(subPlotG: D3Selection<SVGGElement>,
@@ -114,16 +112,16 @@ export class ProcessPlotD3Placement {
     });
   }
 
-  private calculatePlotLeftRight(root: D3Selection<SVGGElement>, plotConfiguration: PlotConfiguration, rootWidth: number) {
-    const widestLeftSideYAxisWidth = this.calculateWidestLeftSideYAxisWidth(root);
-    const widestRightSideYAxesWidth = this.calculateWidestRightSideYAxesWidth(plotConfiguration, root);
+  private calculatePlotLeftRight(svg: D3Selection<SVGSVGElement>, plotConfiguration: PlotConfiguration, svgWidth: number) {
+    const widestLeftSideYAxisWidth = this.calculateWidestLeftSideYAxisWidth(svg);
+    const widestRightSideYAxesWidth = this.calculateWidestRightSideYAxesWidth(plotConfiguration, svg);
     return {
       left: widestLeftSideYAxisWidth,
-      right: rootWidth - widestRightSideYAxesWidth,
+      right: svgWidth - widestRightSideYAxesWidth,
     };
   }
 
-  private calculateSubPlotTopBottom(plotConfiguration: PlotConfiguration, subPlotIndex: number, rootHeight: number,
+  private calculateSubPlotTopBottom(plotConfiguration: PlotConfiguration, subPlotIndex: number, svgHeight: number,
                                     xAxisHeight: number, coloredRegionLabelHeight: number): TopBottom {
     const totalRatio = sum(plotConfiguration.sub_plots.map(subPlot => subPlot.ratio));
     const previousSubPlotsRatio = sum(plotConfiguration.sub_plots
@@ -135,18 +133,18 @@ export class ProcessPlotD3Placement {
       .map(subPlot => subPlot.ratio),
     );
     const firstSubPlotOffset = coloredRegionLabelHeight - this.subPlotGap;
-    const allPlotsHeight = rootHeight - xAxisHeight - firstSubPlotOffset;
+    const allPlotsHeight = svgHeight - xAxisHeight - firstSubPlotOffset;
     const subPlotStartOffset = (previousSubPlotsRatio / totalRatio) * allPlotsHeight;
     const subPlotEndOffset = (followingSubPlotsRatio / totalRatio) * allPlotsHeight;
     const subPlotTop = firstSubPlotOffset + subPlotStartOffset + this.subPlotGap;
-    const subPlotBottom = rootHeight - xAxisHeight - subPlotEndOffset;
+    const subPlotBottom = svgHeight - xAxisHeight - subPlotEndOffset;
     return {top: subPlotTop, bottom: subPlotBottom};
   }
 
-  private calculateColorRegionLabelsHeight(root: D3Selection<SVGGElement>, plotConfiguration: PlotConfiguration) {
+  private calculateColorRegionLabelsHeight(svg: D3Selection<SVGSVGElement>, plotConfiguration: PlotConfiguration) {
     // measure height of colored region labels
     const colorRegionHeights = plotConfiguration.color_regions.map((_, colorRegionIndex) => {
-      const colorRegionG = root.select<SVGGElement>(`.color-region-${colorRegionIndex}`);
+      const colorRegionG = svg.select<SVGGElement>(`.color-region-${colorRegionIndex}`);
       const rect = colorRegionG.select<SVGRectElement>('rect');
       const totalHeight = colorRegionG.node()?.getBoundingClientRect()?.height ?? 0;
       const rectBoundingRectangle = rect.node()?.getBoundingClientRect();
@@ -156,7 +154,7 @@ export class ProcessPlotD3Placement {
     });
 
     // measure height of annotation labels
-    const annotationsSelection = root.select<SVGGElement>('.annotations');
+    const annotationsSelection = svg.select<SVGGElement>('.annotations');
     const annotationLineSelection = annotationsSelection.select<SVGLineElement>('line');
     const totalHeight = annotationsSelection.node()?.getBoundingClientRect()?.height ?? 0;
     const lineHeight = annotationLineSelection.node()?.getBoundingClientRect()?.height ?? 0;
@@ -166,15 +164,15 @@ export class ProcessPlotD3Placement {
     return Math.max(...colorRegionHeights, annotationsHeight, 0);
   }
 
-  private calculateWidestLeftSideYAxisWidth(root: D3Selection<SVGGElement>) {
-    return root.select<SVGGElement>('.y-axis-0').nodes()
+  private calculateWidestLeftSideYAxisWidth(svg: D3Selection<SVGSVGElement>) {
+    return svg.select<SVGGElement>('.y-axis-0').nodes()
              .map(this.mapYAxisWidth.bind(this))
              .reduce((current, previous) => previous + current, 0) - this.axisGap;
   }
 
-  private calculateWidestRightSideYAxesWidth(plotConfiguration: PlotConfiguration, root: D3Selection<SVGGElement>) {
+  private calculateWidestRightSideYAxesWidth(plotConfiguration: PlotConfiguration, svg: D3Selection<SVGSVGElement>) {
     const rightSideYAxesWidths = plotConfiguration.sub_plots.map((_, subPlotIndex) => {
-      const subPlotG = root.selectChild<SVGGElement>(`.subplot-${subPlotIndex}`);
+      const subPlotG = svg.selectChild<SVGGElement>(`.subplot-${subPlotIndex}`);
       return subPlotG.selectChildren<SVGGElement, unknown>('.y-axis').nodes()
                .filter((_, index) => index > 0)
                .map(this.mapYAxisWidth.bind(this))
