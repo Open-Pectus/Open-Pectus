@@ -1,10 +1,12 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, OnDestroy, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, NgZone, OnDestroy, ViewChild } from '@angular/core';
+import { concatLatestFrom } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { axisBottom, ScaleLinear, scaleLinear, select } from 'd3';
-import { filter, firstValueFrom, Subject, take, takeUntil } from 'rxjs';
+import { filter, firstValueFrom, identity, Subject, take, takeUntil } from 'rxjs';
 import { PlotConfiguration } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 import { UtilMethods } from '../../shared/util-methods';
+import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessValueLog } from './ngrx/process-plot.reducer';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
 import { ProcessPlotD3Annotations } from './process-plot-d3.annotations';
@@ -27,6 +29,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   @Input() isCollapsed = false;
   private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(filter(UtilMethods.isNotNullOrUndefined));
   private processValuesLog = this.store.select(ProcessPlotSelectors.processValuesLog);
+  private markedDirty = this.store.select(ProcessPlotSelectors.markedDirty);
   private isZoomed = this.store.select(ProcessPlotSelectors.zoomed);
   private xScale = scaleLinear();
   private yScales: ScaleLinear<number, number>[][] = [];
@@ -39,7 +42,9 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private tooltip = new ProcessPlotD3Tooltip(this.processValuesLog, this.processValuePipe, this.plotConfiguration);
   private zoom?: ProcessPlotD3Zoom;
 
-  constructor(private store: Store, private processValuePipe: ProcessValuePipe) {}
+  constructor(private store: Store,
+              private processValuePipe: ProcessValuePipe,
+              private ngZone: NgZone) {}
 
   ngOnDestroy() {
     this.componentDestroyed.next();
@@ -53,22 +58,22 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       this.insertSvgElements(this.svg, plotConfiguration);
 
       this.placement = new ProcessPlotD3Placement(plotConfiguration, this.svg, this.xScale, this.yScales);
-      this.zoom = new ProcessPlotD3Zoom(this.store, this.placement);
+      this.zoom = new ProcessPlotD3Zoom(this.store);
 
-      this.setupOnResize(plotConfiguration, this.plotElement.nativeElement);
+      this.setupOnResize(this.plotElement.nativeElement);
       this.setupOnDataChange(plotConfiguration);
+      this.setupOnMarkedDirty(plotConfiguration);
       this.tooltip.setupTooltip(this.svg, this.xScale);
       this.zoom.setupZoom(this.svg, plotConfiguration, this.xScale, this.yScales);
-      this.placement.updateElementPlacements();
+      this.store.dispatch(ProcessPlotActions.processPlotInitialized());
     });
   }
 
-  private setupOnResize(plotConfiguration: PlotConfiguration, element: Element) {
+  private setupOnResize(element: Element) {
     const resizeObserver = new ResizeObserver((entries) => {
       // when collapsing, contentRect is 0 width and height, and errors will occur if we try placing elements.
       if(entries.some(entry => entry.contentRect.height === 0)) return;
-      this.placement?.updateElementPlacements();
-      this.processValuesLog.pipe(take(1)).subscribe((processValueLog) => this.plotData(plotConfiguration, processValueLog));
+      this.ngZone.run(() => this.store.dispatch(ProcessPlotActions.processPlotResized()));
     });
     resizeObserver.observe(element);
   }
@@ -135,8 +140,10 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
 
   private setupOnDataChange(plotConfiguration: PlotConfiguration) {
     this.processValuesLog.pipe(
+      concatLatestFrom(() => this.store.select(ProcessPlotSelectors.zoomed)),
       takeUntil(this.componentDestroyed),
-    ).subscribe(async (processValuesLog) => {
+    ).subscribe(async ([processValuesLog, isZoomed]) => {
+      if(isZoomed) return;
       await this.plotData(plotConfiguration, processValuesLog);
       this.updatePlacementsOnNewTopLabel(plotConfiguration, processValuesLog);
     });
@@ -157,8 +164,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
 
     if(hasNewValue) {
       // new color region value, label height could therefore have changed, so update placement of elements and re-plot;
-      this.placement?.updateElementPlacements();
-      this.plotData(plotConfiguration, processValuesLog).then();
+      this.store.dispatch(ProcessPlotActions.newAnnotatedValueAppeared());
     }
   }
 
@@ -188,6 +194,18 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       const xGridLineAxisGenerator = this.placement?.xGridLineAxisGenerators[subPlotIndex];
       if(xGridLineAxisGenerator === undefined) return;
       svg.select<SVGGElement>(`.subplot-${subPlotIndex} .x-grid-lines`).call(xGridLineAxisGenerator);
+    });
+  }
+
+  private setupOnMarkedDirty(plotConfiguration: PlotConfiguration) {
+    this.markedDirty.pipe(
+      filter(identity),
+      concatLatestFrom(() => this.store.select(ProcessPlotSelectors.processValuesLog)),
+      takeUntil(this.componentDestroyed),
+    ).subscribe(async ([_, processValuesLog]) => {
+      this.placement?.updateElementPlacements();
+      await this.plotData(plotConfiguration, processValuesLog);
+      this.store.dispatch(ProcessPlotActions.processPlotElementsPlaced());
     });
   }
 }

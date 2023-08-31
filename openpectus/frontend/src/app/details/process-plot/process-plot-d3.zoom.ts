@@ -2,11 +2,10 @@ import { Store } from '@ngrx/store';
 import { path, ScaleLinear } from 'd3';
 import { PlotConfiguration } from '../../api';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
-import { ProcessPlotD3Placement } from './process-plot-d3.placement';
 import { D3Selection } from './process-plot-d3.types';
 
 export class ProcessPlotD3Zoom {
-  constructor(private store: Store, private placement: ProcessPlotD3Placement) {}
+  constructor(private store: Store) {}
 
   setupZoom(svg: D3Selection<SVGSVGElement>,
             plotConfiguration: PlotConfiguration,
@@ -65,7 +64,6 @@ export class ProcessPlotD3Zoom {
         yScale.domain([ys[1], ys[0]]);
       });
       this.store.dispatch(ProcessPlotActions.processPlotZoomed());
-      this.placement.updateElementPlacements();
     };
   }
 
@@ -79,7 +77,6 @@ export class ProcessPlotD3Zoom {
         yScales[subPlotIndex][axisIndex].domain([axis.y_min, axis.y_max]);
       }));
       this.store.dispatch(ProcessPlotActions.processPlotZoomReset());
-      this.placement.updateElementPlacements();
     };
   }
 }

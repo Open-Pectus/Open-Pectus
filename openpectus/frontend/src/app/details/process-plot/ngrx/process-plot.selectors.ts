@@ -6,4 +6,5 @@ export class ProcessPlotSelectors {
   static plotConfiguration = createSelector(this.selectFeature, state => state.plotConfiguration);
   static processValuesLog = createSelector(this.selectFeature, state => state.processValuesLog);
   static zoomed = createSelector(this.selectFeature, state => state.zoomed);
+  static markedDirty = createSelector(this.selectFeature, state => state.markedDirty);
 }
