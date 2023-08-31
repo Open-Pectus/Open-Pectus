@@ -1,8 +1,7 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, OnDestroy, ViewChild } from '@angular/core';
-import { concatLatestFrom } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { axisBottom, ScaleLinear, scaleLinear, select } from 'd3';
-import { filter, Subject, take, takeUntil } from 'rxjs';
+import { filter, firstValueFrom, Subject, take, takeUntil } from 'rxjs';
 import { PlotConfiguration } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 import { UtilMethods } from '../../shared/util-methods';
@@ -28,6 +27,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   @Input() isCollapsed = false;
   private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(filter(UtilMethods.isNotNullOrUndefined));
   private processValuesLog = this.store.select(ProcessPlotSelectors.processValuesLog);
+  private isZoomed = this.store.select(ProcessPlotSelectors.zoomed);
   private xScale = scaleLinear();
   private yScales: ScaleLinear<number, number>[][] = [];
   private svg?: D3Selection<SVGSVGElement>;
@@ -62,10 +62,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       // when collapsing, contentRect is 0 width and height, and errors will occur if we try placing elements.
       if(entries.some(entry => entry.contentRect.height === 0)) return;
       this.placement.updateElementPlacements(plotConfiguration, this.svg, this.xScale, this.yScales);
-      this.processValuesLog.pipe(
-        concatLatestFrom(() => this.store.select(ProcessPlotSelectors.zoomed)),
-        take(1),
-      ).subscribe(([processValueLog, isZoomed]) => this.plotData(plotConfiguration, processValueLog, !isZoomed));
+      this.processValuesLog.pipe(take(1)).subscribe((processValueLog) => this.plotData(plotConfiguration, processValueLog));
     });
     resizeObserver.observe(element);
   }
@@ -140,17 +137,15 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
 
   private setupOnDataChange(plotConfiguration: PlotConfiguration) {
     this.processValuesLog.pipe(
-      concatLatestFrom(() => this.store.select(ProcessPlotSelectors.zoomed)),
       takeUntil(this.componentDestroyed),
-    ).subscribe(([processValuesLog, isZoomed]) => {
-      this.plotData(plotConfiguration, processValuesLog, !isZoomed);
-      this.updatePlacementsOnNewTopLabel(plotConfiguration, processValuesLog, !isZoomed);
+    ).subscribe((processValuesLog) => {
+      this.plotData(plotConfiguration, processValuesLog).then();
+      this.updatePlacementsOnNewTopLabel(plotConfiguration, processValuesLog);
     });
   }
 
   private updatePlacementsOnNewTopLabel(plotConfiguration: PlotConfiguration,
-                                        processValuesLog: ProcessValueLog,
-                                        fitXScaleToData = true) {
+                                        processValuesLog: ProcessValueLog) {
     const processValueNamesToConsider = plotConfiguration.process_value_names_to_annotate
       .concat(plotConfiguration.color_regions.map(colorRegion => colorRegion.process_value_name));
 
@@ -165,15 +160,14 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     if(hasNewValue) {
       // new color region value, label height could therefore have changed, so update placement of elements and re-plot;
       this.placement.updateElementPlacements(plotConfiguration, this.svg, this.xScale, this.yScales);
-      this.plotData(plotConfiguration, processValuesLog, fitXScaleToData);
+      this.plotData(plotConfiguration, processValuesLog).then();
     }
   }
 
-  private plotData(plotConfiguration: PlotConfiguration,
-                   processValuesLog: ProcessValueLog,
-                   fitXScaleToData = true) {
+  private async plotData(plotConfiguration: PlotConfiguration,
+                         processValuesLog: ProcessValueLog) {
     if(this.svg === undefined) throw Error('no Svg selection when plotting data!');
-    if(fitXScaleToData) this.fitXScaleToData(plotConfiguration, processValuesLog);
+    if(!await firstValueFrom(this.isZoomed)) this.fitXScaleToData(plotConfiguration, processValuesLog);
     this.drawXAxis(this.svg, plotConfiguration);
     this.lines.plotLines(plotConfiguration, processValuesLog, this.svg, this.xScale, this.yScales);
     this.coloredRegions.plotColoredRegions(plotConfiguration, processValuesLog, this.svg, this.xScale, this.yScales);
