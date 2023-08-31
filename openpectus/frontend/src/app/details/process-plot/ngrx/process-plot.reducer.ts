@@ -41,11 +41,11 @@ const reducer = createReducer(initialState,
     ProcessPlotActions.processPlotResized,
     ProcessPlotActions.newAnnotatedValueAppeared,
     ProcessPlotActions.processPlotInitialized,
+    ProcessPlotActions.processPlotZoomReset,
     state => produce(state, draft => {
       draft.markedDirty = true;
     })),
   on(ProcessPlotActions.processPlotZoomed,
-    ProcessPlotActions.processPlotZoomReset,
     ProcessPlotActions.processPlotPanned,
     state => produce(state, draft => {
       draft.scalesMarkedDirty = true;

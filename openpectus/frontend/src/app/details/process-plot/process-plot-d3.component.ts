@@ -59,7 +59,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       this.insertSvgElements(this.svg, plotConfiguration);
 
       this.placement = new ProcessPlotD3Placement(plotConfiguration, this.svg, this.xScale, this.yScales);
-      this.zoomAndPan = new ProcessPlotD3ZoomAndPan(this.store);
+      this.zoomAndPan = new ProcessPlotD3ZoomAndPan(this.store, this.componentDestroyed);
 
       this.setupOnResize(this.plotElement.nativeElement);
       this.setupOnDataChange(plotConfiguration);
