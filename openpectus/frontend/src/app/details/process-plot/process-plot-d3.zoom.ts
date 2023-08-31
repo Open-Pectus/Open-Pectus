@@ -12,18 +12,17 @@ export class ProcessPlotD3Zoom {
             plotConfiguration: PlotConfiguration,
             xScale: ScaleLinear<number, number>,
             yScales: ScaleLinear<number, number>[][]) {
-    plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
+    plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
       const subPlotG = svg.select<SVGGElement>(`g.subplot-${subPlotIndex}`);
-      subPlotG.on('mousedown', this.getMouseDown(svg, xScale, yScales, subPlotIndex, plotConfiguration));
-      subPlotG.on('dblclick', this.getDblClick(svg, plotConfiguration, xScale, yScales));
+      subPlotG.on('mousedown', this.getMouseDown(svg, xScale, yScales, subPlotIndex));
+      subPlotG.on('dblclick', this.getDblClick(svg, plotConfiguration, yScales));
     });
   }
 
   private getMouseDown(svg: D3Selection<SVGSVGElement>,
                        xScale: ScaleLinear<number, number>,
                        yScales: ScaleLinear<number, number>[][],
-                       subPlotIndex: number,
-                       plotConfiguration: PlotConfiguration) {
+                       subPlotIndex: number) {
     return (mouseDownEvent: MouseEvent) => {
       let path = svg.selectAll<SVGPathElement, MouseEvent>('path.zoom');
       path = path
@@ -34,7 +33,7 @@ export class ProcessPlotD3Zoom {
         .attr('stroke', 'black')
         .attr('fill', 'none');
       svg.on('mousemove', this.getMouseMove(path));
-      svg.on('mouseup', this.getMouseUp(svg, path, xScale, yScales, subPlotIndex, plotConfiguration));
+      svg.on('mouseup', this.getMouseUp(svg, path, xScale, yScales, subPlotIndex));
     };
   }
 
@@ -52,8 +51,7 @@ export class ProcessPlotD3Zoom {
                      pathSelection: D3Selection<SVGPathElement, MouseEvent>,
                      xScale: ScaleLinear<number, number>,
                      yScales: ScaleLinear<number, number>[][],
-                     subPlotIndex: number,
-                     plotConfiguration: PlotConfiguration) {
+                     subPlotIndex: number) {
     return (mouseUpEvent: MouseEvent) => {
       svg.on('mousemove mouseup', null);
       svg.select('path.zoom').remove();
@@ -67,13 +65,12 @@ export class ProcessPlotD3Zoom {
         yScale.domain([ys[1], ys[0]]);
       });
       this.store.dispatch(ProcessPlotActions.processPlotZoomed());
-      this.placement.updateElementPlacements(plotConfiguration, svg, xScale, yScales);
+      this.placement.updateElementPlacements();
     };
   }
 
   private getDblClick(svg: D3Selection<SVGSVGElement>,
                       plotConfiguration: PlotConfiguration,
-                      xScale: ScaleLinear<number, number>,
                       yScales: ScaleLinear<number, number>[][]) {
     return (_: MouseEvent) => {
       svg.on('mousemove mouseup', null);
@@ -82,7 +79,7 @@ export class ProcessPlotD3Zoom {
         yScales[subPlotIndex][axisIndex].domain([axis.y_min, axis.y_max]);
       }));
       this.store.dispatch(ProcessPlotActions.processPlotZoomReset());
-      this.placement.updateElementPlacements(plotConfiguration, svg, xScale, yScales);
+      this.placement.updateElementPlacements();
     };
   }
 }

@@ -3,8 +3,8 @@ import { PlotConfiguration, SubPlot } from '../../api';
 import { D3Selection, LeftRight, TopBottom } from './process-plot-d3.types';
 
 export class ProcessPlotD3Placement {
-  readonly axisLabelHeight = 12;
   xGridLineAxisGenerators: Axis<NumberValue>[] = [];
+  private readonly axisLabelHeight = 12;
   // Configurable values
   private readonly subPlotGap = 20;
   private readonly margin = {left: 5, top: 10, right: 5, bottom: 5};
@@ -12,39 +12,44 @@ export class ProcessPlotD3Placement {
   private readonly yAxisLabelMargin = 8;
   private readonly pixelsPerTick = 42;
 
-  updateElementPlacements(plotConfiguration: PlotConfiguration, svg: D3Selection<SVGSVGElement> | undefined,
-                          xScale: ScaleLinear<number, number>, yScales: ScaleLinear<number, number>[][]) {
-    if(svg === undefined) throw Error('no SVG element during placement!');
-    const rootHeight = (svg.node()?.height.baseVal.value ?? 0) - this.margin.top - this.margin.bottom;
-    const rootWidth = (svg.node()?.width.baseVal.value ?? 0) - this.margin.left - this.margin.right;
-    const root = svg.selectChild<SVGGElement>('.root').attr('transform', `translate(${[this.margin.left, this.margin.top]})`);
-    const xAxisHeight = root.select<SVGGElement>('.x-axis').node()?.getBoundingClientRect().height ?? 0;
-    const subPlotLeftRight = this.calculatePlotLeftRight(root, plotConfiguration, rootWidth);
-    this.placeXAxis(root, rootHeight, xScale, subPlotLeftRight, xAxisHeight);
-    const coloredRegionLabelHeight = this.calculateColorRegionLabelsHeight(root, plotConfiguration);
+  constructor(private plotConfiguration: PlotConfiguration,
+              private svg: D3Selection<SVGSVGElement>,
+              private xScale: ScaleLinear<number, number>,
+              private yScales: ScaleLinear<number, number>[][]) {}
 
-    plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
+  updateElementPlacements() {
+    const rootHeight = (this.svg.node()?.height.baseVal.value ?? 0) - this.margin.top - this.margin.bottom;
+    const rootWidth = (this.svg.node()?.width.baseVal.value ?? 0) - this.margin.left - this.margin.right;
+    const root = this.svg.selectChild<SVGGElement>('.root').attr('transform', `translate(${[this.margin.left, this.margin.top]})`);
+    const xAxisHeight = root.select<SVGGElement>('.x-axis').node()?.getBoundingClientRect().height ?? 0;
+    const subPlotLeftRight = this.calculatePlotLeftRight(root, this.plotConfiguration, rootWidth);
+    this.placeXAxis(root, rootHeight, subPlotLeftRight, xAxisHeight);
+    const coloredRegionLabelHeight = this.calculateColorRegionLabelsHeight(root, this.plotConfiguration);
+
+    this.plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
       const subPlotG = root.selectChild<SVGGElement>(`.subplot-${subPlotIndex}`);
-      const subPlotTopBottom = this.calculateSubPlotTopBottom(plotConfiguration, subPlotIndex, rootHeight, xAxisHeight,
+      const subPlotTopBottom = this.calculateSubPlotTopBottom(this.plotConfiguration, subPlotIndex, rootHeight, xAxisHeight,
         coloredRegionLabelHeight);
-      this.placeYAxes(subPlot, subPlotG, subPlotIndex, yScales, subPlotLeftRight, subPlotTopBottom);
-      this.placeGridLines(subPlotG, subPlotIndex, xScale, yScales, subPlotLeftRight, subPlotTopBottom);
+      this.placeYAxes(subPlot, subPlotG, subPlotIndex, subPlotLeftRight, subPlotTopBottom);
+      this.placeGridLines(subPlotG, subPlotIndex, subPlotLeftRight, subPlotTopBottom);
       this.placeSubPlotBorder(subPlotG, subPlotLeftRight, subPlotTopBottom);
     });
   }
 
-  private placeYAxes(subPlot: SubPlot, subPlotG: D3Selection<SVGGElement>, subPlotIndex: number,
-                     yScales: ScaleLinear<number, number>[][], leftRight: LeftRight, topBottom: TopBottom) {
-    yScales[subPlotIndex].forEach(yScale => yScale.range([topBottom.bottom, topBottom.top]));
+  private placeYAxes(subPlot: SubPlot, subPlotG: D3Selection<SVGGElement>,
+                     subPlotIndex: number,
+                     leftRight: LeftRight,
+                     topBottom: TopBottom) {
+    this.yScales[subPlotIndex].forEach(yScale => yScale.range([topBottom.bottom, topBottom.top]));
     subPlot.axes.forEach((_, axisIndex) => {
-      const axisXTransform = this.placeYAxis(yScales, subPlotIndex, axisIndex, subPlotG, leftRight);
+      const axisXTransform = this.placeYAxis(subPlotIndex, axisIndex, subPlotG, leftRight);
       this.placeAxisLabels(axisIndex, subPlotG, topBottom, axisXTransform);
     });
   }
 
-  private placeYAxis(yScales: ScaleLinear<number, number>[][], subPlotIndex: number, axisIndex: number,
+  private placeYAxis(subPlotIndex: number, axisIndex: number,
                      subPlotG: D3Selection<SVGGElement>, leftRight: LeftRight) {
-    const yScale = yScales[subPlotIndex][axisIndex];
+    const yScale = this.yScales[subPlotIndex][axisIndex];
     const otherRightSideYAxesWidth = subPlotG.selectChildren<SVGGElement, unknown>('.y-axis').nodes()
                                        .filter((_, otherAxisIndex) => otherAxisIndex !== 0 && otherAxisIndex < axisIndex)
                                        .map(this.mapYAxisWidth.bind(this))
@@ -82,14 +87,15 @@ export class ProcessPlotD3Placement {
     const labelXTransform = axisXTransform + (isLeftAxis ? -axisWidth - this.yAxisLabelMargin : axisWidth + this.yAxisLabelMargin);
     const labelYTransform = topBottom.top + (axisHeight / 2) + (isLeftAxis ? (labelWidth / 2) : -(labelWidth / 2));
     subPlotG.selectChild(`.axis-label-${axisIndex}`)
-      .attr('transform', `translate(${[labelXTransform, labelYTransform]}) rotate(${labelRotation})`);
+      .attr('transform', `translate(${[labelXTransform, labelYTransform]}) rotate(${labelRotation})`)
+      .style('font-size', this.axisLabelHeight);
   }
 
-  private placeXAxis(root: D3Selection<SVGGElement>, rootHeight: number, xScale: ScaleLinear<number, number>,
+  private placeXAxis(root: D3Selection<SVGGElement>, rootHeight: number,
                      leftRight: LeftRight, xAxisHeight: number) {
-    xScale.range([leftRight.left, leftRight.right]);
+    this.xScale.range([leftRight.left, leftRight.right]);
     root.selectChild<SVGGElement>('.x-axis')
-      .call(axisBottom(xScale))
+      .call(axisBottom(this.xScale))
       .attr('transform', `translate(${[0, rootHeight - xAxisHeight]})`);
   }
 
@@ -177,19 +183,19 @@ export class ProcessPlotD3Placement {
     return Math.max(...rightSideYAxesWidths, 0);
   }
 
-  private placeGridLines(subPlotG: D3Selection<SVGGElement>, subPlotIndex: number, xScale: ScaleLinear<number, number>,
-                         yScales: ScaleLinear<number, number>[][], subPlotLeftRight: { left: number; right: number },
+  private placeGridLines(subPlotG: D3Selection<SVGGElement>, subPlotIndex: number,
+                         subPlotLeftRight: { left: number; right: number },
                          subPlotTopBottom: TopBottom) {
     const subPlotWidth = subPlotLeftRight.right - subPlotLeftRight.left;
     const subPlotHeight = subPlotTopBottom.bottom - subPlotTopBottom.top;
-    this.xGridLineAxisGenerators[subPlotIndex] = axisTop(xScale)
+    this.xGridLineAxisGenerators[subPlotIndex] = axisTop(this.xScale)
       .tickSize(-subPlotHeight)
       .tickFormat(() => '');
     subPlotG.select<SVGGElement>('.x-grid-lines')
       .call(this.xGridLineAxisGenerators[subPlotIndex])
       .attr('transform', `translate(${[0, subPlotTopBottom.top]})`);
 
-    const yScale = yScales[subPlotIndex][0];
+    const yScale = this.yScales[subPlotIndex][0];
     subPlotG.select<SVGGElement>('.y-grid-lines')
       .call(axisLeft(yScale)
         .tickSize(-subPlotWidth)

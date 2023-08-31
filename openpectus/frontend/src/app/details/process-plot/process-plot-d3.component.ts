@@ -32,12 +32,12 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private yScales: ScaleLinear<number, number>[][] = [];
   private svg?: D3Selection<SVGSVGElement>;
   private componentDestroyed = new Subject<void>();
-  private placement = new ProcessPlotD3Placement();
+  private placement?: ProcessPlotD3Placement;
   private lines = new ProcessPlotD3Lines();
   private coloredRegions = new ProcessPlotD3ColoredRegions();
   private annotations = new ProcessPlotD3Annotations();
   private tooltip = new ProcessPlotD3Tooltip(this.processValuesLog, this.processValuePipe, this.plotConfiguration);
-  private zoom = new ProcessPlotD3Zoom(this.store, this.placement);
+  private zoom?: ProcessPlotD3Zoom;
 
   constructor(private store: Store, private processValuePipe: ProcessValuePipe) {}
 
@@ -49,11 +49,17 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     this.plotConfiguration.pipe(take(1)).subscribe(plotConfiguration => {
       if(this.plotElement === undefined) return;
       this.svg = select<SVGSVGElement, unknown>(this.plotElement.nativeElement);
+      this.yScales = this.createYScales(plotConfiguration);
+      this.insertSvgElements(this.svg, plotConfiguration);
+
+      this.placement = new ProcessPlotD3Placement(plotConfiguration, this.svg, this.xScale, this.yScales);
+      this.zoom = new ProcessPlotD3Zoom(this.store, this.placement);
+
       this.setupOnResize(plotConfiguration, this.plotElement.nativeElement);
-      this.oneTimeSetup(plotConfiguration);
       this.setupOnDataChange(plotConfiguration);
       this.tooltip.setupTooltip(this.svg, this.xScale);
       this.zoom.setupZoom(this.svg, plotConfiguration, this.xScale, this.yScales);
+      this.placement.updateElementPlacements();
     });
   }
 
@@ -61,17 +67,10 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     const resizeObserver = new ResizeObserver((entries) => {
       // when collapsing, contentRect is 0 width and height, and errors will occur if we try placing elements.
       if(entries.some(entry => entry.contentRect.height === 0)) return;
-      this.placement.updateElementPlacements(plotConfiguration, this.svg, this.xScale, this.yScales);
+      this.placement?.updateElementPlacements();
       this.processValuesLog.pipe(take(1)).subscribe((processValueLog) => this.plotData(plotConfiguration, processValueLog));
     });
     resizeObserver.observe(element);
-  }
-
-  private oneTimeSetup(plotConfiguration: PlotConfiguration) {
-    if(this.svg === undefined) return;
-    this.yScales = this.createYScales(plotConfiguration);
-    this.insertSvgElements(this.svg, plotConfiguration);
-    this.placement.updateElementPlacements(plotConfiguration, this.svg, this.xScale, this.yScales);
   }
 
   private createYScales(plotConfiguration: PlotConfiguration) {
@@ -103,7 +102,6 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
           .style('color', axis.color);
         subPlotG.append('text').attr('class', `axis-label axis-label-${axisIndex}`)
           .attr('fill', axis.color)
-          .style('font-size', this.placement.axisLabelHeight)
           .text(axis.label);
         subPlotG.append('g').attr('class', `line line-${axisIndex}`)
           .attr('clip-path', `url(#subplot-clip-path-${subPlotIndex})`)
@@ -138,8 +136,8 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private setupOnDataChange(plotConfiguration: PlotConfiguration) {
     this.processValuesLog.pipe(
       takeUntil(this.componentDestroyed),
-    ).subscribe((processValuesLog) => {
-      this.plotData(plotConfiguration, processValuesLog).then();
+    ).subscribe(async (processValuesLog) => {
+      await this.plotData(plotConfiguration, processValuesLog);
       this.updatePlacementsOnNewTopLabel(plotConfiguration, processValuesLog);
     });
   }
@@ -159,7 +157,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
 
     if(hasNewValue) {
       // new color region value, label height could therefore have changed, so update placement of elements and re-plot;
-      this.placement.updateElementPlacements(plotConfiguration, this.svg, this.xScale, this.yScales);
+      this.placement?.updateElementPlacements();
       this.plotData(plotConfiguration, processValuesLog).then();
     }
   }
@@ -187,7 +185,9 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private drawXAxis(svg: D3Selection<SVGSVGElement>, plotConfiguration: PlotConfiguration) {
     svg.select<SVGGElement>('.x-axis').call(axisBottom(this.xScale));
     plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
-      svg.select<SVGGElement>(`.subplot-${subPlotIndex} .x-grid-lines`).call(this.placement.xGridLineAxisGenerators[subPlotIndex]);
+      const xGridLineAxisGenerator = this.placement?.xGridLineAxisGenerators[subPlotIndex];
+      if(xGridLineAxisGenerator === undefined) return;
+      svg.select<SVGGElement>(`.subplot-${subPlotIndex} .x-grid-lines`).call(xGridLineAxisGenerator);
     });
   }
 }
