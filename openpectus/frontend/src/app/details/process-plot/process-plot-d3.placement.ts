@@ -32,6 +32,8 @@ export class ProcessPlotD3Placement {
       this.placeGridLines(subPlotG, subPlotIndex, subPlotLeftRight, subPlotTopBottom);
       this.placeSubPlotBorder(subPlotG, subPlotLeftRight, subPlotTopBottom);
     });
+
+    this.updateAxes();
   }
 
   updateAxes() {
@@ -54,25 +56,20 @@ export class ProcessPlotD3Placement {
                      topBottom: TopBottom) {
     this.yScales[subPlotIndex].forEach(yScale => yScale.range([topBottom.bottom, topBottom.top]));
     subPlot.axes.forEach((_, axisIndex) => {
-      const axisXTransform = this.placeYAxis(subPlotIndex, axisIndex, subPlotG, leftRight);
+      const axisXTransform = this.placeYAxis(axisIndex, subPlotG, leftRight);
       this.placeAxisLabels(axisIndex, subPlotG, topBottom, axisXTransform);
-
     });
   }
 
-  private placeYAxis(subPlotIndex: number, axisIndex: number,
+  private placeYAxis(axisIndex: number,
                      subPlotG: D3Selection<SVGGElement>, leftRight: LeftRight) {
-    const yScale = this.yScales[subPlotIndex][axisIndex];
     const otherRightSideYAxesWidth = subPlotG.selectChildren<SVGGElement, unknown>('.y-axis').nodes()
                                        .filter((_, otherAxisIndex) => otherAxisIndex !== 0 && otherAxisIndex < axisIndex)
                                        .map(this.mapYAxisWidth.bind(this))
                                        .reduce((current, previous) => current + previous, 0) ?? 0;
     const isLeftAxis = axisIndex === 0;
     const yAxisXTransform = isLeftAxis ? leftRight.left : leftRight.right + otherRightSideYAxesWidth; // right side
-    const axisGenerator = isLeftAxis ? axisLeft(yScale) : axisRight(yScale);
-    axisGenerator.tickValues(this.getTickValues(yScale));
     subPlotG.selectChild<SVGGElement>(`.y-axis-${axisIndex}`)
-      .call(axisGenerator)
       .attr('transform', `translate(${[yAxisXTransform, 0]})`);
     return yAxisXTransform;
   }
@@ -108,7 +105,6 @@ export class ProcessPlotD3Placement {
                      leftRight: LeftRight, xAxisHeight: number) {
     this.xScale.range([leftRight.left, leftRight.right]);
     svg.selectChild<SVGGElement>('.x-axis')
-      .call(axisBottom(this.xScale))
       .attr('transform', `translate(${[0, svgHeight - xAxisHeight]})`);
   }
 
