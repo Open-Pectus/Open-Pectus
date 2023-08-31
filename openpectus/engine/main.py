@@ -3,14 +3,13 @@ from queue import Empty
 import time
 from argparse import ArgumentParser
 from threading import Thread
-from typing import Any, Dict, List
-from typing_extensions import override
+from typing import Any, List
 
 import httpx
 
 from openpectus.protocol.engine import Client, create_client
 from openpectus.engine.eng import ExecutionEngine, CommandRequest
-from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
+from openpectus.engine.hardware import RegisterDirection
 from openpectus.lang.exec import tags
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
 from openpectus.lang.exec import readings as R
@@ -33,9 +32,10 @@ def get_args():
 def create_demo_uod() -> UnitOperationDefinitionBase:
 
     def reset(cmd: UodCommand, args: List[Any]) -> None:
-        if cmd._exec_iterations == 0:
+        count = cmd.get_iteration_count()
+        if count == 0:
             cmd.context.tags.get("Reset").set_value("Reset")
-        elif cmd._exec_iterations == 5:
+        elif count == 4:
             cmd.context.tags.get("Reset").set_value("N/A")
             cmd.set_complete()
 

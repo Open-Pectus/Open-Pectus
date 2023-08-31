@@ -30,6 +30,10 @@ class EngineCommand(Generic[TContext]):
     def is_execution_started(self) -> bool:
         return self._exec_started
 
+    def get_iteration_count(self) -> int:
+        """ Returns number of iterations executed. """
+        return self._exec_iterations
+
     def is_execution_complete(self) -> bool:
         return self._exec_complete
 

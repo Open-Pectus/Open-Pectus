@@ -20,11 +20,14 @@ logger.setLevel(logging.DEBUG)
 def create_test_uod() -> UnitOperationDefinitionBase:
 
     def reset(cmd: UodCommand, args: List[Any]) -> None:
-        if cmd._exec_iterations == 0:
+        count = cmd.get_iteration_count()
+        if count == 0:
             cmd.context.tags.get("Reset").set_value("Reset")
-        elif cmd._exec_iterations == 5:
+        elif count == 4:
             cmd.context.tags.get("Reset").set_value("N/A")
             cmd.set_complete()
+
+    # TODO def exec_with_args()
 
     return (
         UodBuilder()
@@ -71,6 +74,12 @@ class TestHardwareLayer(unittest.TestCase):
         hwl.write("foo", rFT01)
 
         self.assertEqual("foo", hwl.register_values["FT01"])
+
+
+def print_runlog(e: ExecutionEngine):
+    print("Run Log:")
+    for item in e.runlog.get_items():
+        print(f" {item.start_tick}-{item.end_tick}  {item.command_req.name}  {item.states}")
 
 
 def create_engine() -> ExecutionEngine:
@@ -222,20 +231,48 @@ class TestEngine(unittest.TestCase):
 
         self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
 
-    @unittest.skip("not implemented")
     def test_uod_commands_multiple_iterations(self):
-        raise NotImplementedError()
+        e = create_engine()
+
+        self.assertEqual("N/A", e.uod.tags["Reset"].get_value())
+
+        e.schedule_execution("Reset", "")
+
+        e.tick()
+        self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
+
+        e.tick()
+        self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
+
+        e.tick()
+        self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
+
+        e.tick()
+        self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
+
+        e.tick()
+        self.assertEqual("N/A", e.uod.tags["Reset"].get_value())
+
+        e.tick()
+        self.assertEqual("N/A", e.uod.tags["Reset"].get_value())
+
+        print_runlog(e)
 
     @unittest.skip("not implemented")
     def test_overlapping_uod_commands(self):
         raise NotImplementedError()
 
-    @unittest.skip("not implemented")
     def test_internal_command_can_execute_valid_command(self):
         e = create_engine()
 
-        req = CommandRequest("INCREMENT RUN COUNTER", None)
-        e._execute_command(req)
+        self.assertEqual(0, e._system_tags["RUN COUNTER"].get_value())
+
+        e.schedule_execution("INCREMENT RUN COUNTER", "")
+        e.tick()
+
+        self.assertEqual(1, e._system_tags["RUN COUNTER"].get_value())
+
+        print_runlog(e)
 
     @unittest.skip("not implemented")
     def test_internal_commands_multiple_iterations(self):
@@ -259,9 +296,13 @@ class TestEngine(unittest.TestCase):
         # name, state=ProcessUnitState (READY, IN_PROGRESS , NOT_ONLINE) , location="H21.5", runtime_msec=189309,
         raise NotImplementedError()
 
-    @unittest.skip("not implemented")
     def test_get_runlog(self):
-        raise NotImplementedError()
+        e = create_engine()
+
+        e.cmd_queue.put(CommandRequest("START"))
+        e.tick()
+
+        self.assertEqual(1, len(e.runlog._items))
 
     def test_runstate_start(self):
         e = create_engine()
