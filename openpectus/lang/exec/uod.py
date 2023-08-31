@@ -5,22 +5,13 @@ from openpectus.lang.exec.errors import UodValidationError
 from openpectus.lang.exec.readings import Reading, ReadingCollection
 from openpectus.lang.exec.tags import Tag, TagCollection
 from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
-from openpectus.engine.commands import EngineCommand
+from openpectus.engine.commands import ContextEngineCommand
 
 logger = logging.getLogger(__name__)
 
 
 class UnitOperationDefinitionBase:
-    # TODO decide on casing behavior for names of tags, registers and commands
-    """ Represets the Unit Operation Definition interface used by the Pectus engine and intepreter.
-
-    It consists of two parts - the machine definition part (interpreter) and the execution part (engine).
-
-    The interface specifies:
-        Custom tags
-        Custom commands
-        Mapping of process value tags to physical I/O
-        Process values (which tags as displayed and possibly a command to modify them)
+    """ Represets the Unit Operation Definition interface used by the OpenPectus engine.
     """
     def __init__(self,
                  instrument_name: str,
@@ -28,7 +19,8 @@ class UnitOperationDefinitionBase:
                  tags: TagCollection,
                  system_tags: TagCollection,
                  readings: ReadingCollection,
-                 command_factories: Dict[str, UodCommandBuilder]) -> None:
+                 command_factories: Dict[str, UodCommandBuilder],
+                 overlapping_command_names_lists: List[List[str]]) -> None:
         self.instrument = instrument_name
         self.hwl = hwl
         self.tags = tags
@@ -36,17 +28,11 @@ class UnitOperationDefinitionBase:
         self.readings = readings
         self.command_factories = command_factories
         self.command_instances: Dict[str, UodCommand] = {}
+        self.overlapping_command_names_lists: List[List[str]] = overlapping_command_names_lists
 
     def define_register(self, name: str, direction: RegisterDirection, **options):
         assert isinstance(self.hwl, HardwareLayerBase)
         self.hwl.registers[name] = Register(name, direction, **options)
-
-    def define_command(self, cb: UodCommandBuilder):
-        if cb.name is None or cb.name.strip() == "":
-            raise ValueError("Command name is None or empty")
-        if cb.name.lower() in self.command_factories.keys():
-            raise ValueError(f"Command name {cb.name} is already defined")
-        self.command_factories[cb.name.lower()] = cb
 
     def validate_configuration(self):
         fatal = False
@@ -77,16 +63,19 @@ class UnitOperationDefinitionBase:
             exit(1)
 
     def has_command_name(self, name: str) -> bool:
+        """ Check whether the command name is defined in the Uod """
         if name.strip() == "":
             raise ValueError("Command name is None or empty")
         return name in self.command_factories.keys()
 
     def has_command_instance(self, name: str) -> bool:
+        """ Check whether the Uod currently has an active instance of the named command """
         if name.strip() == "":
             raise ValueError("Command name is None or empty")
         return name in self.command_instances.keys()
 
     def create_command(self, name: str) -> UodCommand:
+        """ Create a new command instance. Only one command instance with a given name can exist at a time. """
         if name.strip() == "":
             raise ValueError("Command name is None or empty")
         if self.has_command_instance(name):
@@ -99,24 +88,17 @@ class UnitOperationDefinitionBase:
         return instance
 
     def dispose_command(self, cmd: UodCommand):
+        """ Remove command from list of instances """
         if self.has_command_instance(cmd.name):
             self.command_instances.pop(cmd.name)
 
     def get_command(self, name: str) -> UodCommand | None:
+        """ Get existing command instance by name """
         if name.strip() == "":
             raise ValueError("Command name is None or empty")
         if self.has_command_instance(name):
             return self.command_instances[name]
         raise ValueError(f"Command instance named '{name}' not found")
-
-    def get_or_create_command(self, name: str) -> UodCommand:
-        if name.strip() == "":
-            raise ValueError("Command name is None or empty")
-
-        if self.has_command_instance(name):
-            return self.get_command(name)  # type: ignore
-        else:
-            return self.create_command(name)
 
     def get_command_names(self, as_lower=True) -> List[str]:
         def to_case(name: str):
@@ -131,16 +113,8 @@ class UnitOperationDefinitionBase:
     def validate_command_name(self, command_name: str) -> bool:
         return command_name.lower() in self.get_command_names(as_lower=True)
 
-    def validate_command_args(self, command_name: str, command_args: str | None) -> bool:
-        raise NotImplementedError("TODO Requires command instance - ")  # TODO fix this somehow for interpreter
-        if not self.validate_command_name(command_name):
-            return True
-        cmd = self.get_command(command_name)
-        assert cmd is not None
-        return cmd.parse_args(command_args, self) is not None
 
-
-class UodCommand(EngineCommand[UnitOperationDefinitionBase]):
+class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
     """ Represents a command that targets hardware, such as setting a valve state.
 
     Uod commands are specified/implemented by using the UodCommandBuilder class.
@@ -256,6 +230,7 @@ class UodBuilder():
         self.tags = TagCollection()
         self.system_tags: TagCollection | None = None
         self.commands: Dict[str, UodCommandBuilder] = {}
+        self.overlapping_command_names_lists: List[List[str]] = []
         self.readings = ReadingCollection()
 
     def validate(self):
@@ -313,6 +288,12 @@ class UodBuilder():
         self.commands[cb.name] = cb
         return self
 
+    def with_command_overlap(self, command_names: List[str]) -> UodBuilder:
+        if len(command_names) < 2:
+            raise ValueError("To define command overlap, at least two command names are required")
+        self.overlapping_command_names_lists.append(command_names)
+        return self
+
     def with_process_value(self, pv: Reading) -> UodBuilder:
         self.readings.add(pv)
         return self
@@ -326,6 +307,7 @@ class UodBuilder():
             self.tags,
             self.system_tags,  # type: ignore
             self.readings,
-            self.commands)
+            self.commands,
+            self.overlapping_command_names_lists)
 
         return uod

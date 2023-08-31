@@ -6,7 +6,7 @@ from typing_extensions import override
 import unittest
 
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder
-from openpectus.engine.eng import ExecutionEngine, CommandRequest, EngineInternalCommand
+from openpectus.engine.eng import ExecutionEngine, CommandRequest, EngineInternalCommand, RunLogItemState
 from openpectus.lang.exec import tags
 from openpectus.lang.exec.uod import UodCommand
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
@@ -25,6 +25,11 @@ def create_test_uod() -> UnitOperationDefinitionBase:
             cmd.context.tags.get("Reset").set_value("Reset")
         elif count == 4:
             cmd.context.tags.get("Reset").set_value("N/A")
+            cmd.set_complete()
+
+    def overlap_exec(cmd: UodCommand, args: List[Any]) -> None:
+        count = cmd.get_iteration_count()
+        if count >= 9:
             cmd.set_complete()
 
     # TODO def exec_with_args()
@@ -47,6 +52,9 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_tag(tags.Reading("FT01", "L/h"))
         .with_tag(tags.Select("Reset", value="N/A", unit=None, choices=["Reset", "N/A"]))
         .with_command(UodCommand.builder().with_name("Reset").with_exec_fn(reset))
+        .with_command(UodCommand.builder().with_name("overlap1").with_exec_fn(overlap_exec))
+        .with_command(UodCommand.builder().with_name("overlap2").with_exec_fn(overlap_exec))
+        .with_command_overlap(['overlap1', 'overlap2'])
         .build()
     )
 
@@ -79,7 +87,7 @@ class TestHardwareLayer(unittest.TestCase):
 def print_runlog(e: ExecutionEngine):
     print("Run Log:")
     for item in e.runlog.get_items():
-        print(f" {item.start_tick}-{item.end_tick}  {item.command_req.name}  {item.states}")
+        print(f" {item.start_tick}-{item.end_tick}  {item.command_req.name}  {', '.join(s.value for s in item.states)}")
 
 
 def create_engine() -> ExecutionEngine:
@@ -100,7 +108,7 @@ class TestEngine(unittest.TestCase):
         e = ExecutionEngine(uod)
         e._configure()
 
-        self.assertEqual(1, len(uod.command_factories))
+        self.assertTrue(len(uod.command_factories) > 0)
         self.assertTrue(len(uod.instrument) > 0)
         self.assertTrue(len(uod.tags) > 0)
 
@@ -258,9 +266,71 @@ class TestEngine(unittest.TestCase):
 
         print_runlog(e)
 
-    @unittest.skip("not implemented")
+    def test_concurrent_uod_commands(self):
+        e = create_engine()
+
+        e.schedule_execution("Reset", "")
+        e.tick()
+
+        e.schedule_execution("Reset", "")
+        e.tick()
+
+        runlog = list(e.runlog.get_items())
+        self.assertEqual(2, len(runlog))
+
+        print_runlog(e)
+
+        self.assertEqual("Reset", runlog[0].command_req.name)
+        self.assertTrue(RunLogItemState.Started in runlog[0].states)
+        self.assertTrue(RunLogItemState.Cancelled in runlog[0].states)
+        self.assertTrue(RunLogItemState.Forced not in runlog[0].states)
+        self.assertTrue(RunLogItemState.Completed not in runlog[0].states)
+
+        self.assertEqual("Reset", runlog[1].command_req.name)
+        self.assertTrue(RunLogItemState.Started in runlog[1].states)
+        self.assertTrue(RunLogItemState.Completed not in runlog[1].states)
+        self.assertTrue(RunLogItemState.Cancelled not in runlog[1].states)
+        self.assertTrue(RunLogItemState.Forced not in runlog[1].states)
+
+        for _ in range(10):
+            e.tick()
+
+        self.assertTrue(RunLogItemState.Completed in runlog[1].states)
+
+        print_runlog(e)        
+
     def test_overlapping_uod_commands(self):
-        raise NotImplementedError()
+        e = create_engine()
+
+        e.schedule_execution("overlap1", "")
+        e.tick()
+
+        e.schedule_execution("overlap2", "")
+        e.tick()
+
+        runlog = list(e.runlog.get_items())
+        self.assertEqual(2, len(runlog))
+
+        print_runlog(e)
+
+        self.assertEqual("overlap1", runlog[0].command_req.name)
+        self.assertTrue(RunLogItemState.Started in runlog[0].states)
+        self.assertTrue(RunLogItemState.Cancelled in runlog[0].states)
+        self.assertTrue(RunLogItemState.Forced not in runlog[0].states)
+        self.assertTrue(RunLogItemState.Completed not in runlog[0].states)
+
+        self.assertEqual("overlap2", runlog[1].command_req.name)
+        self.assertTrue(RunLogItemState.Started in runlog[1].states)
+        self.assertTrue(RunLogItemState.Completed not in runlog[1].states)
+        self.assertTrue(RunLogItemState.Cancelled not in runlog[1].states)
+        self.assertTrue(RunLogItemState.Forced not in runlog[1].states)
+
+        for _ in range(10):
+            e.tick()
+
+        self.assertTrue(RunLogItemState.Completed in runlog[1].states)
+
+        print_runlog(e)
 
     def test_internal_command_can_execute_valid_command(self):
         e = create_engine()

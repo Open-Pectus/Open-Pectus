@@ -7,6 +7,7 @@ import logging
 import time
 from typing import Iterable, List
 
+from openpectus.engine.commands import EngineCommand
 from openpectus.lang.exec.pinterpreter import InterpreterContext, PInterpreter
 from openpectus.lang.exec.timer import OneThreadTimer
 from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException
@@ -94,7 +95,7 @@ class ExecutionEngine():
         """ Indicates the current Start/Stop state"""
         self._runstate_started_time: float = 0
 
-        self._interpreter: PInterpreter | None = None        
+        self._interpreter: PInterpreter | None = None
         """ The interpreter executing the current program, if any. """
 
         self.runlog: RunLog = RunLog()
@@ -273,7 +274,7 @@ class ExecutionEngine():
         # caller==interpreter -> should only call with engine and uod commands
         # caller==frontend -> command could be anything
 
-        cmd_name = cmd_request.name.upper()
+        cmd_name = cmd_request.name
         if EngineInternalCommand.has_value(cmd_name):
             match cmd_name:
                 case EngineInternalCommand.START:
@@ -298,35 +299,53 @@ class ExecutionEngine():
             # TODO internal commands
             pass
         else:
-            assert self.uod.has_command_name(cmd_request.name), f"Expected Uod to have command named {cmd_request.name}"
+            assert self.uod.has_command_name(cmd_name), f"Expected Uod to have command named {cmd_name}"
 
-            if not self.uod.has_command_instance(cmd_request.name):
-                uod_command = self.uod.create_command(cmd_request.name)
-                runlog_item = self.runlog.add_waiting(cmd_request, self._tick_time, self._tick_count)
+            # cancel any existing instance with same name
+            executing = self.cmd_executing.copy()
+            for c in executing:
+                if c.name == cmd_name and not c == cmd_request:
+                    self.cmd_executing.remove(c)
+                    c_item = self.runlog.get_item_by_cmd(c)
+                    assert c_item is not None
+                    if c_item.command is not None:
+                        c_item.command.cancel()
+                    c_item.add_end_state(RunLogItemState.Cancelled, self._tick_time, self._tick_count)
+                    logger.debug(f"Running command {c.name} cancelled because another was started")
+
+            # cancel any overlapping instance
+            executing = self.cmd_executing.copy()
+            for c in executing:
+                if not c == cmd_request:
+                    for overlap_list in self.uod.overlapping_command_names_lists:
+                        if c.name in overlap_list and cmd_name in overlap_list:
+                            self.cmd_executing.remove(c)
+                            c_item = self.runlog.get_item_by_cmd(c)
+                            assert c_item is not None
+                            if c_item.command is not None:
+                                c_item.command.cancel()
+                            c_item.add_end_state(RunLogItemState.Cancelled, self._tick_time, self._tick_count)
+                            logger.debug(f"Running command {c.name} cancelled because overlapping command " +
+                                         f"{cmd_name} was started")
+                            break
+
+            # create or get command instance
+            if not self.uod.has_command_instance(cmd_name):
+                uod_command = self.uod.create_command(cmd_name)
+                runlog_item = self.runlog.add_waiting(cmd_request, uod_command, self._tick_time, self._tick_count)
             else:
-                uod_command = self.uod.get_command(cmd_request.name)
+                uod_command = self.uod.get_command(cmd_name)
                 runlog_item = self.runlog.get_item_by_cmd(cmd_request)
 
-            assert uod_command is not None, "Should always be able to get or create command"
+            assert uod_command is not None
             assert runlog_item is not None
 
             args = uod_command.parse_args(cmd_request.args, uod_command.context)  # TODO remove uod from method signature
             if args is None:
-                logger.error(f"Invalid argument string: '{cmd_request.args}' for command '{cmd_request.name}'")
+                logger.error(f"Invalid argument string: '{cmd_request.args}' for command '{cmd_name}'")
                 raise ValueError("Invalid arguments")
 
-            # cancel any existing instance
-            for c in self.cmd_executing:
-                if c.name == cmd_request.name and not c == cmd_request:
-                    self.cmd_executing.remove(c)
-                    uod_command.cancel()
-                    runlog_item.add_end_state(RunLogItemState.Completed, self._tick_time, self._tick_count)
-                    logger.debug(f"Existing running command {c.name} cancelled because another was started")
-                    # TODO mark cancelled in run log
-
-            # cancel any overlapping instance
-            # TODO
-
+            # execute command state flow
             try:
                 logger.debug(f"Executing uod command: '{cmd_request.name}' with args '{cmd_request.args}', " +
                              f"iteration {uod_command._exec_iterations}")
@@ -354,20 +373,18 @@ class ExecutionEngine():
                     logger.debug(f"Command {cmd_request.name} finalized")
 
             except Exception as ex:
-                runlog_item.add_end_state(RunLogItemState.Failed, self._tick_time, self._tick_count)
+                if cmd_request in self.cmd_executing:                    
+                    self.cmd_executing.remove(cmd_request)
+                item = self.runlog.get_item_by_cmd(cmd_request)
+                if item is not None:
+                    item.add_end_state(RunLogItemState.Failed, self._tick_time, self._tick_count)
+                    if item.command is not None and not item.command.is_cancelled:
+                        item.command.cancel()
+
                 logger.error(f"Uod command execution failed. Command: '{cmd_request.name}', " +
                              f"argument string: '{cmd_request.args}'", exc_info=True)
                 # TODO possibly stop/pause
-                # TODO unschedule
                 raise ex
-
-            # TODO decide responsibilities:
-            # Engine:
-            #   invoke initialize, execute, finalize, cancel on Uod
-            #      only execute is non-synchronous
-            #   update iterations after each execute call
-            # Uod:
-            #   set progress, set complete
 
     def notify_initial_tags(self):
         for tag in self._iter_all_tags():
@@ -487,8 +504,9 @@ class RunLog():
             if item.command_req == req:
                 return item
 
-    def add_waiting(self, req: CommandRequest, time: float, tick: int) -> RunLogItem:
+    def add_waiting(self, req: CommandRequest, cmd: EngineCommand, time: float, tick: int) -> RunLogItem:
         item = RunLogItem(req)
+        item.command = cmd
         item.start = time
         item.start_tick = tick
         item.states = [RunLogItemState.Waiting]
@@ -510,6 +528,7 @@ class RunLog():
 class RunLogItem():
     def __init__(self, command_req: CommandRequest) -> None:
         self.command_req: CommandRequest = command_req
+        self.command: EngineCommand | None = None
         self.start: float | None = None
         self.start_tick: int = -1
         self.end: float | None = None
