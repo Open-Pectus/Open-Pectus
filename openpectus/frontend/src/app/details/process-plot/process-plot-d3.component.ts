@@ -129,13 +129,14 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     });
     const tooltipG = svg.append('g').attr('class', 'tooltip')
       .style('pointer-events', 'none')
-      .style('font', `${ProcessPlotD3Tooltip.fontSize}px sans-serif`);
+      .style('font', `${ProcessPlotD3FontSizes.tooltip}px sans-serif`);
     tooltipG.append('rect').attr('class', 'background')
       .attr('fill', 'white')
       .attr('stroke', 'gray')
-      .attr('stroke-width', '1')
-      .attr('rx', 6)
-      .attr('ry', 6);
+      .attr('stroke-width', 1)
+      .style('filter', 'drop-shadow(3px 3px 4px #8888)')
+      .attr('rx', 5)
+      .attr('ry', 5);
     tooltipG.append('text')
       .attr('dominant-baseline', 'hanging');
   }

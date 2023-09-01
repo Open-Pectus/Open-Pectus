@@ -3,12 +3,12 @@ import { firstValueFrom, Observable } from 'rxjs';
 import { PlotConfiguration, ProcessValue } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 import { ProcessValueLog } from './ngrx/process-plot.reducer';
+import { ProcessPlotD3FontSizes } from './process-plot-d3.font-sizes';
 import { D3Selection } from './process-plot-d3.types';
 
 export class ProcessPlotD3Tooltip {
   static margin = {x: 10, y: 8};
-  static fontSize = 12;
-  placementRelativeToMouse = {x: 2, y: 12};
+  placementRelativeToMouse = {x: 1, y: 14};
 
   constructor(private processValueLog: Observable<ProcessValueLog>,
               private processValuePipe: ProcessValuePipe,
@@ -74,7 +74,7 @@ export class ProcessPlotD3Tooltip {
         .data(processValues)
         .join('tspan')
         .attr('x', 0)
-        .attr('y', (_, i) => `${i * ProcessPlotD3Tooltip.fontSize}pt`)
+        .attr('y', (_, i) => `${i * ProcessPlotD3FontSizes.tooltip}pt`)
         .attr('fill', d => plotConfiguration?.sub_plots.flatMap<string | undefined>(subPlot => {
           return subPlot.axes.find(axis => {
             return axis.process_value_names.includes(d.name);
