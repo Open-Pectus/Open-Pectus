@@ -1,10 +1,10 @@
 import { Axis, axisBottom, axisLeft, axisRight, axisTop, NumberValue, ScaleLinear, sum } from 'd3';
 import { PlotConfiguration, SubPlot } from '../../api';
+import { ProcessPlotD3FontSizes } from './process-plot-d3.font-sizes';
 import { D3Selection, LeftRight, TopBottom } from './process-plot-d3.types';
 
 export class ProcessPlotD3Placement {
   xGridLineAxisGenerators: Axis<NumberValue>[] = [];
-  private readonly axisLabelHeight = 12;
   // Configurable values
   private readonly subPlotGap = 20;
   private readonly axisGap = 14;
@@ -84,7 +84,7 @@ export class ProcessPlotD3Placement {
   }
 
   private mapYAxisWidth(yAxis: SVGGElement) {
-    return yAxis.getBoundingClientRect().width + this.axisGap + this.axisLabelHeight + this.yAxisLabelMargin;
+    return yAxis.getBoundingClientRect().width + this.axisGap + ProcessPlotD3FontSizes.axisLabelSize + this.yAxisLabelMargin;
   }
 
   private placeAxisLabels(axisIndex: number, subPlotG: D3Selection<SVGGElement>, topBottom: TopBottom,
@@ -98,7 +98,7 @@ export class ProcessPlotD3Placement {
     const labelYTransform = topBottom.top + (axisHeight / 2) + (isLeftAxis ? (labelWidth / 2) : -(labelWidth / 2));
     subPlotG.selectChild(`.axis-label-${axisIndex}`)
       .attr('transform', `translate(${[labelXTransform, labelYTransform]}) rotate(${labelRotation})`)
-      .style('font-size', this.axisLabelHeight);
+      .style('font-size', ProcessPlotD3FontSizes.axisLabelSize);
   }
 
   private placeXAxis(svg: D3Selection<SVGSVGElement>, svgHeight: number,

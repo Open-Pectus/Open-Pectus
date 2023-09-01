@@ -12,6 +12,7 @@ import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
 import { ProcessPlotD3ZoomAndPan } from './process-plot-d3-zoom-and.pan';
 import { ProcessPlotD3Annotations } from './process-plot-d3.annotations';
 import { ProcessPlotD3ColoredRegions } from './process-plot-d3.colored-regions';
+import { ProcessPlotD3FontSizes } from './process-plot-d3.font-sizes';
 import { ProcessPlotD3Lines } from './process-plot-d3.lines';
 import { ProcessPlotD3Placement } from './process-plot-d3.placement';
 import { ProcessPlotD3Tooltip } from './process-plot-d3.tooltip';
@@ -94,10 +95,10 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
         .attr('fill', 'blue')
         .attr('stroke-dasharray', 1.5)
         .attr('stroke-width', 1.5)
-        .style('font-size', 11);
+        .style('font-size', ProcessPlotD3FontSizes.annotationLabelSize);
       plotConfiguration.color_regions.forEach((_, colorRegionIndex) => {
         subPlotG.append('g').attr('class', `color-region-${colorRegionIndex}`)
-          .style('font-size', 11)
+          .style('font-size', ProcessPlotD3FontSizes.annotationLabelSize)
           .attr('fill', 'black');
       });
       subPlot.axes.forEach((axis, axisIndex) => {
