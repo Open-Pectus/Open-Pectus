@@ -116,7 +116,8 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
           .attr('stroke-width', 1);
       });
 
-      const subPlotBorderG = subPlotG.append('g').attr('class', 'subplot-border');
+      const subPlotBorderG = subPlotG.append('g').attr('class', 'subplot-border')
+        .style('cursor', 'crosshair');
       subPlotBorderG.append('clipPath').attr('id', `subplot-clip-path-${subPlotIndex}`).append('rect');
       subPlotBorderG.append('rect') // actual border
         .attr('stroke-width', 1)

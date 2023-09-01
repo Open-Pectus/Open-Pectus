@@ -24,7 +24,7 @@ export class ProcessPlotD3ZoomAndPan {
     this.zoomedSubplotIndices.pipe(takeUntil(this.componentDestroyed)).subscribe((zoomedSubplotIndices) => {
       plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
         const isZoomed = zoomedSubplotIndices.includes(subPlotIndex);
-        const cursor = isZoomed ? 'grab' : 'auto';
+        const cursor = isZoomed ? 'grab' : 'crosshair';
         this.setSubplotCursor(svg, subPlotIndex, cursor);
       });
     });
