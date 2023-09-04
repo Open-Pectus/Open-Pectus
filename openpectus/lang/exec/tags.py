@@ -118,6 +118,7 @@ class TagDirection(StrEnum):
 # TODO add support for 'safe' values, ie. to allow specifying a value that is automatically
 # written when run state is one or more of stopped/paused/on hold
 
+
 class Tag(ChangeSubject):
     def __init__(
             self,
@@ -137,6 +138,9 @@ class Tag(ChangeSubject):
         self.choices: List[str] | None = None
         self.direction: TagDirection = direction
         self.safe_value = None
+
+    def as_readonly(self) -> TagValue:
+        return TagValue(self.name, self.value, self.unit)
 
     def set_value(self, val) -> None:
         if val != self.value:
@@ -222,6 +226,9 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
         super().__init__()
         self.tags: Dict[str, Tag] = {}
 
+    def as_readonly(self) -> TagValueCollection:
+        return TagValueCollection([t.as_readonly() for t in self.tags.values()])
+
     # propagate tag changes to collection changes
     def notify_change(self, elm: str):
         self.notify_listeners(elm)
@@ -306,3 +313,53 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
             tag = Tag(name, value, unit, TagDirection.NA)
             tags.add(tag)
         return tags
+
+
+class TagValue():
+    """ Read-only and immutable representation of a tag value. """
+    def __init__(
+            self,
+            name: str,
+            value: TagValueType = None,
+            unit: str | None = None
+    ):
+        if name is None or name.strip() == '':
+            raise ValueError("name is None or empty")
+
+        self.name = name
+        self.value = value
+        self.unit = unit
+
+
+class TagValueCollection(Iterable[TagValue]):
+    """ Represents a read-only and immutable dictionary of tag values. """
+
+    def __init__(self, values: Iterable[TagValue]) -> None:
+        super().__init__()
+        self._tag_values: Dict[str, TagValue] = {}
+        for v in values:
+            self._add(v)
+
+    def get(self, tag_name: str) -> TagValue:
+        if tag_name is None or tag_name.strip() == '':
+            raise ValueError("tag_name is None or empty")
+        if tag_name not in self._tag_values.keys():
+            raise ValueError(f"Tag name {tag_name} not found")
+        return self[tag_name]
+
+    def has(self, tag_name: str) -> bool:
+        if tag_name is None or tag_name.strip() == '':
+            raise ValueError("tag_name is None or empty")
+        return tag_name in self._tag_values.keys()
+
+    def _add(self, tag_value: TagValue):
+        self._tag_values[tag_value.name] = tag_value
+
+    def __iter__(self):
+        yield from self._tag_values.values()
+
+    def __getitem__(self, tag_name: str) -> TagValue:
+        return self._tag_values[tag_name]
+
+    def __len__(self) -> int:
+        return len(self._tag_values)

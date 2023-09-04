@@ -17,6 +17,25 @@ logger = logging.getLogger("Engine")
 logger.setLevel(logging.DEBUG)
 
 
+def run_engine(engine: ExecutionEngine, pcode: str, max_ticks: int = -1):
+    print("Interpretation started")
+    ticks = 0
+    max_ticks = max_ticks
+
+    engine._running = True
+    engine.set_program(pcode)
+
+    while engine.is_running():
+        ticks += 1
+        if max_ticks != -1 and ticks > max_ticks:
+            print(f"Stopping because max_ticks {max_ticks} was reached")
+            engine._running = False
+            return
+
+        time.sleep(0.1)
+        engine.tick()
+
+
 def create_test_uod() -> UnitOperationDefinitionBase:
 
     def reset(cmd: UodCommand, args: List[Any]) -> None:
@@ -87,7 +106,14 @@ class TestHardwareLayer(unittest.TestCase):
 def print_runlog(e: ExecutionEngine):
     print("Run Log:")
     for item in e.runlog.get_items():
-        print(f" {item.start_tick}-{item.end_tick}  {item.command_req.name}  {', '.join(s.value for s in item.states)}")
+        states = ','.join(s.value for s in item.states)
+        start_values = "" if item.start_values is None else \
+            ', '.join(t.name + ': ' + str(t.value) for t in item.start_values)
+        end_values = "" if item.end_values is None else \
+            ', '.join(t.name + ': ' + str(t.value) for t in item.end_values)
+
+        print(f" {item.start_tick}-{item.end_tick}  {item.command_req.name} | States={states} | " +
+              f"Start tags: {start_values} | End tags: {end_values}")
 
 
 def create_engine() -> ExecutionEngine:
@@ -235,7 +261,7 @@ class TestEngine(unittest.TestCase):
         self.assertEqual("N/A", e.uod.tags["Reset"].get_value())
 
         req = CommandRequest("Reset", None)
-        e._execute_command(req)
+        e._execute_command(req, set())
 
         self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
 
@@ -355,9 +381,16 @@ class TestEngine(unittest.TestCase):
 
         # raise NotImplementedError()
 
-    @unittest.skip("not implemented")
-    def test_set_program(self):
-        raise NotImplementedError()
+    def test_set_and_run_program(self):
+        program = """
+Mark: A
+Mark: B
+Mark: C
+"""
+        e = create_engine()
+        run_engine(e, program, 10)
+
+        self.assertEqual(['A', 'B', 'C'], e.interpreter.get_marks())
 
     @unittest.skip("not implemented, needs input")
     def test_get_status(self):
@@ -370,9 +403,18 @@ class TestEngine(unittest.TestCase):
         e = create_engine()
 
         e.cmd_queue.put(CommandRequest("START"))
-        e.tick()
+        e.cmd_queue.put(CommandRequest("Reset"))
 
-        self.assertEqual(1, len(e.runlog._items))
+        for _ in range(5):
+            e.tick()
+
+        self.assertEqual(2, len(e.runlog._items))
+        print_runlog(e)
+
+        for item in e.runlog.get_items():
+            start_values = item.start_values
+            assert start_values is not None
+            self.assertTrue(start_values.has("BASE"))
 
     def test_runstate_start(self):
         e = create_engine()
@@ -431,6 +473,7 @@ class TestEngine(unittest.TestCase):
 
     def test_enum_has(self):
         self.assertTrue(EngineInternalCommand.has_value("STOP"))
+        self.assertTrue(EngineInternalCommand.has_value("INCREMENT RUN COUNTER"))
         self.assertFalse(EngineInternalCommand.has_value("stop"))
 
 
@@ -534,21 +577,6 @@ class TestHW(HardwareLayerBase):
 #     #     for e in locals().copy():
 #     #         if '_' in e:
 #     #             setattr(self, e, locals()[e])
-
-
-# class ResetCommand(UodCommand):
-#     def __init__(self) -> None:
-#         super().__init__()
-#         self.name = "Reset"
-#         self.is_complete = False
-
-#     def execute(self, args: List[Any], uod: UnitOperationDefinitionBase) -> None:
-#         if self.iterations == 0:
-#             uod.tags.get("Reset").set_value("Reset")
-#         elif self.iterations == 5:
-#             uod.tags.get("Reset").set_value("N/A")
-#             self.is_complete = True
-#             self.iterations = 0
 
 
 if __name__ == "__main__":
