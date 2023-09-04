@@ -51,7 +51,10 @@ export class ProcessPlotD3ColoredRegions {
   }
 
   private getXPosition(xScale: ScaleLinear<number, number>, d: ColoredRegionRect) {
-    return xScale(d.end) - (xScale(d.end) - xScale(d.start)) / 2;
+    const start = xScale(d.start);
+    const end = xScale(d.end);
+    const width = end - start;
+    return start + width / 2;
   }
 
   private formatColoredRegionsData(colorRegion: PlotColorRegion, processValueLog: ProcessValueLog,
@@ -81,15 +84,10 @@ export class ProcessPlotD3ColoredRegions {
     return coloredRegionRects;
   }
 
-  private isWithinRange(scale: ScaleLinear<number, number>, rangeValue: number) {
-    const domain = scale.range();
-    return domain[0] <= rangeValue && rangeValue <= domain[1];
-  }
-
 
   private getVisibility(scale: ScaleLinear<number, number>, rangeValue: number) {
-    const domain = scale.range();
-    const visible = domain[0] <= rangeValue && rangeValue <= domain[1];
+    const range = scale.range();
+    const visible = range[0] <= rangeValue && rangeValue <= range[1];
     return visible ? 'visible' : 'hidden';
   }
 }

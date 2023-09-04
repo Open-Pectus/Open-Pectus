@@ -30,10 +30,6 @@ export class ProcessPlotD3ZoomAndPan {
     });
   }
 
-  private clearSubplotCursor(svg: D3Selection<SVGSVGElement>) {
-    svg.selectAll('.subplot').selectAll('.subplot-border').style('cursor', null);
-  }
-
   private setSubplotCursor(svg: D3Selection<SVGSVGElement>, subPlotIndex: number, cursor: string) {
     svg.select(`.subplot-${subPlotIndex}`).selectChild('.subplot-border').style('cursor', cursor);
   }
@@ -108,7 +104,6 @@ export class ProcessPlotD3ZoomAndPan {
                       plotConfiguration: PlotConfiguration,
                       yScales: ScaleLinear<number, number>[][]) {
     return (_: MouseEvent) => {
-      this.clearSubplotCursor(svg);
       svg.on('mousemove mouseup', null);
       svg.select('path.zoom').remove();
       plotConfiguration.sub_plots.map((subPlot, subPlotIndex) => subPlot.axes.map((axis, axisIndex) => {
