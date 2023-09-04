@@ -94,7 +94,7 @@ export class ProcessPlotD3Tooltip {
   }
 
   private line(subPlotBorder: D3Selection<SVGGElement>, xAxisDatum?: ProcessValue) {
-    const lineSelection = subPlotBorder.selectAll('line');
+    const lineSelection = subPlotBorder.selectAll('line.tooltip-line');
     if(xAxisDatum === undefined) {
       lineSelection.style('display', 'none');
       return;

@@ -129,9 +129,10 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
         .attr('stroke-width', 1)
         .attr('stroke', 'black')
         .attr('fill', 'transparent');
-      subPlotBorderG.append('line') // for tooltip
+      subPlotBorderG.append('line').attr('class', 'tooltip-line')
         .attr('stroke', 'black')
-        .attr('stroke-width', 1.5);
+        .attr('stroke-width', 1.5)
+        .attr('clip-path', `url(#subplot-clip-path-${subPlotIndex})`);
     });
     const tooltipG = svg.append('g').attr('class', 'tooltip')
       .style('pointer-events', 'none')
