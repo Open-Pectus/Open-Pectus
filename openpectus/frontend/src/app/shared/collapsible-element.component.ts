@@ -16,7 +16,8 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
                (click)="toggleCollapsed()"></div>
         </div>
       </div>
-      <div class="bg-white rounded-sm overflow-hidden mt-1.5 h-full" [class.transition-[height]]="!isDragging" #content
+      <div class="bg-white rounded-sm mt-1.5 h-full" [class.transition-[height]]="!isDragging" #content
+           [class.overflow-hidden]="!contentOverflow"
            [style.height.px]="height" (transitionend)="onTransitionEndContentContainer($event)">
         <ng-content select="[content]"></ng-content>
       </div>
@@ -38,6 +39,7 @@ export class CollapsibleElementComponent implements OnInit {
   @Input() name?: string;
   @Input() heightResizable = false;
   @Input() contentHeight = 0;
+  @Input() contentOverflow = false;
   @Output() contentHeightChanged = new EventEmitter<number>();
   @Output() collapseStateChanged = new EventEmitter<boolean>();
   @ViewChild('content') contentElementRef?: ElementRef<HTMLDivElement>;

@@ -24,7 +24,8 @@ import { D3Selection } from './process-plot-d3.types';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <svg class="h-full w-full overflow-visible select-none" #plot></svg>
-    <app-yaxis-override-dialog *ngIf="(yAxisOverrideDialogData | ngrxPush) !== undefined"
+    <app-yaxis-override-dialog class="absolute p-0 block overflow-visible mx-2 my-4"
+                               *ngIf="(yAxisOverrideDialogData | ngrxPush) !== undefined"
                                [data]="yAxisOverrideDialogData | ngrxPush"></app-yaxis-override-dialog>
   `,
 })

@@ -6,9 +6,9 @@ import { ProcessPlotActions } from './ngrx/process-plot.actions';
   selector: 'app-process-plot-container',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-collapsible-element [name]="'Process Plot'" [heightResizable]="true" [contentHeight]="400"
+    <app-collapsible-element [name]="'Process Plot'" [heightResizable]="true" [contentHeight]="400" [contentOverflow]="true"
                              (collapseStateChanged)="isCollapsed = $event">
-      <app-process-plot-d3 content class="block w-full h-full px-2 py-4" *ngIf="!isCollapsed"
+      <app-process-plot-d3 content class="block w-full h-full relative px-2 py-4" *ngIf="!isCollapsed"
                            [isCollapsed]="isCollapsed"></app-process-plot-d3>
     </app-collapsible-element>
   `,
