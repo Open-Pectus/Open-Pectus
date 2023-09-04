@@ -23,6 +23,7 @@ export class ProcessPlotD3ColoredRegions {
         colorRegionSelection.selectAll('rect')
           .data(formattedRectData)
           .join('rect')
+          .attr('clip-path', `url(#subplot-clip-path-${subPlotIndex})`)
           .attr('x', d => xScale(d.start))
           .attr('y', subPlotTop)
           .attr('width', d => xScale(d.end) - xScale(d.start))
@@ -34,17 +35,26 @@ export class ProcessPlotD3ColoredRegions {
       topColorRegionSelection.selectAll('path')
         .data(formattedRectData)
         .join('path')
-        .attr('transform', d => `translate(${[xScale(d.end) - (xScale(d.end) - xScale(d.start)) / 2, top]})`)
+        .style('visibility', d => this.getVisibility(xScale, this.getXPosition(xScale, d)))
+        .attr('transform', d => `translate(${[this.getXPosition(xScale, d), top]})`)
         .attr('d', 'M -6 -12 0 -9 6 -12 0 0');
 
       // Label
       topColorRegionSelection.selectAll('text')
         .data(formattedRectData)
         .join('text')
+        .style('visibility', d => this.getVisibility(xScale, this.getXPosition(xScale, d)))
         .attr('transform',
-          d => `translate(${[xScale(d.end) - (xScale(d.end) - xScale(d.start)) / 2 + 3, top - 14]}) rotate(-90)`)
+          d => `translate(${[this.getXPosition(xScale, d) + 3, top - 14]}) rotate(-90)`)
         .text(d => d.value ?? '');
     });
+  }
+
+  private getXPosition(xScale: ScaleLinear<number, number>, d: ColoredRegionRect) {
+    const start = xScale(d.start);
+    const end = xScale(d.end);
+    const width = end - start;
+    return start + width / 2;
   }
 
   private formatColoredRegionsData(colorRegion: PlotColorRegion, processValueLog: ProcessValueLog,
@@ -72,5 +82,12 @@ export class ProcessPlotD3ColoredRegions {
       coloredRegionRects.push({start, end, color: colorAtEnd, value: valueAtEnd});
     }
     return coloredRegionRects;
+  }
+
+
+  private getVisibility(scale: ScaleLinear<number, number>, rangeValue: number) {
+    const range = scale.range();
+    const visible = range[0] <= rangeValue && rangeValue <= range[1];
+    return visible ? 'visible' : 'hidden';
   }
 }
