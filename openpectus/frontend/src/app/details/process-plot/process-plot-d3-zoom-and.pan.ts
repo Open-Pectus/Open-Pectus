@@ -18,9 +18,9 @@ export class ProcessPlotD3ZoomAndPan {
 
   setupZoom() {
     this.plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
-      const subPlotG = this.svg.select<SVGGElement>(`g.subplot-${subPlotIndex}`);
-      subPlotG.on('mousedown', this.getMouseDown(subPlotIndex));
-      subPlotG.on('dblclick', this.getDblClick());
+      const subPlotBorderG = this.svg.select<SVGGElement>(`g.subplot-${subPlotIndex}`).selectChild('g.subplot-border');
+      subPlotBorderG.on('mousedown', this.getMouseDown(subPlotIndex));
+      subPlotBorderG.on('dblclick', this.getDblClick());
     });
 
     this.zoomedSubplotIndices.pipe(takeUntil(this.componentDestroyed)).subscribe((zoomedSubplotIndices) => {

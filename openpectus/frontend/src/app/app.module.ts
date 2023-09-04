@@ -3,7 +3,6 @@ import { HttpClientModule } from '@angular/common/http';
 import '@angular/common/locales/global/da';
 import { isDevMode, LOCALE_ID, NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { PushModule } from '@ngrx/component';
 import { EffectsModule } from '@ngrx/effects';
 import { RouterState, StoreRouterConnectingModule } from '@ngrx/router-store';
 import { StoreModule } from '@ngrx/store';
@@ -39,11 +38,10 @@ import { TopBarComponent } from './top-bar.component';
         strictActionTypeUniqueness: true,
       },
     }),
-    PushModule,
     EffectsModule.forRoot([AppEffects]),
     StoreRouterConnectingModule.forRoot({routerState: RouterState.Minimal}),
     StoreDevtoolsModule.instrument({
-      maxAge: 25,
+      maxAge: 50,
       logOnly: !isDevMode(),
       actionsBlocklist: ['@ngrx'],
     }),

@@ -1,5 +1,6 @@
 import { createAction, props } from '@ngrx/store';
 import { PlotConfiguration } from '../../../api';
+import { YAxisOverrideDialogData } from '../process-plot-d3.types';
 
 const source = '[Process Plot] ';
 
@@ -14,4 +15,6 @@ export class ProcessPlotActions {
   static newAnnotatedValueAppeared = createAction(source + 'New Annotated Value appeared');
   static processPlotInitialized = createAction(source + 'Process Plot Initialized');
   static processPlotPanned = createAction(source + 'Process Plot Panned');
+  static yAxisDblClicked = createAction(source + 'Y Axis Double Clicked', props<{ data: YAxisOverrideDialogData }>());
+  static yOverrideDialogClosed = createAction(source + 'Y Axis Override Dialog Closed');
 }

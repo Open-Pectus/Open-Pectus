@@ -56,7 +56,7 @@ export class ProcessPlotD3Tooltip {
   }
 
   private bisectX(xAxisData: ProcessValue[], mouseX: number): number | undefined {
-    if(xAxisData.length === 0) return;
+    if(xAxisData === undefined || xAxisData.length === 0) return;
     const xValue = this.xScale.invert(mouseX);
     return bisector((d: ProcessValue) => d.value).center(xAxisData, xValue);
   }

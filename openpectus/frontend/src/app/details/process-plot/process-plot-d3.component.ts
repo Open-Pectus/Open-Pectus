@@ -11,6 +11,7 @@ import { ProcessValueLog } from './ngrx/process-plot.reducer';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
 import { ProcessPlotD3ZoomAndPan } from './process-plot-d3-zoom-and.pan';
 import { ProcessPlotD3Annotations } from './process-plot-d3.annotations';
+import { ProcessPlotD3AxesOverrides } from './process-plot-d3.axes-overrides';
 import { ProcessPlotD3ColoredRegions } from './process-plot-d3.colored-regions';
 import { ProcessPlotD3FontSizes } from './process-plot-d3.font-sizes';
 import { ProcessPlotD3Lines } from './process-plot-d3.lines';
@@ -23,11 +24,14 @@ import { D3Selection } from './process-plot-d3.types';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <svg class="h-full w-full overflow-visible select-none" #plot></svg>
+    <app-yaxis-override-dialog *ngIf="(yAxisOverrideDialogData | ngrxPush) !== undefined"
+                               [data]="yAxisOverrideDialogData | ngrxPush"></app-yaxis-override-dialog>
   `,
 })
 export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   @ViewChild('plot', {static: false}) plotElement?: ElementRef<SVGSVGElement>;
   @Input() isCollapsed = false;
+  protected yAxisOverrideDialogData = this.store.select(ProcessPlotSelectors.yAxisOverrideDialogData);
   private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(filter(UtilMethods.isNotNullOrUndefined));
   private processValuesLog = this.store.select(ProcessPlotSelectors.processValuesLog);
   private markedDirty = this.store.select(ProcessPlotSelectors.markedDirty);
@@ -43,6 +47,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private annotations?: ProcessPlotD3Annotations;
   private tooltip?: ProcessPlotD3Tooltip;
   private zoomAndPan?: ProcessPlotD3ZoomAndPan;
+  private axesOverrides?: ProcessPlotD3AxesOverrides;
 
   constructor(private store: Store,
               private processValuePipe: ProcessValuePipe,
@@ -67,12 +72,14 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       this.zoomAndPan = new ProcessPlotD3ZoomAndPan(
         this.store, this.componentDestroyed, plotConfiguration, this.svg, this.xScale, this.yScales,
       );
+      this.axesOverrides = new ProcessPlotD3AxesOverrides(this.store, plotConfiguration, this.svg);
 
       this.setupOnResize(this.plotElement.nativeElement);
       this.setupOnDataChange(plotConfiguration);
       this.setupOnMarkedDirty(plotConfiguration);
       this.tooltip.setupTooltip();
       this.zoomAndPan.setupZoom();
+      this.axesOverrides.setupAxesOverrides();
       this.store.dispatch(ProcessPlotActions.processPlotInitialized());
     });
   }
@@ -110,6 +117,8 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       subPlot.axes.forEach((axis, axisIndex) => {
         subPlotG.append('g').attr('class', `x-grid-lines`).style('color', '#cccccc');
         subPlotG.append('g').attr('class', `y-grid-lines`).style('color', '#cccccc');
+        subPlotG.append('rect').attr('class', `y-axis-background-${axisIndex}`)
+          .attr('fill', 'white');
         subPlotG.append('g').attr('class', `y-axis y-axis-${axisIndex}`)
           .style('color', axis.color);
         subPlotG.append('text').attr('class', `axis-label axis-label-${axisIndex}`)

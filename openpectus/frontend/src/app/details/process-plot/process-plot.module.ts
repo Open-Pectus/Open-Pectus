@@ -8,12 +8,14 @@ import { ProcessPlotEffects } from './ngrx/process-plot.effects';
 import { processPlotSlice } from './ngrx/process-plot.reducer';
 import { ProcessPlotContainerComponent } from './process-plot-container.component';
 import { ProcessPlotD3Component } from './process-plot-d3.component';
+import { YAxisOverrideDialogComponent } from './yaxis-override-dialog.component';
 
 
 @NgModule({
   declarations: [
     ProcessPlotD3Component,
     ProcessPlotContainerComponent,
+    YAxisOverrideDialogComponent,
   ],
   imports: [
     CommonModule,

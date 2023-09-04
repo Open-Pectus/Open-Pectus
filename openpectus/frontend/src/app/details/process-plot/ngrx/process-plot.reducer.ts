@@ -2,6 +2,7 @@ import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
 import { PlotConfiguration, ProcessValue } from '../../../api';
 import { DetailsActions } from '../../ngrx/details.actions';
+import { YAxisOverrideDialogData } from '../process-plot-d3.types';
 import { ProcessPlotActions } from './process-plot.actions';
 
 export type ProcessValueLog = Record<string, ProcessValue[]>
@@ -12,6 +13,7 @@ export interface ProcessPlotState {
   zoomedSubplotIndices: number[];
   markedDirty: boolean;
   scalesMarkedDirty: boolean;
+  yAxisOverrideDialogData?: YAxisOverrideDialogData;
 }
 
 const initialState: ProcessPlotState = {
@@ -59,6 +61,12 @@ const reducer = createReducer(initialState,
         existing.push(processValue);
       }
     });
+  })),
+  on(ProcessPlotActions.yAxisDblClicked, (state, {data}) => produce(state, draft => {
+    draft.yAxisOverrideDialogData = data;
+  })),
+  on(ProcessPlotActions.yOverrideDialogClosed, (state) => produce(state, draft => {
+    draft.yAxisOverrideDialogData = undefined;
   })),
 );
 

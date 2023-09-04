@@ -24,3 +24,12 @@ export interface ColoredRegionRect {
   color: string;
   value: string | number | undefined;
 }
+
+export interface YAxisOverrideDialogData {
+  subplotIndex: number,
+  axisIndex: number,
+  position: {
+    x: number,
+    y: number
+  }
+}

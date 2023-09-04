@@ -58,7 +58,7 @@ export class ProcessPlotD3Placement {
     this.yScales[subPlotIndex].forEach(yScale => yScale.range([topBottom.bottom, topBottom.top]));
     subPlot.axes.forEach((_, axisIndex) => {
       const axisXTransform = this.placeYAxis(axisIndex, subPlotG, leftRight);
-      this.placeAxisLabels(axisIndex, subPlotG, topBottom, axisXTransform);
+      this.placeAxisLabelAndBackground(axisIndex, subPlotG, topBottom, axisXTransform);
     });
   }
 
@@ -88,8 +88,8 @@ export class ProcessPlotD3Placement {
     return yAxis.getBoundingClientRect().width + this.axisGap + ProcessPlotD3FontSizes.axisLabelSize + this.yAxisLabelMargin;
   }
 
-  private placeAxisLabels(axisIndex: number, subPlotG: D3Selection<SVGGElement>, topBottom: TopBottom,
-                          axisXTransform: number) {
+  private placeAxisLabelAndBackground(axisIndex: number, subPlotG: D3Selection<SVGGElement>, topBottom: TopBottom,
+                                      axisXTransform: number) {
     const isLeftAxis = axisIndex === 0;
     const axisWidth = subPlotG.selectChild<SVGGElement>(`.y-axis-${axisIndex}`).node()?.getBoundingClientRect().width ?? 0;
     const axisHeight = topBottom.bottom - topBottom.top;
@@ -97,9 +97,16 @@ export class ProcessPlotD3Placement {
     const labelRotation = isLeftAxis ? -90 : 90;
     const labelXTransform = axisXTransform + (isLeftAxis ? -axisWidth - this.yAxisLabelMargin : axisWidth + this.yAxisLabelMargin);
     const labelYTransform = topBottom.top + (axisHeight / 2) + (isLeftAxis ? (labelWidth / 2) : -(labelWidth / 2));
+    const labelSize = ProcessPlotD3FontSizes.axisLabelSize;
     subPlotG.selectChild(`.axis-label-${axisIndex}`)
       .attr('transform', `translate(${[labelXTransform, labelYTransform]}) rotate(${labelRotation})`)
-      .style('font-size', ProcessPlotD3FontSizes.axisLabelSize);
+      .style('font-size', labelSize);
+
+    subPlotG.selectChild(`.y-axis-background-${axisIndex}`)
+      .attr('x', isLeftAxis ? labelXTransform - labelSize : axisXTransform)
+      .attr('y', topBottom.top)
+      .attr('width', axisWidth + this.yAxisLabelMargin + labelSize)
+      .attr('height', axisHeight);
   }
 
   private placeXAxis(svg: D3Selection<SVGSVGElement>, svgHeight: number,

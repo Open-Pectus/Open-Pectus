@@ -9,4 +9,5 @@ export class ProcessPlotSelectors {
   static anySubplotZoomed = createSelector(this.zoomedSubplotIndices, zoomedSubplotIndices => zoomedSubplotIndices.length !== 0);
   static markedDirty = createSelector(this.selectFeature, state => state.markedDirty);
   static scalesMarkedDirty = createSelector(this.selectFeature, state => state.scalesMarkedDirty);
+  static yAxisOverrideDialogData = createSelector(this.selectFeature, state => state.yAxisOverrideDialogData);
 }
