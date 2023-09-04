@@ -44,6 +44,7 @@ export class ProcessPlotD3Placement {
         const yScale = this.yScales[subPlotIndex][axisIndex];
         const isLeftAxis = axisIndex === 0;
         const axisGenerator = isLeftAxis ? axisLeft(yScale) : axisRight(yScale);
+        axisGenerator.tickFormat((tickValue: NumberValue) => tickValue.valueOf().toFixed(1));
         axisGenerator.tickValues(this.getTickValues(yScale));
         subPlotG.selectChild<SVGGElement>(`.y-axis-${axisIndex}`).call(axisGenerator);
       });
