@@ -38,10 +38,10 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private svg?: D3Selection<SVGSVGElement>;
   private componentDestroyed = new Subject<void>();
   private placement?: ProcessPlotD3Placement;
-  private lines = new ProcessPlotD3Lines();
-  private coloredRegions = new ProcessPlotD3ColoredRegions();
-  private annotations = new ProcessPlotD3Annotations();
-  private tooltip = new ProcessPlotD3Tooltip(this.processValuesLog, this.processValuePipe, this.plotConfiguration);
+  private lines?: ProcessPlotD3Lines;
+  private coloredRegions?: ProcessPlotD3ColoredRegions;
+  private annotations?: ProcessPlotD3Annotations;
+  private tooltip?: ProcessPlotD3Tooltip;
   private zoomAndPan?: ProcessPlotD3ZoomAndPan;
 
   constructor(private store: Store,
@@ -60,13 +60,19 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       this.insertSvgElements(this.svg, plotConfiguration);
 
       this.placement = new ProcessPlotD3Placement(plotConfiguration, this.svg, this.xScale, this.yScales);
-      this.zoomAndPan = new ProcessPlotD3ZoomAndPan(this.store, this.componentDestroyed);
+      this.lines = new ProcessPlotD3Lines(plotConfiguration, this.svg, this.xScale, this.yScales);
+      this.coloredRegions = new ProcessPlotD3ColoredRegions(plotConfiguration, this.svg, this.xScale, this.yScales);
+      this.annotations = new ProcessPlotD3Annotations(plotConfiguration, this.svg, this.xScale, this.yScales);
+      this.tooltip = new ProcessPlotD3Tooltip(this.processValuesLog, this.processValuePipe, plotConfiguration, this.svg, this.xScale);
+      this.zoomAndPan = new ProcessPlotD3ZoomAndPan(
+        this.store, this.componentDestroyed, plotConfiguration, this.svg, this.xScale, this.yScales,
+      );
 
       this.setupOnResize(this.plotElement.nativeElement);
       this.setupOnDataChange(plotConfiguration);
       this.setupOnMarkedDirty(plotConfiguration);
-      this.tooltip.setupTooltip(this.svg, this.xScale);
-      this.zoomAndPan.setupZoom(this.svg, plotConfiguration, this.xScale, this.yScales);
+      this.tooltip.setupTooltip();
+      this.zoomAndPan.setupZoom();
       this.store.dispatch(ProcessPlotActions.processPlotInitialized());
     });
   }
@@ -175,11 +181,11 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
                          processValuesLog: ProcessValueLog) {
     if(this.svg === undefined) throw Error('no Svg selection when plotting data!');
     if(!await firstValueFrom(this.isZoomed)) this.fitXScaleToData(plotConfiguration, processValuesLog);
-    this.drawXAxis(this.svg, plotConfiguration);
-    this.lines.plotLines(plotConfiguration, processValuesLog, this.svg, this.xScale, this.yScales);
-    this.coloredRegions.plotColoredRegions(plotConfiguration, processValuesLog, this.svg, this.xScale, this.yScales);
-    this.annotations.plotAnnotations(plotConfiguration, processValuesLog, this.svg, this.xScale, this.yScales);
-    this.tooltip.updateLineXPosition(this.svg, this.xScale);
+    this.drawXAxis(plotConfiguration);
+    this.lines?.plotLines(processValuesLog);
+    this.coloredRegions?.plotColoredRegions(processValuesLog);
+    this.annotations?.plotAnnotations(processValuesLog);
+    this.tooltip?.updateLineXPosition();
   }
 
   private fitXScaleToData(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValueLog) {
@@ -191,12 +197,12 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     this.xScale.domain([minXValue, maxXValue]);
   }
 
-  private drawXAxis(svg: D3Selection<SVGSVGElement>, plotConfiguration: PlotConfiguration) {
-    svg.select<SVGGElement>('.x-axis').call(axisBottom(this.xScale));
+  private drawXAxis(plotConfiguration: PlotConfiguration) {
+    this.svg?.select<SVGGElement>('.x-axis').call(axisBottom(this.xScale));
     plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
       const xGridLineAxisGenerator = this.placement?.xGridLineAxisGenerators[subPlotIndex];
       if(xGridLineAxisGenerator === undefined) return;
-      svg.select<SVGGElement>(`.subplot-${subPlotIndex} .x-grid-lines`).call(xGridLineAxisGenerator);
+      this.svg?.select<SVGGElement>(`.subplot-${subPlotIndex} .x-grid-lines`).call(xGridLineAxisGenerator);
     });
   }
 

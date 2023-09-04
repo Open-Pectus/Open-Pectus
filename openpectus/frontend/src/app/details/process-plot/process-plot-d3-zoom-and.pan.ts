@@ -9,59 +9,55 @@ import { D3Selection } from './process-plot-d3.types';
 export class ProcessPlotD3ZoomAndPan {
   private zoomedSubplotIndices = this.store.select(ProcessPlotSelectors.zoomedSubplotIndices);
 
-  constructor(private store: Store, private componentDestroyed: Subject<void>) {}
+  constructor(private store: Store,
+              private componentDestroyed: Subject<void>,
+              private plotConfiguration: PlotConfiguration,
+              private svg: D3Selection<SVGSVGElement>,
+              private xScale: ScaleLinear<number, number>,
+              private yScales: ScaleLinear<number, number>[][]) {}
 
-  setupZoom(svg: D3Selection<SVGSVGElement>,
-            plotConfiguration: PlotConfiguration,
-            xScale: ScaleLinear<number, number>,
-            yScales: ScaleLinear<number, number>[][]) {
-    plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
-      const subPlotG = svg.select<SVGGElement>(`g.subplot-${subPlotIndex}`);
-      subPlotG.on('mousedown', this.getMouseDown(svg, xScale, yScales, subPlotIndex));
-      subPlotG.on('dblclick', this.getDblClick(svg, plotConfiguration, yScales));
+  setupZoom() {
+    this.plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
+      const subPlotG = this.svg.select<SVGGElement>(`g.subplot-${subPlotIndex}`);
+      subPlotG.on('mousedown', this.getMouseDown(subPlotIndex));
+      subPlotG.on('dblclick', this.getDblClick());
     });
 
     this.zoomedSubplotIndices.pipe(takeUntil(this.componentDestroyed)).subscribe((zoomedSubplotIndices) => {
-      plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
+      this.plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
         const isZoomed = zoomedSubplotIndices.includes(subPlotIndex);
         const cursor = isZoomed ? 'grab' : 'crosshair';
-        this.setSubplotCursor(svg, subPlotIndex, cursor);
+        this.setSubplotCursor(subPlotIndex, cursor);
       });
     });
   }
 
-  private setSubplotCursor(svg: D3Selection<SVGSVGElement>, subPlotIndex: number, cursor: string) {
-    svg.select(`.subplot-${subPlotIndex}`).selectChild('.subplot-border').style('cursor', cursor);
+  private setSubplotCursor(subPlotIndex: number, cursor: string) {
+    this.svg.select(`.subplot-${subPlotIndex}`).selectChild('.subplot-border').style('cursor', cursor);
   }
 
-  private getMouseDown(svg: D3Selection<SVGSVGElement>,
-                       xScale: ScaleLinear<number, number>,
-                       yScales: ScaleLinear<number, number>[][],
-                       subPlotIndex: number) {
+  private getMouseDown(subPlotIndex: number) {
     return async (mouseDownEvent: MouseEvent) => {
       const subPlotIsAlreadyZoomed = (await firstValueFrom(this.zoomedSubplotIndices)).includes(subPlotIndex);
       if(subPlotIsAlreadyZoomed) {
-        this.startDragToPan(svg, xScale, yScales, subPlotIndex);
+        this.startDragToPan(subPlotIndex);
       } else {
-        this.startDragToZoom(svg, mouseDownEvent, xScale, yScales, subPlotIndex);
+        this.startDragToZoom(mouseDownEvent, subPlotIndex);
       }
     };
   }
 
-  private startDragToZoom(svg: D3Selection<SVGSVGElement>,
-                          mouseDownEvent: MouseEvent,
-                          xScale: ScaleLinear<number, number>,
-                          yScales: ScaleLinear<number, number>[][],
+  private startDragToZoom(mouseDownEvent: MouseEvent,
                           subPlotIndex: number) {
-    let path = svg.selectAll<SVGPathElement, MouseEvent>('path.zoom');
+    let path = this.svg.selectAll<SVGPathElement, MouseEvent>('path.zoom');
     path = path
       .data([mouseDownEvent])
       .join('path').attr('class', 'zoom')
       .attr('pointer-events', 'none')
       .attr('stroke', 'black')
       .attr('fill', 'none');
-    svg.on('mousemove', this.getMouseMoveForDragToZoom(path));
-    svg.on('mouseup', this.getMouseUpForDragToZoom(svg, path, xScale, yScales, subPlotIndex));
+    this.svg.on('mousemove', this.getMouseMoveForDragToZoom(path));
+    this.svg.on('mouseup', this.getMouseUpForDragToZoom(path, subPlotIndex));
   }
 
   private getMouseMoveForDragToZoom(pathSelection: D3Selection<SVGPathElement, MouseEvent>) {
@@ -74,22 +70,19 @@ export class ProcessPlotD3ZoomAndPan {
     };
   }
 
-  private getMouseUpForDragToZoom(svg: D3Selection<SVGSVGElement>,
-                                  pathSelection: D3Selection<SVGPathElement, MouseEvent>,
-                                  xScale: ScaleLinear<number, number>,
-                                  yScales: ScaleLinear<number, number>[][],
+  private getMouseUpForDragToZoom(pathSelection: D3Selection<SVGPathElement, MouseEvent>,
                                   subPlotIndex: number) {
     return (mouseUpEvent: MouseEvent) => {
-      svg.on('mousemove mouseup', null);
-      svg.select('path.zoom').remove();
+      this.svg.on('mousemove mouseup', null);
+      this.svg.select('path.zoom').remove();
 
       const xs = [pathSelection.datum().offsetX, mouseUpEvent.offsetX]
         .sort((a, b) => a - b)
-        .map(offset => xScale.invert(offset));
+        .map(offset => this.xScale.invert(offset));
       if(xs[0] === xs[1]) return; // protection from zooming to a single point on mouse click.
-      xScale.domain(xs);
+      this.xScale.domain(xs);
 
-      yScales[subPlotIndex].forEach((yScale) => {
+      this.yScales[subPlotIndex].forEach((yScale) => {
         const ys = [pathSelection.datum().offsetY, mouseUpEvent.offsetY]
           .sort((a, b) => a - b)
           .map(offset => yScale.invert(offset));
@@ -100,34 +93,27 @@ export class ProcessPlotD3ZoomAndPan {
     };
   }
 
-  private getDblClick(svg: D3Selection<SVGSVGElement>,
-                      plotConfiguration: PlotConfiguration,
-                      yScales: ScaleLinear<number, number>[][]) {
+  private getDblClick() {
     return (_: MouseEvent) => {
-      svg.on('mousemove mouseup', null);
-      svg.select('path.zoom').remove();
-      plotConfiguration.sub_plots.map((subPlot, subPlotIndex) => subPlot.axes.map((axis, axisIndex) => {
-        yScales[subPlotIndex][axisIndex].domain([axis.y_min, axis.y_max]);
+      this.svg.on('mousemove mouseup', null);
+      this.svg.select('path.zoom').remove();
+      this.plotConfiguration.sub_plots.map((subPlot, subPlotIndex) => subPlot.axes.map((axis, axisIndex) => {
+        this.yScales[subPlotIndex][axisIndex].domain([axis.y_min, axis.y_max]);
       }));
       this.store.dispatch(ProcessPlotActions.processPlotZoomReset());
     };
   }
 
-  private startDragToPan(svg: D3Selection<SVGSVGElement>,
-                         xScale: ScaleLinear<number, number>,
-                         yScales: ScaleLinear<number, number>[][],
-                         subPlotIndex: number) {
-    this.setSubplotCursor(svg, subPlotIndex, 'grabbing');
-    svg.on('mousemove', this.getMouseMoveForDragToPan(xScale, yScales, subPlotIndex));
-    svg.on('mouseup', this.getMouseUpForDragToPan(svg, subPlotIndex));
+  private startDragToPan(subPlotIndex: number) {
+    this.setSubplotCursor(subPlotIndex, 'grabbing');
+    this.svg.on('mousemove', this.getMouseMoveForDragToPan(subPlotIndex));
+    this.svg.on('mouseup', this.getMouseUpForDragToPan(subPlotIndex));
   }
 
-  private getMouseMoveForDragToPan(xScale: ScaleLinear<number, number>,
-                                   yScales: ScaleLinear<number, number>[][],
-                                   subPlotIndex: number) {
+  private getMouseMoveForDragToPan(subPlotIndex: number) {
     return (mouseEvent: MouseEvent) => {
-      this.scaleDomainFromMovement(xScale, mouseEvent.movementX);
-      yScales[subPlotIndex].forEach(yScale => this.scaleDomainFromMovement(yScale, mouseEvent.movementY));
+      this.scaleDomainFromMovement(this.xScale, mouseEvent.movementX);
+      this.yScales[subPlotIndex].forEach(yScale => this.scaleDomainFromMovement(yScale, mouseEvent.movementY));
       this.store.dispatch(ProcessPlotActions.processPlotPanned());
     };
   }
@@ -139,10 +125,10 @@ export class ProcessPlotD3ZoomAndPan {
     scale.domain([domain[0] - domainMovement, domain[1] - domainMovement]);
   }
 
-  private getMouseUpForDragToPan(svg: D3Selection<SVGSVGElement>, subPlotIndex: number) {
+  private getMouseUpForDragToPan(subPlotIndex: number) {
     return (_: MouseEvent) => {
-      this.setSubplotCursor(svg, subPlotIndex, 'grab');
-      svg.on('mousemove mouseup', null);
+      this.setSubplotCursor(subPlotIndex, 'grab');
+      this.svg.on('mousemove mouseup', null);
     };
   }
 }
