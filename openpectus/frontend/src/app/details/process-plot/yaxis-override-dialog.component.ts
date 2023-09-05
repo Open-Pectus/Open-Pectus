@@ -11,23 +11,27 @@ import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ng-container *ngrxLet="data; let data">
-      <div *ngrxLet="axisConfiguration; let axisConfiguration"
-           class="bg-white p-2.5 rounded-md border-2 flex flex-col absolute gap-2.5 shadow-md shadow-gray-400"
-           [style.margin]="margin"
-           [style.border-color]="axisConfiguration?.color"
-           [style.transform]="data?.axisIndex !== 0 ? 'translateX(-100%)' : null"
-           [style.left.px]="data?.position?.x"
-           [style.top.px]="data?.position?.y">
-        <p class="whitespace-nowrap">Override y limits for <span [style.color]="axisConfiguration?.color">{{axisConfiguration?.label}}</span>
-        </p>
-        <label class="flex justify-between">
-          Max: <input min="0" type="number" class="border-b border-gray-500 w-32 text-right" [valueAsNumber]="axisConfiguration?.y_max">
-        </label>
-        <label class="flex justify-between">
-          Min: <input min="0" type="number" class="border-b border-gray-500 w-32 text-right" [valueAsNumber]="axisConfiguration?.y_min">
-        </label>
-        <button class="bg-green-400 rounded p-1" (click)="onClose()">Save</button>
-      </div>
+      <ng-container *ngIf="data !== undefined">
+        <div class="fixed left-0 top-0 right-0 bottom-0" (click)="onClose()"></div>
+        <div *ngrxLet="axisConfiguration; let axisConfiguration"
+             class="bg-white p-2.5 rounded-md border-2 flex flex-col absolute gap-2.5 shadow-md shadow-gray-400"
+             [style.margin]="margin"
+             [style.border-color]="axisConfiguration?.color"
+             [style.transform]="data?.axisIndex !== 0 ? 'translateX(-100%)' : null"
+             [style.left.px]="data?.position?.x"
+             [style.top.px]="data?.position?.y">
+          <p class="whitespace-nowrap">
+            Override y limits for <span [style.color]="axisConfiguration?.color">{{axisConfiguration?.label}}</span>
+          </p>
+          <label class="flex justify-between">
+            Max: <input min="0" type="number" class="border-b border-gray-500 w-32 text-right" [valueAsNumber]="axisConfiguration?.y_max">
+          </label>
+          <label class="flex justify-between">
+            Min: <input min="0" type="number" class="border-b border-gray-500 w-32 text-right" [valueAsNumber]="axisConfiguration?.y_min">
+          </label>
+          <button class="bg-green-400 rounded p-1" (click)="onClose()">Save</button>
+        </div>
+      </ng-container>
     </ng-container>
   `,
 })
