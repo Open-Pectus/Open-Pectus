@@ -26,10 +26,15 @@ export interface ColoredRegionRect {
 }
 
 export interface YAxisOverrideDialogData {
-  subplotIndex: number,
-  axisIndex: number,
+  subplotIndex: number;
+  axisIndex: number;
   position: {
-    x: number,
-    y: number
-  }
+    x: number;
+    y: number;
+  };
+}
+
+export interface YAxisLimits {
+  yMax: number;
+  yMin: number;
 }

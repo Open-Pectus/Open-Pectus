@@ -30,7 +30,8 @@ import { D3Selection } from './process-plot-d3.types';
 export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   @ViewChild('plot', {static: false}) plotElement?: ElementRef<SVGSVGElement>;
   @Input() isCollapsed = false;
-  private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(filter(UtilMethods.isNotNullOrUndefined));
+  private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(
+    filter(UtilMethods.isNotNullOrUndefined));
   private processValuesLog = this.store.select(ProcessPlotSelectors.processValuesLog);
   private markedDirty = this.store.select(ProcessPlotSelectors.markedDirty);
   private scalesMarkedDirty = this.store.select(ProcessPlotSelectors.scalesMarkedDirty);
@@ -66,22 +67,23 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       this.yScales = this.createYScales(plotConfiguration);
       this.insertSvgElements(this.svg, plotConfiguration);
 
-      this.placement = new ProcessPlotD3Placement(plotConfiguration, this.svg, this.xScale, this.yScales);
-      this.lines = new ProcessPlotD3Lines(plotConfiguration, this.svg, this.xScale, this.yScales);
-      this.coloredRegions = new ProcessPlotD3ColoredRegions(plotConfiguration, this.svg, this.xScale, this.yScales);
-      this.annotations = new ProcessPlotD3Annotations(plotConfiguration, this.svg, this.xScale, this.yScales);
-      this.tooltip = new ProcessPlotD3Tooltip(this.processValuesLog, this.processValuePipe, plotConfiguration, this.svg, this.xScale);
+      this.placement = new ProcessPlotD3Placement(this.svg, this.xScale, this.yScales);
+      this.lines = new ProcessPlotD3Lines(this.svg, this.xScale, this.yScales);
+      this.coloredRegions = new ProcessPlotD3ColoredRegions(this.svg, this.xScale, this.yScales);
+      this.annotations = new ProcessPlotD3Annotations(this.svg, this.xScale, this.yScales);
+      this.tooltip = new ProcessPlotD3Tooltip(this.processValuesLog, this.processValuePipe, this.svg, this.xScale);
       this.zoomAndPan = new ProcessPlotD3ZoomAndPan(
-        this.store, this.componentDestroyed, plotConfiguration, this.svg, this.xScale, this.yScales,
+        this.store, this.componentDestroyed, this.svg, this.xScale, this.yScales,
       );
-      this.axesOverrides = new ProcessPlotD3AxesOverrides(this.store, plotConfiguration, this.svg);
+      this.axesOverrides = new ProcessPlotD3AxesOverrides(this.store, this.svg);
 
       this.setupOnResize(this.plotElement.nativeElement);
       this.setupOnDataChange(plotConfiguration);
-      this.setupOnMarkedDirty(plotConfiguration);
-      this.tooltip.setupTooltip();
-      this.zoomAndPan.setupZoom();
-      this.axesOverrides.setupAxesOverrides();
+      this.setupOnPlotConfigurationChange();
+      this.setupOnMarkedDirty();
+      this.tooltip.setupTooltip(plotConfiguration);
+      this.zoomAndPan.setupZoom(plotConfiguration);
+      this.axesOverrides.setupAxesOverrides(plotConfiguration);
       this.store.dispatch(ProcessPlotActions.processPlotInitialized());
     });
   }
@@ -196,9 +198,9 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     if(this.svg === undefined) throw Error('no Svg selection when plotting data!');
     if(!await firstValueFrom(this.isZoomed)) this.fitXScaleToData(plotConfiguration, processValuesLog);
     this.drawXAxis(plotConfiguration);
-    this.lines?.plotLines(processValuesLog);
-    this.coloredRegions?.plotColoredRegions(processValuesLog);
-    this.annotations?.plotAnnotations(processValuesLog);
+    this.lines?.plotLines(plotConfiguration, processValuesLog);
+    this.coloredRegions?.plotColoredRegions(plotConfiguration, processValuesLog);
+    this.annotations?.plotAnnotations(plotConfiguration, processValuesLog);
     this.tooltip?.updateLineXPosition();
   }
 
@@ -220,23 +222,27 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     });
   }
 
-  private setupOnMarkedDirty(plotConfiguration: PlotConfiguration) {
+  private setupOnMarkedDirty() {
     this.markedDirty.pipe(filter(identity),
-      concatLatestFrom(() => this.store.select(ProcessPlotSelectors.processValuesLog)),
+      concatLatestFrom(() => [this.processValuesLog, this.plotConfiguration]),
       takeUntil(this.componentDestroyed),
-    ).subscribe(async ([_, processValuesLog]) => {
-      this.placement?.updateElementPlacements();
+    ).subscribe(async ([_, processValuesLog, plotConfiguration]) => {
+      this.placement?.updateElementPlacements(plotConfiguration);
       await this.plotData(plotConfiguration, processValuesLog);
       this.store.dispatch(ProcessPlotActions.processPlotElementsPlaced());
     });
 
     this.scalesMarkedDirty.pipe(filter(identity),
-      concatLatestFrom(() => this.store.select(ProcessPlotSelectors.processValuesLog)),
+      concatLatestFrom(() => [this.processValuesLog, this.plotConfiguration]),
       takeUntil(this.componentDestroyed),
-    ).subscribe(async ([_, processValuesLog]) => {
-      this.placement?.updateAxes();
+    ).subscribe(async ([_, processValuesLog, plotConfiguration]) => {
+      this.placement?.updateAxes(plotConfiguration);
       await this.plotData(plotConfiguration, processValuesLog);
       this.store.dispatch(ProcessPlotActions.processPlotAxesUpdated());
     });
+  }
+
+  private setupOnPlotConfigurationChange() {
+    this.plotConfiguration.pipe();
   }
 }

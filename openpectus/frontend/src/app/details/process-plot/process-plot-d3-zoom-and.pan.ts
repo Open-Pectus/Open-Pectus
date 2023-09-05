@@ -11,20 +11,19 @@ export class ProcessPlotD3ZoomAndPan {
 
   constructor(private store: Store,
               private componentDestroyed: Subject<void>,
-              private plotConfiguration: PlotConfiguration,
               private svg: D3Selection<SVGSVGElement>,
               private xScale: ScaleLinear<number, number>,
               private yScales: ScaleLinear<number, number>[][]) {}
 
-  setupZoom() {
-    this.plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
+  setupZoom(plotConfiguration: PlotConfiguration) {
+    plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
       const subPlotBorderG = this.svg.select<SVGGElement>(`g.subplot-${subPlotIndex}`).selectChild('g.subplot-border');
       subPlotBorderG.on('mousedown', this.getMouseDown(subPlotIndex));
-      subPlotBorderG.on('dblclick', this.getDblClick());
+      subPlotBorderG.on('dblclick', this.getDblClick(plotConfiguration));
     });
 
     this.zoomedSubplotIndices.pipe(takeUntil(this.componentDestroyed)).subscribe((zoomedSubplotIndices) => {
-      this.plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
+      plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
         const isZoomed = zoomedSubplotIndices.includes(subPlotIndex);
         const cursor = isZoomed ? 'grab' : 'crosshair';
         this.setSubplotCursor(subPlotIndex, cursor);
@@ -93,11 +92,11 @@ export class ProcessPlotD3ZoomAndPan {
     };
   }
 
-  private getDblClick() {
+  private getDblClick(plotConfiguration: PlotConfiguration) {
     return (_: MouseEvent) => {
       this.svg.on('mousemove mouseup', null);
       this.svg.select('path.zoom').remove();
-      this.plotConfiguration.sub_plots.map((subPlot, subPlotIndex) => subPlot.axes.map((axis, axisIndex) => {
+      plotConfiguration.sub_plots.map((subPlot, subPlotIndex) => subPlot.axes.map((axis, axisIndex) => {
         this.yScales[subPlotIndex][axisIndex].domain([axis.y_min, axis.y_max]);
       }));
       this.store.dispatch(ProcessPlotActions.processPlotZoomReset());

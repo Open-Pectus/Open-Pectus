@@ -5,6 +5,7 @@ import { map, Observable } from 'rxjs';
 import { PlotAxis } from '../../api';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
+import { YAxisLimits } from './process-plot-d3.types';
 
 @Component({
   selector: 'app-yaxis-override-dialog',
@@ -24,12 +25,14 @@ import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
             Override y limits for <span [style.color]="axisConfiguration?.color">{{axisConfiguration?.label}}</span>
           </p>
           <label class="flex justify-between">
-            Max: <input min="0" type="number" class="border-b border-gray-500 w-32 text-right" [valueAsNumber]="axisConfiguration?.y_max">
+            Max: <input #max min="0" type="number" class="border-b border-gray-500 w-32 text-right" [valueAsNumber]="axisConfiguration?.y_max">
           </label>
           <label class="flex justify-between">
-            Min: <input min="0" type="number" class="border-b border-gray-500 w-32 text-right" [valueAsNumber]="axisConfiguration?.y_min">
+            Min: <input #min min="0" type="number" class="border-b border-gray-500 w-32 text-right" [valueAsNumber]="axisConfiguration?.y_min">
           </label>
-          <button class="bg-green-400 rounded p-1" (click)="onClose()">Save</button>
+          <button class="bg-green-400 rounded p-1"
+                  (click)="onSave(data?.subplotIndex, data?.axisIndex, {yMin: min.valueAsNumber, yMax: max.valueAsNumber})">Save
+          </button>
         </div>
       </ng-container>
     </ng-container>
@@ -52,5 +55,10 @@ export class YAxisOverrideDialogComponent {
 
   onClose() {
     this.store.dispatch(ProcessPlotActions.yOverrideDialogClosed());
+  }
+
+  onSave(subplotIndex: number | undefined, axisIndex: number | undefined, limits: YAxisLimits) {
+    if(subplotIndex === undefined || axisIndex === undefined) return;
+    this.store.dispatch(ProcessPlotActions.yOverrideDialogSaveClicked({subplotIndex, axisIndex, limits}));
   }
 }
