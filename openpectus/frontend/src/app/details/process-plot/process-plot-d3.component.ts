@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, NgZone, OnDestroy, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostBinding, Input, NgZone, OnDestroy, ViewChild } from '@angular/core';
 import { concatLatestFrom } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { axisBottom, ScaleLinear, scaleLinear, select } from 'd3';
@@ -24,17 +24,13 @@ import { D3Selection } from './process-plot-d3.types';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <svg class="h-full w-full overflow-visible select-none" #plot></svg>
-    <app-yaxis-override-dialog class="absolute p-0 block overflow-visible mx-2 my-4"
-                               *ngIf="(yAxisOverrideDialogData | ngrxPush) !== undefined"
-                               [data]="yAxisOverrideDialogData | ngrxPush"
-                               [plotConfiguration]="plotConfiguration | ngrxPush"></app-yaxis-override-dialog>
+    <app-yaxis-override-dialog class="top-0 left-0" [margin]="padding"></app-yaxis-override-dialog>
   `,
 })
 export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   @ViewChild('plot', {static: false}) plotElement?: ElementRef<SVGSVGElement>;
   @Input() isCollapsed = false;
-  protected yAxisOverrideDialogData = this.store.select(ProcessPlotSelectors.yAxisOverrideDialogData);
-  protected plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(filter(UtilMethods.isNotNullOrUndefined));
+  private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(filter(UtilMethods.isNotNullOrUndefined));
   private processValuesLog = this.store.select(ProcessPlotSelectors.processValuesLog);
   private markedDirty = this.store.select(ProcessPlotSelectors.markedDirty);
   private scalesMarkedDirty = this.store.select(ProcessPlotSelectors.scalesMarkedDirty);
@@ -54,6 +50,10 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   constructor(private store: Store,
               private processValuePipe: ProcessValuePipe,
               private ngZone: NgZone) {}
+
+  @HostBinding('style.padding') get padding() {
+    return '1rem .5rem';
+  }
 
   ngOnDestroy() {
     this.componentDestroyed.next();
