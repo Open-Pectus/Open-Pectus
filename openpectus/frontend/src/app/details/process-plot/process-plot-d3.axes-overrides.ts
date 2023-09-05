@@ -15,16 +15,16 @@ export class ProcessPlotD3AxesOverrides {
       subplot.axes.forEach((_, axisIndex) => {
         const axisBackground = subplotG.selectChild(`.y-axis-background-${axisIndex}`);
         const axisG = subplotG.selectChild(`.y-axis-${axisIndex}`);
-        const onDblClick = this.getOnDblClick(subplotIndex, axisIndex);
-        axisBackground.on('dblclick', onDblClick);
-        axisG.on('dblclick', onDblClick);
+        const onClick = this.getOnClick(subplotIndex, axisIndex);
+        axisBackground.on('click', onClick);
+        axisG.on('click', onClick);
       });
     });
   }
 
-  private getOnDblClick(subplotIndex: number, axisIndex: number) {
+  private getOnClick(subplotIndex: number, axisIndex: number) {
     return (mouseEvent: MouseEvent) => {
-      this.store.dispatch(ProcessPlotActions.yAxisDblClicked({
+      this.store.dispatch(ProcessPlotActions.yAxisClicked({
         data: {
           subplotIndex,
           axisIndex,

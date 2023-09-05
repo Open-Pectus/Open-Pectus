@@ -119,9 +119,11 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
         subPlotG.append('g').attr('class', `x-grid-lines`).style('color', '#cccccc');
         subPlotG.append('g').attr('class', `y-grid-lines`).style('color', '#cccccc');
         subPlotG.append('rect').attr('class', `y-axis-background-${axisIndex}`)
-          .attr('fill', 'white');
+          .attr('fill', 'white')
+          .style('cursor', 'pointer');
         subPlotG.append('g').attr('class', `y-axis y-axis-${axisIndex}`)
-          .style('color', axis.color);
+          .style('color', axis.color)
+          .style('cursor', 'pointer');
         subPlotG.append('text').attr('class', `axis-label axis-label-${axisIndex}`)
           .attr('fill', axis.color)
           .text(axis.label);

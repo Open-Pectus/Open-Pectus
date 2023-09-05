@@ -62,7 +62,7 @@ const reducer = createReducer(initialState,
       }
     });
   })),
-  on(ProcessPlotActions.yAxisDblClicked, (state, {data}) => produce(state, draft => {
+  on(ProcessPlotActions.yAxisClicked, (state, {data}) => produce(state, draft => {
     draft.yAxisOverrideDialogData = data;
   })),
   on(ProcessPlotActions.yOverrideDialogClosed, (state) => produce(state, draft => {
