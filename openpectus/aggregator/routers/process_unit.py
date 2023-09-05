@@ -1,13 +1,13 @@
+from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum, auto
 from typing import Literal, List
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel
 
 import openpectus.aggregator.deps as agg_deps
-from openpectus.protocol.aggregator import Aggregator, ChannelInfo, TagInfo
+from openpectus.protocol.aggregator import Aggregator, ChannelInfo, ReadingDef, TagInfo
 from openpectus.protocol.messages import InvokeCommandMsg
-
 
 router = APIRouter(tags=["process_unit"])
 
@@ -51,12 +51,12 @@ class ProcessUnit(BaseModel):
 def create_pu(item: ChannelInfo) -> ProcessUnit:
     # TODO define source of all fields
     unit = ProcessUnit(
-            id=item.client_id or "(error)",
-            name=f"{item.engine_name} ({item.uod_name})",
-            state=ProcessUnitState.Ready(state=ProcessUnitStateEnum.READY),
-            location="Unknown location",
-            runtime_msec=189309,
-            current_user_role=UserRole.ADMIN)
+        id=item.client_id or "(error)",
+        name=f"{item.engine_name} ({item.uod_name})",
+        state=ProcessUnitState.Ready(state=ProcessUnitStateEnum.READY),
+        location="Unknown location",
+        runtime_msec=189309,
+        current_user_role=UserRole.ADMIN)
     return unit
 
 
@@ -81,11 +81,49 @@ class ProcessValueType(StrEnum):
     STRING = auto()
     FLOAT = auto()
     INT = auto()
+    CHOICE = auto()
+
+
+class ProcessValueCommandNumberValue(BaseModel):
+    value: float | int
+    value_unit: str | None
+    """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
+    valid_value_units: List[str] | None
+    """ For values with a unit, provides the list valid alternative units """
+    value_type: Literal[ProcessValueType.INT] | Literal[ProcessValueType.FLOAT]
+    """ Specifies the type of allowed values. """
+
+
+class ProcessValueCommandFreeTextValue(BaseModel):
+    value: str
+    value_type: Literal[ProcessValueType.STRING]
+
+
+class ProcessValueCommandChoiceValue(BaseModel):
+    value: str
+    value_type: Literal[ProcessValueType.CHOICE]
+    options: List[str]
 
 
 class ProcessValueCommand(BaseModel):
     name: str
     command: str
+    disabled: bool | None
+    """ Indicates whether the command button should be disabled. """
+    value: ProcessValueCommandNumberValue | ProcessValueCommandFreeTextValue | ProcessValueCommandChoiceValue | None
+
+
+def get_ProcessValueType_from_value(value: str | float | int | None) -> ProcessValueType:
+    if value is None:
+        return ProcessValueType.STRING  # hmm
+    if isinstance(value, str):
+        return ProcessValueType.STRING
+    elif isinstance(value, int):
+        return ProcessValueType.INT
+    elif isinstance(value, float):
+        return ProcessValueType.FLOAT
+    else:
+        raise ValueError("Invalid value type: " + type(value).__name__)
 
 
 class ProcessValue(BaseModel):
@@ -94,56 +132,43 @@ class ProcessValue(BaseModel):
     value: str | float | int | None
     value_unit: str | None
     """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
-    valid_value_units: List[str] | None
-    """ For values with a unit, provides the list valid alternative units """
     value_type: ProcessValueType
     """ Specifies the type of allowed values. """
-    writable: bool
-    commands: List[ProcessValueCommand] | None  # TODO: have backend verify that no ProcessValue ever is both writable and has commands.
+    commands: List[ProcessValueCommand] | None
 
-
-def create_pv(ti: TagInfo) -> ProcessValue:
-    # TODO define source of all fields
-
-    def get_ProcessValueType_from_value(value: str | float | int | None) -> ProcessValueType:
-        if value is None:
-            return ProcessValueType.STRING  # hmm
-        if isinstance(value, str):
-            return ProcessValueType.STRING
-        elif isinstance(value, int):
-            return ProcessValueType.INT
-        elif isinstance(value, float):
-            return ProcessValueType.FLOAT
-        else:
-            raise ValueError("Invalid value type: " + type(value).__name__)
-
-    return ProcessValue(
-        name=ti.name,
-        value=ti.value,
-        value_unit=ti.value_unit,
-        valid_value_units=[],
-        value_type=get_ProcessValueType_from_value(ti.value),
-        writable=True,
-        commands=[])
+    @staticmethod
+    def from_message(r: ReadingDef, ti: TagInfo) -> ProcessValue:
+        return ProcessValue(
+            name=r.label,
+            value=ti.value,
+            value_type=get_ProcessValueType_from_value(ti.value),
+            value_unit=ti.value_unit,
+            commands=[])
+        # commands=[ProcessValueCommand(name=c.name, command=c.command) for c in r.commands])
 
 
 @router.get("/process_unit/{unit_id}/process_values")
-def get_process_values(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[ProcessValue]:  # naming?, parm last_seen
-    tags = agg.get_client_tags(client_id=unit_id)
-    if tags is None:
+def get_process_values(unit_id: str, response: Response, agg: Aggregator = Depends(agg_deps.get_aggregator)) \
+        -> List[ProcessValue]:
+    # parm last_seen
+
+    response.headers["Cache-Control"] = "no-store"
+
+    client_data = agg.client_data_map.get(unit_id)
+    if client_data is None:
         return []
 
-    return [create_pv(ti) for ti in tags.map.values()]
+    tags_info = client_data.tags_info.map
 
+    print("Readings", client_data.readings)
+    print("Tags", tags_info)
 
-class ProcessValueUpdate(BaseModel):
-    name: str
-    value: str | float | int
-
-
-@router.post("/process_unit/{unit_id}/process_value")
-def set_process_value(unit_id: str, update: ProcessValueUpdate, agg: Aggregator = Depends(agg_deps.get_aggregator)):
-    pass
+    pvs: List[ProcessValue] = []
+    for r in client_data.readings:
+        ti = tags_info.get(r.tag_name)
+        if ti is not None:
+            pvs.append(ProcessValue.from_message(r, ti))
+    return pvs
 
 
 class CommandSource(StrEnum):
@@ -209,9 +234,39 @@ class RunLog(BaseModel):
 
 @router.get('/process_unit/{unit_id}/run_log')
 def get_run_log(unit_id: str) -> RunLog:
-    return RunLog(additional_columns=[], lines=[])
+    return RunLog(lines=[])
 
 
 @router.get('/process_unit/{unit_id}/method')
 def get_method(unit_id: str) -> str:
     return ''
+
+
+class PlotColorRegion(BaseModel):
+    process_value_name: str
+    value_color_map: dict[str | int | float, str]  # color string compatible with css e.g.: '#aa33bb', 'rgb(0,0,0)', 'rgba(0,0,0,0)', 'red'
+
+
+class PlotAxis(BaseModel):
+    label: str
+    process_value_names: List[str]
+    y_max: int | float
+    y_min: int | float
+    color: str
+
+
+class SubPlot(BaseModel):
+    axes: List[PlotAxis]
+    ratio: int | float
+
+
+class PlotConfiguration(BaseModel):
+    process_value_names_to_annotate: List[str]
+    color_regions: List[PlotColorRegion]
+    sub_plots: List[SubPlot]
+    x_axis_process_value_name: str
+
+
+@router.get('/process_unit/{unit_id}/plot_configuration')
+def get_plot_configuration(unit_id: str) -> PlotConfiguration:
+    return PlotConfiguration(color_regions=[], sub_plots=[])

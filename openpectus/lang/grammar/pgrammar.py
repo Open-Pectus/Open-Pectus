@@ -15,13 +15,13 @@ class PGrammar:
         self.parser = pcodeParser
 
     def parse(self, code: str):  # code: TextIOWrapper):
-        input = InputStream(code)  # type: ignore
+        input = InputStream(code)
         self.lexer = pcodeLexer(input)
         stream = CommonTokenStream(self.lexer)
         self.parser = pcodeParser(stream)
 
     def build_model(self) -> PProgram:
-        self.tree = self.parser.program()  # type: ignore
+        self.tree: pcodeParser.ProgramContext = self.parser.program()  # type: ignore
         listener = PProgramBuilder()
         walker = ParseTreeWalker()
         walker.walk(listener, self.tree)
@@ -44,7 +44,7 @@ class PGrammar:
                     PGrammar._recursive(child, buf, offset + 1, ruleNames)
 
     def printSyntaxTree(self, root: ParseTree, initial_newline: bool = True):
-        buf = []
+        buf: List[str] = []
         self._recursive(root, buf, 0, list(self.parser.ruleNames))
         if initial_newline:
             print()

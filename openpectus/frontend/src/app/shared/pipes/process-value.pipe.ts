@@ -15,9 +15,11 @@ export class ProcessValuePipe implements PipeTransform {
       type = processValue.value_type;
       unit = processValue.value_unit;
     }
+    if(value === undefined) return null;
     if(type === undefined) return null;
     switch(type) {
       case ProcessValueType.STRING:
+      case ProcessValueType.CHOICE:
         return value.toString();
       case ProcessValueType.FLOAT:
         return `${this.decimalPipe.transform(value, '1.2-2')} ${unit}`.trim();

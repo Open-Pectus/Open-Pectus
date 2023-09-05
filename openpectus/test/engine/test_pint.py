@@ -37,9 +37,19 @@ class PintTest(unittest.TestCase):
         self.assertEqual("liter", str(volume.units))
         self.assertEqual("[length] * [length] * [length]", volume.dimensionality)
 
+        time = Q_("1 min")  # Note: need 'min' as 'm' is meter
+        self.assertEqual("minute", str(time.units))
+        self.assertEqual("[time]", time.dimensionality)
+
+        length = Q_("1 m")
+        self.assertEqual("meter", str(length.units))
+        self.assertEqual("[length]", length.dimensionality)
+
     def test_basics_unit(self):
         u = U_("s")
         self.assertFalse(u.dimensionless)
+        self.assertEqual("second", str(u))
+        self.assertEqual("[time]", str(u.dimensionality))
         print("{!r}".format(u))
 
         q = 5 * u
@@ -81,7 +91,7 @@ class PintTest(unittest.TestCase):
     def test_compatibility_quantity(self):
         dist = Q_("310m")
         weight = Q_("3kg")
-        temp = Q_(3, ureg.degC)
+        temp = Q_(3, ureg.degC)  # type: ignore
         time = Q_("5 sec")
 
         # NOTE: don't use ureg.is_compatible_with:
@@ -124,8 +134,22 @@ class PintTest(unittest.TestCase):
         # this works. but beware of deltas. temperature calculus is tricky
         # alternatively, use ureg = UnitRegistry(autoconvert_offset_to_baseunit = True)
         # to perform automatic conversions
-        temperature = Q_(25.4, ureg.degC)
+        temperature = Q_(25.4, ureg.degC)  # type: ignore
         self.assertEqual("25.4 degree_Celsius", str(temperature))
+
+    def test_higher_dimensionality(self):
+        flow = Q_("10 L/h")
+        self.assertIsInstance(flow, Quantity)
+        self.assertEqual("<Quantity(10.0, 'liter / hour')>", "{!r}".format(flow))
+        self.assertEqual("liter / hour", str(flow.units))
+
+        flow = Q_("10 L/d")
+        self.assertIsInstance(flow, Quantity)
+        self.assertEqual("<Quantity(10.0, 'liter / day')>", "{!r}".format(flow))
+
+        flow = Q_("10 L/min")
+        self.assertIsInstance(flow, Quantity)
+        self.assertEqual("<Quantity(10.0, 'liter / minute')>", "{!r}".format(flow))
 
     def test_string_parsing(self):
         distance = Q_("24cm")
@@ -149,6 +173,18 @@ class PintTest(unittest.TestCase):
         self.assertTrue(a < b)
         self.assertTrue(a < c)
         self.assertEqual(b, c)
+
+    def test_list_compatible_units(self):
+        a = Q_("10 cm")
+        result = ureg.get_compatible_units(a.units)  # type: ignore
+        print(result)
+        # Returns lots of useless values like parsec, nautical mile, angstrom_star, light_year and such
+        # and a few useful ones, like meter. Need to rool our own or customize pint defaults
+        # see https://github.com/hgrecco/pint/blob/master/pint/default_en.txt
+
+    # def test_customizing_pint_registry(self):
+    #     ureg = UnitRegistry(cache_folder=":auto:")
+    #     print("ureg.cache_folder", ureg.cache_folder)
 
 
 if __name__ == "__main__":

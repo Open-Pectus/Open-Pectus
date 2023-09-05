@@ -1,6 +1,6 @@
 from __future__ import annotations
 import json
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 from pydantic import BaseModel
 
 import openpectus.protocol.messages as messages_namescape
@@ -43,6 +43,22 @@ class RegisterEngineMsg(MessageBase):
     # uod file hash, file change date
 
 
+class ReadingCommand(MessageBase):
+    name: str
+    command: str
+
+
+class ReadingInfo(MessageBase):
+    label: str
+    tag_name: str
+    valid_value_units: List[str] | None
+    commands: List[ReadingCommand]
+
+
+class UodInfoMsg(MessageBase):
+    readings: List[ReadingInfo]
+
+
 class TagsUpdatedMsg(MessageBase):
     tags: List[TagValue] = []
 
@@ -72,7 +88,7 @@ class TagSpec(MessageBase):
     tag_unit: str | None
 
 
-def serialize_msg(msg: MessageBase) -> Tuple[str, dict]:
+def serialize_msg(msg: MessageBase) -> Tuple[str, Dict[str, Any]]:
     return type(msg).__name__, msg.dict()
 
 
@@ -81,9 +97,10 @@ def serialize_msg_to_json(msg: MessageBase) -> str:
     return json.dumps(wrapper)
 
 
-def deserialize_msg(msg_cls_name, init_dict: dict) -> MessageBase:
+def deserialize_msg(msg_cls_name, init_dict: Dict[str, Any]) -> MessageBase:
     cls = getattr(messages_namescape, msg_cls_name)
     msg = cls(**init_dict)
+    assert isinstance(msg, MessageBase)
     return msg
 
 

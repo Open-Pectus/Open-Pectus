@@ -1,7 +1,7 @@
 from __future__ import annotations
 import asyncio
 import logging
-from typing import Awaitable, Callable, Dict
+from typing import Any, Awaitable, Callable, Dict
 from fastapi_websocket_rpc.schemas import RpcResponse
 from fastapi_websocket_pubsub import PubSubClient
 from fastapi_websocket_pubsub.rpc_event_methods import RpcEventClientMethods
@@ -9,13 +9,13 @@ from fastapi_websocket_rpc import RpcChannel
 import tenacity
 
 from openpectus.protocol.exceptions import ProtocolException
-from openpectus.protocol.messages import (    
+from openpectus.protocol.messages import (
     MessageBase,
-    RegisterEngineMsg,
-    ErrorMessage,
+    # RegisterEngineMsg,
+    # ErrorMessage,
     ProtocolErrorMessage,
-    SuccessMessage,
-    InvokeCommandMsg,
+    # SuccessMessage,
+    # InvokeCommandMsg,
     deserialize_msg,
     deserialize_msg_from_json,
     serialize_msg,
@@ -36,19 +36,21 @@ logger.setLevel(logging.DEBUG)
 
 ClientMessageHandler = Callable[[MessageBase], Awaitable[MessageBase]]
 
+MsgDict = Dict[str, Any]
+
 
 class RpcClientHandler(RpcEventClientMethods):
     """Represents the client's RPC interface"""
 
     def __init__(self, client):
         super().__init__(client)
-        self._send_callback: Callable[[str, MessageBase], Awaitable] | None = None
+        self._send_callback: Callable[[str, MessageBase], Awaitable[None]] | None = None
         self._client: Client | None = None
 
     def set_client(self, client: Client):
         self._client = client
 
-    async def on_server_message(self, msg_type: str, msg_dict: dict):
+    async def on_server_message(self, msg_type: str, msg_dict: MsgDict):
         """ Implements client's proxy method. Is invoked by the server using its client proxy. """
         logger.debug(f"on_server_message was called with msg_type: {msg_type}, msg_dict: {msg_dict}")
         assert isinstance(self.channel, RpcChannel)
@@ -136,8 +138,8 @@ class Client:
     async def send_to_server(
         self,
         msg: MessageBase,
-        on_success: Callable | None = None,
-        on_error: Callable | None = None,
+        on_success: Callable[[], None] | None = None,
+        on_error: Callable[[Exception], None] | None = None,
     ) -> MessageBase:
         """Send message to server"""
 
@@ -189,15 +191,16 @@ def create_client(on_connect_callback=None, on_disconnect_callback=None) -> Clie
     if on_disconnect_callback is not None:
         _on_disconnn.append(on_disconnect_callback)
 
-    #Tenacity (https://tenacity.readthedocs.io/) retry kwargs. Defaults to  {'wait': wait.wait_random_exponential(max=45)}
-    #reraise=True, stop=stop_after_attempt(1)
+    # Tenacity (https://tenacity.readthedocs.io/) retry kwargs. Defaults to  {'wait': wait.wait_random_exponential(max=45)}
+    # reraise=True, stop=stop_after_attempt(1)
 
     def logerror(retry_state: tenacity.RetryCallState):
         logger.exception(retry_state.outcome.exception())  # type: ignore
 
     def create_retry_config():
-        from tenacity import retry, wait
-        from tenacity.retry import retry_if_exception, retry_never
+        # from tenacity import retry, wait
+        # from tenacity.retry import retry_if_exception
+        from tenacity.retry import retry_never
         from tenacity.stop import stop_after_attempt
 
         # DEFAULT_RETRY_CONFIG = {

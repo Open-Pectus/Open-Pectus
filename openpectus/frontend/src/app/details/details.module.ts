@@ -12,7 +12,7 @@ import { MethodEditorModule } from './method-editor/method-editor.module';
 import { DetailsEffects } from './ngrx/details.effects';
 import { detailsSlice } from './ngrx/details.reducer';
 import { ProcessDiagramComponent } from './process-diagram.component';
-import { ProcessPlotComponent } from './process-plot.component';
+import { ProcessPlotModule } from './process-plot/process-plot.module';
 import { ProcessValuesModule } from './process-values/process-values.module';
 import { RunLogModule } from './run-log/run-log.module';
 import { UnitDetailsComponent } from './unit-details.component';
@@ -26,7 +26,6 @@ import { UnitHeaderComponent } from './unit-header.component';
     CommandsComponent,
     CommandExamplesListComponent,
     UnitHeaderComponent,
-    ProcessPlotComponent,
   ],
   imports: [
     CommonModule,
@@ -36,6 +35,7 @@ import { UnitHeaderComponent } from './unit-header.component';
     ProcessValuesModule,
     MethodEditorModule,
     RunLogModule,
+    ProcessPlotModule,
     SharedModule,
     LetDirective,
     PushPipe,

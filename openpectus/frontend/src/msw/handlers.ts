@@ -1,4 +1,4 @@
-import { sub } from 'date-fns';
+import { getSeconds, sub } from 'date-fns';
 import { rest } from 'msw';
 import {
   BatchJob,
@@ -6,8 +6,11 @@ import {
   CommandSource,
   InProgress,
   NotOnline,
+  PlotConfiguration,
   ProcessUnit,
   ProcessValue,
+  ProcessValueCommandChoiceValue,
+  ProcessValueCommandFreeTextValue,
   ProcessValueType,
   Ready,
   RunLog,
@@ -84,16 +87,45 @@ export const handlers = [
       ctx.delay(),
       ctx.json<ProcessValue[]>([
         {
+          value_type: ProcessValueType.INT,
+          name: 'timestamp',
+          value: new Date().valueOf(),
+        },
+        {
           value_type: ProcessValueType.FLOAT,
           name: 'PU01 Speed',
-          value: 123 + Math.random() * 2,
-          writable: false,
+          value: 120,
           value_unit: '%',
         }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'PU02 Speed',
+          value: 121,
+          value_unit: '%',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'PU03 Speed',
+          value: 122,
+          value_unit: '%',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'PU04 Speed',
+          value: 123,
+          value_unit: '%',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'PU05 Speed',
+          value: 124,
+          value_unit: '%',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'PU06 Speed',
+          value: 125,
+          value_unit: '%',
+        },
+        {
           value_type: ProcessValueType.STRING,
           name: 'Some other Process Value',
           value: 'So very valuable',
-          writable: false,
           commands: [
             {command: 'some_command', name: 'Some Command'},
             {command: 'some_other_command', name: 'Some Other Command'},
@@ -103,32 +135,107 @@ export const handlers = [
           name: 'A value with unit',
           value: 1000,
           value_unit: 'm',
-          valid_value_units: ['m', 'cm', 'mm', 'km'],
-          writable: true,
+          commands: [
+            {
+              command: 'fdsa', name: 'fdsa', value: {
+                value: 1000,
+                value_type: ProcessValueType.INT,
+                value_unit: 'm',
+                valid_value_units: ['m', 'cm', 'mm', 'km'],
+              },
+            },
+          ],
         }, {
           value_type: ProcessValueType.STRING,
           name: 'Many Data',
           value: 'HANDLE IT',
-          writable: false,
         }, {
           value_type: ProcessValueType.FLOAT,
           name: 'FT01 Flow',
           value: 123 + Math.random() * 2,
-          writable: true,
           value_unit: 'L/h',
-          valid_value_units: ['L/h', 'm3/h', 'L/m', 'm3/m'],
+          commands: [
+            {
+              command: 'fdsafsa',
+              name: 'Set',
+              value: {
+                value: 123 + Math.random() * 2,
+                value_unit: 'L/h',
+                valid_value_units: ['L/h', 'm3/h', 'L/m', 'm3/m'],
+                value_type: ProcessValueType.FLOAT,
+              },
+            },
+          ],
         }, {
           value_type: ProcessValueType.STRING,
-          name: 'A writable text value',
+          name: 'Writable text',
           value: 'VaLuE',
-          writable: true,
+          commands: [{
+            name: 'jiojio',
+            command: 'jiojio',
+            value: {
+              value: 'Writable text',
+              value_type: ProcessValueCommandFreeTextValue.value_type.STRING,
+            },
+          }, {
+            name: 'something',
+            command: 'something',
+          }, {
+            name: 'something disabled',
+            command: 'something disabled',
+            disabled: true,
+          }, {
+            name: 'number',
+            command: 'set number',
+            value: {
+              value: 123,
+              value_unit: 'no',
+              valid_value_units: ['no'],
+              value_type: ProcessValueType.INT,
+            },
+          }, {
+            name: 'choice',
+            command: 'choice',
+            value: {
+              value_type: ProcessValueCommandChoiceValue.value_type.CHOICE,
+              value: 'first',
+              options: ['first', 'second', 'third'],
+            },
+          }],
         }, {
           value_type: ProcessValueType.FLOAT,
           name: 'TT01',
           value: 23.4 + Math.random() * 2,
-          writable: false,
           value_unit: 'degC',
-          valid_value_units: ['degC', 'degF'],
+          commands: [{
+            name: 'Set target temperature',
+            command: 'set_target_temperature',
+            value: {
+              value: 23.4 + Math.random() * 2,
+              value_unit: 'degC',
+              valid_value_units: ['degC', 'degF'],
+              value_type: ProcessValueType.FLOAT,
+            },
+          }],
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'TT02',
+          value: 23.4 + Math.random() * 2,
+          value_unit: 'degC',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'TT03',
+          value: 23.4 + Math.random() * 2,
+          value_unit: 'degC',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'TT04',
+          value: 23.4 + Math.random() * 2,
+          value_unit: 'degC',
+        }, {
+          value_type: ProcessValueType.STRING,
+          name: 'Flow path',
+          value: (getSeconds(Date.now()) % 10 < 3) ? 'Bypass' : (getSeconds(Date.now()) % 10 < 6) ? 'Prime with a long name' : undefined,
         },
       ]),
     );
@@ -205,6 +312,7 @@ export const handlers = [
   }),
 
   rest.get('/api/process_unit/:unitId/run_log', (req, res, context) => {
+    const timestamp = new Date().toISOString();
     return res(
       context.status(200),
       context.json<RunLog>({
@@ -220,7 +328,6 @@ export const handlers = [
               name: 'Amazing float value',
               value: 1.43253342,
               value_type: ProcessValueType.FLOAT,
-              writable: false,
               value_unit: 'afv',
             }],
             end_values: [],
@@ -233,10 +340,30 @@ export const handlers = [
               source: CommandSource.MANUALLY_ENTERED,
             },
             start_values: [
-              {name: 'Amazing float value', value: 999, value_type: ProcessValueType.FLOAT, writable: false, value_unit: 'afv'},
-              {name: 'Best value', value: 19.99, value_type: ProcessValueType.FLOAT, writable: false, value_unit: 'afv'},
-              {name: 'Such prices', value: 4299, value_type: ProcessValueType.FLOAT, writable: false, value_unit: 'afv'},
-              {name: 'Very affordable', value: 0.99, value_type: ProcessValueType.FLOAT, writable: false, value_unit: 'afv'},
+              {
+                name: 'Amazing float value',
+                value: 999,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+              },
+              {
+                name: 'Best value',
+                value: 19.99,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+              },
+              {
+                name: 'Such prices',
+                value: 4299,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+              },
+              {
+                name: 'Very affordable',
+                value: 0.99,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+              },
             ],
             end_values: [],
           }, {
@@ -248,12 +375,28 @@ export const handlers = [
               source: CommandSource.MANUALLY_ENTERED,
             },
             start_values: [
-              {name: 'Waaagh?', value: 'No waagh', value_type: ProcessValueType.STRING, writable: false},
-              {name: 'Dakka?', value: 'No dakka 🙁', value_type: ProcessValueType.STRING, writable: false},
+              {
+                name: 'Waaagh?',
+                value: 'No waagh',
+                value_type: ProcessValueType.STRING,
+              },
+              {
+                name: 'Dakka?',
+                value: 'No dakka 🙁',
+                value_type: ProcessValueType.STRING,
+              },
             ],
             end_values: [
-              {name: 'Waaagh?', value: 'WAAAGH!', value_type: ProcessValueType.STRING, writable: false},
-              {name: 'Dakka?', value: 'DAKKA! 😀', value_type: ProcessValueType.STRING, writable: false},
+              {
+                name: 'Waaagh?',
+                value: 'WAAAGH!',
+                value_type: ProcessValueType.STRING,
+              },
+              {
+                name: 'Dakka?',
+                value: 'DAKKA! 😀',
+                value_type: ProcessValueType.STRING,
+              },
             ],
           },
         ],
@@ -270,6 +413,67 @@ export const handlers = [
 "another key": "another value",
 "another injected": "line"
 }`),
+    );
+  }),
+
+  rest.get('/api/process_unit/:unitId/plot_configuration', (req, res, context) => {
+    return res(
+      context.status(200),
+      context.json<PlotConfiguration>({
+        x_axis_process_value_name: 'timestamp',
+        process_value_names_to_annotate: ['Flow path'],
+        color_regions: [{
+          process_value_name: 'Flow path',
+          value_color_map: {
+            'Bypass': '#3366dd33',
+            'Prime with a long name': '#33aa6633',
+          },
+        }],
+        sub_plots: [
+          {
+            ratio: 1.5,
+            axes: [
+              {
+                label: 'Red',
+                process_value_names: ['PU01 Speed', 'PU02 Speed', 'PU03 Speed', 'PU04 Speed', 'PU05 Speed', 'PU06 Speed'],
+                y_max: 126,
+                y_min: 119,
+                color: '#ff3333',
+              },
+              {
+                label: 'Blue',
+                process_value_names: ['TT01'],
+                y_max: 26,
+                y_min: 20,
+                color: '#1144ff',
+              },
+              {
+                label: 'Teal label',
+                process_value_names: ['TT02'],
+                y_max: 32,
+                y_min: 22,
+                color: '#43c5b7',
+              },
+            ],
+          },
+          {
+            ratio: 1,
+            axes: [{
+              label: 'Green',
+              process_value_names: ['TT03'],
+              y_max: 26,
+              y_min: 20,
+              color: '#33ff33',
+            }, {
+              label: 'orange',
+              process_value_names: ['TT04'],
+              y_max: 29,
+              y_min: 19,
+              color: '#ff8000',
+            }],
+          },
+        ],
+      }),
     );
   }),
 ];

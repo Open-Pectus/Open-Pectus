@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Callable
 from fastapi_websocket_pubsub import PubSubEndpoint
 from fastapi_websocket_rpc import RpcChannel
-from protocol.messages import MessageBase
+from openpectus.protocol.messages import MessageBase
 
 
 class ServerHandler():
@@ -73,7 +73,7 @@ class WsServerHandler(ServerHandler):
     def register_direct_handler(self, handler: Callable[[MessageBase], None]):
         self.direct_handler = handler
 
-    async def on_direct_message(self, msg: MessageBase):
+    async def on_direct_message(self, client_id: str, msg: MessageBase):
         if self.direct_handler is not None:
             self.direct_handler(msg)
 

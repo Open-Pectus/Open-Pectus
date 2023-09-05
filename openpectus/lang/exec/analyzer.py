@@ -123,7 +123,7 @@ class InfiniteBlockVisitor(AnalyzerVisitorBase):
     def __init__(self) -> None:
         super().__init__()
         self.has_global_end = False
-        self.requires_global_end = []
+        self.requires_global_end: List[PNode] = []
 
     def check_global_end_block(self, node: PEndBlock | PEndBlocks):
         p = node.parent
@@ -144,8 +144,8 @@ class InfiniteBlockVisitor(AnalyzerVisitorBase):
         super().visit_PProgram(node)
 
         if len(self.requires_global_end) > 0 and not self.has_global_end:
-            for node in self.requires_global_end:
-                self.add_item(self.create_item(node))
+            for n in self.requires_global_end:
+                self.add_item(self.create_item(n))
 
     def visit_PBlock(self, node: PBlock):
         super().visit_PBlock(node)
@@ -235,10 +235,13 @@ class ConditionAnalyzerVisitor(AnalyzerVisitorBase):
             ))
             return
 
+        def create_pint_unit(unit: str | None) -> pint.Unit:
+            return pint.Unit(unit)   # type: ignore
+
         if tag.unit is not None:
             tag_unit = tag.get_pint_unit()
             assert tag_unit is not None
-            condition_unit = pint.Unit(condition.tag_unit)
+            condition_unit = create_pint_unit(condition.tag_unit)
             if not tag_unit.is_compatible_with(condition_unit):
                 self.add_item(AnalyzerItem(
                     "IncompatibleUnits",

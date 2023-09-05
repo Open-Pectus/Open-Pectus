@@ -1,7 +1,7 @@
 
 import threading
 import time
-from typing import Callable
+from typing import Any, Callable
 
 
 class ZeroThreadTimer:
@@ -37,7 +37,7 @@ class OneThreadTimer():
 
     This allows controlled multithreading.
     """
-    def __init__(self, period_s: float, tick: Callable) -> None:
+    def __init__(self, period_s: float, tick: Callable[[], Any]) -> None:
         self.period_s = period_s
         self.tick = tick
         self.running = False

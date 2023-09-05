@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum, auto
-from typing import Awaitable, Callable, Dict
+from typing import Any, Awaitable, Callable, Dict, List
 from fastapi_websocket_pubsub.event_notifier import EventNotifier
 from pydantic import BaseModel
 from fastapi_websocket_pubsub import PubSubEndpoint
@@ -12,6 +12,7 @@ import logging
 
 from openpectus.protocol.exceptions import ProtocolException
 from openpectus.protocol.messages import (
+    UodInfoMsg,
     deserialize_msg,
     deserialize_msg_from_json,
     serialize_msg,
@@ -27,7 +28,7 @@ from openpectus.protocol.messages import (
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 ServerMessageHandler = Callable[[str, MessageBase], Awaitable[MessageBase]]
@@ -44,7 +45,7 @@ class RpcServerHandler(RpcEventServerMethods):
     def set_message_handler(self, handler: ServerMessageHandler):
         self._message_handler = handler
 
-    async def on_client_message(self, msg_type: str, msg_dict: dict):
+    async def on_client_message(self, msg_type: str, msg_dict: Dict[str, Any]):
         """Implements the server proxy's method. Is invoked by a client by its server proxy."""
         logger.debug(f"on_client_message was called with msg_type: {msg_type}, msg_dict: {msg_dict}")
         assert isinstance(self.channel, RpcChannel)
@@ -116,11 +117,34 @@ class TagsInfo(BaseModel):
 TagsInfo.update_forward_refs()
 
 
+class ReadingCommand(BaseModel):
+    name: str
+    command: str
+
+
+class ReadingDef(BaseModel):
+    label: str
+    tag_name: str
+    valid_value_units: List[str] | None
+    commands: List[ReadingCommand]
+
+
+ReadingDef.update_forward_refs()
+
+
+class ClientData(BaseModel):
+    client_id: str
+    readings: List[ReadingDef]
+    tags_info: TagsInfo
+
+
 class Aggregator:
     def __init__(self) -> None:
         logger.debug("Server init")
         self.channel_map: Dict[str, ChannelInfo] = {}
-        self.tags_map: Dict[str, TagsInfo] = {}
+        """ channel data, indexed by channel_id"""
+        self.client_data_map: Dict[str, ClientData] = {}
+        """ all client data except channels, indexed by client_id"""
         self.endpoint: PubSubEndpoint | None = None
 
     def set_endpoint(self, endpoint: PubSubEndpoint):
@@ -128,9 +152,7 @@ class Aggregator:
         assert isinstance(endpoint.methods, RpcServerHandler)
         endpoint.methods.set_message_handler(self.handle_message)
 
-    async def on_connect(
-        self, channel: RpcChannel
-    ):
+    async def on_connect(self, channel: RpcChannel):
         self.channel_map[channel.id] = ChannelInfo(
             client_id=None,
             engine_name="(Unregistered)",
@@ -163,7 +185,7 @@ class Aggregator:
             return result
 
     @staticmethod
-    def get_client_id(msg: RegisterEngineMsg):
+    def create_client_id(msg: RegisterEngineMsg):
         """ Defines the generation of the client_id that is uniquely assigned to each engine client.
 
         TODO: Considerations:
@@ -176,11 +198,9 @@ class Aggregator:
         """
         return msg.engine_name + "_" + msg.uod_name
 
-    async def handle_RegisterEngineMsg(            
-        self, channel_id, msg: RegisterEngineMsg
-    ) -> SuccessMessage | ErrorMessage:
+    async def handle_RegisterEngineMsg(self, channel_id, msg: RegisterEngineMsg) -> SuccessMessage | ErrorMessage:
         """ Registers engine """
-        client_id = Aggregator.get_client_id(msg)
+        client_id = Aggregator.create_client_id(msg)
         if channel_id not in self.channel_map.keys():
             logger.error(
                 f"Registration failed for client_id {client_id} and channel_id {channel_id}. Channel not found"
@@ -199,28 +219,51 @@ class Aggregator:
         # - disconnect/reconnect should work
         # - client kill/reconnect should work
         # - client_id reused with "same uod" should take over session, else fail as misconfigured client
+        # - add machine name + uod secret
         registrations = list(
             [x for x in self.channel_map.values() if x.client_id == client_id]
         )
-        if (
-            len(registrations) > 0
-            and registrations[0].status != ChannelStatusEnum.Disconnected
-        ):
+        if (len(registrations) > 0 and registrations[0].status != ChannelStatusEnum.Disconnected):
             logger.error(
                 f"""Registration failed for client_id {client_id} and channel_id {channel_id}.
                     Client has other channel"""
             )
             return ErrorMessage(message="Registration failed")
 
-        # we're not being async here...
-        # if False:
-        #     await False
-
         channelInfo.client_id = client_id
         channelInfo.engine_name = msg.engine_name
         channelInfo.uod_name = msg.uod_name
         channelInfo.status = ChannelStatusEnum.Registered
         logger.debug(f"Registration successful of client {client_id} on channel {channel_id}")
+
+        # initialize client data
+        if client_id not in self.client_data_map.keys():
+            self.client_data_map[client_id] = ClientData(client_id=client_id, readings=[], tags_info=TagsInfo(map={}))
+        return SuccessMessage()
+
+    async def handle_UodInfoMsg(self, channel_id: str, msg: UodInfoMsg) -> SuccessMessage | ErrorMessage:
+        ci = self.get_channel(channel_id)
+        if ci is None:
+            logger.error(f"Channel '{channel_id}' not found")
+            return ErrorMessage(message="Client unknown")
+        if ci.client_id is None or ci.status != ChannelStatusEnum.Registered:
+            logger.error(f"Channel '{channel_id}' has invalid status {ci.status} for this operation")
+            return ErrorMessage(message="Client not registered")
+        client_data = self.client_data_map.get(ci.client_id)
+        if client_data is None:
+            return ErrorMessage(message="Client data not initialized")
+
+        logger.debug(f"Got UodInfo from client: {str(msg)}")
+        client_data.readings = []
+        for r in msg.readings:
+            rd = ReadingDef(
+                label=r.label,
+                tag_name=r.tag_name,
+                valid_value_units=r.valid_value_units,
+                commands=[ReadingCommand(name=c.name, command=c.command) for c in r.commands]
+            )
+            client_data.readings.append(rd)
+
         return SuccessMessage()
 
     async def handle_TagsUpdatedMsg(self, channel_id, msg: TagsUpdatedMsg) -> SuccessMessage | ErrorMessage:
@@ -231,13 +274,13 @@ class Aggregator:
         if ci.client_id is None or ci.status != ChannelStatusEnum.Registered:
             logger.error(f"Channel '{channel_id}' has invalid status {ci.status} for this operation")
             return ErrorMessage(message="Client not registered")
+        client_data = self.client_data_map.get(ci.client_id)
+        if client_data is None:
+            return ErrorMessage(message="Client data not initialized")
 
-        logger.info(f"Got update from client: {str(msg)}")
-        tags = self.get_client_tags(ci.client_id)
-        if tags is None:
-            tags = self.init_client_tags(ci.client_id)
+        logger.debug(f"Got tags update from client: {str(msg)}")
         for ti in msg.tags:
-            tags.upsert(ti.name, ti.value, ti.value_unit)
+            client_data.tags_info.upsert(ti.name, ti.value, ti.value_unit)
         return SuccessMessage()
 
     async def on_disconnect(self, channel: RpcChannel):  # registered as handler on RpcEndpoint
@@ -253,14 +296,6 @@ class Aggregator:
             if ci.client_id == client_id:
                 return ci
         return None
-
-    def get_client_tags(self, client_id: str) -> TagsInfo | None:
-        return self.tags_map.get(client_id)
-
-    def init_client_tags(self, client_id: str) -> TagsInfo:
-        tags = TagsInfo(map={})
-        self.tags_map[client_id] = tags
-        return tags
 
     async def send_to_client(self, client_id: str, msg: MessageBase) -> MessageBase:
         logger.debug("send_to_client begin")
@@ -322,5 +357,5 @@ def _create_aggregator(router) -> Aggregator:
         methods_class=RpcServerHandler,
     )
     _server.set_endpoint(endpoint)
-    endpoint.register_route(router, path="/pubsub")
+    endpoint.register_route(router, path="/engine-pubsub")
     return _server
