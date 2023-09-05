@@ -26,14 +26,15 @@ import { D3Selection } from './process-plot-d3.types';
     <svg class="h-full w-full overflow-visible select-none" #plot></svg>
     <app-yaxis-override-dialog class="absolute p-0 block overflow-visible mx-2 my-4"
                                *ngIf="(yAxisOverrideDialogData | ngrxPush) !== undefined"
-                               [data]="yAxisOverrideDialogData | ngrxPush"></app-yaxis-override-dialog>
+                               [data]="yAxisOverrideDialogData | ngrxPush"
+                               [plotConfiguration]="plotConfiguration | ngrxPush"></app-yaxis-override-dialog>
   `,
 })
 export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   @ViewChild('plot', {static: false}) plotElement?: ElementRef<SVGSVGElement>;
   @Input() isCollapsed = false;
   protected yAxisOverrideDialogData = this.store.select(ProcessPlotSelectors.yAxisOverrideDialogData);
-  private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(filter(UtilMethods.isNotNullOrUndefined));
+  protected plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(filter(UtilMethods.isNotNullOrUndefined));
   private processValuesLog = this.store.select(ProcessPlotSelectors.processValuesLog);
   private markedDirty = this.store.select(ProcessPlotSelectors.markedDirty);
   private scalesMarkedDirty = this.store.select(ProcessPlotSelectors.scalesMarkedDirty);
