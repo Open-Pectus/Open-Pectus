@@ -1,6 +1,6 @@
 import { createAction, props } from '@ngrx/store';
 import { PlotConfiguration } from '../../../api';
-import { YAxisLimits, YAxisOverrideDialogData } from '../process-plot-d3.types';
+import { YAxesLimitsOverride, YAxisLimits, YAxisOverrideDialogData } from '../process-plot-d3.types';
 
 const source = '[Process Plot] ';
 
@@ -19,4 +19,6 @@ export class ProcessPlotActions {
   static yOverrideDialogClosed = createAction(source + 'Y Axis Override Dialog Closed');
   static yOverrideDialogSaveClicked = createAction(source + 'Y Axis Override Dialog Save Clicked',
     props<{ subplotIndex: number, axisIndex: number, limits: YAxisLimits }>());
+  static yAxesOverrideLimitsRestoredFromLocalStorage = createAction(source + 'Y Axes Override Limits Restored From LocalStorage',
+    props<{ yAxesLimitsOverride: YAxesLimitsOverride }>());
 }

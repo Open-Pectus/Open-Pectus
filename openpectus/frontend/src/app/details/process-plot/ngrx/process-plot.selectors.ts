@@ -19,6 +19,7 @@ export class ProcessPlotSelectors {
       return produce(plotConfiguration, draft => {
         yAxesLimitsOverride?.forEach((subplotOverride, subplotIndex) => {
           subplotOverride.forEach((axisOverride, axisIndex) => {
+            if(axisOverride === null) return;
             draft.sub_plots[subplotIndex].axes[axisIndex].y_min = axisOverride.yMin;
             draft.sub_plots[subplotIndex].axes[axisIndex].y_max = axisOverride.yMax;
           });

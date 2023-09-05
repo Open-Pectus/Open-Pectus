@@ -38,3 +38,5 @@ export interface YAxisLimits {
   yMax: number;
   yMin: number;
 }
+
+export type YAxesLimitsOverride = (YAxisLimits | null)[][];
