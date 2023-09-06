@@ -45,11 +45,21 @@ export class YAxisOverrideDialogComponent {
   @ViewChild('max') maxInput?: ElementRef<HTMLInputElement>;
   protected data = this.store.select(ProcessPlotSelectors.yAxisOverrideDialogData);
   private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration);
+  private yAxesLimitsOverride = this.store.select(ProcessPlotSelectors.yAxesLimitsOverride);
   protected axisConfiguration: Observable<PlotAxis | undefined> = this.data.pipe(
-    concatLatestFrom(() => this.plotConfiguration),
-    map(([data, plotConfiguration]) => {
+    concatLatestFrom(() => [
+      this.plotConfiguration,
+      this.yAxesLimitsOverride,
+    ]),
+    map(([data, plotConfiguration, yAxesLimitsOverride]) => {
       if(plotConfiguration === undefined || data === undefined) return;
-      return plotConfiguration.sub_plots[data.subplotIndex].axes[data.axisIndex];
+      const yAxisOverride = yAxesLimitsOverride?.[data.subplotIndex]?.[data.axisIndex];
+      const axisConfig = plotConfiguration.sub_plots[data.subplotIndex].axes[data.axisIndex];
+      return {
+        ...axisConfig,
+        y_min: yAxisOverride?.min ?? axisConfig.y_min,
+        y_max: yAxisOverride?.max ?? axisConfig.y_max,
+      };
     }),
     tap(axisConfiguration => {
       if(axisConfiguration !== undefined) setTimeout(() => this.maxInput?.nativeElement.select());
