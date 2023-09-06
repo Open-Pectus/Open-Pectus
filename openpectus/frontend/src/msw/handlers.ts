@@ -88,12 +88,12 @@ export const handlers = [
       ctx.json<ProcessValue[]>([
         {
           value_type: ProcessValueType.INT,
-          name: 'timestamp',
+          name: 'Timestamp',
           value: new Date().valueOf(),
         },
         {
           value_type: ProcessValueType.INT,
-          name: 'timestamp2',
+          name: 'Timestamp2',
           value: new Date().valueOf() + 1000000000000,
         },
         {
@@ -424,7 +424,7 @@ export const handlers = [
     return res(
       context.status(200),
       context.json<PlotConfiguration>({
-        x_axis_process_value_names: ['timestamp', 'timestamp2'],
+        x_axis_process_value_names: ['Timestamp', 'Timestamp2'],
         process_value_names_to_annotate: ['Flow path'],
         color_regions: [{
           process_value_name: 'Flow path',

@@ -83,7 +83,7 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
 
       this.setupOnResize(this.plotElement.nativeElement);
       this.setupOnDataChange(plotConfiguration);
-      this.setupOnAxesConfigurationChange();
+      this.setupOnAxesConfigurationChange(this.svg);
       this.setupOnMarkedDirty();
       this.tooltip.setupTooltip();
       this.zoomAndPan.setupZoom();
@@ -108,7 +108,14 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
   }
 
   private insertSvgElements(plotConfiguration: PlotConfiguration, svg: D3Selection<SVGSVGElement>) {
-    svg.append('g').attr('class', 'x-axis');
+    svg.append('rect').attr('class', `x-axis-background`)
+      .attr('fill', 'white')
+      .style('cursor', 'pointer');
+    svg.append('g').attr('class', 'x-axis')
+      .style('cursor', 'pointer');
+    svg.append('text').attr('class', 'x-axis-label')
+      .style('cursor', 'pointer')
+      .attr('font-size', ProcessPlotFontSizes.axisLabelSize);
     plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
       const subPlotG = svg.append('g')
         .attr('class', `subplot subplot-${subPlotIndex}`);
@@ -131,8 +138,9 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
         subPlotG.append('g').attr('class', `y-axis y-axis-${axisIndex}`)
           .style('color', axis.color)
           .style('cursor', 'pointer');
-        subPlotG.append('text').attr('class', `axis-label axis-label-${axisIndex}`)
+        subPlotG.append('text').attr('class', `y-axis-label y-axis-label-${axisIndex}`)
           .attr('fill', axis.color)
+          .style('cursor', 'pointer')
           .text(axis.label);
         subPlotG.append('g').attr('class', `line line-${axisIndex}`)
           .attr('clip-path', `url(#subplot-clip-path-${subPlotIndex})`)
@@ -245,7 +253,7 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
     });
   }
 
-  private setupOnAxesConfigurationChange() {
+  private setupOnAxesConfigurationChange(svg: D3Selection<SVGSVGElement>) {
     combineLatest([
       this.yAxesLimitsOverride,
       this.zoomAndPanDomainOverrides,
@@ -267,6 +275,7 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
         });
       });
 
+      svg.select('text.x-axis-label').text(xAxisProcessValueName);
       this.fitXScaleToData(processValuesLog, xAxisProcessValueName);
       if(zoomAndPanDomainOverrides !== undefined) {
         zoomAndPanDomainOverrides.y.forEach((subPlotConfig, subPlotIndex) => {

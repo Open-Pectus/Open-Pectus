@@ -10,14 +10,15 @@ import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
     <ng-container *ngrxLet="data; let data">
       <ng-container *ngIf="data !== undefined">
         <div class="fixed left-0 top-0 right-0 bottom-0" (click)="onClose()"></div>
-        <div class="bg-white p-2.5 rounded-md border-2 flex flex-col absolute gap-2.5 shadow-md shadow-gray-400 -translate-y-full"
-             [style.margin]="margin"
-             [style.left.px]="data?.position?.x"
-             [style.top.px]="data?.position?.y"
-             (keyup.enter)="saveButton.click()"
-             (keyup.escape)="onClose()">
+        <div
+            class="bg-white p-2.5 rounded-md border-2 border-gray-400 flex flex-col absolute gap-2.5 shadow-md shadow-gray-400 -translate-y-full"
+            [style.margin]="margin"
+            [style.left.px]="data?.position?.x"
+            [style.top.px]="data?.position?.y"
+            (keyup.enter)="saveButton.click()"
+            (keyup.escape)="onClose()">
           <p class="whitespace-nowrap">Choose process value for x axis</p>
-          <select #select>
+          <select #select class="border border-gray-800 rounded outline-none cursor-pointer">
             <option *ngFor="let option of options | ngrxPush" [value]="option"
                     [selected]="(xAxisProcessValueName | ngrxPush) === option">{{option}}</option>
           </select>

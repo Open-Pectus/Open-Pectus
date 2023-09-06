@@ -8,7 +8,7 @@ export class ProcessPlotPlacement {
   // Configurable values
   private readonly subPlotGap = 20;
   private readonly axisGap = 14;
-  private readonly yAxisLabelMargin = 8;
+  private readonly axisLabelMargin = 8;
   private readonly pixelsPerTick = 42;
 
   constructor(private plotConfiguration: PlotConfiguration,
@@ -19,9 +19,8 @@ export class ProcessPlotPlacement {
   updateElementPlacements() {
     const svgHeight = this.svg.node()?.height.baseVal.value ?? 0;
     const svgWidth = this.svg.node()?.width.baseVal.value ?? 0;
-    const xAxisHeight = this.svg.select<SVGGElement>('.x-axis').node()?.getBoundingClientRect().height ?? 0;
     const subPlotLeftRight = this.calculatePlotLeftRight(this.svg, this.plotConfiguration, svgWidth);
-    this.placeXAxis(this.svg, svgHeight, subPlotLeftRight, xAxisHeight);
+    const xAxisHeight = this.placeXAxis(this.svg, svgHeight, subPlotLeftRight);
     const coloredRegionLabelHeight = this.calculateColorRegionLabelsHeight(this.svg, this.plotConfiguration);
 
     this.plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
@@ -59,7 +58,7 @@ export class ProcessPlotPlacement {
     this.yScales[subPlotIndex].forEach(yScale => yScale.range([topBottom.bottom, topBottom.top]));
     subPlot.axes.forEach((_, axisIndex) => {
       const axisXTransform = this.placeYAxis(axisIndex, subPlotG, leftRight);
-      this.placeAxisLabelAndBackground(axisIndex, subPlotG, topBottom, axisXTransform);
+      this.placeYAxisLabelAndBackground(axisIndex, subPlotG, topBottom, axisXTransform);
     });
   }
 
@@ -87,35 +86,53 @@ export class ProcessPlotPlacement {
   }
 
   private mapYAxisWidth(yAxis: SVGGElement) {
-    return yAxis.getBoundingClientRect().width + this.axisGap + ProcessPlotFontSizes.axisLabelSize + this.yAxisLabelMargin;
+    return yAxis.getBoundingClientRect().width + this.axisGap + ProcessPlotFontSizes.axisLabelSize + this.axisLabelMargin;
   }
 
-  private placeAxisLabelAndBackground(axisIndex: number, subPlotG: D3Selection<SVGGElement>, topBottom: TopBottom,
-                                      axisXTransform: number) {
+  private placeYAxisLabelAndBackground(axisIndex: number, subPlotG: D3Selection<SVGGElement>, topBottom: TopBottom,
+                                       axisXTransform: number) {
     const isLeftAxis = axisIndex === 0;
     const axisWidth = subPlotG.selectChild<SVGGElement>(`.y-axis-${axisIndex}`).node()?.getBoundingClientRect().width ?? 0;
     const axisHeight = topBottom.bottom - topBottom.top;
-    const labelWidth = subPlotG.selectChild<SVGGElement>(`.axis-label-${axisIndex}`).node()?.getBoundingClientRect().height ?? 0;
+    const labelWidth = subPlotG.selectChild<SVGGElement>(`.y-axis-label-${axisIndex}`).node()?.getBoundingClientRect().height ?? 0;
     const labelRotation = isLeftAxis ? -90 : 90;
-    const labelXTransform = axisXTransform + (isLeftAxis ? -axisWidth - this.yAxisLabelMargin : axisWidth + this.yAxisLabelMargin);
+    const labelXTransform = axisXTransform + (isLeftAxis ? -axisWidth - this.axisLabelMargin : axisWidth + this.axisLabelMargin);
     const labelYTransform = topBottom.top + (axisHeight / 2) + (isLeftAxis ? (labelWidth / 2) : -(labelWidth / 2));
     const labelSize = ProcessPlotFontSizes.axisLabelSize;
-    subPlotG.selectChild(`.axis-label-${axisIndex}`)
+    subPlotG.selectChild(`.y-axis-label-${axisIndex}`)
       .attr('transform', `translate(${[labelXTransform, labelYTransform]}) rotate(${labelRotation})`)
       .style('font-size', labelSize);
 
     subPlotG.selectChild(`.y-axis-background-${axisIndex}`)
       .attr('x', isLeftAxis ? labelXTransform - labelSize : axisXTransform)
       .attr('y', topBottom.top)
-      .attr('width', axisWidth + this.yAxisLabelMargin + labelSize)
+      .attr('width', axisWidth + this.axisLabelMargin + labelSize)
       .attr('height', axisHeight);
   }
 
   private placeXAxis(svg: D3Selection<SVGSVGElement>, svgHeight: number,
-                     leftRight: LeftRight, xAxisHeight: number) {
+                     leftRight: LeftRight) {
+    const axisOnlyHeight = this.svg.select<SVGGElement>('.x-axis').node()?.getBoundingClientRect().height ?? 0;
+    const totalHeight = axisOnlyHeight + this.axisLabelMargin + ProcessPlotFontSizes.axisLabelSize;
     this.xScale.range([leftRight.left, leftRight.right]);
     svg.selectChild<SVGGElement>('.x-axis')
-      .attr('transform', `translate(${[0, svgHeight - xAxisHeight]})`);
+      .attr('transform', `translate(${[0, svgHeight - totalHeight]})`);
+    this.placeXAxisLabelAndBackground(svg, svgHeight, totalHeight, leftRight);
+    // noinspection JSSuspiciousNameCombination
+    return totalHeight;
+  }
+
+  private placeXAxisLabelAndBackground(svg: D3Selection<SVGSVGElement>, svgHeight: number, totalHeight: number, leftRight: LeftRight) {
+    const axisWidth = leftRight.right - leftRight.left;
+    const center = leftRight.left + axisWidth / 2;
+    svg.selectChild<SVGTextElement>('text.x-axis-label').attr('transform',
+      `translate(${[center, svgHeight]})`);
+
+    svg.selectChild<SVGRectElement>('rect.x-axis-background')
+      .attr('x', leftRight.left)
+      .attr('y', svgHeight - totalHeight)
+      .attr('width', leftRight.right)
+      .attr('height', totalHeight);
   }
 
   private placeSubPlotBorder(subPlotG: D3Selection<SVGGElement>,
