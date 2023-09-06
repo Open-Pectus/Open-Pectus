@@ -7,13 +7,13 @@ import { SharedModule } from '../../shared/shared.module';
 import { ProcessPlotEffects } from './ngrx/process-plot.effects';
 import { processPlotSlice } from './ngrx/process-plot.reducer';
 import { ProcessPlotContainerComponent } from './process-plot-container.component';
-import { ProcessPlotD3Component } from './process-plot-d3.component';
-import { YAxisOverrideDialogComponent } from './yaxis-override-dialog.component';
+import { ProcessPlotComponent } from './process-plot.component';
+import { YAxisOverrideDialogComponent } from './y-axis-override-dialog.component';
 
 
 @NgModule({
   declarations: [
-    ProcessPlotD3Component,
+    ProcessPlotComponent,
     ProcessPlotContainerComponent,
     YAxisOverrideDialogComponent,
   ],
@@ -26,7 +26,7 @@ import { YAxisOverrideDialogComponent } from './yaxis-override-dialog.component'
     LetDirective,
   ],
   exports: [
-    ProcessPlotD3Component,
+    ProcessPlotComponent,
     ProcessPlotContainerComponent,
   ],
 })

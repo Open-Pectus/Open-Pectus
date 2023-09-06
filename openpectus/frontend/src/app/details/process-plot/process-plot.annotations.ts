@@ -1,9 +1,9 @@
 import { ScaleLinear } from 'd3';
 import { PlotConfiguration } from '../../api';
 import { ProcessValueLog } from './ngrx/process-plot.reducer';
-import { Annotation, D3Selection } from './process-plot-d3.types';
+import { Annotation, D3Selection } from './process-plot.types';
 
-export class ProcessPlotD3Annotations {
+export class ProcessPlotAnnotations {
   constructor(private svg: D3Selection<SVGSVGElement>,
               private xScale: ScaleLinear<number, number>,
               private yScales: ScaleLinear<number, number>[][]) {}

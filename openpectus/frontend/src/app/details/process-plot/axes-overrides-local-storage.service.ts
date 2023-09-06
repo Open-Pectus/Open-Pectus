@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { YAxesLimitsOverride } from './process-plot-d3.types';
+import { YAxesLimitsOverride } from './process-plot.types';
 
 @Injectable({
   providedIn: 'root',

@@ -1,6 +1,6 @@
 import { createAction, props } from '@ngrx/store';
 import { PlotConfiguration } from '../../../api';
-import { AxisLimits, YAxesLimitsOverride, YAxisOverrideDialogData } from '../process-plot-d3.types';
+import { AxisLimits, YAxesLimitsOverride, YAxisOverrideDialogData } from '../process-plot.types';
 
 const source = '[Process Plot] ';
 

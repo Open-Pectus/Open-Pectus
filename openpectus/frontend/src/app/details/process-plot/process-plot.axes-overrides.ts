@@ -1,9 +1,9 @@
 import { Store } from '@ngrx/store';
 import { PlotConfiguration } from '../../api';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
-import { D3Selection } from './process-plot-d3.types';
+import { D3Selection } from './process-plot.types';
 
-export class ProcessPlotD3AxesOverrides {
+export class ProcessPlotAxesOverrides {
   constructor(private store: Store,
               private plotConfiguration: PlotConfiguration,
               private svg: D3Selection<SVGSVGElement>,

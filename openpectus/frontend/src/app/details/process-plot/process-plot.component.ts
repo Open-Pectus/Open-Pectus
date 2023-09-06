@@ -9,25 +9,25 @@ import { UtilMethods } from '../../shared/util-methods';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessValueLog } from './ngrx/process-plot.reducer';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
-import { ProcessPlotD3ZoomAndPan } from './process-plot-d3-zoom-and.pan';
-import { ProcessPlotD3Annotations } from './process-plot-d3.annotations';
-import { ProcessPlotD3AxesOverrides } from './process-plot-d3.axes-overrides';
-import { ProcessPlotD3ColoredRegions } from './process-plot-d3.colored-regions';
-import { ProcessPlotD3FontSizes } from './process-plot-d3.font-sizes';
-import { ProcessPlotD3Lines } from './process-plot-d3.lines';
-import { ProcessPlotD3Placement } from './process-plot-d3.placement';
-import { ProcessPlotD3Tooltip } from './process-plot-d3.tooltip';
-import { D3Selection } from './process-plot-d3.types';
+import { ProcessPlotAnnotations } from './process-plot.annotations';
+import { ProcessPlotAxesOverrides } from './process-plot.axes-overrides';
+import { ProcessPlotColoredRegions } from './process-plot.colored-regions';
+import { ProcessPlotFontSizes } from './process-plot.font-sizes';
+import { ProcessPlotLines } from './process-plot.lines';
+import { ProcessPlotPlacement } from './process-plot.placement';
+import { ProcessPlotTooltip } from './process-plot.tooltip';
+import { D3Selection } from './process-plot.types';
+import { ProcessPlotZoomAndPan } from './process-plot.zoom-and-pan';
 
 @Component({
-  selector: 'app-process-plot-d3',
+  selector: 'app-process-plot',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <svg class="h-full w-full overflow-visible select-none" #plot></svg>
-    <app-yaxis-override-dialog class="top-0 left-0" [margin]="padding"></app-yaxis-override-dialog>
+    <app-y-axis-override-dialog class="top-0 left-0" [margin]="padding"></app-y-axis-override-dialog>
   `,
 })
-export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
+export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
   @ViewChild('plot', {static: false}) plotElement?: ElementRef<SVGSVGElement>;
   @Input() isCollapsed = false;
   private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(
@@ -41,13 +41,13 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
   private yScales: ScaleLinear<number, number>[][] = [];
   private svg?: D3Selection<SVGSVGElement>;
   private componentDestroyed = new Subject<void>();
-  private placement?: ProcessPlotD3Placement;
-  private lines?: ProcessPlotD3Lines;
-  private coloredRegions?: ProcessPlotD3ColoredRegions;
-  private annotations?: ProcessPlotD3Annotations;
-  private tooltip?: ProcessPlotD3Tooltip;
-  private zoomAndPan?: ProcessPlotD3ZoomAndPan;
-  private axesOverrides?: ProcessPlotD3AxesOverrides;
+  private placement?: ProcessPlotPlacement;
+  private lines?: ProcessPlotLines;
+  private coloredRegions?: ProcessPlotColoredRegions;
+  private annotations?: ProcessPlotAnnotations;
+  private tooltip?: ProcessPlotTooltip;
+  private zoomAndPan?: ProcessPlotZoomAndPan;
+  private axesOverrides?: ProcessPlotAxesOverrides;
 
   constructor(private store: Store,
               private processValuePipe: ProcessValuePipe,
@@ -68,15 +68,15 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
       this.yScales = this.createYScales(plotConfiguration);
       this.insertSvgElements(this.svg, plotConfiguration);
 
-      this.placement = new ProcessPlotD3Placement(this.svg, plotConfiguration, this.xScale, this.yScales);
-      this.lines = new ProcessPlotD3Lines(this.svg, this.xScale, this.yScales);
-      this.coloredRegions = new ProcessPlotD3ColoredRegions(this.svg, this.xScale, this.yScales);
-      this.annotations = new ProcessPlotD3Annotations(this.svg, this.xScale, this.yScales);
-      this.tooltip = new ProcessPlotD3Tooltip(plotConfiguration, this.processValuesLog, this.processValuePipe, this.svg, this.xScale);
-      this.zoomAndPan = new ProcessPlotD3ZoomAndPan(
+      this.placement = new ProcessPlotPlacement(this.svg, plotConfiguration, this.xScale, this.yScales);
+      this.lines = new ProcessPlotLines(this.svg, this.xScale, this.yScales);
+      this.coloredRegions = new ProcessPlotColoredRegions(this.svg, this.xScale, this.yScales);
+      this.annotations = new ProcessPlotAnnotations(this.svg, this.xScale, this.yScales);
+      this.tooltip = new ProcessPlotTooltip(plotConfiguration, this.processValuesLog, this.processValuePipe, this.svg, this.xScale);
+      this.zoomAndPan = new ProcessPlotZoomAndPan(
         this.store, this.componentDestroyed, plotConfiguration, this.svg, this.xScale, this.yScales,
       );
-      this.axesOverrides = new ProcessPlotD3AxesOverrides(this.store, plotConfiguration, this.svg);
+      this.axesOverrides = new ProcessPlotAxesOverrides(this.store, plotConfiguration, this.svg);
 
       this.setupOnResize(this.plotElement.nativeElement);
       this.setupOnDataChange(plotConfiguration);
@@ -113,10 +113,10 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
         .attr('fill', 'blue')
         .attr('stroke-dasharray', 1.5)
         .attr('stroke-width', 1.5)
-        .style('font-size', ProcessPlotD3FontSizes.annotationLabelSize);
+        .style('font-size', ProcessPlotFontSizes.annotationLabelSize);
       plotConfiguration.color_regions.forEach((_, colorRegionIndex) => {
         subPlotG.append('g').attr('class', `color-region-${colorRegionIndex}`)
-          .style('font-size', ProcessPlotD3FontSizes.annotationLabelSize)
+          .style('font-size', ProcessPlotFontSizes.annotationLabelSize)
           .attr('fill', 'black');
       });
       subPlot.axes.forEach((axis, axisIndex) => {
@@ -152,7 +152,7 @@ export class ProcessPlotD3Component implements OnDestroy, AfterViewInit {
     });
     const tooltipG = svg.append('g').attr('class', 'tooltip')
       .style('pointer-events', 'none')
-      .style('font', `${ProcessPlotD3FontSizes.tooltip}px sans-serif`);
+      .style('font', `${ProcessPlotFontSizes.tooltip}px sans-serif`);
     tooltipG.append('rect').attr('class', 'background')
       .attr('fill', 'white')
       .attr('stroke', 'gray')

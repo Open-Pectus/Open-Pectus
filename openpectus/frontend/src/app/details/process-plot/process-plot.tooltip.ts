@@ -3,10 +3,10 @@ import { firstValueFrom, Observable } from 'rxjs';
 import { PlotConfiguration, ProcessValue } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 import { ProcessValueLog } from './ngrx/process-plot.reducer';
-import { ProcessPlotD3FontSizes } from './process-plot-d3.font-sizes';
-import { D3Selection } from './process-plot-d3.types';
+import { ProcessPlotFontSizes } from './process-plot.font-sizes';
+import { D3Selection } from './process-plot.types';
 
-export class ProcessPlotD3Tooltip {
+export class ProcessPlotTooltip {
   static margin = {x: 10, y: 8};
   placementRelativeToMouse = {x: 1, y: 14};
 
@@ -69,13 +69,13 @@ export class ProcessPlotD3Tooltip {
     tooltipG.style('display', null);
 
     const text = tooltipG.selectChild('text')
-      .attr('transform', `translate(${[ProcessPlotD3Tooltip.margin.x, ProcessPlotD3Tooltip.margin.y + 2]})`)
+      .attr('transform', `translate(${[ProcessPlotTooltip.margin.x, ProcessPlotTooltip.margin.y + 2]})`)
       .call(txt => txt
         .selectAll('tspan')
         .data(processValues)
         .join('tspan')
         .attr('x', 0)
-        .attr('y', (_, i) => `${i * ProcessPlotD3FontSizes.tooltip}pt`)
+        .attr('y', (_, i) => `${i * ProcessPlotFontSizes.tooltip}pt`)
         .attr('fill', d => this.plotConfiguration.sub_plots.flatMap<string | undefined>(subPlot => {
           return subPlot.axes.find(axis => {
             return axis.process_value_names.includes(d.name);
@@ -89,8 +89,8 @@ export class ProcessPlotD3Tooltip {
     const textNode = text.node() as SVGTextElement;
     const {width, height} = textNode.getBBox();
     tooltipG.selectChild('rect.background')
-      .attr('width', width + 2 * ProcessPlotD3Tooltip.margin.x)
-      .attr('height', height + 2 * ProcessPlotD3Tooltip.margin.y);
+      .attr('width', width + 2 * ProcessPlotTooltip.margin.x)
+      .attr('height', height + 2 * ProcessPlotTooltip.margin.y);
   }
 
   private line(subPlotBorder: D3Selection<SVGGElement>, xAxisDatum?: ProcessValue) {

@@ -5,10 +5,10 @@ import { map, Observable, tap } from 'rxjs';
 import { PlotAxis } from '../../api';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
-import { AxisLimits } from './process-plot-d3.types';
+import { AxisLimits } from './process-plot.types';
 
 @Component({
-  selector: 'app-yaxis-override-dialog',
+  selector: 'app-y-axis-override-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ng-container *ngrxLet="data; let data">

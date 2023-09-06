@@ -2,10 +2,10 @@ import { line, ScaleLinear } from 'd3';
 import { PlotAxis, PlotConfiguration } from '../../api';
 import { UtilMethods } from '../../shared/util-methods';
 import { ProcessValueLog } from './ngrx/process-plot.reducer';
-import { D3Selection } from './process-plot-d3.types';
-import { ProcessPlotDashArrays } from './process-plot-dash-arrays';
+import { ProcessPlotDashArrays } from './process-plot.dash-arrays';
+import { D3Selection } from './process-plot.types';
 
-export class ProcessPlotD3Lines {
+export class ProcessPlotLines {
   constructor(private svg: D3Selection<SVGSVGElement>,
               private xScale: ScaleLinear<number, number>,
               private yScales: ScaleLinear<number, number>[][]) {}

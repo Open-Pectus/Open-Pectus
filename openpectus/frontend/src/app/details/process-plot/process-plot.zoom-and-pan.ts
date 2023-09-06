@@ -4,9 +4,9 @@ import { firstValueFrom, Subject, takeUntil } from 'rxjs';
 import { PlotConfiguration } from '../../api';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
-import { AxisLimits, D3Selection } from './process-plot-d3.types';
+import { AxisLimits, D3Selection } from './process-plot.types';
 
-export class ProcessPlotD3ZoomAndPan {
+export class ProcessPlotZoomAndPan {
   private zoomedSubplotIndices = this.store.select(ProcessPlotSelectors.zoomedSubplotIndices);
 
   constructor(private store: Store,

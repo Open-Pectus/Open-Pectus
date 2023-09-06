@@ -2,7 +2,7 @@ import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
 import { PlotConfiguration, ProcessValue } from '../../../api';
 import { DetailsActions } from '../../ngrx/details.actions';
-import { YAxesLimitsOverride, YAxisOverrideDialogData, ZoomAndPanDomainOverrides } from '../process-plot-d3.types';
+import { YAxesLimitsOverride, YAxisOverrideDialogData, ZoomAndPanDomainOverrides } from '../process-plot.types';
 import { ProcessPlotActions } from './process-plot.actions';
 
 export type ProcessValueLog = Record<string, ProcessValue[]>

@@ -1,9 +1,9 @@
 import { ScaleLinear } from 'd3';
 import { PlotColorRegion, PlotConfiguration } from '../../api';
 import { ProcessValueLog } from './ngrx/process-plot.reducer';
-import { ColoredRegionRect, D3Selection } from './process-plot-d3.types';
+import { ColoredRegionRect, D3Selection } from './process-plot.types';
 
-export class ProcessPlotD3ColoredRegions {
+export class ProcessPlotColoredRegions {
   constructor(private svg: D3Selection<SVGSVGElement>,
               private xScale: ScaleLinear<number, number>,
               private yScales: ScaleLinear<number, number>[][]) {}
