@@ -10,7 +10,6 @@ export type ProcessValueLog = Record<string, ProcessValue[]>
 export interface ProcessPlotState {
   plotConfiguration?: PlotConfiguration;
   processValuesLog: ProcessValueLog;
-  zoomedSubplotIndices: number[];
   markedDirty: boolean;
   yAxisOverrideDialogData?: YAxisOverrideDialogData;
   xAxisProcessValueOverride?: string;
@@ -20,16 +19,12 @@ export interface ProcessPlotState {
 
 const initialState: ProcessPlotState = {
   processValuesLog: {},
-  zoomedSubplotIndices: [],
   markedDirty: false,
 };
 
 const reducer = createReducer(initialState,
   on(ProcessPlotActions.plotConfigurationFetched, (state, {configuration}) => produce(state, draft => {
     draft.plotConfiguration = configuration;
-  })),
-  on(ProcessPlotActions.processPlotZoomed, (state, {subPlotIndex}) => produce(state, draft => {
-    draft.zoomedSubplotIndices.push(subPlotIndex);
   })),
   on(ProcessPlotActions.processPlotZoomed,
     ProcessPlotActions.processPlotPanned,
@@ -44,7 +39,6 @@ const reducer = createReducer(initialState,
   on(ProcessPlotActions.processPlotZoomReset,
     ProcessPlotActions.processPlotReset,
     (state) => produce(state, draft => {
-      draft.zoomedSubplotIndices = [];
       draft.zoomAndPanDomainOverrides = undefined;
     })),
   on(ProcessPlotActions.processPlotElementsPlaced, state => produce(state, draft => {
@@ -54,6 +48,8 @@ const reducer = createReducer(initialState,
     ProcessPlotActions.processPlotResized,
     ProcessPlotActions.newAnnotatedValueAppeared,
     ProcessPlotActions.processPlotInitialized,
+    ProcessPlotActions.processPlotZoomReset,
+    ProcessPlotActions.processPlotReset,
     state => produce(state, draft => {
       draft.markedDirty = true;
     })),
