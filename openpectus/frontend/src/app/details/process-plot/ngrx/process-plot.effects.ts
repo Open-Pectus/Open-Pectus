@@ -22,7 +22,7 @@ export class ProcessPlotEffects {
   ));
 
   saveYAxesLimitOverrideInLocalStorage = createEffect(() => this.actions.pipe(
-    ofType(ProcessPlotActions.yOverrideDialogSaveClicked),
+    ofType(ProcessPlotActions.yOverrideDialogSaveClicked, ProcessPlotActions.processPlotReset),
     concatLatestFrom(() => this.store.select(ProcessPlotSelectors.yAxesLimitsOverride)),
     switchMap(([_, yOverrideLimits]) => {
       this.axesOverridesLocalStorageService.storeYAxesLimitsOverride(yOverrideLimits);

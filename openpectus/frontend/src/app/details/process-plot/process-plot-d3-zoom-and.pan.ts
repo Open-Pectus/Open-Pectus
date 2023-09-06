@@ -4,26 +4,27 @@ import { firstValueFrom, Subject, takeUntil } from 'rxjs';
 import { PlotConfiguration } from '../../api';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
-import { D3Selection } from './process-plot-d3.types';
+import { AxisLimits, D3Selection } from './process-plot-d3.types';
 
 export class ProcessPlotD3ZoomAndPan {
   private zoomedSubplotIndices = this.store.select(ProcessPlotSelectors.zoomedSubplotIndices);
 
   constructor(private store: Store,
               private componentDestroyed: Subject<void>,
+              private plotConfiguration: PlotConfiguration,
               private svg: D3Selection<SVGSVGElement>,
               private xScale: ScaleLinear<number, number>,
               private yScales: ScaleLinear<number, number>[][]) {}
 
-  setupZoom(plotConfiguration: PlotConfiguration) {
-    plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
+  setupZoom() {
+    this.plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
       const subPlotBorderG = this.svg.select<SVGGElement>(`g.subplot-${subPlotIndex}`).selectChild('g.subplot-border');
       subPlotBorderG.on('mousedown', this.getMouseDown(subPlotIndex));
-      subPlotBorderG.on('dblclick', this.getDblClick(plotConfiguration));
+      subPlotBorderG.on('dblclick', this.getDblClick());
     });
 
     this.zoomedSubplotIndices.pipe(takeUntil(this.componentDestroyed)).subscribe((zoomedSubplotIndices) => {
-      plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
+      this.plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
         const isZoomed = zoomedSubplotIndices.includes(subPlotIndex);
         const cursor = isZoomed ? 'grab' : 'crosshair';
         this.setSubplotCursor(subPlotIndex, cursor);
@@ -81,24 +82,24 @@ export class ProcessPlotD3ZoomAndPan {
       if(xs[0] === xs[1]) return; // protection from zooming to a single point on mouse click.
       this.xScale.domain(xs);
 
-      this.yScales[subPlotIndex].forEach((yScale) => {
+      const ys = this.yScales[subPlotIndex].map((yScale) => {
         const ys = [pathSelection.datum().offsetY, mouseUpEvent.offsetY]
           .sort((a, b) => a - b)
           .map(offset => yScale.invert(offset));
-        yScale.domain([ys[1], ys[0]]);
+        return {min: ys[1], max: ys[0]};
       });
 
-      this.store.dispatch(ProcessPlotActions.processPlotZoomed({subPlotIndex}));
+      this.store.dispatch(ProcessPlotActions.processPlotZoomed({
+        subPlotIndex,
+        newXDomain: {min: xs[0], max: xs[1]},
+        newYDomains: ys,
+      }));
     };
   }
 
-  private getDblClick(plotConfiguration: PlotConfiguration) {
+  private getDblClick() {
     return (_: MouseEvent) => {
       this.svg.on('mousemove mouseup', null);
-      this.svg.select('path.zoom').remove();
-      plotConfiguration.sub_plots.map((subPlot, subPlotIndex) => subPlot.axes.map((axis, axisIndex) => {
-        this.yScales[subPlotIndex][axisIndex].domain([axis.y_min, axis.y_max]);
-      }));
       this.store.dispatch(ProcessPlotActions.processPlotZoomReset());
     };
   }
@@ -111,17 +112,17 @@ export class ProcessPlotD3ZoomAndPan {
 
   private getMouseMoveForDragToPan(subPlotIndex: number) {
     return (mouseEvent: MouseEvent) => {
-      this.scaleDomainFromMovement(this.xScale, mouseEvent.movementX);
-      this.yScales[subPlotIndex].forEach(yScale => this.scaleDomainFromMovement(yScale, mouseEvent.movementY));
-      this.store.dispatch(ProcessPlotActions.processPlotPanned());
+      const newXDomain = this.scaleDomainFromMovement(this.xScale, mouseEvent.movementX);
+      const newYDomains = this.yScales[subPlotIndex].map(yScale => this.scaleDomainFromMovement(yScale, mouseEvent.movementY));
+      this.store.dispatch(ProcessPlotActions.processPlotPanned({subPlotIndex, newXDomain, newYDomains}));
     };
   }
 
-  private scaleDomainFromMovement(scale: ScaleLinear<number, number>, movement: number) {
+  private scaleDomainFromMovement(scale: ScaleLinear<number, number>, movement: number): AxisLimits {
     const domain = scale.domain();
     const domainZero = scale.invert(0);
     const domainMovement = scale.invert(movement) - domainZero;
-    scale.domain([domain[0] - domainMovement, domain[1] - domainMovement]);
+    return {min: domain[0] - domainMovement, max: domain[1] - domainMovement};
   }
 
   private getMouseUpForDragToPan(subPlotIndex: number) {

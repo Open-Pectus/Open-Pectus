@@ -2,7 +2,7 @@ import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
 import { PlotConfiguration, ProcessValue } from '../../../api';
 import { DetailsActions } from '../../ngrx/details.actions';
-import { YAxesLimitsOverride, YAxisOverrideDialogData } from '../process-plot-d3.types';
+import { YAxesLimitsOverride, YAxisOverrideDialogData, ZoomAndPanDomainOverrides } from '../process-plot-d3.types';
 import { ProcessPlotActions } from './process-plot.actions';
 
 export type ProcessValueLog = Record<string, ProcessValue[]>
@@ -12,17 +12,16 @@ export interface ProcessPlotState {
   processValuesLog: ProcessValueLog;
   zoomedSubplotIndices: number[];
   markedDirty: boolean;
-  scalesMarkedDirty: boolean;
   yAxisOverrideDialogData?: YAxisOverrideDialogData;
   xAxisProcessValueOverride?: string;
   yAxesLimitsOverride?: YAxesLimitsOverride;
+  zoomAndPanDomainOverrides?: ZoomAndPanDomainOverrides;
 }
 
 const initialState: ProcessPlotState = {
   processValuesLog: {},
   zoomedSubplotIndices: [],
   markedDirty: false,
-  scalesMarkedDirty: false,
 };
 
 const reducer = createReducer(initialState,
@@ -32,27 +31,31 @@ const reducer = createReducer(initialState,
   on(ProcessPlotActions.processPlotZoomed, (state, {subPlotIndex}) => produce(state, draft => {
     draft.zoomedSubplotIndices.push(subPlotIndex);
   })),
-  on(ProcessPlotActions.processPlotZoomReset, (state) => produce(state, draft => {
-    draft.zoomedSubplotIndices = [];
-  })),
+  on(ProcessPlotActions.processPlotZoomed,
+    ProcessPlotActions.processPlotPanned,
+    (state, {subPlotIndex, newXDomain, newYDomains}) => produce(state, draft => {
+      const yDomainOverrides = draft.zoomAndPanDomainOverrides?.y ?? [];
+      yDomainOverrides[subPlotIndex] = newYDomains;
+      draft.zoomAndPanDomainOverrides = {
+        x: newXDomain,
+        y: yDomainOverrides,
+      };
+    })),
+  on(ProcessPlotActions.processPlotZoomReset,
+    ProcessPlotActions.processPlotReset,
+    (state) => produce(state, draft => {
+      draft.zoomedSubplotIndices = [];
+      draft.zoomAndPanDomainOverrides = undefined;
+    })),
   on(ProcessPlotActions.processPlotElementsPlaced, state => produce(state, draft => {
     draft.markedDirty = false;
-  })),
-  on(ProcessPlotActions.processPlotAxesUpdated, state => produce(state, draft => {
-    draft.scalesMarkedDirty = false;
   })),
   on(
     ProcessPlotActions.processPlotResized,
     ProcessPlotActions.newAnnotatedValueAppeared,
     ProcessPlotActions.processPlotInitialized,
-    ProcessPlotActions.processPlotZoomReset,
     state => produce(state, draft => {
       draft.markedDirty = true;
-    })),
-  on(ProcessPlotActions.processPlotZoomed,
-    ProcessPlotActions.processPlotPanned,
-    state => produce(state, draft => {
-      draft.scalesMarkedDirty = true;
     })),
   on(DetailsActions.processValuesFetched, (state, {processValues}) => produce(state, draft => {
     processValues.forEach(processValue => {
@@ -75,10 +78,12 @@ const reducer = createReducer(initialState,
     if(draft.yAxesLimitsOverride[subplotIndex] === undefined) draft.yAxesLimitsOverride[subplotIndex] = [];
     draft.yAxesLimitsOverride[subplotIndex][axisIndex] = limits;
     draft.yAxisOverrideDialogData = undefined;
-    draft.scalesMarkedDirty = true;
   })),
   on(ProcessPlotActions.yAxesOverrideLimitsRestoredFromLocalStorage, (state, {yAxesLimitsOverride}) => produce(state, draft => {
     draft.yAxesLimitsOverride = yAxesLimitsOverride;
+  })),
+  on(ProcessPlotActions.processPlotReset, state => produce(state, draft => {
+    draft.yAxesLimitsOverride = undefined;
   })),
 );
 

@@ -34,9 +34,14 @@ export interface YAxisOverrideDialogData {
   };
 }
 
-export interface YAxisLimits {
-  yMax: number;
-  yMin: number;
+export interface AxisLimits {
+  max: number;
+  min: number;
 }
 
-export type YAxesLimitsOverride = (YAxisLimits | null)[][];
+export type YAxesLimitsOverride = (AxisLimits | null)[][];
+
+export interface ZoomAndPanDomainOverrides {
+  x: AxisLimits;
+  y: YAxesLimitsOverride;
+}

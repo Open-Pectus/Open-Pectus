@@ -12,36 +12,36 @@ export class ProcessPlotD3Placement {
   private readonly pixelsPerTick = 42;
 
   constructor(private svg: D3Selection<SVGSVGElement>,
+              private plotConfiguration: PlotConfiguration,
               private xScale: ScaleLinear<number, number>,
               private yScales: ScaleLinear<number, number>[][]) {}
 
-  updateElementPlacements(plotConfiguration: PlotConfiguration) {
+  updateElementPlacements() {
     const svgHeight = this.svg.node()?.height.baseVal.value ?? 0;
     const svgWidth = this.svg.node()?.width.baseVal.value ?? 0;
     const xAxisHeight = this.svg.select<SVGGElement>('.x-axis').node()?.getBoundingClientRect().height ?? 0;
-    const subPlotLeftRight = this.calculatePlotLeftRight(this.svg, plotConfiguration, svgWidth);
+    const subPlotLeftRight = this.calculatePlotLeftRight(this.svg, this.plotConfiguration, svgWidth);
     this.placeXAxis(this.svg, svgHeight, subPlotLeftRight, xAxisHeight);
-    const coloredRegionLabelHeight = this.calculateColorRegionLabelsHeight(this.svg, plotConfiguration);
+    const coloredRegionLabelHeight = this.calculateColorRegionLabelsHeight(this.svg, this.plotConfiguration);
 
-    plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
+    this.plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
       const subPlotG = this.svg.selectChild<SVGGElement>(`.subplot-${subPlotIndex}`);
-      const subPlotTopBottom = this.calculateSubPlotTopBottom(plotConfiguration, subPlotIndex, svgHeight, xAxisHeight,
+      const subPlotTopBottom = this.calculateSubPlotTopBottom(subPlotIndex, svgHeight, xAxisHeight,
         coloredRegionLabelHeight);
       this.placeYAxes(subPlot, subPlotG, subPlotIndex, subPlotLeftRight, subPlotTopBottom);
       this.placeGridLines(subPlotG, subPlotIndex, subPlotLeftRight, subPlotTopBottom);
       this.placeSubPlotBorder(subPlotG, subPlotLeftRight, subPlotTopBottom);
     });
 
-    this.updateAxes(plotConfiguration);
+    this.updateAxes();
   }
 
-  updateAxes(plotConfiguration: PlotConfiguration) {
+  updateAxes() {
     this.svg.selectChild<SVGGElement>('.x-axis').call(axisBottom(this.xScale));
-    plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
+    this.plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
       const subPlotG = this.svg.selectChild<SVGGElement>(`.subplot-${subPlotIndex}`);
-      subPlot.axes.forEach((axisConfig, axisIndex) => {
+      subPlot.axes.forEach((_, axisIndex) => {
         const yScale = this.yScales[subPlotIndex][axisIndex];
-        yScale.domain([axisConfig.y_min, axisConfig.y_max]);
         const isLeftAxis = axisIndex === 0;
         const axisGenerator = isLeftAxis ? axisLeft(yScale) : axisRight(yScale);
         axisGenerator.tickFormat((tickValue: NumberValue) => tickValue.valueOf().toFixed(1));
@@ -142,14 +142,14 @@ export class ProcessPlotD3Placement {
     };
   }
 
-  private calculateSubPlotTopBottom(plotConfiguration: PlotConfiguration, subPlotIndex: number, svgHeight: number,
+  private calculateSubPlotTopBottom(subPlotIndex: number, svgHeight: number,
                                     xAxisHeight: number, coloredRegionLabelHeight: number): TopBottom {
-    const totalRatio = sum(plotConfiguration.sub_plots.map(subPlot => subPlot.ratio));
-    const previousSubPlotsRatio = sum(plotConfiguration.sub_plots
+    const totalRatio = sum(this.plotConfiguration.sub_plots.map(subPlot => subPlot.ratio));
+    const previousSubPlotsRatio = sum(this.plotConfiguration.sub_plots
       .filter((_, index) => index < subPlotIndex)
       .map(subPlot => subPlot.ratio),
     );
-    const followingSubPlotsRatio = sum(plotConfiguration.sub_plots
+    const followingSubPlotsRatio = sum(this.plotConfiguration.sub_plots
       .filter((_, index) => index > subPlotIndex)
       .map(subPlot => subPlot.ratio),
     );

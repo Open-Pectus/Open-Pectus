@@ -5,7 +5,7 @@ import { map, Observable, tap } from 'rxjs';
 import { PlotAxis } from '../../api';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
-import { YAxisLimits } from './process-plot-d3.types';
+import { AxisLimits } from './process-plot-d3.types';
 
 @Component({
   selector: 'app-yaxis-override-dialog',
@@ -33,7 +33,7 @@ import { YAxisLimits } from './process-plot-d3.types';
             Min: <input #min min="0" type="number" class="border-b border-gray-500 w-32 text-right" [valueAsNumber]="axisConfiguration?.y_min">
           </label>
           <button #saveButton class="bg-green-400 rounded p-1"
-                  (click)="onSave(data?.subplotIndex, data?.axisIndex, {yMin: min.valueAsNumber, yMax: max.valueAsNumber})">Save
+                  (click)="onSave(data?.subplotIndex, data?.axisIndex, {min: min.valueAsNumber, max: max.valueAsNumber})">Save
           </button>
         </div>
       </ng-container>
@@ -63,7 +63,7 @@ export class YAxisOverrideDialogComponent {
     this.store.dispatch(ProcessPlotActions.yOverrideDialogClosed());
   }
 
-  onSave(subplotIndex: number | undefined, axisIndex: number | undefined, limits: YAxisLimits) {
+  onSave(subplotIndex: number | undefined, axisIndex: number | undefined, limits: AxisLimits) {
     if(subplotIndex === undefined || axisIndex === undefined) return;
     this.store.dispatch(ProcessPlotActions.yOverrideDialogSaveClicked({subplotIndex, axisIndex, limits}));
   }
