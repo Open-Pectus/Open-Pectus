@@ -11,7 +11,7 @@ import { DetailsSelectors } from './ngrx/details.selectors';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-collapsible-element [name]="'Process Diagram'" [heightResizable]="true" [contentHeight]="400"
-                             (collapseStateChanged)="collapsed = $event">
+                             (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-circuit-board'">
       <div class="flex justify-center h-full" content *ngIf="!collapsed">
         <div class="m-auto" *ngIf="(processDiagram | ngrxPush)?.svg === ''">No diagram available</div>
         <div class="bg-white rounded-sm p-2" [innerHTML]="diagramWithValues | ngrxPush"></div>
