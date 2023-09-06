@@ -9,7 +9,9 @@ import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
   template: `
     <app-collapsible-element [name]="'Process Plot'" [heightResizable]="true" [contentHeight]="400" [contentOverflow]="true"
                              (collapseStateChanged)="isCollapsed = $event">
-      <button *ngIf="plotIsModified | ngrxPush" buttons (click)="onReset()" class="bg-rose-900 rounded px-3 py-1">Reset</button>
+      <button *ngIf="plotIsModified | ngrxPush" buttons (click)="onReset()" class="bg-orange-800 rounded pl-2.5 pr-3 py-1 flex items-center">
+        <span class="codicon codicon-discard mr-1.5"></span> Reset view
+      </button>
       <app-process-plot content class="block w-full h-full relative" *ngIf="!isCollapsed"
                         [isCollapsed]="isCollapsed"></app-process-plot>
     </app-collapsible-element>
