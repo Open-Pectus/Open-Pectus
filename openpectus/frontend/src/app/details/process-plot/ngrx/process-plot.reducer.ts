@@ -79,6 +79,9 @@ const reducer = createReducer(initialState,
   on(ProcessPlotActions.yAxesOverrideLimitsRestoredFromLocalStorage, (state, {yAxesLimitsOverride}) => produce(state, draft => {
     draft.yAxesLimitsOverride = yAxesLimitsOverride;
   })),
+  on(ProcessPlotActions.xAxisProcessValueNameRestoredFromLocalStorage, (state, {xAxisProcessValueName}) => produce(state, draft => {
+    draft.xAxisProcessValueOverride = xAxisProcessValueName;
+  })),
   on(ProcessPlotActions.processPlotReset, state => produce(state, draft => {
     draft.yAxesLimitsOverride = undefined;
     draft.xAxisProcessValueOverride = undefined;

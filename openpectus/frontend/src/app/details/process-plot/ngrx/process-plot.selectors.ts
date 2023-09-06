@@ -15,11 +15,12 @@ export class ProcessPlotSelectors {
     return overrides.y.map((override, index) => override === null ? null : index).filter(UtilMethods.isNotNullOrUndefined);
   });
   static anySubplotZoomed = createSelector(this.zoomedSubplotIndices, zoomedSubplotIndices => zoomedSubplotIndices.length !== 0);
-  static plotIsModified = createSelector(this.anySubplotZoomed, this.yAxesLimitsOverride, (isZoomed, yAxisOverrides) => {
-    return isZoomed || yAxisOverrides !== undefined;
-  });
-  static xAxisOverrideDialogData = createSelector(this.selectFeature, state => state.xAxisOverrideDialogData);
   static xAxisProcessValueOverride = createSelector(this.selectFeature, state => state.xAxisProcessValueOverride);
+  static plotIsModified = createSelector(this.anySubplotZoomed, this.yAxesLimitsOverride, this.xAxisProcessValueOverride,
+    (isZoomed, yAxisOverrides, xAxisOverride) => {
+      return isZoomed || yAxisOverrides !== undefined || xAxisOverride !== undefined;
+    });
+  static xAxisOverrideDialogData = createSelector(this.selectFeature, state => state.xAxisOverrideDialogData);
   static xAxisProcessValueCandidates = createSelector(this.plotConfiguration,
     plotConfiguration => plotConfiguration?.x_axis_process_value_names);
   static xAxisProcessValueName = createSelector(this.plotConfiguration, this.xAxisProcessValueOverride, (plotConfiguration, override) => {

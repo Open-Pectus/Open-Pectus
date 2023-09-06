@@ -11,12 +11,30 @@ export class AxesOverridesLocalStorageService {
   constructor() { }
 
   storeYAxesLimitsOverride(yAxesLimitsOverride: YAxesLimitsOverride | undefined) {
-    window.localStorage.setItem(this.yAxesLimitsOverrideKey, JSON.stringify(yAxesLimitsOverride));
+    if(yAxesLimitsOverride === undefined) {
+      window.localStorage.removeItem(this.yAxesLimitsOverrideKey);
+    } else {
+      window.localStorage.setItem(this.yAxesLimitsOverrideKey, JSON.stringify(yAxesLimitsOverride));
+    }
   }
 
   getYAxesLimitsOverride() {
     const storedValue = window.localStorage.getItem(this.yAxesLimitsOverrideKey);
     if(storedValue === null) return undefined;
     return JSON.parse(storedValue) as YAxesLimitsOverride;
+  }
+
+  storeXAxisProcessValueName(xAxisProcessValueName: string | undefined) {
+    if(xAxisProcessValueName === undefined) {
+      window.localStorage.removeItem(this.xAxisProcessValueNameKey);
+    } else {
+      window.localStorage.setItem(this.xAxisProcessValueNameKey, JSON.stringify(xAxisProcessValueName));
+    }
+  }
+
+  getXAxisProcessValueName() {
+    const storedValue = window.localStorage.getItem(this.xAxisProcessValueNameKey);
+    if(storedValue === null) return undefined;
+    return JSON.parse(storedValue) as string | undefined;
   }
 }

@@ -22,6 +22,8 @@ export class ProcessPlotActions {
     props<{ subplotIndex: number, axisIndex: number, limits: AxisLimits }>());
   static yAxesOverrideLimitsRestoredFromLocalStorage = createAction(source + 'Y Axes Override Limits Restored From LocalStorage',
     props<{ yAxesLimitsOverride: YAxesLimitsOverride }>());
+  static xAxisProcessValueNameRestoredFromLocalStorage = createAction(source + 'X Axes Process Value Name Restored From LocalStorage',
+    props<{ xAxisProcessValueName: string }>());
   static processPlotReset = createAction(source + 'Process Plot Reset');
   static xAxisClicked = createAction(source + 'X Axis Clicked', props<{ data: XAxisOverrideDialogData }>());
   static xOverrideDialogClosed = createAction(source + 'X Axis Override Dialog Closed');

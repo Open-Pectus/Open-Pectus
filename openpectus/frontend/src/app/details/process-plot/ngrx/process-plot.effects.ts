@@ -39,6 +39,24 @@ export class ProcessPlotEffects {
     }),
   ));
 
+  saveXAxisProcessValueNameInLocalStorage = createEffect(() => this.actions.pipe(
+    ofType(ProcessPlotActions.xOverrideDialogSaveClicked, ProcessPlotActions.processPlotReset),
+    concatLatestFrom(() => this.store.select(ProcessPlotSelectors.xAxisProcessValueOverride)),
+    switchMap(([_, xAxisProcessValueName]) => {
+      this.axesOverridesLocalStorageService.storeXAxisProcessValueName(xAxisProcessValueName);
+      return of();
+    }),
+  ), {dispatch: false});
+
+  restoreXAxisProcessValueNameFromLocalStorage = createEffect(() => this.actions.pipe(
+    ofType(ProcessPlotActions.processPlotInitialized),
+    switchMap(() => {
+      const storedValue = this.axesOverridesLocalStorageService.getXAxisProcessValueName();
+      if(storedValue === undefined) return of();
+      return of(ProcessPlotActions.xAxisProcessValueNameRestoredFromLocalStorage({xAxisProcessValueName: storedValue}));
+    }),
+  ));
+
   constructor(private actions: Actions,
               private store: Store,
               private processUnitService: ProcessUnitService,
