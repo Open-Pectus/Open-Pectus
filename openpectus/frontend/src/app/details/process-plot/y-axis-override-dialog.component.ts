@@ -68,7 +68,6 @@ export class YAxisOverrideDialogComponent {
 
   constructor(private store: Store) {}
 
-
   onClose() {
     this.store.dispatch(ProcessPlotActions.yOverrideDialogClosed());
   }

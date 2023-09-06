@@ -6,16 +6,17 @@ import { ProcessPlotDashArrays } from './process-plot.dash-arrays';
 import { D3Selection } from './process-plot.types';
 
 export class ProcessPlotLines {
-  constructor(private svg: D3Selection<SVGSVGElement>,
+  constructor(private plotConfiguration: PlotConfiguration,
+              private svg: D3Selection<SVGSVGElement>,
               private xScale: ScaleLinear<number, number>,
               private yScales: ScaleLinear<number, number>[][]) {}
 
-  plotLines(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValueLog) {
-    plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
+  plotLines(processValuesLog: ProcessValueLog, xAxisProcessValueName: string) {
+    this.plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
       subPlot.axes.forEach((axis, axisIndex) => {
         this.svg.select<SVGGElement>(`.subplot-${subPlotIndex} .line-${axisIndex}`)
           .selectAll('path')
-          .data(this.formatLineDataForAxis(plotConfiguration, processValuesLog, axis))
+          .data(this.formatLineDataForAxis(processValuesLog, axis, xAxisProcessValueName))
           .join('path')
           .attr('d', line()
             .x(d => this.xScale(d[0]))
@@ -26,13 +27,13 @@ export class ProcessPlotLines {
     });
   }
 
-  private formatLineDataForAxis(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValueLog, axis: PlotAxis): [number, number][][] {
+  private formatLineDataForAxis(processValuesLog: ProcessValueLog, axis: PlotAxis, xAxisProcessValueName: string): [number, number][][] {
     return axis.process_value_names
       .map(processValueName => processValuesLog[processValueName])
       .filter(UtilMethods.isNotNullOrUndefined)
       .map(processValueLine => processValueLine.map((processValue, index) => {
           if(typeof processValue.value !== 'number') return undefined;
-          const x = processValuesLog[plotConfiguration.x_axis_process_value_name][index].value;
+          const x = processValuesLog[xAxisProcessValueName][index].value;
           return [x, processValue.value] as [number, number];
         }).filter(UtilMethods.isNotNullOrUndefined),
       );

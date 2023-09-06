@@ -11,8 +11,8 @@ export class ProcessPlotPlacement {
   private readonly yAxisLabelMargin = 8;
   private readonly pixelsPerTick = 42;
 
-  constructor(private svg: D3Selection<SVGSVGElement>,
-              private plotConfiguration: PlotConfiguration,
+  constructor(private plotConfiguration: PlotConfiguration,
+              private svg: D3Selection<SVGSVGElement>,
               private xScale: ScaleLinear<number, number>,
               private yScales: ScaleLinear<number, number>[][]) {}
 

@@ -13,21 +13,37 @@ export class ProcessPlotAxesOverrides {
     this.plotConfiguration.sub_plots.forEach((subplot, subplotIndex) => {
       const subplotG = this.svg.select<SVGGElement>(`g.subplot-${subplotIndex}`);
       subplot.axes.forEach((_, axisIndex) => {
-        const axisBackground = subplotG.selectChild(`.y-axis-background-${axisIndex}`);
-        const axisG = subplotG.selectChild(`.y-axis-${axisIndex}`);
-        const onClick = this.getOnClick(subplotIndex, axisIndex);
-        axisBackground.on('click', onClick);
-        axisG.on('click', onClick);
+        const axisBackground = subplotG.selectChild(`g.y-axis-background-${axisIndex}`);
+        const axisG = subplotG.selectChild(`g.y-axis-${axisIndex}`);
+        const onYAxisClick = this.getOnYAxisClick(subplotIndex, axisIndex);
+        axisBackground.on('click', onYAxisClick);
+        axisG.on('click', onYAxisClick);
       });
     });
+
+    const xAxisG = this.svg.select<SVGGElement>('g.x-axis');
+    xAxisG.on('click', this.getOnXAxisClick());
   }
 
-  private getOnClick(subplotIndex: number, axisIndex: number) {
+  private getOnYAxisClick(subplotIndex: number, axisIndex: number) {
     return (mouseEvent: MouseEvent) => {
       this.store.dispatch(ProcessPlotActions.yAxisClicked({
         data: {
           subplotIndex,
           axisIndex,
+          position: {
+            x: mouseEvent.offsetX,
+            y: mouseEvent.offsetY,
+          },
+        },
+      }));
+    };
+  }
+
+  private getOnXAxisClick() {
+    return (mouseEvent: MouseEvent) => {
+      this.store.dispatch(ProcessPlotActions.xAxisClicked({
+        data: {
           position: {
             x: mouseEvent.offsetX,
             y: mouseEvent.offsetY,

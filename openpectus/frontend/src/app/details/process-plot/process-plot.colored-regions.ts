@@ -4,16 +4,17 @@ import { ProcessValueLog } from './ngrx/process-plot.reducer';
 import { ColoredRegionRect, D3Selection } from './process-plot.types';
 
 export class ProcessPlotColoredRegions {
-  constructor(private svg: D3Selection<SVGSVGElement>,
+  constructor(private plotConfiguration: PlotConfiguration,
+              private svg: D3Selection<SVGSVGElement>,
               private xScale: ScaleLinear<number, number>,
               private yScales: ScaleLinear<number, number>[][]) {}
 
-  plotColoredRegions(plotConfiguration: PlotConfiguration, processValueLog: ProcessValueLog) {
-    plotConfiguration.color_regions.forEach((colorRegion, colorRegionIndex) => {
+  plotColoredRegions(processValueLog: ProcessValueLog, xAxisProcessValueName: string) {
+    this.plotConfiguration.color_regions.forEach((colorRegion, colorRegionIndex) => {
       const topColorRegionSelection = this.svg.select<SVGGElement>(`.color-region-${colorRegionIndex}`);
-      const formattedRectData = this.formatColoredRegionsData(plotConfiguration, processValueLog, colorRegion);
+      const formattedRectData = this.formatColoredRegionsData(processValueLog, colorRegion, xAxisProcessValueName);
       const top = this.yScales[0][0].range()[1];
-      plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
+      this.plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
         const colorRegionSelection = this.svg.select<SVGGElement>(`.subplot-${subPlotIndex} .color-region-${colorRegionIndex}`);
         const subPlotTop = this.yScales[subPlotIndex][0].range()[1];
         const subPlotBottom = this.yScales[subPlotIndex][0].range()[0];
@@ -57,10 +58,11 @@ export class ProcessPlotColoredRegions {
     return start + width / 2;
   }
 
-  private formatColoredRegionsData(plotConfiguration: PlotConfiguration, processValueLog: ProcessValueLog,
-                                   colorRegion: PlotColorRegion): ColoredRegionRect[] {
+  private formatColoredRegionsData(processValueLog: ProcessValueLog,
+                                   colorRegion: PlotColorRegion,
+                                   xAxisProcessValueName: string): ColoredRegionRect[] {
     const processValueData = processValueLog[colorRegion.process_value_name];
-    const xAxisData = processValueLog[plotConfiguration.x_axis_process_value_name];
+    const xAxisData = processValueLog[xAxisProcessValueName];
     if(processValueData === undefined) return [];
     const processValueValues = processValueData.map(processValue => processValue.value);
     let start: number = xAxisData[0].value as number;

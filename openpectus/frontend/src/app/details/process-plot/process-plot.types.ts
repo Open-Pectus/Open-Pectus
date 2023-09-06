@@ -34,6 +34,13 @@ export interface YAxisOverrideDialogData {
   };
 }
 
+export interface XAxisOverrideDialogData {
+  position: {
+    x: number;
+    y: number;
+  };
+}
+
 export interface AxisLimits {
   max: number;
   min: number;

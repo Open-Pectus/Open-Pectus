@@ -2,7 +2,7 @@ import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
 import { PlotConfiguration, ProcessValue } from '../../../api';
 import { DetailsActions } from '../../ngrx/details.actions';
-import { YAxesLimitsOverride, YAxisOverrideDialogData, ZoomAndPanDomainOverrides } from '../process-plot.types';
+import { XAxisOverrideDialogData, YAxesLimitsOverride, YAxisOverrideDialogData, ZoomAndPanDomainOverrides } from '../process-plot.types';
 import { ProcessPlotActions } from './process-plot.actions';
 
 export type ProcessValueLog = Record<string, ProcessValue[]>
@@ -15,6 +15,7 @@ export interface ProcessPlotState {
   xAxisProcessValueOverride?: string;
   yAxesLimitsOverride?: YAxesLimitsOverride;
   zoomAndPanDomainOverrides?: ZoomAndPanDomainOverrides;
+  xAxisOverrideDialogData?: XAxisOverrideDialogData;
 }
 
 const initialState: ProcessPlotState = {
@@ -80,6 +81,17 @@ const reducer = createReducer(initialState,
   })),
   on(ProcessPlotActions.processPlotReset, state => produce(state, draft => {
     draft.yAxesLimitsOverride = undefined;
+    draft.xAxisProcessValueOverride = undefined;
+  })),
+  on(ProcessPlotActions.xAxisClicked, (state, {data}) => produce(state, draft => {
+    draft.xAxisOverrideDialogData = data;
+  })),
+  on(ProcessPlotActions.xOverrideDialogSaveClicked, (state, {processValueName}) => produce(state, draft => {
+    draft.xAxisProcessValueOverride = processValueName;
+    draft.xAxisOverrideDialogData = undefined;
+  })),
+  on(ProcessPlotActions.xOverrideDialogClosed, (state) => produce(state, draft => {
+    draft.xAxisOverrideDialogData = undefined;
   })),
 );
 

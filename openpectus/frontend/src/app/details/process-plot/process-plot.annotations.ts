@@ -4,15 +4,16 @@ import { ProcessValueLog } from './ngrx/process-plot.reducer';
 import { Annotation, D3Selection } from './process-plot.types';
 
 export class ProcessPlotAnnotations {
-  constructor(private svg: D3Selection<SVGSVGElement>,
+  constructor(private plotConfiguration: PlotConfiguration,
+              private svg: D3Selection<SVGSVGElement>,
               private xScale: ScaleLinear<number, number>,
               private yScales: ScaleLinear<number, number>[][]) {}
 
-  plotAnnotations(plotConfiguration: PlotConfiguration, processValueLog: ProcessValueLog) {
-    const annotationData = this.formatAnnotationData(plotConfiguration, processValueLog);
+  plotAnnotations(processValueLog: ProcessValueLog, xAxisProcessValueName: string) {
+    const annotationData = this.formatAnnotationData(processValueLog, xAxisProcessValueName);
     const topAnnotationSelection = this.svg.select<SVGGElement>(`.annotations`);
     const top = this.yScales[0][0].range()[1];
-    plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
+    this.plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
       const subPlotSelection = this.svg.select<SVGGElement>(`.subplot-${subPlotIndex} .annotations`);
       const subPlotTop = this.yScales[subPlotIndex][0].range()[1];
       const subPlotBottom = this.yScales[subPlotIndex][0].range()[0];
@@ -50,10 +51,10 @@ export class ProcessPlotAnnotations {
     return visible ? 'visible' : 'hidden';
   }
 
-  private formatAnnotationData(plotConfiguration: PlotConfiguration, processValueLog: ProcessValueLog): Annotation[] {
-    return plotConfiguration.process_value_names_to_annotate.flatMap(processValueNameToAnnotate => {
+  private formatAnnotationData(processValueLog: ProcessValueLog, xAxisProcessValueName: string): Annotation[] {
+    const xAxisData = processValueLog[xAxisProcessValueName];
+    return this.plotConfiguration.process_value_names_to_annotate.flatMap(processValueNameToAnnotate => {
       const processValueData = processValueLog[processValueNameToAnnotate];
-      const xAxisData = processValueLog[plotConfiguration.x_axis_process_value_name];
       if(processValueData === undefined) return [];
       return processValueData.reduce<Annotation[]>((accumulator, value, currentIndex) => {
         if(typeof value.value !== 'string' && value.value !== undefined) return accumulator;

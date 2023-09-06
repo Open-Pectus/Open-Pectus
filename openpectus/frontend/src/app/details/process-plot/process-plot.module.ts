@@ -8,6 +8,7 @@ import { ProcessPlotEffects } from './ngrx/process-plot.effects';
 import { processPlotSlice } from './ngrx/process-plot.reducer';
 import { ProcessPlotContainerComponent } from './process-plot-container.component';
 import { ProcessPlotComponent } from './process-plot.component';
+import { XAxisOverrideDialogComponent } from './x-axis-override-dialog.component';
 import { YAxisOverrideDialogComponent } from './y-axis-override-dialog.component';
 
 
@@ -16,6 +17,7 @@ import { YAxisOverrideDialogComponent } from './y-axis-override-dialog.component
     ProcessPlotComponent,
     ProcessPlotContainerComponent,
     YAxisOverrideDialogComponent,
+    XAxisOverrideDialogComponent,
   ],
   imports: [
     CommonModule,

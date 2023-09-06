@@ -2,7 +2,7 @@ import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostBind
 import { concatLatestFrom } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { axisBottom, ScaleLinear, scaleLinear, select } from 'd3';
-import { combineLatest, filter, firstValueFrom, identity, Subject, take, takeUntil } from 'rxjs';
+import { combineLatest, filter, identity, Subject, take, takeUntil } from 'rxjs';
 import { PlotConfiguration } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 import { UtilMethods } from '../../shared/util-methods';
@@ -25,6 +25,7 @@ import { ProcessPlotZoomAndPan } from './process-plot.zoom-and-pan';
   template: `
     <svg class="h-full w-full overflow-visible select-none" #plot></svg>
     <app-y-axis-override-dialog class="top-0 left-0" [margin]="padding"></app-y-axis-override-dialog>
+    <app-x-axis-override-dialog class="top-0 left-0" [margin]="padding"></app-x-axis-override-dialog>
   `,
 })
 export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
@@ -34,9 +35,11 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
     filter(UtilMethods.isNotNullOrUndefined));
   private processValuesLog = this.store.select(ProcessPlotSelectors.processValuesLog);
   private markedDirty = this.store.select(ProcessPlotSelectors.markedDirty);
-  private isZoomed = this.store.select(ProcessPlotSelectors.anySubplotZoomed);
+  private anySubplotZoomed = this.store.select(ProcessPlotSelectors.anySubplotZoomed);
   private yAxesLimitsOverride = this.store.select(ProcessPlotSelectors.yAxesLimitsOverride);
   private zoomAndPanDomainOverrides = this.store.select(ProcessPlotSelectors.zoomAndPanDomainOverrides);
+  private xAxisProcessValueName = this.store.select(ProcessPlotSelectors.xAxisProcessValueName).pipe(
+    filter(UtilMethods.isNotNullOrUndefined));
   private xScale = scaleLinear();
   private yScales: ScaleLinear<number, number>[][] = [];
   private svg?: D3Selection<SVGSVGElement>;
@@ -66,13 +69,13 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
       if(this.plotElement === undefined) return;
       this.svg = select<SVGSVGElement, unknown>(this.plotElement.nativeElement);
       this.yScales = this.createYScales(plotConfiguration);
-      this.insertSvgElements(this.svg, plotConfiguration);
+      this.insertSvgElements(plotConfiguration, this.svg);
 
-      this.placement = new ProcessPlotPlacement(this.svg, plotConfiguration, this.xScale, this.yScales);
-      this.lines = new ProcessPlotLines(this.svg, this.xScale, this.yScales);
-      this.coloredRegions = new ProcessPlotColoredRegions(this.svg, this.xScale, this.yScales);
-      this.annotations = new ProcessPlotAnnotations(this.svg, this.xScale, this.yScales);
-      this.tooltip = new ProcessPlotTooltip(plotConfiguration, this.processValuesLog, this.processValuePipe, this.svg, this.xScale);
+      this.placement = new ProcessPlotPlacement(plotConfiguration, this.svg, this.xScale, this.yScales);
+      this.lines = new ProcessPlotLines(plotConfiguration, this.svg, this.xScale, this.yScales);
+      this.coloredRegions = new ProcessPlotColoredRegions(plotConfiguration, this.svg, this.xScale, this.yScales);
+      this.annotations = new ProcessPlotAnnotations(plotConfiguration, this.svg, this.xScale, this.yScales);
+      this.tooltip = new ProcessPlotTooltip(this.store, plotConfiguration, this.processValuePipe, this.svg, this.xScale);
       this.zoomAndPan = new ProcessPlotZoomAndPan(
         this.store, this.componentDestroyed, plotConfiguration, this.svg, this.xScale, this.yScales,
       );
@@ -104,7 +107,7 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
     }));
   }
 
-  private insertSvgElements(svg: D3Selection<SVGSVGElement>, plotConfiguration: PlotConfiguration) {
+  private insertSvgElements(plotConfiguration: PlotConfiguration, svg: D3Selection<SVGSVGElement>) {
     svg.append('g').attr('class', 'x-axis');
     plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
       const subPlotG = svg.append('g')
@@ -166,11 +169,15 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
 
   private setupOnDataChange(plotConfiguration: PlotConfiguration) {
     this.processValuesLog.pipe(
-      concatLatestFrom(() => this.store.select(ProcessPlotSelectors.anySubplotZoomed)),
+      concatLatestFrom(() => [
+        this.anySubplotZoomed,
+        this.xAxisProcessValueName,
+      ]),
       takeUntil(this.componentDestroyed),
-    ).subscribe(async ([processValuesLog, isZoomed]) => {
+    ).subscribe(async ([processValuesLog, isZoomed, xAxisProcessValueName]) => {
       if(isZoomed) return;
-      await this.plotData(plotConfiguration, processValuesLog);
+      this.fitXScaleToData(processValuesLog, xAxisProcessValueName);
+      this.plotData(plotConfiguration, processValuesLog, xAxisProcessValueName);
       this.updatePlacementsOnNewTopLabel(plotConfiguration, processValuesLog);
     });
   }
@@ -194,19 +201,19 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
     }
   }
 
-  private async plotData(plotConfiguration: PlotConfiguration,
-                         processValuesLog: ProcessValueLog) {
+  private plotData(plotConfiguration: PlotConfiguration,
+                   processValuesLog: ProcessValueLog,
+                   xAxisProcessValueName: string) {
     if(this.svg === undefined) throw Error('no Svg selection when plotting data!');
-    if(!await firstValueFrom(this.isZoomed)) this.fitXScaleToData(plotConfiguration, processValuesLog);
     this.drawXAxis(plotConfiguration);
-    this.lines?.plotLines(plotConfiguration, processValuesLog);
-    this.coloredRegions?.plotColoredRegions(plotConfiguration, processValuesLog);
-    this.annotations?.plotAnnotations(plotConfiguration, processValuesLog);
+    this.lines?.plotLines(processValuesLog, xAxisProcessValueName);
+    this.coloredRegions?.plotColoredRegions(processValuesLog, xAxisProcessValueName);
+    this.annotations?.plotAnnotations(processValuesLog, xAxisProcessValueName);
     this.tooltip?.updateLineXPosition();
   }
 
-  private fitXScaleToData(plotConfiguration: PlotConfiguration, processValuesLog: ProcessValueLog) {
-    const xAxisProcessValues = processValuesLog[plotConfiguration.x_axis_process_value_name];
+  private fitXScaleToData(processValuesLog: ProcessValueLog, xAxisProcessValueName: string) {
+    const xAxisProcessValues = processValuesLog[xAxisProcessValueName];
     if(xAxisProcessValues === undefined) return;
     const minXValue = xAxisProcessValues.at(0)?.value ?? 0;
     const maxXValue = xAxisProcessValues.at(-1)?.value ?? minXValue;
@@ -225,11 +232,15 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
 
   private setupOnMarkedDirty() {
     this.markedDirty.pipe(filter(identity),
-      concatLatestFrom(() => [this.processValuesLog, this.plotConfiguration]),
+      concatLatestFrom(() => [
+        this.processValuesLog,
+        this.plotConfiguration,
+        this.xAxisProcessValueName,
+      ]),
       takeUntil(this.componentDestroyed),
-    ).subscribe(async ([_, processValuesLog, plotConfiguration]) => {
+    ).subscribe(async ([_, processValuesLog, plotConfiguration, xAxisProcessValueName]) => {
       this.placement?.updateElementPlacements();
-      await this.plotData(plotConfiguration, processValuesLog);
+      this.plotData(plotConfiguration, processValuesLog, xAxisProcessValueName);
       this.store.dispatch(ProcessPlotActions.processPlotElementsPlaced());
     });
   }
@@ -238,10 +249,11 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
     combineLatest([
       this.yAxesLimitsOverride,
       this.zoomAndPanDomainOverrides,
+      this.xAxisProcessValueName,
     ]).pipe(
       concatLatestFrom(() => [this.processValuesLog, this.plotConfiguration]),
       takeUntil(this.componentDestroyed),
-    ).subscribe(async ([[yAxesLimitsOverride, zoomAndPanDomainOverrides], processValuesLog, plotConfiguration]) => {
+    ).subscribe(async ([[yAxesLimitsOverride, zoomAndPanDomainOverrides, xAxisProcessValueName], processValuesLog, plotConfiguration]) => {
       plotConfiguration.sub_plots.forEach((subPlotConfig, subPlotIndex) => {
         subPlotConfig.axes.forEach((axisConfig, axisIndex) => {
           this.yScales[subPlotIndex][axisIndex].domain([axisConfig.y_min, axisConfig.y_max]);
@@ -255,6 +267,7 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
         });
       });
 
+      this.fitXScaleToData(processValuesLog, xAxisProcessValueName);
       if(zoomAndPanDomainOverrides !== undefined) {
         zoomAndPanDomainOverrides.y.forEach((subPlotConfig, subPlotIndex) => {
           subPlotConfig.forEach((axisConfig, axisIndex) => {
@@ -265,7 +278,7 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
         this.xScale.domain([zoomAndPanDomainOverrides.x.min, zoomAndPanDomainOverrides.x.max]);
       }
       this.placement?.updateAxes();
-      await this.plotData(plotConfiguration, processValuesLog);
+      this.plotData(plotConfiguration, processValuesLog, xAxisProcessValueName);
     });
   }
 }

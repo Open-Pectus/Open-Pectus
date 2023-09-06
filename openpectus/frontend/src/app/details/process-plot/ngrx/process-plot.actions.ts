@@ -1,6 +1,6 @@
 import { createAction, props } from '@ngrx/store';
 import { PlotConfiguration } from '../../../api';
-import { AxisLimits, YAxesLimitsOverride, YAxisOverrideDialogData } from '../process-plot.types';
+import { AxisLimits, XAxisOverrideDialogData, YAxesLimitsOverride, YAxisOverrideDialogData } from '../process-plot.types';
 
 const source = '[Process Plot] ';
 
@@ -11,7 +11,6 @@ export class ProcessPlotActions {
     props<{ subPlotIndex: number, newXDomain: AxisLimits, newYDomains: AxisLimits[] }>());
   static processPlotZoomReset = createAction(source + 'Process Plot Zoom Reset');
   static processPlotElementsPlaced = createAction(source + 'Process Plot Elements Placed');
-  static processPlotAxesUpdated = createAction(source + 'Process Plot Axes Updated');
   static processPlotResized = createAction(source + 'Process Plot Resized');
   static newAnnotatedValueAppeared = createAction(source + 'New Annotated Value appeared');
   static processPlotInitialized = createAction(source + 'Process Plot Initialized');
@@ -24,4 +23,7 @@ export class ProcessPlotActions {
   static yAxesOverrideLimitsRestoredFromLocalStorage = createAction(source + 'Y Axes Override Limits Restored From LocalStorage',
     props<{ yAxesLimitsOverride: YAxesLimitsOverride }>());
   static processPlotReset = createAction(source + 'Process Plot Reset');
+  static xAxisClicked = createAction(source + 'X Axis Clicked', props<{ data: XAxisOverrideDialogData }>());
+  static xOverrideDialogClosed = createAction(source + 'X Axis Override Dialog Closed');
+  static xOverrideDialogSaveClicked = createAction(source + 'X Axis Override Dialog Save Clicked', props<{ processValueName: string }>());
 }

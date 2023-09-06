@@ -18,4 +18,11 @@ export class ProcessPlotSelectors {
   static plotIsModified = createSelector(this.anySubplotZoomed, this.yAxesLimitsOverride, (isZoomed, yAxisOverrides) => {
     return isZoomed || yAxisOverrides !== undefined;
   });
+  static xAxisOverrideDialogData = createSelector(this.selectFeature, state => state.xAxisOverrideDialogData);
+  static xAxisProcessValueOverride = createSelector(this.selectFeature, state => state.xAxisProcessValueOverride);
+  static xAxisProcessValueCandidates = createSelector(this.plotConfiguration,
+    plotConfiguration => plotConfiguration?.x_axis_process_value_names);
+  static xAxisProcessValueName = createSelector(this.plotConfiguration, this.xAxisProcessValueOverride, (plotConfiguration, override) => {
+    return override ?? plotConfiguration?.x_axis_process_value_names[0];
+  });
 }

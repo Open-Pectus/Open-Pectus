@@ -65,7 +65,7 @@ const processUnits: ProcessUnit[] = [
 
 
 export const handlers = [
-  rest.get('/api/process_units', (req, res, ctx) => {
+  rest.get('/api/process_units', (_, res, ctx) => {
     return res(
       ctx.status(200),
       ctx.json<ProcessUnit[]>(processUnits),
@@ -81,7 +81,7 @@ export const handlers = [
     );
   }),
 
-  rest.get('/api/process_unit/:processUnitId/process_values', (req, res, ctx) => {
+  rest.get('/api/process_unit/:processUnitId/process_values', (_, res, ctx) => {
     return res(
       ctx.status(200),
       ctx.delay(),
@@ -90,6 +90,11 @@ export const handlers = [
           value_type: ProcessValueType.INT,
           name: 'timestamp',
           value: new Date().valueOf(),
+        },
+        {
+          value_type: ProcessValueType.INT,
+          name: 'timestamp2',
+          value: new Date().valueOf() + 1000000000000,
         },
         {
           value_type: ProcessValueType.FLOAT,
@@ -241,7 +246,7 @@ export const handlers = [
     );
   }),
 
-  rest.get('/api/recent_batch_jobs', (req, res, ctx) => {
+  rest.get('/api/recent_batch_jobs', (_, res, ctx) => {
     function getCompletedDate() {
       return sub(new Date(), {seconds: Math.random() * 1000000}).toISOString();
     }
@@ -263,13 +268,13 @@ export const handlers = [
     );
   }),
 
-  rest.post('/api/process_unit/:unitId/execute_command', (req, res, context) => {
+  rest.post('/api/process_unit/:unitId/execute_command', (_, res, context) => {
     return res(
       context.status(200),
     );
   }),
 
-  rest.get('/api/process_unit/:unitId/process_diagram', (req, res, context) => {
+  rest.get('/api/process_unit/:unitId/process_diagram', (_, res, context) => {
     return res(
       context.status(200),
       context.json({
@@ -278,7 +283,7 @@ export const handlers = [
     );
   }),
 
-  rest.get('/api/process_unit/:unitId/command_examples', (req, res, context) => {
+  rest.get('/api/process_unit/:unitId/command_examples', (_, res, context) => {
     return res(
       context.status(200),
       context.json<CommandExample[]>([
@@ -311,8 +316,7 @@ export const handlers = [
     );
   }),
 
-  rest.get('/api/process_unit/:unitId/run_log', (req, res, context) => {
-    const timestamp = new Date().toISOString();
+  rest.get('/api/process_unit/:unitId/run_log', (_, res, context) => {
     return res(
       context.status(200),
       context.json<RunLog>({
@@ -404,7 +408,7 @@ export const handlers = [
     );
   }),
 
-  rest.get('/api/process_unit/:unitId/method', (req, res, context) => {
+  rest.get('/api/process_unit/:unitId/method', (_, res, context) => {
     return res(
       context.status(200),
       context.json<string>(`{
@@ -416,11 +420,11 @@ export const handlers = [
     );
   }),
 
-  rest.get('/api/process_unit/:unitId/plot_configuration', (req, res, context) => {
+  rest.get('/api/process_unit/:unitId/plot_configuration', (_, res, context) => {
     return res(
       context.status(200),
       context.json<PlotConfiguration>({
-        x_axis_process_value_name: 'timestamp',
+        x_axis_process_value_names: ['timestamp', 'timestamp2'],
         process_value_names_to_annotate: ['Flow path'],
         color_regions: [{
           process_value_name: 'Flow path',

@@ -1,17 +1,20 @@
+import { Store } from '@ngrx/store';
 import { bisector, pointer, ScaleLinear, select } from 'd3';
-import { firstValueFrom, Observable } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { PlotConfiguration, ProcessValue } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
-import { ProcessValueLog } from './ngrx/process-plot.reducer';
+import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
 import { ProcessPlotFontSizes } from './process-plot.font-sizes';
 import { D3Selection } from './process-plot.types';
 
 export class ProcessPlotTooltip {
   static margin = {x: 10, y: 8};
   placementRelativeToMouse = {x: 1, y: 14};
+  private processValuesLog = this.store.select(ProcessPlotSelectors.processValuesLog);
+  private xAxisProcessValue = this.store.select(ProcessPlotSelectors.xAxisProcessValueName);
 
-  constructor(private plotConfiguration: PlotConfiguration,
-              private processValueLog: Observable<ProcessValueLog>,
+  constructor(private store: Store,
+              private plotConfiguration: PlotConfiguration,
               private processValuePipe: ProcessValuePipe,
               private svg: D3Selection<SVGSVGElement>,
               private xScale: ScaleLinear<number, number>) {}
@@ -22,12 +25,15 @@ export class ProcessPlotTooltip {
     let eventTargetParentElement: D3Selection<SVGGElement>;
     subplotBorders.on('mousemove', async (event: MouseEvent) => {
       if(event === undefined) return;
-      const processValueLog = await firstValueFrom(this.processValueLog);
+      const processValuesLog = await firstValueFrom(this.processValuesLog);
+      const xAxisProcessValue = await firstValueFrom(this.xAxisProcessValue);
+      if(xAxisProcessValue === undefined) return;
+
       const subplotBorderG = (event.target as SVGRectElement).parentNode as SVGGElement;
       const subplotIndex = parseInt(/subplot-(\d+)/.exec(subplotBorderG.parentElement?.classList.toString() ?? '')?.[1] ?? '');
       const subplotProcessValueNames = this.plotConfiguration.sub_plots[subplotIndex].axes.flatMap(axis => axis.process_value_names);
-      const subplotData = Object.values(processValueLog).filter(processValues => subplotProcessValueNames.includes(processValues[0].name));
-      const xAxisData = processValueLog[this.plotConfiguration.x_axis_process_value_name];
+      const subplotData = Object.values(processValuesLog).filter(processValues => subplotProcessValueNames.includes(processValues[0].name));
+      const xAxisData = processValuesLog[xAxisProcessValue];
       const relativeMousePosition = pointer(event);
       const bisectedIndex = this.bisectX(xAxisData, relativeMousePosition[0]);
       if(bisectedIndex === undefined) return;
