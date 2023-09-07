@@ -264,7 +264,7 @@ class PlotConfiguration(BaseModel):
     process_value_names_to_annotate: List[str]
     color_regions: List[PlotColorRegion]
     sub_plots: List[SubPlot]
-    x_axis_process_value_name: str
+    x_axis_process_value_names: List[str]
 
 
 @router.get('/process_unit/{unit_id}/plot_configuration')

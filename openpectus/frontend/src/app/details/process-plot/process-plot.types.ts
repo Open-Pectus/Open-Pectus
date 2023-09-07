@@ -24,3 +24,31 @@ export interface ColoredRegionRect {
   color: string;
   value: string | number | undefined;
 }
+
+export interface YAxisOverrideDialogData {
+  subplotIndex: number;
+  axisIndex: number;
+  position: {
+    x: number;
+    y: number;
+  };
+}
+
+export interface XAxisOverrideDialogData {
+  position: {
+    x: number;
+    y: number;
+  };
+}
+
+export interface AxisLimits {
+  max: number;
+  min: number;
+}
+
+export type YAxesLimitsOverride = (AxisLimits | null)[][];
+
+export interface ZoomAndPanDomainOverrides {
+  x: AxisLimits;
+  y: YAxesLimitsOverride;
+}

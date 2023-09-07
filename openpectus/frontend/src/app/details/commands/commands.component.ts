@@ -8,7 +8,8 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
   selector: 'app-commands',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-collapsible-element [name]="'Commands'" [heightResizable]="true" [contentHeight]="400" (collapseStateChanged)="collapsed = $event">
+    <app-collapsible-element [name]="'Commands'" [heightResizable]="true" [contentHeight]="400" (collapseStateChanged)="collapsed = $event"
+                             [codiconName]="'codicon-terminal'">
       <div content class="flex h-full" *ngIf="!collapsed">
         <app-command-examples-list [commandExamples]="commandExamples | ngrxPush" [chosenExample]="chosenExample"
                                    (exampleChosen)="chosenExample = $event"></app-command-examples-list>

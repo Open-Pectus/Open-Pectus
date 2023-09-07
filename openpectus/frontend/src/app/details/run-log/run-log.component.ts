@@ -9,7 +9,8 @@ import { RunLogLineComponent } from './run-log-line.component';
   selector: 'app-run-log',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-collapsible-element [name]="'Run Log'" [heightResizable]="true" [contentHeight]="400" (collapseStateChanged)="collapsed = $event">
+    <app-collapsible-element [name]="'Run Log'" [heightResizable]="true" [contentHeight]="400" (collapseStateChanged)="collapsed = $event"
+                             [codiconName]="'codicon-tasklist'">
       <app-run-log-filters buttons></app-run-log-filters>
       <div content *ngIf="!collapsed" class="h-full overflow-y-auto">
         <app-run-log-header [gridFormat]="gridFormat" (expandAll)="expandAll()" (collapseAll)="collapseAll()"></app-run-log-header>

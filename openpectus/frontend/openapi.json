@@ -728,9 +728,12 @@
             "type": "array",
             "title": "Sub Plots"
           },
-          "x_axis_process_value_name": {
-            "type": "string",
-            "title": "X Axis Process Value Name"
+          "x_axis_process_value_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "X Axis Process Value Names"
           }
         },
         "type": "object",
@@ -738,7 +741,7 @@
           "process_value_names_to_annotate",
           "color_regions",
           "sub_plots",
-          "x_axis_process_value_name"
+          "x_axis_process_value_names"
         ],
         "title": "PlotConfiguration"
       },
