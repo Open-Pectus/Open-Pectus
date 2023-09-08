@@ -12,8 +12,6 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/main' }}
-  #SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/112-standard-tags' }}
-  #SHOULD_PUBLISH_IMAGE: ${{ github.head_ref == '112-standard-tags' }}
   NODE_VERSION: 18.16
 
 jobs:
@@ -145,3 +143,27 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           context: .
           file: ./Dockerfile
+  
+  deploy_image:
+    needs: [publish_docker_image]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: 'Login via Azure CLI'
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.ACR_DEPLOY_CREDENTIALS }}
+      - name: Deploy to Azure Container Instances
+        uses: azure/aci-deploy@v1
+        with:
+          dns-name-label: open-pectus-github
+          resource-group: ${{ secrets.ACR_DEPLOY_RESOURCE_GROUP }}
+          image: ${{ secrets.ACR_ENDPOINT }}/open-pectus:main
+          registry-login-server: ${{ secrets.ACR_DEPLOY_LOGIN_SERVER }}
+          registry-username: ${{ secrets.ACR_DEPLOY_USERNAME }}
+          registry-password: ${{ secrets.ACR_DEPLOY_SECRET }}
+          name: open-pectus-github
+          environment-variables: AGGREGATOR_PORT=80
+          location: 'west europe'
