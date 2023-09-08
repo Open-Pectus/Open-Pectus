@@ -138,7 +138,7 @@ jobs:
       - name: Build and push container image to registries
         uses: docker/build-push-action@v4
         with:
-          push: true
+          push: ${{ env.SHOULD_PUBLISH_IMAGE }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           context: .
