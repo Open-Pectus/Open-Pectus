@@ -158,10 +158,11 @@ jobs:
       - name: Deploy to Azure Container Instances
         uses: azure/aci-deploy@v1
         with:
+          dns-name-label: open-pectus-github
           resource-group: ${{ secrets.ACR_DEPLOY_RESOURCE_GROUP }}
           image: ${{ secrets.ACR_ENDPOINT }}/open-pectus:main
           registry-login-server: ${{ secrets.ACR_DEPLOY_LOGIN_SERVER }}
           registry-username: ${{ secrets.ACR_DEPLOY_USERNAME }}
           registry-password: ${{ secrets.ACR_DEPLOY_SECRET }}
-          name: open-pectus-github
+          name: open-pectus-11
           location: 'west europe'
