@@ -159,7 +159,6 @@ jobs:
         uses: azure/aci-deploy@v1
         with:
           resource-group: ${{ secrets.ACR_DEPLOY_RESOURCE_GROUP }}
-          dns-name-label: url-for-container
           image: ${{ secrets.ACR_ENDPOINT }}/open-pectus:main
           registry-login-server: ${{ secrets.ACR_DEPLOY_LOGIN_SERVER }}
           registry-username: ${{ secrets.ACR_DEPLOY_USERNAME }}
