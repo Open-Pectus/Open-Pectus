@@ -58,7 +58,7 @@ export class CollapsibleElementComponent implements OnInit {
 
   protected get height() {
     if(this.collapsed) return 0;
-    return this.heightResizable ? this.contentHeight : this.contentElementRef?.nativeElement.scrollHeight;
+    return this.heightResizable ? this.contentHeight : undefined;
   }
 
   private set height(height: number | undefined) {
