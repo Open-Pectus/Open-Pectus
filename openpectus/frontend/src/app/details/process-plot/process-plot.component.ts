@@ -247,6 +247,7 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
       takeUntil(this.componentDestroyed),
     ).subscribe(async ([_, processValuesLog, plotConfiguration, xAxisProcessValueName]) => {
       this.placement?.updateElementPlacements();
+      this.tooltip?.updateLineYPosition();
       this.plotData(plotConfiguration, processValuesLog, xAxisProcessValueName);
       this.store.dispatch(ProcessPlotActions.processPlotElementsPlaced());
     });

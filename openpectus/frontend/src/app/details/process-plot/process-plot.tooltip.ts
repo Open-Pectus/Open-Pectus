@@ -61,6 +61,18 @@ export class ProcessPlotTooltip {
       .attr('x2', d => this.xScale(d.value as number));
   }
 
+  updateLineYPosition() {
+    const subPlotBorders = this.svg.selectAll<SVGGElement, unknown>('.subplot-border');
+    subPlotBorders.each((_, index, groups) => {
+      const subPlotBorder = select(groups[index]);
+      const rectBBox = subPlotBorder.selectChild<SVGRectElement>('rect').node()?.getBBox();
+      subPlotBorder.selectAll<SVGLineElement, ProcessValue>('line')
+        .filter(d => d !== undefined)
+        .attr('y1', rectBBox?.y ?? 0)
+        .attr('y2', (rectBBox?.y ?? 0) + (rectBBox?.height ?? 0));
+    });
+  }
+
   private bisectX(xAxisData: ProcessValue[], mouseX: number): number | undefined {
     if(xAxisData === undefined || xAxisData.length === 0) return;
     const xValue = this.xScale.invert(mouseX);
@@ -106,12 +118,8 @@ export class ProcessPlotTooltip {
       return;
     }
     lineSelection.style('display', null);
-    const rectBBox = subPlotBorder.selectChild<SVGRectElement>('rect').node()?.getBBox();
-    lineSelection.data([xAxisDatum])
-      .join('line')
-      .attr('x1', d => this.xScale(d.value as number))
-      .attr('x2', d => this.xScale(d.value as number))
-      .attr('y1', rectBBox?.y ?? 0)
-      .attr('y2', (rectBBox?.y ?? 0) + (rectBBox?.height ?? 0));
+    lineSelection.data([xAxisDatum]).join('line');
+    this.updateLineXPosition();
+    this.updateLineYPosition();
   }
 }
