@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostBinding, Input, NgZone, OnDestroy, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostBinding, NgZone, OnDestroy, ViewChild } from '@angular/core';
 import { concatLatestFrom } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { axisBottom, ScaleLinear, scaleLinear, select } from 'd3';
@@ -30,7 +30,6 @@ import { ProcessPlotZoomAndPan } from './process-plot.zoom-and-pan';
 })
 export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
   @ViewChild('plot', {static: false}) plotElement?: ElementRef<SVGSVGElement>;
-  @Input() isCollapsed = false;
   private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(
     filter(UtilMethods.isNotNullOrUndefined));
   private processValuesLog = this.store.select(ProcessPlotSelectors.processValuesLog);
@@ -248,6 +247,7 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
       takeUntil(this.componentDestroyed),
     ).subscribe(async ([_, processValuesLog, plotConfiguration, xAxisProcessValueName]) => {
       this.placement?.updateElementPlacements();
+      this.tooltip?.updateLineYPosition();
       this.plotData(plotConfiguration, processValuesLog, xAxisProcessValueName);
       this.store.dispatch(ProcessPlotActions.processPlotElementsPlaced());
     });
