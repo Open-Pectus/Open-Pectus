@@ -1,3 +1,4 @@
+/* generated using openapi-typescript-codegen -- do no edit */
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
@@ -12,19 +13,19 @@ import type { ApiRequestOptions } from './ApiRequestOptions';
 import type { ApiResult } from './ApiResult';
 import type { OpenAPIConfig } from './OpenAPI';
 
-const isDefined = <T>(value: T | null | undefined): value is Exclude<T, null | undefined> => {
+export const isDefined = <T>(value: T | null | undefined): value is Exclude<T, null | undefined> => {
     return value !== undefined && value !== null;
 };
 
-const isString = (value: any): value is string => {
+export const isString = (value: any): value is string => {
     return typeof value === 'string';
 };
 
-const isStringWithValue = (value: any): value is string => {
+export const isStringWithValue = (value: any): value is string => {
     return isString(value) && value !== '';
 };
 
-const isBlob = (value: any): value is Blob => {
+export const isBlob = (value: any): value is Blob => {
     return (
         typeof value === 'object' &&
         typeof value.type === 'string' &&
@@ -37,11 +38,11 @@ const isBlob = (value: any): value is Blob => {
     );
 };
 
-const isFormData = (value: any): value is FormData => {
+export const isFormData = (value: any): value is FormData => {
     return value instanceof FormData;
 };
 
-const base64 = (str: string): string => {
+export const base64 = (str: string): string => {
     try {
         return btoa(str);
     } catch (err) {
@@ -50,7 +51,7 @@ const base64 = (str: string): string => {
     }
 };
 
-const getQueryString = (params: Record<string, any>): string => {
+export const getQueryString = (params: Record<string, any>): string => {
     const qs: string[] = [];
 
     const append = (key: string, value: any) => {
@@ -103,7 +104,7 @@ const getUrl = (config: OpenAPIConfig, options: ApiRequestOptions): string => {
     return url;
 };
 
-const getFormData = (options: ApiRequestOptions): FormData | undefined => {
+export const getFormData = (options: ApiRequestOptions): FormData | undefined => {
     if (options.formData) {
         const formData = new FormData();
 
@@ -132,14 +133,14 @@ const getFormData = (options: ApiRequestOptions): FormData | undefined => {
 
 type Resolver<T> = (options: ApiRequestOptions) => Promise<T>;
 
-const resolve = async <T>(options: ApiRequestOptions, resolver?: T | Resolver<T>): Promise<T | undefined> => {
+export const resolve = async <T>(options: ApiRequestOptions, resolver?: T | Resolver<T>): Promise<T | undefined> => {
     if (typeof resolver === 'function') {
         return (resolver as Resolver<T>)(options);
     }
     return resolver;
 };
 
-const getHeaders = (config: OpenAPIConfig, options: ApiRequestOptions): Observable<HttpHeaders> => {
+export const getHeaders = (config: OpenAPIConfig, options: ApiRequestOptions): Observable<HttpHeaders> => {
     return forkJoin({
         token: resolve(options, config.TOKEN),
         username: resolve(options, config.USERNAME),
@@ -184,7 +185,7 @@ const getHeaders = (config: OpenAPIConfig, options: ApiRequestOptions): Observab
     );
 };
 
-const getRequestBody = (options: ApiRequestOptions): any => {
+export const getRequestBody = (options: ApiRequestOptions): any => {
     if (options.body) {
         if (options.mediaType?.includes('/json')) {
             return JSON.stringify(options.body)
@@ -214,7 +215,7 @@ export const sendRequest = <T>(
     });
 };
 
-const getResponseHeader = <T>(response: HttpResponse<T>, responseHeader?: string): string | undefined => {
+export const getResponseHeader = <T>(response: HttpResponse<T>, responseHeader?: string): string | undefined => {
     if (responseHeader) {
         const value = response.headers.get(responseHeader);
         if (isString(value)) {
@@ -224,14 +225,14 @@ const getResponseHeader = <T>(response: HttpResponse<T>, responseHeader?: string
     return undefined;
 };
 
-const getResponseBody = <T>(response: HttpResponse<T>): T | undefined => {
+export const getResponseBody = <T>(response: HttpResponse<T>): T | undefined => {
     if (response.status !== 204 && response.body !== null) {
         return response.body;
     }
     return undefined;
 };
 
-const catchErrorCodes = (options: ApiRequestOptions, result: ApiResult): void => {
+export const catchErrorCodes = (options: ApiRequestOptions, result: ApiResult): void => {
     const errors: Record<number, string> = {
         400: 'Bad Request',
         401: 'Unauthorized',
@@ -249,7 +250,19 @@ const catchErrorCodes = (options: ApiRequestOptions, result: ApiResult): void =>
     }
 
     if (!result.ok) {
-        throw new ApiError(options, result, 'Generic Error');
+        const errorStatus = result.status ?? 'unknown';
+        const errorStatusText = result.statusText ?? 'unknown';
+        const errorBody = (() => {
+            try {
+                return JSON.stringify(result.body, null, 2);
+            } catch (e) {
+                return undefined;
+            }
+        })();
+
+        throw new ApiError(options, result,
+            `Generic Error: status: ${errorStatus}; status text: ${errorStatusText}; body: ${errorBody}`
+        );
     }
 };
 

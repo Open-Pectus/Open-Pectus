@@ -52,7 +52,7 @@ export class CollapsibleElementComponent implements OnInit {
   protected collapsed = false;
   protected widenDragHandler = false;
   protected isDragging = false;
-  private minHeight = 100;
+  private minHeight = 200;
 
   constructor(private collapsibleElementStorageService: CollapsibleElementStorageService) {}
 
