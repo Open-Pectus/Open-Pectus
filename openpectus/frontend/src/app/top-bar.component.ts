@@ -10,7 +10,7 @@ import { OidcSecurityService } from 'angular-auth-oidc-client';
       <app-msw-enablement class="absolute left-4"></app-msw-enablement>
       <button class="absolute-center text-3xl font-bold" (click)="navigateToRoot()">Open Pectus</button>
       <div class="absolute right-4 flex gap-4 items-center">
-        <p>{{(oidcSecurityService.userData$ | ngrxPush)?.userData.name}}</p>
+        <p>{{(oidcSecurityService.userData$ | ngrxPush)?.userData?.name}}</p>
         <div class="codicon codicon-account !text-3xl"></div>
       </div>
     </div>
