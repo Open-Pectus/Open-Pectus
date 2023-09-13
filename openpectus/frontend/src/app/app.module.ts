@@ -15,6 +15,8 @@ import { metaReducers, reducers } from './ngrx/';
 import { AppEffects } from './ngrx/app.effects';
 import { ProcessValuePipe } from './shared/pipes/process-value.pipe';
 import { TopBarComponent } from './top-bar.component';
+import { AuthConfigModule } from './auth/auth-config.module';
+import { AuthCallbackComponent } from './auth-callback.component';
 
 
 @NgModule({
@@ -22,6 +24,7 @@ import { TopBarComponent } from './top-bar.component';
     AppComponent,
     TopBarComponent,
     MswEnablementComponent,
+    AuthCallbackComponent,
   ],
   imports: [
     BrowserModule,
@@ -45,6 +48,7 @@ import { TopBarComponent } from './top-bar.component';
       logOnly: !isDevMode(),
       actionsBlocklist: ['@ngrx'],
     }),
+    AuthConfigModule,
   ],
   providers: [
     {provide: LOCALE_ID, useValue: 'da-DK'},
