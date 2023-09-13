@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { AutoLoginPartialRoutesGuard } from 'angular-auth-oidc-client';
-import { AuthCallbackComponent } from './auth-callback.component';
+import { AuthCallbackComponent } from './auth/auth-callback.component';
 
 export const dashboardUrlPart = 'dashboard';
 export const detailsUrlPart = 'details';

@@ -1,9 +1,13 @@
 import { NgModule } from '@angular/core';
 import { AuthModule, LogLevel } from 'angular-auth-oidc-client';
 import { authCallbackUrlPart } from '../app-routing.module';
+import { AuthCallbackComponent } from './auth-callback.component';
 
 
 @NgModule({
+  declarations: [
+    AuthCallbackComponent,
+  ],
   imports: [AuthModule.forRoot({
     config: {
       authority: 'https://login.microsoftonline.com/fdfed7bd-9f6a-44a1-b694-6e39c468c150/v2.0',
@@ -18,13 +22,16 @@ import { authCallbackUrlPart } from '../app-routing.module';
       maxIdTokenIatOffsetAllowedInSeconds: 600,
       // issValidationOff: false,
       issValidationOff: true,
-      autoUserInfo: false,
+      autoUserInfo: true,
       customParamsAuthRequest: {
         prompt: 'select_account', // login, consent
       },
       logLevel: LogLevel.None,
     },
   })],
-  exports: [AuthModule],
+  exports: [
+    AuthModule,
+    AuthCallbackComponent,
+  ],
 })
 export class AuthConfigModule {}

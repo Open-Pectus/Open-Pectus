@@ -3,6 +3,7 @@ import { HttpClientModule } from '@angular/common/http';
 import '@angular/common/locales/global/da';
 import { isDevMode, LOCALE_ID, NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { PushPipe } from '@ngrx/component';
 import { EffectsModule } from '@ngrx/effects';
 import { RouterState, StoreRouterConnectingModule } from '@ngrx/router-store';
 import { StoreModule } from '@ngrx/store';
@@ -10,13 +11,12 @@ import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
+import { AuthConfigModule } from './auth/auth-config.module';
 import { MswEnablementComponent } from './msw-enablement.component';
 import { metaReducers, reducers } from './ngrx/';
 import { AppEffects } from './ngrx/app.effects';
 import { ProcessValuePipe } from './shared/pipes/process-value.pipe';
 import { TopBarComponent } from './top-bar.component';
-import { AuthConfigModule } from './auth/auth-config.module';
-import { AuthCallbackComponent } from './auth-callback.component';
 
 
 @NgModule({
@@ -24,7 +24,6 @@ import { AuthCallbackComponent } from './auth-callback.component';
     AppComponent,
     TopBarComponent,
     MswEnablementComponent,
-    AuthCallbackComponent,
   ],
   imports: [
     BrowserModule,
@@ -49,6 +48,7 @@ import { AuthCallbackComponent } from './auth-callback.component';
       actionsBlocklist: ['@ngrx'],
     }),
     AuthConfigModule,
+    PushPipe,
   ],
   providers: [
     {provide: LOCALE_ID, useValue: 'da-DK'},
