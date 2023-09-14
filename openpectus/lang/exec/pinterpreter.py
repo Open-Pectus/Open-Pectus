@@ -8,6 +8,7 @@ from typing import Generator, List, Tuple
 from typing_extensions import override
 
 from openpectus.lang.model.pprogram import (
+    PInjectedNode,
     PNode,
     PProgram,
     PInstruction,
@@ -23,6 +24,7 @@ from openpectus.lang.model.pprogram import (
 
 from openpectus.lang.exec.tags import (
     TagCollection,
+    TagValueCollection,
     DEFAULT_TAG_BLOCK_TIME,
     DEFAULT_TAG_RUN_TIME,
 )
@@ -51,12 +53,13 @@ class ARType(Enum):
     PROGRAM = "PROGRAM",
     BLOCK = "BLOCK",
     WATCH = "WATCH",
+    INJECTED = "INJECTED",
 
 
 class ActivationRecord:
     # TODO do we need tags here? Is Base global?
     def __init__(
-        self, owner: PNode, start_time: float, start_tags: TagCollection
+        self, owner: PNode, start_time: float, start_tags: TagValueCollection
     ) -> None:
         self.owner: PNode = owner
         self.start_time: float = start_time
@@ -71,6 +74,8 @@ class ActivationRecord:
             return ARType.BLOCK
         elif isinstance(node, PWatch):
             return ARType.WATCH
+        elif isinstance(node, PInjectedNode):
+            return ARType.INJECTED
         else:
             raise NotImplementedError(f"ARType of node type '{type(node).__name__}' unknown")
 
@@ -146,6 +151,21 @@ class PInterpreter(PNodeVisitor):
     def get_marks(self) -> List[str]:
         return [x.message for x in self.logs if x.message[0] != 'P']
 
+    def inject_node(self, program: PProgram):
+        """ Inject the node into the running program in the current scope to be executed as next instruction. """
+        node = PInjectedNode(None)
+        node.children = program.children
+
+        def create_interrupt_handler(ar: ActivationRecord) -> GenerationType:
+            # TODO will this work with nested interrupt handlers,
+            # possibly including blocks?
+            self.stack.push(ar)
+            yield from self.visit(node)
+            self.stack.pop()
+
+        ar = ActivationRecord(node, self.tick_time, self.context.tags.as_readonly())
+        self._register_interrupt(ar, create_interrupt_handler(ar))
+
     def _interpret(self) -> GenerationType:
         """ Create generator for interpreting the main program. """
         self.running = True
@@ -162,7 +182,6 @@ class PInterpreter(PNodeVisitor):
         )
 
     def _update_tags(self):
-        # TODO move to ExecutionEngine
         # Engine has no concept of scopes - or at least only program and current block.
         # What about intermediate blocks/scopes?
         # Does this relate to RunLog? Should that show intermediate scope times?
@@ -195,7 +214,7 @@ class PInterpreter(PNodeVisitor):
         for ar, handler in list(self.interrupts):
             logger.debug(f"Handler count: {len(self.interrupts)}")
             node = ar.owner
-            if isinstance(node, PWatch):
+            if isinstance(node, (PWatch, PInjectedNode)):
                 logger.debug(f"Interrupt {str(node)}")
                 try:
                     assert handler is not None, "Handler is None"
@@ -224,8 +243,7 @@ class PInterpreter(PNodeVisitor):
         # update interpreter tags
         self._update_tags()
 
-        # TODO read uod.tags
-
+        # execute one iteration of program
         assert self.process_instr is not None, "self.process_instr is None"
         try:
             next(self.process_instr)
@@ -235,6 +253,7 @@ class PInterpreter(PNodeVisitor):
             logger.error("Interpretation error", exc_info=True)
             self.pause()
 
+        # execute one iteration of each interrupt
         try:
             work_done = self._run_interrupt_handlers()
             if not work_done:
@@ -242,8 +261,6 @@ class PInterpreter(PNodeVisitor):
         except Exception:
             logger.error("Interpretation interrupt error", exc_info=True)
             self.pause()
-
-        # TODO write uod.tags
 
         if program_end and interrupt_end:
             logger.info("Interpretation complete. Stopping")
@@ -258,11 +275,11 @@ class PInterpreter(PNodeVisitor):
     def _is_awaiting_threshold(self, node: PNode):
         if isinstance(node, PInstruction) and node.time is not None:
             block_elapsed = self.context.tags.get(DEFAULT_TAG_BLOCK_TIME).as_quantity()
-            time_quantity = pint.Quantity(node.time, "sec")
-            if block_elapsed < time_quantity:
-                logger.debug(f"Awaiting threshold: {time_quantity}, current: {block_elapsed}, time: {self.tick_time}")
+            threshold_quantity = pint.Quantity(node.time, "sec")
+            if block_elapsed < threshold_quantity:
+                logger.debug(f"Awaiting threshold: {threshold_quantity}, current: {block_elapsed}, time: {self.tick_time}")
                 return True
-            logger.debug(f"Done awaiting time: {self.tick_time}")
+            logger.debug(f"Done awaiting threshold {threshold_quantity} @ tick time: {self.tick_time}")
         return False
 
     def _evaluate_condition(self, condition_node: PWatch | PAlarm) -> bool:
@@ -342,7 +359,7 @@ class PInterpreter(PNodeVisitor):
 
     def visit_PProgram(self, node: PProgram):
         self._add_to_log(time.time(), time.time(), "PProgram")
-        ar = ActivationRecord(node, self.tick_time, TagCollection.create_system_tags())
+        ar = ActivationRecord(node, self.tick_time, self.context.tags.as_readonly())
         self.stack.push(ar)
         yield from self._visit_children(node.children)
         self.stack.pop()
@@ -355,7 +372,7 @@ class PInterpreter(PNodeVisitor):
         logger.info(f"Mark {str(node)}")
 
     def visit_PBlock(self, node: PBlock):
-        ar = ActivationRecord(node, self.tick_time, TagCollection.create_system_tags())
+        ar = ActivationRecord(node, self.tick_time, self.context.tags.as_readonly())
         self.stack.push(ar)
 
         yield from self._visit_children(node.children)
@@ -382,7 +399,7 @@ class PInterpreter(PNodeVisitor):
     def visit_PCommand(self, node: PCommand):
         try:
             # Note: Commands can be resident and last multiple ticks.
-            # The context (ExecutionEngine) keeps track of this and 
+            # The context (ExecutionEngine) keeps track of this and
             # we just move on to the next tick when tick() is invoked
 
             logger.debug(f"Executing command {str(node)}")
@@ -395,14 +412,18 @@ class PInterpreter(PNodeVisitor):
         def create_interrupt_handler(ar: ActivationRecord) -> GenerationType:
             # TODO will this work with nested interrupt handlers,
             # possibly including blocks?
+            # TODO once this is determined we should have a single method
+            # to create interrupt handlers
             self.stack.push(ar)
-            yield from self.visit_PWatch(node)
+            yield from self.visit(node)
             self.stack.pop()
 
         ar = self.stack.peek()
         if ar.owner is not node:
             # TODO the ar gets the creation tick time. Is this correct?
-            ar = ActivationRecord(node, self.tick_time, TagCollection.create_system_tags())
+            # TODO should use engine tags here - preferably the readonly ones
+            # TODO this is very similar to entries in the run-log...
+            ar = ActivationRecord(node, self.tick_time, self.context.tags.as_readonly())
             self._register_interrupt(ar, create_interrupt_handler(ar))
         else:
             logger.debug(f"{str(node)} interrupt invoked")
@@ -422,3 +443,16 @@ class PInterpreter(PNodeVisitor):
                         logger.info(f"Interrupt complete {ar}")
                     else:
                         yield
+
+    def visit_PInjectedNode(self, node: PInjectedNode):
+        ar = self.stack.peek()
+        if ar.owner is node:
+            logger.debug(f"{str(node)} injected interrupt invoked")
+            while not ar.complete and self.running:
+                logger.debug(f"{str(node)} executing")
+                yield from self._visit_children(node.children)
+                logger.debug(f"{str(node)} executed")
+                ar.complete = True
+                logger.info(f"Injected interrupt complete {ar}")
+        else:
+            logger.error("injection error")

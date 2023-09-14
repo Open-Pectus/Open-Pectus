@@ -5,6 +5,8 @@ from typing import Any, List
 from typing_extensions import override
 import unittest
 
+import pint
+
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder
 from openpectus.engine.eng import ExecutionEngine, CommandRequest, EngineInternalCommand, RunLogItemState
 from openpectus.lang.exec import tags
@@ -15,6 +17,11 @@ from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDire
 logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
 logger = logging.getLogger("Engine")
 logger.setLevel(logging.DEBUG)
+
+# pint takes forever to initialize - long enough
+# to throw off timing of the first instruction.
+# so we initialize it first
+_ = pint.Quantity("0 sec")
 
 
 def run_engine(engine: ExecutionEngine, pcode: str, max_ticks: int = -1):
@@ -29,7 +36,29 @@ def run_engine(engine: ExecutionEngine, pcode: str, max_ticks: int = -1):
         ticks += 1
         if max_ticks != -1 and ticks > max_ticks:
             print(f"Stopping because max_ticks {max_ticks} was reached")
-            engine._running = False
+            return
+
+        time.sleep(0.1)
+        engine.tick()
+
+
+def continue_engine(engine: ExecutionEngine, max_ticks: int = -1):
+    # This function (as well as run_engine) differs from just calling engine.tick() in that
+    # it passes the time before calling tick(). Some functionality depends on this, such as
+    # thresholds.
+
+    # TODO consider adding a SystemClock abstraction to avoid the need for waiting
+    # in tests
+    print("Interpretation continuing")
+    ticks = 0
+    max_ticks = max_ticks
+
+    engine._running = True
+
+    while engine.is_running():
+        ticks += 1
+        if max_ticks != -1 and ticks > max_ticks:
+            print(f"Stopping because max_ticks {max_ticks} was reached")
             return
 
         time.sleep(0.1)
@@ -323,7 +352,7 @@ class TestEngine(unittest.TestCase):
 
         self.assertTrue(RunLogItemState.Completed in runlog[1].states)
 
-        print_runlog(e)        
+        print_runlog(e)
 
     def test_overlapping_uod_commands(self):
         e = create_engine()
@@ -363,16 +392,12 @@ class TestEngine(unittest.TestCase):
 
         self.assertEqual(0, e._system_tags["RUN COUNTER"].get_value())
 
-        e.schedule_execution("INCREMENT RUN COUNTER", "")
+        e.schedule_execution("INCREMENT RUN COUNTER")
         e.tick()
 
         self.assertEqual(1, e._system_tags["RUN COUNTER"].get_value())
 
         print_runlog(e)
-
-    @unittest.skip("not implemented")
-    def test_internal_commands_multiple_iterations(self):
-        raise NotImplementedError()
 
     def test_clocks(self):
         e = create_engine()
@@ -402,11 +427,10 @@ Mark: C
     def test_get_runlog(self):
         e = create_engine()
 
-        e.cmd_queue.put(CommandRequest("START"))
-        e.cmd_queue.put(CommandRequest("Reset"))
+        e.schedule_execution("START")
+        e.schedule_execution("Reset")
 
-        for _ in range(5):
-            e.tick()
+        run_engine(e, "", 5)
 
         self.assertEqual(2, len(e.runlog._items))
         print_runlog(e)
@@ -475,6 +499,71 @@ Mark: C
         self.assertTrue(EngineInternalCommand.has_value("STOP"))
         self.assertTrue(EngineInternalCommand.has_value("INCREMENT RUN COUNTER"))
         self.assertFalse(EngineInternalCommand.has_value("stop"))
+
+    def test_inject_command(self):
+        program = """
+Mark: A
+Mark: B
+Mark: C
+"""
+        e = create_engine()
+        e._running = True
+        e.set_program(program)
+        e.tick()
+        e.tick()
+
+        self.assertEqual(['A'], e.interpreter.get_marks())
+
+        e.inject_code("Mark: I")
+        e.tick()
+
+        self.assertEqual(['A', 'B', 'I'], e.interpreter.get_marks())
+
+        e.tick()
+
+        self.assertEqual(['A', 'B', 'I', 'C'], e.interpreter.get_marks())
+
+    def test_inject_thresholds_1(self):
+        program = """
+Mark: A
+0.25 Mark: B
+Mark: C
+"""
+        e = create_engine()
+        # e._running = True
+        # e.set_program(program)
+        run_engine(e, program, 2)
+
+        self.assertEqual(['A'], e.interpreter.get_marks())
+
+        e.inject_code("Mark: I")
+        continue_engine(e, 1)
+
+        self.assertEqual(['A', 'I'], e.interpreter.get_marks())
+
+        continue_engine(e, 3)
+        self.assertEqual(['A', 'I', 'B', 'C'], e.interpreter.get_marks())
+
+    def test_inject_thresholds_2(self):
+        program = """
+Mark: A
+0.2 Mark: B
+Mark: C
+"""
+        e = create_engine()
+        # e._running = True
+        # e.set_program(program)
+        run_engine(e, program, 2)
+
+        self.assertEqual(['A'], e.interpreter.get_marks())
+
+        e.inject_code("0.3 Mark: I")
+        continue_engine(e, 1)
+
+        self.assertEqual(['A', 'B'], e.interpreter.get_marks())
+
+        continue_engine(e, 3)
+        self.assertEqual(['A', 'B', 'C', 'I'], e.interpreter.get_marks())
 
 
 # Test helpers

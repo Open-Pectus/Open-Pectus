@@ -206,7 +206,7 @@ mark: b2
 mark: b3
 """)
         engine = create_engine()
-        run_engine(engine, program, 50)
+        run_engine(engine, program, 10)
 
         print_log(engine.interpreter)
         self.assertEqual(["a", "b", "a1", "b1", "a2", "b2", "a3", "b3"], engine.interpreter.get_marks())
@@ -242,7 +242,7 @@ mark: b
         run_engine(engine, program, 15)
 
         print_log(engine.interpreter)
-        
+
         # TODO fix intepretation error, watch instruction(s) not being executed
 
         self.assertEqual(["a", "b", "a1", "a2", "a3", "a4"], engine.interpreter.get_marks())
@@ -260,7 +260,7 @@ Mark: A3
         uod.system_tags[DEFAULT_TAG_BASE].set_value("sec")
 
         engine = create_engine(uod)
-        run_engine(engine, program, 15)
+        run_engine(engine, program, 10)
 
         print_log(engine.interpreter)
 
@@ -279,7 +279,7 @@ Block: A
 Mark: A3
 """)
         engine = create_engine()
-        run_engine(engine, program, 25)
+        run_engine(engine, program, 15)
 
         self.assertEqual(["A1", "B1", "A3"], engine.interpreter.get_marks())
 
@@ -305,7 +305,7 @@ Block: A
 Mark: A3
 """)
         engine = create_engine()
-        run_engine(engine, program, 30)
+        run_engine(engine, program, 20)
 
         self.assertEqual(["A1", "A2", "A3"], engine.interpreter.get_marks())
 
@@ -335,7 +335,7 @@ Mark: A3
 0.8 Mark: c
 """)
         engine = create_engine()
-        run_engine(engine, program, 100)
+        run_engine(engine, program, 20)
         i = engine.interpreter
 
         self.assertEqual(["a", "b", "c"], i.get_marks())
@@ -385,7 +385,7 @@ Block: B
 Mark: d
 """)
         engine = create_engine()
-        run_engine(engine, program, 100)
+        run_engine(engine, program, 25)
         i = engine.interpreter
 
         print_log(i)
@@ -406,6 +406,10 @@ Mark: d
             self.assert_time_equal(log_a.time + 1.1 + 6*TICK_INTERVAL, log_d.time, 300)
 
     @unittest.skip("TODO")
+    def test_threshold_column_volume(self):
+        raise NotImplementedError()
+
+    @unittest.skip("TODO")
     def test_watch_tag_categorized_value(self):
         program = build_program("""
 watch: LT01 = Full
@@ -416,17 +420,6 @@ mark: b
         run_interpreter(i, 5)
 
         print_log(i)
-
-    @unittest.skip("TODO")
-    def test_command_long_running(self):
-        raise NotImplementedError()
-        program = build_program("""
-""")
-        #i = PInterpreter(program, TestUod())
-        #i.tags[DEFAULT_TAG_BASE].set_value("sec")
-        #i.validate_commands()
-        #print_program(program, show_errors=True, show_line_numbers=True, show_blanks=True)
-        #run_interpreter(i, )
 
     @unittest.skip("TODO")
     def test_change_base_in_program(self):

@@ -105,6 +105,13 @@ class PProgram(PNode):
         return [c for c in self.get_instructions() if isinstance(c, PAlarm) or isinstance(c, PWatch)]
 
 
+class PInjectedNode(PNode):
+    """ Represents a subtree of injected code """
+    def __init__(self, parent: PNode | None) -> None:
+        super().__init__(parent)
+        self.children = []
+
+
 class PInstruction(PNode):
     """ Represents a generic instruction. """
     def __init__(self, parent: PNode) -> None:

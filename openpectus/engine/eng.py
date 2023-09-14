@@ -13,13 +13,13 @@ from openpectus.lang.exec.timer import OneThreadTimer
 from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 from openpectus.lang.exec.tags import (
-    DEFAULT_TAG_RUN_TIME,
     Tag,
     TagCollection,
+    TagValueCollection,
     ChangeListener,
+    DEFAULT_TAG_RUN_TIME,
     DEFAULT_TAG_CLOCK,
     DEFAULT_TAG_RUN_COUNTER,
-    TagValueCollection
 )
 from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.model.pprogram import PProgram
@@ -97,8 +97,8 @@ class ExecutionEngine():
         self._runstate_started_time: float = 0
         """ Indicates the time of the last Start state"""
 
-        self._interpreter: PInterpreter | None = None
-        """ The interpreter executing the current program, if any. """
+        self._interpreter: PInterpreter = PInterpreter(PProgram(), EngineInterpreterContext(self))
+        """ The interpreter executing the current program. """
 
         self.runlog: RunLog = RunLog()
 
@@ -172,8 +172,7 @@ class ExecutionEngine():
         # TODO
 
         # excecute interpreter tick
-        if self._interpreter is not None:
-            self._interpreter.tick(self._tick_time)
+        self._interpreter.tick(self._tick_time)
 
         # update clocks
         self.update_clocks()
@@ -227,6 +226,9 @@ class ExecutionEngine():
             tag.set_value(tag_value)
 
     def update_clocks(self):
+        # TODO figure out engine/interpreter work split on clock tags
+        # it appears that interpreter will have to update scope times
+        # - unless we allow scope information to pass to engine (which we might)
         if self._runstate_started:
             clock = self._system_tags.get(DEFAULT_TAG_CLOCK)
             clock.set_value(self._tick_time)
@@ -268,26 +270,13 @@ class ExecutionEngine():
             self.cmd_executing.remove(c_done)
 
     def _execute_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
-        # TODO decide whether to parse or not
-        # TODO create state diagram of command execution/iterations/cancellation
-        # TODO add command to force condition and add interpreter api for it
-        # TODO add helper methods on PProgram to determine simple commands
+        # execute an internal engine command or a uod command
 
         logger.debug("Executing command: " + cmd_request.name)
         if cmd_request.name is None or len(cmd_request.name.strip()) == 0:
             logger.error("Command name empty")
             cmds_done.add(cmd_request)
             return
-
-        # Command types
-        # 1. Engine internal, i.e. START
-        # 2. Uod, ie. RESET
-        # 3. Interpreter, i.e. MARK
-
-        # TODO - how do we execute a type 3. ?
-        # TODO consider command types and callers:
-        # caller==interpreter -> should only call with engine and uod commands
-        # caller==frontend -> command could be anything
 
         cmd_name = cmd_request.name
         if EngineInternalCommand.has_value(cmd_name):
@@ -311,9 +300,6 @@ class ExecutionEngine():
 
                 case _:
                     raise NotImplementedError(f"EngineInternalCommand {cmd_name} execution not implemented")
-        elif False:
-            # TODO internal commands
-            pass
         else:
             assert self.uod.has_command_name(cmd_name), f"Expected Uod to have command named {cmd_name}"
 
@@ -433,22 +419,31 @@ class ExecutionEngine():
         hwl.write_batch(register_values, register_list)
 
     # differentiate between injected commands (which are to be executed asap without modifying the program)
-    # and non-injected which are already part of the program
+    # and non-injected which are either
+    # - already part of the program
+    # - uod commands that engine cant just execute (if they have no threshold)
 
-    def schedule_execution(self, name: str, args: str) -> None:
-        """ Schedule execution of named command, possibly with arguments"""
-        # TODO might want to check that no threshold is provided. this is not supported here
-        command = CommandRequest(name, args)
-        self.cmd_queue.put_nowait(command)
+    def schedule_execution(self, name: str, args: str | None = None) -> None:
+        """ Execute named command (engine internal or Uod), possibly with arguments. """
+        if EngineInternalCommand.has_value(name) or self.uod.has_command_name(name):
+            command = CommandRequest(name, args)
+            self.cmd_queue.put_nowait(command)
+        else:
+            raise ValueError("Invalid command type scheduled")
 
     def inject_command(self, name: str, args: str):
         """ Inject a command to run in the current scope of the current program. """
-        # TODO might want to check that no threshold is provided. this is not supported here
+        # Helper for inject_code()
         raise NotImplementedError()
 
-    def inject_snippet(self, pcode: str):
+    def inject_code(self, pcode: str):
         """ Inject a general code snippet to run in the current scope of the current program. """
-        raise NotImplementedError()
+        # TODO return status for frontend client
+        try:
+            injected_program = parse_pcode(pcode)
+            self.interpreter.inject_node(injected_program)
+        except Exception as ex:
+            logger.info("Injected code parse error: " + str(ex))
 
     # code manipulation api
     def set_program(self, pcode: str):
