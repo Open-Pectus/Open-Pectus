@@ -4,14 +4,14 @@ name: Combined Workflows
 
 on:
   push:
-    branches: [ "main", "25-define-system-tags-and-commands" ]
+    branches: [ "main", "172-frontend-azure-ad-oidc-login" ]
   pull_request:
     branches: [ "main" ]
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/main' }}
+  SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/172-frontend-azure-ad-oidc-login' }}
   NODE_VERSION: 18.16
 
 jobs:
@@ -113,7 +113,7 @@ jobs:
       - name: Download openpectus-dist artifact
         uses: actions/download-artifact@v3
         with:
-          name: openpectus-dist          
+          name: openpectus-dist
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v4
@@ -143,7 +143,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           context: .
           file: ./Dockerfile
-  
+
   deploy_image:
     needs: [publish_docker_image]
     runs-on: ubuntu-latest
