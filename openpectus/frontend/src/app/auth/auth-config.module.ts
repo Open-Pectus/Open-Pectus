@@ -22,13 +22,14 @@ import { AuthCallbackComponent } from './auth-callback.component';
         silentRenew: true,
         useRefreshToken: true,
         maxIdTokenIatOffsetAllowedInSeconds: 600,
+        ignoreNonceAfterRefresh: true,
         // issValidationOff: false,
         issValidationOff: true,
         autoUserInfo: true,
-        customParamsAuthRequest: {
-          prompt: 'select_account', // login, consent
-        },
-        logLevel: LogLevel.Debug,
+        // customParamsAuthRequest: {
+        //   prompt: 'select_account', // login, consent
+        // },
+        logLevel: LogLevel.None,
         secureRoutes: [`/api/`],
       },
     }),
