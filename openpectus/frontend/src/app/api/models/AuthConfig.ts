@@ -4,6 +4,7 @@
 /* eslint-disable */
 
 export type AuthConfig = {
+    use_auth: boolean;
     authority_url?: string;
     client_id?: string;
 };

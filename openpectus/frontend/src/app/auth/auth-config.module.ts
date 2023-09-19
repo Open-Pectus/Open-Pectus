@@ -1,21 +1,28 @@
 import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
 import { NgModule } from '@angular/core';
-import { AuthInterceptor, AuthModule, LogLevel, StsConfigHttpLoader, StsConfigLoader } from 'angular-auth-oidc-client';
+import { Store } from '@ngrx/store';
+import { AuthInterceptor, AuthModule, LogLevel, OpenIdConfiguration, StsConfigHttpLoader, StsConfigLoader } from 'angular-auth-oidc-client';
 import { map } from 'rxjs';
 import { AuthConfig, AuthService } from '../api';
 import { authCallbackUrlPart } from '../app-routing.module';
+import { AppActions } from '../ngrx/app.actions';
 import { AuthCallbackComponent } from './auth-callback.component';
 
-export const httpLoaderFactory = (authService: AuthService) => {
-  const config = authService.getConfig().pipe(map((customConfig: AuthConfig) => {
+export const httpLoaderFactory = (authService: AuthService, store: Store) => {
+  const config = authService.getConfig().pipe<OpenIdConfiguration>(map((customConfig: AuthConfig) => {
+      store.dispatch(AppActions.authEnablementFetched({authIsEnabled: customConfig.use_auth}));
+      if(!customConfig.use_auth) {
+        return {
+          authority: window.location.origin,
+          clientId: 'DUMMY',
+          redirectUrl: `${window.location.origin}/${authCallbackUrlPart}`,
+        };
+      }
       return {
         authority: customConfig.authority_url,
         clientId: customConfig.client_id,
-        // authority: 'https://login.microsoftonline.com/fdfed7bd-9f6a-44a1-b694-6e39c468c150/v2.0',
         authWellknownEndpointUrl: 'https://login.microsoftonline.com/common/v2.0',
-        // authWellknownEndpointUrl: 'https://login.microsoftonline.com/fdfed7bd-9f6a-44a1-b694-6e39c468c150/oauth2/v2.0',
         redirectUrl: `${window.location.origin}/${authCallbackUrlPart}`,
-        // clientId: 'fc7355bb-a6be-493f-90a1-cf57063f7948',
         scope: 'openid profile offline_access', // 'openid profile offline_access ' + your scopes
         responseType: 'code',
         silentRenew: true,
@@ -47,7 +54,7 @@ export const httpLoaderFactory = (authService: AuthService) => {
       loader: {
         provide: StsConfigLoader,
         useFactory: httpLoaderFactory,
-        deps: [AuthService],
+        deps: [AuthService, Store],
       },
     }),
     HttpClientModule,

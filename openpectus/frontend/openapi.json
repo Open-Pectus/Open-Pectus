@@ -514,6 +514,10 @@
     "schemas": {
       "AuthConfig": {
         "properties": {
+          "use_auth": {
+            "type": "boolean",
+            "title": "Use Auth"
+          },
           "authority_url": {
             "type": "string",
             "title": "Authority Url"
@@ -524,6 +528,9 @@
           }
         },
         "type": "object",
+        "required": [
+          "use_auth"
+        ],
         "title": "AuthConfig"
       },
       "BatchJob": {

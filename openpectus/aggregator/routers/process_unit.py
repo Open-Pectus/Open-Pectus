@@ -269,4 +269,9 @@ class PlotConfiguration(BaseModel):
 
 @router.get('/process_unit/{unit_id}/plot_configuration')
 def get_plot_configuration(unit_id: str) -> PlotConfiguration:
-    return PlotConfiguration(color_regions=[], sub_plots=[])
+    return PlotConfiguration(
+        color_regions=[],
+        sub_plots=[],
+        process_value_names_to_annotate=[],
+        x_axis_process_value_names=[]
+    )

@@ -70,6 +70,7 @@ export const handlers = [
     return res(
       ctx.status(200),
       ctx.json<AuthConfig>({
+        use_auth: false,
         client_id: 'fc7355bb-a6be-493f-90a1-cf57063f7948',
         authority_url: 'https://login.microsoftonline.com/fdfed7bd-9f6a-44a1-b694-6e39c468c150/v2.0',
       }),

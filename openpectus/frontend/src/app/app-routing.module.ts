@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { AutoLoginPartialRoutesGuard } from 'angular-auth-oidc-client';
 import { AuthCallbackComponent } from './auth/auth-callback.component';
+import { authGuard } from './auth/auth.guard';
 
 export const dashboardUrlPart = 'dashboard';
 export const detailsUrlPart = 'details';
@@ -11,12 +11,12 @@ const routes: Routes = [
   {
     path: dashboardUrlPart,
     loadChildren: () => import('./dashboard/dashboard.module').then(m => m.DashboardModule),
-    canActivate: [AutoLoginPartialRoutesGuard],
+    canActivate: [authGuard],
   },
   {
     path: detailsUrlPart,
     loadChildren: () => import('./details/details.module').then(m => m.DetailsModule),
-    canActivate: [AutoLoginPartialRoutesGuard],
+    canActivate: [authGuard],
   },
   {
     path: authCallbackUrlPart,

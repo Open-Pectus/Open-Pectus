@@ -15,8 +15,7 @@ import { AppActions } from './ngrx/app.actions';
 export class AppComponent implements OnInit {
   constructor(private store: Store,
               private testWebsocketService: TestWebsocketService, // only to get it constructed, so it can run its test. TODO: remove this once pubsub is in actual use.
-              private oidcSecurityService: OidcSecurityService,
-  ) {}
+              private oidcSecurityService: OidcSecurityService) {}
 
   ngOnInit() {
     this.oidcSecurityService.checkAuth().subscribe(
