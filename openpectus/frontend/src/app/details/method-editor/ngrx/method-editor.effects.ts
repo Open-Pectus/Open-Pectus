@@ -12,11 +12,13 @@ import { MethodEditorSelectors } from './method-editor.selectors';
 export class MethodEditorEffects {
   saveMethodEditorModel = createEffect(() => this.actions.pipe(
     ofType(MethodEditorActions.modelSaveRequested),
-    concatLatestFrom(() => this.store.select(MethodEditorSelectors.methodEditorContent)),
-    switchMap(([_, content]) => {
-      /* save model to backend */
-      alert(`model saved! ${content}`);
-      return of(MethodEditorActions.modelSaved());
+    concatLatestFrom(() => [
+      this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName)),
+      this.store.select(MethodEditorSelectors.methodEditorContent),
+    ]),
+    switchMap(([_, unitId, content]) => {
+      if(unitId === undefined) return of();
+      return this.processUnitService.saveMethod(unitId, {content: content ?? ''}).pipe(map(() => MethodEditorActions.modelSaved()));
     }),
   ));
 

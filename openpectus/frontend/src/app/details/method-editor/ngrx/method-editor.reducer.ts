@@ -16,7 +16,7 @@ const initialState: MethodEditorState = {
 const reducer = createReducer(initialState,
   on(MethodEditorActions.methodFetched, (state, {method}) => produce(state, draft => {
     draft.methodEditorIsDirty = false;
-    draft.methodEditorContent = method;
+    draft.methodEditorContent = method.content;
   })),
   on(MethodEditorActions.monacoEditorComponentInitialized, state => produce(state, draft => {
     draft.monacoServicesInitialized = true;
