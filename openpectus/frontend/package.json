@@ -27,6 +27,7 @@
     "@ngrx/store-devtools": "^16.0.0",
     "@types/d3": "^7.4.0",
     "@vscode/codicons": "^0.0.33",
+    "angular-auth-oidc-client": "16.0.1",
     "d3": "^7.8.5",
     "date-fns": "^2.29.3",
     "immer": "^10.0.2",
