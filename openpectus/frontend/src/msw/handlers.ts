@@ -6,6 +6,7 @@ import {
   CommandExample,
   CommandSource,
   InProgress,
+  Method,
   NotOnline,
   PlotConfiguration,
   ProcessUnit,
@@ -423,12 +424,20 @@ export const handlers = [
   rest.get('/api/process_unit/:unitId/method', (_, res, context) => {
     return res(
       context.status(200),
-      context.json<string>(`{
+      context.json<Method>({
+        content: `{
 "some key": "some value",
 "injected": "line",
 "another key": "another value",
 "another injected": "line"
-}`),
+}`,
+      }),
+    );
+  }),
+
+  rest.post('/api/process_unit/:unitId/method', (req, res, context) => {
+    return res(
+      context.status(200),
     );
   }),
 

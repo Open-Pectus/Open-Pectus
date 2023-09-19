@@ -237,10 +237,16 @@ def get_run_log(unit_id: str) -> RunLog:
     return RunLog(lines=[])
 
 
-@router.get('/process_unit/{unit_id}/method')
-def get_method(unit_id: str) -> str:
-    return ''
+class Method(BaseModel):
+    content: str
 
+@router.get('/process_unit/{unit_id}/method')
+def get_method(unit_id: str) -> Method:
+    return Method(content='')
+
+@router.post('/process_unit/{unit_id}/method')
+def save_method(unit_id: str, method: Method) -> None:
+    pass
 
 class PlotColorRegion(BaseModel):
     process_value_name: str
