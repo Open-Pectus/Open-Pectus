@@ -6,7 +6,11 @@ import { take } from 'rxjs';
 @Component({
   selector: 'app-auth-callback',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `Please wait...`,
+  template: `
+    <div class="flex items-center justify-center absolute h-full w-full">
+      Please wait...
+    </div>
+  `,
 })
 export class AuthCallbackComponent implements OnInit {
   constructor(private router: Router,
