@@ -1,7 +1,16 @@
 import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
 import { NgModule } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { AuthInterceptor, AuthModule, LogLevel, OpenIdConfiguration, StsConfigHttpLoader, StsConfigLoader } from 'angular-auth-oidc-client';
+import {
+  AbstractSecurityStorage,
+  AuthInterceptor,
+  AuthModule,
+  DefaultLocalStorageService,
+  LogLevel,
+  OpenIdConfiguration,
+  StsConfigHttpLoader,
+  StsConfigLoader,
+} from 'angular-auth-oidc-client';
 import { map } from 'rxjs';
 import { AuthConfig, AuthService } from '../api';
 import { authCallbackUrlPart } from '../app-routing.module';
@@ -61,6 +70,7 @@ export const httpLoaderFactory = (authService: AuthService, store: Store) => {
   ],
   providers: [
     {provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true},
+    {provide: AbstractSecurityStorage, useClass: DefaultLocalStorageService},
   ],
   exports: [
     AuthModule,
