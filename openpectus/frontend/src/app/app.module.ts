@@ -3,7 +3,7 @@ import { HttpClientModule } from '@angular/common/http';
 import '@angular/common/locales/global/da';
 import { isDevMode, LOCALE_ID, NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { PushPipe } from '@ngrx/component';
+import { LetDirective, PushPipe } from '@ngrx/component';
 import { EffectsModule } from '@ngrx/effects';
 import { RouterState, StoreRouterConnectingModule } from '@ngrx/router-store';
 import { StoreModule } from '@ngrx/store';
@@ -49,6 +49,7 @@ import { TopBarComponent } from './top-bar.component';
     }),
     AuthConfigModule,
     PushPipe,
+    LetDirective,
   ],
   providers: [
     {provide: LOCALE_ID, useValue: 'da-DK'},
