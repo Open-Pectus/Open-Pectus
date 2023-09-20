@@ -152,16 +152,51 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   private setupLockedLines(lockedLineNumbers: number[], editor: MonacoEditor.IStandaloneCodeEditor) {
+    // this.lockLinesViaUndoOnChange(editor, lockedLineNumbers);
+    // this.lockLinesViaStoppingKeyDownEvent(editor, lockedLineNumbers);
+    this.lockLinesViaReadOnlyEditor(editor, lockedLineNumbers);
+    this.decorateLockedLines(lockedLineNumbers, editor);
+  }
+
+  private lockLinesViaUndoOnChange(editor: MonacoEditor.IStandaloneCodeEditor, lockedLineNumbers: number[]) {
     editor.onDidChangeModelContent(event => {
       const changesLockedLine = event.changes.some(change => {
         return lockedLineNumbers.some(lockedLineNumber => {
-          return change.range.startLineNumber <= lockedLineNumber && change.range.endLineNumber >= lockedLineNumber;
+          return change.range.startLineNumber <= lockedLineNumber && lockedLineNumber <= change.range.endLineNumber;
         });
       });
       if(changesLockedLine) {
         editor.trigger('locked lines', 'undo', undefined);
       }
     });
+  }
+
+  private lockLinesViaStoppingKeyDownEvent(editor: MonacoEditor.IStandaloneCodeEditor, lockedLineNumbers: number[]) {
+    editor.onKeyDown(event => {
+      const selectionInLockedRange = editor.getSelections()?.some(selection => {
+        return lockedLineNumbers.some(lockedLineNumber => {
+          return selection.startLineNumber <= lockedLineNumber && lockedLineNumber <= selection.endLineNumber;
+        });
+      });
+      if(selectionInLockedRange) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
+    });
+  }
+
+  private lockLinesViaReadOnlyEditor(editor: MonacoEditor.IStandaloneCodeEditor, lockedLineNumbers: number[]) {
+    editor.onDidChangeCursorSelection(_ => {
+      const selectionInLockedRange = editor.getSelections()?.some(selection => {
+        return lockedLineNumbers.some(lockedLineNumber => {
+          return selection.intersectRanges(new Range(lockedLineNumber, 0, lockedLineNumber + 1, 0));
+        });
+      });
+      editor.updateOptions({readOnly: selectionInLockedRange, readOnlyMessage: {value: 'Cannot edit lines already executed.'}});
+    });
+  }
+
+  private decorateLockedLines(lockedLineNumbers: number[], editor: MonacoEditor.IStandaloneCodeEditor) {
     const lockedLinesDecorations = lockedLineNumbers.map<MonacoEditor.IModelDeltaDecoration>(lockedLineNumber => {
       return {
         range: new Range(lockedLineNumber, 0, lockedLineNumber, 0),
@@ -169,6 +204,8 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
           isWholeLine: true,
           className: 'locked-line',
           hoverMessage: {value: 'This line has been executed and is no longer editable.'},
+          shouldFillLineOnLineBreak: false,
+
         },
       };
     });
