@@ -1,9 +1,13 @@
-:host ::ng-deep .injectedLine {
-  background-color: lightgreen;
-}
+//:host ::ng-deep .injectedLine {
+//  background-color: lightgreen;
+//}
 
 :host ::ng-deep .codicon {
   display: flex;
   flex-direction: column;
   justify-content: center;
+}
+
+:host ::ng-deep .locked-line {
+  background-color: rgba(124, 196, 250, 0.33);
 }
