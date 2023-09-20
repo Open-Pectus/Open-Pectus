@@ -18,4 +18,8 @@ export class UtilMethods {
   static async delay(delayMs: number) {
     return new Promise(resolve => setTimeout(resolve, delayMs));
   }
+
+  static getNumberRange(from: number, to: number): number[] {
+    return Array(to - from + 1).fill(undefined).map((_, i) => i + from);
+  }
 }
