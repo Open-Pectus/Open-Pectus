@@ -11,8 +11,10 @@ class AuthConfig(BaseModel):
 
 @router.get('/config')
 def get_config() -> AuthConfig:
+    tenant_id = os.getenv('AZURE_DIRECTORY_TENANT_ID', default=None)
+    authority_url = f'https://login.microsoftonline.com/{tenant_id}/v2.0' if tenant_id else None
     return AuthConfig(
-        use_auth=os.getenv('USE_AUTH', default=False),
-        authority_url=os.getenv('AUTH_AUTHORITY_URL'),
-        client_id=os.getenv('AUTH_WEB_FRONTEND_CLIENT_ID')
+        use_auth=os.getenv('ENABLE_AZURE_AUTHENTICATION', default=False),
+        authority_url=authority_url,
+        client_id=os.getenv('AZURE_APPLICATION_CLIENT_ID', default=None)
     )
