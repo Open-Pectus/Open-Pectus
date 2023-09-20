@@ -151,9 +151,9 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   private decorateInjectedLines(injectedLines: number[], editor: MonacoEditor.IStandaloneCodeEditor) {
-    const decorationIds: string[] = [];
+    const decorationsCollections: MonacoEditor.IEditorDecorationsCollection[] = [];
     injectedLines.forEach(lineNumber => {
-      const decorationId = editor.deltaDecorations([], [
+      const decorationsCollection = editor.createDecorationsCollection([
         {
           range: new Range(lineNumber, 0, lineNumber, 0),
           options: {
@@ -162,19 +162,14 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
             className: 'injectedLine',
             isWholeLine: true,
             hoverMessage: {value: 'This line has been injected and is not part of the method.'},
-          },
-        },
-        {
-          range: new Range(lineNumber, 0, lineNumber, 0),
-          options: {
             linesDecorationsClassName: 'codicon-export codicon',
           },
         },
       ]);
-      decorationIds.push(...decorationId);
+      decorationsCollections.push(decorationsCollection);
     });
 
-    // console.log(decorationIds);
-    // editor.removeDecorations([decorationIds[1]]);
+    console.log(decorationsCollections);
+    decorationsCollections[1].clear();
   }
 }
