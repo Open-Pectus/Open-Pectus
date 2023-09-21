@@ -22,7 +22,8 @@ Notes:
     - [5.2.3. Comparison](#523-comparison)
   - [5.3. Code generation from API spec](#53-code-generation-from-api-spec)
 - [6. Protocols](#6-protocols)
-  - [6.1. Engine - Aggregator](#61-engine---aggregator)
+  - [6.1. Frontend - Aggregator](#61-frontend---aggregator)
+  - [6.2. Engine - Aggregator](#62-engine---aggregator)
 
 
 # 2. Installation
@@ -276,20 +277,73 @@ To ensure that step 2. is not forgotten, the aggregator test suite contains a te
 
 # 6. Protocols
 
-This chapter documents the Open Pectus web socket protocols.
+This chapter documents the Open Pectus Rest and web socket protocols.
 
-## 6.1. Engine - Aggregator
+## 6.1. Frontend - Aggregator
+```mermaid
+sequenceDiagram
+autonumber
+    participant F as Frontend    
+    participant A as Aggregator
+
+    Note right of A: REST
+
+    Note over F, A: Dashboard    
+    F ->> A: GET process_units
+    A -->> F: 
+    F ->> A: GET recent_batch_jobs
+    A -->> F: 
+
+    Note over F, A: Unit Details
+
+    F ->> A: GET process_unit/{id}/method
+    A -->> F: 
+    F ->> A: GET process_unit/{id}/command_examples
+    A -->> F: 
+    F ->> A: GET process_unit/{id}/run_log
+    A -->> F: 
+    F ->> A: GET process_unit/{id}/process_diagram
+    A -->> F: 
+    F ->> A: GET process_unit/{id}/plot_configuration
+    A -->> F: 
+
+    loop
+    F ->> A: GET process_unit/{id}/process_values
+    A -->> F: 
+    end
+
+    Note over F, A: Command window
+    alt Execute command
+    F ->> A: POST process_unit/{id}/execute_command
+    A -->> F: 
+    end
+
+    Note over F, A: Method Editor
+    alt Save method
+    F ->> A: POST process_unit/{id}/method
+    A -->> F: 
+    end
+    
+    Note over F, A: Run controls    
+    alt Start/Pause/Hold/Stop
+    F ->> A: POST process_unit/{id}/execute_command
+    A -->> F: 
+    end
+```
+
+## 6.2. Engine - Aggregator
 
 ```mermaid
 sequenceDiagram
 autonumber
-    participant E as Engine
     participant A as Aggregator
+    participant E as Engine
 %%note left of E: Registration
-    Note right of A: Web Socket
-    E ->> A: connect    
+    Note right of E: Web Socket
+    E ->> A: connect
+    A -->> E: 
     E ->> A: RegisterEngineMsg
-    A ->> E: [engine_id]
+    A -->> E: [engine_id]
     Note over A,E: A knows E is running
     E ->> A: UodInfoMsg
     E ->> A: TagsUpdatedMsg
@@ -300,14 +354,17 @@ autonumber
     
     loop Every second
     E ->> A: TagsUpdatedMsg
+    A -->> E: 
     end
 
     alt User: Run command
     A ->> E: InvokeCommandMsg
+    E -->> A: 
     end
 
     alt User: Change run state
     A ->> E: InvokeCommandMsg
+    E -->> A: 
     end
 
 ```
