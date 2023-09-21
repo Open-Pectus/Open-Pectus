@@ -29,7 +29,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   private componentDestroyed = new Subject<void>();
   private editor?: MonacoEditor.IStandaloneCodeEditor;
   private readonly languageId = 'json';
-  private methodEditorContent = this.store.select(MethodEditorSelectors.methodEditorContent);
+  private methodEditorContent = this.store.select(MethodEditorSelectors.content);
   private monacoServicesInitialized = this.store.select(MethodEditorSelectors.monacoServicesInitialized);
 
   constructor(private store: Store) {}
@@ -116,8 +116,8 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       editor.dispose();
     });
 
-    this.setupInjectedLines([3, 5], editor);
-    this.setupLockedLines([1, 3], editor);
+    this.setupInjectedLines(editor);
+    this.setupLockedLines(editor);
 
     return editor;
   }
@@ -150,8 +150,8 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     };
   }
 
-  private setupLockedLines(lockedLineNumbers: number[], editor: MonacoEditor.IStandaloneCodeEditor) {
-    const decorations = this.decorateLockedLines(lockedLineNumbers, editor);
+  private setupLockedLines(editor: MonacoEditor.IStandaloneCodeEditor) {
+    const decorations = this.decorateLockedLines(editor);
     this.lockLinesViaReadOnlyEditor(editor, decorations);
   }
 
@@ -168,39 +168,47 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  private decorateLockedLines(lockedLineNumbers: number[], editor: MonacoEditor.IStandaloneCodeEditor) {
-    const lockedLinesDecorations = lockedLineNumbers.map<MonacoEditor.IModelDeltaDecoration>(lockedLineNumber => {
-      return {
-        range: new Range(lockedLineNumber, 0, lockedLineNumber, Number.MAX_VALUE),
-        options: {
-          isWholeLine: true,
-          className: 'locked-line',
-          hoverMessage: {value: 'This line has been executed and is no longer editable.'},
-          shouldFillLineOnLineBreak: false,
-        },
-      };
+  private decorateLockedLines(editor: MonacoEditor.IStandaloneCodeEditor) {
+    const lockedLinesDecorationsCollection = editor.createDecorationsCollection();
+    this.store.select(MethodEditorSelectors.lockedLines).pipe(takeUntil(this.componentDestroyed)).subscribe(lockedLineNumbers => {
+      const lockedLinesDecorations = lockedLineNumbers.map<MonacoEditor.IModelDeltaDecoration>(lockedLineNumber => {
+        return {
+          range: new Range(lockedLineNumber, 0, lockedLineNumber, Number.MAX_VALUE),
+          options: {
+            isWholeLine: true,
+            className: 'locked-line',
+            hoverMessage: {value: 'This line has been executed and is no longer editable.'},
+            shouldFillLineOnLineBreak: false,
+          },
+        };
+      });
+      lockedLinesDecorationsCollection.set(lockedLinesDecorations);
     });
-    return editor.createDecorationsCollection(lockedLinesDecorations);
+    return lockedLinesDecorationsCollection;
   }
 
-  private decorateInjectedLines(injectedLines: number[], editor: MonacoEditor.IStandaloneCodeEditor) {
-    const decorations = injectedLines.map<MonacoEditor.IModelDeltaDecoration>(lineNumber => {
-      return {
-        range: new Range(lineNumber, 0, lineNumber, Number.MAX_VALUE),
-        options: {
-          className: 'injectedLine',
-          isWholeLine: true,
-          hoverMessage: {value: 'This line has been injected and is not part of the method.'},
-          linesDecorationsClassName: 'codicon-export codicon',
-          shouldFillLineOnLineBreak: false,
-        },
-      };
+  private decorateInjectedLines(editor: MonacoEditor.IStandaloneCodeEditor) {
+    const injectedLinesDecorationCollection = editor.createDecorationsCollection();
+    this.store.select(MethodEditorSelectors.injectedLines).pipe(takeUntil(this.componentDestroyed)).subscribe(injectedLineNumbers => {
+      const injectedLinesDecorations = injectedLineNumbers.map<MonacoEditor.IModelDeltaDecoration>(lineNumber => {
+        return {
+          range: new Range(lineNumber, 0, lineNumber, Number.MAX_VALUE),
+          options: {
+            className: 'injectedLine',
+            isWholeLine: true,
+            hoverMessage: {value: 'This line has been injected and is not part of the method.'},
+            linesDecorationsClassName: 'codicon-export codicon',
+            shouldFillLineOnLineBreak: false,
+          },
+        };
+      });
+      injectedLinesDecorationCollection.set(injectedLinesDecorations);
     });
-    return editor.createDecorationsCollection(decorations);
+    return injectedLinesDecorationCollection;
   }
 
-  private setupInjectedLines(injectedLines: number[], editor: MonacoEditor.IStandaloneCodeEditor) {
-    const decorations = this.decorateInjectedLines(injectedLines, editor);
+  private setupInjectedLines(editor: MonacoEditor.IStandaloneCodeEditor) {
+    const decorations = this.decorateInjectedLines(editor);
     decorations.onDidChange(() => {
       const lineNumbers = decorations.getRanges().flatMap(range => UtilMethods.getNumberRange(range.startLineNumber, range.endLineNumber));
       editor.updateOptions({lineNumbers: this.getLineNumberFunction(lineNumbers)});

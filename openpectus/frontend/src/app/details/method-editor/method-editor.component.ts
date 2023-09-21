@@ -21,7 +21,7 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
   `,
 })
 export class MethodEditorComponent implements OnInit {
-  protected methodEditorIsDirty = this.store.select(MethodEditorSelectors.methodEditorIsDirty);
+  protected methodEditorIsDirty = this.store.select(MethodEditorSelectors.isDirty);
   protected editorSizeChange = new Subject<void>();
   protected collapsed = false;
 

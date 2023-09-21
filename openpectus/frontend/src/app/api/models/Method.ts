@@ -5,4 +5,6 @@
 
 export type Method = {
     content: string;
+    locked_lines: Array<number>;
+    injected_lines: Array<number>;
 };

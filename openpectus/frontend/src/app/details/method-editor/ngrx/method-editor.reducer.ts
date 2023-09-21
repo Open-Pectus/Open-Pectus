@@ -4,32 +4,38 @@ import { MethodEditorActions } from './method-editor.actions';
 
 export interface MethodEditorState {
   monacoServicesInitialized: boolean;
-  methodEditorIsDirty: boolean;
-  methodEditorContent?: string;
+  isDirty: boolean;
+  content?: string;
+  lockedLines: number[];
+  injectedLines: number[];
 }
 
 const initialState: MethodEditorState = {
   monacoServicesInitialized: false,
-  methodEditorIsDirty: false,
+  isDirty: false,
+  lockedLines: [],
+  injectedLines: [],
 };
 
 const reducer = createReducer(initialState,
   on(MethodEditorActions.methodFetched, (state, {method}) => produce(state, draft => {
-    draft.methodEditorIsDirty = false;
-    draft.methodEditorContent = method.content;
+    draft.isDirty = false;
+    draft.content = method.content;
+    draft.lockedLines = method.locked_lines;
+    draft.injectedLines = method.injected_lines;
   })),
   on(MethodEditorActions.monacoEditorComponentInitialized, state => produce(state, draft => {
     draft.monacoServicesInitialized = true;
   })),
   on(MethodEditorActions.monacoEditorComponentDestroyed, state => produce(state, draft => {
-    draft.methodEditorContent = undefined;
+    draft.content = undefined;
   })),
   on(MethodEditorActions.modelSaved, state => produce(state, draft => {
-    draft.methodEditorIsDirty = false;
+    draft.isDirty = false;
   })),
   on(MethodEditorActions.modelChanged, (state, {model}) => produce(state, draft => {
-    draft.methodEditorIsDirty = true;
-    draft.methodEditorContent = model;
+    draft.isDirty = true;
+    draft.content = model;
   })),
 );
 

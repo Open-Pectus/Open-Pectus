@@ -709,11 +709,27 @@
           "content": {
             "type": "string",
             "title": "Content"
+          },
+          "locked_lines": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Locked Lines"
+          },
+          "injected_lines": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Injected Lines"
           }
         },
         "type": "object",
         "required": [
-          "content"
+          "content",
+          "locked_lines",
+          "injected_lines"
         ],
         "title": "Method"
       },

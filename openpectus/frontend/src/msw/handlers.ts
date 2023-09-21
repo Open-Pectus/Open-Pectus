@@ -19,6 +19,8 @@ import {
   UserRole,
 } from '../app/api';
 
+const lockedLines = [1, 3];
+
 const processUnits: ProcessUnit[] = [
   {
     name: 'Some unit',
@@ -422,6 +424,7 @@ export const handlers = [
   }),
 
   rest.get('/api/process_unit/:unitId/method', (_, res, context) => {
+    lockedLines.push((lockedLines.at(-1) ?? 0) + 1);
     return res(
       context.status(200),
       context.json<Method>({
@@ -431,6 +434,8 @@ export const handlers = [
 "another key": "another value",
 "another injected": "line"
 }`,
+        locked_lines: lockedLines,
+        injected_lines: [3, 5],
       }),
     );
   }),
