@@ -26,6 +26,7 @@ const reducer = createReducer(initialState,
       if(oldLine === undefined) return;
       oldLine.is_locked = newLine.is_locked;
       oldLine.is_injected = newLine.is_injected;
+      if(newLine.is_locked) oldLine.content = newLine.content;
     });
   })),
   on(MethodEditorActions.monacoEditorComponentInitialized, state => produce(state, draft => {
