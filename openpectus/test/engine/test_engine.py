@@ -134,15 +134,23 @@ class TestHardwareLayer(unittest.TestCase):
 
 def print_runlog(e: ExecutionEngine):
     print("Run Log:")
+
+    float_digits = 3
+
+    def s(val) -> str:
+        if isinstance(val, float):
+            return str(round(val, float_digits))
+        return str(val)
+
     for item in e.runlog.get_items():
         states = ','.join(s.value for s in item.states)
         start_values = "" if item.start_values is None else \
-            ', '.join(t.name + ': ' + str(t.value) for t in item.start_values)
+            ', '.join(t.name + ': ' + s(t.value) for t in item.start_values)
         end_values = "" if item.end_values is None else \
-            ', '.join(t.name + ': ' + str(t.value) for t in item.end_values)
+            ', '.join(t.name + ': ' + s(t.value) for t in item.end_values)
 
-        print(f" {item.start_tick}-{item.end_tick}  {item.command_req.name} | States={states} | " +
-              f"Start tags: {start_values} | End tags: {end_values}")
+        print(f" {item.start_tick}-{item.end_tick}  {item.command_req.name} | States={states} " +
+              f"\n\tStart tags: {start_values} \n\tEnd tags:   {end_values}")
 
 
 def create_engine() -> ExecutionEngine:
@@ -386,6 +394,63 @@ class TestEngine(unittest.TestCase):
         self.assertTrue(RunLogItemState.Completed in runlog[1].states)
 
         print_runlog(e)
+
+    def test_runlog_block(self):
+        program = """
+Block: A
+    End Block
+Mark: X
+"""
+        e = create_engine()
+        run_engine(e, program, 2)
+
+        runlog = list(e.runlog.get_items())
+        self.assertEqual(1, len(runlog))
+        self.assertEqual("Block: A", runlog[0].command_req.name)
+        self.assertTrue(RunLogItemState.Waiting in runlog[0].states)
+        self.assertTrue(RunLogItemState.Started not in runlog[0].states)
+
+        # print_runlog(e)
+
+        continue_engine(e, 1)
+        self.assertTrue(RunLogItemState.Started in runlog[0].states)
+
+        continue_engine(e, 1)
+        self.assertTrue(RunLogItemState.Completed in runlog[0].states)
+
+        print_runlog(e)
+
+    def test_runlog_watch(self):
+        program = """
+Watch: Block Time > 0.2s
+    Mark: A
+Mark: X
+"""
+        e = create_engine()
+        run_engine(e, program, 3)
+
+        runlog = list(e.runlog.get_items())
+        self.assertEqual(1, len(runlog))
+        self.assertEqual("Watch: Block Time > 0.2s", runlog[0].command_req.name)
+        self.assertTrue(RunLogItemState.Waiting in runlog[0].states)
+        self.assertTrue(RunLogItemState.Started not in runlog[0].states)
+
+        continue_engine(e, 1)
+        self.assertTrue(RunLogItemState.Started in runlog[0].states)
+
+        continue_engine(e, 1)
+        self.assertTrue(RunLogItemState.Completed in runlog[0].states)
+
+        print_runlog(e)
+
+    @unittest.skip("Not implemented yet")
+    def test_runlog_watch_forced(self):
+        # TODO how do we represent the instruction we want to force?
+        # user picks a runlog line to force
+        # - how do we get to cmd or node from that?
+        # - line number? or we assign uuids to entries?
+
+        raise NotImplementedError()
 
     def test_internal_command_can_execute_valid_command(self):
         e = create_engine()

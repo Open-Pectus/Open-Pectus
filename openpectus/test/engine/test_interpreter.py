@@ -309,6 +309,21 @@ Mark: A3
 
         self.assertEqual(["A1", "A2", "A3"], engine.interpreter.get_marks())
 
+    @unittest.skip("Base unit not yet implemented")
+    def test_block_time_watch_using_base_unit(self):
+        program = build_program("""
+Block: A
+    Mark: A1
+    Watch: Block time > 1
+        End block
+    Mark: A2
+Mark: A3
+""")
+        engine = create_engine()
+        run_engine(engine, program, 20)
+
+        self.assertEqual(["A1", "A2", "A3"], engine.interpreter.get_marks())
+
     @unittest.skip("Review with Eskild")
     def test_block_time_watch_2(self):
         program = build_program("""

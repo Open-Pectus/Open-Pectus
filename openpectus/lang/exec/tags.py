@@ -290,6 +290,8 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
     def merge_with(self, other: TagCollection) -> TagCollection:
         """ Returns a new TagCollection with the combined tags of both collections.
 
+        Tag instances are kept so tag values are shared between the three collections.
+
         In case of duplicate tag names, tags from other collection are used.
         """
         tags = TagCollection()
@@ -339,6 +341,10 @@ class TagValueCollection(Iterable[TagValue]):
         self._tag_values: Dict[str, TagValue] = {}
         for v in values:
             self._add(v)
+
+    @staticmethod
+    def empty() -> TagValueCollection:
+        return TagValueCollection([])
 
     def get(self, tag_name: str) -> TagValue:
         if tag_name is None or tag_name.strip() == '':

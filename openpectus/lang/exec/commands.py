@@ -1,7 +1,21 @@
 from __future__ import annotations
 from typing import Callable, Dict, List
 
+# Represents part of Engine API
+
+
+class CommandRequest():
+    """ Represents a command request for engine to execute. """
+    def __init__(self, name: str, args: str | None = None) -> None:
+        self.name: str = name
+        self.args: str | None = args
+
+    def __str__(self) -> str:
+        return f"EngineCommand {self.name} | args: {self.args}"
+
+
 # Represents command API towards interpreter
+# Used by analyzers
 
 
 class Command:

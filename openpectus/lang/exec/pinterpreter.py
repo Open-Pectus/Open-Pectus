@@ -6,6 +6,8 @@ import pint
 import inspect
 from typing import Generator, List, Tuple
 from typing_extensions import override
+from openpectus.lang.exec.commands import CommandRequest
+from openpectus.lang.exec.runlog import RunLog, RunLogItemState
 
 from openpectus.lang.model.pprogram import (
     PInjectedNode,
@@ -57,15 +59,21 @@ class ARType(Enum):
 
 
 class ActivationRecord:
-    # TODO do we need tags here? Is Base global?
     def __init__(
-        self, owner: PNode, start_time: float, start_tags: TagValueCollection
+        self,
+        owner: PNode,
+        start_time: float = -1.0,
+        start_tags: TagValueCollection = TagValueCollection.empty()
     ) -> None:
         self.owner: PNode = owner
         self.start_time: float = start_time
         self.start_tags = start_tags
         self.complete: bool = False
         self.artype: ARType = self._get_artype(owner)
+
+    def fill_start(self, start_time: float, start_tags: TagValueCollection):
+        self.start_time: float = start_time
+        self.start_tags = start_tags
 
     def _get_artype(self, node: PNode) -> ARType:
         if isinstance(node, PProgram):
@@ -126,7 +134,7 @@ class InterpreterContext():
     def tags(self) -> TagCollection:
         raise NotImplementedError()
 
-    def schedule_execution(self, name: str, args: str) -> None:
+    def schedule_execution(self, name: str, args: str | None = None) -> CommandRequest:
         raise NotImplementedError()
 
 
@@ -144,9 +152,12 @@ class PInterpreter(PNodeVisitor):
         self.running: bool = False
 
         self.start_time: float = 0
-        self.tick_time: float = 0
+        self._tick_time: float = 0
+        self._tick_number: int = -1
 
         self.process_instr: GenerationType = None
+
+        self.runlog: RunLog = RunLog()
 
     def get_marks(self) -> List[str]:
         return [x.message for x in self.logs if x.message[0] != 'P']
@@ -163,7 +174,7 @@ class PInterpreter(PNodeVisitor):
             yield from self.visit(node)
             self.stack.pop()
 
-        ar = ActivationRecord(node, self.tick_time, self.context.tags.as_readonly())
+        ar = ActivationRecord(node, self._tick_time, self.context.tags.as_readonly())
         self._register_interrupt(ar, create_interrupt_handler(ar))
 
     def _interpret(self) -> GenerationType:
@@ -187,13 +198,13 @@ class PInterpreter(PNodeVisitor):
         # Does this relate to RunLog? Should that show intermediate scope times?
         if self.stack.any():
             ar_program = self.stack.records[0]
-            program_elapsed = self.tick_time - ar_program.start_time
+            program_elapsed = self._tick_time - ar_program.start_time
             q_program = pint.Quantity(f'{program_elapsed} sec')
             self.context.tags.get(DEFAULT_TAG_RUN_TIME).set_quantity(q_program)
 
             ar_block = self.stack.peek()
             # TODO block time should not include pause and hold time
-            block_elapsed = self.tick_time - ar_block.start_time
+            block_elapsed = self._tick_time - ar_block.start_time
             q_block = pint.Quantity(f'{block_elapsed} sec')
             self.context.tags.get(DEFAULT_TAG_BLOCK_TIME).set_quantity(q_block)
 
@@ -229,8 +240,9 @@ class PInterpreter(PNodeVisitor):
                 raise NotImplementedError(f"Interrupt for node type {str(node)} not implemented")
         return instr_count > 0
 
-    def tick(self, tick_time: float):
-        self.tick_time = tick_time
+    def tick(self, tick_time: float, tick_number: int):
+        self._tick_time = tick_time
+        self._tick_number = tick_number
 
         logger.debug("Tick")
 
@@ -277,9 +289,9 @@ class PInterpreter(PNodeVisitor):
             block_elapsed = self.context.tags.get(DEFAULT_TAG_BLOCK_TIME).as_quantity()
             threshold_quantity = pint.Quantity(node.time, "sec")
             if block_elapsed < threshold_quantity:
-                logger.debug(f"Awaiting threshold: {threshold_quantity}, current: {block_elapsed}, time: {self.tick_time}")
+                logger.debug(f"Awaiting threshold: {threshold_quantity}, current: {block_elapsed}, time: {self._tick_time}")
                 return True
-            logger.debug(f"Done awaiting threshold {threshold_quantity} @ tick time: {self.tick_time}")
+            logger.debug(f"Done awaiting threshold {threshold_quantity} @ tick time: {self._tick_time}")
         return False
 
     def _evaluate_condition(self, condition_node: PWatch | PAlarm) -> bool:
@@ -340,7 +352,7 @@ class PInterpreter(PNodeVisitor):
             return
 
         # log all visits
-        logger.debug(f"Visiting {node} at tick {self.tick_time}")
+        logger.debug(f"Visiting {node} at tick {self._tick_time}")
 
         # possibly wait for node threshold to expire
         while self._is_awaiting_threshold(node):
@@ -359,7 +371,7 @@ class PInterpreter(PNodeVisitor):
 
     def visit_PProgram(self, node: PProgram):
         self._add_to_log(time.time(), time.time(), "PProgram")
-        ar = ActivationRecord(node, self.tick_time, self.context.tags.as_readonly())
+        ar = ActivationRecord(node, self._tick_time, self.context.tags.as_readonly())
         self.stack.push(ar)
         yield from self._visit_children(node.children)
         self.stack.pop()
@@ -370,10 +382,19 @@ class PInterpreter(PNodeVisitor):
     def visit_PMark(self, node: PMark):
         self._add_to_log(time.time(), node.time, node.name)
         logger.info(f"Mark {str(node)}")
+        yield  # comment if we dont want mark to always consume a tick
 
     def visit_PBlock(self, node: PBlock):
-        ar = ActivationRecord(node, self.tick_time, self.context.tags.as_readonly())
+        ar = ActivationRecord(node, self._tick_time, self.context.tags.as_readonly())
         self.stack.push(ar)
+
+        # HACK: Bad reuse of CommandRequest as placeholder in runlog
+        req = CommandRequest(f"Block: {node.name}")
+        runlog_item = self.runlog.add_waiting_node(req, node, self._tick_time, self._tick_number)
+
+        yield  # comment if we dont want block to always consume a tick
+
+        runlog_item.add_start_state(self._tick_time, self._tick_number, self.context.tags.as_readonly())
 
         yield from self._visit_children(node.children)
 
@@ -388,6 +409,8 @@ class PInterpreter(PNodeVisitor):
 
         # now it's safe to pop
         self.stack.pop()
+
+        runlog_item.add_end_state(RunLogItemState.Completed, self._tick_time, self._tick_number, self.context.tags.as_readonly())
 
     def visit_PEndBlock(self, node: PEndBlock):
         for ar in reversed(self.stack.records):
@@ -414,6 +437,9 @@ class PInterpreter(PNodeVisitor):
             # possibly including blocks?
             # TODO once this is determined we should have a single method
             # to create interrupt handlers
+
+            # update ar with actual time and tags
+            ar.fill_start(self._tick_time, self.context.tags.as_readonly())
             self.stack.push(ar)
             yield from self.visit(node)
             self.stack.pop()
@@ -423,25 +449,43 @@ class PInterpreter(PNodeVisitor):
             # TODO the ar gets the creation tick time. Is this correct?
             # TODO should use engine tags here - preferably the readonly ones
             # TODO this is very similar to entries in the run-log...
-            ar = ActivationRecord(node, self.tick_time, self.context.tags.as_readonly())
+            # ar = ActivationRecord(node, self._tick_time, self.context.tags.as_readonly())
+            ar = ActivationRecord(node)
             self._register_interrupt(ar, create_interrupt_handler(ar))
+
+            cnd = node.condition.condition_str if node.condition is not None else ""
+            req = CommandRequest(f"Watch: {cnd}")
+            _ = self.runlog.add_waiting_node(req, node, self._tick_time, self._tick_number)
+
         else:
+            # On subsequent visits (that originates from the interrupt handler)
+            # we evaluate the condition. When true, the node is 'activated' and its
+            # body will run            
             logger.debug(f"{str(node)} interrupt invoked")
             if node.activated:
                 condition_result = True
                 logger.debug(f"{str(node)} was previously activated")
             else:
                 while not ar.complete and self.running:
+                    runlog_item = self.runlog.get_item_by_node(node)
+                    assert runlog_item is not None
                     condition_result = self._evaluate_condition(node)
                     logger.debug(f"{str(node)} condition evaluated: {condition_result}")
                     if condition_result:
                         node.activated = True
                         logger.debug(f"{str(node)} executing")
+                        runlog_item.add_start_state(self._tick_time, self._tick_number,
+                                                    self.context.tags.as_readonly())
                         yield from self._visit_children(node.children)
                         logger.debug(f"{str(node)} executed")
                         ar.complete = True
+                        runlog_item.add_end_state(RunLogItemState.Completed,
+                                                  self._tick_time, self._tick_number,
+                                                  self.context.tags.as_readonly())
                         logger.info(f"Interrupt complete {ar}")
                     else:
+                        if RunLogItemState.Waiting not in runlog_item.states:
+                            runlog_item.add_state(RunLogItemState.Waiting)
                         yield
 
     def visit_PInjectedNode(self, node: PInjectedNode):
