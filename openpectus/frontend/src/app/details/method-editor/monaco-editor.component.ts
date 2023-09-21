@@ -4,7 +4,7 @@ import { Store } from '@ngrx/store';
 import { buildWorkerDefinition } from 'monaco-editor-workers';
 import { editor, editor as MonacoEditor, languages, Range, Uri } from 'monaco-editor/esm/vs/editor/editor.api.js'; // importing as 'monaco-editor' causes issues: https://github.com/CodinGame/monaco-vscode-api/issues/162
 import { initServices, MonacoLanguageClient } from 'monaco-languageclient';
-import { combineLatest, firstValueFrom, Observable, Subject, take, takeUntil } from 'rxjs';
+import { firstValueFrom, Observable, Subject, take, takeUntil } from 'rxjs';
 import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient/lib/common/client';
 import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
 import 'vscode/default-extensions/json';
@@ -42,6 +42,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   private injectedLineIds = this.store.select(MethodEditorSelectors.injectedLineIds);
   private lineIds = this.store.select(MethodEditorSelectors.lineIds);
   private methodLines = this.store.select(MethodEditorSelectors.methodLines);
+  private storeModelChangedFromHere = false;
 
   constructor(private store: Store) {}
 
@@ -106,6 +107,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   private async setupEditor() {
     const editor = await this.constructEditor();
     this.setupOnEditorChanged(editor);
+    this.setupOnStoreModelChanged(editor);
     this.setupDecorateLinesWithIds(editor);
     this.setupInjectedLines(editor);
     this.setupLockedLines(editor);
@@ -134,7 +136,6 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   private setupOnEditorChanged(editor: MonacoEditor.IStandaloneCodeEditor) {
     editor.onDidChangeModelContent(event => {
-      console.log(event);
       const model = editor.getModel();
       if(model === null) return;
       const linesContents = model.getLinesContent();
@@ -152,7 +153,21 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
           is_injected: isInjected,
         };
       });
+      this.storeModelChangedFromHere = true;
       this.store.dispatch(MethodEditorActions.linesChanged({lines}));
+      this.storeModelChangedFromHere = false;
+    });
+  }
+
+  private setupOnStoreModelChanged(editor: MonacoEditor.IStandaloneCodeEditor) {
+    this.methodContent.pipe(takeUntil(this.componentDestroyed)).subscribe(methodContent => {
+      if(this.storeModelChangedFromHere) return;
+      console.log('setting model from store');
+      setTimeout(() =>
+        editor.getModel()?.applyEdits([
+          {range: new Range(0, 0, Number.MAX_VALUE, Number.MAX_VALUE), text: methodContent},
+        ]),
+      );
     });
   }
 
@@ -205,24 +220,14 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   private decorateLockedLines(editor: MonacoEditor.IStandaloneCodeEditor) {
     const lockedLinesDecorationsCollection = editor.createDecorationsCollection();
-    this.methodLines.pipe(
-      concatLatestFrom(() => [this.lockedLineIds, this.lineIds]),
+    this.lockedLineIds.pipe(
+      concatLatestFrom(() => this.lineIds),
       takeUntil(this.componentDestroyed),
-    ).subscribe(([methodLines, lockedLineIds, lineIds]) => {
-      console.log('decorating locked lines');
+    ).subscribe(([lockedLineIds, lineIds]) => {
+      console.log('decorating locked lines', lockedLineIds, lineIds);
       const lockedLinesDecorations = lockedLineIds.map<MonacoEditor.IModelDeltaDecoration>(lockedLineId => {
         const lineNumber = lineIds.findIndex(lineId => lineId === lockedLineId) + 1;
         if(lineNumber === undefined) throw Error(`could not find line id decoration with id ${lockedLineId}`);
-
-        // Replace edited line with actually executed command if different.
-        const lockedLineContent = methodLines[lineNumber - 1].content;
-        const potentiallyEditedLineContent = editor.getModel()?.getLineContent(lineNumber);
-        if(lockedLineContent !== potentiallyEditedLineContent) {
-          setTimeout(() => editor.getModel()?.applyEdits([
-            {range: new Range(lineNumber, 0, lineNumber, Number.MAX_VALUE), text: lockedLineContent},
-          ]));
-        }
-
         return {
           range: new Range(lineNumber, 0, lineNumber, 0),
           options: {
@@ -241,7 +246,11 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   private decorateInjectedLines(editor: MonacoEditor.IStandaloneCodeEditor) {
     const injectedLinesDecorationCollection = editor.createDecorationsCollection();
-    combineLatest([this.injectedLineIds, this.lineIds]).pipe(takeUntil(this.componentDestroyed)).subscribe(([injectedLineIds, lineIds]) => {
+    this.injectedLineIds.pipe(
+      concatLatestFrom(() => this.lineIds),
+      takeUntil(this.componentDestroyed),
+    ).subscribe(([injectedLineIds, lineIds]) => {
+      console.log('decorating injected lines', injectedLineIds, lineIds);
       const injectedLinesDecorations = injectedLineIds.map<MonacoEditor.IModelDeltaDecoration>(injectedLineId => {
         const lineNumber = lineIds.findIndex(lineId => lineId === injectedLineId) + 1;
         return {

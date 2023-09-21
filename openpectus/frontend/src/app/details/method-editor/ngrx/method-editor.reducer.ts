@@ -21,12 +21,15 @@ const reducer = createReducer(initialState,
     draft.method = method;
   })),
   on(MethodEditorActions.methodPolled, (state, {method}) => produce(state, draft => {
-    method.lines.forEach(newLine => {
+    method.lines.forEach((newLine, newLineIndex) => {
       const oldLine = draft.method.lines.find(line => line.id === newLine.id);
-      if(oldLine === undefined) return;
-      oldLine.is_locked = newLine.is_locked;
-      oldLine.is_injected = newLine.is_injected;
-      if(newLine.is_locked) oldLine.content = newLine.content;
+      if(oldLine === undefined) {
+        if(newLine.is_locked) draft.method.lines.splice(newLineIndex, 0, newLine);
+      } else {
+        oldLine.is_locked = newLine.is_locked;
+        oldLine.is_injected = newLine.is_injected;
+        if(newLine.is_locked) oldLine.content = newLine.content;
+      }
     });
   })),
   on(MethodEditorActions.monacoEditorComponentInitialized, state => produce(state, draft => {

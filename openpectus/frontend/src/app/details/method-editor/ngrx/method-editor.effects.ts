@@ -35,7 +35,7 @@ export class MethodEditorEffects {
   continuouslyPollMethod = createEffect(() => this.actions.pipe(
     ofType(MethodEditorActions.methodFetched, MethodEditorActions.methodPolled),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
-    debounceTime(6000), // delay() in MSW doesn't work in Firefox, so to avoid freezing the application in FF, we debounce
+    debounceTime(10000), // delay() in MSW doesn't work in Firefox, so to avoid freezing the application in FF, we debounce
     switchMap(([_, unitId]) => {
       if(unitId === undefined) return of();
       return this.processUnitService.getMethod(unitId).pipe(map(method => MethodEditorActions.methodPolled({method})));
