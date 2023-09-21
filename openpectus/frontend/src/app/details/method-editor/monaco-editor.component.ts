@@ -2,7 +2,7 @@ import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, O
 import { concatLatestFrom } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { buildWorkerDefinition } from 'monaco-editor-workers';
-import { editor, editor as MonacoEditor, languages, Range, Uri } from 'monaco-editor/esm/vs/editor/editor.api.js'; // importing as 'monaco-editor' causes issues: https://github.com/CodinGame/monaco-vscode-api/issues/162
+import { editor, editor as MonacoEditor, KeyCode, languages, Range, Uri } from 'monaco-editor/esm/vs/editor/editor.api.js'; // importing as 'monaco-editor' causes issues: https://github.com/CodinGame/monaco-vscode-api/issues/162
 import { initServices, MonacoLanguageClient } from 'monaco-languageclient';
 import { firstValueFrom, Observable, Subject, take, takeUntil } from 'rxjs';
 import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient/lib/common/client';
@@ -201,11 +201,11 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   private setupLockedLines(editor: MonacoEditor.IStandaloneCodeEditor) {
     const lockedLinesDecorations = this.decorateLockedLines(editor);
-    this.lockLinesViaReadOnlyEditor(editor, lockedLinesDecorations);
+    this.lockLines(editor, lockedLinesDecorations);
   }
 
-  private lockLinesViaReadOnlyEditor(editor: MonacoEditor.IStandaloneCodeEditor,
-                                     lockedLineDecorations: MonacoEditor.IEditorDecorationsCollection) {
+  private lockLines(editor: MonacoEditor.IStandaloneCodeEditor,
+                    lockedLineDecorations: MonacoEditor.IEditorDecorationsCollection) {
     editor.onDidChangeCursorSelection(_ => {
       const selectionInLockedRange = editor.getSelections()?.some(selection => {
         return lockedLineDecorations.getRanges()
@@ -215,6 +215,28 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
           });
       });
       editor.updateOptions({readOnly: selectionInLockedRange, readOnlyMessage: {value: 'Cannot edit lines already executed.'}});
+    });
+
+    // Block specifically delete/backspace when at the ending/starting edge of the line before/after the locked line.
+    editor.onKeyDown(event => {
+      const isBackspace = event.keyCode === KeyCode.Backspace;
+      const isDelete = event.keyCode === KeyCode.Delete;
+      if(!isBackspace && !isDelete) return;
+      const selectionInLockedRange = editor.getSelections()?.some(selection => {
+        return lockedLineDecorations.getRanges()
+          .flatMap(range => UtilMethods.getNumberRange(range.startLineNumber, range.endLineNumber))
+          .some(lockedLineNumber => {
+            const previousLineLength = editor?.getModel()?.getLineLength(Math.max(1, lockedLineNumber - 1)) ?? 0;
+            const lockedRange = isDelete
+                                ? new Range(lockedLineNumber - 1, previousLineLength + 1, lockedLineNumber, 0)
+                                : new Range(lockedLineNumber, 0, lockedLineNumber + 1, 1);
+            return selection.intersectRanges(lockedRange);
+          });
+      });
+      if(selectionInLockedRange) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
     });
   }
 
