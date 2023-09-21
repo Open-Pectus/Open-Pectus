@@ -424,20 +424,21 @@ export const handlers = [
   }),
 
   rest.get('/api/process_unit/:unitId/method', (_, res, context) => {
-    lockedLines.push((lockedLines.at(-1) ?? 0) + 1);
-    return res(
+    const result = res(
       context.status(200),
       context.json<Method>({
-        content: `{
-"some key": "some value",
-"injected": "line",
-"another key": "another value",
-"another injected": "line"
-}`,
-        locked_lines: lockedLines,
-        injected_lines: [3, 5],
+        lines: [
+          {id: 'a', is_locked: lockedLines.includes(1), content: '{', is_injected: false},
+          {id: 'b', is_locked: lockedLines.includes(2), content: ' "some key": "some value",', is_injected: false},
+          {id: 'c', is_locked: lockedLines.includes(3), content: ' "injected": "line",', is_injected: true},
+          {id: 'd', is_locked: lockedLines.includes(4), content: ' "another key": "another value",', is_injected: false},
+          {id: 'e', is_locked: lockedLines.includes(5), content: ' "another injected": "line"', is_injected: true},
+          {id: 'f', is_locked: lockedLines.includes(6), content: '}', is_injected: false},
+        ],
       }),
     );
+    lockedLines.push((lockedLines.at(-1) ?? 0) + 1);
+    return result;
   }),
 
   rest.post('/api/process_unit/:unitId/method', (req, res, context) => {

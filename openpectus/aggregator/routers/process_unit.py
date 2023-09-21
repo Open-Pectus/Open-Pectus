@@ -236,15 +236,18 @@ class RunLog(BaseModel):
 def get_run_log(unit_id: str) -> RunLog:
     return RunLog(lines=[])
 
+class MethodLine(BaseModel):
+    id: str
+    content: str
+    is_locked: bool
+    is_injected: bool
 
 class Method(BaseModel):
-    content: str
-    locked_lines: List[int]
-    injected_lines: List[int]
+    lines: List[MethodLine]
 
 @router.get('/process_unit/{unit_id}/method')
 def get_method(unit_id: str) -> Method:
-    return Method(content='', locked_lines=[], injected_lines=[])
+    return Method(lines=[])
 
 @router.post('/process_unit/{unit_id}/method')
 def save_method(unit_id: str, method: Method) -> None:

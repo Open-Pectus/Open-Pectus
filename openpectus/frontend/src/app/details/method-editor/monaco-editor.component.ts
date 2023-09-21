@@ -1,19 +1,25 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, OnDestroy, ViewChild } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { buildWorkerDefinition } from 'monaco-editor-workers';
-import { editor as MonacoEditor, languages, Range, Uri } from 'monaco-editor/esm/vs/editor/editor.api.js'; // importing as 'monaco-editor' causes issues: https://github.com/CodinGame/monaco-vscode-api/issues/162
+import { editor, editor as MonacoEditor, languages, Range, Uri } from 'monaco-editor/esm/vs/editor/editor.api.js'; // importing as 'monaco-editor' causes issues: https://github.com/CodinGame/monaco-vscode-api/issues/162
 import { initServices, MonacoLanguageClient } from 'monaco-languageclient';
-import { firstValueFrom, Observable, Subject, take, takeUntil } from 'rxjs';
+import { combineLatest, firstValueFrom, Observable, Subject, take, takeUntil } from 'rxjs';
 import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient/lib/common/client';
 import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
 import 'vscode/default-extensions/json';
 import 'vscode/default-extensions/theme-defaults';
 import { createConfiguredEditor, createModelReference } from 'vscode/monaco';
+import { MethodLine } from '../../api';
 import { UtilMethods } from '../../shared/util-methods';
 import { MethodEditorActions } from './ngrx/method-editor.actions';
 import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
+import TrackedRangeStickiness = editor.TrackedRangeStickiness;
 
 buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.origin, false);
+
+const lockedLineClassName = 'locked-line';
+const injectedLineClassName = 'injected-line';
+const lineIdClassNamePrefix = 'line-id-';
 
 @Component({
   selector: 'app-monaco-editor',
@@ -29,8 +35,11 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   private componentDestroyed = new Subject<void>();
   private editor?: MonacoEditor.IStandaloneCodeEditor;
   private readonly languageId = 'json';
-  private methodEditorContent = this.store.select(MethodEditorSelectors.content);
+  private methodContent = this.store.select(MethodEditorSelectors.methodContent);
   private monacoServicesInitialized = this.store.select(MethodEditorSelectors.monacoServicesInitialized);
+  private lockedLineIds = this.store.select(MethodEditorSelectors.lockedLineIds);
+  private injectedLineIds = this.store.select(MethodEditorSelectors.injectedLineIds);
+  private lineIds = this.store.select(MethodEditorSelectors.lineIds);
 
   constructor(private store: Store) {}
 
@@ -94,7 +103,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   private async createEditor() {
     const uri = Uri.parse('/tmp/model.json');
-    const modelRef = await createModelReference(uri, await firstValueFrom(this.methodEditorContent));
+    const modelRef = await createModelReference(uri, await firstValueFrom(this.methodContent));
     modelRef.object.setLanguageId(this.languageId);
 
     const editor = createConfiguredEditor(this.editorElement.nativeElement, {
@@ -105,9 +114,24 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     });
 
     editor.onDidChangeModelContent(() => {
-      const model = editor.getModel()?.getValue();
-      if(model === undefined) return;
-      this.store.dispatch(MethodEditorActions.modelChanged({model}));
+      const model = editor.getModel();
+      if(model === null) return;
+      const linesContents = model.getLinesContent();
+
+      const lines = linesContents.map<MethodLine>((lineContent, index) => {
+        const decorations = model.getLineDecorations(index + 1);
+        const idDecoration = decorations.find(decoration => decoration.options.className?.startsWith(lineIdClassNamePrefix));
+        const id = idDecoration?.options.className?.substring(lineIdClassNamePrefix.length);
+        const isLocked = decorations.find(decoration => decoration.options.className === lockedLineClassName) !== undefined;
+        const isInjected = decorations.find(decoration => decoration.options.className === injectedLineClassName) !== undefined;
+        return {
+          id: id ?? crypto.randomUUID(),
+          content: lineContent,
+          is_locked: isLocked,
+          is_injected: isInjected,
+        };
+      });
+      this.store.dispatch(MethodEditorActions.linesChanged({lines}));
     });
 
     this.componentDestroyed.pipe(take(1)).subscribe(() => {
@@ -116,6 +140,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       editor.dispose();
     });
 
+    const idDecorationsCollection = this.setupDecorateLinesWithIds(editor);
     this.setupInjectedLines(editor);
     this.setupLockedLines(editor);
 
@@ -151,14 +176,15 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   private setupLockedLines(editor: MonacoEditor.IStandaloneCodeEditor) {
-    const decorations = this.decorateLockedLines(editor);
-    this.lockLinesViaReadOnlyEditor(editor, decorations);
+    const lockedLinesDecorations = this.decorateLockedLines(editor);
+    this.lockLinesViaReadOnlyEditor(editor, lockedLinesDecorations);
   }
 
-  private lockLinesViaReadOnlyEditor(editor: MonacoEditor.IStandaloneCodeEditor, decorations: MonacoEditor.IEditorDecorationsCollection) {
+  private lockLinesViaReadOnlyEditor(editor: MonacoEditor.IStandaloneCodeEditor,
+                                     lockedLineDecorations: MonacoEditor.IEditorDecorationsCollection) {
     editor.onDidChangeCursorSelection(_ => {
       const selectionInLockedRange = editor.getSelections()?.some(selection => {
-        return decorations.getRanges()
+        return lockedLineDecorations.getRanges()
           .flatMap(range => UtilMethods.getNumberRange(range.startLineNumber, range.endLineNumber))
           .some(lockedLineNumber => {
             return selection.intersectRanges(new Range(lockedLineNumber, 0, lockedLineNumber + 1, 0));
@@ -170,15 +196,18 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   private decorateLockedLines(editor: MonacoEditor.IStandaloneCodeEditor) {
     const lockedLinesDecorationsCollection = editor.createDecorationsCollection();
-    this.store.select(MethodEditorSelectors.lockedLines).pipe(takeUntil(this.componentDestroyed)).subscribe(lockedLineNumbers => {
-      const lockedLinesDecorations = lockedLineNumbers.map<MonacoEditor.IModelDeltaDecoration>(lockedLineNumber => {
+    combineLatest([this.lockedLineIds, this.lineIds]).pipe(takeUntil(this.componentDestroyed)).subscribe(([lockedLineIds, lineIds]) => {
+      const lockedLinesDecorations = lockedLineIds.map<MonacoEditor.IModelDeltaDecoration>(lockedLineId => {
+        const lineNumber = lineIds.findIndex(lineId => lineId === lockedLineId) + 1;
+        if(lineNumber === undefined) throw Error(`could not find line id decoration with id ${lockedLineId}`);
         return {
-          range: new Range(lockedLineNumber, 0, lockedLineNumber, Number.MAX_VALUE),
+          range: new Range(lineNumber, 0, lineNumber, 0),
           options: {
             isWholeLine: true,
-            className: 'locked-line',
+            className: lockedLineClassName,
             hoverMessage: {value: 'This line has been executed and is no longer editable.'},
             shouldFillLineOnLineBreak: false,
+            stickiness: TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
           },
         };
       });
@@ -189,16 +218,18 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   private decorateInjectedLines(editor: MonacoEditor.IStandaloneCodeEditor) {
     const injectedLinesDecorationCollection = editor.createDecorationsCollection();
-    this.store.select(MethodEditorSelectors.injectedLines).pipe(takeUntil(this.componentDestroyed)).subscribe(injectedLineNumbers => {
-      const injectedLinesDecorations = injectedLineNumbers.map<MonacoEditor.IModelDeltaDecoration>(lineNumber => {
+    combineLatest([this.injectedLineIds, this.lineIds]).pipe(takeUntil(this.componentDestroyed)).subscribe(([injectedLineIds, lineIds]) => {
+      const injectedLinesDecorations = injectedLineIds.map<MonacoEditor.IModelDeltaDecoration>(injectedLineId => {
+        const lineNumber = lineIds.findIndex(lineId => lineId === injectedLineId) + 1;
         return {
-          range: new Range(lineNumber, 0, lineNumber, Number.MAX_VALUE),
+          range: new Range(lineNumber, 0, lineNumber, 0),
           options: {
-            className: 'injectedLine',
+            className: injectedLineClassName,
             isWholeLine: true,
-            hoverMessage: {value: 'This line has been injected and is not part of the method.'},
+            hoverMessage: {value: 'This line has been injected and is not part of the methodContent.'},
             linesDecorationsClassName: 'codicon-export codicon',
             shouldFillLineOnLineBreak: false,
+            stickiness: TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
           },
         };
       });
@@ -213,5 +244,24 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       const lineNumbers = decorations.getRanges().flatMap(range => UtilMethods.getNumberRange(range.startLineNumber, range.endLineNumber));
       editor.updateOptions({lineNumbers: this.getLineNumberFunction(lineNumbers)});
     });
+  }
+
+  private setupDecorateLinesWithIds(editor: MonacoEditor.IStandaloneCodeEditor) {
+    const lineIdsDecorationCollection = editor.createDecorationsCollection();
+    this.lineIds.pipe(takeUntil(this.componentDestroyed)).subscribe(lineIds => {
+      const lineIdDecorations = lineIds.map<MonacoEditor.IModelDeltaDecoration>((lineId, index) => {
+        const lineNumber = index + 1;
+        return {
+          range: new Range(lineNumber, 0, lineNumber, 0),
+          options: {
+            className: lineIdClassNamePrefix + lineId,
+            shouldFillLineOnLineBreak: false,
+            stickiness: TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+          },
+        };
+      });
+      lineIdsDecorationCollection.set(lineIdDecorations);
+    });
+    return lineIdsDecorationCollection;
   }
 }

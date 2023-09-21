@@ -14,11 +14,11 @@ export class MethodEditorEffects {
     ofType(MethodEditorActions.modelSaveRequested),
     concatLatestFrom(() => [
       this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName)),
-      this.store.select(MethodEditorSelectors.content),
+      this.store.select(MethodEditorSelectors.method),
     ]),
-    switchMap(([_, unitId, content]) => {
+    switchMap(([_, unitId, method]) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.saveMethod(unitId, {content: content ?? '', locked_lines: [], injected_lines: []}).pipe(
+      return this.processUnitService.saveMethod(unitId, method).pipe(
         map(() => MethodEditorActions.modelSaved()));
     }),
   ));
@@ -33,12 +33,12 @@ export class MethodEditorEffects {
   ));
 
   continuouslyPollMethod = createEffect(() => this.actions.pipe(
-    ofType(MethodEditorActions.methodFetched),
+    ofType(MethodEditorActions.methodFetched, MethodEditorActions.methodPolled),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
-    debounceTime(5000), // delay() in MSW doesn't work in Firefox, so to avoid freezing the application in FF, we debounce
+    debounceTime(6000), // delay() in MSW doesn't work in Firefox, so to avoid freezing the application in FF, we debounce
     switchMap(([_, unitId]) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.getMethod(unitId).pipe(map(method => MethodEditorActions.methodFetched({method})));
+      return this.processUnitService.getMethod(unitId).pipe(map(method => MethodEditorActions.methodPolled({method})));
     }),
   ));
 

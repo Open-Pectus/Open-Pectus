@@ -3,8 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import type { MethodLine } from './MethodLine';
-
-export type Method = {
-    lines: Array<MethodLine>;
+export type MethodLine = {
+    id: string;
+    content: string;
+    is_locked: boolean;
+    is_injected: boolean;
 };

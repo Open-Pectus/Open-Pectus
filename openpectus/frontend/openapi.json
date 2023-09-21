@@ -706,32 +706,47 @@
       },
       "Method": {
         "properties": {
-          "content": {
-            "type": "string",
-            "title": "Content"
-          },
-          "locked_lines": {
+          "lines": {
             "items": {
-              "type": "integer"
+              "$ref": "#/components/schemas/MethodLine"
             },
             "type": "array",
-            "title": "Locked Lines"
-          },
-          "injected_lines": {
-            "items": {
-              "type": "integer"
-            },
-            "type": "array",
-            "title": "Injected Lines"
+            "title": "Lines"
           }
         },
         "type": "object",
         "required": [
-          "content",
-          "locked_lines",
-          "injected_lines"
+          "lines"
         ],
         "title": "Method"
+      },
+      "MethodLine": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "is_locked": {
+            "type": "boolean",
+            "title": "Is Locked"
+          },
+          "is_injected": {
+            "type": "boolean",
+            "title": "Is Injected"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "content",
+          "is_locked",
+          "is_injected"
+        ],
+        "title": "MethodLine"
       },
       "NotOnline": {
         "properties": {
