@@ -10,5 +10,5 @@ export class MethodEditorSelectors {
   static methodContent = createSelector(this.methodLines, methodLines => methodLines.map(line => line.content).join('\n'));
   static lineIds = createSelector(this.method, method => method.lines.map(line => line.id));
   static injectedLineIds = createSelector(this.method, method => method.lines.filter(line => line.is_injected).map(line => line.id));
-  static lockedLineIds = createSelector(this.method, method => method.lines.filter(line => line.is_locked).map(line => line.id));
+  static executedLineIds = createSelector(this.method, method => method.lines.filter(line => line.is_executed).map(line => line.id));
 }

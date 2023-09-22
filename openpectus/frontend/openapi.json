@@ -730,9 +730,9 @@
             "type": "string",
             "title": "Content"
           },
-          "is_locked": {
+          "is_executed": {
             "type": "boolean",
-            "title": "Is Locked"
+            "title": "Is Executed"
           },
           "is_injected": {
             "type": "boolean",
@@ -743,7 +743,7 @@
         "required": [
           "id",
           "content",
-          "is_locked",
+          "is_executed",
           "is_injected"
         ],
         "title": "MethodLine"

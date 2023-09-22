@@ -239,7 +239,7 @@ def get_run_log(unit_id: str) -> RunLog:
 class MethodLine(BaseModel):
     id: str
     content: str
-    is_locked: bool
+    is_executed: bool
     is_injected: bool
 
 class Method(BaseModel):

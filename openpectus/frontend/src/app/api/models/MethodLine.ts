@@ -6,6 +6,6 @@
 export type MethodLine = {
     id: string;
     content: string;
-    is_locked: boolean;
+    is_executed: boolean;
     is_injected: boolean;
 };
