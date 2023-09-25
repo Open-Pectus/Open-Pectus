@@ -108,7 +108,6 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     const editor = await this.constructEditor();
     this.setupOnEditorChanged(editor);
     this.setupOnStoreModelChanged(editor);
-    this.setupDecorateLinesWithIds(editor);
     this.setupInjectedLines(editor);
     this.setupExecutedLines(editor);
 
@@ -161,14 +160,34 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     });
   }
 
+  // Sets up both edits to content and line id decorations, because it's important that they happen right after each other and in this order.
   private setupOnStoreModelChanged(editor: MonacoEditor.IStandaloneCodeEditor) {
-    this.methodContent.pipe(
+    const lineIdsDecorationCollection = editor.createDecorationsCollection();
+    this.methodLines.pipe(
       filter(() => !this.storeModelChangedFromHere),
       takeUntil(this.componentDestroyed),
-    ).subscribe(methodContent => {
+    ).subscribe(methodLines => {
+      
+      // Apply edits
+      const methodContent = methodLines.map(line => line.content).join('\n');
       editor.getModel()?.applyEdits([
         {range: new Range(0, 0, Number.MAX_VALUE, Number.MAX_VALUE), text: methodContent},
       ]);
+
+      // Set line id decorations
+      const lineIds = methodLines.map(line => line.id);
+      const lineIdDecorations = lineIds.map<MonacoEditor.IModelDeltaDecoration>((lineId, index) => {
+        const lineNumber = index + 1;
+        return {
+          range: new Range(lineNumber, 0, lineNumber, 0),
+          options: {
+            className: lineIdClassNamePrefix + lineId,
+            shouldFillLineOnLineBreak: false,
+            stickiness: TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+          },
+        };
+      });
+      lineIdsDecorationCollection.set(lineIdDecorations);
     });
   }
 
@@ -301,27 +320,5 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       const lineNumbers = decorations.getRanges().flatMap(range => UtilMethods.getNumberRange(range.startLineNumber, range.endLineNumber));
       editor.updateOptions({lineNumbers: this.getLineNumberFunction(lineNumbers)});
     });
-  }
-
-  private setupDecorateLinesWithIds(editor: MonacoEditor.IStandaloneCodeEditor) {
-    const lineIdsDecorationCollection = editor.createDecorationsCollection();
-    this.lineIds.pipe(
-      filter(() => !this.storeModelChangedFromHere),
-      takeUntil(this.componentDestroyed),
-    ).subscribe(lineIds => {
-      const lineIdDecorations = lineIds.map<MonacoEditor.IModelDeltaDecoration>((lineId, index) => {
-        const lineNumber = index + 1;
-        return {
-          range: new Range(lineNumber, 0, lineNumber, 0),
-          options: {
-            className: lineIdClassNamePrefix + lineId,
-            shouldFillLineOnLineBreak: false,
-            stickiness: TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
-          },
-        };
-      });
-      lineIdsDecorationCollection.set(lineIdDecorations);
-    });
-    return lineIdsDecorationCollection;
   }
 }
