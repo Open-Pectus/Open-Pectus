@@ -168,12 +168,14 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       takeUntil(this.componentDestroyed),
     ).subscribe(methodLines => {
       console.log('Applying content edits from backed');
-      
+
       // Apply edits
       const methodContent = methodLines.map(line => line.content).join('\n');
+      const preEditSelection = editor.getSelection();
       editor.getModel()?.applyEdits([
         {range: new Range(0, 0, Number.MAX_VALUE, Number.MAX_VALUE), text: methodContent},
       ]);
+      if(preEditSelection !== null) editor.setSelection(preEditSelection);
 
       // Set line id decorations
       const lineIds = methodLines.map(line => line.id);
