@@ -706,6 +706,42 @@
       },
       "Method": {
         "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/MethodLine"
+            },
+            "type": "array",
+            "title": "Lines"
+          },
+          "executed_line_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Executed Line Ids"
+          },
+          "injected_line_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Injected Line Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lines",
+          "executed_line_ids",
+          "injected_line_ids"
+        ],
+        "title": "Method"
+      },
+      "MethodLine": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
           "content": {
             "type": "string",
             "title": "Content"
@@ -713,9 +749,10 @@
         },
         "type": "object",
         "required": [
+          "id",
           "content"
         ],
-        "title": "Method"
+        "title": "MethodLine"
       },
       "NotOnline": {
         "properties": {

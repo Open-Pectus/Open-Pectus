@@ -15,6 +15,7 @@ export type { ExecutableCommand } from './models/ExecutableCommand';
 export type { HTTPValidationError } from './models/HTTPValidationError';
 export { InProgress } from './models/InProgress';
 export type { Method } from './models/Method';
+export type { MethodLine } from './models/MethodLine';
 export { NotOnline } from './models/NotOnline';
 export type { PlotAxis } from './models/PlotAxis';
 export type { PlotColorRegion } from './models/PlotColorRegion';

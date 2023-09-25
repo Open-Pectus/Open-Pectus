@@ -19,6 +19,8 @@ import {
   UserRole,
 } from '../app/api';
 
+const lockedLines = [1, 3];
+
 const processUnits: ProcessUnit[] = [
   {
     name: 'Some unit',
@@ -422,17 +424,24 @@ export const handlers = [
   }),
 
   rest.get('/api/process_unit/:unitId/method', (_, res, context) => {
-    return res(
+    const result = res(
       context.status(200),
       context.json<Method>({
-        content: `{
-"some key": "some value",
-"injected": "line",
-"another key": "another value",
-"another injected": "line"
-}`,
+        lines: [
+          {id: 'a', content: '{'},
+          {id: 'b', content: ' "some key": "some value",'},
+          {id: 'c', content: ' "injected": "line",'},
+          {id: 'd', content: ' "another key": "another value",'},
+          {id: 'e', content: ' "another": "line",'},
+          {id: 'f', content: ' "yet another": "line"'},
+          {id: 'g', content: '}'},
+        ],
+        executed_line_ids: lockedLines.map(no => (no + 9).toString(36)),
+        injected_line_ids: ['c'],
       }),
     );
+    lockedLines.push((lockedLines.at(-1) ?? 0) + 1);
+    return result;
   }),
 
   rest.post('/api/process_unit/:unitId/method', (req, res, context) => {

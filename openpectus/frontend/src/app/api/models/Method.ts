@@ -3,6 +3,10 @@
 /* tslint:disable */
 /* eslint-disable */
 
+import type { MethodLine } from './MethodLine';
+
 export type Method = {
-    content: string;
+    lines: Array<MethodLine>;
+    executed_line_ids: Array<string>;
+    injected_line_ids: Array<string>;
 };

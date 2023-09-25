@@ -236,13 +236,18 @@ class RunLog(BaseModel):
 def get_run_log(unit_id: str) -> RunLog:
     return RunLog(lines=[])
 
+class MethodLine(BaseModel):
+    id: str
+    content: str
 
 class Method(BaseModel):
-    content: str
+    lines: List[MethodLine]
+    executed_line_ids: List[str]
+    injected_line_ids: List[str]
 
 @router.get('/process_unit/{unit_id}/method')
 def get_method(unit_id: str) -> Method:
-    return Method(content='')
+    return Method(lines=[], executed_line_ids=[], injected_line_ids=[])
 
 @router.post('/process_unit/{unit_id}/method')
 def save_method(unit_id: str, method: Method) -> None:
