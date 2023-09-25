@@ -21,6 +21,15 @@ import {
 
 const lockedLines = [1, 3];
 
+// TODO: this should be exposed from backend or handled otherwise when using websocket
+export enum SystemState {
+  Running = 'Run',
+  Paused = 'Paused',
+  Holding = 'Hold',
+  Stopped = 'Stopped',
+  Waiting = 'Wait'
+}
+
 const processUnits: ProcessUnit[] = [
   {
     name: 'Some unit',
@@ -257,6 +266,11 @@ export const handlers = [
           name: 'Flow path',
           value: (getSeconds(Date.now()) % 10 < 3) ? 'Bypass' : (getSeconds(Date.now()) % 10 < 6) ? 'Prime with a long name' : undefined,
         },
+        {
+          value_type: ProcessValueType.STRING,
+          name: 'System State',
+          value: SystemState.Running,
+        },
       ]),
     );
   }),
@@ -334,6 +348,7 @@ export const handlers = [
   rest.get('/api/process_unit/:unitId/run_log', (_, res, context) => {
     return res(
       context.status(200),
+      context.delay(),
       context.json<RunLog>({
         lines: [
           {
