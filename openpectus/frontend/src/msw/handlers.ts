@@ -432,8 +432,9 @@ export const handlers = [
           {id: 'b', is_executed: lockedLines.includes(2), content: ' "some key": "some value",', is_injected: false},
           {id: 'c', is_executed: lockedLines.includes(3), content: ' "injected": "line",', is_injected: true},
           {id: 'd', is_executed: lockedLines.includes(4), content: ' "another key": "another value",', is_injected: false},
-          {id: 'e', is_executed: lockedLines.includes(5), content: ' "another": "line"', is_injected: false},
-          {id: 'f', is_executed: lockedLines.includes(6), content: '}', is_injected: false},
+          {id: 'e', is_executed: lockedLines.includes(5), content: ' "another": "line",', is_injected: false},
+          {id: 'f', is_executed: lockedLines.includes(6), content: ' "yet another": "line"', is_injected: false},
+          {id: 'g', is_executed: lockedLines.includes(7), content: '}', is_injected: false},
         ],
       }),
     );

@@ -4,7 +4,7 @@ import { Store } from '@ngrx/store';
 import { buildWorkerDefinition } from 'monaco-editor-workers';
 import { editor, editor as MonacoEditor, KeyCode, languages, Range, Uri } from 'monaco-editor/esm/vs/editor/editor.api.js'; // importing as 'monaco-editor' causes issues: https://github.com/CodinGame/monaco-vscode-api/issues/162
 import { initServices, MonacoLanguageClient } from 'monaco-languageclient';
-import { firstValueFrom, Observable, Subject, take, takeUntil } from 'rxjs';
+import { filter, firstValueFrom, Observable, Subject, take, takeUntil } from 'rxjs';
 import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient/lib/common/client';
 import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
 import 'vscode/default-extensions/json';
@@ -160,14 +160,13 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   private setupOnStoreModelChanged(editor: MonacoEditor.IStandaloneCodeEditor) {
-    this.methodContent.pipe(takeUntil(this.componentDestroyed)).subscribe(methodContent => {
-      if(this.storeModelChangedFromHere) return;
-      console.log('setting model from store');
-      setTimeout(() =>
-        editor.getModel()?.applyEdits([
-          {range: new Range(0, 0, Number.MAX_VALUE, Number.MAX_VALUE), text: methodContent},
-        ]),
-      );
+    this.methodContent.pipe(
+      filter(() => !this.storeModelChangedFromHere),
+      takeUntil(this.componentDestroyed),
+    ).subscribe(methodContent => {
+      setTimeout(() => editor.getModel()?.applyEdits([
+        {range: new Range(0, 0, Number.MAX_VALUE, Number.MAX_VALUE), text: methodContent},
+      ]));
     });
   }
 
@@ -200,13 +199,13 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   private setupExecutedLines(editor: MonacoEditor.IStandaloneCodeEditor) {
-    const executedLinesDecorations = this.decorateExecutedLines(editor);
-    this.lockExecutedLines(editor, executedLinesDecorations);
+    const executedLinesDecorationCollection = this.setupDecoratingExecutedLines(editor);
+    this.setupLockingExecutedLines(editor, executedLinesDecorationCollection);
   }
 
-  private lockExecutedLines(editor: MonacoEditor.IStandaloneCodeEditor,
-                            executedLineDecorations: MonacoEditor.IEditorDecorationsCollection) {
-    editor.onDidChangeCursorSelection(_ => {
+  private setupLockingExecutedLines(editor: MonacoEditor.IStandaloneCodeEditor,
+                                    executedLineDecorations: MonacoEditor.IEditorDecorationsCollection) {
+    const lockEditorIfSelectionIntersectsExecutedLines = () => {
       const selectionInLockedRange = editor.getSelections()?.some(selection => {
         return executedLineDecorations.getRanges()
           .flatMap(range => UtilMethods.getNumberRange(range.startLineNumber, range.endLineNumber))
@@ -215,7 +214,9 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
           });
       });
       editor.updateOptions({readOnly: selectionInLockedRange, readOnlyMessage: {value: 'Cannot edit lines already executed.'}});
-    });
+    };
+    editor.onDidChangeCursorSelection(lockEditorIfSelectionIntersectsExecutedLines);
+    this.executedLineIds.pipe(takeUntil(this.componentDestroyed)).subscribe(lockEditorIfSelectionIntersectsExecutedLines);
 
     // Block specifically delete/backspace when at the ending/starting edge of the line before/after the locked line.
     editor.onKeyDown(event => {
@@ -240,7 +241,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  private decorateExecutedLines(editor: MonacoEditor.IStandaloneCodeEditor) {
+  private setupDecoratingExecutedLines(editor: MonacoEditor.IStandaloneCodeEditor) {
     const executedLinesDecorationsCollection = editor.createDecorationsCollection();
     this.executedLineIds.pipe(
       concatLatestFrom(() => this.lineIds),
