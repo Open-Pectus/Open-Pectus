@@ -239,11 +239,11 @@ def get_run_log(unit_id: str) -> RunLog:
 class MethodLine(BaseModel):
     id: str
     content: str
-    is_executed: bool
-    is_injected: bool
 
 class Method(BaseModel):
     lines: List[MethodLine]
+    executed_line_ids: List[str]
+    injected_line_ids: List[str]
 
 @router.get('/process_unit/{unit_id}/method')
 def get_method(unit_id: str) -> Method:

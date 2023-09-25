@@ -6,6 +6,4 @@
 export type MethodLine = {
     id: string;
     content: string;
-    is_executed: boolean;
-    is_injected: boolean;
 };

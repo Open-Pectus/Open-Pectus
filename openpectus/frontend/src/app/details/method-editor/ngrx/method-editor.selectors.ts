@@ -8,7 +8,7 @@ export class MethodEditorSelectors {
   static method = createSelector(this.selectFeature, state => state.method);
   static methodLines = createSelector(this.method, method => method.lines);
   static methodContent = createSelector(this.methodLines, methodLines => methodLines.map(line => line.content).join('\n'));
-  static lineIds = createSelector(this.method, method => method.lines.map(line => line.id));
-  static injectedLineIds = createSelector(this.method, method => method.lines.filter(line => line.is_injected).map(line => line.id));
-  static executedLineIds = createSelector(this.method, method => method.lines.filter(line => line.is_executed).map(line => line.id));
+  static lineIds = createSelector(this.methodLines, methodLines => methodLines.map(line => line.id));
+  static injectedLineIds = createSelector(this.method, method => method.injected_line_ids);
+  static executedLineIds = createSelector(this.method, method => method.executed_line_ids);
 }

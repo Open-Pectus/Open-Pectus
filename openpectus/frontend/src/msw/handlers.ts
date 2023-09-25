@@ -428,14 +428,16 @@ export const handlers = [
       context.status(200),
       context.json<Method>({
         lines: [
-          {id: 'a', is_executed: lockedLines.includes(1), content: '{', is_injected: false},
-          {id: 'b', is_executed: lockedLines.includes(2), content: ' "some key": "some value",', is_injected: false},
-          {id: 'c', is_executed: lockedLines.includes(3), content: ' "injected": "line",', is_injected: true},
-          {id: 'd', is_executed: lockedLines.includes(4), content: ' "another key": "another value",', is_injected: false},
-          {id: 'e', is_executed: lockedLines.includes(5), content: ' "another": "line",', is_injected: false},
-          {id: 'f', is_executed: lockedLines.includes(6), content: ' "yet another": "line"', is_injected: false},
-          {id: 'g', is_executed: lockedLines.includes(7), content: '}', is_injected: false},
+          {id: 'a', content: '{'},
+          {id: 'b', content: ' "some key": "some value",'},
+          {id: 'c', content: ' "injected": "line",'},
+          {id: 'd', content: ' "another key": "another value",'},
+          {id: 'e', content: ' "another": "line",'},
+          {id: 'f', content: ' "yet another": "line"'},
+          {id: 'g', content: '}'},
         ],
+        executed_line_ids: lockedLines.map(no => (no + 9).toString(36)),
+        injected_line_ids: ['c'],
       }),
     );
     lockedLines.push((lockedLines.at(-1) ?? 0) + 1);

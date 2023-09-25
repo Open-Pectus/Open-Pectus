@@ -167,6 +167,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       filter(() => !this.storeModelChangedFromHere),
       takeUntil(this.componentDestroyed),
     ).subscribe(methodLines => {
+      console.log('Applying content edits from backed');
       
       // Apply edits
       const methodContent = methodLines.map(line => line.content).join('\n');

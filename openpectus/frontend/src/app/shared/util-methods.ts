@@ -22,4 +22,8 @@ export class UtilMethods {
   static getNumberRange(from: number, to: number): number[] {
     return Array(to - from + 1).fill(undefined).map((_, i) => i + from);
   }
+
+  static arrayEquals<T>(a: T[], b: T[]): boolean {
+    return a.length === b.length && a.every((value, index) => b[index] === value);
+  }
 }

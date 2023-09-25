@@ -1,6 +1,7 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
 import { Method } from '../../../api';
+import { UtilMethods } from '../../../shared/util-methods';
 import { MethodEditorActions } from './method-editor.actions';
 
 export interface MethodEditorState {
@@ -12,7 +13,11 @@ export interface MethodEditorState {
 const initialState: MethodEditorState = {
   monacoServicesInitialized: false,
   isDirty: false,
-  method: {lines: []},
+  method: {
+    lines: [],
+    executed_line_ids: [],
+    injected_line_ids: [],
+  },
 };
 
 const reducer = createReducer(initialState,
@@ -21,14 +26,26 @@ const reducer = createReducer(initialState,
     draft.method = method;
   })),
   on(MethodEditorActions.methodPolled, (state, {method}) => produce(state, draft => {
-    method.lines.forEach((newLine, newLineIndex) => {
-      const oldLine = draft.method.lines.find(line => line.id === newLine.id);
+    if(!UtilMethods.arrayEquals(draft.method.executed_line_ids, method.executed_line_ids)) {
+      draft.method.executed_line_ids = method.executed_line_ids;
+    }
+    if(!UtilMethods.arrayEquals(draft.method.injected_line_ids, method.injected_line_ids)) {
+      draft.method.injected_line_ids = method.injected_line_ids;
+    }
+
+    // take content only from executed (and therefore locked) lines.
+    method.executed_line_ids.forEach((executedLineId) => {
+      const oldLine = draft.method.lines.find(line => line.id === executedLineId);
+      const newLineIndex = method.lines.findIndex(line => line.id === executedLineId);
+      const newLine = method.lines[newLineIndex];
+      if(newLine === undefined) {
+        console.warn('Backend designated a non-existing line id as executed! This is fine if you\'re using MSW.');
+        return;
+      }
       if(oldLine === undefined) {
-        if(newLine.is_executed) draft.method.lines.splice(newLineIndex, 0, newLine);
+        draft.method.lines.splice(newLineIndex, 0, newLine);
       } else {
-        oldLine.is_executed = newLine.is_executed;
-        oldLine.is_injected = newLine.is_injected;
-        if(newLine.is_executed) oldLine.content = newLine.content;
+        oldLine.content = newLine.content;
       }
     });
   })),
@@ -36,7 +53,11 @@ const reducer = createReducer(initialState,
     draft.monacoServicesInitialized = true;
   })),
   on(MethodEditorActions.monacoEditorComponentDestroyed, state => produce(state, draft => {
-    draft.method = {lines: []};
+    draft.method = {
+      lines: [],
+      executed_line_ids: [],
+      injected_line_ids: [],
+    };
   })),
   on(MethodEditorActions.modelSaved, state => produce(state, draft => {
     draft.isDirty = false;

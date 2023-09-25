@@ -712,11 +712,27 @@
             },
             "type": "array",
             "title": "Lines"
+          },
+          "executed_line_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Executed Line Ids"
+          },
+          "injected_line_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Injected Line Ids"
           }
         },
         "type": "object",
         "required": [
-          "lines"
+          "lines",
+          "executed_line_ids",
+          "injected_line_ids"
         ],
         "title": "Method"
       },
@@ -729,22 +745,12 @@
           "content": {
             "type": "string",
             "title": "Content"
-          },
-          "is_executed": {
-            "type": "boolean",
-            "title": "Is Executed"
-          },
-          "is_injected": {
-            "type": "boolean",
-            "title": "Is Injected"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "content",
-          "is_executed",
-          "is_injected"
+          "content"
         ],
         "title": "MethodLine"
       },
