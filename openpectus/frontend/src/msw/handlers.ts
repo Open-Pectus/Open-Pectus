@@ -348,6 +348,7 @@ export const handlers = [
   rest.get('/api/process_unit/:unitId/run_log', (_, res, context) => {
     return res(
       context.status(200),
+      context.delay(),
       context.json<RunLog>({
         lines: [
           {
