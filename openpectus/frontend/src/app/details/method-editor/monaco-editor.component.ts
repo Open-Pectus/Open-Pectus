@@ -135,27 +135,29 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   private setupOnEditorChanged(editor: MonacoEditor.IStandaloneCodeEditor) {
-    editor.onDidChangeModelContent(event => {
-      const model = editor.getModel();
-      if(model === null) return;
-      const linesContents = model.getLinesContent();
+    editor.onDidChangeModelContent(() => {
+      setTimeout(() => { // setTimeout to allow for line id decorations to be placed before this is executed
+        const model = editor.getModel();
+        if(model === null) return;
+        const linesContents = model.getLinesContent();
 
-      const lines = linesContents.map<MethodLine>((lineContent, index) => {
-        const decorations = model.getLineDecorations(index + 1);
-        const idDecoration = decorations.find(decoration => decoration.options.className?.startsWith(lineIdClassNamePrefix));
-        const id = idDecoration?.options.className?.substring(lineIdClassNamePrefix.length);
-        const isExecuted = decorations.find(decoration => decoration.options.className === executedLineClassName) !== undefined;
-        const isInjected = decorations.find(decoration => decoration.options.className === injectedLineClassName) !== undefined;
-        return {
-          id: id ?? crypto.randomUUID(),
-          content: lineContent,
-          is_executed: isExecuted,
-          is_injected: isInjected,
-        };
+        const lines = linesContents.map<MethodLine>((lineContent, index) => {
+          const decorations = model.getLineDecorations(index + 1);
+          const idDecoration = decorations.find(decoration => decoration.options.className?.startsWith(lineIdClassNamePrefix));
+          const id = idDecoration?.options.className?.substring(lineIdClassNamePrefix.length);
+          const isExecuted = decorations.find(decoration => decoration.options.className === executedLineClassName) !== undefined;
+          const isInjected = decorations.find(decoration => decoration.options.className === injectedLineClassName) !== undefined;
+          return {
+            id: id ?? crypto.randomUUID(),
+            content: lineContent,
+            is_executed: isExecuted,
+            is_injected: isInjected,
+          };
+        });
+        this.storeModelChangedFromHere = true;
+        this.store.dispatch(MethodEditorActions.linesChanged({lines}));
+        this.storeModelChangedFromHere = false;
       });
-      this.storeModelChangedFromHere = true;
-      this.store.dispatch(MethodEditorActions.linesChanged({lines}));
-      this.storeModelChangedFromHere = false;
     });
   }
 
@@ -164,9 +166,9 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       filter(() => !this.storeModelChangedFromHere),
       takeUntil(this.componentDestroyed),
     ).subscribe(methodContent => {
-      setTimeout(() => editor.getModel()?.applyEdits([
+      editor.getModel()?.applyEdits([
         {range: new Range(0, 0, Number.MAX_VALUE, Number.MAX_VALUE), text: methodContent},
-      ]));
+      ]);
     });
   }
 
@@ -247,6 +249,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       concatLatestFrom(() => this.lineIds),
       takeUntil(this.componentDestroyed),
     ).subscribe(([executedLineIds, lineIds]) => {
+      console.log('decorating executed lines', executedLineIds, lineIds);
       const executedLinesDecorations = executedLineIds.map<MonacoEditor.IModelDeltaDecoration>(executedLineId => {
         const lineNumber = lineIds.findIndex(lineId => lineId === executedLineId) + 1;
         if(lineNumber === undefined) throw Error(`could not find line id decoration with id ${executedLineId}`);
@@ -302,7 +305,10 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   private setupDecorateLinesWithIds(editor: MonacoEditor.IStandaloneCodeEditor) {
     const lineIdsDecorationCollection = editor.createDecorationsCollection();
-    this.lineIds.pipe(takeUntil(this.componentDestroyed)).subscribe(lineIds => {
+    this.lineIds.pipe(
+      filter(() => !this.storeModelChangedFromHere),
+      takeUntil(this.componentDestroyed),
+    ).subscribe(lineIds => {
       const lineIdDecorations = lineIds.map<MonacoEditor.IModelDeltaDecoration>((lineId, index) => {
         const lineNumber = index + 1;
         return {
