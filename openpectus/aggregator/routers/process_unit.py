@@ -247,7 +247,7 @@ class Method(BaseModel):
 
 @router.get('/process_unit/{unit_id}/method')
 def get_method(unit_id: str) -> Method:
-    return Method(lines=[])
+    return Method(lines=[], executed_line_ids=[], injected_line_ids=[])
 
 @router.post('/process_unit/{unit_id}/method')
 def save_method(unit_id: str, method: Method) -> None:
