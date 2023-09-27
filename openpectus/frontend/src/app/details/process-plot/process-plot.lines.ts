@@ -29,12 +29,12 @@ export class ProcessPlotLines {
 
   private formatLineDataForAxis(processValuesLog: ProcessValueLog, axis: PlotAxis, xAxisProcessValueName: string): [number, number][][] {
     return axis.process_value_names
-      .map(processValueName => processValuesLog[processValueName])
+      .map(processValueName => processValuesLog[processValueName]?.values)
       .filter(UtilMethods.isNotNullOrUndefined)
-      .map(processValueLine => processValueLine.map((processValue, index) => {
-          if(typeof processValue.value !== 'number') return undefined;
-          const x = processValuesLog[xAxisProcessValueName][index].value;
-          return [x, processValue.value] as [number, number];
+      .map(processValueLogEntry => processValueLogEntry.map((processValue, index) => {
+          if(typeof processValue !== 'number') return undefined;
+          const x = processValuesLog[xAxisProcessValueName].values[index];
+          return [x, processValue] as [number, number];
         }).filter(UtilMethods.isNotNullOrUndefined),
       );
   }

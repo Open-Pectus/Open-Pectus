@@ -1,11 +1,18 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { PlotConfiguration, ProcessValue } from '../../../api';
+import { PlotConfiguration, ProcessValueType } from '../../../api';
 import { DetailsActions } from '../../ngrx/details.actions';
 import { XAxisOverrideDialogData, YAxesLimitsOverride, YAxisOverrideDialogData, ZoomAndPanDomainOverrides } from '../process-plot.types';
 import { ProcessPlotActions } from './process-plot.actions';
 
-export type ProcessValueLog = Record<string, ProcessValue[]>
+export interface ProcessValueLogEntry {
+  name: string;
+  values: (string | number)[];
+  value_unit?: string;
+  value_type: ProcessValueType;
+}
+
+export type ProcessValueLog = Record<string, ProcessValueLogEntry>;
 
 export interface ProcessPlotState {
   plotConfiguration?: PlotConfiguration;
@@ -56,11 +63,17 @@ const reducer = createReducer(initialState,
     })),
   on(DetailsActions.processValuesFetched, (state, {processValues}) => produce(state, draft => {
     processValues.forEach(processValue => {
+      if(processValue.value === undefined) return;
       const existing = draft.processValuesLog[processValue.name];
       if(existing === undefined) {
-        draft.processValuesLog[processValue.name] = [processValue];
+        draft.processValuesLog[processValue.name] = {
+          name: processValue.name,
+          value_unit: processValue.value_unit,
+          value_type: processValue.value_type,
+          values: [processValue.value],
+        };
       } else {
-        existing.push(processValue);
+        existing.values.push(processValue.value);
       }
     });
   })),

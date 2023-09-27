@@ -1,8 +1,10 @@
 import { Store } from '@ngrx/store';
 import { bisector, pointer, ScaleLinear, select } from 'd3';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, identity } from 'rxjs';
 import { PlotConfiguration, ProcessValue } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
+import { UtilMethods } from '../../shared/util-methods';
+import { ProcessValueLogEntry } from './ngrx/process-plot.reducer';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
 import { ProcessPlotFontSizes } from './process-plot.font-sizes';
 import { D3Selection } from './process-plot.types';
@@ -11,7 +13,7 @@ export class ProcessPlotTooltip {
   static margin = {x: 10, y: 8};
   placementRelativeToMouse = {x: 1, y: 14};
   private processValuesLog = this.store.select(ProcessPlotSelectors.processValuesLog);
-  private xAxisProcessValue = this.store.select(ProcessPlotSelectors.xAxisProcessValueName);
+  private xAxisProcessValueName = this.store.select(ProcessPlotSelectors.xAxisProcessValueName);
 
   constructor(private store: Store,
               private plotConfiguration: PlotConfiguration,
@@ -26,26 +28,27 @@ export class ProcessPlotTooltip {
     subplotBorders.on('mousemove', async (event: MouseEvent) => {
       if(event === undefined) return;
       const processValuesLog = await firstValueFrom(this.processValuesLog);
-      const xAxisProcessValue = await firstValueFrom(this.xAxisProcessValue);
-      if(xAxisProcessValue === undefined) return;
+      const xAxisProcessValueName = await firstValueFrom(this.xAxisProcessValueName);
+      if(xAxisProcessValueName === undefined) return;
 
       const subplotBorderG = (event.target as SVGRectElement).parentNode as SVGGElement;
       const subplotIndex = parseInt(/subplot-(\d+)/.exec(subplotBorderG.parentElement?.classList.toString() ?? '')?.[1] ?? '');
       const subplotProcessValueNames = this.plotConfiguration.sub_plots[subplotIndex].axes.flatMap(axis => axis.process_value_names);
-      const subplotData = Object.values(processValuesLog).filter(processValues => subplotProcessValueNames.includes(processValues[0].name));
-      const xAxisData = processValuesLog[xAxisProcessValue];
+      const subplotProcessValueLogEntries = Object.values(processValuesLog).filter(
+        processValues => subplotProcessValueNames.includes(processValues.name));
+      const xAxisProcessValueLogEntry = processValuesLog[xAxisProcessValueName];
       const relativeMousePosition = pointer(event);
-      const bisectedIndex = this.bisectX(xAxisData, relativeMousePosition[0]);
+      const bisectedIndex = this.bisectX(xAxisProcessValueLogEntry.values, relativeMousePosition[0]);
       if(bisectedIndex === undefined) return;
-      const bisectedData = subplotData.flatMap(processValues => processValues[bisectedIndex]);
+      const bisectedValues = subplotProcessValueLogEntries.flatMap(processValueLogEntry => processValueLogEntry.values[bisectedIndex]);
 
       tooltip.attr('transform', `translate(${[
         relativeMousePosition[0] + this.placementRelativeToMouse.x,
         relativeMousePosition[1] + this.placementRelativeToMouse.y,
       ]})`)
-        .call(this.callout.bind(this), bisectedData);
+        .call(this.callout.bind(this), subplotProcessValueLogEntries, bisectedValues);
       eventTargetParentElement = select(subplotBorderG);
-      eventTargetParentElement.call(this.line.bind(this), xAxisData[bisectedIndex]);
+      eventTargetParentElement.call(this.line.bind(this), xAxisProcessValueLogEntry.values[bisectedIndex]);
     });
 
     subplotBorders.on('mouseleave', () => {
@@ -55,10 +58,11 @@ export class ProcessPlotTooltip {
   }
 
   updateLineXPosition() {
-    this.svg.selectAll('.subplot-border').selectAll<SVGLineElement, ProcessValue>('line')
-      .filter(d => d !== undefined)
-      .attr('x1', d => this.xScale(d.value as number))
-      .attr('x2', d => this.xScale(d.value as number));
+    this.svg.selectAll('.subplot-border')
+      .selectAll<SVGLineElement, (string | number)>('line')
+      .filter(UtilMethods.isNotNullOrUndefined)
+      .attr('x1', d => this.xScale(d as number))
+      .attr('x2', d => this.xScale(d as number));
   }
 
   updateLineYPosition() {
@@ -67,20 +71,20 @@ export class ProcessPlotTooltip {
       const subPlotBorder = select(groups[index]);
       const rectBBox = subPlotBorder.selectChild<SVGRectElement>('rect').node()?.getBBox();
       subPlotBorder.selectAll<SVGLineElement, ProcessValue>('line')
-        .filter(d => d !== undefined)
+        .filter(UtilMethods.isNotNullOrUndefined)
         .attr('y1', rectBBox?.y ?? 0)
         .attr('y2', (rectBBox?.y ?? 0) + (rectBBox?.height ?? 0));
     });
   }
 
-  private bisectX(xAxisData: ProcessValue[], mouseX: number): number | undefined {
+  private bisectX(xAxisData: ProcessValueLogEntry['values'], mouseX: number): number | undefined {
     if(xAxisData === undefined || xAxisData.length === 0) return;
     const xValue = this.xScale.invert(mouseX);
-    return bisector((d: ProcessValue) => d.value).center(xAxisData, xValue);
+    return bisector(identity).center(xAxisData, xValue);
   }
 
-  private callout(tooltipG: D3Selection<SVGGElement>, processValues?: ProcessValue[]) {
-    if(processValues === undefined) {
+  private callout(tooltipG: D3Selection<SVGGElement>, processValues?: ProcessValue[], processValueValues?: ProcessValueLogEntry['values']) {
+    if(processValueValues === undefined || processValues === undefined) {
       tooltipG.style('display', 'none');
       return;
     }
@@ -99,8 +103,8 @@ export class ProcessPlotTooltip {
             return axis.process_value_names.includes(d.name);
           })?.color;
         }).find<string>((value): value is string => typeof value === 'string') ?? 'black')
-        .text((processValue) => {
-          return `${processValue.name}: ${this.processValuePipe.transform(processValue)}`;
+        .text((processValue, index) => {
+          return `${processValue.name}: ${this.processValuePipe.transform({...processValue, value: processValueValues[index]})}`;
         }),
       );
 
@@ -111,7 +115,7 @@ export class ProcessPlotTooltip {
       .attr('height', height + 2 * ProcessPlotTooltip.margin.y);
   }
 
-  private line(subPlotBorder: D3Selection<SVGGElement>, xAxisDatum?: ProcessValue) {
+  private line(subPlotBorder: D3Selection<SVGGElement>, xAxisDatum?: string | number) {
     const lineSelection = subPlotBorder.selectAll('line.tooltip-line');
     if(xAxisDatum === undefined) {
       lineSelection.style('display', 'none');

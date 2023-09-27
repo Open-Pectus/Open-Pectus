@@ -61,26 +61,25 @@ export class ProcessPlotColoredRegions {
   private formatColoredRegionsData(processValueLog: ProcessValueLog,
                                    colorRegion: PlotColorRegion,
                                    xAxisProcessValueName: string): ColoredRegionRect[] {
-    const processValueData = processValueLog[colorRegion.process_value_name];
+    const processValueLogEntry = processValueLog[colorRegion.process_value_name];
     const xAxisData = processValueLog[xAxisProcessValueName];
-    if(processValueData === undefined) return [];
-    const processValueValues = processValueData.map(processValue => processValue.value);
-    let start: number = xAxisData[0].value as number;
+    if(processValueLogEntry === undefined) return [];
+    let start: number = xAxisData.values[0] as number;
     const coloredRegionRects: ColoredRegionRect[] = [];
-    for(let i = 0; i < processValueValues.length; i++) {
-      const currentValueColor = colorRegion.value_color_map[processValueValues[i] ?? -1];
-      const previousValueColor = colorRegion.value_color_map[processValueValues[i - 1] ?? -1];
+    for(let i = 0; i < processValueLogEntry.values.length; i++) {
+      const currentValueColor = colorRegion.value_color_map[processValueLogEntry.values[i] ?? -1];
+      const previousValueColor = colorRegion.value_color_map[processValueLogEntry.values[i - 1] ?? -1];
       if(currentValueColor === previousValueColor) continue; // same value, just skip ahead
-      const end = xAxisData[i].value as number;
+      const end = xAxisData.values[i] as number;
       if(previousValueColor !== undefined) {
-        coloredRegionRects.push({start, end, color: previousValueColor, value: processValueValues[i - 1]});
+        coloredRegionRects.push({start, end, color: previousValueColor, value: processValueLogEntry.values[i - 1]});
       }
       if(currentValueColor !== undefined) start = end;
     }
-    const valueAtEnd = processValueValues[processValueData.length - 1];
+    const valueAtEnd = processValueLogEntry.values[processValueLogEntry.values.length - 1];
     const colorAtEnd = colorRegion.value_color_map[valueAtEnd ?? -1];
     if(colorAtEnd !== undefined) { // we ran past end, but was drawing a rect, so push that into array
-      const end = xAxisData.at(-1)?.value as number;
+      const end = xAxisData.values.at(-1) as number;
       coloredRegionRects.push({start, end, color: colorAtEnd, value: valueAtEnd});
     }
     return coloredRegionRects;
