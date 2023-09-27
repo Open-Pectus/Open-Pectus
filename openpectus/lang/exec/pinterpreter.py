@@ -196,6 +196,12 @@ class PInterpreter(PNodeVisitor):
         # Engine has no concept of scopes - or at least only program and current block.
         # What about intermediate blocks/scopes?
         # Does this relate to RunLog? Should that show intermediate scope times?
+
+        # Clock         - seconds since epoch
+        # Run Time      - 0 at start, increments when System State is not Stopped
+        # Process Time  - 0 at start, increments when System State is Run
+        # Block Time    - 0 at Block start, global but value refers to active block
+        
         if self.stack.any():
             ar_program = self.stack.records[0]
             program_elapsed = self._tick_time - ar_program.start_time
@@ -394,7 +400,10 @@ class PInterpreter(PNodeVisitor):
 
         yield  # comment if we dont want block to always consume a tick
 
-        runlog_item.add_start_state(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+        runlog_item.add_start_state(
+            self._tick_time,
+            self._tick_number,
+            self.context.tags.as_readonly())
 
         yield from self._visit_children(node.children)
 
@@ -410,7 +419,11 @@ class PInterpreter(PNodeVisitor):
         # now it's safe to pop
         self.stack.pop()
 
-        runlog_item.add_end_state(RunLogItemState.Completed, self._tick_time, self._tick_number, self.context.tags.as_readonly())
+        runlog_item.add_end_state(
+            RunLogItemState.Completed,
+            self._tick_time,
+            self._tick_number,
+            self.context.tags.as_readonly())
 
     def visit_PEndBlock(self, node: PEndBlock):
         for ar in reversed(self.stack.records):
@@ -440,16 +453,13 @@ class PInterpreter(PNodeVisitor):
 
             # update ar with actual time and tags
             ar.fill_start(self._tick_time, self.context.tags.as_readonly())
+
             self.stack.push(ar)
             yield from self.visit(node)
             self.stack.pop()
 
         ar = self.stack.peek()
         if ar.owner is not node:
-            # TODO the ar gets the creation tick time. Is this correct?
-            # TODO should use engine tags here - preferably the readonly ones
-            # TODO this is very similar to entries in the run-log...
-            # ar = ActivationRecord(node, self._tick_time, self.context.tags.as_readonly())
             ar = ActivationRecord(node)
             self._register_interrupt(ar, create_interrupt_handler(ar))
 
@@ -460,10 +470,9 @@ class PInterpreter(PNodeVisitor):
         else:
             # On subsequent visits (that originates from the interrupt handler)
             # we evaluate the condition. When true, the node is 'activated' and its
-            # body will run            
+            # body will run
             logger.debug(f"{str(node)} interrupt invoked")
             if node.activated:
-                condition_result = True
                 logger.debug(f"{str(node)} was previously activated")
             else:
                 while not ar.complete and self.running:

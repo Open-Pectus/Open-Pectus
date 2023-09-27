@@ -10,15 +10,17 @@ from typing import Iterable, List, Set
 from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.pinterpreter import InterpreterContext, PInterpreter
 from openpectus.lang.exec.runlog import RunLog, RunLogItemState
-from openpectus.lang.exec.timer import OneThreadTimer
+from openpectus.lang.exec.timer import EngineTimer, OneThreadTimer
 from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 from openpectus.lang.exec.tags import (
+    DEFAULT_TAG_SYSTEM_STATE,
+    DEFAULT_TAG_METHOD_STATUS,
     Tag,
     TagCollection,
+    TagDirection,
     TagValueCollection,
     ChangeListener,
-    DEFAULT_TAG_RUN_TIME,
     DEFAULT_TAG_CLOCK,
     DEFAULT_TAG_RUN_COUNTER,
 )
@@ -35,19 +37,6 @@ def parse_pcode(pcode: str) -> PProgram:
     p = PGrammar()
     p.parse(pcode)
     return p.build_model()
-
-
-class EngineInternalCommand(StrEnum):
-    START = "START"
-    STOP = "STOP"
-    PAUSE = "PAUSE"
-    HOLD = "HOLD"
-    INCREMENT_RUN_COUNTER = "INCREMENT RUN COUNTER"
-
-    @staticmethod
-    def has_value(value: str):
-        """ Determine if enum has this string value defined. Case sensitive. """
-        return value in EngineInternalCommand.__members__.values()
 
 
 class ExecutionEngine():
@@ -80,12 +69,17 @@ class ExecutionEngine():
 
         self._uod_listener = ChangeListener()
         self._system_listener = ChangeListener()
-        self._tick_timer = OneThreadTimer(tick_interval, self.tick)
+        self._tick_timer: EngineTimer = OneThreadTimer(tick_interval, self.tick)
 
         self._runstate_started: bool = False
         """ Indicates the current Start/Stop state"""
         self._runstate_started_time: float = 0
         """ Indicates the time of the last Start state"""
+
+        self._runstate_pause: bool = False
+        """ Indicates whether the engine is paused"""
+        self._runstate_hold: bool = False
+        """ Indicates whether the engine is on hold"""
 
         self._interpreter: PInterpreter = PInterpreter(PProgram(), EngineInterpreterContext(self))
         """ The interpreter executing the current program. """
@@ -95,6 +89,10 @@ class ExecutionEngine():
 
     def tags_as_readonly(self) -> TagValueCollection:
         return TagValueCollection(t.as_readonly() for t in self._iter_all_tags())
+
+    def cleanup(self):
+        self.cmd_queue.cancel_join_thread()
+        self.tag_updates.cancel_join_thread()
 
     @property
     def interpreter(self) -> PInterpreter:
@@ -167,7 +165,7 @@ class ExecutionEngine():
         self._interpreter.tick(self._tick_time, self._tick_number)
 
         # update clocks
-        self.update_clocks()
+        self.update_tags()
 
         # execute queued commands
         self.execute_commands()
@@ -217,15 +215,13 @@ class ExecutionEngine():
                 tag_value = r.options["to_tag"](tag_value)
             tag.set_value(tag_value)
 
-    def update_clocks(self):
+    def update_tags(self):
         # TODO figure out engine/interpreter work split on clock tags
         # it appears that interpreter will have to update scope times
         # - unless we allow scope information to pass to engine (which we might)
-        if self._runstate_started:
-            clock = self._system_tags.get(DEFAULT_TAG_CLOCK)
-            clock.set_value(self._tick_time)
-            run_time = self._system_tags.get(DEFAULT_TAG_RUN_TIME)
-            run_time.set_value(self._tick_time - self._runstate_started_time)
+
+        clock = self._system_tags.get(DEFAULT_TAG_CLOCK)
+        clock.set_value(time.time())
 
     def execute_commands(self):
         done = False
@@ -256,6 +252,7 @@ class ExecutionEngine():
                     self._execute_command(c, cmds_done)
                 except Exception:
                     logger.error("Error executing command: {c}", exc_info=True)
+                    self._system_tags[DEFAULT_TAG_METHOD_STATUS].set_value(MethodStatusEnum.ERROR)
                     # TODO stop or pause or something
                     break
         for c_done in cmds_done:
@@ -271,20 +268,41 @@ class ExecutionEngine():
             return
 
         cmd_name = cmd_request.name
-        if EngineInternalCommand.has_value(cmd_name):
+        if EngineCommandEnum.has_value(cmd_name):
             match cmd_name:
-                case EngineInternalCommand.START:
+                case EngineCommandEnum.START:
                     self._runstate_started = True
                     self._runstate_started_time = time.time()
+                    self._runstate_pause = False
+                    self._runstate_hold = False
+                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Run)
                     cmds_done.add(cmd_request)
                     self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
-                case EngineInternalCommand.STOP:
+                case EngineCommandEnum.STOP:
                     self._runstate_started = False
+                    self._runstate_pause = False
+                    self._runstate_hold = False
+                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Stopped)
                     cmds_done.add(cmd_request)
                     self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
-                case EngineInternalCommand.INCREMENT_RUN_COUNTER:
+                case EngineCommandEnum.PAUSE:
+                    self._runstate_pause = True
+                    #self._runstate_hold = False
+                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Paused)
+                    self._set_tags_safe()
+                    cmds_done.add(cmd_request)
+                    self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
+
+                case EngineCommandEnum.HOLD:
+                    #self._runstate_pause = False
+                    self._runstate_hold = True
+                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Hold)
+                    cmds_done.add(cmd_request)
+                    self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
+
+                case EngineCommandEnum.INCREMENT_RUN_COUNTER:
                     value = self._system_tags[DEFAULT_TAG_RUN_COUNTER].as_number() + 1
                     self._system_tags[DEFAULT_TAG_RUN_COUNTER].set_value(value)
                     cmds_done.add(cmd_request)
@@ -378,8 +396,16 @@ class ExecutionEngine():
 
                 logger.error(f"Uod command execution failed. Command: '{cmd_request.name}', " +
                              f"argument string: '{cmd_request.args}'", exc_info=True)
-                # TODO possibly stop/pause
                 raise ex
+
+    def _set_tags_safe(self):
+        # Set OUTPUT-direction tags to their safe values
+        for t in self._iter_all_tags():
+            if t.direction == TagDirection.OUTPUT:
+                # TODO can safe value be None?
+                safe_value = t.safe_value
+                if safe_value is not None:
+                    t.set_value(safe_value)
 
     def notify_initial_tags(self):
         for tag in self._iter_all_tags():
@@ -417,7 +443,7 @@ class ExecutionEngine():
 
     def schedule_execution(self, name: str, args: str | None = None) -> CommandRequest:
         """ Execute named command (engine internal or Uod), possibly with arguments. """
-        if EngineInternalCommand.has_value(name) or self.uod.has_command_name(name):
+        if EngineCommandEnum.has_value(name) or self.uod.has_command_name(name):
             request = CommandRequest(name, args)
             self.cmd_queue.put_nowait(request)
             return request
@@ -497,3 +523,27 @@ class EngineInterpreterContext(InterpreterContext):
         return self.engine.schedule_execution(name, args)
 
 
+class EngineCommandEnum(StrEnum):
+    START = "START"
+    STOP = "STOP"
+    PAUSE = "PAUSE"
+    HOLD = "HOLD"
+    INCREMENT_RUN_COUNTER = "INCREMENT RUN COUNTER"
+
+    @staticmethod
+    def has_value(value: str):
+        """ Determine if enum has this string value defined. Case sensitive. """
+        return value in EngineCommandEnum.__members__.values()
+
+
+class SystemStateEnum(StrEnum):
+    Run = "Run",
+    Paused = "Paused",
+    Hold = "Hold",
+    Wait = "Wait",
+    Stopped = "Run"
+
+
+class MethodStatusEnum(StrEnum):
+    OK = "OK",
+    ERROR = "Error"

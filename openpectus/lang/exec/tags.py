@@ -16,8 +16,11 @@ QuantityType = pint.Quantity | PlainQuantity[Any]
 DEFAULT_TAG_BASE = "BASE"
 DEFAULT_TAG_RUN_COUNTER = "RUN COUNTER"
 DEFAULT_TAG_BLOCK_TIME = "BLOCK TIME"
+DEFAULT_TAG_PROCESS_TIME = "PROCESS TIME"
 DEFAULT_TAG_RUN_TIME = "RUN TIME"
 DEFAULT_TAG_CLOCK = "CLOCK"
+DEFAULT_TAG_SYSTEM_STATE = "System State"
+DEFAULT_TAG_METHOD_STATUS = "Method Status"
 
 
 # Define the dimensions and units we want to use and the conversions we want to provide.
@@ -66,6 +69,7 @@ TagValueType = int | float | str | None
 
 
 class ChangeListener():
+    """ Collects named changes """
     def __init__(self) -> None:
         self._changes: Set[str] = set()
 
@@ -81,6 +85,7 @@ class ChangeListener():
 
 
 class ChangeSubject():
+    """ Inherit to support change notification """
     def __init__(self) -> None:
         super().__init__()
 
@@ -115,17 +120,14 @@ class TagDirection(StrEnum):
     UNSPECIFIED = auto()
 
 
-# TODO add support for 'safe' values, ie. to allow specifying a value that is automatically
-# written when run state is one or more of stopped/paused/on hold
-
-
 class Tag(ChangeSubject):
     def __init__(
             self,
             name: str,
             value: TagValueType = None,
             unit: str | None = None,
-            direction: TagDirection = TagDirection.NA) -> None:
+            direction: TagDirection = TagDirection.NA,
+            safe_value: TagValueType = None) -> None:
 
         super().__init__()
 
@@ -137,12 +139,12 @@ class Tag(ChangeSubject):
         self.unit: str | None = unit
         self.choices: List[str] | None = None
         self.direction: TagDirection = direction
-        self.safe_value = None
+        self.safe_value: TagValueType = safe_value
 
     def as_readonly(self) -> TagValue:
         return TagValue(self.name, self.value, self.unit)
 
-    def set_value(self, val) -> None:
+    def set_value(self, val: TagValueType) -> None:
         if val != self.value:
             self.value = val
             self.notify_listeners(self.name)
@@ -308,8 +310,11 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
             (DEFAULT_TAG_BASE, "min", None),  # TODO this should not be wrapped in pint quantity
             (DEFAULT_TAG_RUN_COUNTER, 0, None),
             (DEFAULT_TAG_BLOCK_TIME, 0.0, "s"),
+            (DEFAULT_TAG_PROCESS_TIME, 0.0, "s"),
             (DEFAULT_TAG_RUN_TIME, 0.0, "s"),
             (DEFAULT_TAG_CLOCK, 0.0, "s"),
+            (DEFAULT_TAG_SYSTEM_STATE, "Stopped", None),
+            (DEFAULT_TAG_METHOD_STATUS, "OK", None),
         ]
         for name, value, unit in defaults:
             tag = Tag(name, value, unit, TagDirection.NA)

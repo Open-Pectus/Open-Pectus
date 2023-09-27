@@ -6,6 +6,7 @@ import unittest
 
 import pint
 from openpectus.engine.eng import ExecutionEngine
+from openpectus.lang.exec.commands import CommandRequest
 
 from openpectus.lang.grammar.pprogramformatter import print_program
 from openpectus.lang.grammar.pgrammar import PGrammar
@@ -99,7 +100,7 @@ def run_interpreter(interpreter: PInterpreter, max_ticks: int = -1):
 
         time.sleep(0.1)
         tick_time = time.time()
-        interpreter.tick(tick_time)
+        interpreter.tick(tick_time, ticks)
 
 
 def run_engine(engine: ExecutionEngine, pcode: PProgram, max_ticks: int = -1):
@@ -123,6 +124,12 @@ def run_engine(engine: ExecutionEngine, pcode: PProgram, max_ticks: int = -1):
 
 class InterpreterTest(unittest.TestCase):
 
+    def setUp(self):
+        self.engine: ExecutionEngine = create_engine()
+
+    def tearDown(self):
+        self.engine.cleanup()
+
     def test_sequential_marks(self):
         program = build_program("""
 mark: a
@@ -130,7 +137,7 @@ mark: b
 mark: c
 """)
         print_program(program)
-        engine = create_engine()
+        engine = self.engine
         run_engine(engine, program, 10)
 
         self.assertEqual(["a", "b", "c"], engine.interpreter.get_marks())
@@ -142,7 +149,7 @@ mark: a
 incr counter
 """)
         print_program(program)
-        engine = create_engine()
+        engine = self.engine
 
         self.assertEqual(0, engine.uod.tags["counter"].as_number())
 
@@ -161,7 +168,7 @@ incr counter
 watch: counter > 0
     mark: d
 """)
-        engine = create_engine()
+        engine = self.engine
         run_engine(engine, program, 15)
 
         print_log(engine.interpreter)
@@ -184,7 +191,7 @@ incr counter
 watch: counter > 0
     mark: d
 """)
-        engine = create_engine()
+        engine = self.engine
         run_engine(engine, program, 15)
 
         print_log(engine.interpreter)
@@ -205,7 +212,7 @@ mark: b1
 mark: b2
 mark: b3
 """)
-        engine = create_engine()
+        engine = self.engine
         run_engine(engine, program, 10)
 
         print_log(engine.interpreter)
@@ -238,7 +245,7 @@ watch: Run counter > -1
 mark: b
 """)
         print_program(program)
-        engine = create_engine()
+        engine = self.engine
         run_engine(engine, program, 15)
 
         print_log(engine.interpreter)
@@ -278,7 +285,7 @@ Block: A
     Mark: A2
 Mark: A3
 """)
-        engine = create_engine()
+        engine = self.engine
         run_engine(engine, program, 15)
 
         self.assertEqual(["A1", "B1", "A3"], engine.interpreter.get_marks())
@@ -290,7 +297,7 @@ Block: A
     Mark: A2
 Mark: A3
 """)
-        engine = create_engine()
+        engine = self.engine
         run_engine(engine, program, 5)
 
         self.assertEqual(["A1", "A2"], engine.interpreter.get_marks())
@@ -304,7 +311,7 @@ Block: A
     Mark: A2
 Mark: A3
 """)
-        engine = create_engine()
+        engine = self.engine
         run_engine(engine, program, 20)
 
         self.assertEqual(["A1", "A2", "A3"], engine.interpreter.get_marks())
@@ -319,7 +326,7 @@ Block: A
     Mark: A2
 Mark: A3
 """)
-        engine = create_engine()
+        engine = self.engine
         run_engine(engine, program, 20)
 
         self.assertEqual(["A1", "A2", "A3"], engine.interpreter.get_marks())
@@ -349,7 +356,7 @@ Mark: A3
 0.3 Mark: b
 0.8 Mark: c
 """)
-        engine = create_engine()
+        engine = self.engine
         run_engine(engine, program, 20)
         i = engine.interpreter
 
@@ -399,7 +406,7 @@ Block: B
     End block
 Mark: d
 """)
-        engine = create_engine()
+        engine = self.engine
         run_engine(engine, program, 25)
         i = engine.interpreter
 
@@ -461,5 +468,5 @@ class TestInterpreterContext(InterpreterContext):
     def tags(self) -> TagCollection:
         return self._tags
 
-    def schedule_execution(self, name: str, args: str) -> None:
-        self.engine.schedule_execution(name, args)
+    def schedule_execution(self, name: str, args: str | None = None) -> CommandRequest:
+        return self.engine.schedule_execution(name, args)

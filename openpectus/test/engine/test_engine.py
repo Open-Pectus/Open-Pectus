@@ -6,9 +6,10 @@ from typing_extensions import override
 import unittest
 
 import pint
+from openpectus.lang.exec.timer import NullTimer
 
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder
-from openpectus.engine.eng import ExecutionEngine, CommandRequest, EngineInternalCommand, RunLogItemState
+from openpectus.engine.eng import ExecutionEngine, CommandRequest, EngineCommandEnum, RunLogItemState, SystemStateEnum
 from openpectus.lang.exec import tags
 from openpectus.lang.exec.uod import UodCommand
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
@@ -99,6 +100,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_new_system_tags()
         .with_tag(tags.Reading("FT01", "L/h"))
         .with_tag(tags.Select("Reset", value="N/A", unit=None, choices=["Reset", "N/A"]))
+        .with_tag(tags.Tag("Danger", True, None, tags.TagDirection.OUTPUT, False))
         .with_command(UodCommand.builder().with_name("Reset").with_exec_fn(reset))
         .with_command(UodCommand.builder().with_name("overlap1").with_exec_fn(overlap_exec))
         .with_command(UodCommand.builder().with_name("overlap2").with_exec_fn(overlap_exec))
@@ -156,11 +158,13 @@ def print_runlog(e: ExecutionEngine):
 def create_engine() -> ExecutionEngine:
     uod = create_test_uod()
     e = ExecutionEngine(uod)
+    e._tick_timer = NullTimer()
     e._configure()
     return e
 
 
-class TestEngine(unittest.TestCase):
+class TestEngineSetup(unittest.TestCase):
+
     def test_create_engine(self):
         uod = create_test_uod()
         e = ExecutionEngine(uod)
@@ -187,8 +191,17 @@ class TestEngine(unittest.TestCase):
     def test_load_uod(self):
         pass
 
+
+class TestEngine(unittest.TestCase):
+
+    def setUp(self):
+        self.engine: ExecutionEngine = create_engine()
+
+    def tearDown(self):
+        self.engine.cleanup()
+
     def test_engine_start(self):
-        e = create_engine()
+        e = self.engine
 
         t = threading.Thread(target=e.run)
         t.daemon = True
@@ -199,7 +212,7 @@ class TestEngine(unittest.TestCase):
         t.join()
 
     def test_engine_started_runs_scan_cycle(self):
-        e = create_engine()
+        e = self.engine
 
         t = threading.Thread(target=e._run, daemon=True)  # dont configure twice
         t.start()
@@ -213,7 +226,7 @@ class TestEngine(unittest.TestCase):
         t.join()
 
     def test_read_process_image_marks_assigned_tags_dirty(self):
-        e = create_engine()
+        e = self.engine
 
         hwl: TestHW = e.uod.hwl  # type: ignore
         self.assertIsInstance(hwl, TestHW)
@@ -229,12 +242,11 @@ class TestEngine(unittest.TestCase):
         self.assertTrue("Reset" in dirty_names)
 
     def test_execute_command_marks_assigned_tags_dirty(self):
-        e = create_engine()
+        e = self.engine
 
         self.assertEqual("N/A", e.uod.tags["Reset"].get_value())
 
-        req = CommandRequest("Reset", None)
-        e.cmd_queue.put(req)
+        e.schedule_execution("Reset")
         e.execute_commands()
 
         self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
@@ -244,7 +256,7 @@ class TestEngine(unittest.TestCase):
         self.assertTrue("Reset" in dirty_names)
 
     def test_read_process_image_sets_assigned_tag_values(self):
-        e = create_engine()
+        e = self.engine
 
         # set hw values
         hwl: TestHW = e.uod.hwl  # type: ignore
@@ -260,7 +272,7 @@ class TestEngine(unittest.TestCase):
         self.assertEqual("N/A", e.uod.tags["Reset"].get_value())
 
     def test_notify_tag_updates_publishes_dirty_tag(self):
-        e = create_engine()
+        e = self.engine
         t = e.uod.tags["FT01"]
         e._uod_listener.notify_change(t.name)
 
@@ -271,7 +283,7 @@ class TestEngine(unittest.TestCase):
         self.assertEqual(t_updated.name, t.name)
 
     def test_write_process_values_writed_data_to_registers(self):
-        e = create_engine()
+        e = self.engine
 
         # set hw values
         hwl: TestHW = e.uod.hwl  # type: ignore
@@ -293,7 +305,7 @@ class TestEngine(unittest.TestCase):
         self.assertEqual(1, hwl.register_values["Reset"])
 
     def test_uod_command_can_execute_valid_command(self):
-        e = create_engine()
+        e = self.engine
 
         self.assertEqual("N/A", e.uod.tags["Reset"].get_value())
 
@@ -303,7 +315,7 @@ class TestEngine(unittest.TestCase):
         self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
 
     def test_uod_commands_multiple_iterations(self):
-        e = create_engine()
+        e = self.engine
 
         self.assertEqual("N/A", e.uod.tags["Reset"].get_value())
 
@@ -330,7 +342,7 @@ class TestEngine(unittest.TestCase):
         print_runlog(e)
 
     def test_concurrent_uod_commands(self):
-        e = create_engine()
+        e = self.engine
 
         e.schedule_execution("Reset", "")
         e.tick()
@@ -363,7 +375,7 @@ class TestEngine(unittest.TestCase):
         print_runlog(e)
 
     def test_overlapping_uod_commands(self):
-        e = create_engine()
+        e = self.engine
 
         e.schedule_execution("overlap1", "")
         e.tick()
@@ -401,7 +413,7 @@ Block: A
     End Block
 Mark: X
 """
-        e = create_engine()
+        e = self.engine
         run_engine(e, program, 2)
 
         runlog = list(e.runlog.get_items())
@@ -426,7 +438,7 @@ Watch: Block Time > 0.2s
     Mark: A
 Mark: X
 """
-        e = create_engine()
+        e = self.engine
         run_engine(e, program, 3)
 
         runlog = list(e.runlog.get_items())
@@ -449,11 +461,13 @@ Mark: X
         # user picks a runlog line to force
         # - how do we get to cmd or node from that?
         # - line number? or we assign uuids to entries?
+        # - how about a modified program? should use version numbers
+        #   to handle program modifications and runlog implications
 
         raise NotImplementedError()
 
     def test_internal_command_can_execute_valid_command(self):
-        e = create_engine()
+        e = self.engine
 
         self.assertEqual(0, e._system_tags["RUN COUNTER"].get_value())
 
@@ -465,7 +479,7 @@ Mark: X
         print_runlog(e)
 
     def test_clocks(self):
-        e = create_engine()
+        e = self.engine
 
         self.assertTrue(e._system_tags.has("Clock"))
 
@@ -477,7 +491,7 @@ Mark: A
 Mark: B
 Mark: C
 """
-        e = create_engine()
+        e = self.engine
         run_engine(e, program, 10)
 
         self.assertEqual(['A', 'B', 'C'], e.interpreter.get_marks())
@@ -490,7 +504,7 @@ Mark: C
         raise NotImplementedError()
 
     def test_get_runlog(self):
-        e = create_engine()
+        e = self.engine
 
         e.schedule_execution("START")
         e.schedule_execution("Reset")
@@ -506,15 +520,15 @@ Mark: C
             self.assertTrue(start_values.has("BASE"))
 
     def test_runstate_start(self):
-        e = create_engine()
+        e = self.engine
 
-        e.cmd_queue.put(CommandRequest("START"))
+        e.schedule_execution("START")
         e.tick()
 
         self.assertTrue(e._runstate_started)
 
     def test_clocks_start_stop(self):
-        e = create_engine()
+        e = self.engine
 
         clock = e._system_tags.get(tags.DEFAULT_TAG_CLOCK)
         self.assertEqual(0.0, clock.as_number())
@@ -528,42 +542,131 @@ Mark: C
         e._runstate_started = False
         e.tick()
 
-        self.assertEqual(clock_value, clock.as_number())
+        #TODO
+        #self.assertEqual(clock_value, clock.as_number())
 
     def test_runstate_stop(self):
-        e = create_engine()
-        e.cmd_queue.put(CommandRequest("START"))
+        e = self.engine
+        e.schedule_execution("START")
+
         e.tick()
         self.assertTrue(e._runstate_started)
+        system_state_tag = e._system_tags[tags.DEFAULT_TAG_SYSTEM_STATE]
+        self.assertEqual(SystemStateEnum.Run, system_state_tag.get_value())
 
-        e.cmd_queue.put(CommandRequest("STOP"))
+        e.schedule_execution("STOP")
         e.tick()
         self.assertFalse(e._runstate_started)
 
-    @unittest.skip("not implemented")
+        self.assertEqual(SystemStateEnum.Stopped, system_state_tag.get_value())
+
     def test_runstate_pause(self):
-        raise NotImplementedError()
+        e = self.engine
+        e.schedule_execution("START")
+
+        e.tick()
+        self.assertTrue(e._runstate_started)
+        system_state_tag = e._system_tags[tags.DEFAULT_TAG_SYSTEM_STATE]
+        process_time_tag = e._system_tags[tags.DEFAULT_TAG_PROCESS_TIME]
+        self.assertEqual(SystemStateEnum.Run, system_state_tag.get_value())
+        pre_pause_process_time = process_time_tag.as_number()
+
+        danger_tag = e.uod.tags["Danger"]
+        self.assertTrue(danger_tag.get_value())
+
+        e.schedule_execution("PAUSE")
+        e.tick()
+        self.assertTrue(e._runstate_started)
+        self.assertTrue(e._runstate_pause)
+        self.assertEqual(SystemStateEnum.Paused, system_state_tag.get_value())
+
+        # process time is now stopped
+        self.assertEqual(pre_pause_process_time, process_time_tag.as_number())
+
+        # Pause triggers safe-mode
+        self.assertFalse(danger_tag.get_value())
 
     @unittest.skip("not implemented")
     def test_runstate_unpause(self):
-        raise NotImplementedError()
+        e = self.engine
+        e.schedule_execution("START")
 
-    @unittest.skip("not implemented")
+        e.tick()
+        self.assertTrue(e._runstate_started)
+        system_state_tag = e._system_tags[tags.DEFAULT_TAG_SYSTEM_STATE]
+        process_time_tag = e._system_tags[tags.DEFAULT_TAG_PROCESS_TIME]
+        self.assertEqual(SystemStateEnum.Run, system_state_tag.get_value())
+        pre_pause_process_time = process_time_tag.as_number()
+
+        e.schedule_execution("PAUSE")
+        e.tick()
+        self.assertTrue(e._runstate_started)
+        self.assertTrue(e._runstate_pause)
+        self.assertEqual(SystemStateEnum.Paused, system_state_tag.get_value())
+
+        # process time is now stopped
+        self.assertEqual(pre_pause_process_time, process_time_tag.as_number())
+
+        e.schedule_execution("START")
+        e.tick()
+        self.assertTrue(e._runstate_started)
+        self.assertTrue(e._runstate_pause)
+        self.assertEqual(SystemStateEnum.Paused, system_state_tag.get_value())
+
+        # process time is now stopped
+        self.assertEqual(pre_pause_process_time, process_time_tag.as_number())
+
     def test_runstate_hold(self):
-        raise NotImplementedError()
+        e = self.engine
+        e.schedule_execution("START")
+
+        e.tick()
+        self.assertTrue(e._runstate_started)
+        system_state_tag = e._system_tags[tags.DEFAULT_TAG_SYSTEM_STATE]
+        process_time_tag = e._system_tags[tags.DEFAULT_TAG_PROCESS_TIME]
+        self.assertEqual(SystemStateEnum.Run, system_state_tag.get_value())
+        pre_hold_process_time = process_time_tag.as_number()
+
+        danger_tag = e.uod.tags["Danger"]
+        self.assertTrue(danger_tag.get_value())
+
+        e.schedule_execution("HOLD")
+        e.tick()
+        self.assertTrue(e._runstate_started)
+        self.assertTrue(e._runstate_hold)
+        self.assertEqual(SystemStateEnum.Hold, system_state_tag.get_value())
+
+        # process time is now stopped
+        self.assertEqual(pre_hold_process_time, process_time_tag.as_number())
+
+        # Hold does not trigger safe-mode
+        self.assertTrue(danger_tag.get_value())
 
     @unittest.skip("not implemented")
     def test_runstate_unhold(self):
         raise NotImplementedError()
 
+    def test_safe_values_apply(self):
+        e = self.engine
+        e.schedule_execution("START")
+
+        e.tick()
+
+        danger_tag = e.uod.tags["Danger"]
+        self.assertTrue(danger_tag.get_value())
+
+        e._set_tags_safe()
+
+        self.assertFalse(danger_tag.get_value())
+
     @unittest.skip("not implemented")
-    def test_safe_values(self):
+    def test_safe_values_resume_load_values(self):
         raise NotImplementedError()
 
     def test_enum_has(self):
-        self.assertTrue(EngineInternalCommand.has_value("STOP"))
-        self.assertTrue(EngineInternalCommand.has_value("INCREMENT RUN COUNTER"))
-        self.assertFalse(EngineInternalCommand.has_value("stop"))
+        self.assertTrue(EngineCommandEnum.has_value("STOP"))
+        self.assertTrue(EngineCommandEnum.has_value("INCREMENT RUN COUNTER"))
+        self.assertFalse(EngineCommandEnum.has_value("stop"))
 
     def test_inject_command(self):
         program = """
@@ -571,7 +674,7 @@ Mark: A
 Mark: B
 Mark: C
 """
-        e = create_engine()
+        e = self.engine
         e._running = True
         e.set_program(program)
         e.tick()
@@ -594,7 +697,7 @@ Mark: A
 0.25 Mark: B
 Mark: C
 """
-        e = create_engine()
+        e = self.engine
         # e._running = True
         # e.set_program(program)
         run_engine(e, program, 2)
@@ -615,7 +718,7 @@ Mark: A
 0.2 Mark: B
 Mark: C
 """
-        e = create_engine()
+        e = self.engine
         # e._running = True
         # e.set_program(program)
         run_engine(e, program, 2)

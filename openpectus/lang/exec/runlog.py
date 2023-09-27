@@ -1,6 +1,6 @@
 from __future__ import annotations
 from enum import StrEnum, auto
-from typing import Iterable, List
+from typing import List
 from openpectus.engine.commands import EngineCommand
 from openpectus.lang.exec.commands import CommandRequest
 
@@ -12,8 +12,8 @@ class RunLog():
     def __init__(self) -> None:
         self._items: List[RunLogItem] = []
 
-    def get_items(self) -> Iterable[RunLogItem]:
-        return self._items.__iter__()
+    def get_items(self) -> List[RunLogItem]:
+        return list(self._items)
 
     def get_item_by_cmd(self, req: CommandRequest) -> RunLogItem | None:
         for item in self._items:
