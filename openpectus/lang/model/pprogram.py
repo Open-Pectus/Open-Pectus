@@ -105,6 +105,13 @@ class PProgram(PNode):
         return [c for c in self.get_instructions() if isinstance(c, PAlarm) or isinstance(c, PWatch)]
 
 
+class PInjectedNode(PNode):
+    """ Represents a subtree of injected code """
+    def __init__(self, parent: PNode | None) -> None:
+        super().__init__(parent)
+        self.children = []
+
+
 class PInstruction(PNode):
     """ Represents a generic instruction. """
     def __init__(self, parent: PNode) -> None:
@@ -141,7 +148,7 @@ class PEndBlocks(PInstruction):
 
 
 class PWatch(PInstruction):
-    """ Represents a Watch intruction. """
+    """ Represents a Watch instruction. """
     def __init__(self, parent: PNode) -> None:
         super().__init__(parent)
 
@@ -155,7 +162,7 @@ class PWatch(PInstruction):
 
 
 class PAlarm(PInstruction):
-    """ Represents an Alarm intruction. """
+    """ Represents an Alarm instruction. """
     def __init__(self, parent: PNode) -> None:
         super().__init__(parent)
 
@@ -236,6 +243,3 @@ class PCondition:
     @property
     def tag_value_numeric(self) -> float:
         return float(self.tag_value)
-
-    def evaluate(self, tags) -> bool:  # should possibly take a "context" with more info than just the tags
-        raise NotImplementedError()

@@ -32,7 +32,15 @@ class ZeroThreadTimer:
             self.running = self.tick()
 
 
-class OneThreadTimer():
+class EngineTimer():
+    def start(self):
+        pass
+
+    def stop(self):
+        pass
+
+
+class OneThreadTimer(EngineTimer):
     """ Single threaded (1 extra thread) timer.
 
     This allows controlled multithreading.
@@ -62,3 +70,7 @@ class OneThreadTimer():
     def stop(self):
         self.running = False
         # self.thread.join()
+
+
+class NullTimer(EngineTimer):
+    pass

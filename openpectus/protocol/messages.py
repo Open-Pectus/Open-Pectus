@@ -3,7 +3,7 @@ import json
 from typing import Any, Dict, List, Tuple
 from pydantic import BaseModel
 
-import openpectus.protocol.messages as messages_namescape
+import openpectus.protocol.messages as messages_namespace
 
 # Topics
 
@@ -88,6 +88,21 @@ class TagSpec(MessageBase):
     tag_unit: str | None
 
 
+class RunLog(MessageBase):
+    id: int  # figure this out - should refer some persistent entity
+    lines: List[RunLogItem]
+
+
+class RunLogItem(MessageBase):
+    id: int
+    command_name: str
+    start: float
+    end: float | None
+    progress: float | None  # between 0 and 1
+    start_values: List[TagValue]
+    end_values: List[TagValue]
+
+
 def serialize_msg(msg: MessageBase) -> Tuple[str, Dict[str, Any]]:
     return type(msg).__name__, msg.dict()
 
@@ -98,7 +113,7 @@ def serialize_msg_to_json(msg: MessageBase) -> str:
 
 
 def deserialize_msg(msg_cls_name, init_dict: Dict[str, Any]) -> MessageBase:
-    cls = getattr(messages_namescape, msg_cls_name)
+    cls = getattr(messages_namespace, msg_cls_name)
     msg = cls(**init_dict)
     assert isinstance(msg, MessageBase)
     return msg

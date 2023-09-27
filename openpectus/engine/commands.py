@@ -1,14 +1,10 @@
 from __future__ import annotations
 from typing import Any, Generic, List, TypeVar
 
-TContext = TypeVar('TContext')
 
-
-class EngineCommand(Generic[TContext]):
-    """ Interface for all commands runnable by engine. """
-    def __init__(self, context: TContext) -> None:
-        self.context: TContext = context
-
+class EngineCommand():
+    """ Interface for commands runnable by engine. """
+    def __init__(self) -> None:
         self._cancelled: bool = False
         self._initialized: bool = False
         self._exec_started: bool = False
@@ -30,6 +26,10 @@ class EngineCommand(Generic[TContext]):
     def is_execution_started(self) -> bool:
         return self._exec_started
 
+    def get_iteration_count(self) -> int:
+        """ Returns number of iterations executed. """
+        return self._exec_iterations
+
     def is_execution_complete(self) -> bool:
         return self._exec_complete
 
@@ -50,3 +50,13 @@ class EngineCommand(Generic[TContext]):
 
     def set_complete(self):
         self._exec_complete = True
+
+
+TContext = TypeVar('TContext')
+
+
+class ContextEngineCommand(Generic[TContext], EngineCommand):
+    """ Extension of EngineCommand that provides a typed context. """
+    def __init__(self, context: TContext) -> None:
+        super().__init__()
+        self.context: TContext = context
