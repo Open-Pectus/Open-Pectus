@@ -1,10 +1,12 @@
 import { getSeconds, sub } from 'date-fns';
 import { rest } from 'msw';
 import {
+  AuthConfig,
   BatchJob,
   CommandExample,
   CommandSource,
   InProgress,
+  Method,
   NotOnline,
   PlotConfiguration,
   ProcessUnit,
@@ -16,6 +18,17 @@ import {
   RunLog,
   UserRole,
 } from '../app/api';
+
+const lockedLines = [1, 3];
+
+// TODO: this should be exposed from backend or handled otherwise when using websocket
+export enum SystemState {
+  Running = 'Run',
+  Paused = 'Paused',
+  Holding = 'Hold',
+  Stopped = 'Stopped',
+  Waiting = 'Wait'
+}
 
 const processUnits: ProcessUnit[] = [
   {
@@ -65,7 +78,18 @@ const processUnits: ProcessUnit[] = [
 
 
 export const handlers = [
-  rest.get('/api/process_units', (req, res, ctx) => {
+  rest.get('/auth/config', (_, res, ctx) => {
+    return res(
+      ctx.status(200),
+      ctx.json<AuthConfig>({
+        use_auth: false,
+        client_id: 'fc7355bb-a6be-493f-90a1-cf57063f7948',
+        authority_url: 'https://login.microsoftonline.com/fdfed7bd-9f6a-44a1-b694-6e39c468c150/v2.0',
+      }),
+    );
+  }),
+
+  rest.get('/api/process_units', (_, res, ctx) => {
     return res(
       ctx.status(200),
       ctx.json<ProcessUnit[]>(processUnits),
@@ -81,17 +105,53 @@ export const handlers = [
     );
   }),
 
-  rest.get('/api/process_unit/:processUnitId/process_values', (req, res, ctx) => {
+  rest.get('/api/process_unit/:processUnitId/process_values', (_, res, ctx) => {
     return res(
       ctx.status(200),
       ctx.delay(),
       ctx.json<ProcessValue[]>([
         {
+          value_type: ProcessValueType.INT,
+          name: 'Timestamp',
+          value: new Date().valueOf(),
+        },
+        {
+          value_type: ProcessValueType.INT,
+          name: 'Timestamp2',
+          value: new Date().valueOf() + 1000000000000,
+        },
+        {
           value_type: ProcessValueType.FLOAT,
           name: 'PU01 Speed',
-          value: 123 + Math.random() * 2,
+          value: 120,
           value_unit: '%',
         }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'PU02 Speed',
+          value: 121,
+          value_unit: '%',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'PU03 Speed',
+          value: 122,
+          value_unit: '%',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'PU04 Speed',
+          value: 123,
+          value_unit: '%',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'PU05 Speed',
+          value: 124,
+          value_unit: '%',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'PU06 Speed',
+          value: 125,
+          value_unit: '%',
+        },
+        {
           value_type: ProcessValueType.STRING,
           name: 'Some other Process Value',
           value: 'So very valuable',
@@ -187,15 +247,35 @@ export const handlers = [
             },
           }],
         }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'TT02',
+          value: 23.4 + Math.random() * 2,
+          value_unit: 'degC',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'TT03',
+          value: 23.4 + Math.random() * 2,
+          value_unit: 'degC',
+        }, {
+          value_type: ProcessValueType.FLOAT,
+          name: 'TT04',
+          value: 23.4 + Math.random() * 2,
+          value_unit: 'degC',
+        }, {
           value_type: ProcessValueType.STRING,
           name: 'Flow path',
-          value: (getSeconds(Date.now()) % 10 < 3) ? 'Bypass' : (getSeconds(Date.now()) % 10 < 6) ? 'Prime' : 'Secondary',
+          value: (getSeconds(Date.now()) % 10 < 3) ? 'Bypass' : (getSeconds(Date.now()) % 10 < 6) ? 'Prime with a long name' : undefined,
+        },
+        {
+          value_type: ProcessValueType.STRING,
+          name: 'System State',
+          value: SystemState.Running,
         },
       ]),
     );
   }),
 
-  rest.get('/api/recent_batch_jobs', (req, res, ctx) => {
+  rest.get('/api/recent_batch_jobs', (_, res, ctx) => {
     function getCompletedDate() {
       return sub(new Date(), {seconds: Math.random() * 1000000}).toISOString();
     }
@@ -217,13 +297,13 @@ export const handlers = [
     );
   }),
 
-  rest.post('/api/process_unit/:unitId/execute_command', (req, res, context) => {
+  rest.post('/api/process_unit/:unitId/execute_command', (_, res, context) => {
     return res(
       context.status(200),
     );
   }),
 
-  rest.get('/api/process_unit/:unitId/process_diagram', (req, res, context) => {
+  rest.get('/api/process_unit/:unitId/process_diagram', (_, res, context) => {
     return res(
       context.status(200),
       context.json({
@@ -232,7 +312,7 @@ export const handlers = [
     );
   }),
 
-  rest.get('/api/process_unit/:unitId/command_examples', (req, res, context) => {
+  rest.get('/api/process_unit/:unitId/command_examples', (_, res, context) => {
     return res(
       context.status(200),
       context.json<CommandExample[]>([
@@ -265,9 +345,10 @@ export const handlers = [
     );
   }),
 
-  rest.get('/api/process_unit/:unitId/run_log', (req, res, context) => {
+  rest.get('/api/process_unit/:unitId/run_log', (_, res, context) => {
     return res(
       context.status(200),
+      context.delay(),
       context.json<RunLog>({
         lines: [
           {
@@ -293,10 +374,30 @@ export const handlers = [
               source: CommandSource.MANUALLY_ENTERED,
             },
             start_values: [
-              {name: 'Amazing float value', value: 999, value_type: ProcessValueType.FLOAT, value_unit: 'afv'},
-              {name: 'Best value', value: 19.99, value_type: ProcessValueType.FLOAT, value_unit: 'afv'},
-              {name: 'Such prices', value: 4299, value_type: ProcessValueType.FLOAT, value_unit: 'afv'},
-              {name: 'Very affordable', value: 0.99, value_type: ProcessValueType.FLOAT, value_unit: 'afv'},
+              {
+                name: 'Amazing float value',
+                value: 999,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+              },
+              {
+                name: 'Best value',
+                value: 19.99,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+              },
+              {
+                name: 'Such prices',
+                value: 4299,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+              },
+              {
+                name: 'Very affordable',
+                value: 0.99,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+              },
             ],
             end_values: [],
           }, {
@@ -308,12 +409,28 @@ export const handlers = [
               source: CommandSource.MANUALLY_ENTERED,
             },
             start_values: [
-              {name: 'Waaagh?', value: 'No waagh', value_type: ProcessValueType.STRING},
-              {name: 'Dakka?', value: 'No dakka 🙁', value_type: ProcessValueType.STRING},
+              {
+                name: 'Waaagh?',
+                value: 'No waagh',
+                value_type: ProcessValueType.STRING,
+              },
+              {
+                name: 'Dakka?',
+                value: 'No dakka 🙁',
+                value_type: ProcessValueType.STRING,
+              },
             ],
             end_values: [
-              {name: 'Waaagh?', value: 'WAAAGH!', value_type: ProcessValueType.STRING},
-              {name: 'Dakka?', value: 'DAKKA! 😀', value_type: ProcessValueType.STRING},
+              {
+                name: 'Waaagh?',
+                value: 'WAAAGH!',
+                value_type: ProcessValueType.STRING,
+              },
+              {
+                name: 'Dakka?',
+                value: 'DAKKA! 😀',
+                value_type: ProcessValueType.STRING,
+              },
             ],
           },
         ],
@@ -321,27 +438,44 @@ export const handlers = [
     );
   }),
 
-  rest.get('/api/process_unit/:unitId/method', (req, res, context) => {
+  rest.get('/api/process_unit/:unitId/method', (_, res, context) => {
+    const result = res(
+      context.status(200),
+      context.json<Method>({
+        lines: [
+          {id: 'a', content: '{'},
+          {id: 'b', content: ' "some key": "some value",'},
+          {id: 'c', content: ' "injected": "line",'},
+          {id: 'd', content: ' "another key": "another value",'},
+          {id: 'e', content: ' "another": "line",'},
+          {id: 'f', content: ' "yet another": "line"'},
+          {id: 'g', content: '}'},
+        ],
+        executed_line_ids: lockedLines.map(no => (no + 9).toString(36)),
+        injected_line_ids: ['c'],
+      }),
+    );
+    lockedLines.push((lockedLines.at(-1) ?? 0) + 1);
+    return result;
+  }),
+
+  rest.post('/api/process_unit/:unitId/method', (req, res, context) => {
     return res(
       context.status(200),
-      context.json<string>(`{
-"some key": "some value",
-"injected": "line",
-"another key": "another value",
-"another injected": "line"
-}`),
     );
   }),
 
-  rest.get('/api/process_unit/:unitId/plot_configuration', (req, res, context) => {
+  rest.get('/api/process_unit/:unitId/plot_configuration', (_, res, context) => {
     return res(
       context.status(200),
       context.json<PlotConfiguration>({
+        x_axis_process_value_names: ['Timestamp', 'Timestamp2'],
+        process_value_names_to_annotate: ['Flow path'],
         color_regions: [{
           process_value_name: 'Flow path',
           value_color_map: {
             'Bypass': '#3366dd33',
-            'Prime': '#33aa6633',
+            'Prime with a long name': '#33aa6633',
           },
         }],
         sub_plots: [
@@ -350,11 +484,12 @@ export const handlers = [
             axes: [
               {
                 label: 'Red',
-                process_value_names: ['PU01 Speed', 'FT01 Flow'],
+                process_value_names: ['PU01 Speed', 'PU02 Speed', 'PU03 Speed', 'PU04 Speed', 'PU05 Speed', 'PU06 Speed'],
                 y_max: 126,
-                y_min: 123,
+                y_min: 119,
                 color: '#ff3333',
-              }, {
+              },
+              {
                 label: 'Blue',
                 process_value_names: ['TT01'],
                 y_max: 26,
@@ -363,7 +498,7 @@ export const handlers = [
               },
               {
                 label: 'Teal label',
-                process_value_names: ['TT01'],
+                process_value_names: ['TT02'],
                 y_max: 32,
                 y_min: 22,
                 color: '#43c5b7',
@@ -374,13 +509,13 @@ export const handlers = [
             ratio: 1,
             axes: [{
               label: 'Green',
-              process_value_names: ['TT01'],
+              process_value_names: ['TT03'],
               y_max: 26,
               y_min: 20,
               color: '#33ff33',
             }, {
               label: 'orange',
-              process_value_names: ['TT01'],
+              process_value_names: ['TT04'],
               y_max: 29,
               y_min: 19,
               color: '#ff8000',

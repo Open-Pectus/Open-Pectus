@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { map, of, switchMap } from 'rxjs';
+import { debounceTime, map, of, switchMap } from 'rxjs';
 import { ProcessUnitService } from '../../../api';
 import { selectRouteParam } from '../../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../../details-routing-url-parts';
@@ -12,20 +12,33 @@ import { MethodEditorSelectors } from './method-editor.selectors';
 export class MethodEditorEffects {
   saveMethodEditorModel = createEffect(() => this.actions.pipe(
     ofType(MethodEditorActions.modelSaveRequested),
-    concatLatestFrom(() => this.store.select(MethodEditorSelectors.methodEditorContent)),
-    switchMap(([_, content]) => {
-      /* save model to backend */
-      alert(`model saved! ${content}`);
-      return of(MethodEditorActions.modelSaved());
+    concatLatestFrom(() => [
+      this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName)),
+      this.store.select(MethodEditorSelectors.method),
+    ]),
+    switchMap(([_, unitId, method]) => {
+      if(unitId === undefined) return of();
+      return this.processUnitService.saveMethod(unitId, method).pipe(
+        map(() => MethodEditorActions.modelSaved()));
     }),
   ));
 
   fetchContentWhenComponentInitialized = createEffect(() => this.actions.pipe(
     ofType(MethodEditorActions.methodEditorComponentInitialized),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
-    switchMap(([_, id]) => {
-      if(id === undefined) return of();
-      return this.processUnitService.getMethod(id).pipe(map(method => MethodEditorActions.methodFetched({method})));
+    switchMap(([_, unitId]) => {
+      if(unitId === undefined) return of();
+      return this.processUnitService.getMethod(unitId).pipe(map(method => MethodEditorActions.methodFetched({method})));
+    }),
+  ));
+
+  continuouslyPollMethod = createEffect(() => this.actions.pipe(
+    ofType(MethodEditorActions.methodFetched, MethodEditorActions.methodPolled),
+    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
+    debounceTime(10000), // delay() in MSW doesn't work in Firefox, so to avoid freezing the application in FF, we debounce
+    switchMap(([_, unitId]) => {
+      if(unitId === undefined) return of();
+      return this.processUnitService.getMethod(unitId).pipe(map(method => MethodEditorActions.methodPolled({method})));
     }),
   ));
 

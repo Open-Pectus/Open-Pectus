@@ -7,7 +7,12 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
   template: `
     <div class="flex flex-col bg-sky-700 p-1.5 rounded-md shadow-lg relative transition-[padding-bottom]" [class.pb-0]="collapsed">
       <div class="flex justify-between items-center text-gray-100 p-2 cursor-pointer select-none" (click)="toggleCollapsed()">
-        <span class="text-2xl font-bold">{{name}}</span>
+        <div class="flex items-center">
+          <span class="codicon !text-2xl mr-2" *ngIf="codiconName !== undefined" [ngClass]="codiconName"
+                [style.margin-bottom.px]="codiconName === 'codicon-graph-line' ? -1 : codiconName === 'codicon-dashboard' ? -1 : null"
+                [style.--vscode-symbolIcon-keywordForeground]="'initial'"></span>
+          <span class="text-2xl font-bold">{{name}}</span>
+        </div>
         <div class="flex gap-4 items-center" (click)="$event.stopPropagation()">
           <ng-container *ngIf="!collapsed">
             <ng-content select="[buttons]"></ng-content>
@@ -16,7 +21,8 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
                (click)="toggleCollapsed()"></div>
         </div>
       </div>
-      <div class="bg-white rounded-sm overflow-hidden mt-1.5 h-full" [class.transition-[height]]="!isDragging" #content
+      <div class="bg-white rounded-sm mt-1.5 h-full" [class.transition-[height]]="!isDragging" #content
+           [class.overflow-hidden]="!contentOverflow"
            [style.height.px]="height" (transitionend)="onTransitionEndContentContainer($event)">
         <ng-content select="[content]"></ng-content>
       </div>
@@ -38,19 +44,21 @@ export class CollapsibleElementComponent implements OnInit {
   @Input() name?: string;
   @Input() heightResizable = false;
   @Input() contentHeight = 0;
+  @Input() contentOverflow = false;
+  @Input() codiconName?: string;
   @Output() contentHeightChanged = new EventEmitter<number>();
   @Output() collapseStateChanged = new EventEmitter<boolean>();
   @ViewChild('content') contentElementRef?: ElementRef<HTMLDivElement>;
   protected collapsed = false;
   protected widenDragHandler = false;
   protected isDragging = false;
-  private minHeight = 100;
+  private minHeight = 200;
 
   constructor(private collapsibleElementStorageService: CollapsibleElementStorageService) {}
 
   protected get height() {
     if(this.collapsed) return 0;
-    return this.heightResizable ? this.contentHeight : this.contentElementRef?.nativeElement.scrollHeight;
+    return this.heightResizable ? this.contentHeight : undefined;
   }
 
   private set height(height: number | undefined) {

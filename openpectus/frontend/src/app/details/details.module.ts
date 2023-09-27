@@ -17,6 +17,8 @@ import { ProcessValuesModule } from './process-values/process-values.module';
 import { RunLogModule } from './run-log/run-log.module';
 import { UnitDetailsComponent } from './unit-details.component';
 import { UnitHeaderComponent } from './unit-header.component';
+import { UnitControlButtonComponent } from './unit-control-button.component';
+import { UnitControlsComponent } from './unit-controls.component';
 
 @NgModule({
   declarations: [
@@ -26,6 +28,8 @@ import { UnitHeaderComponent } from './unit-header.component';
     CommandsComponent,
     CommandExamplesListComponent,
     UnitHeaderComponent,
+    UnitControlButtonComponent,
+    UnitControlsComponent,
   ],
   imports: [
     CommonModule,

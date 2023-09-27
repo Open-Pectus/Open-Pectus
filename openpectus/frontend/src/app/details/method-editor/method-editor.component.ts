@@ -9,7 +9,7 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-collapsible-element [name]="'Method Editor'" [heightResizable]="true" (contentHeightChanged)="onContentHeightChanged()"
-                             [contentHeight]="400" (collapseStateChanged)="collapsed = $event">
+                             [contentHeight]="400" (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-list-flat'">
       <button *ngIf="methodEditorIsDirty | ngrxPush" (click)="onSaveButtonClicked()" buttons
               class="bg-green-400 flex items-center text-gray-800 px-2.5 rounded-md">
         <span class="codicon codicon-save !text-xl"></span>
@@ -21,7 +21,7 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
   `,
 })
 export class MethodEditorComponent implements OnInit {
-  protected methodEditorIsDirty = this.store.select(MethodEditorSelectors.methodEditorIsDirty);
+  protected methodEditorIsDirty = this.store.select(MethodEditorSelectors.isDirty);
   protected editorSizeChange = new Subject<void>();
   protected collapsed = false;
 

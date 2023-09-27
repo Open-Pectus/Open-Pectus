@@ -1,10 +1,10 @@
-import { createActionGroup, emptyProps, props } from '@ngrx/store';
+import { createAction, props } from '@ngrx/store';
 import { ProcessUnit } from '../api';
 
-export const AppActions = createActionGroup({
-  source: 'App',
-  events: {
-    'Page initialized': emptyProps(),
-    'Process Units loaded': props<{ processUnits: ProcessUnit[] }>(),
-  },
-});
+const source = '[App] ';
+
+export class AppActions {
+  static pageInitialized = createAction(source + 'Page initialized');
+  static processUnitsLoaded = createAction(source + 'Process Units Loaded', props<{ processUnits: ProcessUnit[] }>());
+  static authEnablementFetched = createAction(source + 'Auth Enablement Fetched', props<{ authIsEnabled: boolean }>());
+}

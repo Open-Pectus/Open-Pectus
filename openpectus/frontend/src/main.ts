@@ -9,13 +9,15 @@ if(MswEnablement.isEnabled) {
   await worker.start({
     onUnhandledRequest: (request: MockedRequest) => {
       const pathname = request.url.pathname;
-      if(pathname.startsWith('/assets') ||
-         pathname.startsWith('/node_modules') ||
-         pathname.startsWith('/src') ||
-         pathname === '/codicon.ttf' ||
-         pathname === '/favicon.ico' ||
-         pathname.endsWith('.js') ||
-         pathname.endsWith('.wasm')
+      if(pathname.startsWith('/assets')
+         || pathname.startsWith('/node_modules')
+         || pathname.startsWith('/src')
+         || pathname.endsWith('.ico')
+         || pathname.endsWith('.js')
+         || pathname.endsWith('.json')
+         || pathname.endsWith('.ttf')
+         || pathname.endsWith('.wasm')
+         || request.url.host !== window.location.host
       ) {
         return;
       }

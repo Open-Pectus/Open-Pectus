@@ -322,8 +322,58 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string",
-                  "title": "Response Get Method"
+                  "$ref": "#/components/schemas/Method"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Save Method",
+        "operationId": "save_method",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            },
+            "name": "unit_id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Method"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "null",
+                  "title": "Response Save Method"
                 }
               }
             }
@@ -487,10 +537,52 @@
           }
         }
       }
+    },
+    "/auth/config": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get Config",
+        "operationId": "get_config",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthConfig"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AuthConfig": {
+        "properties": {
+          "use_auth": {
+            "type": "boolean",
+            "title": "Use Auth"
+          },
+          "authority_url": {
+            "type": "string",
+            "title": "Authority Url"
+          },
+          "client_id": {
+            "type": "string",
+            "title": "Client Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "use_auth"
+        ],
+        "title": "AuthConfig"
+      },
       "BatchJob": {
         "properties": {
           "id": {
@@ -612,6 +704,56 @@
         ],
         "title": "InProgress"
       },
+      "Method": {
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/MethodLine"
+            },
+            "type": "array",
+            "title": "Lines"
+          },
+          "executed_line_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Executed Line Ids"
+          },
+          "injected_line_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Injected Line Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lines",
+          "executed_line_ids",
+          "injected_line_ids"
+        ],
+        "title": "Method"
+      },
+      "MethodLine": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "content"
+        ],
+        "title": "MethodLine"
+      },
       "NotOnline": {
         "properties": {
           "state": {
@@ -707,6 +849,13 @@
       },
       "PlotConfiguration": {
         "properties": {
+          "process_value_names_to_annotate": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Process Value Names To Annotate"
+          },
           "color_regions": {
             "items": {
               "$ref": "#/components/schemas/PlotColorRegion"
@@ -720,12 +869,21 @@
             },
             "type": "array",
             "title": "Sub Plots"
+          },
+          "x_axis_process_value_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "X Axis Process Value Names"
           }
         },
         "type": "object",
         "required": [
+          "process_value_names_to_annotate",
           "color_regions",
-          "sub_plots"
+          "sub_plots",
+          "x_axis_process_value_names"
         ],
         "title": "PlotConfiguration"
       },

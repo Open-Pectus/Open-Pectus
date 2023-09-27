@@ -1,3 +1,4 @@
+/* generated using openapi-typescript-codegen -- do no edit */
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
@@ -7,6 +8,7 @@ import type { Observable } from 'rxjs';
 
 import type { CommandExample } from '../models/CommandExample';
 import type { ExecutableCommand } from '../models/ExecutableCommand';
+import type { Method } from '../models/Method';
 import type { PlotConfiguration } from '../models/PlotConfiguration';
 import type { ProcessDiagram } from '../models/ProcessDiagram';
 import type { ProcessUnit } from '../models/ProcessUnit';
@@ -168,18 +170,43 @@ unitId: string,
     /**
      * Get Method
      * @param unitId 
-     * @returns string Successful Response
+     * @returns Method Successful Response
      * @throws ApiError
      */
     public getMethod(
 unitId: string,
-): Observable<string> {
+): Observable<Method> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
             url: '/api/process_unit/{unit_id}/method',
             path: {
                 'unit_id': unitId,
             },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
+    /**
+     * Save Method
+     * @param unitId 
+     * @param requestBody 
+     * @returns null Successful Response
+     * @throws ApiError
+     */
+    public saveMethod(
+unitId: string,
+requestBody: Method,
+): Observable<null> {
+        return __request(OpenAPI, this.http, {
+            method: 'POST',
+            url: '/api/process_unit/{unit_id}/method',
+            path: {
+                'unit_id': unitId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },

@@ -9,7 +9,6 @@ import openpectus.aggregator.deps as agg_deps
 from openpectus.protocol.aggregator import Aggregator, ChannelInfo, ReadingDef, TagInfo
 from openpectus.protocol.messages import InvokeCommandMsg
 
-
 router = APIRouter(tags=["process_unit"])
 
 
@@ -52,12 +51,12 @@ class ProcessUnit(BaseModel):
 def create_pu(item: ChannelInfo) -> ProcessUnit:
     # TODO define source of all fields
     unit = ProcessUnit(
-            id=item.client_id or "(error)",
-            name=f"{item.engine_name} ({item.uod_name})",
-            state=ProcessUnitState.Ready(state=ProcessUnitStateEnum.READY),
-            location="Unknown location",
-            runtime_msec=189309,
-            current_user_role=UserRole.ADMIN)
+        id=item.client_id or "(error)",
+        name=f"{item.engine_name} ({item.uod_name})",
+        state=ProcessUnitState.Ready(state=ProcessUnitStateEnum.READY),
+        location="Unknown location",
+        runtime_msec=189309,
+        current_user_role=UserRole.ADMIN)
     return unit
 
 
@@ -140,12 +139,12 @@ class ProcessValue(BaseModel):
     @staticmethod
     def from_message(r: ReadingDef, ti: TagInfo) -> ProcessValue:
         return ProcessValue(
-                name=r.label,
-                value=ti.value,
-                value_type=get_ProcessValueType_from_value(ti.value),
-                value_unit=ti.value_unit,
-                commands=[])
-                # commands=[ProcessValueCommand(name=c.name, command=c.command) for c in r.commands])
+            name=r.label,
+            value=ti.value,
+            value_type=get_ProcessValueType_from_value(ti.value),
+            value_unit=ti.value_unit,
+            commands=[])
+        # commands=[ProcessValueCommand(name=c.name, command=c.command) for c in r.commands])
 
 
 @router.get("/process_unit/{unit_id}/process_values")
@@ -237,11 +236,22 @@ class RunLog(BaseModel):
 def get_run_log(unit_id: str) -> RunLog:
     return RunLog(lines=[])
 
+class MethodLine(BaseModel):
+    id: str
+    content: str
+
+class Method(BaseModel):
+    lines: List[MethodLine]
+    executed_line_ids: List[str]
+    injected_line_ids: List[str]
 
 @router.get('/process_unit/{unit_id}/method')
-def get_method(unit_id: str) -> str:
-    return ''
+def get_method(unit_id: str) -> Method:
+    return Method(lines=[], executed_line_ids=[], injected_line_ids=[])
 
+@router.post('/process_unit/{unit_id}/method')
+def save_method(unit_id: str, method: Method) -> None:
+    pass
 
 class PlotColorRegion(BaseModel):
     process_value_name: str
@@ -262,10 +272,17 @@ class SubPlot(BaseModel):
 
 
 class PlotConfiguration(BaseModel):
+    process_value_names_to_annotate: List[str]
     color_regions: List[PlotColorRegion]
     sub_plots: List[SubPlot]
+    x_axis_process_value_names: List[str]
 
 
 @router.get('/process_unit/{unit_id}/plot_configuration')
 def get_plot_configuration(unit_id: str) -> PlotConfiguration:
-    return PlotConfiguration(color_regions=[], sub_plots=[])
+    return PlotConfiguration(
+        color_regions=[],
+        sub_plots=[],
+        process_value_names_to_annotate=[],
+        x_axis_process_value_names=[]
+    )
