@@ -1,22 +1,22 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { PlotConfiguration, ProcessValueType } from '../../../api';
+import { PlotConfiguration, PlotLog } from '../../../api';
 import { DetailsActions } from '../../ngrx/details.actions';
 import { XAxisOverrideDialogData, YAxesLimitsOverride, YAxisOverrideDialogData, ZoomAndPanDomainOverrides } from '../process-plot.types';
 import { ProcessPlotActions } from './process-plot.actions';
 
-export interface ProcessValueLogEntry {
-  name: string;
-  values: (string | number)[];
-  value_unit?: string;
-  value_type: ProcessValueType;
-}
-
-export type ProcessValueLog = Record<string, ProcessValueLogEntry>;
+// export interface ProcessValueLogEntry {
+//   name: string;
+//   values: (string | number)[];
+//   value_unit?: string;
+//   value_type: ProcessValueType;
+// }
+//
+// export type ProcessValueLog = Record<string, ProcessValueLogEntry>;
 
 export interface ProcessPlotState {
   plotConfiguration?: PlotConfiguration;
-  processValuesLog: ProcessValueLog;
+  plotLog: PlotLog;
   markedDirty: boolean;
   yAxisOverrideDialogData?: YAxisOverrideDialogData;
   xAxisProcessValueOverride?: string;
@@ -26,7 +26,7 @@ export interface ProcessPlotState {
 }
 
 const initialState: ProcessPlotState = {
-  processValuesLog: {},
+  plotLog: {entries: {}},
   markedDirty: false,
 };
 
@@ -64,9 +64,9 @@ const reducer = createReducer(initialState,
   on(DetailsActions.processValuesFetched, (state, {processValues}) => produce(state, draft => {
     processValues.forEach(processValue => {
       if(processValue.value === undefined) return;
-      const existing = draft.processValuesLog[processValue.name];
+      const existing = draft.plotLog.entries[processValue.name];
       if(existing === undefined) {
-        draft.processValuesLog[processValue.name] = {
+        draft.plotLog.entries[processValue.name] = {
           name: processValue.name,
           value_unit: processValue.value_unit,
           value_type: processValue.value_type,

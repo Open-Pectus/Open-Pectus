@@ -1,7 +1,7 @@
 from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum, auto
-from typing import Literal, List
+from typing import Literal, List, Dict
 from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel
 
@@ -286,3 +286,20 @@ def get_plot_configuration(unit_id: str) -> PlotConfiguration:
         process_value_names_to_annotate=[],
         x_axis_process_value_names=[]
     )
+
+
+class PlotLogEntry(BaseModel):
+    name: str
+    values: List[(str | float)]
+    value_unit: str | None
+    value_type: ProcessValueType
+
+
+class PlotLog(BaseModel):
+    entries: Dict[str, PlotLogEntry]
+
+
+@router.get('/process_unit/{unit_id}/plot_log')
+def get_plot_log(unit_id: str) -> PlotLog:
+    return PlotLog(entries={})
+

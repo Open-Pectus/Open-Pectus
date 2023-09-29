@@ -20,6 +20,8 @@ export { NotOnline } from './models/NotOnline';
 export type { PlotAxis } from './models/PlotAxis';
 export type { PlotColorRegion } from './models/PlotColorRegion';
 export type { PlotConfiguration } from './models/PlotConfiguration';
+export type { PlotLog } from './models/PlotLog';
+export type { PlotLogEntry } from './models/PlotLogEntry';
 export type { ProcessDiagram } from './models/ProcessDiagram';
 export type { ProcessUnit } from './models/ProcessUnit';
 export type { ProcessValue } from './models/ProcessValue';

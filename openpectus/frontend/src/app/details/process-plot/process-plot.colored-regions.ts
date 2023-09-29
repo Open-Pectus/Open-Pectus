@@ -1,6 +1,5 @@
 import { ScaleLinear } from 'd3';
-import { PlotColorRegion, PlotConfiguration } from '../../api';
-import { ProcessValueLog } from './ngrx/process-plot.reducer';
+import { PlotColorRegion, PlotConfiguration, PlotLog } from '../../api';
 import { ColoredRegionRect, D3Selection } from './process-plot.types';
 
 export class ProcessPlotColoredRegions {
@@ -9,10 +8,10 @@ export class ProcessPlotColoredRegions {
               private xScale: ScaleLinear<number, number>,
               private yScales: ScaleLinear<number, number>[][]) {}
 
-  plotColoredRegions(processValueLog: ProcessValueLog, xAxisProcessValueName: string) {
+  plotColoredRegions(plotLog: PlotLog, xAxisProcessValueName: string) {
     this.plotConfiguration.color_regions.forEach((colorRegion, colorRegionIndex) => {
       const topColorRegionSelection = this.svg.select<SVGGElement>(`.color-region-${colorRegionIndex}`);
-      const formattedRectData = this.formatColoredRegionsData(processValueLog, colorRegion, xAxisProcessValueName);
+      const formattedRectData = this.formatColoredRegionsData(plotLog, colorRegion, xAxisProcessValueName);
       const top = this.yScales[0][0].range()[1];
       this.plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
         const colorRegionSelection = this.svg.select<SVGGElement>(`.subplot-${subPlotIndex} .color-region-${colorRegionIndex}`);
@@ -58,11 +57,11 @@ export class ProcessPlotColoredRegions {
     return start + width / 2;
   }
 
-  private formatColoredRegionsData(processValueLog: ProcessValueLog,
+  private formatColoredRegionsData(plotLog: PlotLog,
                                    colorRegion: PlotColorRegion,
                                    xAxisProcessValueName: string): ColoredRegionRect[] {
-    const processValueLogEntry = processValueLog[colorRegion.process_value_name];
-    const xAxisData = processValueLog[xAxisProcessValueName];
+    const processValueLogEntry = plotLog.entries[colorRegion.process_value_name];
+    const xAxisData = plotLog.entries[xAxisProcessValueName];
     if(processValueLogEntry === undefined) return [];
     let start: number = xAxisData.values[0] as number;
     const coloredRegionRects: ColoredRegionRect[] = [];

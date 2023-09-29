@@ -1,10 +1,9 @@
 import { Store } from '@ngrx/store';
 import { bisector, pointer, ScaleLinear, select } from 'd3';
 import { firstValueFrom, identity } from 'rxjs';
-import { PlotConfiguration, ProcessValue } from '../../api';
+import { PlotConfiguration, PlotLogEntry, ProcessValue } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 import { UtilMethods } from '../../shared/util-methods';
-import { ProcessValueLogEntry } from './ngrx/process-plot.reducer';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
 import { ProcessPlotFontSizes } from './process-plot.font-sizes';
 import { D3Selection } from './process-plot.types';
@@ -12,7 +11,7 @@ import { D3Selection } from './process-plot.types';
 export class ProcessPlotTooltip {
   static margin = {x: 10, y: 8};
   placementRelativeToMouse = {x: 1, y: 14};
-  private processValuesLog = this.store.select(ProcessPlotSelectors.processValuesLog);
+  private plotLog = this.store.select(ProcessPlotSelectors.plotLog);
   private xAxisProcessValueName = this.store.select(ProcessPlotSelectors.xAxisProcessValueName);
 
   constructor(private store: Store,
@@ -27,16 +26,16 @@ export class ProcessPlotTooltip {
     let eventTargetParentElement: D3Selection<SVGGElement>;
     subplotBorders.on('mousemove', async (event: MouseEvent) => {
       if(event === undefined) return;
-      const processValuesLog = await firstValueFrom(this.processValuesLog);
+      const plotLog = await firstValueFrom(this.plotLog);
       const xAxisProcessValueName = await firstValueFrom(this.xAxisProcessValueName);
       if(xAxisProcessValueName === undefined) return;
 
       const subplotBorderG = (event.target as SVGRectElement).parentNode as SVGGElement;
       const subplotIndex = parseInt(/subplot-(\d+)/.exec(subplotBorderG.parentElement?.classList.toString() ?? '')?.[1] ?? '');
       const subplotProcessValueNames = this.plotConfiguration.sub_plots[subplotIndex].axes.flatMap(axis => axis.process_value_names);
-      const subplotProcessValueLogEntries = Object.values(processValuesLog).filter(
+      const subplotProcessValueLogEntries = Object.values(plotLog.entries).filter(
         processValues => subplotProcessValueNames.includes(processValues.name));
-      const xAxisProcessValueLogEntry = processValuesLog[xAxisProcessValueName];
+      const xAxisProcessValueLogEntry = plotLog.entries[xAxisProcessValueName];
       const relativeMousePosition = pointer(event);
       const bisectedIndex = this.bisectX(xAxisProcessValueLogEntry.values, relativeMousePosition[0]);
       if(bisectedIndex === undefined) return;
@@ -77,14 +76,14 @@ export class ProcessPlotTooltip {
     });
   }
 
-  private bisectX(xAxisData: ProcessValueLogEntry['values'], mouseX: number): number | undefined {
-    if(xAxisData === undefined || xAxisData.length === 0) return;
+  private bisectX(xAxisValues: PlotLogEntry['values'], mouseX: number): number | undefined {
+    if(xAxisValues === undefined || xAxisValues.length === 0) return;
     const xValue = this.xScale.invert(mouseX);
-    return bisector(identity).center(xAxisData, xValue);
+    return bisector(identity).center(xAxisValues, xValue);
   }
 
-  private callout(tooltipG: D3Selection<SVGGElement>, processValues?: ProcessValue[], processValueValues?: ProcessValueLogEntry['values']) {
-    if(processValueValues === undefined || processValues === undefined) {
+  private callout(tooltipG: D3Selection<SVGGElement>, processValues?: ProcessValue[], plotLogEntryValues?: PlotLogEntry['values']) {
+    if(plotLogEntryValues === undefined || processValues === undefined) {
       tooltipG.style('display', 'none');
       return;
     }
@@ -104,7 +103,7 @@ export class ProcessPlotTooltip {
           })?.color;
         }).find<string>((value): value is string => typeof value === 'string') ?? 'black')
         .text((processValue, index) => {
-          return `${processValue.name}: ${this.processValuePipe.transform({...processValue, value: processValueValues[index]})}`;
+          return `${processValue.name}: ${this.processValuePipe.transform({...processValue, value: plotLogEntryValues[index]})}`;
         }),
       );
 
