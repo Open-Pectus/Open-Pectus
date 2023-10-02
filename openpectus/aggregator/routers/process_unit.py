@@ -126,10 +126,13 @@ def get_ProcessValueType_from_value(value: str | float | int | None) -> ProcessV
         raise ValueError("Invalid value type: " + type(value).__name__)
 
 
+ProcessValueValueType = str | float | int | None
+
+
 class ProcessValue(BaseModel):
     """ Represents a process value. """
     name: str
-    value: str | float | int | None
+    value: ProcessValueValueType
     value_unit: str | None
     """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
     value_type: ProcessValueType
@@ -287,10 +290,16 @@ def get_plot_configuration(unit_id: str) -> PlotConfiguration:
         x_axis_process_value_names=[]
     )
 
+# This class exists only to workaround the issue that OpenApi spec (or Pydantic) cannot express that elements in a list can be None/null/undefined.
+# Properties on an object can be optional, so we use that via this wrapping class to express None values in the PlotLogEntry.values list.
+# Feel free to refactor to remove this class if it becomes possible to express the above without it.
+class PlotLogEntryValue(BaseModel):
+    value: ProcessValueValueType
+
 
 class PlotLogEntry(BaseModel):
     name: str
-    values: List[(str | float)]
+    values: List[PlotLogEntryValue]
     value_unit: str | None
     value_type: ProcessValueType
 

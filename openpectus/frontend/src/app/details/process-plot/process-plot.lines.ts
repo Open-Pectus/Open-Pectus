@@ -31,9 +31,10 @@ export class ProcessPlotLines {
       .map(processValueName => plotLog.entries[processValueName]?.values)
       .filter(UtilMethods.isNotNullOrUndefined)
       .map(processValueLogEntry => processValueLogEntry.map((processValue, index) => {
-          if(typeof processValue !== 'number') return undefined;
-          const x = plotLog.entries[xAxisProcessValueName].values[index];
-          return [x, processValue] as [number, number];
+          if(typeof processValue.value !== 'number') return undefined;
+          const x = plotLog.entries[xAxisProcessValueName].values.at(index)?.value;
+          if(typeof x !== 'number') throw Error('process value chosen for x axis with non-number values');
+          return [x, processValue.value] satisfies [number, number];
         }).filter(UtilMethods.isNotNullOrUndefined),
       );
   }

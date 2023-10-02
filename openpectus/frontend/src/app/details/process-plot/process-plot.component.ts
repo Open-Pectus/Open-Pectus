@@ -196,8 +196,8 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
     const hasNewValue = processValueNamesToConsider.map(processValueName => {
       const colorRegionData = plotLog.entries[processValueName]?.values;
       if(colorRegionData === undefined) return;
-      const newestValue = colorRegionData[colorRegionData.length - 1];
-      const olderValues = colorRegionData.slice(0, colorRegionData.length - 1);
+      const newestValue = colorRegionData[colorRegionData.length - 1].value;
+      const olderValues = colorRegionData.slice(0, colorRegionData.length - 1).map(value => value.value);
       return !olderValues.includes(newestValue);
     }).some(value => value);
 
@@ -221,8 +221,8 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
   private fitXScaleToData(plotLog: PlotLog, xAxisProcessValueName: string) {
     const xAxisProcessValues = plotLog.entries[xAxisProcessValueName]?.values;
     if(xAxisProcessValues === undefined) return;
-    const minXValue = xAxisProcessValues.at(0) ?? 0;
-    const maxXValue = xAxisProcessValues.at(-1) ?? minXValue;
+    const minXValue = xAxisProcessValues.at(0)?.value ?? 0;
+    const maxXValue = xAxisProcessValues.at(-1)?.value ?? minXValue;
     if(typeof minXValue !== 'number' || typeof maxXValue !== 'number') throw Error('Process Value chosen for x-axis was not a number!');
     this.xScale.domain([minXValue, maxXValue]);
   }

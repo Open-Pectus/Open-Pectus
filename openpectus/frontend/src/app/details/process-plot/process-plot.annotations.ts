@@ -56,11 +56,11 @@ export class ProcessPlotAnnotations {
       const processValueData = plotLog.entries[processValueNameToAnnotate]?.values;
       if(processValueData === undefined) return [];
       return processValueData.reduce<Annotation[]>((accumulator, value, currentIndex) => {
-        if(typeof value !== 'string' && value !== undefined) return accumulator;
-        if(accumulator.at(-1)?.label === value) return accumulator;
-        const x = xAxisData.values[currentIndex];
+        if(typeof value.value !== 'string' && value.value !== undefined) return accumulator;
+        if(accumulator.at(-1)?.label === value.value) return accumulator;
+        const x = xAxisData.values[currentIndex].value;
         if(typeof x !== 'number') throw Error('x-axis value was not a number!');
-        accumulator.push({x, label: value});
+        accumulator.push({x, label: value.value});
         return accumulator;
       }, []);
     });

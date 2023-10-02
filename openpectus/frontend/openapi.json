@@ -953,14 +953,7 @@
           },
           "values": {
             "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "number"
-                }
-              ]
+              "$ref": "#/components/schemas/PlotLogEntryValue"
             },
             "type": "array",
             "title": "Values"
@@ -980,6 +973,26 @@
           "value_type"
         ],
         "title": "PlotLogEntry"
+      },
+      "PlotLogEntryValue": {
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "title": "PlotLogEntryValue"
       },
       "ProcessDiagram": {
         "properties": {

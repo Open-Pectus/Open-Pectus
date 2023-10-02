@@ -79,8 +79,8 @@ export class ProcessPlotPlacement {
   private getTickValues(yScale: ScaleLinear<number, number>) {
     const [domainMin, domainMax] = yScale.domain();
     const [rangeMaxY, rangeMinY] = yScale.range(); // max before min because svg y 0 is at the top, so the range goes from high y to low y.
-    const ticksAmount = Math.floor((rangeMaxY - rangeMinY) / this.pixelsPerTick);
-    if(ticksAmount < 0) return []; // while expanding, this can be temporarily negative throwing errors in console. So let's avoid that.
+    let ticksAmount = Math.floor((rangeMaxY - rangeMinY) / this.pixelsPerTick);
+    if(ticksAmount < 2) ticksAmount = 2; // minimum 2 ticks
     const domainSlice = (domainMax - domainMin) / (ticksAmount - 1);
     return new Array(ticksAmount).fill(undefined).map((_, index) => domainMin + index * domainSlice);
   }
@@ -184,10 +184,8 @@ export class ProcessPlotPlacement {
     const colorRegionHeights = plotConfiguration.color_regions.map((_, colorRegionIndex) => {
       const colorRegionG = svg.select<SVGGElement>(`.color-region-${colorRegionIndex}`);
       const rect = colorRegionG.select<SVGRectElement>('rect');
-      const totalHeight = colorRegionG.node()?.getBoundingClientRect()?.height ?? 0;
-      const rectBoundingRectangle = rect.node()?.getBoundingClientRect();
-      // if the rect width is 0 it will not actually contribute to the totalHeight, but will return full height from boundingRectangle. So disregard the value when width is 0
-      const rectHeight = rectBoundingRectangle?.width === 0 ? 0 : rectBoundingRectangle?.height ?? 0;
+      const totalHeight = colorRegionG.node()?.getBBox()?.height ?? 0;
+      const rectHeight = rect.node()?.getBBox()?.height ?? 0;
       return totalHeight - rectHeight;
     });
 

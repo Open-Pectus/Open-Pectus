@@ -63,17 +63,16 @@ const reducer = createReducer(initialState,
     })),
   on(DetailsActions.processValuesFetched, (state, {processValues}) => produce(state, draft => {
     processValues.forEach(processValue => {
-      if(processValue.value === undefined) return;
       const existing = draft.plotLog.entries[processValue.name];
       if(existing === undefined) {
         draft.plotLog.entries[processValue.name] = {
           name: processValue.name,
           value_unit: processValue.value_unit,
           value_type: processValue.value_type,
-          values: [processValue.value],
+          values: [{value: processValue.value}],
         };
       } else {
-        existing.values.push(processValue.value);
+        existing.values.push({value: processValue.value});
       }
     });
   })),
