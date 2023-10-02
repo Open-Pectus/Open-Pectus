@@ -58,6 +58,7 @@ const reducer = createReducer(initialState,
     ProcessPlotActions.processPlotInitialized,
     ProcessPlotActions.processPlotZoomReset,
     ProcessPlotActions.processPlotReset,
+    ProcessPlotActions.plotLogFetched,
     state => produce(state, draft => {
       draft.markedDirty = true;
     })),
@@ -107,6 +108,9 @@ const reducer = createReducer(initialState,
   })),
   on(ProcessPlotActions.xOverrideDialogClosed, (state) => produce(state, draft => {
     draft.xAxisOverrideDialogData = undefined;
+  })),
+  on(ProcessPlotActions.plotLogFetched, (state, {plotLog}) => produce(state, draft => {
+    draft.plotLog = plotLog;
   })),
 );
 

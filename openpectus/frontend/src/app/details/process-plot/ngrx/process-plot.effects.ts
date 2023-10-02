@@ -11,13 +11,23 @@ import { ProcessPlotSelectors } from './process-plot.selectors';
 
 @Injectable()
 export class ProcessPlotEffects {
-  fetchProcessPlotConfigurationOnComponentInitialization = createEffect(() => this.actions.pipe(
+  fetchPlotConfigurationOnComponentInitialization = createEffect(() => this.actions.pipe(
     ofType(ProcessPlotActions.processPlotComponentInitialized),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([_, id]) => {
       if(id === undefined) return of();
       return this.processUnitService.getPlotConfiguration(id).pipe(
         map(configuration => ProcessPlotActions.plotConfigurationFetched({configuration})));
+    }),
+  ));
+
+  fetchPlotLogOnComponentInitialization = createEffect(() => this.actions.pipe(
+    ofType(ProcessPlotActions.processPlotComponentInitialized),
+    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
+    switchMap(([_, id]) => {
+      if(id === undefined) return of();
+      return this.processUnitService.getPlotLog(id).pipe(
+        map(plotLog => ProcessPlotActions.plotLogFetched({plotLog})));
     }),
   ));
 
