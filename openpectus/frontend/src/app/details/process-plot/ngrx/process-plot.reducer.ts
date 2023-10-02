@@ -5,15 +5,6 @@ import { DetailsActions } from '../../ngrx/details.actions';
 import { XAxisOverrideDialogData, YAxesLimitsOverride, YAxisOverrideDialogData, ZoomAndPanDomainOverrides } from '../process-plot.types';
 import { ProcessPlotActions } from './process-plot.actions';
 
-// export interface ProcessValueLogEntry {
-//   name: string;
-//   values: (string | number)[];
-//   value_unit?: string;
-//   value_type: ProcessValueType;
-// }
-//
-// export type ProcessValueLog = Record<string, ProcessValueLogEntry>;
-
 export interface ProcessPlotState {
   plotConfiguration?: PlotConfiguration;
   plotLog: PlotLog;
