@@ -206,12 +206,11 @@ class Aggregator:
             return ErrorMessage(message="Registration failed")
 
         channel_info = self.channel_map[channel_id]
-        if channel_info.client_id is not None:
+        if channel_info.client_id is not None and channel_info.client_id != client_id:
             logger.error(
                 f"""Registration failed for client_id {client_id} and channel_id {channel_id}.
                     Channel already in use by client_id {channel_info.client_id}"""
             )
-            # TODO if channelInfo.client_id == client_id we can make this idempotent and not fail
             return ErrorMessage(message="Registration failed")
 
         # TODO consider how to handle registrations
@@ -220,8 +219,10 @@ class Aggregator:
         # - client_id reused with "same uod" should take over session, else fail as misconfigured client
         # - add machine name + uod secret
         existing_registrations = [x for x in self.channel_map.values() if x.client_id == client_id]
-        if (len(existing_registrations) > 0 and not (
-                any(existing_registration.status != ChannelStatusEnum.Disconnected for existing_registration in existing_registrations))):
+        if (
+                len(existing_registrations) > 0 and
+                any(existing_registration.status != ChannelStatusEnum.Disconnected for existing_registration in existing_registrations)
+        ):
             logger.error(
                 f"""Registration failed for client_id {client_id} and channel_id {channel_id}.
                     Client has other channel"""
