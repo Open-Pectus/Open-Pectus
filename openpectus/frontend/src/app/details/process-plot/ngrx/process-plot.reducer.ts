@@ -1,15 +1,13 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { PlotConfiguration, ProcessValue } from '../../../api';
+import { PlotConfiguration, PlotLog } from '../../../api';
 import { DetailsActions } from '../../ngrx/details.actions';
 import { XAxisOverrideDialogData, YAxesLimitsOverride, YAxisOverrideDialogData, ZoomAndPanDomainOverrides } from '../process-plot.types';
 import { ProcessPlotActions } from './process-plot.actions';
 
-export type ProcessValueLog = Record<string, ProcessValue[]>
-
 export interface ProcessPlotState {
   plotConfiguration?: PlotConfiguration;
-  processValuesLog: ProcessValueLog;
+  plotLog: PlotLog;
   markedDirty: boolean;
   yAxisOverrideDialogData?: YAxisOverrideDialogData;
   xAxisProcessValueOverride?: string;
@@ -19,7 +17,7 @@ export interface ProcessPlotState {
 }
 
 const initialState: ProcessPlotState = {
-  processValuesLog: {},
+  plotLog: {entries: {}},
   markedDirty: false,
 };
 
@@ -51,16 +49,22 @@ const reducer = createReducer(initialState,
     ProcessPlotActions.processPlotInitialized,
     ProcessPlotActions.processPlotZoomReset,
     ProcessPlotActions.processPlotReset,
+    ProcessPlotActions.plotLogFetched,
     state => produce(state, draft => {
       draft.markedDirty = true;
     })),
   on(DetailsActions.processValuesFetched, (state, {processValues}) => produce(state, draft => {
     processValues.forEach(processValue => {
-      const existing = draft.processValuesLog[processValue.name];
+      const existing = draft.plotLog.entries[processValue.name];
       if(existing === undefined) {
-        draft.processValuesLog[processValue.name] = [processValue];
+        draft.plotLog.entries[processValue.name] = {
+          name: processValue.name,
+          value_unit: processValue.value_unit,
+          value_type: processValue.value_type,
+          values: [{value: processValue.value}],
+        };
       } else {
-        existing.push(processValue);
+        existing.values.push({value: processValue.value});
       }
     });
   })),
@@ -95,6 +99,9 @@ const reducer = createReducer(initialState,
   })),
   on(ProcessPlotActions.xOverrideDialogClosed, (state) => produce(state, draft => {
     draft.xAxisOverrideDialogData = undefined;
+  })),
+  on(ProcessPlotActions.plotLogFetched, (state, {plotLog}) => produce(state, draft => {
+    draft.plotLog = plotLog;
   })),
 );
 

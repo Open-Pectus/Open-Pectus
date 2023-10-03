@@ -10,6 +10,7 @@ import type { CommandExample } from '../models/CommandExample';
 import type { ExecutableCommand } from '../models/ExecutableCommand';
 import type { Method } from '../models/Method';
 import type { PlotConfiguration } from '../models/PlotConfiguration';
+import type { PlotLog } from '../models/PlotLog';
 import type { ProcessDiagram } from '../models/ProcessDiagram';
 import type { ProcessUnit } from '../models/ProcessUnit';
 import type { ProcessValue } from '../models/ProcessValue';
@@ -225,6 +226,27 @@ unitId: string,
         return __request(OpenAPI, this.http, {
             method: 'GET',
             url: '/api/process_unit/{unit_id}/plot_configuration',
+            path: {
+                'unit_id': unitId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
+    /**
+     * Get Plot Log
+     * @param unitId 
+     * @returns PlotLog Successful Response
+     * @throws ApiError
+     */
+    public getPlotLog(
+unitId: string,
+): Observable<PlotLog> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/process_unit/{unit_id}/plot_log',
             path: {
                 'unit_id': unitId,
             },

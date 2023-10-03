@@ -3,11 +3,10 @@ import { concatLatestFrom } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { axisBottom, ScaleLinear, scaleLinear, select } from 'd3';
 import { combineLatest, filter, identity, Subject, take, takeUntil } from 'rxjs';
-import { PlotConfiguration } from '../../api';
+import { PlotConfiguration, PlotLog } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 import { UtilMethods } from '../../shared/util-methods';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
-import { ProcessValueLog } from './ngrx/process-plot.reducer';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
 import { ProcessPlotAnnotations } from './process-plot.annotations';
 import { ProcessPlotAxesOverrides } from './process-plot.axes-overrides';
@@ -32,7 +31,7 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
   @ViewChild('plot', {static: false}) plotElement?: ElementRef<SVGSVGElement>;
   private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(
     filter(UtilMethods.isNotNullOrUndefined));
-  private processValuesLog = this.store.select(ProcessPlotSelectors.processValuesLog);
+  private plotLog = this.store.select(ProcessPlotSelectors.plotLog);
   private markedDirty = this.store.select(ProcessPlotSelectors.markedDirty);
   private anySubplotZoomed = this.store.select(ProcessPlotSelectors.anySubplotZoomed);
   private yAxesLimitsOverride = this.store.select(ProcessPlotSelectors.yAxesLimitsOverride);
@@ -175,7 +174,7 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
   }
 
   private setupOnDataChange(plotConfiguration: PlotConfiguration) {
-    this.processValuesLog.pipe(
+    this.plotLog.pipe(
       concatLatestFrom(() => [
         this.anySubplotZoomed,
         this.xAxisProcessValueName,
@@ -190,12 +189,12 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
   }
 
   private updatePlacementsOnNewTopLabel(plotConfiguration: PlotConfiguration,
-                                        processValuesLog: ProcessValueLog) {
+                                        plotLog: PlotLog) {
     const processValueNamesToConsider = plotConfiguration.process_value_names_to_annotate
       .concat(plotConfiguration.color_regions.map(colorRegion => colorRegion.process_value_name));
 
     const hasNewValue = processValueNamesToConsider.map(processValueName => {
-      const colorRegionData = processValuesLog[processValueName];
+      const colorRegionData = plotLog.entries[processValueName]?.values;
       if(colorRegionData === undefined) return;
       const newestValue = colorRegionData[colorRegionData.length - 1].value;
       const olderValues = colorRegionData.slice(0, colorRegionData.length - 1).map(value => value.value);
@@ -209,18 +208,18 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
   }
 
   private plotData(plotConfiguration: PlotConfiguration,
-                   processValuesLog: ProcessValueLog,
+                   plotLog: PlotLog,
                    xAxisProcessValueName: string) {
     if(this.svg === undefined) throw Error('no Svg selection when plotting data!');
     this.drawXAxis(plotConfiguration);
-    this.lines?.plotLines(processValuesLog, xAxisProcessValueName);
-    this.coloredRegions?.plotColoredRegions(processValuesLog, xAxisProcessValueName);
-    this.annotations?.plotAnnotations(processValuesLog, xAxisProcessValueName);
+    this.lines?.plotLines(plotLog, xAxisProcessValueName);
+    this.coloredRegions?.plotColoredRegions(plotLog, xAxisProcessValueName);
+    this.annotations?.plotAnnotations(plotLog, xAxisProcessValueName);
     this.tooltip?.updateLineXPosition();
   }
 
-  private fitXScaleToData(processValuesLog: ProcessValueLog, xAxisProcessValueName: string) {
-    const xAxisProcessValues = processValuesLog[xAxisProcessValueName];
+  private fitXScaleToData(plotLog: PlotLog, xAxisProcessValueName: string) {
+    const xAxisProcessValues = plotLog.entries[xAxisProcessValueName]?.values;
     if(xAxisProcessValues === undefined) return;
     const minXValue = xAxisProcessValues.at(0)?.value ?? 0;
     const maxXValue = xAxisProcessValues.at(-1)?.value ?? minXValue;
@@ -240,7 +239,7 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
   private setupOnMarkedDirty() {
     this.markedDirty.pipe(filter(identity),
       concatLatestFrom(() => [
-        this.processValuesLog,
+        this.plotLog,
         this.plotConfiguration,
         this.xAxisProcessValueName,
       ]),
@@ -259,7 +258,7 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
       this.zoomAndPanDomainOverrides,
       this.xAxisProcessValueName,
     ]).pipe(
-      concatLatestFrom(() => [this.processValuesLog, this.plotConfiguration]),
+      concatLatestFrom(() => [this.plotLog, this.plotConfiguration]),
       takeUntil(this.componentDestroyed),
     ).subscribe(async ([[yAxesLimitsOverride, zoomAndPanDomainOverrides, xAxisProcessValueName], processValuesLog, plotConfiguration]) => {
       plotConfiguration.sub_plots.forEach((subPlotConfig, subPlotIndex) => {

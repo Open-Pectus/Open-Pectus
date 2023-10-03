@@ -1,6 +1,5 @@
 import { ScaleLinear } from 'd3';
-import { PlotColorRegion, PlotConfiguration } from '../../api';
-import { ProcessValueLog } from './ngrx/process-plot.reducer';
+import { PlotColorRegion, PlotConfiguration, PlotLog } from '../../api';
 import { ColoredRegionRect, D3Selection } from './process-plot.types';
 
 export class ProcessPlotColoredRegions {
@@ -9,10 +8,10 @@ export class ProcessPlotColoredRegions {
               private xScale: ScaleLinear<number, number>,
               private yScales: ScaleLinear<number, number>[][]) {}
 
-  plotColoredRegions(processValueLog: ProcessValueLog, xAxisProcessValueName: string) {
+  plotColoredRegions(plotLog: PlotLog, xAxisProcessValueName: string) {
     this.plotConfiguration.color_regions.forEach((colorRegion, colorRegionIndex) => {
       const topColorRegionSelection = this.svg.select<SVGGElement>(`.color-region-${colorRegionIndex}`);
-      const formattedRectData = this.formatColoredRegionsData(processValueLog, colorRegion, xAxisProcessValueName);
+      const formattedRectData = this.formatColoredRegionsData(plotLog, colorRegion, xAxisProcessValueName);
       const top = this.yScales[0][0].range()[1];
       this.plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
         const colorRegionSelection = this.svg.select<SVGGElement>(`.subplot-${subPlotIndex} .color-region-${colorRegionIndex}`);
@@ -58,29 +57,29 @@ export class ProcessPlotColoredRegions {
     return start + width / 2;
   }
 
-  private formatColoredRegionsData(processValueLog: ProcessValueLog,
+  private formatColoredRegionsData(plotLog: PlotLog,
                                    colorRegion: PlotColorRegion,
                                    xAxisProcessValueName: string): ColoredRegionRect[] {
-    const processValueData = processValueLog[colorRegion.process_value_name];
-    const xAxisData = processValueLog[xAxisProcessValueName];
-    if(processValueData === undefined) return [];
-    const processValueValues = processValueData.map(processValue => processValue.value);
-    let start: number = xAxisData[0].value as number;
+    const processValueLogEntry = plotLog.entries[colorRegion.process_value_name];
+    if(processValueLogEntry === undefined) return [];
+    const xAxisData = plotLog.entries[xAxisProcessValueName];
+    // if(xAxisData.values.some(value => typeof value.value !== 'number')) throw Error('X axis has non-number value');
+    let start: number = xAxisData.values.at(0)?.value as number;
     const coloredRegionRects: ColoredRegionRect[] = [];
-    for(let i = 0; i < processValueValues.length; i++) {
-      const currentValueColor = colorRegion.value_color_map[processValueValues[i] ?? -1];
-      const previousValueColor = colorRegion.value_color_map[processValueValues[i - 1] ?? -1];
+    for(let i = 0; i < processValueLogEntry.values.length; i++) {
+      const currentValueColor = colorRegion.value_color_map[processValueLogEntry.values.at(i)?.value ?? -1];
+      const previousValueColor = i === 0 ? undefined : colorRegion.value_color_map[processValueLogEntry.values[i - 1]?.value ?? -1];
       if(currentValueColor === previousValueColor) continue; // same value, just skip ahead
-      const end = xAxisData[i].value as number;
+      const end = xAxisData.values.at(i)?.value as number;
       if(previousValueColor !== undefined) {
-        coloredRegionRects.push({start, end, color: previousValueColor, value: processValueValues[i - 1]});
+        coloredRegionRects.push({start, end, color: previousValueColor, value: processValueLogEntry.values[i - 1]?.value});
       }
       if(currentValueColor !== undefined) start = end;
     }
-    const valueAtEnd = processValueValues[processValueData.length - 1];
+    const valueAtEnd = processValueLogEntry.values.at(-1)?.value;
     const colorAtEnd = colorRegion.value_color_map[valueAtEnd ?? -1];
     if(colorAtEnd !== undefined) { // we ran past end, but was drawing a rect, so push that into array
-      const end = xAxisData.at(-1)?.value as number;
+      const end = xAxisData.values.at(-1)?.value as number;
       coloredRegionRects.push({start, end, color: colorAtEnd, value: valueAtEnd});
     }
     return coloredRegionRects;

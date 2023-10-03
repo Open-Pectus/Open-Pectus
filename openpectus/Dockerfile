@@ -1,4 +1,4 @@
-FROM python:3
+FROM python:3.11
 
 # see https://hub.docker.com/_/python/
 

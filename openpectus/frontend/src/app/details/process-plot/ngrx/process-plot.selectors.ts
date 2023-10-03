@@ -5,7 +5,7 @@ import { processPlotSlice, ProcessPlotState } from './process-plot.reducer';
 export class ProcessPlotSelectors {
   static selectFeature = createFeatureSelector<ProcessPlotState>(processPlotSlice.name);
   static plotConfiguration = createSelector(this.selectFeature, state => state.plotConfiguration);
-  static processValuesLog = createSelector(this.selectFeature, state => state.processValuesLog);
+  static plotLog = createSelector(this.selectFeature, state => state.plotLog);
   static markedDirty = createSelector(this.selectFeature, state => state.markedDirty);
   static yAxisOverrideDialogData = createSelector(this.selectFeature, state => state.yAxisOverrideDialogData);
   static yAxesLimitsOverride = createSelector(this.selectFeature, state => state.yAxesLimitsOverride);
