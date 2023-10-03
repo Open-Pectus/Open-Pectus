@@ -1,6 +1,5 @@
 import { ScaleLinear } from 'd3';
-import { PlotConfiguration } from '../../api';
-import { ProcessValueLog } from './ngrx/process-plot.reducer';
+import { PlotConfiguration, PlotLog } from '../../api';
 import { Annotation, D3Selection } from './process-plot.types';
 
 export class ProcessPlotAnnotations {
@@ -9,8 +8,8 @@ export class ProcessPlotAnnotations {
               private xScale: ScaleLinear<number, number>,
               private yScales: ScaleLinear<number, number>[][]) {}
 
-  plotAnnotations(processValueLog: ProcessValueLog, xAxisProcessValueName: string) {
-    const annotationData = this.formatAnnotationData(processValueLog, xAxisProcessValueName);
+  plotAnnotations(plotLog: PlotLog, xAxisProcessValueName: string) {
+    const annotationData = this.formatAnnotationData(plotLog, xAxisProcessValueName);
     const topAnnotationSelection = this.svg.select<SVGGElement>(`.annotations`);
     const top = this.yScales[0][0].range()[1];
     this.plotConfiguration.sub_plots.forEach((_, subPlotIndex) => {
@@ -51,15 +50,15 @@ export class ProcessPlotAnnotations {
     return visible ? 'visible' : 'hidden';
   }
 
-  private formatAnnotationData(processValueLog: ProcessValueLog, xAxisProcessValueName: string): Annotation[] {
-    const xAxisData = processValueLog[xAxisProcessValueName];
+  private formatAnnotationData(plotLog: PlotLog, xAxisProcessValueName: string): Annotation[] {
+    const xAxisData = plotLog.entries[xAxisProcessValueName];
     return this.plotConfiguration.process_value_names_to_annotate.flatMap(processValueNameToAnnotate => {
-      const processValueData = processValueLog[processValueNameToAnnotate];
+      const processValueData = plotLog.entries[processValueNameToAnnotate]?.values;
       if(processValueData === undefined) return [];
       return processValueData.reduce<Annotation[]>((accumulator, value, currentIndex) => {
         if(typeof value.value !== 'string' && value.value !== undefined) return accumulator;
         if(accumulator.at(-1)?.label === value.value) return accumulator;
-        const x = xAxisData[currentIndex].value;
+        const x = xAxisData.values[currentIndex].value;
         if(typeof x !== 'number') throw Error('x-axis value was not a number!');
         accumulator.push({x, label: value.value});
         return accumulator;

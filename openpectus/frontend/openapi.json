@@ -433,6 +433,48 @@
         }
       }
     },
+    "/api/process_unit/{unit_id}/plot_log": {
+      "get": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Get Plot Log",
+        "operationId": "get_plot_log",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            },
+            "name": "unit_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlotLog"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/batch_job/{id}": {
       "get": {
         "tags": [
@@ -886,6 +928,71 @@
           "x_axis_process_value_names"
         ],
         "title": "PlotConfiguration"
+      },
+      "PlotLog": {
+        "properties": {
+          "entries": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PlotLogEntry"
+            },
+            "type": "object",
+            "title": "Entries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entries"
+        ],
+        "title": "PlotLog"
+      },
+      "PlotLogEntry": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/PlotLogEntryValue"
+            },
+            "type": "array",
+            "title": "Values"
+          },
+          "value_unit": {
+            "type": "string",
+            "title": "Value Unit"
+          },
+          "value_type": {
+            "$ref": "#/components/schemas/ProcessValueType"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "values",
+          "value_type"
+        ],
+        "title": "PlotLogEntry"
+      },
+      "PlotLogEntryValue": {
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "title": "PlotLogEntryValue"
       },
       "ProcessDiagram": {
         "properties": {

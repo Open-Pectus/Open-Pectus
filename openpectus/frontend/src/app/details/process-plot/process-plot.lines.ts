@@ -1,7 +1,6 @@
 import { line, ScaleLinear } from 'd3';
-import { PlotAxis, PlotConfiguration } from '../../api';
+import { PlotAxis, PlotConfiguration, PlotLog } from '../../api';
 import { UtilMethods } from '../../shared/util-methods';
-import { ProcessValueLog } from './ngrx/process-plot.reducer';
 import { ProcessPlotDashArrays } from './process-plot.dash-arrays';
 import { D3Selection } from './process-plot.types';
 
@@ -11,12 +10,12 @@ export class ProcessPlotLines {
               private xScale: ScaleLinear<number, number>,
               private yScales: ScaleLinear<number, number>[][]) {}
 
-  plotLines(processValuesLog: ProcessValueLog, xAxisProcessValueName: string) {
+  plotLines(plotLog: PlotLog, xAxisProcessValueName: string) {
     this.plotConfiguration.sub_plots.forEach((subPlot, subPlotIndex) => {
       subPlot.axes.forEach((axis, axisIndex) => {
         this.svg.select<SVGGElement>(`.subplot-${subPlotIndex} .line-${axisIndex}`)
           .selectAll('path')
-          .data(this.formatLineDataForAxis(processValuesLog, axis, xAxisProcessValueName))
+          .data(this.formatLineDataForAxis(plotLog, axis, xAxisProcessValueName))
           .join('path')
           .attr('d', line()
             .x(d => this.xScale(d[0]))
@@ -27,14 +26,15 @@ export class ProcessPlotLines {
     });
   }
 
-  private formatLineDataForAxis(processValuesLog: ProcessValueLog, axis: PlotAxis, xAxisProcessValueName: string): [number, number][][] {
+  private formatLineDataForAxis(plotLog: PlotLog, axis: PlotAxis, xAxisProcessValueName: string): [number, number][][] {
     return axis.process_value_names
-      .map(processValueName => processValuesLog[processValueName])
+      .map(processValueName => plotLog.entries[processValueName]?.values)
       .filter(UtilMethods.isNotNullOrUndefined)
-      .map(processValueLine => processValueLine.map((processValue, index) => {
-          if(typeof processValue.value !== 'number') return undefined;
-          const x = processValuesLog[xAxisProcessValueName][index].value;
-          return [x, processValue.value] as [number, number];
+      .map(plotLogEntryValues => plotLogEntryValues.map((processValueLogEntry, index) => {
+          if(typeof processValueLogEntry.value !== 'number') return undefined;
+          const x = plotLog.entries[xAxisProcessValueName].values.at(index)?.value;
+          if(typeof x !== 'number') throw Error('process value chosen for x axis with non-number values');
+          return [x, processValueLogEntry.value] satisfies [number, number];
         }).filter(UtilMethods.isNotNullOrUndefined),
       );
   }

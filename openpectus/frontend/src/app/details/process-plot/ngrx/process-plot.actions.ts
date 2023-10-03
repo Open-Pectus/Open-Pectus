@@ -1,5 +1,5 @@
 import { createAction, props } from '@ngrx/store';
-import { PlotConfiguration } from '../../../api';
+import { PlotConfiguration, PlotLog } from '../../../api';
 import { AxisLimits, XAxisOverrideDialogData, YAxesLimitsOverride, YAxisOverrideDialogData } from '../process-plot.types';
 
 const source = '[Process Plot] ';
@@ -28,4 +28,5 @@ export class ProcessPlotActions {
   static xAxisClicked = createAction(source + 'X Axis Clicked', props<{ data: XAxisOverrideDialogData }>());
   static xOverrideDialogClosed = createAction(source + 'X Axis Override Dialog Closed');
   static xOverrideDialogSaveClicked = createAction(source + 'X Axis Override Dialog Save Clicked', props<{ processValueName: string }>());
+  static plotLogFetched = createAction(source + 'Plot Log Fetched', props<{ plotLog: PlotLog }>());
 }
