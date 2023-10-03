@@ -7,6 +7,7 @@ import { selectRouteParam } from '../../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../../details-routing-url-parts';
 import { RunLogActions } from './run-log.actions';
 
+// noinspection JSUnusedGlobalSymbols
 @Injectable()
 export class RunLogEffects {
   fetchRunLogWhenComponentInitialized = createEffect(() => this.actions.pipe(
@@ -20,7 +21,7 @@ export class RunLogEffects {
     }),
   ));
 
-  continouslyPollRunLog = createEffect(() => this.actions.pipe(
+  continuouslyPollRunLog = createEffect(() => this.actions.pipe(
     ofType(RunLogActions.runLogFetched),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     debounceTime(1000),

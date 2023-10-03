@@ -116,9 +116,12 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   private async constructEditor() {
     const uri = Uri.parse('/tmp/model.json');
-    const modelRef = await createModelReference(uri, await firstValueFrom(this.methodContent));
+    const methodContent = await firstValueFrom(this.methodContent);
+    const modelRef = await createModelReference(uri, methodContent);
+    // noinspection JSUnresolvedReference
     modelRef.object.setLanguageId(this.languageId);
 
+    // noinspection JSUnresolvedReference
     const editor = createConfiguredEditor(this.editorElement.nativeElement, {
       model: modelRef.object.textEditorModel,
       fontSize: 18,
@@ -167,8 +170,6 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       filter(() => !this.storeModelChangedFromHere),
       takeUntil(this.componentDestroyed),
     ).subscribe(methodLines => {
-      console.log('Applying content edits from backed');
-
       // Apply edits
       const methodContent = methodLines.map(line => line.content).join('\n');
       const preEditSelection = editor.getSelection();
@@ -271,7 +272,6 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       concatLatestFrom(() => this.lineIds),
       takeUntil(this.componentDestroyed),
     ).subscribe(([executedLineIds, lineIds]) => {
-      console.log('decorating executed lines', executedLineIds, lineIds);
       const executedLinesDecorations = executedLineIds.map<MonacoEditor.IModelDeltaDecoration>(executedLineId => {
         const lineNumber = lineIds.findIndex(lineId => lineId === executedLineId) + 1;
         if(lineNumber === undefined) throw Error(`could not find line id decoration with id ${executedLineId}`);
@@ -297,7 +297,6 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       concatLatestFrom(() => this.lineIds),
       takeUntil(this.componentDestroyed),
     ).subscribe(([injectedLineIds, lineIds]) => {
-      console.log('decorating injected lines', injectedLineIds, lineIds);
       const injectedLinesDecorations = injectedLineIds.map<MonacoEditor.IModelDeltaDecoration>(injectedLineId => {
         const lineNumber = lineIds.findIndex(lineId => lineId === injectedLineId) + 1;
         return {

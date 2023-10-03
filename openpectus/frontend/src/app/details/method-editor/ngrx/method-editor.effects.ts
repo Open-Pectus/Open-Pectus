@@ -8,6 +8,7 @@ import { DetailsRoutingUrlParts } from '../../details-routing-url-parts';
 import { MethodEditorActions } from './method-editor.actions';
 import { MethodEditorSelectors } from './method-editor.selectors';
 
+// noinspection JSUnusedGlobalSymbols
 @Injectable()
 export class MethodEditorEffects {
   saveMethodEditorModel = createEffect(() => this.actions.pipe(
