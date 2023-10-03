@@ -12,7 +12,7 @@ import { MethodEditorSelectors } from './method-editor.selectors';
 @Injectable()
 export class MethodEditorEffects {
   saveMethodEditorModel = createEffect(() => this.actions.pipe(
-    ofType(MethodEditorActions.modelSaveRequested),
+    ofType(MethodEditorActions.saveButtonClicked, MethodEditorActions.saveKeyboardShortcutPressed),
     concatLatestFrom(() => [
       this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName)),
       this.store.select(MethodEditorSelectors.method),
