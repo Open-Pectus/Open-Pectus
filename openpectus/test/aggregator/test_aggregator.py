@@ -5,16 +5,13 @@ from fastapi_websocket_rpc.rpc_channel import RpcChannel, RpcMethodsBase
 
 class AggregatorTest(unittest.IsolatedAsyncioTestCase):
 
-    # async def createAggregatorUnregistered(self, channel_id: int) -> Aggregator:
-    #     aggregator = Aggregator()
-    #     await aggregator.on_connect(RpcChannel(RpcMethodsBase(), None, channel_id))
-    #     return aggregator
-
     async def connectAggregator(self, aggregator: Aggregator, channel_id: int):
         await aggregator.on_connect(RpcChannel(RpcMethodsBase(), None, channel_id))
 
     async def disconnectAggregator(self, aggregator: Aggregator, channel_id: int):
         await aggregator.on_disconnect(aggregator.get_channel(channel_id).channel)
+
+    # TODO: can we test how many engines the aggregator would serve to frontend in the difference cases?
 
     async def test_register_engine_same_shannel(self):
         channel_id = 'test-channel';
