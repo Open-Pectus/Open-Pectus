@@ -9,6 +9,7 @@ import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
 import { DetailsActions } from './details.actions';
 import { DetailsSelectors } from './details.selectors';
 
+// noinspection JSUnusedGlobalSymbols
 @Injectable()
 export class DetailsEffects {
   fetchProcessValuesWhenPageInitialized = createEffect(() => this.actions.pipe(
