@@ -1,7 +1,7 @@
 import { Store } from '@ngrx/store';
 import { bisector, pointer, ScaleLinear, select } from 'd3';
 import { firstValueFrom, identity } from 'rxjs';
-import { PlotConfiguration, PlotLogEntryValue, ProcessValue } from '../../api';
+import { PlotConfiguration, PlotLogEntry, PlotLogEntryValue } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 import { UtilMethods } from '../../shared/util-methods';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
@@ -86,8 +86,8 @@ export class ProcessPlotTooltip {
     return bisector(identity).center(xAxisValues, xValue);
   }
 
-  private callout(tooltipG: D3Selection<SVGGElement>, processValues?: ProcessValue[], plotLogEntryValues?: PlotLogEntryValue[]) {
-    if(plotLogEntryValues === undefined || processValues === undefined) {
+  private callout(tooltipG: D3Selection<SVGGElement>, plotLogEntries?: PlotLogEntry[], bisectedValues?: PlotLogEntryValue[]) {
+    if(plotLogEntries === undefined || bisectedValues === undefined) {
       tooltipG.style('display', 'none');
       return;
     }
@@ -97,7 +97,7 @@ export class ProcessPlotTooltip {
       .attr('transform', `translate(${[ProcessPlotTooltip.margin.x, ProcessPlotTooltip.margin.y + 2]})`)
       .call(txt => txt
         .selectAll('tspan')
-        .data(processValues)
+        .data(plotLogEntries)
         .join('tspan')
         .attr('x', 0)
         .attr('y', (_, i) => `${i * ProcessPlotFontSizes.tooltip}pt`)
@@ -106,8 +106,8 @@ export class ProcessPlotTooltip {
             return axis.process_value_names.includes(d.name);
           })?.color;
         }).find<string>((value): value is string => typeof value === 'string') ?? 'black')
-        .text((processValue, index) => {
-          return `${processValue.name}: ${this.processValuePipe.transform({...processValue, value: plotLogEntryValues[index].value})}`;
+        .text((plotLogEntry, index) => {
+          return `${plotLogEntry.name}: ${this.processValuePipe.transform({...plotLogEntry, value: bisectedValues[index].value})}`;
         }),
       );
 
