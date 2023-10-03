@@ -45,7 +45,11 @@ import { TopBarComponent } from './top-bar.component';
     StoreDevtoolsModule.instrument({
       maxAge: 50,
       logOnly: !isDevMode(),
-      actionsBlocklist: ['@ngrx'],
+      actionsBlocklist: [
+        '@ngrx',
+        // 'Process Values Fetched',
+        // 'Run Log Fetched',
+      ],
     }),
     AuthConfigModule,
     PushPipe,

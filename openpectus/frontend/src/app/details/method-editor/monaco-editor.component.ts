@@ -43,6 +43,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   private lineIds = this.store.select(MethodEditorSelectors.lineIds);
   private methodLines = this.store.select(MethodEditorSelectors.methodLines);
   private storeModelChangedFromHere = false;
+  private editorModelChangedFromStore = false;
 
   constructor(private store: Store) {}
 
@@ -138,6 +139,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   private setupOnEditorChanged(editor: MonacoEditor.IStandaloneCodeEditor) {
     editor.onDidChangeModelContent(() => {
+      if(this.editorModelChangedFromStore) return;
       setTimeout(() => { // setTimeout to allow for line id decorations to be placed before this is executed
         const model = editor.getModel();
         if(model === null) return;
@@ -173,9 +175,11 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       // Apply edits
       const methodContent = methodLines.map(line => line.content).join('\n');
       const preEditSelection = editor.getSelection();
-      editor.getModel()?.applyEdits([
-        {range: new Range(0, 0, Number.MAX_VALUE, Number.MAX_VALUE), text: methodContent},
-      ]);
+
+      this.editorModelChangedFromStore = true;
+      editor.getModel()?.applyEdits([{range: new Range(0, 0, Number.MAX_VALUE, Number.MAX_VALUE), text: methodContent}]);
+      this.editorModelChangedFromStore = false;
+
       if(preEditSelection !== null) editor.setSelection(preEditSelection);
 
       // Set line id decorations

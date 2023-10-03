@@ -8,7 +8,8 @@ export class MethodEditorActions {
   static methodEditorComponentInitialized = createAction(source + 'Method Editor Component Initialized');
   static modelSaved = createAction(source + 'Model Saved');
   static linesChanged = createAction(source + 'Lines Changed', props<{ lines: MethodLine[] }>());
-  static modelSaveRequested = createAction(source + 'Model Save Requested');
+  static saveButtonClicked = createAction(source + 'Save Button Clicked');
+  static saveKeyboardShortcutPressed = createAction(source + 'Save Keyboard Shortcut Pressed');
   static methodFetched = createAction(source + 'Method Fetched', props<{ method: Method }>());
   static methodPolled = createAction(source + 'Method Polled', props<{ method: Method }>());
   static monacoEditorComponentDestroyed = createAction(source + 'Monaco Editor Component Destroyed');
