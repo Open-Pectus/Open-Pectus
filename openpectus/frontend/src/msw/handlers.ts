@@ -24,12 +24,11 @@ import {
 
 // TODO: this should be exposed from backend or handled otherwise when using websocket
 export enum SystemState {
-  Running = 'Run',
+  Running = 'Running',
   Paused = 'Paused',
-  Holding = 'Hold',
-  PausedAndHolding = 'PausedAndHolding',
-  Stopped = 'Stopped',
-  Waiting = 'Wait'
+  Holding = 'Holding',
+  Waiting = 'Waiting',
+  Stopped = 'Stopped'
 }
 
 const lockedLines = [1, 3];
@@ -313,33 +312,28 @@ export const handlers = [
         switch(executableCommand.command) {
           case 'Start':
             controlState.is_running = true;
-            if(systemState === SystemState.Stopped) systemState = SystemState.Running;
             break;
           case 'Pause':
             controlState.is_paused = true;
-            if(systemState === SystemState.Running) systemState = SystemState.Paused;
-            if(systemState === SystemState.Holding) systemState = SystemState.PausedAndHolding;
             break;
           case 'Unpause':
             controlState.is_paused = false;
-            if(systemState === SystemState.Paused) systemState = SystemState.Running;
-            if(systemState === SystemState.PausedAndHolding) systemState = SystemState.Holding;
             break;
           case 'Hold':
             controlState.is_holding = true;
-            if(systemState === SystemState.Running) systemState = SystemState.Holding;
-            if(systemState === SystemState.Paused) systemState = SystemState.PausedAndHolding;
             break;
           case 'Unhold':
             controlState.is_holding = false;
-            if(systemState === SystemState.Holding) systemState = SystemState.Running;
-            if(systemState === SystemState.PausedAndHolding) systemState = SystemState.Paused;
             break;
           case 'Stop':
             controlState.is_running = false;
-            systemState = SystemState.Stopped;
             break;
         }
+
+        systemState = !controlState.is_running ? SystemState.Stopped :
+                      controlState.is_paused ? SystemState.Paused :
+                      controlState.is_holding ? SystemState.Holding :
+                      SystemState.Running;
       }
     });
     return res(
