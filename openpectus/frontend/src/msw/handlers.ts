@@ -5,6 +5,7 @@ import {
   BatchJob,
   CommandExample,
   CommandSource,
+  ExecutableCommand,
   InProgress,
   Method,
   NotOnline,
@@ -20,16 +21,18 @@ import {
   UserRole,
 } from '../app/api';
 
-const lockedLines = [1, 3];
-
 // TODO: this should be exposed from backend or handled otherwise when using websocket
 export enum SystemState {
   Running = 'Run',
   Paused = 'Paused',
   Holding = 'Hold',
+  PausedAndHolding = 'PausedAndHolding',
   Stopped = 'Stopped',
   Waiting = 'Wait'
 }
+
+const lockedLines = [1, 3];
+let systemState = SystemState.Running;
 
 const processUnits: ProcessUnit[] = [
   {
@@ -270,7 +273,7 @@ export const handlers = [
         {
           value_type: ProcessValueType.STRING,
           name: 'System State',
-          value: SystemState.Running,
+          value: systemState,
         },
       ]),
     );
@@ -298,7 +301,35 @@ export const handlers = [
     );
   }),
 
-  rest.post('/api/process_unit/:unitId/execute_command', (_, res, context) => {
+  rest.post('/api/process_unit/:unitId/execute_command', (req, res, context) => {
+    req.json<ExecutableCommand>().then(executableCommand => {
+      if(executableCommand.source === CommandSource.UNIT_BUTTON) {
+        switch(executableCommand.command) {
+          case 'Start':
+            if(systemState === SystemState.Stopped) systemState = SystemState.Running;
+            break;
+          case 'Pause':
+            if(systemState === SystemState.Running) systemState = SystemState.Paused;
+            if(systemState === SystemState.Holding) systemState = SystemState.PausedAndHolding;
+            break;
+          case 'Unpause':
+            if(systemState === SystemState.Paused) systemState = SystemState.Running;
+            if(systemState === SystemState.PausedAndHolding) systemState = SystemState.Holding;
+            break;
+          case 'Hold':
+            if(systemState === SystemState.Running) systemState = SystemState.Holding;
+            if(systemState === SystemState.Paused) systemState = SystemState.PausedAndHolding;
+            break;
+          case 'Unhold':
+            if(systemState === SystemState.Holding) systemState = SystemState.Running;
+            if(systemState === SystemState.PausedAndHolding) systemState = SystemState.Paused;
+            break;
+          case 'Stop':
+            systemState = SystemState.Stopped;
+            break;
+        }
+      }
+    });
     return res(
       context.status(200),
     );
