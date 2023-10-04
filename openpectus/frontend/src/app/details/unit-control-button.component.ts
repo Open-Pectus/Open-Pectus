@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, HostBinding, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { CommandSource } from '../api';
 import { DetailsActions } from './ngrx/details.actions';
@@ -27,8 +27,6 @@ export class UnitControlButtonComponent {
   @Input() toggledColor = '#0f172a';
 
   constructor(private store: Store) {}
-
-  @HostBinding('style.color') get shadowColor() { return; }
 
   executeCommand() {
     const command = this.toggled ? this.unCommand : this.command;
