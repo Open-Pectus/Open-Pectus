@@ -9,7 +9,7 @@ export class DetailsActions {
   static processValuesFetched = createAction(source + 'Process Values Fetched', props<{ processValues: ProcessValue[] }>());
   static processValuesFailedToLoad = createAction(source + 'Process Values Failed to load');
   static processUnitCommandButtonClicked = createAction(source + 'Process Unit Command Button Clicked',
-    props<{ command: ExecutableCommand }>());
+    props<{ command: string }>());
   static processDiagramInitialized = createAction(source + 'Process Diagram Initialized');
   static processDiagramFetched = createAction(source + 'Process Diagram Fetched', props<{ processDiagram: ProcessDiagram }>());
   static commandsComponentInitialized = createAction(source + 'Commands Component Initialized');
