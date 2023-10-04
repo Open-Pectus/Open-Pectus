@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { CommandSource } from '../api';
 import { DetailsActions } from './ngrx/details.actions';
 
 @Component({
@@ -31,6 +30,6 @@ export class UnitControlButtonComponent {
   executeCommand() {
     const command = this.toggled ? this.unCommand : this.command;
     if(command === undefined) return;
-    this.store.dispatch(DetailsActions.processUnitCommandButtonClicked({command: {command, source: CommandSource.UNIT_BUTTON}}));
+    this.store.dispatch(DetailsActions.processUnitCommandButtonClicked({command}));
   }
 }

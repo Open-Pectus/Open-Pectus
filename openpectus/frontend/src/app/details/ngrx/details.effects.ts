@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { catchError, debounceTime, delayWhen, map, mergeMap, of, switchMap, takeUntil, timer } from 'rxjs';
-import { ProcessUnitService } from '../../api';
+import { CommandSource, ProcessUnitService } from '../../api';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
 import { DetailsActions } from './details.actions';
@@ -58,7 +58,7 @@ export class DetailsEffects {
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     mergeMap(([{command}, unitId]) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.executeCommand(unitId, {...command});
+      return this.processUnitService.executeCommand(unitId, {command, source: CommandSource.UNIT_BUTTON});
     }),
   ), {dispatch: false});
 
