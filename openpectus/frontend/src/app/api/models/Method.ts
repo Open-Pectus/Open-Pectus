@@ -7,6 +7,7 @@ import type { MethodLine } from './MethodLine';
 
 export type Method = {
     lines: Array<MethodLine>;
+    started_line_ids: Array<string>;
     executed_line_ids: Array<string>;
     injected_line_ids: Array<string>;
 };

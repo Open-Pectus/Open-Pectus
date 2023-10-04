@@ -252,12 +252,13 @@ class MethodLine(BaseModel):
 
 class Method(BaseModel):
     lines: List[MethodLine]
+    started_line_ids: List[str]
     executed_line_ids: List[str]
     injected_line_ids: List[str]
 
 @router.get('/process_unit/{unit_id}/method')
 def get_method(unit_id: str) -> Method:
-    return Method(lines=[], executed_line_ids=[], injected_line_ids=[])
+    return Method(lines=[], started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
 
 @router.post('/process_unit/{unit_id}/method')
 def save_method(unit_id: str, method: Method) -> None:

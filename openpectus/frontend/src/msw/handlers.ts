@@ -31,7 +31,8 @@ export enum SystemState {
   Stopped = 'Stopped'
 }
 
-const lockedLines = [1, 3];
+const startedLines = [2];
+const executedLines = [1, 4];
 let controlState: ControlState = {
   is_running: true,
   is_holding: false,
@@ -489,11 +490,12 @@ export const handlers = [
           {id: 'f', content: ' "yet another": "line"'},
           {id: 'g', content: '}'},
         ],
-        executed_line_ids: lockedLines.map(no => (no + 9).toString(36)),
+        started_line_ids: startedLines.map(no => (no + 9).toString(36)),
+        executed_line_ids: executedLines.map(no => (no + 9).toString(36)),
         injected_line_ids: ['c'],
       }),
     );
-    lockedLines.push((lockedLines.at(-1) ?? 0) + 1);
+    executedLines.push((executedLines.at(-1) ?? 0) + 1);
     return result;
   }),
 
