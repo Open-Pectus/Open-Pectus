@@ -4,7 +4,7 @@ import { Store } from '@ngrx/store';
 import { buildWorkerDefinition } from 'monaco-editor-workers';
 import { editor, editor as MonacoEditor, KeyCode, languages, Range, Uri } from 'monaco-editor/esm/vs/editor/editor.api.js'; // importing as 'monaco-editor' causes issues: https://github.com/CodinGame/monaco-vscode-api/issues/162
 import { initServices, MonacoLanguageClient } from 'monaco-languageclient';
-import { filter, firstValueFrom, Observable, Subject, take, takeUntil } from 'rxjs';
+import { combineLatest, filter, firstValueFrom, Observable, Subject, take, takeUntil } from 'rxjs';
 import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient/lib/common/client';
 import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
 import 'vscode/default-extensions/json';
@@ -18,6 +18,7 @@ import TrackedRangeStickiness = editor.TrackedRangeStickiness;
 
 buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.origin, false);
 
+const startedLineClassName = 'started-line';
 const executedLineClassName = 'executed-line';
 const injectedLineClassName = 'injected-line';
 const lineIdClassNamePrefix = 'line-id-';
@@ -40,6 +41,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   private monacoServicesInitialized = this.store.select(MethodEditorSelectors.monacoServicesInitialized);
   private executedLineIds = this.store.select(MethodEditorSelectors.executedLineIds);
   private injectedLineIds = this.store.select(MethodEditorSelectors.injectedLineIds);
+  private startedLineIds = this.store.select(MethodEditorSelectors.startedLineIds);
   private lineIds = this.store.select(MethodEditorSelectors.lineIds);
   private methodLines = this.store.select(MethodEditorSelectors.methodLines);
   private storeModelChangedFromHere = false;
@@ -110,7 +112,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     this.setupOnEditorChanged(editor);
     this.setupOnStoreModelChanged(editor);
     this.setupInjectedLines(editor);
-    this.setupExecutedLines(editor);
+    this.setupStartedAndExecutedLines(editor);
 
     return editor;
   }
@@ -227,22 +229,22 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     };
   }
 
-  private setupExecutedLines(editor: MonacoEditor.IStandaloneCodeEditor) {
-    const executedLinesDecorationCollection = this.setupDecoratingExecutedLines(editor);
-    this.setupLockingExecutedLines(editor, executedLinesDecorationCollection);
+  private setupStartedAndExecutedLines(editor: MonacoEditor.IStandaloneCodeEditor) {
+    const startedAndExecutedLinesDecorationCollection = this.setupDecoratingStartedAndExecutedLines(editor);
+    this.setupLockingStartedAndExecutedLines(editor, startedAndExecutedLinesDecorationCollection);
   }
 
-  private setupLockingExecutedLines(editor: MonacoEditor.IStandaloneCodeEditor,
-                                    executedLineDecorations: MonacoEditor.IEditorDecorationsCollection) {
+  private setupLockingStartedAndExecutedLines(editor: MonacoEditor.IStandaloneCodeEditor,
+                                              startedAndExecutedLineDecorations: MonacoEditor.IEditorDecorationsCollection) {
     const lockEditorIfSelectionIntersectsExecutedLines = () => {
       const selectionInLockedRange = editor.getSelections()?.some(selection => {
-        return executedLineDecorations.getRanges()
+        return startedAndExecutedLineDecorations.getRanges()
           .flatMap(range => UtilMethods.getNumberRange(range.startLineNumber, range.endLineNumber))
           .some(lockedLineNumber => {
             return selection.intersectRanges(new Range(lockedLineNumber, 0, lockedLineNumber + 1, 0));
           });
       });
-      editor.updateOptions({readOnly: selectionInLockedRange, readOnlyMessage: {value: 'Cannot edit lines already executed.'}});
+      editor.updateOptions({readOnly: selectionInLockedRange, readOnlyMessage: {value: 'Cannot edit lines already started or executed.'}});
     };
     editor.onDidChangeCursorSelection(lockEditorIfSelectionIntersectsExecutedLines);
     this.executedLineIds.pipe(takeUntil(this.componentDestroyed)).subscribe(lockEditorIfSelectionIntersectsExecutedLines);
@@ -253,7 +255,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       const isDelete = event.keyCode === KeyCode.Delete;
       if(!isBackspace && !isDelete) return;
       const selectionInLockedRange = editor.getSelections()?.some(selection => {
-        return executedLineDecorations.getRanges()
+        return startedAndExecutedLineDecorations.getRanges()
           .flatMap(range => UtilMethods.getNumberRange(range.startLineNumber, range.endLineNumber))
           .some(lockedLineNumber => {
             const previousLineLength = editor?.getModel()?.getLineLength(Math.max(1, lockedLineNumber - 1)) ?? 0;
@@ -270,29 +272,36 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  private setupDecoratingExecutedLines(editor: MonacoEditor.IStandaloneCodeEditor) {
-    const executedLinesDecorationsCollection = editor.createDecorationsCollection();
-    this.executedLineIds.pipe(
+  private setupDecoratingStartedAndExecutedLines(editor: MonacoEditor.IStandaloneCodeEditor) {
+    const startedAndExecutedLinesDecorationsCollection = editor.createDecorationsCollection();
+    const createDecoration = (lineIds: string[], lineClassName: string, hoverMessage: string) => (executedLineId: string) => {
+      const lineNumber = lineIds.findIndex(lineId => lineId === executedLineId) + 1;
+      if(lineNumber === undefined) throw Error(`could not find line id decoration with id ${executedLineId}`);
+      return {
+        range: new Range(lineNumber, 0, lineNumber, 0),
+        options: {
+          isWholeLine: true,
+          className: lineClassName,
+          hoverMessage: {value: hoverMessage},
+          shouldFillLineOnLineBreak: false,
+          stickiness: TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+        },
+      };
+    };
+
+    combineLatest([this.startedLineIds, this.executedLineIds]).pipe(
       concatLatestFrom(() => this.lineIds),
       takeUntil(this.componentDestroyed),
-    ).subscribe(([executedLineIds, lineIds]) => {
-      const executedLinesDecorations = executedLineIds.map<MonacoEditor.IModelDeltaDecoration>(executedLineId => {
-        const lineNumber = lineIds.findIndex(lineId => lineId === executedLineId) + 1;
-        if(lineNumber === undefined) throw Error(`could not find line id decoration with id ${executedLineId}`);
-        return {
-          range: new Range(lineNumber, 0, lineNumber, 0),
-          options: {
-            isWholeLine: true,
-            className: executedLineClassName,
-            hoverMessage: {value: 'This line has been executed and is no longer editable.'},
-            shouldFillLineOnLineBreak: false,
-            stickiness: TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
-          },
-        };
-      });
-      executedLinesDecorationsCollection.set(executedLinesDecorations);
+    ).subscribe(([[startedLineIds, executedLineIds], lineIds]) => {
+      const executedLinesDecorations = executedLineIds.map<MonacoEditor.IModelDeltaDecoration>(
+        createDecoration(lineIds, executedLineClassName, 'This line has been executed and is no longer editable.'),
+      );
+      const startedLinesDecorations = startedLineIds.map<MonacoEditor.IModelDeltaDecoration>(
+        createDecoration(lineIds, startedLineClassName, 'This line has been started and is no longer editable.'),
+      );
+      startedAndExecutedLinesDecorationsCollection.set([...executedLinesDecorations, ...startedLinesDecorations]);
     });
-    return executedLinesDecorationsCollection;
+    return startedAndExecutedLinesDecorationsCollection;
   }
 
   private decorateInjectedLines(editor: MonacoEditor.IStandaloneCodeEditor) {
