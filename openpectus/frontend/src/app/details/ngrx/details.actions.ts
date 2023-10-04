@@ -1,22 +1,20 @@
-import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import { CommandExample, ExecutableCommand, ProcessDiagram, ProcessUnit, ProcessValue } from '../../api';
+import { createAction, props } from '@ngrx/store';
+import { CommandExample, ControlState, ExecutableCommand, ProcessDiagram, ProcessUnit, ProcessValue } from '../../api';
 
-export const DetailsActions = createActionGroup({
-  source: 'Details',
-  events: {
-    'Unit Details Initialized': emptyProps(),
-    'Unit Details Destroyed': emptyProps(),
-    'Process Values Fetched': props<{ processValues: ProcessValue[] }>(),
-    'Process Values Failed to load': emptyProps(),
+const source = '[Details] ';
 
-    'Process Unit Loaded': props<{ processUnit: ProcessUnit }>(),
-    'Process Unit Command Button Clicked': props<{ command: ExecutableCommand }>(),
-
-    'Process Diagram Initialized': emptyProps(),
-    'Process Diagram Fetched': props<{ processDiagram: ProcessDiagram }>(),
-
-    'Commands Component Initialized': emptyProps(),
-    'Command Examples Fetched': props<{ commandExamples: CommandExample[] }>(),
-    'Commands Component Execute Clicked': props<{ command: ExecutableCommand }>(),
-  },
-});
+export class DetailsActions {
+  static unitDetailsInitialized = createAction(source + 'Unit Details Initialized');
+  static unitDetailsDestroyed = createAction(source + 'Unit Details Destroyed');
+  static processValuesFetched = createAction(source + 'Process Values Fetched', props<{ processValues: ProcessValue[] }>());
+  static processValuesFailedToLoad = createAction(source + 'Process Values Failed to load');
+  static processUnitLoaded = createAction(source + 'Process Unit Loaded', props<{ processUnit: ProcessUnit }>());
+  static processUnitCommandButtonClicked = createAction(source + 'Process Unit Command Button Clicked',
+    props<{ command: ExecutableCommand }>());
+  static processDiagramInitialized = createAction(source + 'Process Diagram Initialized');
+  static processDiagramFetched = createAction(source + 'Process Diagram Fetched', props<{ processDiagram: ProcessDiagram }>());
+  static commandsComponentInitialized = createAction(source + 'Commands Component Initialized');
+  static commandExamplesFetched = createAction(source + 'Command Examples Fetched', props<{ commandExamples: CommandExample[] }>());
+  static commandsComponentExecuteClicked = createAction(source + 'Commands Component Execute Clicked', props<{ command: ExecutableCommand }>());
+  static controlStateFetched = createAction(source + 'Control State Fetched', props<{ controlState: ControlState }>());
+}

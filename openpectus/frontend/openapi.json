@@ -475,6 +475,48 @@
         }
       }
     },
+    "/api/process_unit/{unit_id}/control_state": {
+      "get": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Get Control State",
+        "operationId": "get_control_state",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            },
+            "name": "unit_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ControlState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/batch_job/{id}": {
       "get": {
         "tags": [
@@ -690,6 +732,29 @@
         ],
         "title": "CommandSource",
         "description": "An enumeration."
+      },
+      "ControlState": {
+        "properties": {
+          "is_running": {
+            "type": "boolean",
+            "title": "Is Running"
+          },
+          "is_holding": {
+            "type": "boolean",
+            "title": "Is Holding"
+          },
+          "is_paused": {
+            "type": "boolean",
+            "title": "Is Paused"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_running",
+          "is_holding",
+          "is_paused"
+        ],
+        "title": "ControlState"
       },
       "ExecutableCommand": {
         "properties": {

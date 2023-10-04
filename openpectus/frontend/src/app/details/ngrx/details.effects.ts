@@ -1,13 +1,12 @@
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { debounceTime, filter, map, mergeMap, of, switchMap } from 'rxjs';
+import { debounceTime, map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ProcessUnitService } from '../../api';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
 import { DetailsActions } from './details.actions';
-import { DetailsSelectors } from './details.selectors';
 
 // noinspection JSUnusedGlobalSymbols
 @Injectable()
@@ -37,6 +36,20 @@ export class DetailsEffects {
       return this.processUnitService.getProcessValues(unitId).pipe(
         map(processValues => DetailsActions.processValuesFetched({processValues})),
         catchError(() => of(DetailsActions.processValuesFailedToLoad())),
+      );
+    }),
+  ));
+
+  // TODO: this should be gotten via push through websocket instead of polling.
+  continuouslyPollControlState = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.unitDetailsInitialized, DetailsActions.controlStateFetched),
+    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
+    takeUntil(this.actions.pipe(ofType(DetailsActions.unitDetailsDestroyed))),
+    debounceTime(200), // delay() in MSW doesn't work in Firefox, so to avoid freezing the application in FF, we debounce
+    switchMap(([_, unitId]) => {
+      if(unitId === undefined) return of();
+      return this.processUnitService.getControlState(unitId).pipe(
+        map(controlState => DetailsActions.controlStateFetched({controlState})),
       );
     }),
   ));
