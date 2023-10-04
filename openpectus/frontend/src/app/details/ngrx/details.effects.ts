@@ -1,8 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { debounceTime, map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, debounceTime, delayWhen, map, mergeMap, of, switchMap, takeUntil, timer } from 'rxjs';
 import { ProcessUnitService } from '../../api';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
@@ -15,7 +14,7 @@ export class DetailsEffects {
     ofType(DetailsActions.unitDetailsInitialized),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([_, unitId]) => {
-      if(unitId === undefined) return of(DetailsActions.processValuesFailedToLoad());
+      if(unitId === undefined) return of();
       return this.processUnitService.getProcessValues(unitId).pipe(
         map(processValues => DetailsActions.processValuesFetched({processValues})),
         catchError(() => of(DetailsActions.processValuesFailedToLoad())),
@@ -23,16 +22,14 @@ export class DetailsEffects {
     }),
   ));
 
+  // TODO: When we introduce websocket pubsub, figure out if it makes sense to push process_value changes through it, or polling is fine.
   continuouslyPollProcessValues = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processValuesFetched, DetailsActions.processValuesFailedToLoad),
-    concatLatestFrom(() => [
-      this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName)),
-      this.store.select(DetailsSelectors.shouldPollProcessValues),
-    ]),
-    debounceTime(500), // delay() in MSW doesn't work in Firefox, so to avoid freezing the application in FF, we debounce
-    filter(([_, __, shouldPoll]) => shouldPoll),
-    switchMap(([_, unitId, __]) => {
-      if(unitId === undefined) return of(DetailsActions.processValuesFailedToLoad());
+    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
+    debounceTime(1000),
+    takeUntil(this.actions.pipe(ofType(DetailsActions.unitDetailsDestroyed))),
+    switchMap(([_, unitId]) => {
+      if(unitId === undefined) return of();
       return this.processUnitService.getProcessValues(unitId).pipe(
         map(processValues => DetailsActions.processValuesFetched({processValues})),
         catchError(() => of(DetailsActions.processValuesFailedToLoad())),
@@ -44,8 +41,10 @@ export class DetailsEffects {
   continuouslyPollControlState = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.unitDetailsInitialized, DetailsActions.controlStateFetched),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
+    delayWhen(([action, _]) => {
+      return action.type === DetailsActions.unitDetailsInitialized.type ? of(0) : timer(500);
+    }),
     takeUntil(this.actions.pipe(ofType(DetailsActions.unitDetailsDestroyed))),
-    debounceTime(200), // delay() in MSW doesn't work in Firefox, so to avoid freezing the application in FF, we debounce
     switchMap(([_, unitId]) => {
       if(unitId === undefined) return of();
       return this.processUnitService.getControlState(unitId).pipe(

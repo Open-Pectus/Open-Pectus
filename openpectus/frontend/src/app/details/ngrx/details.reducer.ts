@@ -6,14 +6,12 @@ import { DetailsActions } from './details.actions';
 export interface DetailsState {
   processValues: ProcessValue[];
   processDiagram?: ProcessDiagram;
-  shouldPollProcessValues: boolean;
   commandExamples: CommandExample[];
   controlState: ControlState;
 }
 
 const initialState: DetailsState = {
   processValues: [],
-  shouldPollProcessValues: false,
   commandExamples: [],
   controlState: {
     is_running: false,
@@ -23,12 +21,6 @@ const initialState: DetailsState = {
 };
 
 const reducer = createReducer(initialState,
-  on(DetailsActions.unitDetailsInitialized, state => produce(state, draft => {
-    draft.shouldPollProcessValues = true;
-  })),
-  on(DetailsActions.unitDetailsDestroyed, state => produce(state, draft => {
-    draft.shouldPollProcessValues = false;
-  })),
   on(DetailsActions.processValuesFetched, (state, {processValues}) => produce(state, draft => {
     draft.processValues = processValues;
   })),

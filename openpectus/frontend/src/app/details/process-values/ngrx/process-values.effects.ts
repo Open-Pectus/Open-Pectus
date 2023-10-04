@@ -7,6 +7,7 @@ import { selectRouteParam } from '../../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../../details-routing-url-parts';
 import { ProcessValuesActions } from './process-values.actions';
 
+// noinspection JSUnusedGlobalSymbols
 @Injectable()
 export class ProcessValuesEffects {
   executeProcessValueCommandWhenButtonClicked = createEffect(() => this.actions.pipe(

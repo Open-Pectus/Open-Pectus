@@ -21,6 +21,7 @@ export class RunLogEffects {
     }),
   ));
 
+  // TODO: this should happen via websocket, not polling
   continuouslyPollRunLog = createEffect(() => this.actions.pipe(
     ofType(RunLogActions.runLogFetched),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
