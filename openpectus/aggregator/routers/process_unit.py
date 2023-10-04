@@ -322,4 +322,4 @@ def get_plot_log(unit_id: str) -> PlotLog:
 
 @router.get('/process_unit/{unit_id}/control_state')
 def get_control_state(unit_id: str) -> ControlState:
-    return ControlState(false, false, false)
+    return ControlState(False, False, False)
