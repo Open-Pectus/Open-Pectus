@@ -7,6 +7,7 @@ import { HttpClient } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 
 import type { CommandExample } from '../models/CommandExample';
+import type { ControlState } from '../models/ControlState';
 import type { ExecutableCommand } from '../models/ExecutableCommand';
 import type { Method } from '../models/Method';
 import type { PlotConfiguration } from '../models/PlotConfiguration';
@@ -247,6 +248,27 @@ unitId: string,
         return __request(OpenAPI, this.http, {
             method: 'GET',
             url: '/api/process_unit/{unit_id}/plot_log',
+            path: {
+                'unit_id': unitId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
+    /**
+     * Get Control State
+     * @param unitId 
+     * @returns ControlState Successful Response
+     * @throws ApiError
+     */
+    public getControlState(
+unitId: string,
+): Observable<ControlState> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/process_unit/{unit_id}/control_state',
             path: {
                 'unit_id': unitId,
             },

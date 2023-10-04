@@ -37,6 +37,12 @@ class UserRole(StrEnum):
     ADMIN = auto()
 
 
+class ControlState(BaseModel):
+    is_running: bool
+    is_holding: bool
+    is_paused: bool
+
+
 class ProcessUnit(BaseModel):
     """Represents a process unit. """
     id: str
@@ -56,7 +62,8 @@ def create_pu(item: ChannelInfo) -> ProcessUnit:
         state=ProcessUnitState.Ready(state=ProcessUnitStateEnum.READY),
         location="Unknown location",
         runtime_msec=189309,
-        current_user_role=UserRole.ADMIN)
+        current_user_role=UserRole.ADMIN,
+    )
     return unit
 
 
@@ -146,13 +153,13 @@ class ProcessValue(BaseModel):
             value=ti.value,
             value_type=get_ProcessValueType_from_value(ti.value),
             value_unit=ti.value_unit,
-            commands=[])
+            commands=[]
+        )
         # commands=[ProcessValueCommand(name=c.name, command=c.command) for c in r.commands])
 
 
 @router.get("/process_unit/{unit_id}/process_values")
-def get_process_values(unit_id: str, response: Response, agg: Aggregator = Depends(agg_deps.get_aggregator)) \
-        -> List[ProcessValue]:
+def get_process_values(unit_id: str, response: Response, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[ProcessValue]:
     # parm last_seen
 
     response.headers["Cache-Control"] = "no-store"
@@ -312,3 +319,7 @@ class PlotLog(BaseModel):
 def get_plot_log(unit_id: str) -> PlotLog:
     return PlotLog(entries={})
 
+
+@router.get('/process_unit/{unit_id}/control_state')
+def get_control_state(unit_id: str) -> ControlState:
+    return ControlState(False, False, False)

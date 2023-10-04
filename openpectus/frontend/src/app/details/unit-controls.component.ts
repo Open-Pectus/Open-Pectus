@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { SystemState } from 'src/msw/handlers';
 import { DetailsSelectors } from './ngrx/details.selectors';
 
 
@@ -8,21 +7,25 @@ import { DetailsSelectors } from './ngrx/details.selectors';
   selector: 'app-unit-controls',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex gap-2.5" *ngrxLet="systemState as systemState">
-      <app-unit-control-button [command]="'start'" [iconName]="'play'"
-                               [disabled]="systemState === SystemState.Running"></app-unit-control-button>
-      <app-unit-control-button [command]="'pause'" [iconName]="'debug-pause'"
-                               [disabled]="systemState === SystemState.Paused || systemState === SystemState.Holding"></app-unit-control-button>
-      <app-unit-control-button [command]="'hold'" [iconName]="'debug-stop'"
-                               [disabled]="systemState === SystemState.Holding"></app-unit-control-button>
-      <app-unit-control-button [command]="'stop'" [iconName]="'chrome-close'"
-                               [disabled]="systemState === SystemState.Stopped"></app-unit-control-button>
+    <div class="flex gap-3" *ngrxLet="controlState as controlState">
+      <app-unit-control-button [command]="'Start'" [iconName]="'play'" [toggledColor]="startColor"
+                               [toggled]="controlState.is_running"></app-unit-control-button>
+      <app-unit-control-button [command]="'Pause'" [iconName]="'debug-pause'"
+                               [unCommand]="'Unpause'" [toggledColor]="pauseColor"
+                               [toggled]="controlState.is_paused"></app-unit-control-button>
+      <app-unit-control-button [command]="'Hold'" [iconName]="'debug-stop'"
+                               [unCommand]="'Unhold'" [toggledColor]="pauseColor"
+                               [toggled]="controlState.is_holding"></app-unit-control-button>
+      <app-unit-control-button [command]="'Stop'" [iconName]="'chrome-close'" [toggledColor]="stopColor"
+                               [toggled]="!controlState.is_running"></app-unit-control-button>
     </div>
   `,
 })
 export class UnitControlsComponent {
-  protected readonly SystemState = SystemState;
-  protected systemState = this.store.select(DetailsSelectors.systemState);
+  readonly startColor = '#047857';
+  readonly pauseColor = '#ca8a04';
+  readonly stopColor = '#b91c1c';
+  protected controlState = this.store.select(DetailsSelectors.controlState);
 
   constructor(private store: Store) {}
 }
