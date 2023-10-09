@@ -1,36 +1,36 @@
 Notes:
 
-# 1. Content
+# Content
 
-- [1. Content](#1-content)
-- [2. Setup](#2-setup)
-  - [2.1. Frontend setup](#21-frontend-setup)
-  - [2.2. Backend setup](#22-backend-setup)
-- [3. Running Open Pectus](#3-running-open-pectus)
-  - [3.1. Aggregator](#31-aggregator)
-  - [3.2. Engine](#32-engine)
-  - [3.3. Docker](#33-docker)
-- [4. Components](#4-components)
-  - [4.1. Pectus UI](#41-pectus-ui)
-  - [4.2. Aggregator](#42-aggregator)
-  - [4.3. Engine](#43-engine)
-- [5. Build validation](#5-build-validation)
-  - [5.1. Flake](#51-flake)
-  - [5.2. Type checking](#52-type-checking)
-    - [5.2.1. Mypy](#521-mypy)
-    - [5.2.2. Pyright](#522-pyright)
-    - [5.2.3. Comparison](#523-comparison)
-  - [5.3. Code generation from API spec](#53-code-generation-from-api-spec)
-- [6. Protocols](#6-protocols)
-  - [6.1. Frontend - Aggregator](#61-frontend---aggregator)
-  - [6.2. Engine - Aggregator](#62-engine---aggregator)
+- [Content](#content)
+- [Setup](#setup)
+  - [Frontend setup](#frontend-setup)
+  - [Backend setup](#backend-setup)
+- [Running Open Pectus](#running-open-pectus)
+  - [Aggregator](#aggregator)
+  - [Engine](#engine)
+  - [Docker](#docker)
+- [Components](#components)
+  - [Pectus UI](#pectus-ui)
+  - [Aggregator](#aggregator)
+  - [Engine](#engine)
+- [Build validation](#build-validation)
+  - [Flake](#flake)
+  - [Type checking](#type-checking)
+    - [Mypy](#mypy)
+    - [Pyright](#pyright)
+    - [Comparison](#comparison)
+  - [Code generation from API spec](#code-generation-from-api-spec)
+- [Protocols](#protocols)
+  - [Frontend - Aggregator](#frontend---aggregator)
+  - [Engine - Aggregator](#engine---aggregator)
 
 
-# 2. Setup
+# Setup
 This chapter describes how to set up a development environment to run and develop Open Pectus.
 
 
-## 2.1. Frontend setup
+## Frontend setup
 Prerequisites: Node 18 (LTS) must be installed.
 
 ```shell
@@ -39,7 +39,7 @@ npm ci
 npm run build
 ```
 
-## 2.2. Backend setup
+## Backend setup
 Prerequisites:
 - A conda installation. [Miniconda](https://docs.conda.io/en/latest/miniconda.html) is recommended.  
   _Note: It is possible to install open pectus without conda but this will affect the global python environment on the developer pc
@@ -80,15 +80,15 @@ python -m build -o openpectus/dist
 
 
 
-# 3. Running Open Pectus
+# Running Open Pectus
 
-## 3.1. Aggregator
+## Aggregator
 
 To start a local aggregator service:
 
 Prerequisites:
-- [2.1. Frontend setup](#21-frontend-setup)
-- [2.2. Backend setup](#22-backend-setup)
+- [Frontend setup](#frontend-setup)
+- [Backend setup](#backend-setup)
 
 Run Aggregator to serve frontend from its default build directory. This also starts the
 websocket protocol allowing Engines to connect.
@@ -104,7 +104,7 @@ When Aggregator is running, the aggregator services are available, including:
 - OpenAPI spec:   http://localhost:9800/openapi.json
 
 
-## 3.2. Engine
+## Engine
 Run Engine to connect a local engine to the Aggregator above:
 
 ```shell
@@ -114,11 +114,11 @@ pectus-engine --aggregator_host localhost --aggregator_port 9800
 
 
 
-## 3.3. Docker
+## Docker
 
 Prerequisites:
-- [2.1. Frontend setup](#21-frontend-setup)
-- [2.2. Backend setup](#22-backend-setup)
+- [Frontend setup](#frontend-setup)
+- [Backend setup](#backend-setup)
 
 To start aggregator services in docker, run the following command.
 Note: This depends on the frontend and backend builds being up to date.
@@ -143,14 +143,14 @@ pectus-engine --aggregator_host localhost --aggregator_port 8300
 ```
 
 
-# 4. Components
+# Components
 
-## 4.1. Pectus UI
+## Pectus UI
 
 This is a web application that allows users to view and interact with the Pectus system,
 including runnings engines and process unit hardware attached to them.
 
-## 4.2. Aggregator
+## Aggregator
 
 There is one Aggregator service in a pectus system. It has the following responsibilities:
 
@@ -161,7 +161,7 @@ There is one Aggregator service in a pectus system. It has the following respons
 - Expose a Language Server Protocol web-socket API for the Pectus UI code editor
 - Parse and analyze pectus code (requires no running engine, only knowledge of the UOD)
 
-## 4.3. Engine
+## Engine
 
 An Engine service instance is required for each piece of process unit hardware. It has
 the following responsibilities:
@@ -171,9 +171,9 @@ the following responsibilities:
 - Expose hardware interaction as Commands
 - Parse(?), analyze(?) and run pectus code
 
-# 5. Build validation
+# Build validation
 
-## 5.1. Flake
+## Flake
 Flake is a python linter.
 
 It is run by the build system to help ensure a decent code base. It outputs warnings and errors. The build will
@@ -186,10 +186,10 @@ cd Open-Pectus/openpectus
 flake8
 ```
 
-## 5.2. Type checking
+## Type checking
 
 
-### 5.2.1. Mypy
+### Mypy
 Mypy is a static type checker.
 
 The Backend code base is annotated with type hints, such that Mypy can check the types. The build does not yet include this step
@@ -203,7 +203,7 @@ cd Open-Pectus
 mypy
 ```
 
-### 5.2.2. Pyright
+### Pyright
 Pyright is another static type checker.
 
 Work in underway to assess it. Once assessed, we will use either Mypy or Pyright, not both.
@@ -221,7 +221,7 @@ It is updated very frequently. To update it, run
 pip install -U pyright
 ```
 
-### 5.2.3. Comparison
+### Comparison
 
 **MyPy**
 * Pros
@@ -241,14 +241,14 @@ pip install -U pyright
   * Seems a little heavy on deps - node installs stuff on first start
   * Remains to be seen if it catches the same errors that Mypy does
 
-<!-- ## 3.5. Diagram generation
+<!-- ## Diagram generation
 
 To get started with diagram generation, run the following command from the `openpectus` directory:
 `pyreverse -k .`
 Pyreverse is installed as part of pylint (which is somehow already installed).
  -->
 
-## 5.3. Code generation from API spec
+## Code generation from API spec
 
 The frontend generates and uses typescript skeleton interfaces from the Aggregator API spec.
 
@@ -263,11 +263,11 @@ To ensure that the implemented backend, the API specification file and the types
 To ensure that step 2 is not forgotten, the aggregator test suite contains a test that checks that generates a new api spec file and checks that it matches the spec file last generated by the script. If it doesn't, the test fails and with it the Backend build.
 
 
-# 6. Protocols
+# Protocols
 
 This chapter documents the Open Pectus Rest and Websocket protocols.
 
-## 6.1. Frontend - Aggregator
+## Frontend - Aggregator
 ```mermaid
 sequenceDiagram
     participant F as Frontend    
@@ -322,7 +322,7 @@ sequenceDiagram
     end
 ```
 
-## 6.2. Engine - Aggregator
+## Engine - Aggregator
 
 ```mermaid
 sequenceDiagram
