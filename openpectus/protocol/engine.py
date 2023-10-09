@@ -83,8 +83,8 @@ class Client:
         assert isinstance(ps_client._methods, RpcClientHandler)
         ps_client._methods.set_client(self)
 
-    def set_message_handler(self, message_type, handler: ClientMessageHandler):
-        self.message_handlers[message_type] = handler
+    def set_message_handler(self, message_type: type, handler: ClientMessageHandler):
+        self.message_handlers[message_type.__name__] = handler
 
     async def disconnect_wait_async(self):
         if self.ps_client is not None:
@@ -117,6 +117,7 @@ class Client:
 
         await self.ps_client.wait_until_ready()
         await asyncio.wait_for(self.connected_event.wait(), 5)
+        logger.info("Connected to aggregator")
 
     async def handle_message(self, channel_id: str, msg: MessageBase) -> MessageBase:
         msg_type = type(msg).__name__

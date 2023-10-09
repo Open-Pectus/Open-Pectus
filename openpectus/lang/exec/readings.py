@@ -18,7 +18,7 @@ class Reading():
         if label == "":
             raise ValueError("Name must not be non-empty")
         self.label: str = label
-        self.tag_name = (tag_name or label).upper()
+        self.tag_name = tag_name or label
         self.commands = commands  # might need both name and argument
 
         self.tag: Tag | None = None
@@ -56,13 +56,13 @@ class ReadingCollection(Iterable[Reading]):
         self.pvs: Dict[str, Reading] = {}
 
     def add(self, pv: Reading):
-        self.pvs[pv.label.upper()] = pv
+        self.pvs[pv.label] = pv
 
     def __iter__(self):
         yield from self.pvs.values()
 
     def __getitem__(self, tag_name: str) -> Reading:
-        return self.pvs[tag_name.upper()]
+        return self.pvs[tag_name]
 
     def __len__(self) -> int:
         return len(self.pvs)

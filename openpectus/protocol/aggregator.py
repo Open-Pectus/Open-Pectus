@@ -12,6 +12,7 @@ import logging
 
 from openpectus.protocol.exceptions import ProtocolException
 from openpectus.protocol.messages import (
+    RunLogMsg,
     UodInfoMsg,
     deserialize_msg,
     deserialize_msg_from_json,
@@ -26,9 +27,7 @@ from openpectus.protocol.messages import (
 )
 
 
-logging.basicConfig()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 ServerMessageHandler = Callable[[str, MessageBase], Awaitable[MessageBase]]
@@ -136,6 +135,10 @@ class ClientData(BaseModel):
     client_id: str
     readings: List[ReadingDef]
     tags_info: TagsInfo
+    runlog: RunLogMsg
+
+
+ClientData.update_forward_refs()
 
 
 class Aggregator:
@@ -238,10 +241,14 @@ class Aggregator:
 
         # initialize client data
         if client_id not in self.client_data_map.keys():
-            self.client_data_map[client_id] = ClientData(client_id=client_id, readings=[], tags_info=TagsInfo(map={}))
+            self.client_data_map[client_id] = ClientData(
+                client_id=client_id,
+                readings=[],
+                tags_info=TagsInfo(map={}),
+                runlog=RunLogMsg(id="", lines=[]))
         return SuccessMessage()
 
-    async def handle_UodInfoMsg(self, channel_id: str, msg: UodInfoMsg) -> SuccessMessage | ErrorMessage:
+    def get_registered_client_data_or_error(self, channel_id: str) -> ClientData | ErrorMessage:
         ci = self.get_channel(channel_id)
         if ci is None:
             logger.error(f"Channel '{channel_id}' not found")
@@ -252,6 +259,12 @@ class Aggregator:
         client_data = self.client_data_map.get(ci.client_id)
         if client_data is None:
             return ErrorMessage(message="Client data not initialized")
+        return client_data
+
+    async def handle_UodInfoMsg(self, channel_id: str, msg: UodInfoMsg) -> SuccessMessage | ErrorMessage:
+        client_data = self.get_registered_client_data_or_error(channel_id)
+        if isinstance(client_data, ErrorMessage):
+            return client_data
 
         logger.debug(f"Got UodInfo from client: {str(msg)}")
         client_data.readings = []
@@ -267,20 +280,21 @@ class Aggregator:
         return SuccessMessage()
 
     async def handle_TagsUpdatedMsg(self, channel_id, msg: TagsUpdatedMsg) -> SuccessMessage | ErrorMessage:
-        ci = self.get_channel(channel_id)
-        if ci is None:
-            logger.error(f"Channel '{channel_id}' not found")
-            return ErrorMessage(message="Client unknown")
-        if ci.client_id is None or ci.status != ChannelStatusEnum.Registered:
-            logger.error(f"Channel '{channel_id}' has invalid status {ci.status} for this operation")
-            return ErrorMessage(message="Client not registered")
-        client_data = self.client_data_map.get(ci.client_id)
-        if client_data is None:
-            return ErrorMessage(message="Client data not initialized")
+        client_data = self.get_registered_client_data_or_error(channel_id)
+        if isinstance(client_data, ErrorMessage):
+            return client_data
 
         logger.debug(f"Got tags update from client: {str(msg)}")
         for ti in msg.tags:
             client_data.tags_info.upsert(ti.name, ti.value, ti.value_unit)
+        return SuccessMessage()
+
+    async def handle_RunLogMsg(self, channel_id, msg: RunLogMsg) -> SuccessMessage | ErrorMessage:
+        client_data = self.get_registered_client_data_or_error(channel_id)
+        if isinstance(client_data, ErrorMessage):
+            return client_data
+
+        client_data.runlog = msg
         return SuccessMessage()
 
     async def on_disconnect(self, channel: RpcChannel):  # registered as handler on RpcEndpoint

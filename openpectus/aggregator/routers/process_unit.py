@@ -4,13 +4,24 @@ from enum import StrEnum, auto
 from typing import Literal, List
 from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel
+import logging
 
 import openpectus.aggregator.deps as agg_deps
 from openpectus.protocol.aggregator import Aggregator, ChannelInfo, ReadingDef, TagInfo
-from openpectus.protocol.messages import InvokeCommandMsg
+from openpectus.protocol.messages import (
+    InjectCodeMsg,
+    InvokeCommandMsg,
+    RunLogLineMsg
+)
 
-
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])
+
+
+
+class ServerErrorResponse(BaseModel):
+    error: bool = True
+    message: str
 
 
 class ProcessUnitStateEnum(StrEnum):
@@ -161,8 +172,8 @@ def get_process_values(unit_id: str, response: Response, agg: Aggregator = Depen
 
     tags_info = client_data.tags_info.map
 
-    print("Readings", client_data.readings)
-    print("Tags", tags_info)
+    #print("Readings", client_data.readings)
+    #print("Tags", tags_info)
 
     pvs: List[ProcessValue] = []
     for r in client_data.readings:
@@ -179,22 +190,45 @@ class CommandSource(StrEnum):
 
 
 class ExecutableCommand(BaseModel):
-    command: str  # full command string, e.g. "start" or "foo: bar"
+    command: str  # full pcode command string, e.g. "Start" or "foo: bar" or multiple pcode lines
     source: CommandSource
     name: str | None
 
 
 @router.post("/process_unit/{unit_id}/execute_command")
 async def execute_command(unit_id: str, command: ExecutableCommand, agg: Aggregator = Depends(agg_deps.get_aggregator)):
-    print("command", str(command))
-    cmd_line = command.command
-    if ":" in cmd_line:
-        split = command.command.split(":", maxsplit=1)
-        cmd_name, cmd_args = split[0], split[1]  # TODO watch out for "" vs None as cmd_args
-    else:
-        cmd_name, cmd_args = cmd_line, None
+    #logger.info("execute_command", str(command))
+    if command is None or command.command is None or command.command.strip() == '':
+        logger.error("Cannot invoke empty command")
+        return ServerErrorResponse(message="Cannot invoke empty command")
 
-    msg = InvokeCommandMsg(name=cmd_name, arguments=cmd_args)
+    #print("command.command", command.command)
+
+    lines = command.command.splitlines(keepends=False)
+    line_count = len(lines)
+    if line_count == 0:
+        logger.error("Cannot invoke command with no lines")
+        return ServerErrorResponse(message="Cannot invoke command with no lines")
+    elif line_count > 1:
+        # TODO this should be a seperate end point
+        msg = InjectCodeMsg(pcode=command.command)
+    else:
+        code = lines[0]
+        # Make simple commands title cased, eg 'start' -> 'Start
+        # TODO remove once frontend is updated to title cased commands
+        code = code.title()
+        msg = InvokeCommandMsg(name=code)
+
+    # if ":" in cmd_line:
+    #     split = command.command.split(":", maxsplit=1)
+    #     cmd_name, cmd_args = split[0], split[1]  # TODO watch out for "" vs None as cmd_args
+    # else:
+    #     if " " not in cmd_line:  # TODO remove once frontend is updated to title cased commands
+    #         cmd_line = cmd_line.title()
+    #     cmd_name, cmd_args = cmd_line, None
+
+    # msg = InvokeCommandMsg(name=cmd_name, arguments=cmd_args)
+    logger.debug(f"Sending msg '{str(msg)}' to client '{unit_id}'")
     await agg.send_to_client(client_id=unit_id, msg=msg)
 
 
@@ -215,7 +249,11 @@ class CommandExample(BaseModel):
 @router.get('/process_unit/{unit_id}/command_examples')
 def get_command_examples(unit_id: str) -> List[CommandExample]:
     return [
-        CommandExample(name="Some Example", example="Some example text")
+        CommandExample(name="Some Example", example="Some example text"),
+        CommandExample(name="Watch Example", example="""
+Watch: Block Time > 0.2s
+    Mark: A
+Mark: X""")
     ]
 
 
@@ -225,8 +263,13 @@ class RunLogLine(BaseModel):
     start: datetime
     end: datetime | None
     progress: float | None  # between 0 and 1
-    start_values: List[ProcessValue]
-    end_values: List[ProcessValue]
+    start_values: List[ProcessValue]  # ProcessValue.commands will be None
+    end_values: List[ProcessValue]    # ProcessValue.commands will be None
+    # TODO state: hold state values such as Waiting, Started, Cancelled, Forced, Completed, Failed
+    # TODO start_values and end_values take up space. Consider ways to avoid loading the full runlog
+    # - a 'changes_since' parameter to avoid reloading data that is already known
+    # and/or
+    # - an additional endpoint to get details that can be loaded on demand (e.g. on hover)
 
 
 class RunLog(BaseModel):
@@ -234,8 +277,33 @@ class RunLog(BaseModel):
 
 
 @router.get('/process_unit/{unit_id}/run_log')
-def get_run_log(unit_id: str) -> RunLog:
-    return RunLog(lines=[])
+def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> RunLog:
+    client_data = agg.client_data_map.get(unit_id)
+    if client_data is None:
+        print("No client data - thus no runlog")
+        return RunLog(lines=[])
+
+    print("Runlog length:" + str(len(client_data.runlog.lines)))
+
+    def from_line_msg(msg: RunLogLineMsg) -> RunLogLine:
+        cmd = ExecutableCommand(
+                command="",
+                name=msg.command_name,
+                source=CommandSource("")
+        )
+        line = RunLogLine(
+            id=0,
+            command=cmd,
+            start=datetime.fromtimestamp(msg.start),
+            end=None,
+            progress=None,
+            start_values=[],
+            end_values=[]
+        )
+        return line
+
+    return RunLog(
+        lines=list(map(from_line_msg, client_data.runlog.lines)))
 
 
 @router.get('/process_unit/{unit_id}/method')

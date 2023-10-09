@@ -13,12 +13,12 @@ QuantityType = pint.Quantity | PlainQuantity[Any]
 
 # Represents tag API towards interpreter
 
-DEFAULT_TAG_BASE = "BASE"
-DEFAULT_TAG_RUN_COUNTER = "RUN COUNTER"
-DEFAULT_TAG_BLOCK_TIME = "BLOCK TIME"
-DEFAULT_TAG_PROCESS_TIME = "PROCESS TIME"
-DEFAULT_TAG_RUN_TIME = "RUN TIME"
-DEFAULT_TAG_CLOCK = "CLOCK"
+DEFAULT_TAG_BASE = "Base"
+DEFAULT_TAG_RUN_COUNTER = "Run Counter"
+DEFAULT_TAG_BLOCK_TIME = "Block Time"
+DEFAULT_TAG_PROCESS_TIME = "Process Time"
+DEFAULT_TAG_RUN_TIME = "Run Time"
+DEFAULT_TAG_CLOCK = "Clock"
 DEFAULT_TAG_SYSTEM_STATE = "System State"
 DEFAULT_TAG_METHOD_STATUS = "Method Status"
 
@@ -222,7 +222,7 @@ class Select(Tag):
 
 
 class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
-    """ Represents a case insensitive name/tag dictionary. """
+    """ Represents a  name/tag dictionary. """
 
     def __init__(self) -> None:
         super().__init__()
@@ -237,14 +237,14 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
 
     @property
     def names(self) -> List[str]:
-        """ Return the tag names in upper case. """
+        """ Return the tag names """
         return list(self.tags.keys())
 
     def __iter__(self):
         yield from self.tags.values()
 
     def __getitem__(self, tag_name: str) -> Tag:
-        return self.tags[tag_name.upper()]
+        return self.tags[tag_name]
 
     def __len__(self) -> int:
         return len(self.tags)
@@ -252,7 +252,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
     def get(self, tag_name: str) -> Tag:
         if tag_name is None or tag_name.strip() == '':
             raise ValueError("tag_name is None or empty")
-        if not tag_name.upper() in self.tags.keys():
+        if tag_name not in self.tags.keys():
             raise ValueError(f"Tag name {tag_name} not found")
         return self[tag_name]
 
@@ -265,7 +265,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
         if tag.name in self.tags.keys() and not exist_ok:
             raise ValueError(f"A tag named {tag.name} already exists")
 
-        self.tags[tag.name.upper()] = tag
+        self.tags[tag.name] = tag
         tag.add_listener(self)
 
     def with_tag(self, tag: Tag):
@@ -275,7 +275,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
     def has(self, tag_name: str) -> bool:
         if tag_name is None or tag_name.strip() == '':
             raise ValueError("tag_name is None or empty")
-        return tag_name.upper() in self.tags.keys()
+        return tag_name in self.tags.keys()
 
     def get_value_or_default(self, tag_name) -> TagValueType:
         if not self.has(tag_name):
