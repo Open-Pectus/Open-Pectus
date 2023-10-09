@@ -12,14 +12,16 @@ import { RunLogLineComponent } from './run-log-line.component';
     <app-collapsible-element [name]="'Run Log'" [heightResizable]="true" [contentHeight]="400" (collapseStateChanged)="collapsed = $event"
                              [codiconName]="'codicon-tasklist'">
       <app-run-log-filters buttons></app-run-log-filters>
-      <div content *ngIf="!collapsed" class="h-full overflow-y-auto">
-        <app-run-log-header [gridFormat]="gridFormat" (expandAll)="expandAll()" (collapseAll)="collapseAll()"></app-run-log-header>
-        <app-run-log-line *ngFor="let runLogLine of (runLog | ngrxPush)?.lines; let index = index; trackBy: trackBy" [runLogLine]="runLogLine"
-                          [rowIndex]="index"
-                          [gridFormat]="gridFormat"></app-run-log-line>
-        <p class="text-center p-2 font-semibold" *ngIf="(runLog | ngrxPush)?.lines?.length === 0">
-          No Run Log available or all have been filtered.
-        </p>
+      <div content *ngIf="!collapsed" class="h-full overflow-auto">
+        <div class="min-w-fit">
+          <app-run-log-header [gridFormat]="gridFormat" (expandAll)="expandAll()" (collapseAll)="collapseAll()"></app-run-log-header>
+          <app-run-log-line *ngFor="let runLogLine of (runLog | ngrxPush)?.lines; let index = index; trackBy: trackBy" [runLogLine]="runLogLine"
+                            [rowIndex]="index"
+                            [gridFormat]="gridFormat"></app-run-log-line>
+          <p class="text-center p-2 font-semibold" *ngIf="(runLog | ngrxPush)?.lines?.length === 0">
+            No Run Log available or all have been filtered.
+          </p>
+        </div>
       </div>
     </app-collapsible-element>
   `,
