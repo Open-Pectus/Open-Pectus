@@ -2,7 +2,6 @@ Notes:
 
 # Content
 
-- [Content](#content)
 - [Setup](#setup)
   - [Frontend setup](#frontend-setup)
   - [Backend setup](#backend-setup)
@@ -10,6 +9,8 @@ Notes:
   - [Aggregator](#aggregator)
   - [Engine](#engine)
   - [Docker](#docker)
+- [User Authorization](#user-authorization)
+  - [Azure AD](#azure-ad)
 - [Components](#components)
   - [Pectus UI](#pectus-ui)
   - [Aggregator](#aggregator)
@@ -121,7 +122,7 @@ Prerequisites:
 - [Backend setup](#backend-setup)
 
 To start aggregator services in docker, run the following command.
-Note: This depends on the frontend and backend builds being up to date.
+Note: This depends on the frontend and backend builds being up-to-date.
 
 ```shell
 cd Open-Pectus/openpectus
@@ -142,6 +143,28 @@ An Engine can be started in the docker container using
 pectus-engine --aggregator_host localhost --aggregator_port 8300
 ```
 
+
+# User Authorization
+
+To ensure not everyone can access the data and control the experiments, as well as enable logging who did what, Pectus can integrate with an identity provider using an oAuth/OIDC login flow. 
+
+Currently, we only support Azure AD.
+
+Idp integration is controlled through environment variables, to enable different setups for local development, test/staging servers, and production environments.
+
+## Azure AD
+### Environment Variables
+Set the following environment variables:
+- `ENABLE_AZURE_AUTHENTICATION`: true/false to enable/disable Azure AD integration.
+- `AZURE_DIRECTORY_TENANT_ID`: The "directory tenant id" GUID for your Azure AD tenant/directory.
+- `AZURE_APPLICATION_CLIENT_ID`: The client id for the pectus-specific configuration in Azure AD.
+
+All three environment variables must be provided, (and `ENABLE_AZURE_AUTHENTICATION` set to `true`), for the integration to work.
+
+### Callback URL
+The Azure AD pectus-specific configuration must also be configured to include `<your host>/auth-callback` where `<your host>` includes `http(s)://` and the port number, if it is not the default
+
+E.g. if running locally on a development machine, using `npm start`, the callback url should be `http://localhost:4200/auth-callback`
 
 # Components
 
@@ -232,9 +255,9 @@ pip install -U pyright
 
 **Pyright**
 * Pro
-  * VS Code uses itso it reports the same issues
+  * VS Code uses it so it reports the same issues
   * Easy configuration
-  * VS Code understand its configuration, even in pyproject.toml. So config changes apply immidiately
+  * VS Code understand its configuration, even in pyproject.toml. So config changes apply immediately
   * Does not report errors for StrEnum, auto()
 * Con
   * Non-standard in Python land
