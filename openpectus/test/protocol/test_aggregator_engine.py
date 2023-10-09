@@ -194,7 +194,7 @@ class AsyncServerTestCase(IsolatedAsyncioTestCase):
                 self.proc.kill()
 
 
-@unittest.skip("TODO fix on CI build")
+# @unittest.skip("TODO fix on CI build")
 class IntegrationTest(AsyncServerTestCase):
 
     def create_test_client(self, on_connect_callback=None) -> Client:
@@ -271,7 +271,7 @@ class IntegrationTest(AsyncServerTestCase):
             logger.error("Error sending: " + str(ex))
 
         await client.start_connect_wait_async(ws_url)
-        msg = RegisterEngineMsg(engine_name="test-eng", uod_name="test-uod")
+        msg = RegisterEngineMsg(computer_name="test-eng", uod_name="test-uod")
         resp_msg = await client.send_to_server(msg, on_success=on_register, on_error=on_error)
         self.assertIsInstance(resp_msg, SuccessMessage)
 
@@ -299,7 +299,7 @@ class IntegrationTest(AsyncServerTestCase):
     async def test_client_can_receive_server_message(self):
         client = self.create_test_client()
         await client.start_connect_wait_async(ws_url)
-        register_msg = RegisterEngineMsg(engine_name="test-eng", uod_name="test-uod")
+        register_msg = RegisterEngineMsg(computer_name="test-eng", uod_name="test-uod")
         resp_msg = await client.send_to_server(register_msg)
         self.assertIsInstance(resp_msg, SuccessMessage)
 
@@ -322,7 +322,7 @@ class IntegrationTest(AsyncServerTestCase):
     async def test_server_can_receive_tag_update(self):
         client = self.create_test_client()
         await client.start_connect_wait_async(ws_url)
-        register_msg = RegisterEngineMsg(engine_name="eng", uod_name="uod")
+        register_msg = RegisterEngineMsg(computer_name="eng", uod_name="uod")
         await client.send_to_server(register_msg)
 
         make_server_print_channels()
@@ -382,17 +382,17 @@ class IntegrationTest(AsyncServerTestCase):
 
 class SerializationTest(unittest.TestCase):
     def test_serialization_RegisterEngineMsg(self):
-        reg = RegisterEngineMsg(engine_name="foo", uod_name="bar")
+        reg = RegisterEngineMsg(computer_name="foo", uod_name="bar")
         reg_s = serialize_msg_to_json(reg)
         self.assertIsNotNone(reg_s)
 
     def test_round_trip_RegisterEngineMsg(self):
-        reg = RegisterEngineMsg(engine_name="foo", uod_name="bar")
+        reg = RegisterEngineMsg(computer_name="foo", uod_name="bar")
         reg_s = serialize_msg_to_json(reg)
         reg_d = deserialize_msg_from_json(reg_s)
         self.assertIsNotNone(reg_d)
         self.assertIsInstance(reg_d, RegisterEngineMsg)
-        self.assertEqual(reg.engine_name, reg_d.engine_name)  # type: ignore
+        self.assertEqual(reg.computer_name, reg_d.computer_name)  # type: ignore
         self.assertEqual(reg.uod_name, reg_d.uod_name)  # type: ignore
 
     def test_serialization_TagsUpdatedMsg(self):

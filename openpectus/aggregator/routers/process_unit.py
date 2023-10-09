@@ -1,7 +1,7 @@
 from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum, auto
-from typing import Literal, List
+from typing import Literal, List, Dict
 from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel
 import logging
@@ -16,7 +16,6 @@ from openpectus.protocol.messages import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])
-
 
 
 class ServerErrorResponse(BaseModel):
@@ -49,6 +48,12 @@ class UserRole(StrEnum):
     ADMIN = auto()
 
 
+class ControlState(BaseModel):
+    is_running: bool
+    is_holding: bool
+    is_paused: bool
+
+
 class ProcessUnit(BaseModel):
     """Represents a process unit. """
     id: str
@@ -63,12 +68,13 @@ class ProcessUnit(BaseModel):
 def create_pu(item: ChannelInfo) -> ProcessUnit:
     # TODO define source of all fields
     unit = ProcessUnit(
-            id=item.client_id or "(error)",
-            name=f"{item.engine_name} ({item.uod_name})",
-            state=ProcessUnitState.Ready(state=ProcessUnitStateEnum.READY),
-            location="Unknown location",
-            runtime_msec=189309,
-            current_user_role=UserRole.ADMIN)
+        id=item.client_id or "(error)",
+        name=f"{item.engine_name} ({item.uod_name})",
+        state=ProcessUnitState.Ready(state=ProcessUnitStateEnum.READY),
+        location="Unknown location",
+        runtime_msec=189309,
+        current_user_role=UserRole.ADMIN,
+    )
     return unit
 
 
@@ -138,10 +144,13 @@ def get_ProcessValueType_from_value(value: str | float | int | None) -> ProcessV
         raise ValueError("Invalid value type: " + type(value).__name__)
 
 
+ProcessValueValueType = str | float | int | None
+
+
 class ProcessValue(BaseModel):
     """ Represents a process value. """
     name: str
-    value: str | float | int | None
+    value: ProcessValueValueType
     value_unit: str | None
     """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
     value_type: ProcessValueType
@@ -151,17 +160,17 @@ class ProcessValue(BaseModel):
     @staticmethod
     def from_message(r: ReadingDef, ti: TagInfo) -> ProcessValue:
         return ProcessValue(
-                name=r.label,
-                value=ti.value,
-                value_type=get_ProcessValueType_from_value(ti.value),
-                value_unit=ti.value_unit,
-                commands=[])
-                # commands=[ProcessValueCommand(name=c.name, command=c.command) for c in r.commands])
+            name=r.label,
+            value=ti.value,
+            value_type=get_ProcessValueType_from_value(ti.value),
+            value_unit=ti.value_unit,
+            commands=[]
+        )
+        # commands=[ProcessValueCommand(name=c.name, command=c.command) for c in r.commands])
 
 
 @router.get("/process_unit/{unit_id}/process_values")
-def get_process_values(unit_id: str, response: Response, agg: Aggregator = Depends(agg_deps.get_aggregator)) \
-        -> List[ProcessValue]:
+def get_process_values(unit_id: str, response: Response, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[ProcessValue]:
     # parm last_seen
 
     response.headers["Cache-Control"] = "no-store"
@@ -305,11 +314,23 @@ def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)
     return RunLog(
         lines=list(map(from_line_msg, client_data.runlog.lines)))
 
+class MethodLine(BaseModel):
+    id: str
+    content: str
+
+class Method(BaseModel):
+    lines: List[MethodLine]
+    started_line_ids: List[str]
+    executed_line_ids: List[str]
+    injected_line_ids: List[str]
 
 @router.get('/process_unit/{unit_id}/method')
-def get_method(unit_id: str) -> str:
-    return ''
+def get_method(unit_id: str) -> Method:
+    return Method(lines=[], started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
 
+@router.post('/process_unit/{unit_id}/method')
+def save_method(unit_id: str, method: Method) -> None:
+    pass
 
 class PlotColorRegion(BaseModel):
     process_value_name: str
@@ -330,10 +351,45 @@ class SubPlot(BaseModel):
 
 
 class PlotConfiguration(BaseModel):
+    process_value_names_to_annotate: List[str]
     color_regions: List[PlotColorRegion]
     sub_plots: List[SubPlot]
+    x_axis_process_value_names: List[str]
 
 
 @router.get('/process_unit/{unit_id}/plot_configuration')
 def get_plot_configuration(unit_id: str) -> PlotConfiguration:
-    return PlotConfiguration(color_regions=[], sub_plots=[])
+    return PlotConfiguration(
+        color_regions=[],
+        sub_plots=[],
+        process_value_names_to_annotate=[],
+        x_axis_process_value_names=[]
+    )
+
+
+# This class exists only to workaround the issue that OpenApi spec (or Pydantic) cannot express that elements in a list can be None/null/undefined.
+# Properties on an object can be optional, so we use that via this wrapping class to express None values in the PlotLogEntry.values list.
+# Feel free to refactor to remove this class if it becomes possible to express the above without it.
+class PlotLogEntryValue(BaseModel):
+    value: ProcessValueValueType
+
+
+class PlotLogEntry(BaseModel):
+    name: str
+    values: List[PlotLogEntryValue]
+    value_unit: str | None
+    value_type: ProcessValueType
+
+
+class PlotLog(BaseModel):
+    entries: Dict[str, PlotLogEntry]
+
+
+@router.get('/process_unit/{unit_id}/plot_log')
+def get_plot_log(unit_id: str) -> PlotLog:
+    return PlotLog(entries={})
+
+
+@router.get('/process_unit/{unit_id}/control_state')
+def get_control_state(unit_id: str) -> ControlState:
+    return ControlState(False, False, False)

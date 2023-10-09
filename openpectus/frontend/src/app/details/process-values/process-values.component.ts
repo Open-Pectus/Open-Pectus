@@ -9,7 +9,7 @@ import { PvAndPosition } from './process-value.component';
   selector: 'app-process-values',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-collapsible-element [name]="'Process Values'" (collapseStateChanged)="collapsed = $event">
+    <app-collapsible-element [name]="'Process Values'" (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-dashboard'">
       <div class="flex gap-2 p-2 items-start flex-wrap" content *ngIf="!collapsed">
         <div class="m-auto" *ngIf="(processValues | ngrxPush)?.length === 0">No process values available</div>
         <app-process-value *ngFor="let processValue of (processValues | ngrxPush); trackBy: trackBy"

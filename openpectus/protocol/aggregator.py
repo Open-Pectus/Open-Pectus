@@ -26,9 +26,7 @@ from openpectus.protocol.messages import (
     TagsUpdatedMsg,
 )
 
-
 logger = logging.getLogger(__name__)
-
 
 ServerMessageHandler = Callable[[str, MessageBase], Awaitable[MessageBase]]
 """ Represents the type of callbacks that handle incoming messages from clients """
@@ -188,7 +186,7 @@ class Aggregator:
             return result
 
     @staticmethod
-    def create_client_id(msg: RegisterEngineMsg):
+    def create_client_id(register_engine_msg: RegisterEngineMsg):
         """ Defines the generation of the client_id that is uniquely assigned to each engine client.
 
         TODO: Considerations:
@@ -199,23 +197,23 @@ class Aggregator:
         - historical data; we should not corrupt historical data by accidentially reusing client_id
         - number of cards shown; we should not show many irrelevant cards in frontend of superseeded client_ids
         """
-        return msg.engine_name + "_" + msg.uod_name
+        return register_engine_msg.computer_name + "_" + register_engine_msg.uod_name
 
-    async def handle_RegisterEngineMsg(self, channel_id, msg: RegisterEngineMsg) -> SuccessMessage | ErrorMessage:
+    async def handle_RegisterEngineMsg(self, channel_id, register_engine_msg: RegisterEngineMsg) -> SuccessMessage | ErrorMessage:
         """ Registers engine """
-        client_id = Aggregator.create_client_id(msg)
+        client_id = Aggregator.create_client_id(register_engine_msg)
         if channel_id not in self.channel_map.keys():
             logger.error(
                 f"Registration failed for client_id {client_id} and channel_id {channel_id}. Channel not found"
             )
             return ErrorMessage(message="Registration failed")
-        channelInfo = self.channel_map[channel_id]
-        if channelInfo.client_id is not None:
+
+        channel_info = self.channel_map[channel_id]
+        if channel_info.client_id is not None and channel_info.client_id != client_id:
             logger.error(
                 f"""Registration failed for client_id {client_id} and channel_id {channel_id}.
-                    Channel already in use by client_id {channelInfo.client_id}"""
+                    Channel already in use by client_id {channel_info.client_id}"""
             )
-            # TODO if channelInfo.client_id == client_id we can make this idempotent and not fail
             return ErrorMessage(message="Registration failed")
 
         # TODO consider how to handle registrations
@@ -223,20 +221,21 @@ class Aggregator:
         # - client kill/reconnect should work
         # - client_id reused with "same uod" should take over session, else fail as misconfigured client
         # - add machine name + uod secret
-        registrations = list(
-            [x for x in self.channel_map.values() if x.client_id == client_id]
-        )
-        if (len(registrations) > 0 and registrations[0].status != ChannelStatusEnum.Disconnected):
+        existing_registrations = [x for x in self.channel_map.values() if x.client_id == client_id]
+        if (
+                len(existing_registrations) > 0 and
+                any(existing_registration.status != ChannelStatusEnum.Disconnected for existing_registration in existing_registrations)
+        ):
             logger.error(
                 f"""Registration failed for client_id {client_id} and channel_id {channel_id}.
                     Client has other channel"""
             )
             return ErrorMessage(message="Registration failed")
 
-        channelInfo.client_id = client_id
-        channelInfo.engine_name = msg.engine_name
-        channelInfo.uod_name = msg.uod_name
-        channelInfo.status = ChannelStatusEnum.Registered
+        channel_info.client_id = client_id
+        channel_info.engine_name = register_engine_msg.computer_name
+        channel_info.uod_name = register_engine_msg.uod_name
+        channel_info.status = ChannelStatusEnum.Registered
         logger.debug(f"Registration successful of client {client_id} on channel {channel_id}")
 
         # initialize client data
@@ -347,7 +346,9 @@ class Aggregator:
             return ErrorMessage(exception_message=err)
 
 
-_server : Aggregator | None = None
+_server: Aggregator | None = None
+
+
 # singleton instance
 
 

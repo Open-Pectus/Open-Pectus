@@ -1,0 +1,28 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Aggregator" type="PythonConfigurationType" factoryName="Python">
+    <module name="openpectus" />
+    <option name="INTERPRETER_OPTIONS" value="" />
+    <option name="PARENT_ENVS" value="true" />
+    <envs>
+      <env name="PYTHONUNBUFFERED" value="1" />
+      <env name="AZURE_DIRECTORY_TENANT_ID" value="fdfed7bd-9f6a-44a1-b694-6e39c468c150" />
+      <env name="AZURE_APPLICATION_CLIENT_ID" value="fc7355bb-a6be-493f-90a1-cf57063f7948" />
+      <env name="ENABLE_AZURE_AUTHENTICATION" value="true" />
+    </envs>
+    <option name="SDK_HOME" value="" />
+    <option name="SDK_NAME" value="Python 3.11 (pectus)" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/aggregator" />
+    <option name="IS_MODULE_SDK" value="false" />
+    <option name="ADD_CONTENT_ROOTS" value="true" />
+    <option name="ADD_SOURCE_ROOTS" value="true" />
+    <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/aggregator/main.py" />
+    <option name="PARAMETERS" value="" />
+    <option name="SHOW_COMMAND_LINE" value="false" />
+    <option name="EMULATE_TERMINAL" value="false" />
+    <option name="MODULE_MODE" value="false" />
+    <option name="REDIRECT_INPUT" value="false" />
+    <option name="INPUT_FILE" value="" />
+    <method v="2" />
+  </configuration>
+</component>

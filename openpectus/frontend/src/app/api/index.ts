@@ -1,3 +1,4 @@
+/* generated using openapi-typescript-codegen -- do no edit */
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
@@ -6,16 +7,23 @@ export { CancelablePromise, CancelError } from './core/CancelablePromise';
 export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
+export type { AuthConfig } from './models/AuthConfig';
 export type { BatchJob } from './models/BatchJob';
 export type { CommandExample } from './models/CommandExample';
 export { CommandSource } from './models/CommandSource';
+export type { ControlState } from './models/ControlState';
 export type { ExecutableCommand } from './models/ExecutableCommand';
 export type { HTTPValidationError } from './models/HTTPValidationError';
 export { InProgress } from './models/InProgress';
+export type { Method } from './models/Method';
+export type { MethodLine } from './models/MethodLine';
 export { NotOnline } from './models/NotOnline';
 export type { PlotAxis } from './models/PlotAxis';
 export type { PlotColorRegion } from './models/PlotColorRegion';
 export type { PlotConfiguration } from './models/PlotConfiguration';
+export type { PlotLog } from './models/PlotLog';
+export type { PlotLogEntry } from './models/PlotLogEntry';
+export type { PlotLogEntryValue } from './models/PlotLogEntryValue';
 export type { ProcessDiagram } from './models/ProcessDiagram';
 export type { ProcessUnit } from './models/ProcessUnit';
 export type { ProcessValue } from './models/ProcessValue';
@@ -32,6 +40,7 @@ export { UserRole } from './models/UserRole';
 export type { ValidationError } from './models/ValidationError';
 
 export { AggregatorService } from './services/AggregatorService';
+export { AuthService } from './services/AuthService';
 export { BatchJobService } from './services/BatchJobService';
 export { FrontendPubsubService } from './services/FrontendPubsubService';
 export { ProcessUnitService } from './services/ProcessUnitService';

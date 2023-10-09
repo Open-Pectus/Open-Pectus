@@ -7,7 +7,7 @@ import uvicorn
 from openpectus import log_setup_colorlog
 
 from openpectus.aggregator.spa import SinglePageApplication
-from openpectus.aggregator.routers import batch_job, process_unit, aggregator_websocket
+from openpectus.aggregator.routers import batch_job, process_unit, aggregator_websocket, auth
 from openpectus.aggregator.frontend_ws import frontend_pubsub
 
 
@@ -64,11 +64,12 @@ def create_app(frontend_dist_dir: str = default_frontend_dist_dir):
 
     app = FastAPI(title=title, generate_unique_id_function=custom_generate_unique_id)
 
-    prefix = "/api"
-    app.include_router(process_unit.router, prefix=prefix)
-    app.include_router(batch_job.router, prefix=prefix)
+    api_prefix = "/api"
+    app.include_router(process_unit.router, prefix=api_prefix)
+    app.include_router(batch_job.router, prefix=api_prefix)
     app.include_router(aggregator_websocket.router)
-    app.include_router(frontend_pubsub.router, prefix=prefix)
+    app.include_router(frontend_pubsub.router, prefix=api_prefix)
+    app.include_router(auth.router, prefix='/auth')
 
     app.mount("/", SinglePageApplication(directory=frontend_dist_dir))
 

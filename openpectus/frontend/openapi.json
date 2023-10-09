@@ -322,8 +322,58 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string",
-                  "title": "Response Get Method"
+                  "$ref": "#/components/schemas/Method"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Save Method",
+        "operationId": "save_method",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            },
+            "name": "unit_id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Method"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "null",
+                  "title": "Response Save Method"
                 }
               }
             }
@@ -366,6 +416,90 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PlotConfiguration"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/process_unit/{unit_id}/plot_log": {
+      "get": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Get Plot Log",
+        "operationId": "get_plot_log",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            },
+            "name": "unit_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlotLog"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/process_unit/{unit_id}/control_state": {
+      "get": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Get Control State",
+        "operationId": "get_control_state",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            },
+            "name": "unit_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ControlState"
                 }
               }
             }
@@ -487,10 +621,52 @@
           }
         }
       }
+    },
+    "/auth/config": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get Config",
+        "operationId": "get_config",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthConfig"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AuthConfig": {
+        "properties": {
+          "use_auth": {
+            "type": "boolean",
+            "title": "Use Auth"
+          },
+          "authority_url": {
+            "type": "string",
+            "title": "Authority Url"
+          },
+          "client_id": {
+            "type": "string",
+            "title": "Client Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "use_auth"
+        ],
+        "title": "AuthConfig"
+      },
       "BatchJob": {
         "properties": {
           "id": {
@@ -557,6 +733,29 @@
         "title": "CommandSource",
         "description": "An enumeration."
       },
+      "ControlState": {
+        "properties": {
+          "is_running": {
+            "type": "boolean",
+            "title": "Is Running"
+          },
+          "is_holding": {
+            "type": "boolean",
+            "title": "Is Holding"
+          },
+          "is_paused": {
+            "type": "boolean",
+            "title": "Is Paused"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_running",
+          "is_holding",
+          "is_paused"
+        ],
+        "title": "ControlState"
+      },
       "ExecutableCommand": {
         "properties": {
           "command": {
@@ -611,6 +810,64 @@
           "progress_pct"
         ],
         "title": "InProgress"
+      },
+      "Method": {
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/MethodLine"
+            },
+            "type": "array",
+            "title": "Lines"
+          },
+          "started_line_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Started Line Ids"
+          },
+          "executed_line_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Executed Line Ids"
+          },
+          "injected_line_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Injected Line Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lines",
+          "started_line_ids",
+          "executed_line_ids",
+          "injected_line_ids"
+        ],
+        "title": "Method"
+      },
+      "MethodLine": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "content"
+        ],
+        "title": "MethodLine"
       },
       "NotOnline": {
         "properties": {
@@ -707,6 +964,13 @@
       },
       "PlotConfiguration": {
         "properties": {
+          "process_value_names_to_annotate": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Process Value Names To Annotate"
+          },
           "color_regions": {
             "items": {
               "$ref": "#/components/schemas/PlotColorRegion"
@@ -720,14 +984,88 @@
             },
             "type": "array",
             "title": "Sub Plots"
+          },
+          "x_axis_process_value_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "X Axis Process Value Names"
           }
         },
         "type": "object",
         "required": [
+          "process_value_names_to_annotate",
           "color_regions",
-          "sub_plots"
+          "sub_plots",
+          "x_axis_process_value_names"
         ],
         "title": "PlotConfiguration"
+      },
+      "PlotLog": {
+        "properties": {
+          "entries": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PlotLogEntry"
+            },
+            "type": "object",
+            "title": "Entries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entries"
+        ],
+        "title": "PlotLog"
+      },
+      "PlotLogEntry": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/PlotLogEntryValue"
+            },
+            "type": "array",
+            "title": "Values"
+          },
+          "value_unit": {
+            "type": "string",
+            "title": "Value Unit"
+          },
+          "value_type": {
+            "$ref": "#/components/schemas/ProcessValueType"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "values",
+          "value_type"
+        ],
+        "title": "PlotLogEntry"
+      },
+      "PlotLogEntryValue": {
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "title": "PlotLogEntryValue"
       },
       "ProcessDiagram": {
         "properties": {

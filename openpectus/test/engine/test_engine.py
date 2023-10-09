@@ -552,7 +552,7 @@ Mark: C
         e.tick()
         self.assertTrue(e._runstate_started)
         system_state_tag = e._system_tags[tags.DEFAULT_TAG_SYSTEM_STATE]
-        self.assertEqual(SystemStateEnum.Run, system_state_tag.get_value())
+        self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
 
         e.schedule_execution("Stop")
         e.tick()
@@ -568,7 +568,7 @@ Mark: C
         self.assertTrue(e._runstate_started)
         system_state_tag = e._system_tags[tags.DEFAULT_TAG_SYSTEM_STATE]
         process_time_tag = e._system_tags[tags.DEFAULT_TAG_PROCESS_TIME]
-        self.assertEqual(SystemStateEnum.Run, system_state_tag.get_value())
+        self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
         pre_pause_process_time = process_time_tag.as_number()
 
         danger_tag = e.uod.tags["Danger"]
@@ -595,7 +595,7 @@ Mark: C
         self.assertTrue(e._runstate_started)
         system_state_tag = e._system_tags[tags.DEFAULT_TAG_SYSTEM_STATE]
         process_time_tag = e._system_tags[tags.DEFAULT_TAG_PROCESS_TIME]
-        self.assertEqual(SystemStateEnum.Run, system_state_tag.get_value())
+        self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
         pre_pause_process_time = process_time_tag.as_number()
 
         e.schedule_execution("PAUSE")
@@ -624,7 +624,7 @@ Mark: C
         self.assertTrue(e._runstate_started)
         system_state_tag = e._system_tags[tags.DEFAULT_TAG_SYSTEM_STATE]
         process_time_tag = e._system_tags[tags.DEFAULT_TAG_PROCESS_TIME]
-        self.assertEqual(SystemStateEnum.Run, system_state_tag.get_value())
+        self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
         pre_hold_process_time = process_time_tag.as_number()
 
         danger_tag = e.uod.tags["Danger"]
@@ -634,7 +634,7 @@ Mark: C
         e.tick()
         self.assertTrue(e._runstate_started)
         self.assertTrue(e._runstate_hold)
-        self.assertEqual(SystemStateEnum.Hold, system_state_tag.get_value())
+        self.assertEqual(SystemStateEnum.Holding, system_state_tag.get_value())
 
         # process time is now stopped
         self.assertEqual(pre_hold_process_time, process_time_tag.as_number())

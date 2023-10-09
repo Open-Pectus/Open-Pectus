@@ -7,6 +7,7 @@ export const appFeatureKey = 'app';
 
 export interface AppState {
   processUnits: ProcessUnit[];
+  authIsEnabled?: boolean;
 }
 
 const initialState: AppState = {
@@ -16,6 +17,9 @@ const initialState: AppState = {
 export const appReducer = createReducer(initialState,
   on(AppActions.processUnitsLoaded, (state, {processUnits}) => produce(state, draft => {
     draft.processUnits = processUnits;
+  })),
+  on(AppActions.authEnablementFetched, (state, {authIsEnabled}) => produce(state, draft => {
+    draft.authIsEnabled = authIsEnabled;
   })),
 );
 

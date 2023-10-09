@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import socket
 from queue import Empty
 import time
 from argparse import ArgumentParser
@@ -161,10 +162,10 @@ class WebSocketRPCEngineRunner(EngineRunner):
         if self.client is None:
             raise ValueError("Client is not connected")
 
-        msg = M.RegisterEngineMsg(engine_name="test-eng", uod_name=self.engine.uod.instrument)
-        response = await self.client.send_to_server(msg)  # , on_success=on_register, on_error=on_error)
-        if not isinstance(response, M.SuccessMessage):
-            logger.warning("Failed to Register")
+        register_engine_msg = M.RegisterEngineMsg(computer_name=socket.gethostname(), uod_name=self.engine.uod.instrument)
+        register_response = await self.client.send_to_server(register_engine_msg)  # , on_success=on_register, on_error=on_error)
+        if not isinstance(register_response, M.SuccessMessage):
+            print("Failed to Register")
             return
 
         self.client.set_message_handler(M.InvokeCommandMsg, self._schedule_command)

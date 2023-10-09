@@ -38,7 +38,7 @@ class ProtocolErrorMessage(ErrorMessage):
 
 
 class RegisterEngineMsg(MessageBase):
-    engine_name: str
+    computer_name: str
     uod_name: str
     # uod file hash, file change date
 

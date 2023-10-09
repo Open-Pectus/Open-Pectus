@@ -12,32 +12,23 @@ const config = {
       {
         // adapted from https://github.com/Microsoft/monaco-editor/issues/886#issuecomment-1188678096 and https://github.com/TypeFox/monaco-languageclient-ng-example/blob/main/custom-webpack.config.js
         test: /\.css$/,
+        use: ['style-loader', 'css-loader'],
         include: [
           resolve(__dirname, './node_modules/monaco-editor'),
           resolve(__dirname, './node_modules/vscode'),
         ],
-        use: ['style-loader', {
-          loader: 'css-loader',
-          options: {
-            url: false,
-          },
-        }],
       },
       {
         test: /\.(mp3|wasm|ttf)$/i,
         type: 'asset/resource',
       },
-      {
-        test: /\.wasm$/,
-        type: 'asset/inline',
-      },
     ],
-    // this fixes the ttf url loading issue
-    // parser: {
-    //   javascript: {
-    //     url: true,
-    //   },
-    // },
+    // this fixes the ttf and wasm url loading issue
+    parser: {
+      javascript: {
+        url: true,
+      },
+    },
   },
   resolve: {
     extensions: ['.ts', '.js'],

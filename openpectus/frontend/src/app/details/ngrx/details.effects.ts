@@ -1,21 +1,20 @@
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { debounceTime, filter, map, mergeMap, of, switchMap } from 'rxjs';
-import { catchError } from 'rxjs/operators';
-import { ProcessUnitService } from '../../api';
+import { catchError, debounceTime, delayWhen, map, mergeMap, of, switchMap, takeUntil, timer } from 'rxjs';
+import { CommandSource, ProcessUnitService } from '../../api';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
 import { DetailsActions } from './details.actions';
-import { DetailsSelectors } from './details.selectors';
 
+// noinspection JSUnusedGlobalSymbols
 @Injectable()
 export class DetailsEffects {
   fetchProcessValuesWhenPageInitialized = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.unitDetailsInitialized),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     switchMap(([_, unitId]) => {
-      if(unitId === undefined) return of(DetailsActions.processValuesFailedToLoad());
+      if(unitId === undefined) return of();
       return this.processUnitService.getProcessValues(unitId).pipe(
         map(processValues => DetailsActions.processValuesFetched({processValues})),
         catchError(() => of(DetailsActions.processValuesFailedToLoad())),
@@ -23,19 +22,33 @@ export class DetailsEffects {
     }),
   ));
 
+  // TODO: When we introduce websocket pubsub, figure out if it makes sense to push process_value changes through it, or polling is fine.
   continuouslyPollProcessValues = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processValuesFetched, DetailsActions.processValuesFailedToLoad),
-    concatLatestFrom(() => [
-      this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName)),
-      this.store.select(DetailsSelectors.shouldPollProcessValues),
-    ]),
-    debounceTime(100), // delay() in MSW doesn't work in Firefox, so to avoid freezing the application in FF, we debounce
-    filter(([_, __, shouldPoll]) => shouldPoll),
-    switchMap(([_, unitId, __]) => {
-      if(unitId === undefined) return of(DetailsActions.processValuesFailedToLoad());
+    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
+    debounceTime(1000),
+    takeUntil(this.actions.pipe(ofType(DetailsActions.unitDetailsDestroyed))),
+    switchMap(([_, unitId]) => {
+      if(unitId === undefined) return of();
       return this.processUnitService.getProcessValues(unitId).pipe(
         map(processValues => DetailsActions.processValuesFetched({processValues})),
         catchError(() => of(DetailsActions.processValuesFailedToLoad())),
+      );
+    }),
+  ));
+
+  // TODO: this should be gotten via push through websocket instead of polling.
+  continuouslyPollControlState = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.unitDetailsInitialized, DetailsActions.controlStateFetched),
+    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
+    delayWhen(([action, _]) => {
+      return action.type === DetailsActions.unitDetailsInitialized.type ? of(0) : timer(500);
+    }),
+    takeUntil(this.actions.pipe(ofType(DetailsActions.unitDetailsDestroyed))),
+    switchMap(([_, unitId]) => {
+      if(unitId === undefined) return of();
+      return this.processUnitService.getControlState(unitId).pipe(
+        map(controlState => DetailsActions.controlStateFetched({controlState})),
       );
     }),
   ));
@@ -45,7 +58,7 @@ export class DetailsEffects {
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     mergeMap(([{command}, unitId]) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.executeCommand(unitId, {...command});
+      return this.processUnitService.executeCommand(unitId, {command, source: CommandSource.UNIT_BUTTON});
     }),
   ), {dispatch: false});
 
