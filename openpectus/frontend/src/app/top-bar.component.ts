@@ -6,11 +6,11 @@ import { OidcSecurityService } from 'angular-auth-oidc-client';
   selector: 'app-top-bar',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="w-full h-14 flex items-center bg-sky-900 text-white relative">
-      <app-msw-enablement class="absolute left-4"></app-msw-enablement>
-      <button class="absolute-center text-3xl font-bold" (click)="navigateToRoot()">Open Pectus</button>
+    <div class="w-full h-24 md:h-14 flex items-center justify-between px-4 bg-sky-900 text-white relative">
+      <app-msw-enablement class="flex-1"></app-msw-enablement>
+      <button class="text-3xl font-bold mx-4" (click)="navigateToRoot()">Open Pectus</button>
       <ng-container *ngrxLet="oidcSecurityService.userData$ as userData">
-        <div class="absolute right-4 flex gap-4 items-center">
+        <div class="flex gap-4 items-center flex-1 justify-end">
           <p>{{userData.userData?.name ?? 'Anonymous'}}</p>
           <div class="codicon codicon-account !text-3xl"></div>
         </div>
