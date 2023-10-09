@@ -16,7 +16,7 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
         <span class="ml-2 font-semibold">Save</span>
       </button>
       <app-monaco-editor class="block rounded-sm h-full" [editorSizeChange]="editorSizeChange"
-                         content *ngIf="!collapsed"></app-monaco-editor>
+                         content *ngIf="!collapsed" (keydown.control.s)="onCtrlS($event)"></app-monaco-editor>
     </app-collapsible-element>
   `,
 })
@@ -32,10 +32,16 @@ export class MethodEditorComponent implements OnInit {
   }
 
   onSaveButtonClicked() {
-    this.store.dispatch(MethodEditorActions.modelSaveRequested());
+    this.store.dispatch(MethodEditorActions.saveButtonClicked());
   }
 
   onContentHeightChanged() {
     this.editorSizeChange.next();
+  }
+
+  onCtrlS(event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.store.dispatch(MethodEditorActions.saveKeyboardShortcutPressed());
   }
 }

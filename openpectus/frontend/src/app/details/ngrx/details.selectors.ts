@@ -1,5 +1,4 @@
 import { createFeatureSelector, createSelector } from '@ngrx/store';
-import { ProcessValueType } from '../../api';
 import { AppSelectors } from '../../ngrx/app.selectors';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
@@ -13,13 +12,6 @@ export class DetailsSelectors {
       return processUnits.find(processUnit => processUnit.id.toString() === unitId);
     });
   static processDiagram = createSelector(this.selectFeature, state => state.processDiagram);
-  static shouldPollProcessValues = createSelector(this.selectFeature, state => state.shouldPollProcessValues);
   static commandExamples = createSelector(this.selectFeature, state => state.commandExamples);
-  static systemState = createSelector(this.processValues,
-    processValues => {
-      const systemState = processValues.find(
-        processValue => processValue.name === 'System State' && processValue.value_type === ProcessValueType.STRING);
-      return systemState?.value as string | undefined;
-    })
-  ;
+  static controlState = createSelector(this.selectFeature, state => state.controlState);
 }

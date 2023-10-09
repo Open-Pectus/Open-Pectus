@@ -9,6 +9,7 @@ import { AxesOverridesLocalStorageService } from '../axes-overrides-local-storag
 import { ProcessPlotActions } from './process-plot.actions';
 import { ProcessPlotSelectors } from './process-plot.selectors';
 
+// noinspection JSUnusedGlobalSymbols
 @Injectable()
 export class ProcessPlotEffects {
   fetchPlotConfigurationOnComponentInitialization = createEffect(() => this.actions.pipe(

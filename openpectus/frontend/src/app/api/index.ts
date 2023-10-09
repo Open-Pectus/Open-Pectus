@@ -11,6 +11,7 @@ export type { AuthConfig } from './models/AuthConfig';
 export type { BatchJob } from './models/BatchJob';
 export type { CommandExample } from './models/CommandExample';
 export { CommandSource } from './models/CommandSource';
+export type { ControlState } from './models/ControlState';
 export type { ExecutableCommand } from './models/ExecutableCommand';
 export type { HTTPValidationError } from './models/HTTPValidationError';
 export { InProgress } from './models/InProgress';

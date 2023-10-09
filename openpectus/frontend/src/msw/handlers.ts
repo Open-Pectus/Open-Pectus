@@ -5,6 +5,8 @@ import {
   BatchJob,
   CommandExample,
   CommandSource,
+  ControlState,
+  ExecutableCommand,
   InProgress,
   Method,
   NotOnline,
@@ -20,16 +22,23 @@ import {
   UserRole,
 } from '../app/api';
 
-const lockedLines = [1, 3];
-
 // TODO: this should be exposed from backend or handled otherwise when using websocket
 export enum SystemState {
-  Running = 'Run',
+  Running = 'Running',
   Paused = 'Paused',
-  Holding = 'Hold',
-  Stopped = 'Stopped',
-  Waiting = 'Wait'
+  Holding = 'Holding',
+  Waiting = 'Waiting',
+  Stopped = 'Stopped'
 }
+
+const startedLines = [2];
+const executedLines = [1, 4];
+let controlState: ControlState = {
+  is_running: true,
+  is_holding: false,
+  is_paused: false,
+};
+let systemState = SystemState.Running;
 
 const processUnits: ProcessUnit[] = [
   {
@@ -270,7 +279,7 @@ export const handlers = [
         {
           value_type: ProcessValueType.STRING,
           name: 'System State',
-          value: SystemState.Running,
+          value: systemState,
         },
       ]),
     );
@@ -298,7 +307,36 @@ export const handlers = [
     );
   }),
 
-  rest.post('/api/process_unit/:unitId/execute_command', (_, res, context) => {
+  rest.post('/api/process_unit/:unitId/execute_command', (req, res, context) => {
+    req.json<ExecutableCommand>().then(executableCommand => {
+      if(executableCommand.source === CommandSource.UNIT_BUTTON) {
+        switch(executableCommand.command) {
+          case 'Start':
+            controlState.is_running = true;
+            break;
+          case 'Pause':
+            controlState.is_paused = true;
+            break;
+          case 'Unpause':
+            controlState.is_paused = false;
+            break;
+          case 'Hold':
+            controlState.is_holding = true;
+            break;
+          case 'Unhold':
+            controlState.is_holding = false;
+            break;
+          case 'Stop':
+            controlState.is_running = false;
+            break;
+        }
+
+        systemState = !controlState.is_running ? SystemState.Stopped :
+                      controlState.is_paused ? SystemState.Paused :
+                      controlState.is_holding ? SystemState.Holding :
+                      SystemState.Running;
+      }
+    });
     return res(
       context.status(200),
     );
@@ -308,7 +346,7 @@ export const handlers = [
     return res(
       context.status(200),
       context.json({
-        svg: '<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="489" height="211" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 489 211"><defs/><g transform="translate(-214.00,-81.50)"><g transform="translate(233.260000,117.350000)" id="shape1"><path fill-rule="nonzero" fill="#ffffff" d="M.0,5.0L.0,15.0L20.0,5.0L20.0,15.0L.0,5.0zM4.0,.0L16.0,.0L16.0,-12.0L4.0,-12.0L4.0,.0"/><path stroke="#000000" stroke-width="0.3199999928474426" d="M.0,5.0L.0,15.0L20.0,5.0L20.0,15.0L.0,5.0zM10.0,10.0L10.0,.0M4.0,.0L16.0,.0L16.0,-12.0L4.0,-12.0L4.0,.0" fill="none"/></g><g transform="translate(233.260000,183.850000)" id="shape2"><path fill-rule="nonzero" fill="#ffffff" d="M.0,5.0L.0,15.0L20.0,5.0L20.0,15.0L.0,5.0zM4.0,.0L16.0,.0L16.0,-12.0L4.0,-12.0L4.0,.0"/><path stroke="#000000" stroke-width="0.3199999928474426" d="M.0,5.0L.0,15.0L20.0,5.0L20.0,15.0L.0,5.0zM10.0,10.0L10.0,.0M4.0,.0L16.0,.0L16.0,-12.0L4.0,-12.0L4.0,.0" fill="none"/></g><g transform="translate(355.000000,139.000000)" id="shape3"><path fill-rule="nonzero" fill="#ffffff" d="M.0,22.0C-0.0,9.8,9.8,.0,22.0,.0C34.2,-0.0,44.0,9.8,44.0,22.0C44.0,34.2,34.2,44.0,22.0,44.0C9.8,44.0,.0,34.2,.0,22.0z"/><path stroke="#000000" stroke-width="1" d="M.0,22.0C-0.0,9.8,9.8,.0,22.0,.0C34.2,-0.0,44.0,9.8,44.0,22.0C44.0,34.2,34.2,44.0,22.0,44.0C9.8,44.0,.0,34.2,.0,22.0zM8.8,39.6L44.0,22.0L8.8,4.4M.0,22.0L-11.0,22.0M44.0,22.0L55.0,22.0" fill="none"/></g><g transform="translate(253.260000,193.850000)" id="shape4"><path stroke="#191919" stroke-width="1" d="M.0,.0L58.7,.0L58.7,-32.9L84.7,-32.9" fill="none"/><path stroke-width="1" stroke="#191919" stroke-linecap="round" fill="#191919" d="M84.7,-35.9L90.7,-32.9L84.7,-29.9L84.7,-35.9"/></g><g transform="translate(253.260000,127.350000)" id="shape5"><path stroke="#191919" stroke-width="1" d="M.0,.0L58.7,.0L58.7,33.6L84.7,33.6" fill="none"/><path stroke-width="1" stroke="#191919" stroke-linecap="round" fill="#191919" d="M84.7,30.6L90.7,33.6L84.7,36.6L84.7,30.6"/></g><path fill-rule="nonzero" transform="translate(471.000000,176.000000)" stroke="#000000" stroke-width="1" fill="#ffffff" d="M.0,80.5C5.8,84.0,13.7,86.0,22.0,86.0C30.3,86.0,38.2,84.0,44.0,80.5L44.0,5.5C38.2,2.0,30.3,.0,22.0,.0C13.7,.0,5.8,2.0,.0,5.5L.0,80.5z" id="shape6"/><g transform="translate(410.000000,161.000000)" id="shape7"><path stroke="#191919" stroke-width="1" d="M.0,.0L83.0,.0L83.0,9.0" fill="none"/><path stroke-width="1" stroke="#191919" stroke-linecap="round" fill="#191919" d="M86.0,9.0L83.0,15.0L80.0,9.0L86.0,9.0"/></g><g transform="translate(436.000000,91.000000)" id="group8"><path fill-rule="nonzero" stroke="#000000" stroke-width="0.3199999928474426" fill="#ffffff" d="M.0,21.0C.0,9.4,9.4,.0,21.0,.0C32.6,.0,42.0,9.4,42.0,21.0C42.0,32.6,32.6,42.0,21.0,42.0C9.4,42.0,.0,32.6,.0,21.0z" id="shape9"/><text style="fill:#191919;font-family:Arial;font-size:12.00pt" xml:space="preserve"><tspan y="19.1" x="11.5">FT</tspan></text></g><path transform="translate(457.000000,133.000000)" stroke="#191919" stroke-width="1" d="M.0,.0L.0,28.0" fill="none" id="shape10"/><g transform="translate(214.000000,94.500000)" id="shape11"><text style="fill:#191919;font-family:Arial;font-size:12.00pt" xml:space="preserve"><tspan y="24.0" x="40.5">VA01</tspan></text></g><g transform="translate(214.000000,161.000000)" id="shape12"><text style="fill:#191919;font-family:Arial;font-size:12.00pt" xml:space="preserve"><tspan y="24.0" x="40.5">VA02</tspan></text></g><g transform="translate(340.000000,176.000000)" id="shape13"><text style="fill:#191919;font-family:Arial;font-size:12.00pt" xml:space="preserve"><tspan y="24.0" x="4.0">PU01</tspan><tspan y="43.0" x="4.0">{{ PU01 </tspan><tspan y="59.0" x="4.0">Speed }}</tspan></text></g><g transform="translate(485.000000,81.500000)" id="shape14"><text style="fill:#191919;font-family:Arial;font-size:12.00pt" xml:space="preserve"><tspan y="24.0" x="4.0">FT01</tspan><tspan y="43.0" x="4.0">{{ FT01 Flow }}</tspan></text></g><g transform="translate(542.260000,219.000000)" id="group15"><path fill-rule="nonzero" stroke="#000000" stroke-width="0.3199999928474426" fill="#ffffff" d="M.0,21.0C.0,9.4,9.4,.0,21.0,.0C32.6,.0,42.0,9.4,42.0,21.0C42.0,32.6,32.6,42.0,21.0,42.0C9.4,42.0,.0,32.6,.0,21.0z" id="shape16"/><text style="fill:#191919;font-family:Arial;font-size:12.00pt" xml:space="preserve"><tspan y="19.1" x="12.0">TT</tspan></text></g><path transform="translate(542.260000,240.000000)" stroke="#191919" stroke-width="1" d="M.0,.0L-27.0,.0" fill="none" id="shape17"/><g transform="translate(583.000000,238.500000)" id="shape18"><text style="fill:#191919;font-family:Arial;font-size:12.00pt" xml:space="preserve"><tspan y="24.0" x="4.0">TT01</tspan><tspan y="43.0" x="4.0">{{ TT01.PV }} 😀 {{ TT01.unit }}</tspan></text></g></g></svg>',
+        svg: '<!--suppress ALL --><svg xmlns:xlink="http://www.w3.org/1999/xlink" width="489" height="211" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 489 211"><defs/><g transform="translate(-214.00,-81.50)"><g transform="translate(233.260000,117.350000)" id="shape1"><path fill-rule="nonzero" fill="#ffffff" d="M.0,5.0L.0,15.0L20.0,5.0L20.0,15.0L.0,5.0zM4.0,.0L16.0,.0L16.0,-12.0L4.0,-12.0L4.0,.0"/><path stroke="#000000" stroke-width="0.3199999928474426" d="M.0,5.0L.0,15.0L20.0,5.0L20.0,15.0L.0,5.0zM10.0,10.0L10.0,.0M4.0,.0L16.0,.0L16.0,-12.0L4.0,-12.0L4.0,.0" fill="none"/></g><g transform="translate(233.260000,183.850000)" id="shape2"><path fill-rule="nonzero" fill="#ffffff" d="M.0,5.0L.0,15.0L20.0,5.0L20.0,15.0L.0,5.0zM4.0,.0L16.0,.0L16.0,-12.0L4.0,-12.0L4.0,.0"/><path stroke="#000000" stroke-width="0.3199999928474426" d="M.0,5.0L.0,15.0L20.0,5.0L20.0,15.0L.0,5.0zM10.0,10.0L10.0,.0M4.0,.0L16.0,.0L16.0,-12.0L4.0,-12.0L4.0,.0" fill="none"/></g><g transform="translate(355.000000,139.000000)" id="shape3"><path fill-rule="nonzero" fill="#ffffff" d="M.0,22.0C-0.0,9.8,9.8,.0,22.0,.0C34.2,-0.0,44.0,9.8,44.0,22.0C44.0,34.2,34.2,44.0,22.0,44.0C9.8,44.0,.0,34.2,.0,22.0z"/><path stroke="#000000" stroke-width="1" d="M.0,22.0C-0.0,9.8,9.8,.0,22.0,.0C34.2,-0.0,44.0,9.8,44.0,22.0C44.0,34.2,34.2,44.0,22.0,44.0C9.8,44.0,.0,34.2,.0,22.0zM8.8,39.6L44.0,22.0L8.8,4.4M.0,22.0L-11.0,22.0M44.0,22.0L55.0,22.0" fill="none"/></g><g transform="translate(253.260000,193.850000)" id="shape4"><path stroke="#191919" stroke-width="1" d="M.0,.0L58.7,.0L58.7,-32.9L84.7,-32.9" fill="none"/><path stroke-width="1" stroke="#191919" stroke-linecap="round" fill="#191919" d="M84.7,-35.9L90.7,-32.9L84.7,-29.9L84.7,-35.9"/></g><g transform="translate(253.260000,127.350000)" id="shape5"><path stroke="#191919" stroke-width="1" d="M.0,.0L58.7,.0L58.7,33.6L84.7,33.6" fill="none"/><path stroke-width="1" stroke="#191919" stroke-linecap="round" fill="#191919" d="M84.7,30.6L90.7,33.6L84.7,36.6L84.7,30.6"/></g><path fill-rule="nonzero" transform="translate(471.000000,176.000000)" stroke="#000000" stroke-width="1" fill="#ffffff" d="M.0,80.5C5.8,84.0,13.7,86.0,22.0,86.0C30.3,86.0,38.2,84.0,44.0,80.5L44.0,5.5C38.2,2.0,30.3,.0,22.0,.0C13.7,.0,5.8,2.0,.0,5.5L.0,80.5z" id="shape6"/><g transform="translate(410.000000,161.000000)" id="shape7"><path stroke="#191919" stroke-width="1" d="M.0,.0L83.0,.0L83.0,9.0" fill="none"/><path stroke-width="1" stroke="#191919" stroke-linecap="round" fill="#191919" d="M86.0,9.0L83.0,15.0L80.0,9.0L86.0,9.0"/></g><g transform="translate(436.000000,91.000000)" id="group8"><path fill-rule="nonzero" stroke="#000000" stroke-width="0.3199999928474426" fill="#ffffff" d="M.0,21.0C.0,9.4,9.4,.0,21.0,.0C32.6,.0,42.0,9.4,42.0,21.0C42.0,32.6,32.6,42.0,21.0,42.0C9.4,42.0,.0,32.6,.0,21.0z" id="shape9"/><text style="fill:#191919;font-family:Arial;font-size:12.00pt" xml:space="preserve"><tspan y="19.1" x="11.5">FT</tspan></text></g><path transform="translate(457.000000,133.000000)" stroke="#191919" stroke-width="1" d="M.0,.0L.0,28.0" fill="none" id="shape10"/><g transform="translate(214.000000,94.500000)" id="shape11"><text style="fill:#191919;font-family:Arial;font-size:12.00pt" xml:space="preserve"><tspan y="24.0" x="40.5">VA01</tspan></text></g><g transform="translate(214.000000,161.000000)" id="shape12"><text style="fill:#191919;font-family:Arial;font-size:12.00pt" xml:space="preserve"><tspan y="24.0" x="40.5">VA02</tspan></text></g><g transform="translate(340.000000,176.000000)" id="shape13"><text style="fill:#191919;font-family:Arial;font-size:12.00pt" xml:space="preserve"><tspan y="24.0" x="4.0">PU01</tspan><tspan y="43.0" x="4.0">{{ PU01 </tspan><tspan y="59.0" x="4.0">Speed }}</tspan></text></g><g transform="translate(485.000000,81.500000)" id="shape14"><text style="fill:#191919;font-family:Arial;font-size:12.00pt" xml:space="preserve"><tspan y="24.0" x="4.0">FT01</tspan><tspan y="43.0" x="4.0">{{ FT01 Flow }}</tspan></text></g><g transform="translate(542.260000,219.000000)" id="group15"><path fill-rule="nonzero" stroke="#000000" stroke-width="0.3199999928474426" fill="#ffffff" d="M.0,21.0C.0,9.4,9.4,.0,21.0,.0C32.6,.0,42.0,9.4,42.0,21.0C42.0,32.6,32.6,42.0,21.0,42.0C9.4,42.0,.0,32.6,.0,21.0z" id="shape16"/><text style="fill:#191919;font-family:Arial;font-size:12.00pt" xml:space="preserve"><tspan y="19.1" x="12.0">TT</tspan></text></g><path transform="translate(542.260000,240.000000)" stroke="#191919" stroke-width="1" d="M.0,.0L-27.0,.0" fill="none" id="shape17"/><g transform="translate(583.000000,238.500000)" id="shape18"><text style="fill:#191919;font-family:Arial;font-size:12.00pt" xml:space="preserve"><tspan y="24.0" x="4.0">TT01</tspan><tspan y="43.0" x="4.0">{{ TT01.PV }} 😀 {{ TT01.unit }}</tspan></text></g></g></svg>',
       }),
     );
   }),
@@ -452,15 +490,16 @@ export const handlers = [
           {id: 'f', content: ' "yet another": "line"'},
           {id: 'g', content: '}'},
         ],
-        executed_line_ids: lockedLines.map(no => (no + 9).toString(36)),
+        started_line_ids: startedLines.map(no => (no + 9).toString(36)),
+        executed_line_ids: executedLines.map(no => (no + 9).toString(36)),
         injected_line_ids: ['c'],
       }),
     );
-    lockedLines.push((lockedLines.at(-1) ?? 0) + 1);
+    executedLines.push((executedLines.at(-1) ?? 0) + 1);
     return result;
   }),
 
-  rest.post('/api/process_unit/:unitId/method', (req, res, context) => {
+  rest.post('/api/process_unit/:unitId/method', (_, res, context) => {
     return res(
       context.status(200),
     );
@@ -527,7 +566,7 @@ export const handlers = [
     );
   }),
 
-  rest.get('/api/process_unit/:unitId/plot_log', (req, res, context) => {
+  rest.get('/api/process_unit/:unitId/plot_log', (_, res, context) => {
     const noOfValues = 90;
     return res(
       context.status(200),
@@ -619,6 +658,13 @@ export const handlers = [
           },
         },
       }),
+    );
+  }),
+
+  rest.get('/api/process_unit/:unitId/control_state', (_, res, context) => {
+    return res(
+      context.status(200),
+      context.json<ControlState>(controlState),
     );
   }),
 ];

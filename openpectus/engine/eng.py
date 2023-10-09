@@ -275,7 +275,7 @@ class ExecutionEngine():
                     self._runstate_started_time = time.time()
                     self._runstate_pause = False
                     self._runstate_hold = False
-                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Run)
+                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Running)
                     cmds_done.add(cmd_request)
                     self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
@@ -298,7 +298,7 @@ class ExecutionEngine():
                 case EngineCommandEnum.HOLD:
                     #self._runstate_pause = False
                     self._runstate_hold = True
-                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Hold)
+                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Holding)
                     cmds_done.add(cmd_request)
                     self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
@@ -537,11 +537,11 @@ class EngineCommandEnum(StrEnum):
 
 
 class SystemStateEnum(StrEnum):
-    Run = "Run",
+    Running = "Running",
     Paused = "Paused",
-    Hold = "Hold",
-    Wait = "Wait",
-    Stopped = "Run"
+    Holding = "Holding",
+    Waiting = "Waiting",
+    Stopped = "Stopped"
 
 
 class MethodStatusEnum(StrEnum):

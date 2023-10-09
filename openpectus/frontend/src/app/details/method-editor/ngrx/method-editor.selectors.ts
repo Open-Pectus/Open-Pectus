@@ -11,4 +11,5 @@ export class MethodEditorSelectors {
   static lineIds = createSelector(this.methodLines, methodLines => methodLines.map(line => line.id));
   static injectedLineIds = createSelector(this.method, method => method.injected_line_ids);
   static executedLineIds = createSelector(this.method, method => method.executed_line_ids);
+  static startedLineIds = createSelector(this.method, method => method.started_line_ids);
 }

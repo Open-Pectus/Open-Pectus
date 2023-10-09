@@ -8,10 +8,11 @@ import { DetailsRoutingUrlParts } from '../../details-routing-url-parts';
 import { MethodEditorActions } from './method-editor.actions';
 import { MethodEditorSelectors } from './method-editor.selectors';
 
+// noinspection JSUnusedGlobalSymbols
 @Injectable()
 export class MethodEditorEffects {
   saveMethodEditorModel = createEffect(() => this.actions.pipe(
-    ofType(MethodEditorActions.modelSaveRequested),
+    ofType(MethodEditorActions.saveButtonClicked, MethodEditorActions.saveKeyboardShortcutPressed),
     concatLatestFrom(() => [
       this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName)),
       this.store.select(MethodEditorSelectors.method),

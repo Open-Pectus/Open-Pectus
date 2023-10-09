@@ -7,3 +7,7 @@
 :host ::ng-deep .executed-line {
   background-color: rgba(0, 255, 0, 0.33);
 }
+
+:host ::ng-deep .started-line {
+  background-color: rgba(0, 200, 255, 0.33);
+}

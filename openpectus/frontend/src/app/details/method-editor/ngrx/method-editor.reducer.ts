@@ -15,6 +15,7 @@ const initialState: MethodEditorState = {
   isDirty: false,
   method: {
     lines: [],
+    started_line_ids: [],
     executed_line_ids: [],
     injected_line_ids: [],
   },
@@ -31,6 +32,9 @@ const reducer = createReducer(initialState,
     }
     if(!UtilMethods.arrayEquals(draft.method.injected_line_ids, method.injected_line_ids)) {
       draft.method.injected_line_ids = method.injected_line_ids;
+    }
+    if(!UtilMethods.arrayEquals(draft.method.started_line_ids, method.started_line_ids)) {
+      draft.method.started_line_ids = method.started_line_ids;
     }
 
     // take content only from executed (and therefore locked) lines.
@@ -51,13 +55,6 @@ const reducer = createReducer(initialState,
   })),
   on(MethodEditorActions.monacoEditorComponentInitialized, state => produce(state, draft => {
     draft.monacoServicesInitialized = true;
-  })),
-  on(MethodEditorActions.monacoEditorComponentDestroyed, state => produce(state, draft => {
-    draft.method = {
-      lines: [],
-      executed_line_ids: [],
-      injected_line_ids: [],
-    };
   })),
   on(MethodEditorActions.modelSaved, state => produce(state, draft => {
     draft.isDirty = false;
