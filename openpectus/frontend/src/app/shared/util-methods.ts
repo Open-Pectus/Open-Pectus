@@ -1,6 +1,6 @@
 export class UtilMethods {
   static get isMobile() {
-    return window.outerWidth < 768;
+    return window.outerWidth < 1024;
   }
 
   static get isDesktop() {
