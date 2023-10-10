@@ -10,8 +10,8 @@ import { OidcSecurityService } from 'angular-auth-oidc-client';
       <app-msw-enablement class="flex-1"></app-msw-enablement>
       <button class="text-3xl font-bold mx-4 my-2.5" (click)="navigateToRoot()">Open Pectus</button>
       <ng-container *ngrxLet="oidcSecurityService.userData$ as userData">
-        <div class="flex gap-4 items-center flex-1 justify-end">
-          <p>{{userData.userData?.name ?? 'Anonymous'}}</p>
+        <div class="flex gap-3 items-center flex-1 justify-end">
+          <p>{{getInitials(userData.userData) ?? 'Anon'}}</p>
           <div class="codicon codicon-account !text-3xl"></div>
         </div>
       </ng-container>
@@ -24,5 +24,9 @@ export class TopBarComponent {
 
   navigateToRoot() {
     this.router.navigate(['/']).then();
+  }
+
+  getInitials(userData: { email: string }) {
+    return userData.email.split('@')[0].toUpperCase();
   }
 }
