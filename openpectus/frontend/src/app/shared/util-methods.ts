@@ -1,4 +1,12 @@
 export class UtilMethods {
+  static get isMobile() {
+    return window.outerWidth < 768;
+  }
+
+  static get isDesktop() {
+    return !UtilMethods.isMobile;
+  }
+
   static isNotNullOrUndefined<T>(value: T | null | undefined): value is T {
     return value !== null && value !== undefined;
   }
@@ -25,13 +33,5 @@ export class UtilMethods {
 
   static arrayEquals<T>(a: T[], b: T[]): boolean {
     return a.length === b.length && a.every((value, index) => b[index] === value);
-  }
-
-  static isMobile() {
-    return window.outerWidth < 768;
-  }
-
-  static isDesktop() {
-    return !UtilMethods.isMobile();
   }
 }

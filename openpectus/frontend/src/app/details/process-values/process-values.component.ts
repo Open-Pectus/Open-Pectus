@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { ProcessValue, ProcessValueCommand } from '../../api';
+import { UtilMethods } from '../../shared/util-methods';
 import { DetailsSelectors } from '../ngrx/details.selectors';
 import { ProcessValuesActions } from './ngrx/process-values.actions';
 import { PvAndPosition } from './process-value.component';
@@ -53,6 +54,7 @@ export class ProcessValuesComponent implements OnInit, OnDestroy {
   }
 
   onOpenCommands(pvAndPosition: PvAndPosition) {
+    if(UtilMethods.isMobile) pvAndPosition.position.x = window.innerWidth / 2;
     this.pvAndPositionForPopover = pvAndPosition;
     this.showCommands = true;
   }
