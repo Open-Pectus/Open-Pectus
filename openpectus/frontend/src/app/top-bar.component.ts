@@ -26,7 +26,7 @@ export class TopBarComponent {
     this.router.navigate(['/']).then();
   }
 
-  getInitials(userData: { email: string }) {
-    return userData.email.split('@')[0].toUpperCase();
+  getInitials(userData: { email: string } | null) {
+    return userData?.email?.split('@')?.[0]?.toUpperCase();
   }
 }
