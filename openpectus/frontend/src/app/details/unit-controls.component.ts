@@ -7,7 +7,7 @@ import { DetailsSelectors } from './ngrx/details.selectors';
   selector: 'app-unit-controls',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex gap-3" *ngrxLet="controlState as controlState">
+    <div class="flex gap-3 flex-wrap" *ngrxLet="controlState as controlState">
       <app-unit-control-button [command]="'Start'" [iconName]="'play'" [toggledColor]="startColor"
                                [toggled]="controlState.is_running"></app-unit-control-button>
       <app-unit-control-button [command]="'Pause'" [iconName]="'debug-pause'"

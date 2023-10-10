@@ -6,7 +6,7 @@ import { RunLogActions } from './ngrx/run-log.actions';
   selector: 'app-run-log-filters',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex gap-3 items-center">
+    <div class="flex gap-3 items-center flex-wrap justify-end">
       <label class="relative">
         <input type="text" placeholder="Filter Run Log" size="20"
                class="border border-slate-200 placeholder:text-slate-400 text-white bg-transparent outline-none rounded p-1 h-8"

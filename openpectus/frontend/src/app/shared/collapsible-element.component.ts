@@ -5,23 +5,23 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
   selector: 'app-collapsible-element',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex flex-col bg-sky-700 p-1.5 rounded-md shadow-lg relative transition-[padding-bottom]" [class.pb-0]="collapsed">
-      <div class="flex justify-between items-center text-gray-100 p-2 cursor-pointer select-none" (click)="toggleCollapsed()">
-        <div class="flex items-center">
+    <div class="flex flex-col bg-sky-700 py-1.5 lg:rounded-md lg:p-1.5 shadow-lg relative transition-[padding-bottom]" [class.pb-0]="collapsed">
+      <div class="flex items-center flex-wrap text-gray-100 p-2 gap-3 cursor-pointer select-none" (click)="toggleCollapsed()">
+        <div class="flex items-center mr-1">
           <span class="codicon !text-2xl mr-2" *ngIf="codiconName !== undefined" [ngClass]="codiconName"
                 [style.margin-bottom.px]="codiconName === 'codicon-graph-line' ? -1 : codiconName === 'codicon-dashboard' ? -1 : null"
                 [style.--vscode-symbolIcon-keywordForeground]="'initial'"></span>
           <span class="text-2xl font-bold">{{name}}</span>
         </div>
-        <div class="flex gap-4 items-center" (click)="$event.stopPropagation()">
-          <ng-container *ngIf="!collapsed">
-            <ng-content select="[buttons]"></ng-content>
-          </ng-container>
-          <div class="codicon !text-2xl !font-bold" [class.codicon-chevron-right]="collapsed" [class.codicon-chevron-down]="!collapsed"
-               (click)="toggleCollapsed()"></div>
+        <div class="flex gap-4 items-center flex-1 justify-end mr-10" *ngIf="!collapsed" (click)="$event.stopPropagation()">
+          <ng-content select="[buttons]"></ng-content>
         </div>
+
+        <div class="codicon !text-2xl !font-bold absolute right-3 lg:right-4" [class.codicon-chevron-right]="collapsed"
+             [class.codicon-chevron-down]="!collapsed"
+             (click)="$event.stopPropagation(); toggleCollapsed()"></div>
       </div>
-      <div class="bg-white rounded-sm mt-1.5 h-full" [class.transition-[height]]="!isDragging" #content
+      <div class="bg-white lg:rounded-sm mt-1.5 h-full" [class.transition-[height]]="!isDragging" #content
            [class.overflow-hidden]="!contentOverflow"
            [style.height.px]="height" (transitionend)="onTransitionEndContentContainer($event)">
         <ng-content select="[content]"></ng-content>

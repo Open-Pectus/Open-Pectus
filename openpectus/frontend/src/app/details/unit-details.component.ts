@@ -7,15 +7,14 @@ import { DetailsActions } from './ngrx/details.actions';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="flex justify-center">
-      <div class="grid grid-cols-1 2xl:grid-cols-2 w-full p-8 gap-8">
-        <app-unit-header></app-unit-header>
+      <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:py-8 gap-4 lg:gap-8">
+        <app-unit-header class="mx-2 my-3 lg:m-0"></app-unit-header>
         <app-process-values></app-process-values>
         <app-method-editor></app-method-editor>
         <app-commands></app-commands>
         <app-run-log></app-run-log>
         <app-process-diagram></app-process-diagram>
         <app-process-plot-container class="2xl:col-span-2"></app-process-plot-container>
-
       </div>
     </div>
   `,

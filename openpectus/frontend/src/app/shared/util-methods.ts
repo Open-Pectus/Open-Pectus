@@ -1,4 +1,12 @@
 export class UtilMethods {
+  static get isMobile() {
+    return window.outerWidth < 1024;
+  }
+
+  static get isDesktop() {
+    return !UtilMethods.isMobile;
+  }
+
   static isNotNullOrUndefined<T>(value: T | null | undefined): value is T {
     return value !== null && value !== undefined;
   }

@@ -92,7 +92,7 @@ export const handlers = [
     return res(
       ctx.status(200),
       ctx.json<AuthConfig>({
-        use_auth: false,
+        use_auth: true,
         client_id: 'fc7355bb-a6be-493f-90a1-cf57063f7948',
         authority_url: 'https://login.microsoftonline.com/fdfed7bd-9f6a-44a1-b694-6e39c468c150/v2.0',
       }),
@@ -209,38 +209,40 @@ export const handlers = [
           value_type: ProcessValueType.STRING,
           name: 'Writable text',
           value: 'VaLuE',
-          commands: [{
-            name: 'jiojio',
-            command: 'jiojio',
-            value: {
-              value: 'Writable text',
-              value_type: ProcessValueCommandFreeTextValue.value_type.STRING,
+          commands: [
+            {
+              name: 'choice',
+              command: 'choice',
+              value: {
+                value_type: ProcessValueCommandChoiceValue.value_type.CHOICE,
+                value: 'first',
+                options: ['first', 'second', 'third'],
+              },
             },
-          }, {
-            name: 'something',
-            command: 'something',
-          }, {
-            name: 'something disabled',
-            command: 'something disabled',
-            disabled: true,
-          }, {
-            name: 'number',
-            command: 'set number',
-            value: {
-              value: 123,
-              value_unit: 'no',
-              valid_value_units: ['no'],
-              value_type: ProcessValueType.INT,
-            },
-          }, {
-            name: 'choice',
-            command: 'choice',
-            value: {
-              value_type: ProcessValueCommandChoiceValue.value_type.CHOICE,
-              value: 'first',
-              options: ['first', 'second', 'third'],
-            },
-          }],
+            {
+              name: 'jiojio',
+              command: 'jiojio',
+              value: {
+                value: 'Writable text',
+                value_type: ProcessValueCommandFreeTextValue.value_type.STRING,
+              },
+            }, {
+              name: 'something',
+              command: 'something',
+            }, {
+              name: 'something disabled',
+              command: 'something disabled',
+              disabled: true,
+            }, {
+              name: 'number',
+              command: 'set number',
+              value: {
+                value: 123,
+                value_unit: 'no',
+                valid_value_units: ['no'],
+                value_type: ProcessValueType.INT,
+              },
+            }],
         }, {
           value_type: ProcessValueType.FLOAT,
           name: 'TT01',

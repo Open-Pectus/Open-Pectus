@@ -7,14 +7,11 @@ import { DetailsSelectors } from './ngrx/details.selectors';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ng-container *ngrxLet="processUnit as processUnit">
-      <div class="flex justify-between items-start gap-4">
-        <div class="text-slate-700">
-          <h1 class="text-4xl font-bold">{{processUnit?.name}}</h1>
-          <span class="text-sm">{{processUnit?.current_user_role}}</span>
-        </div>
-
-        <app-unit-controls></app-unit-controls>
+      <div class="text-slate-700 mb-3 -mt-2">
+        <span class="text-sm">{{processUnit?.current_user_role}}</span>
+        <h1 class="text-4xl font-bold">{{processUnit?.name}}</h1>
       </div>
+      <app-unit-controls></app-unit-controls>
     </ng-container>
   `,
 })

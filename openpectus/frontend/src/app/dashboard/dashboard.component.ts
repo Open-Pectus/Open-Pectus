@@ -7,7 +7,7 @@ import { DashboardActions } from './ngrx/dashboard.actions';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="flex justify-center">
-      <div class="flex flex-col max-w-5xl mx-8">
+      <div class="flex flex-col max-w-5xl mx-4 lg:mx-8">
         <div class="text-xl font-semibold my-6 text-gray-500">Process Units:</div>
         <app-dashboard-process-units class="mb-6"></app-dashboard-process-units>
         <div class="flex justify-between items-center">

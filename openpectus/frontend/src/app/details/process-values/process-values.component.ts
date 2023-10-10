@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { ProcessValue, ProcessValueCommand } from '../../api';
+import { UtilMethods } from '../../shared/util-methods';
 import { DetailsSelectors } from '../ngrx/details.selectors';
 import { ProcessValuesActions } from './ngrx/process-values.actions';
 import { PvAndPosition } from './process-value.component';
@@ -10,7 +11,7 @@ import { PvAndPosition } from './process-value.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-collapsible-element [name]="'Process Values'" (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-dashboard'">
-      <div class="flex gap-2 p-2 items-start flex-wrap" content *ngIf="!collapsed">
+      <div class="flex gap-2 py-2 px-1 lg:px-2 items-start flex-wrap" content *ngIf="!collapsed">
         <div class="m-auto" *ngIf="(processValues | ngrxPush)?.length === 0">No process values available</div>
         <app-process-value *ngFor="let processValue of (processValues | ngrxPush); trackBy: trackBy"
                            [processValue]="processValue"
@@ -53,6 +54,7 @@ export class ProcessValuesComponent implements OnInit, OnDestroy {
   }
 
   onOpenCommands(pvAndPosition: PvAndPosition) {
+    if(UtilMethods.isMobile) pvAndPosition.position.x = window.innerWidth / 2;
     this.pvAndPositionForPopover = pvAndPosition;
     this.showCommands = true;
   }
