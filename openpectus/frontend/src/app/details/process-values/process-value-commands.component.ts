@@ -31,7 +31,7 @@ type FocusableCommandComponent = ProcessValueCommandButtonComponent | ProcessVal
                                   (save)="onEditorSave($event, command)"></app-process-value-editor>
         <app-process-value-command-choice #focusableElement [command]="command" *ngIf="shouldUseChoice(command)" (buttonBlur)="onBlur($event)"
                                           (choiceMade)="onChoiceMade($event, command)"></app-process-value-command-choice>
-        <app-process-value-command-button #focusableElement [command]="command" (buttonBlur)="onBlur($event)"
+        <app-process-value-command-button #focusableElement [command]="command" *ngIf="shouldUseButton(command)" (buttonBlur)="onBlur($event)"
                                           (click)="$event.stopPropagation(); onButtonClick(command)"></app-process-value-command-button>
       </ng-container>
     </div>
@@ -75,6 +75,10 @@ export class ProcessValueCommandsComponent implements AfterViewInit {
 
   shouldUseChoice(command: ProcessValueCommand) {
     return command.value?.value_type === ProcessValueCommandChoiceValue.value_type.CHOICE;
+  }
+
+  shouldUseButton(command: ProcessValueCommand) {
+    return command?.value === undefined;
   }
 
   onChoiceMade(optionChosen: string, command: ProcessValueCommand) {
