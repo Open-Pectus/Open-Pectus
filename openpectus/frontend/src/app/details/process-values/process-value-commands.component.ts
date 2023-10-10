@@ -12,24 +12,27 @@ import {
 } from '@angular/core';
 import { produce } from 'immer';
 import { ProcessValueCommand, ProcessValueCommandChoiceValue, ProcessValueType } from '../../api';
+import { ProcessValueCommandButtonComponent } from './process-value-command-button.component';
+import { ProcessValueCommandChoiceComponent } from './process-value-command-choice.component';
 import { ProcessValueEditorComponent, ValueAndUnit } from './process-value-editor.component';
+
+type FocusableCommandComponent = ProcessValueCommandButtonComponent | ProcessValueEditorComponent | ProcessValueCommandChoiceComponent;
 
 @Component({
   selector: 'app-process-value-commands',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div tabindex="0" #element
+    <div tabindex="0" #container
          class="absolute left-1/2 -translate-x-1/2 top-0.5 z-10 flex flex-col gap-2 bg-white border border-slate-500 outline-none rounded-md p-2"
          (blur)="onBlur($event)">
 
       <ng-container *ngFor="let command of processValueCommands">
-        <app-process-value-editor *ngIf="shouldUseEditor(command)" [command]="command" (inputBlur)="onBlur($event)"
+        <app-process-value-editor #focusableElement *ngIf="shouldUseEditor(command)" [command]="command" (inputBlur)="onBlur($event)"
                                   (save)="onEditorSave($event, command)"></app-process-value-editor>
-        <app-process-value-command-choice [command]="command" *ngIf="shouldUseChoice(command)"
+        <app-process-value-command-choice #focusableElement [command]="command" *ngIf="shouldUseChoice(command)" (buttonBlur)="onBlur($event)"
                                           (choiceMade)="onChoiceMade($event, command)"></app-process-value-command-choice>
-        <button *ngIf="command.value === undefined" [attr.disabled]="command.disabled" [class.!bg-gray-400]="command.disabled"
-                class="bg-green-400 text-gray-800 rounded-md py-2 px-3 whitespace-pre font-semibold"
-                (click)="$event.stopPropagation(); onButtonClick(command)">{{command.name}}</button>
+        <app-process-value-command-button #focusableElement [command]="command" (buttonBlur)="onBlur($event)"
+                                          (click)="$event.stopPropagation(); onButtonClick(command)"></app-process-value-command-button>
       </ng-container>
     </div>
   `,
@@ -37,16 +40,16 @@ import { ProcessValueEditorComponent, ValueAndUnit } from './process-value-edito
 export class ProcessValueCommandsComponent implements AfterViewInit {
   @Output() shouldClose = new EventEmitter<ProcessValueCommand | undefined>();
   @Input() processValueCommands?: ProcessValueCommand[];
-  @ViewChild('element', {static: true}) element!: ElementRef<HTMLDivElement>;
-  @ViewChildren(ProcessValueEditorComponent) editors!: QueryList<ProcessValueEditorComponent>;
+  @ViewChild('container', {static: true}) container!: ElementRef<HTMLDivElement>;
+  @ViewChildren('focusableElement') focusableElements!: QueryList<FocusableCommandComponent>;
 
   ngAfterViewInit() {
-    this.editors.first.focus();
+    this.focusableElements.first?.focus();
   }
 
   onBlur(event: FocusEvent) {
     // only close if it is not one of our subelements buttons or editors receiving focus.
-    if((event.relatedTarget as Element | null)?.compareDocumentPosition(this.element.nativeElement) === 10) return;
+    if((event.relatedTarget as Element | null)?.compareDocumentPosition(this.container.nativeElement) === 10) return;
     this.shouldClose.emit();
   }
 
