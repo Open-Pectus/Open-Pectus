@@ -21,12 +21,12 @@ export class BatchJobService {
     constructor(public readonly http: HttpClient) {}
 
     /**
-     * Get Batch
+     * Get Batch Job
      * @param id 
      * @returns BatchJob Successful Response
      * @throws ApiError
      */
-    public getBatch(
+    public getBatchJob(
 id: string,
 ): Observable<BatchJob> {
         return __request(OpenAPI, this.http, {

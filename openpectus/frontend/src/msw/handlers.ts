@@ -296,15 +296,15 @@ export const handlers = [
       ctx.status(200),
       ctx.json<BatchJob[]>([
         {
-          id: 1,
+          id: '1',
           unit_id: '1',
           unit_name: 'Some Name 1 that is very long, and way longer than it should be.',
           completed_date: getCompletedDate(),
           contributors: ['Eskild'],
         },
-        {id: 2, unit_id: '2', unit_name: 'Some Name 2', completed_date: getCompletedDate(), contributors: ['Eskild', 'Morten']},
-        {id: 3, unit_id: '3', unit_name: 'Some Name 3', completed_date: getCompletedDate(), contributors: ['Eskild']},
-        {id: 4, unit_id: '4', unit_name: 'Some Name 4', completed_date: getCompletedDate(), contributors: ['Eskild']},
+        {id: '2', unit_id: '2', unit_name: 'Some Name 2', completed_date: getCompletedDate(), contributors: ['Eskild', 'Morten']},
+        {id: '3', unit_id: '3', unit_name: 'Some Name 3', completed_date: getCompletedDate(), contributors: ['Eskild']},
+        {id: '4', unit_id: '4', unit_name: 'Some Name 4', completed_date: getCompletedDate(), contributors: ['Eskild']},
       ]),
     );
   }),
@@ -781,6 +781,19 @@ export const handlers = [
             ],
           },
         ],
+      }),
+    );
+  }),
+
+  rest.get('/api/batch_job/:id', (req, res, context) => {
+    return res(
+      context.status(200),
+      context.json<BatchJob>({
+        id: req.params['id'].toString(),
+        completed_date: sub(new Date(), {hours: 1}).toISOString(),
+        contributors: ['Morten', 'Eskild'],
+        unit_id: 'A process unit id',
+        unit_name: 'A batch job name',
       }),
     );
   }),

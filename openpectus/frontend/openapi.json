@@ -519,8 +519,8 @@
         "tags": [
           "batch_job"
         ],
-        "summary": "Get Batch",
-        "operationId": "get_batch",
+        "summary": "Get Batch Job",
+        "operationId": "get_batch_job",
         "parameters": [
           {
             "required": true,
@@ -751,7 +751,7 @@
       "BatchJob": {
         "properties": {
           "id": {
-            "type": "integer",
+            "type": "string",
             "title": "Id"
           },
           "unit_id": {

@@ -10,14 +10,14 @@ router = APIRouter(tags=["batch_job"])
 
 class BatchJob(BaseModel):
     """ Represents a current or historical run of a process unit. """
-    id: int
+    id: str
     unit_id: str
     unit_name: str
     completed_date: datetime
     contributors: List[str] = []
 
 @router.get("/batch_job/{id}")
-def get_batch(id: str) -> BatchJob:
+def get_batch_job(id: str) -> BatchJob:
     dt = datetime(2023, 3, 21, 12, 31, 57, 0)
     return BatchJob(id=id, unit_id="3", unit_name="Foo", completed_date=dt, contributors=[])
 

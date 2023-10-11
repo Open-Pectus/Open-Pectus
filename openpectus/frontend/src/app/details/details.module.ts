@@ -5,6 +5,7 @@ import { EffectsModule } from '@ngrx/effects';
 import { StoreModule } from '@ngrx/store';
 import { SharedModule } from '../shared/shared.module';
 import { BatchJobDetailsComponent } from './batch-job-details.component';
+import { BatchJobHeaderComponent } from './batch-job-header.component';
 import { CommandExamplesListComponent } from './commands/command-examples-list.component';
 import { CommandsComponent } from './commands/commands.component';
 import { DetailsRoutingModule } from './details-routing.module';
@@ -15,10 +16,10 @@ import { ProcessDiagramComponent } from './process-diagram.component';
 import { ProcessPlotModule } from './process-plot/process-plot.module';
 import { ProcessValuesModule } from './process-values/process-values.module';
 import { RunLogModule } from './run-log/run-log.module';
-import { UnitDetailsComponent } from './unit-details.component';
-import { UnitHeaderComponent } from './unit-header.component';
 import { UnitControlButtonComponent } from './unit-control-button.component';
 import { UnitControlsComponent } from './unit-controls.component';
+import { UnitDetailsComponent } from './unit-details.component';
+import { UnitHeaderComponent } from './unit-header.component';
 
 @NgModule({
   declarations: [
@@ -30,6 +31,7 @@ import { UnitControlsComponent } from './unit-controls.component';
     UnitHeaderComponent,
     UnitControlButtonComponent,
     UnitControlsComponent,
+    BatchJobHeaderComponent,
   ],
   imports: [
     CommonModule,

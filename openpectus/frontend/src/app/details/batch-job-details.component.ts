@@ -10,6 +10,7 @@ import { DetailsActions } from './ngrx/details.actions';
   template: `
     <div class="flex justify-center">
       <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:py-8 gap-4 lg:gap-8">
+        <app-batch-job-header class="2xl:col-span-2 mx-2 mt-3 lg:m-0"></app-batch-job-header>
         <app-method-editor [batchJobId]="batchJobId | ngrxPush"></app-method-editor>
         <app-run-log [batchJobId]="batchJobId | ngrxPush"></app-run-log>
         <app-process-plot-container class="2xl:col-span-2"></app-process-plot-container>
