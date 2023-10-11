@@ -33,6 +33,7 @@ export class MethodEditorEffects {
     }),
   ));
 
+  // TODO: Should be websocket in future, not polling.
   continuouslyPollMethod = createEffect(() => this.actions.pipe(
     ofType(MethodEditorActions.methodFetched, MethodEditorActions.methodPolled),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
