@@ -8,6 +8,7 @@ import type { Observable } from 'rxjs';
 
 import type { BatchJob } from '../models/BatchJob';
 import type { Method } from '../models/Method';
+import type { RunLog } from '../models/RunLog';
 
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -64,6 +65,27 @@ id: string,
         return __request(OpenAPI, this.http, {
             method: 'GET',
             url: '/api/batch_job/{id}/method',
+            path: {
+                'id': id,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
+    /**
+     * Get Batch Job Run Log
+     * @param id 
+     * @returns RunLog Successful Response
+     * @throws ApiError
+     */
+    public getBatchJobRunLog(
+id: string,
+): Observable<RunLog> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/batch_job/{id}/run_log',
             path: {
                 'id': id,
             },
