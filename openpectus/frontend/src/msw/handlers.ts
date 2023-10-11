@@ -669,4 +669,24 @@ export const handlers = [
       context.json<ControlState>(controlState),
     );
   }),
+
+  rest.get('/api/batch_job/:batchJobId/method', (req, res, context) => {
+    return res(
+      context.status(200),
+      context.json<Method>({
+        lines: [
+          {id: 'a', content: '{'},
+          {id: 'b', content: ' "some key": "some value",'},
+          {id: 'c', content: ' "injected": "line",'},
+          {id: 'd', content: ' "another key": "another value",'},
+          {id: 'e', content: ' "another": "line",'},
+          {id: 'f', content: ' "yet another": "line"'},
+          {id: 'g', content: '}'},
+        ],
+        started_line_ids: [],
+        executed_line_ids: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+        injected_line_ids: ['c'],
+      }),
+    );
+  }),
 ];

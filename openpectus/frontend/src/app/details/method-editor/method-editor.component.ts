@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { Subject } from 'rxjs';
 import { MethodEditorActions } from './ngrx/method-editor.actions';
@@ -20,7 +20,10 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
     </app-collapsible-element>
   `,
 })
-export class MethodEditorComponent implements OnInit {
+export class MethodEditorComponent implements OnInit, OnDestroy {
+  @Input() runningUnitId?: string;
+  @Input() batchJobId?: string;
+
   protected methodEditorIsDirty = this.store.select(MethodEditorSelectors.isDirty);
   protected editorSizeChange = new Subject<void>();
   protected collapsed = false;
@@ -28,7 +31,16 @@ export class MethodEditorComponent implements OnInit {
   constructor(private store: Store) {}
 
   ngOnInit() {
-    this.store.dispatch(MethodEditorActions.methodEditorComponentInitialized());
+    if(this.runningUnitId !== undefined) {
+      this.store.dispatch(MethodEditorActions.methodEditorComponentInitializedForUnit({unitId: this.runningUnitId}));
+    }
+    if(this.batchJobId !== undefined) {
+      this.store.dispatch(MethodEditorActions.methodEditorComponentInitializedForBatchJob({batchJobId: this.batchJobId}));
+    }
+  }
+
+  ngOnDestroy() {
+    this.store.dispatch(MethodEditorActions.methodEditorComponentDestroyed());
   }
 
   onSaveButtonClicked() {

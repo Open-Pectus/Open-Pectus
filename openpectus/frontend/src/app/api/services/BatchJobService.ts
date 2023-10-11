@@ -7,6 +7,7 @@ import { HttpClient } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 
 import type { BatchJob } from '../models/BatchJob';
+import type { Method } from '../models/Method';
 
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -25,7 +26,7 @@ export class BatchJobService {
      * @throws ApiError
      */
     public getBatch(
-id: number,
+id: string,
 ): Observable<BatchJob> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
@@ -48,6 +49,27 @@ id: number,
         return __request(OpenAPI, this.http, {
             method: 'GET',
             url: '/api/recent_batch_jobs',
+        });
+    }
+
+    /**
+     * Get Batch Job Method
+     * @param id 
+     * @returns Method Successful Response
+     * @throws ApiError
+     */
+    public getBatchJobMethod(
+id: string,
+): Observable<Method> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/batch_job/{id}/method',
+            path: {
+                'id': id,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
         });
     }
 

@@ -130,7 +130,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       fontSize: 18,
       glyphMargin: false,
       fixedOverflowWidgets: true,
-      lineNumbersMinChars: 1,
+      lineNumbersMinChars: UtilMethods.isMobile ? 1 : 3,
       minimap: {
         enabled: UtilMethods.isDesktop,
       },

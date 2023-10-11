@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { debounceTime, map, of, switchMap } from 'rxjs';
-import { ProcessUnitService } from '../../../api';
+import { BatchJobService, ProcessUnitService } from '../../../api';
 import { selectRouteParam } from '../../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../../details-routing-url-parts';
 import { MethodEditorActions } from './method-editor.actions';
@@ -24,18 +24,25 @@ export class MethodEditorEffects {
     }),
   ));
 
-  fetchContentWhenComponentInitialized = createEffect(() => this.actions.pipe(
-    ofType(MethodEditorActions.methodEditorComponentInitialized),
-    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
-    switchMap(([_, unitId]) => {
+  fetchContentWhenComponentInitializedForUnit = createEffect(() => this.actions.pipe(
+    ofType(MethodEditorActions.methodEditorComponentInitializedForUnit),
+    switchMap(({unitId}) => {
       if(unitId === undefined) return of();
       return this.processUnitService.getMethod(unitId).pipe(map(method => MethodEditorActions.methodFetched({method})));
     }),
   ));
 
+  fetchContentWhenComponentInitializedForBatchJob = createEffect(() => this.actions.pipe(
+    ofType(MethodEditorActions.methodEditorComponentInitializedForBatchJob),
+    switchMap(({batchJobId}) => {
+      if(batchJobId === undefined) return of();
+      return this.batchJobService.getBatchJobMethod(batchJobId).pipe(map(method => MethodEditorActions.methodFetched({method})));
+    }),
+  ));
+
   // TODO: Should be websocket in future, not polling.
   continuouslyPollMethod = createEffect(() => this.actions.pipe(
-    ofType(MethodEditorActions.methodFetched, MethodEditorActions.methodPolled),
+    ofType(MethodEditorActions.methodEditorComponentInitializedForUnit, MethodEditorActions.methodPolled),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     debounceTime(10000), // delay() in MSW doesn't work in Firefox, so to avoid freezing the application in FF, we debounce
     switchMap(([_, unitId]) => {
@@ -44,5 +51,7 @@ export class MethodEditorEffects {
     }),
   ));
 
-  constructor(private actions: Actions, private store: Store, private processUnitService: ProcessUnitService) {}
+  constructor(private actions: Actions, private store: Store,
+              private processUnitService: ProcessUnitService,
+              private batchJobService: BatchJobService) {}
 }

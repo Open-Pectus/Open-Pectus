@@ -528,7 +528,7 @@
           {
             "required": true,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "title": "Id"
             },
             "name": "id",
@@ -577,6 +577,48 @@
                   },
                   "type": "array",
                   "title": "Response Get Recent Batch Jobs"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/batch_job/{id}/method": {
+      "get": {
+        "tags": [
+          "batch_job"
+        ],
+        "summary": "Get Batch Job Method",
+        "operationId": "get_batch_job_method",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            },
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Method"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }

@@ -2,6 +2,8 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum, auto
 from typing import Literal, List, Dict
+
+from aggregator.routers.dto import Method
 from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel
 
@@ -246,15 +248,6 @@ class RunLog(BaseModel):
 def get_run_log(unit_id: str) -> RunLog:
     return RunLog(lines=[])
 
-class MethodLine(BaseModel):
-    id: str
-    content: str
-
-class Method(BaseModel):
-    lines: List[MethodLine]
-    started_line_ids: List[str]
-    executed_line_ids: List[str]
-    injected_line_ids: List[str]
 
 @router.get('/process_unit/{unit_id}/method')
 def get_method(unit_id: str) -> Method:

@@ -63,6 +63,9 @@ const reducer = createReducer(initialState,
     draft.isDirty = true;
     draft.method.lines = lines;
   })),
+  on(MethodEditorActions.methodEditorComponentDestroyed, state => produce(state, draft => {
+    draft.method = {lines: [], started_line_ids: [], executed_line_ids: [], injected_line_ids: []};
+  })),
 );
 
 export const methodEditorSlice = {name: 'methodEditor', reducer};

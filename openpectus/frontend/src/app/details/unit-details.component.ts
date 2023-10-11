@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
+import { selectRouteParam } from '../ngrx/router.selectors';
+import { DetailsRoutingUrlParts } from './details-routing-url-parts';
 import { DetailsActions } from './ngrx/details.actions';
 
 @Component({
@@ -10,7 +12,7 @@ import { DetailsActions } from './ngrx/details.actions';
       <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:py-8 gap-4 lg:gap-8">
         <app-unit-header class="mx-2 my-3 lg:m-0"></app-unit-header>
         <app-process-values></app-process-values>
-        <app-method-editor></app-method-editor>
+        <app-method-editor [runningUnitId]="unitId | ngrxPush"></app-method-editor>
         <app-commands></app-commands>
         <app-run-log></app-run-log>
         <app-process-diagram></app-process-diagram>
@@ -20,6 +22,8 @@ import { DetailsActions } from './ngrx/details.actions';
   `,
 })
 export class UnitDetailsComponent implements OnInit, OnDestroy {
+  protected unitId = this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName));
+
   constructor(private store: Store) {}
 
   ngOnInit() {

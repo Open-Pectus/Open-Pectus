@@ -16,4 +16,6 @@ export class DetailsActions {
   static commandExamplesFetched = createAction(source + 'Command Examples Fetched', props<{ commandExamples: CommandExample[] }>());
   static commandsComponentExecuteClicked = createAction(source + 'Commands Component Execute Clicked', props<{ command: ExecutableCommand }>());
   static controlStateFetched = createAction(source + 'Control State Fetched', props<{ controlState: ControlState }>());
+  static batchJobDetailsInitialized = createAction(source + 'Batch Job Details Initialized');
+  static batchJobDetailsDestroyed = createAction(source + 'Batch Job Details Destroyed');
 }
