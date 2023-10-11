@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { catchError, debounceTime, delayWhen, map, mergeMap, of, switchMap, takeUntil, timer } from 'rxjs';
+import { catchError, debounceTime, delayWhen, map, mergeMap, of, switchMap, timer } from 'rxjs';
 import { BatchJobService, CommandSource, ProcessUnitService } from '../../api';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
@@ -27,7 +27,6 @@ export class DetailsEffects {
     ofType(DetailsActions.processValuesFetched, DetailsActions.processValuesFailedToLoad),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     debounceTime(1000),
-    takeUntil(this.actions.pipe(ofType(DetailsActions.unitDetailsDestroyed))),
     switchMap(([_, unitId]) => {
       if(unitId === undefined) return of();
       return this.processUnitService.getProcessValues(unitId).pipe(
@@ -44,7 +43,6 @@ export class DetailsEffects {
     delayWhen(([action, _]) => {
       return action.type === DetailsActions.unitDetailsInitialized.type ? of(0) : timer(500);
     }),
-    takeUntil(this.actions.pipe(ofType(DetailsActions.unitDetailsDestroyed))),
     switchMap(([_, unitId]) => {
       if(unitId === undefined) return of();
       return this.processUnitService.getControlState(unitId).pipe(
