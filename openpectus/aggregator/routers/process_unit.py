@@ -87,19 +87,6 @@ def get_units(agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[Proces
 
 
 
-def get_ProcessValueType_from_value(value: str | float | int | None) -> ProcessValueType:
-    if value is None:
-        return ProcessValueType.STRING  # hmm
-    if isinstance(value, str):
-        return ProcessValueType.STRING
-    elif isinstance(value, int):
-        return ProcessValueType.INT
-    elif isinstance(value, float):
-        return ProcessValueType.FLOAT
-    else:
-        raise ValueError("Invalid value type: " + type(value).__name__)
-
-
 
 
 

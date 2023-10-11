@@ -2,7 +2,7 @@ antlr4-python3-runtime==4.9.2
 pint==0.22
 typing_extensions==4.8.0
 pydantic==1.10.13
-flake8==6.0.0   # dev
+flake8==6.1.0   # dev
 black==23.3.0   # dev
 build==0.10.0   # dev
 fastapi==0.103.2

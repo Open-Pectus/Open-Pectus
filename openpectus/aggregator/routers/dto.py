@@ -48,6 +48,21 @@ class ProcessValueCommand(BaseModel):
 ProcessValueValueType = str | float | int | None
 
 
+
+def get_ProcessValueType_from_value(value: str | float | int | None) -> ProcessValueType:
+    if value is None:
+        return ProcessValueType.STRING  # hmm
+    if isinstance(value, str):
+        return ProcessValueType.STRING
+    elif isinstance(value, int):
+        return ProcessValueType.INT
+    elif isinstance(value, float):
+        return ProcessValueType.FLOAT
+    else:
+        raise ValueError("Invalid value type: " + type(value).__name__)
+
+
+
 class ProcessValue(BaseModel):
     """ Represents a process value. """
     name: str
