@@ -20,7 +20,7 @@ const initialState: RunLogState = {
 };
 
 const reducer = createReducer(initialState,
-  on(RunLogActions.runLogComponentInitialized, state => produce(state, draft => {
+  on(RunLogActions.runLogComponentInitializedForUnit, state => produce(state, draft => {
     draft.filterText = '';
     draft.onlyRunning = false;
   })),

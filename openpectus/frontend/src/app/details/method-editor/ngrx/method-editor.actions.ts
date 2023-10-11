@@ -14,7 +14,7 @@ export class MethodEditorActions {
   static saveButtonClicked = createAction(source + 'Save Button Clicked');
   static saveKeyboardShortcutPressed = createAction(source + 'Save Keyboard Shortcut Pressed');
   static methodFetched = createAction(source + 'Method Fetched', props<{ method: Method }>());
-  static methodPolled = createAction(source + 'Method Polled', props<{ method: Method }>());
+  static methodPolled = createAction(source + 'Method Polled', props<{ method: Method, unitId: string }>());
   static monacoEditorComponentDestroyed = createAction(source + 'Monaco Editor Component Destroyed');
   static methodEditorComponentDestroyed = createAction(source + 'Method Editor Component Destroyed');
 }

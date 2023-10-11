@@ -673,6 +673,7 @@ export const handlers = [
   rest.get('/api/batch_job/:batchJobId/method', (req, res, context) => {
     return res(
       context.status(200),
+      context.delay(),
       context.json<Method>({
         lines: [
           {id: 'a', content: '{'},
@@ -686,6 +687,100 @@ export const handlers = [
         started_line_ids: [],
         executed_line_ids: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
         injected_line_ids: ['c'],
+      }),
+    );
+  }),
+
+  rest.get('/api/batch_job/:id/run_log', (_, res, context) => {
+    return res(
+      context.status(200),
+      context.delay(),
+      context.json<RunLog>({
+        lines: [
+          {
+            id: 1,
+            start: sub(Date.now(), {days: 0, hours: 2, seconds: 20}).toISOString(),
+            end: sub(Date.now(), {days: 0, hours: 1, seconds: 20}).toISOString(),
+            command: {
+              command: 'Some Other Command',
+              source: CommandSource.MANUALLY_ENTERED,
+            },
+            start_values: [{
+              name: 'Amazing float value',
+              value: 1.43253342,
+              value_type: ProcessValueType.FLOAT,
+              value_unit: 'afv',
+            }],
+            end_values: [],
+          }, {
+            id: 2,
+            start: sub(Date.now(), {days: 0, hours: 1, seconds: 10}).toISOString(),
+            end: sub(Date.now(), {days: 0, hours: 0, seconds: 10}).toISOString(),
+            command: {
+              command: 'Some Third Command',
+              source: CommandSource.MANUALLY_ENTERED,
+            },
+            start_values: [
+              {
+                name: 'Amazing float value',
+                value: 999,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+              },
+              {
+                name: 'Best value',
+                value: 19.99,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+              },
+              {
+                name: 'Such prices',
+                value: 4299,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+              },
+              {
+                name: 'Very affordable',
+                value: 0.99,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+              },
+            ],
+            end_values: [],
+          }, {
+            id: 3,
+            start: sub(Date.now(), {days: 1, hours: 3, seconds: 30}).toISOString(),
+            end: sub(Date.now(), {days: 1, hours: 3}).toISOString(),
+            command: {
+              command: 'Supply the dakka',
+              source: CommandSource.MANUALLY_ENTERED,
+            },
+            start_values: [
+              {
+                name: 'Waaagh?',
+                value: 'No waagh',
+                value_type: ProcessValueType.STRING,
+              },
+              {
+                name: 'Dakka?',
+                value: 'No dakka 🙁',
+                value_type: ProcessValueType.STRING,
+              },
+            ],
+            end_values: [
+              {
+                name: 'Waaagh?',
+                value: 'WAAAGH!',
+                value_type: ProcessValueType.STRING,
+              },
+              {
+                name: 'Dakka?',
+                value: 'DAKKA! 😀',
+                value_type: ProcessValueType.STRING,
+              },
+            ],
+          },
+        ],
       }),
     );
   }),

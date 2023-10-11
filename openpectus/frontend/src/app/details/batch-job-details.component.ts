@@ -11,7 +11,7 @@ import { DetailsActions } from './ngrx/details.actions';
     <div class="flex justify-center">
       <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:py-8 gap-4 lg:gap-8">
         <app-method-editor [batchJobId]="batchJobId | ngrxPush"></app-method-editor>
-        <app-run-log></app-run-log>
+        <app-run-log [batchJobId]="batchJobId | ngrxPush"></app-run-log>
         <app-process-plot-container class="2xl:col-span-2"></app-process-plot-container>
       </div>
     </div>

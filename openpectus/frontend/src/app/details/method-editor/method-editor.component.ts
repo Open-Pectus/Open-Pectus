@@ -21,7 +21,7 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
   `,
 })
 export class MethodEditorComponent implements OnInit, OnDestroy {
-  @Input() runningUnitId?: string;
+  @Input() unitId?: string;
   @Input() batchJobId?: string;
 
   protected methodEditorIsDirty = this.store.select(MethodEditorSelectors.isDirty);
@@ -31,8 +31,8 @@ export class MethodEditorComponent implements OnInit, OnDestroy {
   constructor(private store: Store) {}
 
   ngOnInit() {
-    if(this.runningUnitId !== undefined) {
-      this.store.dispatch(MethodEditorActions.methodEditorComponentInitializedForUnit({unitId: this.runningUnitId}));
+    if(this.unitId !== undefined) {
+      this.store.dispatch(MethodEditorActions.methodEditorComponentInitializedForUnit({unitId: this.unitId}));
     }
     if(this.batchJobId !== undefined) {
       this.store.dispatch(MethodEditorActions.methodEditorComponentInitializedForBatchJob({batchJobId: this.batchJobId}));

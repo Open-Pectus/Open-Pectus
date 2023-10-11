@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { RunLogActions } from './ngrx/run-log.actions';
 
@@ -14,7 +14,7 @@ import { RunLogActions } from './ngrx/run-log.actions';
         <button *ngIf="filterInput.value.length !== 0" class="p-2 codicon codicon-chrome-close absolute right-0"
                 (click)="filterInput.value = ''; filterTextChanged('')"></button>
       </label>
-      <label class="flex items-center gap-1 cursor-pointer border rounded px-1 border-slate-200 h-8">
+      <label class="flex items-center gap-1 cursor-pointer border rounded px-1 border-slate-200 h-8" *ngIf="showRunningFilter">
         In progress only
         <input type="checkbox" (input)="onlyRunningChanged(onlyRunningCheckbox.checked)" #onlyRunningCheckbox
                [class.codicon-pass]="onlyRunningCheckbox.checked" [class.codicon-circle-large]="!onlyRunningCheckbox.checked"
@@ -24,6 +24,8 @@ import { RunLogActions } from './ngrx/run-log.actions';
   `,
 })
 export class RunLogFiltersComponent {
+  @Input() showRunningFilter = true;
+
   constructor(private store: Store) {}
 
   filterTextChanged(filterText: string) {
