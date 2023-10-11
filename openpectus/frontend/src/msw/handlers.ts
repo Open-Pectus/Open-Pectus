@@ -670,7 +670,12 @@ export const handlers = [
     );
   }),
 
-  rest.get('/api/batch_job/:batchJobId/method', (req, res, context) => {
+
+  /**************
+   * BATCH JOBS *
+   **************/
+
+  rest.get('/api/batch_job/:id/method', (req, res, context) => {
     return res(
       context.status(200),
       context.delay(),
@@ -794,6 +799,163 @@ export const handlers = [
         contributors: ['Morten', 'Eskild'],
         unit_id: 'A process unit id',
         unit_name: 'A batch job name',
+      }),
+    );
+  }),
+
+
+  rest.get('/api/batch_job/:id/plot_configuration', (_, res, context) => {
+    return res(
+      context.status(200),
+      context.json<PlotConfiguration>({
+        x_axis_process_value_names: ['Timestamp', 'Timestamp2'],
+        process_value_names_to_annotate: ['Flow path'],
+        color_regions: [{
+          process_value_name: 'Flow path',
+          value_color_map: {
+            'Bypass': '#3366dd33',
+            'Prime with a long name': '#33aa6633',
+          },
+        }],
+        sub_plots: [
+          {
+            ratio: 1.5,
+            axes: [
+              {
+                label: 'Red',
+                process_value_names: ['PU01 Speed', 'PU02 Speed', 'PU03 Speed', 'PU04 Speed', 'PU05 Speed', 'PU06 Speed'],
+                y_max: 126,
+                y_min: 119,
+                color: '#ff3333',
+              },
+              {
+                label: 'Blue',
+                process_value_names: ['TT01'],
+                y_max: 26,
+                y_min: 20,
+                color: '#1144ff',
+              },
+              {
+                label: 'Teal label',
+                process_value_names: ['TT02'],
+                y_max: 32,
+                y_min: 22,
+                color: '#43c5b7',
+              },
+            ],
+          },
+          {
+            ratio: 1,
+            axes: [{
+              label: 'Green',
+              process_value_names: ['TT03'],
+              y_max: 26,
+              y_min: 20,
+              color: '#33ff33',
+            }, {
+              label: 'orange',
+              process_value_names: ['TT04'],
+              y_max: 29,
+              y_min: 19,
+              color: '#ff8000',
+            }],
+          },
+        ],
+      }),
+    );
+  }),
+
+  rest.get('/api/batch_job/:id/plot_log', (_, res, context) => {
+    const noOfValues = 90;
+    return res(
+      context.status(200),
+      context.json<PlotLog>({
+        entries: {
+          'Timestamp': {
+            value_type: ProcessValueType.INT,
+            name: 'Timestamp',
+            values: new Array(noOfValues).fill(undefined).map((_, index) => ({value: new Date().valueOf() - 1000 * (noOfValues - index)})),
+          },
+          'Timestamp2': {
+            value_type: ProcessValueType.INT,
+            name: 'Timestamp2',
+            values: new Array(noOfValues).fill(undefined).map(
+              (_, index) => ({value: new Date().valueOf() - 1000 * (noOfValues - index) + 1000000000000})),
+          },
+          'PU01 Speed': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'PU01 Speed',
+            values: new Array(noOfValues).fill({value: 120}),
+            value_unit: '%',
+          },
+          'PU02 Speed': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'PU02 Speed',
+            values: new Array(noOfValues).fill({value: 121}),
+            value_unit: '%',
+          },
+          'PU03 Speed': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'PU03 Speed',
+            values: new Array(noOfValues).fill({value: 122}),
+            value_unit: '%',
+          },
+          'PU04 Speed': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'PU04 Speed',
+            values: new Array(noOfValues).fill({value: 123}),
+            value_unit: '%',
+          },
+          'PU05 Speed': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'PU05 Speed',
+            values: new Array(noOfValues).fill({value: 124}),
+            value_unit: '%',
+          },
+          'PU06 Speed': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'PU06 Speed',
+            values: new Array(noOfValues).fill({value: 125}),
+            value_unit: '%',
+          },
+          'FT01 Flow': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'FT01 Flow',
+            values: new Array(noOfValues).fill(undefined).map(() => ({value: 123 + Math.random() * 2})),
+            value_unit: 'L/h',
+          },
+          'TT01': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'TT01',
+            values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2})),
+            value_unit: 'degC',
+          },
+          'TT02': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'TT02',
+            values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2})),
+            value_unit: 'degC',
+          },
+          'TT03': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'TT03',
+            values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2})),
+            value_unit: 'degC',
+          },
+          'TT04': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'TT04',
+            values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2})),
+            value_unit: 'degC',
+          },
+          'Flow path': {
+            value_type: ProcessValueType.STRING,
+            name: 'Flow path',
+            values: new Array(noOfValues).fill(undefined).map((_, index) =>
+              ({value: (index % 9 < 3) ? 'Bypass' : (index % 9 < 6) ? 'Prime with a long name' : undefined}),
+            ),
+          },
+        },
       }),
     );
   }),

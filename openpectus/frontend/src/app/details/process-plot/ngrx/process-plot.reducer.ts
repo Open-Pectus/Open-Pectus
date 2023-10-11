@@ -103,6 +103,7 @@ const reducer = createReducer(initialState,
   on(ProcessPlotActions.plotLogFetched, (state, {plotLog}) => produce(state, draft => {
     draft.plotLog = plotLog;
   })),
+  on(ProcessPlotActions.processPlotComponentDestroyed, () => initialState),
 );
 
 export const processPlotSlice = {name: 'processPlot', reducer};

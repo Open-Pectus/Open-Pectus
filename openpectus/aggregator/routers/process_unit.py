@@ -3,7 +3,8 @@ from enum import StrEnum, auto
 from typing import Literal, List, Dict
 
 import openpectus.aggregator.deps as agg_deps
-from aggregator.routers.dto import Method, RunLog, ProcessValueType, ProcessValue, ExecutableCommand, ProcessValueValueType
+from aggregator.routers.dto import Method, RunLog, ProcessValueType, ProcessValue, ExecutableCommand, ProcessValueValueType, PlotConfiguration, \
+    PlotLog
 from fastapi import APIRouter, Depends, Response
 from openpectus.protocol.aggregator import Aggregator, ChannelInfo
 from openpectus.protocol.messages import InvokeCommandMsg
@@ -175,30 +176,6 @@ def get_method(unit_id: str) -> Method:
 def save_method(unit_id: str, method: Method) -> None:
     pass
 
-class PlotColorRegion(BaseModel):
-    process_value_name: str
-    value_color_map: dict[str | int | float, str]  # color string compatible with css e.g.: '#aa33bb', 'rgb(0,0,0)', 'rgba(0,0,0,0)', 'red'
-
-
-class PlotAxis(BaseModel):
-    label: str
-    process_value_names: List[str]
-    y_max: int | float
-    y_min: int | float
-    color: str
-
-
-class SubPlot(BaseModel):
-    axes: List[PlotAxis]
-    ratio: int | float
-
-
-class PlotConfiguration(BaseModel):
-    process_value_names_to_annotate: List[str]
-    color_regions: List[PlotColorRegion]
-    sub_plots: List[SubPlot]
-    x_axis_process_value_names: List[str]
-
 
 @router.get('/process_unit/{unit_id}/plot_configuration')
 def get_plot_configuration(unit_id: str) -> PlotConfiguration:
@@ -208,23 +185,6 @@ def get_plot_configuration(unit_id: str) -> PlotConfiguration:
         process_value_names_to_annotate=[],
         x_axis_process_value_names=[]
     )
-
-# This class exists only to workaround the issue that OpenApi spec (or Pydantic) cannot express that elements in a list can be None/null/undefined.
-# Properties on an object can be optional, so we use that via this wrapping class to express None values in the PlotLogEntry.values list.
-# Feel free to refactor to remove this class if it becomes possible to express the above without it.
-class PlotLogEntryValue(BaseModel):
-    value: ProcessValueValueType
-
-
-class PlotLogEntry(BaseModel):
-    name: str
-    values: List[PlotLogEntryValue]
-    value_unit: str | None
-    value_type: ProcessValueType
-
-
-class PlotLog(BaseModel):
-    entries: Dict[str, PlotLogEntry]
 
 
 @router.get('/process_unit/{unit_id}/plot_log')

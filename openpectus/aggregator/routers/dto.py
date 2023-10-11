@@ -106,3 +106,46 @@ class Method(BaseModel):
     started_line_ids: List[str]
     executed_line_ids: List[str]
     injected_line_ids: List[str]
+
+
+class PlotColorRegion(BaseModel):
+    process_value_name: str
+    value_color_map: dict[str | int | float, str]  # color string compatible with css e.g.: '#aa33bb', 'rgb(0,0,0)', 'rgba(0,0,0,0)', 'red'
+
+
+class PlotAxis(BaseModel):
+    label: str
+    process_value_names: List[str]
+    y_max: int | float
+    y_min: int | float
+    color: str
+
+
+class SubPlot(BaseModel):
+    axes: List[PlotAxis]
+    ratio: int | float
+
+
+class PlotConfiguration(BaseModel):
+    process_value_names_to_annotate: List[str]
+    color_regions: List[PlotColorRegion]
+    sub_plots: List[SubPlot]
+    x_axis_process_value_names: List[str]
+
+
+# This class exists only to workaround the issue that OpenApi spec (or Pydantic) cannot express that elements in a list can be None/null/undefined.
+# Properties on an object can be optional, so we use that via this wrapping class to express None values in the PlotLogEntry.values list.
+# Feel free to refactor to remove this class if it becomes possible to express the above without it.
+class PlotLogEntryValue(BaseModel):
+    value: ProcessValueValueType
+
+
+class PlotLogEntry(BaseModel):
+    name: str
+    values: List[PlotLogEntryValue]
+    value_unit: str | None
+    value_type: ProcessValueType
+
+
+class PlotLog(BaseModel):
+    entries: Dict[str, PlotLogEntry]

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List
 
-from aggregator.routers.dto import Method, RunLog
+from aggregator.routers.dto import Method, RunLog, PlotConfiguration, PlotLog
 from fastapi import APIRouter
 from pydantic import BaseModel
 
@@ -32,3 +32,16 @@ def get_batch_job_method(id: str) -> Method:
 @router.get('/batch_job/{id}/run_log')
 def get_batch_job_run_log(id: str) -> RunLog:
     return RunLog(lines=[])
+
+@router.get('/batch_job/{id}/plot_configuration')
+def get_batch_job_plot_configuration(unit_id: str) -> PlotConfiguration:
+    return PlotConfiguration(
+        color_regions=[],
+        sub_plots=[],
+        process_value_names_to_annotate=[],
+        x_axis_process_value_names=[]
+    )
+
+@router.get('/batch_job/{id}/plot_log')
+def get_batch_job_plot_log(unit_id: str) -> PlotLog:
+    return PlotLog(entries={})
