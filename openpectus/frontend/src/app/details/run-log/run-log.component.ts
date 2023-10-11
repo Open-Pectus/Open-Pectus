@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input, OnInit, QueryList, ViewChildren } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit, QueryList, ViewChildren } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { RunLogLine } from '../../api';
 import { RunLogActions } from './ngrx/run-log.actions';
@@ -26,7 +26,7 @@ import { RunLogLineComponent } from './run-log-line.component';
     </app-collapsible-element>
   `,
 })
-export class RunLogComponent implements OnInit {
+export class RunLogComponent implements OnInit, OnDestroy {
   @Input() unitId?: string;
   @Input() batchJobId?: string;
   @ViewChildren(RunLogLineComponent) runLogLines?: QueryList<RunLogLineComponent>;
@@ -43,6 +43,10 @@ export class RunLogComponent implements OnInit {
   ngOnInit() {
     if(this.unitId !== undefined) this.store.dispatch(RunLogActions.runLogComponentInitializedForUnit({unitId: this.unitId}));
     if(this.batchJobId !== undefined) this.store.dispatch(RunLogActions.runLogComponentInitializedForBatchJob({batchJobId: this.batchJobId}));
+  }
+
+  ngOnDestroy() {
+    this.store.dispatch(RunLogActions.runLogComponentDestroyed());
   }
 
   expandAll() {

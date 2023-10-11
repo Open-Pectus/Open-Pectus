@@ -22,6 +22,8 @@ const initialState: MethodEditorState = {
 };
 
 const reducer = createReducer(initialState,
+  on(MethodEditorActions.methodEditorComponentDestroyed,
+    (state) => ({...initialState, monacoServicesInitialized: state.monacoServicesInitialized})),
   on(MethodEditorActions.methodFetched, (state, {method}) => produce(state, draft => {
     draft.isDirty = false;
     draft.method = method;
@@ -62,9 +64,6 @@ const reducer = createReducer(initialState,
   on(MethodEditorActions.linesChanged, (state, {lines}) => produce(state, draft => {
     draft.isDirty = true;
     draft.method.lines = lines;
-  })),
-  on(MethodEditorActions.methodEditorComponentDestroyed, state => produce(state, draft => {
-    draft.method = {lines: [], started_line_ids: [], executed_line_ids: [], injected_line_ids: []};
   })),
 );
 

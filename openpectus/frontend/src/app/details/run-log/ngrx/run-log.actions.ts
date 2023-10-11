@@ -7,6 +7,7 @@ export class RunLogActions {
   static runLogComponentInitializedForUnit = createAction(source + 'Run Log Component Initialized For Unit', props<{ unitId: string }>());
   static runLogComponentInitializedForBatchJob = createAction(source + 'Run Log Component Initialized For Batch Job',
     props<{ batchJobId: string }>());
+  static runLogComponentDestroyed = createAction(source + 'Run Log Component Destroyed');
   static runLogFetched = createAction(source + 'Run Log Fetched', props<{ runLog: RunLog }>());
   static onlyRunningFilterChanged = createAction(source + 'OnlyRunning Filter Changed', props<{ onlyRunning: boolean }>());
   static filterTextChanged = createAction(source + 'Filter Text Changed', props<{ filterText: string }>());
