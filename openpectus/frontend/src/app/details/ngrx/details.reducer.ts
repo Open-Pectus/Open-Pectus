@@ -9,11 +9,13 @@ export interface DetailsState {
   commandExamples: CommandExample[];
   controlState: ControlState;
   batchJob?: BatchJob;
+  shouldPoll: boolean;
 }
 
 const initialState: DetailsState = {
   processValues: [],
   commandExamples: [],
+  shouldPoll: false,
   controlState: {
     is_running: false,
     is_holding: false,
@@ -22,6 +24,12 @@ const initialState: DetailsState = {
 };
 
 const reducer = createReducer(initialState,
+  on(DetailsActions.unitDetailsInitialized, state => produce(state, draft => {
+    draft.shouldPoll = true;
+  })),
+  on(DetailsActions.unitDetailsDestroyed, state => produce(state, draft => {
+    draft.shouldPoll = false;
+  })),
   on(DetailsActions.processValuesFetched, (state, {processValues}) => produce(state, draft => {
     draft.processValues = processValues;
   })),
