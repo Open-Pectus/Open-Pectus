@@ -471,6 +471,9 @@ Mark: X
 
         self.assertEqual(0, e._system_tags["Run Counter"].get_value())
 
+        e.schedule_execution("Start")
+        e.tick()
+        
         e.schedule_execution("Increment run counter")
         e.tick()
 
