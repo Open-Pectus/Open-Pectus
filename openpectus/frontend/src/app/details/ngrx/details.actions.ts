@@ -1,5 +1,5 @@
 import { createAction, props } from '@ngrx/store';
-import { CommandExample, ControlState, ExecutableCommand, ProcessDiagram, ProcessValue } from '../../api';
+import { BatchJob, CommandExample, ControlState, ExecutableCommand, ProcessDiagram, ProcessValue } from '../../api';
 
 const source = '[Details] ';
 
@@ -16,4 +16,7 @@ export class DetailsActions {
   static commandExamplesFetched = createAction(source + 'Command Examples Fetched', props<{ commandExamples: CommandExample[] }>());
   static commandsComponentExecuteClicked = createAction(source + 'Commands Component Execute Clicked', props<{ command: ExecutableCommand }>());
   static controlStateFetched = createAction(source + 'Control State Fetched', props<{ controlState: ControlState }>());
+  static batchJobDetailsInitialized = createAction(source + 'Batch Job Details Initialized');
+  static batchJobDetailsDestroyed = createAction(source + 'Batch Job Details Destroyed');
+  static batchJobFetched = createAction(source + 'Batch Job Fetched', props<{ batchJob: BatchJob }>());
 }

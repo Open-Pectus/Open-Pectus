@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
@@ -16,14 +16,24 @@ import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
     </app-collapsible-element>
   `,
 })
-export class ProcessPlotContainerComponent implements OnInit {
+export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
+  @Input() unitId?: string;
+  @Input() batchJobId?: string;
+
   protected isCollapsed = false;
   protected plotIsModified = this.store.select(ProcessPlotSelectors.plotIsModified);
 
   constructor(private store: Store) {}
 
   ngOnInit() {
-    this.store.dispatch(ProcessPlotActions.processPlotComponentInitialized());
+    if(this.unitId !== undefined) this.store.dispatch(ProcessPlotActions.processPlotComponentInitializedForUnit({unitId: this.unitId}));
+    if(this.batchJobId !== undefined) {
+      this.store.dispatch(ProcessPlotActions.processPlotComponentInitializedForBatchJob({batchJobId: this.batchJobId}));
+    }
+  }
+
+  ngOnDestroy() {
+    this.store.dispatch(ProcessPlotActions.processPlotComponentDestroyed());
   }
 
   onReset() {

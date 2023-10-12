@@ -22,6 +22,8 @@ const initialState: MethodEditorState = {
 };
 
 const reducer = createReducer(initialState,
+  on(MethodEditorActions.methodEditorComponentDestroyed,
+    (state) => ({...initialState, monacoServicesInitialized: state.monacoServicesInitialized})),
   on(MethodEditorActions.methodFetched, (state, {method}) => produce(state, draft => {
     draft.isDirty = false;
     draft.method = method;
@@ -37,10 +39,10 @@ const reducer = createReducer(initialState,
       draft.method.started_line_ids = method.started_line_ids;
     }
 
-    // take content only from executed (and therefore locked) lines.
-    method.executed_line_ids.forEach((executedLineId) => {
-      const oldLine = draft.method.lines.find(line => line.id === executedLineId);
-      const newLineIndex = method.lines.findIndex(line => line.id === executedLineId);
+    // take content only from executed or started (and therefore locked) lines.
+    method.executed_line_ids.concat(method.started_line_ids).forEach((lockedLineId) => {
+      const oldLine = draft.method.lines.find(line => line.id === lockedLineId);
+      const newLineIndex = method.lines.findIndex(line => line.id === lockedLineId);
       const newLine = method.lines[newLineIndex];
       if(newLine === undefined) {
         console.warn('Backend designated a non-existing line id as executed! This is fine if you\'re using MSW.');

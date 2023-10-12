@@ -7,6 +7,10 @@ import { HttpClient } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 
 import type { BatchJob } from '../models/BatchJob';
+import type { Method } from '../models/Method';
+import type { PlotConfiguration } from '../models/PlotConfiguration';
+import type { PlotLog } from '../models/PlotLog';
+import type { RunLog } from '../models/RunLog';
 
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -19,13 +23,13 @@ export class BatchJobService {
     constructor(public readonly http: HttpClient) {}
 
     /**
-     * Get Batch
+     * Get Batch Job
      * @param id 
      * @returns BatchJob Successful Response
      * @throws ApiError
      */
-    public getBatch(
-id: number,
+    public getBatchJob(
+id: string,
 ): Observable<BatchJob> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
@@ -48,6 +52,90 @@ id: number,
         return __request(OpenAPI, this.http, {
             method: 'GET',
             url: '/api/recent_batch_jobs',
+        });
+    }
+
+    /**
+     * Get Batch Job Method
+     * @param id 
+     * @returns Method Successful Response
+     * @throws ApiError
+     */
+    public getBatchJobMethod(
+id: string,
+): Observable<Method> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/batch_job/{id}/method',
+            path: {
+                'id': id,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
+    /**
+     * Get Batch Job Run Log
+     * @param id 
+     * @returns RunLog Successful Response
+     * @throws ApiError
+     */
+    public getBatchJobRunLog(
+id: string,
+): Observable<RunLog> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/batch_job/{id}/run_log',
+            path: {
+                'id': id,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
+    /**
+     * Get Batch Job Plot Configuration
+     * @param unitId 
+     * @returns PlotConfiguration Successful Response
+     * @throws ApiError
+     */
+    public getBatchJobPlotConfiguration(
+unitId: string,
+): Observable<PlotConfiguration> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/batch_job/{id}/plot_configuration',
+            query: {
+                'unit_id': unitId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
+    /**
+     * Get Batch Job Plot Log
+     * @param unitId 
+     * @returns PlotLog Successful Response
+     * @throws ApiError
+     */
+    public getBatchJobPlotLog(
+unitId: string,
+): Observable<PlotLog> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/batch_job/{id}/plot_log',
+            query: {
+                'unit_id': unitId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
         });
     }
 

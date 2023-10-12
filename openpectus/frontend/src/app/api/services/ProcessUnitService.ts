@@ -194,13 +194,13 @@ unitId: string,
      * Save Method
      * @param unitId 
      * @param requestBody 
-     * @returns null Successful Response
+     * @returns any Successful Response
      * @throws ApiError
      */
     public saveMethod(
 unitId: string,
 requestBody: Method,
-): Observable<null> {
+): Observable<any> {
         return __request(OpenAPI, this.http, {
             method: 'POST',
             url: '/api/process_unit/{unit_id}/method',

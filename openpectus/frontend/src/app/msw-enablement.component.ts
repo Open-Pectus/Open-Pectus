@@ -6,10 +6,9 @@ import { MswEnablement } from '../msw/msw-enablement';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="text-xs text-slate-400">
-
       <button class="rounded p-1.5 bg-blue-900"
-              (click)="MswEnablement.isEnabled = !MswEnablement.isEnabled; location.reload()">
-        <label class="flex">
+              (click)="onButtonClick()">
+        <label class="flex pointer-events-none">
           <span>MSW:</span>
           <input type="checkbox" [checked]="MswEnablement.isEnabled">
         </label>
@@ -19,5 +18,9 @@ import { MswEnablement } from '../msw/msw-enablement';
 })
 export class MswEnablementComponent {
   protected readonly MswEnablement = MswEnablement;
-  protected readonly location = location;
+
+  onButtonClick() {
+    MswEnablement.isEnabled = !MswEnablement.isEnabled;
+    setTimeout(() => location.reload());
+  }
 }

@@ -7,7 +7,7 @@
  * Represents a current or historical run of a process unit. 
  */
 export type BatchJob = {
-    id: number;
+    id: string;
     unit_id: string;
     unit_name: string;
     completed_date: string;

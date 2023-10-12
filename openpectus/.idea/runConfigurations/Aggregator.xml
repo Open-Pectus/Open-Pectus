@@ -7,7 +7,7 @@
       <env name="PYTHONUNBUFFERED" value="1" />
       <env name="AZURE_DIRECTORY_TENANT_ID" value="fdfed7bd-9f6a-44a1-b694-6e39c468c150" />
       <env name="AZURE_APPLICATION_CLIENT_ID" value="fc7355bb-a6be-493f-90a1-cf57063f7948" />
-      <env name="ENABLE_AZURE_AUTHENTICATION" value="true" />
+      <env name="ENABLE_AZURE_AUTHENTICATION" value="false" />
     </envs>
     <option name="SDK_HOME" value="" />
     <option name="SDK_NAME" value="Python 3.11 (pectus)" />

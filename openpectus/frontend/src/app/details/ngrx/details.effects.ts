@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { catchError, debounceTime, delayWhen, map, mergeMap, of, switchMap, takeUntil, timer } from 'rxjs';
-import { CommandSource, ProcessUnitService } from '../../api';
+import { catchError, debounceTime, delayWhen, map, mergeMap, of, switchMap, timer } from 'rxjs';
+import { BatchJobService, CommandSource, ProcessUnitService } from '../../api';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
 import { DetailsActions } from './details.actions';
@@ -27,7 +27,6 @@ export class DetailsEffects {
     ofType(DetailsActions.processValuesFetched, DetailsActions.processValuesFailedToLoad),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
     debounceTime(1000),
-    takeUntil(this.actions.pipe(ofType(DetailsActions.unitDetailsDestroyed))),
     switchMap(([_, unitId]) => {
       if(unitId === undefined) return of();
       return this.processUnitService.getProcessValues(unitId).pipe(
@@ -44,7 +43,6 @@ export class DetailsEffects {
     delayWhen(([action, _]) => {
       return action.type === DetailsActions.unitDetailsInitialized.type ? of(0) : timer(500);
     }),
-    takeUntil(this.actions.pipe(ofType(DetailsActions.unitDetailsDestroyed))),
     switchMap(([_, unitId]) => {
       if(unitId === undefined) return of();
       return this.processUnitService.getControlState(unitId).pipe(
@@ -93,5 +91,18 @@ export class DetailsEffects {
     }),
   ));
 
-  constructor(private actions: Actions, private store: Store, private processUnitService: ProcessUnitService) {}
+  fetchBatchJobWhenComponentInitialized = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.batchJobDetailsInitialized),
+    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.batchJobIdParamName))),
+    switchMap(([_, batchJobId]) => {
+      if(batchJobId === undefined) return of();
+      return this.batchJobService.getBatchJob(batchJobId).pipe(
+        map(batchJob => DetailsActions.batchJobFetched({batchJob})),
+      );
+    }),
+  ));
+
+  constructor(private actions: Actions, private store: Store,
+              private processUnitService: ProcessUnitService,
+              private batchJobService: BatchJobService) {}
 }
