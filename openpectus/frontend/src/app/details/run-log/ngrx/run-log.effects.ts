@@ -1,10 +1,9 @@
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { debounceTime, map, of, switchMap } from 'rxjs';
+import { delay, filter, map, of, switchMap } from 'rxjs';
 import { BatchJobService, ProcessUnitService } from '../../../api';
-import { selectRouteParam } from '../../../ngrx/router.selectors';
-import { DetailsRoutingUrlParts } from '../../details-routing-url-parts';
+import { DetailsSelectors } from '../../ngrx/details.selectors';
 import { RunLogActions } from './run-log.actions';
 
 // noinspection JSUnusedGlobalSymbols
@@ -32,13 +31,14 @@ export class RunLogEffects {
 
   // TODO: this should happen via websocket, not polling
   continuouslyPollRunLog = createEffect(() => this.actions.pipe(
-    ofType(RunLogActions.runLogFetched),
-    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
-    debounceTime(1000),
-    switchMap(([_, unitId]) => {
+    ofType(RunLogActions.runLogComponentInitializedForUnit, RunLogActions.runLogPolledForUnit),
+    delay(1000),
+    concatLatestFrom(() => this.store.select(DetailsSelectors.shouldPoll)),
+    filter(([_, shouldPoll]) => shouldPoll),
+    switchMap(([{unitId}]) => {
       if(unitId === undefined) return of();
       return this.processUnitService.getRunLog(unitId).pipe(
-        map(runLog => RunLogActions.runLogFetched({runLog})),
+        map(runLog => RunLogActions.runLogPolledForUnit({runLog, unitId})),
       );
     }),
   ));

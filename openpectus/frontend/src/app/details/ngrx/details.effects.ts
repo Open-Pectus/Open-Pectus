@@ -1,11 +1,12 @@
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { catchError, debounceTime, delayWhen, map, mergeMap, of, switchMap, timer } from 'rxjs';
+import { catchError, delay, filter, map, mergeMap, of, switchMap } from 'rxjs';
 import { BatchJobService, CommandSource, ProcessUnitService } from '../../api';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
 import { DetailsActions } from './details.actions';
+import { DetailsSelectors } from './details.selectors';
 
 // noinspection JSUnusedGlobalSymbols
 @Injectable()
@@ -25,8 +26,12 @@ export class DetailsEffects {
   // TODO: When we introduce websocket pubsub, figure out if it makes sense to push process_value changes through it, or polling is fine.
   continuouslyPollProcessValues = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processValuesFetched, DetailsActions.processValuesFailedToLoad),
-    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
-    debounceTime(1000),
+    delay(1000),
+    concatLatestFrom(() => [
+      this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName)),
+      this.store.select(DetailsSelectors.shouldPoll),
+    ]),
+    filter(([_, __, shouldPoll]) => shouldPoll),
     switchMap(([_, unitId]) => {
       if(unitId === undefined) return of();
       return this.processUnitService.getProcessValues(unitId).pipe(
@@ -36,17 +41,30 @@ export class DetailsEffects {
     }),
   ));
 
-  // TODO: this should be gotten via push through websocket instead of polling.
-  continuouslyPollControlState = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.unitDetailsInitialized, DetailsActions.controlStateFetched),
+  fetchControlStateWhenPageInitialized = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.unitDetailsInitialized),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
-    delayWhen(([action, _]) => {
-      return action.type === DetailsActions.unitDetailsInitialized.type ? of(0) : timer(500);
-    }),
     switchMap(([_, unitId]) => {
       if(unitId === undefined) return of();
       return this.processUnitService.getControlState(unitId).pipe(
         map(controlState => DetailsActions.controlStateFetched({controlState})),
+      );
+    }),
+  ));
+
+  // TODO: this should be gotten via push through websocket instead of polling.
+  continuouslyPollControlState = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.unitDetailsInitialized, DetailsActions.controlStatePolled),
+    delay(500),
+    concatLatestFrom(() => [
+      this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName)),
+      this.store.select(DetailsSelectors.shouldPoll),
+    ]),
+    filter(([_, __, shouldPoll]) => shouldPoll),
+    switchMap(([_, unitId]) => {
+      if(unitId === undefined) return of();
+      return this.processUnitService.getControlState(unitId).pipe(
+        map(controlState => DetailsActions.controlStatePolled({controlState})),
       );
     }),
   ));

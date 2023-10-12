@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { debounceTime, map, of, switchMap } from 'rxjs';
+import { delay, filter, map, of, switchMap } from 'rxjs';
 import { BatchJobService, ProcessUnitService } from '../../../api';
 import { selectRouteParam } from '../../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../../details-routing-url-parts';
+import { DetailsSelectors } from '../../ngrx/details.selectors';
 import { MethodEditorActions } from './method-editor.actions';
 import { MethodEditorSelectors } from './method-editor.selectors';
 
@@ -42,11 +43,13 @@ export class MethodEditorEffects {
 
   // TODO: Should be websocket in future, not polling.
   continuouslyPollMethod = createEffect(() => this.actions.pipe(
-    ofType(MethodEditorActions.methodEditorComponentInitializedForUnit, MethodEditorActions.methodPolled),
-    debounceTime(10000), // delay() in MSW doesn't work in Firefox, so to avoid freezing the application in FF, we debounce
-    switchMap(({unitId}) => {
+    ofType(MethodEditorActions.methodEditorComponentInitializedForUnit, MethodEditorActions.methodPolledForUnit),
+    delay(10000),
+    concatLatestFrom(() => this.store.select(DetailsSelectors.shouldPoll)),
+    filter(([_, shouldPoll]) => shouldPoll),
+    switchMap(([{unitId}]) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.getMethod(unitId).pipe(map(method => MethodEditorActions.methodPolled({method, unitId})));
+      return this.processUnitService.getMethod(unitId).pipe(map(method => MethodEditorActions.methodPolledForUnit({method, unitId})));
     }),
   ));
 
