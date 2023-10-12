@@ -22,13 +22,14 @@ const initialState: MethodEditorState = {
 };
 
 const reducer = createReducer(initialState,
-  on(MethodEditorActions.methodEditorComponentDestroyed,
-    (state) => ({...initialState, monacoServicesInitialized: state.monacoServicesInitialized})),
+  on(MethodEditorActions.methodEditorComponentDestroyed, (state) => {
+    return {...initialState, monacoServicesInitialized: state.monacoServicesInitialized};
+  }),
   on(MethodEditorActions.methodFetched, (state, {method}) => produce(state, draft => {
     draft.isDirty = false;
     draft.method = method;
   })),
-  on(MethodEditorActions.methodPolled, (state, {method}) => produce(state, draft => {
+  on(MethodEditorActions.methodPolledForUnit, (state, {method}) => produce(state, draft => {
     if(!UtilMethods.arrayEquals(draft.method.executed_line_ids, method.executed_line_ids)) {
       draft.method.executed_line_ids = method.executed_line_ids;
     }

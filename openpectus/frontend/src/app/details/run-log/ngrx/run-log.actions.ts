@@ -9,6 +9,7 @@ export class RunLogActions {
     props<{ batchJobId: string }>());
   static runLogComponentDestroyed = createAction(source + 'Run Log Component Destroyed');
   static runLogFetched = createAction(source + 'Run Log Fetched', props<{ runLog: RunLog }>());
+  static runLogPolledForUnit = createAction(source + 'Run Log Polled For Unit', props<{ runLog: RunLog, unitId: string }>());
   static onlyRunningFilterChanged = createAction(source + 'OnlyRunning Filter Changed', props<{ onlyRunning: boolean }>());
   static filterTextChanged = createAction(source + 'Filter Text Changed', props<{ filterText: string }>());
   static expandLine = createAction(source + 'Expand Line', props<{ id: number }>());

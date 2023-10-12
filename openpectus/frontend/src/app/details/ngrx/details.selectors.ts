@@ -15,4 +15,5 @@ export class DetailsSelectors {
   static commandExamples = createSelector(this.selectFeature, state => state.commandExamples);
   static controlState = createSelector(this.selectFeature, state => state.controlState);
   static batchJob = createSelector(this.selectFeature, state => state.batchJob);
+  static shouldPoll = createSelector(this.selectFeature, state => state.shouldPoll);
 }

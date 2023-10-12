@@ -47,8 +47,10 @@ import { TopBarComponent } from './top-bar.component';
       logOnly: !isDevMode(),
       actionsBlocklist: [
         '@ngrx',
-        // 'Process Values Fetched',
-        // 'Run Log Fetched',
+        // DetailsActions.processValuesFetched.type,
+        // RunLogActions.runLogPolledForUnit.type,
+        // DetailsActions.controlStateFetched.type,
+        // MethodEditorActions.methodPolledForUnit.type,
       ],
     }),
     AuthConfigModule,
