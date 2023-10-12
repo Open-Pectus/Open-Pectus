@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { debounceTime, filter, map, of, switchMap } from 'rxjs';
+import { delay, filter, map, of, switchMap } from 'rxjs';
 import { BatchJobService, ProcessUnitService } from '../../../api';
 import { DetailsSelectors } from '../../ngrx/details.selectors';
 import { RunLogActions } from './run-log.actions';
@@ -32,7 +32,7 @@ export class RunLogEffects {
   // TODO: this should happen via websocket, not polling
   continuouslyPollRunLog = createEffect(() => this.actions.pipe(
     ofType(RunLogActions.runLogComponentInitializedForUnit, RunLogActions.runLogPolledForUnit),
-    debounceTime(1000),
+    delay(1000),
     concatLatestFrom(() => this.store.select(DetailsSelectors.shouldPoll)),
     filter(([_, shouldPoll]) => shouldPoll),
     switchMap(([{unitId}]) => {

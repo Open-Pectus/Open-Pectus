@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { debounceTime, filter, map, of, switchMap } from 'rxjs';
+import { delay, filter, map, of, switchMap } from 'rxjs';
 import { BatchJobService, ProcessUnitService } from '../../../api';
 import { selectRouteParam } from '../../../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from '../../details-routing-url-parts';
@@ -44,7 +44,7 @@ export class MethodEditorEffects {
   // TODO: Should be websocket in future, not polling.
   continuouslyPollMethod = createEffect(() => this.actions.pipe(
     ofType(MethodEditorActions.methodEditorComponentInitializedForUnit, MethodEditorActions.methodPolledForUnit),
-    debounceTime(10000),
+    delay(10000),
     concatLatestFrom(() => this.store.select(DetailsSelectors.shouldPoll)),
     filter(([_, shouldPoll]) => shouldPoll),
     switchMap(([{unitId}]) => {
