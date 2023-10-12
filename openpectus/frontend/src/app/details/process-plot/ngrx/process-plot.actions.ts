@@ -5,7 +5,11 @@ import { AxisLimits, XAxisOverrideDialogData, YAxesLimitsOverride, YAxisOverride
 const source = '[Process Plot] ';
 
 export class ProcessPlotActions {
-  static processPlotComponentInitialized = createAction(source + 'Process Plot Component Initialized');
+  static processPlotComponentInitializedForUnit = createAction(source + 'Process Plot Component Initialized For Unit',
+    props<{ unitId: string }>());
+  static processPlotComponentInitializedForBatchJob = createAction(source + 'Process Plot Component Initialized For Batch Job',
+    props<{ batchJobId: string }>());
+  static processPlotComponentDestroyed = createAction(source + 'Process Plot Component Destroyed');
   static plotConfigurationFetched = createAction(source + 'Plot Configuration Fetched', props<{ configuration: PlotConfiguration }>());
   static processPlotZoomed = createAction(source + 'Process Plot Zoomed',
     props<{ subPlotIndex: number, newXDomain: AxisLimits, newYDomains: AxisLimits[] }>());

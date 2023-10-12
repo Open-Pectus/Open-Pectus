@@ -1,18 +1,19 @@
 antlr4-python3-runtime==4.9.2
 pint==0.22
-typing-extensions==4.7.1
-flake8==6.0.0   # dev
+typing_extensions==4.8.0
+pydantic==1.10.13
+flake8==6.1.0   # dev
 black==23.3.0   # dev
 build==0.10.0   # dev
-fastapi==0.99.0
-uvicorn[standard]==0.22.0
-httpx==0.24.1
-fastapi_websocket_rpc==0.1.24
-fastapi_websocket_pubsub==0.3.3
+fastapi==0.103.2
+uvicorn[standard]==0.23.2
+httpx==0.25.0
+fastapi_websocket_rpc==0.1.25
+fastapi_websocket_pubsub==0.3.8
 colorlog==6.7.0
 
 # simulation server
-#opcua   
+#opcua
 #numpy
 #scipy
 #cryptography

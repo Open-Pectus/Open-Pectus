@@ -10,14 +10,14 @@ export interface PvAndPosition {
   selector: 'app-process-value',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex bg-vscode-background-grey-hover p-2 items-center gap-2 rounded select-none"
+    <div class="flex flex-col bg-vscode-background-grey-hover p-1 items-center gap-1 lg:gap-2 rounded select-none"
          [class.cursor-pointer]="hasCommands(processValue)" (click)="onClick()">
       <div class="mx-1 font-semibold">{{processValue?.name}}</div>
-      <div class="bg-white rounded py-0.5 px-2 whitespace-nowrap min-h-[1.75rem] relative">
+      <div class="bg-white rounded py-0.5 px-2 whitespace-nowrap min-h-[1.75rem] relative w-full text-center">
         {{processValue | processValue}}
 
         <div *ngIf="hasCommands(processValue)" [class.codicon-wand]="hasCommands(processValue)"
-             class="absolute -top-2 -right-2 p-[2.5px] codicon !text-[0.6rem] bg-vscode-background-grey-hover rounded-full"></div>
+             class="absolute -top-2 -right-1 p-[2.5px] codicon !text-[0.6rem] bg-vscode-background-grey-hover rounded-full"></div>
       </div>
     </div>
   `,

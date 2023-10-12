@@ -209,38 +209,40 @@ export const handlers = [
           value_type: ProcessValueType.STRING,
           name: 'Writable text',
           value: 'VaLuE',
-          commands: [{
-            name: 'jiojio',
-            command: 'jiojio',
-            value: {
-              value: 'Writable text',
-              value_type: ProcessValueCommandFreeTextValue.value_type.STRING,
+          commands: [
+            {
+              name: 'choice',
+              command: 'choice',
+              value: {
+                value_type: ProcessValueCommandChoiceValue.value_type.CHOICE,
+                value: 'first',
+                options: ['first', 'second', 'third'],
+              },
             },
-          }, {
-            name: 'something',
-            command: 'something',
-          }, {
-            name: 'something disabled',
-            command: 'something disabled',
-            disabled: true,
-          }, {
-            name: 'number',
-            command: 'set number',
-            value: {
-              value: 123,
-              value_unit: 'no',
-              valid_value_units: ['no'],
-              value_type: ProcessValueType.INT,
-            },
-          }, {
-            name: 'choice',
-            command: 'choice',
-            value: {
-              value_type: ProcessValueCommandChoiceValue.value_type.CHOICE,
-              value: 'first',
-              options: ['first', 'second', 'third'],
-            },
-          }],
+            {
+              name: 'jiojio',
+              command: 'jiojio',
+              value: {
+                value: 'Writable text',
+                value_type: ProcessValueCommandFreeTextValue.value_type.STRING,
+              },
+            }, {
+              name: 'something',
+              command: 'something',
+            }, {
+              name: 'something disabled',
+              command: 'something disabled',
+              disabled: true,
+            }, {
+              name: 'number',
+              command: 'set number',
+              value: {
+                value: 123,
+                value_unit: 'no',
+                valid_value_units: ['no'],
+                value_type: ProcessValueType.INT,
+              },
+            }],
         }, {
           value_type: ProcessValueType.FLOAT,
           name: 'TT01',
@@ -294,15 +296,15 @@ export const handlers = [
       ctx.status(200),
       ctx.json<BatchJob[]>([
         {
-          id: 1,
+          id: '1',
           unit_id: '1',
           unit_name: 'Some Name 1 that is very long, and way longer than it should be.',
           completed_date: getCompletedDate(),
           contributors: ['Eskild'],
         },
-        {id: 2, unit_id: '2', unit_name: 'Some Name 2', completed_date: getCompletedDate(), contributors: ['Eskild', 'Morten']},
-        {id: 3, unit_id: '3', unit_name: 'Some Name 3', completed_date: getCompletedDate(), contributors: ['Eskild']},
-        {id: 4, unit_id: '4', unit_name: 'Some Name 4', completed_date: getCompletedDate(), contributors: ['Eskild']},
+        {id: '2', unit_id: '2', unit_name: 'Some Name 2', completed_date: getCompletedDate(), contributors: ['Eskild', 'Morten']},
+        {id: '3', unit_id: '3', unit_name: 'Some Name 3', completed_date: getCompletedDate(), contributors: ['Eskild']},
+        {id: '4', unit_id: '4', unit_name: 'Some Name 4', completed_date: getCompletedDate(), contributors: ['Eskild']},
       ]),
     );
   }),
@@ -665,6 +667,296 @@ export const handlers = [
     return res(
       context.status(200),
       context.json<ControlState>(controlState),
+    );
+  }),
+
+
+  /**************
+   * BATCH JOBS *
+   **************/
+
+  rest.get('/api/batch_job/:id/method', (req, res, context) => {
+    return res(
+      context.status(200),
+      context.delay(),
+      context.json<Method>({
+        lines: [
+          {id: 'a', content: '{'},
+          {id: 'b', content: ' "some key": "some value",'},
+          {id: 'c', content: ' "injected": "line",'},
+          {id: 'd', content: ' "another key": "another value",'},
+          {id: 'e', content: ' "another": "line",'},
+          {id: 'f', content: ' "yet another": "line"'},
+          {id: 'g', content: '}'},
+        ],
+        started_line_ids: [],
+        executed_line_ids: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+        injected_line_ids: ['c'],
+      }),
+    );
+  }),
+
+  rest.get('/api/batch_job/:id/run_log', (_, res, context) => {
+    return res(
+      context.status(200),
+      context.delay(),
+      context.json<RunLog>({
+        lines: [
+          {
+            id: 1,
+            start: sub(Date.now(), {days: 0, hours: 2, seconds: 20}).toISOString(),
+            end: sub(Date.now(), {days: 0, hours: 1, seconds: 20}).toISOString(),
+            command: {
+              command: 'Some Other Command',
+              source: CommandSource.MANUALLY_ENTERED,
+            },
+            start_values: [{
+              name: 'Amazing float value',
+              value: 1.43253342,
+              value_type: ProcessValueType.FLOAT,
+              value_unit: 'afv',
+            }],
+            end_values: [],
+          }, {
+            id: 2,
+            start: sub(Date.now(), {days: 0, hours: 1, seconds: 10}).toISOString(),
+            end: sub(Date.now(), {days: 0, hours: 0, seconds: 10}).toISOString(),
+            command: {
+              command: 'Some Third Command',
+              source: CommandSource.MANUALLY_ENTERED,
+            },
+            start_values: [
+              {
+                name: 'Amazing float value',
+                value: 999,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+              },
+              {
+                name: 'Best value',
+                value: 19.99,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+              },
+              {
+                name: 'Such prices',
+                value: 4299,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+              },
+              {
+                name: 'Very affordable',
+                value: 0.99,
+                value_type: ProcessValueType.FLOAT,
+                value_unit: 'afv',
+              },
+            ],
+            end_values: [],
+          }, {
+            id: 3,
+            start: sub(Date.now(), {days: 1, hours: 3, seconds: 30}).toISOString(),
+            end: sub(Date.now(), {days: 1, hours: 3}).toISOString(),
+            command: {
+              command: 'Supply the dakka',
+              source: CommandSource.MANUALLY_ENTERED,
+            },
+            start_values: [
+              {
+                name: 'Waaagh?',
+                value: 'No waagh',
+                value_type: ProcessValueType.STRING,
+              },
+              {
+                name: 'Dakka?',
+                value: 'No dakka 🙁',
+                value_type: ProcessValueType.STRING,
+              },
+            ],
+            end_values: [
+              {
+                name: 'Waaagh?',
+                value: 'WAAAGH!',
+                value_type: ProcessValueType.STRING,
+              },
+              {
+                name: 'Dakka?',
+                value: 'DAKKA! 😀',
+                value_type: ProcessValueType.STRING,
+              },
+            ],
+          },
+        ],
+      }),
+    );
+  }),
+
+  rest.get('/api/batch_job/:id', (req, res, context) => {
+    return res(
+      context.status(200),
+      context.json<BatchJob>({
+        id: req.params['id'].toString(),
+        completed_date: sub(new Date(), {hours: 1}).toISOString(),
+        contributors: ['Morten', 'Eskild'],
+        unit_id: 'A process unit id',
+        unit_name: 'A batch job name',
+      }),
+    );
+  }),
+
+
+  rest.get('/api/batch_job/:id/plot_configuration', (_, res, context) => {
+    return res(
+      context.status(200),
+      context.json<PlotConfiguration>({
+        x_axis_process_value_names: ['Timestamp', 'Timestamp2'],
+        process_value_names_to_annotate: ['Flow path'],
+        color_regions: [{
+          process_value_name: 'Flow path',
+          value_color_map: {
+            'Bypass': '#3366dd33',
+            'Prime with a long name': '#33aa6633',
+          },
+        }],
+        sub_plots: [
+          {
+            ratio: 1.5,
+            axes: [
+              {
+                label: 'Red',
+                process_value_names: ['PU01 Speed', 'PU02 Speed', 'PU03 Speed', 'PU04 Speed', 'PU05 Speed', 'PU06 Speed'],
+                y_max: 126,
+                y_min: 119,
+                color: '#ff3333',
+              },
+              {
+                label: 'Blue',
+                process_value_names: ['TT01'],
+                y_max: 26,
+                y_min: 20,
+                color: '#1144ff',
+              },
+              {
+                label: 'Teal label',
+                process_value_names: ['TT02'],
+                y_max: 32,
+                y_min: 22,
+                color: '#43c5b7',
+              },
+            ],
+          },
+          {
+            ratio: 1,
+            axes: [{
+              label: 'Green',
+              process_value_names: ['TT03'],
+              y_max: 26,
+              y_min: 20,
+              color: '#33ff33',
+            }, {
+              label: 'orange',
+              process_value_names: ['TT04'],
+              y_max: 29,
+              y_min: 19,
+              color: '#ff8000',
+            }],
+          },
+        ],
+      }),
+    );
+  }),
+
+  rest.get('/api/batch_job/:id/plot_log', (_, res, context) => {
+    const noOfValues = 90;
+    return res(
+      context.status(200),
+      context.json<PlotLog>({
+        entries: {
+          'Timestamp': {
+            value_type: ProcessValueType.INT,
+            name: 'Timestamp',
+            values: new Array(noOfValues).fill(undefined).map((_, index) => ({value: new Date().valueOf() - 1000 * (noOfValues - index)})),
+          },
+          'Timestamp2': {
+            value_type: ProcessValueType.INT,
+            name: 'Timestamp2',
+            values: new Array(noOfValues).fill(undefined).map(
+              (_, index) => ({value: new Date().valueOf() - 1000 * (noOfValues - index) + 1000000000000})),
+          },
+          'PU01 Speed': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'PU01 Speed',
+            values: new Array(noOfValues).fill({value: 120}),
+            value_unit: '%',
+          },
+          'PU02 Speed': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'PU02 Speed',
+            values: new Array(noOfValues).fill({value: 121}),
+            value_unit: '%',
+          },
+          'PU03 Speed': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'PU03 Speed',
+            values: new Array(noOfValues).fill({value: 122}),
+            value_unit: '%',
+          },
+          'PU04 Speed': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'PU04 Speed',
+            values: new Array(noOfValues).fill({value: 123}),
+            value_unit: '%',
+          },
+          'PU05 Speed': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'PU05 Speed',
+            values: new Array(noOfValues).fill({value: 124}),
+            value_unit: '%',
+          },
+          'PU06 Speed': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'PU06 Speed',
+            values: new Array(noOfValues).fill({value: 125}),
+            value_unit: '%',
+          },
+          'FT01 Flow': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'FT01 Flow',
+            values: new Array(noOfValues).fill(undefined).map(() => ({value: 123 + Math.random() * 2})),
+            value_unit: 'L/h',
+          },
+          'TT01': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'TT01',
+            values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2})),
+            value_unit: 'degC',
+          },
+          'TT02': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'TT02',
+            values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2})),
+            value_unit: 'degC',
+          },
+          'TT03': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'TT03',
+            values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2})),
+            value_unit: 'degC',
+          },
+          'TT04': {
+            value_type: ProcessValueType.FLOAT,
+            name: 'TT04',
+            values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2})),
+            value_unit: 'degC',
+          },
+          'Flow path': {
+            value_type: ProcessValueType.STRING,
+            name: 'Flow path',
+            values: new Array(noOfValues).fill(undefined).map((_, index) =>
+              ({value: (index % 9 < 3) ? 'Bypass' : (index % 9 < 6) ? 'Prime with a long name' : undefined}),
+            ),
+          },
+        },
+      }),
     );
   }),
 ];
