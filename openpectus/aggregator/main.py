@@ -4,8 +4,8 @@ import os
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 import uvicorn
-from openpectus import log_setup_colorlog
 
+from openpectus import log_setup_colorlog
 from openpectus.aggregator.spa import SinglePageApplication
 from openpectus.aggregator.routers import batch_job, process_unit, aggregator_websocket, auth
 from openpectus.aggregator.frontend_ws import frontend_pubsub
