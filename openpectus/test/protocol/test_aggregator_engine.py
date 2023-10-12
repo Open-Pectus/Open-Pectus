@@ -347,12 +347,12 @@ class IntegrationTest(AsyncServerTestCase):
     async def test_server_can_receive_runlog(self):
         client = self.create_test_client()
         await client.start_connect_wait_async(ws_url)
-        register_msg = RegisterEngineMsg(engine_name="eng", uod_name="uod")
+        register_msg = RegisterEngineMsg(computer_name="eng", uod_name="uod")
         await client.send_to_server(register_msg)
 
         make_server_print_channels()
 
-        client_id = Aggregator.create_client_id(register_msg)        
+        client_id = Aggregator.create_client_id(register_msg)
         msg = RunLogMsg(id="a", lines=[
             RunLogLineMsg(
                 id="",

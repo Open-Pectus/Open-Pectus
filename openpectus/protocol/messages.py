@@ -112,6 +112,12 @@ class RunLogLineMsg(MessageBase):
 RunLogMsg.update_forward_refs()
 
 
+class ControlStateMsg(MessageBase):
+    is_running: bool
+    is_holding: bool
+    is_paused: bool
+
+
 def serialize_msg(msg: MessageBase) -> Tuple[str, Dict[str, Any]]:
     return type(msg).__name__, msg.dict()
 

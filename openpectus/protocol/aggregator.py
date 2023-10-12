@@ -12,6 +12,7 @@ import logging
 
 from openpectus.protocol.exceptions import ProtocolException
 from openpectus.protocol.messages import (
+    ControlStateMsg,
     RunLogMsg,
     UodInfoMsg,
     deserialize_msg,
@@ -134,6 +135,9 @@ class ClientData(BaseModel):
     readings: List[ReadingDef]
     tags_info: TagsInfo
     runlog: RunLogMsg
+    control_state: ControlStateMsg = ControlStateMsg(
+        is_running=False, is_holding=False, is_paused=False
+    )
 
 
 ClientData.update_forward_refs()
@@ -199,6 +203,19 @@ class Aggregator:
         """
         return register_engine_msg.computer_name + "_" + register_engine_msg.uod_name
 
+    def get_registered_client_data_or_error(self, channel_id: str) -> ClientData | ErrorMessage:
+        ci = self.get_channel(channel_id)
+        if ci is None:
+            logger.error(f"Channel '{channel_id}' not found")
+            return ErrorMessage(message="Client unknown")
+        if ci.client_id is None or ci.status != ChannelStatusEnum.Registered:
+            logger.error(f"Channel '{channel_id}' has invalid status {ci.status} for this operation")
+            return ErrorMessage(message="Client not registered")
+        client_data = self.client_data_map.get(ci.client_id)
+        if client_data is None:
+            return ErrorMessage(message="Client data not initialized")
+        return client_data
+
     async def handle_RegisterEngineMsg(self, channel_id, register_engine_msg: RegisterEngineMsg) -> SuccessMessage | ErrorMessage:
         """ Registers engine """
         client_id = Aggregator.create_client_id(register_engine_msg)
@@ -247,19 +264,6 @@ class Aggregator:
                 runlog=RunLogMsg(id="", lines=[]))
         return SuccessMessage()
 
-    def get_registered_client_data_or_error(self, channel_id: str) -> ClientData | ErrorMessage:
-        ci = self.get_channel(channel_id)
-        if ci is None:
-            logger.error(f"Channel '{channel_id}' not found")
-            return ErrorMessage(message="Client unknown")
-        if ci.client_id is None or ci.status != ChannelStatusEnum.Registered:
-            logger.error(f"Channel '{channel_id}' has invalid status {ci.status} for this operation")
-            return ErrorMessage(message="Client not registered")
-        client_data = self.client_data_map.get(ci.client_id)
-        if client_data is None:
-            return ErrorMessage(message="Client data not initialized")
-        return client_data
-
     async def handle_UodInfoMsg(self, channel_id: str, msg: UodInfoMsg) -> SuccessMessage | ErrorMessage:
         client_data = self.get_registered_client_data_or_error(channel_id)
         if isinstance(client_data, ErrorMessage):
@@ -294,6 +298,14 @@ class Aggregator:
             return client_data
 
         client_data.runlog = msg
+        return SuccessMessage()
+
+    async def handle_ControlStateMsg(self, channel_id, msg: ControlStateMsg) -> SuccessMessage | ErrorMessage:
+        client_data = self.get_registered_client_data_or_error(channel_id)
+        if isinstance(client_data, ErrorMessage):
+            return client_data
+
+        client_data.control_state = msg
         return SuccessMessage()
 
     async def on_disconnect(self, channel: RpcChannel):  # registered as handler on RpcEndpoint

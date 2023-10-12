@@ -74,9 +74,9 @@ class ExecutionEngine():
         self._runstate_started_time: float = 0
         """ Indicates the time of the last Start state"""
 
-        self._runstate_pause: bool = False
+        self._runstate_paused: bool = False
         """ Indicates whether the engine is paused"""
-        self._runstate_hold: bool = False
+        self._runstate_holding: bool = False
         """ Indicates whether the engine is on hold"""
 
         self._interpreter: PInterpreter = PInterpreter(PProgram(), EngineInterpreterContext(self))
@@ -271,34 +271,60 @@ class ExecutionEngine():
             self._execute_uod_command(cmd_request, cmds_done)
 
     def _execute_internal_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
+
+        if not self._runstate_started and cmd_request.name != EngineCommandEnum.START:
+            logger.warning(f"Command {cmd_request.name} is invalid when Engine is not running")
+            return
+
         match cmd_request.name:
             case EngineCommandEnum.START:
+                if self._runstate_started:
+                    logger.warning("Cannot start when already running")
+                    return
                 self._runstate_started = True
                 self._runstate_started_time = time.time()
-                self._runstate_pause = False
-                self._runstate_hold = False
-                self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Run)
+                self._runstate_paused = False
+                self._runstate_holding = False
+                self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Running)
                 cmds_done.add(cmd_request)
                 self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
             case EngineCommandEnum.STOP:
                 self._runstate_started = False
-                self._runstate_pause = False
-                self._runstate_hold = False
+                self._runstate_paused = False
+                self._runstate_holding = False
                 self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Stopped)
                 cmds_done.add(cmd_request)
                 self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
             case EngineCommandEnum.PAUSE:
-                self._runstate_pause = True
+                self._runstate_paused = True
                 self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Paused)
                 self._apply_safe_state()
                 cmds_done.add(cmd_request)
                 self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
+            case EngineCommandEnum.UNPAUSE:
+                self._runstate_paused = False
+                if self._runstate_holding:
+                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Holding)
+                else:
+                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Running)
+                self._apply_safe_state()
+                cmds_done.add(cmd_request)
+                self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
+
             case EngineCommandEnum.HOLD:
-                self._runstate_hold = True
-                self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Hold)
+                self._runstate_holding = True
+                if not self._runstate_paused:
+                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Holding)
+                cmds_done.add(cmd_request)
+                self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
+
+            case EngineCommandEnum.UNHOLD:
+                self._runstate_holding = False
+                if not self._runstate_paused:
+                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Running)
                 cmds_done.add(cmd_request)
                 self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
@@ -523,20 +549,6 @@ class ExecutionEngine():
     # undo/revert(?)
 
 
-# Tag.Select (self.hw_value = self.read)
-# Tag state     'Reset'   'N/A'
-# io value
-# pio value     1       0
-
-# Tag.ValveNC (hw_value: return 0 if r == self.safe_state else return 1)
-# Tag state     'Closed'    'Open'
-# io value
-# pio value     0           1
-
-# Tag.Text (hw_value=read)
-
-# Tag.Output (self.hw_value=self.float)
-
 class EngineInterpreterContext(InterpreterContext):
     def __init__(self, engine: ExecutionEngine) -> None:
         super().__init__()
@@ -568,10 +580,10 @@ class EngineCommandEnum(StrEnum):
 
 
 class SystemStateEnum(StrEnum):
-    Run = "Running",
+    Running = "Running",
     Paused = "Paused",
-    Hold = "On Hold",
-    Wait = "Waiting",
+    Holding = "Holding",
+    Waiting = "Waiting",
     Stopped = "Stopped"
 
 

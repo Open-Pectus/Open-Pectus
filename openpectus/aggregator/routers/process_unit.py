@@ -9,6 +9,7 @@ import logging
 import openpectus.aggregator.deps as agg_deps
 from openpectus.protocol.aggregator import Aggregator, ChannelInfo, ReadingDef, TagInfo
 from openpectus.protocol.messages import (
+    ControlStateMsg,
     InjectCodeMsg,
     InvokeCommandMsg,
     RunLogLineMsg
@@ -52,6 +53,20 @@ class ControlState(BaseModel):
     is_running: bool
     is_holding: bool
     is_paused: bool
+
+    @staticmethod
+    def from_message(state: ControlStateMsg) -> ControlState:
+        return ControlState(
+            is_running=state.is_running,
+            is_holding=state.is_holding,
+            is_paused=state.is_paused)
+
+    @staticmethod
+    def default() -> ControlState:
+        return ControlState(
+            is_running=False,
+            is_holding=False,
+            is_paused=False)
 
 
 class ProcessUnit(BaseModel):
@@ -196,6 +211,7 @@ class CommandSource(StrEnum):
     PROCESS_VALUE = auto()
     MANUALLY_ENTERED = auto()
     UNIT_BUTTON = auto()
+    METHOD = auto()
 
 
 class ExecutableCommand(BaseModel):
@@ -289,16 +305,14 @@ class RunLog(BaseModel):
 def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> RunLog:
     client_data = agg.client_data_map.get(unit_id)
     if client_data is None:
-        print("No client data - thus no runlog")
+        logger.warning("No client data - thus no runlog")
         return RunLog(lines=[])
-
-    print("Runlog length:" + str(len(client_data.runlog.lines)))
 
     def from_line_msg(msg: RunLogLineMsg) -> RunLogLine:
         cmd = ExecutableCommand(
-                command="",
-                name=msg.command_name,
-                source=CommandSource("")
+                command=msg.command_name,
+                name=None,
+                source=CommandSource.METHOD
         )
         line = RunLogLine(
             id=0,
@@ -314,9 +328,11 @@ def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)
     return RunLog(
         lines=list(map(from_line_msg, client_data.runlog.lines)))
 
+
 class MethodLine(BaseModel):
     id: str
     content: str
+
 
 class Method(BaseModel):
     lines: List[MethodLine]
@@ -324,13 +340,16 @@ class Method(BaseModel):
     executed_line_ids: List[str]
     injected_line_ids: List[str]
 
+
 @router.get('/process_unit/{unit_id}/method')
 def get_method(unit_id: str) -> Method:
     return Method(lines=[], started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
 
+
 @router.post('/process_unit/{unit_id}/method')
 def save_method(unit_id: str, method: Method) -> None:
     pass
+
 
 class PlotColorRegion(BaseModel):
     process_value_name: str
@@ -391,5 +410,10 @@ def get_plot_log(unit_id: str) -> PlotLog:
 
 
 @router.get('/process_unit/{unit_id}/control_state')
-def get_control_state(unit_id: str) -> ControlState:
-    return ControlState(False, False, False)
+def get_control_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> ControlState:
+    client_data = agg.client_data_map.get(unit_id)
+    if client_data is None:
+        logger.warning("No client data - thus no control state")
+        return ControlState.default()
+
+    return ControlState.from_message(client_data.control_state)

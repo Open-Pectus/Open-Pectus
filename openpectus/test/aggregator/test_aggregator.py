@@ -1,20 +1,23 @@
 import unittest
-from openpectus.protocol.aggregator import Aggregator, ChannelInfo, ChannelStatusEnum
+from openpectus.protocol.aggregator import Aggregator
 from openpectus.protocol.messages import RegisterEngineMsg, SuccessMessage, ErrorMessage
 from fastapi_websocket_rpc.rpc_channel import RpcChannel, RpcMethodsBase
 
+
 class AggregatorTest(unittest.IsolatedAsyncioTestCase):
 
-    async def connectAggregator(self, aggregator: Aggregator, channel_id: int):
+    async def connectAggregator(self, aggregator: Aggregator, channel_id: str):
         await aggregator.on_connect(RpcChannel(RpcMethodsBase(), None, channel_id))
 
-    async def disconnectAggregator(self, aggregator: Aggregator, channel_id: int):
-        await aggregator.on_disconnect(aggregator.get_channel(channel_id).channel)
+    async def disconnectAggregator(self, aggregator: Aggregator, channel_id: str):
+        channel_info = aggregator.get_channel(channel_id)
+        if channel_info is not None:
+            await aggregator.on_disconnect(channel_info.channel)
 
     # TODO: can we test how many engines the aggregator would serve to frontend in the difference cases?
 
     async def test_register_engine_same_shannel(self):
-        channel_id = 'test-channel';
+        channel_id = 'test-channel'
         aggregator = Aggregator()
         register_engine_msg = RegisterEngineMsg(computer_name='computer-name', uod_name='uod-name')
 
@@ -33,10 +36,9 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
         result = await aggregator.handle_RegisterEngineMsg(channel_id, register_engine_msg)
         self.assertIsInstance(result, SuccessMessage)
 
-
     async def test_register_engine_different_name(self):
-        channel_id = 'test-channel';
-        channel_id2 = 'test-channel2';
+        channel_id = 'test-channel'
+        channel_id2 = 'test-channel2'
         aggregator = Aggregator()
         register_engine_msg = RegisterEngineMsg(computer_name='computer-name', uod_name='uod-name')
         register_engine_msg_different_computer = RegisterEngineMsg(computer_name='computer-name2', uod_name='uod-name')

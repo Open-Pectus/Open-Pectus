@@ -577,7 +577,7 @@ Mark: C
         e.schedule_execution("Pause")
         e.tick()
         self.assertTrue(e._runstate_started)
-        self.assertTrue(e._runstate_pause)
+        self.assertTrue(e._runstate_paused)
         self.assertEqual(SystemStateEnum.Paused, system_state_tag.get_value())
 
         # process time is now stopped
@@ -601,7 +601,7 @@ Mark: C
         e.schedule_execution("PAUSE")
         e.tick()
         self.assertTrue(e._runstate_started)
-        self.assertTrue(e._runstate_pause)
+        self.assertTrue(e._runstate_paused)
         self.assertEqual(SystemStateEnum.Paused, system_state_tag.get_value())
 
         # process time is now stopped
@@ -610,7 +610,7 @@ Mark: C
         e.schedule_execution("Start")
         e.tick()
         self.assertTrue(e._runstate_started)
-        self.assertTrue(e._runstate_pause)
+        self.assertTrue(e._runstate_paused)
         self.assertEqual(SystemStateEnum.Paused, system_state_tag.get_value())
 
         # process time is now stopped
@@ -633,7 +633,7 @@ Mark: C
         e.schedule_execution("Hold")
         e.tick()
         self.assertTrue(e._runstate_started)
-        self.assertTrue(e._runstate_hold)
+        self.assertTrue(e._runstate_holding)
         self.assertEqual(SystemStateEnum.Holding, system_state_tag.get_value())
 
         # process time is now stopped
