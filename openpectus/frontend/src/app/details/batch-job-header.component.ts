@@ -17,13 +17,11 @@ import { DetailsSelectors } from './ngrx/details.selectors';
         </div>
         <h1 class="text-4xl lg:text-5xl font-bold">{{batchJob?.unit_name}}</h1>
 
-        <!--        <a [href]="'/api/batch_job/'+ batchJob?.id +'/csv_file'" download>-->
         <button class="absolute top-0 right-0 px-3 py-1.5 rounded-md bg-sky-900 text-white flex items-center"
                 (click)="downloadCsv(batchJob)">
           <i class="codicon codicon-desktop-download !text-xl mr-2.5"></i>
           Data CSV-file
         </button>
-        <!--        </a>-->
       </div>
     </ng-container>
   `,
@@ -35,6 +33,6 @@ export class BatchJobHeaderComponent {
 
   downloadCsv(batchJob?: BatchJob) {
     if(batchJob === undefined) return;
-    this.store.dispatch(DetailsActions.batchJobDownloadCsvButtonClicked({batchJobId: batchJob.id, url: batchJob.csv_url}));
+    this.store.dispatch(DetailsActions.batchJobDownloadCsvButtonClicked({url: batchJob.csv_url}));
   }
 }

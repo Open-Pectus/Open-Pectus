@@ -123,15 +123,15 @@ export class DetailsEffects {
 
   downloadBatchJobCsvWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.batchJobDownloadCsvButtonClicked),
-    switchMap(({batchJobId, url}) => {
-      return this.httpClient.get(url, {responseType: 'blob'}).pipe(
-        // return this.batchJobService.getBatchJobCsvFile(batchJobId).pipe(
-        map(batchJobCsvFile => {
+    switchMap(({url}) => {
+      return this.httpClient.get(url, {observe: 'response', responseType: 'blob'}).pipe(
+        map(response => {
+          if(response.body === null) return;
           const link = document.createElement('a');
-          link.download = 'CSV file.csv';
-          link.href = URL.createObjectURL(new Blob([batchJobCsvFile]));
+          const filename = new RegExp(/filename="(.+)"/).exec(response.headers.get('content-disposition') ?? 'filename="file.csv"')?.[1];
+          link.download = filename ?? 'file.csv';
+          link.href = URL.createObjectURL(response.body);
           link.click();
-          // link.remove();
         }),
       );
     }),

@@ -1,11 +1,10 @@
-import io
 from datetime import datetime
 from typing import List
 from fastapi import APIRouter
 from pydantic import BaseModel
 
 from openpectus.aggregator.routers.dto import Method, RunLog, PlotConfiguration, PlotLog
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.responses import StreamingResponse
 
 router = APIRouter(tags=["batch_job"])
 
@@ -62,18 +61,12 @@ def get_batch_job_plot_log(id: str) -> PlotLog:
     return PlotLog(entries={})
 
 
-@router.get(batch_job_csv_file_download_url, response_class=FileResponse)
+@router.get(batch_job_csv_file_download_url, response_class=StreamingResponse)
 def get_batch_job_csv_file(id: str) -> StreamingResponse:
-    file_content = 'some CSV here'
-
-    # with io.StringIO(file_content) as file:
-    #     return FileResponse(
-    #         path=file
-    #     )
-
+    file_content = 'some;CSV;here\nand;more;here'
     file_name = f'BatchJob-{id}.csv'
     return StreamingResponse(
         content=iter([file_content]),
         media_type='text/csv',
-        headers={"Content-Disposition": f"attachment;filename={file_name}"}
+        headers={'Content-Disposition': f'attachment;filename="{file_name}"'}
     )

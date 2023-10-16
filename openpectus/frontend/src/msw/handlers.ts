@@ -997,9 +997,9 @@ export const handlers = [
   rest.get(batchJobCsvUrl, (req, res, context) => {
     const file = batchJobCsvFile.default;
     return res(
-      // context.status(200),
       context.set('Content-Length', file.length.toString()),
       context.set('Content-Type', 'text/csv'),
+      context.set('Content-Disposition', `attachment;filename="BatchJob-${req.params['id']}.csv"`),
       context.body(file),
     );
   }),
