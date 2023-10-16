@@ -846,6 +846,11 @@
             "type": "string",
             "title": "Unit Name"
           },
+          "started_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started Date"
+          },
           "completed_date": {
             "type": "string",
             "format": "date-time",
@@ -865,6 +870,7 @@
           "id",
           "unit_id",
           "unit_name",
+          "started_date",
           "completed_date"
         ],
         "title": "BatchJob",

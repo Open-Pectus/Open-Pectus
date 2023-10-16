@@ -292,6 +292,10 @@ export const handlers = [
       return sub(new Date(), {seconds: Math.random() * 1000000}).toISOString();
     }
 
+    function getStartedDate() {
+      return sub(new Date(), {hours: 2, seconds: Math.random() * 1000000}).toISOString();
+    }
+
     return res(
       ctx.status(200),
       ctx.json<BatchJob[]>([
@@ -299,12 +303,34 @@ export const handlers = [
           id: '1',
           unit_id: '1',
           unit_name: 'Some Name 1 that is very long, and way longer than it should be.',
+          started_date: getStartedDate(),
           completed_date: getCompletedDate(),
           contributors: ['Eskild'],
         },
-        {id: '2', unit_id: '2', unit_name: 'Some Name 2', completed_date: getCompletedDate(), contributors: ['Eskild', 'Morten']},
-        {id: '3', unit_id: '3', unit_name: 'Some Name 3', completed_date: getCompletedDate(), contributors: ['Eskild']},
-        {id: '4', unit_id: '4', unit_name: 'Some Name 4', completed_date: getCompletedDate(), contributors: ['Eskild']},
+        {
+          id: '2',
+          unit_id: '2',
+          unit_name: 'Some Name 2',
+          started_date: getStartedDate(),
+          completed_date: getCompletedDate(),
+          contributors: ['Eskild', 'Morten'],
+        },
+        {
+          id: '3',
+          unit_id: '3',
+          unit_name: 'Some Name 3',
+          started_date: getStartedDate(),
+          completed_date: getCompletedDate(),
+          contributors: ['Eskild'],
+        },
+        {
+          id: '4',
+          unit_id: '4',
+          unit_name: 'Some Name 4',
+          started_date: getStartedDate(),
+          completed_date: getCompletedDate(),
+          contributors: ['Eskild'],
+        },
       ]),
     );
   }),
@@ -795,6 +821,7 @@ export const handlers = [
       context.status(200),
       context.json<BatchJob>({
         id: req.params['id'].toString(),
+        started_date: sub(new Date(), {hours: 3, minutes: 22, seconds: 11}).toISOString(),
         completed_date: sub(new Date(), {hours: 1}).toISOString(),
         contributors: ['Morten', 'Eskild'],
         unit_id: 'A process unit id',

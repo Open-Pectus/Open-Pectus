@@ -13,6 +13,7 @@ class BatchJob(BaseModel):
     id: str
     unit_id: str
     unit_name: str
+    started_date: datetime
     completed_date: datetime
     contributors: List[str] = []
 

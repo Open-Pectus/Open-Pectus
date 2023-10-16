@@ -12,6 +12,7 @@ import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { AuthConfigModule } from './auth/auth-config.module';
+import { Defaults } from './defaults';
 import { MswEnablementComponent } from './msw-enablement.component';
 import { metaReducers, reducers } from './ngrx/';
 import { AppEffects } from './ngrx/app.effects';
@@ -62,7 +63,7 @@ import { TopBarComponent } from './top-bar.component';
     DatePipe,
     DecimalPipe,
     ProcessValuePipe,
-    {provide: DATE_PIPE_DEFAULT_OPTIONS, useValue: {dateFormat: 'd. MMMM y HH:mm:ss'}},
+    {provide: DATE_PIPE_DEFAULT_OPTIONS, useValue: {dateFormat: Defaults.dateFormat}},
   ],
   bootstrap: [AppComponent],
 })
