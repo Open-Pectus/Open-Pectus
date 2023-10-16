@@ -469,12 +469,15 @@ Mark: X
     def test_internal_command_can_execute_valid_command(self):
         e = self.engine
 
-        self.assertEqual(0, e._system_tags["RUN COUNTER"].get_value())
+        self.assertEqual(0, e._system_tags["Run Counter"].get_value())
 
-        e.schedule_execution("INCREMENT RUN COUNTER")
+        e.schedule_execution("Start")
+        e.tick()
+        
+        e.schedule_execution("Increment run counter")
         e.tick()
 
-        self.assertEqual(1, e._system_tags["RUN COUNTER"].get_value())
+        self.assertEqual(1, e._system_tags["Run Counter"].get_value())
 
         print_runlog(e)
 
@@ -506,7 +509,7 @@ Mark: C
     def test_get_runlog(self):
         e = self.engine
 
-        e.schedule_execution("START")
+        e.schedule_execution("Start")
         e.schedule_execution("Reset")
 
         run_engine(e, "", 5)
@@ -517,12 +520,12 @@ Mark: C
         for item in e.runlog.get_items():
             start_values = item.start_values
             assert start_values is not None
-            self.assertTrue(start_values.has("BASE"))
+            self.assertTrue(start_values.has("Base"))
 
     def test_runstate_start(self):
         e = self.engine
 
-        e.schedule_execution("START")
+        e.schedule_execution("Start")
         e.tick()
 
         self.assertTrue(e._runstate_started)
@@ -547,14 +550,14 @@ Mark: C
 
     def test_runstate_stop(self):
         e = self.engine
-        e.schedule_execution("START")
+        e.schedule_execution("Start")
 
         e.tick()
         self.assertTrue(e._runstate_started)
         system_state_tag = e._system_tags[tags.DEFAULT_TAG_SYSTEM_STATE]
         self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
 
-        e.schedule_execution("STOP")
+        e.schedule_execution("Stop")
         e.tick()
         self.assertFalse(e._runstate_started)
 
@@ -562,7 +565,7 @@ Mark: C
 
     def test_runstate_pause(self):
         e = self.engine
-        e.schedule_execution("START")
+        e.schedule_execution("Start")
 
         e.tick()
         self.assertTrue(e._runstate_started)
@@ -574,10 +577,10 @@ Mark: C
         danger_tag = e.uod.tags["Danger"]
         self.assertTrue(danger_tag.get_value())
 
-        e.schedule_execution("PAUSE")
+        e.schedule_execution("Pause")
         e.tick()
         self.assertTrue(e._runstate_started)
-        self.assertTrue(e._runstate_pause)
+        self.assertTrue(e._runstate_paused)
         self.assertEqual(SystemStateEnum.Paused, system_state_tag.get_value())
 
         # process time is now stopped
@@ -589,7 +592,7 @@ Mark: C
     @unittest.skip("not implemented")
     def test_runstate_unpause(self):
         e = self.engine
-        e.schedule_execution("START")
+        e.schedule_execution("Start")
 
         e.tick()
         self.assertTrue(e._runstate_started)
@@ -601,16 +604,16 @@ Mark: C
         e.schedule_execution("PAUSE")
         e.tick()
         self.assertTrue(e._runstate_started)
-        self.assertTrue(e._runstate_pause)
+        self.assertTrue(e._runstate_paused)
         self.assertEqual(SystemStateEnum.Paused, system_state_tag.get_value())
 
         # process time is now stopped
         self.assertEqual(pre_pause_process_time, process_time_tag.as_number())
 
-        e.schedule_execution("START")
+        e.schedule_execution("Start")
         e.tick()
         self.assertTrue(e._runstate_started)
-        self.assertTrue(e._runstate_pause)
+        self.assertTrue(e._runstate_paused)
         self.assertEqual(SystemStateEnum.Paused, system_state_tag.get_value())
 
         # process time is now stopped
@@ -618,7 +621,7 @@ Mark: C
 
     def test_runstate_hold(self):
         e = self.engine
-        e.schedule_execution("START")
+        e.schedule_execution("Start")
 
         e.tick()
         self.assertTrue(e._runstate_started)
@@ -630,10 +633,10 @@ Mark: C
         danger_tag = e.uod.tags["Danger"]
         self.assertTrue(danger_tag.get_value())
 
-        e.schedule_execution("HOLD")
+        e.schedule_execution("Hold")
         e.tick()
         self.assertTrue(e._runstate_started)
-        self.assertTrue(e._runstate_hold)
+        self.assertTrue(e._runstate_holding)
         self.assertEqual(SystemStateEnum.Holding, system_state_tag.get_value())
 
         # process time is now stopped
@@ -648,14 +651,14 @@ Mark: C
 
     def test_safe_values_apply(self):
         e = self.engine
-        e.schedule_execution("START")
+        e.schedule_execution("Start")
 
         e.tick()
 
         danger_tag = e.uod.tags["Danger"]
         self.assertTrue(danger_tag.get_value())
 
-        e._set_tags_safe()
+        e._apply_safe_state()
 
         self.assertFalse(danger_tag.get_value())
 
@@ -664,9 +667,10 @@ Mark: C
         raise NotImplementedError()
 
     def test_enum_has(self):
-        self.assertTrue(EngineCommandEnum.has_value("STOP"))
-        self.assertTrue(EngineCommandEnum.has_value("INCREMENT RUN COUNTER"))
+        self.assertTrue(EngineCommandEnum.has_value("Stop"))
+        self.assertTrue(EngineCommandEnum.has_value("Increment run counter"))
         self.assertFalse(EngineCommandEnum.has_value("stop"))
+        self.assertFalse(EngineCommandEnum.has_value("STOP"))
 
     def test_inject_command(self):
         program = """

@@ -19,6 +19,7 @@ from openpectus.lang.exec.tags import (
     Tag,
     TagCollection,
     TagDirection,
+    TagValue,
     TagValueCollection,
     ChangeListener,
     DEFAULT_TAG_CLOCK,
@@ -27,10 +28,7 @@ from openpectus.lang.exec.tags import (
 from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.model.pprogram import PProgram
 
-
-logging.basicConfig()
 logger = logging.getLogger("Engine")
-logger.setLevel(logging.DEBUG)
 
 
 def parse_pcode(pcode: str) -> PProgram:
@@ -76,9 +74,9 @@ class ExecutionEngine():
         self._runstate_started_time: float = 0
         """ Indicates the time of the last Start state"""
 
-        self._runstate_pause: bool = False
+        self._runstate_paused: bool = False
         """ Indicates whether the engine is paused"""
-        self._runstate_hold: bool = False
+        self._runstate_holding: bool = False
         """ Indicates whether the engine is on hold"""
 
         self._interpreter: PInterpreter = PInterpreter(PProgram(), EngineInterpreterContext(self))
@@ -267,145 +265,202 @@ class ExecutionEngine():
             cmds_done.add(cmd_request)
             return
 
-        cmd_name = cmd_request.name
-        if EngineCommandEnum.has_value(cmd_name):
-            match cmd_name:
-                case EngineCommandEnum.START:
-                    self._runstate_started = True
-                    self._runstate_started_time = time.time()
-                    self._runstate_pause = False
-                    self._runstate_hold = False
-                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Running)
-                    cmds_done.add(cmd_request)
-                    self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
-
-                case EngineCommandEnum.STOP:
-                    self._runstate_started = False
-                    self._runstate_pause = False
-                    self._runstate_hold = False
-                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Stopped)
-                    cmds_done.add(cmd_request)
-                    self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
-
-                case EngineCommandEnum.PAUSE:
-                    self._runstate_pause = True
-                    #self._runstate_hold = False
-                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Paused)
-                    self._set_tags_safe()
-                    cmds_done.add(cmd_request)
-                    self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
-
-                case EngineCommandEnum.HOLD:
-                    #self._runstate_pause = False
-                    self._runstate_hold = True
-                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Holding)
-                    cmds_done.add(cmd_request)
-                    self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
-
-                case EngineCommandEnum.INCREMENT_RUN_COUNTER:
-                    value = self._system_tags[DEFAULT_TAG_RUN_COUNTER].as_number() + 1
-                    self._system_tags[DEFAULT_TAG_RUN_COUNTER].set_value(value)
-                    cmds_done.add(cmd_request)
-                    self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
-
-                case _:
-                    raise NotImplementedError(f"EngineInternalCommand {cmd_name} execution not implemented")
+        if EngineCommandEnum.has_value(cmd_request.name):
+            self._execute_internal_command(cmd_request, cmds_done)
         else:
-            assert self.uod.has_command_name(cmd_name), f"Expected Uod to have command named {cmd_name}"
+            self._execute_uod_command(cmd_request, cmds_done)
 
-            # cancel any existing instance with same name
-            for c in self.cmd_executing:
-                if c.name == cmd_name and not c == cmd_request:
-                    cmds_done.add(c)
-                    c_item = self.runlog.get_item_by_cmd(c)
-                    assert c_item is not None
-                    if c_item.command is not None:
-                        c_item.command.cancel()
-                    c_item.add_end_state(RunLogItemState.Cancelled, self._tick_time, self._tick_number,
-                                         self.tags_as_readonly())
-                    logger.debug(f"Running command {c.name} cancelled because another was started")
+    def _execute_internal_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
 
-            # cancel any overlapping instance
-            for c in self.cmd_executing:
-                if not c == cmd_request:
-                    for overlap_list in self.uod.overlapping_command_names_lists:
-                        if c.name in overlap_list and cmd_name in overlap_list:
-                            cmds_done.add(c)
-                            c_item = self.runlog.get_item_by_cmd(c)
-                            assert c_item is not None
-                            if c_item.command is not None:
-                                c_item.command.cancel()
-                            c_item.add_end_state(RunLogItemState.Cancelled, self._tick_time, self._tick_number,
-                                                 self.tags_as_readonly())
-                            logger.debug(f"Running command {c.name} cancelled because overlapping command " +
-                                         f"{cmd_name} was started")
-                            break
+        if not self._runstate_started and cmd_request.name != EngineCommandEnum.START:
+            logger.warning(f"Command {cmd_request.name} is invalid when Engine is not running")
+            return
 
-            # create or get command instance
-            if not self.uod.has_command_instance(cmd_name):
-                uod_command = self.uod.create_command(cmd_name)
-                runlog_item = self.runlog.add_waiting(cmd_request, uod_command, self._tick_time, self._tick_number)
-            else:
-                uod_command = self.uod.get_command(cmd_name)
-                runlog_item = self.runlog.get_item_by_cmd(cmd_request)
+        match cmd_request.name:
+            case EngineCommandEnum.START:
+                if self._runstate_started:
+                    logger.warning("Cannot start when already running")
+                    return
+                self._runstate_started = True
+                self._runstate_started_time = time.time()
+                self._runstate_paused = False
+                self._runstate_holding = False
+                self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Running)
+                cmds_done.add(cmd_request)
+                self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
-            assert uod_command is not None
-            assert runlog_item is not None
+            case EngineCommandEnum.STOP:
+                self._runstate_started = False
+                self._runstate_paused = False
+                self._runstate_holding = False
+                self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Stopped)
+                cmds_done.add(cmd_request)
+                self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
-            args = uod_command.parse_args(cmd_request.args, uod_command.context)  # TODO remove uod from method signature
-            if args is None:
-                logger.error(f"Invalid argument string: '{cmd_request.args}' for command '{cmd_name}'")
-                raise ValueError("Invalid arguments")
+            case EngineCommandEnum.PAUSE:
+                self._runstate_paused = True
+                self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Paused)
+                self._apply_safe_state()
+                cmds_done.add(cmd_request)
+                self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
-            # execute command state flow
-            try:
-                logger.debug(f"Executing uod command: '{cmd_request.name}' with args '{cmd_request.args}', " +
-                             f"iteration {uod_command._exec_iterations}")
-                if uod_command.is_cancelled():
-                    if not uod_command.is_finalized():
-                        cmds_done.add(cmd_request)
-                        uod_command.finalize()
+            case EngineCommandEnum.UNPAUSE:
+                self._runstate_paused = False
+                if self._runstate_holding:
+                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Holding)
+                else:
+                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Running)
+                self._apply_safe_state()
+                cmds_done.add(cmd_request)
+                self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
-                if not uod_command.is_initialized():
-                    uod_command.initialize()
-                    logger.debug(f"Command {cmd_request.name} initialized")
+            case EngineCommandEnum.HOLD:
+                self._runstate_holding = True
+                if not self._runstate_paused:
+                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Holding)
+                cmds_done.add(cmd_request)
+                self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
-                if not uod_command.is_execution_started():
-                    runlog_item.add_start_state(self._tick_time, self._tick_number, self.tags_as_readonly())
-                    uod_command.execute(args)
-                    logger.debug(f"Command {cmd_request.name} executed first iteration {uod_command._exec_iterations}")
-                elif not uod_command.is_execution_complete():
-                    uod_command.execute(args)
-                    logger.debug(f"Command {cmd_request.name} executed another iteration {uod_command._exec_iterations}")
+            case EngineCommandEnum.UNHOLD:
+                self._runstate_holding = False
+                if not self._runstate_paused:
+                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Running)
+                cmds_done.add(cmd_request)
+                self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
-                if uod_command.is_execution_complete() and not uod_command.is_finalized():
-                    runlog_item.add_end_state(RunLogItemState.Completed, self._tick_time, self._tick_number,
-                                              self.tags_as_readonly())
+            case EngineCommandEnum.INCREMENT_RUN_COUNTER:
+                value = self._system_tags[DEFAULT_TAG_RUN_COUNTER].as_number() + 1
+                self._system_tags[DEFAULT_TAG_RUN_COUNTER].set_value(value)
+                cmds_done.add(cmd_request)
+                self.runlog.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
+
+            case _:
+                raise NotImplementedError(f"Internal engine command '{cmd_request.name}' execution not implemented")
+
+    def _execute_uod_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
+        cmd_name = cmd_request.name
+        assert self.uod.has_command_name(cmd_name), f"Expected Uod to have command named {cmd_name}"
+
+        # cancel any existing instance with same name
+        for c in self.cmd_executing:
+            if c.name == cmd_name and not c == cmd_request:
+                cmds_done.add(c)
+                c_item = self.runlog.get_item_by_cmd(c)
+                assert c_item is not None
+                if c_item.command is not None:
+                    c_item.command.cancel()
+                c_item.add_end_state(
+                    RunLogItemState.Cancelled,
+                    self._tick_time,
+                    self._tick_number,
+                    self.tags_as_readonly())
+                logger.debug(f"Running command {c.name} cancelled because another was started")
+
+        # cancel any overlapping instance
+        for c in self.cmd_executing:
+            if not c == cmd_request:
+                for overlap_list in self.uod.overlapping_command_names_lists:
+                    if c.name in overlap_list and cmd_name in overlap_list:
+                        cmds_done.add(c)
+                        c_item = self.runlog.get_item_by_cmd(c)
+                        assert c_item is not None
+                        if c_item.command is not None:
+                            c_item.command.cancel()
+                        c_item.add_end_state(
+                            RunLogItemState.Cancelled,
+                            self._tick_time,
+                            self._tick_number,
+                            self.tags_as_readonly())
+                        logger.debug(
+                            f"Running command {c.name} cancelled because overlapping command " +
+                            f"'{cmd_name}' was started")
+                        break
+
+        # create or get command instance
+        if not self.uod.has_command_instance(cmd_name):
+            uod_command = self.uod.create_command(cmd_name)
+            runlog_item = self.runlog.add_waiting(cmd_request, uod_command, self._tick_time, self._tick_number)
+        else:
+            uod_command = self.uod.get_command(cmd_name)
+            runlog_item = self.runlog.get_item_by_cmd(cmd_request)
+
+        assert uod_command is not None
+        assert runlog_item is not None
+
+        args = uod_command.parse_args(cmd_request.args, uod_command.context)  # TODO remove uod from method signature
+        if args is None:
+            logger.error(f"Invalid argument string: '{cmd_request.args}' for command '{cmd_name}'")
+            raise ValueError("Invalid arguments")
+
+        # execute command state flow
+        try:
+            logger.debug(
+                f"Executing uod command: '{cmd_request.name}' with args '{cmd_request.args}', " +
+                f"iteration {uod_command._exec_iterations}")
+            if uod_command.is_cancelled():
+                if not uod_command.is_finalized():
                     cmds_done.add(cmd_request)
                     uod_command.finalize()
-                    logger.debug(f"Command {cmd_request.name} finalized")
 
-            except Exception as ex:
-                if cmd_request in self.cmd_executing:
-                    cmds_done.add(cmd_request)
-                item = self.runlog.get_item_by_cmd(cmd_request)
-                if item is not None:
-                    item.add_end_state(RunLogItemState.Failed, self._tick_time, self._tick_number, self.tags_as_readonly())
-                    if item.command is not None and not item.command.is_cancelled:
-                        item.command.cancel()
+            if not uod_command.is_initialized():
+                uod_command.initialize()
+                logger.debug(f"Command {cmd_request.name} initialized")
 
-                logger.error(f"Uod command execution failed. Command: '{cmd_request.name}', " +
-                             f"argument string: '{cmd_request.args}'", exc_info=True)
-                raise ex
+            if not uod_command.is_execution_started():
+                runlog_item.add_start_state(self._tick_time, self._tick_number, self.tags_as_readonly())
+                uod_command.execute(args)
+                logger.debug(f"Command {cmd_request.name} executed first iteration {uod_command._exec_iterations}")
+            elif not uod_command.is_execution_complete():
+                uod_command.execute(args)
+                logger.debug(f"Command {cmd_request.name} executed another iteration {uod_command._exec_iterations}")
 
-    def _set_tags_safe(self):
-        # Set OUTPUT-direction tags to their safe values
+            if uod_command.is_execution_complete() and not uod_command.is_finalized():
+                runlog_item.add_end_state(
+                    RunLogItemState.Completed,
+                    self._tick_time,
+                    self._tick_number,
+                    self.tags_as_readonly())
+                cmds_done.add(cmd_request)
+                uod_command.finalize()
+                logger.debug(f"Command {cmd_request.name} finalized")
+
+        except Exception as ex:
+            if cmd_request in self.cmd_executing:
+                cmds_done.add(cmd_request)
+            item = self.runlog.get_item_by_cmd(cmd_request)
+            if item is not None:
+                item.add_end_state(
+                    RunLogItemState.Failed,
+                    self._tick_time,
+                    self._tick_number,
+                    self.tags_as_readonly())
+                if item.command is not None and not item.command.is_cancelled:
+                    item.command.cancel()
+
+            logger.error(
+                f"Uod command execution failed. Command: '{cmd_request.name}', " +
+                f"argument string: '{cmd_request.args}'", exc_info=True)
+            raise ex
+
+    def _apply_safe_state(self) -> TagValueCollection:
+        current_values: List[TagValue] = []
+
         for t in self._iter_all_tags():
             if t.direction == TagDirection.OUTPUT:
-                # TODO can safe value be None?
+                # TODO safe value can actually be None so we'll need
+                # additional data to determine whether a safe value is present
                 safe_value = t.safe_value
                 if safe_value is not None:
+                    current_values.append(t.as_readonly())
                     t.set_value(safe_value)
+
+        return TagValueCollection(current_values)
+
+    def _apply_state(self, state: TagValueCollection):
+        for t in self._iter_all_tags():
+            if state.has(t.name):
+                tag_value = state.get(t.name)
+                t.set_value(tag_value.value)
 
     def notify_initial_tags(self):
         for tag in self._iter_all_tags():
@@ -494,20 +549,6 @@ class ExecutionEngine():
     # undo/revert(?)
 
 
-# Tag.Select (self.hw_value = self.read)
-# Tag state     'Reset'   'N/A'
-# io value
-# pio value     1       0
-
-# Tag.ValveNC (hw_value: return 0 if r == self.safe_state else return 1)
-# Tag state     'Closed'    'Open'
-# io value
-# pio value     0           1
-
-# Tag.Text (hw_value=read)
-
-# Tag.Output (self.hw_value=self.float)
-
 class EngineInterpreterContext(InterpreterContext):
     def __init__(self, engine: ExecutionEngine) -> None:
         super().__init__()
@@ -524,11 +565,13 @@ class EngineInterpreterContext(InterpreterContext):
 
 
 class EngineCommandEnum(StrEnum):
-    START = "START"
-    STOP = "STOP"
-    PAUSE = "PAUSE"
-    HOLD = "HOLD"
-    INCREMENT_RUN_COUNTER = "INCREMENT RUN COUNTER"
+    START = "Start"
+    STOP = "Stop"
+    PAUSE = "Pause"
+    UNPAUSE = "Unpause"
+    HOLD = "Hold"
+    UNHOLD = "Unhold"
+    INCREMENT_RUN_COUNTER = "Increment run counter"
 
     @staticmethod
     def has_value(value: str):

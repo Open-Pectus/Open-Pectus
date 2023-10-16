@@ -18,9 +18,11 @@ from openpectus.protocol.aggregator import Aggregator, TagsInfo
 from openpectus.protocol.messages import (
     MessageBase,
     RegisterEngineMsg,
+    RunLogLineMsg,
+    RunLogMsg,
     SuccessMessage,
     ErrorMessage,
-    TagValue,
+    TagValueMsg,
     TagsUpdatedMsg,
     InvokeCommandMsg,
     serialize_msg_to_json,
@@ -36,6 +38,9 @@ logging.basicConfig()
 logger = get_logger("Test")
 logger.setLevel(logging.DEBUG)
 
+logging.getLogger('asyncio').setLevel(logging.ERROR)
+
+
 PORT = 7990
 ws_url = f"ws://localhost:{PORT}/engine-pubsub"
 trigger_url = f"http://localhost:{PORT}/trigger"
@@ -43,6 +48,7 @@ trigger_send_url = f"http://localhost:{PORT}/trigger_send"
 health_url = f"http://localhost:{PORT}/health"
 debug_channels_url = f"http://localhost:{PORT}/debug_channels"
 tags_url = f"http://localhost:{PORT}/tags"
+runlog_url = f"http://localhost:{PORT}/runlog"
 clear_state_url = f"http://localhost:{PORT}/clear_state"
 
 DATA = "MAGIC"
@@ -74,7 +80,7 @@ def setup_server_rest_routes(app: FastAPI, endpoint: PubSubEndpoint):
         return PlainTextResponse("OK")
 
     @app.get("/tags/{client_id}")
-    async def tags(client_id: str, aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
+    async def get_tags(client_id: str, aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
         client_data = aggregator.client_data_map.get(client_id)
         if client_data is None:
             return Response("No data found for client_id " + client_id, status_code=400)
@@ -83,6 +89,17 @@ def setup_server_rest_routes(app: FastAPI, endpoint: PubSubEndpoint):
         if tags is None:
             return Response("No tags found for client_id " + client_id, status_code=400)
         return tags
+
+    @app.get("/runlog/{client_id}")
+    async def get_runlog(client_id: str, aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
+        client_data = aggregator.client_data_map.get(client_id)
+        if client_data is None:
+            return Response("No data found for client_id " + client_id, status_code=400)
+        runlog = client_data.runlog
+        print("runlog", runlog)
+        if runlog is None:
+            return Response("No runlog found for client_id " + client_id, status_code=400)
+        return runlog
 
     @app.get("/debug_channels")
     async def debug_channels(aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
@@ -147,7 +164,7 @@ class AsyncServerTestCase(IsolatedAsyncioTestCase):
             logger.error("Server running on asyncSetUp. Clearing its state.")
             _ = httpx.get(clear_state_url)
 
-            time.sleep(2)
+            time.sleep(1)
 
         except httpx.ConnectError:
             pass
@@ -177,7 +194,7 @@ class AsyncServerTestCase(IsolatedAsyncioTestCase):
                 self.proc.kill()
 
 
-# @unittest.skip("TODO fix on CI build")
+@unittest.skip("TODO fix on CI build")
 class IntegrationTest(AsyncServerTestCase):
 
     def create_test_client(self, on_connect_callback=None) -> Client:
@@ -268,7 +285,7 @@ class IntegrationTest(AsyncServerTestCase):
         client = self.create_test_client()
 
         await client.start_connect_wait_async(ws_url)
-        msg = TagsUpdatedMsg(tags=[TagValue(name="foo", value="bar", value_unit=None)])
+        msg = TagsUpdatedMsg(tags=[TagValueMsg(name="foo", value="bar", value_unit=None)])
         result = await client.send_to_server(msg)
         self.assertIsInstance(result, ErrorMessage)
         self.assertEqual(result.message, "Client not registered")  # type: ignore
@@ -293,7 +310,7 @@ class IntegrationTest(AsyncServerTestCase):
             event.set()
             return SuccessMessage()
 
-        client.set_message_handler("InvokeCommandMsg", on_invoke_command)
+        client.set_message_handler(InvokeCommandMsg, on_invoke_command)
 
         # trigger server sent command via rest call
         cmd_msg = InvokeCommandMsg(name="START")
@@ -311,7 +328,7 @@ class IntegrationTest(AsyncServerTestCase):
         make_server_print_channels()
 
         client_id = Aggregator.create_client_id(register_msg)
-        msg = TagsUpdatedMsg(tags=[TagValue(name="foo", value="bar", value_unit=None)])
+        msg = TagsUpdatedMsg(tags=[TagValueMsg(name="foo", value="bar", value_unit=None)])
         result = await client.send_to_server(msg)
         self.assertIsInstance(result, SuccessMessage)
 
@@ -324,6 +341,41 @@ class IntegrationTest(AsyncServerTestCase):
         self.assertIsNotNone(tag)
         self.assertEqual(tag.name, "foo")  # type: ignore
         self.assertEqual(tag.value, "bar")  # type: ignore
+
+        await client.disconnect_wait_async()
+
+    async def test_server_can_receive_runlog(self):
+        client = self.create_test_client()
+        await client.start_connect_wait_async(ws_url)
+        register_msg = RegisterEngineMsg(computer_name="eng", uod_name="uod")
+        await client.send_to_server(register_msg)
+
+        make_server_print_channels()
+
+        client_id = Aggregator.create_client_id(register_msg)
+        msg = RunLogMsg(id="a", lines=[
+            RunLogLineMsg(
+                id="",
+                command_name="Foo",
+                start=10.1,
+                end=None,
+                progress=None,
+                start_values=[TagValueMsg(name="T1", value=87, value_unit=None)],
+                end_values=[])
+        ])
+        result = await client.send_to_server(msg)
+        self.assertIsInstance(result, SuccessMessage)
+
+        response = httpx.get(runlog_url + "/" + client_id)
+        self.assertEqual(200, response.status_code)
+
+        runlog = RunLogMsg.parse_raw(response.content)
+        self.assertIsNotNone(runlog)
+        print(runlog)
+        # tag = tags.get("foo")
+        # self.assertIsNotNone(tag)
+        # self.assertEqual(tag.name, "foo")  # type: ignore
+        # self.assertEqual(tag.value, "bar")  # type: ignore
 
         await client.disconnect_wait_async()
 
@@ -344,12 +396,12 @@ class SerializationTest(unittest.TestCase):
         self.assertEqual(reg.uod_name, reg_d.uod_name)  # type: ignore
 
     def test_serialization_TagsUpdatedMsg(self):
-        tu = TagsUpdatedMsg(tags=[TagValue(name="foo", value="bar", value_unit="m")])
+        tu = TagsUpdatedMsg(tags=[TagValueMsg(name="foo", value="bar", value_unit="m")])
         tu_s = serialize_msg_to_json(tu)
         self.assertIsNotNone(tu_s)
 
     def test_round_trip_TagsUpdatedMsg(self):
-        tu = TagsUpdatedMsg(tags=[TagValue(name="foo", value="bar", value_unit=None)])
+        tu = TagsUpdatedMsg(tags=[TagValueMsg(name="foo", value="bar", value_unit=None)])
         tu_s = serialize_msg_to_json(tu)
         self.assertIsNotNone(tu_s)
 

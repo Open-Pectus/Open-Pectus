@@ -2,11 +2,63 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum, auto
 from typing import Literal, List, Dict
-
-from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel
 
 from openpectus.protocol.aggregator import ReadingDef, TagInfo
+
+
+class ServerErrorResponse(BaseModel):
+    error: bool = True
+    message: str
+
+
+class ProcessUnitStateEnum(StrEnum):
+    """ Represents the state of a process unit. """
+    READY = auto()
+    IN_PROGRESS = auto()
+    NOT_ONLINE = auto()
+
+
+class ProcessUnitState:
+    class Ready(BaseModel):
+        state: Literal[ProcessUnitStateEnum.READY]
+
+    class InProgress(BaseModel):
+        state: Literal[ProcessUnitStateEnum.IN_PROGRESS]
+        progress_pct: int
+
+    class NotOnline(BaseModel):
+        state: Literal[ProcessUnitStateEnum.NOT_ONLINE]
+        last_seen_date: datetime
+
+
+class UserRole(StrEnum):
+    VIEWER = auto()
+    ADMIN = auto()
+
+
+class ControlState(BaseModel):
+    is_running: bool
+    is_holding: bool
+    is_paused: bool
+
+    @staticmethod
+    def default() -> ControlState:
+        return ControlState(
+            is_running=False,
+            is_holding=False,
+            is_paused=False)
+
+
+class ProcessUnit(BaseModel):
+    """Represents a process unit. """
+    id: str
+    name: str
+    state: ProcessUnitState.Ready | ProcessUnitState.InProgress | ProcessUnitState.NotOnline
+    location: str | None
+    runtime_msec: int | None
+    current_user_role: UserRole
+    # users: List[User] ?
 
 
 class ProcessValueType(StrEnum):
@@ -48,7 +100,6 @@ class ProcessValueCommand(BaseModel):
 ProcessValueValueType = str | float | int | None
 
 
-
 def get_ProcessValueType_from_value(value: str | float | int | None) -> ProcessValueType:
     if value is None:
         return ProcessValueType.STRING  # hmm
@@ -60,7 +111,6 @@ def get_ProcessValueType_from_value(value: str | float | int | None) -> ProcessV
         return ProcessValueType.FLOAT
     else:
         raise ValueError("Invalid value type: " + type(value).__name__)
-
 
 
 class ProcessValue(BaseModel):
@@ -89,6 +139,7 @@ class CommandSource(StrEnum):
     PROCESS_VALUE = auto()
     MANUALLY_ENTERED = auto()
     UNIT_BUTTON = auto()
+    METHOD = auto()
 
 
 class ExecutableCommand(BaseModel):

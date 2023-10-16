@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import socket
 from queue import Empty
 import time
@@ -7,6 +8,8 @@ from threading import Thread
 from typing import Any, List
 
 import httpx
+from openpectus import log_setup_colorlog
+from openpectus.lang.exec.runlog import RunLogItem
 
 from openpectus.protocol.engine import Client, create_client
 from openpectus.engine.eng import ExecutionEngine, CommandRequest
@@ -15,6 +18,12 @@ from openpectus.lang.exec import tags
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
 from openpectus.lang.exec import readings as R
 import openpectus.protocol.messages as M
+
+
+log_setup_colorlog()
+
+logger = logging.getLogger("openpectus.protocol.engine")
+logger.setLevel(logging.INFO)
 
 
 def get_args():
@@ -52,9 +61,10 @@ def create_demo_uod() -> UnitOperationDefinitionBase:
         .with_tag(tags.Reading("FT01", "L/h"))
         .with_tag(tags.Select("Reset", value="N/A", unit=None, choices=['Reset', "N/A"]))
         .with_command(UodCommand.builder().with_name("Reset").with_exec_fn(reset))
-        .with_process_value(R.Reading(label="Run time"))
+        .with_process_value(R.Reading(label="Run Time"))
         .with_process_value(R.Reading(label="FT01"))
         .with_process_value(R.Reading(label="Reset"))
+        .with_process_value(R.Reading(label="System State"))
         .build()
     )
 
@@ -82,6 +92,12 @@ class EngineRunner:
     async def send_tag_updates_async(self):
         raise NotImplementedError()
 
+    async def send_runlog_async(self):
+        raise NotImplementedError()
+
+    async def send_control_state_async(self):
+        raise NotImplementedError()
+
     async def run_loop_async(self):
         try:
             await self.connect_async()
@@ -90,45 +106,14 @@ class EngineRunner:
             await self.notify_initial_tags_async()
 
             while True:
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(1)
                 await self.send_tag_updates_async()
+                await self.send_runlog_async()
+                await self.send_control_state_async()
         except KeyboardInterrupt:
             await self.disconnect_async()
         except asyncio.CancelledError:
             return
-
-
-class DemoEngineRunner():
-    def __init__(self, e: ExecutionEngine) -> None:
-        self.e = e
-        self.running = False
-
-    async def connect_async(self):
-        pass
-
-    async def disconnect_async(self):
-        self.running = False
-
-    async def register_async(self):
-        pass
-
-    async def run_loop_async(self):
-        self.running = True
-        try:
-            while self.running:
-                time.sleep(0.1)
-
-                tag = None
-                try:
-                    tag = self.e.tag_updates.get_nowait()
-                    # tag = self.e.tag_updates.get()
-                except Empty:
-                    pass
-                if tag is not None:
-                    print(f"Tag updated: {tag.name}:\t{tag.get_value()}")
-
-        except KeyboardInterrupt:
-            await self.disconnect_async()
 
 
 class WebSocketRPCEngineRunner(EngineRunner):
@@ -152,8 +137,10 @@ class WebSocketRPCEngineRunner(EngineRunner):
         register_response = await self.client.send_to_server(register_engine_msg)  # , on_success=on_register, on_error=on_error)
         if not isinstance(register_response, M.SuccessMessage):
             print("Failed to Register")
+            return
 
-        self.client.set_message_handler("InvokeCommandMsg", self._schedule_command)
+        self.client.set_message_handler(M.InvokeCommandMsg, self._schedule_command)
+        self.client.set_message_handler(M.InjectCodeMsg, self._inject_code)
 
     async def send_uod_info_async(self):
         if self.client is None:
@@ -179,12 +166,47 @@ class WebSocketRPCEngineRunner(EngineRunner):
         try:
             for _ in range(100):
                 tag = self.engine.tag_updates.get_nowait()
-                tags.append(M.TagValue(name=tag.name, value=tag.get_value(), value_unit=tag.unit))
+                tags.append(M.TagValueMsg(name=tag.name, value=tag.get_value(), value_unit=tag.unit))
         except Empty:
             pass
         if len(tags) > 0:
             msg = M.TagsUpdatedMsg(tags=tags)
             await self.client.send_to_server(msg)
+
+    async def send_runlog_async(self):
+        if self.client is None:
+            raise ValueError("Client is not connected")
+
+        def to_msg(item: RunLogItem) -> M.RunLogLineMsg:
+            msg = M.RunLogLineMsg(
+                id="",
+                command_name=item.command_req.name,
+                start=item.start,
+                end=item.end,
+                progress=None,
+                start_values=[],
+                end_values=[]
+                )
+            return msg
+
+        items = self.engine.runlog.get_items()
+        print("## Runlog items sent: " + str(len(items)))
+        msg = M.RunLogMsg(
+            id="",
+            lines=list(map(to_msg, items))
+        )
+        await self.client.send_to_server(msg)
+
+    async def send_control_state_async(self):
+        if self.client is None:
+            raise ValueError("Client is not connected")
+
+        msg = M.ControlStateMsg(
+            is_running=self.engine._runstate_started,
+            is_holding=self.engine._runstate_holding,
+            is_paused=self.engine._runstate_paused
+        )
+        await self.client.send_to_server(msg)
 
     async def _schedule_command(self, msg: M.MessageBase) -> M.MessageBase:
         assert isinstance(msg, M.InvokeCommandMsg)
@@ -193,10 +215,15 @@ class WebSocketRPCEngineRunner(EngineRunner):
         # TODO verify this is intended behavior
         # TODO - move this into ExecutionEngine
         if not self.engine.is_running() and msg.name.upper() == "START":
+            logger.info("Starting engine on first start command")
             self.engine.run()
 
-        cmd = CommandRequest(name=msg.name, args=msg.arguments)
-        self.engine.cmd_queue.put_nowait(cmd)
+        self.engine.schedule_execution(name=msg.name, args=msg.arguments)
+        return M.SuccessMessage()
+
+    async def _inject_code(self, msg: M.MessageBase) -> M.MessageBase:
+        assert isinstance(msg, M.InjectCodeMsg)
+        self.engine.inject_code(msg.pcode)
         return M.SuccessMessage()
 
     async def disconnect_async(self):
@@ -214,40 +241,7 @@ async def async_main(args):
     e = ExecutionEngine(uod, tick_interval=1)
 
     if args.runner == "DemoTagListener":
-        runner = DemoEngineRunner(e)
-        await runner.run_loop_async()
-
-        listener_thread = Thread(target=runner.run_loop_async, daemon=True, name=runner.__class__.__name__)
-
-        print("Starting engine")
-        listener_thread.start()
-        e.run()
-
-        secs_start = time.time() + 5
-        secs_stop = secs_start + 10
-        secs_reset = secs_start + 5
-        never = time.time() * 2
-        try:
-            while True:
-                time.sleep(.1)
-
-                if e._tick_time > secs_start:
-                    e.cmd_queue.put(CommandRequest("START"))
-                    secs_start = never
-
-                if e._tick_time > secs_reset:
-                    e.cmd_queue.put(CommandRequest("RESET"))
-                    secs_reset = never
-
-                if e._tick_time > secs_stop:
-                    e.cmd_queue.put(CommandRequest("STOP"))
-                    secs_stop = never
-
-        except KeyboardInterrupt:
-            # TODO
-            # e.shutdown()
-            # runner.stop()
-            print("Engine stopped")
+        raise NotImplementedError()
 
     else:
         aggregator_health_url = f"http://{args.aggregator_host}:{args.aggregator_port}/health"
@@ -272,6 +266,7 @@ async def async_main(args):
 
 def main():
     args = get_args()
+    logger.info("Engine starting")
     asyncio.run(async_main(args))
 
 

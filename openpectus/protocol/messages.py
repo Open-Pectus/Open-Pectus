@@ -60,12 +60,15 @@ class UodInfoMsg(MessageBase):
 
 
 class TagsUpdatedMsg(MessageBase):
-    tags: List[TagValue] = []
+    tags: List[TagValueMsg] = []
 
 
-class TagValue(MessageBase):
+TagValueType = str | int | float | None
+
+
+class TagValueMsg(MessageBase):
     name: str = ""
-    value: str | int | float | None = None
+    value: TagValueType = None
     value_unit: str | None
 
 
@@ -78,6 +81,9 @@ class InvokeCommandMsg(MessageBase):
     arguments: str | None = None
 
 
+class InjectCodeMsg(MessageBase):
+    pcode: str
+
 # class UodSpecMsg(MessageBase):
 #     name: str
 #     tags: List[TagSpec] = []
@@ -88,19 +94,28 @@ class TagSpec(MessageBase):
     tag_unit: str | None
 
 
-class RunLog(MessageBase):
-    id: int  # figure this out - should refer some persistent entity
-    lines: List[RunLogItem]
+class RunLogMsg(MessageBase):
+    id: str  # figure this out - should refer some persistent entity
+    lines: List[RunLogLineMsg]
 
 
-class RunLogItem(MessageBase):
-    id: int
+class RunLogLineMsg(MessageBase):
+    id: str
     command_name: str
     start: float
     end: float | None
     progress: float | None  # between 0 and 1
-    start_values: List[TagValue]
-    end_values: List[TagValue]
+    start_values: List[TagValueMsg]
+    end_values: List[TagValueMsg]
+
+
+RunLogMsg.update_forward_refs()
+
+
+class ControlStateMsg(MessageBase):
+    is_running: bool
+    is_holding: bool
+    is_paused: bool
 
 
 def serialize_msg(msg: MessageBase) -> Tuple[str, Dict[str, Any]]:

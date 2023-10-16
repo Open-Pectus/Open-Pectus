@@ -32,9 +32,7 @@ from openpectus.lang.exec.tags import (
 )
 
 
-logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 # TODO define pause + hold behavior

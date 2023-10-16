@@ -1,9 +1,11 @@
 from argparse import ArgumentParser
+import logging
 import os
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 import uvicorn
 
+from openpectus import log_setup_colorlog
 from openpectus.aggregator.spa import SinglePageApplication
 from openpectus.aggregator.routers import batch_job, process_unit, aggregator_websocket, auth
 from openpectus.aggregator.frontend_ws import frontend_pubsub
@@ -29,15 +31,22 @@ from openpectus.aggregator.frontend_ws import frontend_pubsub
 # Look into this https://stackoverflow.com/questions/74137116/how-to-hide-a-pydantic-discriminator-field-from-fastapi-docs
 # Final / Literal ...
 
+
+log_setup_colorlog()
+
+logger = logging.getLogger("openpectus.protocol.aggregator")
+logger.setLevel(logging.INFO)
+
+
 default_frontend_dist_dir = os.path.join(os.path.dirname(__file__), "frontend-dist")
 
 
 def get_args():
     parser = ArgumentParser("Start Aggregator server")
     parser.add_argument("-host", "--host", required=False, default="127.0.0.1",
-                        help="Host address to bind web socket to")
+                        help="Host address to bind frontend and web socket to")
     parser.add_argument("-p", "--port", required=False, type=int, default="9800",
-                        help="Port to bind web socket to")
+                        help="Host port to bind frontend and web socket to")
     parser.add_argument("-fdd", "--frontend_dist_dir", required=False, default=default_frontend_dist_dir,
                         help="Frontend distribution directory. Defaults to " + default_frontend_dist_dir)
     return parser.parse_args()
@@ -70,6 +79,7 @@ def create_app(frontend_dist_dir: str = default_frontend_dist_dir):
 def main():
     args = get_args()
     app = create_app(args.frontend_dist_dir)
+    print(f"Serving frontend at http://{args.host}:{args.port}")
     uvicorn.run(app, host=args.host, port=args.port)
 
 

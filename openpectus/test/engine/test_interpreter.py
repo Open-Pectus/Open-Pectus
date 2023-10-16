@@ -132,9 +132,9 @@ class InterpreterTest(unittest.TestCase):
 
     def test_sequential_marks(self):
         program = build_program("""
-mark: a
-mark: b
-mark: c
+Mark: a
+Mark: b
+Mark: c
 """)
         print_program(program)
         engine = self.engine
@@ -145,7 +145,7 @@ mark: c
 
     def test_command_incr_counter(self):
         program = build_program("""
-mark: a
+Mark: a
 incr counter
 """)
         print_program(program)
@@ -158,15 +158,19 @@ incr counter
         self.assertEqual(1, engine.uod.tags["counter"].as_number())
         self.assertEqual("a", engine.interpreter.get_marks()[0])
 
+    @unittest.skip("TODO")
+    def test_condition_with_invalid_tag_fails(self):
+        raise NotImplementedError()
+
     def test_watch_can_evaluate_tag(self):
         program = build_program("""
-mark: a
-watch: counter > 0
-    mark: b
-mark: c
+Mark: a
+Watch: counter > 0
+    Mark: b
+Mark: c
 incr counter
-watch: counter > 0
-    mark: d
+Watch: counter > 0
+    Mark: d
 """)
         engine = self.engine
         run_engine(engine, program, 15)
@@ -180,37 +184,38 @@ watch: counter > 0
 
     def test_watch_nested(self):
         program = build_program("""
-mark: a
-watch: counter > 0
-    mark: b
-    watch: counter > 1
-        mark: e
-mark: c
+Mark: a
+Watch: counter > 0
+    Mark: b
+    Watch: counter > 1
+        Mark: e
+Mark: c
 incr counter
 incr counter
-watch: counter > 0
-    mark: d
+Watch: counter > 0
+    Mark: d
 """)
         engine = self.engine
         run_engine(engine, program, 15)
 
         print_log(engine.interpreter)
-        #self.assertEqual(["a", "c", "b", "e", "d"], engine.interpreter.get_marks())
+        # TODO abgiguous ...
+        # self.assertEqual(["a", "c", "b", "e", "d"], engine.interpreter.get_marks())
         self.assertEqual(["a", "c", "b", "d", "e"], engine.interpreter.get_marks())
 
     def test_watch_long_running_order(self):
         # specify order of highly overlapping instructions
         # between main program and a single interrupt handler
         program = build_program("""
-mark: a
-watch: Run counter > -1
-    mark: a1
-    mark: a2
-    mark: a3
-mark: b
-mark: b1
-mark: b2
-mark: b3
+Mark: a
+Watch: Run Counter > -1
+    Mark: a1
+    Mark: a2
+    Mark: a3
+Mark: b
+Mark: b1
+Mark: b2
+Mark: b3
 """)
         engine = self.engine
         run_engine(engine, program, 10)
@@ -225,24 +230,24 @@ mark: b3
         # specify block time for block in interrupt handler
 
         program = build_program("""
-mark: a
-watch: Run counter > -1
+Mark: a
+Watch: Run counter > -1
     Block: A
-        mark: a1
-        watch: Block time > 0.5 sec
-            mark: a2
-        watch: Block time > 1.0 sec
-            mark: a3
-        watch: Block time > 1.2 sec
-            mark: a32
-        watch: Block time > 1.3 sec
-            mark: a33
-        watch: Block time > 1.4 sec
-            mark: a34
-        watch: Block time > 1.5 sec
-            mark: a4
+        Mark: a1
+        Watch: Block time > 0.5 sec
+            Mark: a2
+        Watch: Block time > 1.0 sec
+            Mark: a3
+        Watch: Block time > 1.2 sec
+            Mark: a32
+        Watch: Block time > 1.3 sec
+            Mark: a33
+        Watch: Block time > 1.4 sec
+            Mark: a34
+        Watch: Block time > 1.5 sec
+            Mark: a4
             End block
-mark: b
+Mark: b
 """)
         print_program(program)
         engine = self.engine
@@ -306,7 +311,7 @@ Mark: A3
         program = build_program("""
 Block: A
     Mark: A1
-    Watch: Block time > 1 sec
+    Watch: Block Time > 1 sec
         End block
     Mark: A2
 Mark: A3
@@ -434,9 +439,9 @@ Mark: d
     @unittest.skip("TODO")
     def test_watch_tag_categorized_value(self):
         program = build_program("""
-watch: LT01 = Full
-    mark: a1
-mark: b
+Watch: LT01 = Full
+    Mark: a1
+Mark: b
 """)
         i = create_interpreter(program=program)
         run_interpreter(i, 5)

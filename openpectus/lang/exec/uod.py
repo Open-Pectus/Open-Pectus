@@ -100,18 +100,14 @@ class UnitOperationDefinitionBase:
             return self.command_instances[name]
         raise ValueError(f"Command instance named '{name}' not found")
 
-    def get_command_names(self, as_lower=True) -> List[str]:
-        def to_case(name: str):
-            if as_lower:
-                return name.lower()
-            return name
-        return list([to_case(c_name) for c_name in self.command_factories.keys()])
+    def get_command_names(self) -> List[str]:
+        return list(self.command_factories.keys())
 
     def validate_tag_name(self, tag_name: str) -> bool:
-        return tag_name.upper() in self.tags.names
+        return tag_name in self.tags.names
 
     def validate_command_name(self, command_name: str) -> bool:
-        return command_name.lower() in self.get_command_names(as_lower=True)
+        return command_name in self.get_command_names()
 
 
 class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):

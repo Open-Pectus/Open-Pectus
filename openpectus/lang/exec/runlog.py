@@ -27,18 +27,16 @@ class RunLog():
                 return item
 
     def add_waiting(self, req: CommandRequest, cmd: EngineCommand, time: float, tick: int) -> RunLogItem:
-        item = RunLogItem(req)
+        item = RunLogItem(req, time)
         item.command = cmd
-        item.start = time
         item.start_tick = tick
         item.states = [RunLogItemState.Waiting]
         self._items.append(item)
         return item
 
     def add_waiting_node(self, req: CommandRequest, node: PNode, time: float, tick: int) -> RunLogItem:
-        item = RunLogItem(req)
+        item = RunLogItem(req, time)
         item.node = node
-        item.start = time
         item.start_tick = tick
         item.states = [RunLogItemState.Waiting]
         self._items.append(item)
@@ -46,8 +44,7 @@ class RunLog():
 
     def add_completed(self, req: CommandRequest, time: float, tick: int, tags: TagValueCollection) -> RunLogItem:
         """ Add an item that is immidiately started and completed """
-        item = RunLogItem(req)
-        item.start = time
+        item = RunLogItem(req, time)
         item.start_tick = tick
         item.end = time
         item.end_tick = tick
@@ -59,11 +56,11 @@ class RunLog():
 
 
 class RunLogItem():
-    def __init__(self, command_req: CommandRequest) -> None:
+    def __init__(self, command_req: CommandRequest, start: float) -> None:
         self.command_req: CommandRequest = command_req
         self.command: EngineCommand | None = None
         self.node: PNode | None = None
-        self.start: float | None = None
+        self.start: float = start
         self.start_tick: int = -1
         self.end: float | None = None
         self.end_tick: int = -1
