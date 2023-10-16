@@ -677,10 +677,10 @@
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Unit Id"
+              "title": "Id"
             },
-            "name": "unit_id",
-            "in": "query"
+            "name": "id",
+            "in": "path"
           }
         ],
         "responses": {
@@ -719,10 +719,10 @@
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Unit Id"
+              "title": "Id"
             },
-            "name": "unit_id",
-            "in": "query"
+            "name": "id",
+            "in": "path"
           }
         ],
         "responses": {
@@ -735,6 +735,41 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/batch_job/{id}/csv_file": {
+      "get": {
+        "tags": [
+          "batch_job"
+        ],
+        "summary": "Get Batch Job Csv File",
+        "operationId": "get_batch_job_csv_file",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            },
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -863,6 +898,10 @@
             "type": "array",
             "title": "Contributors",
             "default": []
+          },
+          "csv_url": {
+            "type": "string",
+            "title": "Csv Url"
           }
         },
         "type": "object",
@@ -871,7 +910,8 @@
           "unit_id",
           "unit_name",
           "started_date",
-          "completed_date"
+          "completed_date",
+          "csv_url"
         ],
         "title": "BatchJob",
         "description": "Represents a current or historical run of a process unit. "

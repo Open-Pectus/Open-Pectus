@@ -99,18 +99,18 @@ id: string,
 
     /**
      * Get Batch Job Plot Configuration
-     * @param unitId 
+     * @param id 
      * @returns PlotConfiguration Successful Response
      * @throws ApiError
      */
     public getBatchJobPlotConfiguration(
-unitId: string,
+id: string,
 ): Observable<PlotConfiguration> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
             url: '/api/batch_job/{id}/plot_configuration',
-            query: {
-                'unit_id': unitId,
+            path: {
+                'id': id,
             },
             errors: {
                 422: `Validation Error`,
@@ -120,18 +120,39 @@ unitId: string,
 
     /**
      * Get Batch Job Plot Log
-     * @param unitId 
+     * @param id 
      * @returns PlotLog Successful Response
      * @throws ApiError
      */
     public getBatchJobPlotLog(
-unitId: string,
+id: string,
 ): Observable<PlotLog> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
             url: '/api/batch_job/{id}/plot_log',
-            query: {
-                'unit_id': unitId,
+            path: {
+                'id': id,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
+    /**
+     * Get Batch Job Csv File
+     * @param id 
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public getBatchJobCsvFile(
+id: string,
+): Observable<any> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/batch_job/{id}/csv_file',
+            path: {
+                'id': id,
             },
             errors: {
                 422: `Validation Error`,

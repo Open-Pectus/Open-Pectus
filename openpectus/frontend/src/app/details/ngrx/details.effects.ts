@@ -1,3 +1,4 @@
+import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
@@ -120,7 +121,25 @@ export class DetailsEffects {
     }),
   ));
 
-  constructor(private actions: Actions, private store: Store,
+  downloadBatchJobCsvWhenButtonClicked = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.batchJobDownloadCsvButtonClicked),
+    switchMap(({batchJobId, url}) => {
+      return this.httpClient.get(url, {responseType: 'blob'}).pipe(
+        // return this.batchJobService.getBatchJobCsvFile(batchJobId).pipe(
+        map(batchJobCsvFile => {
+          const link = document.createElement('a');
+          link.download = 'CSV file.csv';
+          link.href = URL.createObjectURL(new Blob([batchJobCsvFile]));
+          link.click();
+          // link.remove();
+        }),
+      );
+    }),
+  ), {dispatch: false});
+
+  constructor(private actions: Actions,
+              private store: Store,
               private processUnitService: ProcessUnitService,
-              private batchJobService: BatchJobService) {}
+              private batchJobService: BatchJobService,
+              private httpClient: HttpClient) {}
 }
