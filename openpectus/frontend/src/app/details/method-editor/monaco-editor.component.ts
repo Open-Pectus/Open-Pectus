@@ -33,6 +33,7 @@ const lineIdClassNamePrefix = 'line-id-';
 })
 export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   @Input() editorSizeChange?: Observable<void>;
+  @Input() readOnlyEditor = false;
   @ViewChild('editor', {static: true}) editorElement!: ElementRef<HTMLDivElement>;
   private componentDestroyed = new Subject<void>();
   private editor?: MonacoEditor.IStandaloneCodeEditor;
@@ -235,7 +236,11 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   private setupStartedAndExecutedLines(editor: MonacoEditor.IStandaloneCodeEditor) {
     const startedAndExecutedLinesDecorationCollection = this.setupDecoratingStartedAndExecutedLines(editor);
-    this.setupLockingStartedAndExecutedLines(editor, startedAndExecutedLinesDecorationCollection);
+    if(this.readOnlyEditor) {
+      editor.updateOptions({readOnly: true, readOnlyMessage: {value: 'You cannot edit an already executed program.'}});
+    } else {
+      this.setupLockingStartedAndExecutedLines(editor, startedAndExecutedLinesDecorationCollection);
+    }
   }
 
   private setupLockingStartedAndExecutedLines(editor: MonacoEditor.IStandaloneCodeEditor,

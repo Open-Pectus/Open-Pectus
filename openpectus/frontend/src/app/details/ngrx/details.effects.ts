@@ -120,7 +120,22 @@ export class DetailsEffects {
     }),
   ));
 
-  constructor(private actions: Actions, private store: Store,
+  downloadBatchJobCsvWhenButtonClicked = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.batchJobDownloadCsvButtonClicked),
+    switchMap(({batchJobId}) => {
+      return this.batchJobService.getBatchJobCsvJson(batchJobId).pipe(
+        map(batchJobCsv => {
+          const link = document.createElement('a');
+          link.download = batchJobCsv.filename;
+          link.href = URL.createObjectURL(new Blob([batchJobCsv.csv_content]));
+          link.click();
+        }),
+      );
+    }),
+  ), {dispatch: false});
+
+  constructor(private actions: Actions,
+              private store: Store,
               private processUnitService: ProcessUnitService,
               private batchJobService: BatchJobService) {}
 }

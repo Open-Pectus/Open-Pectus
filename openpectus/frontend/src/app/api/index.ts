@@ -9,6 +9,7 @@ export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { AuthConfig } from './models/AuthConfig';
 export type { BatchJob } from './models/BatchJob';
+export type { BatchJobCsv } from './models/BatchJobCsv';
 export type { CommandExample } from './models/CommandExample';
 export { CommandSource } from './models/CommandSource';
 export type { ControlState } from './models/ControlState';

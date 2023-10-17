@@ -7,7 +7,6 @@ export interface RunLogState {
   runLog: RunLog;
   onlyRunning: boolean;
   filterText: string;
-  dateFormat: string;
   expandedLines: number[];
 }
 
@@ -15,7 +14,6 @@ const initialState: RunLogState = {
   runLog: {lines: []},
   onlyRunning: false,
   filterText: '',
-  dateFormat: 'MM-dd HH:mm:ss',
   expandedLines: [],
 };
 

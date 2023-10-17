@@ -677,10 +677,10 @@
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Unit Id"
+              "title": "Id"
             },
-            "name": "unit_id",
-            "in": "query"
+            "name": "id",
+            "in": "path"
           }
         ],
         "responses": {
@@ -719,10 +719,10 @@
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Unit Id"
+              "title": "Id"
             },
-            "name": "unit_id",
-            "in": "query"
+            "name": "id",
+            "in": "path"
           }
         ],
         "responses": {
@@ -735,6 +735,83 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/batch_job/{id}/csv_json": {
+      "get": {
+        "tags": [
+          "batch_job"
+        ],
+        "summary": "Get Batch Job Csv Json",
+        "operationId": "get_batch_job_csv_json",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            },
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchJobCsv"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/batch_job/{id}/csv_file": {
+      "get": {
+        "tags": [
+          "batch_job"
+        ],
+        "summary": "Get Batch Job Csv File",
+        "operationId": "get_batch_job_csv_file",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            },
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -846,6 +923,11 @@
             "type": "string",
             "title": "Unit Name"
           },
+          "started_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started Date"
+          },
           "completed_date": {
             "type": "string",
             "format": "date-time",
@@ -865,10 +947,29 @@
           "id",
           "unit_id",
           "unit_name",
+          "started_date",
           "completed_date"
         ],
         "title": "BatchJob",
         "description": "Represents a current or historical run of a process unit. "
+      },
+      "BatchJobCsv": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "csv_content": {
+            "type": "string",
+            "title": "Csv Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "csv_content"
+        ],
+        "title": "BatchJobCsv"
       },
       "CommandExample": {
         "properties": {

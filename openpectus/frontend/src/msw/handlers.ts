@@ -3,6 +3,7 @@ import { rest } from 'msw';
 import {
   AuthConfig,
   BatchJob,
+  BatchJobCsv,
   CommandExample,
   CommandSource,
   ControlState,
@@ -39,6 +40,9 @@ let controlState: ControlState = {
   is_paused: false,
 };
 let systemState = SystemState.Running;
+
+const csvContent = `Some;CSV;File
+123;456;789`;
 
 const processUnits: ProcessUnit[] = [
   {
@@ -292,6 +296,10 @@ export const handlers = [
       return sub(new Date(), {seconds: Math.random() * 1000000}).toISOString();
     }
 
+    function getStartedDate() {
+      return sub(new Date(), {hours: 2, seconds: Math.random() * 1000000}).toISOString();
+    }
+
     return res(
       ctx.status(200),
       ctx.json<BatchJob[]>([
@@ -299,12 +307,34 @@ export const handlers = [
           id: '1',
           unit_id: '1',
           unit_name: 'Some Name 1 that is very long, and way longer than it should be.',
+          started_date: getStartedDate(),
           completed_date: getCompletedDate(),
           contributors: ['Eskild'],
         },
-        {id: '2', unit_id: '2', unit_name: 'Some Name 2', completed_date: getCompletedDate(), contributors: ['Eskild', 'Morten']},
-        {id: '3', unit_id: '3', unit_name: 'Some Name 3', completed_date: getCompletedDate(), contributors: ['Eskild']},
-        {id: '4', unit_id: '4', unit_name: 'Some Name 4', completed_date: getCompletedDate(), contributors: ['Eskild']},
+        {
+          id: '2',
+          unit_id: '2',
+          unit_name: 'Some Name 2',
+          started_date: getStartedDate(),
+          completed_date: getCompletedDate(),
+          contributors: ['Eskild', 'Morten'],
+        },
+        {
+          id: '3',
+          unit_id: '3',
+          unit_name: 'Some Name 3',
+          started_date: getStartedDate(),
+          completed_date: getCompletedDate(),
+          contributors: ['Eskild'],
+        },
+        {
+          id: '4',
+          unit_id: '4',
+          unit_name: 'Some Name 4',
+          started_date: getStartedDate(),
+          completed_date: getCompletedDate(),
+          contributors: ['Eskild'],
+        },
       ]),
     );
   }),
@@ -485,16 +515,16 @@ export const handlers = [
       context.json<Method>({
         lines: [
           {id: 'a', content: '{'},
-          {id: 'b', content: ' "some key": "some value",'},
-          {id: 'c', content: ' "injected": "line",'},
-          {id: 'd', content: ' "another key": "another value",'},
+          {id: 'b', content: ' "watch": "some condition",'},
+          {id: 'c', content: ' "some unrun": "line",'},
+          {id: 'd', content: ' "injected": "line",'},
           {id: 'e', content: ' "another": "line",'},
           {id: 'f', content: ' "yet another": "line"'},
           {id: 'g', content: '}'},
         ],
         started_line_ids: startedLines.map(no => (no + 9).toString(36)),
         executed_line_ids: executedLines.map(no => (no + 9).toString(36)),
-        injected_line_ids: ['c'],
+        injected_line_ids: ['d'],
       }),
     );
     executedLines.push((executedLines.at(-1) ?? 0) + 1);
@@ -684,13 +714,13 @@ export const handlers = [
           {id: 'a', content: '{'},
           {id: 'b', content: ' "some key": "some value",'},
           {id: 'c', content: ' "injected": "line",'},
-          {id: 'd', content: ' "another key": "another value",'},
-          {id: 'e', content: ' "another": "line",'},
-          {id: 'f', content: ' "yet another": "line"'},
+          {id: 'd', content: ' "watch": "some condition",'},
+          {id: 'e', content: ' "an unrun": "line",'},
+          {id: 'f', content: ' "another unrun": "line"'},
           {id: 'g', content: '}'},
         ],
-        started_line_ids: [],
-        executed_line_ids: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+        started_line_ids: ['d'],
+        executed_line_ids: ['a', 'b', 'c', 'g'],
         injected_line_ids: ['c'],
       }),
     );
@@ -795,6 +825,7 @@ export const handlers = [
       context.status(200),
       context.json<BatchJob>({
         id: req.params['id'].toString(),
+        started_date: sub(new Date(), {hours: 3, minutes: 22, seconds: 11}).toISOString(),
         completed_date: sub(new Date(), {hours: 1}).toISOString(),
         contributors: ['Morten', 'Eskild'],
         unit_id: 'A process unit id',
@@ -956,6 +987,24 @@ export const handlers = [
             ),
           },
         },
+      }),
+    );
+  }),
+
+  rest.get('/api/batch_job/:id/csv_file', (req, res, context) => {
+    return res(
+      context.set('Content-Length', csvContent.length.toString()),
+      context.set('Content-Type', 'text/csv'),
+      context.set('Content-Disposition', `attachment;filename="BatchJob-${req.params['id']}.csv"`),
+      context.body(csvContent),
+    );
+  }),
+
+  rest.get('/api/batch_job/:id/csv_json', (req, res, context) => {
+    return res(
+      context.json<BatchJobCsv>({
+        filename: `BatchJob-${req.params['id']}.csv`,
+        csv_content: csvContent,
       }),
     );
   }),
