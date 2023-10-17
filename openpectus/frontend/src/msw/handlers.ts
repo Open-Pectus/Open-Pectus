@@ -1,4 +1,4 @@
-import { getSeconds, sub } from 'date-fns';
+import { format, getSeconds, sub } from 'date-fns';
 import { rest } from 'msw';
 import {
   AuthConfig,
@@ -40,9 +40,6 @@ let controlState: ControlState = {
   is_paused: false,
 };
 let systemState = SystemState.Running;
-
-const csvContent = `Some;CSV;File
-123;456;789`;
 
 const processUnits: ProcessUnit[] = [
   {
@@ -829,7 +826,7 @@ export const handlers = [
         completed_date: sub(new Date(), {hours: 1}).toISOString(),
         contributors: ['Morten', 'Eskild'],
         unit_id: 'A process unit id',
-        unit_name: 'A batch job name',
+        unit_name: 'A process unit name',
       }),
     );
   }),
@@ -992,6 +989,8 @@ export const handlers = [
   }),
 
   rest.get('/api/batch_job/:id/csv_file', (req, res, context) => {
+    const csvContent = `Some;CSV;File
+123;456;789`;
     return res(
       context.set('Content-Length', csvContent.length.toString()),
       context.set('Content-Type', 'text/csv'),
@@ -1003,8 +1002,16 @@ export const handlers = [
   rest.get('/api/batch_job/:id/csv_json', (req, res, context) => {
     return res(
       context.json<BatchJobCsv>({
-        filename: `BatchJob-${req.params['id']}.csv`,
-        csv_content: csvContent,
+        filename: `P2 - A process unit name - ${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.csv`,
+        csv_content: `# Batch Job Id:;${req.params['id']}
+# Process Unit Name:;A process unit name
+# Starting Time:;${new Date().toISOString()}
+# Ending Time:;${new Date().toISOString()}
+# Contributors:;Eskild;Morten
+Some;Csv;Data
+123;456;789
+123;456;789
+123;456;789`,
       }),
     );
   }),
