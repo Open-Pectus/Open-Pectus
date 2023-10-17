@@ -7,6 +7,7 @@ import { HttpClient } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 
 import type { BatchJob } from '../models/BatchJob';
+import type { BatchJobCsv } from '../models/BatchJobCsv';
 import type { Method } from '../models/Method';
 import type { PlotConfiguration } from '../models/PlotConfiguration';
 import type { PlotLog } from '../models/PlotLog';
@@ -130,6 +131,27 @@ id: string,
         return __request(OpenAPI, this.http, {
             method: 'GET',
             url: '/api/batch_job/{id}/plot_log',
+            path: {
+                'id': id,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
+    /**
+     * Get Batch Job Csv Json
+     * @param id 
+     * @returns BatchJobCsv Successful Response
+     * @throws ApiError
+     */
+    public getBatchJobCsvJson(
+id: string,
+): Observable<BatchJobCsv> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/batch_job/{id}/csv_json',
             path: {
                 'id': id,
             },

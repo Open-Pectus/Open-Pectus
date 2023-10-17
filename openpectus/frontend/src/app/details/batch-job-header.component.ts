@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { BatchJob } from '../api';
 import { DetailsActions } from './ngrx/details.actions';
 import { DetailsSelectors } from './ngrx/details.selectors';
 
@@ -18,7 +17,7 @@ import { DetailsSelectors } from './ngrx/details.selectors';
         <h1 class="text-4xl lg:text-5xl font-bold">{{batchJob?.unit_name}}</h1>
 
         <button class="absolute top-0 right-0 px-3 py-1.5 rounded-md bg-sky-900 text-white flex items-center"
-                (click)="downloadCsv(batchJob)">
+                (click)="downloadCsv(batchJob?.id)">
           <i class="codicon codicon-desktop-download !text-xl mr-2.5"></i>
           Data CSV-file
         </button>
@@ -31,8 +30,8 @@ export class BatchJobHeaderComponent {
 
   constructor(private store: Store) {}
 
-  downloadCsv(batchJob?: BatchJob) {
-    if(batchJob === undefined) return;
-    this.store.dispatch(DetailsActions.batchJobDownloadCsvButtonClicked({url: batchJob.csv_url}));
+  downloadCsv(batchJobId?: string) {
+    if(batchJobId === undefined) return;
+    this.store.dispatch(DetailsActions.batchJobDownloadCsvButtonClicked({batchJobId}));
   }
 }

@@ -1,4 +1,3 @@
-import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
@@ -123,14 +122,12 @@ export class DetailsEffects {
 
   downloadBatchJobCsvWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.batchJobDownloadCsvButtonClicked),
-    switchMap(({url}) => {
-      return this.httpClient.get(url, {observe: 'response', responseType: 'blob'}).pipe(
-        map(response => {
-          if(response.body === null) return;
+    switchMap(({batchJobId}) => {
+      return this.batchJobService.getBatchJobCsvJson(batchJobId).pipe(
+        map(batchJobCsv => {
           const link = document.createElement('a');
-          const filename = new RegExp(/filename="(.+)"/).exec(response.headers.get('content-disposition') ?? 'filename="file.csv"')?.[1];
-          link.download = filename ?? 'file.csv';
-          link.href = URL.createObjectURL(response.body);
+          link.download = batchJobCsv.filename;
+          link.href = URL.createObjectURL(new Blob([batchJobCsv.csv_content]));
           link.click();
         }),
       );
@@ -140,6 +137,5 @@ export class DetailsEffects {
   constructor(private actions: Actions,
               private store: Store,
               private processUnitService: ProcessUnitService,
-              private batchJobService: BatchJobService,
-              private httpClient: HttpClient) {}
+              private batchJobService: BatchJobService) {}
 }

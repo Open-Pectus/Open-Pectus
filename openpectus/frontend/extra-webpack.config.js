@@ -22,11 +22,6 @@ const config = {
         test: /\.(mp3|wasm|ttf)$/i,
         type: 'asset/resource',
       },
-      {
-        // This is just so that the msw handlers.ts can import a csv file for batch job csv file download mocking.
-        test: /\.csv$/,
-        use: 'raw-loader',
-      },
     ],
     // this fixes the ttf and wasm url loading issue
     parser: {

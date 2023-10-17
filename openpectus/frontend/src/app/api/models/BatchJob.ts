@@ -13,5 +13,4 @@ export type BatchJob = {
     started_date: string;
     completed_date: string;
     contributors?: Array<string>;
-    csv_url: string;
 };

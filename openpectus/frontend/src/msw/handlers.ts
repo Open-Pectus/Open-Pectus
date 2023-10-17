@@ -3,6 +3,7 @@ import { rest } from 'msw';
 import {
   AuthConfig,
   BatchJob,
+  BatchJobCsv,
   CommandExample,
   CommandSource,
   ControlState,
@@ -21,7 +22,6 @@ import {
   RunLog,
   UserRole,
 } from '../app/api';
-import * as batchJobCsvFile from './BatchJob.csv';
 
 // TODO: this should be exposed from backend or handled otherwise when using websocket
 export enum SystemState {
@@ -40,6 +40,9 @@ let controlState: ControlState = {
   is_paused: false,
 };
 let systemState = SystemState.Running;
+
+const csvContent = `Some;CSV;File
+123;456;789`;
 
 const processUnits: ProcessUnit[] = [
   {
@@ -87,7 +90,6 @@ const processUnits: ProcessUnit[] = [
   },
 ];
 
-const batchJobCsvUrl = '/api/batch_job/:id/csv_file';
 
 export const handlers = [
   rest.get('/auth/config', (_, res, ctx) => {
@@ -308,7 +310,6 @@ export const handlers = [
           started_date: getStartedDate(),
           completed_date: getCompletedDate(),
           contributors: ['Eskild'],
-          csv_url: batchJobCsvUrl.replace(':id', '1'),
         },
         {
           id: '2',
@@ -317,7 +318,6 @@ export const handlers = [
           started_date: getStartedDate(),
           completed_date: getCompletedDate(),
           contributors: ['Eskild', 'Morten'],
-          csv_url: batchJobCsvUrl.replace(':id', '2'),
         },
         {
           id: '3',
@@ -326,7 +326,6 @@ export const handlers = [
           started_date: getStartedDate(),
           completed_date: getCompletedDate(),
           contributors: ['Eskild'],
-          csv_url: batchJobCsvUrl.replace(':id', '3'),
         },
         {
           id: '4',
@@ -335,7 +334,6 @@ export const handlers = [
           started_date: getStartedDate(),
           completed_date: getCompletedDate(),
           contributors: ['Eskild'],
-          csv_url: batchJobCsvUrl.replace(':id', '4'),
         },
       ]),
     );
@@ -832,7 +830,6 @@ export const handlers = [
         contributors: ['Morten', 'Eskild'],
         unit_id: 'A process unit id',
         unit_name: 'A batch job name',
-        csv_url: batchJobCsvUrl.replace(':id', req.params['id'].toString()),
       }),
     );
   }),
@@ -994,13 +991,21 @@ export const handlers = [
     );
   }),
 
-  rest.get(batchJobCsvUrl, (req, res, context) => {
-    const file = batchJobCsvFile.default;
+  rest.get('/api/batch_job/:id/csv_file', (req, res, context) => {
     return res(
-      context.set('Content-Length', file.length.toString()),
+      context.set('Content-Length', csvContent.length.toString()),
       context.set('Content-Type', 'text/csv'),
       context.set('Content-Disposition', `attachment;filename="BatchJob-${req.params['id']}.csv"`),
-      context.body(file),
+      context.body(csvContent),
+    );
+  }),
+
+  rest.get('/api/batch_job/:id/csv_json', (req, res, context) => {
+    return res(
+      context.json<BatchJobCsv>({
+        filename: `BatchJob-${req.params['id']}.csv`,
+        csv_content: csvContent,
+      }),
     );
   }),
 ];

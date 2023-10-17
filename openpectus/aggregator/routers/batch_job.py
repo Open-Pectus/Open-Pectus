@@ -8,21 +8,20 @@ from fastapi.responses import StreamingResponse
 
 router = APIRouter(tags=["batch_job"])
 
-batch_job_csv_file_download_url = '/batch_job/{id}/csv_file'
-
 
 class BatchJob(BaseModel):
     """ Represents a current or historical run of a process unit. """
-    def __init__(self, *args, **kwargs):
-        super().__init__(self, args, kwargs)
-        self.csv_url = batch_job_csv_file_download_url.replace('{id}', self.id)
     id: str
     unit_id: str
     unit_name: str
     started_date: datetime
     completed_date: datetime
     contributors: List[str] = []
-    csv_url: str
+
+
+class BatchJobCsv(BaseModel):
+    filename: str
+    csv_content: str
 
 
 @router.get("/batch_job/{id}")
@@ -61,7 +60,12 @@ def get_batch_job_plot_log(id: str) -> PlotLog:
     return PlotLog(entries={})
 
 
-@router.get(batch_job_csv_file_download_url, response_class=StreamingResponse)
+@router.get('/batch_job/{id}/csv_json')
+def get_batch_job_csv_json(id: str) -> BatchJobCsv:
+    return BatchJobCsv(filename=f'BatchJob-{id}.csv', csv_content='some;CSV;here\nand;more;here')
+
+
+@router.get('/batch_job/{id}/csv_file', response_class=StreamingResponse)
 def get_batch_job_csv_file(id: str) -> StreamingResponse:
     file_content = 'some;CSV;here\nand;more;here'
     file_name = f'BatchJob-{id}.csv'

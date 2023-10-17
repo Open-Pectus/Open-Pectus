@@ -749,6 +749,48 @@
         }
       }
     },
+    "/api/batch_job/{id}/csv_json": {
+      "get": {
+        "tags": [
+          "batch_job"
+        ],
+        "summary": "Get Batch Job Csv Json",
+        "operationId": "get_batch_job_csv_json",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            },
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchJobCsv"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/batch_job/{id}/csv_file": {
       "get": {
         "tags": [
@@ -898,10 +940,6 @@
             "type": "array",
             "title": "Contributors",
             "default": []
-          },
-          "csv_url": {
-            "type": "string",
-            "title": "Csv Url"
           }
         },
         "type": "object",
@@ -910,11 +948,28 @@
           "unit_id",
           "unit_name",
           "started_date",
-          "completed_date",
-          "csv_url"
+          "completed_date"
         ],
         "title": "BatchJob",
         "description": "Represents a current or historical run of a process unit. "
+      },
+      "BatchJobCsv": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "csv_content": {
+            "type": "string",
+            "title": "Csv Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "csv_content"
+        ],
+        "title": "BatchJobCsv"
       },
       "CommandExample": {
         "properties": {
