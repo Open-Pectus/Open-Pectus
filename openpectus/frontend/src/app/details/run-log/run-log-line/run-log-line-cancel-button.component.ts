@@ -6,7 +6,7 @@ import { RunLogActions } from '../ngrx/run-log.actions';
   selector: 'app-run-log-line-cancel-button',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-run-log-line-button buttonText="Cancel" colorClass="bg-red-800" codiconClass="codicon-chrome-close"
+    <app-run-log-line-button buttonText="Cancel" colorClass="bg-red-200" confirmColorClass="bg-red-700" codiconClass="codicon-chrome-close"
                              (confirmedClick)="onClick()"></app-run-log-line-button>
   `,
 })

@@ -4,8 +4,10 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, In
   selector: 'app-run-log-line-button',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <button class="flex items-center gap-1.5 rounded-md px-2 py-1 text-white"
-            [ngClass]="isConfirming ? 'bg-amber-600' : colorClass"
+    <button class="flex items-center gap-1.5 rounded-md px-2 py-1 !text-xs"
+            [class.text-white]="isConfirming"
+            [class.font-semibold]="isConfirming"
+            [ngClass]="isConfirming ? confirmColorClass : colorClass"
             (click)="onClick()">
       <i class="codicon" [ngClass]="codiconClass"></i>
       {{isConfirming ? 'Confirm' : ''}} {{buttonText}}{{isConfirming ? '?' : ''}}
@@ -15,6 +17,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, In
 export class RunLogLineButtonComponent {
   @Input() codiconClass?: string;
   @Input() colorClass?: string;
+  @Input() confirmColorClass?: string;
   @Input() buttonText?: string;
   @Output() confirmedClick = new EventEmitter<void>();
   protected isConfirming = false;

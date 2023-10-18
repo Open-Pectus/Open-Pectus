@@ -1023,6 +1023,7 @@ export const handlers = [
 # Starting Time:;${new Date().toISOString()}
 # Ending Time:;${new Date().toISOString()}
 # Contributors:;Eskild;Morten
+
 Some;Csv;Data
 123;456;789
 123;456;789

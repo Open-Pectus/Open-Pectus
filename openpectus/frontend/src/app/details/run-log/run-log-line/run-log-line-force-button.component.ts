@@ -6,7 +6,7 @@ import { RunLogActions } from '../ngrx/run-log.actions';
   selector: 'app-run-log-line-force-button',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-run-log-line-button buttonText="Force" colorClass="bg-green-800" codiconClass="codicon-play"
+    <app-run-log-line-button buttonText="Force" colorClass="bg-yellow-100" confirmColorClass="bg-yellow-600" codiconClass="codicon-play"
                              (confirmedClick)="onClick()"></app-run-log-line-button>
   `,
 })
