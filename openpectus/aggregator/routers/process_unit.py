@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import List
 import logging
 from fastapi import APIRouter, Depends, Response
-from pydantic import BaseModel
 
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.routers.dto as D
@@ -31,7 +30,7 @@ def get_unit(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -
     ci = agg.get_client_channel(client_id=unit_id)
     if ci is None:
         return None
-    return create_pu(ci)
+    return create_pu(item=ci)
 
 
 @router.get("/process_units")
@@ -70,8 +69,8 @@ def get_process_values(
 
 
 @router.post("/process_unit/{unit_id}/execute_command")
-async def execute_command(unit_id: str, command: D.ExecutableCommand, agg: Aggregator = Depends(agg_deps.get_aggregator)):
-    # logger.info("execute_command", str(command))
+async def execute_command(unit_id: str, command: D.ExecutableCommand, agg: Aggregator = Depends(agg_deps.get_aggregator)):    
+    # logger.debug("execute_command", str(command))
     if command is None or command.command is None or command.command.strip() == '':
         logger.error("Cannot invoke empty command")
         return D.ServerErrorResponse(message="Cannot invoke empty command")
@@ -80,54 +79,40 @@ async def execute_command(unit_id: str, command: D.ExecutableCommand, agg: Aggre
 
     lines = command.command.splitlines(keepends=False)
     line_count = len(lines)
-    if line_count == 0:
+    if line_count < 1:
         logger.error("Cannot invoke command with no lines")
         return D.ServerErrorResponse(message="Cannot invoke command with no lines")
-    elif line_count > 1:
-        # TODO this should be a seperate end point
-        msg = M.InjectCodeMsg(pcode=command.command)
-    else:
-        code = lines[0]
+
+    if command.source == D.CommandSource.UNIT_BUTTON:
         # Make simple commands title cased, eg 'start' -> 'Start
         # TODO remove once frontend is updated to title cased commands
+        code = lines[0]
         code = code.title()
         msg = M.InvokeCommandMsg(name=code)
+    else:
+        msg = M.InjectCodeMsg(pcode=command.command)
 
-    # if ":" in cmd_line:
-    #     split = command.command.split(":", maxsplit=1)
-    #     cmd_name, cmd_args = split[0], split[1]  # TODO watch out for "" vs None as cmd_args
-    # else:
-    #     if " " not in cmd_line:  # TODO remove once frontend is updated to title cased commands
-    #         cmd_line = cmd_line.title()
-    #     cmd_name, cmd_args = cmd_line, None
-
-    # msg = InvokeCommandMsg(name=cmd_name, arguments=cmd_args)
-    logger.debug(f"Sending msg '{str(msg)}' to client '{unit_id}'")
+    logger.info(f"Sending msg '{str(msg)}' of type {type(msg)} to client '{unit_id}'")
     await agg.send_to_client(client_id=unit_id, msg=msg)
 
 
-class ProcessDiagram(BaseModel):
-    svg: str
-
-
 @router.get("/process_unit/{unit_id}/process_diagram")
-def get_process_diagram(unit_id: str) -> ProcessDiagram:
-    return ProcessDiagram(svg="")
-
-
-class CommandExample(BaseModel):
-    name: str
-    example: str
+def get_process_diagram(unit_id: str) -> D.ProcessDiagram:
+    return D.ProcessDiagram(svg="")
 
 
 @router.get('/process_unit/{unit_id}/command_examples')
-def get_command_examples(unit_id: str) -> List[CommandExample]:
+def get_command_examples(unit_id: str) -> List[D.CommandExample]:
     return [
-        CommandExample(name="Some Example", example="Some example text"),
-        CommandExample(name="Watch Example", example="""
-Watch: Block Time > 0.2s
+        D.CommandExample(name="Some Example", example="Some example text"),
+        D.CommandExample(name="Watch Example", example="""
+Watch: Block Time > 3s
     Mark: A
-Mark: X""")
+Mark: X
+
+Watch: Block Time > 7s
+    Mark: B
+Mark: Y""")
     ]
 
 
@@ -160,13 +145,36 @@ def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)
 
 
 @router.get('/process_unit/{unit_id}/method')
-def get_method(unit_id: str) -> D.Method:
-    return D.Method(lines=[], started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
+def get_method(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> D.Method:
+    client_data = agg.client_data_map.get(unit_id)
+    if client_data is None:
+        print("No client data - thus no method")
+        logger.warning("No client data - thus no method")
+        return D.Method(lines=[], started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
+
+    def from_messsage(msg: M.MethodMsg) -> D.Method:
+        return D.Method(
+            lines=[D.MethodLine(id=line.id, content=line.content) for line in msg.lines],
+            started_line_ids=[_id for _id in msg.started_line_ids],
+            executed_line_ids=[_id for _id in msg.executed_line_ids],
+            injected_line_ids=[_id for _id in msg.injected_line_ids],
+        )
+
+    print("Returned client method")
+    return from_messsage(client_data.method)
 
 
 @router.post('/process_unit/{unit_id}/method')
-def save_method(unit_id: str, method: D.Method) -> None:
-    pass
+async def save_method(unit_id: str, method: D.Method, agg: Aggregator = Depends(agg_deps.get_aggregator)):
+    msg = M.MethodMsg(
+        lines=[M.MethodLineMsg(id=line.id, content=line.content) for line in method.lines],
+        started_line_ids=[_id for _id in method.started_line_ids],
+        executed_line_ids=[_id for _id in method.executed_line_ids],
+        injected_line_ids=[_id for _id in method.injected_line_ids],
+    )
+
+    if not await agg.set_method(client_id=unit_id, method=msg):
+        return D.ServerErrorResponse(message="Failed to set method")
 
 
 @router.get('/process_unit/{unit_id}/plot_configuration')

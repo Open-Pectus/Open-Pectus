@@ -32,6 +32,15 @@ class ProcessUnitState:
         last_seen_date: datetime
 
 
+class ProcessDiagram(BaseModel):
+    svg: str
+
+
+class CommandExample(BaseModel):
+    name: str
+    example: str
+
+
 class UserRole(StrEnum):
     VIEWER = auto()
     ADMIN = auto()
@@ -139,6 +148,7 @@ class CommandSource(StrEnum):
     PROCESS_VALUE = auto()
     MANUALLY_ENTERED = auto()
     UNIT_BUTTON = auto()
+    """ One of the engine control commands, eg. Start or Pause"""
     METHOD = auto()
 
 
