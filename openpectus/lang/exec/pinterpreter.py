@@ -156,6 +156,7 @@ class PInterpreter(PNodeVisitor):
         self.process_instr: GenerationType = None
 
         self.runlog: RunLog = RunLog()
+        logger.info("Interpreter initialized")
 
     def get_marks(self) -> List[str]:
         return [x.message for x in self.logs if x.message[0] != 'P']
@@ -278,9 +279,8 @@ class PInterpreter(PNodeVisitor):
             logger.error("Interpretation interrupt error", exc_info=True)
             self.pause()
 
-        if program_end and interrupt_end:
-            logger.info("Interpretation complete. Stopping")
-            self.stop()
+        # if program_end and interrupt_end:
+        #     self.stop()
 
     def stop(self):
         self.running = False
@@ -386,6 +386,11 @@ class PInterpreter(PNodeVisitor):
     def visit_PMark(self, node: PMark):
         self._add_to_log(time.time(), node.time, node.name)
         logger.info(f"Mark {str(node)}")
+
+        # HACK: Bad reuse of CommandRequest as placeholder in runlog
+        req = CommandRequest(f"Mark: {node.name}")
+        self.runlog.add_completed(req, self._tick_time, self._tick_number, self.context.tags.as_readonly())
+
         yield  # comment if we dont want mark to always consume a tick
 
     def visit_PBlock(self, node: PBlock):

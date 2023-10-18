@@ -27,14 +27,60 @@ from openpectus.lang.exec.tags import (
 )
 from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.model.pprogram import PProgram
+import openpectus.protocol.messages as M
 
 logger = logging.getLogger("Engine")
+proxy_logger = logging.getLogger("EngineProxyAdapter")
 
 
 def parse_pcode(pcode: str) -> PProgram:
     p = PGrammar()
     p.parse(pcode)
     return p.build_model()
+
+
+class EngineProxy():
+    """ Represents the remote rpc interface of Engine. """
+
+    async def get_method(self) -> M.MethodMsg | M.RpcErrorMessage:
+        raise NotImplementedError()
+
+    async def set_method(self, method_msg: M.MethodMsg) -> M.RpcStatusMessage:
+        raise NotImplementedError()
+
+    async def get_runlog(self) -> M.RunLogMsg | M.RpcErrorMessage:
+        raise NotImplementedError()
+
+
+class EngineProxyAdapter(EngineProxy):
+    def __init__(self, engine: ExecutionEngine) -> None:
+        super().__init__()
+        self.engine = engine
+
+    async def get_method(self) -> M.MethodMsg | M.RpcErrorMessage:
+        code = self.engine._pcode
+        lines = code.splitlines(keepends=True)
+
+        proxy_logger.info(f"Returning method with {len(lines)} lines")
+        # TODO get line ids and status from interpreter
+        return M.MethodMsg(
+            lines=[M.MethodLineMsg(id="", content=line) for line in lines],
+            started_line_ids=[],
+            executed_line_ids=[],
+            injected_line_ids=[])
+
+    async def set_method(self, method_msg: M.MethodMsg) -> M.RpcStatusMessage:
+        pcode = '\n'.join(line.content for line in method_msg.lines)
+        try:
+            self.engine.set_program(pcode)
+            proxy_logger.info("New method set")
+            return M.SuccessMessage()
+        except Exception as ex:
+            proxy_logger.error("Failed to set method")
+            return M.ErrorMessage(message="Failed to set method", exception_message=str(ex))
+
+    async def get_runlog(self) -> M.RunLogMsg | M.RpcErrorMessage:
+        raise NotImplementedError()
 
 
 class ExecutionEngine():
@@ -81,6 +127,7 @@ class ExecutionEngine():
 
         self._interpreter: PInterpreter = PInterpreter(PProgram(), EngineInterpreterContext(self))
         """ The interpreter executing the current program. """
+        self._pcode: str = ""
 
     def _iter_all_tags(self) -> Iterable[Tag]:
         return itertools.chain(self._system_tags, self.uod.tags)
@@ -160,7 +207,8 @@ class ExecutionEngine():
         # TODO
 
         # excecute interpreter tick
-        self._interpreter.tick(self._tick_time, self._tick_number)
+        if self._runstate_started and not self._runstate_paused and not self._runstate_holding:
+            self._interpreter.tick(self._tick_time, self._tick_number)
 
         # update clocks
         self.update_tags()
@@ -503,7 +551,7 @@ class ExecutionEngine():
             self.cmd_queue.put_nowait(request)
             return request
         else:
-            raise ValueError("Invalid command type scheduled")
+            raise ValueError(f"Invalid command type scheduled: {name}")
 
     def inject_command(self, name: str, args: str):
         """ Inject a command to run in the current scope of the current program. """
@@ -516,6 +564,7 @@ class ExecutionEngine():
         try:
             injected_program = parse_pcode(pcode)
             self.interpreter.inject_node(injected_program)
+            logger.info("Injected code successful")
         except Exception as ex:
             logger.info("Injected code parse error: " + str(ex))
 
@@ -531,10 +580,13 @@ class ExecutionEngine():
         try:
             program = parse_pcode(pcode=pcode)
             self._interpreter = PInterpreter(program, EngineInterpreterContext(self))
+            line_count = len(pcode.splitlines(keepends=True))
+            logger.info(f"New method set with {line_count} lines")
         except Exception:
-            logger.error("Failed to set code", exc_info=True)
-            raise ValueError()
+            logger.error("Failed to set method", exc_info=True)
+            raise
 
+    # TODO remove this - only used from tests foir no good reason
     def set_pprogram(self, program: PProgram):
         """ Set new program. This will replace the current program. """
 

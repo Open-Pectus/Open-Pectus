@@ -175,7 +175,7 @@ class PAlarm(PInstruction):
 
 
 class PMark(PInstruction):
-    """ Represents an Mark intruction. """
+    """ Represents an Mark instruction. """
     def __init__(self, parent: PNode) -> None:
         super().__init__(parent)
 

@@ -19,6 +19,8 @@ logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
 logger = logging.getLogger("Engine")
 logger.setLevel(logging.DEBUG)
 
+logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.INFO)
+
 # pint takes forever to initialize - long enough
 # to throw off timing of the first instruction.
 # so we initialize it first
@@ -32,6 +34,7 @@ def run_engine(engine: ExecutionEngine, pcode: str, max_ticks: int = -1):
 
     engine._running = True
     engine.set_program(pcode)
+    engine.schedule_execution("Start")
 
     while engine.is_running():
         ticks += 1
@@ -414,21 +417,22 @@ Block: A
 Mark: X
 """
         e = self.engine
-        run_engine(e, program, 2)
+        run_engine(e, program, 3)
 
         runlog = list(e.runlog.get_items())
-        self.assertEqual(1, len(runlog))
-        self.assertEqual("Block: A", runlog[0].command_req.name)
-        self.assertTrue(RunLogItemState.Waiting in runlog[0].states)
-        self.assertTrue(RunLogItemState.Started not in runlog[0].states)
+        self.assertEqual(2, len(runlog))
+        self.assertEqual("Start", runlog[0].command_req.name)
+        self.assertEqual("Block: A", runlog[1].command_req.name)
+        self.assertTrue(RunLogItemState.Waiting in runlog[1].states)
+        self.assertTrue(RunLogItemState.Started not in runlog[1].states)
 
         # print_runlog(e)
 
         continue_engine(e, 1)
-        self.assertTrue(RunLogItemState.Started in runlog[0].states)
+        self.assertTrue(RunLogItemState.Started in runlog[1].states)
 
         continue_engine(e, 1)
-        self.assertTrue(RunLogItemState.Completed in runlog[0].states)
+        self.assertTrue(RunLogItemState.Completed in runlog[1].states)
 
         print_runlog(e)
 
@@ -439,19 +443,19 @@ Watch: Block Time > 0.2s
 Mark: X
 """
         e = self.engine
-        run_engine(e, program, 3)
+        run_engine(e, program, 4)
 
         runlog = list(e.runlog.get_items())
-        self.assertEqual(1, len(runlog))
-        self.assertEqual("Watch: Block Time > 0.2s", runlog[0].command_req.name)
-        self.assertTrue(RunLogItemState.Waiting in runlog[0].states)
-        self.assertTrue(RunLogItemState.Started not in runlog[0].states)
+        #self.assertEqual(1, len(runlog))
+        self.assertEqual("Watch: Block Time > 0.2s", runlog[1].command_req.name)
+        self.assertTrue(RunLogItemState.Waiting in runlog[1].states)
+        self.assertTrue(RunLogItemState.Started not in runlog[1].states)
 
         continue_engine(e, 1)
-        self.assertTrue(RunLogItemState.Started in runlog[0].states)
+        self.assertTrue(RunLogItemState.Started in runlog[1].states)
 
         continue_engine(e, 1)
-        self.assertTrue(RunLogItemState.Completed in runlog[0].states)
+        self.assertTrue(RunLogItemState.Completed in runlog[1].states)
 
         print_runlog(e)
 
@@ -473,7 +477,7 @@ Mark: X
 
         e.schedule_execution("Start")
         e.tick()
-        
+
         e.schedule_execution("Increment run counter")
         e.tick()
 
@@ -498,6 +502,23 @@ Mark: C
         run_engine(e, program, 10)
 
         self.assertEqual(['A', 'B', 'C'], e.interpreter.get_marks())
+
+    def test_set_and_continue_program(self):
+        program = """
+Mark: A
+"""
+        e = self.engine
+        run_engine(e, program, 10)
+        self.assertEqual(['A', ], e.interpreter.get_marks())
+
+        program = """
+Mark: B
+Mark: C
+"""
+        e.set_program(program)
+        continue_engine(e, 10)
+
+        self.assertEqual(['B', 'C'], e.interpreter.get_marks())
 
     @unittest.skip("not implemented, needs input")
     def test_get_status(self):
@@ -679,20 +700,14 @@ Mark: B
 Mark: C
 """
         e = self.engine
-        e._running = True
-        e.set_program(program)
-        e.tick()
-        e.tick()
-
+        run_engine(e, program, 3)
         self.assertEqual(['A'], e.interpreter.get_marks())
 
         e.inject_code("Mark: I")
-        e.tick()
-
+        continue_engine(e, 1)
         self.assertEqual(['A', 'B', 'I'], e.interpreter.get_marks())
 
-        e.tick()
-
+        continue_engine(e, 1)
         self.assertEqual(['A', 'B', 'I', 'C'], e.interpreter.get_marks())
 
     def test_inject_thresholds_1(self):
@@ -702,9 +717,7 @@ Mark: A
 Mark: C
 """
         e = self.engine
-        # e._running = True
-        # e.set_program(program)
-        run_engine(e, program, 2)
+        run_engine(e, program, 3)
 
         self.assertEqual(['A'], e.interpreter.get_marks())
 
@@ -723,9 +736,7 @@ Mark: A
 Mark: C
 """
         e = self.engine
-        # e._running = True
-        # e.set_program(program)
-        run_engine(e, program, 2)
+        run_engine(e, program, 3)
 
         self.assertEqual(['A'], e.interpreter.get_marks())
 

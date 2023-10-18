@@ -69,7 +69,7 @@ def get_process_values(
 
 
 @router.post("/process_unit/{unit_id}/execute_command")
-async def execute_command(unit_id: str, command: D.ExecutableCommand, agg: Aggregator = Depends(agg_deps.get_aggregator)):    
+async def execute_command(unit_id: str, command: D.ExecutableCommand, agg: Aggregator = Depends(agg_deps.get_aggregator)):
     # logger.debug("execute_command", str(command))
     if command is None or command.command is None or command.command.strip() == '':
         logger.error("Cannot invoke empty command")

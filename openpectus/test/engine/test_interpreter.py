@@ -110,6 +110,7 @@ def run_engine(engine: ExecutionEngine, pcode: PProgram, max_ticks: int = -1):
 
     engine._running = True
     engine.set_pprogram(pcode)
+    engine.schedule_execution("Start")
 
     while engine.is_running():
         ticks += 1
