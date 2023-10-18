@@ -16,4 +16,6 @@ export class RunLogActions {
   static collapseLine = createAction(source + 'Collapse Line', props<{ id: number }>());
   static expandAll = createAction(source + 'Expand All');
   static collapseAll = createAction(source + 'Collapse All');
+  static forceLineButtonClicked = createAction(source + 'Force Line Button Clicked', props<{ lineId: number }>());
+  static cancelLineButtonClicked = createAction(source + 'Cancel Line Button Clicked', props<{ lineId: number }>());
 }

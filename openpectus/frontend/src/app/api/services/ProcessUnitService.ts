@@ -278,4 +278,52 @@ unitId: string,
         });
     }
 
+    /**
+     * Force Run Log Line
+     * @param unitId 
+     * @param lineId 
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public forceRunLogLine(
+unitId: string,
+lineId: number,
+): Observable<any> {
+        return __request(OpenAPI, this.http, {
+            method: 'POST',
+            url: '/api/process_unit/{unit_id}/run_log/force_line/{line_id}',
+            path: {
+                'unit_id': unitId,
+                'line_id': lineId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
+    /**
+     * Cancel Run Log Line
+     * @param unitId 
+     * @param lineId 
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public cancelRunLogLine(
+unitId: string,
+lineId: number,
+): Observable<any> {
+        return __request(OpenAPI, this.http, {
+            method: 'POST',
+            url: '/api/process_unit/{unit_id}/run_log/cancel_line/{line_id}',
+            path: {
+                'unit_id': unitId,
+                'line_id': lineId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
 }

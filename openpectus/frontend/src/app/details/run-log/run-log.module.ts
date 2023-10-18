@@ -9,7 +9,10 @@ import { runLogSlice } from './ngrx/run-log.reducer';
 import { RunLogAdditionalValuesComponent } from './run-log-additional-values.component';
 import { RunLogFiltersComponent } from './run-log-filters.component';
 import { RunLogHeaderComponent } from './run-log-header.component';
-import { RunLogLineComponent } from './run-log-line.component';
+import { RunLogLineButtonComponent } from './run-log-line/run-log-line-button.component';
+import { RunLogLineCancelButtonComponent } from './run-log-line/run-log-line-cancel-button.component';
+import { RunLogLineForceButtonComponent } from './run-log-line/run-log-line-force-button.component';
+import { RunLogLineComponent } from './run-log-line/run-log-line.component';
 import { RunLogComponent } from './run-log.component';
 
 
@@ -20,6 +23,9 @@ import { RunLogComponent } from './run-log.component';
     RunLogFiltersComponent,
     RunLogHeaderComponent,
     RunLogAdditionalValuesComponent,
+    RunLogLineForceButtonComponent,
+    RunLogLineCancelButtonComponent,
+    RunLogLineButtonComponent,
   ],
   imports: [
     CommonModule,

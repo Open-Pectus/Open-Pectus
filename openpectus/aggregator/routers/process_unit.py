@@ -151,7 +151,7 @@ def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)
             end=None,
             progress=None,
             start_values=[],
-            end_values=[]
+            end_values=[],
         )
         return line
 
@@ -199,3 +199,13 @@ def get_control_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggre
         return D.ControlState.default()
 
     return from_message(client_data.control_state)
+
+
+@router.post('/process_unit/{unit_id}/run_log/force_line/{line_id}')
+def force_run_log_line(unit_id: str, line_id: int):
+    pass
+
+
+@router.post('/process_unit/{unit_id}/run_log/cancel_line/{line_id}')
+def cancel_run_log_line(unit_id: str, line_id: int):
+    pass

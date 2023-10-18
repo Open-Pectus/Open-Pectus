@@ -14,4 +14,8 @@ export type RunLogLine = {
     progress?: number;
     start_values: Array<ProcessValue>;
     end_values: Array<ProcessValue>;
+    forcible?: boolean;
+    cancellable?: boolean;
+    forced?: boolean;
+    cancelled?: boolean;
 };
