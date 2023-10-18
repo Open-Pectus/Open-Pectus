@@ -91,6 +91,100 @@ const processUnits: ProcessUnit[] = [
 ];
 
 
+const runLogLines = [
+  {
+    id: 1,
+    start: sub(Date.now(), {days: 0, hours: 2, seconds: 20}).toISOString(),
+    command: {
+      command: 'Some Other Command',
+      source: CommandSource.MANUALLY_ENTERED,
+    },
+    start_values: [{
+      name: 'Amazing float value',
+      value: 1.43253342,
+      value_type: ProcessValueType.FLOAT,
+      value_unit: 'afv',
+    }],
+    end_values: [],
+    forcible: true,
+    cancellable: false,
+  }, {
+    id: 2,
+    start: sub(Date.now(), {days: 0, hours: 1, seconds: 10}).toISOString(),
+    progress: 0.66,
+    command: {
+      command: 'Some Third Command With A Long Name',
+      source: CommandSource.MANUALLY_ENTERED,
+    },
+    start_values: [
+      {
+        name: 'Amazing float value',
+        value: 999,
+        value_type: ProcessValueType.FLOAT,
+        value_unit: 'afv',
+      },
+      {
+        name: 'Best value',
+        value: 19.99,
+        value_type: ProcessValueType.FLOAT,
+        value_unit: 'afv',
+      },
+      {
+        name: 'Such prices',
+        value: 4299,
+        value_type: ProcessValueType.FLOAT,
+        value_unit: 'afv',
+      },
+      {
+        name: 'Very affordable',
+        value: 0.99,
+        value_type: ProcessValueType.FLOAT,
+        value_unit: 'afv',
+      },
+    ],
+    end_values: [],
+    forcible: true,
+    cancellable: true,
+  }, {
+    id: 3,
+    start: sub(Date.now(), {days: 1, hours: 3, seconds: 30}).toISOString(),
+    end: sub(Date.now(), {days: 1, hours: 3}).toISOString(),
+    command: {
+      command: 'Supply the dakka',
+      source: CommandSource.MANUALLY_ENTERED,
+    },
+    start_values: [
+      {
+        name: 'Waaagh?',
+        value: 'No waagh',
+        value_type: ProcessValueType.STRING,
+      },
+      {
+        name: 'Dakka?',
+        value: 'No dakka 🙁',
+        value_type: ProcessValueType.STRING,
+      },
+    ],
+    end_values: [
+      {
+        name: 'Waaagh?',
+        value: 'WAAAGH!',
+        value_type: ProcessValueType.STRING,
+      },
+      {
+        name: 'Dakka?',
+        value: 'DAKKA! 😀',
+        value_type: ProcessValueType.STRING,
+      },
+    ],
+    forcible: false,
+    cancellable: false,
+    forced: false,
+    cancelled: true,
+  },
+];
+
+
 export const handlers = [
   rest.get('/auth/config', (_, res, ctx) => {
     return res(
@@ -421,96 +515,7 @@ export const handlers = [
       context.status(200),
       context.delay(),
       context.json<RunLog>({
-        lines: [
-          {
-            id: 1,
-            start: sub(Date.now(), {days: 0, hours: 2, seconds: 20}).toISOString(),
-            command: {
-              command: 'Some Other Command',
-              source: CommandSource.MANUALLY_ENTERED,
-            },
-            start_values: [{
-              name: 'Amazing float value',
-              value: 1.43253342,
-              value_type: ProcessValueType.FLOAT,
-              value_unit: 'afv',
-            }],
-            end_values: [],
-            forcible: true,
-            cancellable: false,
-          }, {
-            id: 2,
-            start: sub(Date.now(), {days: 0, hours: 1, seconds: 10}).toISOString(),
-            progress: 0.66,
-            command: {
-              command: 'Some Third Command With A Long Name',
-              source: CommandSource.MANUALLY_ENTERED,
-            },
-            start_values: [
-              {
-                name: 'Amazing float value',
-                value: 999,
-                value_type: ProcessValueType.FLOAT,
-                value_unit: 'afv',
-              },
-              {
-                name: 'Best value',
-                value: 19.99,
-                value_type: ProcessValueType.FLOAT,
-                value_unit: 'afv',
-              },
-              {
-                name: 'Such prices',
-                value: 4299,
-                value_type: ProcessValueType.FLOAT,
-                value_unit: 'afv',
-              },
-              {
-                name: 'Very affordable',
-                value: 0.99,
-                value_type: ProcessValueType.FLOAT,
-                value_unit: 'afv',
-              },
-            ],
-            end_values: [],
-            forcible: true,
-            cancellable: true,
-          }, {
-            id: 3,
-            start: sub(Date.now(), {days: 1, hours: 3, seconds: 30}).toISOString(),
-            end: sub(Date.now(), {days: 1, hours: 3}).toISOString(),
-            command: {
-              command: 'Supply the dakka',
-              source: CommandSource.MANUALLY_ENTERED,
-            },
-            start_values: [
-              {
-                name: 'Waaagh?',
-                value: 'No waagh',
-                value_type: ProcessValueType.STRING,
-              },
-              {
-                name: 'Dakka?',
-                value: 'No dakka 🙁',
-                value_type: ProcessValueType.STRING,
-              },
-            ],
-            end_values: [
-              {
-                name: 'Waaagh?',
-                value: 'WAAAGH!',
-                value_type: ProcessValueType.STRING,
-              },
-              {
-                name: 'Dakka?',
-                value: 'DAKKA! 😀',
-                value_type: ProcessValueType.STRING,
-              },
-            ],
-            forcible: false,
-            cancellable: false,
-          },
-        ],
+        lines: runLogLines,
       }),
     );
   }),
@@ -753,8 +758,6 @@ export const handlers = [
               value_unit: 'afv',
             }],
             end_values: [],
-            forcible: false,
-            cancellable: false,
           }, {
             id: 2,
             start: sub(Date.now(), {days: 0, hours: 1, seconds: 10}).toISOString(),
@@ -824,8 +827,6 @@ export const handlers = [
                 value_type: ProcessValueType.STRING,
               },
             ],
-            forcible: false,
-            cancellable: false,
           },
         ],
       }),
@@ -1032,13 +1033,26 @@ Some;Csv;Data
     );
   }),
 
-  rest.post('/api/process_unit/:unitId/run_log/force_line/:lineId', (_, res, context) => {
+  rest.post('/api/process_unit/:unitId/run_log/force_line/:lineId', (req, res, context) => {
+    const line = runLogLines.find(runLogLine => runLogLine.id.toString() === req.params['lineId']);
+    if(line !== undefined) {
+      line.forced = true;
+      line.forcible = false;
+      line.cancellable = false;
+      line.end = new Date().toISOString();
+    }
     return res(
       context.status(200),
     );
   }),
 
-  rest.post('/api/process_unit/:unitId/run_log/cancel_line/:lineId', (_, res, context) => {
+  rest.post('/api/process_unit/:unitId/run_log/cancel_line/:lineId', (req, res, context) => {
+    const line = runLogLines.find(runLogLine => runLogLine.id.toString() === req.params['lineId']);
+    if(line !== undefined) {
+      line.cancelled = true;
+      line.cancellable = false;
+      line.forcible = false;
+    }
     return res(
       context.status(200),
     );

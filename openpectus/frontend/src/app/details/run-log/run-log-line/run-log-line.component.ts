@@ -10,7 +10,10 @@ import { AdditionalValueType } from '../run-log-additional-values.component';
   selector: 'app-run-log-line',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div [class.!bg-gray-200]="rowIndex % 2 === 1" class="bg-gray-100 border-b border-white cursor-pointer"
+    <div [class.!bg-gray-200]="rowIndex % 2 === 1"
+         [class.!bg-yellow-100]="runLogLine?.forced"
+         [class.!bg-red-200]="runLogLine?.cancelled"
+         class="bg-gray-100 border-b border-white cursor-pointer"
          *ngrxLet="expanded as expanded" (click)="toggleCollapse(expanded)">
       <div class="grid gap-2 px-3 py-2" [style.grid]="gridFormat">
         <p>{{runLogLine?.start ?? '' | date}}</p>

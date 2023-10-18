@@ -1756,6 +1756,14 @@
           "cancellable": {
             "type": "boolean",
             "title": "Cancellable"
+          },
+          "forced": {
+            "type": "boolean",
+            "title": "Forced"
+          },
+          "cancelled": {
+            "type": "boolean",
+            "title": "Cancelled"
           }
         },
         "type": "object",
@@ -1764,9 +1772,7 @@
           "command",
           "start",
           "start_values",
-          "end_values",
-          "forcible",
-          "cancellable"
+          "end_values"
         ],
         "title": "RunLogLine"
       },

@@ -156,8 +156,10 @@ class RunLogLine(BaseModel):
     progress: float | None  # between 0 and 1
     start_values: List[ProcessValue]
     end_values: List[ProcessValue]
-    forcible: bool
-    cancellable: bool
+    forcible: bool | None
+    cancellable: bool | None
+    forced: bool | None
+    cancelled: bool | None
 
 
 class RunLog(BaseModel):

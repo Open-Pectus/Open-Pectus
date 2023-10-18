@@ -23,7 +23,7 @@ const reducer = createReducer(initialState,
     draft.filterText = '';
     draft.onlyRunning = false;
   })),
-  on(RunLogActions.runLogFetched, (state, {runLog}) => produce(state, draft => {
+  on(RunLogActions.runLogFetched, RunLogActions.runLogPolledForUnit, (state, {runLog}) => produce(state, draft => {
     draft.runLog = runLog;
   })),
   on(RunLogActions.onlyRunningFilterChanged, (state, {onlyRunning}) => produce(state, draft => {
