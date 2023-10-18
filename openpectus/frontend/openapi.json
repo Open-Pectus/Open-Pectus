@@ -514,6 +514,104 @@
         }
       }
     },
+    "/api/process_unit/{unit_id}/run_log/force_line/{line_id}": {
+      "post": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Force Run Log Line",
+        "operationId": "force_run_log_line",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            },
+            "name": "unit_id",
+            "in": "path"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Line Id"
+            },
+            "name": "line_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/process_unit/{unit_id}/run_log/cancel_line/{line_id}": {
+      "post": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Cancel Run Log Line",
+        "operationId": "cancel_run_log_line",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            },
+            "name": "unit_id",
+            "in": "path"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Line Id"
+            },
+            "name": "line_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/batch_job/{id}": {
       "get": {
         "tags": [
@@ -1650,6 +1748,14 @@
             },
             "type": "array",
             "title": "End Values"
+          },
+          "forcible": {
+            "type": "boolean",
+            "title": "Forcible"
+          },
+          "cancellable": {
+            "type": "boolean",
+            "title": "Cancellable"
           }
         },
         "type": "object",
@@ -1658,7 +1764,9 @@
           "command",
           "start",
           "start_values",
-          "end_values"
+          "end_values",
+          "forcible",
+          "cancellable"
         ],
         "title": "RunLogLine"
       },

@@ -1,10 +1,10 @@
 import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { map } from 'rxjs';
-import { RunLogLine } from '../../api';
-import { RunLogActions } from './ngrx/run-log.actions';
-import { RunLogSelectors } from './ngrx/run-log.selectors';
-import { AdditionalValueType } from './run-log-additional-values.component';
+import { RunLogLine } from '../../../api';
+import { RunLogActions } from '../ngrx/run-log.actions';
+import { RunLogSelectors } from '../ngrx/run-log.selectors';
+import { AdditionalValueType } from '../run-log-additional-values.component';
 
 @Component({
   selector: 'app-run-log-line',
@@ -18,7 +18,14 @@ import { AdditionalValueType } from './run-log-additional-values.component';
         <progress [attr.value]="runLogLine?.progress" class="h-full w-28" [style.border-width]="'revert'" [style.border-style]="'revert'"
                   [style.border-color]="'revert'" *ngIf="runLogLine?.end === undefined"></progress>
         <p>{{runLogLine?.command?.command}}</p>
+        <div class="col-end-6 flex gap-2">
+          <app-run-log-line-force-button *ngIf="runLogLine?.forcible" [lineId]="runLogLine?.id"
+                                         (click)="$event.stopPropagation()"></app-run-log-line-force-button>
+          <app-run-log-line-cancel-button *ngIf="runLogLine?.cancellable" [lineId]="runLogLine?.id"
+                                          (click)="$event.stopPropagation()"></app-run-log-line-cancel-button>
+        </div>
       </div>
+
       <div [style.height.px]="expanded && additionalValuesElementHasHeight ? additionalValues.scrollHeight : 0"
            [class.transition-[height]]="initialHeightAchieved"
            class="w-full overflow-hidden">

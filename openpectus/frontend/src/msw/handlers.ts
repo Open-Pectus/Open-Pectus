@@ -1,3 +1,5 @@
+// noinspection DuplicatedCode
+
 import { format, getSeconds, sub } from 'date-fns';
 import { rest } from 'msw';
 import {
@@ -24,6 +26,7 @@ import {
 } from '../app/api';
 
 // TODO: this should be exposed from backend or handled otherwise when using websocket
+// noinspection JSUnusedGlobalSymbols
 export enum SystemState {
   Running = 'Running',
   Paused = 'Paused',
@@ -433,12 +436,14 @@ export const handlers = [
               value_unit: 'afv',
             }],
             end_values: [],
+            forcible: true,
+            cancellable: false,
           }, {
             id: 2,
             start: sub(Date.now(), {days: 0, hours: 1, seconds: 10}).toISOString(),
             progress: 0.66,
             command: {
-              command: 'Some Third Command',
+              command: 'Some Third Command With A Long Name',
               source: CommandSource.MANUALLY_ENTERED,
             },
             start_values: [
@@ -468,6 +473,8 @@ export const handlers = [
               },
             ],
             end_values: [],
+            forcible: true,
+            cancellable: true,
           }, {
             id: 3,
             start: sub(Date.now(), {days: 1, hours: 3, seconds: 30}).toISOString(),
@@ -500,6 +507,8 @@ export const handlers = [
                 value_type: ProcessValueType.STRING,
               },
             ],
+            forcible: false,
+            cancellable: false,
           },
         ],
       }),
@@ -702,7 +711,7 @@ export const handlers = [
    * BATCH JOBS *
    **************/
 
-  rest.get('/api/batch_job/:id/method', (req, res, context) => {
+  rest.get('/api/batch_job/:id/method', (_, res, context) => {
     return res(
       context.status(200),
       context.delay(),
@@ -744,6 +753,8 @@ export const handlers = [
               value_unit: 'afv',
             }],
             end_values: [],
+            forcible: false,
+            cancellable: false,
           }, {
             id: 2,
             start: sub(Date.now(), {days: 0, hours: 1, seconds: 10}).toISOString(),
@@ -779,6 +790,8 @@ export const handlers = [
               },
             ],
             end_values: [],
+            forcible: false,
+            cancellable: false,
           }, {
             id: 3,
             start: sub(Date.now(), {days: 1, hours: 3, seconds: 30}).toISOString(),
@@ -811,6 +824,8 @@ export const handlers = [
                 value_type: ProcessValueType.STRING,
               },
             ],
+            forcible: false,
+            cancellable: false,
           },
         ],
       }),
@@ -1013,6 +1028,18 @@ Some;Csv;Data
 123;456;789
 123;456;789`,
       }),
+    );
+  }),
+
+  rest.post('/api/process_unit/:unitId/run_log/force_line/:lineId', (_, res, context) => {
+    return res(
+      context.status(200),
+    );
+  }),
+
+  rest.post('/api/process_unit/:unitId/run_log/cancel_line/:lineId', (_, res, context) => {
+    return res(
+      context.status(200),
     );
   }),
 ];
