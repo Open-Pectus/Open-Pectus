@@ -37,6 +37,11 @@ class ProtocolErrorMessage(ErrorMessage):
     protocol_mgs: str
 
 
+RpcErrorMessage = ErrorMessage | ProtocolErrorMessage
+RpcStatusMessage = SuccessMessage | RpcErrorMessage
+#RpcValueMessage = MessageBase | RpcErrorMessage
+
+
 class RegisterEngineMsg(MessageBase):
     computer_name: str
     uod_name: str
@@ -98,6 +103,10 @@ class RunLogMsg(MessageBase):
     id: str  # figure this out - should refer some persistent entity
     lines: List[RunLogLineMsg]
 
+    @staticmethod
+    def default() -> RunLogMsg:
+        return RunLogMsg(id="", lines=[])
+
 
 class RunLogLineMsg(MessageBase):
     id: str
@@ -116,6 +125,29 @@ class ControlStateMsg(MessageBase):
     is_running: bool
     is_holding: bool
     is_paused: bool
+
+    @staticmethod
+    def default() -> ControlStateMsg:
+        return ControlStateMsg(is_running=False, is_holding=False, is_paused=False)
+
+
+class MethodLineMsg(MessageBase):
+    id: str
+    content: str
+
+
+class MethodMsg(MessageBase):
+    lines: List[MethodLineMsg]
+    started_line_ids: List[str]
+    executed_line_ids: List[str]
+    injected_line_ids: List[str]
+
+    @staticmethod
+    def default() -> MethodMsg:
+        return MethodMsg(lines=[], started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
+
+
+MethodMsg.update_forward_refs()
 
 
 def serialize_msg(msg: MessageBase) -> Tuple[str, Dict[str, Any]]:
