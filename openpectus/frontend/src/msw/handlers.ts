@@ -111,7 +111,7 @@ const runLogLines = [
   }, {
     id: 2,
     start: sub(Date.now(), {days: 0, hours: 1, seconds: 10}).toISOString(),
-    progress: 0.66,
+    progress: 0.1234678,
     command: {
       command: 'Some Third Command With A Long Name',
       source: CommandSource.MANUALLY_ENTERED,
@@ -181,6 +181,24 @@ const runLogLines = [
     cancellable: false,
     forced: false,
     cancelled: true,
+  },
+  {
+    id: 4,
+    start: sub(Date.now(), {days: 0, hours: 2, minutes: 23}).toISOString(),
+    progress: 0.5123,
+    command: {
+      command: 'Some Command',
+      source: CommandSource.MANUALLY_ENTERED,
+    },
+    start_values: [{
+      name: 'Amazing float value',
+      value: 1.43253342,
+      value_type: ProcessValueType.FLOAT,
+      value_unit: 'afv',
+    }],
+    end_values: [],
+    forcible: false,
+    cancellable: true,
   },
 ];
 
