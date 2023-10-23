@@ -1052,6 +1052,7 @@ Some;Csv;Data
       line.cancelled = true;
       line.cancellable = false;
       line.forcible = false;
+      line.end = new Date().toISOString();
     }
     return res(
       context.status(200),
