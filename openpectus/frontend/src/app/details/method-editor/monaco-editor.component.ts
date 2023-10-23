@@ -57,7 +57,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     await this.initServices();
     this.registerLanguages();
     this.editor = await this.setupEditor();
-    this.setupWebSocket(`ws://localhost:3000/sampleServer`);
+    this.setupWebSocket(`ws://localhost:30000/sampleServer`);
 
     this.editorSizeChange?.pipe(takeUntil(this.componentDestroyed)).subscribe(() => this.editor?.layout());
     window.onresize = () => this.editor?.layout();
