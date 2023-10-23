@@ -18,8 +18,8 @@ import { AdditionalValueType } from '../run-log-additional-values.component';
       <div class="grid gap-2 px-3 py-2" [style.grid]="gridFormat">
         <p>{{runLogLine?.start ?? '' | date}}</p>
         <p *ngIf="runLogLine?.end !== undefined">{{runLogLine?.end ?? '' | date}}</p>
-        <progress [attr.value]="runLogLine?.progress" class="h-full w-28" [style.border-width]="'revert'" [style.border-style]="'revert'"
-                  [style.border-color]="'revert'" *ngIf="runLogLine?.end === undefined"></progress>
+        <app-run-log-line-progress [value]="runLogLine?.progress" class="py-0.5"
+                                   *ngIf="runLogLine?.end === undefined"></app-run-log-line-progress>
         <p>{{runLogLine?.command?.command}}</p>
         <div class="col-end-6 flex gap-2">
           <app-run-log-line-force-button *ngIf="runLogLine?.forcible" [lineId]="runLogLine?.id"
