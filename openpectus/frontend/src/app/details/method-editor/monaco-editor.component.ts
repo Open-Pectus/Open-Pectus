@@ -1,20 +1,23 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, OnDestroy, ViewChild } from '@angular/core';
+import '@codingame/monaco-vscode-json-default-extension';
+import getLanguagesServiceOverride from '@codingame/monaco-vscode-languages-service-override';
+import getModelServiceOverride from '@codingame/monaco-vscode-model-service-override';
+import getTextmateServiceOverride from '@codingame/monaco-vscode-textmate-service-override';
+import '@codingame/monaco-vscode-theme-defaults-default-extension';
+import getThemeServiceOverride from '@codingame/monaco-vscode-theme-service-override';
 import { concatLatestFrom } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { buildWorkerDefinition } from 'monaco-editor-workers';
-import { editor, editor as MonacoEditor, KeyCode, languages, Range, Uri } from 'monaco-editor/esm/vs/editor/editor.api.js'; // importing as 'monaco-editor' causes issues: https://github.com/CodinGame/monaco-vscode-api/issues/162
+import { editor as MonacoEditor, KeyCode, languages, Range, Uri } from 'monaco-editor/esm/vs/editor/editor.api.js'; // importing as 'monaco-editor' causes issues: https://github.com/CodinGame/monaco-vscode-api/issues/162
 import { initServices, MonacoLanguageClient } from 'monaco-languageclient';
 import { combineLatest, filter, firstValueFrom, Observable, Subject, take, takeUntil } from 'rxjs';
 import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient/lib/common/client';
 import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
-import 'vscode/default-extensions/json';
-import 'vscode/default-extensions/theme-defaults';
 import { createConfiguredEditor, createModelReference } from 'vscode/monaco';
 import { MethodLine } from '../../api';
 import { UtilMethods } from '../../shared/util-methods';
 import { MethodEditorActions } from './ngrx/method-editor.actions';
 import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
-import TrackedRangeStickiness = editor.TrackedRangeStickiness;
 
 buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.origin, false);
 
@@ -91,10 +94,12 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     const alreadyInitialized = await firstValueFrom(this.monacoServicesInitialized);
     if(alreadyInitialized) return;
     await initServices({
-      enableTextmateService: true,
-      enableThemeService: true,
-      enableModelService: true,
-      enableLanguagesService: true,
+      userServices: {
+        ...getThemeServiceOverride(),
+        ...getTextmateServiceOverride(),
+        ...getModelServiceOverride(),
+        ...getLanguagesServiceOverride(),
+      },
       debugLogging: false,
     });
   }
@@ -198,7 +203,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
           options: {
             className: lineIdClassNamePrefix + lineId,
             shouldFillLineOnLineBreak: false,
-            stickiness: TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+            stickiness: MonacoEditor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
           },
         };
       });
@@ -293,7 +298,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
           className: lineClassName,
           hoverMessage: {value: hoverMessage},
           shouldFillLineOnLineBreak: false,
-          stickiness: TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+          stickiness: MonacoEditor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
         },
       };
     };
@@ -329,7 +334,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
             hoverMessage: {value: 'This line has been injected and is not part of the methodContent.'},
             linesDecorationsClassName: 'codicon-export codicon',
             shouldFillLineOnLineBreak: false,
-            stickiness: TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+            stickiness: MonacoEditor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
           },
         };
       });
