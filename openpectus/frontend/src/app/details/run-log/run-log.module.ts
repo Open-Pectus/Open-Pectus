@@ -14,6 +14,7 @@ import { RunLogLineCancelButtonComponent } from './run-log-line/run-log-line-can
 import { RunLogLineForceButtonComponent } from './run-log-line/run-log-line-force-button.component';
 import { RunLogLineComponent } from './run-log-line/run-log-line.component';
 import { RunLogComponent } from './run-log.component';
+import { RunLogLineProgressComponent } from './run-log-line/run-log-line-progress.component';
 
 
 @NgModule({
@@ -26,6 +27,7 @@ import { RunLogComponent } from './run-log.component';
     RunLogLineForceButtonComponent,
     RunLogLineCancelButtonComponent,
     RunLogLineButtonComponent,
+    RunLogLineProgressComponent,
   ],
   imports: [
     CommonModule,

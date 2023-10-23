@@ -13,6 +13,15 @@ module.exports = {
         'vscode-background-dark': '#2C2C2C',
         'vscode-green': '#1D9271',
       },
+      keyframes: {
+        'ping-pong-x': {
+          '0%': {transform: 'translateX(0)', left: '0'},
+          '100%': {transform: 'translateX(-100%)', left: '100%'},
+        },
+      },
+      animation: {
+        'ping-pong-x': 'ping-pong-x 1.4s linear alternate infinite',
+      },
     },
   },
   plugins: [],
