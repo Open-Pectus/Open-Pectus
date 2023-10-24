@@ -7,8 +7,8 @@ import '@codingame/monaco-vscode-theme-defaults-default-extension';
 import getThemeServiceOverride from '@codingame/monaco-vscode-theme-service-override';
 import { concatLatestFrom } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
+import { editor as MonacoEditor, KeyCode, languages, Range, Uri } from 'monaco-editor'; // importing as 'monaco-editor' causes issues: https://github.com/CodinGame/monaco-vscode-api/issues/162
 import { buildWorkerDefinition } from 'monaco-editor-workers';
-import { editor as MonacoEditor, KeyCode, languages, Range, Uri } from 'monaco-editor/esm/vs/editor/editor.api.js'; // importing as 'monaco-editor' causes issues: https://github.com/CodinGame/monaco-vscode-api/issues/162
 import { initServices, MonacoLanguageClient } from 'monaco-languageclient';
 import { combineLatest, filter, firstValueFrom, Observable, Subject, take, takeUntil } from 'rxjs';
 import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient/lib/common/client';
