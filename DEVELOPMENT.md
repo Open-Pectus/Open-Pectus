@@ -37,7 +37,7 @@ This chapter describes how to set up a development environment to run and develo
 
 
 ## 2.1. Frontend setup
-Prerequisites: Node 18 (LTS) must be installed.
+Prerequisites: Node 20 (LTS) must be installed.
 
 ```shell
 cd Open-Pectus/openpectus/frontend
