@@ -55,7 +55,7 @@ export class DetailsEffects {
   // TODO: this should be gotten via push through websocket instead of polling.
   continuouslyPollControlState = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.unitDetailsInitialized, DetailsActions.controlStatePolled),
-    delay(500),
+    delay(1500),
     concatLatestFrom(() => [
       this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName)),
       this.store.select(DetailsSelectors.shouldPoll),
