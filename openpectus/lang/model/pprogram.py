@@ -1,25 +1,55 @@
 from __future__ import annotations
 from typing import Callable, List
+from uuid import UUID, uuid4
 
 
 class PNode():
-    """ Represents an AST node in a pectus runtime model object tree. """
+    """ Represents an AST node in an openpectus runtime model object tree. """
+
     def __init__(self, parent: PNode | None) -> None:
         """ Create new node with specified parent or None for the root node. If parent is given,
             the created node is added as child of the parent.
         """
         self.parent = parent
         """ The parent node or None for the root node. """
+
         self.children: List[PNode] | None = None
         """ The child nodes of the node, if any. None if the node cannot have child nodes. """
 
+        self._id: UUID = uuid4()
+        """ Node id, assigned randomly during initialization. Can be changed for the sole
+        purpose of merging two parse trees. """
+
         self.is_root: bool = False
+        """ Set to true for the root node. False for all other nodes in a tree. """
+
         self.indent: int | None = None
+        """ The indentation for the line, expressed in number of spaces. A multiple of 
+        pprogrambuilder.INDENTATION_SPACES. """
+
         self.line: int | None = None
+        """ The line number, starting from 1. All instructions have unique line numbers,
+        except PProgram which shares line number with its first child instruction.
+        """
+
         self.errors: List[PError] | None = None
+        """ Errors encountered during parsing. """
+
 
         if self.parent is not None and self.parent.children is not None:
             self.parent.children.append(self)
+
+    @property
+    def id(self) -> UUID:
+        return self._id
+
+    def update_id(self, new_id: UUID):
+        self._id = new_id
+
+    @property
+    def runlog_name(self) -> str | None:
+        """ Name to show in runlog. Return None to skip in runlog. """
+        return None
 
     @property
     def depth(self):
@@ -30,16 +60,17 @@ class PNode():
     def __str__(self) -> str:
         return type(self).__name__
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         # TODO: Here be dragons. See issue https://github.com/Open-Pectus/Open-Pectus/issues/22 regarding
         # identity vs value equality, performance and caching.
         # See also note in next_following() below.
         # Current implementation may cause RecursionError
         if not isinstance(other, PNode):
             return False
-        if self.depth != other.depth:
-            return False
-        return self.__dict__ == other.__dict__
+        return self.id == other.id
+        # if self.depth != other.depth:
+        #     return False
+        # return self.__dict__ == other.__dict__
 
     def get_child_nodes(self, recursive: bool = False) -> List[PNode]:
         children: List[PNode] = []
@@ -134,6 +165,10 @@ class PBlock(PInstruction):
     def __str__(self) -> str:
         return super().__str__() + ": " + self.name
 
+    @property
+    def runlog_name(self) -> str | None:
+        return "Block: " + self.name
+
 
 class PEndBlock(PInstruction):
     """ Represents an End Block intruction. """
@@ -156,9 +191,16 @@ class PWatch(PInstruction):
         self.condition: PCondition | None = None
         self.activated: bool = False
 
+    @property
+    def condition_str(self) -> str:
+        return self.condition.condition_str if self.condition is not None else ""
+
     def __str__(self) -> str:
-        cnd = self.condition.condition_str if self.condition is not None else ""
-        return super().__str__() + f": {cnd} | line: {self.line}"
+        return super().__str__() + f": {self.condition_str} | line: {self.line}"
+
+    @property
+    def runlog_name(self) -> str | None:
+        return "Watch: " + self.condition_str
 
 
 class PAlarm(PInstruction):
@@ -169,13 +211,21 @@ class PAlarm(PInstruction):
         self.children = []
         self.condition: PCondition | None = None
 
+    @property
+    def condition_str(self) -> str:
+        return self.condition.condition_str if self.condition is not None else ""
+
     def __str__(self) -> str:
         cnd = self.condition.condition_str if self.condition is not None else ""
         return super().__str__() + f": {cnd} | line: {self.line}"
 
+    @property
+    def runlog_name(self) -> str | None:
+        return "Alarm: " + self.condition_str
+
 
 class PMark(PInstruction):
-    """ Represents an Mark intruction. """
+    """ Represents an Mark instruction. """
     def __init__(self, parent: PNode) -> None:
         super().__init__(parent)
 
@@ -184,6 +234,10 @@ class PMark(PInstruction):
 
     def __str__(self) -> str:
         return super().__str__() + ": " + self.name
+
+    @property
+    def runlog_name(self) -> str | None:
+        return "Mark: " + self.name
 
 
 class PCommand(PInstruction):
@@ -197,6 +251,10 @@ class PCommand(PInstruction):
 
     def __str__(self) -> str:
         return super().__str__() + ": " + self.name
+
+    @property
+    def runlog_name(self) -> str | None:
+        return self.name
 
 
 class PBlank(PInstruction):

@@ -25,6 +25,7 @@ from openpectus.protocol.messages import (
     ErrorMessage,
     RegisterEngineMsg,
     TagsUpdatedMsg,
+    MethodMsg
 )
 
 logger = logging.getLogger(__name__)
@@ -132,18 +133,39 @@ ReadingDef.update_forward_refs()
 
 class ClientData(BaseModel):
     client_id: str
-    readings: List[ReadingDef]
-    tags_info: TagsInfo
-    runlog: RunLogMsg
-    control_state: ControlStateMsg = ControlStateMsg(
-        is_running=False, is_holding=False, is_paused=False
-    )
+    readings: List[ReadingDef] = []
+    tags_info: TagsInfo = TagsInfo(map={})
+    runlog: RunLogMsg = RunLogMsg.default()
+    control_state: ControlStateMsg = ControlStateMsg.default()
+    method: MethodMsg = MethodMsg.default()
 
 
 ClientData.update_forward_refs()
 
 
-class Aggregator:
+# class AggregatorApi():
+#     """ Represents the Aggregator Rest API service interface """
+
+#     def get_method(self, client_id: str) -> MethodMsg | None:
+#         raise NotImplementedError()
+
+#     async def set_method(self, client_id: str, method: MethodMsg) -> RpcStatusMessage:
+#         raise NotImplementedError()
+
+
+# class AggregatorApiAdapter(AggregatorApi):
+#     def __init__(self, agg: Aggregator) -> None:
+#         super().__init__()
+#         self.agg = agg
+
+#     def get_method(self, client_id: str) -> MethodMsg | None:
+#         raise NotImplementedError()
+
+#     async def set_method(self, client_id: str, method: MethodMsg) -> RpcStatusMessage:
+#         raise NotImplementedError()
+
+
+class Aggregator():
     def __init__(self) -> None:
         logger.debug("Server init")
         self.channel_map: Dict[str, ChannelInfo] = {}
@@ -216,7 +238,9 @@ class Aggregator:
             return ErrorMessage(message="Client data not initialized")
         return client_data
 
-    async def handle_RegisterEngineMsg(self, channel_id, register_engine_msg: RegisterEngineMsg) -> SuccessMessage | ErrorMessage:
+    async def handle_RegisterEngineMsg(self, channel_id, register_engine_msg: RegisterEngineMsg) \
+            -> SuccessMessage | ErrorMessage:
+
         """ Registers engine """
         client_id = Aggregator.create_client_id(register_engine_msg)
         if channel_id not in self.channel_map.keys():
@@ -241,7 +265,8 @@ class Aggregator:
         existing_registrations = [x for x in self.channel_map.values() if x.client_id == client_id]
         if (
                 len(existing_registrations) > 0 and
-                any(existing_registration.status != ChannelStatusEnum.Disconnected for existing_registration in existing_registrations)
+                any(existing_registration.status != ChannelStatusEnum.Disconnected for
+                    existing_registration in existing_registrations)
         ):
             logger.error(
                 f"""Registration failed for client_id {client_id} and channel_id {channel_id}.
@@ -257,11 +282,8 @@ class Aggregator:
 
         # initialize client data
         if client_id not in self.client_data_map.keys():
-            self.client_data_map[client_id] = ClientData(
-                client_id=client_id,
-                readings=[],
-                tags_info=TagsInfo(map={}),
-                runlog=RunLogMsg(id="", lines=[]))
+            self.client_data_map[client_id] = ClientData(client_id=client_id)
+
         return SuccessMessage()
 
     async def handle_UodInfoMsg(self, channel_id: str, msg: UodInfoMsg) -> SuccessMessage | ErrorMessage:
@@ -356,6 +378,32 @@ class Aggregator:
             err = "Unhandled server error"
             logger.error(err, exc_info=True)
             return ErrorMessage(exception_message=err)
+
+    # AggregatorApi interface implementation
+    def get_method(self, client_id: str) -> MethodMsg | None:
+        client_data = self.client_data_map.get(client_id)
+        if client_data is None:
+            return None
+
+        logger.info(f"Returned local method with {len(client_data.method.lines)} lines")
+        return client_data.method
+
+    async def set_method(self, client_id: str, method: MethodMsg) -> bool:
+        try:
+            response = await self.send_to_client(client_id=client_id, msg=method)
+            if isinstance(response, ErrorMessage):
+                logger.error(f"Failed to set method. Engine response: {response.message}")
+                return False
+        except Exception:
+            logger.error("Failed to set method", exc_info=True)
+            return False
+
+        # update local method state
+        client_data = self.client_data_map.get(client_id)
+        if client_data is not None:
+            client_data.method = method
+
+        return True
 
 
 _server: Aggregator | None = None

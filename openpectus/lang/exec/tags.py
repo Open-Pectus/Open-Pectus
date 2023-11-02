@@ -374,3 +374,6 @@ class TagValueCollection(Iterable[TagValue]):
 
     def __len__(self) -> int:
         return len(self._tag_values)
+
+    def to_list(self) -> list[TagValue]:
+        return [v for v in self._tag_values.values()]

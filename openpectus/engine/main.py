@@ -2,17 +2,15 @@ import asyncio
 import logging
 import socket
 from queue import Empty
-import time
 from argparse import ArgumentParser
-from threading import Thread
 from typing import Any, List
 
 import httpx
+
 from openpectus import log_setup_colorlog
 from openpectus.lang.exec.runlog import RunLogItem
-
 from openpectus.protocol.engine import Client, create_client
-from openpectus.engine.eng import ExecutionEngine, CommandRequest
+from openpectus.engine.eng import EngineProxy, EngineProxyAdapter, ExecutionEngine
 from openpectus.engine.hardware import RegisterDirection
 from openpectus.lang.exec import tags
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
@@ -24,6 +22,8 @@ log_setup_colorlog()
 
 logger = logging.getLogger("openpectus.protocol.engine")
 logger.setLevel(logging.INFO)
+logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.INFO)
+logging.getLogger("Engine").setLevel(logging.INFO)
 
 
 def get_args():
@@ -114,6 +114,8 @@ class EngineRunner:
             await self.disconnect_async()
         except asyncio.CancelledError:
             return
+        except Exception:
+            logger.error("Unhandled exception in run_loop_async", exc_info=True)
 
 
 class WebSocketRPCEngineRunner(EngineRunner):
@@ -123,6 +125,7 @@ class WebSocketRPCEngineRunner(EngineRunner):
         self.ws_url = ws_url
 
         self.engine.run()
+        self.proxy: EngineProxy = EngineProxyAdapter(engine)
 
     async def connect_async(self):
         client = create_client()
@@ -141,6 +144,7 @@ class WebSocketRPCEngineRunner(EngineRunner):
 
         self.client.set_message_handler(M.InvokeCommandMsg, self._schedule_command)
         self.client.set_message_handler(M.InjectCodeMsg, self._inject_code)
+        self.client.set_message_handler(M.MethodMsg, self.set_method)
 
     async def send_uod_info_async(self):
         if self.client is None:
@@ -177,23 +181,26 @@ class WebSocketRPCEngineRunner(EngineRunner):
         if self.client is None:
             raise ValueError("Client is not connected")
 
+        def to_value(t : tags.TagValue) -> M.TagValueMsg:
+            return M.TagValueMsg(name=t.name, value=t.value, value_unit=t.unit)
+
         def to_msg(item: RunLogItem) -> M.RunLogLineMsg:
+            # TODO what about state - try the client in test mode
             msg = M.RunLogLineMsg(
-                id="",
-                command_name=item.command_req.name,
+                id=item.id,
+                command_name=item.name,
                 start=item.start,
                 end=item.end,
-                progress=None,
-                start_values=[],
-                end_values=[]
-                )
+                progress=item.progress,
+                start_values=[to_value(t) for t in item.start_values],
+                end_values=[to_value(t) for t in item.end_values]
+            )
             return msg
 
-        items = self.engine.runlog.get_items()
-        print("## Runlog items sent: " + str(len(items)))
+        runlog = self.engine.runtimeinfo.get_runlog()
         msg = M.RunLogMsg(
-            id="",
-            lines=list(map(to_msg, items))
+            id=runlog.id,
+            lines=list(map(to_msg, runlog.items))
         )
         await self.client.send_to_server(msg)
 
@@ -225,6 +232,18 @@ class WebSocketRPCEngineRunner(EngineRunner):
         assert isinstance(msg, M.InjectCodeMsg)
         self.engine.inject_code(msg.pcode)
         return M.SuccessMessage()
+
+    async def get_method(self) -> M.MethodMsg | M.RpcErrorMessage:
+        try:
+            response = await self.proxy.get_method()
+            return response
+        except Exception as ex:
+            return M.ProtocolErrorMessage(message="Failed to get message", exception_message=str(ex),
+                                          protocol_mgs="Exception(?)")
+
+    async def set_method(self, msg: M.MessageBase) -> M.MessageBase:
+        assert isinstance(msg, M.MethodMsg)
+        return await self.proxy.set_method(msg)
 
     async def disconnect_async(self):
         if self.client is not None:

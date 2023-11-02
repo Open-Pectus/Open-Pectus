@@ -1,5 +1,6 @@
 
 from io import StringIO
+from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.model.pprogram import (
     PNode,
     PProgram,
@@ -15,6 +16,14 @@ def print_program(program: PProgram, show_line_numbers: bool = False, show_error
     opts.blanks = show_blanks
     out = PProgramFormatter(opts).format(program)
     print(out)
+
+
+def print_parsed_program(pcode: str, show_line_numbers: bool = False, show_errors: bool = False, show_blanks: bool = False):
+    """ Parse pcode and print program to stdout using the provided options. """
+    p = PGrammar()
+    p.parse(pcode)
+    program = p.build_model()
+    return print_program(program, show_line_numbers=show_line_numbers, show_errors=show_errors, show_blanks=show_blanks)
 
 
 class FormattingOptions():
