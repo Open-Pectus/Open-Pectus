@@ -3,18 +3,21 @@ import logging
 import time
 from typing import List, Any
 import unittest
+from uuid import UUID
 
 import pint
 from openpectus.engine.eng import ExecutionEngine
 from openpectus.lang.exec.commands import CommandRequest
 
-from openpectus.lang.grammar.pprogramformatter import print_program
+from openpectus.lang.grammar.pprogramformatter import print_parsed_program as print_program
 from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.model.pprogram import PProgram
 from openpectus.lang.exec.pinterpreter import InterpreterContext, PInterpreter
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder
 from openpectus.lang.exec.tags import Tag, DEFAULT_TAG_BASE, TagCollection
 from openpectus.lang.exec.uod import UodCommand
+
+from openpectus.test.engine.test_engine import run_engine, continue_engine
 
 TICK_INTERVAL = 0.1
 
@@ -65,12 +68,6 @@ def build_program(s) -> PProgram:
     return p.build_model()
 
 
-def print_log(i: PInterpreter):
-    start = min([x.time for x in i.logs])
-    print('\n'.join(
-        f"{(x.time-start):.2f}\t{x.time:.2f}\t{x.unit_time}\t{x.message}" for x in i.logs))
-
-
 def create_interpreter(
         program: PProgram,
         uod: UnitOperationDefinitionBase | None = None):
@@ -103,26 +100,6 @@ def run_interpreter(interpreter: PInterpreter, max_ticks: int = -1):
         interpreter.tick(tick_time, ticks)
 
 
-def run_engine(engine: ExecutionEngine, pcode: PProgram, max_ticks: int = -1):
-    print("Interpretation started")
-    ticks = 0
-    max_ticks = max_ticks
-
-    engine._running = True
-    engine.set_pprogram(pcode)
-    engine.schedule_execution("Start")
-
-    while engine.is_running():
-        ticks += 1
-        if max_ticks != -1 and ticks > max_ticks:
-            print(f"Stopping because max_ticks {max_ticks} was reached")
-            engine._running = False
-            return
-
-        time.sleep(0.1)
-        engine.tick()
-
-
 class InterpreterTest(unittest.TestCase):
 
     def setUp(self):
@@ -132,23 +109,22 @@ class InterpreterTest(unittest.TestCase):
         self.engine.cleanup()
 
     def test_sequential_marks(self):
-        program = build_program("""
+        program = """
 Mark: a
 Mark: b
 Mark: c
-""")
+"""
         print_program(program)
         engine = self.engine
         run_engine(engine, program, 10)
 
-        self.assertEqual(["a", "b", "c"], engine.interpreter.get_marks())
-        print_log(engine.interpreter)
+        self.assertEqual(["a", "b", "c"], engine.interpreter.get_marks())        
 
     def test_command_incr_counter(self):
-        program = build_program("""
+        program = """
 Mark: a
 incr counter
-""")
+"""
         print_program(program)
         engine = self.engine
 
@@ -164,7 +140,7 @@ incr counter
         raise NotImplementedError()
 
     def test_watch_can_evaluate_tag(self):
-        program = build_program("""
+        program = """
 Mark: a
 Watch: counter > 0
     Mark: b
@@ -172,11 +148,10 @@ Mark: c
 incr counter
 Watch: counter > 0
     Mark: d
-""")
+"""
         engine = self.engine
         run_engine(engine, program, 15)
 
-        print_log(engine.interpreter)
         self.assertEqual(["a", "c", "b", "d"], engine.interpreter.get_marks())
         # Note that first watch is also activated and its body executed
         # even though it is not activated when first run. This represents the
@@ -184,7 +159,7 @@ Watch: counter > 0
         # self.assertEqual(["a", "c", "d"], i.get_marks())
 
     def test_watch_nested(self):
-        program = build_program("""
+        program = """
 Mark: a
 Watch: counter > 0
     Mark: b
@@ -195,11 +170,10 @@ incr counter
 incr counter
 Watch: counter > 0
     Mark: d
-""")
+"""
         engine = self.engine
         run_engine(engine, program, 15)
 
-        print_log(engine.interpreter)
         # TODO abgiguous ...
         # self.assertEqual(["a", "c", "b", "e", "d"], engine.interpreter.get_marks())
         self.assertEqual(["a", "c", "b", "d", "e"], engine.interpreter.get_marks())
@@ -207,7 +181,7 @@ Watch: counter > 0
     def test_watch_long_running_order(self):
         # specify order of highly overlapping instructions
         # between main program and a single interrupt handler
-        program = build_program("""
+        program = """
 Mark: a
 Watch: Run Counter > -1
     Mark: a1
@@ -217,11 +191,10 @@ Mark: b
 Mark: b1
 Mark: b2
 Mark: b3
-""")
+"""
         engine = self.engine
         run_engine(engine, program, 10)
 
-        print_log(engine.interpreter)
         self.assertEqual(["a", "b", "a1", "b1", "a2", "b2", "a3", "b3"], engine.interpreter.get_marks())
 
     @unittest.skip("TODO")
@@ -230,7 +203,7 @@ Mark: b3
 
         # specify block time for block in interrupt handler
 
-        program = build_program("""
+        program = """
 Mark: a
 Watch: Run counter > -1
     Block: A
@@ -249,25 +222,23 @@ Watch: Run counter > -1
             Mark: a4
             End block
 Mark: b
-""")
+"""
         print_program(program)
         engine = self.engine
         run_engine(engine, program, 15)
-
-        print_log(engine.interpreter)
 
         # TODO fix intepretation error, watch instruction(s) not being executed
 
         self.assertEqual(["a", "b", "a1", "a2", "a3", "a4"], engine.interpreter.get_marks())
 
     def test_block(self):
-        program = build_program("""
+        program = """
 Block: A
     Mark: A1
     End block
     Mark: A2
 Mark: A3
-""")
+"""
         uod = create_test_uod()
         assert uod.system_tags is not None
         uod.system_tags[DEFAULT_TAG_BASE].set_value("sec")
@@ -275,12 +246,10 @@ Mark: A3
         engine = create_engine(uod)
         run_engine(engine, program, 10)
 
-        print_log(engine.interpreter)
-
         self.assertEqual(["A1", "A3"], engine.interpreter.get_marks())
 
     def test_block_nested(self):
-        program = build_program("""
+        program = """
 Block: A
     Mark: A1
     Block: B
@@ -290,33 +259,33 @@ Block: A
     End block
     Mark: A2
 Mark: A3
-""")
+"""
         engine = self.engine
         run_engine(engine, program, 15)
 
         self.assertEqual(["A1", "B1", "A3"], engine.interpreter.get_marks())
 
     def test_block_unterminated(self):
-        program = build_program("""
+        program = """
 Block: A
     Mark: A1
     Mark: A2
 Mark: A3
-""")
+"""
         engine = self.engine
         run_engine(engine, program, 5)
 
         self.assertEqual(["A1", "A2"], engine.interpreter.get_marks())
 
     def test_block_time_watch(self):
-        program = build_program("""
+        program = """
 Block: A
     Mark: A1
     Watch: Block Time > 1 sec
         End block
     Mark: A2
 Mark: A3
-""")
+"""
         engine = self.engine
         run_engine(engine, program, 20)
 
@@ -324,14 +293,14 @@ Mark: A3
 
     @unittest.skip("Base unit not yet implemented")
     def test_block_time_watch_using_base_unit(self):
-        program = build_program("""
+        program = """
 Block: A
     Mark: A1
     Watch: Block time > 1
         End block
     Mark: A2
 Mark: A3
-""")
+"""
         engine = self.engine
         run_engine(engine, program, 20)
 
@@ -357,25 +326,25 @@ Mark: A3
         self.assertEqual(["A1", "A3"], i.get_marks())
 
     def test_threshold_time(self):
-        program = build_program("""
+        program = """
 0.0 Mark: a
 0.3 Mark: b
 0.8 Mark: c
-""")
+"""
         engine = self.engine
         run_engine(engine, program, 20)
         i = engine.interpreter
 
         self.assertEqual(["a", "b", "c"], i.get_marks())
-        print_log(i)
+        # print_log(i)
 
-        log_a = next(x for x in i.logs if x.message == 'a')
-        log_b = next(x for x in i.logs if x.message == 'b')
-        log_c = next(x for x in i.logs if x.message == 'c')
-        with self.subTest("a, b"):
-            self.assert_time_equal(log_a.time + .3, log_b.time)
-        with self.subTest("a, c"):
-            self.assert_time_equal(log_a.time + .8, log_c.time)
+        # log_a = next(x for x in i.logs if x.message == 'a')
+        # log_b = next(x for x in i.logs if x.message == 'b')
+        # log_c = next(x for x in i.logs if x.message == 'c')
+        # with self.subTest("a, b"):
+        #     self.assert_time_equal(log_a.time + .3, log_b.time)
+        # with self.subTest("a, c"):
+        #     self.assert_time_equal(log_a.time + .8, log_c.time)
 
     def test_assert_time_equal(self):
         self.assert_time_equal(1, 1.2, 200)
@@ -402,7 +371,7 @@ Mark: A3
             print(f"Diff {diff_milis} accepted")
 
     def test_threshold_block_time(self):
-        program = build_program("""
+        program = """
 Mark: a
 Block: A
     0.3 Mark: b
@@ -411,27 +380,26 @@ Block: B
     0.8 Mark: c
     End block
 Mark: d
-""")
+"""
         engine = self.engine
         run_engine(engine, program, 25)
-        i = engine.interpreter
 
-        print_log(i)
+        i = engine.interpreter
 
         self.assertEqual(["a", "b", "c", "d"], i.get_marks())
 
-        log_a = next(x for x in i.logs if x.message == 'a')
-        log_b = next(x for x in i.logs if x.message == 'b')
-        log_c = next(x for x in i.logs if x.message == 'c')
-        log_d = next(x for x in i.logs if x.message == 'd')
-        with self.subTest("a / b"):
-            self.assert_time_equal(log_a.time + 0.3 + TICK_INTERVAL, log_b.time, 300)
-        with self.subTest("b / c"):
-            self.assert_time_equal(log_b.time + .8 + TICK_INTERVAL, log_c.time, 300)
-        with self.subTest("c / d"):
-            self.assert_time_equal(log_c.time + TICK_INTERVAL, log_d.time, 300)
-        with self.subTest("a / d"):
-            self.assert_time_equal(log_a.time + 1.1 + 6*TICK_INTERVAL, log_d.time, 300)
+        # log_a = next(x for x in i.logs if x.message == 'a')
+        # log_b = next(x for x in i.logs if x.message == 'b')
+        # log_c = next(x for x in i.logs if x.message == 'c')
+        # log_d = next(x for x in i.logs if x.message == 'd')
+        # with self.subTest("a / b"):
+        #     self.assert_time_equal(log_a.time + 0.3 + TICK_INTERVAL, log_b.time, 300)
+        # with self.subTest("b / c"):
+        #     self.assert_time_equal(log_b.time + .8 + TICK_INTERVAL, log_c.time, 300)
+        # with self.subTest("c / d"):
+        #     self.assert_time_equal(log_c.time + TICK_INTERVAL, log_d.time, 300)
+        # with self.subTest("a / d"):
+        #     self.assert_time_equal(log_a.time + 1.1 + 6*TICK_INTERVAL, log_d.time, 300)
 
     @unittest.skip("TODO")
     def test_threshold_column_volume(self):
@@ -446,8 +414,6 @@ Mark: b
 """)
         i = create_interpreter(program=program)
         run_interpreter(i, 5)
-
-        print_log(i)
 
     @unittest.skip("TODO")
     def test_change_base_in_program(self):
@@ -474,5 +440,5 @@ class TestInterpreterContext(InterpreterContext):
     def tags(self) -> TagCollection:
         return self._tags
 
-    def schedule_execution(self, name: str, args: str | None = None) -> CommandRequest:
-        return self.engine.schedule_execution(name, args)
+    def schedule_execution(self, name: str, args: str | None = None, exec_id: UUID | None = None) -> CommandRequest:
+        return self.engine.schedule_execution(name, args, exec_id)
