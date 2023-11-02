@@ -6,10 +6,11 @@ from typing_extensions import override
 import unittest
 
 import pint
+from openpectus.lang.exec.runlog import RuntimeRecordStateEnum
 from openpectus.lang.exec.timer import NullTimer
 
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder
-from openpectus.engine.eng import ExecutionEngine, CommandRequest, EngineCommandEnum, RunLogItemState, SystemStateEnum
+from openpectus.engine.eng import ExecutionEngine, EngineCommandEnum, SystemStateEnum
 from openpectus.lang.exec import tags
 from openpectus.lang.exec.uod import UodCommand
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
@@ -67,6 +68,13 @@ def continue_engine(engine: ExecutionEngine, max_ticks: int = -1):
 
         time.sleep(0.1)
         engine.tick()
+
+
+def get_queue_items(q) -> list[tags.Tag]:
+    items = []
+    while not q.empty():
+        items.append(q.get())
+    return items
 
 
 def create_test_uod() -> UnitOperationDefinitionBase:
@@ -137,25 +145,30 @@ class TestHardwareLayer(unittest.TestCase):
         self.assertEqual("foo", hwl.register_values["FT01"])
 
 
-def print_runlog(e: ExecutionEngine):
-    print("Run Log:")
+def print_runlog(e: ExecutionEngine, description=""):
+    runlog = e.interpreter.runtimeinfo.get_runlog()
+    print(f"Runlog {runlog.id} records: ", description)
+#    print("line | start | end   | name                 | states")
+#    print("-----|-------|-------|----------------------|-------------------")
+    for item in runlog.items:
+        name = f"{str(item.name):<20}"
+        prog = f"{item.progress:d2}" if item.progress else ""
+        print(f"{name}   {item.state:<15}    {prog}")
+#    print("-----|-------|-------|----------------------|-------------------")
 
-    float_digits = 3
 
-    def s(val) -> str:
-        if isinstance(val, float):
-            return str(round(val, float_digits))
-        return str(val)
-
-    for item in e.runlog.get_items():
-        states = ','.join(s.value for s in item.states)
-        start_values = "" if item.start_values is None else \
-            ', '.join(t.name + ': ' + s(t.value) for t in item.start_values)
-        end_values = "" if item.end_values is None else \
-            ', '.join(t.name + ': ' + s(t.value) for t in item.end_values)
-
-        print(f" {item.start_tick}-{item.end_tick}  {item.command_req.name} | States={states} " +
-              f"\n\tStart tags: {start_values} \n\tEnd tags:   {end_values}")
+def print_runtime_records(e: ExecutionEngine, description: str = ""):
+    records = e.interpreter.runtimeinfo.records
+    print("Runtime records: ", description)
+    print("line | start | end   | name                 | states")
+    print("-----|-------|-------|----------------------|-------------------")
+    for r in records:
+        name = f"{str(r.name):<20}" if r.name is not None else f"{str(r.node):<20}"
+        line = f"{int(r.node.line):4d}" if r.node.line is not None else "   -"
+        states = ", ".join([f"{st.state_name}: {st.state_tick}" for st in r.states])
+        end = f"{r.visit_end_tick:5d}" if r.visit_end_tick != -1 else "    -"
+        print(f"{line}   {r.visit_start_tick:5d}   {end}   {name}   {states}")
+    print("-----|-------|-------|----------------------|-------------------")
 
 
 def create_engine() -> ExecutionEngine:
@@ -237,10 +250,10 @@ class TestEngine(unittest.TestCase):
         hwl.register_values["FT01"] = 1
         hwl.register_values["Reset"] = 1
 
-        e.read_process_image()
+        run_engine(e, "", 1)
 
         # assert tags marked dirty
-        dirty_names = e._tag_names_dirty
+        dirty_names = [t.name for t in get_queue_items(e.tag_updates)]
         self.assertTrue("FT01" in dirty_names)
         self.assertTrue("Reset" in dirty_names)
 
@@ -249,13 +262,12 @@ class TestEngine(unittest.TestCase):
 
         self.assertEqual("N/A", e.uod.tags["Reset"].get_value())
 
-        e.schedule_execution("Reset")
-        e.execute_commands()
+        run_engine(e, "Reset", 3)
 
         self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
 
         # assert tags marked dirty
-        dirty_names = e._tag_names_dirty
+        dirty_names = [t.name for t in get_queue_items(e.tag_updates)]
         self.assertTrue("Reset" in dirty_names)
 
     def test_read_process_image_sets_assigned_tag_values(self):
@@ -285,7 +297,7 @@ class TestEngine(unittest.TestCase):
         t_updated = e.tag_updates.get()
         self.assertEqual(t_updated.name, t.name)
 
-    def test_write_process_values_writed_data_to_registers(self):
+    def test_write_process_values_writes_data_to_registers(self):
         e = self.engine
 
         # set hw values
@@ -309,11 +321,11 @@ class TestEngine(unittest.TestCase):
 
     def test_uod_command_can_execute_valid_command(self):
         e = self.engine
-
+        run_engine(e, "", 3)
         self.assertEqual("N/A", e.uod.tags["Reset"].get_value())
 
-        req = CommandRequest("Reset", None)
-        e._execute_command(req, set())
+        e.inject_code("Reset")
+        continue_engine(e, 1)
 
         self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
 
@@ -322,91 +334,81 @@ class TestEngine(unittest.TestCase):
 
         self.assertEqual("N/A", e.uod.tags["Reset"].get_value())
 
-        e.schedule_execution("Reset", "")
-
-        e.tick()
+        run_engine(e, "Reset", 2)
         self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
 
-        e.tick()
+        # Reset takes 3 ticks to revert
+        continue_engine(e, 3)
         self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
 
-        e.tick()
-        self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
-
-        e.tick()
-        self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
-
-        e.tick()
+        continue_engine(e, 1)
         self.assertEqual("N/A", e.uod.tags["Reset"].get_value())
 
-        e.tick()
+        continue_engine(e, 25)
         self.assertEqual("N/A", e.uod.tags["Reset"].get_value())
 
+        print_runtime_records(e)
         print_runlog(e)
 
     def test_concurrent_uod_commands(self):
         e = self.engine
+        run_engine(e, """
+Reset
+Reset
+""", 5)
 
-        e.schedule_execution("Reset", "")
-        e.tick()
+        records = e.interpreter.runtimeinfo.records
 
-        e.schedule_execution("Reset", "")
-        e.tick()
+        print_runtime_records(e)
 
-        runlog = list(e.runlog.get_items())
-        self.assertEqual(2, len(runlog))
+        r = records[2]
+        self.assertEqual("Reset", r.name)
+        self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
+        self.assertTrue(r.has_state(RuntimeRecordStateEnum.Cancelled))
+        self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Completed))
 
-        print_runlog(e)
+        r = records[3]
+        self.assertEqual("Reset", r.name)
+        self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
+        self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Cancelled))        
+        self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Completed))
 
-        self.assertEqual("Reset", runlog[0].command_req.name)
-        self.assertTrue(RunLogItemState.Started in runlog[0].states)
-        self.assertTrue(RunLogItemState.Cancelled in runlog[0].states)
-        self.assertTrue(RunLogItemState.Forced not in runlog[0].states)
-        self.assertTrue(RunLogItemState.Completed not in runlog[0].states)
-
-        self.assertEqual("Reset", runlog[1].command_req.name)
-        self.assertTrue(RunLogItemState.Started in runlog[1].states)
-        self.assertTrue(RunLogItemState.Completed not in runlog[1].states)
-        self.assertTrue(RunLogItemState.Cancelled not in runlog[1].states)
-        self.assertTrue(RunLogItemState.Forced not in runlog[1].states)
-
-        for _ in range(10):
-            e.tick()
-
-        self.assertTrue(RunLogItemState.Completed in runlog[1].states)
-
-        print_runlog(e)
+        continue_engine(e, 3)
+        print_runtime_records(e)
+        self.assertTrue(r.has_state(RuntimeRecordStateEnum.Completed))
 
     def test_overlapping_uod_commands(self):
         e = self.engine
+        run_engine(e, """
+overlap1
+overlap2
+""", 5)
 
-        e.schedule_execution("overlap1", "")
-        e.tick()
+        rs = e.runtimeinfo.records
 
-        e.schedule_execution("overlap2", "")
-        e.tick()
+        print_runtime_records(e)
 
-        runlog = list(e.runlog.get_items())
-        self.assertEqual(2, len(runlog))
+        r = rs[2]
+        self.assertEqual("overlap1", r.name)
+        self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
+        self.assertTrue(r.has_state(RuntimeRecordStateEnum.Cancelled))
+        self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Forced))
+        self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Completed))
 
-        print_runlog(e)
+        continue_engine(e, 1)
+        print_runtime_records(e)
 
-        self.assertEqual("overlap1", runlog[0].command_req.name)
-        self.assertTrue(RunLogItemState.Started in runlog[0].states)
-        self.assertTrue(RunLogItemState.Cancelled in runlog[0].states)
-        self.assertTrue(RunLogItemState.Forced not in runlog[0].states)
-        self.assertTrue(RunLogItemState.Completed not in runlog[0].states)
+        r = rs[3]
+        self.assertEqual("overlap2", r.name)
+        self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
+        self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Cancelled))
+        self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Forced))
+        self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Completed))
 
-        self.assertEqual("overlap2", runlog[1].command_req.name)
-        self.assertTrue(RunLogItemState.Started in runlog[1].states)
-        self.assertTrue(RunLogItemState.Completed not in runlog[1].states)
-        self.assertTrue(RunLogItemState.Cancelled not in runlog[1].states)
-        self.assertTrue(RunLogItemState.Forced not in runlog[1].states)
+        continue_engine(e, 1)
+        print_runtime_records(e)
 
-        for _ in range(10):
-            e.tick()
-
-        self.assertTrue(RunLogItemState.Completed in runlog[1].states)
+        self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Completed))
 
         print_runlog(e)
 
@@ -419,22 +421,21 @@ Mark: X
         e = self.engine
         run_engine(e, program, 3)
 
-        runlog = list(e.runlog.get_items())
-        self.assertEqual(2, len(runlog))
-        self.assertEqual("Start", runlog[0].command_req.name)
-        self.assertEqual("Block: A", runlog[1].command_req.name)
-        self.assertTrue(RunLogItemState.Waiting in runlog[1].states)
-        self.assertTrue(RunLogItemState.Started not in runlog[1].states)
+        rs = e.runtimeinfo.records
 
-        # print_runlog(e)
+        print_runtime_records(e)
 
-        continue_engine(e, 1)
-        self.assertTrue(RunLogItemState.Started in runlog[1].states)
+        self.assertEqual(3, len(rs))
+        self.assertEqual("Block: A", rs[2].name)
+        self.assertFalse(rs[0].has_state(RuntimeRecordStateEnum.Started))
 
         continue_engine(e, 1)
-        self.assertTrue(RunLogItemState.Completed in runlog[1].states)
+        self.assertTrue(rs[2].has_state(RuntimeRecordStateEnum.Started))
 
-        print_runlog(e)
+        continue_engine(e, 1)
+        self.assertTrue(rs[2].has_state(RuntimeRecordStateEnum.Completed))
+
+        print_runtime_records(e)
 
     def test_runlog_watch(self):
         program = """
@@ -445,19 +446,31 @@ Mark: X
         e = self.engine
         run_engine(e, program, 4)
 
-        runlog = list(e.runlog.get_items())
-        #self.assertEqual(1, len(runlog))
-        self.assertEqual("Watch: Block Time > 0.2s", runlog[1].command_req.name)
-        self.assertTrue(RunLogItemState.Waiting in runlog[1].states)
-        self.assertTrue(RunLogItemState.Started not in runlog[1].states)
+        print_runtime_records(e)
+
+        r = e.interpreter.runtimeinfo.records[2]
+        self.assertEqual("Watch: Block Time > 0.2s", r.name)
+        self.assertTrue(r.has_state(RuntimeRecordStateEnum.AwaitingInterrrupt))
+        self.assertTrue(r.has_state(RuntimeRecordStateEnum.AwaitingCondition))
+        self.assertFalse(r.has_state(RuntimeRecordStateEnum.Started))
 
         continue_engine(e, 1)
-        self.assertTrue(RunLogItemState.Started in runlog[1].states)
+        self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
 
         continue_engine(e, 1)
-        self.assertTrue(RunLogItemState.Completed in runlog[1].states)
+        self.assertTrue(r.has_state(RuntimeRecordStateEnum.Completed))
 
-        print_runlog(e)
+        print_runtime_records(e)
+
+    def test_runlog_uod_commands(self):
+        e = self.engine
+        run_engine(e, """
+Reset
+Reset
+Reset
+""", 10)
+        
+        print_runtime_records(e)
 
     @unittest.skip("Not implemented yet")
     def test_runlog_watch_forced(self):
@@ -529,16 +542,16 @@ Mark: C
 
     def test_get_runlog(self):
         e = self.engine
+        run_engine(e, "Reset", 3)
 
-        e.schedule_execution("Start")
-        e.schedule_execution("Reset")
+        print_runtime_records(e)
 
-        run_engine(e, "", 5)
+        items = e.get_runlog().items
+        self.assertEqual(1, len(items))
+        self.assertEqual("Reset", items[0].name)
 
-        self.assertEqual(2, len(e.runlog._items))
-        print_runlog(e)
-
-        for item in e.runlog.get_items():
+        # assert has tags
+        for item in items:
             start_values = item.start_values
             assert start_values is not None
             self.assertTrue(start_values.has("Base"))
@@ -566,8 +579,6 @@ Mark: C
         e._runstate_started = False
         e.tick()
 
-        #TODO
-        #self.assertEqual(clock_value, clock.as_number())
 
     def test_runstate_stop(self):
         e = self.engine
@@ -723,10 +734,10 @@ Mark: C
 
         e.inject_code("Mark: I")
         continue_engine(e, 1)
-
         self.assertEqual(['A', 'I'], e.interpreter.get_marks())
 
         continue_engine(e, 3)
+        # print_runtime_records(e)
         self.assertEqual(['A', 'I', 'B', 'C'], e.interpreter.get_marks())
 
     def test_inject_thresholds_2(self):

@@ -1,14 +1,19 @@
 from __future__ import annotations
 from typing import Callable, Dict, List
+from uuid import UUID
 
 # Represents part of Engine API
 
 
 class CommandRequest():
     """ Represents a command request for engine to execute. """
-    def __init__(self, name: str, args: str | None = None) -> None:
+    def __init__(self, name: str, args: str | None = None, exec_id: UUID | None = None) -> None:
         self.name: str = name
         self.args: str | None = args
+        self.exec_id: UUID | None = exec_id
+
+        # allows tracking individual commands
+        self.command_exec_id: UUID | None = None
 
     def __str__(self) -> str:
         return f"EngineCommand {self.name} | args: {self.args}"

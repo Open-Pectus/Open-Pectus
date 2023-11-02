@@ -130,16 +130,17 @@ def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)
                 source=D.CommandSource.METHOD
         )
         line = D.RunLogLine(
-            id=0,
+            id=0,   # TODO change type int to str
             command=cmd,
             start=datetime.fromtimestamp(msg.start),
-            end=None,
+            end=None if msg.end is None else datetime.fromtimestamp(msg.end),
             progress=None,
             start_values=[],
             end_values=[]
         )
         return line
 
+    logger.info(f"Got runlog with {len(client_data.runlog.lines)} lines")
     return D.RunLog(
         lines=list(map(from_line_msg, client_data.runlog.lines)))
 

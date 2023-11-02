@@ -100,7 +100,7 @@ class TagSpec(MessageBase):
 
 
 class RunLogMsg(MessageBase):
-    id: str  # figure this out - should refer some persistent entity
+    id: str
     lines: List[RunLogLineMsg]
 
     @staticmethod

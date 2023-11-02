@@ -181,22 +181,26 @@ class WebSocketRPCEngineRunner(EngineRunner):
         if self.client is None:
             raise ValueError("Client is not connected")
 
+        def to_value(t : tags.TagValue) -> M.TagValueMsg:
+            return M.TagValueMsg(name=t.name, value=t.value, value_unit=t.unit)
+
         def to_msg(item: RunLogItem) -> M.RunLogLineMsg:
+            # TODO what about state - try the client in test mode
             msg = M.RunLogLineMsg(
-                id="",
-                command_name=item.command_req.name,
+                id=item.id,
+                command_name=item.name,
                 start=item.start,
                 end=item.end,
-                progress=None,
-                start_values=[],
-                end_values=[]
-                )
+                progress=item.progress,
+                start_values=[to_value(t) for t in item.start_values],
+                end_values=[to_value(t) for t in item.end_values]
+            )
             return msg
 
-        items = self.engine.runlog.get_items()
+        runlog = self.engine.runtimeinfo.get_runlog()
         msg = M.RunLogMsg(
-            id="",
-            lines=list(map(to_msg, items))
+            id=runlog.id,
+            lines=list(map(to_msg, runlog.items))
         )
         await self.client.send_to_server(msg)
 
