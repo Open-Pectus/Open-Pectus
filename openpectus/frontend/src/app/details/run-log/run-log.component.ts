@@ -3,7 +3,7 @@ import { Store } from '@ngrx/store';
 import { RunLogLine } from '../../api';
 import { RunLogActions } from './ngrx/run-log.actions';
 import { RunLogSelectors } from './ngrx/run-log.selectors';
-import { RunLogLineComponent } from './run-log-line.component';
+import { RunLogLineComponent } from './run-log-line/run-log-line.component';
 
 @Component({
   selector: 'app-run-log',

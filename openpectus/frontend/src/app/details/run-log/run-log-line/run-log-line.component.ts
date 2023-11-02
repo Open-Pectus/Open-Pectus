@@ -1,24 +1,34 @@
 import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { map } from 'rxjs';
-import { RunLogLine } from '../../api';
-import { RunLogActions } from './ngrx/run-log.actions';
-import { RunLogSelectors } from './ngrx/run-log.selectors';
-import { AdditionalValueType } from './run-log-additional-values.component';
+import { RunLogLine } from '../../../api';
+import { RunLogActions } from '../ngrx/run-log.actions';
+import { RunLogSelectors } from '../ngrx/run-log.selectors';
+import { AdditionalValueType } from '../run-log-additional-values.component';
 
 @Component({
   selector: 'app-run-log-line',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div [class.!bg-gray-200]="rowIndex % 2 === 1" class="bg-gray-100 border-b border-white cursor-pointer"
+    <div [class.!bg-gray-200]="rowIndex % 2 === 1"
+         [class.!bg-yellow-100]="runLogLine?.forced"
+         [class.!bg-red-200]="runLogLine?.cancelled"
+         class="bg-gray-100 border-b border-white cursor-pointer"
          *ngrxLet="expanded as expanded" (click)="toggleCollapse(expanded)">
       <div class="grid gap-2 px-3 py-2" [style.grid]="gridFormat">
-        <p>{{runLogLine?.start ?? '' | date:(dateFormat | ngrxPush)}}</p>
-        <p *ngIf="runLogLine?.end !== undefined">{{runLogLine?.end ?? '' | date:(dateFormat | ngrxPush)}}</p>
-        <progress [attr.value]="runLogLine?.progress" class="h-full w-28" [style.border-width]="'revert'" [style.border-style]="'revert'"
-                  [style.border-color]="'revert'" *ngIf="runLogLine?.end === undefined"></progress>
+        <p>{{runLogLine?.start ?? '' | date}}</p>
+        <p *ngIf="runLogLine?.end !== undefined">{{runLogLine?.end ?? '' | date}}</p>
+        <app-run-log-line-progress [value]="runLogLine?.progress" class="py-0.5"
+                                   *ngIf="runLogLine?.end === undefined"></app-run-log-line-progress>
         <p>{{runLogLine?.command?.command}}</p>
+        <div class="col-end-6 flex gap-2">
+          <app-run-log-line-force-button *ngIf="runLogLine?.forcible" [lineId]="runLogLine?.id"
+                                         (click)="$event.stopPropagation()"></app-run-log-line-force-button>
+          <app-run-log-line-cancel-button *ngIf="runLogLine?.cancellable" [lineId]="runLogLine?.id"
+                                          (click)="$event.stopPropagation()"></app-run-log-line-cancel-button>
+        </div>
       </div>
+
       <div [style.height.px]="expanded && additionalValuesElementHasHeight ? additionalValues.scrollHeight : 0"
            [class.transition-[height]]="initialHeightAchieved"
            class="w-full overflow-hidden">
@@ -41,7 +51,6 @@ export class RunLogLineComponent implements AfterViewInit {
   @Input() gridFormat?: string = 'auto / 1fr 1fr 1fr';
   @Output() collapseToggled = new EventEmitter<boolean>();
   protected readonly AdditionalValueType = AdditionalValueType;
-  protected readonly dateFormat = this.store.select(RunLogSelectors.dateFormat);
   protected readonly expanded = this.store.select(RunLogSelectors.expandedLines).pipe(
     map(lineIds => lineIds.some(lineId => lineId === this.runLogLine?.id)),
   );

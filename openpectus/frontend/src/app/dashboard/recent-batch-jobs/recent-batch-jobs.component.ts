@@ -28,6 +28,11 @@ export class RecentBatchJobsComponent implements OnInit {
       key: 'unit_name',
     },
     {
+      header: 'Started',
+      key: 'started_date',
+      isDate: true,
+    },
+    {
       header: 'Completed',
       key: 'completed_date',
       isDate: true,

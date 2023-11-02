@@ -20,4 +20,5 @@ export class DetailsActions {
   static batchJobDetailsInitialized = createAction(source + 'Batch Job Details Initialized');
   static batchJobDetailsDestroyed = createAction(source + 'Batch Job Details Destroyed');
   static batchJobFetched = createAction(source + 'Batch Job Fetched', props<{ batchJob: BatchJob }>());
+  static batchJobDownloadCsvButtonClicked = createAction(source + 'Batch Job Download Csv Button Clicked', props<{ batchJobId: string }>());
 }

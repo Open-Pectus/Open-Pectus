@@ -55,7 +55,7 @@ export class DetailsEffects {
   // TODO: this should be gotten via push through websocket instead of polling.
   continuouslyPollControlState = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.unitDetailsInitialized, DetailsActions.controlStatePolled),
-    delay(500),
+    delay(1500),
     concatLatestFrom(() => [
       this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName)),
       this.store.select(DetailsSelectors.shouldPoll),
@@ -120,7 +120,22 @@ export class DetailsEffects {
     }),
   ));
 
-  constructor(private actions: Actions, private store: Store,
+  downloadBatchJobCsvWhenButtonClicked = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.batchJobDownloadCsvButtonClicked),
+    switchMap(({batchJobId}) => {
+      return this.batchJobService.getBatchJobCsvJson(batchJobId).pipe(
+        map(batchJobCsv => {
+          const link = document.createElement('a');
+          link.download = batchJobCsv.filename;
+          link.href = URL.createObjectURL(new Blob([batchJobCsv.csv_content]));
+          link.click();
+        }),
+      );
+    }),
+  ), {dispatch: false});
+
+  constructor(private actions: Actions,
+              private store: Store,
               private processUnitService: ProcessUnitService,
               private batchJobService: BatchJobService) {}
 }

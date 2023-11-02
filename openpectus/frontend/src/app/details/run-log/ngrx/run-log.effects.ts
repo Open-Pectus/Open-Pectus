@@ -3,6 +3,8 @@ import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { delay, filter, map, of, switchMap } from 'rxjs';
 import { BatchJobService, ProcessUnitService } from '../../../api';
+import { selectRouteParam } from '../../../ngrx/router.selectors';
+import { DetailsRoutingUrlParts } from '../../details-routing-url-parts';
 import { DetailsSelectors } from '../../ngrx/details.selectors';
 import { RunLogActions } from './run-log.actions';
 
@@ -42,6 +44,25 @@ export class RunLogEffects {
       );
     }),
   ));
+
+
+  forceRunLogLineWhenButtonClicked = createEffect(() => this.actions.pipe(
+    ofType(RunLogActions.forceLineButtonClicked),
+    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
+    switchMap(([{lineId}, unitId]) => {
+      if(unitId === undefined) return of();
+      return this.processUnitService.forceRunLogLine(unitId, lineId);
+    }),
+  ), {dispatch: false});
+
+  cancelRunLogLineWhenButtonClicked = createEffect(() => this.actions.pipe(
+    ofType(RunLogActions.cancelLineButtonClicked),
+    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
+    switchMap(([{lineId}, unitId]) => {
+      if(unitId === undefined) return of();
+      return this.processUnitService.cancelRunLogLine(unitId, lineId);
+    }),
+  ), {dispatch: false});
 
   constructor(private actions: Actions, private store: Store,
               private processUnitService: ProcessUnitService,

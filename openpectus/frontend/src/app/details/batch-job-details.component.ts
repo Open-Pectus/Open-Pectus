@@ -11,9 +11,9 @@ import { DetailsActions } from './ngrx/details.actions';
     <div class="flex justify-center">
       <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:py-8 gap-4 lg:gap-8" *ngrxLet="batchJobId as batchJobId">
         <app-batch-job-header class="2xl:col-span-2 mx-2 mt-3 lg:m-0"></app-batch-job-header>
+        <app-process-plot-container [batchJobId]="batchJobId" class="2xl:col-span-2"></app-process-plot-container>
         <app-method-editor [batchJobId]="batchJobId"></app-method-editor>
         <app-run-log [batchJobId]="batchJobId"></app-run-log>
-        <app-process-plot-container [batchJobId]="batchJobId" class="2xl:col-span-2"></app-process-plot-container>
       </div>
     </div>
   `,

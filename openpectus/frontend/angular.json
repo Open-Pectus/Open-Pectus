@@ -59,7 +59,9 @@
             "allowedCommonJsDependencies": [
               "vscode-jsonrpc",
               "vscode-languageclient",
-              "vscode-languageserver-protocol"
+              "vscode-languageserver-protocol",
+              "vscode-oniguruma",
+              "vscode-textmate"
             ],
             "inlineStyleLanguage": "scss",
             "assets": [

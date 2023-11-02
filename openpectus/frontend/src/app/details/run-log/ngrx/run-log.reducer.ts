@@ -7,7 +7,6 @@ export interface RunLogState {
   runLog: RunLog;
   onlyRunning: boolean;
   filterText: string;
-  dateFormat: string;
   expandedLines: number[];
 }
 
@@ -15,7 +14,6 @@ const initialState: RunLogState = {
   runLog: {lines: []},
   onlyRunning: false,
   filterText: '',
-  dateFormat: 'MM-dd HH:mm:ss',
   expandedLines: [],
 };
 
@@ -25,7 +23,7 @@ const reducer = createReducer(initialState,
     draft.filterText = '';
     draft.onlyRunning = false;
   })),
-  on(RunLogActions.runLogFetched, (state, {runLog}) => produce(state, draft => {
+  on(RunLogActions.runLogFetched, RunLogActions.runLogPolledForUnit, (state, {runLog}) => produce(state, draft => {
     draft.runLog = runLog;
   })),
   on(RunLogActions.onlyRunningFilterChanged, (state, {onlyRunning}) => produce(state, draft => {

@@ -23,7 +23,7 @@ const config = {
         type: 'asset/resource',
       },
     ],
-    // this fixes the ttf and wasm url loading issue
+    // this is required for loading .wasm (and other) files. For context, see https://stackoverflow.com/a/75252098 and https://github.com/angular/angular-cli/issues/24617
     parser: {
       javascript: {
         url: true,
@@ -31,10 +31,7 @@ const config = {
     },
   },
   resolve: {
-    extensions: ['.ts', '.js'],
-    fallback: {
-      path: resolve(__dirname, './node_modules/path-browserify'),
-    },
+    extensions: ['.ts', '.js', '.json', '.ttf'],
   },
   experiments: {
     topLevelAwait: true,

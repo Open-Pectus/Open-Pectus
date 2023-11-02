@@ -7,9 +7,9 @@ import { DetailsSelectors } from './ngrx/details.selectors';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ng-container *ngrxLet="processUnit as processUnit">
-      <div class="text-slate-700 mb-3 -mt-2">
-        <span class="text-sm">{{processUnit?.current_user_role}}</span>
-        <h1 class="text-4xl font-bold">{{processUnit?.name}}</h1>
+      <div class="text-slate-700 mb-4 -mt-2">
+        <span class="text-xs mb-2">User role: <b>{{processUnit?.current_user_role | titlecase}}</b></span>
+        <h1 class="text-4xl lg:text-5xl font-bold">{{processUnit?.name}}</h1>
       </div>
       <app-unit-controls></app-unit-controls>
     </ng-container>

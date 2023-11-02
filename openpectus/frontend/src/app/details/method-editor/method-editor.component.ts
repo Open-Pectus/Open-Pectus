@@ -16,7 +16,8 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
         <span class="ml-2 font-semibold">Save</span>
       </button>
       <app-monaco-editor class="block rounded-sm h-full" [editorSizeChange]="editorSizeChange"
-                         content *ngIf="!collapsed" (keydown.control.s)="onCtrlS($event)"></app-monaco-editor>
+                         content *ngIf="!collapsed" (keydown.control.s)="onCtrlS($event)"
+                         [readOnlyEditor]="batchJobId !== undefined"></app-monaco-editor>
     </app-collapsible-element>
   `,
 })

@@ -7,13 +7,13 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
   template: `
     <div class="flex flex-col bg-sky-700 py-1.5 lg:rounded-md lg:p-1.5 shadow-lg relative transition-[padding-bottom]" [class.pb-0]="collapsed">
       <div class="flex items-center flex-wrap text-gray-100 p-2 gap-3 cursor-pointer select-none" (click)="toggleCollapsed()">
-        <div class="flex items-center mr-1">
+        <div class="flex flex-1 items-center mr-1">
           <span class="codicon !text-2xl mr-2" *ngIf="codiconName !== undefined" [ngClass]="codiconName"
                 [style.margin-bottom.px]="codiconName === 'codicon-graph-line' ? -1 : codiconName === 'codicon-dashboard' ? -1 : null"
                 [style.--vscode-symbolIcon-keywordForeground]="'initial'"></span>
           <span class="text-2xl font-bold">{{name}}</span>
         </div>
-        <div class="flex gap-4 items-center flex-1 justify-end mr-10" *ngIf="!collapsed" (click)="$event.stopPropagation()">
+        <div class="flex gap-4 items-center mr-10" *ngIf="!collapsed" (click)="$event.stopPropagation()">
           <ng-content select="[buttons]"></ng-content>
         </div>
 
