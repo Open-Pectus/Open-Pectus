@@ -11,6 +11,7 @@ httpx==0.25.0
 fastapi_websocket_rpc==0.1.25
 fastapi_websocket_pubsub==0.3.8
 colorlog==6.7.0
+pyright
 
 # simulation server
 #opcua
