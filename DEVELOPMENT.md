@@ -22,9 +22,7 @@ Notes:
 - [6. Build validation](#6-build-validation)
   - [6.1. Flake](#61-flake)
   - [6.2. Type checking](#62-type-checking)
-    - [6.2.1. Mypy](#621-mypy)
-    - [6.2.2. Pyright](#622-pyright)
-    - [6.2.3. Comparison](#623-comparison)
+    - [6.2.1. Pyright](#621-pyright)
   - [6.3. Code generation from API spec](#63-code-generation-from-api-spec)
 - [7. Protocols](#7-protocols)
   - [7.1. Frontend - Aggregator](#71-frontend---aggregator)
@@ -50,6 +48,7 @@ Prerequisites:
 - A conda installation. [Miniconda](https://docs.conda.io/en/latest/miniconda.html) is recommended.  
   _Note: It is possible to install open pectus without conda but this will affect the global python environment on the developer pc
   so this in not recommended._
+- Java SE SDK (optional, only needed for parser generation when updating P-code grammar)
 
 All the following commands can only be run from within the (mini)conda prompt, and from the `Open-Pectus` folder.
 
@@ -217,24 +216,8 @@ flake8
 ## 6.2. Type checking
 
 
-### 6.2.1. Mypy
-Mypy is a static type checker.
-
-The Backend code base is annotated with type hints, such that Mypy can check the types. The build does not yet include this step
-as there are still problems being worked out.
-
-It is configured in pyproject.toml.
-
-To manually invoke, run
-```shell
-cd Open-Pectus
-mypy
-```
-
-### 6.2.2. Pyright
-Pyright is another static type checker.
-
-Work in underway to assess it. Once assessed, we will use either Mypy or Pyright, not both.
+### 6.2.1. Pyright
+Pyright is a static type checker.
 
 It is configured in pyproject.toml. Configuration reference: https://github.com/microsoft/pyright/blob/main/docs/configuration.md
 
@@ -248,26 +231,6 @@ It is updated very frequently. To update it, run
 ```shell
 pip install -U pyright
 ```
-
-### 6.2.3. Comparison
-
-**MyPy**
-* Pros
-  * Standard in Python land
-* Cons
-  * Has quite a few issues with no good solutions, e.g. StrEnum, auto()
-  * Seems to have lots of legacy, e.g. troublesome configuration.
-
-**Pyright**
-* Pro
-  * VS Code uses it so it reports the same issues
-  * Easy configuration
-  * VS Code understand its configuration, even in pyproject.toml. So config changes apply immediately
-  * Does not report errors for StrEnum, auto()
-* Con
-  * Non-standard in Python land
-  * Seems a little heavy on deps - node installs stuff on first start
-  * Remains to be seen if it catches the same errors that Mypy does
 
 <!-- ## Diagram generation
 
