@@ -137,6 +137,10 @@ def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)
             progress=None,
             start_values=[],
             end_values=[],
+            forcible=None,  # TODO map forcible,forced,cancellable and cancelled
+            forced=None,
+            cancellable=None,
+            cancelled=None
         )
         return line
 
@@ -149,7 +153,6 @@ def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)
 def get_method(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> D.Method:
     client_data = agg.client_data_map.get(unit_id)
     if client_data is None:
-        print("No client data - thus no method")
         logger.warning("No client data - thus no method")
         return D.Method(lines=[], started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
 
