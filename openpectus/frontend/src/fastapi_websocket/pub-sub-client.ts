@@ -28,7 +28,7 @@ export class PubSubClient {
     return this._callbacks[topic] ?? [];
   }
 
-  subscribe(topic: string, callback: PubSubCallback) {
+  async subscribe(topic: string, callback: PubSubCallback) {
     const newCallbacks = this.getCallbacks(topic).concat(callback);
     this._callbacks[topic] = newCallbacks;
     if(newCallbacks.length === 1) {
@@ -39,22 +39,22 @@ export class PubSubClient {
     }
   }
 
-  subscribeMany(topics: string[], callback: PubSubCallback) {
+  async subscribeMany(topics: string[], callback: PubSubCallback) {
     return Promise.all(topics.map(topic => this.subscribe(topic, callback)));
   }
 
-  unsubscribe(topic: string, callbackToRemove: PubSubCallback) {
+  async unsubscribe(topic: string, callbackToRemove: PubSubCallback) {
     const otherCallbacks = this.getCallbacks(topic).filter(callback => callback !== callbackToRemove);
     if(otherCallbacks.length === 0) {
       delete this._callbacks[topic];
-      return this.rpcClient.call('unsubscribe', {topics: [topic]}).then();
+      return this.rpcClient.call('unsubscribe', {topics: [topic]});
     } else {
       this._callbacks[topic] = otherCallbacks;
       return Promise.resolve();
     }
   }
 
-  unsubscribeMany(topics: string[], callback: PubSubCallback) {
+  async unsubscribeMany(topics: string[], callback: PubSubCallback) {
     return Promise.all(topics.map(topic => this.unsubscribe(topic, callback)));
   }
 }

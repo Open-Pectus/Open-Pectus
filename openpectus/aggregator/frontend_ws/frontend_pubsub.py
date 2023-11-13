@@ -16,19 +16,19 @@ logging_config.set_mode(LoggingModes.UVICORN)
 router = APIRouter(tags=["frontend_pubsub"])
 
 
-class ConcatServer(RpcMethodsBase):
-    async def concat(self, a="", b=""):
-        return a + b
+# class ConcatServer(RpcMethodsBase):
+#     async def concat(self, a="", b=""):
+#         return a + b
 
-async def on_rpc_connect(channel):
-    asyncio.create_task(callConcat(channel))
+# async def on_rpc_connect(channel):
+#     asyncio.create_task(callConcat(channel))
 
-async def callConcat(channel):
-    await asyncio.sleep(1)
-    result = await channel.other.concat(a='first', b='second')
-    print(result)
+# async def callConcat(channel):
+#     await asyncio.sleep(1)
+#     result = await channel.other.concat(a='first', b='second')
+#     print(result)
 
-rpc_endpoint = WebsocketRPCEndpoint(ConcatServer(), on_connect=[on_rpc_connect])
+# rpc_endpoint = WebsocketRPCEndpoint(ConcatServer(), on_connect=[on_rpc_connect])
 
 
 class MethodsWithUnsubscribe(RpcEventServerMethods):
@@ -41,23 +41,26 @@ class MethodsWithUnsubscribe(RpcEventServerMethods):
 pubsub_endpoint = PubSubEndpoint(methods_class=MethodsWithUnsubscribe)
 
 
+# async def publishPubSub():
+#     await asyncio.sleep(1)
+#     await pubsub_endpoint.publish(["guns", "germs"])
+#     await asyncio.sleep(1)
+#     await pubsub_endpoint.publish(["germs"])
+#     await asyncio.sleep(1)
+#     await pubsub_endpoint.publish(["steel"], data={"author": "Jared Diamond"})
+#     await asyncio.sleep(1)
+#     await pubsub_endpoint.publish(["germs"])
 
-async def publishPubSub():
-    await asyncio.sleep(1)
-    await pubsub_endpoint.publish(["guns", "germs"])
-    await asyncio.sleep(1)
-    await pubsub_endpoint.publish(["germs"])
-    await asyncio.sleep(1)
-    await pubsub_endpoint.publish(["steel"], data={"author": "Jared Diamond"})
-    await asyncio.sleep(1)
-    await pubsub_endpoint.publish(["germs"])
 
+async def publishRunLog():
+    await pubsub_endpoint.publish(["some_unit/run-log"])
 
-rpc_endpoint.register_route(router)
+# rpc_endpoint.register_route(router)
 pubsub_endpoint.register_route(router, path="/frontend-pubsub")
 
 
 @router.get("/trigger-pubsub")
 async def trigger_pubsub():
-    asyncio.create_task(publishPubSub())
+    # asyncio.create_task(publishPubSub())
+    asyncio.create_task(publishRunLog())
 

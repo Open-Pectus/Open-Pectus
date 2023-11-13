@@ -16,7 +16,7 @@ from fastapi_websocket_pubsub import PubSubEndpoint
 from fastapi_websocket_rpc.logger import logging_config, LoggingModes
 logging_config.set_mode(LoggingModes.UVICORN)
 
-app =  FastAPI()
+app = FastAPI()
 router = APIRouter()
 endpoint = PubSubEndpoint()
 endpoint.register_route(router)
