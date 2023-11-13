@@ -29,6 +29,7 @@ router = APIRouter(tags=["frontend_pubsub"])
 #     print(result)
 
 # rpc_endpoint = WebsocketRPCEndpoint(ConcatServer(), on_connect=[on_rpc_connect])
+# rpc_endpoint.register_route(router)
 
 
 class MethodsWithUnsubscribe(RpcEventServerMethods):
@@ -37,30 +38,13 @@ class MethodsWithUnsubscribe(RpcEventServerMethods):
         await self.event_notifier.unsubscribe(self.channel.id, topics)
         return True
 
-
 pubsub_endpoint = PubSubEndpoint(methods_class=MethodsWithUnsubscribe)
-
-
-# async def publishPubSub():
-#     await asyncio.sleep(1)
-#     await pubsub_endpoint.publish(["guns", "germs"])
-#     await asyncio.sleep(1)
-#     await pubsub_endpoint.publish(["germs"])
-#     await asyncio.sleep(1)
-#     await pubsub_endpoint.publish(["steel"], data={"author": "Jared Diamond"})
-#     await asyncio.sleep(1)
-#     await pubsub_endpoint.publish(["germs"])
-
-
-async def publishRunLog():
-    await pubsub_endpoint.publish(["some_unit/run-log"])
-
-# rpc_endpoint.register_route(router)
 pubsub_endpoint.register_route(router, path="/frontend-pubsub")
 
+async def publishPubSub():
+    await pubsub_endpoint.publish(list(pubsub_endpoint.notifier._topics.keys()))
 
 @router.get("/trigger-pubsub")
 async def trigger_pubsub():
-    # asyncio.create_task(publishPubSub())
-    asyncio.create_task(publishRunLog())
+    asyncio.create_task(publishPubSub())
 
