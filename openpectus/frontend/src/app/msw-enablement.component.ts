@@ -24,7 +24,7 @@ export class MswEnablementComponent implements OnInit {
 
   ngOnInit() {
     if(MswEnablement.isEnabled) {
-      setInterval(() => this.pubSubService.triggerPubsub().subscribe(), 3000);
+      setInterval(() => this.pubSubService.triggerPublishMsw().subscribe(), 3000);
     }
   }
 

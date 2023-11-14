@@ -44,7 +44,7 @@ export class MethodEditorEffects {
   subscribeForUpdatesFromBackend = createEffect(() => this.actions.pipe(
     ofType(MethodEditorActions.methodEditorComponentInitializedForUnit),
     mergeMap(({unitId}) => {
-      return this.pubSubService.subscribeRunLog(unitId).pipe(
+      return this.pubSubService.subscribeMethod(unitId).pipe(
         takeUntil(this.actions.pipe(ofType(MethodEditorActions.methodEditorComponentDestroyed))),
         map(_ => MethodEditorActions.methodUpdatedOnBackend({unitId})),
       );

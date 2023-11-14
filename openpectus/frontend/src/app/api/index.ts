@@ -33,6 +33,7 @@ export { ProcessValueCommandChoiceValue } from './models/ProcessValueCommandChoi
 export { ProcessValueCommandFreeTextValue } from './models/ProcessValueCommandFreeTextValue';
 export type { ProcessValueCommandNumberValue } from './models/ProcessValueCommandNumberValue';
 export { ProcessValueType } from './models/ProcessValueType';
+export { PubSubTopic } from './models/PubSubTopic';
 export { Ready } from './models/Ready';
 export type { RunLog } from './models/RunLog';
 export type { RunLogLine } from './models/RunLogLine';
