@@ -10,4 +10,8 @@ export class PubSubService {
   subscribeRunLog(unitId: string) {
     return this.client.forTopic(`${unitId}/run-log`);
   }
+
+  subscribeMethod(unitId: string) {
+    return this.client.forTopic(`${unitId}/method`);
+  }
 }
