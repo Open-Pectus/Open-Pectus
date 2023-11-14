@@ -1,12 +1,9 @@
 import asyncio
-from fastapi_websocket_rpc.rpc_methods import RpcMethodsBase
-from fastapi_websocket_rpc.websocket_rpc_endpoint import WebsocketRPCEndpoint
 from fastapi_websocket_pubsub import PubSubEndpoint
 from fastapi.routing import APIRouter
 
 
 from fastapi_websocket_pubsub.rpc_event_methods import RpcEventServerMethods
-from fastapi_websocket_pubsub.websocket_rpc_event_notifier import WebSocketRpcEventNotifier
 from fastapi_websocket_pubsub.event_notifier import TopicList
 
 # set RPC to log like UVICORN
@@ -38,11 +35,14 @@ class MethodsWithUnsubscribe(RpcEventServerMethods):
         await self.event_notifier.unsubscribe(self.channel.id, topics)
         return True
 
+
 pubsub_endpoint = PubSubEndpoint(methods_class=MethodsWithUnsubscribe)
 pubsub_endpoint.register_route(router, path="/frontend-pubsub")
 
 async def publishPubSub():
-    await pubsub_endpoint.publish(list(pubsub_endpoint.notifier._topics.keys()))
+    topics_subscribed_to = list(pubsub_endpoint.notifier._topics.keys())
+    msw_topics_subscribed_to = [topic for topic in topics_subscribed_to if topic.startswith('MSW_')]
+    await pubsub_endpoint.publish(msw_topics_subscribed_to)
 
 @router.get("/trigger-pubsub")
 async def trigger_pubsub():

@@ -47,7 +47,7 @@ let systemState = SystemState.Running;
 const processUnits: ProcessUnit[] = [
   {
     name: 'Some unit',
-    id: 'some_unit',
+    id: 'MSW_some_unit',
     location: 'Some place',
     runtime_msec: 59999,
     state: {
@@ -58,7 +58,7 @@ const processUnits: ProcessUnit[] = [
   },
   {
     name: 'Some other unit with a long title',
-    id: 'some_other_unit',
+    id: 'MSW_some_other_unit',
     location: 'Some place else',
     runtime_msec: 456498,
     state: {
@@ -68,7 +68,7 @@ const processUnits: ProcessUnit[] = [
   },
   {
     name: 'Some third unit',
-    id: 'some_third_unit',
+    id: 'MSW_some_third_unit',
     location: 'Some third place',
     runtime_msec: 12365,
     state: {
@@ -79,7 +79,7 @@ const processUnits: ProcessUnit[] = [
   },
   {
     name: 'A fourth for linebreak',
-    id: 'a_fourth',
+    id: 'MSW_a_fourth',
     location: 'Narnia',
     runtime_msec: 85264,
     state: {
