@@ -42,28 +42,6 @@ const reducer = createReducer(initialState,
   on(DetailsActions.controlStateFetched, (state, {controlState}) => produce(state, draft => {
     draft.controlState = controlState;
   })),
-  on(DetailsActions.processUnitCommandButtonClicked, (state, {command}) => produce(state, draft => {
-    switch(command) {
-      case 'Start':
-        draft.controlState.is_running = true;
-        break;
-      case 'Pause':
-        draft.controlState.is_paused = true;
-        break;
-      case 'Unpause':
-        draft.controlState.is_paused = false;
-        break;
-      case 'Hold':
-        draft.controlState.is_holding = true;
-        break;
-      case 'Unhold':
-        draft.controlState.is_holding = false;
-        break;
-      case 'Stop':
-        draft.controlState.is_running = false;
-        break;
-    }
-  })),
   on(DetailsActions.batchJobFetched, (state, {batchJob}) => produce(state, draft => {
     draft.batchJob = batchJob;
   })),

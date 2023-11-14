@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
+import { firstValueFrom } from 'rxjs';
 import { selectRouteParam } from '../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from './details-routing-url-parts';
 import { DetailsActions } from './ngrx/details.actions';
@@ -26,8 +27,10 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
 
   constructor(private store: Store) {}
 
-  ngOnInit() {
-    this.store.dispatch(DetailsActions.unitDetailsInitialized());
+  async ngOnInit() {
+    const unitId = await firstValueFrom(this.unitId);
+    if(unitId === undefined) throw Error('UnitDetailsComponent initialized without a process unit id in url');
+    this.store.dispatch(DetailsActions.unitDetailsInitialized({unitId}));
   }
 
   ngOnDestroy() {

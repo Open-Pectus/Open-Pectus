@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { DetailsSelectors } from './ngrx/details.selectors';
+import { DetailsSelectors } from '../ngrx/details.selectors';
 
 
 @Component({

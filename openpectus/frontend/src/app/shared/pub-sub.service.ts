@@ -14,4 +14,8 @@ export class PubSubService {
   subscribeMethod(unitId: string) {
     return this.client.forTopic(`${unitId}/method`);
   }
+
+  subscribeControlState(unitId: string) {
+    return this.client.forTopic(`${unitId}/control-state`);
+  }
 }

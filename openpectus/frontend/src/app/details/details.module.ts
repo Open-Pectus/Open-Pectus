@@ -16,10 +16,10 @@ import { ProcessDiagramComponent } from './process-diagram.component';
 import { ProcessPlotModule } from './process-plot/process-plot.module';
 import { ProcessValuesModule } from './process-values/process-values.module';
 import { RunLogModule } from './run-log/run-log.module';
-import { UnitControlButtonComponent } from './unit-control-button.component';
-import { UnitControlsComponent } from './unit-controls.component';
 import { UnitDetailsComponent } from './unit-details.component';
-import { UnitHeaderComponent } from './unit-header.component';
+import { UnitControlButtonComponent } from './unit-header/unit-control-button.component';
+import { UnitControlsComponent } from './unit-header/unit-controls.component';
+import { UnitHeaderComponent } from './unit-header/unit-header.component';
 
 @NgModule({
   declarations: [
