@@ -48,6 +48,11 @@ class RegisterEngineMsg(MessageBase):
     # uod file hash, file change date
 
 
+class RegisterEngineReplyMsg(MessageBase):
+    success: bool
+    client_id: str | None
+
+
 class ReadingCommand(MessageBase):
     name: str
     command: str
@@ -149,6 +154,24 @@ class MethodMsg(MessageBase):
 
 MethodMsg.update_forward_refs()
 
+
+def serialize(msg: MessageBase) -> dict[str, Any]:
+    json_dict = msg.dict()
+    json_dict["_type"] = type(msg).__name__
+    return json_dict
+
+
+def deserialize(json_dict: dict[str, Any]) -> MessageBase:
+    if "_type" not in json_dict.keys():
+        raise ValueError("Deserialization error. Key '_type' missing.")
+    message_type = json_dict["_type"]    
+    cls = getattr(messages_namespace, message_type)
+    msg = cls(**json_dict)
+    assert isinstance(msg, MessageBase)
+    return msg
+
+
+# TODO remove these
 
 def serialize_msg(msg: MessageBase) -> Tuple[str, Dict[str, Any]]:
     return type(msg).__name__, msg.dict()
