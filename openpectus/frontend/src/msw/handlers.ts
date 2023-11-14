@@ -513,21 +513,23 @@ export const handlers = [
   }),
 
   http.get('/api/process_unit/:unitId/method', () => {
+    const lines = [
+      {id: 'a', content: '{'},
+      {id: 'b', content: ' "watch": "some condition",'},
+      {id: 'c', content: ' "some unrun": "line",'},
+      {id: 'd', content: ' "injected": "line",'},
+      {id: 'e', content: ' "another": "line",'},
+      {id: 'f', content: ' "yet another": "line"'},
+      {id: 'g', content: '}'},
+    ];
     const result = HttpResponse.json<Method>({
-      lines: [
-        {id: 'a', content: '{'},
-        {id: 'b', content: ' "watch": "some condition",'},
-        {id: 'c', content: ' "some unrun": "line",'},
-        {id: 'd', content: ' "injected": "line",'},
-        {id: 'e', content: ' "another": "line",'},
-        {id: 'f', content: ' "yet another": "line"'},
-        {id: 'g', content: '}'},
-      ],
+      lines: lines,
       started_line_ids: startedLines.map(no => (no + 9).toString(36)),
       executed_line_ids: executedLines.map(no => (no + 9).toString(36)),
       injected_line_ids: ['d'],
     });
-    executedLines.push((executedLines.at(-1) ?? 0) + 1);
+    const lastExecutedLine = executedLines.at(-1) ?? 0;
+    if(lastExecutedLine < lines.length) executedLines.push(lastExecutedLine + 1);
     return result;
   }),
 
