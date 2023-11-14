@@ -1,14 +1,16 @@
 from __future__ import annotations
 import logging
 from typing import Awaitable, Callable, Dict
+from fastapi import APIRouter, FastAPI, Request
 import requests
-import httpx
 
 from fastapi_websocket_rpc.websocket_rpc_endpoint import WebsocketRPCEndpoint
 from fastapi_websocket_rpc.websocket_rpc_client import WebSocketRpcClient, RpcMethodsBase
 
 import openpectus.protocol.messages as M
 
+AGGREGATOR_RPC_WS_PATH = "/AE_rpc"
+AGGREGATOR_POST_PATH = "/AE_post"
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +44,7 @@ class AE_AggregatorDispatcher():
     def set_post_handler(self, message_type: type, handler: MessageHandler):
         raise NotImplementedError()
 
-    def unset_post_handler(self, message_type: type, handler: MessageHandler):
+    def unset_post_handler(self, message_type: type):
         raise NotImplementedError()
 
 
@@ -71,13 +73,15 @@ class AE_EngineDispatcher_Impl(AE_EngineDispatcher):
             """ Dispath message to registered handler. """
             return await self.disp._dispatch_message(message)
 
-    def __init__(self, post_url: str, ws_url: str) -> None:
+    def __init__(self, aggregator_host: str) -> None:
         super().__init__()
 
-        self.post_url = post_url
+        # TODO consider https/wss
+        self.post_url = f"http://{aggregator_host}{AGGREGATOR_POST_PATH}"
+        rpc_url = f"ws://{aggregator_host}{AGGREGATOR_RPC_WS_PATH}"
 
         rpc_methods = AE_EngineDispatcher_Impl.EngineRpcMethods(self)
-        self.rpc_client = WebSocketRpcClient(uri=ws_url, methods=rpc_methods)
+        self.rpc_client = WebSocketRpcClient(uri=rpc_url, methods=rpc_methods)
 
         self._handlers: Dict[str, MessageHandler] = {}
 
@@ -116,15 +120,28 @@ class AE_EngineDispatcher_Impl(AE_EngineDispatcher):
 
 
 class AE_AggregatorDispatcher_Impl(AE_AggregatorDispatcher):
-    def __init__(self) -> None:
+    def __init__(self, router: APIRouter | FastAPI) -> None:
         super().__init__()
 
         self.endpoint = WebsocketRPCEndpoint()
+        self.endpoint.register_route(router, path=AGGREGATOR_RPC_WS_PATH)
         self._handlers: Dict[str, MessageHandler] = {}
+        self.register_post_route(router)
 
     async def rpc_call(self, message: M.MessageBase) -> M.MessageBase:
-        response = await self.endpoint.other._dispatch_message(message=message)
+        response = await self.endpoint.other._dispatch_message(message=message)  # type: ignore
         return response
+
+    def register_post_route(self, router: APIRouter | FastAPI):
+        @router.post(AGGREGATOR_POST_PATH)
+        async def post(request: Request):
+            request_json = await request.json()
+            message = M.deserialize(request_json)
+
+            response_message = await self._dispatch_post(message)
+            
+            message_json = M.serialize(response_message)
+            return message_json
 
     async def _dispatch_post(self, message: M.MessageBase) -> M.MessageBase:
         """ Dispath message to registered handler. """
@@ -141,7 +158,12 @@ class AE_AggregatorDispatcher_Impl(AE_AggregatorDispatcher):
             return M.ProtocolErrorMessage(protocol_mgs="Dispatch failed. No handler registered.")
 
     def set_post_handler(self, message_type: type, handler: MessageHandler):
-        raise NotImplementedError()
+        """ Set handler for message_type. """
+        if message_type.__name__ in self._handlers.keys():
+            logger.error(f"Handler for message type {message_type} is already set.")
+        self._handlers[message_type.__name__] = handler
 
-    def unset_post_handler(self, message_type: type, handler: MessageHandler):
-        raise NotImplementedError()
+    def unset_post_handler(self, message_type: type):
+        """ Unset handler for message_type. """
+        if message_type.__name__ in self._handlers.keys():
+            del self._handlers[message_type.__name__]
