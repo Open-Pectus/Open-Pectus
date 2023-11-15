@@ -15,12 +15,12 @@ export interface PubSubPromiseClientConfig {
 export class PubSubClient {
   // TODO: handle subscriptions on ALL_TOPICS key
 
-  rpcClient = new WebsocketRpcClient(this.config.uri, {
+  private readonly _callbacks: { [topic: string]: PubSubCallback[] | undefined } = {};
+  private readonly rpcClient = new WebsocketRpcClient(this.config.uri, {
     notify: (subscription: RpcSubscription, data: unknown) => {
       this.getCallbacks(subscription.topic).forEach(callback => callback({data, topic: subscription.topic}));
     },
   });
-  private readonly _callbacks: { [topic: string]: PubSubCallback[] | undefined } = {};
 
   constructor(private config: PubSubPromiseClientConfig) {}
 

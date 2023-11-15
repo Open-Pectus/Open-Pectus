@@ -13,7 +13,12 @@ export class WebsocketRpcClient {
     this.methods = extendWithBaseMethods(methods);
   }
 
-  async waitForReady() {
+  async call(method: string, args: Object = {}) {
+    await this.waitForReady();
+    return await this.channel.call(method, args);
+  }
+
+  private async waitForReady() {
     switch(this.ws.readyState) {
       case WebSocket.OPEN:
         return Promise.resolve();
@@ -26,10 +31,6 @@ export class WebsocketRpcClient {
         }
         return this.readyPromise;
     }
-  }
-
-  call(method: string, args: Object = {}) {
-    return this.waitForReady().then(() => this.channel.call(method, args));
   }
 
   private async delay(delayMs: number) {

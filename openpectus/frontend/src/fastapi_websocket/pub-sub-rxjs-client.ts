@@ -2,11 +2,9 @@ import { Observable } from 'rxjs';
 import { PubSubCallbackParameters, PubSubClient, PubSubPromiseClientConfig } from './pub-sub-client';
 
 export class PubSubRxjsClient {
-  private promiseClient: PubSubClient;
+  private promiseClient = new PubSubClient(this.config);
 
-  constructor(config: PubSubPromiseClientConfig) {
-    this.promiseClient = new PubSubClient(config);
-  }
+  constructor(private config: PubSubPromiseClientConfig) {}
 
   forTopic(topic: string): Observable<PubSubCallbackParameters> {
     return new Observable(subscriber => {
