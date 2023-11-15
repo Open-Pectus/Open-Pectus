@@ -142,29 +142,6 @@ class ClientData(BaseModel):
 
 ClientData.update_forward_refs()
 
-
-# class AggregatorApi():
-#     """ Represents the Aggregator Rest API service interface """
-
-#     def get_method(self, client_id: str) -> MethodMsg | None:
-#         raise NotImplementedError()
-
-#     async def set_method(self, client_id: str, method: MethodMsg) -> RpcStatusMessage:
-#         raise NotImplementedError()
-
-
-# class AggregatorApiAdapter(AggregatorApi):
-#     def __init__(self, agg: Aggregator) -> None:
-#         super().__init__()
-#         self.agg = agg
-
-#     def get_method(self, client_id: str) -> MethodMsg | None:
-#         raise NotImplementedError()
-
-#     async def set_method(self, client_id: str, method: MethodMsg) -> RpcStatusMessage:
-#         raise NotImplementedError()
-
-
 class Aggregator():
     def __init__(self) -> None:
         logger.debug("Server init")

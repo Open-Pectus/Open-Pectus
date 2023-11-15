@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Response
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.routers.dto as D
 import openpectus.protocol.messages as M
-from openpectus.protocol.aggregator import Aggregator, ChannelInfo
+from openpectus.aggregator.protocol import Aggregator, ChannelInfo
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])

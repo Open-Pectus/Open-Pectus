@@ -4,7 +4,7 @@ from enum import StrEnum, auto
 from typing import Literal, List, Dict
 from pydantic import BaseModel
 
-from openpectus.protocol.aggregator import ReadingDef, TagInfo
+from openpectus.aggregator.protocol import ReadingDef, TagInfo
 
 
 class ServerErrorResponse(BaseModel):

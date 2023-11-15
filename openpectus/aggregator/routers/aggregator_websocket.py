@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 import openpectus.aggregator.deps as agg_deps
-from openpectus.protocol.aggregator import Aggregator
+from openpectus.aggregator.protocol import Aggregator
 
 
 router = APIRouter(tags=["aggregator"])

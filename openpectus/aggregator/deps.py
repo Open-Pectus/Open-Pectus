@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from openpectus.protocol.aggregator import Aggregator, _create_aggregator, _get_aggregator
+from openpectus.aggregator.protocol import Aggregator, _create_aggregator, _get_aggregator
 
 
 def create_aggregator(router: APIRouter):
