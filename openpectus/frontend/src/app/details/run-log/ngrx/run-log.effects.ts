@@ -1,11 +1,11 @@
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { delay, filter, map, of, switchMap } from 'rxjs';
+import { map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
 import { BatchJobService, ProcessUnitService } from '../../../api';
 import { selectRouteParam } from '../../../ngrx/router.selectors';
+import { PubSubService } from '../../../shared/pub-sub.service';
 import { DetailsRoutingUrlParts } from '../../details-routing-url-parts';
-import { DetailsSelectors } from '../../ngrx/details.selectors';
 import { RunLogActions } from './run-log.actions';
 
 // noinspection JSUnusedGlobalSymbols
@@ -31,20 +31,24 @@ export class RunLogEffects {
     }),
   ));
 
-  // TODO: this should happen via websocket, not polling
-  continuouslyPollRunLog = createEffect(() => this.actions.pipe(
-    ofType(RunLogActions.runLogComponentInitializedForUnit, RunLogActions.runLogPolledForUnit),
-    delay(1000),
-    concatLatestFrom(() => this.store.select(DetailsSelectors.shouldPoll)),
-    filter(([_, shouldPoll]) => shouldPoll),
-    switchMap(([{unitId}]) => {
-      if(unitId === undefined) return of();
-      return this.processUnitService.getRunLog(unitId).pipe(
-        map(runLog => RunLogActions.runLogPolledForUnit({runLog, unitId})),
+  subscribeForUpdatesFromBackend = createEffect(() => this.actions.pipe(
+    ofType(RunLogActions.runLogComponentInitializedForUnit),
+    mergeMap(({unitId}) => {
+      return this.pubSubService.subscribeRunLog(unitId).pipe(
+        takeUntil(this.actions.pipe(ofType(RunLogActions.runLogComponentDestroyed))),
+        map(_ => RunLogActions.runLogUpdatedOnBackend({unitId})),
       );
     }),
   ));
 
+  fetchOnUpdateFromBackend = createEffect(() => this.actions.pipe(
+    ofType(RunLogActions.runLogUpdatedOnBackend),
+    mergeMap(({unitId}) => {
+      return this.processUnitService.getRunLog(unitId).pipe(
+        map(runLog => RunLogActions.runLogFetched({runLog})),
+      );
+    }),
+  ));
 
   forceRunLogLineWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(RunLogActions.forceLineButtonClicked),
@@ -66,5 +70,6 @@ export class RunLogEffects {
 
   constructor(private actions: Actions, private store: Store,
               private processUnitService: ProcessUnitService,
-              private batchJobService: BatchJobService) {}
+              private batchJobService: BatchJobService,
+              private pubSubService: PubSubService) {}
 }

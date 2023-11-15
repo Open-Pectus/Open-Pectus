@@ -18,4 +18,5 @@ export class RunLogActions {
   static collapseAll = createAction(source + 'Collapse All');
   static forceLineButtonClicked = createAction(source + 'Force Line Button Clicked', props<{ lineId: number }>());
   static cancelLineButtonClicked = createAction(source + 'Cancel Line Button Clicked', props<{ lineId: number }>());
+  static runLogUpdatedOnBackend = createAction(source + 'Run Log Updated On Backend', props<{ unitId: string }>());
 }

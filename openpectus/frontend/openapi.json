@@ -943,13 +943,54 @@
         }
       }
     },
-    "/api/trigger-pubsub": {
+    "/api/expose-pusub-topics": {
+      "post": {
+        "tags": [
+          "frontend_pubsub"
+        ],
+        "summary": "Expose Pubsub Topics",
+        "description": "This endpoint is just for exposing the topic enum to frontend via autogeneration",
+        "operationId": "expose_pubsub_topics",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PubSubTopic"
+            },
+            "name": "topic",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/trigger-publish-msw": {
       "get": {
         "tags": [
           "frontend_pubsub"
         ],
-        "summary": "Trigger Pubsub",
-        "operationId": "trigger_pubsub",
+        "summary": "Trigger Publish Msw",
+        "description": "Publish to all topics that start with 'MSW_'",
+        "operationId": "trigger_publish_msw",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1678,6 +1719,16 @@
           "choice"
         ],
         "title": "ProcessValueType",
+        "description": "An enumeration."
+      },
+      "PubSubTopic": {
+        "type": "string",
+        "enum": [
+          "run_log",
+          "method",
+          "control_state"
+        ],
+        "title": "PubSubTopic",
         "description": "An enumeration."
       },
       "Ready": {

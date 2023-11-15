@@ -47,7 +47,7 @@ let systemState = SystemState.Running;
 const processUnits: ProcessUnit[] = [
   {
     name: 'Some unit',
-    id: 'some_unit',
+    id: 'MSW_some_unit',
     location: 'Some place',
     runtime_msec: 59999,
     state: {
@@ -58,7 +58,7 @@ const processUnits: ProcessUnit[] = [
   },
   {
     name: 'Some other unit with a long title',
-    id: 'some_other_unit',
+    id: 'MSW_some_other_unit',
     location: 'Some place else',
     runtime_msec: 456498,
     state: {
@@ -68,7 +68,7 @@ const processUnits: ProcessUnit[] = [
   },
   {
     name: 'Some third unit',
-    id: 'some_third_unit',
+    id: 'MSW_some_third_unit',
     location: 'Some third place',
     runtime_msec: 12365,
     state: {
@@ -79,7 +79,7 @@ const processUnits: ProcessUnit[] = [
   },
   {
     name: 'A fourth for linebreak',
-    id: 'a_fourth',
+    id: 'MSW_a_fourth',
     location: 'Narnia',
     runtime_msec: 85264,
     state: {
@@ -513,21 +513,23 @@ export const handlers = [
   }),
 
   http.get('/api/process_unit/:unitId/method', () => {
+    const lines = [
+      {id: 'a', content: '{'},
+      {id: 'b', content: ' "watch": "some condition",'},
+      {id: 'c', content: ' "some unrun": "line",'},
+      {id: 'd', content: ' "injected": "line",'},
+      {id: 'e', content: ' "another": "line",'},
+      {id: 'f', content: ' "yet another": "line"'},
+      {id: 'g', content: '}'},
+    ];
     const result = HttpResponse.json<Method>({
-      lines: [
-        {id: 'a', content: '{'},
-        {id: 'b', content: ' "watch": "some condition",'},
-        {id: 'c', content: ' "some unrun": "line",'},
-        {id: 'd', content: ' "injected": "line",'},
-        {id: 'e', content: ' "another": "line",'},
-        {id: 'f', content: ' "yet another": "line"'},
-        {id: 'g', content: '}'},
-      ],
+      lines: lines,
       started_line_ids: startedLines.map(no => (no + 9).toString(36)),
       executed_line_ids: executedLines.map(no => (no + 9).toString(36)),
       injected_line_ids: ['d'],
     });
-    executedLines.push((executedLines.at(-1) ?? 0) + 1);
+    const lastExecutedLine = executedLines.at(-1) ?? 0;
+    if(lastExecutedLine < lines.length) executedLines.push(lastExecutedLine + 1);
     return result;
   }),
 

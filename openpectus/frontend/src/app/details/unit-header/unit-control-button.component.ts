@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { DetailsActions } from './ngrx/details.actions';
+import { DetailsActions } from '../ngrx/details.actions';
 
 @Component({
   selector: 'app-unit-control-button',
