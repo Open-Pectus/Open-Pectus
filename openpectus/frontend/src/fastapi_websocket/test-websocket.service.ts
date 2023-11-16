@@ -22,9 +22,7 @@ export class TestWebsocketService {
         return a + b;
       },
     });
-    rpcClient.waitForReady().then(() => {
-      rpcClient.call('concat', {a: 'first ', b: 'second'}).then(result => console.debug('concat call result:', result));
-    });
+    rpcClient.call('concat', {a: 'first ', b: 'second'}).then(result => console.debug('concat call result:', result));
   }
 
   testPubSubClient() {

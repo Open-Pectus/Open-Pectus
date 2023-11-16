@@ -25,11 +25,11 @@ const reducer = createReducer(initialState,
   on(MethodEditorActions.methodEditorComponentDestroyed, (state) => {
     return {...initialState, monacoServicesInitialized: state.monacoServicesInitialized};
   }),
-  on(MethodEditorActions.methodFetched, (state, {method}) => produce(state, draft => {
+  on(MethodEditorActions.methodFetchedInitially, (state, {method}) => produce(state, draft => {
     draft.isDirty = false;
     draft.method = method;
   })),
-  on(MethodEditorActions.methodPolledForUnit, (state, {method}) => produce(state, draft => {
+  on(MethodEditorActions.methodFetchedDueToUpdate, (state, {method}) => produce(state, draft => {
     if(!UtilMethods.arrayEquals(draft.method.executed_line_ids, method.executed_line_ids)) {
       draft.method.executed_line_ids = method.executed_line_ids;
     }

@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { MswEnablement } from '../msw/msw-enablement';
+import { FrontendPubsubService } from './api';
 
 @Component({
   selector: 'app-msw-enablement',
@@ -16,8 +17,16 @@ import { MswEnablement } from '../msw/msw-enablement';
     </div>
   `,
 })
-export class MswEnablementComponent {
+export class MswEnablementComponent implements OnInit {
   protected readonly MswEnablement = MswEnablement;
+
+  constructor(private pubSubService: FrontendPubsubService) {}
+
+  ngOnInit() {
+    if(MswEnablement.isEnabled) {
+      setInterval(() => this.pubSubService.triggerPublishMsw().subscribe(), 3000);
+    }
+  }
 
   onButtonClick() {
     MswEnablement.isEnabled = !MswEnablement.isEnabled;

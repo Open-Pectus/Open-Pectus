@@ -1,11 +1,11 @@
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { delay, filter, map, of, switchMap } from 'rxjs';
+import { map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
 import { BatchJobService, ProcessUnitService } from '../../../api';
 import { selectRouteParam } from '../../../ngrx/router.selectors';
+import { PubSubService } from '../../../shared/pub-sub.service';
 import { DetailsRoutingUrlParts } from '../../details-routing-url-parts';
-import { DetailsSelectors } from '../../ngrx/details.selectors';
 import { MethodEditorActions } from './method-editor.actions';
 import { MethodEditorSelectors } from './method-editor.selectors';
 
@@ -29,7 +29,7 @@ export class MethodEditorEffects {
     ofType(MethodEditorActions.methodEditorComponentInitializedForUnit),
     switchMap(({unitId}) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.getMethod(unitId).pipe(map(method => MethodEditorActions.methodFetched({method})));
+      return this.processUnitService.getMethod(unitId).pipe(map(method => MethodEditorActions.methodFetchedInitially({method})));
     }),
   ));
 
@@ -37,23 +37,31 @@ export class MethodEditorEffects {
     ofType(MethodEditorActions.methodEditorComponentInitializedForBatchJob),
     switchMap(({batchJobId}) => {
       if(batchJobId === undefined) return of();
-      return this.batchJobService.getBatchJobMethod(batchJobId).pipe(map(method => MethodEditorActions.methodFetched({method})));
+      return this.batchJobService.getBatchJobMethod(batchJobId).pipe(map(method => MethodEditorActions.methodFetchedInitially({method})));
     }),
   ));
 
-  // TODO: Should be websocket in future, not polling.
-  continuouslyPollMethod = createEffect(() => this.actions.pipe(
-    ofType(MethodEditorActions.methodEditorComponentInitializedForUnit, MethodEditorActions.methodPolledForUnit),
-    delay(10000),
-    concatLatestFrom(() => this.store.select(DetailsSelectors.shouldPoll)),
-    filter(([_, shouldPoll]) => shouldPoll),
-    switchMap(([{unitId}]) => {
-      if(unitId === undefined) return of();
-      return this.processUnitService.getMethod(unitId).pipe(map(method => MethodEditorActions.methodPolledForUnit({method, unitId})));
+  subscribeForUpdatesFromBackend = createEffect(() => this.actions.pipe(
+    ofType(MethodEditorActions.methodEditorComponentInitializedForUnit),
+    mergeMap(({unitId}) => {
+      return this.pubSubService.subscribeMethod(unitId).pipe(
+        takeUntil(this.actions.pipe(ofType(MethodEditorActions.methodEditorComponentDestroyed))),
+        map(_ => MethodEditorActions.methodUpdatedOnBackend({unitId})),
+      );
+    }),
+  ));
+
+  fetchOnUpdateFromBackend = createEffect(() => this.actions.pipe(
+    ofType(MethodEditorActions.methodUpdatedOnBackend),
+    mergeMap(({unitId}) => {
+      return this.processUnitService.getMethod(unitId).pipe(
+        map(method => MethodEditorActions.methodFetchedDueToUpdate({method})),
+      );
     }),
   ));
 
   constructor(private actions: Actions, private store: Store,
               private processUnitService: ProcessUnitService,
-              private batchJobService: BatchJobService) {}
+              private batchJobService: BatchJobService,
+              private pubSubService: PubSubService) {}
 }

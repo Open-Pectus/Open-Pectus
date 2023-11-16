@@ -13,6 +13,7 @@ if(MswEnablement.isEnabled) {
       if(pathname.startsWith('/assets')
          || pathname.startsWith('/node_modules')
          || pathname.startsWith('/src')
+         || pathname.startsWith('/api/trigger-pubsub')
          || pathname.endsWith('.ico')
          || pathname.endsWith('.js')
          || pathname.endsWith('.json')

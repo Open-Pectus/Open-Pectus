@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { catchError, delay, filter, map, mergeMap, of, switchMap } from 'rxjs';
+import { catchError, delay, filter, map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
 import { BatchJobService, CommandSource, ProcessUnitService } from '../../api';
 import { selectRouteParam } from '../../ngrx/router.selectors';
+import { PubSubService } from '../../shared/pub-sub.service';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
 import { DetailsActions } from './details.actions';
 import { DetailsSelectors } from './details.selectors';
@@ -13,9 +14,7 @@ import { DetailsSelectors } from './details.selectors';
 export class DetailsEffects {
   fetchProcessValuesWhenPageInitialized = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.unitDetailsInitialized),
-    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
-    switchMap(([_, unitId]) => {
-      if(unitId === undefined) return of();
+    switchMap(({unitId}) => {
       return this.processUnitService.getProcessValues(unitId).pipe(
         map(processValues => DetailsActions.processValuesFetched({processValues})),
         catchError(() => of(DetailsActions.processValuesFailedToLoad())),
@@ -43,28 +42,29 @@ export class DetailsEffects {
 
   fetchControlStateWhenPageInitialized = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.unitDetailsInitialized),
-    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
-    switchMap(([_, unitId]) => {
-      if(unitId === undefined) return of();
+    switchMap(({unitId}) => {
       return this.processUnitService.getControlState(unitId).pipe(
         map(controlState => DetailsActions.controlStateFetched({controlState})),
       );
     }),
   ));
 
-  // TODO: this should be gotten via push through websocket instead of polling.
-  continuouslyPollControlState = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.unitDetailsInitialized, DetailsActions.controlStatePolled),
-    delay(1500),
-    concatLatestFrom(() => [
-      this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName)),
-      this.store.select(DetailsSelectors.shouldPoll),
-    ]),
-    filter(([_, __, shouldPoll]) => shouldPoll),
-    switchMap(([_, unitId]) => {
-      if(unitId === undefined) return of();
+
+  subscribeForUpdatesFromBackend = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.unitDetailsInitialized),
+    mergeMap(({unitId}) => {
+      return this.pubSubService.subscribeControlState(unitId).pipe(
+        takeUntil(this.actions.pipe(ofType(DetailsActions.unitDetailsDestroyed))),
+        map(_ => DetailsActions.controlStateUpdatedOnBackend({unitId})),
+      );
+    }),
+  ));
+
+  fetchOnUpdateFromBackend = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.controlStateUpdatedOnBackend),
+    mergeMap(({unitId}) => {
       return this.processUnitService.getControlState(unitId).pipe(
-        map(controlState => DetailsActions.controlStatePolled({controlState})),
+        map(controlState => DetailsActions.controlStateFetched({controlState})),
       );
     }),
   ));
@@ -137,5 +137,6 @@ export class DetailsEffects {
   constructor(private actions: Actions,
               private store: Store,
               private processUnitService: ProcessUnitService,
-              private batchJobService: BatchJobService) {}
+              private batchJobService: BatchJobService,
+              private pubSubService: PubSubService) {}
 }
