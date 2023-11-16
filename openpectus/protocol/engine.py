@@ -1,13 +1,14 @@
 from __future__ import annotations
+
 import asyncio
 import logging
 from typing import Any, Awaitable, Callable, Dict
-from fastapi_websocket_rpc.schemas import RpcResponse
+
+import tenacity
 from fastapi_websocket_pubsub import PubSubClient
 from fastapi_websocket_pubsub.rpc_event_methods import RpcEventClientMethods
 from fastapi_websocket_rpc import RpcChannel
-import tenacity
-
+from fastapi_websocket_rpc.schemas import RpcResponse
 from openpectus.protocol.exceptions import ProtocolException
 from openpectus.protocol.messages import (
     MessageBase,
