@@ -50,7 +50,7 @@ class RegisterEngineMsg(MessageBase):
 
 class RegisterEngineReplyMsg(MessageBase):
     success: bool
-    client_id: str | None
+    engine_id: str | None
 
 
 class ReadingCommand(MessageBase):

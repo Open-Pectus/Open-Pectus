@@ -4,8 +4,9 @@ from typing import Awaitable, Callable, Dict
 from fastapi import APIRouter, FastAPI, Request
 import requests
 
-from fastapi_websocket_rpc.websocket_rpc_endpoint import WebsocketRPCEndpoint
+from fastapi_websocket_rpc.websocket_rpc_endpoint import WebsocketRPCEndpoint, RpcChannel
 from fastapi_websocket_rpc.websocket_rpc_client import WebSocketRpcClient, RpcMethodsBase
+from openpectus.protocol.exceptions import ProtocolException
 
 import openpectus.protocol.messages as M
 
@@ -21,9 +22,9 @@ MessageHandler = Callable[[M.MessageBase], Awaitable[M.MessageBase]]
 
 
 class AE_EngineDispatcher():
-    """ Protocol dispatcher for Engine.
+    """ Engine dispatcher for the Aggregator-Engine Protocol.
 
-    Allows sending sync message via HTTP POST and receiving async messages via JSON-RPC.
+    Allows sending messages via HTTP POST and receiving messages via JSON-RPC.
     """
 
     def post(self, message: M.MessageBase) -> M.MessageBase:
@@ -37,8 +38,11 @@ class AE_EngineDispatcher():
 
 
 class AE_AggregatorDispatcher():
+    """ Aggregator dispatcher for the Aggregator-Engine Protocol.
 
-    async def rpc_call(self, message: M.MessageBase) -> M.MessageBase:
+    Allows receiving message via HTTP POST and sending messages via JSON-RPC.
+    """
+    async def rpc_call(self, engine_id: str, message: M.MessageBase) -> M.MessageBase:
         raise NotImplementedError()
 
     def set_post_handler(self, message_type: type, handler: MessageHandler):
@@ -49,7 +53,10 @@ class AE_AggregatorDispatcher():
 
 
 class AF_AggregatorDispatcher():
+    """ Aggregator dispatcher for the Aggregator-Frontend Protocol.
 
+    Allows sending messages via JSON-PubSub.
+    """
     async def publish_msg1(self, message: M.MessageBase):
         raise NotImplementedError()
 
@@ -120,16 +127,31 @@ class AE_EngineDispatcher_Impl(AE_EngineDispatcher):
 
 
 class AE_AggregatorDispatcher_Impl(AE_AggregatorDispatcher):
+    """ Aggregator dispatcher for the Aggregator-Engine Protocol using REST + WebSocket RPC.
+
+    """
     def __init__(self, router: APIRouter | FastAPI) -> None:
         super().__init__()
 
+        self.engine_map: Dict[str, RpcChannel] = {}
         self.endpoint = WebsocketRPCEndpoint()
         self.endpoint.register_route(router, path=AGGREGATOR_RPC_WS_PATH)
         self._handlers: Dict[str, MessageHandler] = {}
         self.register_post_route(router)
 
-    async def rpc_call(self, message: M.MessageBase) -> M.MessageBase:
-        response = await self.endpoint.other._dispatch_message(message=message)  # type: ignore
+    # TODO handle client_id/engine_id => channel map
+    # async def on_client_connect(self, channel: RpcChannel, _):
+    #     pass
+
+    # async def on_client_disconnect(self, channel: RpcChannel, _):
+    #     pass
+
+    async def rpc_call(self, engine_id: str, message: M.MessageBase) -> M.MessageBase:
+        if engine_id not in self.engine_map.keys():
+            raise ProtocolException("Unknown engine: " + engine_id)
+
+        channel = self.engine_map[engine_id]
+        response = await channel.other._dispatch_message(message=message)  # type: ignore
         return response
 
     def register_post_route(self, router: APIRouter | FastAPI):
@@ -139,7 +161,7 @@ class AE_AggregatorDispatcher_Impl(AE_AggregatorDispatcher):
             message = M.deserialize(request_json)
 
             response_message = await self._dispatch_post(message)
-            
+
             message_json = M.serialize(response_message)
             return message_json
 
