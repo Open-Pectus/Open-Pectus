@@ -63,8 +63,6 @@ class AF_AggregatorDispatcher():
     async def publish_msg2(self, message: M.MessageBase):
         raise NotImplementedError()
 
-# engine should post Register (which returns client_id), then register handlers, then post Ready
-
 
 # ---------- Implementations -----------
 
