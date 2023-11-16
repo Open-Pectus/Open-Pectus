@@ -16,7 +16,7 @@ logger = get_logger("Test")
 
 # rpc_logger.logging_config.set_mode(rpc_logger.LoggingModes.UVICORN, rpc_logger.logging.DEBUG)
 
-PORT = 7994
+PORT = 7995
 aggregator_host = f"localhost:{PORT}"
 trigger_url = f"http://localhost:{PORT}/trigger"
 
