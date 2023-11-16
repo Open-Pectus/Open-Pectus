@@ -1,0 +1,44 @@
+import os
+
+import uvicorn
+from fastapi import FastAPI
+from fastapi.routing import APIRoute
+from openpectus.aggregator.frontend_ws import frontend_pubsub
+from openpectus.aggregator.routers import process_unit, batch_job, aggregator_websocket, auth
+from openpectus.aggregator.spa import SinglePageApplication
+
+
+class Aggregator:
+    default_title = "Pectus Aggregator"
+    default_frontend_dist_dir = os.path.join(os.path.dirname(__file__), "frontend-dist")
+    default_host = "127.0.0.1"
+    default_port = 9800
+
+    def __init__(self, title: str = default_title, host: str = default_host, port: int = default_port, frontend_dist_dir: str = default_frontend_dist_dir):
+        self.title = title
+        self.host = host
+        self.port = port
+        self.frontend_dist_dir = frontend_dist_dir
+        self.setup_fastapi()
+
+    def setup_fastapi(self):
+        api_prefix = "/api"
+
+        def custom_generate_unique_id(route: APIRoute):
+            return f"{route.name}"
+        self.fastapi = FastAPI(title=self.title, generate_unique_id_function=custom_generate_unique_id)
+        self.fastapi.include_router(process_unit.router, prefix=api_prefix)
+        self.fastapi.include_router(batch_job.router, prefix=api_prefix)
+        self.fastapi.include_router(aggregator_websocket.router)
+        self.fastapi.include_router(frontend_pubsub.router, prefix=api_prefix)
+        self.fastapi.include_router(auth.router, prefix='/auth')
+        if not os.path.exists(self.frontend_dist_dir):
+            raise FileNotFoundError("frontend_dist_dir not found: " + self.frontend_dist_dir)
+        self.fastapi.mount("/", SinglePageApplication(directory=self.frontend_dist_dir))
+
+
+
+
+    def start(self):
+        print(f"Serving frontend at http://{self.host}:{self.port}")
+        uvicorn.run(self.fastapi, host=self.host, port=self.port)
