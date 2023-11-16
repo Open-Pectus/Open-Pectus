@@ -1,4 +1,5 @@
 import asyncio
+import random
 import unittest
 from multiprocessing import Process
 from unittest import IsolatedAsyncioTestCase
@@ -16,7 +17,8 @@ logger = get_logger("Test")
 
 # rpc_logger.logging_config.set_mode(rpc_logger.LoggingModes.UVICORN, rpc_logger.logging.DEBUG)
 
-PORT = 7995
+
+PORT = random.randint(7000, 10000)
 aggregator_host = f"localhost:{PORT}"
 trigger_url = f"http://localhost:{PORT}/trigger"
 
