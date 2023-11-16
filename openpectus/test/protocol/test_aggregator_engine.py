@@ -14,7 +14,7 @@ from fastapi_websocket_pubsub import PubSubClient, PubSubEndpoint
 import openpectus.aggregator.deps as agg_deps
 from openpectus.aggregator.routers import aggregator_websocket
 from openpectus.protocol.engine import create_client, Client
-from openpectus.protocol.aggregator import Aggregator, TagsInfo
+from openpectus.aggregator.protocol import Aggregator, TagsInfo
 from openpectus.protocol.messages import (
     MessageBase,
     RegisterEngineMsg,
