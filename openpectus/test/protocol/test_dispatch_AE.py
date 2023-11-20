@@ -1,8 +1,9 @@
 import asyncio
-import random
+import time
 import unittest
 from multiprocessing import Process
 from unittest import IsolatedAsyncioTestCase
+import requests
 
 import uvicorn
 from fastapi import FastAPI, Request
@@ -14,15 +15,13 @@ import openpectus.protocol.messages as M
 
 
 logger = get_logger("Test")
-
 # rpc_logger.logging_config.set_mode(rpc_logger.LoggingModes.UVICORN, rpc_logger.logging.DEBUG)
 
 
-#PORT = random.randint(7000, 10000)
 PORT = 7795
 aggregator_host = f"localhost:{PORT}"
 trigger_url = f"http://localhost:{PORT}/trigger"
-
+health_url = f"http://{aggregator_host}/health"
 
 # def setup_server_rest_route(app, endpoint: WebsocketRPCEndpoint):
 #     @app.get("/trigger")
@@ -34,8 +33,17 @@ trigger_url = f"http://localhost:{PORT}/trigger"
 #         return "triggered"
 
 
+def setup_server_health(app):
+    @app.get("/health")
+    def health():
+        logger.info("Health endpoint hit")
+        return "OK"
+
+
 def setup_server():
     app = FastAPI()
+
+    setup_server_health(app)
 
     # dispatcher sets up websocket endpoint
     aggregator_disp = AE_AggregatorDispatcher_Impl(app)
@@ -60,12 +68,23 @@ def server():
     proc.kill()  # Cleanup after test
 
 
-class UvicornAsyncTestCase(IsolatedAsyncioTestCase):
+def wait_for_url_ok(url: str, timeout_seconds=5):
+    start_time = time.time()
+    while time.time() < start_time + timeout_seconds:
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                return
+        except Exception:
+            time.sleep(0.1)
+    raise TimeoutError(f"Url {url} did respond in time")
+
+
+class FastAPIAsyncTestCase(IsolatedAsyncioTestCase):
     def __init__(self, methodName: str = "runTest") -> None:
         super().__init__(methodName)
         self.DEBUG = True
         self.server_process: Process | None = None
-        self.startup = asyncio.Event()
 
     async def asyncSetUp(self):
         if self.DEBUG:
@@ -73,8 +92,11 @@ class UvicornAsyncTestCase(IsolatedAsyncioTestCase):
         self.server_process = Process(target=setup_server, args=(), daemon=True)
         self.server_process.start()
         if self.DEBUG:
-            print("*** Server process started", flush=True)
-        await asyncio.sleep(0.1)
+            print("*** Server process initiated", flush=True)
+
+        wait_for_url_ok(health_url, 5)
+
+        print("*** Server app started", flush=True)
 
     async def asyncTearDown(self):
         if self.DEBUG:
@@ -86,7 +108,7 @@ class UvicornAsyncTestCase(IsolatedAsyncioTestCase):
                 self.server_process.kill()
 
 
-class TestAE_EngineDispatcher_Impl(UvicornAsyncTestCase):
+class TestAE_EngineDispatcher_Impl(FastAPIAsyncTestCase):
 
     def test_post(self):
         print("*** test_post: start", flush=True)
