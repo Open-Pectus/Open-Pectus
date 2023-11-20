@@ -87,9 +87,12 @@ class UvicornAsyncTestCase(IsolatedAsyncioTestCase):
 class TestAE_EngineDispatcher_Impl(UvicornAsyncTestCase):
 
     def test_post(self):
+        print("*** test_post: start", flush=True)
         disp = AE_EngineDispatcher_Impl(aggregator_host)
         msg = M.RegisterEngineMsg(uod_name="uod1", computer_name="pc1")
+        print("*** test_post: post", flush=True)
         result = disp.post(msg)
+        print("*** test_post: post successful", flush=True)
         assert isinstance(result, M.RegisterEngineReplyMsg), f"Got type {type(result)}"
         self.assertEqual(result.success, True)
         self.assertEqual(result.engine_id, "1234")
