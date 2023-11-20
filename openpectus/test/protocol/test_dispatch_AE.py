@@ -74,7 +74,7 @@ class UvicornAsyncTestCase(IsolatedAsyncioTestCase):
         self.server_process.start()
         if self.DEBUG:
             print("*** Server process started", flush=True)
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0)
 
     async def asyncTearDown(self):
         if self.DEBUG:
