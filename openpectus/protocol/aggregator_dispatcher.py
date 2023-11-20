@@ -4,7 +4,7 @@ from typing import Dict
 import openpectus.protocol.messages as M
 from fastapi import APIRouter, FastAPI, Request
 from fastapi_websocket_rpc import RpcChannel, WebsocketRPCEndpoint
-from openpectus.protocol.dispatch_interface import AGGREGATOR_RPC_WS_PATH, AGGREGATOR_POST_PATH, MessageHandler
+from openpectus.protocol.dispatch_interface import AGGREGATOR_RPC_WS_PATH, AGGREGATOR_REST_PATH, MessageHandler
 from openpectus.protocol.exceptions import ProtocolException
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ class AggregatorDispatcher():
         self.router = APIRouter(tags=["aggregator"])
         self.engine_map: Dict[str, RpcChannel] = {}
         self.endpoint = WebsocketRPCEndpoint()
-        self.endpoint.register_route(router, path=AGGREGATOR_RPC_WS_PATH)
+        self.endpoint.register_route(self.router, path=AGGREGATOR_RPC_WS_PATH)
         self._handlers: Dict[str, MessageHandler] = {}
         self.register_post_route(self.router)
 
@@ -41,7 +41,7 @@ class AggregatorDispatcher():
         return response
 
     def register_post_route(self, router: APIRouter | FastAPI):
-        @router.post(AGGREGATOR_POST_PATH)
+        @router.post(AGGREGATOR_REST_PATH)
         async def post(request: Request):
             request_json = await request.json()
             message = M.deserialize(request_json)

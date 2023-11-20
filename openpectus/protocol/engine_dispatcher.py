@@ -4,7 +4,7 @@ from typing import Dict
 import openpectus.protocol.messages as M
 import requests
 from fastapi_websocket_rpc import RpcMethodsBase, WebSocketRpcClient
-from openpectus.protocol.dispatch_interface import AGGREGATOR_POST_PATH, AGGREGATOR_RPC_WS_PATH, MessageHandler
+from openpectus.protocol.dispatch_interface import AGGREGATOR_REST_PATH, AGGREGATOR_RPC_WS_PATH, MessageHandler
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ class EngineDispatcher():
         super().__init__()
 
         # TODO consider https/wss
-        self.post_url = f"http://{aggregator_host}{AGGREGATOR_POST_PATH}"
+        self.post_url = f"http://{aggregator_host}{AGGREGATOR_REST_PATH}"
         rpc_url = f"ws://{aggregator_host}{AGGREGATOR_RPC_WS_PATH}"
 
         rpc_methods = EngineDispatcher.EngineRpcMethods(self)

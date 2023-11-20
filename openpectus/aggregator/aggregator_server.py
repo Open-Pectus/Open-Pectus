@@ -1,4 +1,5 @@
 import os
+from typing import List
 
 import uvicorn
 from openpectus.aggregator.deps import _create_aggregator

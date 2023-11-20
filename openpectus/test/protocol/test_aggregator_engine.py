@@ -39,7 +39,7 @@ logging.getLogger('asyncio').setLevel(logging.ERROR)
 
 
 PORT = 7990
-ws_url = f"ws://localhost:{PORT}/engine-pubsub"
+ws_url = f"ws://localhost:{PORT}/{AGGREGATOR_RPC_WS_PATH}"
 trigger_url = f"http://localhost:{PORT}/trigger"
 trigger_send_url = f"http://localhost:{PORT}/trigger_send"
 health_url = f"http://localhost:{PORT}/health"

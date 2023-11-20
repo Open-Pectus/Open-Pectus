@@ -1,12 +1,13 @@
+import logging
 from datetime import datetime
 from typing import List
-import logging
-from fastapi import APIRouter, Depends, Response
 
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.routers.dto as D
 import openpectus.protocol.messages as M
-from openpectus.aggregator.models.models import Aggregator, ChannelInfo
+from fastapi import APIRouter, Depends, Response
+from openpectus.aggregator.aggregator import Aggregator
+from openpectus.aggregator.models.models import ChannelInfo
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])

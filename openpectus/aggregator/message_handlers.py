@@ -1,5 +1,5 @@
-from protocol.aggregator_dispatcher import AggregatorDispatcher
-from protocol.messages import RegisterEngineMsg, UodInfoMsg, TagsUpdatedMsg, RunLogMsg, ControlStateMsg
+from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
+from openpectus.protocol.messages import RegisterEngineMsg, UodInfoMsg, TagsUpdatedMsg, RunLogMsg, ControlStateMsg, SuccessMessage, ErrorMessage
 
 
 class MessageHandlers:

@@ -1,7 +1,7 @@
-from openpectus.aggregator.models.models import EngineData
 from openpectus.aggregator.message_handlers import MessageHandlers
-from fastapi_websocket_rpc import WebsocketRPCEndpoint
+from openpectus.aggregator.models.models import EngineData
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
+from openpectus.protocol.messages import RegisterEngineMsg, MethodMsg
 
 
 class Aggregator:
