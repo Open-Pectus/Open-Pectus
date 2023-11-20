@@ -48,6 +48,7 @@ def setup_server():
 
     # endpoint = WebsocketRPCEndpoint(methods=server_proxy)
     # endpoint.register_route(app, path="/test-rpc")
+    print(f"*** Starting uvicorn on port {PORT}", flush=True)
     uvicorn.run(app, port=PORT)
 
 
