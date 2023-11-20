@@ -7,13 +7,13 @@ import openpectus.aggregator.routers.dto as D
 import openpectus.protocol.messages as M
 from fastapi import APIRouter, Depends, Response
 from openpectus.aggregator.aggregator import Aggregator
-from openpectus.aggregator.models.models import ChannelInfo
+from openpectus.aggregator.models.models import EngineData
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])
 
 
-def create_pu(item: ChannelInfo) -> D.ProcessUnit:
+def create_pu(item: EngineData) -> D.ProcessUnit:
     # TODO define source of all fields
     unit = D.ProcessUnit(
         id=item.engine_id or "(error)",

@@ -1,4 +1,3 @@
-from openpectus.aggregator.message_handlers import MessageHandlers
 from openpectus.aggregator.models.models import EngineData
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.protocol.messages import RegisterEngineMsg, MethodMsg
@@ -11,7 +10,6 @@ class Aggregator:
         self.engine_data_map: Dict[str, EngineData] = {}
         """ all client data except channels, indexed by engine_id """
         self.dispatcher = dispatcher
-        self.message_handler = MessageHandlers(dispatcher)
 
     @staticmethod
     def create_engine_id(register_engine_msg: RegisterEngineMsg):

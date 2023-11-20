@@ -15,15 +15,6 @@ class ChannelStatusEnum(StrEnum):
     Disconnected = auto()
 
 
-@dataclass
-class ChannelInfo:
-    engine_id: str | None
-    engine_name: str
-    uod_name: str
-    channel: RpcChannel
-    status: ChannelStatusEnum = ChannelStatusEnum.Unknown
-
-
 TagValueType = int | float | str | None
 """ Represents the possible types of a tag value"""
 
@@ -56,7 +47,6 @@ class TagsInfo(BaseModel):
                 logger.warning(f"Tag '{name}' changed unit from '{current.value_unit}' to '{unit}'. This is unexpected")
 
 
-
 class ReadingCommand(BaseModel):
     name: str
     command: str
@@ -69,10 +59,10 @@ class ReadingDef(BaseModel):
     commands: List[ReadingCommand]
 
 
-
-
 class EngineData(BaseModel):
     engine_id: str
+    computer_name: str
+    uod_name: str
     readings: List[ReadingDef] = []
     tags_info: TagsInfo = TagsInfo(map={})
     runlog: RunLogMsg = RunLogMsg.default()

@@ -1,62 +1,85 @@
 import unittest
+from unittest.mock import Mock, AsyncMock, MagicMock, PropertyMock
+
 from openpectus.aggregator.aggregator import Aggregator
-from openpectus.protocol.messages import RegisterEngineMsg, SuccessMessage, ErrorMessage
-from fastapi_websocket_rpc.rpc_channel import RpcChannel, RpcMethodsBase
+from openpectus.aggregator.message_handlers import MessageHandlers
+from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
+from openpectus.protocol.messages import RegisterEngineMsg, SuccessMessage, ErrorMessage, RegisterEngineReplyMsg
 
 
 class AggregatorTest(unittest.IsolatedAsyncioTestCase):
 
-    async def connectAggregator(self, aggregator: Aggregator, channel_id: str):
-        await aggregator.on_connect(RpcChannel(RpcMethodsBase(), None, channel_id))
+    async def create_channel_mock(self, engine_id):
+        return Mock(close=AsyncMock(), other=Mock(get_engine_id=Mock(return_value=engine_id)))
 
-    async def disconnectAggregator(self, aggregator: Aggregator, channel_id: str):
-        channel_info = aggregator.get_channel(channel_id)
-        if channel_info is not None:
-            await aggregator.on_disconnect(channel_info.channel)
+    async def connectRpc(self, dispatcher: AggregatorDispatcher, engine_id: str = None):
+        channel = await self.create_channel_mock(engine_id)
+        await dispatcher.on_client_connect(channel)
+        return channel
 
-    # TODO: can we test how many engines the aggregator would serve to frontend in the difference cases?
+    async def disconnectRpc(self, dispatcher: AggregatorDispatcher, engine_id: str):
+        channel = dispatcher.engine_id_channel_map[engine_id]
+        await dispatcher.on_client_disconnect(channel)
 
-    async def test_register_engine_same_shannel(self):
-        channel_id = 'test-channel'
-        aggregator = Aggregator()
+    async def test_register_engine(self):
+        dispatcher = AggregatorDispatcher()
+        aggregator = Aggregator(dispatcher)
+        messageHandlers = MessageHandlers(aggregator)
         register_engine_msg = RegisterEngineMsg(computer_name='computer-name', uod_name='uod-name')
+        engine_id = Aggregator.create_engine_id(register_engine_msg)
 
-        await self.connectAggregator(aggregator, channel_id)
+        # connecting rpc with no response for engine id should close connection
+        channel = await self.connectRpc(dispatcher, None)
+        channel.close.assert_called()
 
         # registering while not registered before should succceed
-        result = await aggregator.handle_RegisterEngineMsg(channel_id, register_engine_msg)
-        self.assertIsInstance(result, SuccessMessage)
+        resultMessage = await dispatcher._dispatch_post(register_engine_msg)
+        self.assertIsInstance(resultMessage, RegisterEngineReplyMsg)
+        self.assertEqual(resultMessage.success, True)
 
-        # registering on same channel while already registered and still connected should fail
-        result = await aggregator.handle_RegisterEngineMsg(channel_id, register_engine_msg)
-        self.assertIsInstance(result, ErrorMessage)
+        # connecting rpc now should not close connection
+        channel = await self.connectRpc(dispatcher, engine_id)
+        channel.close.assert_not_called()
 
-        # registering on same channel while already registered, but after disconnect should succeed
-        await self.disconnectAggregator(aggregator, channel_id)
-        result = await aggregator.handle_RegisterEngineMsg(channel_id, register_engine_msg)
-        self.assertIsInstance(result, SuccessMessage)
+        # registering while already registered and still connected should fail
+        resultMessage = await dispatcher._dispatch_post(register_engine_msg)
+        self.assertIsInstance(resultMessage, RegisterEngineReplyMsg)
+        self.assertEqual(resultMessage.success, False)
+
+        # registering while already registered, but after disconnect should succeed
+        await self.disconnectRpc(dispatcher, engine_id)
+        resultMessage = await dispatcher._dispatch_post(register_engine_msg)
+        self.assertIsInstance(resultMessage, RegisterEngineReplyMsg)
+        self.assertEqual(resultMessage.success, True)
+
 
     async def test_register_engine_different_name(self):
-        channel_id = 'test-channel'
-        channel_id2 = 'test-channel2'
-        aggregator = Aggregator()
+        dispatcher = AggregatorDispatcher()
+        aggregator = Aggregator(dispatcher)
+        messageHandlers = MessageHandlers(aggregator)
         register_engine_msg = RegisterEngineMsg(computer_name='computer-name', uod_name='uod-name')
         register_engine_msg_different_computer = RegisterEngineMsg(computer_name='computer-name2', uod_name='uod-name')
+        engine_id1 = Aggregator.create_engine_id(register_engine_msg)
+        engine_id2 = Aggregator.create_engine_id(register_engine_msg_different_computer)
 
-        await self.connectAggregator(aggregator, channel_id)
-        await self.connectAggregator(aggregator, channel_id2)
+        # registering engine 1 while not registered before should succceed
+        resultMessage = await messageHandlers.handle_RegisterEngineMsg(register_engine_msg)
+        self.assertIsInstance(resultMessage, RegisterEngineReplyMsg)
+        self.assertEqual(resultMessage.success, True)
 
-        # registering while not registered before should succceed
-        result = await aggregator.handle_RegisterEngineMsg(channel_id, register_engine_msg)
-        self.assertIsInstance(result, SuccessMessage)
+        # connecting rpc now for registered engine should not close connection
+        channel = await self.connectRpc(dispatcher, engine_id1)
+        channel.close.assert_not_called()
 
-        # registering on new channel while already registered with same name should fail
-        result = await aggregator.handle_RegisterEngineMsg(channel_id2, register_engine_msg)
-        self.assertIsInstance(result, ErrorMessage)
+        # registering while already registered with same name should fail
+        resultMessage = await messageHandlers.handle_RegisterEngineMsg(register_engine_msg)
+        self.assertIsInstance(resultMessage, RegisterEngineReplyMsg)
+        self.assertEqual(resultMessage.success, False)
 
-        # registering on new channel while already registered but with different name should succeed
-        result = await aggregator.handle_RegisterEngineMsg(channel_id2, register_engine_msg_different_computer)
-        self.assertIsInstance(result, SuccessMessage)
+        # registering while already registered but with different name should succeed
+        resultMessage = await messageHandlers.handle_RegisterEngineMsg(register_engine_msg_different_computer)
+        self.assertIsInstance(resultMessage, RegisterEngineReplyMsg)
+        self.assertEqual(resultMessage.success, True)
 
 
 if __name__ == '__main__':

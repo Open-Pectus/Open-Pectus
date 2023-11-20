@@ -19,24 +19,30 @@ class AggregatorDispatcher():
         super().__init__()
 
         self.router = APIRouter(tags=["aggregator"])
-        self.engine_map: Dict[str, RpcChannel] = {}
-        self.endpoint = WebsocketRPCEndpoint()
+        self.engine_id_channel_map: Dict[str, RpcChannel] = {}
+        self.endpoint = WebsocketRPCEndpoint(on_connect=[self.on_client_connect], on_disconnect=[self.on_client_disconnect])
         self.endpoint.register_route(self.router, path=AGGREGATOR_RPC_WS_PATH)
         self._handlers: Dict[str, MessageHandler] = {}
         self.register_post_route(self.router)
 
-    # TODO handle client_id/engine_id => channel map
-    # async def on_client_connect(self, channel: RpcChannel, _):
-    #     pass
+    async def on_client_connect(self, channel: RpcChannel):
+        try:
+            engine_id = channel.other.get_engine_id()
+            if engine_id is None or engine_id in self.engine_id_channel_map:
+                return await channel.close()
+            self.engine_id_channel_map[engine_id] = RpcChannel
+        except:
+            logger.error(exc_info=True)
+            return await channel.close()
 
-    # async def on_client_disconnect(self, channel: RpcChannel, _):
-    #     pass
+    async def on_client_disconnect(self, channel: RpcChannel):
+        self.engine_id_channel_map = { key:value for key, value in self.engine_id_channel_map.items() if value != channel }
 
     async def rpc_call(self, engine_id: str, message: M.MessageBase) -> M.MessageBase:
-        if engine_id not in self.engine_map.keys():
+        if engine_id not in self.engine_id_channel_map.keys():
             raise ProtocolException("Unknown engine: " + engine_id)
 
-        channel = self.engine_map[engine_id]
+        channel = self.engine_id_channel_map[engine_id]
         response = await channel.other._dispatch_message(message=message)  # type: ignore
         return response
 

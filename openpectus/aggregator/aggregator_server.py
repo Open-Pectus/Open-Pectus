@@ -2,6 +2,7 @@ import os
 from typing import List
 
 import uvicorn
+from openpectus.aggregator.message_handlers import MessageHandlers
 from openpectus.aggregator.deps import _create_aggregator
 from openpectus.aggregator.aggregator import Aggregator
 from fastapi import FastAPI
@@ -25,7 +26,8 @@ class AggregatorServer:
         self.port = port
         self.frontend_dist_dir = frontend_dist_dir
         dispatcher = AggregatorDispatcher()
-        _create_aggregator(dispatcher)
+        aggregator = _create_aggregator(dispatcher)
+        MessageHandlers(aggregator)
         self.setup_fastapi([dispatcher.router])
 
     def setup_fastapi(self, additional_routes: List[APIRoute]):
