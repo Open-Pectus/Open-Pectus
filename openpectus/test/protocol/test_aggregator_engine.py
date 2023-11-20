@@ -12,9 +12,11 @@ from unittest import IsolatedAsyncioTestCase
 from fastapi_websocket_pubsub import PubSubClient, PubSubEndpoint
 
 import openpectus.aggregator.deps as agg_deps
-from openpectus.aggregator.routers import aggregator_websocket
+from openpectus.aggregator.aggregator import Aggregator
+from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.protocol.engine import create_client, Client
-from openpectus.aggregator.protocol import Aggregator, TagsInfo
+from openpectus.aggregator.aggregator import Aggregator
+from openpectus.aggregator.models.models import TagsInfo
 from openpectus.protocol.messages import (
     MessageBase,
     RegisterEngineMsg,
@@ -28,11 +30,6 @@ from openpectus.protocol.messages import (
     serialize_msg_to_json,
     deserialize_msg_from_json
 )
-
-
-server_app = FastAPI()
-router = aggregator_websocket.router
-
 
 logging.basicConfig()
 logger = get_logger("Test")
@@ -64,63 +61,65 @@ def setup_server_rest_routes(app: FastAPI, endpoint: PubSubEndpoint):
         asyncio.create_task(endpoint.publish([EVENT_TOPIC], data=DATA))
         return "triggered"
 
-    class SimpleCommandToClient(MessageBase):
-        client_id: str
+    class SimpleCommandToEngine(MessageBase):
+        engine_id: str
         cmd_name: str
 
     @app.post("/trigger_send")
-    async def trigger_send_command(cmd: SimpleCommandToClient, aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
-        if cmd.client_id is None or cmd.client_id == "" or cmd.cmd_name is None or cmd.cmd_name == "":
+    async def trigger_send_command(cmd: SimpleCommandToEngine, aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
+        if cmd.engine_id is None or cmd.engine_id == "" or cmd.cmd_name is None or cmd.cmd_name == "":
             return Response("Bad command", status_code=400)
 
         logger.debug("trigger_send command: " + cmd.cmd_name)
         # can't await this call or the test would deadlock so we fire'n'forget it
         msg = InvokeCommandMsg(name=cmd.cmd_name)
-        asyncio.create_task(aggregator.send_to_client(cmd.client_id, msg))
+        asyncio.create_task(aggregator.send_to_client(cmd.engine_id, msg))
         return PlainTextResponse("OK")
 
-    @app.get("/tags/{client_id}")
-    async def get_tags(client_id: str, aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
-        client_data = aggregator.client_data_map.get(client_id)
-        if client_data is None:
-            return Response("No data found for client_id " + client_id, status_code=400)
-        tags = client_data.tags_info
+    @app.get("/tags/{engine_id}")
+    async def get_tags(engine_id: str, aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
+        engine_data = aggregator.engine_data_map.get(engine_id)
+        if engine_data is None:
+            return Response("No data found for engine_id " + engine_id, status_code=400)
+        tags = engine_data.tags_info
         print("tags", tags)
         if tags is None:
-            return Response("No tags found for client_id " + client_id, status_code=400)
+            return Response("No tags found for engine_id " + engine_id, status_code=400)
         return tags
 
-    @app.get("/runlog/{client_id}")
-    async def get_runlog(client_id: str, aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
-        client_data = aggregator.client_data_map.get(client_id)
-        if client_data is None:
-            return Response("No data found for client_id " + client_id, status_code=400)
-        runlog = client_data.runlog
+    @app.get("/runlog/{engine_id}")
+    async def get_runlog(engine_id: str, aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
+        engine_data = aggregator.engine_data_map.get(engine_id)
+        if engine_data is None:
+            return Response("No data found for engine_id " + engine_id, status_code=400)
+        runlog = engine_data.runlog
         print("runlog", runlog)
         if runlog is None:
-            return Response("No runlog found for client_id " + client_id, status_code=400)
+            return Response("No runlog found for engine_id " + engine_id, status_code=400)
         return runlog
 
     @app.get("/debug_channels")
     async def debug_channels(aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
-        print("Server channel map (channel, ch. closed, client_id, status):")
+        print("Server channel map (channel, ch. closed, engine_id, status):")
         for x in aggregator.channel_map.values():
-            print(f"{x.channel.id}\t{x.channel.isClosed()}\t{x.client_id}\t{x.status}")
+            print(f"{x.channel.id}\t{x.channel.isClosed()}\t{x.engine_id}\t{x.status}")
 
     @app.get("/clear_state")
     async def clear_state(aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
         logger.info("/clear_state")
         aggregator.channel_map.clear()
-        aggregator.client_data_map.clear()
+        aggregator.engine_data_map.clear()
 
 
 def setup_server():
-    aggregator = agg_deps.create_aggregator(router)
-    server_app.include_router(router)
+    app = FastAPI()
+    dispatcher = AggregatorDispatcher()
+    aggregator = Aggregator(dispatcher)
+    app.include_router(dispatcher.router)
     assert aggregator.endpoint is not None
     # Regular REST endpoint - that publishes to PubSub
-    setup_server_rest_routes(server_app, aggregator.endpoint)
-    uvicorn.run(server_app, port=PORT)
+    setup_server_rest_routes(app, aggregator.endpoint)
+    uvicorn.run(app, port=PORT)
 
 
 def start_server_process():
@@ -130,10 +129,10 @@ def start_server_process():
     return proc
 
 
-def send_message_to_client(client_id: str, msg: InvokeCommandMsg):
+def send_message_to_client(engine_id: str, msg: InvokeCommandMsg):
     """ Use server http test interface ot have it send a message to the given client using its websocket protocol """
     # we do not support args at this time
-    response = httpx.post(trigger_send_url,  json={'client_id': client_id, 'cmd_name': msg.name})
+    response = httpx.post(trigger_send_url,  json={'engine_id': engine_id, 'cmd_name': msg.name})
     if not response.is_success:
         print("Error response text", response.text)
         raise Exception(f"Server returned non-success status code: {response.status_code}")
@@ -294,7 +293,7 @@ class IntegrationTest(AsyncServerTestCase):
 
     async def test_can_send_command_trigger(self):
         cmd_msg = InvokeCommandMsg(name="START")
-        send_message_to_client(client_id="foo", msg=cmd_msg)
+        send_message_to_client(engine_id="foo", msg=cmd_msg)
 
     async def test_client_can_receive_server_message(self):
         client = self.create_test_client()
@@ -314,8 +313,8 @@ class IntegrationTest(AsyncServerTestCase):
 
         # trigger server sent command via rest call
         cmd_msg = InvokeCommandMsg(name="START")
-        client_id = Aggregator.create_client_id(register_msg)
-        send_message_to_client(client_id, msg=cmd_msg)
+        engine_id = Aggregator.create_engine_id(register_msg)
+        send_message_to_client(engine_id, msg=cmd_msg)
 
         await asyncio.wait_for(event.wait(), 5)
 
@@ -327,12 +326,12 @@ class IntegrationTest(AsyncServerTestCase):
 
         make_server_print_channels()
 
-        client_id = Aggregator.create_client_id(register_msg)
+        engine_id = Aggregator.create_engine_id(register_msg)
         msg = TagsUpdatedMsg(tags=[TagValueMsg(name="foo", value="bar", value_unit=None)])
         result = await client.send_to_server(msg)
         self.assertIsInstance(result, SuccessMessage)
 
-        response = httpx.get(tags_url + "/" + client_id)
+        response = httpx.get(tags_url + "/" + engine_id)
         self.assertEqual(200, response.status_code)
 
         tags = TagsInfo.parse_raw(response.content)
@@ -352,7 +351,7 @@ class IntegrationTest(AsyncServerTestCase):
 
         make_server_print_channels()
 
-        client_id = Aggregator.create_client_id(register_msg)
+        engine_id = Aggregator.create_engine_id(register_msg)
         msg = RunLogMsg(id="a", lines=[
             RunLogLineMsg(
                 id="",
@@ -366,7 +365,7 @@ class IntegrationTest(AsyncServerTestCase):
         result = await client.send_to_server(msg)
         self.assertIsInstance(result, SuccessMessage)
 
-        response = httpx.get(runlog_url + "/" + client_id)
+        response = httpx.get(runlog_url + "/" + engine_id)
         self.assertEqual(200, response.status_code)
 
         runlog = RunLogMsg.parse_raw(response.content)

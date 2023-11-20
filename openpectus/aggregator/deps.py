@@ -1,11 +1,19 @@
 from fastapi import APIRouter
 
-from openpectus.aggregator.protocol import Aggregator, _create_aggregator, _get_aggregator
+from openpectus.aggregator.aggregator import Aggregator
 
-
-def create_aggregator(router: APIRouter):
-    return _create_aggregator(router)
-
+_server: Aggregator | None = None
 
 def get_aggregator() -> Aggregator:
-    return _get_aggregator()
+    if _server is None:
+        raise Exception("DI configuration error. Aggregator has not been initialized")
+    return _server
+
+def _create_aggregator(dispatcher: AggregatorDispatcher) -> Aggregator:
+    global _server
+    if _server is not None:
+        return _server
+    else:
+        _server = Aggregator(dispatcher)
+        print("GLOBAL: Creating aggregator server")
+        return _server

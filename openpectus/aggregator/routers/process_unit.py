@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Response
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.routers.dto as D
 import openpectus.protocol.messages as M
-from openpectus.aggregator.protocol import Aggregator, ChannelInfo
+from openpectus.aggregator.models.models import Aggregator, ChannelInfo
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])
@@ -15,7 +15,7 @@ router = APIRouter(tags=["process_unit"])
 def create_pu(item: ChannelInfo) -> D.ProcessUnit:
     # TODO define source of all fields
     unit = D.ProcessUnit(
-        id=item.client_id or "(error)",
+        id=item.engine_id or "(error)",
         name=f"{item.engine_name} ({item.uod_name})",
         state=D.ProcessUnitState.Ready(state=D.ProcessUnitStateEnum.READY),
         location="Unknown location",
@@ -51,7 +51,7 @@ def get_process_values(
 
     response.headers["Cache-Control"] = "no-store"
 
-    client_data = agg.client_data_map.get(unit_id)
+    client_data = agg.engine_data_map.get(unit_id)
     if client_data is None:
         return []
 
@@ -118,7 +118,7 @@ Mark: Y""")
 
 @router.get('/process_unit/{unit_id}/run_log')
 def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> D.RunLog:
-    client_data = agg.client_data_map.get(unit_id)
+    client_data = agg.engine_data_map.get(unit_id)
     if client_data is None:
         logger.warning("No client data - thus no runlog")
         return D.RunLog(lines=[])
@@ -151,7 +151,7 @@ def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)
 
 @router.get('/process_unit/{unit_id}/method')
 def get_method(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> D.Method:
-    client_data = agg.client_data_map.get(unit_id)
+    client_data = agg.engine_data_map.get(unit_id)
     if client_data is None:
         logger.warning("No client data - thus no method")
         return D.Method(lines=[], started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
@@ -177,7 +177,7 @@ async def save_method(unit_id: str, method: D.Method, agg: Aggregator = Depends(
         injected_line_ids=[_id for _id in method.injected_line_ids],
     )
 
-    if not await agg.set_method(client_id=unit_id, method=msg):
+    if not await agg.set_method(engine_id=unit_id, method=msg):
         return D.ServerErrorResponse(message="Failed to set method")
 
 
@@ -205,7 +205,7 @@ def get_control_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggre
             is_holding=state.is_holding,
             is_paused=state.is_paused)
 
-    client_data = agg.client_data_map.get(unit_id)
+    client_data = agg.engine_data_map.get(unit_id)
     if client_data is None:
         logger.warning("No client data - thus no control state")
         return D.ControlState.default()

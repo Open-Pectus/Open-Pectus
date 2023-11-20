@@ -1,5 +1,5 @@
 import unittest
-from openpectus.aggregator.protocol import Aggregator
+from openpectus.aggregator.aggregator import Aggregator
 from openpectus.protocol.messages import RegisterEngineMsg, SuccessMessage, ErrorMessage
 from fastapi_websocket_rpc.rpc_channel import RpcChannel, RpcMethodsBase
 

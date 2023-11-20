@@ -10,19 +10,20 @@ from openpectus.protocol.exceptions import ProtocolException
 logger = logging.getLogger(__name__)
 
 
-class AE_AggregatorDispatcher():
+class AggregatorDispatcher():
     """
     Aggregator dispatcher for the Aggregator-Engine Protocol using REST + WebSocket RPC.
     Allows receiving message via HTTP POST and sending messages via JSON-RPC.
     """
-    def __init__(self, router: APIRouter | FastAPI) -> None:
+    def __init__(self) -> None:
         super().__init__()
 
+        self.router = APIRouter(tags=["aggregator"])
         self.engine_map: Dict[str, RpcChannel] = {}
         self.endpoint = WebsocketRPCEndpoint()
         self.endpoint.register_route(router, path=AGGREGATOR_RPC_WS_PATH)
         self._handlers: Dict[str, MessageHandler] = {}
-        self.register_post_route(router)
+        self.register_post_route(self.router)
 
     # TODO handle client_id/engine_id => channel map
     # async def on_client_connect(self, channel: RpcChannel, _):

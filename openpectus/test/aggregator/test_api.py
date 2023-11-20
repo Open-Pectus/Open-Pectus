@@ -3,11 +3,11 @@ import json
 import os
 import unittest
 
-from openpectus.aggregator.aggregator import Aggregator
+from openpectus.aggregator.aggregator_server import AggregatorServer
 from fastapi.testclient import TestClient
 
 project_path = os.path.join(os.path.dirname(__file__), "..", "..")
-fastapi = Aggregator().fastapi
+fastapi = AggregatorServer().fastapi
 client = TestClient(fastapi)
 
 

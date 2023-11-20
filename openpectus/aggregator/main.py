@@ -3,7 +3,7 @@ import os
 from argparse import ArgumentParser
 
 from openpectus import log_setup_colorlog
-from openpectus.aggregator.aggregator import Aggregator
+from openpectus.aggregator.aggregator_server import AggregatorServer
 
 # - add lsp thingys
 # - start (manage) lsp server instance for each client
@@ -34,12 +34,12 @@ logger.setLevel(logging.INFO)
 
 def get_args():
     parser = ArgumentParser("Start Aggregator server")
-    parser.add_argument("-host", "--host", required=False, default=Aggregator.default_host,
+    parser.add_argument("-host", "--host", required=False, default=AggregatorServer.default_host,
                         help="Host address to bind frontend and web socket to")
-    parser.add_argument("-p", "--port", required=False, type=int, default=Aggregator.default_port,
+    parser.add_argument("-p", "--port", required=False, type=int, default=AggregatorServer.default_port,
                         help="Host port to bind frontend and web socket to")
-    parser.add_argument("-fdd", "--frontend_dist_dir", required=False, default=Aggregator.default_frontend_dist_dir,
-                        help="Frontend distribution directory. Defaults to " + Aggregator.default_frontend_dist_dir)
+    parser.add_argument("-fdd", "--frontend_dist_dir", required=False, default=AggregatorServer.default_frontend_dist_dir,
+                        help="Frontend distribution directory. Defaults to " + AggregatorServer.default_frontend_dist_dir)
     return parser.parse_args()
 
 
@@ -47,7 +47,7 @@ def main():
     args = get_args()
     title = "Pectus Aggregator"
     print(f"*** {title} ***")
-    Aggregator(title, args.host, args.port, args.frontend_dist_dir).start()
+    AggregatorServer(title, args.host, args.port, args.frontend_dist_dir).start()
 
 
 if __name__ == "__main__":

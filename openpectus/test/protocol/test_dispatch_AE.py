@@ -9,7 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi_websocket_rpc import WebsocketRPCEndpoint
 from fastapi_websocket_rpc.logger import get_logger
 
-from openpectus.protocol.aggregator_dispatcher import AE_AggregatorDispatcher
+from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.protocol.engine_dispatcher import EngineDispatcher
 import openpectus.protocol.messages as M
 
@@ -36,10 +36,8 @@ trigger_url = f"http://localhost:{PORT}/trigger"
 
 
 def setup_server():
-    app = FastAPI()
-
     # dispatcher sets up websocket endpoint
-    aggregator_disp = AE_AggregatorDispatcher(app)
+    aggregator_disp = AggregatorDispatcher()
 
     async def handle_register(msg: M.MessageBase) -> M.MessageBase:
         assert isinstance(msg, M.RegisterEngineMsg)
@@ -49,6 +47,8 @@ def setup_server():
 
     # endpoint = WebsocketRPCEndpoint(methods=server_proxy)
     # endpoint.register_route(app, path="/test-rpc")
+    app = FastAPI()
+    app.include_router(aggregator_disp.router)
     uvicorn.run(app, port=PORT)
 
 
