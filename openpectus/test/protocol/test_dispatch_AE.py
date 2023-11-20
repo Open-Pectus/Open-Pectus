@@ -59,10 +59,31 @@ def server():
     proc.kill()  # Cleanup after test
 
 
-@unittest.skip("TODO Fix on CI server")
-class TestAE_EngineDispatcher_Impl(IsolatedAsyncioTestCase):
+class UvicornAsyncTestCase(IsolatedAsyncioTestCase):
+    def __init__(self, methodName: str = "runTest") -> None:
+        super().__init__(methodName)
+        self.DEBUG = True
+        self.server_process: Process | None = None
+
     async def asyncSetUp(self):
-        next(server())
+        if self.DEBUG:
+            print("** SetUp", flush=True)
+        self.server_process = Process(target=setup_server, args=(), daemon=True)
+        self.server_process.start()
+        if self.DEBUG:
+            print("*** Server process started", flush=True)
+
+    async def asyncTearDown(self):
+        if self.DEBUG:
+            print("** TearDown", flush=True)
+        if self.server_process is not None:
+            if self.server_process.is_alive():
+                if self.DEBUG:
+                    print("*** Killing process", flush=True)
+                self.server_process.kill()
+
+
+class TestAE_EngineDispatcher_Impl(UvicornAsyncTestCase):
 
     def test_post(self):
         disp = AE_EngineDispatcher_Impl(aggregator_host)
