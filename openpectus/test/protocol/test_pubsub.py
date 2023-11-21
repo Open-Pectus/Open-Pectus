@@ -2,17 +2,17 @@ import asyncio
 import unittest
 from multiprocessing import Process
 from unittest import IsolatedAsyncioTestCase
-import httpx
 
+import httpx
 import uvicorn
 from fastapi import FastAPI
 from fastapi_websocket_pubsub import PubSubClient, PubSubEndpoint
 from fastapi_websocket_pubsub.rpc_event_methods import RpcEventServerMethods, RpcEventClientMethods
 from fastapi_websocket_rpc import RpcChannel
-from fastapi_websocket_rpc.schemas import RpcResponse
 from fastapi_websocket_rpc.logger import get_logger
+from fastapi_websocket_rpc.schemas import RpcResponse
 from fastapi_websocket_rpc.utils import gen_uid
-
+from openpectus.protocol.dispatch_interface import AGGREGATOR_RPC_WS_PATH
 
 logger = get_logger("Test")
 

@@ -3,20 +3,20 @@ import logging
 import time
 import unittest
 from multiprocessing import Process
+from unittest import IsolatedAsyncioTestCase
+
 import httpx
+import openpectus.aggregator.deps as agg_deps
 import uvicorn
 from fastapi import Depends, FastAPI
 from fastapi.responses import Response, PlainTextResponse
-from fastapi_websocket_rpc.logger import get_logger
-from unittest import IsolatedAsyncioTestCase
 from fastapi_websocket_pubsub import PubSubClient, PubSubEndpoint
-
-import openpectus.aggregator.deps as agg_deps
-from openpectus.aggregator.aggregator import Aggregator
-from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
-from openpectus.protocol.engine import create_client, Client
+from fastapi_websocket_rpc.logger import get_logger
 from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.models.models import TagsInfo
+from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
+from openpectus.protocol.dispatch_interface import AGGREGATOR_RPC_WS_PATH
+from openpectus.protocol.engine import create_client, Client
 from openpectus.protocol.messages import (
     MessageBase,
     RegisterEngineMsg,
