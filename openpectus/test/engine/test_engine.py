@@ -10,7 +10,8 @@ from openpectus.lang.exec.runlog import RuntimeRecordStateEnum
 from openpectus.lang.exec.timer import NullTimer
 
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder
-from openpectus.engine.eng import ExecutionEngine, EngineCommandEnum, SystemStateEnum
+from openpectus.engine.models import EngineCommandEnum, SystemStateEnum
+from openpectus.engine.engine import Engine
 from openpectus.lang.exec import tags
 from openpectus.lang.exec.uod import UodCommand
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
@@ -370,7 +371,7 @@ Reset
         r = records[3]
         self.assertEqual("Reset", r.name)
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
-        self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Cancelled))        
+        self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Cancelled))
         self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Completed))
 
         continue_engine(e, 3)
@@ -469,7 +470,7 @@ Reset
 Reset
 Reset
 """, 10)
-        
+
         print_runtime_records(e)
 
     @unittest.skip("Not implemented yet")

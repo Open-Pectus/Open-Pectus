@@ -1,10 +1,12 @@
 import logging
 from typing import Dict
 
+import httpx
 import openpectus.protocol.messages as M
 import requests
 from fastapi_websocket_rpc import RpcMethodsBase, WebSocketRpcClient
 from openpectus.protocol.dispatch_interface import AGGREGATOR_REST_PATH, AGGREGATOR_RPC_WS_PATH, MessageHandler
+from openpectus.protocol.dispatch_interface import AGGREGATOR_HEALTH_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -15,24 +17,55 @@ class EngineDispatcher():
     """
 
     class EngineRpcMethods(RpcMethodsBase):
-        def __init__(self, disp: 'EngineDispatcher'):
+        def __init__(self, dispatcher: 'EngineDispatcher', engine_id: str):
             super().__init__()
-            self.disp = disp
+            self.disp = dispatcher
+            self.engine_id = engine_id
 
         async def _dispatch_message(self, message: M.MessageBase):
             """ Dispath message to registered handler. """
             return await self.disp._dispatch_message(message)
 
-    def __init__(self, aggregator_host: str) -> None:
+        def get_engine_id(self):
+            return self.engine_id
+
+    async def register_for_engine_id(self):
+        register_engine_msg = M.RegisterEngineMsg(computer_name=socket.gethostname(), uod_name=self.engine.uod.instrument)
+        register_response = await self.post(register_engine_msg)
+        if not isinstance(register_response, M.RegisterEngineReplyMsg) or not register_response.success:
+            print("Failed to Register")
+            return
+        return register_response.engine_id
+
+
+    def check_aggregator_alive(self, aggregator_host: str):
+        aggregator_health_url = f"http://{aggregator_host}{AGGREGATOR_HEALTH_PATH}"
+        try:
+            resp = httpx.get(aggregator_health_url)
+        except httpx.ConnectError as ex:
+            print("Connection to Aggregator health end point failed.")
+            print(f"Status url: {aggregator_health_url}")
+            print(f"Error: {ex}")
+            print("OpenPectus Engine cannot start.")
+            exit(1)
+        if resp.is_error:
+            print("Aggregator health end point returned an unsuccessful result.")
+            print(f"Status url: {aggregator_health_url}")
+            print(f"HTTP status code returned: {resp.status_code}")
+            print("OpenPectus Engine cannot start.")
+            exit(1)
+
+    def __init__(self,  aggregator_host: str) -> None:
         super().__init__()
 
         # TODO consider https/wss
         self.post_url = f"http://{aggregator_host}{AGGREGATOR_REST_PATH}"
         rpc_url = f"ws://{aggregator_host}{AGGREGATOR_RPC_WS_PATH}"
 
-        rpc_methods = EngineDispatcher.EngineRpcMethods(self)
+        self.check_aggregator_alive(aggregator_host)
+        engine_id = self.register_for_engine_id()
+        rpc_methods = EngineDispatcher.EngineRpcMethods(self, engine_id)
         self.rpc_client = WebSocketRpcClient(uri=rpc_url, methods=rpc_methods)
-
         self._handlers: Dict[str, MessageHandler] = {}
 
     def post(self, message: M.MessageBase) -> M.MessageBase:

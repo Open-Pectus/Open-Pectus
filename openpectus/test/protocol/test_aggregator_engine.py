@@ -15,8 +15,7 @@ from fastapi_websocket_rpc.logger import get_logger
 from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.models.models import TagsInfo
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
-from openpectus.protocol.dispatch_interface import AGGREGATOR_RPC_WS_PATH
-from openpectus.protocol.engine import create_client, Client
+from openpectus.protocol.dispatch_interface import AGGREGATOR_RPC_WS_PATH, AGGREGATOR_HEALTH_PATH
 from openpectus.protocol.messages import (
     MessageBase,
     RegisterEngineMsg,
@@ -42,7 +41,7 @@ PORT = 7990
 ws_url = f"ws://localhost:{PORT}/{AGGREGATOR_RPC_WS_PATH}"
 trigger_url = f"http://localhost:{PORT}/trigger"
 trigger_send_url = f"http://localhost:{PORT}/trigger_send"
-health_url = f"http://localhost:{PORT}/health"
+health_url = f"http://localhost:{PORT}{AGGREGATOR_HEALTH_PATH}"
 debug_channels_url = f"http://localhost:{PORT}/debug_channels"
 tags_url = f"http://localhost:{PORT}/tags"
 runlog_url = f"http://localhost:{PORT}/runlog"

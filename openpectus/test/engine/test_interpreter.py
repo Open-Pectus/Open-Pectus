@@ -6,7 +6,7 @@ import unittest
 from uuid import UUID
 
 import pint
-from openpectus.engine.eng import ExecutionEngine
+from openpectus.engine.engine import Engine
 from openpectus.lang.exec.commands import CommandRequest
 
 from openpectus.lang.grammar.pprogramformatter import print_parsed_program as print_program
@@ -118,7 +118,7 @@ Mark: c
         engine = self.engine
         run_engine(engine, program, 10)
 
-        self.assertEqual(["a", "b", "c"], engine.interpreter.get_marks())        
+        self.assertEqual(["a", "b", "c"], engine.interpreter.get_marks())
 
     def test_command_incr_counter(self):
         program = """
