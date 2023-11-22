@@ -68,7 +68,7 @@ class EngineReporter():
         def to_value(t: TagValue) -> EM.TagValue:
             return EM.TagValue(name=t.name, value=t.value, value_unit=t.unit)
 
-        def to_msg(item: RunLogItem) -> EM.RunLogLine:
+        def to_line(item: RunLogItem) -> EM.RunLogLine:
             # TODO what about state - try the client in test mode
             msg = EM.RunLogLine(
                 id=item.id,
@@ -84,7 +84,7 @@ class EngineReporter():
         runlog = self.engine.runtimeinfo.get_runlog()
         msg = EM.RunLogMsg(
             id=runlog.id,
-            lines=list(map(to_msg, runlog.items))
+            lines=list(map(to_line, runlog.items))
         )
         self.dispatcher.post(msg)
 

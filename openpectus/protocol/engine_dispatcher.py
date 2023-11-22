@@ -1,3 +1,4 @@
+from __future__ import annotations
 import asyncio
 import logging
 import socket
@@ -22,7 +23,7 @@ class EngineDispatcher():
     """
 
     class EngineRpcMethods(RpcMethodsBase):
-        def __init__(self, dispatcher: 'EngineDispatcher', engine_id: str):
+        def __init__(self, dispatcher: EngineDispatcher, engine_id: str):
             super().__init__()
             self.disp = dispatcher
             self.engine_id = engine_id

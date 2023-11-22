@@ -63,7 +63,3 @@ class ControlStateMsg(EngineMessage):
     is_running: bool
     is_holding: bool
     is_paused: bool
-
-    @classmethod
-    def default() -> 'ControlStateMsg':
-        return ControlStateMsg(is_running=False, is_holding=False, is_paused=False)

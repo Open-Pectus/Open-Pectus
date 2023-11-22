@@ -1,3 +1,4 @@
+from __future__ import annotations
 from uuid import UUID
 
 from openpectus.lang.exec.commands import CommandRequest
@@ -6,7 +7,7 @@ from openpectus.lang.exec.tags import TagCollection
 
 
 class EngineInterpreterContext(InterpreterContext):
-    def __init__(self, engine: 'Engine') -> None:
+    def __init__(self, engine: Engine) -> None:
         super().__init__()
         self.engine = engine
         self._tags = engine.uod.system_tags.merge_with(engine.uod.tags)
