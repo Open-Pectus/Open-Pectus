@@ -8,7 +8,7 @@ from uuid import UUID
 
 from openpectus.engine.engine_interpreter_context import EngineInterpreterContext
 from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException
-from openpectus.engine.models import SystemStateEnum, EngineCommandEnum
+from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum
 from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.errors import InterpretationError
 from openpectus.lang.exec.pinterpreter import PInterpreter

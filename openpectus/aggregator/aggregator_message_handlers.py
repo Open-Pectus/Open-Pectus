@@ -1,11 +1,11 @@
 import logging
 
-from openpectus.aggregator.models import EngineData
-from openpectus.aggregator.aggregator import Aggregator
-from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
-import openpectus.protocol.messages as M
+import openpectus.protocol.messages as Msg
+import openpectus.protocol.models as Mdl
+from openpectus.aggregator.aggregator import Aggregator
+from openpectus.aggregator.models import EngineData
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class AggregatorMessageHandlers:
     def get_registered_engine_data(self, engine_id: str) -> EngineData | None:
         return self.aggregator.engine_data_map[engine_id] if engine_id in self.aggregator.engine_data_map.keys() else None
 
-    async def handle_RegisterEngineMsg(self, register_engine_msg: EM.RegisterEngineMsg) -> M.SuccessMessage | M.ErrorMessage:
+    async def handle_RegisterEngineMsg(self, register_engine_msg: EM.RegisterEngineMsg) -> Msg.SuccessMessage | Msg.ErrorMessage:
         """ Registers engine """
         engine_id = self.aggregator.create_engine_id(register_engine_msg)
         if engine_id in self.aggregator.dispatcher.engine_id_channel_map.keys():
@@ -48,46 +48,46 @@ class AggregatorMessageHandlers:
         logger.debug(f"Registration successful of client {engine_id}")
         return AM.RegisterEngineReplyMsg(success=True, engine_id=engine_id)
 
-    async def handle_UodInfoMsg(self, msg: EM.UodInfoMsg) -> M.SuccessMessage | M.ErrorMessage:
-        engine_data = self.get_registered_engine_data(channel_id)
+    async def handle_UodInfoMsg(self, msg: EM.UodInfoMsg) -> Msg.SuccessMessage | Msg.ErrorMessage:
+        engine_data = self.get_registered_engine_data(msg.engine_id)
         if engine_data is None:
-            return M.ErrorMessage()
+            return Msg.ErrorMessage()
 
         logger.debug(f"Got UodInfo from client: {str(msg)}")
         engine_data.readings = []
         for r in msg.readings:
-            rd = ReadingDef(
+            rd = Mdl.ReadingInfo(
                 label=r.label,
                 tag_name=r.tag_name,
                 valid_value_units=r.valid_value_units,
-                commands=[ReadingCommand(name=c.name, command=c.command) for c in r.commands]
+                commands=[Mdl.ReadingCommand(name=c.name, command=c.command) for c in r.commands]
             )
             engine_data.readings.append(rd)
 
-        return M.SuccessMessage()
+        return Msg.SuccessMessage()
 
-    async def handle_TagsUpdatedMsg(self, msg: EM.TagsUpdatedMsg) -> M.SuccessMessage | M.ErrorMessage:
+    async def handle_TagsUpdatedMsg(self, msg: EM.TagsUpdatedMsg) -> Msg.SuccessMessage | Msg.ErrorMessage:
         engine_data = self.get_registered_engine_data(msg.engine_id)
         if engine_data is None:
-            return M.ErrorMessage()
+            return Msg.ErrorMessage()
 
         logger.debug(f"Got tags update from client: {str(msg)}")
         for ti in msg.tags:
             engine_data.tags_info.upsert(ti.name, ti.value, ti.value_unit)
-        return M.SuccessMessage()
+        return Msg.SuccessMessage()
 
-    async def handle_RunLogMsg(self, msg: EM.RunLogMsg) -> M.SuccessMessage | M.ErrorMessage:
+    async def handle_RunLogMsg(self, msg: EM.RunLogMsg) -> Msg.SuccessMessage | Msg.ErrorMessage:
         engine_data = self.get_registered_engine_data(msg.engine_id)
         if engine_data is None:
-            return M.ErrorMessage()
+            return Msg.ErrorMessage()
 
         engine_data.runlog = msg
-        return M.SuccessMessage()
+        return Msg.SuccessMessage()
 
-    async def handle_ControlStateMsg(self, msg: EM.ControlStateMsg) -> M.SuccessMessage | M.ErrorMessage:
+    async def handle_ControlStateMsg(self, msg: EM.ControlStateMsg) -> Msg.SuccessMessage | Msg.ErrorMessage:
         engine_data = self.get_registered_engine_data(msg.engine_id)
         if engine_data is None:
-            return M.ErrorMessage()
+            return Msg.ErrorMessage()
 
         engine_data.control_state = msg.control_state
-        return M.SuccessMessage()
+        return Msg.SuccessMessage()

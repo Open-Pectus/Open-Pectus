@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from queue import Empty
+from typing import List
 
 import openpectus.lang.exec.tags as tags
 import openpectus.protocol.engine_messages as EM

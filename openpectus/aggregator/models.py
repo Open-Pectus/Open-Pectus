@@ -1,15 +1,18 @@
+import logging
 from datetime import datetime
 from enum import StrEnum, auto
 from typing import Dict, List
 
-import openpectus.protocol.messages as Msg
 import openpectus.protocol.models as Mdl
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 # aliases so users of this file don't have to know about the protocol models
 RunLogLine = Mdl.RunLogLine
 ControlState = Mdl.ControlState
 Method = Mdl.Method
+MethodLine = Mdl.MethodLine
 
 
 class ChannelStatusEnum(StrEnum):

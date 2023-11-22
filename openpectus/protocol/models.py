@@ -1,6 +1,9 @@
+import logging
 from typing import List
 
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 
 class ReadingCommand(BaseModel):
@@ -44,6 +47,7 @@ class Method(BaseModel):
     started_line_ids: List[str]
     executed_line_ids: List[str]
     injected_line_ids: List[str]
+
 
 class ControlState(BaseModel):
     is_running: bool

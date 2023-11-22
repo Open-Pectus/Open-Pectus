@@ -3,8 +3,8 @@ from datetime import datetime
 from typing import List
 
 import openpectus.aggregator.deps as agg_deps
-import openpectus.aggregator.routers.dto as D
 import openpectus.aggregator.models as Mdl
+import openpectus.aggregator.routers.dto as D
 import openpectus.protocol.aggregator_messages as AM
 from fastapi import APIRouter, Depends, Response
 from openpectus.aggregator.aggregator import Aggregator
@@ -172,12 +172,12 @@ def get_method(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator))
 
 @router.post('/process_unit/{unit_id}/method')
 async def save_method(unit_id: str, method: D.Method, agg: Aggregator = Depends(agg_deps.get_aggregator)):
-    msg = M.MethodMsg(
-        lines=[M.MethodLineMsg(id=line.id, content=line.content) for line in method.lines],
+    msg = AM.MethodMsg(method=Mdl.Method(
+        lines=[Mdl.MethodLine(id=line.id, content=line.content) for line in method.lines],
         started_line_ids=[_id for _id in method.started_line_ids],
         executed_line_ids=[_id for _id in method.executed_line_ids],
         injected_line_ids=[_id for _id in method.injected_line_ids],
-    )
+    ))
 
     if not await agg.set_method(engine_id=unit_id, method=msg):
         return D.ServerErrorResponse(message="Failed to set method")

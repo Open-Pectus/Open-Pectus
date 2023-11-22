@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 from uuid import UUID
 
+from openpectus.engine.engine import Engine
 from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.pinterpreter import InterpreterContext
 from openpectus.lang.exec.tags import TagCollection

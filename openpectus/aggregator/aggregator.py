@@ -1,8 +1,13 @@
+import logging
+from typing import Dict
+
+import openpectus.protocol.aggregator_messages as AM
+import openpectus.protocol.engine_messages as EM
+import openpectus.protocol.messages as M
 from openpectus.aggregator.models import EngineData
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
-import openpectus.protocol.engine_messages as EM
-import openpectus.protocol.aggregator_messages as AM
 
+logger = logging.getLogger(__name__)
 
 class Aggregator:
     def __init__(self, dispatcher: AggregatorDispatcher) -> None:
@@ -36,7 +41,7 @@ class Aggregator:
     async def set_method(self, engine_id: str, method: AM.MethodMsg) -> bool:
         try:
             response = await self.dispatcher.rpc_call(engine_id, message=method)
-            if isinstance(response, ErrorMessage):
+            if isinstance(response, M.ErrorMessage):
                 logger.error(f"Failed to set method. Engine response: {response.message}")
                 return False
         except Exception:

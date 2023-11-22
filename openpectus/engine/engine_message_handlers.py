@@ -1,9 +1,11 @@
+import logging
+
+import openpectus.protocol.aggregator_messages as AM
+import openpectus.protocol.messages as M
 from openpectus.engine.engine import Engine
 from openpectus.protocol.engine_dispatcher import EngineDispatcher
-import openpectus.protocol.messages as M
-import openpectus.protocol.aggregator_messages as AM
-import openpectus.protocol.engine_messages as EM
 
+logger = logging.getLogger(__name__)
 
 class EngineMessageHandlers():
     def __init__(self, engine: Engine, dispatcher: EngineDispatcher) -> None:
@@ -16,10 +18,10 @@ class EngineMessageHandlers():
         pcode = '\n'.join(line.content for line in method_msg.lines)
         try:
             self.engine.set_program(pcode)
-            proxy_logger.info("New method set")
+            logger.info("New method set")
             return M.SuccessMessage()
         except Exception as ex:
-            proxy_logger.error("Failed to set method")
+            logger.error("Failed to set method")
             return M.ErrorMessage(message="Failed to set method", exception_message=str(ex))
 
     async def handle_invokeCommandMsg(self, msg: AM.InvokeCommandMsg) -> M.MessageBase:

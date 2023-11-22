@@ -51,7 +51,7 @@ def setup_server_rest_routes(app: FastAPI, endpoint: PubSubEndpoint):
         asyncio.create_task(endpoint.publish([EVENT_TOPIC], data=DATA))
         return "triggered"
 
-    class SimpleCommandToEngine(M.MessageBase):
+    class SimpleCommandToEngine(Msg.MessageBase):
         engine_id: str
         cmd_name: str
 
@@ -135,52 +135,52 @@ def make_server_print_channels():
         raise Exception(f"Server returned non-success status code: {response.status_code}")
 
 
-class AsyncServerTestCase(IsolatedAsyncioTestCase):
-    # Note: This test class is not rock solid. When things go wrong, it may leave
-    # a server running so a new test run fails. Especially when used with VS Code
-    # and a test run is stopped manually. So sometimes a VS Code restart is necessary.
-
-    def __init__(self, methodName: str = "runTest") -> None:
-        super().__init__(methodName)
-        self.proc : Process | None = None
-        self.client: Client | None = None
-
-    async def asyncSetUp(self):
-        logger.info("asyncSetUp")
-        try:
-            _ = httpx.get(health_url)
-
-            logger.error("Server running on asyncSetUp. Clearing its state.")
-            _ = httpx.get(clear_state_url)
-
-            time.sleep(1)
-
-        except httpx.ConnectError:
-            pass
-
-        self.proc = start_server_process()
-
-    async def asyncTearDown(self):
-        logger.info("asyncTearDown")
-
-        # handle failed tests that may have left their client connected
-        if self.client is not None and self.client.connected:
-            try:
-                logger.debug("Disconnecting client")
-                await self.client.disconnect_wait_async()
-            except Exception:
-                logger.error("Failed to disconnect client", exc_info=True)
-                pass
-
-        try:
-            _ = httpx.get(clear_state_url)
-        except Exception:
-            pass
-
-        if self.proc is not None:
-            if self.proc.is_alive():
-                logger.debug("Server process still running on TearDown - killing it")
-                self.proc.kill()
+# class AsyncServerTestCase(IsolatedAsyncioTestCase):
+#     # Note: This test class is not rock solid. When things go wrong, it may leave
+#     # a server running so a new test run fails. Especially when used with VS Code
+#     # and a test run is stopped manually. So sometimes a VS Code restart is necessary.
+#
+#     def __init__(self, methodName: str = "runTest") -> None:
+#         super().__init__(methodName)
+#         self.proc : Process | None = None
+#         self.client: Client | None = None
+#
+#     async def asyncSetUp(self):
+#         logger.info("asyncSetUp")
+#         try:
+#             _ = httpx.get(health_url)
+#
+#             logger.error("Server running on asyncSetUp. Clearing its state.")
+#             _ = httpx.get(clear_state_url)
+#
+#             time.sleep(1)
+#
+#         except httpx.ConnectError:
+#             pass
+#
+#         self.proc = start_server_process()
+#
+#     async def asyncTearDown(self):
+#         logger.info("asyncTearDown")
+#
+#         # handle failed tests that may have left their client connected
+#         if self.client is not None and self.client.connected:
+#             try:
+#                 logger.debug("Disconnecting client")
+#                 await self.client.disconnect_wait_async()
+#             except Exception:
+#                 logger.error("Failed to disconnect client", exc_info=True)
+#                 pass
+#
+#         try:
+#             _ = httpx.get(clear_state_url)
+#         except Exception:
+#             pass
+#
+#         if self.proc is not None:
+#             if self.proc.is_alive():
+#                 logger.debug("Server process still running on TearDown - killing it")
+#                 self.proc.kill()
 
 
 # @unittest.skip("TODO fix on CI build")
