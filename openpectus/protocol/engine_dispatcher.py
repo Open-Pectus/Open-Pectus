@@ -11,7 +11,7 @@ import requests
 from fastapi_websocket_rpc import RpcMethodsBase, WebSocketRpcClient
 from openpectus.protocol.dispatch_interface import AGGREGATOR_REST_PATH, AGGREGATOR_RPC_WS_PATH, MessageHandler
 from openpectus.protocol.dispatch_interface import AGGREGATOR_HEALTH_PATH
-from protocol.serialization import serialize, deserialize
+from openpectus.protocol.serialization import serialize, deserialize
 
 logger = logging.getLogger(__name__)
 

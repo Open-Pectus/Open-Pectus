@@ -1,23 +1,19 @@
-
 import logging
 import time
-from typing import List, Any
 import unittest
+from typing import List, Any
 from uuid import UUID
 
 import pint
 from openpectus.engine.engine import Engine
 from openpectus.lang.exec.commands import CommandRequest
-
-from openpectus.lang.grammar.pprogramformatter import print_parsed_program as print_program
-from openpectus.lang.grammar.pgrammar import PGrammar
-from openpectus.lang.model.pprogram import PProgram
 from openpectus.lang.exec.pinterpreter import InterpreterContext, PInterpreter
-from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder
 from openpectus.lang.exec.tags import Tag, DEFAULT_TAG_BASE, TagCollection
-from openpectus.lang.exec.uod import UodCommand
-
-from openpectus.test.engine.test_engine import run_engine, continue_engine
+from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
+from openpectus.lang.grammar.pgrammar import PGrammar
+from openpectus.lang.grammar.pprogramformatter import print_parsed_program as print_program
+from openpectus.lang.model.pprogram import PProgram
+from openpectus.test.engine.test_engine import run_engine
 
 TICK_INTERVAL = 0.1
 
@@ -54,10 +50,10 @@ def create_test_uod() -> UnitOperationDefinitionBase:
     )
 
 
-def create_engine(uod: UnitOperationDefinitionBase | None = None) -> ExecutionEngine:
+def create_engine(uod: UnitOperationDefinitionBase | None = None) -> Engine:
     if uod is None:
         uod = create_test_uod()
-    e = ExecutionEngine(uod)
+    e = Engine(uod)
     e._configure()
     return e
 
@@ -103,7 +99,7 @@ def run_interpreter(interpreter: PInterpreter, max_ticks: int = -1):
 class InterpreterTest(unittest.TestCase):
 
     def setUp(self):
-        self.engine: ExecutionEngine = create_engine()
+        self.engine: Engine = create_engine()
 
     def tearDown(self):
         self.engine.cleanup()
@@ -431,7 +427,7 @@ if __name__ == "__main__":
 
 
 class TestInterpreterContext(InterpreterContext):
-    def __init__(self, engine: ExecutionEngine) -> None:
+    def __init__(self, engine: Engine) -> None:
         super().__init__()
         self.engine = engine
         self._tags = engine.uod.system_tags.merge_with(engine.uod.tags)

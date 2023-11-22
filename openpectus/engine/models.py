@@ -1,3 +1,4 @@
+from enum import StrEnum
 
 
 class EngineCommandEnum(StrEnum):

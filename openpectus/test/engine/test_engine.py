@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import threading
 import time
@@ -29,7 +30,7 @@ logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.INFO)
 _ = pint.Quantity("0 sec")
 
 
-def run_engine(engine: ExecutionEngine, pcode: str, max_ticks: int = -1):
+def run_engine(engine: Engine, pcode: str, max_ticks: int = -1):
     print("Interpretation started")
     ticks = 0
     max_ticks = max_ticks
@@ -48,7 +49,7 @@ def run_engine(engine: ExecutionEngine, pcode: str, max_ticks: int = -1):
         engine.tick()
 
 
-def continue_engine(engine: ExecutionEngine, max_ticks: int = -1):
+def continue_engine(engine: Engine, max_ticks: int = -1):
     # This function (as well as run_engine) differs from just calling engine.tick() in that
     # it passes the time before calling tick(). Some functionality depends on this, such as
     # thresholds.
@@ -146,7 +147,7 @@ class TestHardwareLayer(unittest.TestCase):
         self.assertEqual("foo", hwl.register_values["FT01"])
 
 
-def print_runlog(e: ExecutionEngine, description=""):
+def print_runlog(e: Engine, description=""):
     runlog = e.interpreter.runtimeinfo.get_runlog()
     print(f"Runlog {runlog.id} records: ", description)
 #    print("line | start | end   | name                 | states")
@@ -158,7 +159,7 @@ def print_runlog(e: ExecutionEngine, description=""):
 #    print("-----|-------|-------|----------------------|-------------------")
 
 
-def print_runtime_records(e: ExecutionEngine, description: str = ""):
+def print_runtime_records(e: Engine, description: str = ""):
     records = e.interpreter.runtimeinfo.records
     print("Runtime records: ", description)
     print("line | start | end   | name                 | states")
@@ -172,9 +173,9 @@ def print_runtime_records(e: ExecutionEngine, description: str = ""):
     print("-----|-------|-------|----------------------|-------------------")
 
 
-def create_engine() -> ExecutionEngine:
+def create_engine() -> Engine:
     uod = create_test_uod()
-    e = ExecutionEngine(uod)
+    e = Engine(uod)
     e._tick_timer = NullTimer()
     e._configure()
     return e
@@ -184,12 +185,12 @@ class TestEngineSetup(unittest.TestCase):
 
     def test_create_engine(self):
         uod = create_test_uod()
-        e = ExecutionEngine(uod)
+        e = Engine(uod)
         self.assertIsNotNone(e)
 
     def test_configure_uod(self):
         uod = create_test_uod()
-        e = ExecutionEngine(uod)
+        e = Engine(uod)
         e._configure()
 
         self.assertTrue(len(uod.command_factories) > 0)
@@ -199,7 +200,7 @@ class TestEngineSetup(unittest.TestCase):
     @unittest.skip("not implemented")
     def test_uod_reading_to_process_values(self):
         uod = create_test_uod()
-        e = ExecutionEngine(uod)
+        e = Engine(uod)
         e._configure()
 
         # assert process values match the defined readings
@@ -212,7 +213,7 @@ class TestEngineSetup(unittest.TestCase):
 class TestEngine(unittest.TestCase):
 
     def setUp(self):
-        self.engine: ExecutionEngine = create_engine()
+        self.engine: Engine = create_engine()
 
     def tearDown(self):
         self.engine.cleanup()
@@ -252,6 +253,7 @@ class TestEngine(unittest.TestCase):
         hwl.register_values["Reset"] = 1
 
         run_engine(e, "", 1)
+        time.sleep(0.1)
 
         # assert tags marked dirty
         dirty_names = [t.name for t in get_queue_items(e.tag_updates)]

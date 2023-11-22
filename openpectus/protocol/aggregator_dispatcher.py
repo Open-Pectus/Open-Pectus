@@ -6,7 +6,7 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi_websocket_rpc import RpcChannel, WebsocketRPCEndpoint
 from openpectus.protocol.dispatch_interface import AGGREGATOR_RPC_WS_PATH, AGGREGATOR_REST_PATH, MessageHandler
 from openpectus.protocol.exceptions import ProtocolException
-from protocol.serialization import deserialize, serialize
+from openpectus.protocol.serialization import deserialize, serialize
 
 logger = logging.getLogger(__name__)
 

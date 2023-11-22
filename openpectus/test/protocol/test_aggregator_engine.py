@@ -7,28 +7,18 @@ from unittest import IsolatedAsyncioTestCase
 
 import httpx
 import openpectus.aggregator.deps as agg_deps
+import openpectus.protocol.aggregator_messages as AM
+import openpectus.protocol.engine_messages as EM
+import openpectus.protocol.messages as M
 import uvicorn
 from fastapi import Depends, FastAPI
 from fastapi.responses import Response, PlainTextResponse
-from fastapi_websocket_pubsub import PubSubClient, PubSubEndpoint
+from fastapi_websocket_pubsub import PubSubEndpoint
 from fastapi_websocket_rpc.logger import get_logger
 from openpectus.aggregator.aggregator import Aggregator
-from openpectus.aggregator.models.models import TagsInfo
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.protocol.dispatch_interface import AGGREGATOR_RPC_WS_PATH, AGGREGATOR_HEALTH_PATH
-from openpectus.protocol.messages import (
-    MessageBase,
-    RegisterEngineMsg,
-    RunLogLineMsg,
-    RunLogMsg,
-    SuccessMessage,
-    ErrorMessage,
-    TagValueMsg,
-    TagsUpdatedMsg,
-    InvokeCommandMsg,
-    serialize_msg_to_json,
-    deserialize_msg_from_json
-)
+from openpectus.protocol.serialization import serialize_msg_to_json, deserialize_msg_from_json
 
 logging.basicConfig()
 logger = get_logger("Test")
@@ -60,7 +50,7 @@ def setup_server_rest_routes(app: FastAPI, endpoint: PubSubEndpoint):
         asyncio.create_task(endpoint.publish([EVENT_TOPIC], data=DATA))
         return "triggered"
 
-    class SimpleCommandToEngine(MessageBase):
+    class SimpleCommandToEngine(M.MessageBase):
         engine_id: str
         cmd_name: str
 
@@ -71,7 +61,7 @@ def setup_server_rest_routes(app: FastAPI, endpoint: PubSubEndpoint):
 
         logger.debug("trigger_send command: " + cmd.cmd_name)
         # can't await this call or the test would deadlock so we fire'n'forget it
-        msg = InvokeCommandMsg(name=cmd.cmd_name)
+        msg = AM.InvokeCommandMsg(name=cmd.cmd_name)
         asyncio.create_task(aggregator.send_to_client(cmd.engine_id, msg))
         return PlainTextResponse("OK")
 
@@ -128,7 +118,7 @@ def start_server_process():
     return proc
 
 
-def send_message_to_client(engine_id: str, msg: InvokeCommandMsg):
+def send_message_to_client(engine_id: str, msg: AM.InvokeCommandMsg):
     """ Use server http test interface ot have it send a message to the given client using its websocket protocol """
     # we do not support args at this time
     response = httpx.post(trigger_send_url,  json={'engine_id': engine_id, 'cmd_name': msg.name})
@@ -192,220 +182,220 @@ class AsyncServerTestCase(IsolatedAsyncioTestCase):
                 self.proc.kill()
 
 
-@unittest.skip("TODO fix on CI build")
-class IntegrationTest(AsyncServerTestCase):
-
-    def create_test_client(self, on_connect_callback=None) -> Client:
-        self.client = create_client(on_connect_callback=on_connect_callback)
-        return self.client
-
-    def test_can_start_server(self):
-        response = httpx.get(health_url)
-        self.assertEqual(200, response.status_code)
-        self.assertEqual('"healthy"', response.text)
-
-    async def test_can_connect_ps_client(self):
-        finish = asyncio.Event()
-
-        async with PubSubClient() as ps_client:
-            async def on_event(data, topic):
-                self.assertEqual(data, DATA)
-                finish.set()
-
-            ps_client.subscribe(EVENT_TOPIC, on_event)  # type: ignore
-            ps_client.start_client(ws_url)
-            await ps_client.wait_until_ready()
-
-            # trigger publish via rest call
-            response = httpx.get(trigger_url)
-            self.assertEqual(200, response.status_code)
-
-            # wait for finish trigger
-            await asyncio.wait_for(finish.wait(), 5)
-
-    async def test_can_connect_client(self):
-        connected_event = asyncio.Event()
-
-        async def on_connect(x, y):
-            logger.info("client connected")
-            connected_event.set()
-            await asyncio.sleep(.1)  # not strictly necessary but yields a warning if no await
-
-        client = self.create_test_client(on_connect_callback=on_connect)
-        assert client.ps_client is not None
-        client.ps_client.start_client(ws_url)
-        self.assertFalse(client.connected)
-        await client.ps_client.wait_until_ready()
-
-        await asyncio.wait_for(connected_event.wait(), 5)
-
-        self.assertTrue(client.connected)
-        await client.ps_client.disconnect()
-        await client.ps_client.wait_until_done()
-
-    async def test_can_connect_client_simple(self):
-        client = self.create_test_client()
-        await client.start_connect_wait_async(ws_url)
-
-        self.assertTrue(client.connected)
-        await client.disconnect_wait_async()
-
-    async def test_can_register_client(self):
-        client = self.create_test_client()
-
-        registered_event = asyncio.Event()
-        client_registered = False
-        client_failed = False
-
-        def on_register():
-            logger.info("client registered")
-            nonlocal client_registered
-            client_registered = True
-            registered_event.set()
-
-        def on_error(ex: Exception | None = None):
-            nonlocal client_failed
-            client_failed = True
-            logger.error("Error sending: " + str(ex))
-
-        await client.start_connect_wait_async(ws_url)
-        msg = RegisterEngineMsg(computer_name="test-eng", uod_name="test-uod")
-        resp_msg = await client.send_to_server(msg, on_success=on_register, on_error=on_error)
-        self.assertIsInstance(resp_msg, SuccessMessage)
-
-        await asyncio.wait_for(registered_event.wait(), 5)
-        self.assertTrue(client_registered)
-        self.assertFalse(client_failed)
-
-        await client.disconnect_wait_async()
-
-    async def test_client_can_send_message(self):
-        client = self.create_test_client()
-
-        await client.start_connect_wait_async(ws_url)
-        msg = TagsUpdatedMsg(tags=[TagValueMsg(name="foo", value="bar", value_unit=None)])
-        result = await client.send_to_server(msg)
-        self.assertIsInstance(result, ErrorMessage)
-        self.assertEqual(result.message, "Client not registered")  # type: ignore
-
-        await client.disconnect_wait_async()
-
-    async def test_can_send_command_trigger(self):
-        cmd_msg = InvokeCommandMsg(name="START")
-        send_message_to_client(engine_id="foo", msg=cmd_msg)
-
-    async def test_client_can_receive_server_message(self):
-        client = self.create_test_client()
-        await client.start_connect_wait_async(ws_url)
-        register_msg = RegisterEngineMsg(computer_name="test-eng", uod_name="test-uod")
-        resp_msg = await client.send_to_server(register_msg)
-        self.assertIsInstance(resp_msg, SuccessMessage)
-
-        event = asyncio.Event()
-
-        async def on_invoke_command(msg: MessageBase) -> MessageBase:
-            # print("on_invoke_command")
-            event.set()
-            return SuccessMessage()
-
-        client.set_message_handler(InvokeCommandMsg, on_invoke_command)
-
-        # trigger server sent command via rest call
-        cmd_msg = InvokeCommandMsg(name="START")
-        engine_id = Aggregator.create_engine_id(register_msg)
-        send_message_to_client(engine_id, msg=cmd_msg)
-
-        await asyncio.wait_for(event.wait(), 5)
-
-    async def test_server_can_receive_tag_update(self):
-        client = self.create_test_client()
-        await client.start_connect_wait_async(ws_url)
-        register_msg = RegisterEngineMsg(computer_name="eng", uod_name="uod")
-        await client.send_to_server(register_msg)
-
-        make_server_print_channels()
-
-        engine_id = Aggregator.create_engine_id(register_msg)
-        msg = TagsUpdatedMsg(tags=[TagValueMsg(name="foo", value="bar", value_unit=None)])
-        result = await client.send_to_server(msg)
-        self.assertIsInstance(result, SuccessMessage)
-
-        response = httpx.get(tags_url + "/" + engine_id)
-        self.assertEqual(200, response.status_code)
-
-        tags = TagsInfo.parse_raw(response.content)
-        self.assertIsNotNone(tags)
-        tag = tags.get("foo")
-        self.assertIsNotNone(tag)
-        self.assertEqual(tag.name, "foo")  # type: ignore
-        self.assertEqual(tag.value, "bar")  # type: ignore
-
-        await client.disconnect_wait_async()
-
-    async def test_server_can_receive_runlog(self):
-        client = self.create_test_client()
-        await client.start_connect_wait_async(ws_url)
-        register_msg = RegisterEngineMsg(computer_name="eng", uod_name="uod")
-        await client.send_to_server(register_msg)
-
-        make_server_print_channels()
-
-        engine_id = Aggregator.create_engine_id(register_msg)
-        msg = RunLogMsg(id="a", lines=[
-            RunLogLineMsg(
-                id="",
-                command_name="Foo",
-                start=10.1,
-                end=None,
-                progress=None,
-                start_values=[TagValueMsg(name="T1", value=87, value_unit=None)],
-                end_values=[])
-        ])
-        result = await client.send_to_server(msg)
-        self.assertIsInstance(result, SuccessMessage)
-
-        response = httpx.get(runlog_url + "/" + engine_id)
-        self.assertEqual(200, response.status_code)
-
-        runlog = RunLogMsg.parse_raw(response.content)
-        self.assertIsNotNone(runlog)
-        print(runlog)
-        # tag = tags.get("foo")
-        # self.assertIsNotNone(tag)
-        # self.assertEqual(tag.name, "foo")  # type: ignore
-        # self.assertEqual(tag.value, "bar")  # type: ignore
-
-        await client.disconnect_wait_async()
+# @unittest.skip("TODO fix on CI build")
+# class IntegrationTest(AsyncServerTestCase):
+#
+#     def create_test_client(self, on_connect_callback=None) -> Client:
+#         self.client = create_client(on_connect_callback=on_connect_callback)
+#         return self.client
+#
+#     def test_can_start_server(self):
+#         response = httpx.get(health_url)
+#         self.assertEqual(200, response.status_code)
+#         self.assertEqual('"healthy"', response.text)
+#
+#     async def test_can_connect_ps_client(self):
+#         finish = asyncio.Event()
+#
+#         async with PubSubClient() as ps_client:
+#             async def on_event(data, topic):
+#                 self.assertEqual(data, DATA)
+#                 finish.set()
+#
+#             ps_client.subscribe(EVENT_TOPIC, on_event)  # type: ignore
+#             ps_client.start_client(ws_url)
+#             await ps_client.wait_until_ready()
+#
+#             # trigger publish via rest call
+#             response = httpx.get(trigger_url)
+#             self.assertEqual(200, response.status_code)
+#
+#             # wait for finish trigger
+#             await asyncio.wait_for(finish.wait(), 5)
+#
+#     async def test_can_connect_client(self):
+#         connected_event = asyncio.Event()
+#
+#         async def on_connect(x, y):
+#             logger.info("client connected")
+#             connected_event.set()
+#             await asyncio.sleep(.1)  # not strictly necessary but yields a warning if no await
+#
+#         client = self.create_test_client(on_connect_callback=on_connect)
+#         assert client.ps_client is not None
+#         client.ps_client.start_client(ws_url)
+#         self.assertFalse(client.connected)
+#         await client.ps_client.wait_until_ready()
+#
+#         await asyncio.wait_for(connected_event.wait(), 5)
+#
+#         self.assertTrue(client.connected)
+#         await client.ps_client.disconnect()
+#         await client.ps_client.wait_until_done()
+#
+#     async def test_can_connect_client_simple(self):
+#         client = self.create_test_client()
+#         await client.start_connect_wait_async(ws_url)
+#
+#         self.assertTrue(client.connected)
+#         await client.disconnect_wait_async()
+#
+#     async def test_can_register_client(self):
+#         client = self.create_test_client()
+#
+#         registered_event = asyncio.Event()
+#         client_registered = False
+#         client_failed = False
+#
+#         def on_register():
+#             logger.info("client registered")
+#             nonlocal client_registered
+#             client_registered = True
+#             registered_event.set()
+#
+#         def on_error(ex: Exception | None = None):
+#             nonlocal client_failed
+#             client_failed = True
+#             logger.error("Error sending: " + str(ex))
+#
+#         await client.start_connect_wait_async(ws_url)
+#         msg = RegisterEngineMsg(computer_name="test-eng", uod_name="test-uod")
+#         resp_msg = await client.send_to_server(msg, on_success=on_register, on_error=on_error)
+#         self.assertIsInstance(resp_msg, SuccessMessage)
+#
+#         await asyncio.wait_for(registered_event.wait(), 5)
+#         self.assertTrue(client_registered)
+#         self.assertFalse(client_failed)
+#
+#         await client.disconnect_wait_async()
+#
+#     async def test_client_can_send_message(self):
+#         client = self.create_test_client()
+#
+#         await client.start_connect_wait_async(ws_url)
+#         msg = EM.TagsUpdatedMsg(tags=[EM.TagValue(name="foo", value="bar", value_unit=None)])
+#         result = await client.send_to_server(msg)
+#         self.assertIsInstance(result, ErrorMessage)
+#         self.assertEqual(result.message, "Client not registered")  # type: ignore
+#
+#         await client.disconnect_wait_async()
+#
+#     async def test_can_send_command_trigger(self):
+#         cmd_msg = AM.InvokeCommandMsg(name="START")
+#         send_message_to_client(engine_id="foo", msg=cmd_msg)
+#
+#     async def test_client_can_receive_server_message(self):
+#         client = self.create_test_client()
+#         await client.start_connect_wait_async(ws_url)
+#         register_msg = EM.RegisterEngineMsg(computer_name="test-eng", uod_name="test-uod")
+#         resp_msg = await client.send_to_server(register_msg)
+#         self.assertIsInstance(resp_msg, SuccessMessage)
+#
+#         event = asyncio.Event()
+#
+#         async def on_invoke_command(msg: MessageBase) -> MessageBase:
+#             # print("on_invoke_command")
+#             event.set()
+#             return M.SuccessMessage()
+#
+#         client.set_message_handler(InvokeCommandMsg, on_invoke_command)
+#
+#         # trigger server sent command via rest call
+#         cmd_msg = AM.InvokeCommandMsg(name="START")
+#         engine_id = Aggregator.create_engine_id(register_msg)
+#         send_message_to_client(engine_id, msg=cmd_msg)
+#
+#         await asyncio.wait_for(event.wait(), 5)
+#
+#     async def test_server_can_receive_tag_update(self):
+#         client = self.create_test_client()
+#         await client.start_connect_wait_async(ws_url)
+#         register_msg = EM.RegisterEngineMsg(computer_name="eng", uod_name="uod")
+#         await client.send_to_server(register_msg)
+#
+#         make_server_print_channels()
+#
+#         engine_id = Aggregator.create_engine_id(register_msg)
+#         msg = EM.TagsUpdatedMsg(tags=[EM.TagValue(name="foo", value="bar", value_unit=None)])
+#         result = await client.send_to_server(msg)
+#         self.assertIsInstance(result, SuccessMessage)
+#
+#         response = httpx.get(tags_url + "/" + engine_id)
+#         self.assertEqual(200, response.status_code)
+#
+#         tags = TagsInfo.parse_raw(response.content)
+#         self.assertIsNotNone(tags)
+#         tag = tags.get("foo")
+#         self.assertIsNotNone(tag)
+#         self.assertEqual(tag.name, "foo")  # type: ignore
+#         self.assertEqual(tag.value, "bar")  # type: ignore
+#
+#         await client.disconnect_wait_async()
+#
+#     async def test_server_can_receive_runlog(self):
+#         client = self.create_test_client()
+#         await client.start_connect_wait_async(ws_url)
+#         register_msg = EM.RegisterEngineMsg(computer_name="eng", uod_name="uod")
+#         await client.send_to_server(register_msg)
+#
+#         make_server_print_channels()
+#
+#         engine_id = Aggregator.create_engine_id(register_msg)
+#         msg = EM.RunLogMsg(id="a", lines=[
+#             EM.RunLogLine(
+#                 id="",
+#                 command_name="Foo",
+#                 start=10.1,
+#                 end=None,
+#                 progress=None,
+#                 start_values=[EM.TagValue(name="T1", value=87, value_unit=None)],
+#                 end_values=[])
+#         ])
+#         result = await client.send_to_server(msg)
+#         self.assertIsInstance(result, SuccessMessage)
+#
+#         response = httpx.get(runlog_url + "/" + engine_id)
+#         self.assertEqual(200, response.status_code)
+#
+#         runlog = RunLogMsg.parse_raw(response.content)
+#         self.assertIsNotNone(runlog)
+#         print(runlog)
+#         # tag = tags.get("foo")
+#         # self.assertIsNotNone(tag)
+#         # self.assertEqual(tag.name, "foo")  # type: ignore
+#         # self.assertEqual(tag.value, "bar")  # type: ignore
+#
+#         await client.disconnect_wait_async()
 
 
 class SerializationTest(unittest.TestCase):
     def test_serialization_RegisterEngineMsg(self):
-        reg = RegisterEngineMsg(computer_name="foo", uod_name="bar")
+        reg = EM.RegisterEngineMsg(computer_name="foo", uod_name="bar")
         reg_s = serialize_msg_to_json(reg)
         self.assertIsNotNone(reg_s)
 
     def test_round_trip_RegisterEngineMsg(self):
-        reg = RegisterEngineMsg(computer_name="foo", uod_name="bar")
+        reg = EM.RegisterEngineMsg(computer_name="foo", uod_name="bar")
         reg_s = serialize_msg_to_json(reg)
         reg_d = deserialize_msg_from_json(reg_s)
         self.assertIsNotNone(reg_d)
-        self.assertIsInstance(reg_d, RegisterEngineMsg)
+        self.assertIsInstance(reg_d, EM.RegisterEngineMsg)
         self.assertEqual(reg.computer_name, reg_d.computer_name)  # type: ignore
         self.assertEqual(reg.uod_name, reg_d.uod_name)  # type: ignore
 
     def test_serialization_TagsUpdatedMsg(self):
-        tu = TagsUpdatedMsg(tags=[TagValueMsg(name="foo", value="bar", value_unit="m")])
+        tu = EM.TagsUpdatedMsg(tags=[EM.TagValue(name="foo", value="bar", value_unit="m")])
         tu_s = serialize_msg_to_json(tu)
         self.assertIsNotNone(tu_s)
 
     def test_round_trip_TagsUpdatedMsg(self):
-        tu = TagsUpdatedMsg(tags=[TagValueMsg(name="foo", value="bar", value_unit=None)])
+        tu = EM.TagsUpdatedMsg(tags=[EM.TagValue(name="foo", value="bar", value_unit=None)])
         tu_s = serialize_msg_to_json(tu)
         self.assertIsNotNone(tu_s)
 
         tu_d = deserialize_msg_from_json(tu_s)
         self.assertIsNotNone(tu_d)
-        self.assertIsInstance(tu_d, TagsUpdatedMsg)
+        self.assertIsInstance(tu_d, EM.TagsUpdatedMsg)
         self.assertEqual(tu_d.tags[0].name, tu.tags[0].name)  # type: ignore
 
 

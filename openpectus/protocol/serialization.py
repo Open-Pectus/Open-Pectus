@@ -1,3 +1,4 @@
+import json
 from typing import Any, Tuple, Dict
 
 import openpectus.protocol.aggregator_messages as AM
@@ -33,9 +34,9 @@ def serialize_msg_to_json(msg: M.MessageBase) -> str:
 
 
 def deserialize_msg(msg_cls_name, init_dict: Dict[str, Any]) -> M.MessageBase:
-    cls = getattr(messages_namespace, msg_cls_name)
+    cls = getattr(EM, msg_cls_name, getattr(AM, msg_cls_name, getattr(M, msg_cls_name, None)))
     msg = cls(**init_dict)
-    assert isinstance(msg, MessageBase)
+    assert isinstance(msg, M.MessageBase)
     return msg
 
 
