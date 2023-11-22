@@ -38,7 +38,7 @@ class AggregatorDispatcher():
             logger.info(f"Engine connected with engine_id: {engine_id}")
             self.engine_id_channel_map[engine_id] = RpcChannel
         except:
-            logger.error(exc_info=True)
+            logger.error("on_client_connect failed with exception", exc_info=True)
             return await channel.close()
 
     async def on_client_disconnect(self, channel: RpcChannel):

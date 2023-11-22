@@ -12,7 +12,7 @@ import openpectus.protocol.aggregator_messages as AM
 class AggregatorTest(unittest.IsolatedAsyncioTestCase):
 
     async def create_channel_mock(self, engine_id):
-        return Mock(close=AsyncMock(), other=Mock(get_engine_id=Mock(return_value=engine_id)))
+        return Mock(close=AsyncMock(), other=Mock(get_engine_id=AsyncMock(return_value=engine_id)))
 
     async def connectRpc(self, dispatcher: AggregatorDispatcher, engine_id: str = None):
         channel = await self.create_channel_mock(engine_id)
