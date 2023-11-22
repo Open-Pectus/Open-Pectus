@@ -32,7 +32,7 @@ class EngineDispatcher():
             """ Dispath message to registered handler. """
             return await self.disp._dispatch_message(message)
 
-        def get_engine_id(self):
+        async def get_engine_id(self):
             return self.engine_id
 
     async def register_for_engine_id(self, uod_name: str):
@@ -68,15 +68,17 @@ class EngineDispatcher():
 
         # TODO consider https/wss
         self.post_url = f"http://{aggregator_host}{AGGREGATOR_REST_PATH}"
-        asyncio.get_event_loop().create_task(self.setup_websocket(aggregator_host, uod_name))
+        asyncio.create_task(self.setup_websocket(aggregator_host, uod_name))
 
     async def setup_websocket(self, aggregator_host: str, uod_name: str):
         self.check_aggregator_alive(aggregator_host)
-        self._engine_id = await self.register_for_engine_id(uod_name)
+        while self._engine_id is None:
+            self._engine_id = await self.register_for_engine_id(uod_name)
 
         rpc_url = f"ws://{aggregator_host}{AGGREGATOR_RPC_WS_PATH}"
         rpc_methods = EngineDispatcher.EngineRpcMethods(self, self._engine_id)
         self.rpc_client = WebSocketRpcClient(uri=rpc_url, methods=rpc_methods)
+        await self.rpc_client.__aenter__()
 
     def post(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
         """ Send message via HTTP POST. """

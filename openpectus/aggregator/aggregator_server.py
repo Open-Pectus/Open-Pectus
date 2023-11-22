@@ -30,7 +30,7 @@ class AggregatorServer:
         AggregatorMessageHandlers(aggregator)
         self.setup_fastapi([dispatcher.router])
 
-    def setup_fastapi(self, additional_routes: List[APIRoute]):
+    def setup_fastapi(self, additional_routes: List[APIRoute] = []):
         api_prefix = "/api"
 
         def custom_generate_unique_id(route: APIRoute):
@@ -44,7 +44,6 @@ class AggregatorServer:
         if not os.path.exists(self.frontend_dist_dir):
             raise FileNotFoundError("frontend_dist_dir not found: " + self.frontend_dist_dir)
         self.fastapi.mount("/", SinglePageApplication(directory=self.frontend_dist_dir))
-
 
 
 

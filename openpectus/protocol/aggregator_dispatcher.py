@@ -21,16 +21,21 @@ class AggregatorDispatcher():
 
         self.router = APIRouter(tags=["aggregator"])
         self.engine_id_channel_map: Dict[str, RpcChannel] = {}
+        self._handlers: Dict[str, MessageHandler] = {}
         self.endpoint = WebsocketRPCEndpoint(on_connect=[self.on_client_connect], on_disconnect=[self.on_client_disconnect])
         self.endpoint.register_route(self.router, path=AGGREGATOR_RPC_WS_PATH)
-        self._handlers: Dict[str, MessageHandler] = {}
         self.register_post_route(self.router)
 
     async def on_client_connect(self, channel: RpcChannel):
         try:
-            engine_id = channel.other.get_engine_id()
-            if engine_id is None or engine_id in self.engine_id_channel_map:
+            engine_id = await channel.other.get_engine_id()
+            if engine_id is None:
+                logger.error("Engine tried connecting with no engine_id available. Closing connection.")
                 return await channel.close()
+            if engine_id in self.engine_id_channel_map:
+                logger.error("Engine tried connecting with engine_id that is already connected. Closing connection.")
+                return await channel.close()
+            logger.info(f"Engine connected with engine_id: {engine_id}")
             self.engine_id_channel_map[engine_id] = RpcChannel
         except:
             logger.error(exc_info=True)
