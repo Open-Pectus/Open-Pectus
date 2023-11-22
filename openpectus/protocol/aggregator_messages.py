@@ -1,9 +1,10 @@
 from typing import List
 
-import openpectus.protocol.messages as M
+import openpectus.protocol.messages as Msg
+import openpectus.protocol.models as Mdl
 
 
-class AggregatorMessage(M.MessageBase):
+class AggregatorMessage(Msg.MessageBase):
     pass
 
 
@@ -12,7 +13,7 @@ class RegisterEngineReplyMsg(AggregatorMessage):
     engine_id: str | None
 
 
-class UnregisteredEngineErrorMsg(M.ErrorMessage):
+class UnregisteredEngineErrorMsg(Msg.ErrorMessage):
     pass
 
 
@@ -35,13 +36,5 @@ class TagSpec(AggregatorMessage):
 #     tags: List[TagSpec] = []
 
 
-class MethodLineMsg(AggregatorMessage):
-    id: str
-    content: str
-
-
 class MethodMsg(AggregatorMessage):
-    lines: List[MethodLineMsg]
-    started_line_ids: List[str]
-    executed_line_ids: List[str]
-    injected_line_ids: List[str]
+    method: Mdl.Method

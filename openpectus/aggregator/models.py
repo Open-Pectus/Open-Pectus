@@ -1,12 +1,15 @@
-from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum, auto
 from typing import Dict, List
 
-from fastapi_websocket_rpc import RpcChannel
-import openpectus.protocol.messages as M
-import openpectus.protocol.engine_messages as EM
+import openpectus.protocol.messages as Msg
+import openpectus.protocol.models as Mdl
 from pydantic import BaseModel
+
+# aliases so users of this file don't have to know about the protocol models
+RunLogLine = Mdl.RunLogLine
+ControlState = Mdl.ControlState
+Method = Mdl.Method
 
 
 class ChannelStatusEnum(StrEnum):
@@ -53,21 +56,16 @@ class ReadingCommand(BaseModel):
     command: str
 
 
-class ReadingDef(BaseModel):
-    label: str
-    tag_name: str
-    valid_value_units: List[str] | None
-    commands: List[ReadingCommand]
-
-
+class RunLog(BaseModel):
+    lines: List[RunLogLine]
 
 
 class EngineData(BaseModel):
     engine_id: str
     computer_name: str
     uod_name: str
-    readings: List[ReadingDef] = []
+    readings: List[Mdl.ReadingInfo] = []
     tags_info: TagsInfo = TagsInfo(map={})
-    runlog: None = None
-    control_state: None = None
-    method: None = None
+    runlog: RunLog = RunLog(lines=[])
+    control_state: ControlState = ControlState(is_running=False, is_holding=False, is_paused=False)
+    method: Method = Method(lines=[], started_line_ids=[], executed_line_ids=[], injected_line_ids=[])

@@ -1,6 +1,6 @@
 import logging
 
-from openpectus.aggregator.models.models import EngineData
+from openpectus.aggregator.models import EngineData
 from openpectus.aggregator.aggregator import Aggregator
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 import openpectus.protocol.aggregator_messages as AM
@@ -19,12 +19,12 @@ class AggregatorMessageHandlers:
         aggregator.dispatcher.set_post_handler(EM.RunLogMsg, self.handle_RunLogMsg)
         aggregator.dispatcher.set_post_handler(EM.ControlStateMsg, self.handle_ControlStateMsg)
 
-    def get_registered_engine_data(self, engine_id: str):
+    def get_registered_engine_data(self, engine_id: str) -> EngineData | None:
         return self.aggregator.engine_data_map[engine_id] if engine_id in self.aggregator.engine_data_map.keys() else None
 
     async def handle_RegisterEngineMsg(self, register_engine_msg: EM.RegisterEngineMsg) -> M.SuccessMessage | M.ErrorMessage:
         """ Registers engine """
-        engine_id = Aggregator.create_engine_id(register_engine_msg)
+        engine_id = self.aggregator.create_engine_id(register_engine_msg)
         if engine_id in self.aggregator.dispatcher.engine_id_channel_map.keys():
             logger.error(
                 f"""Registration failed for engine_id {engine_id}. An engine with that engine_id already has a websocket connection. """
@@ -89,5 +89,5 @@ class AggregatorMessageHandlers:
         if engine_data is None:
             return M.ErrorMessage()
 
-        engine_data.control_state = msg
+        engine_data.control_state = msg.control_state
         return M.SuccessMessage()

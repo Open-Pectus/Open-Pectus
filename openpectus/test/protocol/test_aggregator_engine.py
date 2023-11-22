@@ -9,7 +9,8 @@ import httpx
 import openpectus.aggregator.deps as agg_deps
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
-import openpectus.protocol.messages as M
+import openpectus.protocol.messages as Msg
+import openpectus.protocol.models as Mdl
 import uvicorn
 from fastapi import Depends, FastAPI
 from fastapi.responses import Response, PlainTextResponse
@@ -384,12 +385,12 @@ class SerializationTest(unittest.TestCase):
         self.assertEqual(reg.uod_name, reg_d.uod_name)  # type: ignore
 
     def test_serialization_TagsUpdatedMsg(self):
-        tu = EM.TagsUpdatedMsg(tags=[EM.TagValue(name="foo", value="bar", value_unit="m")])
+        tu = EM.TagsUpdatedMsg(tags=[Mdl.TagValue(name="foo", value="bar", value_unit="m")])
         tu_s = serialize_msg_to_json(tu)
         self.assertIsNotNone(tu_s)
 
     def test_round_trip_TagsUpdatedMsg(self):
-        tu = EM.TagsUpdatedMsg(tags=[EM.TagValue(name="foo", value="bar", value_unit=None)])
+        tu = EM.TagsUpdatedMsg(tags=[Mdl.TagValue(name="foo", value="bar", value_unit=None)])
         tu_s = serialize_msg_to_json(tu)
         self.assertIsNotNone(tu_s)
 

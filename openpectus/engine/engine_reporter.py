@@ -2,13 +2,12 @@ import asyncio
 import logging
 from queue import Empty
 
-import openpectus.protocol.messages as M
-import openpectus.protocol.aggregator_messages as AM
+import openpectus.lang.exec.tags as tags
 import openpectus.protocol.engine_messages as EM
+import openpectus.protocol.models as Mdl
 from openpectus.engine.engine import Engine
-from openpectus.protocol.engine_dispatcher import EngineDispatcher
-from openpectus.lang.exec.tags import TagValue
 from openpectus.lang.exec.runlog import RunLogItem
+from openpectus.protocol.engine_dispatcher import EngineDispatcher
 
 logger = logging.getLogger(__name__)
 
@@ -40,13 +39,13 @@ class EngineReporter():
         await self.send_tag_updates_async()
 
     async def send_uod_info_async(self):
-        readings: List[EM.ReadingInfo] = []
+        readings: List[Mdl.ReadingInfo] = []
         for r in self.engine.uod.readings:
-            ri = EM.ReadingInfo(
+            ri = Mdl.ReadingInfo(
                 label=r.label,
                 tag_name=r.tag_name,
                 valid_value_units=r.valid_value_units,
-                commands=[EM.ReadingCommand(name=c.name, command=c.command) for c in r.commands])
+                commands=[Mdl.ReadingCommand(name=c.name, command=c.command) for c in r.commands])
             readings.append(ri)
 
         msg = EM.UodInfoMsg(readings=readings)
@@ -57,7 +56,7 @@ class EngineReporter():
         try:
             for _ in range(100):
                 tag = self.engine.tag_updates.get_nowait()
-                tags.append(EM.TagValue(name=tag.name, value=tag.get_value(), value_unit=tag.unit))
+                tags.append(Mdl.TagValue(name=tag.name, value=tag.get_value(), value_unit=tag.unit))
         except Empty:
             pass
         if len(tags) > 0:
@@ -65,12 +64,12 @@ class EngineReporter():
             self.dispatcher.post(msg)
 
     async def send_runlog_async(self):
-        def to_value(t: TagValue) -> EM.TagValue:
-            return EM.TagValue(name=t.name, value=t.value, value_unit=t.unit)
+        def to_value(t: tags.TagValue) -> Mdl.TagValue:
+            return Mdl.TagValue(name=t.name, value=t.value, value_unit=t.unit)
 
-        def to_line(item: RunLogItem) -> EM.RunLogLine:
+        def to_line(item: RunLogItem) -> Mdl.RunLogLine:
             # TODO what about state - try the client in test mode
-            msg = EM.RunLogLine(
+            msg = Mdl.RunLogLine(
                 id=item.id,
                 command_name=item.name,
                 start=item.start,
@@ -89,11 +88,11 @@ class EngineReporter():
         self.dispatcher.post(msg)
 
     async def send_control_state_async(self):
-        msg = EM.ControlStateMsg(
+        msg = EM.ControlStateMsg(control_state=Mdl.ControlState(
             is_running=self.engine._runstate_started,
             is_holding=self.engine._runstate_holding,
             is_paused=self.engine._runstate_paused
-        )
+        ))
         self.dispatcher.post(msg)
 
     # async def get_method(self) -> M.MethodMsg | M.RpcErrorMessage:

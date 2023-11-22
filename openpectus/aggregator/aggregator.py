@@ -1,4 +1,4 @@
-from openpectus.aggregator.models.models import EngineData
+from openpectus.aggregator.models import EngineData
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.aggregator_messages as AM
@@ -12,8 +12,7 @@ class Aggregator:
         """ all client data except channels, indexed by engine_id """
         self.dispatcher = dispatcher
 
-    @staticmethod
-    def create_engine_id(register_engine_msg: EM.RegisterEngineMsg):
+    def create_engine_id(self, register_engine_msg: EM.RegisterEngineMsg):
         """ Defines the generation of the engine_id that is uniquely assigned to each engine.
 
         TODO: Considerations:

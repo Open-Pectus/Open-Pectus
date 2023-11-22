@@ -28,7 +28,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
         aggregator = Aggregator(dispatcher)
         messageHandlers = AggregatorMessageHandlers(aggregator)
         register_engine_msg = EM.RegisterEngineMsg(computer_name='computer-name', uod_name='uod-name')
-        engine_id = Aggregator.create_engine_id(register_engine_msg)
+        engine_id = aggregator.create_engine_id(register_engine_msg)
 
         # connecting rpc with no response for engine id should close connection
         channel = await self.connectRpc(dispatcher, None)
@@ -61,8 +61,8 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
         messageHandlers = AggregatorMessageHandlers(aggregator)
         register_engine_msg = EM.RegisterEngineMsg(computer_name='computer-name', uod_name='uod-name')
         register_engine_msg_different_computer = EM.RegisterEngineMsg(computer_name='computer-name2', uod_name='uod-name')
-        engine_id1 = Aggregator.create_engine_id(register_engine_msg)
-        engine_id2 = Aggregator.create_engine_id(register_engine_msg_different_computer)
+        engine_id1 = aggregator.create_engine_id(register_engine_msg)
+        engine_id2 = aggregator.create_engine_id(register_engine_msg_different_computer)
 
         # registering engine 1 while not registered before should succceed
         resultMessage = await messageHandlers.handle_RegisterEngineMsg(register_engine_msg)

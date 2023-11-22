@@ -4,10 +4,11 @@ from typing import List
 
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.routers.dto as D
-import openpectus.protocol.messages as M
+import openpectus.aggregator.models as Mdl
+import openpectus.protocol.aggregator_messages as AM
 from fastapi import APIRouter, Depends, Response
 from openpectus.aggregator.aggregator import Aggregator
-from openpectus.aggregator.models.models import EngineData
+from openpectus.aggregator.models import EngineData
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])
@@ -89,12 +90,12 @@ async def execute_command(unit_id: str, command: D.ExecutableCommand, agg: Aggre
         # TODO remove once frontend is updated to title cased commands
         code = lines[0]
         code = code.title()
-        msg = M.InvokeCommandMsg(name=code)
+        msg = AM.InvokeCommandMsg(name=code)
     else:
-        msg = M.InjectCodeMsg(pcode=command.command)
+        msg = AM.InjectCodeMsg(pcode=command.command)
 
     logger.info(f"Sending msg '{str(msg)}' of type {type(msg)} to client '{unit_id}'")
-    await agg.send_to_client(client_id=unit_id, msg=msg)
+    await agg.dispatcher.rpc_call(unit_id, msg)
 
 
 @router.get("/process_unit/{unit_id}/process_diagram")
@@ -119,12 +120,12 @@ Mark: Y""")
 
 @router.get('/process_unit/{unit_id}/run_log')
 def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> D.RunLog:
-    client_data = agg.engine_data_map.get(unit_id)
-    if client_data is None:
+    engine_data = agg.engine_data_map.get(unit_id)
+    if engine_data is None:
         logger.warning("No client data - thus no runlog")
         return D.RunLog(lines=[])
 
-    def from_line_msg(msg: M.RunLogLineMsg) -> D.RunLogLine:
+    def from_line_model(msg: Mdl.RunLogLine) -> D.RunLogLine:
         cmd = D.ExecutableCommand(
                 command=msg.command_name,
                 name=None,
@@ -145,19 +146,19 @@ def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)
         )
         return line
 
-    logger.info(f"Got runlog with {len(client_data.runlog.lines)} lines")
+    logger.info(f"Got runlog with {len(engine_data.runlog.lines)} lines")
     return D.RunLog(
-        lines=list(map(from_line_msg, client_data.runlog.lines)))
+        lines=list(map(from_line_model, engine_data.runlog.lines)))
 
 
 @router.get('/process_unit/{unit_id}/method')
 def get_method(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> D.Method:
-    client_data = agg.engine_data_map.get(unit_id)
-    if client_data is None:
+    engine_data = agg.engine_data_map.get(unit_id)
+    if engine_data is None:
         logger.warning("No client data - thus no method")
         return D.Method(lines=[], started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
 
-    def from_messsage(msg: M.MethodMsg) -> D.Method:
+    def from_model(msg: Mdl.Method) -> D.Method:
         return D.Method(
             lines=[D.MethodLine(id=line.id, content=line.content) for line in msg.lines],
             started_line_ids=[_id for _id in msg.started_line_ids],
@@ -166,7 +167,7 @@ def get_method(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator))
         )
 
     print("Returned client method")
-    return from_messsage(client_data.method)
+    return from_model(engine_data.method)
 
 
 @router.post('/process_unit/{unit_id}/method')
@@ -200,18 +201,18 @@ def get_plot_log(unit_id: str) -> D.PlotLog:
 @router.get('/process_unit/{unit_id}/control_state')
 def get_control_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> D.ControlState:
 
-    def from_message(state: M.ControlStateMsg) -> D.ControlState:
+    def from_message(state: Mdl.ControlState) -> D.ControlState:
         return D.ControlState(
             is_running=state.is_running,
             is_holding=state.is_holding,
             is_paused=state.is_paused)
 
-    client_data = agg.engine_data_map.get(unit_id)
-    if client_data is None:
+    engine_data = agg.engine_data_map.get(unit_id)
+    if engine_data is None:
         logger.warning("No client data - thus no control state")
         return D.ControlState.default()
 
-    return from_message(client_data.control_state)
+    return from_message(engine_data.control_state)
 
 
 @router.post('/process_unit/{unit_id}/run_log/force_line/{line_id}')
