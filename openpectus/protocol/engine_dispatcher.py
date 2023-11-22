@@ -1,12 +1,17 @@
+import asyncio
 import logging
+import socket
 from typing import Dict
 
 import httpx
 import openpectus.protocol.messages as M
+import openpectus.protocol.engine_messages as EM
+import openpectus.protocol.aggregator_messages as AM
 import requests
 from fastapi_websocket_rpc import RpcMethodsBase, WebSocketRpcClient
 from openpectus.protocol.dispatch_interface import AGGREGATOR_REST_PATH, AGGREGATOR_RPC_WS_PATH, MessageHandler
 from openpectus.protocol.dispatch_interface import AGGREGATOR_HEALTH_PATH
+from protocol.serialization import serialize, deserialize
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +34,10 @@ class EngineDispatcher():
         def get_engine_id(self):
             return self.engine_id
 
-    async def register_for_engine_id(self):
-        register_engine_msg = M.RegisterEngineMsg(computer_name=socket.gethostname(), uod_name=self.engine.uod.instrument)
-        register_response = await self.post(register_engine_msg)
-        if not isinstance(register_response, M.RegisterEngineReplyMsg) or not register_response.success:
+    async def register_for_engine_id(self, uod_name: str):
+        register_engine_msg = EM.RegisterEngineMsg(computer_name=socket.gethostname(), uod_name=uod_name)
+        register_response = self.post(register_engine_msg)
+        if not isinstance(register_response, AM.RegisterEngineReplyMsg) or not register_response.success:
             print("Failed to Register")
             return
         return register_response.engine_id
@@ -55,26 +60,33 @@ class EngineDispatcher():
             print("OpenPectus Engine cannot start.")
             exit(1)
 
-    def __init__(self,  aggregator_host: str) -> None:
+    def __init__(self,  aggregator_host: str, uod_name: str) -> None:
         super().__init__()
+        self._handlers: Dict[str, MessageHandler] = {}
+        self._engine_id = None
 
         # TODO consider https/wss
         self.post_url = f"http://{aggregator_host}{AGGREGATOR_REST_PATH}"
-        rpc_url = f"ws://{aggregator_host}{AGGREGATOR_RPC_WS_PATH}"
+        asyncio.get_event_loop().create_task(self.setup_websocket(aggregator_host, uod_name))
 
+    async def setup_websocket(self, aggregator_host: str, uod_name: str):
         self.check_aggregator_alive(aggregator_host)
-        engine_id = self.register_for_engine_id()
-        rpc_methods = EngineDispatcher.EngineRpcMethods(self, engine_id)
-        self.rpc_client = WebSocketRpcClient(uri=rpc_url, methods=rpc_methods)
-        self._handlers: Dict[str, MessageHandler] = {}
+        self._engine_id = await self.register_for_engine_id(uod_name)
 
-    def post(self, message: M.MessageBase) -> M.MessageBase:
+        rpc_url = f"ws://{aggregator_host}{AGGREGATOR_RPC_WS_PATH}"
+        rpc_methods = EngineDispatcher.EngineRpcMethods(self, self._engine_id)
+        self.rpc_client = WebSocketRpcClient(uri=rpc_url, methods=rpc_methods)
+
+    def post(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
         """ Send message via HTTP POST. """
-        message_json = M.serialize(message)
+        if(not isinstance(message, EM.RegisterEngineMsg)): # Special case for registering
+            if(self._engine_id is None): return M.ErrorMessage # TODO maybe throw error instead?
+            message.engine_id = self._engine_id
+        message_json = serialize(message)
         response = requests.post(url=self.post_url, json=message_json)
         if response.status_code == 200:
             response_json = response.json()
-            value = M.deserialize(response_json)
+            value = deserialize(response_json)
             return value
         else:
             message_type = type(message)

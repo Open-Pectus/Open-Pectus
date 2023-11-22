@@ -4,7 +4,8 @@ from enum import StrEnum, auto
 from typing import Dict, List
 
 from fastapi_websocket_rpc import RpcChannel
-from openpectus.protocol.messages import RunLogMsg, ControlStateMsg, MethodMsg
+import openpectus.protocol.messages as M
+import openpectus.protocol.engine_messages as EM
 from pydantic import BaseModel
 
 
@@ -59,12 +60,14 @@ class ReadingDef(BaseModel):
     commands: List[ReadingCommand]
 
 
+
+
 class EngineData(BaseModel):
     engine_id: str
     computer_name: str
     uod_name: str
     readings: List[ReadingDef] = []
     tags_info: TagsInfo = TagsInfo(map={})
-    runlog: RunLogMsg = RunLogMsg.default()
-    control_state: ControlStateMsg = ControlStateMsg.default()
-    method: MethodMsg = MethodMsg.default()
+    runlog: None = None
+    control_state: None = None
+    method: None = None

@@ -6,6 +6,7 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi_websocket_rpc import RpcChannel, WebsocketRPCEndpoint
 from openpectus.protocol.dispatch_interface import AGGREGATOR_RPC_WS_PATH, AGGREGATOR_REST_PATH, MessageHandler
 from openpectus.protocol.exceptions import ProtocolException
+from protocol.serialization import deserialize, serialize
 
 logger = logging.getLogger(__name__)
 
@@ -50,11 +51,11 @@ class AggregatorDispatcher():
         @router.post(AGGREGATOR_REST_PATH)
         async def post(request: Request):
             request_json = await request.json()
-            message = M.deserialize(request_json)
+            message = deserialize(request_json)
 
             response_message = await self._dispatch_post(message)
 
-            message_json = M.serialize(response_message)
+            message_json = serialize(response_message)
             return message_json
 
     async def _dispatch_post(self, message: M.MessageBase) -> M.MessageBase:

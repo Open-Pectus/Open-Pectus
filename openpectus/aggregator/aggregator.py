@@ -1,6 +1,7 @@
 from openpectus.aggregator.models.models import EngineData
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
-from openpectus.protocol.messages import RegisterEngineMsg, MethodMsg
+import openpectus.protocol.engine_messages as EM
+import openpectus.protocol.aggregator_messages as AM
 
 
 class Aggregator:
@@ -12,7 +13,7 @@ class Aggregator:
         self.dispatcher = dispatcher
 
     @staticmethod
-    def create_engine_id(register_engine_msg: RegisterEngineMsg):
+    def create_engine_id(register_engine_msg: EM.RegisterEngineMsg):
         """ Defines the generation of the engine_id that is uniquely assigned to each engine.
 
         TODO: Considerations:
@@ -25,7 +26,7 @@ class Aggregator:
         """
         return register_engine_msg.computer_name + "_" + register_engine_msg.uod_name
 
-    def get_method(self, engine_id: str) -> MethodMsg | None:
+    def get_method(self, engine_id: str) -> AM.MethodMsg | None:
         engine_data = self.engine_data_map.get(engine_id)
         if engine_data is None:
             return None
@@ -33,7 +34,7 @@ class Aggregator:
         logger.info(f"Returned local method with {len(engine_data.method.lines)} lines")
         return engine_data.method
 
-    async def set_method(self, engine_id: str, method: MethodMsg) -> bool:
+    async def set_method(self, engine_id: str, method: AM.MethodMsg) -> bool:
         try:
             response = await self.dispatcher.rpc_call(engine_id, message=method)
             if isinstance(response, ErrorMessage):

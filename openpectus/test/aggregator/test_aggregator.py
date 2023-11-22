@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import Mock, AsyncMock, MagicMock, PropertyMock
 
 from openpectus.aggregator.aggregator import Aggregator
-from openpectus.aggregator.message_handlers import MessageHandlers
+from openpectus.aggregator.aggregator_message_handlers import AggregatorMessageHandlers
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.protocol.messages import RegisterEngineMsg, SuccessMessage, ErrorMessage, RegisterEngineReplyMsg
 
@@ -24,7 +24,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
     async def test_register_engine(self):
         dispatcher = AggregatorDispatcher()
         aggregator = Aggregator(dispatcher)
-        messageHandlers = MessageHandlers(aggregator)
+        messageHandlers = AggregatorMessageHandlers(aggregator)
         register_engine_msg = RegisterEngineMsg(computer_name='computer-name', uod_name='uod-name')
         engine_id = Aggregator.create_engine_id(register_engine_msg)
 
@@ -56,7 +56,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
     async def test_register_engine_different_name(self):
         dispatcher = AggregatorDispatcher()
         aggregator = Aggregator(dispatcher)
-        messageHandlers = MessageHandlers(aggregator)
+        messageHandlers = AggregatorMessageHandlers(aggregator)
         register_engine_msg = RegisterEngineMsg(computer_name='computer-name', uod_name='uod-name')
         register_engine_msg_different_computer = RegisterEngineMsg(computer_name='computer-name2', uod_name='uod-name')
         engine_id1 = Aggregator.create_engine_id(register_engine_msg)

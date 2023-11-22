@@ -7,7 +7,7 @@ from openpectus import log_setup_colorlog
 from openpectus.engine.engine import Engine
 from openpectus.engine.engine_reporter import EngineReporter
 from openpectus.engine.hardware import RegisterDirection
-from openpectus.engine.message_handlers import MessageHandlers
+from openpectus.engine.engine_message_handlers import EngineMessageHandlers
 from openpectus.lang.exec import tags, readings as R
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
 from protocol.engine_dispatcher import EngineDispatcher
@@ -63,9 +63,9 @@ async def async_main(args):
     # TODO: read uod from file
     uod = create_demo_uod()
     engine = Engine(uod, tick_interval=1)
-    dispatcher = EngineDispatcher(f"{args.aggregator_hostname}:{args.aggregator_port}")
+    dispatcher = EngineDispatcher(f"{args.aggregator_hostname}:{args.aggregator_port}", engine.uod.instrument)
     engine_reporter = EngineReporter(engine, dispatcher)
-    message_handlers = MessageHandlers(engine, dispatcher)
+    message_handlers = EngineMessageHandlers(engine, dispatcher)
     await engine_reporter.run_loop_async()
 
 
