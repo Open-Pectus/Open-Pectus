@@ -17,7 +17,7 @@ def create_pu(item: EngineData) -> D.ProcessUnit:
     # TODO define source of all fields
     unit = D.ProcessUnit(
         id=item.engine_id or "(error)",
-        name=f"{item.engine_name} ({item.uod_name})",
+        name=f"{item.computer_name} ({item.uod_name})",
         state=D.ProcessUnitState.Ready(state=D.ProcessUnitStateEnum.READY),
         location="Unknown location",
         runtime_msec=189309,
@@ -28,7 +28,7 @@ def create_pu(item: EngineData) -> D.ProcessUnit:
 
 @router.get("/process_unit/{unit_id}")
 def get_unit(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> D.ProcessUnit | None:
-    ci = agg.get_client_channel(client_id=unit_id)
+    ci = agg.engine_data_map.get(unit_id)
     if ci is None:
         return None
     return create_pu(item=ci)
@@ -37,7 +37,7 @@ def get_unit(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -
 @router.get("/process_units")
 def get_units(agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[D.ProcessUnit]:
     units: List[D.ProcessUnit] = []
-    for channel_id, item in agg.channel_map.items():
+    for engine_id, item in agg.engine_data_map.items():
         unit = create_pu(item)
         units.append(unit)
     return units
