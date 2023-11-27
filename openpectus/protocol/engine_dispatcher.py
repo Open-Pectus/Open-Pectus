@@ -83,7 +83,7 @@ class EngineDispatcher():
     def post(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
         """ Send message via HTTP POST. """
         if(not isinstance(message, EM.RegisterEngineMsg)): # Special case for registering
-            if(self._engine_id is None): return M.ErrorMessage # TODO maybe throw error instead?
+            if(self._engine_id is None): return M.ErrorMessage(message="Engine did not have engine_id yet")
             message.engine_id = self._engine_id
         message_json = serialize(message)
         response = requests.post(url=self.post_url, json=message_json)
