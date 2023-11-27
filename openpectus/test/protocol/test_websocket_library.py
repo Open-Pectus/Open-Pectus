@@ -38,7 +38,8 @@ class RpcMethods(RpcMethodsBase):
 
 def setup_server_endpoint():
     server = FastAPI()
-    server_endpoint = WebsocketRPCEndpoint(on_connect=[on_client_connect])
+    # WebsockeRPCEndpoint has wrong types for its on_connect and on_disconnect. It should be List[Callable[[RpcChannel], Awaitable[Any]]] instead of List[Coroutine]
+    server_endpoint = WebsocketRPCEndpoint(on_connect=[on_client_connect]) # type: ignore
     server_endpoint.register_route(server, path=AGGREGATOR_RPC_WS_PATH)
     uvicorn.run(server, port=PORT)
 

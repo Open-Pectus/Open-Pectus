@@ -25,7 +25,9 @@ class AggregatorDispatcher():
         self.router = APIRouter(tags=["aggregator"])
         self.engine_id_channel_map: Dict[str, RpcChannel] = {}
         self._handlers: Dict[str, MessageHandler] = {}
-        self.endpoint = WebsocketRPCEndpoint(on_connect=[self.on_client_connect], on_disconnect=[self.on_client_disconnect])
+        # WebsockeRPCEndpoint has wrong types for its on_connect and on_disconnect. It should be List[Callable[[RpcChannel], Awaitable[Any]]] instead of List[Coroutine]
+        # See https://github.com/permitio/fastapi_websocket_rpc/issues/30
+        self.endpoint = WebsocketRPCEndpoint(on_connect=[self.on_client_connect], on_disconnect=[self.on_client_disconnect]) # type: ignore
         self.endpoint.register_route(self.router, path=AGGREGATOR_RPC_WS_PATH)
         self.register_post_route(self.router)
 

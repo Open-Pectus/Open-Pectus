@@ -20,7 +20,7 @@ class AggregatorMessageHandlers:
         aggregator.dispatcher.set_post_handler(EM.ControlStateMsg, self.handle_ControlStateMsg)
 
     def get_registered_engine_data(self, engine_id: str | None) -> EngineData | None:
-        return self.aggregator.engine_data_map[engine_id] if engine_id in self.aggregator.engine_data_map.keys() else None
+        return self.aggregator.engine_data_map[engine_id] if isinstance(engine_id, str) and engine_id in self.aggregator.engine_data_map.keys() else None
 
     async def handle_RegisterEngineMsg(self, register_engine_msg: EM.RegisterEngineMsg) -> AM.RegisterEngineReplyMsg:
         """ Registers engine """

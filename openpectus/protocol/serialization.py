@@ -37,6 +37,7 @@ def serialize_msg_to_json(msg: M.MessageBase) -> str:
 
 def deserialize_msg(msg_cls_name, init_dict: Dict[str, Any]) -> M.MessageBase:
     cls = getattr(EM, msg_cls_name, getattr(AM, msg_cls_name, getattr(M, msg_cls_name, None)))
+    assert not isinstance(cls, NoneType)
     msg = cls(**init_dict)
     assert isinstance(msg, M.MessageBase)
     return msg
