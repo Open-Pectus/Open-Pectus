@@ -1,22 +1,24 @@
+import asyncio
 import unittest
-from unittest.mock import Mock, AsyncMock, MagicMock, PropertyMock
+from unittest.mock import Mock, AsyncMock
 
+import openpectus.protocol.aggregator_messages as AM
+import openpectus.protocol.engine_messages as EM
+from fastapi_websocket_rpc.schemas import RpcResponse
 from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.aggregator_message_handlers import AggregatorMessageHandlers
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
-import openpectus.protocol.messages as M
-import openpectus.protocol.engine_messages as EM
-import openpectus.protocol.aggregator_messages as AM
 
 
 class AggregatorTest(unittest.IsolatedAsyncioTestCase):
 
-    async def create_channel_mock(self, engine_id):
-        return Mock(close=AsyncMock(), other=Mock(get_engine_id=AsyncMock(return_value=engine_id)))
+    async def create_channel_mock(self, engine_id: str | None):
+        response = RpcResponse[str | None](result=engine_id, result_type=None)
+        return Mock(close=AsyncMock(), other=Mock(get_engine_id=AsyncMock(return_value=response)))
 
-    async def connectRpc(self, dispatcher: AggregatorDispatcher, engine_id: str | None = None):
+    async def connectRpc(self, dispatcher: AggregatorDispatcher, engine_id: str | None):
         channel = await self.create_channel_mock(engine_id)
-        await dispatcher.on_client_connect(channel)
+        await dispatcher.on_delayed_client_connect(channel)
         return channel
 
     async def disconnectRpc(self, dispatcher: AggregatorDispatcher, engine_id: str):
@@ -53,7 +55,6 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
         resultMessage = await dispatcher._dispatch_post(register_engine_msg)
         assert isinstance(resultMessage, AM.RegisterEngineReplyMsg)
         self.assertEqual(resultMessage.success, True)
-
 
     async def test_register_engine_different_name(self):
         dispatcher = AggregatorDispatcher()

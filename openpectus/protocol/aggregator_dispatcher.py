@@ -36,7 +36,7 @@ class AggregatorDispatcher():
             response = await channel.other.get_engine_id()
             assert isinstance(response, RpcResponse)
             engine_id = response.result
-            assert isinstance(engine_id, str)
+            assert isinstance(engine_id, str | None)
             if engine_id is None:
                 logger.error("Engine tried connecting with no engine_id available. Closing connection.")
                 return await channel.close()
