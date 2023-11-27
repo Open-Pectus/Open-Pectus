@@ -130,6 +130,12 @@ class Engine(InterpreterContext):
         self._running = True
         self._tick_timer.start()
 
+    def stop(self):
+        self.uod.hwl.disconnect()
+        self._running = False
+        self._tick_timer.stop()
+        self.cleanup()
+
     def tick(self):
         """ Performs a scan cycle tick. """
         logger.debug(f"Tick {self._tick_number + 1}")

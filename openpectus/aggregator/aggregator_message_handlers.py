@@ -19,10 +19,10 @@ class AggregatorMessageHandlers:
         aggregator.dispatcher.set_post_handler(EM.RunLogMsg, self.handle_RunLogMsg)
         aggregator.dispatcher.set_post_handler(EM.ControlStateMsg, self.handle_ControlStateMsg)
 
-    def get_registered_engine_data(self, engine_id: str) -> EngineData | None:
+    def get_registered_engine_data(self, engine_id: str | None) -> EngineData | None:
         return self.aggregator.engine_data_map[engine_id] if engine_id in self.aggregator.engine_data_map.keys() else None
 
-    async def handle_RegisterEngineMsg(self, register_engine_msg: EM.RegisterEngineMsg) -> Msg.SuccessMessage | Msg.ErrorMessage:
+    async def handle_RegisterEngineMsg(self, register_engine_msg: EM.RegisterEngineMsg) -> AM.RegisterEngineReplyMsg:
         """ Registers engine """
         engine_id = self.aggregator.create_engine_id(register_engine_msg)
         if engine_id in self.aggregator.dispatcher.engine_id_channel_map.keys():
@@ -81,7 +81,7 @@ class AggregatorMessageHandlers:
         if engine_data is None:
             return Msg.ErrorMessage()
 
-        engine_data.runlog = msg
+        engine_data.runlog = msg.runlog
         return Msg.SuccessMessage()
 
     async def handle_ControlStateMsg(self, msg: EM.ControlStateMsg) -> Msg.SuccessMessage | Msg.ErrorMessage:

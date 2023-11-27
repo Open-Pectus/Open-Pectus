@@ -1,5 +1,6 @@
 from __future__ import annotations
 import asyncio
+import atexit
 import logging
 import socket
 from typing import Dict
@@ -78,7 +79,11 @@ class EngineDispatcher():
         rpc_url = f"ws://{aggregator_host}{AGGREGATOR_RPC_WS_PATH}"
         rpc_methods = EngineDispatcher.EngineRpcMethods(self, self._engine_id)
         self.rpc_client = WebSocketRpcClient(uri=rpc_url, methods=rpc_methods)
+        atexit.register(self.disconnect)
         await self.rpc_client.__aenter__()
+
+    async def disconnect(self):
+        await self.rpc_client.__aexit__()
 
     def post(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
         """ Send message via HTTP POST. """

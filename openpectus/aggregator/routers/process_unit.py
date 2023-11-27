@@ -127,12 +127,12 @@ def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)
 
     def from_line_model(msg: Mdl.RunLogLine) -> D.RunLogLine:
         cmd = D.ExecutableCommand(
-                command=msg.command_name,
-                name=None,
-                source=D.CommandSource.METHOD
+            command=msg.command_name,
+            name=None,
+            source=D.CommandSource.METHOD
         )
         line = D.RunLogLine(
-            id=0,   # TODO change type int to str
+            id=0,  # TODO change type int to str
             command=cmd,
             start=datetime.fromtimestamp(msg.start),
             end=None if msg.end is None else datetime.fromtimestamp(msg.end),
@@ -171,15 +171,13 @@ def get_method(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator))
 
 
 @router.post('/process_unit/{unit_id}/method')
-async def save_method(unit_id: str, method: D.Method, agg: Aggregator = Depends(agg_deps.get_aggregator)):
-    msg = AM.MethodMsg(method=Mdl.Method(
-        lines=[Mdl.MethodLine(id=line.id, content=line.content) for line in method.lines],
-        started_line_ids=[_id for _id in method.started_line_ids],
-        executed_line_ids=[_id for _id in method.executed_line_ids],
-        injected_line_ids=[_id for _id in method.injected_line_ids],
-    ))
+async def save_method(unit_id: str, method_dto: D.Method, agg: Aggregator = Depends(agg_deps.get_aggregator)):
+    method_mdl = Mdl.Method(lines=[Mdl.MethodLine(id=line.id, content=line.content) for line in method_dto.lines],
+                            started_line_ids=[_id for _id in method_dto.started_line_ids],
+                            executed_line_ids=[_id for _id in method_dto.executed_line_ids],
+                            injected_line_ids=[_id for _id in method_dto.injected_line_ids])
 
-    if not await agg.set_method(engine_id=unit_id, method=msg):
+    if not await agg.set_method(engine_id=unit_id, method=method_mdl):
         return D.ServerErrorResponse(message="Failed to set method")
 
 
@@ -200,7 +198,6 @@ def get_plot_log(unit_id: str) -> D.PlotLog:
 
 @router.get('/process_unit/{unit_id}/control_state')
 def get_control_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> D.ControlState:
-
     def from_message(state: Mdl.ControlState) -> D.ControlState:
         return D.ControlState(
             is_running=state.is_running,

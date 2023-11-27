@@ -4,6 +4,7 @@ from typing import Dict
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
+import openpectus.aggregator.models as Mdl
 from openpectus.aggregator.models import EngineData
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 
@@ -36,11 +37,11 @@ class Aggregator:
             return None
 
         logger.info(f"Returned local method with {len(engine_data.method.lines)} lines")
-        return engine_data.method
+        return AM.MethodMsg(method=engine_data.method)
 
-    async def set_method(self, engine_id: str, method: AM.MethodMsg) -> bool:
+    async def set_method(self, engine_id: str, method: Mdl.Method) -> bool:
         try:
-            response = await self.dispatcher.rpc_call(engine_id, message=method)
+            response = await self.dispatcher.rpc_call(engine_id, message=AM.MethodMsg(method=method))
             if isinstance(response, M.ErrorMessage):
                 logger.error(f"Failed to set method. Engine response: {response.message}")
                 return False

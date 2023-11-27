@@ -10,7 +10,7 @@ class AggregatorMessage(Msg.MessageBase):
 
 class RegisterEngineReplyMsg(AggregatorMessage):
     success: bool
-    engine_id: str | None
+    engine_id: str | None = None
 
 
 class UnregisteredEngineErrorMsg(Msg.ErrorMessage):

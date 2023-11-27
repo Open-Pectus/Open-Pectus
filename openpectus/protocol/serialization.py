@@ -1,5 +1,6 @@
 import json
-from typing import Any, Tuple, Dict
+from types import NoneType
+from typing import Any, Tuple, Dict, Callable
 
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
@@ -17,6 +18,7 @@ def deserialize(json_dict: dict[str, Any]) -> M.MessageBase:
         raise ValueError("Deserialization error. Key '_type' missing.")
     message_type = json_dict["_type"]
     cls = getattr(EM, message_type, getattr(AM, message_type, getattr(M, message_type, None)))
+    assert not isinstance(cls, NoneType)
     msg = cls(**json_dict)
     assert isinstance(msg, M.MessageBase)
     return msg

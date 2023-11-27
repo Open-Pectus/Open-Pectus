@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 # aliases so users of this file don't have to know about the protocol models
 RunLogLine = Mdl.RunLogLine
+RunLog = Mdl.RunLog
 ControlState = Mdl.ControlState
 Method = Mdl.Method
 MethodLine = Mdl.MethodLine
@@ -58,9 +59,6 @@ class ReadingCommand(BaseModel):
     name: str
     command: str
 
-
-class RunLog(BaseModel):
-    lines: List[RunLogLine]
 
 
 class EngineData(BaseModel):

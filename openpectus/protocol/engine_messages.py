@@ -5,7 +5,7 @@ import openpectus.protocol.models as Mdl
 
 
 class EngineMessage(Msg.MessageBase):
-    engine_id: str | None
+    engine_id: str | None = None
 
 
 class RegisterEngineMsg(Msg.MessageBase):
@@ -25,7 +25,7 @@ class TagsUpdatedMsg(EngineMessage):
 
 class RunLogMsg(EngineMessage):
     id: str
-    lines: List[Mdl.RunLogLine]
+    runlog: Mdl.RunLog
 
 
 class MethodMsg(EngineMessage):

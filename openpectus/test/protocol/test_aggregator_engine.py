@@ -55,16 +55,16 @@ def setup_server_rest_routes(app: FastAPI, endpoint: PubSubEndpoint):
         engine_id: str
         cmd_name: str
 
-    @app.post("/trigger_send")
-    async def trigger_send_command(cmd: SimpleCommandToEngine, aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
-        if cmd.engine_id is None or cmd.engine_id == "" or cmd.cmd_name is None or cmd.cmd_name == "":
-            return Response("Bad command", status_code=400)
-
-        logger.debug("trigger_send command: " + cmd.cmd_name)
-        # can't await this call or the test would deadlock so we fire'n'forget it
-        msg = AM.InvokeCommandMsg(name=cmd.cmd_name)
-        asyncio.create_task(aggregator.send_to_client(cmd.engine_id, msg))
-        return PlainTextResponse("OK")
+    # @app.post("/trigger_send")
+    # async def trigger_send_command(cmd: SimpleCommandToEngine, aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
+    #     if cmd.engine_id is None or cmd.engine_id == "" or cmd.cmd_name is None or cmd.cmd_name == "":
+    #         return Response("Bad command", status_code=400)
+    #
+    #     logger.debug("trigger_send command: " + cmd.cmd_name)
+    #     # can't await this call or the test would deadlock so we fire'n'forget it
+    #     msg = AM.InvokeCommandMsg(name=cmd.cmd_name)
+    #     asyncio.create_task(aggregator.send_to_client(cmd.engine_id, msg))
+    #     return PlainTextResponse("OK")
 
     @app.get("/tags/{engine_id}")
     async def get_tags(engine_id: str, aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
@@ -88,35 +88,35 @@ def setup_server_rest_routes(app: FastAPI, endpoint: PubSubEndpoint):
             return Response("No runlog found for engine_id " + engine_id, status_code=400)
         return runlog
 
-    @app.get("/debug_channels")
-    async def debug_channels(aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
-        print("Server channel map (channel, ch. closed, engine_id, status):")
-        for x in aggregator.channel_map.values():
-            print(f"{x.channel.id}\t{x.channel.isClosed()}\t{x.engine_id}\t{x.status}")
+    # @app.get("/debug_channels")
+    # async def debug_channels(aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
+    #     print("Server channel map (channel, ch. closed, engine_id, status):")
+    #     for x in aggregator.channel_map.values():
+    #         print(f"{x.channel.id}\t{x.channel.isClosed()}\t{x.engine_id}\t{x.status}")
 
-    @app.get("/clear_state")
-    async def clear_state(aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
-        logger.info("/clear_state")
-        aggregator.channel_map.clear()
-        aggregator.engine_data_map.clear()
-
-
-def setup_server():
-    app = FastAPI()
-    dispatcher = AggregatorDispatcher()
-    aggregator = Aggregator(dispatcher)
-    app.include_router(dispatcher.router)
-    assert aggregator.endpoint is not None
-    # Regular REST endpoint - that publishes to PubSub
-    setup_server_rest_routes(app, aggregator.endpoint)
-    uvicorn.run(app, port=PORT)
+    # @app.get("/clear_state")
+    # async def clear_state(aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
+    #     logger.info("/clear_state")
+    #     aggregator.channel_map.clear()
+    #     aggregator.engine_data_map.clear()
 
 
-def start_server_process():
-    # Run the server as a separate process
-    proc = Process(target=setup_server, args=(), daemon=True, name="uvicorn unit test server")
-    proc.start()
-    return proc
+# def setup_server():
+#     app = FastAPI()
+#     dispatcher = AggregatorDispatcher()
+#     aggregator = Aggregator(dispatcher)
+#     app.include_router(dispatcher.router)
+#     assert aggregator.endpoint is not None
+#     # Regular REST endpoint - that publishes to PubSub
+#     setup_server_rest_routes(app, aggregator.endpoint)
+#     uvicorn.run(app, port=PORT)
+
+
+# def start_server_process():
+#     # Run the server as a separate process
+#     proc = Process(target=setup_server, args=(), daemon=True, name="uvicorn unit test server")
+#     proc.start()
+#     return proc
 
 
 def send_message_to_client(engine_id: str, msg: AM.InvokeCommandMsg):

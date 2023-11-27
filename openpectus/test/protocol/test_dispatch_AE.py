@@ -12,6 +12,8 @@ from fastapi_websocket_rpc.logger import get_logger
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.protocol.engine_dispatcher import EngineDispatcher
 import openpectus.protocol.messages as M
+import openpectus.protocol.aggregator_messages as AM
+import openpectus.protocol.engine_messages as EM
 
 
 logger = get_logger("Test")
@@ -40,10 +42,10 @@ def setup_server():
     aggregator_disp = AggregatorDispatcher()
 
     async def handle_register(msg: M.MessageBase) -> M.MessageBase:
-        assert isinstance(msg, M.RegisterEngineMsg)
-        return M.RegisterEngineReplyMsg(success=True, engine_id="1234")
+        assert isinstance(msg, EM.RegisterEngineMsg)
+        return AM.RegisterEngineReplyMsg(success=True, engine_id="1234")
 
-    aggregator_disp.set_post_handler(M.RegisterEngineMsg, handle_register)
+    aggregator_disp.set_post_handler(EM.RegisterEngineMsg, handle_register)
 
     # endpoint = WebsocketRPCEndpoint(methods=server_proxy)
     # endpoint.register_route(app, path="/test-rpc")
@@ -81,8 +83,8 @@ class TestAE_EngineDispatcher_Impl(IsolatedAsyncioTestCase):
             finish.set()
             return M.MessageBase()
 
-        disp = EngineDispatcher(aggregator_host)
-        disp.set_rpc_handler(M.InvokeCommandMsg, handler)
+        disp = EngineDispatcher(aggregator_host, "uod1")
+        disp.set_rpc_handler(AM.InvokeCommandMsg, handler)
 
         # dispatch unrelated message
         await disp._dispatch_message(M.MessageBase())
@@ -91,7 +93,7 @@ class TestAE_EngineDispatcher_Impl(IsolatedAsyncioTestCase):
         self.assertTrue(not finish.is_set())
 
         # dispatch handled message
-        await disp._dispatch_message(M.InvokeCommandMsg(name="foo"))
+        await disp._dispatch_message(AM.InvokeCommandMsg(name="foo"))
 
         await asyncio.wait_for(finish.wait(), 5)
         self.assertTrue(finish.is_set())

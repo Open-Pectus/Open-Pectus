@@ -4,6 +4,7 @@ from typing import Dict
 
 import openpectus.protocol.messages as M
 from fastapi import APIRouter, FastAPI, Request
+from fastapi.routing import APIRoute
 from fastapi_websocket_rpc import RpcChannel, WebsocketRPCEndpoint
 from fastapi_websocket_rpc.schemas import RpcResponse
 from openpectus.protocol.dispatch_interface import AGGREGATOR_RPC_WS_PATH, AGGREGATOR_REST_PATH, MessageHandler
@@ -41,7 +42,7 @@ class AggregatorDispatcher():
                 logger.error("Engine tried connecting with engine_id that is already connected. Closing connection.")
                 return await channel.close()
             logger.info(f"Engine connected with engine_id: {engine_id}")
-            self.engine_id_channel_map[engine_id] = RpcChannel
+            self.engine_id_channel_map[engine_id] = channel
         except:
             logger.error("on_client_connect failed with exception", exc_info=True)
             return await channel.close()
@@ -57,7 +58,7 @@ class AggregatorDispatcher():
             raise ProtocolException("Unknown engine: " + engine_id)
 
         channel = self.engine_id_channel_map[engine_id]
-        response = await channel.other._dispatch_message(message=message)  # type: ignore
+        response = await channel.other._dispatch_message(message=message)
         return response
 
     def register_post_route(self, router: APIRouter | FastAPI):

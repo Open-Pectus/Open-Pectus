@@ -15,7 +15,7 @@ class EngineMessageHandlers():
         dispatcher.set_rpc_handler(AM.MethodMsg, self.handle_methodMsg)
 
     async def handle_methodMsg(self, method_msg: AM.MethodMsg) -> M.RpcStatusMessage:
-        pcode = '\n'.join(line.content for line in method_msg.lines)
+        pcode = '\n'.join(line.content for line in method_msg.method.lines)
         try:
             self.engine.set_program(pcode)
             logger.info("New method set")

@@ -18,6 +18,10 @@ class EngineReporter():
         self.engine = engine
         self.engine.run()
 
+    async def stop(self):
+        await self.dispatcher.disconnect()
+        self.engine.stop()
+
     async def run_loop_async(self):
         try:
             await self.send_uod_info_async()
@@ -29,7 +33,7 @@ class EngineReporter():
                 await self.send_runlog_async()
                 await self.send_control_state_async()
         except KeyboardInterrupt:
-            await self.disconnect_async()
+            await self.stop()
         except asyncio.CancelledError:
             return
         except Exception:
@@ -84,7 +88,7 @@ class EngineReporter():
         runlog = self.engine.runtimeinfo.get_runlog()
         msg = EM.RunLogMsg(
             id=runlog.id,
-            lines=list(map(to_line, runlog.items))
+            runlog=Mdl.RunLog(lines=list(map(to_line, runlog.items)))
         )
         self.dispatcher.post(msg)
 

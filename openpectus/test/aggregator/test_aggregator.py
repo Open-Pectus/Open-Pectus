@@ -14,7 +14,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
     async def create_channel_mock(self, engine_id):
         return Mock(close=AsyncMock(), other=Mock(get_engine_id=AsyncMock(return_value=engine_id)))
 
-    async def connectRpc(self, dispatcher: AggregatorDispatcher, engine_id: str = None):
+    async def connectRpc(self, dispatcher: AggregatorDispatcher, engine_id: str | None = None):
         channel = await self.create_channel_mock(engine_id)
         await dispatcher.on_client_connect(channel)
         return channel
@@ -36,7 +36,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
 
         # registering while not registered before should succceed
         resultMessage = await dispatcher._dispatch_post(register_engine_msg)
-        self.assertIsInstance(resultMessage, AM.RegisterEngineReplyMsg)
+        assert isinstance(resultMessage, AM.RegisterEngineReplyMsg)
         self.assertEqual(resultMessage.success, True)
 
         # connecting rpc now should not close connection
@@ -45,13 +45,13 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
 
         # registering while already registered and still connected should fail
         resultMessage = await dispatcher._dispatch_post(register_engine_msg)
-        self.assertIsInstance(resultMessage, AM.RegisterEngineReplyMsg)
+        assert isinstance(resultMessage, AM.RegisterEngineReplyMsg)
         self.assertEqual(resultMessage.success, False)
 
         # registering while already registered, but after disconnect should succeed
         await self.disconnectRpc(dispatcher, engine_id)
         resultMessage = await dispatcher._dispatch_post(register_engine_msg)
-        self.assertIsInstance(resultMessage, AM.RegisterEngineReplyMsg)
+        assert isinstance(resultMessage, AM.RegisterEngineReplyMsg)
         self.assertEqual(resultMessage.success, True)
 
 
@@ -66,7 +66,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
 
         # registering engine 1 while not registered before should succceed
         resultMessage = await messageHandlers.handle_RegisterEngineMsg(register_engine_msg)
-        self.assertIsInstance(resultMessage, AM.RegisterEngineReplyMsg)
+        assert isinstance(resultMessage, AM.RegisterEngineReplyMsg)
         self.assertEqual(resultMessage.success, True)
 
         # connecting rpc now for registered engine should not close connection
@@ -75,12 +75,12 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
 
         # registering while already registered with same name should fail
         resultMessage = await messageHandlers.handle_RegisterEngineMsg(register_engine_msg)
-        self.assertIsInstance(resultMessage, AM.RegisterEngineReplyMsg)
+        assert isinstance(resultMessage, AM.RegisterEngineReplyMsg)
         self.assertEqual(resultMessage.success, False)
 
         # registering while already registered but with different name should succeed
         resultMessage = await messageHandlers.handle_RegisterEngineMsg(register_engine_msg_different_computer)
-        self.assertIsInstance(resultMessage, AM.RegisterEngineReplyMsg)
+        assert isinstance(resultMessage, AM.RegisterEngineReplyMsg)
         self.assertEqual(resultMessage.success, True)
 
 

@@ -37,6 +37,10 @@ class RunLogLine(BaseModel):
     end_values: List[TagValue]
 
 
+class RunLog(BaseModel):
+    lines: List[RunLogLine]
+
+
 class MethodLine(BaseModel):
     id: str
     content: str

@@ -5,7 +5,7 @@ import uvicorn
 from openpectus.aggregator.aggregator_message_handlers import AggregatorMessageHandlers
 from openpectus.aggregator.deps import _create_aggregator
 from openpectus.aggregator.aggregator import Aggregator
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from fastapi.routing import APIRoute
 from openpectus.aggregator.frontend_ws import frontend_pubsub
 from openpectus.aggregator.routers import process_unit, batch_job, auth
@@ -30,7 +30,7 @@ class AggregatorServer:
         AggregatorMessageHandlers(aggregator)
         self.setup_fastapi([dispatcher.router])
 
-    def setup_fastapi(self, additional_routes: List[APIRoute] = []):
+    def setup_fastapi(self, additional_routers: List[APIRouter] = []):
         api_prefix = "/api"
 
         def custom_generate_unique_id(route: APIRoute):
@@ -40,7 +40,7 @@ class AggregatorServer:
         self.fastapi.include_router(batch_job.router, prefix=api_prefix)
         self.fastapi.include_router(frontend_pubsub.router, prefix=api_prefix)
         self.fastapi.include_router(auth.router, prefix='/auth')
-        for route in additional_routes : self.fastapi.include_router(route)
+        for route in additional_routers : self.fastapi.include_router(route)
         if not os.path.exists(self.frontend_dist_dir):
             raise FileNotFoundError("frontend_dist_dir not found: " + self.frontend_dist_dir)
         self.fastapi.mount("/", SinglePageApplication(directory=self.frontend_dist_dir))
