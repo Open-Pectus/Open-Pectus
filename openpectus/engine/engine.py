@@ -6,12 +6,11 @@ from queue import Empty
 from typing import Iterable, List, Set
 from uuid import UUID
 
-from openpectus.engine.engine_interpreter_context import EngineInterpreterContext
 from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException
 from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum
 from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.errors import InterpretationError
-from openpectus.lang.exec.pinterpreter import PInterpreter
+from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext
 from openpectus.lang.exec.runlog import RuntimeInfo, RunLog
 from openpectus.lang.exec.tags import (
     DEFAULT_TAG_SYSTEM_STATE,
@@ -33,7 +32,7 @@ from openpectus.lang.model.pprogram import PProgram
 logger = logging.getLogger(__name__)
 
 
-class Engine():
+class Engine(InterpreterContext):
     """ Main engine class. Handles
     - io loop, reads and writes hardware process image (sync)
     - invokes interpreter to interpret next instruction (sync, generator based)
@@ -76,7 +75,7 @@ class Engine():
         self._runstate_holding: bool = False
         """ Indicates whether the engine is on hold"""
 
-        self._interpreter: PInterpreter = PInterpreter(PProgram(), EngineInterpreterContext(self))
+        self._interpreter: PInterpreter = PInterpreter(PProgram(), self)
         """ The interpreter executing the current program. """
         self._pcode: str = ""
 
@@ -505,6 +504,10 @@ class Engine():
     # - already part of the program
     # - uod commands that engine cant just execute (if they have no threshold)
 
+    @property
+    def tags(self) -> TagCollection:
+        return self.uod.system_tags.merge_with(self.uod.tags)
+
     def schedule_execution(self, name: str, args: str | None = None, exec_id: UUID | None = None) -> CommandRequest:
         """ Execute named command (engine internal or Uod), possibly with arguments. """
         if EngineCommandEnum.has_value(name) or self.uod.has_command_name(name):
@@ -541,7 +544,7 @@ class Engine():
         try:
             program = self.parse_pcode(pcode=pcode)
             self._pcode = pcode
-            self._interpreter = PInterpreter(program, EngineInterpreterContext(self))
+            self._interpreter = PInterpreter(program, self)
             line_count = len(pcode.splitlines(keepends=True))
             logger.info(f"New method set with {line_count} lines")
         except Exception:
@@ -557,7 +560,7 @@ class Engine():
             # TODO possible clean up more stuff
             logger.info("Interpreter stopped")
 
-        self._interpreter = PInterpreter(program, EngineInterpreterContext(self))
+        self._interpreter = PInterpreter(program, self)
 
     # set_code, update_line
     # undo/revert(?)

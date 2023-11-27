@@ -73,9 +73,8 @@ def create_interpreter(
         uod = create_test_uod()
 
     engine = create_engine(uod)
-    context = TestInterpreterContext(engine)
 
-    return PInterpreter(program, context)
+    return PInterpreter(program, engine)
 
 
 def run_interpreter(interpreter: PInterpreter, max_ticks: int = -1):
