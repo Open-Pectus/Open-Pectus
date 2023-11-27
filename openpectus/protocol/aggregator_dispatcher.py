@@ -1,9 +1,11 @@
+import asyncio
 import logging
 from typing import Dict
 
 import openpectus.protocol.messages as M
 from fastapi import APIRouter, FastAPI, Request
 from fastapi_websocket_rpc import RpcChannel, WebsocketRPCEndpoint
+from fastapi_websocket_rpc.schemas import RpcResponse
 from openpectus.protocol.dispatch_interface import AGGREGATOR_RPC_WS_PATH, AGGREGATOR_REST_PATH, MessageHandler
 from openpectus.protocol.exceptions import ProtocolException
 from openpectus.protocol.serialization import deserialize, serialize
@@ -26,9 +28,12 @@ class AggregatorDispatcher():
         self.endpoint.register_route(self.router, path=AGGREGATOR_RPC_WS_PATH)
         self.register_post_route(self.router)
 
-    async def on_client_connect(self, channel: RpcChannel):
+    async def on_delayed_client_connect(self, channel: RpcChannel):
         try:
-            engine_id = await channel.other.get_engine_id()
+            response = await channel.other.get_engine_id()
+            assert isinstance(response, RpcResponse)
+            engine_id = response.result
+            assert isinstance(engine_id, str)
             if engine_id is None:
                 logger.error("Engine tried connecting with no engine_id available. Closing connection.")
                 return await channel.close()
@@ -40,6 +45,9 @@ class AggregatorDispatcher():
         except:
             logger.error("on_client_connect failed with exception", exc_info=True)
             return await channel.close()
+
+    async def on_client_connect(self, channel: RpcChannel):
+        asyncio.create_task(self.on_delayed_client_connect(channel))
 
     async def on_client_disconnect(self, channel: RpcChannel):
         self.engine_id_channel_map = { key:value for key, value in self.engine_id_channel_map.items() if value != channel }
