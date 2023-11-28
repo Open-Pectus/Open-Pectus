@@ -5,7 +5,7 @@ import openpectus.protocol.models as Mdl
 
 
 class EngineMessage(Msg.MessageBase):
-    engine_id: str | None = None
+    engine_id: str = ''
 
 
 class RegisterEngineMsg(Msg.MessageBase):
