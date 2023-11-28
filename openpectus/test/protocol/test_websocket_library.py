@@ -51,7 +51,7 @@ class TestRpc(IsolatedAsyncioTestCase):
         rpc_url = f"ws://127.0.0.1:{PORT}{AGGREGATOR_RPC_WS_PATH}"
         rpc_methods = RpcMethods()
         rpc_client = WebSocketRpcClient(uri=rpc_url, methods=rpc_methods)
-        await rpc_client.__connect__()
+        await rpc_client.__aenter__()
         proc.terminate()
 
 if __name__ == "__main__":
