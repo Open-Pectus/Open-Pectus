@@ -1,13 +1,12 @@
 import asyncio
 import logging
-from typing import Dict
+from typing import Dict, TypeVar, Callable, Awaitable, Any
 
 import openpectus.protocol.messages as M
 from fastapi import APIRouter, FastAPI, Request
-from fastapi.routing import APIRoute
 from fastapi_websocket_rpc import RpcChannel, WebsocketRPCEndpoint
 from fastapi_websocket_rpc.schemas import RpcResponse
-from openpectus.protocol.dispatch_interface import AGGREGATOR_RPC_WS_PATH, AGGREGATOR_REST_PATH, MessageHandler
+from openpectus.protocol.dispatch_interface import AGGREGATOR_RPC_WS_PATH, AGGREGATOR_REST_PATH
 from openpectus.protocol.exceptions import ProtocolException
 from openpectus.protocol.serialization import deserialize, serialize
 
@@ -24,7 +23,7 @@ class AggregatorDispatcher():
 
         self.router = APIRouter(tags=["aggregator"])
         self.engine_id_channel_map: Dict[str, RpcChannel] = {}
-        self._handlers: Dict[str, MessageHandler] = {}
+        self._handlers: Dict[type, Callable[[Any], Awaitable[M.MessageBase]]] = {}
         # WebsockeRPCEndpoint has wrong types for its on_connect and on_disconnect. It should be List[Callable[[RpcChannel], Awaitable[Any]]] instead of List[Coroutine]
         # See https://github.com/permitio/fastapi_websocket_rpc/issues/30
         self.endpoint = WebsocketRPCEndpoint(on_connect=[self.on_client_connect], on_disconnect=[self.on_client_disconnect]) # type: ignore
@@ -76,7 +75,7 @@ class AggregatorDispatcher():
 
     async def _dispatch_post(self, message: M.MessageBase) -> M.MessageBase:
         """ Dispath message to registered handler. """
-        message_type = type(message).__name__
+        message_type = type(message)
         if message_type in self._handlers.keys():
             try:
                 response = await self._handlers[message_type](message)
@@ -88,13 +87,15 @@ class AggregatorDispatcher():
             logger.warning(f"Dispatch failed for message type: {message_type}. No handler registered.")
             return M.ProtocolErrorMessage(protocol_mgs="Dispatch failed. No handler registered.")
 
-    def set_post_handler(self, message_type: type, handler: MessageHandler):
+    MessageToHandle = TypeVar("MessageToHandle", bound=M.MessageBase)
+
+    def set_post_handler(self, message_type: type[MessageToHandle], handler: Callable[[MessageToHandle], Awaitable[M.MessageBase]]):
         """ Set handler for message_type. """
-        if message_type.__name__ in self._handlers.keys():
+        if message_type in self._handlers.keys():
             logger.error(f"Handler for message type {message_type} is already set.")
-        self._handlers[message_type.__name__] = handler
+        self._handlers[message_type] = handler
 
     def unset_post_handler(self, message_type: type):
         """ Unset handler for message_type. """
-        if message_type.__name__ in self._handlers.keys():
-            del self._handlers[message_type.__name__]
+        if message_type in self._handlers.keys():
+            del self._handlers[message_type]

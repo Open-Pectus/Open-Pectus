@@ -1,27 +1,23 @@
 import asyncio
-import random
 import unittest
 from multiprocessing import Process
 from unittest import IsolatedAsyncioTestCase
 
-import uvicorn
-from fastapi import FastAPI, Request
-from fastapi_websocket_rpc import WebsocketRPCEndpoint
-from fastapi_websocket_rpc.logger import get_logger
-
-from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
-from openpectus.protocol.engine_dispatcher import EngineDispatcher
-import openpectus.protocol.messages as M
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
-
+import openpectus.protocol.messages as M
+import uvicorn
+from fastapi import FastAPI
+from fastapi_websocket_rpc.logger import get_logger
+from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
+from openpectus.protocol.engine_dispatcher import EngineDispatcher
 
 logger = get_logger("Test")
 
 # rpc_logger.logging_config.set_mode(rpc_logger.LoggingModes.UVICORN, rpc_logger.logging.DEBUG)
 
 
-#PORT = random.randint(7000, 10000)
+# PORT = random.randint(7000, 10000)
 PORT = 7795
 aggregator_host = f"localhost:{PORT}"
 trigger_url = f"http://localhost:{PORT}/trigger"
@@ -41,7 +37,7 @@ def setup_server():
     # dispatcher sets up websocket endpoint
     aggregator_disp = AggregatorDispatcher()
 
-    async def handle_register(msg: M.MessageBase) -> M.MessageBase:
+    async def handle_register(msg: EM.RegisterEngineMsg) -> AM.RegisterEngineReplyMsg:
         assert isinstance(msg, EM.RegisterEngineMsg)
         return AM.RegisterEngineReplyMsg(success=True, engine_id="1234")
 
@@ -76,7 +72,6 @@ class TestAE_EngineDispatcher_Impl(IsolatedAsyncioTestCase):
         # self.assertEqual(result.engine_id, "1234")
 
     async def test_rpc_handler(self):
-
         finish = asyncio.Event()
 
         async def handler(message: M.MessageBase) -> M.MessageBase:

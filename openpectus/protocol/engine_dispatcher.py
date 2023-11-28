@@ -1,21 +1,22 @@
 from __future__ import annotations
+
 import asyncio
 import atexit
 import logging
 import socket
-from typing import Dict
+from typing import Dict, TypeVar, Callable, Any, Awaitable
 
 import httpx
-import openpectus.protocol.messages as M
-import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.aggregator_messages as AM
+import openpectus.protocol.engine_messages as EM
+import openpectus.protocol.messages as M
 import requests
 from fastapi_websocket_rpc import RpcMethodsBase, WebSocketRpcClient
-from openpectus.protocol.dispatch_interface import AGGREGATOR_REST_PATH, AGGREGATOR_RPC_WS_PATH, MessageHandler
-from openpectus.protocol.dispatch_interface import AGGREGATOR_HEALTH_PATH
+from openpectus.protocol.dispatch_interface import AGGREGATOR_REST_PATH, AGGREGATOR_RPC_WS_PATH, AGGREGATOR_HEALTH_PATH
 from openpectus.protocol.serialization import serialize, deserialize
 
 logger = logging.getLogger(__name__)
+
 
 class EngineDispatcher():
     """
@@ -44,7 +45,6 @@ class EngineDispatcher():
             return
         return register_response.engine_id
 
-
     def check_aggregator_alive(self, aggregator_host: str):
         aggregator_health_url = f"http://{aggregator_host}{AGGREGATOR_HEALTH_PATH}"
         try:
@@ -62,9 +62,9 @@ class EngineDispatcher():
             print("OpenPectus Engine cannot start.")
             exit(1)
 
-    def __init__(self,  aggregator_host: str, uod_name: str) -> None:
+    def __init__(self, aggregator_host: str, uod_name: str) -> None:
         super().__init__()
-        self._handlers: Dict[str, MessageHandler] = {}
+        self._handlers: Dict[type, Callable[[Any], Awaitable[M.MessageBase]]] = {}
         self._engine_id = None
 
         # TODO consider https/wss
@@ -87,8 +87,8 @@ class EngineDispatcher():
 
     def post(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
         """ Send message via HTTP POST. """
-        if(not isinstance(message, EM.RegisterEngineMsg)): # Special case for registering
-            if(self._engine_id is None): return M.ErrorMessage(message="Engine did not have engine_id yet")
+        if (not isinstance(message, EM.RegisterEngineMsg)):  # Special case for registering
+            if (self._engine_id is None): return M.ErrorMessage(message="Engine did not have engine_id yet")
             message.engine_id = self._engine_id
         message_json = serialize(message)
         response = requests.post(url=self.post_url, json=message_json)
@@ -103,20 +103,22 @@ class EngineDispatcher():
 
     async def _dispatch_message(self, message: M.MessageBase):
         """ Dispath message to registered handler. """
-        message_type = type(message).__name__
+        message_type = type(message)
         if message_type in self._handlers.keys():
             try:
                 await self._handlers[message_type](message)
             except Exception:
                 logger.warning(f"Dispatch failed for message type: {message_type}. No handler registered.")
 
-    def set_rpc_handler(self, message_type: type, handler: MessageHandler):
+    MessageToHandle = TypeVar("MessageToHandle", bound=M.MessageBase)
+
+    def set_rpc_handler(self, message_type: type[MessageToHandle], handler: Callable[[MessageToHandle], Awaitable[M.MessageBase]]):
         """ Set handler for message_type. """
-        if message_type.__name__ in self._handlers.keys():
+        if message_type in self._handlers.keys():
             logger.error(f"Handler for message type {message_type} is already set.")
-        self._handlers[message_type.__name__] = handler
+        self._handlers[message_type] = handler
 
     def unset_rpc_handler(self, message_type: type):
         """ Unset handler for message_type. """
-        if message_type.__name__ in self._handlers.keys():
-            del self._handlers[message_type.__name__]
+        if message_type in self._handlers.keys():
+            del self._handlers[message_type]

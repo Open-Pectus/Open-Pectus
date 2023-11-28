@@ -1,12 +1,12 @@
 from __future__ import annotations
+
 from datetime import datetime
 from enum import StrEnum, auto
 from typing import Literal, List, Dict
 
-from aggregator.models import TagInfo
+from openpectus.aggregator.models import TagInfo
+from openpectus.protocol.models import ReadingInfo
 from pydantic import BaseModel
-
-from openpectus.protocol.models import ReadingInfo, TagValue
 
 
 class ServerErrorResponse(BaseModel):
