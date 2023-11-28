@@ -1,7 +1,6 @@
 import logging
 
 import openpectus.protocol.aggregator_messages as AM
-import openpectus.protocol.messages as M
 from openpectus.engine.engine import Engine
 from openpectus.protocol.engine_dispatcher import EngineDispatcher
 
@@ -14,17 +13,17 @@ class EngineMessageHandlers():
         dispatcher.set_rpc_handler(AM.InjectCodeMsg, self.handle_injectCodeMsg)
         dispatcher.set_rpc_handler(AM.MethodMsg, self.handle_methodMsg)
 
-    async def handle_methodMsg(self, method_msg: AM.MethodMsg) -> M.RpcStatusMessage:
+    async def handle_methodMsg(self, method_msg: AM.MethodMsg):
         pcode = '\n'.join(line.content for line in method_msg.method.lines)
         try:
             self.engine.set_program(pcode)
             logger.info("New method set")
-            return M.SuccessMessage()
+            return AM.SuccessMessage()
         except Exception as ex:
             logger.error("Failed to set method")
-            return M.ErrorMessage(message="Failed to set method", exception_message=str(ex))
+            return AM.ErrorMessage(message="Failed to set method", exception_message=str(ex))
 
-    async def handle_invokeCommandMsg(self, msg: AM.InvokeCommandMsg) -> M.MessageBase:
+    async def handle_invokeCommandMsg(self, msg: AM.InvokeCommandMsg):
         assert isinstance(msg, AM.InvokeCommandMsg)
 
         # as side effect, start engine on first START command
@@ -35,9 +34,9 @@ class EngineMessageHandlers():
             self.engine.run()
 
         self.engine.schedule_execution(name=msg.name, args=msg.arguments)
-        return M.SuccessMessage()
+        return AM.SuccessMessage()
 
-    async def handle_injectCodeMsg(self, msg: AM.InjectCodeMsg) -> M.MessageBase:
+    async def handle_injectCodeMsg(self, msg: AM.InjectCodeMsg):
         assert isinstance(msg, AM.InjectCodeMsg)
         self.engine.inject_code(msg.pcode)
-        return M.SuccessMessage()
+        return AM.SuccessMessage()

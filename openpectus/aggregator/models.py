@@ -14,6 +14,8 @@ RunLog = Mdl.RunLog
 ControlState = Mdl.ControlState
 Method = Mdl.Method
 MethodLine = Mdl.MethodLine
+ReadingCommand = Mdl.ReadingCommand
+ReadingInfo = Mdl.ReadingInfo
 
 
 class ChannelStatusEnum(StrEnum):
@@ -53,12 +55,6 @@ class TagsInfo(BaseModel):
 
             if current.value_unit != unit:
                 logger.warning(f"Tag '{name}' changed unit from '{current.value_unit}' to '{unit}'. This is unexpected")
-
-
-class ReadingCommand(BaseModel):
-    name: str
-    command: str
-
 
 
 class EngineData(BaseModel):

@@ -4,6 +4,9 @@ import openpectus.protocol.messages as Msg
 import openpectus.protocol.models as Mdl
 
 
+SuccessMessage = Msg.SuccessMessage
+ErrorMessage = Msg.ErrorMessage
+
 class AggregatorMessage(Msg.MessageBase):
     pass
 

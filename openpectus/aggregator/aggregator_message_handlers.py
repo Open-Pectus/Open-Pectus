@@ -2,10 +2,8 @@ import logging
 
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
-import openpectus.protocol.messages as Msg
-import openpectus.protocol.models as Mdl
+import openpectus.aggregator.models as Mdl
 from openpectus.aggregator.aggregator import Aggregator
-from openpectus.aggregator.models import EngineData
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +34,7 @@ class AggregatorMessageHandlers:
 
         # initialize client data
         if not self.aggregator.has_registered_engine_id(engine_id):
-            self.aggregator.register_engine_data(EngineData(
+            self.aggregator.register_engine_data(Mdl.EngineData(
                 engine_id=engine_id,
                 computer_name=register_engine_msg.computer_name,
                 uod_name=register_engine_msg.uod_name
@@ -45,10 +43,10 @@ class AggregatorMessageHandlers:
         logger.debug(f"Registration successful of client {engine_id}")
         return AM.RegisterEngineReplyMsg(success=True, engine_id=engine_id)
 
-    async def handle_UodInfoMsg(self, msg: EM.UodInfoMsg) -> Msg.SuccessMessage | Msg.ErrorMessage:
+    async def handle_UodInfoMsg(self, msg: EM.UodInfoMsg) -> AM.SuccessMessage | AM.ErrorMessage:
         engine_data = self.aggregator.get_registered_engine_data(msg.engine_id)
         if engine_data is None:
-            return Msg.ErrorMessage()
+            return AM.ErrorMessage()
 
         logger.debug(f"Got UodInfo from client: {str(msg)}")
         engine_data.readings = []
@@ -61,30 +59,30 @@ class AggregatorMessageHandlers:
             )
             engine_data.readings.append(rd)
 
-        return Msg.SuccessMessage()
+        return AM.SuccessMessage()
 
-    async def handle_TagsUpdatedMsg(self, msg: EM.TagsUpdatedMsg) -> Msg.SuccessMessage | Msg.ErrorMessage:
+    async def handle_TagsUpdatedMsg(self, msg: EM.TagsUpdatedMsg) -> AM.SuccessMessage | AM.ErrorMessage:
         engine_data = self.aggregator.get_registered_engine_data(msg.engine_id)
         if engine_data is None:
-            return Msg.ErrorMessage()
+            return AM.ErrorMessage()
 
         logger.debug(f"Got tags update from client: {str(msg)}")
         for ti in msg.tags:
             engine_data.tags_info.upsert(ti.name, ti.value, ti.value_unit)
-        return Msg.SuccessMessage()
+        return AM.SuccessMessage()
 
-    async def handle_RunLogMsg(self, msg: EM.RunLogMsg) -> Msg.SuccessMessage | Msg.ErrorMessage:
+    async def handle_RunLogMsg(self, msg: EM.RunLogMsg) -> AM.SuccessMessage | AM.ErrorMessage:
         engine_data = self.aggregator.get_registered_engine_data(msg.engine_id)
         if engine_data is None:
-            return Msg.ErrorMessage()
+            return AM.ErrorMessage()
 
         engine_data.runlog = msg.runlog
-        return Msg.SuccessMessage()
+        return AM.SuccessMessage()
 
-    async def handle_ControlStateMsg(self, msg: EM.ControlStateMsg) -> Msg.SuccessMessage | Msg.ErrorMessage:
+    async def handle_ControlStateMsg(self, msg: EM.ControlStateMsg) -> AM.SuccessMessage | AM.ErrorMessage:
         engine_data = self.aggregator.get_registered_engine_data(msg.engine_id)
         if engine_data is None:
-            return Msg.ErrorMessage()
+            return AM.ErrorMessage()
 
         engine_data.control_state = msg.control_state
-        return Msg.SuccessMessage()
+        return AM.SuccessMessage()
