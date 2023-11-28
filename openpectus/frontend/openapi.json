@@ -924,25 +924,6 @@
         }
       }
     },
-    "/health": {
-      "get": {
-        "tags": [
-          "aggregator"
-        ],
-        "summary": "Health",
-        "operationId": "health",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/expose-pusub-topics": {
       "post": {
         "tags": [
@@ -1018,6 +999,25 @@
                 "schema": {
                   "$ref": "#/components/schemas/AuthConfig"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/engine-rest": {
+      "post": {
+        "tags": [
+          "aggregator"
+        ],
+        "summary": "Post",
+        "operationId": "post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }

@@ -1,20 +1,17 @@
-from __future__ import annotations
-from enum import StrEnum
 import itertools
-from multiprocessing import Queue
-from queue import Empty
 import logging
 import time
+from multiprocessing import Queue
+from queue import Empty
 from typing import Iterable, List, Set
 from uuid import UUID
 
+from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException
+from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum
 from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.errors import InterpretationError
-from openpectus.lang.exec.pinterpreter import InterpreterContext, PInterpreter
-from openpectus.lang.exec.runlog import RunLogItem, RuntimeInfo, RunLog
-from openpectus.lang.exec.timer import EngineTimer, OneThreadTimer
-from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException
-from openpectus.lang.exec.uod import UnitOperationDefinitionBase
+from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext
+from openpectus.lang.exec.runlog import RuntimeInfo, RunLog
 from openpectus.lang.exec.tags import (
     DEFAULT_TAG_SYSTEM_STATE,
     DEFAULT_TAG_METHOD_STATUS,
@@ -27,94 +24,22 @@ from openpectus.lang.exec.tags import (
     DEFAULT_TAG_CLOCK,
     DEFAULT_TAG_RUN_COUNTER,
 )
+from openpectus.lang.exec.timer import EngineTimer, OneThreadTimer
+from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.model.pprogram import PProgram
-import openpectus.protocol.messages as M
 
-logger = logging.getLogger("Engine")
-proxy_logger = logging.getLogger("EngineProxyAdapter")
+logger = logging.getLogger(__name__)
 
 
-def parse_pcode(pcode: str) -> PProgram:
-    p = PGrammar()
-    p.parse(pcode)
-    return p.build_model()
-
-
-class EngineProxy():
-    """ Represents the remote rpc interface of Engine. """
-
-    async def get_method(self) -> M.MethodMsg | M.RpcErrorMessage:
-        raise NotImplementedError()
-
-    async def set_method(self, method_msg: M.MethodMsg) -> M.RpcStatusMessage:
-        raise NotImplementedError()
-
-    async def get_runlog(self) -> M.RunLogMsg | M.RpcErrorMessage:
-        raise NotImplementedError()
-
-
-class EngineProxyAdapter(EngineProxy):
-    def __init__(self, engine: ExecutionEngine) -> None:
-        super().__init__()
-        self.engine = engine
-
-    async def get_method(self) -> M.MethodMsg | M.RpcErrorMessage:
-        code = self.engine._pcode
-        lines = code.splitlines(keepends=True)
-
-        proxy_logger.info(f"Returning method with {len(lines)} lines")
-
-        # TODO get line ids and status from interpreter
-        return M.MethodMsg(
-            lines=[M.MethodLineMsg(id="", content=line) for line in lines],
-            started_line_ids=[],
-            executed_line_ids=[],
-            injected_line_ids=[])
-
-    async def set_method(self, method_msg: M.MethodMsg) -> M.RpcStatusMessage:
-        pcode = '\n'.join(line.content for line in method_msg.lines)
-        try:
-            self.engine.set_program(pcode)
-            proxy_logger.info("New method set")
-            return M.SuccessMessage()
-        except Exception as ex:
-            proxy_logger.error("Failed to set method")
-            return M.ErrorMessage(message="Failed to set method", exception_message=str(ex))
-
-    async def get_runlog(self) -> M.RunLogMsg | M.RpcErrorMessage:
-
-        def tagcoll_to_msg(tags: TagValueCollection) -> list[M.TagValueMsg]:
-            return [M.TagValueMsg(
-                name=tag.name,
-                value=tag.value,
-                value_unit=tag.unit) for tag in tags]
-
-        def item_to_msg(item: RunLogItem) -> M.RunLogLineMsg:
-            lineMsg = M.RunLogLineMsg(
-                id=item.id,
-                command_name=item.name,
-                start=item.start,
-                start_values=tagcoll_to_msg(item.start_values),
-                progress=item.progress,
-                end=item.end,
-                end_values=tagcoll_to_msg(item.end_values)
-            )
-            return lineMsg
-        
-        runlog = self.engine.get_runlog()
-        return M.RunLogMsg(
-            id=runlog.id,
-            lines=list(map(item_to_msg, runlog.items)))
-
-
-class ExecutionEngine():
+class Engine(InterpreterContext):
     """ Main engine class. Handles
     - io loop, reads and writes hardware process image (sync)
     - invokes interpreter to interpret next instruction (sync, generator based)
     - signals state changes via tag_updates queue (to aggregator via websockets, natively async)
     - accepts commands from cmd_queue (from interpreter and from aggregator)
     """
+
     def __init__(self, uod: UnitOperationDefinitionBase, tick_interval=0.1) -> None:
         self.uod = uod
         self._running: bool = False
@@ -150,7 +75,7 @@ class ExecutionEngine():
         self._runstate_holding: bool = False
         """ Indicates whether the engine is on hold"""
 
-        self._interpreter: PInterpreter = PInterpreter(PProgram(), EngineInterpreterContext(self))
+        self._interpreter: PInterpreter = PInterpreter(PProgram(), self)
         """ The interpreter executing the current program. """
         self._pcode: str = ""
 
@@ -204,6 +129,12 @@ class ExecutionEngine():
 
         self._running = True
         self._tick_timer.start()
+
+    def stop(self):
+        self.uod.hwl.disconnect()
+        self._running = False
+        self._tick_timer.stop()
+        self.cleanup()
 
     def tick(self):
         """ Performs a scan cycle tick. """
@@ -343,7 +274,7 @@ class ExecutionEngine():
             logger.warning(f"Command {cmd_request.name} is invalid when Engine is not running")
             return
 
-        #TODO replace commented runlog lines this with new runlog API
+        # TODO replace commented runlog lines this with new runlog API
 
         match cmd_request.name:
             case EngineCommandEnum.START:
@@ -355,8 +286,8 @@ class ExecutionEngine():
                 self._runstate_paused = False
                 self._runstate_holding = False
                 self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Running)
-                cmds_done.add(cmd_request)                
-                #self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
+                cmds_done.add(cmd_request)
+                # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
             case EngineCommandEnum.STOP:
                 self._runstate_started = False
@@ -364,14 +295,14 @@ class ExecutionEngine():
                 self._runstate_holding = False
                 self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Stopped)
                 cmds_done.add(cmd_request)
-                #self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
+                # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
             case EngineCommandEnum.PAUSE:
                 self._runstate_paused = True
                 self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Paused)
                 self._apply_safe_state()
                 cmds_done.add(cmd_request)
-                #self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
+                # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
             case EngineCommandEnum.UNPAUSE:
                 self._runstate_paused = False
@@ -381,27 +312,27 @@ class ExecutionEngine():
                     self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Running)
                 self._apply_safe_state()
                 cmds_done.add(cmd_request)
-                #self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
+                # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
             case EngineCommandEnum.HOLD:
                 self._runstate_holding = True
                 if not self._runstate_paused:
                     self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Holding)
                 cmds_done.add(cmd_request)
-                #self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
+                # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
             case EngineCommandEnum.UNHOLD:
                 self._runstate_holding = False
                 if not self._runstate_paused:
                     self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Running)
                 cmds_done.add(cmd_request)
-                #self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
+                # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
             case EngineCommandEnum.INCREMENT_RUN_COUNTER:
                 value = self._system_tags[DEFAULT_TAG_RUN_COUNTER].as_number() + 1
                 self._system_tags[DEFAULT_TAG_RUN_COUNTER].set_value(value)
                 cmds_done.add(cmd_request)
-                #self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
+                # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
             case _:
                 raise NotImplementedError(f"Internal engine command '{cmd_request.name}' execution not implemented")
@@ -556,6 +487,11 @@ class ExecutionEngine():
             self.tag_updates.put(tag)
         self._uod_listener.clear_changes()
 
+    def parse_pcode(self, pcode: str) -> PProgram:
+        p = PGrammar()
+        p.parse(pcode)
+        return p.build_model()
+
     def write_process_image(self):
         hwl: HardwareLayerBase = self.uod.hwl
 
@@ -573,6 +509,10 @@ class ExecutionEngine():
     # and non-injected which are either
     # - already part of the program
     # - uod commands that engine cant just execute (if they have no threshold)
+
+    @property
+    def tags(self) -> TagCollection:
+        return self.uod.system_tags.merge_with(self.uod.tags)
 
     def schedule_execution(self, name: str, args: str | None = None, exec_id: UUID | None = None) -> CommandRequest:
         """ Execute named command (engine internal or Uod), possibly with arguments. """
@@ -592,7 +532,7 @@ class ExecutionEngine():
         """ Inject a general code snippet to run in the current scope of the current program. """
         # TODO return status for frontend client
         try:
-            injected_program = parse_pcode(pcode)
+            injected_program = self.parse_pcode(pcode)
             self.interpreter.inject_node(injected_program)
             logger.info("Injected code successful")
         except Exception as ex:
@@ -608,9 +548,9 @@ class ExecutionEngine():
             logger.info("Interpreter stopped")
 
         try:
-            program = parse_pcode(pcode=pcode)
+            program = self.parse_pcode(pcode=pcode)
             self._pcode = pcode
-            self._interpreter = PInterpreter(program, EngineInterpreterContext(self))
+            self._interpreter = PInterpreter(program, self)
             line_count = len(pcode.splitlines(keepends=True))
             logger.info(f"New method set with {line_count} lines")
         except Exception:
@@ -626,50 +566,7 @@ class ExecutionEngine():
             # TODO possible clean up more stuff
             logger.info("Interpreter stopped")
 
-        self._interpreter = PInterpreter(program, EngineInterpreterContext(self))
+        self._interpreter = PInterpreter(program, self)
 
     # set_code, update_line
     # undo/revert(?)
-
-
-class EngineInterpreterContext(InterpreterContext):
-    def __init__(self, engine: ExecutionEngine) -> None:
-        super().__init__()
-
-        self.engine = engine
-        self._tags = engine.uod.system_tags.merge_with(engine.uod.tags)
-
-    @property
-    def tags(self) -> TagCollection:
-        return self._tags
-
-    def schedule_execution(self, name: str, args: str | None = None, exec_id: UUID | None = None) -> CommandRequest:
-        return self.engine.schedule_execution(name, args, exec_id)
-
-
-class EngineCommandEnum(StrEnum):
-    START = "Start"
-    STOP = "Stop"
-    PAUSE = "Pause"
-    UNPAUSE = "Unpause"
-    HOLD = "Hold"
-    UNHOLD = "Unhold"
-    INCREMENT_RUN_COUNTER = "Increment run counter"
-
-    @staticmethod
-    def has_value(value: str):
-        """ Determine if enum has this string value defined. Case sensitive. """
-        return value in EngineCommandEnum.__members__.values()
-
-
-class SystemStateEnum(StrEnum):
-    Running = "Running",
-    Paused = "Paused",
-    Holding = "Holding",
-    Waiting = "Waiting",
-    Stopped = "Stopped"
-
-
-class MethodStatusEnum(StrEnum):
-    OK = "OK",
-    ERROR = "Error"

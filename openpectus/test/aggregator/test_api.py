@@ -1,15 +1,14 @@
+import hashlib
 import json
 import os
 import unittest
-import hashlib
+
+from openpectus.aggregator.aggregator_server import AggregatorServer
 from fastapi.testclient import TestClient
 
-from openpectus.aggregator.main import create_app
-
-
 project_path = os.path.join(os.path.dirname(__file__), "..", "..")
-app = create_app()
-client = TestClient(app)
+fastapi = AggregatorServer().fastapi
+client = TestClient(fastapi)
 
 
 class AggregatorOpenAPIApiTest(unittest.TestCase):
@@ -21,7 +20,7 @@ class AggregatorOpenAPIApiTest(unittest.TestCase):
         response = client.get("/openapi.json")
         self.assertEqual(200, response.status_code)
         spec = response.json()
-        self.assertEqual(app.title, spec["info"]["title"])
+        self.assertEqual(fastapi.title, spec["info"]["title"])
 
     def test_write_openapi_spec_to_file_and_compare_with_existing(self):
         response = client.get("/openapi.json")
