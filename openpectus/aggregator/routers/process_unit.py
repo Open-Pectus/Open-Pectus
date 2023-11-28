@@ -29,7 +29,7 @@ def create_pu(item: EngineData) -> D.ProcessUnit:
 
 @router.get("/process_unit/{unit_id}")
 def get_unit(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> D.ProcessUnit | None:
-    ci = agg.engine_data_map.get(unit_id)
+    ci = agg.get_registered_engine_data(unit_id)
     if ci is None:
         return None
     return create_pu(item=ci)
@@ -38,8 +38,8 @@ def get_unit(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -
 @router.get("/process_units")
 def get_units(agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[D.ProcessUnit]:
     units: List[D.ProcessUnit] = []
-    for engine_id, item in agg.engine_data_map.items():
-        unit = create_pu(item)
+    for engine_data in agg.get_all_registered_engine_data():
+        unit = create_pu(engine_data)
         units.append(unit)
     return units
 
@@ -53,7 +53,7 @@ def get_process_values(
 
     response.headers["Cache-Control"] = "no-store"
 
-    client_data = agg.engine_data_map.get(unit_id)
+    client_data = agg.get_registered_engine_data(unit_id)
     if client_data is None:
         return []
 
@@ -120,7 +120,7 @@ Mark: Y""")
 
 @router.get('/process_unit/{unit_id}/run_log')
 def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> D.RunLog:
-    engine_data = agg.engine_data_map.get(unit_id)
+    engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None:
         logger.warning("No client data - thus no runlog")
         return D.RunLog(lines=[])
@@ -153,7 +153,7 @@ def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)
 
 @router.get('/process_unit/{unit_id}/method')
 def get_method(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> D.Method:
-    engine_data = agg.engine_data_map.get(unit_id)
+    engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None:
         logger.warning("No client data - thus no method")
         return D.Method(lines=[], started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
@@ -204,7 +204,7 @@ def get_control_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggre
             is_holding=state.is_holding,
             is_paused=state.is_paused)
 
-    engine_data = agg.engine_data_map.get(unit_id)
+    engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None:
         logger.warning("No client data - thus no control state")
         return D.ControlState.default()

@@ -22,7 +22,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
         return channel
 
     async def disconnectRpc(self, dispatcher: AggregatorDispatcher, engine_id: str):
-        channel = dispatcher.engine_id_channel_map[engine_id]
+        channel = dispatcher._engine_id_channel_map[engine_id]
         await dispatcher.on_client_disconnect(channel)
 
     async def test_register_engine(self):

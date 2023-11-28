@@ -68,7 +68,7 @@ def setup_server_rest_routes(app: FastAPI, endpoint: PubSubEndpoint):
 
     @app.get("/tags/{engine_id}")
     async def get_tags(engine_id: str, aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
-        engine_data = aggregator.engine_data_map.get(engine_id)
+        engine_data = aggregator.get_registered_engine_data(engine_id)
         if engine_data is None:
             return Response("No data found for engine_id " + engine_id, status_code=400)
         tags = engine_data.tags_info
@@ -79,7 +79,7 @@ def setup_server_rest_routes(app: FastAPI, endpoint: PubSubEndpoint):
 
     @app.get("/runlog/{engine_id}")
     async def get_runlog(engine_id: str, aggregator: Aggregator = Depends(agg_deps.get_aggregator)):
-        engine_data = aggregator.engine_data_map.get(engine_id)
+        engine_data = aggregator.get_registered_engine_data(engine_id)
         if engine_data is None:
             return Response("No data found for engine_id " + engine_id, status_code=400)
         runlog = engine_data.runlog

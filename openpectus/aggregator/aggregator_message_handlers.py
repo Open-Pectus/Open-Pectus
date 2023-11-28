@@ -19,13 +19,10 @@ class AggregatorMessageHandlers:
         aggregator.dispatcher.set_post_handler(EM.RunLogMsg, self.handle_RunLogMsg)
         aggregator.dispatcher.set_post_handler(EM.ControlStateMsg, self.handle_ControlStateMsg)
 
-    def get_registered_engine_data(self, engine_id: str | None) -> EngineData | None:
-        return self.aggregator.engine_data_map[engine_id] if isinstance(engine_id, str) and engine_id in self.aggregator.engine_data_map.keys() else None
-
     async def handle_RegisterEngineMsg(self, register_engine_msg: EM.RegisterEngineMsg) -> AM.RegisterEngineReplyMsg:
         """ Registers engine """
         engine_id = self.aggregator.create_engine_id(register_engine_msg)
-        if engine_id in self.aggregator.dispatcher.engine_id_channel_map.keys():
+        if self.aggregator.dispatcher.has_engine_id(engine_id):
             logger.error(
                 f"""Registration failed for engine_id {engine_id}. An engine with that engine_id already has a websocket connection. """
             )
@@ -38,18 +35,18 @@ class AggregatorMessageHandlers:
         # - add machine name + uod secret
 
         # initialize client data
-        if engine_id not in self.aggregator.engine_data_map.keys():
-            self.aggregator.engine_data_map[engine_id] = EngineData(
+        if not self.aggregator.has_registered_engine_id(engine_id):
+            self.aggregator.register_engine_data(EngineData(
                 engine_id=engine_id,
                 computer_name=register_engine_msg.computer_name,
                 uod_name=register_engine_msg.uod_name
-            )
+            ))
 
         logger.debug(f"Registration successful of client {engine_id}")
         return AM.RegisterEngineReplyMsg(success=True, engine_id=engine_id)
 
     async def handle_UodInfoMsg(self, msg: EM.UodInfoMsg) -> Msg.SuccessMessage | Msg.ErrorMessage:
-        engine_data = self.get_registered_engine_data(msg.engine_id)
+        engine_data = self.aggregator.get_registered_engine_data(msg.engine_id)
         if engine_data is None:
             return Msg.ErrorMessage()
 
@@ -67,7 +64,7 @@ class AggregatorMessageHandlers:
         return Msg.SuccessMessage()
 
     async def handle_TagsUpdatedMsg(self, msg: EM.TagsUpdatedMsg) -> Msg.SuccessMessage | Msg.ErrorMessage:
-        engine_data = self.get_registered_engine_data(msg.engine_id)
+        engine_data = self.aggregator.get_registered_engine_data(msg.engine_id)
         if engine_data is None:
             return Msg.ErrorMessage()
 
@@ -77,7 +74,7 @@ class AggregatorMessageHandlers:
         return Msg.SuccessMessage()
 
     async def handle_RunLogMsg(self, msg: EM.RunLogMsg) -> Msg.SuccessMessage | Msg.ErrorMessage:
-        engine_data = self.get_registered_engine_data(msg.engine_id)
+        engine_data = self.aggregator.get_registered_engine_data(msg.engine_id)
         if engine_data is None:
             return Msg.ErrorMessage()
 
@@ -85,7 +82,7 @@ class AggregatorMessageHandlers:
         return Msg.SuccessMessage()
 
     async def handle_ControlStateMsg(self, msg: EM.ControlStateMsg) -> Msg.SuccessMessage | Msg.ErrorMessage:
-        engine_data = self.get_registered_engine_data(msg.engine_id)
+        engine_data = self.aggregator.get_registered_engine_data(msg.engine_id)
         if engine_data is None:
             return Msg.ErrorMessage()
 

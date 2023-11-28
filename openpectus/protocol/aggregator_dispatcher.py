@@ -22,13 +22,16 @@ class AggregatorDispatcher():
         super().__init__()
 
         self.router = APIRouter(tags=["aggregator"])
-        self.engine_id_channel_map: Dict[str, RpcChannel] = {}
+        self._engine_id_channel_map: Dict[str, RpcChannel] = {}
         self._handlers: Dict[type, Callable[[Any], Awaitable[M.MessageBase]]] = {}
         # WebsockeRPCEndpoint has wrong types for its on_connect and on_disconnect. It should be List[Callable[[RpcChannel], Awaitable[Any]]] instead of List[Coroutine]
         # See https://github.com/permitio/fastapi_websocket_rpc/issues/30
         self.endpoint = WebsocketRPCEndpoint(on_connect=[self.on_client_connect], on_disconnect=[self.on_client_disconnect]) # type: ignore
         self.endpoint.register_route(self.router, path=AGGREGATOR_RPC_WS_PATH)
         self.register_post_route(self.router)
+
+    def has_engine_id(self, engine_id: str) -> bool:
+        return engine_id in self._engine_id_channel_map.keys()
 
     async def on_delayed_client_connect(self, channel: RpcChannel):
         try:
@@ -39,11 +42,11 @@ class AggregatorDispatcher():
             if engine_id is None:
                 logger.error("Engine tried connecting with no engine_id available. Closing connection.")
                 return await channel.close()
-            if engine_id in self.engine_id_channel_map:
+            if engine_id in self._engine_id_channel_map:
                 logger.error("Engine tried connecting with engine_id that is already connected. Closing connection.")
                 return await channel.close()
             logger.info(f"Engine connected with engine_id: {engine_id}")
-            self.engine_id_channel_map[engine_id] = channel
+            self._engine_id_channel_map[engine_id] = channel
         except:
             logger.error("on_client_connect failed with exception", exc_info=True)
             return await channel.close()
@@ -52,13 +55,13 @@ class AggregatorDispatcher():
         asyncio.create_task(self.on_delayed_client_connect(channel))
 
     async def on_client_disconnect(self, channel: RpcChannel):
-        self.engine_id_channel_map = { key:value for key, value in self.engine_id_channel_map.items() if value != channel }
+        self._engine_id_channel_map = {key:value for key, value in self._engine_id_channel_map.items() if value != channel}
 
     async def rpc_call(self, engine_id: str, message: M.MessageBase) -> M.MessageBase:
-        if engine_id not in self.engine_id_channel_map.keys():
+        if engine_id not in self._engine_id_channel_map.keys():
             raise ProtocolException("Unknown engine: " + engine_id)
 
-        channel = self.engine_id_channel_map[engine_id]
+        channel = self._engine_id_channel_map[engine_id]
         response = await channel.other._dispatch_message(message=message)
         return response
 

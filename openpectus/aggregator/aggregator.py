@@ -1,5 +1,5 @@
 import logging
-from typing import Dict
+from typing import Dict, List
 
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
@@ -14,7 +14,7 @@ class Aggregator:
     def __init__(self, dispatcher: AggregatorDispatcher) -> None:
         # self.channel_map: Dict[str, ChannelInfo] = {}
         # """ channel data, indexed by channel_id"""
-        self.engine_data_map: Dict[str, EngineData] = {}
+        self._engine_data_map: Dict[str, EngineData] = {}
         """ all client data except channels, indexed by engine_id """
         self.dispatcher = dispatcher
 
@@ -31,8 +31,20 @@ class Aggregator:
         """
         return register_engine_msg.computer_name + "_" + register_engine_msg.uod_name
 
+    def get_registered_engine_data(self, engine_id: str | None) -> EngineData | None:
+        return self._engine_data_map[engine_id] if isinstance(engine_id, str) and engine_id in self._engine_data_map.keys() else None
+
+    def get_all_registered_engine_data(self) -> List[EngineData]:
+        return list(self._engine_data_map.values())
+
+    def has_registered_engine_id(self, engine_id: str) -> bool:
+        return engine_id in self._engine_data_map.keys()
+
+    def register_engine_data(self, engine_data: EngineData):
+        self._engine_data_map[engine_data.engine_id] = engine_data
+
     def get_method(self, engine_id: str) -> AM.MethodMsg | None:
-        engine_data = self.engine_data_map.get(engine_id)
+        engine_data = self._engine_data_map.get(engine_id)
         if engine_data is None:
             return None
 
@@ -50,7 +62,7 @@ class Aggregator:
             return False
 
         # update local method state
-        engine_data = self.engine_data_map.get(engine_id)
+        engine_data = self._engine_data_map.get(engine_id)
         if engine_data is not None:
             engine_data.method = method
 
