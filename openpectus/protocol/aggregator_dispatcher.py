@@ -34,6 +34,8 @@ class AggregatorDispatcher():
         return engine_id in self._engine_id_channel_map.keys()
 
     async def on_delayed_client_connect(self, channel: RpcChannel):
+        """ We 'delay' our on_connect callback because the WebsocketRPCEndpoint calls on_connect callbacks before it starts listening to responses to rpc calls.
+         When we use create_task(), in on_client_connect() below, to call this method, we ensure that WebsocketRPCEndpoint starts listening to responses before we call get_engine_id() over rpc. """
         try:
             response = await channel.other.get_engine_id()
             assert isinstance(response, RpcResponse)

@@ -45,7 +45,7 @@ class EngineDispatcher():
             return
         return register_response.engine_id
 
-    def check_aggregator_alive(self, aggregator_host: str):
+    def check_aggregator_alive_or_exit(self, aggregator_host: str):
         aggregator_health_url = f"http://{aggregator_host}{AGGREGATOR_HEALTH_PATH}"
         try:
             resp = httpx.get(aggregator_health_url)
@@ -72,7 +72,7 @@ class EngineDispatcher():
         asyncio.create_task(self.setup_websocket(aggregator_host, uod_name))
 
     async def setup_websocket(self, aggregator_host: str, uod_name: str):
-        self.check_aggregator_alive(aggregator_host)
+        self.check_aggregator_alive_or_exit(aggregator_host)
         while self._engine_id is None:
             self._engine_id = await self.register_for_engine_id(uod_name)
 
@@ -104,11 +104,12 @@ class EngineDispatcher():
     async def _dispatch_message(self, message: M.MessageBase):
         """ Dispath message to registered handler. """
         message_type = type(message)
-        if message_type in self._handlers.keys():
-            try:
-                await self._handlers[message_type](message)
-            except Exception:
-                logger.warning(f"Dispatch failed for message type: {message_type}. No handler registered.")
+        try:
+            await self._handlers[message_type](message)
+        except KeyError:
+            logger.warning(f"Dispatch failed for message type: {message_type}. No handler registered.")
+        except Exception:
+            logger.warning(f"Dispatch failed for message type: {message_type}. A handler was registered, but failed somehow.", exc_info=True)
 
     MessageToHandle = TypeVar("MessageToHandle", bound=M.MessageBase)
 

@@ -122,7 +122,7 @@ Mark: Y""")
 def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> D.RunLog:
     engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None:
-        logger.warning("No client data - thus no runlog")
+        logger.warning("No engine data - thus no runlog")
         return D.RunLog(lines=[])
 
     def from_line_model(msg: Mdl.RunLogLine) -> D.RunLogLine:
