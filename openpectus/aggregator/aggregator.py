@@ -31,8 +31,8 @@ class Aggregator:
         """
         return register_engine_msg.computer_name + "_" + register_engine_msg.uod_name
 
-    def get_registered_engine_data(self, engine_id: str | None) -> EngineData | None:
-        return self._engine_data_map[engine_id] if isinstance(engine_id, str) and engine_id in self._engine_data_map.keys() else None
+    def get_registered_engine_data(self, engine_id: str):
+        return self._engine_data_map.get(engine_id)
 
     def get_all_registered_engine_data(self) -> List[EngineData]:
         return list(self._engine_data_map.values())
@@ -42,6 +42,32 @@ class Aggregator:
 
     def register_engine_data(self, engine_data: EngineData):
         self._engine_data_map[engine_data.engine_id] = engine_data
+
+    def set_readings(self, engine_id: str, readings: List[Mdl.ReadingInfo]):
+        try:
+            self._engine_data_map[engine_id].readings = readings
+        except KeyError:
+            logger.error(f'No engine registered under id {engine_id} when trying to set readings.')
+
+    def upsert_tag_values(self, engine_id: str, tag_values: List[Mdl.TagValue]):
+        try:
+            engine_data = self._engine_data_map[engine_id]
+            for tag_value in tag_values:
+                engine_data.tags_info.upsert(tag_value.name, tag_value.value, tag_value.value_unit)
+        except KeyError:
+            logger.error(f'No engine registered under id {engine_id} when trying to upsert tag values.')
+
+    def set_runlog(self, engine_id: str, runlog: Mdl.RunLog):
+        try:
+            self._engine_data_map[engine_id].runlog = runlog
+        except KeyError:
+            logger.error(f'No engine registered under id {engine_id} when trying to set run log.')
+
+    def set_control_state(self, engine_id: str, control_state: Mdl.ControlState):
+        try:
+            self._engine_data_map[engine_id].control_state = control_state
+        except KeyError:
+            logger.error(f'No engine registered under id {engine_id} when trying to set control state.')
 
     def get_method(self, engine_id: str) -> AM.MethodMsg | None:
         engine_data = self._engine_data_map.get(engine_id)

@@ -43,46 +43,41 @@ class AggregatorMessageHandlers:
         logger.debug(f"Registration successful of client {engine_id}")
         return AM.RegisterEngineReplyMsg(success=True, engine_id=engine_id)
 
+    # def check_engine_id(self, engine_id: str | None):
+    #     if not isinstance(engine_id, str): return AM.ErrorMessage(message='engine_id on message was not a string.')
+    #     assert isinstance(engine_id, str)
+    #     if not self.aggregator.has_registered_engine_id(engine_id): return AM.ErrorMessage(message=f'No engine registered under id {engine_id}')
+    #
+    #     return None
+
     async def handle_UodInfoMsg(self, msg: EM.UodInfoMsg) -> AM.SuccessMessage | AM.ErrorMessage:
-        engine_data = self.aggregator.get_registered_engine_data(msg.engine_id)
-        if engine_data is None:
-            return AM.ErrorMessage()
+        if not isinstance(msg.engine_id, str): return AM.ErrorMessage(message='engine_id on message was not a string.')
+        if not self.aggregator.has_registered_engine_id(msg.engine_id): return AM.ErrorMessage(message=f'No engine registered under id {msg.engine_id}')
 
         logger.debug(f"Got UodInfo from client: {str(msg)}")
-        engine_data.readings = []
-        for r in msg.readings:
-            rd = Mdl.ReadingInfo(
-                label=r.label,
-                tag_name=r.tag_name,
-                valid_value_units=r.valid_value_units,
-                commands=[Mdl.ReadingCommand(name=c.name, command=c.command) for c in r.commands]
-            )
-            engine_data.readings.append(rd)
-
+        self.aggregator.set_readings(msg.engine_id, msg.readings)
         return AM.SuccessMessage()
 
     async def handle_TagsUpdatedMsg(self, msg: EM.TagsUpdatedMsg) -> AM.SuccessMessage | AM.ErrorMessage:
-        engine_data = self.aggregator.get_registered_engine_data(msg.engine_id)
-        if engine_data is None:
-            return AM.ErrorMessage()
+        if not isinstance(msg.engine_id, str): return AM.ErrorMessage(message='engine_id on message was not a string.')
+        if not self.aggregator.has_registered_engine_id(msg.engine_id): return AM.ErrorMessage(message=f'No engine registered under id {msg.engine_id}')
 
         logger.debug(f"Got tags update from client: {str(msg)}")
-        for ti in msg.tags:
-            engine_data.tags_info.upsert(ti.name, ti.value, ti.value_unit)
+        self.aggregator.upsert_tag_values(msg.engine_id, msg.tags)
         return AM.SuccessMessage()
 
     async def handle_RunLogMsg(self, msg: EM.RunLogMsg) -> AM.SuccessMessage | AM.ErrorMessage:
-        engine_data = self.aggregator.get_registered_engine_data(msg.engine_id)
-        if engine_data is None:
-            return AM.ErrorMessage()
+        if not isinstance(msg.engine_id, str): return AM.ErrorMessage(message='engine_id on message was not a string.')
+        if not self.aggregator.has_registered_engine_id(msg.engine_id): return AM.ErrorMessage(message=f'No engine registered under id {msg.engine_id}')
 
-        engine_data.runlog = msg.runlog
+        logger.debug(f"Got run log from client: {str(msg)}")
+        self.aggregator.set_runlog(msg.engine_id, msg.runlog)
         return AM.SuccessMessage()
 
     async def handle_ControlStateMsg(self, msg: EM.ControlStateMsg) -> AM.SuccessMessage | AM.ErrorMessage:
-        engine_data = self.aggregator.get_registered_engine_data(msg.engine_id)
-        if engine_data is None:
-            return AM.ErrorMessage()
+        if not isinstance(msg.engine_id, str): return AM.ErrorMessage(message='engine_id on message was not a string.')
+        if not self.aggregator.has_registered_engine_id(msg.engine_id): return AM.ErrorMessage(message=f'No engine registered under id {msg.engine_id}')
 
-        engine_data.control_state = msg.control_state
+        logger.debug(f"Got control state from client: {str(msg)}")
+        self.aggregator.set_control_state(msg.engine_id, msg.control_state)
         return AM.SuccessMessage()
