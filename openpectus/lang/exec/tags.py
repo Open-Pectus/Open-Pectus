@@ -6,7 +6,7 @@ import pint
 from pint import UnitRegistry, Quantity
 from pint.facets.plain import PlainQuantity
 
-ureg = UnitRegistry(cache_folder=":auto:")
+ureg = UnitRegistry(cache_folder="./pint-cache")
 Q_ = Quantity
 
 QuantityType = pint.Quantity | PlainQuantity[Any]
