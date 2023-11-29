@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { BatchJob } from '../../api';
-import { detailsUrlPart } from '../../app-routing.module';
+import { detailsUrlPart } from '../../app.routes';
 import { DetailsRoutingUrlParts } from '../../details/details-routing-url-parts';
 import { DefaultTableSort, TableColumn, TableComponent, TableSortDirection } from '../../shared/table.component';
 import { DashboardActions } from '../ngrx/dashboard.actions';

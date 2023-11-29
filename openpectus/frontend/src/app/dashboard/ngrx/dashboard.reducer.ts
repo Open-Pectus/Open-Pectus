@@ -3,8 +3,6 @@ import { produce } from 'immer';
 import { BatchJob } from '../../api';
 import { DashboardActions } from './dashboard.actions';
 
-export const dashboardFeatureKey = 'dashboard';
-
 export interface DashboardState {
   recentBatchJobFilter: string;
   recentBatchJobs: BatchJob[];
@@ -15,7 +13,7 @@ const initialState: DashboardState = {
   recentBatchJobs: [],
 };
 
-export const dashboardReducer = createReducer(initialState,
+const reducer = createReducer(initialState,
   on(DashboardActions.recentBatchJobFilterChanged, (state, {filter}) => produce(state, draft => {
     draft.recentBatchJobFilter = filter;
   })),
@@ -24,3 +22,4 @@ export const dashboardReducer = createReducer(initialState,
   })),
 );
 
+export const dashboardSlice = {name: 'dashboard', reducer};

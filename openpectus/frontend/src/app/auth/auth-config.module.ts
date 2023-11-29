@@ -13,7 +13,7 @@ import {
 } from 'angular-auth-oidc-client';
 import { map } from 'rxjs';
 import { AuthConfig, AuthService } from '../api';
-import { authCallbackUrlPart } from '../app-routing.module';
+import { authCallbackUrlPart } from '../app.routes';
 import { AppActions } from '../ngrx/app.actions';
 import { AuthCallbackComponent } from './auth-callback.component';
 

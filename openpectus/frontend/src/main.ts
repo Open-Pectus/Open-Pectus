@@ -3,14 +3,15 @@ import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 import '@angular/common/locales/global/da';
 import { importProvidersFrom, isDevMode, LOCALE_ID } from '@angular/core';
 import { bootstrapApplication, BrowserModule } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
 import { LetDirective, PushPipe } from '@ngrx/component';
-import { EffectsModule } from '@ngrx/effects';
-import { RouterState, StoreRouterConnectingModule } from '@ngrx/router-store';
-import { StoreModule } from '@ngrx/store';
-import { StoreDevtoolsModule } from '@ngrx/store-devtools';
+import { provideEffects } from '@ngrx/effects';
+import { provideRouterStore, RouterState } from '@ngrx/router-store';
+import { provideStore } from '@ngrx/store';
+import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { setupWorker } from 'msw/browser';
-import { AppRoutingModule } from './app/app-routing.module';
 import { AppComponent } from './app/app.component';
+import { APP_ROUTES } from './app/app.routes';
 import { AuthConfigModule } from './app/auth/auth-config.module';
 import { Defaults } from './app/defaults';
 import { metaReducers, reducers } from './app/ngrx';
@@ -46,32 +47,33 @@ if(MswEnablement.isEnabled) {
 
 bootstrapApplication(AppComponent, {
   providers: [
+    provideStore(reducers, {
+      metaReducers,
+      runtimeChecks: {
+        strictStateImmutability: true,
+        strictActionImmutability: true,
+        strictStateSerializability: true,
+        strictActionSerializability: true,
+        strictActionWithinNgZone: true,
+        strictActionTypeUniqueness: true,
+      },
+    }),
+    provideEffects([AppEffects]),
+    provideRouterStore({routerState: RouterState.Minimal}),
+    provideStoreDevtools({
+      maxAge: 50,
+      logOnly: !isDevMode(),
+      actionsBlocklist: [
+        '@ngrx',
+        // DetailsActions.processValuesFetched.type,
+        // RunLogActions.runLogPolledForUnit.type,
+        // DetailsActions.controlStateFetched.type,
+        // MethodEditorActions.methodPolledForUnit.type,
+      ],
+    }),
+    provideRouter(APP_ROUTES),
     importProvidersFrom(
       BrowserModule,
-      AppRoutingModule,
-      StoreModule.forRoot(reducers, {
-        metaReducers,
-        runtimeChecks: {
-          strictStateImmutability: true,
-          strictActionImmutability: true,
-          strictStateSerializability: true,
-          strictActionSerializability: true,
-          strictActionWithinNgZone: true,
-          strictActionTypeUniqueness: true,
-        },
-      }),
-      EffectsModule.forRoot([AppEffects]), StoreRouterConnectingModule.forRoot({routerState: RouterState.Minimal}),
-      StoreDevtoolsModule.instrument({
-        maxAge: 50,
-        logOnly: !isDevMode(),
-        actionsBlocklist: [
-          '@ngrx',
-          // DetailsActions.processValuesFetched.type,
-          // RunLogActions.runLogPolledForUnit.type,
-          // DetailsActions.controlStateFetched.type,
-          // MethodEditorActions.methodPolledForUnit.type,
-        ],
-      }),
       AuthConfigModule,
       PushPipe,
       LetDirective,

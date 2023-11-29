@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
-import { detailsUrlPart } from '../../app-routing.module';
+import { detailsUrlPart } from '../../app.routes';
 import { DetailsRoutingUrlParts } from '../../details/details-routing-url-parts';
 import { AppSelectors } from '../../ngrx/app.selectors';
 import { ProcessUnitCardComponent } from './process-unit-card.component';
