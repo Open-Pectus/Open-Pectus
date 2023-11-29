@@ -16,6 +16,7 @@ Method = Mdl.Method
 MethodLine = Mdl.MethodLine
 ReadingCommand = Mdl.ReadingCommand
 ReadingInfo = Mdl.ReadingInfo
+TagValue = Mdl.TagValue
 
 
 class ChannelStatusEnum(StrEnum):

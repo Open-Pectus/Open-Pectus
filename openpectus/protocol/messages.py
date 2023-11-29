@@ -31,7 +31,7 @@ class ErrorMessage(MessageBase):
 
 
 class ProtocolErrorMessage(ErrorMessage):
-    protocol_mgs: str
+    protocol_msg: str
 
 
 RpcErrorMessage = ErrorMessage | ProtocolErrorMessage

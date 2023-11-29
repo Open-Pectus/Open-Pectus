@@ -41,7 +41,7 @@ def setup_server():
         assert isinstance(msg, EM.RegisterEngineMsg)
         return AM.RegisterEngineReplyMsg(success=True, engine_id="1234")
 
-    aggregator_disp.set_post_handler(EM.RegisterEngineMsg, handle_register)
+    aggregator_disp.set_register_handler(handle_register)
 
     # endpoint = WebsocketRPCEndpoint(methods=server_proxy)
     # endpoint.register_route(app, path="/test-rpc")
