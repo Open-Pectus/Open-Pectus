@@ -3,7 +3,7 @@ import { NgModule } from '@angular/core';
 import { LetDirective, PushPipe } from '@ngrx/component';
 import { EffectsModule } from '@ngrx/effects';
 import { StoreModule } from '@ngrx/store';
-import { SharedModule } from '../../shared/shared.module';
+
 import { ProcessValuesEffects } from './ngrx/process-values.effects';
 import { processValuesSlice } from './ngrx/process-values.reducer';
 import { ProcessValueCommandButtonComponent } from './process-value-command-button.component';
@@ -21,7 +21,6 @@ import { ProcessValuesComponent } from './process-values.component';
     EffectsModule.forFeature(ProcessValuesEffects),
     LetDirective,
     PushPipe,
-    SharedModule,
     ProcessValuesComponent,
     ProcessValueComponent,
     ProcessValueEditorComponent,

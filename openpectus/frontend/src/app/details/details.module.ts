@@ -3,7 +3,7 @@ import { NgModule } from '@angular/core';
 import { LetDirective, PushPipe } from '@ngrx/component';
 import { EffectsModule } from '@ngrx/effects';
 import { StoreModule } from '@ngrx/store';
-import { SharedModule } from '../shared/shared.module';
+
 import { BatchJobDetailsComponent } from './batch-job-details.component';
 import { BatchJobHeaderComponent } from './batch-job-header.component';
 import { CommandExamplesListComponent } from './commands/command-examples-list.component';
@@ -31,7 +31,6 @@ import { UnitHeaderComponent } from './unit-header/unit-header.component';
     MethodEditorModule,
     RunLogModule,
     ProcessPlotModule,
-    SharedModule,
     LetDirective,
     PushPipe,
     UnitDetailsComponent,

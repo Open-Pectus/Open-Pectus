@@ -3,7 +3,7 @@ import { NgModule } from '@angular/core';
 import { PushModule } from '@ngrx/component';
 import { EffectsModule } from '@ngrx/effects';
 import { StoreModule } from '@ngrx/store';
-import { SharedModule } from '../shared/shared.module';
+
 import { DashboardRoutingModule } from './dashboard-routing.module';
 import { DashboardComponent } from './dashboard.component';
 import { DashboardEffects } from './ngrx/dashboard.effects';
@@ -20,7 +20,6 @@ import { RecentBatchJobsComponent } from './recent-batch-jobs/recent-batch-jobs.
     StoreModule.forFeature(dashboardFeatureKey, dashboardReducer),
     EffectsModule.forFeature([DashboardEffects]),
     PushModule,
-    SharedModule,
     DashboardComponent,
     DashboardProcessUnitsComponent,
     ProcessUnitCardComponent,

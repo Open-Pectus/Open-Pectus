@@ -1,6 +1,6 @@
+import { NgClass, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
 import { CollapsibleElementStorageService } from './collapsible-element-storage.service';
-import { NgIf, NgClass } from '@angular/common';
 
 @Component({
   selector: 'app-collapsible-element',

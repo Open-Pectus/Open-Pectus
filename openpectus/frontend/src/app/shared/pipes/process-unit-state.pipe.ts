@@ -1,7 +1,7 @@
 import { Pipe, PipeTransform } from '@angular/core';
-import { UtilMethods } from '../util-methods';
 import { InProgress, NotOnline, Ready } from '../../api';
 import { ProcessUnitStateEnum } from '../../typings';
+import { UtilMethods } from '../util-methods';
 
 @Pipe({
   name: 'processUnitState',
