@@ -8,6 +8,8 @@ import { DetailsSelectors } from './ngrx/details.selectors';
 @Component({
   selector: 'app-batch-job-header',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [LetDirective, DatePipe],
   template: `
     <ng-container *ngrxLet="batchJob as batchJob">
       <div class="text-slate-700 mb-1 relative">
@@ -26,8 +28,6 @@ import { DetailsSelectors } from './ngrx/details.selectors';
       </div>
     </ng-container>
   `,
-  standalone: true,
-  imports: [LetDirective, DatePipe],
 })
 export class BatchJobHeaderComponent {
   protected batchJob = this.store.select(DetailsSelectors.batchJob);

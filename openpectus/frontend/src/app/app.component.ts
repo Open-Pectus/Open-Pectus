@@ -1,12 +1,16 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
 import { TestWebsocketService } from '../fastapi_websocket/test-websocket.service';
 import { AppActions } from './ngrx/app.actions';
+import { TopBarComponent } from './top-bar.component';
 
 @Component({
   selector: 'app-root',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [TopBarComponent, RouterOutlet],
   template: `
     <app-top-bar></app-top-bar>
     <router-outlet></router-outlet>

@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from 
 @Component({
   selector: 'app-run-log-header',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
   template: `
     <div class="grid bg-gray-700 text-white items-center gap-2 px-3 py-2" [style.grid]="gridFormat">
       <b>Start</b>
@@ -18,7 +19,6 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from 
       </button>
     </div>
   `,
-  standalone: true,
 })
 export class RunLogHeaderComponent {
   @Input() gridFormat: string = '';

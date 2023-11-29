@@ -12,6 +12,14 @@ import { RunLogComponent } from './run-log/run-log.component';
 @Component({
   selector: 'app-batch-job-details',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    LetDirective,
+    BatchJobHeaderComponent,
+    ProcessPlotContainerComponent,
+    MethodEditorComponent,
+    RunLogComponent,
+  ],
   template: `
     <div class="flex justify-center">
       <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:py-8 gap-4 lg:gap-8" *ngrxLet="batchJobId as batchJobId">
@@ -22,14 +30,6 @@ import { RunLogComponent } from './run-log/run-log.component';
       </div>
     </div>
   `,
-  standalone: true,
-  imports: [
-    LetDirective,
-    BatchJobHeaderComponent,
-    ProcessPlotContainerComponent,
-    MethodEditorComponent,
-    RunLogComponent,
-  ],
 })
 export class BatchJobDetailsComponent implements OnInit, OnDestroy {
   protected batchJobId = this.store.select(selectRouteParam(DetailsRoutingUrlParts.batchJobIdParamName));

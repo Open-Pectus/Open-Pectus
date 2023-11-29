@@ -12,6 +12,15 @@ import { DetailsSelectors } from './ngrx/details.selectors';
 @Component({
   selector: 'app-process-diagram',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    CollapsibleElementComponent,
+    NgIf,
+    PushPipe,
+  ],
+  styles: [
+    ':host ::ng-deep svg { height: 100%; width: 100% }',
+  ],
   template: `
     <app-collapsible-element [name]="'Process Diagram'" [heightResizable]="true" [contentHeight]="400"
                              (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-circuit-board'">
@@ -21,15 +30,6 @@ import { DetailsSelectors } from './ngrx/details.selectors';
       </div>
     </app-collapsible-element>
   `,
-  styles: [
-    ':host ::ng-deep svg { height: 100%; width: 100% }',
-  ],
-  standalone: true,
-  imports: [
-    CollapsibleElementComponent,
-    NgIf,
-    PushPipe,
-  ],
 })
 export class ProcessDiagramComponent implements OnInit {
   processDiagram = this.store.select(DetailsSelectors.processDiagram);

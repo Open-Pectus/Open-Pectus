@@ -6,6 +6,8 @@ import { DetailsActions } from '../ngrx/details.actions';
 @Component({
   selector: 'app-unit-control-button',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [NgClass, TitleCasePipe],
   template: `
     <button class="py-2 pr-4 pl-3.5 rounded-lg text-white bg-slate-700 flex items-center gap-2"
             (click)="executeCommand()"
@@ -17,8 +19,6 @@ import { DetailsActions } from '../ngrx/details.actions';
       <span class="codicon" [ngClass]="'codicon-'+iconName"></span>{{command | titlecase}}
     </button>
   `,
-  standalone: true,
-  imports: [NgClass, TitleCasePipe],
 })
 export class UnitControlButtonComponent {
   @Input() command?: string;

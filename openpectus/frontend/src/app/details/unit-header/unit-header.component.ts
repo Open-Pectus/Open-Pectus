@@ -8,6 +8,12 @@ import { UnitControlsComponent } from './unit-controls.component';
 @Component({
   selector: 'app-unit-header',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    LetDirective,
+    UnitControlsComponent,
+    TitleCasePipe,
+  ],
   template: `
     <ng-container *ngrxLet="processUnit as processUnit">
       <div class="text-slate-700 mb-4 -mt-2">
@@ -17,12 +23,6 @@ import { UnitControlsComponent } from './unit-controls.component';
       <app-unit-controls></app-unit-controls>
     </ng-container>
   `,
-  standalone: true,
-  imports: [
-    LetDirective,
-    UnitControlsComponent,
-    TitleCasePipe,
-  ],
 })
 export class UnitHeaderComponent {
   protected processUnit = this.store.select(DetailsSelectors.processUnit);

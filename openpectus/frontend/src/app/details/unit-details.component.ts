@@ -16,6 +16,17 @@ import { UnitHeaderComponent } from './unit-header/unit-header.component';
 @Component({
   selector: 'app-unit-details',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    LetDirective,
+    UnitHeaderComponent,
+    ProcessValuesComponent,
+    MethodEditorComponent,
+    CommandsComponent,
+    RunLogComponent,
+    ProcessDiagramComponent,
+    ProcessPlotContainerComponent,
+  ],
   template: `
     <div class="flex justify-center">
       <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:py-8 gap-4 lg:gap-8" *ngrxLet="unitId as unitId">
@@ -29,17 +40,6 @@ import { UnitHeaderComponent } from './unit-header/unit-header.component';
       </div>
     </div>
   `,
-  standalone: true,
-  imports: [
-    LetDirective,
-    UnitHeaderComponent,
-    ProcessValuesComponent,
-    MethodEditorComponent,
-    CommandsComponent,
-    RunLogComponent,
-    ProcessDiagramComponent,
-    ProcessPlotContainerComponent,
-  ],
 })
 export class UnitDetailsComponent implements OnInit, OnDestroy {
   protected unitId = this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName));
