@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgFor, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
 import { compareAsc, compareDesc } from 'date-fns';
 
@@ -45,6 +45,8 @@ export interface DefaultTableSort<T> {
       </table>
     </div>
   `,
+  standalone: true,
+  imports: [NgFor, NgIf],
 })
 export class TableComponent<T> {
   @Input() columns?: TableColumn<T>[];

@@ -1,3 +1,4 @@
+import { DecimalPipe, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 
 @Component({
@@ -16,6 +17,8 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
             *ngIf="value !== undefined">{{value * 100 | number:'1.1-1'}} %</span>
     </div>
   `,
+  standalone: true,
+  imports: [NgIf, DecimalPipe],
 })
 export class RunLogLineProgressComponent {
   @Input() value?: number;

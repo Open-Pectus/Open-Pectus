@@ -1,4 +1,6 @@
+import { NgFor, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { PushPipe } from '@ngrx/component';
 import { CommandExample } from '../../api';
 
 @Component({
@@ -20,6 +22,12 @@ import { CommandExample } from '../../api';
   styles: [
     ':host ::ng-deep ::-webkit-scrollbar { display: none; }',
     ':host { position: relative }',
+  ],
+  standalone: true,
+  imports: [
+    NgIf,
+    NgFor,
+    PushPipe,
   ],
 })
 export class CommandExamplesListComponent {

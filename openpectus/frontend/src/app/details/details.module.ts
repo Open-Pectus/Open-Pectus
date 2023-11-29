@@ -22,17 +22,6 @@ import { UnitControlsComponent } from './unit-header/unit-controls.component';
 import { UnitHeaderComponent } from './unit-header/unit-header.component';
 
 @NgModule({
-  declarations: [
-    UnitDetailsComponent,
-    BatchJobDetailsComponent,
-    ProcessDiagramComponent,
-    CommandsComponent,
-    CommandExamplesListComponent,
-    UnitHeaderComponent,
-    UnitControlButtonComponent,
-    UnitControlsComponent,
-    BatchJobHeaderComponent,
-  ],
   imports: [
     CommonModule,
     DetailsRoutingModule,
@@ -45,6 +34,15 @@ import { UnitHeaderComponent } from './unit-header/unit-header.component';
     SharedModule,
     LetDirective,
     PushPipe,
+    UnitDetailsComponent,
+    BatchJobDetailsComponent,
+    ProcessDiagramComponent,
+    CommandsComponent,
+    CommandExamplesListComponent,
+    UnitHeaderComponent,
+    UnitControlButtonComponent,
+    UnitControlsComponent,
+    BatchJobHeaderComponent,
   ],
 })
 export class DetailsModule {}

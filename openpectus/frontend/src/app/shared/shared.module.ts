@@ -9,14 +9,6 @@ import { TableComponent } from './table.component';
 
 
 @NgModule({
-  declarations: [
-    FormatDurationMsecPipe,
-    ProcessUnitStatePipe,
-    TableComponent,
-    CollapsibleElementComponent,
-    ProcessValuePipe,
-    SafeHtmlPipe,
-  ],
   exports: [
     FormatDurationMsecPipe,
     ProcessUnitStatePipe,
@@ -27,6 +19,12 @@ import { TableComponent } from './table.component';
   ],
   imports: [
     CommonModule,
+    FormatDurationMsecPipe,
+    ProcessUnitStatePipe,
+    TableComponent,
+    CollapsibleElementComponent,
+    ProcessValuePipe,
+    SafeHtmlPipe,
   ],
 })
 export class SharedModule {}

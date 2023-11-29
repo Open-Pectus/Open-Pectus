@@ -1,8 +1,13 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
+import { LetDirective } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { selectRouteParam } from '../ngrx/router.selectors';
+import { BatchJobHeaderComponent } from './batch-job-header.component';
 import { DetailsRoutingUrlParts } from './details-routing-url-parts';
+import { MethodEditorComponent } from './method-editor/method-editor.component';
 import { DetailsActions } from './ngrx/details.actions';
+import { ProcessPlotContainerComponent } from './process-plot/process-plot-container.component';
+import { RunLogComponent } from './run-log/run-log.component';
 
 @Component({
   selector: 'app-batch-job-details',
@@ -17,6 +22,14 @@ import { DetailsActions } from './ngrx/details.actions';
       </div>
     </div>
   `,
+  standalone: true,
+  imports: [
+    LetDirective,
+    BatchJobHeaderComponent,
+    ProcessPlotContainerComponent,
+    MethodEditorComponent,
+    RunLogComponent,
+  ],
 })
 export class BatchJobDetailsComponent implements OnInit, OnDestroy {
   protected batchJobId = this.store.select(selectRouteParam(DetailsRoutingUrlParts.batchJobIdParamName));

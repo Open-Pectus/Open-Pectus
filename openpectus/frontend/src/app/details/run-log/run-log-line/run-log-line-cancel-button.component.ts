@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { RunLogActions } from '../ngrx/run-log.actions';
+import { RunLogLineButtonComponent } from './run-log-line-button.component';
 
 @Component({
   selector: 'app-run-log-line-cancel-button',
@@ -13,6 +14,8 @@ import { RunLogActions } from '../ngrx/run-log.actions';
                              (confirmedClick)="onClick()">
     </app-run-log-line-button>
   `,
+  standalone: true,
+  imports: [RunLogLineButtonComponent],
 })
 export class RunLogLineCancelButtonComponent {
   @Input() lineId?: number;

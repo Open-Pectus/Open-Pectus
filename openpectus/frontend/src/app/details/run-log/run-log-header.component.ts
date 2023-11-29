@@ -18,6 +18,7 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from 
       </button>
     </div>
   `,
+  standalone: true,
 })
 export class RunLogHeaderComponent {
   @Input() gridFormat: string = '';

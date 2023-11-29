@@ -24,6 +24,8 @@ export interface ValueAndUnit {
       </button>
     </div>
   `,
+  standalone: true,
+  imports: [ProcessValuePipe],
 })
 export class ProcessValueEditorComponent {
   @Input() command?: ProcessValueCommand;

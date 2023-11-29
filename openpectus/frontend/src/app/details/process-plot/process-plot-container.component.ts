@@ -1,7 +1,11 @@
+import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
+import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
+import { ProcessPlotComponent } from './process-plot.component';
 
 @Component({
   selector: 'app-process-plot-container',
@@ -15,6 +19,13 @@ import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
       <app-process-plot content class="block w-full h-full relative" *ngIf="!isCollapsed"></app-process-plot>
     </app-collapsible-element>
   `,
+  standalone: true,
+  imports: [
+    CollapsibleElementComponent,
+    NgIf,
+    ProcessPlotComponent,
+    PushPipe,
+  ],
 })
 export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
   @Input() unitId?: string;

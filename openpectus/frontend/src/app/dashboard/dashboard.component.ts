@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { DashboardActions } from './ngrx/dashboard.actions';
+import { DashboardProcessUnitsComponent } from './process-units/dashboard-process-units.component';
+import { RecentBatchJobsComponent } from './recent-batch-jobs/recent-batch-jobs.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -19,6 +21,8 @@ import { DashboardActions } from './ngrx/dashboard.actions';
       </div>
     </div>
   `,
+  standalone: true,
+  imports: [DashboardProcessUnitsComponent, RecentBatchJobsComponent],
 })
 export class DashboardComponent {
   constructor(private store: Store) {}

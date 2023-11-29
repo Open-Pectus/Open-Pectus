@@ -1,4 +1,6 @@
+import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { LetDirective } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { DetailsActions } from './ngrx/details.actions';
 import { DetailsSelectors } from './ngrx/details.selectors';
@@ -24,6 +26,8 @@ import { DetailsSelectors } from './ngrx/details.selectors';
       </div>
     </ng-container>
   `,
+  standalone: true,
+  imports: [LetDirective, DatePipe],
 })
 export class BatchJobHeaderComponent {
   protected batchJob = this.store.select(DetailsSelectors.batchJob);

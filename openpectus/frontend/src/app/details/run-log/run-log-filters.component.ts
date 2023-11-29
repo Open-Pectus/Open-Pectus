@@ -1,3 +1,4 @@
+import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { RunLogActions } from './ngrx/run-log.actions';
@@ -22,6 +23,8 @@ import { RunLogActions } from './ngrx/run-log.actions';
       </label>
     </div>
   `,
+  standalone: true,
+  imports: [NgIf],
 })
 export class RunLogFiltersComponent {
   @Input() showRunningFilter = true;

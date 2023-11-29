@@ -9,6 +9,7 @@ import { ProcessValueCommand } from '../../api';
             class="bg-green-400 text-gray-800 rounded-md py-2 px-3 whitespace-pre font-semibold"
             (blur)="buttonBlur.emit($event)">{{command?.name}}</button>
   `,
+  standalone: true,
 })
 export class ProcessValueCommandButtonComponent {
   @Input() command?: ProcessValueCommand;

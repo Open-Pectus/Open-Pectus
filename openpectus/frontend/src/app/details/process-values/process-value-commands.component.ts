@@ -1,3 +1,4 @@
+import { NgFor, NgIf } from '@angular/common';
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
@@ -36,6 +37,14 @@ type FocusableCommandComponent = ProcessValueCommandButtonComponent | ProcessVal
       </ng-container>
     </div>
   `,
+  standalone: true,
+  imports: [
+    NgFor,
+    NgIf,
+    ProcessValueEditorComponent,
+    ProcessValueCommandChoiceComponent,
+    ProcessValueCommandButtonComponent,
+  ],
 })
 export class ProcessValueCommandsComponent implements AfterViewInit {
   @Output() shouldClose = new EventEmitter<ProcessValueCommand | undefined>();

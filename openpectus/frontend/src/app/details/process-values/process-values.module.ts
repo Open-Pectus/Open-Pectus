@@ -6,23 +6,15 @@ import { StoreModule } from '@ngrx/store';
 import { SharedModule } from '../../shared/shared.module';
 import { ProcessValuesEffects } from './ngrx/process-values.effects';
 import { processValuesSlice } from './ngrx/process-values.reducer';
+import { ProcessValueCommandButtonComponent } from './process-value-command-button.component';
+import { ProcessValueCommandChoiceComponent } from './process-value-command-choice.component';
 import { ProcessValueCommandsComponent } from './process-value-commands.component';
 import { ProcessValueEditorComponent } from './process-value-editor.component';
 import { ProcessValueComponent } from './process-value.component';
 import { ProcessValuesComponent } from './process-values.component';
-import { ProcessValueCommandChoiceComponent } from './process-value-command-choice.component';
-import { ProcessValueCommandButtonComponent } from './process-value-command-button.component';
 
 
 @NgModule({
-  declarations: [
-    ProcessValuesComponent,
-    ProcessValueComponent,
-    ProcessValueEditorComponent,
-    ProcessValueCommandsComponent,
-    ProcessValueCommandChoiceComponent,
-    ProcessValueCommandButtonComponent,
-  ],
   imports: [
     CommonModule,
     StoreModule.forFeature(processValuesSlice),
@@ -30,6 +22,12 @@ import { ProcessValueCommandButtonComponent } from './process-value-command-butt
     LetDirective,
     PushPipe,
     SharedModule,
+    ProcessValuesComponent,
+    ProcessValueComponent,
+    ProcessValueEditorComponent,
+    ProcessValueCommandsComponent,
+    ProcessValueCommandChoiceComponent,
+    ProcessValueCommandButtonComponent,
   ],
   exports: [
     ProcessValuesComponent,

@@ -1,3 +1,4 @@
+import { NgFor } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import { ProcessValueCommand, ProcessValueCommandChoiceValue } from '../../api';
 
@@ -12,6 +13,8 @@ import { ProcessValueCommand, ProcessValueCommandChoiceValue } from '../../api';
               (click)="$event.stopPropagation(); choiceMade.emit(option)" (blur)="buttonBlur.emit($event)">{{option}}</button>
     </div>
   `,
+  standalone: true,
+  imports: [NgFor],
 })
 export class ProcessValueCommandChoiceComponent {
   @Input() command?: ProcessValueCommand;

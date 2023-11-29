@@ -13,12 +13,6 @@ import { YAxisOverrideDialogComponent } from './y-axis-override-dialog.component
 
 
 @NgModule({
-  declarations: [
-    ProcessPlotComponent,
-    ProcessPlotContainerComponent,
-    YAxisOverrideDialogComponent,
-    XAxisOverrideDialogComponent,
-  ],
   imports: [
     CommonModule,
     SharedModule,
@@ -26,6 +20,10 @@ import { YAxisOverrideDialogComponent } from './y-axis-override-dialog.component
     EffectsModule.forFeature(ProcessPlotEffects),
     PushPipe,
     LetDirective,
+    ProcessPlotComponent,
+    ProcessPlotContainerComponent,
+    YAxisOverrideDialogComponent,
+    XAxisOverrideDialogComponent,
   ],
   exports: [
     ProcessPlotComponent,

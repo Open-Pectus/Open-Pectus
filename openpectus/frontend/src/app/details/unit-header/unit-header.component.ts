@@ -1,6 +1,9 @@
+import { TitleCasePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { LetDirective } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { DetailsSelectors } from '../ngrx/details.selectors';
+import { UnitControlsComponent } from './unit-controls.component';
 
 @Component({
   selector: 'app-unit-header',
@@ -14,6 +17,12 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
       <app-unit-controls></app-unit-controls>
     </ng-container>
   `,
+  standalone: true,
+  imports: [
+    LetDirective,
+    UnitControlsComponent,
+    TitleCasePipe,
+  ],
 })
 export class UnitHeaderComponent {
   protected processUnit = this.store.select(DetailsSelectors.processUnit);

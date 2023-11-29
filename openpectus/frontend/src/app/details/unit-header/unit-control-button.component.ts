@@ -1,3 +1,4 @@
+import { NgClass, TitleCasePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { DetailsActions } from '../ngrx/details.actions';
@@ -16,6 +17,8 @@ import { DetailsActions } from '../ngrx/details.actions';
       <span class="codicon" [ngClass]="'codicon-'+iconName"></span>{{command | titlecase}}
     </button>
   `,
+  standalone: true,
+  imports: [NgClass, TitleCasePipe],
 })
 export class UnitControlButtonComponent {
   @Input() command?: string;

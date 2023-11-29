@@ -1,7 +1,10 @@
+import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
+import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { combineLatest, map } from 'rxjs';
+import { CollapsibleElementComponent } from '../shared/collapsible-element.component';
 import { ProcessValuePipe } from '../shared/pipes/process-value.pipe';
 import { DetailsActions } from './ngrx/details.actions';
 import { DetailsSelectors } from './ngrx/details.selectors';
@@ -20,6 +23,12 @@ import { DetailsSelectors } from './ngrx/details.selectors';
   `,
   styles: [
     ':host ::ng-deep svg { height: 100%; width: 100% }',
+  ],
+  standalone: true,
+  imports: [
+    CollapsibleElementComponent,
+    NgIf,
+    PushPipe,
   ],
 })
 export class ProcessDiagramComponent implements OnInit {

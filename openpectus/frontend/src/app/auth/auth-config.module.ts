@@ -55,9 +55,6 @@ export const httpLoaderFactory = (authService: AuthService, store: Store) => {
 
 
 @NgModule({
-  declarations: [
-    AuthCallbackComponent,
-  ],
   imports: [
     AuthModule.forRoot({
       loader: {
@@ -67,6 +64,7 @@ export const httpLoaderFactory = (authService: AuthService, store: Store) => {
       },
     }),
     HttpClientModule,
+    AuthCallbackComponent,
   ],
   providers: [
     {provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true},

@@ -1,8 +1,12 @@
+import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { CommandExample, CommandSource } from '../../api';
+import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { DetailsActions } from '../ngrx/details.actions';
 import { DetailsSelectors } from '../ngrx/details.selectors';
+import { CommandExamplesListComponent } from './command-examples-list.component';
 
 @Component({
   selector: 'app-commands',
@@ -29,6 +33,13 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
       </div>
     </app-collapsible-element>
   `,
+  standalone: true,
+  imports: [
+    CollapsibleElementComponent,
+    NgIf,
+    CommandExamplesListComponent,
+    PushPipe,
+  ],
 })
 export class CommandsComponent implements OnInit {
   protected collapsed = false;

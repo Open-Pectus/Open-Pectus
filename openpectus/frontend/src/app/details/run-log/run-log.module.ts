@@ -12,13 +12,19 @@ import { RunLogHeaderComponent } from './run-log-header.component';
 import { RunLogLineButtonComponent } from './run-log-line/run-log-line-button.component';
 import { RunLogLineCancelButtonComponent } from './run-log-line/run-log-line-cancel-button.component';
 import { RunLogLineForceButtonComponent } from './run-log-line/run-log-line-force-button.component';
+import { RunLogLineProgressComponent } from './run-log-line/run-log-line-progress.component';
 import { RunLogLineComponent } from './run-log-line/run-log-line.component';
 import { RunLogComponent } from './run-log.component';
-import { RunLogLineProgressComponent } from './run-log-line/run-log-line-progress.component';
 
 
 @NgModule({
-  declarations: [
+  imports: [
+    CommonModule,
+    StoreModule.forFeature(runLogSlice),
+    EffectsModule.forFeature(RunLogEffects),
+    SharedModule,
+    PushPipe,
+    LetDirective,
     RunLogComponent,
     RunLogLineComponent,
     RunLogFiltersComponent,
@@ -28,14 +34,6 @@ import { RunLogLineProgressComponent } from './run-log-line/run-log-line-progres
     RunLogLineCancelButtonComponent,
     RunLogLineButtonComponent,
     RunLogLineProgressComponent,
-  ],
-  imports: [
-    CommonModule,
-    StoreModule.forFeature(runLogSlice),
-    EffectsModule.forFeature(RunLogEffects),
-    SharedModule,
-    PushPipe,
-    LetDirective,
   ],
   exports: [
     RunLogComponent,

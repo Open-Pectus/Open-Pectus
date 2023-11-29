@@ -5,6 +5,7 @@ import { ProcessUnitStateEnum } from '../../typings';
 
 @Pipe({
   name: 'processUnitState',
+  standalone: true,
 })
 export class ProcessUnitStatePipe implements PipeTransform {
   transform(value: ProcessUnitStateEnum | undefined, ...args: unknown[]): string {

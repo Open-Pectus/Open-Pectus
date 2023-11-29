@@ -1,4 +1,6 @@
+import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, Input, ViewChild } from '@angular/core';
+import { LetDirective } from '@ngrx/component';
 import { concatLatestFrom } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { map, Observable, tap } from 'rxjs';
@@ -39,6 +41,8 @@ import { AxisLimits } from './process-plot.types';
       </ng-container>
     </ng-container>
   `,
+  standalone: true,
+  imports: [LetDirective, NgIf],
 })
 export class YAxisOverrideDialogComponent {
   @Input() margin?: string;

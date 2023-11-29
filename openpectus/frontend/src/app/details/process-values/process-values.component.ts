@@ -1,10 +1,14 @@
+import { NgFor, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
+import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { ProcessValue, ProcessValueCommand } from '../../api';
+import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { UtilMethods } from '../../shared/util-methods';
 import { DetailsSelectors } from '../ngrx/details.selectors';
 import { ProcessValuesActions } from './ngrx/process-values.actions';
-import { PvAndPosition } from './process-value.component';
+import { ProcessValueCommandsComponent } from './process-value-commands.component';
+import { ProcessValueComponent, PvAndPosition } from './process-value.component';
 
 @Component({
   selector: 'app-process-values',
@@ -24,6 +28,15 @@ import { PvAndPosition } from './process-value.component';
                                   [style.top.px]="pvAndPositionForPopover?.position?.y"></app-process-value-commands>
     </app-collapsible-element>
   `,
+  standalone: true,
+  imports: [
+    CollapsibleElementComponent,
+    NgIf,
+    NgFor,
+    ProcessValueComponent,
+    ProcessValueCommandsComponent,
+    PushPipe,
+  ],
 })
 export class ProcessValuesComponent implements OnInit, OnDestroy {
   processValues = this.store.select(DetailsSelectors.processValues);

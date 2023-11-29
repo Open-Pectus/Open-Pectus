@@ -1,6 +1,10 @@
+import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { Subject } from 'rxjs';
+import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
+import { MonacoEditorComponent } from './monaco-editor.component';
 import { MethodEditorActions } from './ngrx/method-editor.actions';
 import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
 
@@ -20,6 +24,13 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
                          [readOnlyEditor]="batchJobId !== undefined"></app-monaco-editor>
     </app-collapsible-element>
   `,
+  standalone: true,
+  imports: [
+    CollapsibleElementComponent,
+    NgIf,
+    MonacoEditorComponent,
+    PushPipe,
+  ],
 })
 export class MethodEditorComponent implements OnInit, OnDestroy {
   @Input() unitId?: string;

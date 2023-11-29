@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { LetDirective } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { DetailsSelectors } from '../ngrx/details.selectors';
+import { UnitControlButtonComponent } from './unit-control-button.component';
 
 
 @Component({
@@ -20,6 +22,8 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
                                [toggled]="!controlState.is_running"></app-unit-control-button>
     </div>
   `,
+  standalone: true,
+  imports: [LetDirective, UnitControlButtonComponent],
 })
 export class UnitControlsComponent {
   readonly startColor = '#047857';

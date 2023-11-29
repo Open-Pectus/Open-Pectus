@@ -17,6 +17,8 @@ import { ProcessPlotPlacement } from './process-plot.placement';
 import { ProcessPlotTooltip } from './process-plot.tooltip';
 import { D3Selection } from './process-plot.types';
 import { ProcessPlotZoomAndPan } from './process-plot.zoom-and-pan';
+import { XAxisOverrideDialogComponent } from './x-axis-override-dialog.component';
+import { YAxisOverrideDialogComponent } from './y-axis-override-dialog.component';
 
 @Component({
   selector: 'app-process-plot',
@@ -26,6 +28,8 @@ import { ProcessPlotZoomAndPan } from './process-plot.zoom-and-pan';
     <app-y-axis-override-dialog class="top-0 left-0" [margin]="padding"></app-y-axis-override-dialog>
     <app-x-axis-override-dialog class="top-0 left-0" [margin]="padding"></app-x-axis-override-dialog>
   `,
+  standalone: true,
+  imports: [YAxisOverrideDialogComponent, XAxisOverrideDialogComponent],
 })
 export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
   @ViewChild('plot', {static: false}) plotElement?: ElementRef<SVGSVGElement>;

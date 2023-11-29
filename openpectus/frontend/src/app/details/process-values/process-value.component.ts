@@ -1,5 +1,7 @@
+import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output } from '@angular/core';
 import { ProcessValue } from '../../api';
+import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 
 export interface PvAndPosition {
   processValue: ProcessValue,
@@ -21,6 +23,8 @@ export interface PvAndPosition {
       </div>
     </div>
   `,
+  standalone: true,
+  imports: [NgIf, ProcessValuePipe],
 })
 export class ProcessValueComponent {
   @Input() processValue?: ProcessValue;

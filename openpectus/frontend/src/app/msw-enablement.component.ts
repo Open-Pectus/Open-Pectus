@@ -16,6 +16,7 @@ import { FrontendPubsubService } from './api';
       </button>
     </div>
   `,
+  standalone: true,
 })
 export class MswEnablementComponent implements OnInit {
   protected readonly MswEnablement = MswEnablement;

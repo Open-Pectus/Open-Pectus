@@ -14,12 +14,6 @@ import { RecentBatchJobsComponent } from './recent-batch-jobs/recent-batch-jobs.
 
 
 @NgModule({
-  declarations: [
-    DashboardComponent,
-    DashboardProcessUnitsComponent,
-    ProcessUnitCardComponent,
-    RecentBatchJobsComponent,
-  ],
   imports: [
     CommonModule,
     DashboardRoutingModule,
@@ -27,6 +21,10 @@ import { RecentBatchJobsComponent } from './recent-batch-jobs/recent-batch-jobs.
     EffectsModule.forFeature([DashboardEffects]),
     PushModule,
     SharedModule,
+    DashboardComponent,
+    DashboardProcessUnitsComponent,
+    ProcessUnitCardComponent,
+    RecentBatchJobsComponent,
   ],
 })
 export class DashboardModule {}

@@ -1,3 +1,4 @@
+import { NgClass } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
 
 @Component({
@@ -13,6 +14,8 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, In
       {{isConfirming ? 'Confirm' : ''}} {{buttonText}}{{isConfirming ? '?' : ''}}
     </button>
   `,
+  standalone: true,
+  imports: [NgClass],
 })
 export class RunLogLineButtonComponent {
   @Input() codiconClass?: string;

@@ -11,6 +11,7 @@ import { take } from 'rxjs';
       Please wait...
     </div>
   `,
+  standalone: true,
 })
 export class AuthCallbackComponent implements OnInit {
   constructor(private router: Router,

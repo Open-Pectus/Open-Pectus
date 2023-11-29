@@ -1,10 +1,12 @@
+import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { BatchJob } from '../../api';
 import { detailsUrlPart } from '../../app-routing.module';
 import { DetailsRoutingUrlParts } from '../../details/details-routing-url-parts';
-import { DefaultTableSort, TableColumn, TableSortDirection } from '../../shared/table.component';
+import { DefaultTableSort, TableColumn, TableComponent, TableSortDirection } from '../../shared/table.component';
 import { DashboardActions } from '../ngrx/dashboard.actions';
 import { DashboardSelectors } from '../ngrx/dashboard.selectors';
 
@@ -17,6 +19,12 @@ import { DashboardSelectors } from '../ngrx/dashboard.selectors';
                [defaultSort]="defaultSort" [filter]="recenterBatchJobFilter | ngrxPush"></app-table>
     <div class="text-center p-2" *ngIf="(recentBatchJobs | ngrxPush)?.length === 0">No recent batch jobs available</div>
   `,
+  standalone: true,
+  imports: [
+    TableComponent,
+    NgIf,
+    PushPipe,
+  ],
 })
 export class RecentBatchJobsComponent implements OnInit {
   protected readonly recenterBatchJobFilter = this.store.select(DashboardSelectors.recentBatchJobFilter);

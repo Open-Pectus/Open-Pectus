@@ -1,10 +1,15 @@
+import { DatePipe, NgIf } from '@angular/common';
 import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
+import { LetDirective } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { map } from 'rxjs';
 import { RunLogLine } from '../../../api';
 import { RunLogActions } from '../ngrx/run-log.actions';
 import { RunLogSelectors } from '../ngrx/run-log.selectors';
-import { AdditionalValueType } from '../run-log-additional-values.component';
+import { AdditionalValueType, RunLogAdditionalValuesComponent } from '../run-log-additional-values.component';
+import { RunLogLineCancelButtonComponent } from './run-log-line-cancel-button.component';
+import { RunLogLineForceButtonComponent } from './run-log-line-force-button.component';
+import { RunLogLineProgressComponent } from './run-log-line-progress.component';
 
 @Component({
   selector: 'app-run-log-line',
@@ -44,6 +49,16 @@ import { AdditionalValueType } from '../run-log-additional-values.component';
       </div>
     </div>
   `,
+  standalone: true,
+  imports: [
+    LetDirective,
+    NgIf,
+    RunLogLineProgressComponent,
+    RunLogLineForceButtonComponent,
+    RunLogLineCancelButtonComponent,
+    RunLogAdditionalValuesComponent,
+    DatePipe,
+  ],
 })
 export class RunLogLineComponent implements AfterViewInit {
   @Input() runLogLine?: RunLogLine;

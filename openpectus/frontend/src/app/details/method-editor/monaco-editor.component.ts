@@ -33,6 +33,7 @@ const lineIdClassNamePrefix = 'line-id-';
     <div #editor class="w-full h-full"></div>
   `,
   styleUrls: ['monaco-editor.component.scss'],
+  standalone: true,
 })
 export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   @Input() editorSizeChange?: Observable<void>;

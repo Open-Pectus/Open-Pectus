@@ -1,9 +1,17 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
+import { LetDirective } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { firstValueFrom } from 'rxjs';
 import { selectRouteParam } from '../ngrx/router.selectors';
+import { CommandsComponent } from './commands/commands.component';
 import { DetailsRoutingUrlParts } from './details-routing-url-parts';
+import { MethodEditorComponent } from './method-editor/method-editor.component';
 import { DetailsActions } from './ngrx/details.actions';
+import { ProcessDiagramComponent } from './process-diagram.component';
+import { ProcessPlotContainerComponent } from './process-plot/process-plot-container.component';
+import { ProcessValuesComponent } from './process-values/process-values.component';
+import { RunLogComponent } from './run-log/run-log.component';
+import { UnitHeaderComponent } from './unit-header/unit-header.component';
 
 @Component({
   selector: 'app-unit-details',
@@ -21,6 +29,17 @@ import { DetailsActions } from './ngrx/details.actions';
       </div>
     </div>
   `,
+  standalone: true,
+  imports: [
+    LetDirective,
+    UnitHeaderComponent,
+    ProcessValuesComponent,
+    MethodEditorComponent,
+    CommandsComponent,
+    RunLogComponent,
+    ProcessDiagramComponent,
+    ProcessPlotContainerComponent,
+  ],
 })
 export class UnitDetailsComponent implements OnInit, OnDestroy {
   protected unitId = this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName));

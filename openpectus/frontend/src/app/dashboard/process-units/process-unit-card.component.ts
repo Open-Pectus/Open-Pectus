@@ -1,5 +1,8 @@
+import { NgClass } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { InProgress, NotOnline, ProcessUnit, Ready } from '../../api';
+import { FormatDurationMsecPipe } from '../../shared/pipes/format-duration-msec.pipe';
+import { ProcessUnitStatePipe } from '../../shared/pipes/process-unit-state.pipe';
 import { UtilMethods } from '../../shared/util-methods';
 
 @Component({
@@ -18,6 +21,12 @@ import { UtilMethods } from '../../shared/util-methods';
       </div>
     </div>
   `,
+  standalone: true,
+  imports: [
+    NgClass,
+    FormatDurationMsecPipe,
+    ProcessUnitStatePipe,
+  ],
 })
 export class ProcessUnitCardComponent {
   @Input() processUnit?: ProcessUnit;

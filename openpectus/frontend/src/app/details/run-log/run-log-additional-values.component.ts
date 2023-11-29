@@ -1,5 +1,7 @@
+import { NgFor } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { ProcessValue } from '../../api';
+import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 
 export enum AdditionalValueType {
   Start = 'start',
@@ -23,6 +25,8 @@ export enum AdditionalValueType {
       </div>
     </div>
   `,
+  standalone: true,
+  imports: [NgFor, ProcessValuePipe],
 })
 export class RunLogAdditionalValuesComponent {
   @Input() type?: AdditionalValueType;

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
 import { CollapsibleElementStorageService } from './collapsible-element-storage.service';
+import { NgIf, NgClass } from '@angular/common';
 
 @Component({
   selector: 'app-collapsible-element',
@@ -39,6 +40,8 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
       </div>
     </div>
   `,
+  standalone: true,
+  imports: [NgIf, NgClass],
 })
 export class CollapsibleElementComponent implements OnInit {
   @Input() name?: string;

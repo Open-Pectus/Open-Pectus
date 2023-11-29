@@ -21,11 +21,7 @@ import { TopBarComponent } from './top-bar.component';
 
 
 @NgModule({
-  declarations: [
-    AppComponent,
-    TopBarComponent,
-    MswEnablementComponent,
-  ],
+  declarations: [AppComponent],
   imports: [
     BrowserModule,
     AppRoutingModule,
@@ -57,6 +53,8 @@ import { TopBarComponent } from './top-bar.component';
     AuthConfigModule,
     PushPipe,
     LetDirective,
+    TopBarComponent,
+    MswEnablementComponent,
   ],
   providers: [
     {provide: LOCALE_ID, useValue: 'da-DK'},

@@ -11,10 +11,6 @@ import { methodEditorSlice } from './ngrx/method-editor.reducer';
 
 
 @NgModule({
-  declarations: [
-    MethodEditorComponent,
-    MonacoEditorComponent,
-  ],
   imports: [
     CommonModule,
     StoreModule.forFeature(methodEditorSlice),
@@ -22,6 +18,8 @@ import { methodEditorSlice } from './ngrx/method-editor.reducer';
     LetDirective,
     PushPipe,
     SharedModule,
+    MethodEditorComponent,
+    MonacoEditorComponent,
   ],
   exports: [
     MethodEditorComponent,
