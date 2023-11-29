@@ -1,5 +1,6 @@
 import { DATE_PIPE_DEFAULT_OPTIONS, DatePipe, DecimalPipe } from '@angular/common';
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import '@angular/common/locales/global/da';
 import { importProvidersFrom, isDevMode, LOCALE_ID } from '@angular/core';
 import { bootstrapApplication, BrowserModule } from '@angular/platform-browser';
 import { LetDirective, PushPipe } from '@ngrx/component';
