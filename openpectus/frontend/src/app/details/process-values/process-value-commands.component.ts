@@ -22,6 +22,14 @@ type FocusableCommandComponent = ProcessValueCommandButtonComponent | ProcessVal
 @Component({
   selector: 'app-process-value-commands',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    NgFor,
+    NgIf,
+    ProcessValueEditorComponent,
+    ProcessValueCommandChoiceComponent,
+    ProcessValueCommandButtonComponent,
+  ],
   template: `
     <div tabindex="0" #container
          class="absolute left-1/2 -translate-x-1/2 top-0.5 z-10 flex flex-col gap-2 bg-white border border-slate-500 outline-none rounded-md p-2"
@@ -37,14 +45,6 @@ type FocusableCommandComponent = ProcessValueCommandButtonComponent | ProcessVal
       </ng-container>
     </div>
   `,
-  standalone: true,
-  imports: [
-    NgFor,
-    NgIf,
-    ProcessValueEditorComponent,
-    ProcessValueCommandChoiceComponent,
-    ProcessValueCommandButtonComponent,
-  ],
 })
 export class ProcessValueCommandsComponent implements AfterViewInit {
   @Output() shouldClose = new EventEmitter<ProcessValueCommand | undefined>();

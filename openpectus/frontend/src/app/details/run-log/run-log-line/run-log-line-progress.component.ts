@@ -4,6 +4,8 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 @Component({
   selector: 'app-run-log-line-progress',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [NgIf, DecimalPipe],
   template: `
     <div class="border-slate-400 bg-slate-100 border rounded-md overflow-hidden w-28 h-full flex items-center relative">
       <div class="bg-sky-600 saturate-50 h-full overflow-visible flex items-center"
@@ -17,8 +19,6 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
             *ngIf="value !== undefined">{{value * 100 | number:'1.1-1'}} %</span>
     </div>
   `,
-  standalone: true,
-  imports: [NgIf, DecimalPipe],
 })
 export class RunLogLineProgressComponent {
   @Input() value?: number;

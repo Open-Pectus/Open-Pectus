@@ -11,6 +11,8 @@ export enum AdditionalValueType {
 @Component({
   selector: 'app-run-log-additional-values',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [NgFor, ProcessValuePipe],
   template: `
     <div #additionalValues class="grid grid-rows-1 px-3 pb-2.5 gap-2.5 grid-flow-col justify-end items-center">
       <p class="text-sm">At {{type}}:</p>
@@ -25,8 +27,6 @@ export enum AdditionalValueType {
       </div>
     </div>
   `,
-  standalone: true,
-  imports: [NgFor, ProcessValuePipe],
 })
 export class RunLogAdditionalValuesComponent {
   @Input() type?: AdditionalValueType;

@@ -11,6 +11,13 @@ import { CommandExamplesListComponent } from './command-examples-list.component'
 @Component({
   selector: 'app-commands',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    CollapsibleElementComponent,
+    NgIf,
+    CommandExamplesListComponent,
+    PushPipe,
+  ],
   template: `
     <app-collapsible-element [name]="'Commands'" [heightResizable]="true" [contentHeight]="400" (collapseStateChanged)="collapsed = $event"
                              [codiconName]="'codicon-terminal'">
@@ -33,13 +40,6 @@ import { CommandExamplesListComponent } from './command-examples-list.component'
       </div>
     </app-collapsible-element>
   `,
-  standalone: true,
-  imports: [
-    CollapsibleElementComponent,
-    NgIf,
-    CommandExamplesListComponent,
-    PushPipe,
-  ],
 })
 export class CommandsComponent implements OnInit {
   protected collapsed = false;

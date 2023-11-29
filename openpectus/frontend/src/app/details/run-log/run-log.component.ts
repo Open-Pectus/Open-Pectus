@@ -13,6 +13,16 @@ import { RunLogLineComponent } from './run-log-line/run-log-line.component';
 @Component({
   selector: 'app-run-log',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    CollapsibleElementComponent,
+    RunLogFiltersComponent,
+    NgIf,
+    RunLogHeaderComponent,
+    NgFor,
+    RunLogLineComponent,
+    PushPipe,
+  ],
   template: `
     <app-collapsible-element [name]="'Run Log'" [heightResizable]="true" [contentHeight]="400" (collapseStateChanged)="collapsed = $event"
                              [codiconName]="'codicon-tasklist'">
@@ -30,16 +40,6 @@ import { RunLogLineComponent } from './run-log-line/run-log-line.component';
       </div>
     </app-collapsible-element>
   `,
-  standalone: true,
-  imports: [
-    CollapsibleElementComponent,
-    RunLogFiltersComponent,
-    NgIf,
-    RunLogHeaderComponent,
-    NgFor,
-    RunLogLineComponent,
-    PushPipe,
-  ],
 })
 export class RunLogComponent implements OnInit, OnDestroy {
   @Input() unitId?: string;

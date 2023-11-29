@@ -7,6 +7,8 @@ import { RecentBatchJobsComponent } from './recent-batch-jobs/recent-batch-jobs.
 @Component({
   selector: 'app-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [DashboardProcessUnitsComponent, RecentBatchJobsComponent],
   template: `
     <div class="flex justify-center">
       <div class="flex flex-col max-w-5xl mx-4 lg:mx-8">
@@ -21,8 +23,6 @@ import { RecentBatchJobsComponent } from './recent-batch-jobs/recent-batch-jobs.
       </div>
     </div>
   `,
-  standalone: true,
-  imports: [DashboardProcessUnitsComponent, RecentBatchJobsComponent],
 })
 export class DashboardComponent {
   constructor(private store: Store) {}

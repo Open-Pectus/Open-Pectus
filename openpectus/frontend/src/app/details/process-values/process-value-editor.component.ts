@@ -10,6 +10,8 @@ export interface ValueAndUnit {
 @Component({
   selector: 'app-process-value-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [ProcessValuePipe],
   template: `
     <div class="flex">
       <input #inputElement class="p-1 pl-2 outline-none border-l border-y border-gray-300 rounded-l-md w-32" type="text"
@@ -24,8 +26,6 @@ export interface ValueAndUnit {
       </button>
     </div>
   `,
-  standalone: true,
-  imports: [ProcessValuePipe],
 })
 export class ProcessValueEditorComponent {
   @Input() command?: ProcessValueCommand;

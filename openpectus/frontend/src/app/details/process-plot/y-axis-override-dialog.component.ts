@@ -12,6 +12,8 @@ import { AxisLimits } from './process-plot.types';
 @Component({
   selector: 'app-y-axis-override-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [LetDirective, NgIf],
   template: `
     <ng-container *ngrxLet="data; let data">
       <ng-container *ngIf="data !== undefined">
@@ -41,8 +43,6 @@ import { AxisLimits } from './process-plot.types';
       </ng-container>
     </ng-container>
   `,
-  standalone: true,
-  imports: [LetDirective, NgIf],
 })
 export class YAxisOverrideDialogComponent {
   @Input() margin?: string;

@@ -6,6 +6,8 @@ import { RunLogActions } from './ngrx/run-log.actions';
 @Component({
   selector: 'app-run-log-filters',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [NgIf],
   template: `
     <div class="flex gap-3 items-center flex-wrap justify-end">
       <label class="relative">
@@ -23,8 +25,6 @@ import { RunLogActions } from './ngrx/run-log.actions';
       </label>
     </div>
   `,
-  standalone: true,
-  imports: [NgIf],
 })
 export class RunLogFiltersComponent {
   @Input() showRunningFilter = true;

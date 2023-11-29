@@ -6,6 +6,8 @@ import { RunLogLineButtonComponent } from './run-log-line-button.component';
 @Component({
   selector: 'app-run-log-line-cancel-button',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [RunLogLineButtonComponent],
   template: `
     <app-run-log-line-button buttonText="Cancel"
                              colorClass="bg-red-200"
@@ -14,8 +16,6 @@ import { RunLogLineButtonComponent } from './run-log-line-button.component';
                              (confirmedClick)="onClick()">
     </app-run-log-line-button>
   `,
-  standalone: true,
-  imports: [RunLogLineButtonComponent],
 })
 export class RunLogLineCancelButtonComponent {
   @Input() lineId?: number;

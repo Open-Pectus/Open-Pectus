@@ -14,17 +14,17 @@ import { DashboardSelectors } from '../ngrx/dashboard.selectors';
 @Component({
   selector: 'app-recent-batch-jobs',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <app-table class="w-full h-96" [columns]="columns" [data]="recentBatchJobs | ngrxPush" (rowClicked)="navigateToBatchJob($event)"
-               [defaultSort]="defaultSort" [filter]="recenterBatchJobFilter | ngrxPush"></app-table>
-    <div class="text-center p-2" *ngIf="(recentBatchJobs | ngrxPush)?.length === 0">No recent batch jobs available</div>
-  `,
   standalone: true,
   imports: [
     TableComponent,
     NgIf,
     PushPipe,
   ],
+  template: `
+    <app-table class="w-full h-96" [columns]="columns" [data]="recentBatchJobs | ngrxPush" (rowClicked)="navigateToBatchJob($event)"
+               [defaultSort]="defaultSort" [filter]="recenterBatchJobFilter | ngrxPush"></app-table>
+    <div class="text-center p-2" *ngIf="(recentBatchJobs | ngrxPush)?.length === 0">No recent batch jobs available</div>
+  `,
 })
 export class RecentBatchJobsComponent implements OnInit {
   protected readonly recenterBatchJobFilter = this.store.select(DashboardSelectors.recentBatchJobFilter);

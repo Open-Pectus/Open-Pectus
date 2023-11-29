@@ -6,6 +6,8 @@ import { RunLogLineButtonComponent } from './run-log-line-button.component';
 @Component({
   selector: 'app-run-log-line-force-button',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [RunLogLineButtonComponent],
   template: `
     <app-run-log-line-button buttonText="Force"
                              colorClass="bg-yellow-100"
@@ -14,8 +16,6 @@ import { RunLogLineButtonComponent } from './run-log-line-button.component';
                              (confirmedClick)="onClick()">
     </app-run-log-line-button>
   `,
-  standalone: true,
-  imports: [RunLogLineButtonComponent],
 })
 export class RunLogLineForceButtonComponent {
   @Input() lineId?: number;

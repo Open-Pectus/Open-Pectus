@@ -11,6 +11,13 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
 @Component({
   selector: 'app-method-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    CollapsibleElementComponent,
+    NgIf,
+    MonacoEditorComponent,
+    PushPipe,
+  ],
   template: `
     <app-collapsible-element [name]="'Method Editor'" [heightResizable]="true" (contentHeightChanged)="onContentHeightChanged()"
                              [contentHeight]="400" (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-list-flat'">
@@ -24,13 +31,6 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
                          [readOnlyEditor]="batchJobId !== undefined"></app-monaco-editor>
     </app-collapsible-element>
   `,
-  standalone: true,
-  imports: [
-    CollapsibleElementComponent,
-    NgIf,
-    MonacoEditorComponent,
-    PushPipe,
-  ],
 })
 export class MethodEditorComponent implements OnInit, OnDestroy {
   @Input() unitId?: string;

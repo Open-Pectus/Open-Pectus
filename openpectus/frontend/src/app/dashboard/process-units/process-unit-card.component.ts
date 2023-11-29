@@ -8,6 +8,12 @@ import { UtilMethods } from '../../shared/util-methods';
 @Component({
   selector: 'app-process-unit-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    NgClass,
+    FormatDurationMsecPipe,
+    ProcessUnitStatePipe,
+  ],
   template: `
     <div class="rounded-md shadow-md cursor-pointer bg-vscode-background-grey hover:brightness-95">
       <div class="px-5 py-3 bg-sky-700 text-white rounded-t-md flex justify-between">
@@ -21,12 +27,6 @@ import { UtilMethods } from '../../shared/util-methods';
       </div>
     </div>
   `,
-  standalone: true,
-  imports: [
-    NgClass,
-    FormatDurationMsecPipe,
-    ProcessUnitStatePipe,
-  ],
 })
 export class ProcessUnitCardComponent {
   @Input() processUnit?: ProcessUnit;

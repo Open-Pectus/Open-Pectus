@@ -23,13 +23,13 @@ import { YAxisOverrideDialogComponent } from './y-axis-override-dialog.component
 @Component({
   selector: 'app-process-plot',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [YAxisOverrideDialogComponent, XAxisOverrideDialogComponent],
   template: `
     <svg class="h-full w-full overflow-visible select-none" #plot></svg>
     <app-y-axis-override-dialog class="top-0 left-0" [margin]="padding"></app-y-axis-override-dialog>
     <app-x-axis-override-dialog class="top-0 left-0" [margin]="padding"></app-x-axis-override-dialog>
   `,
-  standalone: true,
-  imports: [YAxisOverrideDialogComponent, XAxisOverrideDialogComponent],
 })
 export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
   @ViewChild('plot', {static: false}) plotElement?: ElementRef<SVGSVGElement>;

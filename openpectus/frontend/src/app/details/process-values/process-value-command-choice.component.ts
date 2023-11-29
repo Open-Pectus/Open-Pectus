@@ -5,6 +5,8 @@ import { ProcessValueCommand, ProcessValueCommandChoiceValue } from '../../api';
 @Component({
   selector: 'app-process-value-command-choice',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [NgFor],
   template: `
     <div class="flex items-center">
       <p class="mr-2">{{command?.name}}: </p>
@@ -13,8 +15,6 @@ import { ProcessValueCommand, ProcessValueCommandChoiceValue } from '../../api';
               (click)="$event.stopPropagation(); choiceMade.emit(option)" (blur)="buttonBlur.emit($event)">{{option}}</button>
     </div>
   `,
-  standalone: true,
-  imports: [NgFor],
 })
 export class ProcessValueCommandChoiceComponent {
   @Input() command?: ProcessValueCommand;

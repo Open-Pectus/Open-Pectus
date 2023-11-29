@@ -13,6 +13,15 @@ import { ProcessValueComponent, PvAndPosition } from './process-value.component'
 @Component({
   selector: 'app-process-values',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    CollapsibleElementComponent,
+    NgIf,
+    NgFor,
+    ProcessValueComponent,
+    ProcessValueCommandsComponent,
+    PushPipe,
+  ],
   template: `
     <app-collapsible-element [name]="'Process Values'" (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-dashboard'">
       <div class="flex gap-2 py-2 px-1 lg:px-2 items-start flex-wrap" content *ngIf="!collapsed">
@@ -28,15 +37,6 @@ import { ProcessValueComponent, PvAndPosition } from './process-value.component'
                                   [style.top.px]="pvAndPositionForPopover?.position?.y"></app-process-value-commands>
     </app-collapsible-element>
   `,
-  standalone: true,
-  imports: [
-    CollapsibleElementComponent,
-    NgIf,
-    NgFor,
-    ProcessValueComponent,
-    ProcessValueCommandsComponent,
-    PushPipe,
-  ],
 })
 export class ProcessValuesComponent implements OnInit, OnDestroy {
   processValues = this.store.select(DetailsSelectors.processValues);

@@ -10,6 +10,13 @@ import { ProcessPlotComponent } from './process-plot.component';
 @Component({
   selector: 'app-process-plot-container',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    CollapsibleElementComponent,
+    NgIf,
+    ProcessPlotComponent,
+    PushPipe,
+  ],
   template: `
     <app-collapsible-element [name]="'Process Plot'" [heightResizable]="true" [contentHeight]="400" [contentOverflow]="true"
                              (collapseStateChanged)="isCollapsed = $event" [codiconName]="'codicon-graph-line'">
@@ -19,13 +26,6 @@ import { ProcessPlotComponent } from './process-plot.component';
       <app-process-plot content class="block w-full h-full relative" *ngIf="!isCollapsed"></app-process-plot>
     </app-collapsible-element>
   `,
-  standalone: true,
-  imports: [
-    CollapsibleElementComponent,
-    NgIf,
-    ProcessPlotComponent,
-    PushPipe,
-  ],
 })
 export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
   @Input() unitId?: string;

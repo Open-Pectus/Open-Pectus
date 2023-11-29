@@ -11,6 +11,8 @@ export interface PvAndPosition {
 @Component({
   selector: 'app-process-value',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [NgIf, ProcessValuePipe],
   template: `
     <div class="flex flex-col bg-vscode-background-grey-hover p-1 items-center gap-1 lg:gap-2 rounded select-none"
          [class.cursor-pointer]="hasCommands(processValue)" (click)="onClick()">
@@ -23,8 +25,6 @@ export interface PvAndPosition {
       </div>
     </div>
   `,
-  standalone: true,
-  imports: [NgIf, ProcessValuePipe],
 })
 export class ProcessValueComponent {
   @Input() processValue?: ProcessValue;
