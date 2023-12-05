@@ -5,6 +5,7 @@ import { FrontendPubsubService } from './api';
 @Component({
   selector: 'app-msw-enablement',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
   template: `
     <div class="text-xs text-slate-400">
       <button class="rounded p-1.5 bg-blue-900"

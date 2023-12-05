@@ -1,12 +1,23 @@
+import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { Subject } from 'rxjs';
+import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
+import { MonacoEditorComponent } from './monaco-editor.component';
 import { MethodEditorActions } from './ngrx/method-editor.actions';
 import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
 
 @Component({
   selector: 'app-method-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    CollapsibleElementComponent,
+    NgIf,
+    MonacoEditorComponent,
+    PushPipe,
+  ],
   template: `
     <app-collapsible-element [name]="'Method Editor'" [heightResizable]="true" (contentHeightChanged)="onContentHeightChanged()"
                              [contentHeight]="400" (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-list-flat'">

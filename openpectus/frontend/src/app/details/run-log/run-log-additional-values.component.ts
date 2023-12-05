@@ -1,5 +1,7 @@
+import { NgFor } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { ProcessValue } from '../../api';
+import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 
 export enum AdditionalValueType {
   Start = 'start',
@@ -9,6 +11,8 @@ export enum AdditionalValueType {
 @Component({
   selector: 'app-run-log-additional-values',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [NgFor, ProcessValuePipe],
   template: `
     <div #additionalValues class="grid grid-rows-1 px-3 pb-2.5 gap-2.5 grid-flow-col justify-end items-center">
       <p class="text-sm">At {{type}}:</p>

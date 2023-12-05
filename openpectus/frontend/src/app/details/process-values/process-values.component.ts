@@ -1,14 +1,27 @@
+import { NgFor, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
+import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { ProcessValue, ProcessValueCommand } from '../../api';
+import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { UtilMethods } from '../../shared/util-methods';
 import { DetailsSelectors } from '../ngrx/details.selectors';
 import { ProcessValuesActions } from './ngrx/process-values.actions';
-import { PvAndPosition } from './process-value.component';
+import { ProcessValueCommandsComponent } from './process-value-commands.component';
+import { ProcessValueComponent, PvAndPosition } from './process-value.component';
 
 @Component({
   selector: 'app-process-values',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    CollapsibleElementComponent,
+    NgIf,
+    NgFor,
+    ProcessValueComponent,
+    ProcessValueCommandsComponent,
+    PushPipe,
+  ],
   template: `
     <app-collapsible-element [name]="'Process Values'" (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-dashboard'">
       <div class="flex gap-2 py-2 px-1 lg:px-2 items-start flex-wrap" content *ngIf="!collapsed">

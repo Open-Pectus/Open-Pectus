@@ -1,10 +1,14 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { DashboardActions } from './ngrx/dashboard.actions';
+import { DashboardProcessUnitsComponent } from './process-units/dashboard-process-units.component';
+import { RecentBatchJobsComponent } from './recent-batch-jobs/recent-batch-jobs.component';
 
 @Component({
   selector: 'app-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [DashboardProcessUnitsComponent, RecentBatchJobsComponent],
   template: `
     <div class="flex justify-center">
       <div class="flex flex-col max-w-5xl mx-4 lg:mx-8">

@@ -1,4 +1,6 @@
+import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, Input, ViewChild } from '@angular/core';
+import { LetDirective } from '@ngrx/component';
 import { concatLatestFrom } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { map, Observable, tap } from 'rxjs';
@@ -10,6 +12,8 @@ import { AxisLimits } from './process-plot.types';
 @Component({
   selector: 'app-y-axis-override-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [LetDirective, NgIf],
   template: `
     <ng-container *ngrxLet="data; let data">
       <ng-container *ngIf="data !== undefined">

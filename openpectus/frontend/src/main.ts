@@ -1,6 +1,23 @@
-import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
+import { DATE_PIPE_DEFAULT_OPTIONS, DatePipe, DecimalPipe } from '@angular/common';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import '@angular/common/locales/global/da';
+import { importProvidersFrom, isDevMode, LOCALE_ID } from '@angular/core';
+import { bootstrapApplication, BrowserModule } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
+import { LetDirective, PushPipe } from '@ngrx/component';
+import { provideEffects } from '@ngrx/effects';
+import { provideRouterStore, RouterState } from '@ngrx/router-store';
+import { provideStore } from '@ngrx/store';
+import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { setupWorker } from 'msw/browser';
-import { AppModule } from './app/app.module';
+import { AppComponent } from './app/app.component';
+import { APP_ROUTES } from './app/app.routes';
+import { AuthConfigModule } from './app/auth/auth-config.module';
+import { Defaults } from './app/defaults';
+import { metaReducers, reducers } from './app/ngrx';
+import { AppEffects } from './app/ngrx/app.effects';
+import { ProcessValuePipe } from './app/shared/pipes/process-value.pipe';
+
 import { handlers } from './msw/handlers';
 import { MswEnablement } from './msw/msw-enablement';
 
@@ -28,5 +45,45 @@ if(MswEnablement.isEnabled) {
   });
 }
 
-platformBrowserDynamic().bootstrapModule(AppModule)
+bootstrapApplication(AppComponent, {
+  providers: [
+    provideStore(reducers, {
+      metaReducers,
+      runtimeChecks: {
+        strictStateImmutability: true,
+        strictActionImmutability: true,
+        strictStateSerializability: true,
+        strictActionSerializability: true,
+        strictActionWithinNgZone: true,
+        strictActionTypeUniqueness: true,
+      },
+    }),
+    provideEffects([AppEffects]),
+    provideRouterStore({routerState: RouterState.Minimal}),
+    provideStoreDevtools({
+      maxAge: 50,
+      logOnly: !isDevMode(),
+      actionsBlocklist: [
+        '@ngrx',
+        // DetailsActions.processValuesFetched.type,
+        // RunLogActions.runLogPolledForUnit.type,
+        // DetailsActions.controlStateFetched.type,
+        // MethodEditorActions.methodPolledForUnit.type,
+      ],
+    }),
+    provideRouter(APP_ROUTES),
+    importProvidersFrom(
+      BrowserModule,
+      AuthConfigModule,
+      PushPipe,
+      LetDirective,
+    ),
+    {provide: LOCALE_ID, useValue: 'da-DK'},
+    DatePipe,
+    DecimalPipe,
+    ProcessValuePipe,
+    {provide: DATE_PIPE_DEFAULT_OPTIONS, useValue: {dateFormat: Defaults.dateFormat}},
+    provideHttpClient(withInterceptorsFromDi()),
+  ],
+})
   .catch(err => console.error(err));

@@ -1,13 +1,32 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
+import { LetDirective } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { firstValueFrom } from 'rxjs';
 import { selectRouteParam } from '../ngrx/router.selectors';
+import { CommandsComponent } from './commands/commands.component';
 import { DetailsRoutingUrlParts } from './details-routing-url-parts';
+import { MethodEditorComponent } from './method-editor/method-editor.component';
 import { DetailsActions } from './ngrx/details.actions';
+import { ProcessDiagramComponent } from './process-diagram.component';
+import { ProcessPlotContainerComponent } from './process-plot/process-plot-container.component';
+import { ProcessValuesComponent } from './process-values/process-values.component';
+import { RunLogComponent } from './run-log/run-log.component';
+import { UnitHeaderComponent } from './unit-header/unit-header.component';
 
 @Component({
   selector: 'app-unit-details',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    LetDirective,
+    UnitHeaderComponent,
+    ProcessValuesComponent,
+    MethodEditorComponent,
+    CommandsComponent,
+    RunLogComponent,
+    ProcessDiagramComponent,
+    ProcessPlotContainerComponent,
+  ],
   template: `
     <div class="flex justify-center">
       <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:py-8 gap-4 lg:gap-8" *ngrxLet="unitId as unitId">

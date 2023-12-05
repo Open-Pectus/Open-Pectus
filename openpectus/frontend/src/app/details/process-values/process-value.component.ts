@@ -1,5 +1,7 @@
+import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output } from '@angular/core';
 import { ProcessValue } from '../../api';
+import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 
 export interface PvAndPosition {
   processValue: ProcessValue,
@@ -9,6 +11,8 @@ export interface PvAndPosition {
 @Component({
   selector: 'app-process-value',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [NgIf, ProcessValuePipe],
   template: `
     <div class="flex flex-col bg-vscode-background-grey-hover p-1 items-center gap-1 lg:gap-2 rounded select-none"
          [class.cursor-pointer]="hasCommands(processValue)" (click)="onClick()">

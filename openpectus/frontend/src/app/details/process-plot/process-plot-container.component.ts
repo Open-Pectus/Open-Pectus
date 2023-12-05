@@ -1,11 +1,22 @@
+import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
+import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
+import { ProcessPlotComponent } from './process-plot.component';
 
 @Component({
   selector: 'app-process-plot-container',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    CollapsibleElementComponent,
+    NgIf,
+    ProcessPlotComponent,
+    PushPipe,
+  ],
   template: `
     <app-collapsible-element [name]="'Process Plot'" [heightResizable]="true" [contentHeight]="400" [contentOverflow]="true"
                              (collapseStateChanged)="isCollapsed = $event" [codiconName]="'codicon-graph-line'">

@@ -1,9 +1,12 @@
+import { NgClass, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
 import { CollapsibleElementStorageService } from './collapsible-element-storage.service';
 
 @Component({
   selector: 'app-collapsible-element',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [NgIf, NgClass],
   template: `
     <div class="flex flex-col bg-sky-700 py-1.5 lg:rounded-md lg:p-1.5 shadow-lg relative transition-[padding-bottom]" [class.pb-0]="collapsed">
       <div class="flex items-center flex-wrap text-gray-100 p-2 gap-3 cursor-pointer select-none" (click)="toggleCollapsed()">

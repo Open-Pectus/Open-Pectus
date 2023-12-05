@@ -1,7 +1,10 @@
+import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
+import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { combineLatest, map } from 'rxjs';
+import { CollapsibleElementComponent } from '../shared/collapsible-element.component';
 import { ProcessValuePipe } from '../shared/pipes/process-value.pipe';
 import { DetailsActions } from './ngrx/details.actions';
 import { DetailsSelectors } from './ngrx/details.selectors';
@@ -9,6 +12,15 @@ import { DetailsSelectors } from './ngrx/details.selectors';
 @Component({
   selector: 'app-process-diagram',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    CollapsibleElementComponent,
+    NgIf,
+    PushPipe,
+  ],
+  styles: [
+    ':host ::ng-deep svg { height: 100%; width: 100% }',
+  ],
   template: `
     <app-collapsible-element [name]="'Process Diagram'" [heightResizable]="true" [contentHeight]="400"
                              (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-circuit-board'">
@@ -18,9 +30,6 @@ import { DetailsSelectors } from './ngrx/details.selectors';
       </div>
     </app-collapsible-element>
   `,
-  styles: [
-    ':host ::ng-deep svg { height: 100%; width: 100% }',
-  ],
 })
 export class ProcessDiagramComponent implements OnInit {
   processDiagram = this.store.select(DetailsSelectors.processDiagram);

@@ -1,9 +1,12 @@
+import { NgFor } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import { ProcessValueCommand, ProcessValueCommandChoiceValue } from '../../api';
 
 @Component({
   selector: 'app-process-value-command-choice',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [NgFor],
   template: `
     <div class="flex items-center">
       <p class="mr-2">{{command?.name}}: </p>

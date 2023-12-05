@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgFor, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
 import { compareAsc, compareDesc } from 'date-fns';
 
@@ -21,6 +21,8 @@ export interface DefaultTableSort<T> {
 @Component({
   selector: 'app-table',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [NgFor, NgIf],
   template: `
     <div class="bg-vscode-background-grey rounded-lg shadow-lg overflow-hidden">
       <table class="w-full table-fixed border-collapse">

@@ -1,8 +1,11 @@
+import { NgClass } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
 
 @Component({
   selector: 'app-run-log-line-button',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [NgClass],
   template: `
     <button class="flex items-center gap-1.5 rounded-md px-2 py-1 !text-xs"
             [class.text-white]="isConfirming"
