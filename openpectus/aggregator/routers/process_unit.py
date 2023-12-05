@@ -44,26 +44,26 @@ def get_units(agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[D.Proc
     return units
 
 
-@router.get("/process_unit/{unit_id}/process_values")
+@router.get("/process_unit/{engine_id}/process_values")
 def get_process_values(
-        unit_id: str,
+        engine_id: str,
         response: Response,
         agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[D.ProcessValue]:
     # parm last_seen
 
     response.headers["Cache-Control"] = "no-store"
 
-    client_data = agg.get_registered_engine_data(unit_id)
-    if client_data is None:
+    engine_data = agg.get_registered_engine_data(engine_id)
+    if engine_data is None:
         return []
 
-    tags_info = client_data.tags_info.map
+    tags_info = engine_data.tags_info.map
 
-    # print("Readings", client_data.readings)
+    # print("Readings", engine_data.readings)
     # print("Tags", tags_info)
 
     pvs: List[D.ProcessValue] = []
-    for r in client_data.readings:
+    for r in engine_data.readings:
         ti = tags_info.get(r.tag_name)
         if ti is not None:
             pvs.append(D.ProcessValue.from_message(r, ti))

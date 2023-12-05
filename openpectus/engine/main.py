@@ -11,7 +11,7 @@ from protocol.engine_dispatcher import EngineDispatcher
 
 log_setup_colorlog()
 
-logger = logging.getLogger("openpectus.protocol.engine")
+logger = logging.getLogger("openpectus.engine.engine")
 logger.setLevel(logging.INFO)
 logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.INFO)
 logging.getLogger("Engine").setLevel(logging.INFO)
@@ -32,6 +32,7 @@ async def async_main(args):
     uod = create_demo_uod()
     engine = Engine(uod, tick_interval=1)
     dispatcher = EngineDispatcher(f"{args.aggregator_hostname}:{args.aggregator_port}", engine.uod.instrument)
+    await dispatcher.connect_websocket()
     engine_reporter = EngineReporter(engine, dispatcher)
     message_handlers = EngineMessageHandlers(engine, dispatcher)
     await engine_reporter.run_loop_async()
