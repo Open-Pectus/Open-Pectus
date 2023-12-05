@@ -280,6 +280,7 @@ class Engine(InterpreterContext):
             case EngineCommandEnum.START:
                 if self._runstate_started:
                     logger.warning("Cannot start when already running")
+                    cmds_done.add(cmd_request)
                     return
                 self._runstate_started = True
                 self._runstate_started_time = time.time()

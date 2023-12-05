@@ -30,9 +30,9 @@ class EngineDispatcher():
             self.disp = dispatcher
             self.engine_id = engine_id
 
-        async def _dispatch_message(self, message: M.MessageBase):
+        async def dispatch_message(self, message: dict[str, Any]):
             """ Dispath message to registered handler. """
-            return await self.disp._dispatch_message(message)
+            return await self.disp._dispatch_message(deserialize(message))
 
         async def get_engine_id(self):
             return self.engine_id

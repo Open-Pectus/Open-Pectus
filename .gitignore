@@ -133,3 +133,4 @@ openpectus/lang/grammar/.antlr
 frontend-dist
 conda/*
 openpectus/engine/pint-cache/*
+openpectus/test/pint-cache/
