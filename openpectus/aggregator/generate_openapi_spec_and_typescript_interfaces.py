@@ -4,8 +4,8 @@ import os
 import subprocess
 from unittest.mock import Mock
 
-from aggregator import Aggregator
-from aggregator.aggregator_server import AggregatorServer
+from openpectus.aggregator.aggregator import Aggregator
+from openpectus.aggregator.aggregator_server import AggregatorServer
 from fastapi.testclient import TestClient
 
 # check we're running from the right place

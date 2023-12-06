@@ -30,7 +30,7 @@ topic: PubSubTopic,
 ): Observable<any> {
         return __request(OpenAPI, this.http, {
             method: 'POST',
-            url: '/api/expose-pusub-topics',
+            url: '/api/expose-pubsub-topics',
             query: {
                 'topic': topic,
             },
@@ -48,7 +48,7 @@ topic: PubSubTopic,
      */
     public triggerPublishMsw(): Observable<any> {
         return __request(OpenAPI, this.http, {
-            method: 'GET',
+            method: 'POST',
             url: '/api/trigger-publish-msw',
         });
     }

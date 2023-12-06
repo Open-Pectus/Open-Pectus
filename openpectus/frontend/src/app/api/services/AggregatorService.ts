@@ -17,14 +17,14 @@ export class AggregatorService {
     constructor(public readonly http: HttpClient) {}
 
     /**
-     * Health
+     * Post
      * @returns any Successful Response
      * @throws ApiError
      */
-    public health(): Observable<any> {
+    public post(): Observable<any> {
         return __request(OpenAPI, this.http, {
-            method: 'GET',
-            url: '/health',
+            method: 'POST',
+            url: '/engine-rest',
         });
     }
 
