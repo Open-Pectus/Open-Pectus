@@ -570,7 +570,7 @@ Mark: C
     def test_clocks_start_stop(self):
         e = self.engine
 
-        clock = e._system_tags.get(tags.DEFAULT_TAG_CLOCK)
+        clock = e._system_tags.get(tags.SYSTEM_TAG_CLOCK)
         self.assertEqual(0.0, clock.as_number())
 
         e._runstate_started = True
@@ -589,7 +589,7 @@ Mark: C
 
         e.tick()
         self.assertTrue(e._runstate_started)
-        system_state_tag = e._system_tags[tags.DEFAULT_TAG_SYSTEM_STATE]
+        system_state_tag = e._system_tags[tags.SYSTEM_TAG_SYSTEM_STATE]
         self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
 
         e.schedule_execution("Stop")
@@ -604,8 +604,8 @@ Mark: C
 
         e.tick()
         self.assertTrue(e._runstate_started)
-        system_state_tag = e._system_tags[tags.DEFAULT_TAG_SYSTEM_STATE]
-        process_time_tag = e._system_tags[tags.DEFAULT_TAG_PROCESS_TIME]
+        system_state_tag = e._system_tags[tags.SYSTEM_TAG_SYSTEM_STATE]
+        process_time_tag = e._system_tags[tags.SYSTEM_TAG_PROCESS_TIME]
         self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
         pre_pause_process_time = process_time_tag.as_number()
 
@@ -631,8 +631,8 @@ Mark: C
 
         e.tick()
         self.assertTrue(e._runstate_started)
-        system_state_tag = e._system_tags[tags.DEFAULT_TAG_SYSTEM_STATE]
-        process_time_tag = e._system_tags[tags.DEFAULT_TAG_PROCESS_TIME]
+        system_state_tag = e._system_tags[tags.SYSTEM_TAG_SYSTEM_STATE]
+        process_time_tag = e._system_tags[tags.SYSTEM_TAG_PROCESS_TIME]
         self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
         pre_pause_process_time = process_time_tag.as_number()
 
@@ -660,8 +660,8 @@ Mark: C
 
         e.tick()
         self.assertTrue(e._runstate_started)
-        system_state_tag = e._system_tags[tags.DEFAULT_TAG_SYSTEM_STATE]
-        process_time_tag = e._system_tags[tags.DEFAULT_TAG_PROCESS_TIME]
+        system_state_tag = e._system_tags[tags.SYSTEM_TAG_SYSTEM_STATE]
+        process_time_tag = e._system_tags[tags.SYSTEM_TAG_PROCESS_TIME]
         self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
         pre_hold_process_time = process_time_tag.as_number()
 
