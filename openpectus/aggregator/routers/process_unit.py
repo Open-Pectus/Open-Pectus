@@ -4,7 +4,7 @@ from typing import List
 
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
-import openpectus.aggregator.routers.dto as D
+import openpectus.aggregator.routers.dto as Dto
 import openpectus.protocol.aggregator_messages as AM
 from fastapi import APIRouter, Depends, Response
 from openpectus.aggregator.aggregator import Aggregator
@@ -14,21 +14,21 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])
 
 
-def create_pu(item: EngineData) -> D.ProcessUnit:
+def create_pu(item: EngineData) -> Dto.ProcessUnit:
     # TODO define source of all fields
-    unit = D.ProcessUnit(
+    unit = Dto.ProcessUnit(
         id=item.engine_id or "(error)",
         name=f"{item.computer_name} ({item.uod_name})",
-        state=D.ProcessUnitState.Ready(state=D.ProcessUnitStateEnum.READY),
+        state=Dto.ProcessUnitState.Ready(state=Dto.ProcessUnitStateEnum.READY),
         location="Unknown location",
         runtime_msec=189309,
-        current_user_role=D.UserRole.ADMIN,
+        current_user_role=Dto.UserRole.ADMIN,
     )
     return unit
 
 
 @router.get("/process_unit/{unit_id}")
-def get_unit(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> D.ProcessUnit | None:
+def get_unit(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.ProcessUnit | None:
     ci = agg.get_registered_engine_data(unit_id)
     if ci is None:
         return None
@@ -36,8 +36,8 @@ def get_unit(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -
 
 
 @router.get("/process_units")
-def get_units(agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[D.ProcessUnit]:
-    units: List[D.ProcessUnit] = []
+def get_units(agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[Dto.ProcessUnit]:
+    units: List[Dto.ProcessUnit] = []
     for engine_data in agg.get_all_registered_engine_data():
         unit = create_pu(engine_data)
         units.append(unit)
@@ -48,7 +48,7 @@ def get_units(agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[D.Proc
 def get_process_values(
         engine_id: str,
         response: Response,
-        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[D.ProcessValue]:
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[Dto.ProcessValue]:
     # parm last_seen
 
     response.headers["Cache-Control"] = "no-store"
@@ -62,20 +62,20 @@ def get_process_values(
     # print("Readings", engine_data.readings)
     # print("Tags", tags_info)
 
-    pvs: List[D.ProcessValue] = []
+    pvs: List[Dto.ProcessValue] = []
     for r in engine_data.readings:
         ti = tags_info.get(r.tag_name)
         if ti is not None:
-            pvs.append(D.ProcessValue.from_message(r, ti))
+            pvs.append(Dto.ProcessValue.from_message(r, ti))
     return pvs
 
 
 @router.post("/process_unit/{unit_id}/execute_command")
-async def execute_command(unit_id: str, command: D.ExecutableCommand, agg: Aggregator = Depends(agg_deps.get_aggregator)):
+async def execute_command(unit_id: str, command: Dto.ExecutableCommand, agg: Aggregator = Depends(agg_deps.get_aggregator)):
     # logger.debug("execute_command", str(command))
     if command is None or command.command is None or command.command.strip() == '':
         logger.error("Cannot invoke empty command")
-        return D.ServerErrorResponse(message="Cannot invoke empty command")
+        return Dto.ServerErrorResponse(message="Cannot invoke empty command")
 
     # print("command.command", command.command)
 
@@ -83,9 +83,9 @@ async def execute_command(unit_id: str, command: D.ExecutableCommand, agg: Aggre
     line_count = len(lines)
     if line_count < 1:
         logger.error("Cannot invoke command with no lines")
-        return D.ServerErrorResponse(message="Cannot invoke command with no lines")
+        return Dto.ServerErrorResponse(message="Cannot invoke command with no lines")
 
-    if command.source == D.CommandSource.UNIT_BUTTON:
+    if command.source == Dto.CommandSource.UNIT_BUTTON:
         # Make simple commands title cased, eg 'start' -> 'Start
         # TODO remove once frontend is updated to title cased commands
         code = lines[0]
@@ -99,15 +99,15 @@ async def execute_command(unit_id: str, command: D.ExecutableCommand, agg: Aggre
 
 
 @router.get("/process_unit/{unit_id}/process_diagram")
-def get_process_diagram(unit_id: str) -> D.ProcessDiagram:
-    return D.ProcessDiagram(svg="")
+def get_process_diagram(unit_id: str) -> Dto.ProcessDiagram:
+    return Dto.ProcessDiagram(svg="")
 
 
 @router.get('/process_unit/{unit_id}/command_examples')
-def get_command_examples(unit_id: str) -> List[D.CommandExample]:
+def get_command_examples(unit_id: str) -> List[Dto.CommandExample]:
     return [
-        D.CommandExample(name="Some Example", example="Some example text"),
-        D.CommandExample(name="Watch Example", example="""
+        Dto.CommandExample(name="Some Example", example="Some example text"),
+        Dto.CommandExample(name="Watch Example", example="""
 Watch: Block Time > 3s
     Mark: A
 Mark: X
@@ -119,19 +119,19 @@ Mark: Y""")
 
 
 @router.get('/process_unit/{unit_id}/run_log')
-def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> D.RunLog:
+def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.RunLog:
     engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None:
         logger.warning("No engine data - thus no runlog")
-        return D.RunLog(lines=[])
+        return Dto.RunLog(lines=[])
 
-    def from_line_model(msg: Mdl.RunLogLine) -> D.RunLogLine:
-        cmd = D.ExecutableCommand(
+    def from_line_model(msg: Mdl.RunLogLine) -> Dto.RunLogLine:
+        cmd = Dto.ExecutableCommand(
             command=msg.command_name,
             name=None,
-            source=D.CommandSource.METHOD
+            source=Dto.CommandSource.METHOD
         )
-        line = D.RunLogLine(
+        line = Dto.RunLogLine(
             id=0,  # TODO change type int to str
             command=cmd,
             start=datetime.fromtimestamp(msg.start),
@@ -147,23 +147,23 @@ def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)
         return line
 
     logger.info(f"Got runlog with {len(engine_data.runlog.lines)} lines")
-    return D.RunLog(
+    return Dto.RunLog(
         lines=list(map(from_line_model, engine_data.runlog.lines)))
 
 
 @router.get('/process_unit/{unit_id}/method-and-state')
-def get_method_and_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> D.MethodAndState:
+def get_method_and_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.MethodAndState:
     engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None:
         logger.warning("No client data - thus no method")
-        return D.MethodAndState(method=D.Method(lines=[]), state=D.MethodState(started_line_ids=[], executed_line_ids=[], injected_line_ids=[]))
+        return Dto.MethodAndState(method=Dto.Method(lines=[]), state=Dto.MethodState(started_line_ids=[], executed_line_ids=[], injected_line_ids=[]))
 
-    def from_models(method: Mdl.Method, method_state: Mdl.MethodState) -> D.MethodAndState:
-        return D.MethodAndState(
-            method=D.Method(lines=[D.MethodLine(id=line.id, content=line.content) for line in method.lines]),
-            state=D.MethodState(started_line_ids=[_id for _id in method_state.started_line_ids],
-                                executed_line_ids=[_id for _id in method_state.executed_line_ids],
-                                injected_line_ids=[_id for _id in method_state.injected_line_ids])
+    def from_models(method: Mdl.Method, method_state: Mdl.MethodState) -> Dto.MethodAndState:
+        return Dto.MethodAndState(
+            method=Dto.Method(lines=[Dto.MethodLine(id=line.id, content=line.content) for line in method.lines]),
+            state=Dto.MethodState(started_line_ids=[_id for _id in method_state.started_line_ids],
+                                  executed_line_ids=[_id for _id in method_state.executed_line_ids],
+                                  injected_line_ids=[_id for _id in method_state.injected_line_ids])
         )
 
     print("Returned client method")
@@ -171,16 +171,16 @@ def get_method_and_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_ag
 
 
 @router.post('/process_unit/{unit_id}/method')
-async def save_method(unit_id: str, method_dto: D.Method, agg: Aggregator = Depends(agg_deps.get_aggregator)):
+async def save_method(unit_id: str, method_dto: Dto.Method, agg: Aggregator = Depends(agg_deps.get_aggregator)):
     method_mdl = Mdl.Method(lines=[Mdl.MethodLine(id=line.id, content=line.content) for line in method_dto.lines])
 
     if not await agg.from_frontend.method_saved(engine_id=unit_id, method=method_mdl):
-        return D.ServerErrorResponse(message="Failed to set method")
+        return Dto.ServerErrorResponse(message="Failed to set method")
 
 
 @router.get('/process_unit/{unit_id}/plot_configuration')
-def get_plot_configuration(unit_id: str) -> D.PlotConfiguration:
-    return D.PlotConfiguration(
+def get_plot_configuration(unit_id: str) -> Dto.PlotConfiguration:
+    return Dto.PlotConfiguration(
         color_regions=[],
         sub_plots=[],
         process_value_names_to_annotate=[],
@@ -189,14 +189,14 @@ def get_plot_configuration(unit_id: str) -> D.PlotConfiguration:
 
 
 @router.get('/process_unit/{unit_id}/plot_log')
-def get_plot_log(unit_id: str) -> D.PlotLog:
-    return D.PlotLog(entries={})
+def get_plot_log(unit_id: str) -> Dto.PlotLog:
+    return Dto.PlotLog(entries={})
 
 
 @router.get('/process_unit/{unit_id}/control_state')
-def get_control_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> D.ControlState:
-    def from_message(state: Mdl.ControlState) -> D.ControlState:
-        return D.ControlState(
+def get_control_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.ControlState:
+    def from_message(state: Mdl.ControlState) -> Dto.ControlState:
+        return Dto.ControlState(
             is_running=state.is_running,
             is_holding=state.is_holding,
             is_paused=state.is_paused)
@@ -204,7 +204,7 @@ def get_control_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggre
     engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None:
         logger.warning("No client data - thus no control state")
-        return D.ControlState.default()
+        return Dto.ControlState.default()
 
     return from_message(engine_data.control_state)
 
