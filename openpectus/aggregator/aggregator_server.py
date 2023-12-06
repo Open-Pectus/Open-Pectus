@@ -25,8 +25,8 @@ class AggregatorServer:
         self.port = port
         self.frontend_dist_dir = frontend_dist_dir
         dispatcher = AggregatorDispatcher()
-        aggregator = _create_aggregator(dispatcher)
         publisher = FrontendPublisher()
+        aggregator = _create_aggregator(dispatcher, publisher)
         AggregatorMessageHandlers(aggregator)
         self.setup_fastapi([dispatcher.router, publisher.router])
 

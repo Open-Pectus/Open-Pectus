@@ -1,22 +1,26 @@
+import asyncio
 import logging
 from typing import Dict, List
 
+import openpectus.aggregator.models as Mdl
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
-import openpectus.aggregator.models as Mdl
+from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.aggregator.models import EngineData
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 
 logger = logging.getLogger(__name__)
 
+
 class Aggregator:
-    def __init__(self, dispatcher: AggregatorDispatcher) -> None:
+    def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher) -> None:
         # self.channel_map: Dict[str, ChannelInfo] = {}
         # """ channel data, indexed by channel_id"""
         self._engine_data_map: Dict[str, EngineData] = {}
         """ all client data except channels, indexed by engine_id """
         self.dispatcher = dispatcher
+        self.publisher = publisher
 
     def create_engine_id(self, register_engine_msg: EM.RegisterEngineMsg):
         """ Defines the generation of the engine_id that is uniquely assigned to each engine.
@@ -59,13 +63,19 @@ class Aggregator:
 
     def set_runlog(self, engine_id: str, runlog: Mdl.RunLog):
         try:
-            self._engine_data_map[engine_id].runlog = runlog
+            engine_data = self._engine_data_map[engine_id]
+            if engine_data.runlog != runlog:
+                engine_data.runlog = runlog
+                asyncio.create_task(self.publisher.publish_run_log_changed(engine_id))
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set run log.')
 
     def set_control_state(self, engine_id: str, control_state: Mdl.ControlState):
         try:
-            self._engine_data_map[engine_id].control_state = control_state
+            engine_data = self._engine_data_map[engine_id]
+            if engine_data.control_state != control_state:
+                engine_data.control_state = control_state
+                asyncio.create_task(self.publisher.publish_control_state_changed(engine_id))
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set control state.')
 
