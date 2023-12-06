@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 EngineDataMap = Dict[str, EngineData]
 
 
-class FromEngine():
+class FromEngine:
     def __init__(self, engine_data_map: EngineDataMap, publisher: FrontendPublisher):
         self._engine_data_map = engine_data_map
         self.publisher = publisher
@@ -65,7 +65,7 @@ class FromEngine():
             logger.error(f'No engine registered under id {engine_id} when trying to set control state.')
 
 
-class FromFrontend():
+class FromFrontend:
     def __init__(self, engine_data_map: EngineDataMap, dispatcher: AggregatorDispatcher):
         self._engine_data_map = engine_data_map
         self.dispatcher = dispatcher
@@ -119,11 +119,3 @@ class Aggregator:
 
     def has_registered_engine_id(self, engine_id: str) -> bool:
         return engine_id in self._engine_data_map.keys()
-
-    def get_method(self, engine_id: str) -> AM.MethodMsg | None:
-        engine_data = self._engine_data_map.get(engine_id)
-        if engine_data is None:
-            return None
-
-        logger.info(f"Returned local method with {len(engine_data.method.lines)} lines")
-        return AM.MethodMsg(method=engine_data.method)
