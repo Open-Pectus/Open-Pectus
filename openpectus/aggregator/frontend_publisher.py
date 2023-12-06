@@ -5,9 +5,6 @@ from fastapi.routing import APIRouter
 from fastapi_websocket_pubsub import PubSubEndpoint
 from fastapi_websocket_pubsub.event_notifier import TopicList
 from fastapi_websocket_pubsub.rpc_event_methods import RpcEventServerMethods
-from fastapi_websocket_rpc.logger import logging_config, LoggingModes
-
-logging_config.set_mode(LoggingModes.UVICORN)  # set RPC to log like UVICORN
 
 
 class PubSubTopic(StrEnum):
@@ -22,7 +19,8 @@ class FrontendPublisher:
             If/when I get this added to the library itself, we can remove this """
 
         async def unsubscribe(self, topics: TopicList = []) -> bool:
-            await self.event_notifier.unsubscribe(self.channel.id, topics)
+            channel_id = await self._get_channel_id_()
+            await self.event_notifier.unsubscribe(channel_id, topics)
             return True
 
     def __init__(self):
