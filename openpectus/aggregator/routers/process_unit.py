@@ -21,7 +21,7 @@ def create_pu(item: EngineData) -> Dto.ProcessUnit:
         name=f"{item.computer_name} ({item.uod_name})",
         state=Dto.ProcessUnitState.Ready(state=Dto.ProcessUnitStateEnum.READY),
         location="Unknown location",
-        runtime_msec=189309,
+        runtime_msec=item.runtime,
         current_user_role=Dto.UserRole.ADMIN,
     )
     return unit

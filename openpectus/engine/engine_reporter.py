@@ -4,15 +4,16 @@ import time
 from queue import Empty
 from typing import List
 
-import openpectus.lang.exec.tags as tags
-import openpectus.protocol.messages as M
 import openpectus.protocol.engine_messages as EM
+import openpectus.protocol.messages as M
 import openpectus.protocol.models as Mdl
 from openpectus.engine.engine import Engine
 from openpectus.lang.exec.runlog import RunLogItem
+from openpectus.lang.exec.tags import SystemTagName, TagValue
 from openpectus.protocol.engine_dispatcher import EngineDispatcher
 
 logger = logging.getLogger(__name__)
+
 
 class EngineReporter():
     def __init__(self, engine: Engine, dispatcher: EngineDispatcher) -> None:
@@ -27,7 +28,7 @@ class EngineReporter():
     async def run_loop_async(self):
         try:
             init_succeeded = False
-            while(not init_succeeded):
+            while (not init_succeeded):
                 init_succeeded = await self.send_uod_info_async()
                 if init_succeeded: await self.notify_initial_tags_async()
                 if not init_succeeded: time.sleep(10)
@@ -51,23 +52,38 @@ class EngineReporter():
     async def send_uod_info_async(self):
         readings: List[Mdl.ReadingInfo] = []
         for r in self.engine.uod.readings:
-            ri = Mdl.ReadingInfo(
-                label=r.label,
-                tag_name=r.tag_name,
-                valid_value_units=r.valid_value_units,
-                commands=[Mdl.ReadingCommand(name=c.name, command=c.command) for c in r.commands])
-            readings.append(ri)
+            tag_name = self.map_and_filter_tag_name(r.tag_name)
+            if tag_name is not None:
+                ri = Mdl.ReadingInfo(
+                    label=r.label,
+                    tag_name=tag_name,
+                    valid_value_units=r.valid_value_units,
+                    commands=[Mdl.ReadingCommand(name=c.name, command=c.command) for c in r.commands])
+                readings.append(ri)
 
         msg = EM.UodInfoMsg(readings=readings)
         response = self.dispatcher.post(msg)
         return not isinstance(response, M.ErrorMessage)
+
+    def map_and_filter_tag_name(self, tag_name: str):
+        match tag_name:
+            case SystemTagName.RUN_TIME:
+                return Mdl.SystemTagName.run_time
+            case SystemTagName.SYSTEM_STATE:
+                return Mdl.SystemTagName.system_state
+            case name if name in [tag.name for tag in SystemTagName]:
+                return None
+            case _:
+                return tag_name
 
     async def send_tag_updates_async(self):
         tags = []
         try:
             for _ in range(100):
                 tag = self.engine.tag_updates.get_nowait()
-                tags.append(Mdl.TagValue(name=tag.name, value=tag.get_value(), value_unit=tag.unit))
+                tag_name = self.map_and_filter_tag_name(tag.name)
+                if tag_name is not None:
+                    tags.append(Mdl.TagValue(name=tag_name, value=tag.get_value(), value_unit=tag.unit))
         except Empty:
             pass
         if len(tags) > 0:
@@ -75,7 +91,7 @@ class EngineReporter():
             self.dispatcher.post(msg)
 
     async def send_runlog_async(self):
-        def to_value(t: tags.TagValue) -> Mdl.TagValue:
+        def to_value(t: TagValue) -> Mdl.TagValue:
             return Mdl.TagValue(name=t.name, value=t.value, value_unit=t.unit)
 
         def to_line(item: RunLogItem) -> Mdl.RunLogLine:
