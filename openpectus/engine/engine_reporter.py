@@ -52,7 +52,7 @@ class EngineReporter():
     async def send_uod_info_async(self):
         readings: List[Mdl.ReadingInfo] = []
         for r in self.engine.uod.readings:
-            tag_name = self.map_tag_name(r.tag_name)
+            tag_name = self.map_and_filter_tag_name(r.tag_name)
             if tag_name is not None:
                 ri = Mdl.ReadingInfo(
                     label=r.label,
@@ -65,7 +65,7 @@ class EngineReporter():
         response = self.dispatcher.post(msg)
         return not isinstance(response, M.ErrorMessage)
 
-    def map_tag_name(self, tag_name: str):
+    def map_and_filter_tag_name(self, tag_name: str):
         match tag_name:
             case SystemTagName.RUN_TIME:
                 return Mdl.SystemTagName.run_time
@@ -81,7 +81,7 @@ class EngineReporter():
         try:
             for _ in range(100):
                 tag = self.engine.tag_updates.get_nowait()
-                tag_name = self.map_tag_name(tag.name)
+                tag_name = self.map_and_filter_tag_name(tag.name)
                 if tag_name is not None:
                     tags.append(Mdl.TagValue(name=tag_name, value=tag.get_value(), value_unit=tag.unit))
         except Empty:

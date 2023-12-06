@@ -70,5 +70,6 @@ class EngineData(BaseModel):
     method: Method = Method(lines=[])
     method_state: MethodState = MethodState(started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
 
-    def get_runtime(self):
-        pass # TODO, using system tag name that should be made available here without having to reach deep into interpreter/engine land
+    @property
+    def runtime(self):
+        self.tags_info.get(Mdl.SystemTagName.run_time)
