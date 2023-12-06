@@ -67,3 +67,6 @@ class EngineData(BaseModel):
     runlog: RunLog = RunLog(lines=[])
     control_state: ControlState = ControlState(is_running=False, is_holding=False, is_paused=False)
     method: Method = Method(lines=[], started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
+
+    def get_runtime(self):
+        pass # TODO, using system tag name that should be made available here without having to reach deep into interpreter/engine land

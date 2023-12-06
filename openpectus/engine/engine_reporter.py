@@ -1,9 +1,11 @@
 import asyncio
 import logging
+import time
 from queue import Empty
 from typing import List
 
 import openpectus.lang.exec.tags as tags
+import openpectus.protocol.messages as M
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.models as Mdl
 from openpectus.engine.engine import Engine
@@ -24,8 +26,11 @@ class EngineReporter():
 
     async def run_loop_async(self):
         try:
-            await self.send_uod_info_async()
-            await self.notify_initial_tags_async()
+            init_succeeded = False
+            while(not init_succeeded):
+                init_succeeded = await self.send_uod_info_async()
+                if init_succeeded: await self.notify_initial_tags_async()
+                if not init_succeeded: time.sleep(10)
 
             while True:
                 await asyncio.sleep(1)
@@ -54,7 +59,8 @@ class EngineReporter():
             readings.append(ri)
 
         msg = EM.UodInfoMsg(readings=readings)
-        self.dispatcher.post(msg)
+        response = self.dispatcher.post(msg)
+        return not isinstance(response, M.ErrorMessage)
 
     async def send_tag_updates_async(self):
         tags = []

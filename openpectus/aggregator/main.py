@@ -26,10 +26,8 @@ from openpectus.aggregator.aggregator_server import AggregatorServer
 # Final / Literal ...
 
 
-log_setup_colorlog()
-
-logger = logging.getLogger("openpectus.protocol.aggregator")
-logger.setLevel(logging.INFO)
+log_setup_colorlog(root_loglevel=logging.INFO)
+logger = logging.getLogger("openpectus.aggregator.aggregator")
 
 
 def get_args():

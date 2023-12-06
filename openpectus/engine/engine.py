@@ -272,6 +272,7 @@ class Engine(InterpreterContext):
 
         if not self._runstate_started and cmd_request.name != EngineCommandEnum.START:
             logger.warning(f"Command {cmd_request.name} is invalid when Engine is not running")
+            cmds_done.add(cmd_request)
             return
 
         # TODO replace commented runlog lines this with new runlog API
@@ -280,6 +281,7 @@ class Engine(InterpreterContext):
             case EngineCommandEnum.START:
                 if self._runstate_started:
                     logger.warning("Cannot start when already running")
+                    cmds_done.add(cmd_request)
                     return
                 self._runstate_started = True
                 self._runstate_started_time = time.time()

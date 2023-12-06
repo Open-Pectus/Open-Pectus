@@ -72,7 +72,7 @@
         }
       }
     },
-    "/api/process_unit/{unit_id}/process_values": {
+    "/api/process_unit/{engine_id}/process_values": {
       "get": {
         "tags": [
           "process_unit"
@@ -84,9 +84,9 @@
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Unit Id"
+              "title": "Engine Id"
             },
-            "name": "unit_id",
+            "name": "engine_id",
             "in": "path"
           }
         ],
@@ -924,7 +924,47 @@
         }
       }
     },
-    "/api/expose-pusub-topics": {
+    "/auth/config": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get Config",
+        "operationId": "get_config",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthConfig"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/engine-rest": {
+      "post": {
+        "tags": [
+          "aggregator"
+        ],
+        "summary": "Post",
+        "operationId": "post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/expose-pubsub-topics": {
       "post": {
         "tags": [
           "frontend_pubsub"
@@ -965,53 +1005,13 @@
       }
     },
     "/api/trigger-publish-msw": {
-      "get": {
+      "post": {
         "tags": [
           "frontend_pubsub"
         ],
         "summary": "Trigger Publish Msw",
         "description": "Publish to all topics that start with 'MSW_'",
         "operationId": "trigger_publish_msw",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/config": {
-      "get": {
-        "tags": [
-          "auth"
-        ],
-        "summary": "Get Config",
-        "operationId": "get_config",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthConfig"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/engine-rest": {
-      "post": {
-        "tags": [
-          "aggregator"
-        ],
-        "summary": "Post",
-        "operationId": "post",
         "responses": {
           "200": {
             "description": "Successful Response",

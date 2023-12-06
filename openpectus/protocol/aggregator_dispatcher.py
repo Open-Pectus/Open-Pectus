@@ -69,7 +69,7 @@ class AggregatorDispatcher():
             raise ProtocolException("Unknown engine: " + engine_id)
 
         channel = self._engine_id_channel_map[engine_id]
-        response = await channel.other._dispatch_message(message=message)
+        response = await channel.other.dispatch_message(message=serialize(message))
         return response
 
     def register_post_route(self, router: APIRouter | FastAPI):
