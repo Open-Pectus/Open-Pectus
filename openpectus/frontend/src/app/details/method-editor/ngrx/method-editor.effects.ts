@@ -29,7 +29,8 @@ export class MethodEditorEffects {
     ofType(MethodEditorActions.methodEditorComponentInitializedForUnit),
     switchMap(({unitId}) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.getMethod(unitId).pipe(map(method => MethodEditorActions.methodFetchedInitially({method})));
+      return this.processUnitService.getMethodAndState(unitId).pipe(
+        map(methodAndState => MethodEditorActions.methodFetchedInitially({methodAndState})));
     }),
   ));
 
@@ -37,7 +38,8 @@ export class MethodEditorEffects {
     ofType(MethodEditorActions.methodEditorComponentInitializedForBatchJob),
     switchMap(({batchJobId}) => {
       if(batchJobId === undefined) return of();
-      return this.batchJobService.getBatchJobMethod(batchJobId).pipe(map(method => MethodEditorActions.methodFetchedInitially({method})));
+      return this.batchJobService.getBatchJobMethodAndState(batchJobId).pipe(
+        map(methodAndState => MethodEditorActions.methodFetchedInitially({methodAndState})));
     }),
   ));
 
@@ -54,8 +56,8 @@ export class MethodEditorEffects {
   fetchOnUpdateFromBackend = createEffect(() => this.actions.pipe(
     ofType(MethodEditorActions.methodUpdatedOnBackend),
     mergeMap(({unitId}) => {
-      return this.processUnitService.getMethod(unitId).pipe(
-        map(method => MethodEditorActions.methodFetchedDueToUpdate({method})),
+      return this.processUnitService.getMethodAndState(unitId).pipe(
+        map(methodAndState => MethodEditorActions.methodFetchedDueToUpdate({methodAndState})),
       );
     }),
   ));

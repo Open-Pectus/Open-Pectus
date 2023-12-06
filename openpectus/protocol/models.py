@@ -48,6 +48,8 @@ class MethodLine(BaseModel):
 
 class Method(BaseModel):
     lines: List[MethodLine]
+
+class MethodState(BaseModel):
     started_line_ids: List[str]
     executed_line_ids: List[str]
     injected_line_ids: List[str]

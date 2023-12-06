@@ -31,6 +31,8 @@ class RunLogMsg(EngineMessage):
 class MethodMsg(EngineMessage):
     method: Mdl.Method
 
+class MethodStateMsg(EngineMessage):
+    method_state: Mdl.MethodState
 
 class ControlStateMsg(EngineMessage):
     control_state: Mdl.ControlState

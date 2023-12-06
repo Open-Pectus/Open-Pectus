@@ -11,7 +11,7 @@ import {
   ControlState,
   ExecutableCommand,
   InProgress,
-  Method,
+  MethodAndState,
   NotOnline,
   PlotConfiguration,
   PlotLog,
@@ -512,7 +512,7 @@ export const handlers = [
     });
   }),
 
-  http.get('/api/process_unit/:unitId/method', () => {
+  http.get('/api/process_unit/:unitId/method-and-state', () => {
     const lines = [
       {id: 'a', content: '{'},
       {id: 'b', content: ' "watch": "some condition",'},
@@ -522,11 +522,13 @@ export const handlers = [
       {id: 'f', content: ' "yet another": "line"'},
       {id: 'g', content: '}'},
     ];
-    const result = HttpResponse.json<Method>({
-      lines: lines,
-      started_line_ids: startedLines.map(no => (no + 9).toString(36)),
-      executed_line_ids: executedLines.map(no => (no + 9).toString(36)),
-      injected_line_ids: ['d'],
+    const result = HttpResponse.json<MethodAndState>({
+      method: {lines: lines},
+      state: {
+        started_line_ids: startedLines.map(no => (no + 9).toString(36)),
+        executed_line_ids: executedLines.map(no => (no + 9).toString(36)),
+        injected_line_ids: ['d'],
+      },
     });
     const lastExecutedLine = executedLines.at(-1) ?? 0;
     if(lastExecutedLine < lines.length) executedLines.push(lastExecutedLine + 1);
@@ -696,21 +698,25 @@ export const handlers = [
    * BATCH JOBS *
    **************/
 
-  http.get('/api/batch_job/:id/method', async () => {
+  http.get('/api/batch_job/:id/method-and-state', async () => {
     await delay();
-    return HttpResponse.json<Method>({
-      lines: [
-        {id: 'a', content: '{'},
-        {id: 'b', content: ' "some key": "some value",'},
-        {id: 'c', content: ' "injected": "line",'},
-        {id: 'd', content: ' "watch": "some condition",'},
-        {id: 'e', content: ' "an unrun": "line",'},
-        {id: 'f', content: ' "another unrun": "line"'},
-        {id: 'g', content: '}'},
-      ],
-      started_line_ids: ['d'],
-      executed_line_ids: ['a', 'b', 'c', 'g'],
-      injected_line_ids: ['c'],
+    return HttpResponse.json<MethodAndState>({
+      method: {
+        lines: [
+          {id: 'a', content: '{'},
+          {id: 'b', content: ' "some key": "some value",'},
+          {id: 'c', content: ' "injected": "line",'},
+          {id: 'd', content: ' "watch": "some condition",'},
+          {id: 'e', content: ' "an unrun": "line",'},
+          {id: 'f', content: ' "another unrun": "line"'},
+          {id: 'g', content: '}'},
+        ],
+      },
+      state: {
+        started_line_ids: ['d'],
+        executed_line_ids: ['a', 'b', 'c', 'g'],
+        injected_line_ids: ['c'],
+      },
     });
   }),
 

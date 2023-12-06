@@ -34,7 +34,7 @@ class AggregatorMessageHandlers:
 
         # initialize client data
         if not self.aggregator.has_registered_engine_id(engine_id):
-            self.aggregator.register_engine_data(Mdl.EngineData(
+            self.aggregator.from_engine.register_engine_data(Mdl.EngineData(
                 engine_id=engine_id,
                 computer_name=register_engine_msg.computer_name,
                 uod_name=register_engine_msg.uod_name
@@ -53,7 +53,7 @@ class AggregatorMessageHandlers:
         if validation_errors is not None: return validation_errors
 
         logger.debug(f"Got UodInfo from client: {str(msg)}")
-        self.aggregator.set_readings(msg.engine_id, msg.readings)
+        self.aggregator.from_engine.readings_changed(msg.engine_id, msg.readings)
         return AM.SuccessMessage()
 
     async def handle_TagsUpdatedMsg(self, msg: EM.TagsUpdatedMsg) -> AM.SuccessMessage | AM.ErrorMessage:
@@ -61,7 +61,7 @@ class AggregatorMessageHandlers:
         if validation_errors is not None: return validation_errors
 
         logger.debug(f"Got tags update from client: {str(msg)}")
-        self.aggregator.upsert_tag_values(msg.engine_id, msg.tags)
+        self.aggregator.from_engine.tag_values_changed(msg.engine_id, msg.tags)
         return AM.SuccessMessage()
 
     async def handle_RunLogMsg(self, msg: EM.RunLogMsg) -> AM.SuccessMessage | AM.ErrorMessage:
@@ -69,7 +69,7 @@ class AggregatorMessageHandlers:
         if validation_errors is not None: return validation_errors
 
         logger.debug(f"Got run log from client: {str(msg)}")
-        self.aggregator.set_runlog(msg.engine_id, msg.runlog)
+        self.aggregator.from_engine.runlog_changed(msg.engine_id, msg.runlog)
         return AM.SuccessMessage()
 
     async def handle_ControlStateMsg(self, msg: EM.ControlStateMsg) -> AM.SuccessMessage | AM.ErrorMessage:
@@ -77,5 +77,5 @@ class AggregatorMessageHandlers:
         if validation_errors is not None: return validation_errors
 
         logger.debug(f"Got control state from client: {str(msg)}")
-        self.aggregator.set_control_state(msg.engine_id, msg.control_state)
+        self.aggregator.from_engine.control_state_changed(msg.engine_id, msg.control_state)
         return AM.SuccessMessage()

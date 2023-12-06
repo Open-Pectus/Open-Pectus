@@ -1,6 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { Method } from '../../../api';
+import { Method, MethodState } from '../../../api';
 import { UtilMethods } from '../../../shared/util-methods';
 import { MethodEditorActions } from './method-editor.actions';
 
@@ -8,13 +8,14 @@ export interface MethodEditorState {
   monacoServicesInitialized: boolean;
   isDirty: boolean;
   method: Method;
+  methodState: MethodState;
 }
 
 const initialState: MethodEditorState = {
   monacoServicesInitialized: false,
   isDirty: false,
-  method: {
-    lines: [],
+  method: {lines: []},
+  methodState: {
     started_line_ids: [],
     executed_line_ids: [],
     injected_line_ids: [],
@@ -25,26 +26,27 @@ const reducer = createReducer(initialState,
   on(MethodEditorActions.methodEditorComponentDestroyed, (state) => {
     return {...initialState, monacoServicesInitialized: state.monacoServicesInitialized};
   }),
-  on(MethodEditorActions.methodFetchedInitially, (state, {method}) => produce(state, draft => {
+  on(MethodEditorActions.methodFetchedInitially, (state, {methodAndState}) => produce(state, draft => {
     draft.isDirty = false;
-    draft.method = method;
+    draft.method = methodAndState.method;
+    draft.methodState = methodAndState.state;
   })),
-  on(MethodEditorActions.methodFetchedDueToUpdate, (state, {method}) => produce(state, draft => {
-    if(!UtilMethods.arrayEquals(draft.method.executed_line_ids, method.executed_line_ids)) {
-      draft.method.executed_line_ids = method.executed_line_ids;
+  on(MethodEditorActions.methodFetchedDueToUpdate, (state, {methodAndState}) => produce(state, draft => {
+    if(!UtilMethods.arrayEquals(draft.methodState.executed_line_ids, methodAndState.state.executed_line_ids)) {
+      draft.methodState.executed_line_ids = methodAndState.state.executed_line_ids;
     }
-    if(!UtilMethods.arrayEquals(draft.method.injected_line_ids, method.injected_line_ids)) {
-      draft.method.injected_line_ids = method.injected_line_ids;
+    if(!UtilMethods.arrayEquals(draft.methodState.injected_line_ids, methodAndState.state.injected_line_ids)) {
+      draft.methodState.injected_line_ids = methodAndState.state.injected_line_ids;
     }
-    if(!UtilMethods.arrayEquals(draft.method.started_line_ids, method.started_line_ids)) {
-      draft.method.started_line_ids = method.started_line_ids;
+    if(!UtilMethods.arrayEquals(draft.methodState.started_line_ids, methodAndState.state.started_line_ids)) {
+      draft.methodState.started_line_ids = methodAndState.state.started_line_ids;
     }
 
     // take content only from executed or started (and therefore locked) lines.
-    method.executed_line_ids.concat(method.started_line_ids).forEach((lockedLineId) => {
+    methodAndState.state.executed_line_ids.concat(methodAndState.state.started_line_ids).forEach((lockedLineId) => {
       const oldLine = draft.method.lines.find(line => line.id === lockedLineId);
-      const newLineIndex = method.lines.findIndex(line => line.id === lockedLineId);
-      const newLine = method.lines[newLineIndex];
+      const newLineIndex = methodAndState.method.lines.findIndex(line => line.id === lockedLineId);
+      const newLine = methodAndState.method.lines[newLineIndex];
       if(newLine === undefined) {
         console.warn('Backend designated a non-existing line id as executed! This is fine if you\'re using MSW.');
         return;
