@@ -10,6 +10,7 @@ import type { CommandExample } from '../models/CommandExample';
 import type { ControlState } from '../models/ControlState';
 import type { ExecutableCommand } from '../models/ExecutableCommand';
 import type { Method } from '../models/Method';
+import type { MethodAndState } from '../models/MethodAndState';
 import type { PlotConfiguration } from '../models/PlotConfiguration';
 import type { PlotLog } from '../models/PlotLog';
 import type { ProcessDiagram } from '../models/ProcessDiagram';
@@ -170,17 +171,17 @@ unitId: string,
     }
 
     /**
-     * Get Method
+     * Get Method And State
      * @param unitId 
-     * @returns Method Successful Response
+     * @returns MethodAndState Successful Response
      * @throws ApiError
      */
-    public getMethod(
+    public getMethodAndState(
 unitId: string,
-): Observable<Method> {
+): Observable<MethodAndState> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/process_unit/{unit_id}/method',
+            url: '/api/process_unit/{unit_id}/method-and-state',
             path: {
                 'unit_id': unitId,
             },

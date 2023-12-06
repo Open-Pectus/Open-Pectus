@@ -43,8 +43,8 @@ class FrontendPublisher:
         """ This endpoint is just for exposing the topic enum to frontend via autogeneration """
         pass
 
-    def trigger_publish_msw(self):
+    async def trigger_publish_msw(self):
         """ Publish to all topics that start with 'MSW_' """
         topics_subscribed_to = list(self.pubsub_endpoint.notifier._topics.keys())
         msw_topics_subscribed_to = [topic for topic in topics_subscribed_to if topic.startswith('MSW_')]
-        asyncio.create_task(self.pubsub_endpoint.publish(msw_topics_subscribed_to))
+        await self.pubsub_endpoint.publish(msw_topics_subscribed_to)

@@ -298,13 +298,13 @@
         }
       }
     },
-    "/api/process_unit/{unit_id}/method": {
+    "/api/process_unit/{unit_id}/method-and-state": {
       "get": {
         "tags": [
           "process_unit"
         ],
-        "summary": "Get Method",
-        "operationId": "get_method",
+        "summary": "Get Method And State",
+        "operationId": "get_method_and_state",
         "parameters": [
           {
             "required": true,
@@ -322,7 +322,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Method"
+                  "$ref": "#/components/schemas/MethodAndState"
                 }
               }
             }
@@ -338,7 +338,9 @@
             }
           }
         }
-      },
+      }
+    },
+    "/api/process_unit/{unit_id}/method": {
       "post": {
         "tags": [
           "process_unit"
@@ -679,13 +681,13 @@
         }
       }
     },
-    "/api/batch_job/{id}/method": {
+    "/api/batch_job/{id}/method-and-state": {
       "get": {
         "tags": [
           "batch_job"
         ],
-        "summary": "Get Batch Job Method",
-        "operationId": "get_batch_job_method",
+        "summary": "Get Batch Job Method And State",
+        "operationId": "get_batch_job_method_and_state",
         "parameters": [
           {
             "required": true,
@@ -703,7 +705,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Method"
+                  "$ref": "#/components/schemas/MethodAndState"
                 }
               }
             }
@@ -1225,7 +1227,50 @@
             },
             "type": "array",
             "title": "Lines"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lines"
+        ],
+        "title": "Method"
+      },
+      "MethodAndState": {
+        "properties": {
+          "method": {
+            "$ref": "#/components/schemas/Method"
           },
+          "state": {
+            "$ref": "#/components/schemas/MethodState"
+          }
+        },
+        "type": "object",
+        "required": [
+          "method",
+          "state"
+        ],
+        "title": "MethodAndState"
+      },
+      "MethodLine": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "content"
+        ],
+        "title": "MethodLine"
+      },
+      "MethodState": {
+        "properties": {
           "started_line_ids": {
             "items": {
               "type": "string"
@@ -1250,30 +1295,11 @@
         },
         "type": "object",
         "required": [
-          "lines",
           "started_line_ids",
           "executed_line_ids",
           "injected_line_ids"
         ],
-        "title": "Method"
-      },
-      "MethodLine": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "content": {
-            "type": "string",
-            "title": "Content"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "content"
-        ],
-        "title": "MethodLine"
+        "title": "MethodState"
       },
       "NotOnline": {
         "properties": {

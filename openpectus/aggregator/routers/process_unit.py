@@ -151,33 +151,30 @@ def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)
         lines=list(map(from_line_model, engine_data.runlog.lines)))
 
 
-@router.get('/process_unit/{unit_id}/method')
-def get_method(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> D.Method:
+@router.get('/process_unit/{unit_id}/method-and-state')
+def get_method_and_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> D.MethodAndState:
     engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None:
         logger.warning("No client data - thus no method")
-        return D.Method(lines=[], started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
+        return D.MethodAndState(method=D.Method(lines=[]), state=D.MethodState(started_line_ids=[], executed_line_ids=[], injected_line_ids=[]))
 
-    def from_model(msg: Mdl.Method) -> D.Method:
-        return D.Method(
-            lines=[D.MethodLine(id=line.id, content=line.content) for line in msg.lines],
-            started_line_ids=[_id for _id in msg.started_line_ids],
-            executed_line_ids=[_id for _id in msg.executed_line_ids],
-            injected_line_ids=[_id for _id in msg.injected_line_ids],
+    def from_models(method: Mdl.Method, method_state: Mdl.MethodState) -> D.MethodAndState:
+        return D.MethodAndState(
+            method=D.Method(lines=[D.MethodLine(id=line.id, content=line.content) for line in method.lines]),
+            state=D.MethodState(started_line_ids=[_id for _id in method_state.started_line_ids],
+                                executed_line_ids=[_id for _id in method_state.executed_line_ids],
+                                injected_line_ids=[_id for _id in method_state.injected_line_ids])
         )
 
     print("Returned client method")
-    return from_model(engine_data.method)
+    return from_models(engine_data.method, engine_data.method_state)
 
 
 @router.post('/process_unit/{unit_id}/method')
 async def save_method(unit_id: str, method_dto: D.Method, agg: Aggregator = Depends(agg_deps.get_aggregator)):
-    method_mdl = Mdl.Method(lines=[Mdl.MethodLine(id=line.id, content=line.content) for line in method_dto.lines],
-                            started_line_ids=[_id for _id in method_dto.started_line_ids],
-                            executed_line_ids=[_id for _id in method_dto.executed_line_ids],
-                            injected_line_ids=[_id for _id in method_dto.injected_line_ids])
+    method_mdl = Mdl.Method(lines=[Mdl.MethodLine(id=line.id, content=line.content) for line in method_dto.lines])
 
-    if not await agg.set_method(engine_id=unit_id, method=method_mdl):
+    if not await agg.from_frontend.method_saved(engine_id=unit_id, method=method_mdl):
         return D.ServerErrorResponse(message="Failed to set method")
 
 

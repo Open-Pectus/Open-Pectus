@@ -14,6 +14,7 @@ RunLog = Mdl.RunLog
 ControlState = Mdl.ControlState
 Method = Mdl.Method
 MethodLine = Mdl.MethodLine
+MethodState = Mdl.MethodState
 ReadingCommand = Mdl.ReadingCommand
 ReadingInfo = Mdl.ReadingInfo
 TagValue = Mdl.TagValue
@@ -66,7 +67,8 @@ class EngineData(BaseModel):
     tags_info: TagsInfo = TagsInfo(map={})
     runlog: RunLog = RunLog(lines=[])
     control_state: ControlState = ControlState(is_running=False, is_holding=False, is_paused=False)
-    method: Method = Method(lines=[], started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
+    method: Method = Method(lines=[])
+    method_state: MethodState = MethodState(started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
 
     def get_runtime(self):
         pass # TODO, using system tag name that should be made available here without having to reach deep into interpreter/engine land

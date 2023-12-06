@@ -185,9 +185,17 @@ class MethodLine(BaseModel):
 
 class Method(BaseModel):
     lines: List[MethodLine]
+
+
+class MethodState(BaseModel):
     started_line_ids: List[str]
     executed_line_ids: List[str]
     injected_line_ids: List[str]
+
+
+class MethodAndState(BaseModel):
+    method: Method
+    state: MethodState
 
 
 class PlotColorRegion(BaseModel):
@@ -231,3 +239,18 @@ class PlotLogEntry(BaseModel):
 
 class PlotLog(BaseModel):
     entries: Dict[str, PlotLogEntry]
+
+
+class BatchJob(BaseModel):
+    """ Represents a current or historical run of a process unit. """
+    id: str
+    unit_id: str
+    unit_name: str
+    started_date: datetime
+    completed_date: datetime
+    contributors: List[str] = []
+
+
+class BatchJobCsv(BaseModel):
+    filename: str
+    csv_content: str
