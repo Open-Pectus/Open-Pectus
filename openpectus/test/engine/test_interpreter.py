@@ -8,7 +8,7 @@ import pint
 from openpectus.engine.engine import Engine
 from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.pinterpreter import InterpreterContext, PInterpreter
-from openpectus.lang.exec.tags import Tag, SYSTEM_TAG_BASE, TagCollection
+from openpectus.lang.exec.tags import Tag, TagCollection, SystemTagName
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
 from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.grammar.pprogramformatter import print_parsed_program as print_program
@@ -236,7 +236,7 @@ Mark: A3
 """
         uod = create_test_uod()
         assert uod.system_tags is not None
-        uod.system_tags[SYSTEM_TAG_BASE].set_value("sec")
+        uod.system_tags[SystemTagName.BASE].set_value("sec")
 
         engine = create_engine(uod)
         run_engine(engine, program, 10)

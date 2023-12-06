@@ -4,7 +4,7 @@ import time
 from queue import Empty
 from typing import List
 
-import openpectus.lang.exec.tags as tags
+from openpectus.lang.exec.tags import SystemTagName, TagValue
 import openpectus.protocol.messages as M
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.models as Mdl
@@ -75,7 +75,7 @@ class EngineReporter():
             self.dispatcher.post(msg)
 
     async def send_runlog_async(self):
-        def to_value(t: tags.TagValue) -> Mdl.TagValue:
+        def to_value(t: TagValue) -> Mdl.TagValue:
             return Mdl.TagValue(name=t.name, value=t.value, value_unit=t.unit)
 
         def to_line(item: RunLogItem) -> Mdl.RunLogLine:

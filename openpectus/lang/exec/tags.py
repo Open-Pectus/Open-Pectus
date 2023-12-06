@@ -13,14 +13,15 @@ QuantityType = pint.Quantity | PlainQuantity[Any]
 
 # Represents tag API towards interpreter
 
-SYSTEM_TAG_BASE = "Base"
-SYSTEM_TAG_RUN_COUNTER = "Run Counter"
-SYSTEM_TAG_BLOCK_TIME = "Block Time"
-SYSTEM_TAG_PROCESS_TIME = "Process Time"
-SYSTEM_TAG_RUN_TIME = "Run Time"
-SYSTEM_TAG_CLOCK = "Clock"
-SYSTEM_TAG_SYSTEM_STATE = "System State"
-SYSTEM_TAG_METHOD_STATUS = "Method Status"
+class SystemTagName(StrEnum):
+    BASE = "Base"
+    RUN_COUNTER = "Run Counter"
+    BLOCK_TIME = "Block Time"
+    PROCESS_TIME = "Process Time"
+    RUN_TIME = "Run Time"
+    CLOCK = "Clock"
+    SYSTEM_STATE = "System State"
+    METHOD_STATUS = "Method Status"
 
 
 # Define the dimensions and units we want to use and the conversions we want to provide.
@@ -176,12 +177,12 @@ class Tag(ChangeSubject):
         return Tag(self.name, self.value, self.unit)
 
 
-class Reading(Tag):
+class ReadingTag(Tag):
     def __init__(self, name: str, unit: str | None = None) -> None:
         super().__init__(name, value=0.0, unit=unit, direction=TagDirection.INPUT)
 
 
-class Select(Tag):
+class SelectTag(Tag):
     def __init__(self, name: str, value, unit: str | None ,
                  choices: List[str], direction: TagDirection = TagDirection.NA) -> None:
         super().__init__(name, value, unit, direction)
@@ -307,14 +308,14 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
     def create_system_tags() -> TagCollection:
         tags = TagCollection()
         defaults = [
-            (SYSTEM_TAG_BASE, "min", None),  # TODO this should not be wrapped in pint quantity
-            (SYSTEM_TAG_RUN_COUNTER, 0, None),
-            (SYSTEM_TAG_BLOCK_TIME, 0.0, "s"),
-            (SYSTEM_TAG_PROCESS_TIME, 0.0, "s"),
-            (SYSTEM_TAG_RUN_TIME, 0.0, "s"),
-            (SYSTEM_TAG_CLOCK, 0.0, "s"),
-            (SYSTEM_TAG_SYSTEM_STATE, "Stopped", None),
-            (SYSTEM_TAG_METHOD_STATUS, "OK", None),
+            (SystemTagName.BASE, "min", None),  # TODO this should not be wrapped in pint quantity
+            (SystemTagName.RUN_COUNTER, 0, None),
+            (SystemTagName.BLOCK_TIME, 0.0, "s"),
+            (SystemTagName.PROCESS_TIME, 0.0, "s"),
+            (SystemTagName.RUN_TIME, 0.0, "s"),
+            (SystemTagName.CLOCK, 0.0, "s"),
+            (SystemTagName.SYSTEM_STATE, "Stopped", None),
+            (SystemTagName.METHOD_STATUS, "OK", None),
         ]
         for name, value, unit in defaults:
             tag = Tag(name, value, unit, TagDirection.NA)

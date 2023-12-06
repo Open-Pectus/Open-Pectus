@@ -28,8 +28,7 @@ from openpectus.lang.model.pprogram import (
 from openpectus.lang.exec.tags import (
     TagCollection,
     TagValueCollection,
-    SYSTEM_TAG_BLOCK_TIME,
-    SYSTEM_TAG_RUN_TIME,
+    SystemTagName,
 )
 
 
@@ -220,13 +219,13 @@ class PInterpreter(PNodeVisitor):
             ar_program = self.stack.records[0]
             program_elapsed = self._tick_time - ar_program.start_time
             q_program = pint.Quantity(f'{program_elapsed} sec')
-            self.context.tags.get(SYSTEM_TAG_RUN_TIME).set_quantity(q_program)
+            self.context.tags.get(SystemTagName.RUN_TIME).set_quantity(q_program)
 
             ar_block = self.stack.peek()
             # TODO block time should not include pause and hold time
             block_elapsed = self._tick_time - ar_block.start_time
             q_block = pint.Quantity(f'{block_elapsed} sec')
-            self.context.tags.get(SYSTEM_TAG_BLOCK_TIME).set_quantity(q_block)
+            self.context.tags.get(SystemTagName.BLOCK_TIME).set_quantity(q_block)
 
             # TODO implement remaining tags, e.g. SYSTEM STATE, RUN COUNTER
 
@@ -302,7 +301,7 @@ class PInterpreter(PNodeVisitor):
 
     def _is_awaiting_threshold(self, node: PNode):
         if isinstance(node, PInstruction) and node.time is not None:
-            block_elapsed = self.context.tags.get(SYSTEM_TAG_BLOCK_TIME).as_quantity()
+            block_elapsed = self.context.tags.get(SystemTagName.BLOCK_TIME).as_quantity()
             threshold_quantity = pint.Quantity(node.time, "sec")
             if block_elapsed < threshold_quantity:
                 logger.debug(f"Awaiting threshold: {threshold_quantity}, current: {block_elapsed}, time: {self._tick_time}")

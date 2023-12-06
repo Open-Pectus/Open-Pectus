@@ -1,22 +1,18 @@
-import asyncio
 import logging
 import threading
 import time
-from typing import Any, List
-from typing_extensions import override
 import unittest
+from typing import Any, List
 
 import pint
+from openpectus.engine.engine import Engine
+from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
+from openpectus.engine.models import EngineCommandEnum, SystemStateEnum
+from openpectus.lang.exec.tags import SystemTagName, Tag, ReadingTag, SelectTag, TagDirection
 from openpectus.lang.exec.runlog import RuntimeRecordStateEnum
 from openpectus.lang.exec.timer import NullTimer
-
-from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder
-from openpectus.engine.models import EngineCommandEnum, SystemStateEnum
-from openpectus.engine.engine import Engine
-from openpectus.lang.exec import tags
-from openpectus.lang.exec.uod import UodCommand
-from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
-
+from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
+from typing_extensions import override
 
 logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
 logger = logging.getLogger("Engine")
@@ -72,7 +68,7 @@ def continue_engine(engine: Engine, max_ticks: int = -1):
         engine.tick()
 
 
-def get_queue_items(q) -> list[tags.Tag]:
+def get_queue_items(q) -> list[Tag]:
     items = []
     while not q.empty():
         items.append(q.get())
@@ -80,7 +76,6 @@ def get_queue_items(q) -> list[tags.Tag]:
 
 
 def create_test_uod() -> UnitOperationDefinitionBase:
-
     def reset(cmd: UodCommand, args: List[Any]) -> None:
         count = cmd.get_iteration_count()
         if count == 0:
@@ -111,9 +106,9 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         )
         # Readings
         .with_new_system_tags()
-        .with_tag(tags.Reading("FT01", "L/h"))
-        .with_tag(tags.Select("Reset", value="N/A", unit=None, choices=["Reset", "N/A"]))
-        .with_tag(tags.Tag("Danger", True, None, tags.TagDirection.OUTPUT, False))
+        .with_tag(ReadingTag("FT01", "L/h"))
+        .with_tag(SelectTag("Reset", value="N/A", unit=None, choices=["Reset", "N/A"]))
+        .with_tag(Tag("Danger", True, None, TagDirection.OUTPUT, False))
         .with_command(UodCommand.builder().with_name("Reset").with_exec_fn(reset))
         .with_command(UodCommand.builder().with_name("overlap1").with_exec_fn(overlap_exec))
         .with_command(UodCommand.builder().with_name("overlap2").with_exec_fn(overlap_exec))
@@ -150,12 +145,14 @@ class TestHardwareLayer(unittest.TestCase):
 def print_runlog(e: Engine, description=""):
     runlog = e.interpreter.runtimeinfo.get_runlog()
     print(f"Runlog {runlog.id} records: ", description)
-#    print("line | start | end   | name                 | states")
-#    print("-----|-------|-------|----------------------|-------------------")
+    #    print("line | start | end   | name                 | states")
+    #    print("-----|-------|-------|----------------------|-------------------")
     for item in runlog.items:
         name = f"{str(item.name):<20}"
         prog = f"{item.progress:d2}" if item.progress else ""
         print(f"{name}   {item.state:<15}    {prog}")
+
+
 #    print("-----|-------|-------|----------------------|-------------------")
 
 
@@ -570,7 +567,7 @@ Mark: C
     def test_clocks_start_stop(self):
         e = self.engine
 
-        clock = e._system_tags.get(tags.SYSTEM_TAG_CLOCK)
+        clock = e._system_tags.get(SystemTagName.CLOCK)
         self.assertEqual(0.0, clock.as_number())
 
         e._runstate_started = True
@@ -582,14 +579,13 @@ Mark: C
         e._runstate_started = False
         e.tick()
 
-
     def test_runstate_stop(self):
         e = self.engine
         e.schedule_execution("Start")
 
         e.tick()
         self.assertTrue(e._runstate_started)
-        system_state_tag = e._system_tags[tags.SYSTEM_TAG_SYSTEM_STATE]
+        system_state_tag = e._system_tags[SystemTagName.SYSTEM_STATE]
         self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
 
         e.schedule_execution("Stop")
@@ -604,8 +600,8 @@ Mark: C
 
         e.tick()
         self.assertTrue(e._runstate_started)
-        system_state_tag = e._system_tags[tags.SYSTEM_TAG_SYSTEM_STATE]
-        process_time_tag = e._system_tags[tags.SYSTEM_TAG_PROCESS_TIME]
+        system_state_tag = e._system_tags[SystemTagName.SYSTEM_STATE]
+        process_time_tag = e._system_tags[SystemTagName.PROCESS_TIME]
         self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
         pre_pause_process_time = process_time_tag.as_number()
 
@@ -631,8 +627,8 @@ Mark: C
 
         e.tick()
         self.assertTrue(e._runstate_started)
-        system_state_tag = e._system_tags[tags.SYSTEM_TAG_SYSTEM_STATE]
-        process_time_tag = e._system_tags[tags.SYSTEM_TAG_PROCESS_TIME]
+        system_state_tag = e._system_tags[SystemTagName.SYSTEM_STATE]
+        process_time_tag = e._system_tags[SystemTagName.PROCESS_TIME]
         self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
         pre_pause_process_time = process_time_tag.as_number()
 
@@ -660,8 +656,8 @@ Mark: C
 
         e.tick()
         self.assertTrue(e._runstate_started)
-        system_state_tag = e._system_tags[tags.SYSTEM_TAG_SYSTEM_STATE]
-        process_time_tag = e._system_tags[tags.SYSTEM_TAG_PROCESS_TIME]
+        system_state_tag = e._system_tags[SystemTagName.SYSTEM_STATE]
+        process_time_tag = e._system_tags[SystemTagName.PROCESS_TIME]
         self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
         pre_hold_process_time = process_time_tag.as_number()
 
