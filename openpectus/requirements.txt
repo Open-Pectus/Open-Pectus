@@ -12,7 +12,7 @@ fastapi_websocket_rpc==0.1.25
 fastapi_websocket_pubsub==0.3.8
 colorlog==6.7.0
 requests==2.31.0
-peewee==3.17.0
+sqlalchemy=2.0.23
 pyright
 
 # simulation server
