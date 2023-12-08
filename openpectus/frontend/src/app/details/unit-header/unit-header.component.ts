@@ -1,10 +1,19 @@
+import { TitleCasePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { LetDirective } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { DetailsSelectors } from '../ngrx/details.selectors';
+import { UnitControlsComponent } from './unit-controls.component';
 
 @Component({
   selector: 'app-unit-header',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    LetDirective,
+    UnitControlsComponent,
+    TitleCasePipe,
+  ],
   template: `
     <ng-container *ngrxLet="processUnit as processUnit">
       <div class="text-slate-700 mb-4 -mt-2">

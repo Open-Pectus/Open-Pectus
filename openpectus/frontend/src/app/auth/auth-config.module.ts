@@ -13,7 +13,7 @@ import {
 } from 'angular-auth-oidc-client';
 import { map } from 'rxjs';
 import { AuthConfig, AuthService } from '../api';
-import { authCallbackUrlPart } from '../app-routing.module';
+import { authCallbackUrlPart } from '../app.routes';
 import { AppActions } from '../ngrx/app.actions';
 import { AuthCallbackComponent } from './auth-callback.component';
 
@@ -55,9 +55,6 @@ export const httpLoaderFactory = (authService: AuthService, store: Store) => {
 
 
 @NgModule({
-  declarations: [
-    AuthCallbackComponent,
-  ],
   imports: [
     AuthModule.forRoot({
       loader: {
@@ -67,6 +64,7 @@ export const httpLoaderFactory = (authService: AuthService, store: Store) => {
       },
     }),
     HttpClientModule,
+    AuthCallbackComponent,
   ],
   providers: [
     {provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true},

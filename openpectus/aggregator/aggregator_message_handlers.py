@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class AggregatorMessageHandlers:
     def __init__(self, aggregator: Aggregator):
         self.aggregator = aggregator
-        aggregator.dispatcher.set_post_handler(EM.RegisterEngineMsg, self.handle_RegisterEngineMsg)
+        aggregator.dispatcher.set_register_handler(self.handle_RegisterEngineMsg)
         aggregator.dispatcher.set_post_handler(EM.UodInfoMsg, self.handle_UodInfoMsg)
         aggregator.dispatcher.set_post_handler(EM.TagsUpdatedMsg, self.handle_TagsUpdatedMsg)
         aggregator.dispatcher.set_post_handler(EM.RunLogMsg, self.handle_RunLogMsg)
@@ -34,7 +34,7 @@ class AggregatorMessageHandlers:
 
         # initialize client data
         if not self.aggregator.has_registered_engine_id(engine_id):
-            self.aggregator.register_engine_data(Mdl.EngineData(
+            self.aggregator.from_engine.register_engine_data(Mdl.EngineData(
                 engine_id=engine_id,
                 computer_name=register_engine_msg.computer_name,
                 uod_name=register_engine_msg.uod_name
@@ -43,46 +43,39 @@ class AggregatorMessageHandlers:
         logger.debug(f"Registration successful of client {engine_id}")
         return AM.RegisterEngineReplyMsg(success=True, engine_id=engine_id)
 
+    def validate_msg(self, msg: EM.EngineMessage):
+        if not self.aggregator.has_registered_engine_id(msg.engine_id): return AM.ErrorMessage(message=f'No engine registered under id {msg.engine_id}')
+        # possibly more validations...
+        return None
+
     async def handle_UodInfoMsg(self, msg: EM.UodInfoMsg) -> AM.SuccessMessage | AM.ErrorMessage:
-        engine_data = self.aggregator.get_registered_engine_data(msg.engine_id)
-        if engine_data is None:
-            return AM.ErrorMessage()
+        validation_errors = self.validate_msg(msg)
+        if validation_errors is not None: return validation_errors
 
         logger.debug(f"Got UodInfo from client: {str(msg)}")
-        engine_data.readings = []
-        for r in msg.readings:
-            rd = Mdl.ReadingInfo(
-                label=r.label,
-                tag_name=r.tag_name,
-                valid_value_units=r.valid_value_units,
-                commands=[Mdl.ReadingCommand(name=c.name, command=c.command) for c in r.commands]
-            )
-            engine_data.readings.append(rd)
-
+        self.aggregator.from_engine.readings_changed(msg.engine_id, msg.readings)
         return AM.SuccessMessage()
 
     async def handle_TagsUpdatedMsg(self, msg: EM.TagsUpdatedMsg) -> AM.SuccessMessage | AM.ErrorMessage:
-        engine_data = self.aggregator.get_registered_engine_data(msg.engine_id)
-        if engine_data is None:
-            return AM.ErrorMessage()
+        validation_errors = self.validate_msg(msg)
+        if validation_errors is not None: return validation_errors
 
         logger.debug(f"Got tags update from client: {str(msg)}")
-        for ti in msg.tags:
-            engine_data.tags_info.upsert(ti.name, ti.value, ti.value_unit)
+        self.aggregator.from_engine.tag_values_changed(msg.engine_id, msg.tags)
         return AM.SuccessMessage()
 
     async def handle_RunLogMsg(self, msg: EM.RunLogMsg) -> AM.SuccessMessage | AM.ErrorMessage:
-        engine_data = self.aggregator.get_registered_engine_data(msg.engine_id)
-        if engine_data is None:
-            return AM.ErrorMessage()
+        validation_errors = self.validate_msg(msg)
+        if validation_errors is not None: return validation_errors
 
-        engine_data.runlog = msg.runlog
+        logger.debug(f"Got run log from client: {str(msg)}")
+        self.aggregator.from_engine.runlog_changed(msg.engine_id, msg.runlog)
         return AM.SuccessMessage()
 
     async def handle_ControlStateMsg(self, msg: EM.ControlStateMsg) -> AM.SuccessMessage | AM.ErrorMessage:
-        engine_data = self.aggregator.get_registered_engine_data(msg.engine_id)
-        if engine_data is None:
-            return AM.ErrorMessage()
+        validation_errors = self.validate_msg(msg)
+        if validation_errors is not None: return validation_errors
 
-        engine_data.control_state = msg.control_state
+        logger.debug(f"Got control state from client: {str(msg)}")
+        self.aggregator.from_engine.control_state_changed(msg.engine_id, msg.control_state)
         return AM.SuccessMessage()

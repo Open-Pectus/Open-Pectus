@@ -10,6 +10,7 @@ import {
 
 @Pipe({
   name: 'processValue',
+  standalone: true,
 })
 export class ProcessValuePipe implements PipeTransform {
   constructor(private decimalPipe: DecimalPipe) {}

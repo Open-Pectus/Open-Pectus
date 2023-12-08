@@ -1,4 +1,5 @@
 import logging
+from enum import StrEnum, auto
 from typing import List
 
 from pydantic import BaseModel
@@ -19,6 +20,11 @@ class ReadingInfo(BaseModel):
 
 
 TagValueType = str | int | float | None
+
+
+class SystemTagName(StrEnum):
+    run_time = auto()
+    system_state = auto()
 
 
 class TagValue(BaseModel):
@@ -48,6 +54,9 @@ class MethodLine(BaseModel):
 
 class Method(BaseModel):
     lines: List[MethodLine]
+
+
+class MethodState(BaseModel):
     started_line_ids: List[str]
     executed_line_ids: List[str]
     injected_line_ids: List[str]

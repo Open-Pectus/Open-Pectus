@@ -13,16 +13,13 @@ from openpectus.lang.exec.errors import InterpretationError
 from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext
 from openpectus.lang.exec.runlog import RuntimeInfo, RunLog
 from openpectus.lang.exec.tags import (
-    DEFAULT_TAG_SYSTEM_STATE,
-    DEFAULT_TAG_METHOD_STATUS,
     Tag,
     TagCollection,
     TagDirection,
     TagValue,
     TagValueCollection,
     ChangeListener,
-    DEFAULT_TAG_CLOCK,
-    DEFAULT_TAG_RUN_COUNTER,
+    SystemTagName,
 )
 from openpectus.lang.exec.timer import EngineTimer, OneThreadTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
@@ -221,7 +218,7 @@ class Engine(InterpreterContext):
         # it appears that interpreter will have to update scope times
         # - unless we allow scope information to pass to engine (which we might)
 
-        clock = self._system_tags.get(DEFAULT_TAG_CLOCK)
+        clock = self._system_tags.get(SystemTagName.CLOCK)
         clock.set_value(time.time())
 
     def execute_commands(self):
@@ -248,7 +245,7 @@ class Engine(InterpreterContext):
                     self._execute_command(c, cmds_done)
                 except Exception:
                     logger.error("Error executing command: {c}", exc_info=True)
-                    self._system_tags[DEFAULT_TAG_METHOD_STATUS].set_value(MethodStatusEnum.ERROR)
+                    self._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.ERROR)
                     # TODO stop or pause or something
                     break
         for c_done in cmds_done:
@@ -272,6 +269,7 @@ class Engine(InterpreterContext):
 
         if not self._runstate_started and cmd_request.name != EngineCommandEnum.START:
             logger.warning(f"Command {cmd_request.name} is invalid when Engine is not running")
+            cmds_done.add(cmd_request)
             return
 
         # TODO replace commented runlog lines this with new runlog API
@@ -280,12 +278,13 @@ class Engine(InterpreterContext):
             case EngineCommandEnum.START:
                 if self._runstate_started:
                     logger.warning("Cannot start when already running")
+                    cmds_done.add(cmd_request)
                     return
                 self._runstate_started = True
                 self._runstate_started_time = time.time()
                 self._runstate_paused = False
                 self._runstate_holding = False
-                self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Running)
+                self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running)
                 cmds_done.add(cmd_request)
                 # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
@@ -293,13 +292,13 @@ class Engine(InterpreterContext):
                 self._runstate_started = False
                 self._runstate_paused = False
                 self._runstate_holding = False
-                self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Stopped)
+                self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Stopped)
                 cmds_done.add(cmd_request)
                 # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
             case EngineCommandEnum.PAUSE:
                 self._runstate_paused = True
-                self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Paused)
+                self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Paused)
                 self._apply_safe_state()
                 cmds_done.add(cmd_request)
                 # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
@@ -307,9 +306,9 @@ class Engine(InterpreterContext):
             case EngineCommandEnum.UNPAUSE:
                 self._runstate_paused = False
                 if self._runstate_holding:
-                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Holding)
+                    self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Holding)
                 else:
-                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Running)
+                    self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running)
                 self._apply_safe_state()
                 cmds_done.add(cmd_request)
                 # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
@@ -317,20 +316,20 @@ class Engine(InterpreterContext):
             case EngineCommandEnum.HOLD:
                 self._runstate_holding = True
                 if not self._runstate_paused:
-                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Holding)
+                    self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Holding)
                 cmds_done.add(cmd_request)
                 # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
             case EngineCommandEnum.UNHOLD:
                 self._runstate_holding = False
                 if not self._runstate_paused:
-                    self._system_tags[DEFAULT_TAG_SYSTEM_STATE].set_value(SystemStateEnum.Running)
+                    self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running)
                 cmds_done.add(cmd_request)
                 # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
             case EngineCommandEnum.INCREMENT_RUN_COUNTER:
-                value = self._system_tags[DEFAULT_TAG_RUN_COUNTER].as_number() + 1
-                self._system_tags[DEFAULT_TAG_RUN_COUNTER].set_value(value)
+                value = self._system_tags[SystemTagName.RUN_COUNTER].as_number() + 1
+                self._system_tags[SystemTagName.RUN_COUNTER].set_value(value)
                 cmds_done.add(cmd_request)
                 # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 

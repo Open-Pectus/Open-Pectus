@@ -1,10 +1,19 @@
+import { NgClass } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { InProgress, NotOnline, ProcessUnit, Ready } from '../../api';
+import { FormatDurationMsecPipe } from '../../shared/pipes/format-duration-msec.pipe';
+import { ProcessUnitStatePipe } from '../../shared/pipes/process-unit-state.pipe';
 import { UtilMethods } from '../../shared/util-methods';
 
 @Component({
   selector: 'app-process-unit-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    NgClass,
+    FormatDurationMsecPipe,
+    ProcessUnitStatePipe,
+  ],
   template: `
     <div class="rounded-md shadow-md cursor-pointer bg-vscode-background-grey hover:brightness-95">
       <div class="px-5 py-3 bg-sky-700 text-white rounded-t-md flex justify-between">

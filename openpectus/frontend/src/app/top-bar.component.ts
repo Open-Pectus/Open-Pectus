@@ -1,10 +1,14 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { Router } from '@angular/router';
+import { LetDirective } from '@ngrx/component';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
+import { MswEnablementComponent } from './msw-enablement.component';
 
 @Component({
   selector: 'app-top-bar',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [MswEnablementComponent, LetDirective],
   template: `
     <div class="w-full flex items-center justify-between px-4 bg-sky-900 text-white relative">
       <app-msw-enablement class="flex-1"></app-msw-enablement>

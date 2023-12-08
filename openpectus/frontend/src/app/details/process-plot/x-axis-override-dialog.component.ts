@@ -1,4 +1,6 @@
+import { NgFor, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { LetDirective, PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
@@ -6,6 +8,13 @@ import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
 @Component({
   selector: 'app-x-axis-override-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    LetDirective,
+    NgIf,
+    NgFor,
+    PushPipe,
+  ],
   template: `
     <ng-container *ngrxLet="data; let data">
       <ng-container *ngIf="data !== undefined">

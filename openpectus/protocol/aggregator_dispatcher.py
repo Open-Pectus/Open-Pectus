@@ -3,6 +3,8 @@ import logging
 from typing import Dict, TypeVar, Callable, Awaitable, Any
 
 import openpectus.protocol.messages as M
+import openpectus.protocol.aggregator_messages as AM
+import openpectus.protocol.engine_messages as EM
 from fastapi import APIRouter, FastAPI, Request
 from fastapi_websocket_rpc import RpcChannel, WebsocketRPCEndpoint
 from fastapi_websocket_rpc.schemas import RpcResponse
@@ -11,6 +13,8 @@ from openpectus.protocol.exceptions import ProtocolException
 from openpectus.protocol.serialization import deserialize, serialize
 
 logger = logging.getLogger(__name__)
+
+RegisterHandler = Callable[[EM.RegisterEngineMsg], Awaitable[AM.RegisterEngineReplyMsg]]
 
 
 class AggregatorDispatcher():
@@ -24,6 +28,7 @@ class AggregatorDispatcher():
         self.router = APIRouter(tags=["aggregator"])
         self._engine_id_channel_map: Dict[str, RpcChannel] = {}
         self._handlers: Dict[type, Callable[[Any], Awaitable[M.MessageBase]]] = {}
+        self._register_handler: RegisterHandler | None = None
         # WebsockeRPCEndpoint has wrong types for its on_connect and on_disconnect. It should be List[Callable[[RpcChannel], Awaitable[Any]]] instead of List[Coroutine]
         # See https://github.com/permitio/fastapi_websocket_rpc/issues/30
         self.endpoint = WebsocketRPCEndpoint(on_connect=[self.on_client_connect], on_disconnect=[self.on_client_disconnect]) # type: ignore
@@ -64,7 +69,7 @@ class AggregatorDispatcher():
             raise ProtocolException("Unknown engine: " + engine_id)
 
         channel = self._engine_id_channel_map[engine_id]
-        response = await channel.other._dispatch_message(message=message)
+        response = await channel.other.dispatch_message(message=serialize(message))
         return response
 
     def register_post_route(self, router: APIRouter | FastAPI):
@@ -72,27 +77,32 @@ class AggregatorDispatcher():
         async def post(request: Request):
             request_json = await request.json()
             message = deserialize(request_json)
-
+            if not isinstance(message, EM.RegisterEngineMsg) and not isinstance(message, EM.EngineMessage):
+                raise ValueError("Wrong kind of message sent from Engine")
             response_message = await self._dispatch_post(message)
 
             message_json = serialize(response_message)
             return message_json
 
-    async def _dispatch_post(self, message: M.MessageBase) -> M.MessageBase:
+    async def _dispatch_post(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
         """ Dispath message to registered handler. """
+        if isinstance(message, EM.RegisterEngineMsg):
+            if self._register_handler is None: return M.ProtocolErrorMessage(protocol_msg="Missing handler for registering engine!")
+            return await self._register_handler(message)
+
+        if message.engine_id == '': return M.ProtocolErrorMessage(protocol_msg="Failed to handle engine message as its engine_id was the empty string")
         message_type = type(message)
         if message_type in self._handlers.keys():
             try:
-                response = await self._handlers[message_type](message)
-                return response
+                return await self._handlers[message_type](message)
             except Exception:
                 logger.error(f"Dispatch failed for message type: {message_type}. Handler raised exception.", exc_info=True)
-                return M.ProtocolErrorMessage(protocol_mgs="Dispatch failed. Handler raised exception.")
+                return M.ProtocolErrorMessage(protocol_msg="Dispatch failed. Handler raised exception.")
         else:
             logger.warning(f"Dispatch failed for message type: {message_type}. No handler registered.")
-            return M.ProtocolErrorMessage(protocol_mgs="Dispatch failed. No handler registered.")
+            return M.ProtocolErrorMessage(protocol_msg="Dispatch failed. No handler registered.")
 
-    MessageToHandle = TypeVar("MessageToHandle", bound=M.MessageBase)
+    MessageToHandle = TypeVar("MessageToHandle", bound=EM.EngineMessage)
 
     def set_post_handler(self, message_type: type[MessageToHandle], handler: Callable[[MessageToHandle], Awaitable[M.MessageBase]]):
         """ Set handler for message_type. """
@@ -104,3 +114,6 @@ class AggregatorDispatcher():
         """ Unset handler for message_type. """
         if message_type in self._handlers.keys():
             del self._handlers[message_type]
+
+    def set_register_handler(self, handler: RegisterHandler):
+        self._register_handler = handler

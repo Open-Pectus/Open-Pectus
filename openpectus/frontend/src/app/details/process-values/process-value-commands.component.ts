@@ -1,3 +1,4 @@
+import { NgFor, NgIf } from '@angular/common';
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
@@ -21,6 +22,14 @@ type FocusableCommandComponent = ProcessValueCommandButtonComponent | ProcessVal
 @Component({
   selector: 'app-process-value-commands',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    NgFor,
+    NgIf,
+    ProcessValueEditorComponent,
+    ProcessValueCommandChoiceComponent,
+    ProcessValueCommandButtonComponent,
+  ],
   template: `
     <div tabindex="0" #container
          class="absolute left-1/2 -translate-x-1/2 top-0.5 z-10 flex flex-col gap-2 bg-white border border-slate-500 outline-none rounded-md p-2"

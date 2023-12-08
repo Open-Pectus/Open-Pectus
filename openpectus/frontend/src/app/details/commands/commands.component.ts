@@ -1,12 +1,23 @@
+import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { CommandExample, CommandSource } from '../../api';
+import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { DetailsActions } from '../ngrx/details.actions';
 import { DetailsSelectors } from '../ngrx/details.selectors';
+import { CommandExamplesListComponent } from './command-examples-list.component';
 
 @Component({
   selector: 'app-commands',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    CollapsibleElementComponent,
+    NgIf,
+    CommandExamplesListComponent,
+    PushPipe,
+  ],
   template: `
     <app-collapsible-element [name]="'Commands'" [heightResizable]="true" [contentHeight]="400" (collapseStateChanged)="collapsed = $event"
                              [codiconName]="'codicon-terminal'">

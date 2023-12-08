@@ -8,7 +8,7 @@ import type { Observable } from 'rxjs';
 
 import type { BatchJob } from '../models/BatchJob';
 import type { BatchJobCsv } from '../models/BatchJobCsv';
-import type { Method } from '../models/Method';
+import type { MethodAndState } from '../models/MethodAndState';
 import type { PlotConfiguration } from '../models/PlotConfiguration';
 import type { PlotLog } from '../models/PlotLog';
 import type { RunLog } from '../models/RunLog';
@@ -57,17 +57,17 @@ id: string,
     }
 
     /**
-     * Get Batch Job Method
+     * Get Batch Job Method And State
      * @param id 
-     * @returns Method Successful Response
+     * @returns MethodAndState Successful Response
      * @throws ApiError
      */
-    public getBatchJobMethod(
+    public getBatchJobMethodAndState(
 id: string,
-): Observable<Method> {
+): Observable<MethodAndState> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/batch_job/{id}/method',
+            url: '/api/batch_job/{id}/method-and-state',
             path: {
                 'id': id,
             },

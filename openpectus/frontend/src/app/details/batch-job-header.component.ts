@@ -1,4 +1,6 @@
+import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { LetDirective } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { DetailsActions } from './ngrx/details.actions';
 import { DetailsSelectors } from './ngrx/details.selectors';
@@ -6,6 +8,8 @@ import { DetailsSelectors } from './ngrx/details.selectors';
 @Component({
   selector: 'app-batch-job-header',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [LetDirective, DatePipe],
   template: `
     <ng-container *ngrxLet="batchJob as batchJob">
       <div class="text-slate-700 mb-1 relative">

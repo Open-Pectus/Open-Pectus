@@ -1,12 +1,25 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
+import { LetDirective } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { selectRouteParam } from '../ngrx/router.selectors';
+import { BatchJobHeaderComponent } from './batch-job-header.component';
 import { DetailsRoutingUrlParts } from './details-routing-url-parts';
+import { MethodEditorComponent } from './method-editor/method-editor.component';
 import { DetailsActions } from './ngrx/details.actions';
+import { ProcessPlotContainerComponent } from './process-plot/process-plot-container.component';
+import { RunLogComponent } from './run-log/run-log.component';
 
 @Component({
   selector: 'app-batch-job-details',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    LetDirective,
+    BatchJobHeaderComponent,
+    ProcessPlotContainerComponent,
+    MethodEditorComponent,
+    RunLogComponent,
+  ],
   template: `
     <div class="flex justify-center">
       <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:py-8 gap-4 lg:gap-8" *ngrxLet="batchJobId as batchJobId">

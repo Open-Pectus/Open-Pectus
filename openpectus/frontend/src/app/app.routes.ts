@@ -1,5 +1,4 @@
-import { NgModule } from '@angular/core';
-import { RouterModule, Routes } from '@angular/router';
+import { Routes } from '@angular/router';
 import { AuthCallbackComponent } from './auth/auth-callback.component';
 import { authGuard } from './auth/auth.guard';
 
@@ -7,15 +6,15 @@ export const dashboardUrlPart = 'dashboard';
 export const detailsUrlPart = 'details';
 export const authCallbackUrlPart = 'auth-callback';
 
-const routes: Routes = [
+export const APP_ROUTES: Routes = [
   {
     path: dashboardUrlPart,
-    loadChildren: () => import('./dashboard/dashboard.module').then(m => m.DashboardModule),
+    loadChildren: () => import('./dashboard/dashboard.routes'),
     canActivate: [authGuard],
   },
   {
     path: detailsUrlPart,
-    loadChildren: () => import('./details/details.module').then(m => m.DetailsModule),
+    loadChildren: () => import('./details/details.routes'),
     canActivate: [authGuard],
   },
   {
@@ -29,8 +28,4 @@ const routes: Routes = [
   },
 ];
 
-@NgModule({
-  imports: [RouterModule.forRoot(routes)],
-  exports: [RouterModule],
-})
-export class AppRoutingModule {}
+export default APP_ROUTES;

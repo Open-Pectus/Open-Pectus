@@ -1,10 +1,12 @@
+import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { BatchJob } from '../../api';
-import { detailsUrlPart } from '../../app-routing.module';
+import { detailsUrlPart } from '../../app.routes';
 import { DetailsRoutingUrlParts } from '../../details/details-routing-url-parts';
-import { DefaultTableSort, TableColumn, TableSortDirection } from '../../shared/table.component';
+import { DefaultTableSort, TableColumn, TableComponent, TableSortDirection } from '../../shared/table.component';
 import { DashboardActions } from '../ngrx/dashboard.actions';
 import { DashboardSelectors } from '../ngrx/dashboard.selectors';
 
@@ -12,6 +14,12 @@ import { DashboardSelectors } from '../ngrx/dashboard.selectors';
 @Component({
   selector: 'app-recent-batch-jobs',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    TableComponent,
+    NgIf,
+    PushPipe,
+  ],
   template: `
     <app-table class="w-full h-96" [columns]="columns" [data]="recentBatchJobs | ngrxPush" (rowClicked)="navigateToBatchJob($event)"
                [defaultSort]="defaultSort" [filter]="recenterBatchJobFilter | ngrxPush"></app-table>

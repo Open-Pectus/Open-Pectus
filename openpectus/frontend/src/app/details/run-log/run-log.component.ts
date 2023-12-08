@@ -1,13 +1,28 @@
+import { NgFor, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit, QueryList, ViewChildren } from '@angular/core';
+import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { RunLogLine } from '../../api';
+import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { RunLogActions } from './ngrx/run-log.actions';
 import { RunLogSelectors } from './ngrx/run-log.selectors';
+import { RunLogFiltersComponent } from './run-log-filters.component';
+import { RunLogHeaderComponent } from './run-log-header.component';
 import { RunLogLineComponent } from './run-log-line/run-log-line.component';
 
 @Component({
   selector: 'app-run-log',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    CollapsibleElementComponent,
+    RunLogFiltersComponent,
+    NgIf,
+    RunLogHeaderComponent,
+    NgFor,
+    RunLogLineComponent,
+    PushPipe,
+  ],
   template: `
     <app-collapsible-element [name]="'Run Log'" [heightResizable]="true" [contentHeight]="400" (collapseStateChanged)="collapsed = $event"
                              [codiconName]="'codicon-tasklist'">

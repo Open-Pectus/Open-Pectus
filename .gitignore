@@ -135,5 +135,4 @@ frontend-dist
 
 conda/*
 
-openpectus/engine/pint-cache/*
 pint-cache/*

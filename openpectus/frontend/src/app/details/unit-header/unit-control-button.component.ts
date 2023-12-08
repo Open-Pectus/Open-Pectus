@@ -1,3 +1,4 @@
+import { NgClass, TitleCasePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { DetailsActions } from '../ngrx/details.actions';
@@ -5,6 +6,8 @@ import { DetailsActions } from '../ngrx/details.actions';
 @Component({
   selector: 'app-unit-control-button',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [NgClass, TitleCasePipe],
   template: `
     <button class="py-2 pr-4 pl-3.5 rounded-lg text-white bg-slate-700 flex items-center gap-2"
             (click)="executeCommand()"

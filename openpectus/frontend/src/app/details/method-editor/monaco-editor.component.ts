@@ -29,10 +29,11 @@ const lineIdClassNamePrefix = 'line-id-';
 @Component({
   selector: 'app-monaco-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  styleUrls: ['monaco-editor.component.scss'],
   template: `
     <div #editor class="w-full h-full"></div>
   `,
-  styleUrls: ['monaco-editor.component.scss'],
 })
 export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   @Input() editorSizeChange?: Observable<void>;

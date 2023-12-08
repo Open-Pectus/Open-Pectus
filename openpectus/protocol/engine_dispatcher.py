@@ -30,9 +30,9 @@ class EngineDispatcher():
             self.disp = dispatcher
             self.engine_id = engine_id
 
-        async def _dispatch_message(self, message: M.MessageBase):
+        async def dispatch_message(self, message: dict[str, Any]):
             """ Dispath message to registered handler. """
-            return await self.disp._dispatch_message(message)
+            return await self.disp._dispatch_message(deserialize(message))
 
         async def get_engine_id(self):
             return self.engine_id
@@ -40,6 +40,7 @@ class EngineDispatcher():
     async def register_for_engine_id(self, uod_name: str):
         register_engine_msg = EM.RegisterEngineMsg(computer_name=socket.gethostname(), uod_name=uod_name)
         register_response = self.post(register_engine_msg)
+        logger.info("Registering for engine id")
         if not isinstance(register_response, AM.RegisterEngineReplyMsg) or not register_response.success:
             print("Failed to Register")
             return
@@ -66,17 +67,18 @@ class EngineDispatcher():
         super().__init__()
         self._handlers: Dict[type, Callable[[Any], Awaitable[M.MessageBase]]] = {}
         self._engine_id = None
+        self._aggregator_host = aggregator_host
+        self._uod_name = uod_name
 
         # TODO consider https/wss
         self.post_url = f"http://{aggregator_host}{AGGREGATOR_REST_PATH}"
-        asyncio.create_task(self.setup_websocket(aggregator_host, uod_name))
 
-    async def setup_websocket(self, aggregator_host: str, uod_name: str):
-        self.check_aggregator_alive_or_exit(aggregator_host)
+    async def connect_websocket(self):
+        self.check_aggregator_alive_or_exit(self._aggregator_host)
         while self._engine_id is None:
-            self._engine_id = await self.register_for_engine_id(uod_name)
+            self._engine_id = await self.register_for_engine_id(self._uod_name)
 
-        rpc_url = f"ws://{aggregator_host}{AGGREGATOR_RPC_WS_PATH}"
+        rpc_url = f"ws://{self._aggregator_host}{AGGREGATOR_RPC_WS_PATH}"
         rpc_methods = EngineDispatcher.EngineRpcMethods(self, self._engine_id)
         self.rpc_client = WebSocketRpcClient(uri=rpc_url, methods=rpc_methods)
         atexit.register(self.disconnect)
@@ -88,7 +90,9 @@ class EngineDispatcher():
     def post(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
         """ Send message via HTTP POST. """
         if (not isinstance(message, EM.RegisterEngineMsg)):  # Special case for registering
-            if (self._engine_id is None): return M.ErrorMessage(message="Engine did not have engine_id yet")
+            if (self._engine_id is None):
+                logger.error("Engine did not have engine_id yet")
+                return M.ErrorMessage(message="Engine did not have engine_id yet")
             message.engine_id = self._engine_id
         message_json = serialize(message)
         response = requests.post(url=self.post_url, json=message_json)

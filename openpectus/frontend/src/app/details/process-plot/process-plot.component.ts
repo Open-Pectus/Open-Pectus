@@ -17,10 +17,14 @@ import { ProcessPlotPlacement } from './process-plot.placement';
 import { ProcessPlotTooltip } from './process-plot.tooltip';
 import { D3Selection } from './process-plot.types';
 import { ProcessPlotZoomAndPan } from './process-plot.zoom-and-pan';
+import { XAxisOverrideDialogComponent } from './x-axis-override-dialog.component';
+import { YAxisOverrideDialogComponent } from './y-axis-override-dialog.component';
 
 @Component({
   selector: 'app-process-plot',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [YAxisOverrideDialogComponent, XAxisOverrideDialogComponent],
   template: `
     <svg class="h-full w-full overflow-visible select-none" #plot></svg>
     <app-y-axis-override-dialog class="top-0 left-0" [margin]="padding"></app-y-axis-override-dialog>
