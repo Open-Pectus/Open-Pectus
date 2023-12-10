@@ -15,8 +15,8 @@ class MessageBase(BaseModel):
     These inherit from pydantic BaseModel to support automatic (de-)serialization when sent over
     fastapi_websocket_pubsub. Additionally they support automatic openapi schema generation for
     use with REST.
-      """
-    pass
+    """
+    version: int = 0
 
 
 class SuccessMessage(MessageBase):
