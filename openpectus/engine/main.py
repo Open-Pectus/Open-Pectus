@@ -7,7 +7,7 @@ from openpectus.engine.demo_uod import create_demo_uod
 from openpectus.engine.engine import Engine
 from openpectus.engine.engine_message_handlers import EngineMessageHandlers
 from openpectus.engine.engine_reporter import EngineReporter
-from protocol.engine_dispatcher import EngineDispatcher
+from openpectus.protocol.engine_dispatcher import EngineDispatcher
 
 log_setup_colorlog()
 
@@ -34,7 +34,7 @@ async def async_main(args):
     dispatcher = EngineDispatcher(f"{args.aggregator_hostname}:{args.aggregator_port}", engine.uod.instrument)
     await dispatcher.connect_websocket()
     engine_reporter = EngineReporter(engine, dispatcher)
-    message_handlers = EngineMessageHandlers(engine, dispatcher)
+    _ = EngineMessageHandlers(engine, dispatcher)
     await engine_reporter.run_loop_async()
 
 

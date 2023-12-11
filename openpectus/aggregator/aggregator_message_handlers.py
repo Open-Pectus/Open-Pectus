@@ -22,7 +22,8 @@ class AggregatorMessageHandlers:
         engine_id = self.aggregator.create_engine_id(register_engine_msg)
         if self.aggregator.dispatcher.has_engine_id(engine_id):
             logger.error(
-                f"""Registration failed for engine_id {engine_id}. An engine with that engine_id already has a websocket connection. """
+                f"""Registration failed for engine_id {engine_id}. An engine with that engine_id already
+                has a websocket connection. """
             )
             return AM.RegisterEngineReplyMsg(success=False)
 
@@ -44,13 +45,15 @@ class AggregatorMessageHandlers:
         return AM.RegisterEngineReplyMsg(success=True, engine_id=engine_id)
 
     def validate_msg(self, msg: EM.EngineMessage):
-        if not self.aggregator.has_registered_engine_id(msg.engine_id): return AM.ErrorMessage(message=f'No engine registered under id {msg.engine_id}')
+        if not self.aggregator.has_registered_engine_id(msg.engine_id):
+            return AM.ErrorMessage(message=f'No engine registered under id {msg.engine_id}')
         # possibly more validations...
         return None
 
     async def handle_UodInfoMsg(self, msg: EM.UodInfoMsg) -> AM.SuccessMessage | AM.ErrorMessage:
         validation_errors = self.validate_msg(msg)
-        if validation_errors is not None: return validation_errors
+        if validation_errors is not None:
+            return validation_errors
 
         logger.debug(f"Got UodInfo from client: {str(msg)}")
         self.aggregator.from_engine.readings_changed(msg.engine_id, msg.readings)
@@ -58,7 +61,8 @@ class AggregatorMessageHandlers:
 
     async def handle_TagsUpdatedMsg(self, msg: EM.TagsUpdatedMsg) -> AM.SuccessMessage | AM.ErrorMessage:
         validation_errors = self.validate_msg(msg)
-        if validation_errors is not None: return validation_errors
+        if validation_errors is not None:
+            return validation_errors
 
         logger.debug(f"Got tags update from client: {str(msg)}")
         self.aggregator.from_engine.tag_values_changed(msg.engine_id, msg.tags)
@@ -66,7 +70,8 @@ class AggregatorMessageHandlers:
 
     async def handle_RunLogMsg(self, msg: EM.RunLogMsg) -> AM.SuccessMessage | AM.ErrorMessage:
         validation_errors = self.validate_msg(msg)
-        if validation_errors is not None: return validation_errors
+        if validation_errors is not None:
+            return validation_errors
 
         logger.debug(f"Got run log from client: {str(msg)}")
         self.aggregator.from_engine.runlog_changed(msg.engine_id, msg.runlog)
@@ -74,7 +79,8 @@ class AggregatorMessageHandlers:
 
     async def handle_ControlStateMsg(self, msg: EM.ControlStateMsg) -> AM.SuccessMessage | AM.ErrorMessage:
         validation_errors = self.validate_msg(msg)
-        if validation_errors is not None: return validation_errors
+        if validation_errors is not None:
+            return validation_errors
 
         logger.debug(f"Got control state from client: {str(msg)}")
         self.aggregator.from_engine.control_state_changed(msg.engine_id, msg.control_state)

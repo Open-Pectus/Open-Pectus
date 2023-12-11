@@ -27,7 +27,7 @@ class AggregatorServer:
         dispatcher = AggregatorDispatcher()
         publisher = FrontendPublisher()
         aggregator = _create_aggregator(dispatcher, publisher)
-        AggregatorMessageHandlers(aggregator)
+        _ = AggregatorMessageHandlers(aggregator)
         self.setup_fastapi([dispatcher.router, publisher.router])
 
     def setup_fastapi(self, additional_routers: List[APIRouter] = []):
@@ -40,7 +40,8 @@ class AggregatorServer:
         self.fastapi.include_router(process_unit.router, prefix=api_prefix)
         self.fastapi.include_router(batch_job.router, prefix=api_prefix)
         self.fastapi.include_router(auth.router, prefix='/auth')
-        for route in additional_routers: self.fastapi.include_router(route)
+        for route in additional_routers:
+            self.fastapi.include_router(route)
         if not os.path.exists(self.frontend_dist_dir):
             raise FileNotFoundError("frontend_dist_dir not found: " + self.frontend_dist_dir)
         self.fastapi.mount("/", SinglePageApplication(directory=self.frontend_dist_dir))
