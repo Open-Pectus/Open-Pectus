@@ -4,7 +4,7 @@ from typing import Any
 
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
-from openpectus.protocol.exceptions import ProtocolDeserializationException, ProtocolSerializationException
+from openpectus.protocol.exceptions import ProtocolDeserializationException
 import openpectus.protocol.messages as M
 
 _message_namespaces = [AM, EM, M]
