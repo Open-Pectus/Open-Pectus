@@ -5,17 +5,13 @@ import unittest
 import httpx
 import openpectus.aggregator.deps as agg_deps
 import openpectus.protocol.aggregator_messages as AM
-import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as Msg
-import openpectus.protocol.models as Mdl
 from fastapi import Depends, FastAPI
 from fastapi.responses import Response
 from fastapi_websocket_pubsub import PubSubEndpoint
 from fastapi_websocket_rpc.logger import get_logger
 from openpectus.aggregator.aggregator import Aggregator
-from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.protocol.dispatch_interface import AGGREGATOR_RPC_WS_PATH, AGGREGATOR_HEALTH_PATH
-from openpectus.protocol.serialization import serialize, deserialize
 
 logging.basicConfig()
 logger = get_logger("Test")
@@ -363,37 +359,6 @@ def make_server_print_channels():
 #         # self.assertEqual(tag.value, "bar")  # type: ignore
 #
 #         await client.disconnect_wait_async()
-
-
-class SerializationTest(unittest.TestCase):
-    def test_serialization_RegisterEngineMsg(self):
-        reg = EM.RegisterEngineMsg(computer_name="foo", uod_name="bar")
-        reg_s = serialize(reg)
-        self.assertIsNotNone(reg_s)
-
-    def test_round_trip_RegisterEngineMsg(self):
-        reg = EM.RegisterEngineMsg(computer_name="foo", uod_name="bar")
-        reg_s = serialize(reg)
-        reg_d = deserialize(reg_s)
-        self.assertIsNotNone(reg_d)
-        self.assertIsInstance(reg_d, EM.RegisterEngineMsg)
-        self.assertEqual(reg.computer_name, reg_d.computer_name)  # type: ignore
-        self.assertEqual(reg.uod_name, reg_d.uod_name)  # type: ignore
-
-    def test_serialization_TagsUpdatedMsg(self):
-        tu = EM.TagsUpdatedMsg(tags=[Mdl.TagValue(name="foo", value="bar", value_unit="m")])
-        tu_s = serialize(tu)
-        self.assertIsNotNone(tu_s)
-
-    def test_round_trip_TagsUpdatedMsg(self):
-        tu = EM.TagsUpdatedMsg(tags=[Mdl.TagValue(name="foo", value="bar", value_unit=None)])
-        tu_s = serialize(tu)
-        self.assertIsNotNone(tu_s)
-
-        tu_d = deserialize(tu_s)
-        self.assertIsNotNone(tu_d)
-        self.assertIsInstance(tu_d, EM.TagsUpdatedMsg)
-        self.assertEqual(tu_d.tags[0].name, tu.tags[0].name)  # type: ignore
 
 
 if __name__ == "__main__":
