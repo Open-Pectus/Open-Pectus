@@ -1,5 +1,4 @@
 import logging
-import os
 from argparse import ArgumentParser
 
 from openpectus import log_setup_colorlog
@@ -28,6 +27,7 @@ from openpectus.aggregator.aggregator_server import AggregatorServer
 
 log_setup_colorlog(root_loglevel=logging.INFO)
 logger = logging.getLogger("openpectus.aggregator.aggregator")
+logger.setLevel(logging.INFO)
 
 
 def get_args():
