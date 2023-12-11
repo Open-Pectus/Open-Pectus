@@ -12,9 +12,10 @@ class DBModel(DeclarativeBase):
 
 
 class ProcessUnitData(DBModel):
+    """Represents a live process unit (engine). """
+
     __tablename__ = "ProcessUnitData"
 
-    """Represents a live process unit (engine). """
     engine_id: Mapped[str] = mapped_column()
     state: Mapped[str] = mapped_column()
     location: Mapped[str] = mapped_column()
@@ -25,9 +26,10 @@ class ProcessUnitData(DBModel):
 
 
 class BatchJobData(DBModel):
+    """ Represents a historical run of a process unit. """
+
     __tablename__ = "BatchJobData"
 
-    """ Represents a historical run of a process unit. """
     engine_id: Mapped[str] = mapped_column()
     computer_name: Mapped[str] = mapped_column()
     uod_name: Mapped[str] = mapped_column()
