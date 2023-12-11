@@ -30,13 +30,13 @@ class DatabaseTest(unittest.TestCase):
 
         # select() raises when db does not exist
         with self.assertRaises(OperationalError):
-            with database.get_session() as session:
+            with database.SessionLocal() as session:
                 _ = session.execute(stmt)
 
         # create the tables
         database.create_db()
 
-        with database.get_session() as session:
+        with database.SessionLocal() as session:
             # now it works
             result = session.execute(stmt)
             # self.assertEqual(0, len(result))
@@ -50,7 +50,7 @@ class DatabaseTest(unittest.TestCase):
 
         self.assertEqual(model.id, None)
 
-        with database.get_session() as session:
+        with database.SessionLocal() as session:
             # now it works
             session.add(model)
             session.commit()
@@ -61,7 +61,7 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual(model.id, 1)
 
         stmt = select(DatabaseTest.TestModel).where(DatabaseTest.TestModel.id == 1)
-        with database.get_session() as session:
+        with database.SessionLocal() as session:
             result = session.execute(stmt)
             self.assertEqual(1, len(result.all()))
 
@@ -76,7 +76,7 @@ class SerializationTest(unittest.TestCase):
 
     def test_json_deserialization(self):
         data = D.ControlState(is_running=True, is_holding=False, is_paused=True)
-        json_dict = serialize(data)          
+        json_dict = serialize(data)
         instance = deserialize(json_dict)
         self.assertIsNotNone(instance)
         self.assertIsInstance(instance, D.ControlState)
@@ -114,14 +114,14 @@ class RepositoryTest(unittest.TestCase):
 
         entity_id = 0
 
-        with database.get_session() as s:
+        with database.SessionLocal() as s:
             s.add(entity)
             s.commit()
             entity_id = entity.id
 
         self.assertEqual(entity_id, 1)
 
-        with database.get_session() as s:
+        with database.SessionLocal() as s:
             repo = BatchJobDataRepository(s)
 
             created_entity = repo.get_by_id(entity_id)
@@ -139,14 +139,14 @@ class RepositoryTest(unittest.TestCase):
 
         entity_id = 0
 
-        with database.get_session() as s:
+        with database.SessionLocal() as s:
             s.add(entity)
             s.commit()
             entity_id = entity.id
 
         self.assertEqual(1, entity.id)
 
-        with database.get_session() as s:            
+        with database.SessionLocal() as s:
             repo = BatchJobDataRepository(s)
 
             created_entity = repo.get_by_id(entity_id)
@@ -154,7 +154,7 @@ class RepositoryTest(unittest.TestCase):
             created_entity.computer_name = "updated_computer_name"
             s.commit()
 
-        with database.get_session() as s:
+        with database.SessionLocal() as s:
             repo = BatchJobDataRepository(s)
 
             updated_entity = repo.get_by_id(entity_id)
@@ -171,11 +171,11 @@ class RepositoryTest(unittest.TestCase):
         entity.uod_name = "my_uod_name"
         entity.contributors = ['foo', 'bar']
 
-        with database.get_session() as s:
+        with database.SessionLocal() as s:
             s.add(entity)
             s.commit()
 
-        with database.get_session() as s:
+        with database.SessionLocal() as s:
             repo = BatchJobDataRepository(s)
             created_entity = repo.get_by_engine_id("my_eng_id")
             self.assertIsNotNone(created_entity)
@@ -192,14 +192,14 @@ class RepositoryTest(unittest.TestCase):
 
         entity_id = 0
 
-        with database.get_session() as s:
+        with database.SessionLocal() as s:
             s.add(entity)
             s.commit()
             entity_id = entity.id
 
         self.assertEqual(1, entity.id)
 
-        with database.get_session() as s:
+        with database.SessionLocal() as s:
             repo = BatchJobDataRepository(s)
 
             created_entity = repo.get_by_id(entity_id)
@@ -212,7 +212,7 @@ class RepositoryTest(unittest.TestCase):
             created_entity.contributors = contributors
             s.commit()
 
-        with database.get_session() as s:
+        with database.SessionLocal() as s:
             repo = BatchJobDataRepository(s)
             updated_entity = repo.get_by_id(entity_id)
             assert updated_entity is not None

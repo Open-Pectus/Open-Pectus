@@ -136,3 +136,4 @@ frontend-dist
 conda/*
 
 pint-cache/*
+openpectus/aggregator/aggregator_data.db
