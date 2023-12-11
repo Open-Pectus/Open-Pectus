@@ -46,7 +46,7 @@ npm run build
 
 ## 2.2. Backend setup
 Prerequisites:
-- A conda installation. [Miniconda](https://docs.conda.io/en/latest/miniconda.html) is recommended.  
+- A conda installation. [Miniconda](https://docs.conda.io/en/latest/miniconda.html) is recommended.
   _Note: It is possible to install open pectus without conda but this will affect the global python environment on the developer pc
   so this in not recommended._
 - Java SE SDK (optional, only needed for parser generation when updating P-code grammar)
@@ -57,12 +57,12 @@ All the following commands can only be run from within the (mini)conda prompt, a
 
 Create a new conda environment and install all dependencies:
 ```shell
-conda env create -n=pectus --file=environment.yml
+conda env create -p=./conda --file=environment.yml
 ```
 
 Activate the created pectus conda environment:
 ```shell
-conda activate pectus
+conda activate ./conda
 ```
 
 Install open pectus in the environment:
@@ -73,11 +73,12 @@ pip install -e .
 ### 2.2.2. Other commands
 **To update an existing conda environment with all dependencies (e.g. when requirements.txt has changed):**
 ```shell
-conda env update -n=pectus --file=environment.yml --prune
+conda env update -p=./conda --file=environment.yml --prune
 ```
 
+
 **To build a distribution:**
-_The build server builds a distribution. This is not normally needed in a developer environment but can be necessary to test building docker images.  
+_The build server builds a distribution. This is not normally needed in a developer environment but can be necessary to test building docker images.
 Optionally, to include frontend in the build, build the frontend and copy the contents of `openpectus/frontend/dist` into `openpectus/aggregator/frontend-dist` before building the distribution._
 
 ```shell
@@ -151,7 +152,7 @@ pectus-engine --aggregator_host localhost --aggregator_port 8300
 
 # 4. User Authorization
 
-To ensure not everyone can access the data and control the experiments, as well as enable logging who did what, Pectus can integrate with an identity provider using an oAuth/OIDC login flow. 
+To ensure not everyone can access the data and control the experiments, as well as enable logging who did what, Pectus can integrate with an identity provider using an oAuth/OIDC login flow.
 
 Currently, we only support Azure AD.
 
@@ -262,55 +263,55 @@ This chapter documents the Open Pectus Rest and Websocket protocols.
 ## 7.1. Frontend - Aggregator
 ```mermaid
 sequenceDiagram
-    participant F as Frontend    
+    participant F as Frontend
     participant A as Aggregator
 
     Note right of A: REST
 
-    Note over F, A: Dashboard    
+    Note over F, A: Dashboard
     F ->> A: GET process_units
-    A -->> F: 
+    A -->> F:
     F ->> A: GET recent_batch_jobs
-    A -->> F: 
+    A -->> F:
 
     Note over F, A: Unit Details
 
     F ->> A: GET process_unit/{id}/command_examples
-    A -->> F: 
+    A -->> F:
     F ->> A: GET process_unit/{id}/process_diagram
-    A -->> F: 
+    A -->> F:
     F ->> A: GET process_unit/{id}/plot_configuration
-    A -->> F: 
+    A -->> F:
 
     loop polling now, websocket in future
     F ->> A: GET process_unit/{id}/method
-    A -->> F: 
+    A -->> F:
     end
     loop polling now, websocket in future
     F ->> A: GET process_unit/{id}/run_log
-    A -->> F: 
+    A -->> F:
     end
     loop polling now, maybe websocket in future
     F ->> A: GET process_unit/{id}/process_values
-    A -->> F: 
+    A -->> F:
     end
 
     Note over F, A: Command window
     alt Execute command
     F ->> A: POST process_unit/{id}/execute_command
-    A -->> F: 
+    A -->> F:
     end
 
     Note over F, A: Method Editor
     alt Save method
     F ->> A: POST process_unit/{id}/method
-    A -->> F: 
+    A -->> F:
     end
-    
-    Note over F, A: Run controls    
+
+    Note over F, A: Run controls
     alt Start/Pause/Hold/Stop
     F ->> A: POST process_unit/{id}/execute_command
-    A -->> F: 
+    A -->> F:
     end
 ```
 
@@ -323,7 +324,7 @@ sequenceDiagram
 %%note left of E: Registration
     Note right of E: Web Socket
     E ->> A: connect
-    A -->> E: 
+    A -->> E:
     E ->> A: RegisterEngineMsg
     A -->> E: [engine_id]
     Note over A,E: A knows E is running
@@ -333,27 +334,27 @@ sequenceDiagram
 
 
 %%note left of E: Engine running
-    
+
     loop Every second
     E ->> A: TagsUpdatedMsg
-    A -->> E: 
+    A -->> E:
     end
 
     alt User: Run command
     A ->> E: InvokeCommandMsg
-    E -->> A: 
+    E -->> A:
     end
 
     alt User: Change run state
     A ->> E: InvokeCommandMsg
-    E -->> A: 
+    E -->> A:
     end
 
 ```
 
 ## 7.3 Aggregator states per engine
 ```mermaid
-stateDiagram-v2    
+stateDiagram-v2
     Engine_Unknown --> Engine_Registered: [engine registers]
     Engine_Registered --> Engine_Connected: [ws connect]
     Engine_Connected --> Engine_Registered: [ws disconnect, other]
