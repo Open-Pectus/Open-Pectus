@@ -18,7 +18,6 @@ class EngineMessageHandlers():
         pcode = '\n'.join(line.content for line in method_msg.method.lines)
         try:
             self.engine.set_program(pcode)
-            logger.info("New method set")
             return AM.SuccessMessage()
         except Exception as ex:
             logger.error("Failed to set method")

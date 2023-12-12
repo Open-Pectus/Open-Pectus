@@ -33,7 +33,7 @@ class Engine(InterpreterContext):
     """ Main engine class. Handles
     - io loop, reads and writes hardware process image (sync)
     - invokes interpreter to interpret next instruction (sync, generator based)
-    - signals state changes via tag_updates queue (to aggregator via websockets, natively async)
+    - signals state changes via tag_updates queue (to EngineReporter)
     - accepts commands from cmd_queue (from interpreter and from aggregator)
     """
 

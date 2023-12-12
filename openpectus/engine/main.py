@@ -32,7 +32,7 @@ async def async_main(args):
     uod = create_demo_uod()
     engine = Engine(uod, tick_interval=1)
     dispatcher = EngineDispatcher(f"{args.aggregator_hostname}:{args.aggregator_port}", engine.uod.instrument)
-    await dispatcher.connect_websocket()
+    await dispatcher.connect_websocket_async()
     engine_reporter = EngineReporter(engine, dispatcher)
     _ = EngineMessageHandlers(engine, dispatcher)
     await engine_reporter.run_loop_async()

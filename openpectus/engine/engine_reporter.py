@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import time
 from queue import Empty
 from typing import List
 
@@ -21,35 +20,40 @@ class EngineReporter():
         self.engine = engine
         self.engine.run()
 
-    async def stop(self):
-        await self.dispatcher.disconnect()
+    async def stop_async(self):
+        await self.dispatcher.disconnect_async()
         self.engine.stop()
 
     async def run_loop_async(self):
         try:
             init_succeeded = False
-            while (not init_succeeded):
-                init_succeeded = await self.send_uod_info_async()
-                if init_succeeded: await self.notify_initial_tags_async()
-                if not init_succeeded: time.sleep(10)
+            while not init_succeeded:
+                init_succeeded = self.send_uod_info()
+                if init_succeeded:
+                    self.notify_initial_tags()
+                if not init_succeeded:
+                    await asyncio.sleep(10)
 
             while True:
                 await asyncio.sleep(1)
-                await self.send_tag_updates_async()
-                await self.send_runlog_async()
-                await self.send_control_state_async()
+                self.send_tag_updates()
+                self.send_runlog()
+                self.send_control_state()
         except KeyboardInterrupt:
-            await self.stop()
+            # TODO this causes an asyncio exception, sometimes the process even halts
+            # look into handling this in main instead like this with cleanup:
+            # https://stackoverflow.com/questions/54525836/where-do-i-catch-the-keyboardinterrupt-exception-in-this-async-setup#54528397
+            await self.stop_async()
         except asyncio.CancelledError:
             return
         except Exception:
             logger.error("Unhandled exception in run_loop_async", exc_info=True)
 
-    async def notify_initial_tags_async(self):
+    def notify_initial_tags(self):
         self.engine.notify_initial_tags()
-        await self.send_tag_updates_async()
+        self.send_tag_updates()
 
-    async def send_uod_info_async(self):
+    def send_uod_info(self):
         readings: List[Mdl.ReadingInfo] = []
         for r in self.engine.uod.readings:
             tag_name = self.map_and_filter_tag_name(r.tag_name)
@@ -76,7 +80,7 @@ class EngineReporter():
             case _:
                 return tag_name
 
-    async def send_tag_updates_async(self):
+    def send_tag_updates(self):
         tags = []
         try:
             for _ in range(100):
@@ -90,7 +94,7 @@ class EngineReporter():
             msg = EM.TagsUpdatedMsg(tags=tags)
             self.dispatcher.post(msg)
 
-    async def send_runlog_async(self):
+    def send_runlog(self):
         def to_value(t: TagValue) -> Mdl.TagValue:
             return Mdl.TagValue(name=t.name, value=t.value, value_unit=t.unit)
 
@@ -114,7 +118,7 @@ class EngineReporter():
         )
         self.dispatcher.post(msg)
 
-    async def send_control_state_async(self):
+    def send_control_state(self):
         msg = EM.ControlStateMsg(control_state=Mdl.ControlState(
             is_running=self.engine._runstate_started,
             is_holding=self.engine._runstate_holding,
