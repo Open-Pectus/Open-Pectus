@@ -6,6 +6,7 @@ from openpectus.protocol.engine_dispatcher import EngineDispatcher
 
 logger = logging.getLogger(__name__)
 
+
 class EngineMessageHandlers():
     def __init__(self, engine: Engine, dispatcher: EngineDispatcher) -> None:
         self.engine = engine

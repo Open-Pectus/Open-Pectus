@@ -30,9 +30,16 @@ class EngineDispatcher():
             self.disp = dispatcher
             self.engine_id = engine_id
 
-        async def dispatch_message(self, message: dict[str, Any]):
+        async def dispatch_message(self, message_json: dict[str, Any]):
             """ Dispath message to registered handler. """
-            return await self.disp._dispatch_message(deserialize(message))
+            try:
+                message = deserialize(message_json)
+                assert isinstance(message, M.MessageBase)
+            except Exception:
+                logger.error("Dispatch failed. Message deserialization failed.", exc_info=True)
+                return
+
+            return await self.disp._dispatch_message(message)
 
         async def get_engine_id(self):
             return self.engine_id
@@ -94,16 +101,26 @@ class EngineDispatcher():
                 logger.error("Engine did not have engine_id yet")
                 return M.ErrorMessage(message="Engine did not have engine_id yet")
             message.engine_id = self._engine_id
-        message_json = serialize(message)
+
+        try:
+            message_json = serialize(message)
+        except Exception:
+            logger.error("Message serialization failed", exc_info=True)
+            return M.ErrorMessage(message="Post failed")
+
         response = requests.post(url=self.post_url, json=message_json)
         if response.status_code == 200:
             response_json = response.json()
-            value = deserialize(response_json)
-            return value
+            try:
+                value = deserialize(response_json)
+                return value
+            except Exception:
+                logger.error("Message deserialization failed", exc_info=True)
+                return M.ErrorMessage(message="Post succeeded but result deserialization failed")
         else:
             message_type = type(message)
             logger.error(f"Non-success http status code: {response.status_code} for input message type: {message_type}")
-            return M.ErrorMessage(message=f"Post failed with message {message_type}")
+            return M.ErrorMessage(message="Post failed")
 
     async def _dispatch_message(self, message: M.MessageBase):
         """ Dispath message to registered handler. """
@@ -113,11 +130,16 @@ class EngineDispatcher():
         except KeyError:
             logger.warning(f"Dispatch failed for message type: {message_type}. No handler registered.")
         except Exception:
-            logger.warning(f"Dispatch failed for message type: {message_type}. A handler was registered, but failed somehow.", exc_info=True)
+            logger.warning(
+                f"Dispatch failed for message type: {message_type}. A handler was registered, but failed somehow.",
+                exc_info=True)
 
     MessageToHandle = TypeVar("MessageToHandle", bound=M.MessageBase)
 
-    def set_rpc_handler(self, message_type: type[MessageToHandle], handler: Callable[[MessageToHandle], Awaitable[M.MessageBase]]):
+    def set_rpc_handler(
+            self,
+            message_type: type[MessageToHandle],
+            handler: Callable[[MessageToHandle], Awaitable[M.MessageBase]]):
         """ Set handler for message_type. """
         if message_type in self._handlers.keys():
             logger.error(f"Handler for message type {message_type} is already set.")

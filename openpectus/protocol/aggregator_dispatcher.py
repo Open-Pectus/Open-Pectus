@@ -29,9 +29,12 @@ class AggregatorDispatcher():
         self._engine_id_channel_map: Dict[str, RpcChannel] = {}
         self._handlers: Dict[type, Callable[[Any], Awaitable[M.MessageBase]]] = {}
         self._register_handler: RegisterHandler | None = None
-        # WebsockeRPCEndpoint has wrong types for its on_connect and on_disconnect. It should be List[Callable[[RpcChannel], Awaitable[Any]]] instead of List[Coroutine]
+        # WebsockeRPCEndpoint has wrong types for its on_connect and on_disconnect.
+        # It should be List[Callable[[RpcChannel], Awaitable[Any]]] instead of List[Coroutine]
         # See https://github.com/permitio/fastapi_websocket_rpc/issues/30
-        self.endpoint = WebsocketRPCEndpoint(on_connect=[self.on_client_connect], on_disconnect=[self.on_client_disconnect]) # type: ignore
+        self.endpoint = WebsocketRPCEndpoint(
+            on_connect=[self.on_client_connect],  # type: ignore
+            on_disconnect=[self.on_client_disconnect])  # type: ignore
         self.endpoint.register_route(self.router, path=AGGREGATOR_RPC_WS_PATH)
         self.register_post_route(self.router)
 
@@ -39,8 +42,10 @@ class AggregatorDispatcher():
         return engine_id in self._engine_id_channel_map.keys()
 
     async def on_delayed_client_connect(self, channel: RpcChannel):
-        """ We 'delay' our on_connect callback because the WebsocketRPCEndpoint calls on_connect callbacks before it starts listening to responses to rpc calls.
-         When we use create_task(), in on_client_connect() below, to call this method, we ensure that WebsocketRPCEndpoint starts listening to responses before we call get_engine_id() over rpc. """
+        """ We 'delay' our on_connect callback because the WebsocketRPCEndpoint calls on_connect callbacks before it starts
+        listening to responses to rpc calls. When we use create_task(), in on_client_connect() below, to call this method,
+        we ensure that WebsocketRPCEndpoint starts listening to responses before we call get_engine_id() over rpc.
+        """
         try:
             response = await channel.other.get_engine_id()
             assert isinstance(response, RpcResponse)
@@ -54,7 +59,7 @@ class AggregatorDispatcher():
                 return await channel.close()
             logger.info(f"Engine connected with engine_id: {engine_id}")
             self._engine_id_channel_map[engine_id] = channel
-        except:
+        except Exception:
             logger.error("on_client_connect failed with exception", exc_info=True)
             return await channel.close()
 
@@ -62,35 +67,54 @@ class AggregatorDispatcher():
         asyncio.create_task(self.on_delayed_client_connect(channel))
 
     async def on_client_disconnect(self, channel: RpcChannel):
-        self._engine_id_channel_map = {key:value for key, value in self._engine_id_channel_map.items() if value != channel}
+        self._engine_id_channel_map = {key: value for key, value in self._engine_id_channel_map.items() if value != channel}
 
     async def rpc_call(self, engine_id: str, message: M.MessageBase) -> M.MessageBase:
         if engine_id not in self._engine_id_channel_map.keys():
             raise ProtocolException("Unknown engine: " + engine_id)
 
         channel = self._engine_id_channel_map[engine_id]
-        response = await channel.other.dispatch_message(message=serialize(message))
+        try:
+            message_json = serialize(message)
+        except Exception:
+            logger.error(f"Message serialization failed, message type: {type(message).__name__}")
+            raise ProtocolException("Serialization error")
+
+        response = await channel.other.dispatch_message(message_json=message_json)
         return response
 
     def register_post_route(self, router: APIRouter | FastAPI):
         @router.post(AGGREGATOR_REST_PATH)
         async def post(request: Request):
             request_json = await request.json()
-            message = deserialize(request_json)
+            try:
+                message = deserialize(request_json)
+            except Exception:
+                logger.error(f"Message deserialization failed, json:\n{request_json}\n", exc_info=True)
+                raise ProtocolException("Deserialization error")
+
             if not isinstance(message, EM.RegisterEngineMsg) and not isinstance(message, EM.EngineMessage):
-                raise ValueError("Wrong kind of message sent from Engine")
+                raise ValueError(f"Invalid type of message sent from Engine: {type(message).__name__}")
             response_message = await self._dispatch_post(message)
 
-            message_json = serialize(response_message)
+            try:
+                message_json = serialize(response_message)
+            except Exception:
+                logger.error(f"Message serialization failed, message type: {type(response_message).__name__}")
+                raise ProtocolException("Serialization error")
+
             return message_json
 
     async def _dispatch_post(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
         """ Dispath message to registered handler. """
         if isinstance(message, EM.RegisterEngineMsg):
-            if self._register_handler is None: return M.ProtocolErrorMessage(protocol_msg="Missing handler for registering engine!")
+            if self._register_handler is None:
+                return M.ProtocolErrorMessage(protocol_msg="Missing handler for registering engine!")
             return await self._register_handler(message)
 
-        if message.engine_id == '': return M.ProtocolErrorMessage(protocol_msg="Failed to handle engine message as its engine_id was the empty string")
+        if message.engine_id == '':
+            return M.ProtocolErrorMessage(
+                protocol_msg="Failed to handle engine message as its engine_id was the empty string")
         message_type = type(message)
         if message_type in self._handlers.keys():
             try:
@@ -104,7 +128,10 @@ class AggregatorDispatcher():
 
     MessageToHandle = TypeVar("MessageToHandle", bound=EM.EngineMessage)
 
-    def set_post_handler(self, message_type: type[MessageToHandle], handler: Callable[[MessageToHandle], Awaitable[M.MessageBase]]):
+    def set_post_handler(
+            self,
+            message_type: type[MessageToHandle],
+            handler: Callable[[MessageToHandle], Awaitable[M.MessageBase]]):
         """ Set handler for message_type. """
         if message_type in self._handlers.keys():
             logger.error(f"Handler for message type {message_type} is already set.")
