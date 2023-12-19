@@ -36,6 +36,10 @@ class FrontendPublisher:
     async def publish_method_changed(self, unitId: str):
         await self.pubsub_endpoint.publish(f'{unitId}/{PubSubTopic.METHOD}')
 
+    async def publish_method_state_changed(self, unitId: str):
+        # for now we use PubSubTopic.METHOD for both Method and MethodState changes
+        await self.pubsub_endpoint.publish(f'{unitId}/{PubSubTopic.METHOD}')
+
     async def publish_control_state_changed(self, unitId: str):
         await self.pubsub_endpoint.publish(f'{unitId}/{PubSubTopic.CONTROL_STATE}')
 

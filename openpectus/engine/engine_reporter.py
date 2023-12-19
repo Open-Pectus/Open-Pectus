@@ -39,11 +39,7 @@ class EngineReporter():
                 self.send_tag_updates()
                 self.send_runlog()
                 self.send_control_state()
-        except KeyboardInterrupt:
-            # TODO this causes an asyncio exception, sometimes the process even halts
-            # look into handling this in main instead like this with cleanup:
-            # https://stackoverflow.com/questions/54525836/where-do-i-catch-the-keyboardinterrupt-exception-in-this-async-setup#54528397
-            await self.stop_async()
+                self.send_method_state()
         except asyncio.CancelledError:
             return
         except Exception:
@@ -126,15 +122,7 @@ class EngineReporter():
         ))
         self.dispatcher.post(msg)
 
-    # async def get_method(self) -> M.MethodMsg | M.RpcErrorMessage:
-    #     code = self.engine._pcode
-    #     lines = code.splitlines(keepends=True)
-    #
-    #     proxy_logger.info(f"Returning method with {len(lines)} lines")
-    #
-    #     # TODO get line ids and status from interpreter
-    #     return M.MethodMsg(
-    #         lines=[M.MethodLineMsg(id="", content=line) for line in lines],
-    #         started_line_ids=[],
-    #         executed_line_ids=[],
-    #         injected_line_ids=[])
+    def send_method_state(self):
+        state = self.engine.get_method_state()
+        msg = EM.MethodStateMsg(method_state=state)
+        self.dispatcher.post(msg)

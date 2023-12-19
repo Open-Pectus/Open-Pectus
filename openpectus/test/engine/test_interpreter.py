@@ -20,6 +20,8 @@ TICK_INTERVAL = 0.1
 logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
 logger = logging.getLogger("Engine")
 logger.setLevel(logging.DEBUG)
+# logger = logging.getLogger("openpectus.lang.exec.pinterpreter")
+# logger.setLevel(logging.DEBUG)
 
 
 # def warmup_pint(self):
