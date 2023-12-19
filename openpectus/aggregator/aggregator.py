@@ -10,6 +10,7 @@ from openpectus.aggregator.data.repository import PlotLogRepository
 from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.aggregator.models import EngineData
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -25,25 +26,25 @@ class FromEngine:
     def register_engine_data(self, engine_data: EngineData):
         self._engine_data_map[engine_data.engine_id] = engine_data
 
-    def readings_changed(self, engine_id: str, readings: List[Mdl.ReadingInfo]):
+    def readings_changed(self, engine_id: str, readings: List[Mdl.ReadingInfo], db_session: Session):
         try:
             self._engine_data_map[engine_id].readings = readings
-            self.plot_log_repository.create_plot_log(self._engine_data_map[engine_id])
+            self.plot_log_repository.create_plot_log(self._engine_data_map[engine_id], db_session)
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set readings.')
 
-    def tag_values_changed(self, engine_id: str, tag_values: List[Mdl.TagValue]):
+    def tag_values_changed(self, engine_id: str, tag_values: List[Mdl.TagValue], db_session: Session):
         try:
             engine_data = self._engine_data_map[engine_id]
             for tag_value in tag_values:
                 was_inserted = engine_data.tags_info.upsert(tag_value)
                 if was_inserted:
-                    self.plot_log_repository.store_new_tag_info(engine_id, tag_value)
-            self.plot_log_repository.store_tag_values(engine_id, tag_values)
+                    self.plot_log_repository.store_new_tag_info(engine_id, tag_value, db_session)
+            self.plot_log_repository.store_tag_values(engine_id, tag_values, db_session)
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to upsert tag values.')
 
-    def runlog_changed(self, engine_id: str, runlog: Mdl.RunLog):
+    def runlog_changed(self, engine_id: str, runlog: Mdl.RunLog, db_session: Session):
         try:
             engine_data = self._engine_data_map[engine_id]
             if engine_data.runlog != runlog:
@@ -52,7 +53,7 @@ class FromEngine:
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set run log.')
 
-    def control_state_changed(self, engine_id: str, control_state: Mdl.ControlState):
+    def control_state_changed(self, engine_id: str, control_state: Mdl.ControlState, db_session: Session):
         try:
             engine_data = self._engine_data_map[engine_id]
             if engine_data.control_state != control_state:
@@ -61,7 +62,7 @@ class FromEngine:
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set control state.')
 
-    def method_state_changed(self, engine_id: str, control_state: Mdl.ControlState):
+    def method_state_changed(self, engine_id: str, control_state: Mdl.ControlState, db_session: Session):
         try:
             engine_data = self._engine_data_map[engine_id]
             if engine_data.control_state != control_state:

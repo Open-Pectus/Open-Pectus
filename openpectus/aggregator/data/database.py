@@ -29,6 +29,7 @@ def create_db():
     if len(reg.mappers) == 0:
         raise ValueError("No data classes have been mapped")
 
+    reg.metadata.drop_all(engine)
     reg.metadata.create_all(engine)
 
 
