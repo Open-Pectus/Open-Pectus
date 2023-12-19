@@ -35,7 +35,6 @@ class PNode():
         self.errors: List[PError] | None = None
         """ Errors encountered during parsing. """
 
-
         if self.parent is not None and self.parent.children is not None:
             self.parent.children.append(self)
 

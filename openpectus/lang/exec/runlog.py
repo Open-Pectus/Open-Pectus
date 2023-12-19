@@ -102,9 +102,8 @@ class RuntimeInfo():
             else:
                 item.state = RunLogItemState.Waiting
 
-            
             if item.start is None:
-                # TODO this should not happend, should it?
+                # TODO this should not happen, should it?
                 item.start = r.visit_start_time
 
             items.append(item)

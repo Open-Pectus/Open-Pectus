@@ -82,13 +82,13 @@ class TestAE_EngineDispatcher_Impl(IsolatedAsyncioTestCase):
         disp.set_rpc_handler(AM.InvokeCommandMsg, handler)
 
         # dispatch unrelated message
-        await disp._dispatch_message(M.MessageBase())
+        await disp._dispatch_message_async(M.MessageBase())
 
         await asyncio.sleep(2)
         self.assertTrue(not finish.is_set())
 
         # dispatch handled message
-        await disp._dispatch_message(AM.InvokeCommandMsg(name="foo"))
+        await disp._dispatch_message_async(AM.InvokeCommandMsg(name="foo"))
 
         await asyncio.wait_for(finish.wait(), 5)
         self.assertTrue(finish.is_set())

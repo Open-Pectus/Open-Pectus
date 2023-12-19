@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import atexit
 import logging
 import socket
@@ -30,7 +29,7 @@ class EngineDispatcher():
             self.disp = dispatcher
             self.engine_id = engine_id
 
-        async def dispatch_message(self, message_json: dict[str, Any]):
+        async def dispatch_message_async(self, message_json: dict[str, Any]):
             """ Dispath message to registered handler. """
             try:
                 message = deserialize(message_json)
@@ -39,12 +38,13 @@ class EngineDispatcher():
                 logger.error("Dispatch failed. Message deserialization failed.", exc_info=True)
                 return
 
-            return await self.disp._dispatch_message(message)
+            return await self.disp._dispatch_message_async(message)
 
-        async def get_engine_id(self):
+        async def get_engine_id_async(self):
+            # Note: Must be async since it is invoked by RPC
             return self.engine_id
 
-    async def register_for_engine_id(self, uod_name: str):
+    async def register_for_engine_id_async(self, uod_name: str):
         register_engine_msg = EM.RegisterEngineMsg(computer_name=socket.gethostname(), uod_name=uod_name)
         register_response = self.post(register_engine_msg)
         logger.info("Registering for engine id")
@@ -80,18 +80,18 @@ class EngineDispatcher():
         # TODO consider https/wss
         self.post_url = f"http://{aggregator_host}{AGGREGATOR_REST_PATH}"
 
-    async def connect_websocket(self):
+    async def connect_websocket_async(self):
         self.check_aggregator_alive_or_exit(self._aggregator_host)
         while self._engine_id is None:
-            self._engine_id = await self.register_for_engine_id(self._uod_name)
+            self._engine_id = await self.register_for_engine_id_async(self._uod_name)
 
         rpc_url = f"ws://{self._aggregator_host}{AGGREGATOR_RPC_WS_PATH}"
         rpc_methods = EngineDispatcher.EngineRpcMethods(self, self._engine_id)
         self.rpc_client = WebSocketRpcClient(uri=rpc_url, methods=rpc_methods)
-        atexit.register(self.disconnect)
+        atexit.register(self.disconnect_async)
         await self.rpc_client.__aenter__()
 
-    async def disconnect(self):
+    async def disconnect_async(self):
         await self.rpc_client.__aexit__()
 
     def post(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
@@ -122,7 +122,7 @@ class EngineDispatcher():
             logger.error(f"Non-success http status code: {response.status_code} for input message type: {message_type}")
             return M.ErrorMessage(message="Post failed")
 
-    async def _dispatch_message(self, message: M.MessageBase):
+    async def _dispatch_message_async(self, message: M.MessageBase):
         """ Dispath message to registered handler. """
         message_type = type(message)
         try:

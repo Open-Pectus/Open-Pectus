@@ -14,7 +14,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
 
     async def create_channel_mock(self, engine_id: str | None):
         response = RpcResponse[str | None](result=engine_id, result_type=None)
-        return Mock(close=AsyncMock(), other=Mock(get_engine_id=AsyncMock(return_value=response)))
+        return Mock(close=AsyncMock(), other=Mock(get_engine_id_async=AsyncMock(return_value=response)))
 
     async def connectRpc(self, dispatcher: AggregatorDispatcher, engine_id: str | None):
         channel = await self.create_channel_mock(engine_id)
@@ -28,7 +28,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
     async def test_register_engine(self):
         dispatcher = AggregatorDispatcher()
         aggregator = Aggregator(dispatcher, Mock())
-        messageHandlers = AggregatorMessageHandlers(aggregator)
+        _ = AggregatorMessageHandlers(aggregator)
         register_engine_msg = EM.RegisterEngineMsg(computer_name='computer-name', uod_name='uod-name')
         engine_id = aggregator.create_engine_id(register_engine_msg)
 
