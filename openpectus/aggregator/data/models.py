@@ -75,11 +75,28 @@ class PlotLogEntryValue(DBModel):
     value_int: Mapped[Optional[int]] = mapped_column()
 
 
+ProcessValueValueType = str | float | int | None
+
+
 class ProcessValueType(StrEnum):
     STRING = auto()
     FLOAT = auto()
     INT = auto()
     CHOICE = auto()
+    NONE = auto()
+
+
+def get_ProcessValueType_from_value(value: ProcessValueValueType) -> ProcessValueType:
+    if value is None:
+        return ProcessValueType.NONE
+    if isinstance(value, str):
+        return ProcessValueType.STRING
+    elif isinstance(value, int):
+        return ProcessValueType.INT
+    elif isinstance(value, float):
+        return ProcessValueType.FLOAT
+    else:
+        raise ValueError("Invalid value type: " + type(value).__name__)
 
 
 class PlotLogEntry(DBModel):
@@ -87,7 +104,7 @@ class PlotLogEntry(DBModel):
     name: Mapped[str] = mapped_column()
     values: Mapped[List[PlotLogEntryValue]] = relationship(cascade="all, delete-orphan")
     value_unit: Mapped[str | None] = mapped_column()
-    value_type: Mapped[ProcessValueType] = mapped_column()
+    value_type: Mapped[ProcessValueType | None] = mapped_column()
     plot_log_id: Mapped[int] = mapped_column(ForeignKey('PlotLogs.id'))
     plot_log: Mapped[PlotLog] = relationship(back_populates='entries')
 

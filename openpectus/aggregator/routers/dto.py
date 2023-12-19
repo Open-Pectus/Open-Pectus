@@ -111,7 +111,7 @@ class ProcessValueCommand(BaseModel):
 ProcessValueValueType = str | float | int | None
 
 
-def get_ProcessValueType_from_value(value: str | float | int | None) -> ProcessValueType:
+def get_ProcessValueType_from_value(value: ProcessValueValueType) -> ProcessValueType:
     if value is None:
         return ProcessValueType.STRING  # hmm
     if isinstance(value, str):

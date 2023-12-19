@@ -36,7 +36,10 @@ class FromEngine:
         try:
             engine_data = self._engine_data_map[engine_id]
             for tag_value in tag_values:
-                engine_data.tags_info.upsert(tag_value)
+                was_inserted = engine_data.tags_info.upsert(tag_value)
+                if was_inserted:
+                    self.plot_log_repository.store_new_tag_info(engine_id, tag_value)
+            self.plot_log_repository.store_tag_values(engine_id, tag_values)
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to upsert tag values.')
 

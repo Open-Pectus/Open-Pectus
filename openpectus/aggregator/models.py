@@ -44,12 +44,13 @@ class TagsInfo(BaseModel):
     def get(self, tag_name: str):
         return self.map.get(tag_name)
 
-    def upsert(self, tag_value: Mdl.TagValue):
+    def upsert(self, tag_value: Mdl.TagValue) -> bool:
         current = self.map.get(tag_value.name)
         now = datetime.now()
         if current is None:
             current = TagInfo(name=tag_value.name, value=tag_value.value, value_unit=tag_value.value_unit, updated=now)
             self.map[current.name] = current
+            return True # was inserted
             # Store unit and type in plot log db
         else:
             if current.value != tag_value.value:
@@ -59,6 +60,8 @@ class TagsInfo(BaseModel):
 
             if current.value_unit != tag_value.value_unit:
                 logger.warning(f"Tag '{tag_value.name}' changed unit from '{current.value_unit}' to '{tag_value.value_unit}'. This is unexpected")
+
+            return False # was updated
 
 
 class EngineData(BaseModel):
