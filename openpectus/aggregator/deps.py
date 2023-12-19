@@ -1,3 +1,4 @@
+from openpectus.aggregator.data.repository import PlotLogRepository
 from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
@@ -11,11 +12,11 @@ def get_aggregator() -> Aggregator:
     return _server
 
 
-def _create_aggregator(dispatcher: AggregatorDispatcher, publisher: FrontendPublisher) -> Aggregator:
+def _create_aggregator(dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, plot_log_repository: PlotLogRepository) -> Aggregator:
     global _server
     if _server is not None:
         return _server
     else:
-        _server = Aggregator(dispatcher, publisher)
+        _server = Aggregator(dispatcher, publisher, plot_log_repository)
         print("GLOBAL: Creating aggregator server")
         return _server

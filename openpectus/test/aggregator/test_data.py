@@ -5,8 +5,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
 
-from openpectus.aggregator.data import DBModel, database
-from openpectus.aggregator.data.models import BatchJobData
+from openpectus.aggregator.data import database
+from openpectus.aggregator.data.models import DBModel, BatchJobData
 from openpectus.aggregator.data.repository import BatchJobDataRepository
 
 import openpectus.aggregator.routers.dto as D

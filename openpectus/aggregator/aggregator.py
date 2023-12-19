@@ -6,6 +6,7 @@ import openpectus.aggregator.models as Mdl
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
+from openpectus.aggregator.data.repository import PlotLogRepository
 from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.aggregator.models import EngineData
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
@@ -16,9 +17,10 @@ EngineDataMap = Dict[str, EngineData]
 
 
 class FromEngine:
-    def __init__(self, engine_data_map: EngineDataMap, publisher: FrontendPublisher):
+    def __init__(self, engine_data_map: EngineDataMap, publisher: FrontendPublisher, plot_log_repository: PlotLogRepository):
         self._engine_data_map = engine_data_map
         self.publisher = publisher
+        self.plot_log_repository = plot_log_repository
 
     def register_engine_data(self, engine_data: EngineData):
         self._engine_data_map[engine_data.engine_id] = engine_data
@@ -26,6 +28,7 @@ class FromEngine:
     def readings_changed(self, engine_id: str, readings: List[Mdl.ReadingInfo]):
         try:
             self._engine_data_map[engine_id].readings = readings
+            self.plot_log_repository.create_plot_log(self._engine_data_map[engine_id])
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set readings.')
 
@@ -89,14 +92,14 @@ class FromFrontend:
 
 
 class Aggregator:
-    def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher) -> None:
+    def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, plot_log_repository: PlotLogRepository) -> None:
         # self.channel_map: Dict[str, ChannelInfo] = {}
         # """ channel data, indexed by channel_id"""
         self._engine_data_map: EngineDataMap = {}
         """ all client data except channels, indexed by engine_id """
         self.dispatcher = dispatcher
         self.from_frontend = FromFrontend(self._engine_data_map, dispatcher)
-        self.from_engine = FromEngine(self._engine_data_map, publisher)
+        self.from_engine = FromEngine(self._engine_data_map, publisher, plot_log_repository)
 
     def create_engine_id(self, register_engine_msg: EM.RegisterEngineMsg):
         """ Defines the generation of the engine_id that is uniquely assigned to each engine.
