@@ -1,16 +1,14 @@
-
 import unittest
+from unittest.mock import Mock
 
-from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import select
-from sqlalchemy.exc import OperationalError
-
+import openpectus.aggregator.routers.dto as D
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.models import DBModel, BatchJobData
 from openpectus.aggregator.data.repository import BatchJobDataRepository
-
-import openpectus.aggregator.routers.dto as D
 from openpectus.aggregator.routers.serialization import deserialize, serialize
+from sqlalchemy import select
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm import Mapped, mapped_column
 
 
 def init_db():
@@ -122,9 +120,9 @@ class RepositoryTest(unittest.TestCase):
         self.assertEqual(entity_id, 1)
 
         with database.SessionLocal() as s:
-            repo = BatchJobDataRepository(s)
+            repo = BatchJobDataRepository()
 
-            created_entity = repo.get_by_id(entity_id)
+            created_entity = repo.get_by_id(entity_id, s)
             assert created_entity is not None
             self.assertEqual("my_computer_name", created_entity.computer_name)
             self.assertEqual("my_uod_name", created_entity.uod_name)
@@ -147,17 +145,17 @@ class RepositoryTest(unittest.TestCase):
         self.assertEqual(1, entity.id)
 
         with database.SessionLocal() as s:
-            repo = BatchJobDataRepository(s)
+            repo = BatchJobDataRepository()
 
-            created_entity = repo.get_by_id(entity_id)
+            created_entity = repo.get_by_id(entity_id, s)
             assert created_entity is not None
             created_entity.computer_name = "updated_computer_name"
             s.commit()
 
         with database.SessionLocal() as s:
-            repo = BatchJobDataRepository(s)
+            repo = BatchJobDataRepository()
 
-            updated_entity = repo.get_by_id(entity_id)
+            updated_entity = repo.get_by_id(entity_id, s)
             assert updated_entity is not None
             self.assertEqual("updated_computer_name", updated_entity.computer_name)
             self.assertEqual("my_uod_name", updated_entity.uod_name)
@@ -176,8 +174,8 @@ class RepositoryTest(unittest.TestCase):
             s.commit()
 
         with database.SessionLocal() as s:
-            repo = BatchJobDataRepository(s)
-            created_entity = repo.get_by_engine_id("my_eng_id")
+            repo = BatchJobDataRepository()
+            created_entity = repo.get_by_engine_id("my_eng_id", s)
             self.assertIsNotNone(created_entity)
             self.assertIsInstance(created_entity, BatchJobData)
 
@@ -200,9 +198,9 @@ class RepositoryTest(unittest.TestCase):
         self.assertEqual(1, entity.id)
 
         with database.SessionLocal() as s:
-            repo = BatchJobDataRepository(s)
+            repo = BatchJobDataRepository()
 
-            created_entity = repo.get_by_id(entity_id)
+            created_entity = repo.get_by_id(entity_id, s)
             assert created_entity is not None
             self.assertEqual(['foo', 'bar'], created_entity.contributors)
 
@@ -213,8 +211,8 @@ class RepositoryTest(unittest.TestCase):
             s.commit()
 
         with database.SessionLocal() as s:
-            repo = BatchJobDataRepository(s)
-            updated_entity = repo.get_by_id(entity_id)
+            repo = BatchJobDataRepository()
+            updated_entity = repo.get_by_id(entity_id, s)
             assert updated_entity is not None
             self.assertEqual(['foo', 'bar', 'baz'], updated_entity.contributors)
 

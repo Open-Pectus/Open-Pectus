@@ -2,7 +2,7 @@ import logging
 from typing import List
 
 from openpectus.aggregator.data import database
-from openpectus.aggregator.data.models import PlotLogEntryValue, get_ProcessValueType_from_value, PlotLog, PlotLogEntry
+from openpectus.aggregator.data.models import BatchJobData, PlotLogEntryValue, get_ProcessValueType_from_value, PlotLog, PlotLogEntry
 from openpectus.aggregator.models import TagValue, ReadingInfo, EngineData
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -95,23 +95,22 @@ class PlotLogRepository(RepositoryBase):
                 value_int=tag.value if isinstance(tag.value, int) else None,
             )
 
-        db_models = [entry_value for entry_value in  map(map_tag_to_entry_value, tags) if isinstance(entry_value, PlotLogEntryValue)]
+        db_models = [entry_value for entry_value in map(map_tag_to_entry_value, tags) if isinstance(entry_value, PlotLogEntryValue)]
         db_session.add_all(db_models)
         db_session.commit()
 
 
 class BatchJobDataRepository(RepositoryBase):
-    pass
     # def upsert(self, process_unit: BatchJobData):
     #     self.session.
     #     process_unit.save()
 
-    # def get_by_id(self, id: int) -> BatchJobData | None:
-    #     return self.session.get(BatchJobData, id)
-    #
-    # def get_by_engine_id(self, engine_id: str) -> BatchJobData | None:
-    #     q = select(BatchJobData).where(BatchJobData.engine_id == engine_id)
-    #     result = self.session.execute(q).first()
-    #     if result is None:
-    #         return None
-    #     return result.tuple()[0]
+    def get_by_id(self, id: int, db_session: Session) -> BatchJobData | None:
+        return db_session.get(BatchJobData, id)
+
+    def get_by_engine_id(self, engine_id: str, db_session: Session) -> BatchJobData | None:
+        q = select(BatchJobData).where(BatchJobData.engine_id == engine_id)
+        result = db_session.execute(q).first()
+        if result is None:
+            return None
+        return result.tuple()[0]
