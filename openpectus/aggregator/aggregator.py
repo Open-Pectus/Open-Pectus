@@ -36,7 +36,7 @@ class FromEngine:
         try:
             engine_data = self._engine_data_map[engine_id]
             for tag_value in tag_values:
-                engine_data.tags_info.upsert(tag_value.name, tag_value.value, tag_value.value_unit)
+                engine_data.tags_info.upsert(tag_value)
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to upsert tag values.')
 
