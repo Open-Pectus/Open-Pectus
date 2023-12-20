@@ -235,11 +235,11 @@ class PlotLogEntryValue(BaseModel):
         orm_mode = True
 
     @classmethod
-    def from_orm(cls, orm_obj: data_models.PlotLogEntryValue) -> PlotLogEntryValue:
-        mapped = super().from_orm(orm_obj)
-        if orm_obj.value_int is not None: mapped.value = orm_obj.value_int
-        if orm_obj.value_float is not None: mapped.value = orm_obj.value_float
-        if orm_obj.value_str is not None: mapped.value = orm_obj.value_str
+    def from_orm(cls, obj: data_models.PlotLogEntryValue) -> PlotLogEntryValue:
+        mapped = super().from_orm(obj)
+        if obj.value_int is not None: mapped.value = obj.value_int
+        if obj.value_float is not None: mapped.value = obj.value_float
+        if obj.value_str is not None: mapped.value = obj.value_str
         return mapped
 
 
