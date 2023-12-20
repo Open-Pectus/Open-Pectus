@@ -20,7 +20,7 @@ class ReadingInfo(BaseModel):
     commands: List[ReadingCommand]
 
 
-TagValueType = str | int | float | None
+TagValueType = None | float | int | str
 
 
 class SystemTagName(StrEnum):
