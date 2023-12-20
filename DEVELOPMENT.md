@@ -270,48 +270,48 @@ sequenceDiagram
 
     Note over F, A: Dashboard
     F ->> A: GET process_units
-    A -->> F:
+    A -->> F: 
     F ->> A: GET recent_batch_jobs
-    A -->> F:
+    A -->> F: 
 
     Note over F, A: Unit Details
 
     F ->> A: GET process_unit/{id}/command_examples
-    A -->> F:
+    A -->> F: 
     F ->> A: GET process_unit/{id}/process_diagram
-    A -->> F:
+    A -->> F: 
     F ->> A: GET process_unit/{id}/plot_configuration
-    A -->> F:
+    A -->> F: 
 
     loop polling now, websocket in future
     F ->> A: GET process_unit/{id}/method
-    A -->> F:
+    A -->> F: 
     end
     loop polling now, websocket in future
     F ->> A: GET process_unit/{id}/run_log
-    A -->> F:
+    A -->> F: 
     end
     loop polling now, maybe websocket in future
     F ->> A: GET process_unit/{id}/process_values
-    A -->> F:
+    A -->> F: 
     end
 
     Note over F, A: Command window
     alt Execute command
     F ->> A: POST process_unit/{id}/execute_command
-    A -->> F:
+    A -->> F: 
     end
 
     Note over F, A: Method Editor
     alt Save method
     F ->> A: POST process_unit/{id}/method
-    A -->> F:
+    A -->> F: 
     end
 
     Note over F, A: Run controls
     alt Start/Pause/Hold/Stop
     F ->> A: POST process_unit/{id}/execute_command
-    A -->> F:
+    A -->> F: 
     end
 ```
 
@@ -324,7 +324,7 @@ sequenceDiagram
 %%note left of E: Registration
     Note right of E: Web Socket
     E ->> A: connect
-    A -->> E:
+    A -->> E: 
     E ->> A: RegisterEngineMsg
     A -->> E: [engine_id]
     Note over A,E: A knows E is running
@@ -337,17 +337,17 @@ sequenceDiagram
 
     loop Every second
     E ->> A: TagsUpdatedMsg
-    A -->> E:
+    A -->> E: 
     end
 
     alt User: Run command
     A ->> E: InvokeCommandMsg
-    E -->> A:
+    E -->> A: 
     end
 
     alt User: Change run state
     A ->> E: InvokeCommandMsg
-    E -->> A:
+    E -->> A: 
     end
 
 ```
