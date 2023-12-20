@@ -4,8 +4,9 @@ from openpectus.lang.exec.errors import UodValidationError
 
 
 class ReadingCommand():
-    name: str
-    command: str
+    def __init__(self, name: str, command: str) -> None:
+        self.name: str = name
+        self.command: str = command
 
 
 class Reading():

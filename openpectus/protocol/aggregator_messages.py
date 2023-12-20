@@ -3,9 +3,12 @@ from typing import List
 import openpectus.protocol.messages as Msg
 import openpectus.protocol.models as Mdl
 
+# Note: These are the messages sent by AggregatorDispatcher and handled by EngineMessageHandlers.
+
 
 SuccessMessage = Msg.SuccessMessage
 ErrorMessage = Msg.ErrorMessage
+
 
 class AggregatorMessage(Msg.MessageBase):
     pass

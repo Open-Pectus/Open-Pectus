@@ -1,14 +1,10 @@
 import asyncio
-import time
 import unittest
 from multiprocessing import Process
-from typing import List, Coroutine
 from unittest import IsolatedAsyncioTestCase
-from unittest.mock import Mock
 
 import uvicorn
 from fastapi import FastAPI
-from fastapi_websocket_pubsub.rpc_event_methods import RpcEventServerMethods, RpcEventClientMethods
 from fastapi_websocket_rpc import RpcChannel, WebsocketRPCEndpoint, RpcMethodsBase, WebSocketRpcClient
 from fastapi_websocket_rpc.logger import get_logger
 from openpectus.protocol.dispatch_interface import AGGREGATOR_RPC_WS_PATH
@@ -21,18 +17,20 @@ trigger_url = f"http://localhost:{PORT}/trigger"
 
 mock_engine_id = 'mock engine id'
 
+
 async def on_delayed_client_connect(channel: RpcChannel):
-    engine_id = await channel.other.get_engine_id()
+    engine_id = await channel.other.get_engine_id_async()
     # self.assertEqual(engine_id, mock_engine_id)
     logger.info(engine_id)
     print(engine_id, flush=True)
+
 
 async def on_client_connect(channel: RpcChannel):
     asyncio.create_task(on_delayed_client_connect(channel))
 
 
 class RpcMethods(RpcMethodsBase):
-    async def get_engine_id(self):
+    async def get_engine_id_async(self):
         return mock_engine_id
 
 
@@ -53,6 +51,7 @@ class TestRpc(IsolatedAsyncioTestCase):
         rpc_client = WebSocketRpcClient(uri=rpc_url, methods=rpc_methods)
         await rpc_client.__aenter__()
         proc.terminate()
+
 
 if __name__ == "__main__":
     unittest.main()

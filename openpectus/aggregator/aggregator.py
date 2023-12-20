@@ -62,12 +62,12 @@ class FromEngine:
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set control state.')
 
-    def method_state_changed(self, engine_id: str, control_state: Mdl.ControlState, db_session: Session):
+    def method_state_changed(self, engine_id: str, method_state: Mdl.MethodState, db_session: Session):
         try:
             engine_data = self._engine_data_map[engine_id]
-            if engine_data.control_state != control_state:
-                engine_data.control_state = control_state
-                asyncio.create_task(self.publisher.publish_control_state_changed(engine_id))
+            if engine_data.method_state != method_state:
+                engine_data.method_state = method_state
+                asyncio.create_task(self.publisher.publish_method_state_changed(engine_id))
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set control state.')
 

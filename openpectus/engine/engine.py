@@ -7,6 +7,7 @@ from typing import Iterable, List, Set
 from uuid import UUID
 
 from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException
+from openpectus.engine.method_model import MethodModel
 from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum
 from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.errors import InterpretationError
@@ -25,6 +26,7 @@ from openpectus.lang.exec.timer import EngineTimer, OneThreadTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.model.pprogram import PProgram
+import openpectus.protocol.models as Mdl
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +35,7 @@ class Engine(InterpreterContext):
     """ Main engine class. Handles
     - io loop, reads and writes hardware process image (sync)
     - invokes interpreter to interpret next instruction (sync, generator based)
-    - signals state changes via tag_updates queue (to aggregator via websockets, natively async)
+    - signals state changes via tag_updates queue (to EngineReporter)
     - accepts commands from cmd_queue (from interpreter and from aggregator)
     """
 
@@ -74,7 +76,17 @@ class Engine(InterpreterContext):
 
         self._interpreter: PInterpreter = PInterpreter(PProgram(), self)
         """ The interpreter executing the current program. """
-        self._pcode: str = ""
+
+        def on_method_init():
+            self._interpreter.stop()
+            self._interpreter = PInterpreter(self._method.get_program(), self)
+            logger.info("Method and interpreter re-initialized")
+
+        def on_method_error(ex: Exception):
+            logger.error("An error occured while setting new method: " + str(ex))
+
+        self._method: MethodModel = MethodModel(on_method_init, on_method_error)
+        """ The model handling changes to program/method code """
 
     def _iter_all_tags(self) -> Iterable[Tag]:
         return itertools.chain(self._system_tags, self.uod.tags)
@@ -83,8 +95,17 @@ class Engine(InterpreterContext):
         return TagValueCollection(t.as_readonly() for t in self._iter_all_tags())
 
     def cleanup(self):
+        #self.cmd_queue.close()
+        #self.cmd_queue.join_thread()
         self.cmd_queue.cancel_join_thread()
+        #del self.cmd_queue
+        #self.tag_updates.close()
+        #self.tag_updates.join_thread()
         self.tag_updates.cancel_join_thread()
+        #self.tag_updates.close()
+        #del self.tag_updates
+        # Fix this. Leaks threads 'QueueFeederThread' in windows, both in Anaconda and VS Code.
+        # This leads to the tests not terminating
 
     @property
     def interpreter(self) -> PInterpreter:
@@ -198,14 +219,8 @@ class Engine(InterpreterContext):
         # for tag, value in zip(readable_tags, values):
         #     tag.set_value(value)
 
-        hwl: HardwareLayerBase = self.uod.hwl
-
-        # assert isinstance(self.uod.hwl, HardwareLayerBase) is True
-        if not isinstance(hwl, HardwareLayerBase):
-            logger.error("Hmm")  # TODO this is really weird. figure out why this happens
-
-        registers = hwl.registers
-        register_values = hwl.read_batch(list(registers.values()))
+        registers = self.uod.hwl.registers
+        register_values = self.uod.hwl.read_batch(list(registers.values()))
         for i, r in enumerate(registers.values()):
             tag = self.uod.tags.get(r.name)
             tag_value = register_values[i]
@@ -476,6 +491,7 @@ class Engine(InterpreterContext):
             self.tag_updates.put(tag)
 
     def notify_tag_updates(self):
+        # pick up changes from listeners and queue them up
         for tag_name in self._system_listener.changes:
             tag = self._system_tags[tag_name]
             self.tag_updates.put(tag)
@@ -486,6 +502,7 @@ class Engine(InterpreterContext):
             self.tag_updates.put(tag)
         self._uod_listener.clear_changes()
 
+    #TODO remove
     def parse_pcode(self, pcode: str) -> PProgram:
         p = PGrammar()
         p.parse(pcode)
@@ -530,6 +547,9 @@ class Engine(InterpreterContext):
     def inject_code(self, pcode: str):
         """ Inject a general code snippet to run in the current scope of the current program. """
         # TODO return status for frontend client
+        # TODO set updated method content and signal Method change
+        # TODO perform this change via _method
+        logger.warning("TODO set updated method content and signal Method change")
         try:
             injected_program = self.parse_pcode(pcode)
             self.interpreter.inject_node(injected_program)
@@ -538,34 +558,15 @@ class Engine(InterpreterContext):
             logger.info("Injected code parse error: " + str(ex))
 
     # code manipulation api
-    def set_program(self, pcode: str):
-        """ Set new program. This will replace the current program. """
-
-        if self._interpreter is not None:
-            self._interpreter.stop()
-            # TODO possible clean up more stuff
-            logger.info("Interpreter stopped")
-
+    def set_method(self, method: Mdl.Method):
+        """ Set new method. This will replace the current method and invoke the on_method_init callback. """
         try:
-            program = self.parse_pcode(pcode=pcode)
-            self._pcode = pcode
-            self._interpreter = PInterpreter(program, self)
-            line_count = len(pcode.splitlines(keepends=True))
-            logger.info(f"New method set with {line_count} lines")
+            self._method.set_method(method)
+            logger.info(f"New method set with {len(method.lines)} lines")
         except Exception:
             logger.error("Failed to set method", exc_info=True)
             raise
 
-    # TODO remove this - only used from tests foir no good reason
-    def set_pprogram(self, program: PProgram):
-        """ Set new program. This will replace the current program. """
-
-        if self._interpreter is not None:
-            self._interpreter.stop()
-            # TODO possible clean up more stuff
-            logger.info("Interpreter stopped")
-
-        self._interpreter = PInterpreter(program, self)
-
-    # set_code, update_line
-    # undo/revert(?)
+    def get_method_state(self) -> Mdl.MethodState:
+        self._method.update_state(self.interpreter.runtimeinfo)
+        return self._method.get_method_state()

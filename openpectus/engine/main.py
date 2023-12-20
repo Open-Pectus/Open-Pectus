@@ -32,16 +32,32 @@ async def async_main(args):
     uod = create_demo_uod()
     engine = Engine(uod, tick_interval=1)
     dispatcher = EngineDispatcher(f"{args.aggregator_hostname}:{args.aggregator_port}", engine.uod.instrument)
-    await dispatcher.connect_websocket()
+    await dispatcher.connect_websocket_async()
     engine_reporter = EngineReporter(engine, dispatcher)
+    args.engine_reporter = engine_reporter
     _ = EngineMessageHandlers(engine, dispatcher)
     await engine_reporter.run_loop_async()
+
+
+async def close_async(engine_reporter: EngineReporter):
+    if (engine_reporter):
+        await engine_reporter.stop_async()
 
 
 def main():
     args = get_args()
     logger.info("Engine starting")
-    asyncio.run(async_main(args))
+
+    # Handling KeyboardInterrupt seems to fix the halt that sometimes otherwise occurs. But we still get the error:
+    # "sys:1: RuntimeWarning: coroutine 'EngineDispatcher.disconnect_async' was never awaited"
+    # https://stackoverflow.com/questions/54525836/where-do-i-catch-the-keyboardinterrupt-exception-in-this-async-setup#54528397
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(async_main(args))
+    except KeyboardInterrupt:
+        loop.run_until_complete(close_async(args.engine_reporter))
+    finally:
+        print('Engine stopped')
 
 
 if __name__ == "__main__":

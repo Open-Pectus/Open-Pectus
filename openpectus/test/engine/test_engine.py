@@ -12,6 +12,7 @@ from openpectus.lang.exec.tags import SystemTagName, Tag, ReadingTag, SelectTag,
 from openpectus.lang.exec.runlog import RuntimeRecordStateEnum
 from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
+import openpectus.protocol.models as Mdl
 from typing_extensions import override
 
 logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
@@ -32,7 +33,7 @@ def run_engine(engine: Engine, pcode: str, max_ticks: int = -1):
     max_ticks = max_ticks
 
     engine._running = True
-    engine.set_program(pcode)
+    engine.set_method(Mdl.Method.from_pcode(pcode=pcode))
     engine.schedule_execution("Start")
 
     while engine.is_running():
@@ -528,7 +529,7 @@ Mark: A
 Mark: B
 Mark: C
 """
-        e.set_program(program)
+        e.set_method(Mdl.Method.from_pcode(pcode=program))
         continue_engine(e, 10)
 
         self.assertEqual(['B', 'C'], e.interpreter.get_marks())

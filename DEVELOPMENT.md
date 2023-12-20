@@ -360,10 +360,10 @@ stateDiagram-v2
     Engine_Connected --> Engine_Registered: [ws disconnect, other]
     Engine_Connected --> Engine_Unknown: [ws disconnect, aggregator refuse]
 
-    Engine_Connected --> Engine_Running: [Start]
+    Engine_Connected --> Engine_Running: [Start Method]
     Engine_Running --> ??: [error executing method]
-    Engine_Running --> Engine_Complete: [method execution complete]
-    Engine_Running --> Engine_Connected: [Stop]
+    Engine_Running --> Engine_Complete: [Stop Method]
+    Engine_Running --> ???: [method execution complete]
     Engine_Running --> Received_EngineData: [Engine sends data]
     note right of Received_EngineData: Create and persist BatchJobProcessValueData
     Received_EngineData --> Engine_Running: [auto]

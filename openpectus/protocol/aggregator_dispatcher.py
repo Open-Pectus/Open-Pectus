@@ -47,10 +47,10 @@ class AggregatorDispatcher():
     async def on_delayed_client_connect(self, channel: RpcChannel):
         """ We 'delay' our on_connect callback because the WebsocketRPCEndpoint calls on_connect callbacks before it starts
         listening to responses to rpc calls. When we use create_task(), in on_client_connect() below, to call this method,
-        we ensure that WebsocketRPCEndpoint starts listening to responses before we call get_engine_id() over rpc.
+        we ensure that WebsocketRPCEndpoint starts listening to responses before we call get_engine_id_async() over rpc.
         """
         try:
-            response = await channel.other.get_engine_id()
+            response = await channel.other.get_engine_id_async()
             assert isinstance(response, RpcResponse)
             engine_id = response.result
             assert isinstance(engine_id, str | None)
@@ -83,7 +83,7 @@ class AggregatorDispatcher():
             logger.error(f"Message serialization failed, message type: {type(message).__name__}")
             raise ProtocolException("Serialization error")
 
-        response = await channel.other.dispatch_message(message_json=message_json)
+        response = await channel.other.dispatch_message_async(message_json=message_json)
         return response
 
     def register_post_route(self, router: APIRouter | FastAPI):

@@ -263,7 +263,7 @@ class PInterpreter(PNodeVisitor):
         self._tick_time = tick_time
         self._tick_number = tick_number
 
-        logger.debug("Tick")
+        logger.debug(f"Tick {self._tick_number}")
 
         if self.process_instr is None:
             self.process_instr = self._interpret()

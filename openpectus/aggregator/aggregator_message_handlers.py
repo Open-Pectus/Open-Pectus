@@ -17,6 +17,7 @@ class AggregatorMessageHandlers:
         aggregator.dispatcher.set_post_handler(EM.TagsUpdatedMsg, self.handle_TagsUpdatedMsg)
         aggregator.dispatcher.set_post_handler(EM.RunLogMsg, self.handle_RunLogMsg)
         aggregator.dispatcher.set_post_handler(EM.ControlStateMsg, self.handle_ControlStateMsg)
+        aggregator.dispatcher.set_post_handler(EM.MethodStateMsg, self.handle_MethodStateMsg)
 
     async def handle_RegisterEngineMsg(self, register_engine_msg: EM.RegisterEngineMsg) -> AM.RegisterEngineReplyMsg:
         """ Registers engine """
@@ -85,4 +86,13 @@ class AggregatorMessageHandlers:
 
         logger.debug(f"Got control state from client: {str(msg)}")
         self.aggregator.from_engine.control_state_changed(msg.engine_id, msg.control_state, db_session)
+        return AM.SuccessMessage()
+
+    async def handle_MethodStateMsg(self, msg: EM.MethodStateMsg):
+        validation_errors = self.validate_msg(msg)
+        if validation_errors is not None:
+            return validation_errors
+
+        logger.debug(f"Got method state from client: {str(msg)}")
+        self.aggregator.from_engine.method_state_changed(msg.engine_id, msg.method_state)
         return AM.SuccessMessage()

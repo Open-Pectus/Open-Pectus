@@ -3,6 +3,8 @@ from typing import List
 import openpectus.protocol.messages as Msg
 import openpectus.protocol.models as Mdl
 
+# Note: These are the messages sent by EngineDispatcher and handled by AggregatorMessageHandlers.
+
 
 class EngineMessage(Msg.MessageBase):
     engine_id: str = ''
@@ -31,8 +33,10 @@ class RunLogMsg(EngineMessage):
 class MethodMsg(EngineMessage):
     method: Mdl.Method
 
+
 class MethodStateMsg(EngineMessage):
     method_state: Mdl.MethodState
+
 
 class ControlStateMsg(EngineMessage):
     control_state: Mdl.ControlState
