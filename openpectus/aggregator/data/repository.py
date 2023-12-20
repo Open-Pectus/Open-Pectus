@@ -2,7 +2,8 @@ import logging
 from typing import List
 
 from openpectus.aggregator.data import database
-from openpectus.aggregator.data.models import BatchJobData, PlotLogEntryValue, get_ProcessValueType_from_value, PlotLog, PlotLogEntry
+from openpectus.aggregator.data.models import ProcessValueType, BatchJobData, PlotLogEntryValue, get_ProcessValueType_from_value, PlotLog, \
+    PlotLogEntry
 from openpectus.aggregator.models import TagValue, ReadingInfo, EngineData
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -45,11 +46,11 @@ class PlotLogRepository(RepositoryBase):
         def map_reading(reading: ReadingInfo):
             entry = PlotLogEntry()
             entry.plot_log = plot_log
+            entry.value_type = ProcessValueType.NONE
             entry.name = reading.label
             return entry
 
-        entries = list(map(map_reading, engine_data.readings))
-        plot_log.entries = entries
+        entries = map(map_reading, engine_data.readings)
 
         self.db_session.add(plot_log)
         self.db_session.add_all(entries)
@@ -64,6 +65,14 @@ class PlotLogRepository(RepositoryBase):
         existing_plot_log_entry.value_type = get_ProcessValueType_from_value(tag.value)
         self.db_session.add(existing_plot_log_entry)
         self.db_session.commit()
+
+    def get_plot_log(self, engine_id: str) -> PlotLog | None:
+        return self.db_session.scalar(
+            select(PlotLog)
+            .join(PlotLog.entries)
+            .join(PlotLogEntry.values)
+            .where(PlotLog.engine_id == engine_id)
+        )
 
     def get_plot_log_entry(self, engine_id: str, tag: TagValue) -> PlotLogEntry | None:
         return self.db_session.scalar(

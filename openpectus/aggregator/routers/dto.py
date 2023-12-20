@@ -77,6 +77,7 @@ class ProcessValueType(StrEnum):
     FLOAT = auto()
     INT = auto()
     CHOICE = auto()
+    NONE = auto()
 
 
 class ProcessValueCommandNumberValue(BaseModel):
@@ -229,6 +230,9 @@ class PlotConfiguration(BaseModel):
 class PlotLogEntryValue(BaseModel):
     value: ProcessValueValueType
 
+    class Config: # TODO: change in pydantic v2
+        orm_mode = True
+
 
 class PlotLogEntry(BaseModel):
     name: str
@@ -236,9 +240,15 @@ class PlotLogEntry(BaseModel):
     value_unit: str | None
     value_type: ProcessValueType
 
+    class Config: # TODO: change in pydantic v2
+        orm_mode = True
+
 
 class PlotLog(BaseModel):
     entries: Dict[str, PlotLogEntry]
+
+    class Config: # TODO: change in pydantic v2
+        orm_mode = True
 
 
 class BatchJob(BaseModel):

@@ -1742,7 +1742,8 @@
           "string",
           "float",
           "int",
-          "choice"
+          "choice",
+          "none"
         ],
         "title": "ProcessValueType",
         "description": "An enumeration."

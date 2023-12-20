@@ -7,6 +7,7 @@ import {
   ProcessValueCommandNumberValue,
   ProcessValueType,
 } from '../../api';
+import { UtilMethods } from '../util-methods';
 
 @Pipe({
   name: 'processValue',
@@ -27,6 +28,8 @@ export class ProcessValuePipe implements PipeTransform {
     if(value === undefined) return null;
     if(type === undefined) return null;
     switch(type) {
+      case ProcessValueType.NONE:
+        return null;
       case ProcessValueType.STRING:
       case ProcessValueType.CHOICE:
       case ProcessValueCommandFreeTextValue.value_type.STRING:
@@ -38,6 +41,8 @@ export class ProcessValuePipe implements PipeTransform {
       case ProcessValueType.INT:
       case 'int':
         return `${this.decimalPipe.transform(value, '1.0-0')} ${unit}`.trim();
+      default:
+        UtilMethods.assertNever(type);
     }
   }
 }

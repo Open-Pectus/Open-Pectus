@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum, auto
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Dict
 
 import openpectus.aggregator.data.database as database
 from sqlalchemy import JSON, ForeignKey
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, attribute_keyed_dict
 
 
 class DBModel(DeclarativeBase):
@@ -104,15 +104,16 @@ class PlotLogEntry(DBModel):
     name: Mapped[str] = mapped_column()
     values: Mapped[List[PlotLogEntryValue]] = relationship(cascade="all, delete-orphan")
     value_unit: Mapped[str | None] = mapped_column()
-    value_type: Mapped[ProcessValueType | None] = mapped_column()
+    value_type: Mapped[ProcessValueType] = mapped_column()
     plot_log_id: Mapped[int] = mapped_column(ForeignKey('PlotLogs.id'))
-    plot_log: Mapped[PlotLog] = relationship(back_populates='entries')
+    plot_log: Mapped[PlotLog] = relationship()
 
 
 class PlotLog(DBModel):
     __tablename__ = "PlotLogs"
     engine_id: Mapped[str] = mapped_column()
-    entries: Mapped[List[PlotLogEntry]] = relationship(
+    entries: Mapped[Dict[str, PlotLogEntry]] = relationship(
+        collection_class=attribute_keyed_dict("name"),
         back_populates='plot_log',
         cascade="all, delete-orphan"
     )
