@@ -88,11 +88,11 @@ class AggregatorMessageHandlers:
         self.aggregator.from_engine.control_state_changed(msg.engine_id, msg.control_state, db_session)
         return AM.SuccessMessage()
 
-    async def handle_MethodStateMsg(self, msg: EM.MethodStateMsg):
+    async def handle_MethodStateMsg(self, msg: EM.MethodStateMsg, db_session: Session):
         validation_errors = self.validate_msg(msg)
         if validation_errors is not None:
             return validation_errors
 
         logger.debug(f"Got method state from client: {str(msg)}")
-        self.aggregator.from_engine.method_state_changed(msg.engine_id, msg.method_state)
+        self.aggregator.from_engine.method_state_changed(msg.engine_id, msg.method_state, db_session)
         return AM.SuccessMessage()
