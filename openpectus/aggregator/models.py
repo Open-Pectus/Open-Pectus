@@ -74,6 +74,7 @@ class EngineData(BaseModel):
     control_state: ControlState = ControlState(is_running=False, is_holding=False, is_paused=False)
     method: Method = Method.empty()
     method_state: MethodState = MethodState.empty()
+    tags_last_persisted: datetime | None = None
 
     @property
     def runtime(self):

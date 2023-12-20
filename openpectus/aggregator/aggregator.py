@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from datetime import datetime, timedelta
 from typing import Dict, List
 
 import openpectus.aggregator.models as Mdl
@@ -40,7 +41,11 @@ class FromEngine:
                 was_inserted = engine_data.tags_info.upsert(tag_value)
                 if was_inserted:
                     self.plot_log_repository.store_new_tag_info(engine_id, tag_value, db_session)
-            self.plot_log_repository.store_tag_values(engine_id, tag_values, db_session)
+
+            now = datetime.now()
+            if engine_data.tags_last_persisted is None or now - engine_data.tags_last_persisted > timedelta(seconds=5):
+                self.plot_log_repository.store_tag_values(engine_id, tag_values, db_session)
+                engine_data.tags_last_persisted = now
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to upsert tag values.')
 
