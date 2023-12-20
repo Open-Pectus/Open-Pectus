@@ -120,9 +120,9 @@ class RepositoryTest(unittest.TestCase):
         self.assertEqual(entity_id, 1)
 
         with database.SessionLocal() as s:
-            repo = BatchJobDataRepository()
+            repo = BatchJobDataRepository(s)
 
-            created_entity = repo.get_by_id(entity_id, s)
+            created_entity = repo.get_by_id(entity_id)
             assert created_entity is not None
             self.assertEqual("my_computer_name", created_entity.computer_name)
             self.assertEqual("my_uod_name", created_entity.uod_name)
@@ -145,17 +145,17 @@ class RepositoryTest(unittest.TestCase):
         self.assertEqual(1, entity.id)
 
         with database.SessionLocal() as s:
-            repo = BatchJobDataRepository()
+            repo = BatchJobDataRepository(s)
 
-            created_entity = repo.get_by_id(entity_id, s)
+            created_entity = repo.get_by_id(entity_id)
             assert created_entity is not None
             created_entity.computer_name = "updated_computer_name"
             s.commit()
 
         with database.SessionLocal() as s:
-            repo = BatchJobDataRepository()
+            repo = BatchJobDataRepository(s)
 
-            updated_entity = repo.get_by_id(entity_id, s)
+            updated_entity = repo.get_by_id(entity_id)
             assert updated_entity is not None
             self.assertEqual("updated_computer_name", updated_entity.computer_name)
             self.assertEqual("my_uod_name", updated_entity.uod_name)
@@ -174,8 +174,8 @@ class RepositoryTest(unittest.TestCase):
             s.commit()
 
         with database.SessionLocal() as s:
-            repo = BatchJobDataRepository()
-            created_entity = repo.get_by_engine_id("my_eng_id", s)
+            repo = BatchJobDataRepository(s)
+            created_entity = repo.get_by_engine_id("my_eng_id")
             self.assertIsNotNone(created_entity)
             self.assertIsInstance(created_entity, BatchJobData)
 
@@ -198,9 +198,9 @@ class RepositoryTest(unittest.TestCase):
         self.assertEqual(1, entity.id)
 
         with database.SessionLocal() as s:
-            repo = BatchJobDataRepository()
+            repo = BatchJobDataRepository(s)
 
-            created_entity = repo.get_by_id(entity_id, s)
+            created_entity = repo.get_by_id(entity_id)
             assert created_entity is not None
             self.assertEqual(['foo', 'bar'], created_entity.contributors)
 
@@ -211,8 +211,8 @@ class RepositoryTest(unittest.TestCase):
             s.commit()
 
         with database.SessionLocal() as s:
-            repo = BatchJobDataRepository()
-            updated_entity = repo.get_by_id(entity_id, s)
+            repo = BatchJobDataRepository(s)
+            updated_entity = repo.get_by_id(entity_id)
             assert updated_entity is not None
             self.assertEqual(['foo', 'bar', 'baz'], updated_entity.contributors)
 

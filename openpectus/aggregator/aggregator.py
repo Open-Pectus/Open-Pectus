@@ -19,32 +19,33 @@ EngineDataMap = Dict[str, EngineData]
 
 
 class FromEngine:
-    def __init__(self, engine_data_map: EngineDataMap, publisher: FrontendPublisher, plot_log_repository: PlotLogRepository):
+    def __init__(self, engine_data_map: EngineDataMap, publisher: FrontendPublisher):
         self._engine_data_map = engine_data_map
         self.publisher = publisher
-        self.plot_log_repository = plot_log_repository
 
     def register_engine_data(self, engine_data: EngineData):
         self._engine_data_map[engine_data.engine_id] = engine_data
 
     def readings_changed(self, engine_id: str, readings: List[Mdl.ReadingInfo], db_session: Session):
+        plot_log_repo = PlotLogRepository(db_session)
         try:
             self._engine_data_map[engine_id].readings = readings
-            self.plot_log_repository.create_plot_log(self._engine_data_map[engine_id], db_session)
+            plot_log_repo.create_plot_log(self._engine_data_map[engine_id])
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set readings.')
 
     def tag_values_changed(self, engine_id: str, tag_values: List[Mdl.TagValue], db_session: Session):
+        plot_log_repo = PlotLogRepository(db_session)
         try:
             engine_data = self._engine_data_map[engine_id]
             for tag_value in tag_values:
                 was_inserted = engine_data.tags_info.upsert(tag_value)
                 if was_inserted:
-                    self.plot_log_repository.store_new_tag_info(engine_id, tag_value, db_session)
+                    plot_log_repo.store_new_tag_info(engine_id, tag_value)
 
             now = datetime.now()
             if engine_data.tags_last_persisted is None or now - engine_data.tags_last_persisted > timedelta(seconds=5):
-                self.plot_log_repository.store_tag_values(engine_id, tag_values, db_session)
+                plot_log_repo.store_tag_values(engine_id, tag_values)
                 engine_data.tags_last_persisted = now
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to upsert tag values.')
@@ -101,14 +102,14 @@ class FromFrontend:
 
 
 class Aggregator:
-    def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, plot_log_repository: PlotLogRepository) -> None:
+    def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher) -> None:
         # self.channel_map: Dict[str, ChannelInfo] = {}
         # """ channel data, indexed by channel_id"""
         self._engine_data_map: EngineDataMap = {}
         """ all client data except channels, indexed by engine_id """
         self.dispatcher = dispatcher
         self.from_frontend = FromFrontend(self._engine_data_map, dispatcher)
-        self.from_engine = FromEngine(self._engine_data_map, publisher, plot_log_repository)
+        self.from_engine = FromEngine(self._engine_data_map, publisher)
 
     def create_engine_id(self, register_engine_msg: EM.RegisterEngineMsg):
         """ Defines the generation of the engine_id that is uniquely assigned to each engine.

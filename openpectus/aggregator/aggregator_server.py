@@ -30,8 +30,7 @@ class AggregatorServer:
         self.database_file_path = database_file_path
         dispatcher = AggregatorDispatcher()
         publisher = FrontendPublisher()
-        plot_log_repository = PlotLogRepository()
-        aggregator = _create_aggregator(dispatcher, publisher, plot_log_repository)
+        aggregator = _create_aggregator(dispatcher, publisher)
         _ = AggregatorMessageHandlers(aggregator)
         self.setup_fastapi([dispatcher.router, publisher.router])
         self.init_db()

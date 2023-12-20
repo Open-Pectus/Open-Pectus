@@ -27,7 +27,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_register_engine(self):
         dispatcher = AggregatorDispatcher()
-        aggregator = Aggregator(dispatcher, Mock(), Mock())
+        aggregator = Aggregator(dispatcher, Mock())
         _ = AggregatorMessageHandlers(aggregator)
         register_engine_msg = EM.RegisterEngineMsg(computer_name='computer-name', uod_name='uod-name')
         engine_id = aggregator.create_engine_id(register_engine_msg)
@@ -58,7 +58,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_register_engine_different_name(self):
         dispatcher = AggregatorDispatcher()
-        aggregator = Aggregator(dispatcher, Mock(), Mock())
+        aggregator = Aggregator(dispatcher, Mock())
         messageHandlers = AggregatorMessageHandlers(aggregator)
         register_engine_msg = EM.RegisterEngineMsg(computer_name='computer-name', uod_name='uod-name')
         register_engine_msg_different_computer = EM.RegisterEngineMsg(computer_name='computer-name2', uod_name='uod-name')

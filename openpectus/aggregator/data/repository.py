@@ -33,13 +33,12 @@ def get_db():
 
 
 class RepositoryBase():
-    pass
-    # def __init__(self) -> None:
-    #     self.session = get_db()
+    def __init__(self, db_session: Session) -> None:
+        self.db_session = db_session
 
 
 class PlotLogRepository(RepositoryBase):
-    def create_plot_log(self, engine_data: EngineData, db_session: Session):
+    def create_plot_log(self, engine_data: EngineData):
         plot_log = PlotLog()
         plot_log.engine_id = engine_data.engine_id
 
@@ -52,37 +51,37 @@ class PlotLogRepository(RepositoryBase):
         entries = list(map(map_reading, engine_data.readings))
         plot_log.entries = entries
 
-        db_session.add(plot_log)
-        db_session.add_all(entries)
-        db_session.commit()
+        self.db_session.add(plot_log)
+        self.db_session.add_all(entries)
+        self.db_session.commit()
 
-    def store_new_tag_info(self, engine_id: str, tag: TagValue, db_session: Session):
-        existing_plot_log_entry = self.get_plot_log_entry(engine_id, tag, db_session)
+    def store_new_tag_info(self, engine_id: str, tag: TagValue):
+        existing_plot_log_entry = self.get_plot_log_entry(engine_id, tag)
         if existing_plot_log_entry is None:
             logger.debug(f'tag {tag.name} was not found in readings')
             return
         existing_plot_log_entry.value_unit = tag.value_unit
         existing_plot_log_entry.value_type = get_ProcessValueType_from_value(tag.value)
-        db_session.add(existing_plot_log_entry)
-        db_session.commit()
+        self.db_session.add(existing_plot_log_entry)
+        self.db_session.commit()
 
-    def get_plot_log_entry(self, engine_id: str, tag: TagValue, db_session: Session) -> PlotLogEntry | None:
-        return db_session.scalar(
+    def get_plot_log_entry(self, engine_id: str, tag: TagValue) -> PlotLogEntry | None:
+        return self.db_session.scalar(
             select(PlotLogEntry)
             .join(PlotLog)
             .where(PlotLog.engine_id == engine_id)
             .where(PlotLogEntry.name == tag.name)
         )
 
-    def get_plot_log_entries(self, engine_id: str, db_session: Session) -> List[PlotLogEntry]:
-        return list(db_session.scalars(
+    def get_plot_log_entries(self, engine_id: str) -> List[PlotLogEntry]:
+        return list(self.db_session.scalars(
             select(PlotLogEntry)
             .join(PlotLog)
             .where(PlotLog.engine_id == engine_id)
         ).all())
 
-    def store_tag_values(self, engine_id: str, tags: List[TagValue], db_session: Session):
-        plot_log_entries = self.get_plot_log_entries(engine_id, db_session)
+    def store_tag_values(self, engine_id: str, tags: List[TagValue]):
+        plot_log_entries = self.get_plot_log_entries(engine_id)
 
         def map_tag_to_entry_value(tag: TagValue):
             plot_log_entry = [entry for entry in plot_log_entries if entry.name == tag.name]
@@ -96,8 +95,8 @@ class PlotLogRepository(RepositoryBase):
             )
 
         db_models = [entry_value for entry_value in map(map_tag_to_entry_value, tags) if isinstance(entry_value, PlotLogEntryValue)]
-        db_session.add_all(db_models)
-        db_session.commit()
+        self.db_session.add_all(db_models)
+        self.db_session.commit()
 
 
 class BatchJobDataRepository(RepositoryBase):
@@ -105,12 +104,12 @@ class BatchJobDataRepository(RepositoryBase):
     #     self.session.
     #     process_unit.save()
 
-    def get_by_id(self, id: int, db_session: Session) -> BatchJobData | None:
-        return db_session.get(BatchJobData, id)
+    def get_by_id(self, id: int) -> BatchJobData | None:
+        return self.db_session.get(BatchJobData, id)
 
-    def get_by_engine_id(self, engine_id: str, db_session: Session) -> BatchJobData | None:
+    def get_by_engine_id(self, engine_id: str) -> BatchJobData | None:
         q = select(BatchJobData).where(BatchJobData.engine_id == engine_id)
-        result = db_session.execute(q).first()
+        result = self.db_session.execute(q).first()
         if result is None:
             return None
         return result.tuple()[0]
