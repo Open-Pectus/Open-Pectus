@@ -4,6 +4,7 @@ from datetime import datetime
 from enum import StrEnum, auto
 from typing import Literal, List, Dict
 
+import openpectus.aggregator.data.models as data_models
 from openpectus.aggregator.models import TagInfo
 from openpectus.protocol.models import ReadingInfo
 from pydantic import BaseModel
@@ -230,8 +231,16 @@ class PlotConfiguration(BaseModel):
 class PlotLogEntryValue(BaseModel):
     value: ProcessValueValueType
 
-    class Config: # TODO: change in pydantic v2
+    class Config:  # TODO: change in pydantic v2
         orm_mode = True
+
+    @classmethod
+    def from_orm(cls, orm_obj: data_models.PlotLogEntryValue) -> PlotLogEntryValue:
+        mapped = super().from_orm(orm_obj)
+        if orm_obj.value_int is not None: mapped.value = orm_obj.value_int
+        if orm_obj.value_float is not None: mapped.value = orm_obj.value_float
+        if orm_obj.value_str is not None: mapped.value = orm_obj.value_str
+        return mapped
 
 
 class PlotLogEntry(BaseModel):
@@ -240,14 +249,14 @@ class PlotLogEntry(BaseModel):
     value_unit: str | None
     value_type: ProcessValueType
 
-    class Config: # TODO: change in pydantic v2
+    class Config:  # TODO: change in pydantic v2
         orm_mode = True
 
 
 class PlotLog(BaseModel):
     entries: Dict[str, PlotLogEntry]
 
-    class Config: # TODO: change in pydantic v2
+    class Config:  # TODO: change in pydantic v2
         orm_mode = True
 
 
