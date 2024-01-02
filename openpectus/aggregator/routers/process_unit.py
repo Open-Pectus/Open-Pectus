@@ -8,7 +8,9 @@ import openpectus.aggregator.routers.dto as Dto
 import openpectus.protocol.aggregator_messages as AM
 from fastapi import APIRouter, Depends, Response
 from openpectus.aggregator.aggregator import Aggregator
+from openpectus.aggregator.data.repository import PlotLogRepository, get_db
 from openpectus.aggregator.models import EngineData
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])
@@ -156,7 +158,8 @@ def get_method_and_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_ag
     engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None:
         logger.warning("No client data - thus no method")
-        return Dto.MethodAndState(method=Dto.Method(lines=[]), state=Dto.MethodState(started_line_ids=[], executed_line_ids=[], injected_line_ids=[]))
+        return Dto.MethodAndState(method=Dto.Method(lines=[]),
+                                  state=Dto.MethodState(started_line_ids=[], executed_line_ids=[], injected_line_ids=[]))
 
     def from_models(method: Mdl.Method, method_state: Mdl.MethodState) -> Dto.MethodAndState:
         return Dto.MethodAndState(
@@ -182,15 +185,27 @@ async def save_method(unit_id: str, method_dto: Dto.Method, agg: Aggregator = De
 def get_plot_configuration(unit_id: str) -> Dto.PlotConfiguration:
     return Dto.PlotConfiguration(
         color_regions=[],
-        sub_plots=[],
+        sub_plots=[Dto.SubPlot(
+            axes=[Dto.PlotAxis(
+                label='FT01',
+                process_value_names=['FT01'],
+                y_max=20,
+                y_min=10,
+                color='#ff0000',
+            )],
+            ratio=1
+        )],
         process_value_names_to_annotate=[],
-        x_axis_process_value_names=[]
+        x_axis_process_value_names=['FT01']
     )
 
 
 @router.get('/process_unit/{unit_id}/plot_log')
-def get_plot_log(unit_id: str) -> Dto.PlotLog:
-    return Dto.PlotLog(entries={})
+def get_plot_log(unit_id: str, db_session: Session = Depends(get_db)) -> Dto.PlotLog:
+    plot_log_repo = PlotLogRepository(db_session)
+    plot_log_model = plot_log_repo.get_plot_log(unit_id)
+    plot_log_dto = Dto.PlotLog.from_orm(plot_log_model)
+    return plot_log_dto
 
 
 @router.get('/process_unit/{unit_id}/control_state')

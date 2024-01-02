@@ -2,15 +2,17 @@ import asyncio
 import logging
 from typing import Dict, TypeVar, Callable, Awaitable, Any
 
-import openpectus.protocol.messages as M
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
-from fastapi import APIRouter, FastAPI, Request
+import openpectus.protocol.messages as M
+from fastapi import APIRouter, FastAPI, Request, Depends
 from fastapi_websocket_rpc import RpcChannel, WebsocketRPCEndpoint
 from fastapi_websocket_rpc.schemas import RpcResponse
+from openpectus.aggregator.data.repository import get_db
 from openpectus.protocol.dispatch_interface import AGGREGATOR_RPC_WS_PATH, AGGREGATOR_REST_PATH
 from openpectus.protocol.exceptions import ProtocolException
 from openpectus.protocol.serialization import deserialize, serialize
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -22,12 +24,13 @@ class AggregatorDispatcher():
     Aggregator dispatcher for the Aggregator-Engine Protocol using REST + WebSocket RPC.
     Allows receiving message via HTTP POST and sending messages via JSON-RPC.
     """
+
     def __init__(self) -> None:
         super().__init__()
 
         self.router = APIRouter(tags=["aggregator"])
         self._engine_id_channel_map: Dict[str, RpcChannel] = {}
-        self._handlers: Dict[type, Callable[[Any], Awaitable[M.MessageBase]]] = {}
+        self._handlers: Dict[type, Callable[[Any, Session], Awaitable[M.MessageBase]]] = {}
         self._register_handler: RegisterHandler | None = None
         # WebsockeRPCEndpoint has wrong types for its on_connect and on_disconnect.
         # It should be List[Callable[[RpcChannel], Awaitable[Any]]] instead of List[Coroutine]
@@ -85,7 +88,7 @@ class AggregatorDispatcher():
 
     def register_post_route(self, router: APIRouter | FastAPI):
         @router.post(AGGREGATOR_REST_PATH)
-        async def post(request: Request):
+        async def post(request: Request, db_session: Session = Depends(get_db)):
             request_json = await request.json()
             try:
                 message = deserialize(request_json)
@@ -95,7 +98,7 @@ class AggregatorDispatcher():
 
             if not isinstance(message, EM.RegisterEngineMsg) and not isinstance(message, EM.EngineMessage):
                 raise ValueError(f"Invalid type of message sent from Engine: {type(message).__name__}")
-            response_message = await self._dispatch_post(message)
+            response_message = await self._dispatch_post(message, db_session)
 
             try:
                 message_json = serialize(response_message)
@@ -105,7 +108,7 @@ class AggregatorDispatcher():
 
             return message_json
 
-    async def _dispatch_post(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
+    async def _dispatch_post(self, message: EM.EngineMessage | EM.RegisterEngineMsg, db_session: Session) -> M.MessageBase:
         """ Dispath message to registered handler. """
         if isinstance(message, EM.RegisterEngineMsg):
             if self._register_handler is None:
@@ -118,7 +121,7 @@ class AggregatorDispatcher():
         message_type = type(message)
         if message_type in self._handlers.keys():
             try:
-                return await self._handlers[message_type](message)
+                return await self._handlers[message_type](message, db_session)
             except Exception:
                 logger.error(f"Dispatch failed for message type: {message_type}. Handler raised exception.", exc_info=True)
                 return M.ProtocolErrorMessage(protocol_msg="Dispatch failed. Handler raised exception.")
@@ -131,7 +134,7 @@ class AggregatorDispatcher():
     def set_post_handler(
             self,
             message_type: type[MessageToHandle],
-            handler: Callable[[MessageToHandle], Awaitable[M.MessageBase]]):
+            handler: Callable[[MessageToHandle, Session], Awaitable[M.MessageBase]]):
         """ Set handler for message_type. """
         if message_type in self._handlers.keys():
             logger.error(f"Handler for message type {message_type} is already set.")

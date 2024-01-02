@@ -1484,13 +1484,13 @@
           "value": {
             "anyOf": [
               {
-                "type": "string"
-              },
-              {
                 "type": "number"
               },
               {
                 "type": "integer"
+              },
+              {
+                "type": "string"
               }
             ],
             "title": "Value"
@@ -1567,13 +1567,13 @@
           "value": {
             "anyOf": [
               {
-                "type": "string"
-              },
-              {
                 "type": "number"
               },
               {
                 "type": "integer"
+              },
+              {
+                "type": "string"
               }
             ],
             "title": "Value"
@@ -1742,7 +1742,8 @@
           "string",
           "float",
           "int",
-          "choice"
+          "choice",
+          "none"
         ],
         "title": "ProcessValueType",
         "description": "An enumeration."

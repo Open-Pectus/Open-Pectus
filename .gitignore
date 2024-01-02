@@ -135,4 +135,5 @@ frontend-dist
 
 conda/*
 
-pint-cache/*
+**/pint-cache/*
+*.db

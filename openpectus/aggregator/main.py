@@ -38,6 +38,8 @@ def get_args():
                         help="Host port to bind frontend and web socket to")
     parser.add_argument("-fdd", "--frontend_dist_dir", required=False, default=AggregatorServer.default_frontend_dist_dir,
                         help="Frontend distribution directory. Defaults to " + AggregatorServer.default_frontend_dist_dir)
+    parser.add_argument("-dbpath", "--database_file_path", required=False, default=AggregatorServer.default_database_file_path,
+                        help="SQLite database file path. Defaults to " + AggregatorServer.default_database_file_path)
     return parser.parse_args()
 
 
@@ -45,7 +47,7 @@ def main():
     args = get_args()
     title = "Pectus Aggregator"
     print(f"*** {title} ***")
-    AggregatorServer(title, args.host, args.port, args.frontend_dist_dir).start()
+    AggregatorServer(title, args.host, args.port, args.frontend_dist_dir, args.database_file_path).start()
 
 
 if __name__ == "__main__":

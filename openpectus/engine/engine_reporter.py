@@ -56,7 +56,7 @@ class EngineReporter():
             if tag_name is not None:
                 ri = Mdl.ReadingInfo(
                     label=r.label,
-                    tag_name=tag_name,
+                    tag_name=str(tag_name),
                     valid_value_units=r.valid_value_units,
                     commands=[Mdl.ReadingCommand(name=c.name, command=c.command) for c in r.commands])
                 readings.append(ri)

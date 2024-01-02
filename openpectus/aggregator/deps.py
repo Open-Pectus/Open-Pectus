@@ -1,3 +1,4 @@
+from openpectus.aggregator.data.repository import PlotLogRepository
 from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher

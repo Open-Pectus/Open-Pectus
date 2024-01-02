@@ -11,4 +11,5 @@ export enum ProcessValueType {
     FLOAT = 'float',
     INT = 'int',
     CHOICE = 'choice',
+    NONE = 'none',
 }

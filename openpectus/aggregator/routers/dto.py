@@ -4,6 +4,7 @@ from datetime import datetime
 from enum import StrEnum, auto
 from typing import Literal, List, Dict
 
+import openpectus.aggregator.data.models as data_models
 from openpectus.aggregator.models import TagInfo
 from openpectus.protocol.models import ReadingInfo
 from pydantic import BaseModel
@@ -77,6 +78,7 @@ class ProcessValueType(StrEnum):
     FLOAT = auto()
     INT = auto()
     CHOICE = auto()
+    NONE = auto()
 
 
 class ProcessValueCommandNumberValue(BaseModel):
@@ -108,10 +110,10 @@ class ProcessValueCommand(BaseModel):
     value: ProcessValueCommandNumberValue | ProcessValueCommandFreeTextValue | ProcessValueCommandChoiceValue | None
 
 
-ProcessValueValueType = str | float | int | None
+ProcessValueValueType = None | float | int | str
 
 
-def get_ProcessValueType_from_value(value: str | float | int | None) -> ProcessValueType:
+def get_ProcessValueType_from_value(value: ProcessValueValueType) -> ProcessValueType:
     if value is None:
         return ProcessValueType.STRING  # hmm
     if isinstance(value, str):
@@ -229,6 +231,17 @@ class PlotConfiguration(BaseModel):
 class PlotLogEntryValue(BaseModel):
     value: ProcessValueValueType
 
+    class Config:  # TODO: change in pydantic v2
+        orm_mode = True
+
+    @classmethod
+    def from_orm(cls, obj: data_models.PlotLogEntryValue) -> PlotLogEntryValue:
+        mapped = super().from_orm(obj)
+        if obj.value_int is not None: mapped.value = obj.value_int
+        if obj.value_float is not None: mapped.value = obj.value_float
+        if obj.value_str is not None: mapped.value = obj.value_str
+        return mapped
+
 
 class PlotLogEntry(BaseModel):
     name: str
@@ -236,9 +249,15 @@ class PlotLogEntry(BaseModel):
     value_unit: str | None
     value_type: ProcessValueType
 
+    class Config:  # TODO: change in pydantic v2
+        orm_mode = True
+
 
 class PlotLog(BaseModel):
     entries: Dict[str, PlotLogEntry]
+
+    class Config:  # TODO: change in pydantic v2
+        orm_mode = True
 
 
 class BatchJob(BaseModel):
