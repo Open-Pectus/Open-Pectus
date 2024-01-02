@@ -11,7 +11,7 @@ import type { ProcessValueType } from './ProcessValueType';
  */
 export type ProcessValue = {
     name: string;
-    value?: (string | number);
+    value?: (number | string);
     value_unit?: string;
     value_type: ProcessValueType;
     commands?: Array<ProcessValueCommand>;

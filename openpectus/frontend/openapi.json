@@ -1484,13 +1484,13 @@
           "value": {
             "anyOf": [
               {
-                "type": "string"
-              },
-              {
                 "type": "number"
               },
               {
                 "type": "integer"
+              },
+              {
+                "type": "string"
               }
             ],
             "title": "Value"
@@ -1567,13 +1567,13 @@
           "value": {
             "anyOf": [
               {
-                "type": "string"
-              },
-              {
                 "type": "number"
               },
               {
                 "type": "integer"
+              },
+              {
+                "type": "string"
               }
             ],
             "title": "Value"

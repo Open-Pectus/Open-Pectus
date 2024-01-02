@@ -4,5 +4,5 @@
 /* eslint-disable */
 
 export type PlotLogEntryValue = {
-    value?: (string | number);
+    value?: (number | string);
 };
