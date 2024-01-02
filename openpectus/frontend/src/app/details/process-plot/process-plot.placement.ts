@@ -131,7 +131,7 @@ export class ProcessPlotPlacement {
     svg.selectChild<SVGRectElement>('rect.x-axis-background')
       .attr('x', leftRight.left)
       .attr('y', svgHeight - totalHeight)
-      .attr('width', leftRight.right)
+      .attr('width', leftRight.right - leftRight.left)
       .attr('height', totalHeight);
   }
 
