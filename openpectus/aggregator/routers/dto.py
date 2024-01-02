@@ -110,7 +110,7 @@ class ProcessValueCommand(BaseModel):
     value: ProcessValueCommandNumberValue | ProcessValueCommandFreeTextValue | ProcessValueCommandChoiceValue | None
 
 
-ProcessValueValueType = str | float | int | None
+ProcessValueValueType = None | float | int | str
 
 
 def get_ProcessValueType_from_value(value: ProcessValueValueType) -> ProcessValueType:

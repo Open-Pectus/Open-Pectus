@@ -185,9 +185,18 @@ async def save_method(unit_id: str, method_dto: Dto.Method, agg: Aggregator = De
 def get_plot_configuration(unit_id: str) -> Dto.PlotConfiguration:
     return Dto.PlotConfiguration(
         color_regions=[],
-        sub_plots=[],
+        sub_plots=[Dto.SubPlot(
+            axes=[Dto.PlotAxis(
+                label='FT01',
+                process_value_names=['FT01'],
+                y_max=20,
+                y_min=10,
+                color='#ff0000',
+            )],
+            ratio=1
+        )],
         process_value_names_to_annotate=[],
-        x_axis_process_value_names=[]
+        x_axis_process_value_names=['FT01']
     )
 
 
