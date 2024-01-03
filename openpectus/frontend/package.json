@@ -9,7 +9,9 @@
     "start prod": "ng serve --configuration production",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "generate": "openapi --input ./openapi.json --output ./src/app/api --client angular"
+    "generate": "openapi --input ./openapi.json --output ./src/app/api --client angular",
+    "generate-openapi": "npx @openapitools/openapi-generator-cli generate --input-spec ./openapi.json --output ./src/app/api --generator-name typescript-angular",
+    "generate-fetch": "npx openapi-typescript ./openapi.json -o ./src/app/api/api.d.ts"
   },
   "private": true,
   "dependencies": {
