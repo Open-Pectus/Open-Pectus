@@ -190,13 +190,13 @@ def get_plot_configuration(unit_id: str) -> Dto.PlotConfiguration:
                 label='FT01',
                 process_value_names=['FT01'],
                 y_max=20,
-                y_min=10,
+                y_min=0,
                 color='#ff0000',
             )],
             ratio=1
         )],
         process_value_names_to_annotate=[],
-        x_axis_process_value_names=['FT01']
+        x_axis_process_value_names=['Time']
     )
 
 
