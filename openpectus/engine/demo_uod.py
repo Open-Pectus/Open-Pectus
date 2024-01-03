@@ -22,15 +22,18 @@ def create_demo_uod() -> UnitOperationDefinitionBase:
         .with_instrument("DemoUod")
         .with_hardware(DemoHardware())
         .with_hardware_register("FT01", RegisterDirection.Read, path='Objects;2:System;2:FT01')
+        .with_hardware_register("Time", RegisterDirection.Read)
         .with_hardware_register("Reset", RegisterDirection.Both, path='Objects;2:System;2:RESET',
                                 from_tag=lambda x: 1 if x == 'Reset' else 0,
                                 to_tag=lambda x: "Reset" if x == 1 else "N/A")
         .with_new_system_tags()
         .with_tag(tags.ReadingTag("FT01", "L/h"))
+        .with_tag(tags.ReadingTag("Time"))
         .with_tag(tags.SelectTag("Reset", value="N/A", unit=None, choices=['Reset', "N/A"]))
         .with_command(UodCommand.builder().with_name("Reset").with_exec_fn(reset))
         .with_process_value(R.Reading(label="Run Time"))
         .with_process_value(R.Reading(label="FT01"))
+        .with_process_value(R.Reading(label="Time"))
         .with_process_value(R.Reading(label="Reset"))
         .with_process_value(R.Reading(label="System State"))
         .build()
@@ -51,6 +54,8 @@ class DemoHardware(HardwareLayerBase):
             elapsed_seconds = time() - self.start_time
             minutes = elapsed_seconds / 60
             return 10 * (math.sin(minutes) + 1)
+        elif r.name == "Time":
+            return time() - self.start_time
 
     def write(self, value: Any, r: Register):
         pass
