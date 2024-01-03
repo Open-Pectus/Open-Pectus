@@ -14,13 +14,13 @@
         "operationId": "get_unit",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           }
         ],
         "responses": {
@@ -81,13 +81,13 @@
         "operationId": "get_process_values",
         "parameters": [
           {
+            "name": "engine_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Engine Id"
-            },
-            "name": "engine_id",
-            "in": "path"
+            }
           }
         ],
         "responses": {
@@ -96,10 +96,10 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/ProcessValue"
                   },
-                  "type": "array",
                   "title": "Response Get Process Values"
                 }
               }
@@ -127,24 +127,24 @@
         "operationId": "execute_command",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ExecutableCommand"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -177,13 +177,13 @@
         "operationId": "get_process_diagram",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           }
         ],
         "responses": {
@@ -219,13 +219,13 @@
         "operationId": "get_command_examples",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           }
         ],
         "responses": {
@@ -234,10 +234,10 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/CommandExample"
                   },
-                  "type": "array",
                   "title": "Response Get Command Examples"
                 }
               }
@@ -265,13 +265,13 @@
         "operationId": "get_run_log",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           }
         ],
         "responses": {
@@ -307,13 +307,13 @@
         "operationId": "get_method_and_state",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           }
         ],
         "responses": {
@@ -349,24 +349,24 @@
         "operationId": "save_method",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/Method"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -399,13 +399,13 @@
         "operationId": "get_plot_configuration",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           }
         ],
         "responses": {
@@ -441,13 +441,13 @@
         "operationId": "get_plot_log",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           }
         ],
         "responses": {
@@ -483,13 +483,13 @@
         "operationId": "get_control_state",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           }
         ],
         "responses": {
@@ -525,22 +525,22 @@
         "operationId": "force_run_log_line",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           },
           {
+            "name": "line_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "integer",
               "title": "Line Id"
-            },
-            "name": "line_id",
-            "in": "path"
+            }
           }
         ],
         "responses": {
@@ -574,22 +574,22 @@
         "operationId": "cancel_run_log_line",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           },
           {
+            "name": "line_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "integer",
               "title": "Line Id"
-            },
-            "name": "line_id",
-            "in": "path"
+            }
           }
         ],
         "responses": {
@@ -623,13 +623,13 @@
         "operationId": "get_batch_job",
         "parameters": [
           {
+            "name": "id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Id"
-            },
-            "name": "id",
-            "in": "path"
+            }
           }
         ],
         "responses": {
@@ -690,13 +690,13 @@
         "operationId": "get_batch_job_method_and_state",
         "parameters": [
           {
+            "name": "id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Id"
-            },
-            "name": "id",
-            "in": "path"
+            }
           }
         ],
         "responses": {
@@ -732,13 +732,13 @@
         "operationId": "get_batch_job_run_log",
         "parameters": [
           {
+            "name": "id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Id"
-            },
-            "name": "id",
-            "in": "path"
+            }
           }
         ],
         "responses": {
@@ -774,13 +774,13 @@
         "operationId": "get_batch_job_plot_configuration",
         "parameters": [
           {
+            "name": "id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Id"
-            },
-            "name": "id",
-            "in": "path"
+            }
           }
         ],
         "responses": {
@@ -816,13 +816,13 @@
         "operationId": "get_batch_job_plot_log",
         "parameters": [
           {
+            "name": "id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Id"
-            },
-            "name": "id",
-            "in": "path"
+            }
           }
         ],
         "responses": {
@@ -858,13 +858,13 @@
         "operationId": "get_batch_job_csv_json",
         "parameters": [
           {
+            "name": "id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Id"
-            },
-            "name": "id",
-            "in": "path"
+            }
           }
         ],
         "responses": {
@@ -900,13 +900,13 @@
         "operationId": "get_batch_job_csv_file",
         "parameters": [
           {
+            "name": "id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Id"
-            },
-            "name": "id",
-            "in": "path"
+            }
           }
         ],
         "responses": {
@@ -976,12 +976,12 @@
         "operationId": "expose_pubsub_topics",
         "parameters": [
           {
+            "name": "topic",
+            "in": "query",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PubSubTopic"
-            },
-            "name": "topic",
-            "in": "query"
+            }
           }
         ],
         "responses": {
@@ -1138,8 +1138,7 @@
           "unit_button",
           "method"
         ],
-        "title": "CommandSource",
-        "description": "An enumeration."
+        "title": "CommandSource"
       },
       "ControlState": {
         "properties": {
@@ -1201,10 +1200,7 @@
       "InProgress": {
         "properties": {
           "state": {
-            "type": "string",
-            "enum": [
-              "in_progress"
-            ],
+            "const": "in_progress",
             "title": "State"
           },
           "progress_pct": {
@@ -1304,10 +1300,7 @@
       "NotOnline": {
         "properties": {
           "state": {
-            "type": "string",
-            "enum": [
-              "not_online"
-            ],
+            "const": "not_online",
             "title": "State"
           },
           "last_seen_date": {
@@ -1644,10 +1637,7 @@
             "title": "Value"
           },
           "value_type": {
-            "type": "string",
-            "enum": [
-              "choice"
-            ],
+            "const": "choice",
             "title": "Value Type"
           },
           "options": {
@@ -1673,10 +1663,7 @@
             "title": "Value"
           },
           "value_type": {
-            "type": "string",
-            "enum": [
-              "string"
-            ],
+            "const": "string",
             "title": "Value Type"
           }
         },
@@ -1714,16 +1701,10 @@
           "value_type": {
             "anyOf": [
               {
-                "type": "string",
-                "enum": [
-                  "int"
-                ]
+                "const": "int"
               },
               {
-                "type": "string",
-                "enum": [
-                  "float"
-                ]
+                "const": "float"
               }
             ],
             "title": "Value Type"
@@ -1745,8 +1726,7 @@
           "choice",
           "none"
         ],
-        "title": "ProcessValueType",
-        "description": "An enumeration."
+        "title": "ProcessValueType"
       },
       "PubSubTopic": {
         "type": "string",
@@ -1755,16 +1735,12 @@
           "method",
           "control_state"
         ],
-        "title": "PubSubTopic",
-        "description": "An enumeration."
+        "title": "PubSubTopic"
       },
       "Ready": {
         "properties": {
           "state": {
-            "type": "string",
-            "enum": [
-              "ready"
-            ],
+            "const": "ready",
             "title": "State"
           }
         },
@@ -1888,8 +1864,7 @@
           "viewer",
           "admin"
         ],
-        "title": "UserRole",
-        "description": "An enumeration."
+        "title": "UserRole"
       },
       "ValidationError": {
         "properties": {

@@ -30,7 +30,7 @@ def create_pu(item: EngineData) -> Dto.ProcessUnit:
 
 
 @router.get("/process_unit/{unit_id}")
-def get_unit(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.ProcessUnit | None:
+def get_unit(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.Omissible[Dto.ProcessUnit]:
     ci = agg.get_registered_engine_data(unit_id)
     if ci is None:
         return None

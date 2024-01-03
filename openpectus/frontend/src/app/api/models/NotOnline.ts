@@ -4,15 +4,6 @@
 /* eslint-disable */
 
 export type NotOnline = {
-    state: NotOnline.state;
+    state: any;
     last_seen_date: string;
 };
-
-export namespace NotOnline {
-
-    export enum state {
-        NOT_ONLINE = 'not_online',
-    }
-
-
-}

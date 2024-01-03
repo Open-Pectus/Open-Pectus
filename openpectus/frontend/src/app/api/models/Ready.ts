@@ -4,14 +4,5 @@
 /* eslint-disable */
 
 export type Ready = {
-    state: Ready.state;
+    state: any;
 };
-
-export namespace Ready {
-
-    export enum state {
-        READY = 'ready',
-    }
-
-
-}

@@ -4,15 +4,6 @@
 /* eslint-disable */
 
 export type InProgress = {
-    state: InProgress.state;
+    state: any;
     progress_pct: number;
 };
-
-export namespace InProgress {
-
-    export enum state {
-        IN_PROGRESS = 'in_progress',
-    }
-
-
-}

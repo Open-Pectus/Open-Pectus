@@ -5,14 +5,5 @@
 
 export type ProcessValueCommandFreeTextValue = {
     value: string;
-    value_type: ProcessValueCommandFreeTextValue.value_type;
+    value_type: any;
 };
-
-export namespace ProcessValueCommandFreeTextValue {
-
-    export enum value_type {
-        STRING = 'string',
-    }
-
-
-}

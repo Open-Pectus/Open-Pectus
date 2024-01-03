@@ -2,12 +2,31 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum, auto
-from typing import Literal, List, Dict
+from typing import Literal, List, Dict, TypeVar, Annotated, Optional, Type, Any
 
 import openpectus.aggregator.data.models as data_models
 from openpectus.aggregator.models import TagInfo
 from openpectus.protocol.models import ReadingInfo
-from pydantic import BaseModel
+from pydantic import ConfigDict, BaseModel, GetCoreSchemaHandler
+from pydantic_core import core_schema
+
+
+# from https://github.com/pydantic/pydantic/issues/7161#issuecomment-1840396128
+class NotNullable:
+    def __get_pydantic_core_schema__(self, source: Type[Any], handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:
+        schema = handler(source)
+        assert schema["type"] == "nullable"
+        return schema["schema"]
+
+
+T = TypeVar("T")
+Omissible = Annotated[Optional[T], NotNullable()]
+
+
+class AuthConfig(BaseModel):
+    use_auth: bool
+    authority_url: Omissible[str] = None
+    client_id: Omissible[str] = None
 
 
 class ServerErrorResponse(BaseModel):
@@ -67,8 +86,8 @@ class ProcessUnit(BaseModel):
     id: str
     name: str
     state: ProcessUnitState.Ready | ProcessUnitState.InProgress | ProcessUnitState.NotOnline
-    location: str | None
-    runtime_msec: int | None
+    location: Omissible[str] = None
+    runtime_msec: Omissible[int] = None
     current_user_role: UserRole
     # users: List[User] ?
 
@@ -83,9 +102,9 @@ class ProcessValueType(StrEnum):
 
 class ProcessValueCommandNumberValue(BaseModel):
     value: float | int
-    value_unit: str | None
+    value_unit: Omissible[str] = None
     """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
-    valid_value_units: List[str] | None
+    valid_value_units: Omissible[List[str]] = None
     """ For values with a unit, provides the list valid alternative units """
     value_type: Literal[ProcessValueType.INT] | Literal[ProcessValueType.FLOAT]
     """ Specifies the type of allowed values. """
@@ -105,12 +124,12 @@ class ProcessValueCommandChoiceValue(BaseModel):
 class ProcessValueCommand(BaseModel):
     name: str
     command: str
-    disabled: bool | None
+    disabled: Omissible[bool] = None
     """ Indicates whether the command button should be disabled. """
-    value: ProcessValueCommandNumberValue | ProcessValueCommandFreeTextValue | ProcessValueCommandChoiceValue | None
+    value: Omissible[ProcessValueCommandNumberValue | ProcessValueCommandFreeTextValue | ProcessValueCommandChoiceValue] = None
 
 
-ProcessValueValueType = None | float | int | str
+ProcessValueValueType = Omissible[float | int | str]
 
 
 def get_ProcessValueType_from_value(value: ProcessValueValueType) -> ProcessValueType:
@@ -129,12 +148,12 @@ def get_ProcessValueType_from_value(value: ProcessValueValueType) -> ProcessValu
 class ProcessValue(BaseModel):
     """ Represents a process value. """
     name: str
-    value: ProcessValueValueType
-    value_unit: str | None
+    value: ProcessValueValueType = None
+    value_unit: Omissible[str] = None
     """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
     value_type: ProcessValueType
     """ Specifies the type of allowed values. """
-    commands: List[ProcessValueCommand] | None
+    commands: Omissible[List[ProcessValueCommand]] = None
 
     @staticmethod
     def from_message(r: ReadingInfo, ti: TagInfo) -> ProcessValue:
@@ -159,21 +178,21 @@ class CommandSource(StrEnum):
 class ExecutableCommand(BaseModel):
     command: str  # full command string, e.g. "start" or "foo: bar"
     source: CommandSource
-    name: str | None
+    name: Omissible[str] = None
 
 
 class RunLogLine(BaseModel):
     id: int
     command: ExecutableCommand
     start: datetime
-    end: datetime | None
-    progress: float | None  # between 0 and 1
+    end: Omissible[datetime] = None
+    progress: Omissible[float] = None  # between 0 and 1
     start_values: List[ProcessValue]
     end_values: List[ProcessValue]
-    forcible: bool | None
-    cancellable: bool | None
-    forced: bool | None
-    cancelled: bool | None
+    forcible: Omissible[bool] = None
+    cancellable: Omissible[bool] = None
+    forced: Omissible[bool] = None
+    cancelled: Omissible[bool] = None
 
 
 class RunLog(BaseModel):
@@ -229,10 +248,8 @@ class PlotConfiguration(BaseModel):
 # Properties on an object can be optional, so we use that via this wrapping class to express None values in the PlotLogEntry.values list.
 # Feel free to refactor to remove this class if it becomes possible to express the above without it.
 class PlotLogEntryValue(BaseModel):
-    value: ProcessValueValueType
-
-    class Config:  # TODO: change in pydantic v2
-        orm_mode = True
+    value: ProcessValueValueType = None
+    model_config = ConfigDict(from_attributes=True)
 
     @classmethod
     def from_orm(cls, obj: data_models.PlotLogEntryValue) -> PlotLogEntryValue:
@@ -246,18 +263,14 @@ class PlotLogEntryValue(BaseModel):
 class PlotLogEntry(BaseModel):
     name: str
     values: List[PlotLogEntryValue]
-    value_unit: str | None
+    value_unit: Omissible[str] = None
     value_type: ProcessValueType
-
-    class Config:  # TODO: change in pydantic v2
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PlotLog(BaseModel):
     entries: Dict[str, PlotLogEntry]
-
-    class Config:  # TODO: change in pydantic v2
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BatchJob(BaseModel):

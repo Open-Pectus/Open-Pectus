@@ -16,7 +16,7 @@ class ReadingCommand(BaseModel):
 class ReadingInfo(BaseModel):
     label: str
     tag_name: str
-    valid_value_units: List[str] | None
+    valid_value_units: List[str] | None = None
     commands: List[ReadingCommand]
 
 
@@ -31,15 +31,15 @@ class SystemTagName(StrEnum):
 class TagValue(BaseModel):
     name: str = ""
     value: TagValueType = None
-    value_unit: str | None
+    value_unit: str | None = None
 
 
 class RunLogLine(BaseModel):
     id: str
     command_name: str
     start: float
-    end: float | None
-    progress: float | None  # between 0 and 1
+    end: float | None = None
+    progress: float | None = None  # between 0 and 1
     start_values: List[TagValue]
     end_values: List[TagValue]
 

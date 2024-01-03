@@ -3,9 +3,6 @@
 /* tslint:disable */
 /* eslint-disable */
 
-/**
- * An enumeration.
- */
 export enum PubSubTopic {
     RUN_LOG = 'run_log',
     METHOD = 'method',

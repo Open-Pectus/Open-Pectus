@@ -34,7 +34,7 @@ TagValueType = int | float | str | None
 class TagInfo(BaseModel):
     name: str
     value: TagValueType
-    value_unit: str | None
+    value_unit: str | None = None
     updated: datetime
 
 

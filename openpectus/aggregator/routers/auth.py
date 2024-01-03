@@ -1,14 +1,9 @@
 import os
+
 from fastapi import APIRouter
-from pydantic import BaseModel
+from openpectus.aggregator.routers.dto import AuthConfig
 
 router = APIRouter(tags=['auth'])
-
-
-class AuthConfig(BaseModel):
-    use_auth: bool
-    authority_url: str | None
-    client_id: str | None
 
 
 @router.get('/config')
