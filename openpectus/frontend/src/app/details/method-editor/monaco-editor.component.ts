@@ -141,6 +141,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       minimap: {
         enabled: UtilMethods.isDesktop,
       },
+      autoIndent: 'none',
     });
     this.componentDestroyed.pipe(take(1)).subscribe(() => {
       modelRef.object.dispose();
