@@ -34,7 +34,7 @@ def create_demo_uod() -> UnitOperationDefinitionBase:
         .with_process_value(R.Reading(label="Run Time"))
         .with_process_value(R.Reading(label="FT01"))
         .with_process_value(R.Reading(label="Time"))
-        .with_process_value(R.Reading(label="Reset"))
+        # .with_process_value(R.Reading(label="Reset"))
         .with_process_value(R.Reading(label="System State"))
         .build()
     )
@@ -53,7 +53,7 @@ class DemoHardware(HardwareLayerBase):
         if r.name == "FT01":
             elapsed_seconds = time() - self.start_time
             minutes = elapsed_seconds / 60
-            return 10 * (math.sin(minutes) + 1)
+            return int(10 * (math.sin(minutes) + 1))
         elif r.name == "Time":
             return time() - self.start_time
 

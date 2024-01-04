@@ -1494,9 +1494,16 @@
               }
             ],
             "title": "Value"
+          },
+          "timestamp_ms": {
+            "type": "integer",
+            "title": "Timestamp Ms"
           }
         },
         "type": "object",
+        "required": [
+          "timestamp_ms"
+        ],
         "title": "PlotLogEntryValue"
       },
       "ProcessDiagram": {

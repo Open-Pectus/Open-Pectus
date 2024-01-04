@@ -1,6 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { PlotConfiguration, PlotLog } from '../../../api';
+import { PlotConfiguration, PlotLog, PlotLogEntry, PlotLogEntryValue } from '../../../api';
 import { DetailsActions } from '../../ngrx/details.actions';
 import { XAxisOverrideDialogData, YAxesLimitsOverride, YAxisOverrideDialogData, ZoomAndPanDomainOverrides } from '../process-plot.types';
 import { ProcessPlotActions } from './process-plot.actions';
@@ -62,10 +62,10 @@ const reducer = createReducer(initialState,
           name: processValue.name,
           value_unit: processValue.value_unit,
           value_type: processValue.value_type,
-          values: [{value: processValue.value}],
+          values: [{value: processValue.value, timestamp_ms: Date.now()}],
         };
       } else {
-        existing.values.push({value: processValue.value});
+        existing.values.push({value: processValue.value, timestamp_ms: Date.now()});
       }
     });
   })),
@@ -102,7 +102,24 @@ const reducer = createReducer(initialState,
     draft.xAxisOverrideDialogData = undefined;
   })),
   on(ProcessPlotActions.plotLogFetched, (state, {plotLog}) => produce(state, draft => {
-    draft.plotLog = plotLog;
+    const allTimestamps = Object.values(plotLog.entries).flatMap(entry => entry.values.map(value => value.timestamp_ms));
+    const sortedUniqueTimestamps = [...new Set(allTimestamps)].sort((a, b) => a - b);
+    const newEntries: Record<string, PlotLogEntry> = {};
+    Object.entries(plotLog.entries).forEach(([name, entry]) => {
+      if(entry.values.length === 0) return; // skip empty entries
+      let previousFoundValue: PlotLogEntryValue | undefined = undefined;
+      const newValues = sortedUniqueTimestamps.map(requiredTimestamp => {
+        const existingValueIndex = entry.values.findIndex(value => value.timestamp_ms === requiredTimestamp);
+        if(existingValueIndex !== -1) {
+          previousFoundValue = entry.values[existingValueIndex];
+          return previousFoundValue;
+        }
+        if(previousFoundValue === undefined) throw Error('No value found and no previous value found');
+        return {value: previousFoundValue.value, timestamp_ms: requiredTimestamp};
+      });
+      newEntries[name] = {...entry, values: newValues};
+    });
+    draft.plotLog.entries = newEntries;
   })),
 );
 
