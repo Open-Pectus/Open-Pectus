@@ -31,31 +31,24 @@ TagValueType = int | float | str | None
 """ Represents the possible types of a tag value"""
 
 
-class TagInfo(BaseModel):
-    name: str
-    value: TagValueType
-    value_unit: str | None
-    updated: datetime
-
 
 class TagsInfo(BaseModel):
-    map: Dict[str, TagInfo]
+    map: Dict[str, Mdl.TagValue]
 
     def get(self, tag_name: str):
         return self.map.get(tag_name)
 
     def upsert(self, tag_value: Mdl.TagValue) -> bool:
         current = self.map.get(tag_value.name)
-        now = datetime.now()
         if current is None:
-            current = TagInfo(name=tag_value.name, value=tag_value.value, value_unit=tag_value.value_unit, updated=now)
+            current = tag_value
             self.map[current.name] = current
             return True # was inserted
             # Store unit and type in plot log db
         else:
             if current.value != tag_value.value:
                 current.value = tag_value.value
-                current.updated = now
+                current.timestamp_ms = tag_value.timestamp_ms
                 # hold latest time written to db, and if difference exceeds a threshold, insert new value in db.
 
             if current.value_unit != tag_value.value_unit:

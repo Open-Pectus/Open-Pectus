@@ -5,8 +5,8 @@ from enum import StrEnum, auto
 from typing import Literal, List, Dict
 
 import openpectus.aggregator.data.models as data_models
-from openpectus.aggregator.models import TagInfo
 from openpectus.protocol.models import ReadingInfo
+from protocol.models import TagValue
 from pydantic import BaseModel
 
 
@@ -149,7 +149,7 @@ class ProcessValue(Dto):
     commands: List[ProcessValueCommand] | None
 
     @staticmethod
-    def from_message(r: ReadingInfo, ti: TagInfo) -> ProcessValue:
+    def from_message(r: ReadingInfo, ti: TagValue) -> ProcessValue:
         return ProcessValue(
             name=r.label,
             value=ti.value,
