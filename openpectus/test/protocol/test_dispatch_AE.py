@@ -64,7 +64,7 @@ class TestAE_EngineDispatcher_Impl(IsolatedAsyncioTestCase):
         next(server())
 
     def test_post(self):
-        disp = EngineDispatcher(aggregator_host, "uod1")
+        disp = EngineDispatcher(aggregator_host, "uod1", "loc")
         # msg = M.RegisterEngineMsg(uod_name="uod1", computer_name="pc1")
         # result = disp.post(msg)
         # assert isinstance(result, M.RegisterEngineReplyMsg), f"Got type {type(result)}"
@@ -78,7 +78,7 @@ class TestAE_EngineDispatcher_Impl(IsolatedAsyncioTestCase):
             finish.set()
             return M.MessageBase()
 
-        disp = EngineDispatcher(aggregator_host, "uod1")
+        disp = EngineDispatcher(aggregator_host, "uod1", "loc")
         disp.set_rpc_handler(AM.InvokeCommandMsg, handler)
 
         # dispatch unrelated message

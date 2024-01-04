@@ -65,14 +65,16 @@ class MethodModel():
 
     def update_state(self, runtimeinfo: RuntimeInfo):
         method_state = Mdl.MethodState.empty()
-        for record in runtimeinfo.records:
-            if record.node is not PProgram:
-                assert record.node.line is not None
-                line_num = record.node.line
-                line_id = self._map_line_num_to_line_id[line_num]
-                method_state.started_line_ids.append(line_id)
-                if record.visit_end_time != -1:
-                    method_state.executed_line_ids.append(line_id)
+        if self._pcode != "":
+            for record in runtimeinfo.records:
+                if record.node is not PProgram:
+                    assert record.node is not None, "node is None"
+                    assert record.node.line is not None, "node.line is None, node: " + str(record.node)
+                    line_num = record.node.line
+                    line_id = self._map_line_num_to_line_id[line_num]
+                    method_state.started_line_ids.append(line_id)
+                    if record.visit_end_time != -1:
+                        method_state.executed_line_ids.append(line_id)
 
         self._method_state = method_state
         self._dirty = False

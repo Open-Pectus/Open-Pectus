@@ -16,6 +16,7 @@ class UnitOperationDefinitionBase:
     def __init__(self,
                  instrument_name: str,
                  hwl: HardwareLayerBase,
+                 location: str,
                  tags: TagCollection,
                  system_tags: TagCollection,
                  readings: ReadingCollection,
@@ -23,6 +24,7 @@ class UnitOperationDefinitionBase:
                  overlapping_command_names_lists: List[List[str]]) -> None:
         self.instrument = instrument_name
         self.hwl = hwl
+        self.location = location
         self.tags = tags
         self.system_tags = system_tags
         self.readings = readings
@@ -228,6 +230,7 @@ class UodBuilder():
         self.commands: Dict[str, UodCommandBuilder] = {}
         self.overlapping_command_names_lists: List[List[str]] = []
         self.readings = ReadingCollection()
+        self.location: str = ""
 
     def validate(self):
         if len(self.instrument.strip()) == 0:
@@ -250,6 +253,10 @@ class UodBuilder():
 
     def with_hardware(self, hwl: HardwareLayerBase) -> UodBuilder:
         self.hwl = hwl
+        return self
+
+    def with_location(self, location: str) -> UodBuilder:
+        self.location = location
         return self
 
     def with_hardware_register(self, name: str, direction: RegisterDirection, **options) -> UodBuilder:
@@ -300,6 +307,7 @@ class UodBuilder():
         uod = UnitOperationDefinitionBase(
             self.instrument,
             self.hwl,  # type: ignore
+            self.location,
             self.tags,
             self.system_tags,  # type: ignore
             self.readings,

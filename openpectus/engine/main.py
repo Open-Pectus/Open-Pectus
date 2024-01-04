@@ -31,7 +31,10 @@ async def async_main(args):
     # TODO: read uod from file
     uod = create_demo_uod()
     engine = Engine(uod, tick_interval=1)
-    dispatcher = EngineDispatcher(f"{args.aggregator_hostname}:{args.aggregator_port}", engine.uod.instrument)
+    dispatcher = EngineDispatcher(
+        f"{args.aggregator_hostname}:{args.aggregator_port}",
+        engine.uod.instrument,
+        engine.uod.location)
     await dispatcher.connect_websocket_async()
     engine_reporter = EngineReporter(engine, dispatcher)
     args.engine_reporter = engine_reporter

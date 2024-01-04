@@ -21,6 +21,7 @@ def create_demo_uod() -> UnitOperationDefinitionBase:
         UodBuilder()
         .with_instrument("DemoUod")
         .with_hardware(DemoHardware())
+        .with_location("Demo location")
         .with_hardware_register("FT01", RegisterDirection.Read, path='Objects;2:System;2:FT01')
         .with_hardware_register("Time", RegisterDirection.Read)
         .with_hardware_register("Reset", RegisterDirection.Both, path='Objects;2:System;2:RESET',
