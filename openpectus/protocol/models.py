@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import logging
 from enum import StrEnum, auto
 from typing import List
@@ -8,19 +9,24 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 
-class ReadingCommand(BaseModel):
+class ProtocolModel(BaseModel):
+    class Config:
+        smart_union = True
+
+
+class ReadingCommand(ProtocolModel):
     name: str
     command: str
 
 
-class ReadingInfo(BaseModel):
+class ReadingInfo(ProtocolModel):
     label: str
     tag_name: str
     valid_value_units: List[str] | None
     commands: List[ReadingCommand]
 
 
-TagValueType = None | float | int | str
+TagValueType = float | int | str | None
 
 
 class SystemTagName(StrEnum):
@@ -28,13 +34,13 @@ class SystemTagName(StrEnum):
     system_state = auto()
 
 
-class TagValue(BaseModel):
+class TagValue(ProtocolModel):
     name: str = ""
     value: TagValueType = None
     value_unit: str | None
 
 
-class RunLogLine(BaseModel):
+class RunLogLine(ProtocolModel):
     id: str
     command_name: str
     start: float
@@ -44,16 +50,16 @@ class RunLogLine(BaseModel):
     end_values: List[TagValue]
 
 
-class RunLog(BaseModel):
+class RunLog(ProtocolModel):
     lines: List[RunLogLine]
 
 
-class MethodLine(BaseModel):
+class MethodLine(ProtocolModel):
     id: str
     content: str
 
 
-class Method(BaseModel):
+class Method(ProtocolModel):
     lines: List[MethodLine]
 
     @staticmethod
@@ -70,7 +76,7 @@ class Method(BaseModel):
         return method
 
 
-class MethodState(BaseModel):
+class MethodState(ProtocolModel):
     started_line_ids: List[str]
     executed_line_ids: List[str]
     injected_line_ids: List[str]
@@ -80,7 +86,7 @@ class MethodState(BaseModel):
         return MethodState(started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
 
 
-class ControlState(BaseModel):
+class ControlState(ProtocolModel):
     is_running: bool
     is_holding: bool
     is_paused: bool
