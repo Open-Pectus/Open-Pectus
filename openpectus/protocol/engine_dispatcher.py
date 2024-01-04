@@ -44,8 +44,8 @@ class EngineDispatcher():
             # Note: Must be async since it is invoked by RPC
             return self.engine_id
 
-    async def register_for_engine_id_async(self, uod_name: str):
-        register_engine_msg = EM.RegisterEngineMsg(computer_name=socket.gethostname(), uod_name=uod_name)
+    async def register_for_engine_id_async(self, uod_name: str, location: str):
+        register_engine_msg = EM.RegisterEngineMsg(computer_name=socket.gethostname(), uod_name=uod_name, location=location)
         register_response = self.post(register_engine_msg)
         logger.info("Registering for engine id")
         if not isinstance(register_response, AM.RegisterEngineReplyMsg) or not register_response.success:
@@ -70,12 +70,13 @@ class EngineDispatcher():
             print("OpenPectus Engine cannot start.")
             exit(1)
 
-    def __init__(self, aggregator_host: str, uod_name: str) -> None:
+    def __init__(self, aggregator_host: str, uod_name: str, location: str) -> None:
         super().__init__()
         self._handlers: Dict[type, Callable[[Any], Awaitable[M.MessageBase]]] = {}
         self._engine_id = None
         self._aggregator_host = aggregator_host
         self._uod_name = uod_name
+        self._location = location
 
         # TODO consider https/wss
         self.post_url = f"http://{aggregator_host}{AGGREGATOR_REST_PATH}"
@@ -83,7 +84,7 @@ class EngineDispatcher():
     async def connect_websocket_async(self):
         self.check_aggregator_alive_or_exit(self._aggregator_host)
         while self._engine_id is None:
-            self._engine_id = await self.register_for_engine_id_async(self._uod_name)
+            self._engine_id = await self.register_for_engine_id_async(self._uod_name, self._location)
 
         rpc_url = f"ws://{self._aggregator_host}{AGGREGATOR_RPC_WS_PATH}"
         rpc_methods = EngineDispatcher.EngineRpcMethods(self, self._engine_id)

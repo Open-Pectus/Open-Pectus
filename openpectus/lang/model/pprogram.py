@@ -120,6 +120,7 @@ class PProgram(PNode):
         super().__init__(None)
         self.children = []
         self.is_root = True
+        self.line = 1
 
     def get_instructions(self, include_blanks: bool = False) -> List[PInstruction]:
         """ Return list of all program instructions, recursively, depth first. """
