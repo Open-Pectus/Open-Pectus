@@ -130,6 +130,7 @@ class Tag(ChangeSubject):
     def __init__(
             self,
             name: str,
+            timestamp_ms: int = int(time.time() * 1000),
             value: TagValueType = None,
             unit: str | None = None,
             direction: TagDirection = TagDirection.NA,
@@ -141,23 +142,20 @@ class Tag(ChangeSubject):
             raise ValueError("unit must be None or a string")
 
         self.name: str = name
-        self.set_timestamp()
+        self.timestamp_ms = timestamp_ms
         self.value: TagValueType = value  # Do we need default also? sometimes it is used as safe but are the other uses?
         self.unit: str | None = unit
         self.choices: List[str] | None = None
         self.direction: TagDirection = direction
         self.safe_value: TagValueType = safe_value
 
-    def set_timestamp(self):
-        self.timestamp_ms = int(time.time() * 1000)
-
     def as_readonly(self) -> TagValue:
         return TagValue(self.name, self.timestamp_ms, self.value, self.unit)
 
-    def set_value(self, val: TagValueType) -> None:
+    def set_value(self, val: TagValueType, timestamp_ms: int = int(time.time() * 1000)) -> None:
         if val != self.value:
             self.value = val
-            self.set_timestamp()
+            self.timestamp_ms = timestamp_ms
             self.notify_listeners(self.name)
 
     def get_value(self):
@@ -179,17 +177,17 @@ class Tag(ChangeSubject):
             raise ValueError(f"Value is not numerical: '{self.value}'")
         return self.value
 
-    def set_quantity(self, q: QuantityType):
+    def set_quantity(self, q: QuantityType, timestamp_ms: int = int(time.time() * 1000)):
         self.unit = None if q.dimensionless else str(q.units)
-        self.set_value(q.magnitude)
+        self.set_value(q.magnitude, timestamp_ms)
 
     def clone(self) -> Tag:
-        return Tag(self.name, self.value, self.unit)
+        return Tag(self.name, self.timestamp_ms, self.value, self.unit)
 
 
 class ReadingTag(Tag):
     def __init__(self, name: str, unit: str | None = None) -> None:
-        super().__init__(name, value=0.0, unit=unit, direction=TagDirection.INPUT)
+        super().__init__(name, timestamp_ms=int(time.time() * 1000), value=0.0, unit=unit, direction=TagDirection.INPUT)
 
 
 class SelectTag(Tag):
@@ -318,6 +316,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
     @staticmethod
     def create_system_tags() -> TagCollection:
         tags = TagCollection()
+        timestamp_ms = int(time.time() * 1000)
         defaults = [
             (SystemTagName.BASE, "min", None),  # TODO this should not be wrapped in pint quantity
             (SystemTagName.RUN_COUNTER, 0, None),
@@ -329,7 +328,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
             (SystemTagName.METHOD_STATUS, "OK", None),
         ]
         for name, value, unit in defaults:
-            tag = Tag(name, value, unit, TagDirection.NA)
+            tag = Tag(name, timestamp_ms, value, unit, TagDirection.NA)
             tags.add(tag)
         return tags
 

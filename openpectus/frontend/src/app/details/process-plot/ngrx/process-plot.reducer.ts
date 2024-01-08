@@ -107,15 +107,15 @@ const reducer = createReducer(initialState,
     const newEntries: Record<string, PlotLogEntry> = {};
     Object.entries(plotLog.entries).forEach(([name, entry]) => {
       if(entry.values.length === 0) return; // skip empty entries
-      let previousFoundValue: PlotLogEntryValue | undefined = undefined;
+      let previousExistingValue: PlotLogEntryValue | undefined = undefined;
       const newValues = sortedUniqueTimestamps.map(requiredTimestamp => {
-        const existingValueIndex = entry.values.findIndex(value => value.timestamp_ms === requiredTimestamp);
-        if(existingValueIndex !== -1) {
-          previousFoundValue = entry.values[existingValueIndex];
-          return previousFoundValue;
+        const existingValue = entry.values.find(value => value.timestamp_ms === requiredTimestamp);
+        if(existingValue !== undefined) {
+          previousExistingValue = existingValue;
+          return previousExistingValue;
         }
-        if(previousFoundValue === undefined) throw Error('No value found and no previous value found');
-        return {value: previousFoundValue.value, timestamp_ms: requiredTimestamp};
+        if(previousExistingValue === undefined) throw Error('No value found and no previous value found');
+        return {value: previousExistingValue.value, timestamp_ms: requiredTimestamp};
       });
       newEntries[name] = {...entry, values: newValues};
     });
