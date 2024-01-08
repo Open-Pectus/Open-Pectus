@@ -46,7 +46,7 @@ class FromEngine:
             now = datetime.now()
             if engine_data.tags_last_persisted is None or now - engine_data.tags_last_persisted > timedelta(seconds=5):
                 tag_values_to_persist = [tag_value for tag_value in engine_data.tags_info.map.values() if
-                                         engine_data.tags_last_persisted is None or tag_value.timestamp_ms > int(engine_data.tags_last_persisted.timestamp() * 1000)]
+                                         engine_data.tags_last_persisted is None or tag_value.timestamp > engine_data.tags_last_persisted.timestamp()]
                 plot_log_repo.store_tag_values(engine_id, tag_values_to_persist)
                 engine_data.tags_last_persisted = now
         except KeyError:

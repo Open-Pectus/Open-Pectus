@@ -48,7 +48,7 @@ class TagsInfo(BaseModel):
         else:
             if current.value != tag_value.value:
                 current.value = tag_value.value
-                current.timestamp_ms = tag_value.timestamp_ms
+                current.timestamp = tag_value.timestamp
                 # hold latest time written to db, and if difference exceeds a threshold, insert new value in db.
 
             if current.value_unit != tag_value.value_unit:

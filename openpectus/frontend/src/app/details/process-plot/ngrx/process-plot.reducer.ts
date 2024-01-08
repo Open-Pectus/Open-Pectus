@@ -62,10 +62,10 @@ const reducer = createReducer(initialState,
           name: processValue.name,
           value_unit: processValue.value_unit,
           value_type: processValue.value_type,
-          values: [{value: processValue.value, timestamp_ms: Date.now()}],
+          values: [{value: processValue.value, timestamp: Date.now()}],
         };
       } else {
-        existing.values.push({value: processValue.value, timestamp_ms: Date.now()});
+        existing.values.push({value: processValue.value, timestamp: Date.now()});
       }
     });
   })),
@@ -104,18 +104,18 @@ const reducer = createReducer(initialState,
   on(ProcessPlotActions.plotLogFetched, (state, {plotLog}) => produce(state, draft => {
     const requiredTimestamps = Object.values(plotLog.entries)
       .filter(entry => state.plotConfiguration?.x_axis_process_value_names.includes(entry.name))
-      .flatMap(entry => entry.values.map(value => value.timestamp_ms));
+      .flatMap(entry => entry.values.map(value => value.timestamp));
     const sortedUniqueTimestamps = [...new Set(requiredTimestamps)].sort((a, b) => a - b);
     const newEntries: Record<string, PlotLogEntry> = {};
     Object.entries(plotLog.entries).forEach(([name, entry]) => {
       if(entry.values.length === 0) return; // skip empty entries
       const newValues = sortedUniqueTimestamps.map(requiredTimestamp => {
         const bestMatchingValue = entry.values.reduce((prev, curr) => {
-          if(curr.timestamp_ms > requiredTimestamp) return prev;
-          if(curr.timestamp_ms > prev.timestamp_ms) return curr;
+          if(curr.timestamp > requiredTimestamp) return prev;
+          if(curr.timestamp > prev.timestamp) return curr;
           return prev;
         });
-        return {value: bestMatchingValue.value, timestamp_ms: requiredTimestamp};
+        return {value: bestMatchingValue.value, timestamp: requiredTimestamp};
       });
       newEntries[name] = {...entry, values: newValues};
     });

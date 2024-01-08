@@ -242,7 +242,7 @@ class PlotConfiguration(Dto):
 # Feel free to refactor to remove this class if it becomes possible to express the above without it.
 class PlotLogEntryValue(Dto):
     value: ProcessValueValueType
-    timestamp_ms: int
+    timestamp: float
 
     @classmethod
     def from_orm(cls, obj: data_models.PlotLogEntryValue) -> PlotLogEntryValue:

@@ -1495,14 +1495,14 @@
             ],
             "title": "Value"
           },
-          "timestamp_ms": {
-            "type": "integer",
-            "title": "Timestamp Ms"
+          "timestamp": {
+            "type": "number",
+            "title": "Timestamp"
           }
         },
         "type": "object",
         "required": [
-          "timestamp_ms"
+          "timestamp"
         ],
         "title": "PlotLogEntryValue"
       },

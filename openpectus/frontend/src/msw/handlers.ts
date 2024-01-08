@@ -605,13 +605,13 @@ export const handlers = [
           value_type: ProcessValueType.INT,
           name: 'Timestamp',
           values: new Array(noOfValues).fill(undefined).map(
-            (_, index) => ({value: new Date().valueOf() - 1000 * (noOfValues - index), timestamp_ms: Date.now()})),
+            (_, index) => ({value: new Date().valueOf() - 1000 * (noOfValues - index), timestamp: Date.now()})),
         },
         'Timestamp2': {
           value_type: ProcessValueType.INT,
           name: 'Timestamp2',
           values: new Array(noOfValues).fill(undefined).map(
-            (_, index) => ({value: new Date().valueOf() - 1000 * (noOfValues - index) + 1000000000000, timestamp_ms: Date.now()})),
+            (_, index) => ({value: new Date().valueOf() - 1000 * (noOfValues - index) + 1000000000000, timestamp: Date.now()})),
         },
         'PU01 Speed': {
           value_type: ProcessValueType.FLOAT,
@@ -652,38 +652,38 @@ export const handlers = [
         'FT01 Flow': {
           value_type: ProcessValueType.FLOAT,
           name: 'FT01 Flow',
-          values: new Array(noOfValues).fill(undefined).map(() => ({value: 123 + Math.random() * 2, timestamp_ms: Date.now()})),
+          values: new Array(noOfValues).fill(undefined).map(() => ({value: 123 + Math.random() * 2, timestamp: Date.now()})),
           value_unit: 'L/h',
         },
         'TT01': {
           value_type: ProcessValueType.FLOAT,
           name: 'TT01',
-          values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2, timestamp_ms: Date.now()})),
+          values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2, timestamp: Date.now()})),
           value_unit: 'degC',
         },
         'TT02': {
           value_type: ProcessValueType.FLOAT,
           name: 'TT02',
-          values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2, timestamp_ms: Date.now()})),
+          values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2, timestamp: Date.now()})),
           value_unit: 'degC',
         },
         'TT03': {
           value_type: ProcessValueType.FLOAT,
           name: 'TT03',
-          values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2, timestamp_ms: Date.now()})),
+          values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2, timestamp: Date.now()})),
           value_unit: 'degC',
         },
         'TT04': {
           value_type: ProcessValueType.FLOAT,
           name: 'TT04',
-          values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2, timestamp_ms: Date.now()})),
+          values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2, timestamp: Date.now()})),
           value_unit: 'degC',
         },
         'Flow path': {
           value_type: ProcessValueType.STRING,
           name: 'Flow path',
           values: new Array(noOfValues).fill(undefined).map((_, index) =>
-            ({value: (index % 9 < 3) ? 'Bypass' : (index % 9 < 6) ? 'Prime with a long name' : undefined, timestamp_ms: Date.now()}),
+            ({value: (index % 9 < 3) ? 'Bypass' : (index % 9 < 6) ? 'Prime with a long name' : undefined, timestamp: Date.now()}),
           ),
         },
       },
@@ -892,13 +892,13 @@ export const handlers = [
           value_type: ProcessValueType.INT,
           name: 'Timestamp',
           values: new Array(noOfValues).fill(undefined).map(
-            (_, index) => ({value: new Date().valueOf() - 1000 * (noOfValues - index), timestamp_ms: Date.now()})),
+            (_, index) => ({value: new Date().valueOf() - 1000 * (noOfValues - index), timestamp: Date.now()})),
         },
         'Timestamp2': {
           value_type: ProcessValueType.INT,
           name: 'Timestamp2',
           values: new Array(noOfValues).fill(undefined).map(
-            (_, index) => ({value: new Date().valueOf() - 1000 * (noOfValues - index) + 1000000000000, timestamp_ms: Date.now()})),
+            (_, index) => ({value: new Date().valueOf() - 1000 * (noOfValues - index) + 1000000000000, timestamp: Date.now()})),
         },
         'PU01 Speed': {
           value_type: ProcessValueType.FLOAT,
@@ -939,38 +939,38 @@ export const handlers = [
         'FT01 Flow': {
           value_type: ProcessValueType.FLOAT,
           name: 'FT01 Flow',
-          values: new Array(noOfValues).fill(undefined).map(() => ({value: 123 + Math.random() * 2, timestamp_ms: Date.now()})),
+          values: new Array(noOfValues).fill(undefined).map(() => ({value: 123 + Math.random() * 2, timestamp: Date.now()})),
           value_unit: 'L/h',
         },
         'TT01': {
           value_type: ProcessValueType.FLOAT,
           name: 'TT01',
-          values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2, timestamp_ms: Date.now()})),
+          values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2, timestamp: Date.now()})),
           value_unit: 'degC',
         },
         'TT02': {
           value_type: ProcessValueType.FLOAT,
           name: 'TT02',
-          values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2, timestamp_ms: Date.now()})),
+          values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2, timestamp: Date.now()})),
           value_unit: 'degC',
         },
         'TT03': {
           value_type: ProcessValueType.FLOAT,
           name: 'TT03',
-          values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2, timestamp_ms: Date.now()})),
+          values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2, timestamp: Date.now()})),
           value_unit: 'degC',
         },
         'TT04': {
           value_type: ProcessValueType.FLOAT,
           name: 'TT04',
-          values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2, timestamp_ms: Date.now()})),
+          values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2, timestamp: Date.now()})),
           value_unit: 'degC',
         },
         'Flow path': {
           value_type: ProcessValueType.STRING,
           name: 'Flow path',
           values: new Array(noOfValues).fill(undefined).map((_, index) =>
-            ({value: (index % 9 < 3) ? 'Bypass' : (index % 9 < 6) ? 'Prime with a long name' : undefined, timestamp_ms: Date.now()}),
+            ({value: (index % 9 < 3) ? 'Bypass' : (index % 9 < 6) ? 'Prime with a long name' : undefined, timestamp: Date.now()}),
           ),
         },
       },

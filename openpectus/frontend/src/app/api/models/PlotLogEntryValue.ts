@@ -5,5 +5,5 @@
 
 export type PlotLogEntryValue = {
     value?: (number | string);
-    timestamp_ms: number;
+    timestamp: number;
 };

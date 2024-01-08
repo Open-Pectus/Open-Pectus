@@ -221,13 +221,13 @@ class Engine(InterpreterContext):
 
         registers = self.uod.hwl.registers
         register_values = self.uod.hwl.read_batch(list(registers.values()))
-        timestamp_ms = int(time.time() * 1000)
+        timestamp = time.time()
         for i, r in enumerate(registers.values()):
             tag = self.uod.tags.get(r.name)
             tag_value = register_values[i]
             if "to_tag" in r.options:
                 tag_value = r.options["to_tag"](tag_value)
-            tag.set_value(tag_value, timestamp_ms)
+            tag.set_value(tag_value, timestamp)
 
     def update_tags(self):
         # TODO figure out engine/interpreter work split on clock tags

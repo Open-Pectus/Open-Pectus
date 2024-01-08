@@ -69,7 +69,7 @@ class BatchJobData(DBModel):
 class PlotLogEntryValue(DBModel):
     __tablename__ = "PlotLogEntryValues"
     plot_log_entry_id: Mapped[int] = mapped_column(ForeignKey('PlotLogEntries.id'))
-    timestamp_ms: Mapped[int] = mapped_column()
+    timestamp: Mapped[float] = mapped_column()
     value_str: Mapped[Optional[str]] = mapped_column()
     value_float: Mapped[Optional[float]] = mapped_column()
     value_int: Mapped[Optional[int]] = mapped_column()
