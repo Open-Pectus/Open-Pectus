@@ -96,6 +96,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         UodBuilder()
         .with_instrument("TestUod")
         .with_hardware(TestHW())
+        .with_location("Test location")
         .with_hardware_register(
             "FT01", RegisterDirection.Both, path="Objects;2:System;2:FT01")
         .with_hardware_register(

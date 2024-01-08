@@ -40,7 +40,8 @@ class AggregatorMessageHandlers:
             self.aggregator.from_engine.register_engine_data(Mdl.EngineData(
                 engine_id=engine_id,
                 computer_name=register_engine_msg.computer_name,
-                uod_name=register_engine_msg.uod_name
+                uod_name=register_engine_msg.uod_name,
+                location=register_engine_msg.location
             ))
 
         logger.debug(f"Registration successful of client {engine_id}")

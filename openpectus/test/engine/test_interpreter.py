@@ -44,6 +44,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         UodBuilder()
         .with_instrument("TestUod")
         .with_no_hardware()
+        .with_location("Test location")
         # Readings
         .with_new_system_tags()
         .with_tag(Tag("counter", 0))

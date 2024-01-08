@@ -22,7 +22,7 @@ def create_pu(item: EngineData) -> Dto.ProcessUnit:
         id=item.engine_id or "(error)",
         name=f"{item.computer_name} ({item.uod_name})",
         state=Dto.ProcessUnitState.Ready(state=Dto.ProcessUnitStateEnum.READY),
-        location="Unknown location",
+        location=item.location,
         runtime_msec=item.runtime,
         current_user_role=Dto.UserRole.ADMIN,
     )

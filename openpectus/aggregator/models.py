@@ -61,6 +61,7 @@ class EngineData(BaseModel):
     engine_id: str
     computer_name: str
     uod_name: str
+    location: str
     readings: List[Mdl.ReadingInfo] = []
     tags_info: TagsInfo = TagsInfo(map={})
     runlog: RunLog = RunLog(lines=[])

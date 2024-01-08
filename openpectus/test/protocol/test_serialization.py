@@ -8,16 +8,16 @@ from openpectus.protocol.serialization import serialize, deserialize
 
 class SerializationTest(unittest.TestCase):
     def test_serialization_RegisterEngineMsg(self):
-        reg = EM.RegisterEngineMsg(computer_name="foo", uod_name="bar")
+        reg = EM.RegisterEngineMsg(computer_name="foo", uod_name="bar", location="baz")
         reg_s = serialize(reg)
         self.assertEqual(
             {'_type': 'RegisterEngineMsg', '_ns': 'openpectus.protocol.engine_messages',
-             'computer_name': 'foo', 'uod_name': 'bar', 'version': 0},
+             'computer_name': 'foo', 'uod_name': 'bar', 'location': 'baz', 'version': 0},
             reg_s)
         self.assertIsNotNone(reg_s)
 
     def test_round_trip_RegisterEngineMsg(self):
-        reg = EM.RegisterEngineMsg(computer_name="foo", uod_name="bar")
+        reg = EM.RegisterEngineMsg(computer_name="foo", uod_name="bar", location="baz")
         reg_s = serialize(reg)
         reg_d = deserialize(reg_s)
         self.assertIsNotNone(reg_d)
