@@ -5,8 +5,7 @@ from enum import StrEnum, auto
 from typing import Literal, List, Dict
 
 import openpectus.aggregator.data.models as data_models
-from openpectus.protocol.models import ReadingInfo
-from protocol.models import TagValue
+from openpectus.protocol.models import ReadingInfo, TagValue
 from pydantic import BaseModel
 
 

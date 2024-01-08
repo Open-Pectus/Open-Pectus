@@ -38,7 +38,7 @@ def create_demo_uod() -> UnitOperationDefinitionBase:
         .with_process_value(R.Reading(label="FT01"))
         .with_process_value(R.Reading(label="FT02"))
         .with_process_value(R.Reading(label="Time"))
-        # .with_process_value(R.Reading(label="Reset"))
+        .with_process_value(R.Reading(label="Reset"))
         .with_process_value(R.Reading(label="System State"))
         .build()
     )

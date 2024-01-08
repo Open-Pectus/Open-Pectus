@@ -187,13 +187,13 @@ class Tag(ChangeSubject):
 
 class ReadingTag(Tag):
     def __init__(self, name: str, unit: str | None = None) -> None:
-        super().__init__(name, timestamp=time.time(), value=0.0, unit=unit, direction=TagDirection.INPUT)
+        super().__init__(name, value=0.0, unit=unit, direction=TagDirection.INPUT)
 
 
 class SelectTag(Tag):
     def __init__(self, name: str, value, unit: str | None,
                  choices: List[str], direction: TagDirection = TagDirection.NA) -> None:
-        super().__init__(name, value, unit, direction)
+        super().__init__(name=name, value=value, unit=unit, direction=direction)
         if choices is None or len(choices) == 0:
             raise ValueError("choices must be non-empty")
         self.choices = choices
