@@ -1,6 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { PlotConfiguration, PlotLog, PlotLogEntry, PlotLogEntryValue } from '../../../api';
+import { PlotConfiguration, PlotLog, PlotLogEntry } from '../../../api';
 import { DetailsActions } from '../../ngrx/details.actions';
 import { XAxisOverrideDialogData, YAxesLimitsOverride, YAxisOverrideDialogData, ZoomAndPanDomainOverrides } from '../process-plot.types';
 import { ProcessPlotActions } from './process-plot.actions';
@@ -102,20 +102,20 @@ const reducer = createReducer(initialState,
     draft.xAxisOverrideDialogData = undefined;
   })),
   on(ProcessPlotActions.plotLogFetched, (state, {plotLog}) => produce(state, draft => {
-    const allTimestamps = Object.values(plotLog.entries).flatMap(entry => entry.values.map(value => value.timestamp_ms));
-    const sortedUniqueTimestamps = [...new Set(allTimestamps)].sort((a, b) => a - b);
+    const requiredTimestamps = Object.values(plotLog.entries)
+      .filter(entry => state.plotConfiguration?.x_axis_process_value_names.includes(entry.name))
+      .flatMap(entry => entry.values.map(value => value.timestamp_ms));
+    const sortedUniqueTimestamps = [...new Set(requiredTimestamps)].sort((a, b) => a - b);
     const newEntries: Record<string, PlotLogEntry> = {};
     Object.entries(plotLog.entries).forEach(([name, entry]) => {
       if(entry.values.length === 0) return; // skip empty entries
-      let previousExistingValue: PlotLogEntryValue | undefined = undefined;
       const newValues = sortedUniqueTimestamps.map(requiredTimestamp => {
-        const existingValue = entry.values.find(value => value.timestamp_ms === requiredTimestamp);
-        if(existingValue !== undefined) {
-          previousExistingValue = existingValue;
-          return previousExistingValue;
-        }
-        if(previousExistingValue === undefined) throw Error('No value found and no previous value found');
-        return {value: previousExistingValue.value, timestamp_ms: requiredTimestamp};
+        const bestMatchingValue = entry.values.reduce((prev, curr) => {
+          if(curr.timestamp_ms > requiredTimestamp) return prev;
+          if(curr.timestamp_ms > prev.timestamp_ms) return curr;
+          return prev;
+        });
+        return {value: bestMatchingValue.value, timestamp_ms: requiredTimestamp};
       });
       newEntries[name] = {...entry, values: newValues};
     });
