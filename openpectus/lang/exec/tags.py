@@ -130,7 +130,7 @@ class Tag(ChangeSubject):
     def __init__(
             self,
             name: str,
-            timestamp: float = time.time(),
+            timestamp: float | None = None,
             value: TagValueType = None,
             unit: str | None = None,
             direction: TagDirection = TagDirection.NA,
@@ -150,9 +150,10 @@ class Tag(ChangeSubject):
         self.safe_value: TagValueType = safe_value
 
     def as_readonly(self) -> TagValue:
+        # assert self.timestamp is not None, f'tick_time is None for tag {self.name}'
         return TagValue(self.name, self.timestamp, self.value, self.unit)
 
-    def set_value(self, val: TagValueType, timestamp: float = time.time()) -> None:
+    def set_value(self, val: TagValueType, timestamp: float) -> None:
         if val != self.value:
             self.value = val
             self.timestamp = timestamp
@@ -177,7 +178,7 @@ class Tag(ChangeSubject):
             raise ValueError(f"Value is not numerical: '{self.value}'")
         return self.value
 
-    def set_quantity(self, q: QuantityType, timestamp: float = time.time()):
+    def set_quantity(self, q: QuantityType, timestamp: float):
         self.unit = None if q.dimensionless else str(q.units)
         self.set_value(q.magnitude, timestamp)
 
@@ -316,7 +317,6 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
     @staticmethod
     def create_system_tags() -> TagCollection:
         tags = TagCollection()
-        timestamp = time.time()
         defaults = [
             (SystemTagName.BASE, "min", None),  # TODO this should not be wrapped in pint quantity
             (SystemTagName.RUN_COUNTER, 0, None),
@@ -328,7 +328,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
             (SystemTagName.METHOD_STATUS, "OK", None),
         ]
         for name, value, unit in defaults:
-            tag = Tag(name, timestamp, value, unit, TagDirection.NA)
+            tag = Tag(name, value=value, unit=unit, direction=TagDirection.NA)
             tags.add(tag)
         return tags
 
@@ -339,7 +339,7 @@ class TagValue():
     def __init__(
             self,
             name: str,
-            timestamp: float,
+            timestamp: float | None = None,
             value: TagValueType = None,
             unit: str | None = None
     ):

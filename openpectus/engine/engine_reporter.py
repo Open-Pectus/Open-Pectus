@@ -83,6 +83,7 @@ class EngineReporter():
                 tag = self.engine.tag_updates.get_nowait()
                 tag_name = self.map_and_filter_tag_name(tag.name)
                 if tag_name is not None:
+                    assert tag.timestamp is not None
                     tags.append(Mdl.TagValue(name=tag_name, timestamp=tag.timestamp, value=tag.get_value(), value_unit=tag.unit))
         except Empty:
             pass
@@ -92,6 +93,7 @@ class EngineReporter():
 
     def send_runlog(self):
         def to_value(t: TagValue) -> Mdl.TagValue:
+            assert t.timestamp is not None
             return Mdl.TagValue(name=t.name, value=t.value, value_unit=t.unit, timestamp=t.timestamp)
 
         def to_line(item: RunLogItem) -> Mdl.RunLogLine:

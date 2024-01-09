@@ -37,7 +37,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         counter = cmd.context.tags["counter"]
         count = counter.as_number()
         count = count + 1
-        counter.set_value(count)
+        counter.set_value(count, time.time())
         cmd.set_complete()
 
     return (
@@ -239,7 +239,7 @@ Mark: A3
 """
         uod = create_test_uod()
         assert uod.system_tags is not None
-        uod.system_tags[SystemTagName.BASE].set_value("sec")
+        uod.system_tags[SystemTagName.BASE].set_value("sec", time.time())
 
         engine = create_engine(uod)
         run_engine(engine, program, 10)

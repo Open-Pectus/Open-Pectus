@@ -221,13 +221,12 @@ class Engine(InterpreterContext):
 
         registers = self.uod.hwl.registers
         register_values = self.uod.hwl.read_batch(list(registers.values()))
-        timestamp = time.time()
         for i, r in enumerate(registers.values()):
             tag = self.uod.tags.get(r.name)
             tag_value = register_values[i]
             if "to_tag" in r.options:
                 tag_value = r.options["to_tag"](tag_value)
-            tag.set_value(tag_value, timestamp)
+            tag.set_value(tag_value, self._tick_time)
 
     def update_tags(self):
         # TODO figure out engine/interpreter work split on clock tags
@@ -235,7 +234,7 @@ class Engine(InterpreterContext):
         # - unless we allow scope information to pass to engine (which we might)
 
         clock = self._system_tags.get(SystemTagName.CLOCK)
-        clock.set_value(time.time())
+        clock.set_value(time.time(), self._tick_time)
 
     def execute_commands(self):
         done = False
@@ -261,7 +260,7 @@ class Engine(InterpreterContext):
                     self._execute_command(c, cmds_done)
                 except Exception:
                     logger.error("Error executing command: {c}", exc_info=True)
-                    self._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.ERROR)
+                    self._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.ERROR, self._tick_time)
                     # TODO stop or pause or something
                     break
         for c_done in cmds_done:
@@ -300,7 +299,7 @@ class Engine(InterpreterContext):
                 self._runstate_started_time = time.time()
                 self._runstate_paused = False
                 self._runstate_holding = False
-                self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running)
+                self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, self._tick_time)
                 cmds_done.add(cmd_request)
                 # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
@@ -308,13 +307,13 @@ class Engine(InterpreterContext):
                 self._runstate_started = False
                 self._runstate_paused = False
                 self._runstate_holding = False
-                self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Stopped)
+                self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Stopped, self._tick_time)
                 cmds_done.add(cmd_request)
                 # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
             case EngineCommandEnum.PAUSE:
                 self._runstate_paused = True
-                self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Paused)
+                self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Paused, self._tick_time)
                 self._apply_safe_state()
                 cmds_done.add(cmd_request)
                 # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
@@ -322,9 +321,9 @@ class Engine(InterpreterContext):
             case EngineCommandEnum.UNPAUSE:
                 self._runstate_paused = False
                 if self._runstate_holding:
-                    self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Holding)
+                    self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Holding, self._tick_time)
                 else:
-                    self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running)
+                    self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, self._tick_time)
                 self._apply_safe_state()
                 cmds_done.add(cmd_request)
                 # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
@@ -332,20 +331,20 @@ class Engine(InterpreterContext):
             case EngineCommandEnum.HOLD:
                 self._runstate_holding = True
                 if not self._runstate_paused:
-                    self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Holding)
+                    self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Holding, self._tick_time)
                 cmds_done.add(cmd_request)
                 # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
             case EngineCommandEnum.UNHOLD:
                 self._runstate_holding = False
                 if not self._runstate_paused:
-                    self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running)
+                    self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, self._tick_time)
                 cmds_done.add(cmd_request)
                 # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
             case EngineCommandEnum.INCREMENT_RUN_COUNTER:
                 value = self._system_tags[SystemTagName.RUN_COUNTER].as_number() + 1
-                self._system_tags[SystemTagName.RUN_COUNTER].set_value(value)
+                self._system_tags[SystemTagName.RUN_COUNTER].set_value(value, self._tick_time)
                 cmds_done.add(cmd_request)
                 # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
@@ -477,7 +476,7 @@ class Engine(InterpreterContext):
                 safe_value = t.safe_value
                 if safe_value is not None:
                     current_values.append(t.as_readonly())
-                    t.set_value(safe_value)
+                    t.set_value(safe_value, self._tick_time)
 
         return TagValueCollection(current_values)
 
@@ -485,7 +484,7 @@ class Engine(InterpreterContext):
         for t in self._iter_all_tags():
             if state.has(t.name):
                 tag_value = state.get(t.name)
-                t.set_value(tag_value.value)
+                t.set_value(tag_value.value, self._tick_time)
 
     def notify_initial_tags(self):
         for tag in self._iter_all_tags():

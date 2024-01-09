@@ -11,10 +11,10 @@ def create_demo_uod() -> UnitOperationDefinitionBase:
     def reset(cmd: UodCommand, args: List[Any]) -> None:
         count = cmd.get_iteration_count()
         if count == 0:
-            cmd.context.tags.get("Reset").set_value("Reset")
+            cmd.context.tags.get("Reset").set_value("Reset", time())
             cmd.context.hwl.reset_FT01()  # type: ignore
         elif count == 4:
-            cmd.context.tags.get("Reset").set_value("N/A")
+            cmd.context.tags.get("Reset").set_value("N/A", time())
             cmd.set_complete()
 
     return (
