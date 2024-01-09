@@ -488,6 +488,9 @@ class Engine(InterpreterContext):
 
     def notify_initial_tags(self):
         for tag in self._iter_all_tags():
+            if tag.tick_time is None:
+                logger.debug(f'setting a tick time on {tag.name} tag missing it in notify_initial_tags()')
+                tag.tick_time = self._tick_time
             self.tag_updates.put(tag)
 
     def notify_tag_updates(self):
