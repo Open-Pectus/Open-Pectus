@@ -1494,9 +1494,16 @@
               }
             ],
             "title": "Value"
+          },
+          "tick_time": {
+            "type": "number",
+            "title": "Tick Time"
           }
         },
         "type": "object",
+        "required": [
+          "tick_time"
+        ],
         "title": "PlotLogEntryValue"
       },
       "ProcessDiagram": {

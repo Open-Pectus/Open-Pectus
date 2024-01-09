@@ -34,12 +34,12 @@ class SerializationTest(unittest.TestCase):
         self.assertEqual(am_method.method, reg_d.method)  # type: ignore
 
     def test_serialization_TagsUpdatedMsg(self):
-        tu = EM.TagsUpdatedMsg(tags=[Mdl.TagValue(name="foo", value="bar", value_unit="m")])
+        tu = EM.TagsUpdatedMsg(tags=[Mdl.TagValue(name="foo", tick_time=0, value="bar", value_unit="m")])
         tu_s = serialize(tu)
         self.assertIsNotNone(tu_s)
 
     def test_round_trip_TagsUpdatedMsg(self):
-        tu = EM.TagsUpdatedMsg(tags=[Mdl.TagValue(name="foo", value="bar", value_unit=None)])
+        tu = EM.TagsUpdatedMsg(tags=[Mdl.TagValue(name="foo", tick_time=0, value="bar", value_unit=None)])
         tu_s = serialize(tu)
         self.assertIsNotNone(tu_s)
 

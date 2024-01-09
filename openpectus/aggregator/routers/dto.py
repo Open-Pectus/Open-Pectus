@@ -5,12 +5,23 @@ from enum import StrEnum, auto
 from typing import Literal, List, Dict
 
 import openpectus.aggregator.data.models as data_models
-from openpectus.aggregator.models import TagInfo
-from openpectus.protocol.models import ReadingInfo
+from openpectus.protocol.models import ReadingInfo, TagValue
 from pydantic import BaseModel
 
 
-class ServerErrorResponse(BaseModel):
+class Dto(BaseModel):
+    class Config:
+        smart_union = True
+        orm_mode = True
+
+
+class AuthConfig(Dto):
+    use_auth: bool
+    authority_url: str | None
+    client_id: str | None
+
+
+class ServerErrorResponse(Dto):
     error: bool = True
     message: str
 
@@ -23,23 +34,23 @@ class ProcessUnitStateEnum(StrEnum):
 
 
 class ProcessUnitState:
-    class Ready(BaseModel):
+    class Ready(Dto):
         state: Literal[ProcessUnitStateEnum.READY]
 
-    class InProgress(BaseModel):
+    class InProgress(Dto):
         state: Literal[ProcessUnitStateEnum.IN_PROGRESS]
         progress_pct: int
 
-    class NotOnline(BaseModel):
+    class NotOnline(Dto):
         state: Literal[ProcessUnitStateEnum.NOT_ONLINE]
         last_seen_date: datetime
 
 
-class ProcessDiagram(BaseModel):
+class ProcessDiagram(Dto):
     svg: str
 
 
-class CommandExample(BaseModel):
+class CommandExample(Dto):
     name: str
     example: str
 
@@ -49,7 +60,7 @@ class UserRole(StrEnum):
     ADMIN = auto()
 
 
-class ControlState(BaseModel):
+class ControlState(Dto):
     is_running: bool
     is_holding: bool
     is_paused: bool
@@ -62,7 +73,7 @@ class ControlState(BaseModel):
             is_paused=False)
 
 
-class ProcessUnit(BaseModel):
+class ProcessUnit(Dto):
     """Represents a process unit. """
     id: str
     name: str
@@ -81,7 +92,7 @@ class ProcessValueType(StrEnum):
     NONE = auto()
 
 
-class ProcessValueCommandNumberValue(BaseModel):
+class ProcessValueCommandNumberValue(Dto):
     value: float | int
     value_unit: str | None
     """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
@@ -91,18 +102,18 @@ class ProcessValueCommandNumberValue(BaseModel):
     """ Specifies the type of allowed values. """
 
 
-class ProcessValueCommandFreeTextValue(BaseModel):
+class ProcessValueCommandFreeTextValue(Dto):
     value: str
     value_type: Literal[ProcessValueType.STRING]
 
 
-class ProcessValueCommandChoiceValue(BaseModel):
+class ProcessValueCommandChoiceValue(Dto):
     value: str
     value_type: Literal[ProcessValueType.CHOICE]
     options: List[str]
 
 
-class ProcessValueCommand(BaseModel):
+class ProcessValueCommand(Dto):
     name: str
     command: str
     disabled: bool | None
@@ -110,12 +121,12 @@ class ProcessValueCommand(BaseModel):
     value: ProcessValueCommandNumberValue | ProcessValueCommandFreeTextValue | ProcessValueCommandChoiceValue | None
 
 
-ProcessValueValueType = None | float | int | str
+ProcessValueValueType = float | int | str | None
 
 
 def get_ProcessValueType_from_value(value: ProcessValueValueType) -> ProcessValueType:
     if value is None:
-        return ProcessValueType.STRING  # hmm
+        return ProcessValueType.NONE
     if isinstance(value, str):
         return ProcessValueType.STRING
     elif isinstance(value, int):
@@ -126,7 +137,7 @@ def get_ProcessValueType_from_value(value: ProcessValueValueType) -> ProcessValu
         raise ValueError("Invalid value type: " + type(value).__name__)
 
 
-class ProcessValue(BaseModel):
+class ProcessValue(Dto):
     """ Represents a process value. """
     name: str
     value: ProcessValueValueType
@@ -137,7 +148,7 @@ class ProcessValue(BaseModel):
     commands: List[ProcessValueCommand] | None
 
     @staticmethod
-    def from_message(r: ReadingInfo, ti: TagInfo) -> ProcessValue:
+    def from_message(r: ReadingInfo, ti: TagValue) -> ProcessValue:
         return ProcessValue(
             name=r.label,
             value=ti.value,
@@ -156,13 +167,13 @@ class CommandSource(StrEnum):
     METHOD = auto()
 
 
-class ExecutableCommand(BaseModel):
+class ExecutableCommand(Dto):
     command: str  # full command string, e.g. "start" or "foo: bar"
     source: CommandSource
     name: str | None
 
 
-class RunLogLine(BaseModel):
+class RunLogLine(Dto):
     id: int
     command: ExecutableCommand
     start: datetime
@@ -176,36 +187,36 @@ class RunLogLine(BaseModel):
     cancelled: bool | None
 
 
-class RunLog(BaseModel):
+class RunLog(Dto):
     lines: List[RunLogLine]
 
 
-class MethodLine(BaseModel):
+class MethodLine(Dto):
     id: str
     content: str
 
 
-class Method(BaseModel):
+class Method(Dto):
     lines: List[MethodLine]
 
 
-class MethodState(BaseModel):
+class MethodState(Dto):
     started_line_ids: List[str]
     executed_line_ids: List[str]
     injected_line_ids: List[str]
 
 
-class MethodAndState(BaseModel):
+class MethodAndState(Dto):
     method: Method
     state: MethodState
 
 
-class PlotColorRegion(BaseModel):
+class PlotColorRegion(Dto):
     process_value_name: str
     value_color_map: dict[str | int | float, str]  # color string compatible with css e.g.: '#aa33bb', 'rgb(0,0,0)', 'rgba(0,0,0,0)', 'red'
 
 
-class PlotAxis(BaseModel):
+class PlotAxis(Dto):
     label: str
     process_value_names: List[str]
     y_max: int | float
@@ -213,12 +224,12 @@ class PlotAxis(BaseModel):
     color: str
 
 
-class SubPlot(BaseModel):
+class SubPlot(Dto):
     axes: List[PlotAxis]
     ratio: int | float
 
 
-class PlotConfiguration(BaseModel):
+class PlotConfiguration(Dto):
     process_value_names_to_annotate: List[str]
     color_regions: List[PlotColorRegion]
     sub_plots: List[SubPlot]
@@ -228,11 +239,9 @@ class PlotConfiguration(BaseModel):
 # This class exists only to workaround the issue that OpenApi spec (or Pydantic) cannot express that elements in a list can be None/null/undefined.
 # Properties on an object can be optional, so we use that via this wrapping class to express None values in the PlotLogEntry.values list.
 # Feel free to refactor to remove this class if it becomes possible to express the above without it.
-class PlotLogEntryValue(BaseModel):
+class PlotLogEntryValue(Dto):
     value: ProcessValueValueType
-
-    class Config:  # TODO: change in pydantic v2
-        orm_mode = True
+    tick_time: float
 
     @classmethod
     def from_orm(cls, obj: data_models.PlotLogEntryValue) -> PlotLogEntryValue:
@@ -243,24 +252,18 @@ class PlotLogEntryValue(BaseModel):
         return mapped
 
 
-class PlotLogEntry(BaseModel):
+class PlotLogEntry(Dto):
     name: str
     values: List[PlotLogEntryValue]
     value_unit: str | None
     value_type: ProcessValueType
 
-    class Config:  # TODO: change in pydantic v2
-        orm_mode = True
 
-
-class PlotLog(BaseModel):
+class PlotLog(Dto):
     entries: Dict[str, PlotLogEntry]
 
-    class Config:  # TODO: change in pydantic v2
-        orm_mode = True
 
-
-class BatchJob(BaseModel):
+class BatchJob(Dto):
     """ Represents a current or historical run of a process unit. """
     id: str
     unit_id: str
@@ -270,6 +273,6 @@ class BatchJob(BaseModel):
     contributors: List[str] = []
 
 
-class BatchJobCsv(BaseModel):
+class BatchJobCsv(Dto):
     filename: str
     csv_content: str

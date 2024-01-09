@@ -45,7 +45,9 @@ class FromEngine:
 
             now = datetime.now()
             if engine_data.tags_last_persisted is None or now - engine_data.tags_last_persisted > timedelta(seconds=5):
-                plot_log_repo.store_tag_values(engine_id, tag_values)
+                tag_values_to_persist = [tag_value for tag_value in engine_data.tags_info.map.values() if
+                                         engine_data.tags_last_persisted is None or tag_value.tick_time > engine_data.tags_last_persisted.timestamp()]
+                plot_log_repo.store_tag_values(engine_id, tag_values_to_persist)
                 engine_data.tags_last_persisted = now
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to upsert tag values.')

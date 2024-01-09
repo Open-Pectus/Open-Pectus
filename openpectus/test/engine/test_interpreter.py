@@ -37,7 +37,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         counter = cmd.context.tags["counter"]
         count = counter.as_number()
         count = count + 1
-        counter.set_value(count)
+        counter.set_value(count, time.time())
         cmd.set_complete()
 
     return (
@@ -47,7 +47,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_location("Test location")
         # Readings
         .with_new_system_tags()
-        .with_tag(Tag("counter", 0))
+        .with_tag(Tag(name="counter", value=0))
         .with_command(UodCommand.builder().with_name("incr counter").with_exec_fn(incr_counter))
         .build()
     )
@@ -239,7 +239,7 @@ Mark: A3
 """
         uod = create_test_uod()
         assert uod.system_tags is not None
-        uod.system_tags[SystemTagName.BASE].set_value("sec")
+        uod.system_tags[SystemTagName.BASE].set_value("sec", time.time())
 
         engine = create_engine(uod)
         run_engine(engine, program, 10)

@@ -219,13 +219,13 @@ class PInterpreter(PNodeVisitor):
             ar_program = self.stack.records[0]
             program_elapsed = self._tick_time - ar_program.start_time
             q_program = pint.Quantity(f'{program_elapsed} sec')
-            self.context.tags.get(SystemTagName.RUN_TIME).set_quantity(q_program)
+            self.context.tags.get(SystemTagName.RUN_TIME).set_quantity(q_program, self._tick_time)
 
             ar_block = self.stack.peek()
             # TODO block time should not include pause and hold time
             block_elapsed = self._tick_time - ar_block.start_time
             q_block = pint.Quantity(f'{block_elapsed} sec')
-            self.context.tags.get(SystemTagName.BLOCK_TIME).set_quantity(q_block)
+            self.context.tags.get(SystemTagName.BLOCK_TIME).set_quantity(q_block, self._tick_time)
 
             # TODO implement remaining tags, e.g. SYSTEM STATE, RUN COUNTER
 

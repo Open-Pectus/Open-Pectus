@@ -192,6 +192,12 @@ def get_plot_configuration(unit_id: str) -> Dto.PlotConfiguration:
                 y_max=20,
                 y_min=0,
                 color='#ff0000',
+            ), Dto.PlotAxis(
+                label='FT02',
+                process_value_names=['FT02'],
+                y_max=20,
+                y_min=0,
+                color='#0000ff',
             )],
             ratio=1
         )],

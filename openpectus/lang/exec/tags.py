@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import time
 from enum import StrEnum, auto
 from typing import Any, Dict, Iterable, List, Set
 
@@ -10,6 +12,7 @@ ureg = UnitRegistry(cache_folder="./pint-cache")
 Q_ = Quantity
 
 QuantityType = pint.Quantity | PlainQuantity[Any]
+
 
 # Represents tag API towards interpreter
 
@@ -71,6 +74,7 @@ TagValueType = int | float | str | None
 
 class ChangeListener():
     """ Collects named changes """
+
     def __init__(self) -> None:
         self._changes: Set[str] = set()
 
@@ -87,6 +91,7 @@ class ChangeListener():
 
 class ChangeSubject():
     """ Inherit to support change notification """
+
     def __init__(self) -> None:
         super().__init__()
 
@@ -125,6 +130,7 @@ class Tag(ChangeSubject):
     def __init__(
             self,
             name: str,
+            tick_time: float | None = None,
             value: TagValueType = None,
             unit: str | None = None,
             direction: TagDirection = TagDirection.NA,
@@ -136,6 +142,7 @@ class Tag(ChangeSubject):
             raise ValueError("unit must be None or a string")
 
         self.name: str = name
+        self.tick_time = tick_time
         self.value: TagValueType = value  # Do we need default also? sometimes it is used as safe but are the other uses?
         self.unit: str | None = unit
         self.choices: List[str] | None = None
@@ -143,11 +150,12 @@ class Tag(ChangeSubject):
         self.safe_value: TagValueType = safe_value
 
     def as_readonly(self) -> TagValue:
-        return TagValue(self.name, self.value, self.unit)
+        return TagValue(self.name, self.tick_time, self.value, self.unit)
 
-    def set_value(self, val: TagValueType) -> None:
+    def set_value(self, val: TagValueType, tick_time: float) -> None:
         if val != self.value:
             self.value = val
+            self.tick_time = tick_time
             self.notify_listeners(self.name)
 
     def get_value(self):
@@ -169,12 +177,12 @@ class Tag(ChangeSubject):
             raise ValueError(f"Value is not numerical: '{self.value}'")
         return self.value
 
-    def set_quantity(self, q: QuantityType):
+    def set_quantity(self, q: QuantityType, tick_time: float):
         self.unit = None if q.dimensionless else str(q.units)
-        self.set_value(q.magnitude)
+        self.set_value(q.magnitude, tick_time)
 
     def clone(self) -> Tag:
-        return Tag(self.name, self.value, self.unit)
+        return Tag(self.name, self.tick_time, self.value, self.unit)
 
 
 class ReadingTag(Tag):
@@ -183,12 +191,13 @@ class ReadingTag(Tag):
 
 
 class SelectTag(Tag):
-    def __init__(self, name: str, value, unit: str | None ,
+    def __init__(self, name: str, value, unit: str | None,
                  choices: List[str], direction: TagDirection = TagDirection.NA) -> None:
-        super().__init__(name, value, unit, direction)
+        super().__init__(name=name, value=value, unit=unit, direction=direction)
         if choices is None or len(choices) == 0:
             raise ValueError("choices must be non-empty")
         self.choices = choices
+
 
 # TODO consider builder pattern for Tag - may replace so many tags - or at least make ctor args managable
 
@@ -318,16 +327,18 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
             (SystemTagName.METHOD_STATUS, "OK", None),
         ]
         for name, value, unit in defaults:
-            tag = Tag(name, value, unit, TagDirection.NA)
+            tag = Tag(name, value=value, unit=unit, direction=TagDirection.NA)
             tags.add(tag)
         return tags
 
 
 class TagValue():
     """ Read-only and immutable representation of a tag value. """
+
     def __init__(
             self,
             name: str,
+            tick_time: float | None = None,
             value: TagValueType = None,
             unit: str | None = None
     ):
@@ -335,6 +346,7 @@ class TagValue():
             raise ValueError("name is None or empty")
 
         self.name = name
+        self.tick_time = tick_time
         self.value = value
         self.unit = unit
 

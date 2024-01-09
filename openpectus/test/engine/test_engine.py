@@ -80,9 +80,9 @@ def create_test_uod() -> UnitOperationDefinitionBase:
     def reset(cmd: UodCommand, args: List[Any]) -> None:
         count = cmd.get_iteration_count()
         if count == 0:
-            cmd.context.tags.get("Reset").set_value("Reset")
+            cmd.context.tags.get("Reset").set_value("Reset", time.time())
         elif count == 4:
-            cmd.context.tags.get("Reset").set_value("N/A")
+            cmd.context.tags.get("Reset").set_value("N/A", time.time())
             cmd.set_complete()
 
     def overlap_exec(cmd: UodCommand, args: List[Any]) -> None:
@@ -110,7 +110,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_new_system_tags()
         .with_tag(ReadingTag("FT01", "L/h"))
         .with_tag(SelectTag("Reset", value="N/A", unit=None, choices=["Reset", "N/A"]))
-        .with_tag(Tag("Danger", True, None, TagDirection.OUTPUT, False))
+        .with_tag(Tag("Danger", value=True, unit=None, direction=TagDirection.OUTPUT, safe_value=False))
         .with_command(UodCommand.builder().with_name("Reset").with_exec_fn(reset))
         .with_command(UodCommand.builder().with_name("overlap1").with_exec_fn(overlap_exec))
         .with_command(UodCommand.builder().with_name("overlap2").with_exec_fn(overlap_exec))
@@ -312,8 +312,8 @@ class TestEngine(unittest.TestCase):
         self.assertEqual(87, e.uod.tags["FT01"].get_value())
 
         # modify tag values
-        e.uod.tags["FT01"].set_value(22)
-        e.uod.tags["Reset"].set_value("Reset")
+        e.uod.tags["FT01"].set_value(22, e._tick_time)
+        e.uod.tags["Reset"].set_value("Reset", e._tick_time)
 
         e.write_process_image()
 

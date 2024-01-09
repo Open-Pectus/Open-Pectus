@@ -71,7 +71,7 @@ class EngineReporter():
                 return Mdl.SystemTagName.run_time
             case SystemTagName.SYSTEM_STATE:
                 return Mdl.SystemTagName.system_state
-            case name if name in [tag.name for tag in SystemTagName]:
+            case name if name in [tag.value for tag in SystemTagName]:
                 return None
             case _:
                 return tag_name
@@ -83,7 +83,8 @@ class EngineReporter():
                 tag = self.engine.tag_updates.get_nowait()
                 tag_name = self.map_and_filter_tag_name(tag.name)
                 if tag_name is not None:
-                    tags.append(Mdl.TagValue(name=tag_name, value=tag.get_value(), value_unit=tag.unit))
+                    assert tag.tick_time is not None, f'tick_time is None for tag {tag.name}'
+                    tags.append(Mdl.TagValue(name=tag_name, tick_time=tag.tick_time, value=tag.get_value(), value_unit=tag.unit))
         except Empty:
             pass
         if len(tags) > 0:
@@ -92,7 +93,8 @@ class EngineReporter():
 
     def send_runlog(self):
         def to_value(t: TagValue) -> Mdl.TagValue:
-            return Mdl.TagValue(name=t.name, value=t.value, value_unit=t.unit)
+            assert t.tick_time is not None
+            return Mdl.TagValue(name=t.name, value=t.value, value_unit=t.unit, tick_time=t.tick_time)
 
         def to_line(item: RunLogItem) -> Mdl.RunLogLine:
             # TODO what about state - try the client in test mode
