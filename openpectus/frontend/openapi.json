@@ -1495,14 +1495,14 @@
             ],
             "title": "Value"
           },
-          "timestamp": {
+          "tick_time": {
             "type": "number",
-            "title": "Timestamp"
+            "title": "Tick Time"
           }
         },
         "type": "object",
         "required": [
-          "timestamp"
+          "tick_time"
         ],
         "title": "PlotLogEntryValue"
       },

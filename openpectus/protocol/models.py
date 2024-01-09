@@ -36,7 +36,7 @@ class SystemTagName(StrEnum):
 
 class TagValue(ProtocolModel):
     name: str = ""
-    timestamp: float
+    tick_time: float
     value: TagValueType = None
     value_unit: str | None
 

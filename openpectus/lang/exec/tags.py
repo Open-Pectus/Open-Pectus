@@ -130,7 +130,7 @@ class Tag(ChangeSubject):
     def __init__(
             self,
             name: str,
-            timestamp: float | None = None,
+            tick_time: float | None = None,
             value: TagValueType = None,
             unit: str | None = None,
             direction: TagDirection = TagDirection.NA,
@@ -142,7 +142,7 @@ class Tag(ChangeSubject):
             raise ValueError("unit must be None or a string")
 
         self.name: str = name
-        self.timestamp = timestamp
+        self.tick_time = tick_time
         self.value: TagValueType = value  # Do we need default also? sometimes it is used as safe but are the other uses?
         self.unit: str | None = unit
         self.choices: List[str] | None = None
@@ -150,13 +150,12 @@ class Tag(ChangeSubject):
         self.safe_value: TagValueType = safe_value
 
     def as_readonly(self) -> TagValue:
-        # assert self.timestamp is not None, f'tick_time is None for tag {self.name}'
-        return TagValue(self.name, self.timestamp, self.value, self.unit)
+        return TagValue(self.name, self.tick_time, self.value, self.unit)
 
-    def set_value(self, val: TagValueType, timestamp: float) -> None:
+    def set_value(self, val: TagValueType, tick_time: float) -> None:
         if val != self.value:
             self.value = val
-            self.timestamp = timestamp
+            self.tick_time = tick_time
             self.notify_listeners(self.name)
 
     def get_value(self):
@@ -178,12 +177,12 @@ class Tag(ChangeSubject):
             raise ValueError(f"Value is not numerical: '{self.value}'")
         return self.value
 
-    def set_quantity(self, q: QuantityType, timestamp: float):
+    def set_quantity(self, q: QuantityType, tick_time: float):
         self.unit = None if q.dimensionless else str(q.units)
-        self.set_value(q.magnitude, timestamp)
+        self.set_value(q.magnitude, tick_time)
 
     def clone(self) -> Tag:
-        return Tag(self.name, self.timestamp, self.value, self.unit)
+        return Tag(self.name, self.tick_time, self.value, self.unit)
 
 
 class ReadingTag(Tag):
@@ -339,7 +338,7 @@ class TagValue():
     def __init__(
             self,
             name: str,
-            timestamp: float | None = None,
+            tick_time: float | None = None,
             value: TagValueType = None,
             unit: str | None = None
     ):
@@ -347,7 +346,7 @@ class TagValue():
             raise ValueError("name is None or empty")
 
         self.name = name
-        self.timestamp = timestamp
+        self.tick_time = tick_time
         self.value = value
         self.unit = unit
 

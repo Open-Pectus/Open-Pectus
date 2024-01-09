@@ -5,5 +5,5 @@
 
 export type PlotLogEntryValue = {
     value?: (number | string);
-    timestamp: number;
+    tick_time: number;
 };

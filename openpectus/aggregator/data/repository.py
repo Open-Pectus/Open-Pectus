@@ -99,7 +99,7 @@ class PlotLogRepository(RepositoryBase):
                 return None
             return PlotLogEntryValue(
                 plot_log_entry_id=plot_log_entry[0].id,
-                timestamp=tag.timestamp,
+                tick_time=tag.tick_time,
                 value_str=tag.value if isinstance(tag.value, str) else None,
                 value_float=tag.value if isinstance(tag.value, float) else None,
                 value_int=tag.value if isinstance(tag.value, int) else None,

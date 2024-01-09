@@ -62,10 +62,10 @@ const reducer = createReducer(initialState,
           name: processValue.name,
           value_unit: processValue.value_unit,
           value_type: processValue.value_type,
-          values: [{value: processValue.value, timestamp: Date.now()}],
+          values: [{value: processValue.value, tick_time: Date.now()}],
         };
       } else {
-        existing.values.push({value: processValue.value, timestamp: Date.now()});
+        existing.values.push({value: processValue.value, tick_time: Date.now()});
       }
     });
   })),
@@ -102,20 +102,20 @@ const reducer = createReducer(initialState,
     draft.xAxisOverrideDialogData = undefined;
   })),
   on(ProcessPlotActions.plotLogFetched, (state, {plotLog}) => produce(state, draft => {
-    const requiredTimestamps = Object.values(plotLog.entries)
+    const requiredTickTimes = Object.values(plotLog.entries)
       .filter(entry => state.plotConfiguration?.x_axis_process_value_names.includes(entry.name))
-      .flatMap(entry => entry.values.map(value => value.timestamp));
-    const sortedUniqueTimestamps = [...new Set(requiredTimestamps)].sort((a, b) => a - b);
+      .flatMap(entry => entry.values.map(value => value.tick_time));
+    const sortedUniqueTickTimes = [...new Set(requiredTickTimes)].sort((a, b) => a - b);
     const newEntries: Record<string, PlotLogEntry> = {};
     Object.entries(plotLog.entries).forEach(([name, entry]) => {
       if(entry.values.length === 0) return; // skip empty entries
-      const newValues = sortedUniqueTimestamps.map(requiredTimestamp => {
+      const newValues = sortedUniqueTickTimes.map(requiredTickTime => {
         const bestMatchingValue = entry.values.reduce((prev, curr) => {
-          if(curr.timestamp > requiredTimestamp) return prev;
-          if(curr.timestamp > prev.timestamp) return curr;
+          if(curr.tick_time > requiredTickTime) return prev;
+          if(curr.tick_time > prev.tick_time) return curr;
           return prev;
         });
-        return {value: bestMatchingValue.value, timestamp: requiredTimestamp};
+        return {value: bestMatchingValue.value, tick_time: requiredTickTime};
       });
       newEntries[name] = {...entry, values: newValues};
     });
