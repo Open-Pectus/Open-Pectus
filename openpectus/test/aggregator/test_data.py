@@ -3,8 +3,8 @@ from unittest.mock import Mock
 
 import openpectus.aggregator.routers.dto as D
 from openpectus.aggregator.data import database
-from openpectus.aggregator.data.models import DBModel, BatchJobData
-from openpectus.aggregator.data.repository import BatchJobDataRepository
+from openpectus.aggregator.data.models import DBModel, RecentRun
+from openpectus.aggregator.data.repository import RecentRunDataRepository
 from openpectus.aggregator.routers.serialization import deserialize, serialize
 from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
@@ -105,7 +105,7 @@ class RepositoryTest(unittest.TestCase):
         init_db()
 
         # at the data level we can insert any kind of junk
-        entity = BatchJobData()
+        entity = RecentRun()
         entity.engine_id = "my_eng_id"
         entity.computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
@@ -120,7 +120,7 @@ class RepositoryTest(unittest.TestCase):
         self.assertEqual(entity_id, 1)
 
         with database.SessionLocal() as s:
-            repo = BatchJobDataRepository(s)
+            repo = RecentRunDataRepository(s)
 
             created_entity = repo.get_by_id(entity_id)
             assert created_entity is not None
@@ -130,7 +130,7 @@ class RepositoryTest(unittest.TestCase):
     def test_can_update(self):
         init_db()
 
-        entity = BatchJobData()
+        entity = RecentRun()
         entity.engine_id = "my_eng_id"
         entity.computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
@@ -145,7 +145,7 @@ class RepositoryTest(unittest.TestCase):
         self.assertEqual(1, entity.id)
 
         with database.SessionLocal() as s:
-            repo = BatchJobDataRepository(s)
+            repo = RecentRunDataRepository(s)
 
             created_entity = repo.get_by_id(entity_id)
             assert created_entity is not None
@@ -153,7 +153,7 @@ class RepositoryTest(unittest.TestCase):
             s.commit()
 
         with database.SessionLocal() as s:
-            repo = BatchJobDataRepository(s)
+            repo = RecentRunDataRepository(s)
 
             updated_entity = repo.get_by_id(entity_id)
             assert updated_entity is not None
@@ -163,7 +163,7 @@ class RepositoryTest(unittest.TestCase):
     def test_can_find(self):
         init_db()
 
-        entity = BatchJobData()
+        entity = RecentRun()
         entity.engine_id = "my_eng_id"
         entity.computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
@@ -174,15 +174,15 @@ class RepositoryTest(unittest.TestCase):
             s.commit()
 
         with database.SessionLocal() as s:
-            repo = BatchJobDataRepository(s)
+            repo = RecentRunDataRepository(s)
             created_entity = repo.get_by_engine_id("my_eng_id")
             self.assertIsNotNone(created_entity)
-            self.assertIsInstance(created_entity, BatchJobData)
+            self.assertIsInstance(created_entity, RecentRun)
 
     def test_json(self):
         init_db()
 
-        entity = BatchJobData()
+        entity = RecentRun()
         entity.engine_id = "my_eng_id"
         entity.computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
@@ -198,7 +198,7 @@ class RepositoryTest(unittest.TestCase):
         self.assertEqual(1, entity.id)
 
         with database.SessionLocal() as s:
-            repo = BatchJobDataRepository(s)
+            repo = RecentRunDataRepository(s)
 
             created_entity = repo.get_by_id(entity_id)
             assert created_entity is not None
@@ -211,7 +211,7 @@ class RepositoryTest(unittest.TestCase):
             s.commit()
 
         with database.SessionLocal() as s:
-            repo = BatchJobDataRepository(s)
+            repo = RecentRunDataRepository(s)
             updated_entity = repo.get_by_id(entity_id)
             assert updated_entity is not None
             self.assertEqual(['foo', 'bar', 'baz'], updated_entity.contributors)

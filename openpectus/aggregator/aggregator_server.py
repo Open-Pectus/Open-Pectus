@@ -9,7 +9,7 @@ from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import PlotLogRepository
 from openpectus.aggregator.deps import _create_aggregator
 from openpectus.aggregator.frontend_publisher import FrontendPublisher
-from openpectus.aggregator.routers import process_unit, batch_job, auth
+from openpectus.aggregator.routers import process_unit, recent_runs, auth
 from openpectus.aggregator.spa import SinglePageApplication
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 
@@ -43,7 +43,7 @@ class AggregatorServer:
 
         self.fastapi = FastAPI(title=self.title, generate_unique_id_function=custom_generate_unique_id)
         self.fastapi.include_router(process_unit.router, prefix=api_prefix)
-        self.fastapi.include_router(batch_job.router, prefix=api_prefix)
+        self.fastapi.include_router(recent_runs.router, prefix=api_prefix)
         self.fastapi.include_router(auth.router, prefix='/auth')
         for route in additional_routers:
             self.fastapi.include_router(route)

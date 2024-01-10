@@ -3,7 +3,7 @@ import time
 from typing import List
 
 from openpectus.aggregator.data import database
-from openpectus.aggregator.data.models import ProcessValueType, BatchJobData, PlotLogEntryValue, get_ProcessValueType_from_value, PlotLog, \
+from openpectus.aggregator.data.models import ProcessValueType, RecentRun, PlotLogEntryValue, get_ProcessValueType_from_value, PlotLog, \
     PlotLogEntry
 from openpectus.aggregator.models import TagValue, ReadingInfo, EngineData
 from sqlalchemy import select
@@ -119,16 +119,12 @@ class PlotLogRepository(RepositoryBase):
         self.db_session.commit()
 
 
-class BatchJobDataRepository(RepositoryBase):
-    # def upsert(self, process_unit: BatchJobData):
-    #     self.session.
-    #     process_unit.save()
+class RecentRunDataRepository(RepositoryBase):
+    def get_by_id(self, id: int) -> RecentRun | None:
+        return self.db_session.get(RecentRun, id)
 
-    def get_by_id(self, id: int) -> BatchJobData | None:
-        return self.db_session.get(BatchJobData, id)
-
-    def get_by_engine_id(self, engine_id: str) -> BatchJobData | None:
-        q = select(BatchJobData).where(BatchJobData.engine_id == engine_id)
+    def get_by_engine_id(self, engine_id: str) -> RecentRun | None:
+        q = select(RecentRun).where(RecentRun.engine_id == engine_id)
         result = self.db_session.execute(q).first()
         if result is None:
             return None

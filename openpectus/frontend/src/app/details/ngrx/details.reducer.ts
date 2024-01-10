@@ -1,6 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { BatchJob, CommandExample, ControlState, ProcessDiagram, ProcessValue } from '../../api';
+import { CommandExample, ControlState, ProcessDiagram, ProcessValue, RecentRun } from '../../api';
 import { DetailsActions } from './details.actions';
 
 export interface DetailsState {
@@ -8,7 +8,7 @@ export interface DetailsState {
   processDiagram?: ProcessDiagram;
   commandExamples: CommandExample[];
   controlState: ControlState;
-  batchJob?: BatchJob;
+  recentRun?: RecentRun;
   shouldPoll: boolean;
 }
 
@@ -42,8 +42,8 @@ const reducer = createReducer(initialState,
   on(DetailsActions.controlStateFetched, (state, {controlState}) => produce(state, draft => {
     draft.controlState = controlState;
   })),
-  on(DetailsActions.batchJobFetched, (state, {batchJob}) => produce(state, draft => {
-    draft.batchJob = batchJob;
+  on(DetailsActions.recentRunFetched, (state, {recentRun}) => produce(state, draft => {
+    draft.recentRun = recentRun;
   })),
 );
 

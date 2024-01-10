@@ -263,8 +263,8 @@ class PlotLog(Dto):
     entries: Dict[str, PlotLogEntry]
 
 
-class BatchJob(Dto):
-    """ Represents a current or historical run of a process unit. """
+class RecentRun(Dto):
+    """ Represents a historical run of a process unit. """
     id: str
     unit_id: str
     unit_name: str
@@ -273,6 +273,6 @@ class BatchJob(Dto):
     contributors: List[str] = []
 
 
-class BatchJobCsv(Dto):
+class RecentRunCsv(Dto):
     filename: str
     csv_content: str

@@ -6,11 +6,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 
-import type { BatchJob } from '../models/BatchJob';
-import type { BatchJobCsv } from '../models/BatchJobCsv';
 import type { MethodAndState } from '../models/MethodAndState';
 import type { PlotConfiguration } from '../models/PlotConfiguration';
 import type { PlotLog } from '../models/PlotLog';
+import type { RecentRun } from '../models/RecentRun';
+import type { RecentRunCsv } from '../models/RecentRunCsv';
 import type { RunLog } from '../models/RunLog';
 
 import { OpenAPI } from '../core/OpenAPI';
@@ -19,22 +19,34 @@ import { request as __request } from '../core/request';
 @Injectable({
   providedIn: 'root',
 })
-export class BatchJobService {
+export class RecentRunsService {
 
     constructor(public readonly http: HttpClient) {}
 
     /**
-     * Get Batch Job
-     * @param id 
-     * @returns BatchJob Successful Response
+     * Get Recent Runs
+     * @returns RecentRun Successful Response
      * @throws ApiError
      */
-    public getBatchJob(
-id: string,
-): Observable<BatchJob> {
+    public getRecentRuns(): Observable<Array<RecentRun>> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/batch_job/{id}',
+            url: '/api/recent_runs/',
+        });
+    }
+
+    /**
+     * Get Recent Run
+     * @param id 
+     * @returns RecentRun Successful Response
+     * @throws ApiError
+     */
+    public getRecentRun(
+id: string,
+): Observable<RecentRun> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/recent_runs/{id}',
             path: {
                 'id': id,
             },
@@ -45,29 +57,17 @@ id: string,
     }
 
     /**
-     * Get Recent Batch Jobs
-     * @returns BatchJob Successful Response
-     * @throws ApiError
-     */
-    public getRecentBatchJobs(): Observable<Array<BatchJob>> {
-        return __request(OpenAPI, this.http, {
-            method: 'GET',
-            url: '/api/recent_batch_jobs',
-        });
-    }
-
-    /**
-     * Get Batch Job Method And State
+     * Get Recent Run Method And State
      * @param id 
      * @returns MethodAndState Successful Response
      * @throws ApiError
      */
-    public getBatchJobMethodAndState(
+    public getRecentRunMethodAndState(
 id: string,
 ): Observable<MethodAndState> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/batch_job/{id}/method-and-state',
+            url: '/api/recent_runs/{id}/method-and-state',
             path: {
                 'id': id,
             },
@@ -78,17 +78,17 @@ id: string,
     }
 
     /**
-     * Get Batch Job Run Log
+     * Get Recent Run Run Log
      * @param id 
      * @returns RunLog Successful Response
      * @throws ApiError
      */
-    public getBatchJobRunLog(
+    public getRecentRunRunLog(
 id: string,
 ): Observable<RunLog> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/batch_job/{id}/run_log',
+            url: '/api/recent_runs/{id}/run_log',
             path: {
                 'id': id,
             },
@@ -99,17 +99,17 @@ id: string,
     }
 
     /**
-     * Get Batch Job Plot Configuration
+     * Get Recent Run Plot Configuration
      * @param id 
      * @returns PlotConfiguration Successful Response
      * @throws ApiError
      */
-    public getBatchJobPlotConfiguration(
+    public getRecentRunPlotConfiguration(
 id: string,
 ): Observable<PlotConfiguration> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/batch_job/{id}/plot_configuration',
+            url: '/api/recent_runs/{id}/plot_configuration',
             path: {
                 'id': id,
             },
@@ -120,17 +120,17 @@ id: string,
     }
 
     /**
-     * Get Batch Job Plot Log
+     * Get Recent Run Plot Log
      * @param id 
      * @returns PlotLog Successful Response
      * @throws ApiError
      */
-    public getBatchJobPlotLog(
+    public getRecentRunPlotLog(
 id: string,
 ): Observable<PlotLog> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/batch_job/{id}/plot_log',
+            url: '/api/recent_runs/{id}/plot_log',
             path: {
                 'id': id,
             },
@@ -141,17 +141,17 @@ id: string,
     }
 
     /**
-     * Get Batch Job Csv Json
+     * Get Recent Run Csv Json
      * @param id 
-     * @returns BatchJobCsv Successful Response
+     * @returns RecentRunCsv Successful Response
      * @throws ApiError
      */
-    public getBatchJobCsvJson(
+    public getRecentRunCsvJson(
 id: string,
-): Observable<BatchJobCsv> {
+): Observable<RecentRunCsv> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/batch_job/{id}/csv_json',
+            url: '/api/recent_runs/{id}/csv_json',
             path: {
                 'id': id,
             },
@@ -162,17 +162,17 @@ id: string,
     }
 
     /**
-     * Get Batch Job Csv File
+     * Get Recent Run Csv File
      * @param id 
      * @returns any Successful Response
      * @throws ApiError
      */
-    public getBatchJobCsvFile(
+    public getRecentRunCsvFile(
 id: string,
 ): Observable<any> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/batch_job/{id}/csv_file',
+            url: '/api/recent_runs/{id}/csv_file',
             path: {
                 'id': id,
             },

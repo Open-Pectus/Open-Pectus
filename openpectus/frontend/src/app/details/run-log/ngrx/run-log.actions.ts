@@ -5,8 +5,8 @@ const source = '[Run Log] ';
 
 export class RunLogActions {
   static runLogComponentInitializedForUnit = createAction(source + 'Run Log Component Initialized For Unit', props<{ unitId: string }>());
-  static runLogComponentInitializedForBatchJob = createAction(source + 'Run Log Component Initialized For Batch Job',
-    props<{ batchJobId: string }>());
+  static runLogComponentInitializedForRecentRun = createAction(source + 'Run Log Component Initialized For Recent Run',
+    props<{ recentRunId: string }>());
   static runLogComponentDestroyed = createAction(source + 'Run Log Component Destroyed');
   static runLogFetched = createAction(source + 'Run Log Fetched', props<{ runLog: RunLog }>());
   static runLogPolledForUnit = createAction(source + 'Run Log Polled For Unit', props<{ runLog: RunLog, unitId: string }>());

@@ -3,7 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 
-export type BatchJobCsv = {
+export type RecentRunCsv = {
     filename: string;
     csv_content: string;
 };

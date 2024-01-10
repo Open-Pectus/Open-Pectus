@@ -15,10 +15,10 @@ class DBModel(DeclarativeBase):
     id: Mapped[int] = mapped_column(primary_key=True)
 
 
-class ProcessUnitData(DBModel):
+class ProcessUnit(DBModel):
     """Represents a live process unit (engine). """
 
-    __tablename__ = "ProcessUnitData"
+    __tablename__ = "ProcessUnits"
 
     engine_id: Mapped[str] = mapped_column()
     state: Mapped[str] = mapped_column()
@@ -29,10 +29,10 @@ class ProcessUnitData(DBModel):
     # def set_state(self, state: ProcessUnitState):
 
 
-class BatchJobData(DBModel):
+class RecentRun(DBModel):
     """ Represents a historical run of a process unit. """
 
-    __tablename__ = "BatchJobData"
+    __tablename__ = "RecentRuns"
 
     engine_id: Mapped[str] = mapped_column()
     computer_name: Mapped[str] = mapped_column()
@@ -62,9 +62,6 @@ class BatchJobData(DBModel):
     # method: Method = Method(lines=[], started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
 
 
-# class BatchJobProcessValuesData(DBModel):
-#     #batch_id: foreign key to
-#     # values
 
 class PlotLogEntryValue(DBModel):
     __tablename__ = "PlotLogEntryValues"
