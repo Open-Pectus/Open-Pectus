@@ -12,7 +12,7 @@ def configure_db(database_file_path: str):
     global engine
     engine = create_engine(
         "sqlite://" + "/" + database_file_path,
-        echo=True,
+        echo=False,
         connect_args={"check_same_thread": False},
         json_serializer=json_serialize,
         json_deserializer=json_deserialize)

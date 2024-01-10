@@ -11,6 +11,7 @@ from openpectus.aggregator.data.repository import PlotLogRepository
 from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.aggregator.models import EngineData
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
+from protocol.models import SystemTagName
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -42,11 +43,16 @@ class FromEngine:
                 was_inserted = engine_data.tags_info.upsert(tag_value)
                 if was_inserted:
                     plot_log_repo.store_new_tag_info(engine_id, tag_value)
+                if tag_value.name == SystemTagName.run_id.value:
+                    # TODO: when run_id is None, persist and clear from engine_map: method, run log,
+                    logger.warning(f'run id changed to {tag_value.value}')
 
+            # TODO: Only persist tags while we have a run_id system tag
             now = datetime.now()
             if engine_data.tags_last_persisted is None or now - engine_data.tags_last_persisted > timedelta(seconds=5):
-                tag_values_to_persist = [tag_value for tag_value in engine_data.tags_info.map.values() if
-                                         engine_data.tags_last_persisted is None or tag_value.tick_time > engine_data.tags_last_persisted.timestamp()]
+                tag_values_to_persist = [tag_value for tag_value in engine_data.tags_info.map.values()
+                                         if engine_data.tags_last_persisted is None
+                                         or tag_value.tick_time > engine_data.tags_last_persisted.timestamp()]
                 plot_log_repo.store_tag_values(engine_id, tag_values_to_persist)
                 engine_data.tags_last_persisted = now
         except KeyError:

@@ -25,6 +25,7 @@ class SystemTagName(StrEnum):
     CLOCK = "Clock"
     SYSTEM_STATE = "System State"
     METHOD_STATUS = "Method Status"
+    RUN_ID = "Run Id"
 
 
 # Define the dimensions and units we want to use and the conversions we want to provide.
@@ -325,6 +326,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
             (SystemTagName.CLOCK, 0.0, "s"),
             (SystemTagName.SYSTEM_STATE, "Stopped", None),
             (SystemTagName.METHOD_STATUS, "OK", None),
+            (SystemTagName.RUN_ID, None, None)
         ]
         for name, value, unit in defaults:
             tag = Tag(name, value=value, unit=unit, direction=TagDirection.NA)
