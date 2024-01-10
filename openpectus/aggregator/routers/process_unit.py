@@ -16,14 +16,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])
 
 
-def create_pu(item: EngineData) -> Dto.ProcessUnit:
+def map_pu(engine_data: EngineData) -> Dto.ProcessUnit:
     # TODO define source of all fields
     unit = Dto.ProcessUnit(
-        id=item.engine_id or "(error)",
-        name=f"{item.computer_name} ({item.uod_name})",
+        id=engine_data.engine_id or "(error)",
+        name=f"{engine_data.computer_name} ({engine_data.uod_name})",
         state=Dto.ProcessUnitState.Ready(state=Dto.ProcessUnitStateEnum.READY),
-        location=item.location,
-        runtime_msec=item.runtime,
+        location=engine_data.location,
+        runtime_msec=engine_data.runtime.value if engine_data.runtime is not None and isinstance(engine_data.runtime.value, int) else 0,
         current_user_role=Dto.UserRole.ADMIN,
     )
     return unit
@@ -34,14 +34,14 @@ def get_unit(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -
     ci = agg.get_registered_engine_data(unit_id)
     if ci is None:
         return None
-    return create_pu(item=ci)
+    return map_pu(engine_data=ci)
 
 
 @router.get("/process_units")
 def get_units(agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[Dto.ProcessUnit]:
     units: List[Dto.ProcessUnit] = []
     for engine_data in agg.get_all_registered_engine_data():
-        unit = create_pu(engine_data)
+        unit = map_pu(engine_data)
         units.append(unit)
     return units
 
@@ -207,9 +207,14 @@ def get_plot_configuration(unit_id: str) -> Dto.PlotConfiguration:
 
 
 @router.get('/process_unit/{unit_id}/plot_log')
-def get_plot_log(unit_id: str, db_session: Session = Depends(get_db)) -> Dto.PlotLog:
+def get_plot_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator), db_session: Session = Depends(get_db)) -> Dto.PlotLog:
     plot_log_repo = PlotLogRepository(db_session)
-    plot_log_model = plot_log_repo.get_plot_log(unit_id)
+    engine_data = agg.get_registered_engine_data(unit_id)
+    if engine_data is None or engine_data.run_id is None:
+        return Dto.PlotLog(entries={})
+    plot_log_model = plot_log_repo.get_plot_log(engine_data.engine_id, engine_data.run_id)
+    if plot_log_model is None:
+        return Dto.PlotLog(entries={})
     plot_log_dto = Dto.PlotLog.from_orm(plot_log_model)
     return plot_log_dto
 

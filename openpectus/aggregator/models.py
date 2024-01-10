@@ -66,4 +66,9 @@ class EngineData(BaseModel):
 
     @property
     def runtime(self):
-        self.tags_info.get(Mdl.SystemTagName.run_time)
+        return self.tags_info.get(Mdl.SystemTagName.run_time)
+
+    @property
+    def run_id(self):
+        run_id_tag = self.tags_info.get(Mdl.SystemTagName.run_id)
+        return str(run_id_tag.value) if run_id_tag is not None else None
