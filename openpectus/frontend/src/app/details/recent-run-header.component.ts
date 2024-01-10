@@ -18,7 +18,7 @@ import { DetailsSelectors } from './ngrx/details.selectors';
           <span>Finished at: <b class="whitespace-nowrap">{{ recentRun?.completed_date | date }}</b></span>
           <span>Contributions by: <b>{{ recentRun?.contributors?.join(', ') }}</b></span>
         </div>
-        <h1 class="text-4xl lg:text-5xl font-bold">{{ recentRun?.unit_name }}</h1>
+        <h1 class="text-4xl lg:text-5xl font-bold">{{ recentRun?.engine_id }}</h1>
 
         <button class="absolute top-0 right-0 px-3 py-1.5 rounded-md bg-sky-900 text-white flex items-center"
                 (click)="downloadCsv(recentRun?.id)">

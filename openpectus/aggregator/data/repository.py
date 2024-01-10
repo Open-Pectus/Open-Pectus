@@ -1,6 +1,7 @@
 import logging
 import time
-from typing import List
+from datetime import datetime
+from typing import List, Iterable
 
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.models import ProcessValueType, RecentRun, PlotLogEntryValue, get_ProcessValueType_from_value, PlotLog, \
@@ -91,13 +92,13 @@ class PlotLogRepository(RepositoryBase):
             .where(PlotLog.run_id == run_id)
         )
 
-    def get_plot_log_entries(self, engine_id: str, run_id: str) -> List[PlotLogEntry]:
-        return list(self.db_session.scalars(
+    def get_plot_log_entries(self, engine_id: str, run_id: str) -> Iterable[PlotLogEntry]:
+        return self.db_session.scalars(
             select(PlotLogEntry)
             .join(PlotLog)
             .where(PlotLog.engine_id == engine_id)
             .where(PlotLog.run_id == run_id)
-        ).all())
+        ).all()
 
     def store_tag_values(self, engine_id: str, run_id: str, tags: List[TagValue]):
         plot_log_entries = self.get_plot_log_entries(engine_id, run_id)
@@ -119,13 +120,28 @@ class PlotLogRepository(RepositoryBase):
         self.db_session.commit()
 
 
-class RecentRunDataRepository(RepositoryBase):
+class RecentRunRepository(RepositoryBase):
+    def store_recent_run(self, engine_data: EngineData):
+        if engine_data.run_id is None: raise ValueError('misisng run_id when trying to store recent run')
+        if engine_data.run_started is None: raise ValueError('misisng run_started when trying to store recent run')
+        recent_run = RecentRun()
+        recent_run.engine_id = engine_data.engine_id
+        recent_run.run_id = engine_data.run_id
+        recent_run.computer_name = engine_data.computer_name
+        recent_run.uod_name = engine_data.uod_name
+        recent_run.started_date = engine_data.run_started
+        recent_run.completed_date = datetime.now()
+        self.db_session.add(recent_run)
+        self.db_session.commit()
+
     def get_by_id(self, id: int) -> RecentRun | None:
         return self.db_session.get(RecentRun, id)
 
-    def get_by_engine_id(self, engine_id: str) -> RecentRun | None:
-        q = select(RecentRun).where(RecentRun.engine_id == engine_id)
-        result = self.db_session.execute(q).first()
-        if result is None:
-            return None
-        return result.tuple()[0]
+    def get_by_engine_id(self, engine_id: str) -> Iterable[RecentRun]:
+        return self.db_session.scalars(
+            select(RecentRun)
+            .where(RecentRun.engine_id == engine_id)
+        ).all()
+
+    def get_all(self) -> Iterable[RecentRun]:
+        return self.db_session.scalars(select(RecentRun)).all()

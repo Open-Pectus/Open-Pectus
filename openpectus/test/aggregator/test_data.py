@@ -4,7 +4,7 @@ from unittest.mock import Mock
 import openpectus.aggregator.routers.dto as D
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.models import DBModel, RecentRun
-from openpectus.aggregator.data.repository import RecentRunDataRepository
+from openpectus.aggregator.data.repository import RecentRunRepository
 from openpectus.aggregator.routers.serialization import deserialize, serialize
 from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
@@ -120,7 +120,7 @@ class RepositoryTest(unittest.TestCase):
         self.assertEqual(entity_id, 1)
 
         with database.SessionLocal() as s:
-            repo = RecentRunDataRepository(s)
+            repo = RecentRunRepository(s)
 
             created_entity = repo.get_by_id(entity_id)
             assert created_entity is not None
@@ -145,7 +145,7 @@ class RepositoryTest(unittest.TestCase):
         self.assertEqual(1, entity.id)
 
         with database.SessionLocal() as s:
-            repo = RecentRunDataRepository(s)
+            repo = RecentRunRepository(s)
 
             created_entity = repo.get_by_id(entity_id)
             assert created_entity is not None
@@ -153,7 +153,7 @@ class RepositoryTest(unittest.TestCase):
             s.commit()
 
         with database.SessionLocal() as s:
-            repo = RecentRunDataRepository(s)
+            repo = RecentRunRepository(s)
 
             updated_entity = repo.get_by_id(entity_id)
             assert updated_entity is not None
@@ -174,7 +174,7 @@ class RepositoryTest(unittest.TestCase):
             s.commit()
 
         with database.SessionLocal() as s:
-            repo = RecentRunDataRepository(s)
+            repo = RecentRunRepository(s)
             created_entity = repo.get_by_engine_id("my_eng_id")
             self.assertIsNotNone(created_entity)
             self.assertIsInstance(created_entity, RecentRun)
@@ -198,7 +198,7 @@ class RepositoryTest(unittest.TestCase):
         self.assertEqual(1, entity.id)
 
         with database.SessionLocal() as s:
-            repo = RecentRunDataRepository(s)
+            repo = RecentRunRepository(s)
 
             created_entity = repo.get_by_id(entity_id)
             assert created_entity is not None
@@ -211,7 +211,7 @@ class RepositoryTest(unittest.TestCase):
             s.commit()
 
         with database.SessionLocal() as s:
-            repo = RecentRunDataRepository(s)
+            repo = RecentRunRepository(s)
             updated_entity = repo.get_by_id(entity_id)
             assert updated_entity is not None
             self.assertEqual(['foo', 'bar', 'baz'], updated_entity.contributors)

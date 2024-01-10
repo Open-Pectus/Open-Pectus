@@ -1,27 +1,31 @@
 from datetime import datetime
-from typing import List
+from typing import Iterable, List
 
 import openpectus.aggregator.routers.dto as Dto
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
+from openpectus.aggregator.data.repository import get_db, RecentRunRepository
+from sqlalchemy.orm import Session
 
 router = APIRouter(tags=["recent_runs"], prefix='/recent_runs')
 
 
 @router.get("/")
-def get_recent_runs() -> List[Dto.RecentRun]:
-    return []
+def get_recent_runs(db_session: Session = Depends(get_db)) -> List[Dto.RecentRun]:
+    repo = RecentRunRepository(db_session)
+    return list(map(Dto.RecentRun.from_orm, repo.get_all()))
 
 
 @router.get("/{id}")
 def get_recent_run(id: str) -> Dto.RecentRun:
     dt = datetime(2023, 3, 21, 12, 31, 57, 0)
-    return Dto.RecentRun(id=id, unit_id="3", unit_name="Foo", started_date=dt, completed_date=dt, contributors=[])
+    return Dto.RecentRun(id=id, engine_id="3", run_id="Foo", started_date=dt, completed_date=dt, contributors=[])
 
 
 @router.get('/{id}/method-and-state')
 def get_recent_run_method_and_state(id: str) -> Dto.MethodAndState:
-    return Dto.MethodAndState(method=Dto.Method(lines=[]), state=Dto.MethodState(started_line_ids=[], executed_line_ids=[], injected_line_ids=[]))
+    return Dto.MethodAndState(method=Dto.Method(lines=[]),
+                              state=Dto.MethodState(started_line_ids=[], executed_line_ids=[], injected_line_ids=[]))
 
 
 @router.get('/{id}/run_log')

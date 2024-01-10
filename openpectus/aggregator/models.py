@@ -63,6 +63,7 @@ class EngineData(BaseModel):
     method: Method = Method.empty()
     method_state: MethodState = MethodState.empty()
     tags_last_persisted: datetime | None = None
+    run_started: datetime | None = None
 
     @property
     def runtime(self):

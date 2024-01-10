@@ -35,10 +35,11 @@ class RecentRun(DBModel):
     __tablename__ = "RecentRuns"
 
     engine_id: Mapped[str] = mapped_column()
+    run_id: Mapped[str] = mapped_column()
     computer_name: Mapped[str] = mapped_column()
     uod_name: Mapped[str] = mapped_column()
-    started_date: Mapped[Optional[datetime]] = mapped_column()
-    completed_date: Mapped[Optional[datetime]] = mapped_column()
+    started_date: Mapped[datetime] = mapped_column()
+    completed_date: Mapped[datetime] = mapped_column()
 
     _contributors_json: Mapped[Optional[dict[str, Any]]] = mapped_column(type_=JSON, name="contributors")
 

@@ -33,7 +33,7 @@ export class RecentRunsComponent implements OnInit {
   protected readonly columns: TableColumn<RecentRun>[] = [
     {
       header: 'Unit',
-      key: 'unit_name',
+      key: 'engine_id',
     },
     {
       header: 'Started',

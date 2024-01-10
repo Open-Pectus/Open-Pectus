@@ -266,8 +266,8 @@ class PlotLog(Dto):
 class RecentRun(Dto):
     """ Represents a historical run of a process unit. """
     id: str
-    unit_id: str
-    unit_name: str
+    engine_id: str
+    run_id: str
     started_date: datetime
     completed_date: datetime
     contributors: List[str] = []

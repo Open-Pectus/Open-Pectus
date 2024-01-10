@@ -1725,13 +1725,13 @@
             "type": "string",
             "title": "Id"
           },
-          "unit_id": {
+          "engine_id": {
             "type": "string",
-            "title": "Unit Id"
+            "title": "Engine Id"
           },
-          "unit_name": {
+          "run_id": {
             "type": "string",
-            "title": "Unit Name"
+            "title": "Run Id"
           },
           "started_date": {
             "type": "string",
@@ -1755,8 +1755,8 @@
         "type": "object",
         "required": [
           "id",
-          "unit_id",
-          "unit_name",
+          "engine_id",
+          "run_id",
           "started_date",
           "completed_date"
         ],

@@ -7,7 +7,7 @@ import openpectus.aggregator.models as Mdl
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
-from openpectus.aggregator.data.repository import PlotLogRepository
+from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRepository
 from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.aggregator.models import EngineData
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
@@ -35,6 +35,7 @@ class FromEngine:
 
     def tag_values_changed(self, engine_id: str, changed_tag_values: List[Mdl.TagValue], db_session: Session):
         plot_log_repo = PlotLogRepository(db_session)
+        recent_run_repo = RecentRunRepository(db_session)
 
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is None:
@@ -43,7 +44,7 @@ class FromEngine:
 
         for changed_tag_value in changed_tag_values:
             if changed_tag_value.name == SystemTagName.run_id.value:
-                self._run_id_changed(plot_log_repo, engine_data, changed_tag_value)
+                self._run_id_changed(plot_log_repo, recent_run_repo, engine_data, changed_tag_value)
             was_inserted = engine_data.tags_info.upsert(changed_tag_value)
             # if a tag doesn't appear with value until after start and run_id, we need to store the info here
             if was_inserted and engine_data.run_id is not None:
@@ -51,13 +52,15 @@ class FromEngine:
 
         self._persist_tag_values(engine_data, plot_log_repo)
 
-    def _run_id_changed(self, plot_log_repo: PlotLogRepository, engine_data: EngineData, run_id_tag: Mdl.TagValue):
+    def _run_id_changed(self, plot_log_repo: PlotLogRepository, recent_run_repo: RecentRunRepository, engine_data: EngineData, run_id_tag: Mdl.TagValue):
         """ Handles persistance related to start and end of a run """
         logger.warning(f'run id changed to {run_id_tag.value}')
-        if run_id_tag.value is None:
+        if run_id_tag.value is None and engine_data.run_id is not None:
+            recent_run_repo.store_recent_run(engine_data)
             # TODO: persist and clear from engine_map: method, run log,
             pass
         else:
+            engine_data.run_started = datetime.fromtimestamp(run_id_tag.tick_time)
             plot_log_repo.create_plot_log(engine_data, str(run_id_tag.value))
 
     def _persist_tag_values(self, engine_data: EngineData, plot_log_repo: PlotLogRepository):

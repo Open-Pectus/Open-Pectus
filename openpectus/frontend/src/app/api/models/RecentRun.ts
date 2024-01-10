@@ -8,8 +8,8 @@
  */
 export type RecentRun = {
     id: string;
-    unit_id: string;
-    unit_name: string;
+    engine_id: string;
+    run_id: string;
     started_date: string;
     completed_date: string;
     contributors?: Array<string>;
