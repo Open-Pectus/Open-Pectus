@@ -40,9 +40,10 @@ class RepositoryBase():
 
 
 class PlotLogRepository(RepositoryBase):
-    def create_plot_log(self, engine_data: EngineData):
+    def create_plot_log(self, engine_data: EngineData, run_id: str):
         plot_log = PlotLog()
         plot_log.engine_id = engine_data.engine_id
+        plot_log.run_id = run_id
 
         def map_reading(reading: ReadingInfo):
             entry = PlotLogEntry()
@@ -56,6 +57,11 @@ class PlotLogRepository(RepositoryBase):
         self.db_session.add(plot_log)
         self.db_session.add_all(entries)
         self.db_session.commit()
+
+        # store info from existing tags
+        for tag in engine_data.tags_info.map.values():
+            self.store_new_tag_info(engine_data.engine_id, tag)
+
 
     def store_new_tag_info(self, engine_id: str, tag: TagValue):
         existing_plot_log_entry = self.get_plot_log_entry(engine_id, tag)
@@ -94,18 +100,18 @@ class PlotLogRepository(RepositoryBase):
         plot_log_entries = self.get_plot_log_entries(engine_id)
 
         def map_tag_to_entry_value(tag: TagValue):
-            plot_log_entry = [entry for entry in plot_log_entries if entry.name == tag.name]
-            if len(plot_log_entry) == 0:
+            plot_log_entry = next((entry for entry in plot_log_entries if entry.name == tag.name), None)
+            if plot_log_entry is None:
                 return None
             return PlotLogEntryValue(
-                plot_log_entry_id=plot_log_entry[0].id,
+                plot_log_entry_id=plot_log_entry.id,
                 tick_time=tag.tick_time,
                 value_str=tag.value if isinstance(tag.value, str) else None,
                 value_float=tag.value if isinstance(tag.value, float) else None,
                 value_int=tag.value if isinstance(tag.value, int) else None,
             )
 
-        db_models = [entry_value for entry_value in map(map_tag_to_entry_value, tags) if isinstance(entry_value, PlotLogEntryValue)]
+        db_models = (entry_value for entry_value in map(map_tag_to_entry_value, tags) if entry_value is not None)
         self.db_session.add_all(db_models)
         self.db_session.commit()
 
