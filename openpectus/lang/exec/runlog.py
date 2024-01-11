@@ -81,24 +81,24 @@ class RuntimeInfo():
                 item.state = RunLogItemState.Completed
                 state = r.get_state(RuntimeRecordStateEnum.Completed)
                 item.end = state.state_time
-                item.end_values = state.values or TagValueCollection.empty()
+                item.end_values = state.values.non_system_tags_collection() if state.values is not None else TagValueCollection.empty()
             elif r.has_state(RuntimeRecordStateEnum.Failed):
                 item.state = RunLogItemState.Failed
                 state = r.get_state(RuntimeRecordStateEnum.Failed)
                 item.end = state.state_time
-                item.end_values = state.values or TagValueCollection.empty()
+                item.end_values = state.values.non_system_tags_collection() if state.values is not None else TagValueCollection.empty()
             elif r.has_state(RuntimeRecordStateEnum.Cancelled):
                 item.state = RunLogItemState.Cancelled
                 state = r.get_state(RuntimeRecordStateEnum.Cancelled)
                 item.end = state.state_time
-                item.end_values = state.values or TagValueCollection.empty()
+                item.end_values = state.values.non_system_tags_collection() if state.values is not None else TagValueCollection.empty()
             elif r.has_state(RuntimeRecordStateEnum.Forced):
                 item.state = RunLogItemState.Forced
             elif r.has_state(RuntimeRecordStateEnum.Started):
                 item.state = RunLogItemState.Started
                 state = r.get_state(RuntimeRecordStateEnum.Started)
                 item.start = state.state_time
-                item.start_values = state.values or TagValueCollection.empty()
+                item.start_values = state.values.non_system_tags_collection() if state.values is not None else TagValueCollection.empty()
             else:
                 item.state = RunLogItemState.Waiting
 
