@@ -5,6 +5,7 @@ from enum import StrEnum, auto
 from typing import Any, List, Optional, Dict
 
 import openpectus.aggregator.data.database as database
+from openpectus.aggregator.models import Method, MethodState
 from sqlalchemy import JSON, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, attribute_keyed_dict
 
@@ -40,7 +41,7 @@ class RecentRun(DBModel):
     uod_name: Mapped[str] = mapped_column()
     started_date: Mapped[datetime] = mapped_column()
     completed_date: Mapped[datetime] = mapped_column()
-
+    method: Mapped[Method] = mapped_column(type_=JSON)
     _contributors_json: Mapped[Optional[dict[str, Any]]] = mapped_column(type_=JSON, name="contributors")
 
     @property
@@ -57,11 +58,6 @@ class RecentRun(DBModel):
 
         Details: https://github.com/Open-Pectus/Open-Pectus/issues/251. """
         self._contributors_json = {"v": value}
-
-    # tags_info: TagsInfo = TagsInfo(map={})
-    # runlog: JSON = JSON()
-    # method: Method = Method(lines=[], started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
-
 
 
 class PlotLogEntryValue(DBModel):

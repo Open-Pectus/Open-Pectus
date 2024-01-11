@@ -58,27 +58,29 @@ class FromEngine:
         logger.warning(f'run id changed to {run_id_tag.value}')
         if run_id_tag.value is None and engine_data.run_id is not None:
             recent_run_repo.store_recent_run(engine_data)
+            engine_data.run_data = Mdl.RunData()
             # TODO: persist and clear from engine_map: method, run log,
             pass
         else:
-            engine_data.run_started = datetime.fromtimestamp(run_id_tag.tick_time)
+            engine_data.run_data.run_started = datetime.fromtimestamp(run_id_tag.tick_time)
             plot_log_repo.create_plot_log(engine_data, str(run_id_tag.value))
 
     def _persist_tag_values(self, engine_data: EngineData, plot_log_repo: PlotLogRepository):
         now = datetime.now()
-        time_threshold_exceeded = engine_data.tags_last_persisted is None or now - engine_data.tags_last_persisted > timedelta(seconds=persistance_threshold_seconds)
+        last_persisted = engine_data.run_data.tags_last_persisted
+        time_threshold_exceeded = last_persisted is None or now - last_persisted > timedelta(seconds=persistance_threshold_seconds)
         if engine_data.run_id is not None and time_threshold_exceeded:
             tag_values_to_persist = [tag_value for tag_value in engine_data.tags_info.map.values()
-                                     if engine_data.tags_last_persisted is None
-                                     or tag_value.tick_time > engine_data.tags_last_persisted.timestamp()]
+                                     if last_persisted is None
+                                     or tag_value.tick_time > last_persisted.timestamp()]
             plot_log_repo.store_tag_values(engine_data.engine_id, engine_data.run_id, tag_values_to_persist)
-            engine_data.tags_last_persisted = now
+            engine_data.run_data.tags_last_persisted = now
 
     def runlog_changed(self, engine_id: str, runlog: Mdl.RunLog, db_session: Session):
         try:
             engine_data = self._engine_data_map[engine_id]
-            if engine_data.runlog != runlog:
-                engine_data.runlog = runlog
+            if engine_data.run_data.runlog != runlog:
+                engine_data.run_data.runlog = runlog
                 asyncio.create_task(self.publisher.publish_run_log_changed(engine_id))
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set run log.')
@@ -95,8 +97,8 @@ class FromEngine:
     def method_state_changed(self, engine_id: str, method_state: Mdl.MethodState, db_session: Session):
         try:
             engine_data = self._engine_data_map[engine_id]
-            if engine_data.method_state != method_state:
-                engine_data.method_state = method_state
+            if engine_data.run_data.method_state != method_state:
+                engine_data.run_data.method_state = method_state
                 asyncio.create_task(self.publisher.publish_method_state_changed(engine_id))
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set control state.')

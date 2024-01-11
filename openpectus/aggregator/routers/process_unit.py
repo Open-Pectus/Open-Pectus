@@ -148,9 +148,9 @@ def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)
         )
         return line
 
-    logger.info(f"Got runlog with {len(engine_data.runlog.lines)} lines")
+    logger.info(f"Got runlog with {len(engine_data.run_data.runlog.lines)} lines")
     return Dto.RunLog(
-        lines=list(map(from_line_model, engine_data.runlog.lines)))
+        lines=list(map(from_line_model, engine_data.run_data.runlog.lines)))
 
 
 @router.get('/process_unit/{unit_id}/method-and-state')
@@ -170,7 +170,7 @@ def get_method_and_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_ag
         )
 
     print("Returned client method")
-    return from_models(engine_data.method, engine_data.method_state)
+    return from_models(engine_data.method, engine_data.run_data.method_state)
 
 
 @router.post('/process_unit/{unit_id}/method')

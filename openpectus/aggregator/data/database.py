@@ -1,6 +1,7 @@
 import json
 from typing import Any, Optional
 
+from pydantic.json import pydantic_encoder
 from sqlalchemy import create_engine, Engine
 from sqlalchemy.orm import registry, Session, sessionmaker
 
@@ -34,7 +35,7 @@ def create_db():
 
 
 def json_serialize(instance) -> str:
-    return json.dumps(instance)
+    return json.dumps(instance, default=pydantic_encoder)
 
 
 def json_deserialize(instance) -> dict[str, Any]:

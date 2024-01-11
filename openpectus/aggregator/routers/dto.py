@@ -271,6 +271,14 @@ class RecentRun(Dto):
     started_date: datetime
     completed_date: datetime
     contributors: List[str] = []
+    method: Method
+    # method_and_state: MethodAndState
+    # run_log: RunLog
+
+    # @classmethod
+    # def from_orm(cls, obj: data_models.RecentRun) -> RecentRun:
+    #     obj.method = Method.parse_raw(obj.method)
+    #     return super().from_orm(obj)
 
 
 class RecentRunCsv(Dto):

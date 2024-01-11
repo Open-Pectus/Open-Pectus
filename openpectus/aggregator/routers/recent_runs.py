@@ -19,7 +19,14 @@ def get_recent_runs(db_session: Session = Depends(get_db)) -> List[Dto.RecentRun
 @router.get("/{id}")
 def get_recent_run(id: str) -> Dto.RecentRun:
     dt = datetime(2023, 3, 21, 12, 31, 57, 0)
-    return Dto.RecentRun(id=id, engine_id="3", run_id="Foo", started_date=dt, completed_date=dt, contributors=[])
+    return Dto.RecentRun(id=id, engine_id="3", run_id="Foo", started_date=dt, completed_date=dt, contributors=[],
+                         method=Dto.Method(lines=[])
+                         # run_log=Dto.RunLog(lines=[]),
+                         # method_and_state=Dto.MethodAndState(method=Dto.Method(lines=[]),
+                         #                                     state=Dto.MethodState(started_line_ids=[],
+                         #                                                           executed_line_ids=[],
+                         #                                                           injected_line_ids=[]))
+                         )
 
 
 @router.get('/{id}/method-and-state')

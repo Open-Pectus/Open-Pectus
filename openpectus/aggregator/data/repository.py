@@ -123,14 +123,17 @@ class PlotLogRepository(RepositoryBase):
 class RecentRunRepository(RepositoryBase):
     def store_recent_run(self, engine_data: EngineData):
         if engine_data.run_id is None: raise ValueError('misisng run_id when trying to store recent run')
-        if engine_data.run_started is None: raise ValueError('misisng run_started when trying to store recent run')
+        if engine_data.run_data.run_started is None: raise ValueError('misisng run_started when trying to store recent run')
         recent_run = RecentRun()
         recent_run.engine_id = engine_data.engine_id
         recent_run.run_id = engine_data.run_id
         recent_run.computer_name = engine_data.computer_name
         recent_run.uod_name = engine_data.uod_name
-        recent_run.started_date = engine_data.run_started
+        recent_run.started_date = engine_data.run_data.run_started
         recent_run.completed_date = datetime.now()
+        recent_run.method = engine_data.method
+        # recent_run.contributors = engine_data.
+
         self.db_session.add(recent_run)
         self.db_session.commit()
 

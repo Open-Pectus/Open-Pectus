@@ -51,6 +51,12 @@ class TagsInfo(BaseModel):
             return False # was updated
 
 
+class RunData(BaseModel):
+    run_started: datetime | None = None
+    method_state: MethodState = MethodState.empty()
+    runlog: RunLog = RunLog(lines=[])
+    tags_last_persisted: datetime | None = None
+
 class EngineData(BaseModel):
     engine_id: str
     computer_name: str
@@ -58,12 +64,9 @@ class EngineData(BaseModel):
     location: str
     readings: List[Mdl.ReadingInfo] = []
     tags_info: TagsInfo = TagsInfo(map={})
-    runlog: RunLog = RunLog(lines=[])
     control_state: ControlState = ControlState(is_running=False, is_holding=False, is_paused=False)
     method: Method = Method.empty()
-    method_state: MethodState = MethodState.empty()
-    tags_last_persisted: datetime | None = None
-    run_started: datetime | None = None
+    run_data: RunData = RunData()
 
     @property
     def runtime(self):
