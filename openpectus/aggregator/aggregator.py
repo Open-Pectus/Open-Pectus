@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 logger = logging.getLogger(__name__)
 
 EngineDataMap = Dict[str, EngineData]
+persistance_threshold_seconds = 5
 
 
 class FromEngine:
@@ -65,7 +66,7 @@ class FromEngine:
 
     def _persist_tag_values(self, engine_data: EngineData, plot_log_repo: PlotLogRepository):
         now = datetime.now()
-        time_threshold_exceeded = engine_data.tags_last_persisted is None or now - engine_data.tags_last_persisted > timedelta(seconds=5)
+        time_threshold_exceeded = engine_data.tags_last_persisted is None or now - engine_data.tags_last_persisted > timedelta(seconds=persistance_threshold_seconds)
         if engine_data.run_id is not None and time_threshold_exceeded:
             tag_values_to_persist = [tag_value for tag_value in engine_data.tags_info.map.values()
                                      if engine_data.tags_last_persisted is None
