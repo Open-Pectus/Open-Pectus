@@ -12,28 +12,6 @@ from sqlalchemy.orm import Session
 logger = logging.getLogger(__name__)
 
 
-# Dependency
-def get_db():
-    db = database.SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-# from https://dev.to/tobias-piotr/patterns-and-practices-for-using-sqlalchemy-20-with-fastapi-49n8
-# async def get_db() -> AsyncGenerator[AsyncSession, None]:
-#     engine = create_async_engine(settings.DATABASE_URL)
-#     factory = async_sessionmaker(engine)
-#     async with factory() as session:
-#         try:
-#             yield session
-#             await session.commit()
-#         except exc.SQLAlchemyError as error:
-#             await session.rollback()
-#             raise
-
-
 class RepositoryBase():
     def __init__(self, db_session: Session) -> None:
         self.db_session = db_session

@@ -2,15 +2,16 @@ import logging
 from datetime import datetime
 from typing import List
 
+from fastapi import APIRouter, Depends, Response
+
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
 import openpectus.aggregator.routers.dto as Dto
 import openpectus.protocol.aggregator_messages as AM
-from fastapi import APIRouter, Depends, Response
 from openpectus.aggregator.aggregator import Aggregator
-from openpectus.aggregator.data.repository import PlotLogRepository, get_db
+from openpectus.aggregator.data import database
+from openpectus.aggregator.data.repository import PlotLogRepository
 from openpectus.aggregator.models import EngineData
-from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])
@@ -207,8 +208,8 @@ def get_plot_configuration(unit_id: str) -> Dto.PlotConfiguration:
 
 
 @router.get('/process_unit/{unit_id}/plot_log')
-def get_plot_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator), db_session: Session = Depends(get_db)) -> Dto.PlotLog:
-    plot_log_repo = PlotLogRepository(db_session)
+def get_plot_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.PlotLog:
+    plot_log_repo = PlotLogRepository(database.scoped_session())
     engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None or engine_data.run_id is None:
         return Dto.PlotLog(entries={})
