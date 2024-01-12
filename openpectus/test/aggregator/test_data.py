@@ -79,6 +79,25 @@ class DatabaseTest(unittest.TestCase):
             result = session.execute(stmt)
             self.assertEqual(1, len(result.all()))
 
+    def test_scope_session_identities(self):
+        init_db()
+
+        # same scope provides same session
+        with database.create_scope():
+            sess1 = database.scoped_session()
+            id1 = id(sess1)
+            sess2 = database.scoped_session()
+            id2 = id(sess2)
+            self.assertIs(sess1, sess2)
+        self.assertEqual(id1, id2)
+
+        # different scope provides different session
+        with database.create_scope():
+            sess3 = database.scoped_session()
+            id3 = id(sess3)
+
+        self.assertNotEqual(id1, id3)
+
 
 class SerializationTest(unittest.TestCase):
     """ Test custom serialization for dto's used when serializing dto's as json database fields. """

@@ -1,5 +1,4 @@
 import json
-import logging
 from typing import Any
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -10,7 +9,6 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.requests import Request
 from starlette.types import ASGIApp
 
-logger = logging.getLogger(__name__)
 
 reg = registry()
 _engine: Engine | None = None
@@ -25,7 +23,7 @@ def create_scope():
     Also used in tests to provide a scope
     """
     if _sessionmaker is None:
-        raise Exception("_sessionmaker has not been set. Will not be able to provide scoped database sessions")
+        raise DatabaseNotConfiguredError()
     session = _sessionmaker()
     token = _session_ctx.set(session)
     try:
@@ -38,8 +36,11 @@ def create_scope():
 
 
 def scoped_session() -> Session:
+    if _engine is None:
+        raise DatabaseNotConfiguredError()
     session = _session_ctx.get()
-    assert session is not None, "Scoped session unavailable. Are you using this from a FastAPI request context?"
+    if session is None:
+        raise SessionMissingError()
     return session
 
 
@@ -56,8 +57,8 @@ def configure_db(database_file_path: str):
 
 def create_db():
     """ Create database tables for registered models. """
-    assert _engine is not None, "Database access is not configured. Use configure_db() "
-
+    if _engine is None:
+        raise DatabaseNotConfiguredError()
     if len(reg.mappers) == 0:
         raise ValueError("No data classes have been mapped")
 
@@ -77,15 +78,23 @@ class DBSessionMiddleware(BaseHTTPMiddleware):
     """ FastAPI middleware that makes request scoped database sessions available """
     def __init__(self, app: ASGIApp):
         super().__init__(app)
-        logger.info("DBSessionMiddleware init complete")
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint):
         if _sessionmaker is None:
-            logger.error("_sessionmaker has not been set. Will not be able to provide scoped database sessions")
-            response = await call_next(request)
+            raise DatabaseNotConfiguredError()
         else:
             with create_scope():
                 response = await call_next(request)
         return response
 
 
+class DatabaseNotConfiguredError(Exception):
+    """Excetion raised when trying to access the database before it is configured. """
+    def __init__(self, *args: object) -> None:
+        super().__init__("Database has not been configured, i.e. configure_db() was not called.")
+
+
+class SessionMissingError(Exception):
+    """Excetion raised when trying to access a database session without a scope."""
+    def __init__(self):
+        super().__init__("No session is available in the current scope.")
