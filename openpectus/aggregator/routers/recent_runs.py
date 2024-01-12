@@ -4,15 +4,16 @@ from typing import Iterable, List
 import openpectus.aggregator.routers.dto as Dto
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
-from openpectus.aggregator.data.repository import get_db, RecentRunRepository
+from openpectus.aggregator.data.repository import RecentRunRepository
+from openpectus.aggregator.data import database
 from sqlalchemy.orm import Session
 
 router = APIRouter(tags=["recent_runs"], prefix='/recent_runs')
 
 
 @router.get("/")
-def get_recent_runs(db_session: Session = Depends(get_db)) -> List[Dto.RecentRun]:
-    repo = RecentRunRepository(db_session)
+def get_recent_runs() -> List[Dto.RecentRun]:
+    repo = RecentRunRepository(database.scoped_session())
     return list(map(Dto.RecentRun.from_orm, repo.get_all()))
 
 

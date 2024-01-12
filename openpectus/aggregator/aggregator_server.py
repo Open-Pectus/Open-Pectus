@@ -6,7 +6,6 @@ from fastapi import FastAPI, APIRouter
 from fastapi.routing import APIRoute
 from openpectus.aggregator.aggregator_message_handlers import AggregatorMessageHandlers
 from openpectus.aggregator.data import database
-from openpectus.aggregator.data.repository import PlotLogRepository
 from openpectus.aggregator.deps import _create_aggregator
 from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.aggregator.routers import process_unit, recent_runs, auth
@@ -53,6 +52,7 @@ class AggregatorServer:
 
     def init_db(self):
         database.configure_db(self.database_file_path)
+        self.fastapi.add_middleware(database.DBSessionMiddleware)
         database.create_db()
 
     def start(self):
