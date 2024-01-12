@@ -3,14 +3,15 @@ import logging
 from datetime import datetime, timedelta
 
 import openpectus.aggregator.models as Mdl
+import openpectus.protocol.aggregator_messages as AM
+import openpectus.protocol.engine_messages as EM
+import openpectus.protocol.messages as M
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import PlotLogRepository
 from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.aggregator.models import EngineData
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
-import openpectus.protocol.aggregator_messages as AM
-import openpectus.protocol.engine_messages as EM
-import openpectus.protocol.messages as M
+from openpectus.protocol.models import SystemTagName
 
 logger = logging.getLogger(__name__)
 
@@ -26,31 +27,47 @@ class FromEngine:
         self._engine_data_map[engine_data.engine_id] = engine_data
 
     def readings_changed(self, engine_id: str, readings: list[Mdl.ReadingInfo]):
-        plot_log_repo = PlotLogRepository(database.scoped_session())
         try:
             self._engine_data_map[engine_id].readings = readings
-            plot_log_repo.create_plot_log(self._engine_data_map[engine_id])
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set readings.')
 
-    def tag_values_changed(self, engine_id: str, tag_values: list[Mdl.TagValue]):
+    def tag_values_changed(self, engine_id: str, changed_tag_values: list[Mdl.TagValue]):
         plot_log_repo = PlotLogRepository(database.scoped_session())
-        try:
-            engine_data = self._engine_data_map[engine_id]
-            for tag_value in tag_values:
-                was_inserted = engine_data.tags_info.upsert(tag_value)
-                if was_inserted:
-                    plot_log_repo.store_new_tag_info(engine_id, tag_value)
 
-            now = datetime.now()
-            if engine_data.tags_last_persisted is None or now - engine_data.tags_last_persisted > timedelta(seconds=5):
-                tag_values_to_persist = [tag_value for tag_value in engine_data.tags_info.map.values()
-                                         if engine_data.tags_last_persisted is None
-                                         or tag_value.tick_time > engine_data.tags_last_persisted.timestamp()]
-                plot_log_repo.store_tag_values(engine_id, tag_values_to_persist)
-                engine_data.tags_last_persisted = now
-        except KeyError:
+        engine_data = self._engine_data_map.get(engine_id)
+        if engine_data is None:
             logger.error(f'No engine registered under id {engine_id} when trying to upsert tag values.')
+            return
+
+        for changed_tag_value in changed_tag_values:
+            if changed_tag_value.name == SystemTagName.run_id.value:
+                self._run_id_changed(plot_log_repo, engine_data, changed_tag_value)
+            was_inserted = engine_data.tags_info.upsert(changed_tag_value)
+            # if a tag doesn't appear with value until after start and run_id, we need to store the info here
+            if was_inserted and engine_data.run_id is not None:
+                plot_log_repo.store_new_tag_info(engine_data.engine_id, engine_data.run_id, changed_tag_value)
+
+        self._persist_tag_values(engine_data, plot_log_repo)
+
+    def _run_id_changed(self, plot_log_repo: PlotLogRepository, engine_data: EngineData, run_id_tag: Mdl.TagValue):
+        """ Handles persistance related to start and end of a run """
+        logger.warning(f'run id changed to {run_id_tag.value}')
+        if run_id_tag.value is None:
+            # TODO: persist and clear from engine_map: method, run log,
+            pass
+        else:
+            plot_log_repo.create_plot_log(engine_data, str(run_id_tag.value))
+
+    def _persist_tag_values(self, engine_data: EngineData, plot_log_repo: PlotLogRepository):
+        now = datetime.now()
+        time_threshold_exceeded = engine_data.tags_last_persisted is None or now - engine_data.tags_last_persisted > timedelta(seconds=5)
+        if engine_data.run_id is not None and time_threshold_exceeded:
+            tag_values_to_persist = [tag_value for tag_value in engine_data.tags_info.map.values()
+                                     if engine_data.tags_last_persisted is None
+                                     or tag_value.tick_time > engine_data.tags_last_persisted.timestamp()]
+            plot_log_repo.store_tag_values(engine_data.engine_id, engine_data.run_id, tag_values_to_persist)
+            engine_data.tags_last_persisted = now
 
     def runlog_changed(self, engine_id: str, runlog: Mdl.RunLog):
         try:

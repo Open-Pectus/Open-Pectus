@@ -36,6 +36,7 @@ export class ProcessPlotTooltip {
       const subplotProcessValueLogEntries = Object.values(plotLog.entries).filter(
         processValues => subplotProcessValueNames.includes(processValues.name));
       const xAxisProcessValueLogEntry = plotLog.entries[xAxisProcessValueName];
+      if(xAxisProcessValueLogEntry === undefined) return;
       const relativeMousePosition = pointer(event);
       const xAxisValues = xAxisProcessValueLogEntry.values.map<number>(value => {
         if(typeof value.value !== 'number') throw Error('Non-number x axis value');

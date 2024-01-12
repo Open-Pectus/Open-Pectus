@@ -1,6 +1,7 @@
 import itertools
 import logging
 import time
+import uuid
 from multiprocessing import Queue
 from queue import Empty
 from typing import Iterable, List, Set
@@ -299,6 +300,7 @@ class Engine(InterpreterContext):
                 self._runstate_started_time = time.time()
                 self._runstate_paused = False
                 self._runstate_holding = False
+                self._system_tags[SystemTagName.RUN_ID].set_value(str(uuid.uuid4()), self._tick_time)
                 self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, self._tick_time)
                 cmds_done.add(cmd_request)
                 # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
@@ -308,6 +310,7 @@ class Engine(InterpreterContext):
                 self._runstate_paused = False
                 self._runstate_holding = False
                 self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Stopped, self._tick_time)
+                self._system_tags[SystemTagName.RUN_ID].set_value(None, self._tick_time)
                 cmds_done.add(cmd_request)
                 # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 

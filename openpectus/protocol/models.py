@@ -32,6 +32,7 @@ TagValueType = float | int | str | None
 class SystemTagName(StrEnum):
     run_time = auto()
     system_state = auto()
+    run_id = auto()
 
 
 class TagValue(ProtocolModel):

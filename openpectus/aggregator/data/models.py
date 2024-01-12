@@ -112,6 +112,7 @@ class PlotLogEntry(DBModel):
 class PlotLog(DBModel):
     __tablename__ = "PlotLogs"
     engine_id: Mapped[str] = mapped_column()
+    run_id: Mapped[str] = mapped_column()
     entries: Mapped[Dict[str, PlotLogEntry]] = relationship(
         collection_class=attribute_keyed_dict("name"),
         back_populates='plot_log',
