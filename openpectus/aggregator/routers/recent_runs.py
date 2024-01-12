@@ -1,12 +1,11 @@
 from datetime import datetime
-from typing import Iterable, List
+from typing import List
 
 import openpectus.aggregator.routers.dto as Dto
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
-from openpectus.aggregator.data.repository import RecentRunRepository
 from openpectus.aggregator.data import database
-from sqlalchemy.orm import Session
+from openpectus.aggregator.data.repository import RecentRunRepository
 
 router = APIRouter(tags=["recent_runs"], prefix='/recent_runs')
 

@@ -1,3 +1,4 @@
+from datetime import datetime
 import unittest
 
 from sqlalchemy import select
@@ -144,6 +145,10 @@ class RepositoryTest(unittest.TestCase):
         entity.engine_id = "my_eng_id"
         entity.computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
+        entity.run_id = 'a run id'
+        entity.started_date = datetime.now()
+        entity.completed_date = datetime.now()
+        entity.method = 'a method'
 
         entity_id = 0
 
@@ -171,6 +176,10 @@ class RepositoryTest(unittest.TestCase):
         entity.engine_id = "my_eng_id"
         entity.computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
+        entity.run_id = 'a run id'
+        entity.started_date = datetime.now()
+        entity.completed_date = datetime.now()
+        entity.method = 'a method'
 
         entity_id = 0
 
@@ -180,7 +189,7 @@ class RepositoryTest(unittest.TestCase):
             session.commit()
             entity_id = entity.id
 
-        self.assertEqual(1, entity.id)
+        self.assertEqual(1, entity_id)
 
         with database.create_scope():
             session = database.scoped_session()
@@ -208,6 +217,10 @@ class RepositoryTest(unittest.TestCase):
         entity.computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
         entity.contributors = ['foo', 'bar']
+        entity.run_id = 'a run id'
+        entity.started_date = datetime.now()
+        entity.completed_date = datetime.now()
+        entity.method = 'a method'
 
         with database.create_scope():
             session = database.scoped_session()
@@ -229,6 +242,10 @@ class RepositoryTest(unittest.TestCase):
         entity.computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
         entity.contributors = ['foo', 'bar']
+        entity.run_id = 'a run id'
+        entity.started_date = datetime.now()
+        entity.completed_date = datetime.now()
+        entity.method = 'a method'
 
         entity_id = 0
 

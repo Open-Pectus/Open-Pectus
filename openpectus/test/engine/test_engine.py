@@ -556,7 +556,7 @@ Mark: C
         for item in items:
             start_values = item.start_values
             assert start_values is not None
-            self.assertTrue(start_values.has("Base"))
+            self.assertTrue(start_values.has("Reset"))
 
     def test_runstate_start(self):
         e = self.engine

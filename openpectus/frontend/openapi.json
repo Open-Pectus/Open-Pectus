@@ -1750,6 +1750,9 @@
             "type": "array",
             "title": "Contributors",
             "default": []
+          },
+          "method": {
+            "$ref": "#/components/schemas/Method"
           }
         },
         "type": "object",
@@ -1758,7 +1761,8 @@
           "engine_id",
           "run_id",
           "started_date",
-          "completed_date"
+          "completed_date",
+          "method"
         ],
         "title": "RecentRun",
         "description": "Represents a historical run of a process unit. "

@@ -408,6 +408,7 @@ export const handlers = [
         started_date: getStartedDate(),
         completed_date: getCompletedDate(),
         contributors: ['Eskild'],
+        method: {lines: []},
       },
       {
         id: '2',
@@ -416,6 +417,7 @@ export const handlers = [
         started_date: getStartedDate(),
         completed_date: getCompletedDate(),
         contributors: ['Eskild', 'Morten'],
+        method: {lines: []},
       },
       {
         id: '3',
@@ -424,6 +426,7 @@ export const handlers = [
         started_date: getStartedDate(),
         completed_date: getCompletedDate(),
         contributors: ['Eskild'],
+        method: {lines: []},
       },
       {
         id: '4',
@@ -432,6 +435,7 @@ export const handlers = [
         started_date: getStartedDate(),
         completed_date: getCompletedDate(),
         contributors: ['Eskild'],
+        method: {lines: []},
       },
     ]);
   }),
@@ -825,6 +829,7 @@ export const handlers = [
       contributors: ['Morten', 'Eskild'],
       engine_id: 'A process unit id',
       run_id: crypto.randomUUID(),
+      method: {lines: []},
     });
   }),
 
