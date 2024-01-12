@@ -4,7 +4,6 @@ import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 import openpectus.aggregator.models as Mdl
 from openpectus.aggregator.aggregator import Aggregator
-from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -53,47 +52,47 @@ class AggregatorMessageHandlers:
         # possibly more validations...
         return None
 
-    async def handle_UodInfoMsg(self, msg: EM.UodInfoMsg, db_session: Session) -> AM.SuccessMessage | AM.ErrorMessage:
+    async def handle_UodInfoMsg(self, msg: EM.UodInfoMsg) -> AM.SuccessMessage | AM.ErrorMessage:
         validation_errors = self.validate_msg(msg)
         if validation_errors is not None:
             return validation_errors
 
         logger.debug(f"Got UodInfo from client: {str(msg)}")
-        self.aggregator.from_engine.readings_changed(msg.engine_id, msg.readings, db_session)
+        self.aggregator.from_engine.readings_changed(msg.engine_id, msg.readings)
         return AM.SuccessMessage()
 
-    async def handle_TagsUpdatedMsg(self, msg: EM.TagsUpdatedMsg, db_session: Session) -> AM.SuccessMessage | AM.ErrorMessage:
+    async def handle_TagsUpdatedMsg(self, msg: EM.TagsUpdatedMsg) -> AM.SuccessMessage | AM.ErrorMessage:
         validation_errors = self.validate_msg(msg)
         if validation_errors is not None:
             return validation_errors
 
         logger.debug(f"Got tags update from client: {str(msg)}")
-        self.aggregator.from_engine.tag_values_changed(msg.engine_id, msg.tags, db_session)
+        self.aggregator.from_engine.tag_values_changed(msg.engine_id, msg.tags)
         return AM.SuccessMessage()
 
-    async def handle_RunLogMsg(self, msg: EM.RunLogMsg, db_session: Session) -> AM.SuccessMessage | AM.ErrorMessage:
+    async def handle_RunLogMsg(self, msg: EM.RunLogMsg) -> AM.SuccessMessage | AM.ErrorMessage:
         validation_errors = self.validate_msg(msg)
         if validation_errors is not None:
             return validation_errors
 
         logger.debug(f"Got run log from client: {str(msg)}")
-        self.aggregator.from_engine.runlog_changed(msg.engine_id, msg.runlog, db_session)
+        self.aggregator.from_engine.runlog_changed(msg.engine_id, msg.runlog)
         return AM.SuccessMessage()
 
-    async def handle_ControlStateMsg(self, msg: EM.ControlStateMsg, db_session: Session) -> AM.SuccessMessage | AM.ErrorMessage:
+    async def handle_ControlStateMsg(self, msg: EM.ControlStateMsg) -> AM.SuccessMessage | AM.ErrorMessage:
         validation_errors = self.validate_msg(msg)
         if validation_errors is not None:
             return validation_errors
 
         logger.debug(f"Got control state from client: {str(msg)}")
-        self.aggregator.from_engine.control_state_changed(msg.engine_id, msg.control_state, db_session)
+        self.aggregator.from_engine.control_state_changed(msg.engine_id, msg.control_state)
         return AM.SuccessMessage()
 
-    async def handle_MethodStateMsg(self, msg: EM.MethodStateMsg, db_session: Session):
+    async def handle_MethodStateMsg(self, msg: EM.MethodStateMsg):
         validation_errors = self.validate_msg(msg)
         if validation_errors is not None:
             return validation_errors
 
         logger.debug(f"Got method state from client: {str(msg)}")
-        self.aggregator.from_engine.method_state_changed(msg.engine_id, msg.method_state, db_session)
+        self.aggregator.from_engine.method_state_changed(msg.engine_id, msg.method_state)
         return AM.SuccessMessage()
