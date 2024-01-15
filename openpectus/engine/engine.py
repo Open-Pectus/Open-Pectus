@@ -172,9 +172,6 @@ class Engine(InterpreterContext):
         # read
         self.read_process_image()
 
-        # update calculated tags
-        # TODO
-
         # excecute interpreter tick
         if self._runstate_started and not self._runstate_paused and not self._runstate_holding:
             try:
@@ -184,8 +181,8 @@ class Engine(InterpreterContext):
             except Exception:
                 logger.error("Unhandled interpretation error", exc_info=True)
 
-        # update clocks
-        self.update_tags()
+        # update calculated tags
+        self.update_calculated_tags()
 
         # execute queued commands
         self.execute_commands()
@@ -229,11 +226,12 @@ class Engine(InterpreterContext):
                 tag_value = r.options["to_tag"](tag_value)
             tag.set_value(tag_value, self._tick_time)
 
-    def update_tags(self):
+    def update_calculated_tags(self):
+        # TODO: update calculated tags
+
         # TODO figure out engine/interpreter work split on clock tags
         # it appears that interpreter will have to update scope times
         # - unless we allow scope information to pass to engine (which we might)
-
         clock = self._system_tags.get(SystemTagName.CLOCK)
         clock.set_value(time.time(), self._tick_time)
 
