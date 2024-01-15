@@ -166,6 +166,12 @@ class Engine(InterpreterContext):
         self._tick_time = time.time()
         self._tick_number += 1
 
+        # Perform certain things in first tick
+        if self._tick_number == 0:
+            # System tags are initialized before first tick, without a tick time, and some are never updated, so provide first tick time as a "default".
+            for tag in self._system_tags.tags.values():
+                tag.tick_time = self._tick_time
+
         # sys_tags = self.system_tags.clone()  # TODO clone does not currently support the subclasses
         # uod_tags = self.uod.tags.clone()
 
