@@ -392,10 +392,3 @@ class TagValueCollection(Iterable[TagValue]):
 
     def to_list(self) -> list[TagValue]:
         return [v for v in self._tag_values.values()]
-
-    def non_system_tags(self) -> Iterable[TagValue]:
-        system_tag_names = [system_tag_name.value for system_tag_name in SystemTagName]
-        return (t for t in self._tag_values.values() if t.name not in system_tag_names)
-
-    def non_system_tags_collection(self) -> TagValueCollection:
-        return TagValueCollection(self.non_system_tags())
