@@ -32,32 +32,21 @@ class ProcessUnit(DBModel):
 
 class RecentRun(DBModel):
     """ Represents a historical run of a process unit. """
-
     __tablename__ = "RecentRuns"
-
     engine_id: Mapped[str] = mapped_column()
     run_id: Mapped[str] = mapped_column()
     computer_name: Mapped[str] = mapped_column()
     uod_name: Mapped[str] = mapped_column()
     started_date: Mapped[datetime] = mapped_column()
     completed_date: Mapped[datetime] = mapped_column()
+    contributors: Mapped[list[str]] = mapped_column(type_=JSON, default=[])
+
+
+class RecentRunMethodAndState(DBModel):
+    __tablename__ = "RecentRunMethodAndStates"
+    run_id: Mapped[str] = mapped_column()
     method: Mapped[Method] = mapped_column(type_=JSON)
-    _contributors_json: Mapped[Optional[dict[str, Any]]] = mapped_column(type_=JSON, name="contributors")
-
-    @property
-    def contributors(self) -> List[str]:
-        """ Typed accessor for the _contributors_json field. """
-        if self._contributors_json is None:
-            return []
-        return self._contributors_json["v"]
-
-    @contributors.setter
-    def contributors(self, value: List[str]):
-        """ Note: Because is a limitation in JSON storage change tracking, never mutate the value. Always assign a new
-        instance containg the new value.
-
-        Details: https://github.com/Open-Pectus/Open-Pectus/issues/251. """
-        self._contributors_json = {"v": value}
+    state: Mapped[MethodState] = mapped_column(type_=JSON)
 
 
 class PlotLogEntryValue(DBModel):

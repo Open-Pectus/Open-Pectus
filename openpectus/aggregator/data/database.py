@@ -32,6 +32,7 @@ def create_scope():
         yield
     except Exception:
         session.rollback()
+        raise
     finally:
         session.close()
         _session_ctx.reset(token)
@@ -87,7 +88,7 @@ class DBSessionMiddleware(BaseHTTPMiddleware):
         else:
             with create_scope():
                 response = await call_next(request)
-        return response
+            return response
 
 
 class DatabaseNotConfiguredError(Exception):

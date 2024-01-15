@@ -639,7 +639,7 @@
         }
       }
     },
-    "/api/recent_runs/{id}": {
+    "/api/recent_runs/{run_id}": {
       "get": {
         "tags": [
           "recent_runs"
@@ -651,9 +651,9 @@
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Id"
+              "title": "Run Id"
             },
-            "name": "id",
+            "name": "run_id",
             "in": "path"
           }
         ],
@@ -681,7 +681,7 @@
         }
       }
     },
-    "/api/recent_runs/{id}/method-and-state": {
+    "/api/recent_runs/{run_id}/method-and-state": {
       "get": {
         "tags": [
           "recent_runs"
@@ -693,9 +693,9 @@
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Id"
+              "title": "Run Id"
             },
-            "name": "id",
+            "name": "run_id",
             "in": "path"
           }
         ],
@@ -1750,9 +1750,6 @@
             "type": "array",
             "title": "Contributors",
             "default": []
-          },
-          "method": {
-            "$ref": "#/components/schemas/Method"
           }
         },
         "type": "object",
@@ -1761,8 +1758,7 @@
           "engine_id",
           "run_id",
           "started_date",
-          "completed_date",
-          "method"
+          "completed_date"
         ],
         "title": "RecentRun",
         "description": "Represents a historical run of a process unit. "

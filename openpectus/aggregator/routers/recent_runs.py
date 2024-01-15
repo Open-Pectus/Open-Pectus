@@ -16,23 +16,16 @@ def get_recent_runs() -> List[Dto.RecentRun]:
     return list(map(Dto.RecentRun.from_orm, repo.get_all()))
 
 
-@router.get("/{id}")
-def get_recent_run(id: str) -> Dto.RecentRun:
-    dt = datetime(2023, 3, 21, 12, 31, 57, 0)
-    return Dto.RecentRun(id=id, engine_id="3", run_id="Foo", started_date=dt, completed_date=dt, contributors=[],
-                         method=Dto.Method(lines=[])
-                         # run_log=Dto.RunLog(lines=[]),
-                         # method_and_state=Dto.MethodAndState(method=Dto.Method(lines=[]),
-                         #                                     state=Dto.MethodState(started_line_ids=[],
-                         #                                                           executed_line_ids=[],
-                         #                                                           injected_line_ids=[]))
-                         )
+@router.get("/{run_id}")
+def get_recent_run(run_id: str) -> Dto.RecentRun:
+    repo = RecentRunRepository(database.scoped_session())
+    return Dto.RecentRun.from_orm(repo.get_by_run_id(run_id))
 
 
-@router.get('/{id}/method-and-state')
-def get_recent_run_method_and_state(id: str) -> Dto.MethodAndState:
-    return Dto.MethodAndState(method=Dto.Method(lines=[]),
-                              state=Dto.MethodState(started_line_ids=[], executed_line_ids=[], injected_line_ids=[]))
+@router.get('/{run_id}/method-and-state')
+def get_recent_run_method_and_state(run_id: str) -> Dto.MethodAndState:
+    repo = RecentRunRepository(database.scoped_session())
+    return Dto.MethodAndState.from_orm(repo.get_method_and_state_by_run_id(run_id))
 
 
 @router.get('/{id}/run_log')

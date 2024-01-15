@@ -59,6 +59,6 @@ export class RecentRunsComponent implements OnInit {
   }
 
   navigateToRecentRun(recentRun: RecentRun) {
-    this.router.navigate([detailsUrlPart, DetailsRoutingUrlParts.recentRunUrlPart, recentRun.id]).then();
+    this.router.navigate([detailsUrlPart, DetailsRoutingUrlParts.recentRunUrlPart, recentRun.run_id]).then();
   }
 }

@@ -148,7 +148,6 @@ class RepositoryTest(unittest.TestCase):
         entity.run_id = 'a run id'
         entity.started_date = datetime.now()
         entity.completed_date = datetime.now()
-        entity.method = 'a method'
 
         entity_id = 0
 
@@ -164,7 +163,7 @@ class RepositoryTest(unittest.TestCase):
             session = database.scoped_session()
             repo = RecentRunRepository(session)
 
-            created_entity = repo.get_by_id(entity_id)
+            created_entity = repo.get_by_run_id(entity.run_id)
             assert created_entity is not None
             self.assertEqual("my_computer_name", created_entity.computer_name)
             self.assertEqual("my_uod_name", created_entity.uod_name)
@@ -179,7 +178,6 @@ class RepositoryTest(unittest.TestCase):
         entity.run_id = 'a run id'
         entity.started_date = datetime.now()
         entity.completed_date = datetime.now()
-        entity.method = 'a method'
 
         entity_id = 0
 
@@ -195,7 +193,7 @@ class RepositoryTest(unittest.TestCase):
             session = database.scoped_session()
             repo = RecentRunRepository(session)
 
-            created_entity = repo.get_by_id(entity_id)
+            created_entity = repo.get_by_run_id(entity.run_id)
             assert created_entity is not None
             created_entity.computer_name = "updated_computer_name"
             session.commit()
@@ -204,7 +202,7 @@ class RepositoryTest(unittest.TestCase):
             session = database.scoped_session()
             repo = RecentRunRepository(session)
 
-            updated_entity = repo.get_by_id(entity_id)
+            updated_entity = repo.get_by_run_id(entity.run_id)
             assert updated_entity is not None
             self.assertEqual("updated_computer_name", updated_entity.computer_name)
             self.assertEqual("my_uod_name", updated_entity.uod_name)
@@ -220,7 +218,6 @@ class RepositoryTest(unittest.TestCase):
         entity.run_id = 'a run id'
         entity.started_date = datetime.now()
         entity.completed_date = datetime.now()
-        entity.method = 'a method'
 
         with database.create_scope():
             session = database.scoped_session()
@@ -245,7 +242,6 @@ class RepositoryTest(unittest.TestCase):
         entity.run_id = 'a run id'
         entity.started_date = datetime.now()
         entity.completed_date = datetime.now()
-        entity.method = 'a method'
 
         entity_id = 0
 
@@ -261,7 +257,7 @@ class RepositoryTest(unittest.TestCase):
             session = database.scoped_session()
             repo = RecentRunRepository(session)
 
-            created_entity = repo.get_by_id(entity_id)
+            created_entity = repo.get_by_run_id(entity.run_id)
             assert created_entity is not None
             self.assertEqual(['foo', 'bar'], created_entity.contributors)
 
@@ -274,7 +270,7 @@ class RepositoryTest(unittest.TestCase):
         with database.create_scope():
             session = database.scoped_session()
             repo = RecentRunRepository(session)
-            updated_entity = repo.get_by_id(entity_id)
+            updated_entity = repo.get_by_run_id(entity.run_id)
             assert updated_entity is not None
             self.assertEqual(['foo', 'bar', 'baz'], updated_entity.contributors)
 

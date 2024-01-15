@@ -37,18 +37,18 @@ export class RecentRunsService {
 
     /**
      * Get Recent Run
-     * @param id 
+     * @param runId 
      * @returns RecentRun Successful Response
      * @throws ApiError
      */
     public getRecentRun(
-id: string,
+runId: string,
 ): Observable<RecentRun> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/recent_runs/{id}',
+            url: '/api/recent_runs/{run_id}',
             path: {
-                'id': id,
+                'run_id': runId,
             },
             errors: {
                 422: `Validation Error`,
@@ -58,18 +58,18 @@ id: string,
 
     /**
      * Get Recent Run Method And State
-     * @param id 
+     * @param runId 
      * @returns MethodAndState Successful Response
      * @throws ApiError
      */
     public getRecentRunMethodAndState(
-id: string,
+runId: string,
 ): Observable<MethodAndState> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/recent_runs/{id}/method-and-state',
+            url: '/api/recent_runs/{run_id}/method-and-state',
             path: {
-                'id': id,
+                'run_id': runId,
             },
             errors: {
                 422: `Validation Error`,

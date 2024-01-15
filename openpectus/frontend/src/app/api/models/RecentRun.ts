@@ -3,8 +3,6 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import type { Method } from './Method';
-
 /**
  * Represents a historical run of a process unit. 
  */
@@ -15,5 +13,4 @@ export type RecentRun = {
     started_date: string;
     completed_date: string;
     contributors?: Array<string>;
-    method: Method;
 };
