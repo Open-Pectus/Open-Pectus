@@ -1,11 +1,10 @@
-from datetime import datetime
 from typing import List
 
 import openpectus.aggregator.routers.dto as Dto
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from openpectus.aggregator.data import database
-from openpectus.aggregator.data.repository import RecentRunRepository
+from openpectus.aggregator.data.repository import PlotLogRepository, RecentRunRepository
 
 router = APIRouter(tags=["recent_runs"], prefix='/recent_runs')
 
@@ -39,9 +38,13 @@ def get_recent_run_plot_configuration(run_id: str) -> Dto.PlotConfiguration:
     return Dto.PlotConfiguration.from_orm(repo.get_plot_configuration_by_run_id(run_id))
 
 
-@router.get('/{id}/plot_log')
-def get_recent_run_plot_log(id: str) -> Dto.PlotLog:
-    return Dto.PlotLog(entries={})
+@router.get('/{run_id}/plot_log')
+def get_recent_run_plot_log(run_id: str) -> Dto.PlotLog:
+    repo = PlotLogRepository(database.scoped_session())
+    plot_log_model = repo.get_plot_log(run_id)
+    if plot_log_model is None:
+        return Dto.PlotLog(entries={})
+    return Dto.PlotLog.from_orm(plot_log_model)
 
 
 @router.get('/{id}/csv_json')

@@ -807,7 +807,7 @@
         }
       }
     },
-    "/api/recent_runs/{id}/plot_log": {
+    "/api/recent_runs/{run_id}/plot_log": {
       "get": {
         "tags": [
           "recent_runs"
@@ -819,9 +819,9 @@
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Id"
+              "title": "Run Id"
             },
-            "name": "id",
+            "name": "run_id",
             "in": "path"
           }
         ],

@@ -121,18 +121,18 @@ runId: string,
 
     /**
      * Get Recent Run Plot Log
-     * @param id 
+     * @param runId 
      * @returns PlotLog Successful Response
      * @throws ApiError
      */
     public getRecentRunPlotLog(
-id: string,
+runId: string,
 ): Observable<PlotLog> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/recent_runs/{id}/plot_log',
+            url: '/api/recent_runs/{run_id}/plot_log',
             path: {
-                'id': id,
+                'run_id': runId,
             },
             errors: {
                 422: `Validation Error`,

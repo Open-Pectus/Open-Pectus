@@ -50,12 +50,11 @@ class PlotLogRepository(RepositoryBase):
         self.db_session.add(existing_plot_log_entry)
         self.db_session.commit()
 
-    def get_plot_log(self, engine_id: str, run_id: str) -> PlotLog | None:
+    def get_plot_log(self, run_id: str) -> PlotLog | None:
         return self.db_session.scalar(
             select(PlotLog)
             .join(PlotLog.entries)
             .join(PlotLogEntry.values)
-            .where(PlotLog.engine_id == engine_id)
             .where(PlotLog.run_id == run_id)
         )
 
