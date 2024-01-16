@@ -1,13 +1,11 @@
 import logging
-from datetime import datetime
 from typing import List
-
-from fastapi import APIRouter, Depends, Response
 
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
 import openpectus.aggregator.routers.dto as Dto
 import openpectus.protocol.aggregator_messages as AM
+from fastapi import APIRouter, Depends, Response
 from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import PlotLogRepository
@@ -126,32 +124,12 @@ def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)
     engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None:
         logger.warning("No engine data - thus no runlog")
-        return Dto.RunLog(lines=[])
-
-    def from_line_model(msg: Mdl.RunLogLine) -> Dto.RunLogLine:
-        cmd = Dto.ExecutableCommand(
-            command=msg.command_name,
-            name=None,
-            source=Dto.CommandSource.METHOD
-        )
-        line = Dto.RunLogLine(
-            id=0,  # TODO change type int to str
-            command=cmd,
-            start=datetime.fromtimestamp(msg.start),
-            end=None if msg.end is None else datetime.fromtimestamp(msg.end),
-            progress=None,
-            start_values=[],
-            end_values=[],
-            forcible=None,  # TODO map forcible,forced,cancellable and cancelled
-            forced=None,
-            cancellable=None,
-            cancelled=None
-        )
-        return line
+        return Dto.RunLog.empty()
 
     logger.info(f"Got runlog with {len(engine_data.run_data.runlog.lines)} lines")
     return Dto.RunLog(
-        lines=list(map(from_line_model, engine_data.run_data.runlog.lines)))
+        lines=list(map(Dto.RunLogLine.from_line_model, engine_data.run_data.runlog.lines))
+    )
 
 
 @router.get('/process_unit/{unit_id}/method-and-state')

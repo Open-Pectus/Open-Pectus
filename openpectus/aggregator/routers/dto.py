@@ -5,6 +5,7 @@ from enum import StrEnum, auto
 from typing import Literal, List, Dict
 
 import openpectus.aggregator.data.models as data_models
+import openpectus.aggregator.models as Mdl
 from openpectus.protocol.models import ReadingInfo, TagValue
 from pydantic import BaseModel
 
@@ -174,7 +175,7 @@ class ExecutableCommand(Dto):
 
 
 class RunLogLine(Dto):
-    id: int
+    id: str
     command: ExecutableCommand
     start: datetime
     end: datetime | None
@@ -186,9 +187,33 @@ class RunLogLine(Dto):
     forced: bool | None
     cancelled: bool | None
 
+    @staticmethod
+    def from_line_model(msg: Mdl.RunLogLine) -> RunLogLine:
+        return RunLogLine(
+            id=msg.id,
+            command=ExecutableCommand(
+                command=msg.command_name,
+                name=None,
+                source=CommandSource.METHOD
+            ),
+            start=datetime.fromtimestamp(msg.start),
+            end=None if msg.end is None else datetime.fromtimestamp(msg.end),
+            progress=None,
+            start_values=[],
+            end_values=[],
+            forcible=None,  # TODO map forcible,forced,cancellable and cancelled
+            forced=None,
+            cancellable=None,
+            cancelled=None
+        )
+
 
 class RunLog(Dto):
     lines: List[RunLogLine]
+
+    @staticmethod
+    def empty() -> RunLog:
+        return RunLog(lines=[])
 
 
 class MethodLine(Dto):

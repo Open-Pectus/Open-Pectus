@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List, Iterable
 
 from openpectus.aggregator.data.models import RecentRunMethodAndState, ProcessValueType, RecentRun, PlotLogEntryValue, \
-    get_ProcessValueType_from_value, PlotLog, PlotLogEntry, RecentRunPlotConfiguration
+    get_ProcessValueType_from_value, PlotLog, PlotLogEntry, RecentRunPlotConfiguration, RecentRunRunLog
 from openpectus.aggregator.models import TagValue, ReadingInfo, EngineData
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -120,9 +120,14 @@ class RecentRunRepository(RepositoryBase):
         plot_configuration.sub_plots = engine_data.plot_configuration.sub_plots
         plot_configuration.x_axis_process_value_names = engine_data.plot_configuration.x_axis_process_value_names
 
+        run_log = RecentRunRunLog()
+        run_log.run_id = engine_data.run_id
+        run_log.lines = engine_data.run_data.runlog.lines
+
         self.db_session.add(recent_run)
         self.db_session.add(method_and_state)
         self.db_session.add(plot_configuration)
+        self.db_session.add(run_log)
         self.db_session.commit()
 
     def get_by_run_id(self, run_id: str) -> RecentRun | None:
@@ -142,3 +147,6 @@ class RecentRunRepository(RepositoryBase):
 
     def get_plot_configuration_by_run_id(self, run_id: str):
         return self.db_session.scalar(select(RecentRunPlotConfiguration).where(RecentRunPlotConfiguration.run_id==run_id))
+
+    def get_run_log_by_run_id(self, run_id: str):
+        return self.db_session.scalar(select(RecentRunRunLog).where(RecentRunRunLog.run_id==run_id))

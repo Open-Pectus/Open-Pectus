@@ -5,7 +5,7 @@ from enum import StrEnum, auto
 from typing import Any, List, Optional, Dict
 
 import openpectus.aggregator.data.database as database
-from openpectus.aggregator.models import Method, MethodState, PlotConfiguration, PlotColorRegion, SubPlot
+from openpectus.aggregator.models import Method, MethodState, PlotConfiguration, PlotColorRegion, SubPlot, RunLogLine
 from sqlalchemy import JSON, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, attribute_keyed_dict
 
@@ -47,6 +47,12 @@ class RecentRunMethodAndState(DBModel):
     run_id: Mapped[str] = mapped_column()
     method: Mapped[Method] = mapped_column(type_=JSON)
     state: Mapped[MethodState] = mapped_column(type_=JSON)
+
+
+class RecentRunRunLog(DBModel):
+    __tablename__ = "RecentRunRunLogs"
+    run_id: Mapped[str] = mapped_column()
+    lines: Mapped[List[RunLogLine]] = mapped_column(type_=JSON)
 
 
 class RecentRunPlotConfiguration(DBModel):

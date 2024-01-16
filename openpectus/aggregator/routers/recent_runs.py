@@ -1,6 +1,7 @@
 from typing import List
 
 import openpectus.aggregator.routers.dto as Dto
+import openpectus.aggregator.models as Mdl
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from openpectus.aggregator.data import database
@@ -27,9 +28,14 @@ def get_recent_run_method_and_state(run_id: str) -> Dto.MethodAndState:
     return Dto.MethodAndState.from_orm(repo.get_method_and_state_by_run_id(run_id))
 
 
-@router.get('/{id}/run_log')
-def get_recent_run_run_log(id: str) -> Dto.RunLog:
-    return Dto.RunLog(lines=[])
+@router.get('/{run_id}/run_log')
+def get_recent_run_run_log(run_id: str) -> Dto.RunLog:
+    repo = RecentRunRepository(database.scoped_session())
+    run_log_db = repo.get_run_log_by_run_id(run_id)
+    if run_log_db is None:
+        return Dto.RunLog.empty()
+    run_log_mdl = Mdl.RunLog.from_orm(run_log_db)
+    return Dto.RunLog(lines=list(map(Dto.RunLogLine.from_line_model, run_log_mdl.lines)))
 
 
 @router.get('/{run_id}/plot_configuration')

@@ -79,18 +79,18 @@ runId: string,
 
     /**
      * Get Recent Run Run Log
-     * @param id 
+     * @param runId 
      * @returns RunLog Successful Response
      * @throws ApiError
      */
     public getRecentRunRunLog(
-id: string,
+runId: string,
 ): Observable<RunLog> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/recent_runs/{id}/run_log',
+            url: '/api/recent_runs/{run_id}/run_log',
             path: {
-                'id': id,
+                'run_id': runId,
             },
             errors: {
                 422: `Validation Error`,

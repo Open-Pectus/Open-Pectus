@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 class ProtocolModel(BaseModel):
     class Config:
         smart_union = True
+        orm_mode = True
 
 
 class ReadingCommand(ProtocolModel):
