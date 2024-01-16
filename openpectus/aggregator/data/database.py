@@ -30,6 +30,7 @@ def create_scope():
         yield
     except Exception:
         session.rollback()
+        raise
     finally:
         session.close()
         _session_ctx.reset(token)
