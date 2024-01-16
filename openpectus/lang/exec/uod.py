@@ -25,7 +25,7 @@ class UnitOperationDefinitionBase:
         self.hwl = hwl
         self.location = location
         self.tags = tags
-        self.system_tags = None
+        self.system_tags: TagCollection | None = None
         self.readings = readings
         self.command_factories = command_factories
         self.command_instances: Dict[str, UodCommand] = {}

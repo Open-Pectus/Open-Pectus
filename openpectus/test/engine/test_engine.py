@@ -107,7 +107,6 @@ def create_test_uod() -> UnitOperationDefinitionBase:
             to_tag=lambda x: "Reset" if x == 1 else "N/A",
         )
         # Readings
-        .with_new_system_tags()
         .with_tag(ReadingTag("FT01", "L/h"))
         .with_tag(SelectTag("Reset", value="N/A", unit=None, choices=["Reset", "N/A"]))
         .with_tag(Tag("Danger", value=True, unit=None, direction=TagDirection.OUTPUT, safe_value=False))

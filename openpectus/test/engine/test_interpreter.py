@@ -46,7 +46,6 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_no_hardware()
         .with_location("Test location")
         # Readings
-        .with_new_system_tags()
         .with_tag(Tag(name="counter", value=0))
         .with_command(UodCommand.builder().with_name("incr counter").with_exec_fn(incr_counter))
         .build()
@@ -238,10 +237,9 @@ Block: A
 Mark: A3
 """
         uod = create_test_uod()
+        engine = create_engine(uod)
         assert uod.system_tags is not None
         uod.system_tags[SystemTagName.BASE].set_value("sec", time.time())
-
-        engine = create_engine(uod)
         run_engine(engine, program, 10)
 
         self.assertEqual(["A1", "A3"], engine.interpreter.get_marks())
@@ -432,11 +430,10 @@ class TestInterpreterContext(InterpreterContext):
     def __init__(self, engine: Engine) -> None:
         super().__init__()
         self.engine = engine
-        self._tags = engine.uod.system_tags.merge_with(engine.uod.tags)
 
     @property
     def tags(self) -> TagCollection:
-        return self._tags
+        return self.engine.tags
 
     def schedule_execution(self, name: str, args: str | None = None, exec_id: UUID | None = None) -> CommandRequest:
         return self.engine.schedule_execution(name, args, exec_id)
