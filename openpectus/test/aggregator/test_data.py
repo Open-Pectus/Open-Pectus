@@ -27,23 +27,16 @@ class DatabaseTest(unittest.TestCase):
         stmt = select(DatabaseTest.TestModel)
 
         # select() raises when db does not exist
-        # well, not anymore??!
-        #with self.assertRaises(OperationalError):
-            # with database.SessionLocal() as session:
-            #     _ = session.execute(stmt)
-        with database.create_scope():
-            session = database.scoped_session()
-            result = session.execute(stmt)
-            self.assertIsNotNone(result)
+        with self.assertRaises(OperationalError):
+            with database.create_scope():
+                session = database.scoped_session()
+                result = session.execute(stmt)
+                self.assertIsNotNone(result)
 
         # create the tables
-        #database.create_db()
+        database.create_db()
 
-        # with database.SessionLocal() as session:
-        #     # now it works
-        #     result = session.execute(stmt)
-        #     # self.assertEqual(0, len(result))
-        #     self.assertIsNotNone(result)
+        # now execute works
         with database.create_scope():
             session = database.scoped_session()
             result = session.execute(stmt)
