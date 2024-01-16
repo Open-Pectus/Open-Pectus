@@ -71,6 +71,8 @@ class EngineReporter():
                 return Mdl.SystemTagName.run_time
             case SystemTagName.SYSTEM_STATE:
                 return Mdl.SystemTagName.system_state
+            case SystemTagName.RUN_ID:
+                return Mdl.SystemTagName.run_id
             case name if name in [tag.value for tag in SystemTagName]:
                 return None
             case _:
