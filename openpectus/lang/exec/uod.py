@@ -18,7 +18,6 @@ class UnitOperationDefinitionBase:
                  hwl: HardwareLayerBase,
                  location: str,
                  tags: TagCollection,
-                 system_tags: TagCollection,
                  readings: ReadingCollection,
                  command_factories: Dict[str, UodCommandBuilder],
                  overlapping_command_names_lists: List[List[str]]) -> None:
@@ -26,7 +25,7 @@ class UnitOperationDefinitionBase:
         self.hwl = hwl
         self.location = location
         self.tags = tags
-        self.system_tags = system_tags
+        self.system_tags = None
         self.readings = readings
         self.command_factories = command_factories
         self.command_instances: Dict[str, UodCommand] = {}
@@ -226,7 +225,6 @@ class UodBuilder():
         self.instrument: str = ""
         self.hwl: HardwareLayerBase | None = None
         self.tags = TagCollection()
-        self.system_tags: TagCollection | None = None
         self.commands: Dict[str, UodCommandBuilder] = {}
         self.overlapping_command_names_lists: List[List[str]] = []
         self.readings = ReadingCollection()
@@ -238,9 +236,6 @@ class UodBuilder():
 
         if self.hwl is None:
             raise ValueError("HardwareLayer must be set")
-
-        if self.system_tags is None:
-            raise ValueError("system_tags must be set")
 
         return
 
@@ -278,13 +273,6 @@ class UodBuilder():
         self.tags.add(tag)
         return self
 
-    def with_system_tags(self, system_tags: TagCollection) -> UodBuilder:
-        self.system_tags = system_tags
-        return self
-
-    def with_new_system_tags(self) -> UodBuilder:
-        return self.with_system_tags(TagCollection.create_system_tags())
-
     def with_command(self, cb: UodCommandBuilder) -> UodBuilder:
         if cb.name in self.commands.keys():
             raise ValueError(f"Duplicate command name: {cb.name}")
@@ -309,7 +297,6 @@ class UodBuilder():
             self.hwl,  # type: ignore
             self.location,
             self.tags,
-            self.system_tags,  # type: ignore
             self.readings,
             self.commands,
             self.overlapping_command_names_lists)

@@ -52,7 +52,8 @@ class Engine(InterpreterContext):
         First tick is effectively number 0. """
 
         # TODO does the uod need to know about these? Yes - we should make them available as read only
-        self._system_tags = uod.system_tags
+        self._system_tags = TagCollection.create_system_tags()
+        self.uod.system_tags = self._system_tags
 
         self.cmd_queue: Queue[CommandRequest] = Queue()
         """ Commands to execute, coming from interpreter and from aggregator """
