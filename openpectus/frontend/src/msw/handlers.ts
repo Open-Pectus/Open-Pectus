@@ -22,6 +22,7 @@ import {
   RecentRun,
   RecentRunCsv,
   RunLog,
+  RunLogLine,
   UserRole,
 } from '../app/api';
 
@@ -91,9 +92,9 @@ const processUnits: ProcessUnit[] = [
 ];
 
 
-const runLogLines = [
+const runLogLines: RunLogLine[] = [
   {
-    id: 1,
+    id: '1',
     start: sub(Date.now(), {days: 0, hours: 2, seconds: 20}).toISOString(),
     command: {
       command: 'Some Other Command',
@@ -109,7 +110,7 @@ const runLogLines = [
     forcible: true,
     cancellable: false,
   }, {
-    id: 2,
+    id: '2',
     start: sub(Date.now(), {days: 0, hours: 1, seconds: 10}).toISOString(),
     progress: 0.1234678,
     command: {
@@ -146,7 +147,7 @@ const runLogLines = [
     forcible: true,
     cancellable: true,
   }, {
-    id: 3,
+    id: '3',
     start: sub(Date.now(), {days: 1, hours: 3, seconds: 30}).toISOString(),
     end: sub(Date.now(), {days: 1, hours: 3}).toISOString(),
     command: {
@@ -183,7 +184,7 @@ const runLogLines = [
     cancelled: true,
   },
   {
-    id: 4,
+    id: '4',
     start: sub(Date.now(), {days: 0, hours: 2, minutes: 23}).toISOString(),
     progress: 0.5123,
     command: {
@@ -729,7 +730,7 @@ export const handlers = [
     return HttpResponse.json<RunLog>({
       lines: [
         {
-          id: 1,
+          id: '1',
           start: sub(Date.now(), {days: 0, hours: 2, seconds: 20}).toISOString(),
           end: sub(Date.now(), {days: 0, hours: 1, seconds: 20}).toISOString(),
           command: {
@@ -744,7 +745,7 @@ export const handlers = [
           }],
           end_values: [],
         }, {
-          id: 2,
+          id: '2',
           start: sub(Date.now(), {days: 0, hours: 1, seconds: 10}).toISOString(),
           end: sub(Date.now(), {days: 0, hours: 0, seconds: 10}).toISOString(),
           command: {
@@ -781,7 +782,7 @@ export const handlers = [
           forcible: false,
           cancellable: false,
         }, {
-          id: 3,
+          id: '3',
           start: sub(Date.now(), {days: 1, hours: 3, seconds: 30}).toISOString(),
           end: sub(Date.now(), {days: 1, hours: 3}).toISOString(),
           command: {

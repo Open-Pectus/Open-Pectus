@@ -198,10 +198,10 @@ def get_control_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggre
 
 
 @router.post('/process_unit/{unit_id}/run_log/force_line/{line_id}')
-def force_run_log_line(unit_id: str, line_id: int):
+def force_run_log_line(unit_id: str, line_id: str):
     pass
 
 
 @router.post('/process_unit/{unit_id}/run_log/cancel_line/{line_id}')
-def cancel_run_log_line(unit_id: str, line_id: int):
+def cancel_run_log_line(unit_id: str, line_id: str):
     pass

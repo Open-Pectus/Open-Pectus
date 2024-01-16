@@ -288,7 +288,7 @@ unitId: string,
      */
     public forceRunLogLine(
 unitId: string,
-lineId: number,
+lineId: string,
 ): Observable<any> {
         return __request(OpenAPI, this.http, {
             method: 'POST',
@@ -312,7 +312,7 @@ lineId: number,
      */
     public cancelRunLogLine(
 unitId: string,
-lineId: number,
+lineId: string,
 ): Observable<any> {
         return __request(OpenAPI, this.http, {
             method: 'POST',

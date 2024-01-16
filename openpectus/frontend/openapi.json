@@ -536,7 +536,7 @@
           {
             "required": true,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "title": "Line Id"
             },
             "name": "line_id",
@@ -585,7 +585,7 @@
           {
             "required": true,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "title": "Line Id"
             },
             "name": "line_id",
@@ -1800,7 +1800,7 @@
       "RunLogLine": {
         "properties": {
           "id": {
-            "type": "integer",
+            "type": "string",
             "title": "Id"
           },
           "command": {

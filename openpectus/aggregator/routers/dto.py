@@ -188,16 +188,16 @@ class RunLogLine(Dto):
     cancelled: bool | None
 
     @staticmethod
-    def from_line_model(msg: Mdl.RunLogLine) -> RunLogLine:
+    def from_line_model(model: Mdl.RunLogLine) -> RunLogLine:
         return RunLogLine(
-            id=msg.id,
+            id=model.id,
             command=ExecutableCommand(
-                command=msg.command_name,
+                command=model.command_name,
                 name=None,
                 source=CommandSource.METHOD
             ),
-            start=datetime.fromtimestamp(msg.start),
-            end=None if msg.end is None else datetime.fromtimestamp(msg.end),
+            start=datetime.fromtimestamp(model.start),
+            end=None if model.end is None else datetime.fromtimestamp(model.end),
             progress=None,
             start_values=[],
             end_values=[],
