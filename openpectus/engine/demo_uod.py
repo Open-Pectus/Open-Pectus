@@ -5,6 +5,7 @@ from typing import List, Any
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
 from openpectus.lang.exec import tags, readings as R
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand, UodBuilder
+from openpectus.protocol.models import PlotConfiguration, SubPlot, PlotAxis
 
 
 def create_demo_uod() -> UnitOperationDefinitionBase:
@@ -16,6 +17,29 @@ def create_demo_uod() -> UnitOperationDefinitionBase:
         elif count == 4:
             cmd.context.tags.get("Reset").set_value("N/A", time())
             cmd.set_complete()
+
+    def get_plot_configuration() -> PlotConfiguration:
+        return PlotConfiguration(
+            color_regions=[],
+            sub_plots=[SubPlot(
+                axes=[PlotAxis(
+                    label='FT01',
+                    process_value_names=['FT01'],
+                    y_max=20,
+                    y_min=0,
+                    color='#ff0000',
+                ), PlotAxis(
+                    label='FT02',
+                    process_value_names=['FT02'],
+                    y_max=20,
+                    y_min=0,
+                    color='#0000ff',
+                )],
+                ratio=1
+            )],
+            process_value_names_to_annotate=[],
+            x_axis_process_value_names=['Time']
+        )
 
     return (
         UodBuilder()
@@ -39,6 +63,7 @@ def create_demo_uod() -> UnitOperationDefinitionBase:
         .with_process_value(R.Reading(label="Time"))
         .with_process_value(R.Reading(label="Reset"))
         .with_process_value(R.Reading(label="System State"))
+        .with_plot_configuration(get_plot_configuration())
         .build()
     )
 

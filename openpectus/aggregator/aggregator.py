@@ -33,6 +33,12 @@ class FromEngine:
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set readings.')
 
+    def plot_configuration_changed(self, engine_id: str, plot_configuration: Mdl.PlotConfiguration):
+        try:
+            self._engine_data_map[engine_id].plot_configuration = plot_configuration
+        except KeyError:
+            logger.error(f'No engine registered under id {engine_id} when trying to set plot configuration.')
+
     def tag_values_changed(self, engine_id: str, changed_tag_values: list[Mdl.TagValue]):
         plot_log_repo = PlotLogRepository(database.scoped_session())
         recent_run_repo = RecentRunRepository(database.scoped_session())
@@ -56,11 +62,12 @@ class FromEngine:
         """ Handles persistance related to start and end of a run """
         logger.warning(f'run id changed to {run_id_tag.value}')
         if run_id_tag.value is None and engine_data.run_id is not None:
+            # Run stopped
             recent_run_repo.store_recent_run(engine_data)
             engine_data.run_data = Mdl.RunData()
             # TODO: persist and clear from engine_map: method, run log,
-            pass
         else:
+            # Run started
             engine_data.run_data.run_started = datetime.fromtimestamp(run_id_tag.tick_time)
             plot_log_repo.create_plot_log(engine_data, str(run_id_tag.value))
 

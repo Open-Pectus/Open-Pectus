@@ -92,3 +92,33 @@ class ControlState(ProtocolModel):
     is_running: bool
     is_holding: bool
     is_paused: bool
+
+
+
+class PlotColorRegion(ProtocolModel):
+    process_value_name: str
+    value_color_map: dict[str | int | float, str]  # color string compatible with css e.g.: '#aa33bb', 'rgb(0,0,0)', 'rgba(0,0,0,0)', 'red'
+
+
+class PlotAxis(ProtocolModel):
+    label: str
+    process_value_names: List[str]
+    y_max: int | float
+    y_min: int | float
+    color: str
+
+
+class SubPlot(ProtocolModel):
+    axes: List[PlotAxis]
+    ratio: int | float
+
+
+class PlotConfiguration(ProtocolModel):
+    process_value_names_to_annotate: List[str]
+    color_regions: List[PlotColorRegion]
+    sub_plots: List[SubPlot]
+    x_axis_process_value_names: List[str]
+
+    @staticmethod
+    def empty() -> PlotConfiguration:
+        return PlotConfiguration(process_value_names_to_annotate=[], color_regions=[], sub_plots=[], x_axis_process_value_names=[])

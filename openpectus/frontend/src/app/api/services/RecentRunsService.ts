@@ -100,18 +100,18 @@ id: string,
 
     /**
      * Get Recent Run Plot Configuration
-     * @param id 
+     * @param runId 
      * @returns PlotConfiguration Successful Response
      * @throws ApiError
      */
     public getRecentRunPlotConfiguration(
-id: string,
+runId: string,
 ): Observable<PlotConfiguration> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/recent_runs/{id}/plot_configuration',
+            url: '/api/recent_runs/{run_id}/plot_configuration',
             path: {
-                'id': id,
+                'run_id': runId,
             },
             errors: {
                 422: `Validation Error`,

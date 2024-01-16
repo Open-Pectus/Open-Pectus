@@ -205,12 +205,12 @@ class RepositoryTest(unittest.TestCase):
 
         entity = RecentRun()
         entity.engine_id = "my_eng_id"
+        entity.run_id = 'a run id'
         entity.computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
-        entity.contributors = ['foo', 'bar']
-        entity.run_id = 'a run id'
         entity.started_date = datetime.now()
         entity.completed_date = datetime.now()
+        entity.contributors = ['foo', 'bar']
 
         with database.create_scope():
             session = database.scoped_session()
@@ -220,7 +220,7 @@ class RepositoryTest(unittest.TestCase):
         with database.create_scope():
             session = database.scoped_session()
             repo = RecentRunRepository(session)
-            created_entity = repo.get_by_engine_id("my_eng_id")
+            created_entity = repo.get_by_run_id("a run id")
             self.assertIsNotNone(created_entity)
             self.assertIsInstance(created_entity, RecentRun)
 

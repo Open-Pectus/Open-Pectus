@@ -6,6 +6,7 @@ from openpectus.lang.exec.readings import Reading, ReadingCollection
 from openpectus.lang.exec.tags import Tag, TagCollection
 from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
 from openpectus.engine.commands import ContextEngineCommand
+from openpectus.protocol.models import PlotConfiguration
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,8 @@ class UnitOperationDefinitionBase:
                  tags: TagCollection,
                  readings: ReadingCollection,
                  command_factories: Dict[str, UodCommandBuilder],
-                 overlapping_command_names_lists: List[List[str]]) -> None:
+                 overlapping_command_names_lists: List[List[str]],
+                 plot_configuration: PlotConfiguration) -> None:
         self.instrument = instrument_name
         self.hwl = hwl
         self.location = location
@@ -30,6 +32,7 @@ class UnitOperationDefinitionBase:
         self.command_factories = command_factories
         self.command_instances: Dict[str, UodCommand] = {}
         self.overlapping_command_names_lists: List[List[str]] = overlapping_command_names_lists
+        self.plot_configuration = plot_configuration
 
     def define_register(self, name: str, direction: RegisterDirection, **options):
         assert isinstance(self.hwl, HardwareLayerBase)
@@ -229,6 +232,7 @@ class UodBuilder():
         self.overlapping_command_names_lists: List[List[str]] = []
         self.readings = ReadingCollection()
         self.location: str = ""
+        self.plot_configuration: PlotConfiguration | None = None
 
     def validate(self):
         if len(self.instrument.strip()) == 0:
@@ -289,6 +293,10 @@ class UodBuilder():
         self.readings.add(pv)
         return self
 
+    def with_plot_configuration(self, plot_configuration: PlotConfiguration):
+        self.plot_configuration = plot_configuration
+        return self
+
     def build(self) -> UnitOperationDefinitionBase:
         self.validate()
 
@@ -299,6 +307,8 @@ class UodBuilder():
             self.tags,
             self.readings,
             self.commands,
-            self.overlapping_command_names_lists)
+            self.overlapping_command_names_lists,
+            self.plot_configuration or PlotConfiguration.empty()
+        )
 
         return uod

@@ -199,16 +199,28 @@ class MethodLine(Dto):
 class Method(Dto):
     lines: List[MethodLine]
 
+    @staticmethod
+    def empty() -> Method:
+        return Method(lines=[])
+
 
 class MethodState(Dto):
     started_line_ids: List[str]
     executed_line_ids: List[str]
     injected_line_ids: List[str]
 
+    @staticmethod
+    def empty() -> MethodState:
+        return MethodState(started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
+
 
 class MethodAndState(Dto):
     method: Method
     state: MethodState
+
+    @staticmethod
+    def empty() -> MethodAndState:
+        return MethodAndState(method=Method.empty(), state=MethodState.empty())
 
 
 class PlotColorRegion(Dto):
@@ -234,6 +246,10 @@ class PlotConfiguration(Dto):
     color_regions: List[PlotColorRegion]
     sub_plots: List[SubPlot]
     x_axis_process_value_names: List[str]
+
+    @staticmethod
+    def empty() -> PlotConfiguration:
+        return PlotConfiguration(process_value_names_to_annotate=[], color_regions=[], sub_plots=[], x_axis_process_value_names=[])
 
 
 # This class exists only to workaround the issue that OpenApi spec (or Pydantic) cannot express that elements in a list can be None/null/undefined.

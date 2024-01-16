@@ -158,9 +158,8 @@ def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)
 def get_method_and_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.MethodAndState:
     engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None:
-        logger.warning("No client data - thus no method")
-        return Dto.MethodAndState(method=Dto.Method(lines=[]),
-                                  state=Dto.MethodState(started_line_ids=[], executed_line_ids=[], injected_line_ids=[]))
+        logger.warning("No engine data - thus no method")
+        return Dto.MethodAndState.empty()
 
     def from_models(method: Mdl.Method, method_state: Mdl.MethodState) -> Dto.MethodAndState:
         return Dto.MethodAndState(
@@ -183,28 +182,13 @@ async def save_method(unit_id: str, method_dto: Dto.Method, agg: Aggregator = De
 
 
 @router.get('/process_unit/{unit_id}/plot_configuration')
-def get_plot_configuration(unit_id: str) -> Dto.PlotConfiguration:
-    return Dto.PlotConfiguration(
-        color_regions=[],
-        sub_plots=[Dto.SubPlot(
-            axes=[Dto.PlotAxis(
-                label='FT01',
-                process_value_names=['FT01'],
-                y_max=20,
-                y_min=0,
-                color='#ff0000',
-            ), Dto.PlotAxis(
-                label='FT02',
-                process_value_names=['FT02'],
-                y_max=20,
-                y_min=0,
-                color='#0000ff',
-            )],
-            ratio=1
-        )],
-        process_value_names_to_annotate=[],
-        x_axis_process_value_names=['Time']
-    )
+def get_plot_configuration(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.PlotConfiguration:
+    engine_data = agg.get_registered_engine_data(unit_id)
+    if engine_data is None:
+        logger.warning("No engine data - thus no plot configuration")
+        return Dto.PlotConfiguration.empty()
+
+    return Dto.PlotConfiguration.validate(engine_data.plot_configuration)
 
 
 @router.get('/process_unit/{unit_id}/plot_log')

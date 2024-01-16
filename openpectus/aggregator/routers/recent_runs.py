@@ -33,14 +33,10 @@ def get_recent_run_run_log(id: str) -> Dto.RunLog:
     return Dto.RunLog(lines=[])
 
 
-@router.get('/{id}/plot_configuration')
-def get_recent_run_plot_configuration(id: str) -> Dto.PlotConfiguration:
-    return Dto.PlotConfiguration(
-        color_regions=[],
-        sub_plots=[],
-        process_value_names_to_annotate=[],
-        x_axis_process_value_names=[]
-    )
+@router.get('/{run_id}/plot_configuration')
+def get_recent_run_plot_configuration(run_id: str) -> Dto.PlotConfiguration:
+    repo = RecentRunRepository(database.scoped_session())
+    return Dto.PlotConfiguration.from_orm(repo.get_plot_configuration_by_run_id(run_id))
 
 
 @router.get('/{id}/plot_log')

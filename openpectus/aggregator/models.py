@@ -18,6 +18,10 @@ MethodState = Mdl.MethodState
 ReadingCommand = Mdl.ReadingCommand
 ReadingInfo = Mdl.ReadingInfo
 TagValue = Mdl.TagValue
+PlotColorRegion = Mdl.PlotColorRegion
+PlotAxis = Mdl.PlotAxis
+SubPlot = Mdl.SubPlot
+PlotConfiguration = Mdl.PlotConfiguration
 
 
 class ChannelStatusEnum(StrEnum):
@@ -67,6 +71,7 @@ class EngineData(BaseModel):
     control_state: ControlState = ControlState(is_running=False, is_holding=False, is_paused=False)
     method: Method = Method.empty()
     run_data: RunData = RunData()
+    plot_configuration: PlotConfiguration = PlotConfiguration.empty()
 
     @property
     def runtime(self):
