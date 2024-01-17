@@ -5,6 +5,7 @@ from enum import StrEnum, auto
 from typing import Literal, List, Dict
 
 import openpectus.aggregator.data.models as data_models
+import openpectus.aggregator.models as Mdl
 from openpectus.protocol.models import ReadingInfo, TagValue
 from pydantic import BaseModel
 
@@ -174,7 +175,7 @@ class ExecutableCommand(Dto):
 
 
 class RunLogLine(Dto):
-    id: int
+    id: str
     command: ExecutableCommand
     start: datetime
     end: datetime | None
@@ -186,9 +187,33 @@ class RunLogLine(Dto):
     forced: bool | None
     cancelled: bool | None
 
+    @staticmethod
+    def from_line_model(model: Mdl.RunLogLine) -> RunLogLine:
+        return RunLogLine(
+            id=model.id,
+            command=ExecutableCommand(
+                command=model.command_name,
+                name=None,
+                source=CommandSource.METHOD
+            ),
+            start=datetime.fromtimestamp(model.start),
+            end=None if model.end is None else datetime.fromtimestamp(model.end),
+            progress=None,
+            start_values=[],
+            end_values=[],
+            forcible=None,  # TODO map forcible,forced,cancellable and cancelled
+            forced=None,
+            cancellable=None,
+            cancelled=None
+        )
+
 
 class RunLog(Dto):
     lines: List[RunLogLine]
+
+    @staticmethod
+    def empty() -> RunLog:
+        return RunLog(lines=[])
 
 
 class MethodLine(Dto):
@@ -199,16 +224,28 @@ class MethodLine(Dto):
 class Method(Dto):
     lines: List[MethodLine]
 
+    @staticmethod
+    def empty() -> Method:
+        return Method(lines=[])
+
 
 class MethodState(Dto):
     started_line_ids: List[str]
     executed_line_ids: List[str]
     injected_line_ids: List[str]
 
+    @staticmethod
+    def empty() -> MethodState:
+        return MethodState(started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
+
 
 class MethodAndState(Dto):
     method: Method
     state: MethodState
+
+    @staticmethod
+    def empty() -> MethodAndState:
+        return MethodAndState(method=Method.empty(), state=MethodState.empty())
 
 
 class PlotColorRegion(Dto):
@@ -234,6 +271,10 @@ class PlotConfiguration(Dto):
     color_regions: List[PlotColorRegion]
     sub_plots: List[SubPlot]
     x_axis_process_value_names: List[str]
+
+    @staticmethod
+    def empty() -> PlotConfiguration:
+        return PlotConfiguration(process_value_names_to_annotate=[], color_regions=[], sub_plots=[], x_axis_process_value_names=[])
 
 
 # This class exists only to workaround the issue that OpenApi spec (or Pydantic) cannot express that elements in a list can be None/null/undefined.
@@ -263,16 +304,22 @@ class PlotLog(Dto):
     entries: Dict[str, PlotLogEntry]
 
 
-class BatchJob(Dto):
-    """ Represents a current or historical run of a process unit. """
+class RecentRun(Dto):
+    """ Represents a historical run of a process unit. """
     id: str
-    unit_id: str
-    unit_name: str
+    engine_id: str
+    run_id: str
     started_date: datetime
     completed_date: datetime
     contributors: List[str] = []
 
+class RecentRunMethod(Dto):
+    id: str
+    run_id: str
+    method: Method
+    method_state: MethodState
 
-class BatchJobCsv(Dto):
+
+class RecentRunCsv(Dto):
     filename: str
     csv_content: str

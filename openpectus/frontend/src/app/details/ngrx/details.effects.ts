@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { catchError, delay, filter, map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
-import { BatchJobService, CommandSource, ProcessUnitService } from '../../api';
+import { CommandSource, ProcessUnitService, RecentRunsService } from '../../api';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { PubSubService } from '../../shared/pub-sub.service';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
@@ -109,25 +109,25 @@ export class DetailsEffects {
     }),
   ));
 
-  fetchBatchJobWhenComponentInitialized = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.batchJobDetailsInitialized),
-    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.batchJobIdParamName))),
-    switchMap(([_, batchJobId]) => {
-      if(batchJobId === undefined) return of();
-      return this.batchJobService.getBatchJob(batchJobId).pipe(
-        map(batchJob => DetailsActions.batchJobFetched({batchJob})),
+  fetchRecentRunWhenComponentInitialized = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.recentRunDetailsInitialized),
+    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.recentRunIdParamName))),
+    switchMap(([_, recentRunId]) => {
+      if(recentRunId === undefined) return of();
+      return this.recentRunsService.getRecentRun(recentRunId).pipe(
+        map(recentRun => DetailsActions.recentRunFetched({recentRun})),
       );
     }),
   ));
 
-  downloadBatchJobCsvWhenButtonClicked = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.batchJobDownloadCsvButtonClicked),
-    switchMap(({batchJobId}) => {
-      return this.batchJobService.getBatchJobCsvJson(batchJobId).pipe(
-        map(batchJobCsv => {
+  downloadRecentRunCsvWhenButtonClicked = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.recentRunDownloadCsvButtonClicked),
+    switchMap(({recentRunId}) => {
+      return this.recentRunsService.getRecentRunCsvJson(recentRunId).pipe(
+        map(RecentRunCsv => {
           const link = document.createElement('a');
-          link.download = batchJobCsv.filename;
-          link.href = URL.createObjectURL(new Blob([batchJobCsv.csv_content]));
+          link.download = RecentRunCsv.filename;
+          link.href = URL.createObjectURL(new Blob([RecentRunCsv.csv_content]));
           link.click();
         }),
       );
@@ -137,6 +137,6 @@ export class DetailsEffects {
   constructor(private actions: Actions,
               private store: Store,
               private processUnitService: ProcessUnitService,
-              private batchJobService: BatchJobService,
+              private recentRunsService: RecentRunsService,
               private pubSubService: PubSubService) {}
 }

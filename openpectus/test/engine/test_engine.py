@@ -4,15 +4,16 @@ import time
 import unittest
 from typing import Any, List
 
+import openpectus.protocol.models as Mdl
 import pint
 from openpectus.engine.engine import Engine
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
 from openpectus.engine.models import EngineCommandEnum, SystemStateEnum
-from openpectus.lang.exec.tags import SystemTagName, Tag, ReadingTag, SelectTag, TagDirection
 from openpectus.lang.exec.runlog import RuntimeRecordStateEnum
+from openpectus.lang.exec.tags import SystemTagName, Tag, ReadingTag, SelectTag, TagDirection
 from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
-import openpectus.protocol.models as Mdl
+from openpectus.test.engine.utility_methods import run_engine, continue_engine
 from typing_extensions import override
 
 logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
@@ -25,48 +26,6 @@ logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.INFO)
 # to throw off timing of the first instruction.
 # so we initialize it first
 _ = pint.Quantity("0 sec")
-
-
-def run_engine(engine: Engine, pcode: str, max_ticks: int = -1):
-    print("Interpretation started")
-    ticks = 0
-    max_ticks = max_ticks
-
-    engine._running = True
-    engine.set_method(Mdl.Method.from_pcode(pcode=pcode))
-    engine.schedule_execution("Start")
-
-    while engine.is_running():
-        ticks += 1
-        if max_ticks != -1 and ticks > max_ticks:
-            print(f"Stopping because max_ticks {max_ticks} was reached")
-            return
-
-        time.sleep(0.1)
-        engine.tick()
-
-
-def continue_engine(engine: Engine, max_ticks: int = -1):
-    # This function (as well as run_engine) differs from just calling engine.tick() in that
-    # it passes the time before calling tick(). Some functionality depends on this, such as
-    # thresholds.
-
-    # TODO consider adding a SystemClock abstraction to avoid the need for waiting
-    # in tests
-    print("Interpretation continuing")
-    ticks = 0
-    max_ticks = max_ticks
-
-    engine._running = True
-
-    while engine.is_running():
-        ticks += 1
-        if max_ticks != -1 and ticks > max_ticks:
-            print(f"Stopping because max_ticks {max_ticks} was reached")
-            return
-
-        time.sleep(0.1)
-        engine.tick()
 
 
 def get_queue_items(q) -> list[Tag]:
@@ -107,7 +66,6 @@ def create_test_uod() -> UnitOperationDefinitionBase:
             to_tag=lambda x: "Reset" if x == 1 else "N/A",
         )
         # Readings
-        .with_new_system_tags()
         .with_tag(ReadingTag("FT01", "L/h"))
         .with_tag(SelectTag("Reset", value="N/A", unit=None, choices=["Reset", "N/A"]))
         .with_tag(Tag("Danger", value=True, unit=None, direction=TagDirection.OUTPUT, safe_value=False))
@@ -556,7 +514,7 @@ Mark: C
         for item in items:
             start_values = item.start_values
             assert start_values is not None
-            self.assertTrue(start_values.has("Base"))
+            self.assertTrue(start_values.has("Reset"))
 
     def test_runstate_start(self):
         e = self.engine

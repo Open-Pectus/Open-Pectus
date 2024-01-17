@@ -1,7 +1,6 @@
-
-
-import unittest
 import time
+import unittest
+
 from openpectus.lang.exec.timer import ZeroThreadTimer, OneThreadTimer
 
 

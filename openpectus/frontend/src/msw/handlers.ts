@@ -4,8 +4,6 @@ import { format, getSeconds, sub } from 'date-fns';
 import { delay, http, HttpResponse, PathParams } from 'msw';
 import {
   AuthConfig,
-  BatchJob,
-  BatchJobCsv,
   CommandExample,
   CommandSource,
   ControlState,
@@ -21,7 +19,10 @@ import {
   ProcessValueCommandFreeTextValue,
   ProcessValueType,
   Ready,
+  RecentRun,
+  RecentRunCsv,
   RunLog,
+  RunLogLine,
   UserRole,
 } from '../app/api';
 
@@ -91,9 +92,9 @@ const processUnits: ProcessUnit[] = [
 ];
 
 
-const runLogLines = [
+const runLogLines: RunLogLine[] = [
   {
-    id: 1,
+    id: '1',
     start: sub(Date.now(), {days: 0, hours: 2, seconds: 20}).toISOString(),
     command: {
       command: 'Some Other Command',
@@ -109,7 +110,7 @@ const runLogLines = [
     forcible: true,
     cancellable: false,
   }, {
-    id: 2,
+    id: '2',
     start: sub(Date.now(), {days: 0, hours: 1, seconds: 10}).toISOString(),
     progress: 0.1234678,
     command: {
@@ -146,7 +147,7 @@ const runLogLines = [
     forcible: true,
     cancellable: true,
   }, {
-    id: 3,
+    id: '3',
     start: sub(Date.now(), {days: 1, hours: 3, seconds: 30}).toISOString(),
     end: sub(Date.now(), {days: 1, hours: 3}).toISOString(),
     command: {
@@ -183,7 +184,7 @@ const runLogLines = [
     cancelled: true,
   },
   {
-    id: 4,
+    id: '4',
     start: sub(Date.now(), {days: 0, hours: 2, minutes: 23}).toISOString(),
     progress: 0.5123,
     command: {
@@ -391,7 +392,7 @@ export const handlers = [
     ]);
   }),
 
-  http.get('/api/recent_batch_jobs', () => {
+  http.get('/api/recent_runs/', () => {
     function getCompletedDate() {
       return sub(new Date(), {seconds: Math.random() * 1000000}).toISOString();
     }
@@ -400,35 +401,35 @@ export const handlers = [
       return sub(new Date(), {hours: 2, seconds: Math.random() * 1000000}).toISOString();
     }
 
-    return HttpResponse.json<BatchJob[]>([
+    return HttpResponse.json<RecentRun[]>([
       {
         id: '1',
-        unit_id: '1',
-        unit_name: 'Some Name 1 that is very long, and way longer than it should be.',
+        engine_id: '1',
+        run_id: crypto.randomUUID(),
         started_date: getStartedDate(),
         completed_date: getCompletedDate(),
         contributors: ['Eskild'],
       },
       {
         id: '2',
-        unit_id: '2',
-        unit_name: 'Some Name 2',
+        engine_id: '2',
+        run_id: crypto.randomUUID(),
         started_date: getStartedDate(),
         completed_date: getCompletedDate(),
         contributors: ['Eskild', 'Morten'],
       },
       {
         id: '3',
-        unit_id: '3',
-        unit_name: 'Some Name 3',
+        engine_id: '3',
+        run_id: crypto.randomUUID(),
         started_date: getStartedDate(),
         completed_date: getCompletedDate(),
         contributors: ['Eskild'],
       },
       {
         id: '4',
-        unit_id: '4',
-        unit_name: 'Some Name 4',
+        engine_id: '4',
+        run_id: crypto.randomUUID(),
         started_date: getStartedDate(),
         completed_date: getCompletedDate(),
         contributors: ['Eskild'],
@@ -698,11 +699,11 @@ export const handlers = [
   }),
 
 
-  /**************
-   * BATCH JOBS *
-   **************/
+  /***************
+   * RECENT RUNS *
+   ***************/
 
-  http.get('/api/batch_job/:id/method-and-state', async () => {
+  http.get('/api/recent_runs/:id/method-and-state', async () => {
     await delay();
     return HttpResponse.json<MethodAndState>({
       method: {
@@ -724,12 +725,12 @@ export const handlers = [
     });
   }),
 
-  http.get('/api/batch_job/:id/run_log', async () => {
+  http.get('/api/recent_runs/:id/run_log', async () => {
     await delay();
     return HttpResponse.json<RunLog>({
       lines: [
         {
-          id: 1,
+          id: '1',
           start: sub(Date.now(), {days: 0, hours: 2, seconds: 20}).toISOString(),
           end: sub(Date.now(), {days: 0, hours: 1, seconds: 20}).toISOString(),
           command: {
@@ -744,7 +745,7 @@ export const handlers = [
           }],
           end_values: [],
         }, {
-          id: 2,
+          id: '2',
           start: sub(Date.now(), {days: 0, hours: 1, seconds: 10}).toISOString(),
           end: sub(Date.now(), {days: 0, hours: 0, seconds: 10}).toISOString(),
           command: {
@@ -781,7 +782,7 @@ export const handlers = [
           forcible: false,
           cancellable: false,
         }, {
-          id: 3,
+          id: '3',
           start: sub(Date.now(), {days: 1, hours: 3, seconds: 30}).toISOString(),
           end: sub(Date.now(), {days: 1, hours: 3}).toISOString(),
           command: {
@@ -817,19 +818,19 @@ export const handlers = [
     });
   }),
 
-  http.get('/api/batch_job/:id', ({params}) => {
-    return HttpResponse.json<BatchJob>({
+  http.get('/api/recent_runs/:id', ({params}) => {
+    return HttpResponse.json<RecentRun>({
       id: params['id'].toString(),
       started_date: sub(new Date(), {hours: 3, minutes: 22, seconds: 11}).toISOString(),
       completed_date: sub(new Date(), {hours: 1}).toISOString(),
       contributors: ['Morten', 'Eskild'],
-      unit_id: 'A process unit id',
-      unit_name: 'A process unit name',
+      engine_id: 'A process unit id',
+      run_id: crypto.randomUUID(),
     });
   }),
 
 
-  http.get('/api/batch_job/:id/plot_configuration', () => {
+  http.get('/api/recent_runs/:id/plot_configuration', () => {
     return HttpResponse.json<PlotConfiguration>({
       x_axis_process_value_names: ['Timestamp', 'Timestamp2'],
       process_value_names_to_annotate: ['Flow path'],
@@ -887,7 +888,7 @@ export const handlers = [
     });
   }),
 
-  http.get('/api/batch_job/:id/plot_log', () => {
+  http.get('/api/recent_runs/:id/plot_log', () => {
     const noOfValues = 90;
     const attachTickTime = (value: object, index: number) => ({...value, tick_time: (Date.now() - (noOfValues - index)) / 1000});
     return HttpResponse.json<PlotLog>({
@@ -983,22 +984,22 @@ export const handlers = [
     });
   }),
 
-  http.get('/api/batch_job/:id/csv_file', ({params}) => {
+  http.get('/api/recent_runs/:id/csv_file', ({params}) => {
     const csvContent = `Some;CSV;File
 123;456;789`;
     return new HttpResponse(csvContent, {
       headers: {
         'Content-Length': csvContent.length.toString(),
         'Content-Type': 'text/csv',
-        'Content-Disposition': `attachment;filename="BatchJob-${params['id']}.csv"`,
+        'Content-Disposition': `attachment;filename="RecentRun-${params['id']}.csv"`,
       },
     });
   }),
 
-  http.get('/api/batch_job/:id/csv_json', ({params}) => {
-    return HttpResponse.json<BatchJobCsv>({
+  http.get('/api/recent_runs/:id/csv_json', ({params}) => {
+    return HttpResponse.json<RecentRunCsv>({
       filename: `P2 - A process unit name - ${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.csv`,
-      csv_content: `# Batch Job Id:;${params['id']}
+      csv_content: `# Recent Run Id:;${params['id']}
 # Process Unit Name:;A process unit name
 # Starting Time:;${new Date().toISOString()}
 # Ending Time:;${new Date().toISOString()}

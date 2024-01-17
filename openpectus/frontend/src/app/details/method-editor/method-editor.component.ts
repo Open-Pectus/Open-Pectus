@@ -28,13 +28,13 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
       </button>
       <app-monaco-editor class="block rounded-sm h-full" [editorSizeChange]="editorSizeChange"
                          content *ngIf="!collapsed" (keydown.control.s)="onCtrlS($event)"
-                         [readOnlyEditor]="batchJobId !== undefined"></app-monaco-editor>
+                         [readOnlyEditor]="recentRunId !== undefined"></app-monaco-editor>
     </app-collapsible-element>
   `,
 })
 export class MethodEditorComponent implements OnInit, OnDestroy {
   @Input() unitId?: string;
-  @Input() batchJobId?: string;
+  @Input() recentRunId?: string;
 
   protected methodEditorIsDirty = this.store.select(MethodEditorSelectors.isDirty);
   protected editorSizeChange = new Subject<void>();
@@ -46,8 +46,8 @@ export class MethodEditorComponent implements OnInit, OnDestroy {
     if(this.unitId !== undefined) {
       this.store.dispatch(MethodEditorActions.methodEditorComponentInitializedForUnit({unitId: this.unitId}));
     }
-    if(this.batchJobId !== undefined) {
-      this.store.dispatch(MethodEditorActions.methodEditorComponentInitializedForBatchJob({batchJobId: this.batchJobId}));
+    if(this.recentRunId !== undefined) {
+      this.store.dispatch(MethodEditorActions.methodEditorComponentInitializedForRecentRun({recentRunId: this.recentRunId}));
     }
   }
 

@@ -13,7 +13,7 @@ from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, Uo
 from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.grammar.pprogramformatter import print_parsed_program as print_program
 from openpectus.lang.model.pprogram import PProgram
-from openpectus.test.engine.test_engine import run_engine
+from openpectus.test.engine.utility_methods import run_engine, build_program
 
 TICK_INTERVAL = 0.1
 
@@ -32,7 +32,6 @@ _ = pint.Quantity("0 sec")
 
 
 def create_test_uod() -> UnitOperationDefinitionBase:
-
     def incr_counter(cmd: UodCommand, args: List[Any]):
         counter = cmd.context.tags["counter"]
         count = counter.as_number()
@@ -46,7 +45,6 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_no_hardware()
         .with_location("Test location")
         # Readings
-        .with_new_system_tags()
         .with_tag(Tag(name="counter", value=0))
         .with_command(UodCommand.builder().with_name("incr counter").with_exec_fn(incr_counter))
         .build()
@@ -59,12 +57,6 @@ def create_engine(uod: UnitOperationDefinitionBase | None = None) -> Engine:
     e = Engine(uod)
     e._configure()
     return e
-
-
-def build_program(s) -> PProgram:
-    p = PGrammar()
-    p.parse(s)
-    return p.build_model()
 
 
 def create_interpreter(
@@ -237,11 +229,9 @@ Block: A
     Mark: A2
 Mark: A3
 """
-        uod = create_test_uod()
-        assert uod.system_tags is not None
-        uod.system_tags[SystemTagName.BASE].set_value("sec", time.time())
-
-        engine = create_engine(uod)
+        engine = self.engine
+        assert engine.uod.system_tags is not None
+        engine.uod.system_tags[SystemTagName.BASE].set_value("sec", time.time())
         run_engine(engine, program, 10)
 
         self.assertEqual(["A1", "A3"], engine.interpreter.get_marks())
@@ -432,11 +422,10 @@ class TestInterpreterContext(InterpreterContext):
     def __init__(self, engine: Engine) -> None:
         super().__init__()
         self.engine = engine
-        self._tags = engine.uod.system_tags.merge_with(engine.uod.tags)
 
     @property
     def tags(self) -> TagCollection:
-        return self._tags
+        return self.engine.tags
 
     def schedule_execution(self, name: str, args: str | None = None, exec_id: UUID | None = None) -> CommandRequest:
         return self.engine.schedule_execution(name, args, exec_id)

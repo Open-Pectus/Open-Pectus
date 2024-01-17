@@ -53,6 +53,7 @@ class Engine(InterpreterContext):
 
         # TODO does the uod need to know about these? Yes - we should make them available as read only
         self._system_tags = TagCollection.create_system_tags()
+        self.uod.system_tags = self._system_tags
 
         self.cmd_queue: Queue[CommandRequest] = Queue()
         """ Commands to execute, coming from interpreter and from aggregator """
@@ -166,14 +167,17 @@ class Engine(InterpreterContext):
         self._tick_time = time.time()
         self._tick_number += 1
 
+        # Perform certain things in first tick
+        if self._tick_number == 0:
+            # System tags are initialized before first tick, without a tick time, and some are never updated, so provide first tick time as a "default".
+            for tag in self._system_tags.tags.values():
+                tag.tick_time = self._tick_time
+
         # sys_tags = self.system_tags.clone()  # TODO clone does not currently support the subclasses
         # uod_tags = self.uod.tags.clone()
 
         # read
         self.read_process_image()
-
-        # update calculated tags
-        # TODO
 
         # excecute interpreter tick
         if self._runstate_started and not self._runstate_paused and not self._runstate_holding:
@@ -184,8 +188,8 @@ class Engine(InterpreterContext):
             except Exception:
                 logger.error("Unhandled interpretation error", exc_info=True)
 
-        # update clocks
-        self.update_tags()
+        # update calculated tags
+        self.update_calculated_tags()
 
         # execute queued commands
         self.execute_commands()
@@ -229,11 +233,12 @@ class Engine(InterpreterContext):
                 tag_value = r.options["to_tag"](tag_value)
             tag.set_value(tag_value, self._tick_time)
 
-    def update_tags(self):
+    def update_calculated_tags(self):
+        # TODO: update calculated tags
+
         # TODO figure out engine/interpreter work split on clock tags
         # it appears that interpreter will have to update scope times
         # - unless we allow scope information to pass to engine (which we might)
-
         clock = self._system_tags.get(SystemTagName.CLOCK)
         clock.set_value(time.time(), self._tick_time)
 
@@ -534,7 +539,7 @@ class Engine(InterpreterContext):
 
     @property
     def tags(self) -> TagCollection:
-        return self.uod.system_tags.merge_with(self.uod.tags)
+        return self._system_tags.merge_with(self.uod.tags)
 
     def schedule_execution(self, name: str, args: str | None = None, exec_id: UUID | None = None) -> CommandRequest:
         """ Execute named command (engine internal or Uod), possibly with arguments. """

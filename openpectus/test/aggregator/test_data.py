@@ -1,3 +1,4 @@
+from datetime import datetime
 import unittest
 
 from sqlalchemy import select
@@ -6,8 +7,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 import openpectus.aggregator.routers.dto as D
 from openpectus.aggregator.data import database
-from openpectus.aggregator.data.models import DBModel, BatchJobData
-from openpectus.aggregator.data.repository import BatchJobDataRepository
+from openpectus.aggregator.data.models import DBModel, RecentRun
+from openpectus.aggregator.data.repository import RecentRunRepository
 from openpectus.aggregator.routers.serialization import deserialize, serialize
 
 
@@ -133,10 +134,13 @@ class RepositoryTest(unittest.TestCase):
         init_db()
 
         # at the data level we can insert any kind of junk
-        entity = BatchJobData()
+        entity = RecentRun()
         entity.engine_id = "my_eng_id"
         entity.computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
+        entity.run_id = 'a run id'
+        entity.started_date = datetime.now()
+        entity.completed_date = datetime.now()
 
         entity_id = 0
 
@@ -150,9 +154,9 @@ class RepositoryTest(unittest.TestCase):
 
         with database.create_scope():
             session = database.scoped_session()
-            repo = BatchJobDataRepository(session)
+            repo = RecentRunRepository(session)
 
-            created_entity = repo.get_by_id(entity_id)
+            created_entity = repo.get_by_run_id(entity.run_id)
             assert created_entity is not None
             self.assertEqual("my_computer_name", created_entity.computer_name)
             self.assertEqual("my_uod_name", created_entity.uod_name)
@@ -160,10 +164,13 @@ class RepositoryTest(unittest.TestCase):
     def test_can_update(self):
         init_db()
 
-        entity = BatchJobData()
+        entity = RecentRun()
         entity.engine_id = "my_eng_id"
         entity.computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
+        entity.run_id = 'a run id'
+        entity.started_date = datetime.now()
+        entity.completed_date = datetime.now()
 
         entity_id = 0
 
@@ -173,22 +180,22 @@ class RepositoryTest(unittest.TestCase):
             session.commit()
             entity_id = entity.id
 
-        self.assertEqual(1, entity.id)
+        self.assertEqual(1, entity_id)
 
         with database.create_scope():
             session = database.scoped_session()
-            repo = BatchJobDataRepository(session)
+            repo = RecentRunRepository(session)
 
-            created_entity = repo.get_by_id(entity_id)
+            created_entity = repo.get_by_run_id(entity.run_id)
             assert created_entity is not None
             created_entity.computer_name = "updated_computer_name"
             session.commit()
 
         with database.create_scope():
             session = database.scoped_session()
-            repo = BatchJobDataRepository(session)
+            repo = RecentRunRepository(session)
 
-            updated_entity = repo.get_by_id(entity_id)
+            updated_entity = repo.get_by_run_id(entity.run_id)
             assert updated_entity is not None
             self.assertEqual("updated_computer_name", updated_entity.computer_name)
             self.assertEqual("my_uod_name", updated_entity.uod_name)
@@ -196,10 +203,13 @@ class RepositoryTest(unittest.TestCase):
     def test_can_find(self):
         init_db()
 
-        entity = BatchJobData()
+        entity = RecentRun()
         entity.engine_id = "my_eng_id"
+        entity.run_id = 'a run id'
         entity.computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
+        entity.started_date = datetime.now()
+        entity.completed_date = datetime.now()
         entity.contributors = ['foo', 'bar']
 
         with database.create_scope():
@@ -209,19 +219,22 @@ class RepositoryTest(unittest.TestCase):
 
         with database.create_scope():
             session = database.scoped_session()
-            repo = BatchJobDataRepository(session)
-            created_entity = repo.get_by_engine_id("my_eng_id")
+            repo = RecentRunRepository(session)
+            created_entity = repo.get_by_run_id("a run id")
             self.assertIsNotNone(created_entity)
-            self.assertIsInstance(created_entity, BatchJobData)
+            self.assertIsInstance(created_entity, RecentRun)
 
     def test_json(self):
         init_db()
 
-        entity = BatchJobData()
+        entity = RecentRun()
         entity.engine_id = "my_eng_id"
         entity.computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
         entity.contributors = ['foo', 'bar']
+        entity.run_id = 'a run id'
+        entity.started_date = datetime.now()
+        entity.completed_date = datetime.now()
 
         entity_id = 0
 
@@ -235,9 +248,9 @@ class RepositoryTest(unittest.TestCase):
 
         with database.create_scope():
             session = database.scoped_session()
-            repo = BatchJobDataRepository(session)
+            repo = RecentRunRepository(session)
 
-            created_entity = repo.get_by_id(entity_id)
+            created_entity = repo.get_by_run_id(entity.run_id)
             assert created_entity is not None
             self.assertEqual(['foo', 'bar'], created_entity.contributors)
 
@@ -249,8 +262,8 @@ class RepositoryTest(unittest.TestCase):
 
         with database.create_scope():
             session = database.scoped_session()
-            repo = BatchJobDataRepository(session)
-            updated_entity = repo.get_by_id(entity_id)
+            repo = RecentRunRepository(session)
+            updated_entity = repo.get_by_run_id(entity.run_id)
             assert updated_entity is not None
             self.assertEqual(['foo', 'bar', 'baz'], updated_entity.contributors)
 
