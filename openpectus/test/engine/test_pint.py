@@ -1,8 +1,8 @@
 import unittest
-from pint import UnitRegistry, Quantity, Unit, DimensionalityError
-import pint
-from pint.util import UnitsContainer
 
+import pint
+from pint import UnitRegistry, Quantity, Unit, DimensionalityError
+from pint.util import UnitsContainer
 
 ureg = UnitRegistry()
 Q_ = Quantity

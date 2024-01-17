@@ -1,6 +1,7 @@
 import unittest
 
 from openpectus.lang.grammar.pgrammar import PGrammar
+from openpectus.lang.grammar.pprogramformatter import PProgramFormatter
 from openpectus.lang.model.pprogram import (
     PNode,
     PProgram,
@@ -16,8 +17,6 @@ from openpectus.lang.model.pprogram import (
     PErrorInstruction,
     PCondition
 )
-
-from openpectus.lang.grammar.pprogramformatter import PProgramFormatter, print_program
 
 
 def build(s):
@@ -618,7 +617,7 @@ mycommand: a  # foo
 
         all = program.get_instructions(include_blanks=True)
         blank_1, cmd, blank_2 = all
-        self.assertIsInstance(cmd , PCommand)
+        self.assertIsInstance(cmd, PCommand)
         self.assertEqual(" foo  ", cmd.comment)
 
     def test_comment(self):
@@ -649,7 +648,6 @@ mycommand: a  # foo
         # slight mishap here. we ignore it for now
         self.assertEqual(" bar# baz", comment2.comment)
         # self.assertEqual(" bar # baz", comment2.comment)
-
 
     def test_program_errors(self):
         p = build(

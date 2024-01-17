@@ -13,7 +13,7 @@ from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, Uo
 from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.grammar.pprogramformatter import print_parsed_program as print_program
 from openpectus.lang.model.pprogram import PProgram
-from openpectus.test.engine.test_engine import run_engine
+from openpectus.test.engine.utility_methods import run_engine, build_program
 
 TICK_INTERVAL = 0.1
 
@@ -32,7 +32,6 @@ _ = pint.Quantity("0 sec")
 
 
 def create_test_uod() -> UnitOperationDefinitionBase:
-
     def incr_counter(cmd: UodCommand, args: List[Any]):
         counter = cmd.context.tags["counter"]
         count = counter.as_number()
@@ -58,12 +57,6 @@ def create_engine(uod: UnitOperationDefinitionBase | None = None) -> Engine:
     e = Engine(uod)
     e._configure()
     return e
-
-
-def build_program(s) -> PProgram:
-    p = PGrammar()
-    p.parse(s)
-    return p.build_model()
 
 
 def create_interpreter(
