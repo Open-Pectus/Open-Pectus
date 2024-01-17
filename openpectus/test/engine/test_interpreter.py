@@ -229,10 +229,9 @@ Block: A
     Mark: A2
 Mark: A3
 """
-        uod = create_test_uod()
-        engine = create_engine(uod)
-        assert uod.system_tags is not None
-        uod.system_tags[SystemTagName.BASE].set_value("sec", time.time())
+        engine = self.engine
+        assert engine.uod.system_tags is not None
+        engine.uod.system_tags[SystemTagName.BASE].set_value("sec", time.time())
         run_engine(engine, program, 10)
 
         self.assertEqual(["A1", "A3"], engine.interpreter.get_marks())
