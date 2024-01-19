@@ -36,6 +36,8 @@ class Register():
     def options(self):
         return self._options
 
+    def __str__(self):
+        return f"Register(name={self._name})"
 
 class HardwareLayerException(Exception):
     """ Raised when hardware connection issues occur. """
@@ -71,10 +73,17 @@ class HardwareConnectionStatus():
 # TODO use better type than Any for hw values
 
 class HardwareLayerBase():
-    """ Represents the hardware layer, typically implemented via OPCUA"""
+    """ Represents the hardware layer """
     def __init__(self) -> None:
         self.registers: Dict[str, Register] = {}
         self.connection_status: HardwareConnectionStatus = HardwareConnectionStatus()
+    
+    def __enter__(self):
+        """ Allow use as context manager. """
+        self.connect()
+        
+    def __exit__(self, type, value, traceback):
+        self.disconnect()
 
     def read(self, r: Register) -> Any:
         raise NotImplementedError()
