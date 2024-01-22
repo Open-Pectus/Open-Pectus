@@ -206,16 +206,5 @@ class OPCUA_Hardware(HardwareLayerBase):
             self._client.disconnect()
         self.connection_status.set_not_ok()
 
-    def probe(self):
-        """ Attempt to write safe value to writable registers
-        and to read readable registers. This will hopefully
-        cause exceptions if there are any mistakes in the Unit
-        Operation Definition. """
-        for r in self.registers.values():
-            if RegisterDirection.Write in r.direction:
-                self.write(r.safe_value, r)
-            if RegisterDirection.Read in r.direction:
-                self.read(r)
-
     def __str__(self):
         return f"OPCUA_Hardware(host={self.host})"

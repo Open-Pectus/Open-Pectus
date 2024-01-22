@@ -16,8 +16,6 @@ class Register():
         self._direction: RegisterDirection = direction
         # self._value: Any = None
         self._options: Dict[str, Any] = options
-        if RegisterDirection.Write in self._direction and 'safe_value' not in self._options:
-            raise Exception(f"'safe_value' must be defined for writable register {self}.")
 
     @property
     def name(self):
@@ -26,10 +24,6 @@ class Register():
     @property
     def direction(self) -> RegisterDirection:
         return self._direction
-
-    @property
-    def safe_value(self) -> Any:
-        return self._options["safe_value"]
 
     # @property
     # def value(self):

@@ -159,7 +159,7 @@ class TestOPCUAHardware(unittest.TestCase):
             self.assertEqual(0.0, hwl.read(FT01))
 
     def test_can_write_register(self):
-        PU01 = Register("PU01", RegisterDirection.Both, path="Objects/2:PU01", safe_value=0.0)
+        PU01 = Register("PU01", RegisterDirection.Both, path="Objects/2:PU01")
         registers = {"PU01": PU01}
         test_server = OPCUATestServer(registers=registers)
 
@@ -185,8 +185,7 @@ class TestOPCUAHardware(unittest.TestCase):
     def test_can_write_multiple_registers(self):
         registers = {f"Writable {i:02d}": Register(f"{i:02d}",
                      RegisterDirection.Both,
-                     path=f"Objects/2:writable_{i:02d}",
-                     safe_value=0.0) for i in range(100)}
+                     path=f"Objects/2:writable_{i:02d}") for i in range(100)}
         test_server = OPCUATestServer(registers=registers)
         values_to_write = [float(i) for i in range(len(registers))]
 
@@ -217,18 +216,15 @@ class TestOPCUAHardware(unittest.TestCase):
         bool_register = Register("Bool",
                                  RegisterDirection.Both,
                                  path="Objects/2:Boolean value",
-                                 type=OPCUA_Types.Boolean,
-                                 safe_value=False)
+                                 type=OPCUA_Types.Boolean)
         float_register = Register("Float",
                                   RegisterDirection.Both,
                                   path="Objects/2:Float value",
-                                  type=OPCUA_Types.Float,
-                                  safe_value=0.0)
+                                  type=OPCUA_Types.Float)
         uint16_register = Register("Uint16",
                                    RegisterDirection.Both,
                                    path="Objects/2:Uint16 value",
-                                   type=OPCUA_Types.UInt16,
-                                   safe_value=0)
+                                   type=OPCUA_Types.UInt16)
         registers = {
             "Bool": bool_register,
             "Float": float_register,
