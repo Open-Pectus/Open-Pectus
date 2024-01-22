@@ -156,6 +156,8 @@ class OPCUA_Hardware(HardwareLayerBase):
         logger.info(f"Attempting to connect to {self.host}")
         self.connection_status.register_connection_attempt()
         if self._client:
+            self._client.disconnect()
+            self._register_to_node.cache_clear()
             del self._client
         self._client = OPCUAClient(self.host)
         try:

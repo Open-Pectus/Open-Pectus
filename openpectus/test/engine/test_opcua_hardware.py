@@ -194,5 +194,27 @@ class TestOPCUAHardware(unittest.TestCase):
         self.assertIn((float_register.options["path"], 1.0), test_server.server_write_events)
         self.assertIn((uint16_register.options["path"], 1), test_server.server_write_events)
         self.assertEqual(values, [True, 1.0, 1,])
+    
+    def test_reconnect(self):
+        FT01 = Register("FT01", RegisterDirection.Both, path="Objects/2:FT01")
+        registers = [
+            FT01
+        ]
+        
+        hwl = OPCUA_Hardware(host="opc.tcp://127.0.0.1:48401/")
+        hwl.registers = registers
+        
+        # Connect and read
+        with OPCUATestServer(registers=registers):
+            hwl.connect()
+            self.assertEqual(0.0, hwl.read(FT01))
+        # Server stops. Try to read again
+        with self.assertRaises(HardwareLayerException) as context:
+            hwl.read(FT01)
+        # Start server, connect and read again
+        with OPCUATestServer(registers=registers):
+            hwl.connect()
+            self.assertEqual(0.0, hwl.read(FT01))
+        
 if __name__ == "__main__":
     unittest.main()
