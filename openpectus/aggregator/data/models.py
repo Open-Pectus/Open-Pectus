@@ -58,11 +58,7 @@ class RecentRunRunLog(DBModel):
 class RecentRunPlotConfiguration(DBModel):
     __tablename__ = "RecentRunPlotConfigurations"
     run_id: Mapped[str] = mapped_column()
-    # plot_configuration: Mapped[PlotConfiguration] = mapped_column(type_=JSON)
-    process_value_names_to_annotate: Mapped[list[str]] = mapped_column(type_=JSON)
-    color_regions: Mapped[list[PlotColorRegion]] = mapped_column(type_=JSON)
-    sub_plots: Mapped[list[SubPlot]] = mapped_column(type_=JSON)
-    x_axis_process_value_names: Mapped[list[str]] = mapped_column(type_=JSON)
+    plot_configuration: Mapped[PlotConfiguration] = mapped_column(type_=JSON)
 
 
 class PlotLogEntryValue(DBModel):

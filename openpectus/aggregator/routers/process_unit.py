@@ -178,7 +178,7 @@ def get_plot_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator
     plot_log_model = plot_log_repo.get_plot_log(engine_data.run_id)
     if plot_log_model is None:
         return Dto.PlotLog(entries={})
-    return Dto.PlotLog.from_orm(plot_log_model)
+    return Dto.PlotLog.validate(plot_log_model)
 
 
 @router.get('/process_unit/{unit_id}/control_state')

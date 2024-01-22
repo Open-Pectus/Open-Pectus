@@ -115,10 +115,7 @@ class RecentRunRepository(RepositoryBase):
 
         plot_configuration = RecentRunPlotConfiguration()
         plot_configuration.run_id = engine_data.run_id
-        plot_configuration.process_value_names_to_annotate = engine_data.plot_configuration.process_value_names_to_annotate
-        plot_configuration.color_regions = engine_data.plot_configuration.color_regions
-        plot_configuration.sub_plots = engine_data.plot_configuration.sub_plots
-        plot_configuration.x_axis_process_value_names = engine_data.plot_configuration.x_axis_process_value_names
+        plot_configuration.plot_configuration = engine_data.plot_configuration
 
         run_log = RecentRunRunLog()
         run_log.run_id = engine_data.run_id
@@ -146,7 +143,7 @@ class RecentRunRepository(RepositoryBase):
         return self.db_session.scalar(select(RecentRunMethodAndState).where(RecentRunMethodAndState.run_id==run_id))
 
     def get_plot_configuration_by_run_id(self, run_id: str):
-        return self.db_session.scalar(select(RecentRunPlotConfiguration).where(RecentRunPlotConfiguration.run_id==run_id))
+        return self.db_session.scalar(select(RecentRunPlotConfiguration.plot_configuration).where(RecentRunPlotConfiguration.run_id==run_id))
 
     def get_run_log_by_run_id(self, run_id: str):
         return self.db_session.scalar(select(RecentRunRunLog).where(RecentRunRunLog.run_id==run_id))
