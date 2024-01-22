@@ -28,7 +28,7 @@ class Register():
         return self._direction
 
     @property
-    def safe_value(self):
+    def safe_value(self) -> Any:
         return self._options["safe_value"]
 
     # @property
@@ -40,7 +40,7 @@ class Register():
     #     self._value = val
 
     @property
-    def options(self):
+    def options(self) -> Dict[str, Any]:
         return self._options
 
     def __str__(self):

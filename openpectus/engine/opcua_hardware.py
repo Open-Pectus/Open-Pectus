@@ -2,7 +2,9 @@ import logging
 import functools
 from typing import Any, Iterable
 import asyncua
+import asyncua.ua
 import asyncua.sync
+import asyncua.client.ua_client
 
 from openpectus.engine.hardware import (
     HardwareLayerBase,
@@ -44,10 +46,10 @@ class OPCUA_Hardware(HardwareLayerBase):
     """ Represents OPCUA hardware layer. """
     def __init__(self, host: str) -> None:
         super().__init__()
-        self._client = None
         self.host: str = host
+        self._client: asyncua.sync.Client = asyncua.sync.Client(self.host)
 
-    def _browse_opcua_name_space_depth_first_until_path_is_valid(self, path: str) -> list[asyncua.ua.uatypes.QualifiedName]:
+    def _browse_opcua_name_space_depth_first_until_path_is_valid(self, path: str) -> tuple[str, list[asyncua.ua.uatypes.QualifiedName]]:
         """ Given a path to a node that does not exist, find the closest
         parent that does.
 
@@ -75,7 +77,7 @@ class OPCUA_Hardware(HardwareLayerBase):
         return (path, children,)
 
     @functools.cache
-    def _register_to_node(self, r: Register) -> asyncua.common.node.Node:
+    def _register_to_node(self, r: Register) -> asyncua.sync.SyncNode:
         """ Resolving a NodeId from a path requires an OPC-UA call.
         The NodeId's are fixed so it makes sense to resolve them once
         and cache the result for future use. """
@@ -99,8 +101,8 @@ class OPCUA_Hardware(HardwareLayerBase):
             raise HardwareLayerException((f"Invalid type '{r.options['type']}' "
                                           f"specified for register {r}. Type must "
                                           f"be an asyncua.ua.VariantType."))
+        path = r.options["path"]
         try:
-            path = r.options["path"]
             node_id = self._client.nodes.root.get_child(path)
         except asyncua.ua.uaerrors._auto.BadNoMatch:
             # If the node cannot be found then we try to help the
@@ -113,7 +115,7 @@ class OPCUA_Hardware(HardwareLayerBase):
                                           f"node is '{valid_path}' with children: {children_string}"))
         return node_id
 
-    def _registers_to_nodes(self, registers: list[Register]) -> list[asyncua.common.node.Node]:
+    def _registers_to_nodes(self, registers: Iterable[Register]) -> list[asyncua.sync.SyncNode]:
         node_ids = []
         for r in registers:
             node_ids.append(self._register_to_node(r))
@@ -127,10 +129,12 @@ class OPCUA_Hardware(HardwareLayerBase):
             self.connection_status.set_not_ok()
             raise HardwareLayerException(f"Not connected to {self.host}")
 
-    def read_batch(self, registers: list[Register]) -> list[Any]:
+    def read_batch(self, registers: Iterable[Register]) -> list[Any]:
         """ Read batch of register values with a single OPC-UA call. """
+        for r in registers:
+            if RegisterDirection.Read not in r.direction:
+                raise HardwareLayerException("Attempt to read unreadable register {r}.")
         try:
-            registers = [r for r in registers if RegisterDirection.Read in r.direction]
             nodes = self._registers_to_nodes(registers)
             values = self._client.read_values(nodes)
         except ConnectionError:
@@ -140,7 +144,7 @@ class OPCUA_Hardware(HardwareLayerBase):
 
     def write(self, value: Any, r: Register):
         if RegisterDirection.Write not in r.direction:
-            return
+            raise HardwareLayerException("Attempt to write unwritable register {r}.")
         try:
             opcua_node = self._register_to_node(r)
             if 'type' in r.options:
@@ -153,9 +157,11 @@ class OPCUA_Hardware(HardwareLayerBase):
 
     def write_batch(self, values: Iterable[Any], registers: Iterable[Register]):
         """ Write batch of register values with a single OPC-UA call. """
+        for r in registers:
+            if RegisterDirection.Write not in r.direction:
+                raise HardwareLayerException("Attempt to write unwritable register {r}.")
         try:
             node_ids = []
-            registers = [r for r in registers if RegisterDirection.Write in r.direction]
             nodes = self._registers_to_nodes(registers)
             node_ids = [node.nodeid for node in nodes]
             data_values = []
@@ -205,7 +211,7 @@ class OPCUA_Hardware(HardwareLayerBase):
         and to read readable registers. This will hopefully
         cause exceptions if there are any mistakes in the Unit
         Operation Definition. """
-        for r in self.registers:
+        for r in self.registers.values():
             if RegisterDirection.Write in r.direction:
                 self.write(r.safe_value, r)
             if RegisterDirection.Read in r.direction:

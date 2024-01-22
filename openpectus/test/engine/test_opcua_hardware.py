@@ -4,6 +4,9 @@ import unittest
 import multiprocessing
 import asyncio
 import asyncua
+import asyncua.ua
+import asyncua.common.callback
+from typing import Any, Dict
 from openpectus.engine.hardware import Register, RegisterDirection, HardwareLayerException
 from openpectus.engine.opcua_hardware import OPCUA_Hardware, OPCUA_Types
 
@@ -14,10 +17,10 @@ logger.setLevel(logging.DEBUG)
 opcua_host = "opc.tcp://127.0.0.1:48401/"
 
 
-async def opcua_test_server_task(registers: list[Register],
-                                 callback_output_queue: multiprocessing.Queue,
-                                 stop_event: multiprocessing.Event,
-                                 is_started_event: multiprocessing.Event):
+async def opcua_test_server_task(registers: Dict[str, Register],
+                                 callback_output_queue,
+                                 stop_event,
+                                 is_started_event) -> None:
     post_write_callback_queue = multiprocessing.Queue()
     server = asyncua.Server()
     await server.init()
@@ -29,7 +32,7 @@ async def opcua_test_server_task(registers: list[Register],
     idx = await server.register_namespace(uri)
     objects = server.nodes.objects
 
-    for r in registers:
+    for r in registers.values():
         # Objects/2:parent_node/2:node_name -> ["Objects", "2:parent_node", "2:node_name"]
         breadcrumbs = r.options["path"].split("/")
         # ["Objects", "2:parent_node", "2:node_name"] -> ["2:parent_node",]
@@ -78,8 +81,8 @@ class OPCUATestServer():
     """ Context manager which launches OPC-UA test server. """
     def __init__(self, registers=None):
         self.callback_output_queue = multiprocessing.Queue()
-        self.server_write_events = []
-        self.registers = []
+        self.server_write_events: list[tuple[str, Any]] = []
+        self.registers = dict()
         if registers:
             self.registers = registers
 
@@ -119,9 +122,7 @@ class TestOPCUAHardware(unittest.TestCase):
 
     def test_reconnect(self):
         FT01 = Register("FT01", RegisterDirection.Read, path="Objects/2:FT01")
-        registers = [
-            FT01
-        ]
+        registers = {"FT01": FT01}
 
         hwl = OPCUA_Hardware(host=opcua_host)
         hwl.registers = registers
@@ -139,9 +140,7 @@ class TestOPCUAHardware(unittest.TestCase):
 
     def test_connection_left_connected_does_not_hang(self):
         FT01 = Register("FT01", RegisterDirection.Read, path="Objects/2:FT01")
-        registers = [
-            FT01
-        ]
+        registers = {"FT01": FT01}
         test_server = OPCUATestServer(registers=registers)
 
         hwl = OPCUA_Hardware(host=opcua_host)
@@ -151,9 +150,7 @@ class TestOPCUAHardware(unittest.TestCase):
 
     def test_can_read_register(self):
         FT01 = Register("FT01", RegisterDirection.Read, path="Objects/2:FT01")
-        registers = [
-            FT01
-        ]
+        registers = {"FT01": FT01}
         test_server = OPCUATestServer(registers=registers)
 
         hwl = OPCUA_Hardware(host="opc.tcp://127.0.0.1:48401/")
@@ -163,9 +160,7 @@ class TestOPCUAHardware(unittest.TestCase):
 
     def test_can_write_register(self):
         PU01 = Register("PU01", RegisterDirection.Both, path="Objects/2:PU01", safe_value=0.0)
-        registers = [
-            PU01
-        ]
+        registers = {"PU01": PU01}
         test_server = OPCUATestServer(registers=registers)
 
         hwl = OPCUA_Hardware(host=opcua_host)
@@ -175,29 +170,31 @@ class TestOPCUAHardware(unittest.TestCase):
         self.assertIn((PU01.options["path"], 10.2,), test_server.server_write_events)
 
     def test_can_read_multiple_registers(self):
-        registers = [Register(f"{i:02d}", RegisterDirection.Read, path=f"Objects/2:readable_{i:02d}") for i in range(100)]
+        registers = {f"Readable {i:02d}": Register(f"{i:02d}",
+                                                   RegisterDirection.Read,
+                                                   path=f"Objects/2:readable_{i:02d}") for i in range(100)}
         test_server = OPCUATestServer(registers=registers)
 
         hwl = OPCUA_Hardware(host=opcua_host)
         hwl.registers = registers
         with test_server, hwl:
-            values = hwl.read_batch(registers)
+            values = hwl.read_batch(registers.values())
             for value in values:
                 self.assertEqual(0.0, value)
 
     def test_can_write_multiple_registers(self):
-        registers = [Register(f"{i:02d}",
+        registers = {f"Writable {i:02d}": Register(f"{i:02d}",
                      RegisterDirection.Both,
                      path=f"Objects/2:writable_{i:02d}",
-                     safe_value=0.0) for i in range(100)]
+                     safe_value=0.0) for i in range(100)}
         test_server = OPCUATestServer(registers=registers)
         values_to_write = [float(i) for i in range(len(registers))]
 
         hwl = OPCUA_Hardware(host=opcua_host)
         hwl.registers = registers
         with test_server, hwl:
-            hwl.write_batch(values_to_write, registers)
-        for register, value_to_write in zip(registers, values_to_write):
+            hwl.write_batch(values_to_write, registers.values())
+        for register, value_to_write in zip(registers.values(), values_to_write):
             self.assertIn((register.options["path"], value_to_write,), test_server.server_write_events)
 
     def test_does_help_user_fix_path_typo(self):
@@ -207,17 +204,16 @@ class TestOPCUAHardware(unittest.TestCase):
         FT01_totalizer_1_total_proper = Register("FT01",
                                                  RegisterDirection.Read,
                                                  path="Objects/2:FT01/2:Totalizer/2:Total 1")
-        test_server = OPCUATestServer(registers=[FT01_totalizer_1_total_proper])
+        test_server = OPCUATestServer(registers={"FT01": FT01_totalizer_1_total_proper})
 
         hwl = OPCUA_Hardware(host=opcua_host)
-        hwl.registers = [FT01_totalizer_1_total_with_typo]
+        hwl.registers = {"FT01": FT01_totalizer_1_total_with_typo}
         with test_server, hwl:
             with self.assertRaises(HardwareLayerException) as context:
                 hwl.read(FT01_totalizer_1_total_with_typo)
             self.assertIn("Objects/2:FT01/2:Totalizer/2:Totaal 1 cannot be found", str(context.exception))
 
     def test_can_read_write_registers_with_type(self):
-        OPCUA_Types
         bool_register = Register("Bool",
                                  RegisterDirection.Both,
                                  path="Objects/2:Boolean value",
@@ -233,19 +229,19 @@ class TestOPCUAHardware(unittest.TestCase):
                                    path="Objects/2:Uint16 value",
                                    type=OPCUA_Types.UInt16,
                                    safe_value=0)
-        registers = [
-            bool_register,
-            float_register,
-            uint16_register,
-        ]
+        registers = {
+            "Bool": bool_register,
+            "Float": float_register,
+            "Uint16": uint16_register,
+        }
         test_server = OPCUATestServer(registers=registers)
 
         hwl = OPCUA_Hardware(host=opcua_host)
         hwl.registers = registers
 
         with test_server, hwl:
-            hwl.write_batch([1, 1, 1], registers)
-            values = hwl.read_batch(registers)
+            hwl.write_batch([1, 1, 1], registers.values())
+            values = hwl.read_batch(registers.values())
 
         self.assertIn((bool_register.options["path"], True), test_server.server_write_events)
         self.assertIn((float_register.options["path"], 1.0), test_server.server_write_events)
@@ -255,10 +251,10 @@ class TestOPCUAHardware(unittest.TestCase):
     def test_illegal_register_type_is_detected(self):
         FT01_type_not_ok = Register("FT01", RegisterDirection.Read, path="Objects/2:FT01", type=bool)
         FT01_type_ok = Register("FT01", RegisterDirection.Read, path="Objects/2:FT01", type=OPCUA_Types.Boolean)
-        test_server = OPCUATestServer(registers=[FT01_type_ok])
+        test_server = OPCUATestServer(registers={"FT01": FT01_type_ok})
 
         hwl = OPCUA_Hardware(host=opcua_host)
-        hwl.registers = [FT01_type_not_ok]
+        hwl.registers = {"FT01": FT01_type_not_ok}
         with test_server, hwl:
             with self.assertRaises(HardwareLayerException):
                 hwl.read(FT01_type_not_ok)
