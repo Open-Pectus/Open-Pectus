@@ -207,8 +207,8 @@ class RuntimeRecord():
     def add_state_awaiting_interrupt(self, time: float, tick: int, state_values: TagValueCollection | None):
         self.add_state(RuntimeRecordStateEnum.AwaitingInterrrupt, time, tick, state_values)
 
-    def add_state_started(self, time: float, tick: int, end_values: TagValueCollection):
-        self.add_state(RuntimeRecordStateEnum.Started, time, tick, end_values)
+    def add_state_started(self, time: float, tick: int, start_values: TagValueCollection):
+        self.add_state(RuntimeRecordStateEnum.Started, time, tick, start_values)
 
     def add_state_completed(self, time: float, tick: int, end_values: TagValueCollection):
         self.add_state(RuntimeRecordStateEnum.Completed, time, tick, end_values)
