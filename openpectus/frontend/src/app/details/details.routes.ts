@@ -1,7 +1,6 @@
 import { Routes } from '@angular/router';
 import { provideEffects } from '@ngrx/effects';
 import { provideState } from '@ngrx/store';
-import { BatchJobDetailsComponent } from './batch-job-details.component';
 import { DetailsRoutingUrlParts } from './details-routing-url-parts';
 import { MethodEditorEffects } from './method-editor/ngrx/method-editor.effects';
 import { methodEditorSlice } from './method-editor/ngrx/method-editor.reducer';
@@ -11,6 +10,7 @@ import { ProcessPlotEffects } from './process-plot/ngrx/process-plot.effects';
 import { processPlotSlice } from './process-plot/ngrx/process-plot.reducer';
 import { ProcessValuesEffects } from './process-values/ngrx/process-values.effects';
 import { processValuesSlice } from './process-values/ngrx/process-values.reducer';
+import { RecentRunDetailsComponent } from './recent-run-details.component';
 import { RunLogEffects } from './run-log/ngrx/run-log.effects';
 import { runLogSlice } from './run-log/ngrx/run-log.reducer';
 import { UnitDetailsComponent } from './unit-details.component';
@@ -31,8 +31,8 @@ export const routes: Routes = [
         component: UnitDetailsComponent,
       },
       {
-        path: `${DetailsRoutingUrlParts.batchJobUrlPart}/:${DetailsRoutingUrlParts.batchJobIdParamName}`,
-        component: BatchJobDetailsComponent,
+        path: `${DetailsRoutingUrlParts.recentRunUrlPart}/:${DetailsRoutingUrlParts.recentRunIdParamName}`,
+        component: RecentRunDetailsComponent,
       },
     ],
   },

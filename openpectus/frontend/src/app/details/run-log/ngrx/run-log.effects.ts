@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
-import { BatchJobService, ProcessUnitService } from '../../../api';
+import { ProcessUnitService, RecentRunsService } from '../../../api';
 import { selectRouteParam } from '../../../ngrx/router.selectors';
 import { PubSubService } from '../../../shared/pub-sub.service';
 import { DetailsRoutingUrlParts } from '../../details-routing-url-parts';
@@ -21,11 +21,11 @@ export class RunLogEffects {
     }),
   ));
 
-  fetchRunLogWhenComponentInitializedForBatchJob = createEffect(() => this.actions.pipe(
-    ofType(RunLogActions.runLogComponentInitializedForBatchJob),
-    switchMap(({batchJobId}) => {
-      if(batchJobId === undefined) return of();
-      return this.batchJobService.getBatchJobRunLog(batchJobId).pipe(
+  fetchRunLogWhenComponentInitializedForRecentRun = createEffect(() => this.actions.pipe(
+    ofType(RunLogActions.runLogComponentInitializedForRecentRun),
+    switchMap(({recentRunId}) => {
+      if(recentRunId === undefined) return of();
+      return this.recentRunsService.getRecentRunRunLog(recentRunId).pipe(
         map(runLog => RunLogActions.runLogFetched({runLog})),
       );
     }),
@@ -70,6 +70,6 @@ export class RunLogEffects {
 
   constructor(private actions: Actions, private store: Store,
               private processUnitService: ProcessUnitService,
-              private batchJobService: BatchJobService,
+              private recentRunsService: RecentRunsService,
               private pubSubService: PubSubService) {}
 }

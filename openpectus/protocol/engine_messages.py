@@ -20,6 +20,7 @@ class RegisterEngineMsg(Msg.MessageBase):
 
 class UodInfoMsg(EngineMessage):
     readings: List[Mdl.ReadingInfo]
+    plot_configuration: Mdl.PlotConfiguration
 
 
 class TagsUpdatedMsg(EngineMessage):

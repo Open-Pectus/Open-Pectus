@@ -17,13 +17,13 @@ class EngineCommandEnum(StrEnum):
 
 
 class SystemStateEnum(StrEnum):
-    Running = "Running",
-    Paused = "Paused",
-    Holding = "Holding",
-    Waiting = "Waiting",
+    Running = "Running"
+    Paused = "Paused"
+    Holding = "Holding"
+    Waiting = "Waiting"
     Stopped = "Stopped"
 
 
 class MethodStatusEnum(StrEnum):
-    OK = "OK",
+    OK = "OK"
     ERROR = "Error"

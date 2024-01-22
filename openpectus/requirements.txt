@@ -16,6 +16,7 @@ sqlalchemy==2.0.23
 asyncua
 pyright
 
+
 # simulation server
 #opcua
 #numpy

@@ -1,7 +1,7 @@
 import unittest
 
-from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.grammar.codegen.pcodeParser import ParserRuleContext, pcodeParser
+from openpectus.lang.grammar.pgrammar import PGrammar
 
 
 def parse(s):

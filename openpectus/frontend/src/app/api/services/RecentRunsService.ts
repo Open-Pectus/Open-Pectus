@@ -6,11 +6,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 
-import type { BatchJob } from '../models/BatchJob';
-import type { BatchJobCsv } from '../models/BatchJobCsv';
 import type { MethodAndState } from '../models/MethodAndState';
 import type { PlotConfiguration } from '../models/PlotConfiguration';
 import type { PlotLog } from '../models/PlotLog';
+import type { RecentRun } from '../models/RecentRun';
+import type { RecentRunCsv } from '../models/RecentRunCsv';
 import type { RunLog } from '../models/RunLog';
 
 import { OpenAPI } from '../core/OpenAPI';
@@ -19,24 +19,36 @@ import { request as __request } from '../core/request';
 @Injectable({
   providedIn: 'root',
 })
-export class BatchJobService {
+export class RecentRunsService {
 
     constructor(public readonly http: HttpClient) {}
 
     /**
-     * Get Batch Job
-     * @param id 
-     * @returns BatchJob Successful Response
+     * Get Recent Runs
+     * @returns RecentRun Successful Response
      * @throws ApiError
      */
-    public getBatchJob(
-id: string,
-): Observable<BatchJob> {
+    public getRecentRuns(): Observable<Array<RecentRun>> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/batch_job/{id}',
+            url: '/api/recent_runs/',
+        });
+    }
+
+    /**
+     * Get Recent Run
+     * @param runId 
+     * @returns RecentRun Successful Response
+     * @throws ApiError
+     */
+    public getRecentRun(
+runId: string,
+): Observable<RecentRun> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/recent_runs/{run_id}',
             path: {
-                'id': id,
+                'run_id': runId,
             },
             errors: {
                 422: `Validation Error`,
@@ -45,31 +57,19 @@ id: string,
     }
 
     /**
-     * Get Recent Batch Jobs
-     * @returns BatchJob Successful Response
-     * @throws ApiError
-     */
-    public getRecentBatchJobs(): Observable<Array<BatchJob>> {
-        return __request(OpenAPI, this.http, {
-            method: 'GET',
-            url: '/api/recent_batch_jobs',
-        });
-    }
-
-    /**
-     * Get Batch Job Method And State
-     * @param id 
+     * Get Recent Run Method And State
+     * @param runId 
      * @returns MethodAndState Successful Response
      * @throws ApiError
      */
-    public getBatchJobMethodAndState(
-id: string,
+    public getRecentRunMethodAndState(
+runId: string,
 ): Observable<MethodAndState> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/batch_job/{id}/method-and-state',
+            url: '/api/recent_runs/{run_id}/method-and-state',
             path: {
-                'id': id,
+                'run_id': runId,
             },
             errors: {
                 422: `Validation Error`,
@@ -78,19 +78,19 @@ id: string,
     }
 
     /**
-     * Get Batch Job Run Log
-     * @param id 
+     * Get Recent Run Run Log
+     * @param runId 
      * @returns RunLog Successful Response
      * @throws ApiError
      */
-    public getBatchJobRunLog(
-id: string,
+    public getRecentRunRunLog(
+runId: string,
 ): Observable<RunLog> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/batch_job/{id}/run_log',
+            url: '/api/recent_runs/{run_id}/run_log',
             path: {
-                'id': id,
+                'run_id': runId,
             },
             errors: {
                 422: `Validation Error`,
@@ -99,19 +99,19 @@ id: string,
     }
 
     /**
-     * Get Batch Job Plot Configuration
-     * @param id 
+     * Get Recent Run Plot Configuration
+     * @param runId 
      * @returns PlotConfiguration Successful Response
      * @throws ApiError
      */
-    public getBatchJobPlotConfiguration(
-id: string,
+    public getRecentRunPlotConfiguration(
+runId: string,
 ): Observable<PlotConfiguration> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/batch_job/{id}/plot_configuration',
+            url: '/api/recent_runs/{run_id}/plot_configuration',
             path: {
-                'id': id,
+                'run_id': runId,
             },
             errors: {
                 422: `Validation Error`,
@@ -120,19 +120,19 @@ id: string,
     }
 
     /**
-     * Get Batch Job Plot Log
-     * @param id 
+     * Get Recent Run Plot Log
+     * @param runId 
      * @returns PlotLog Successful Response
      * @throws ApiError
      */
-    public getBatchJobPlotLog(
-id: string,
+    public getRecentRunPlotLog(
+runId: string,
 ): Observable<PlotLog> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/batch_job/{id}/plot_log',
+            url: '/api/recent_runs/{run_id}/plot_log',
             path: {
-                'id': id,
+                'run_id': runId,
             },
             errors: {
                 422: `Validation Error`,
@@ -141,17 +141,17 @@ id: string,
     }
 
     /**
-     * Get Batch Job Csv Json
+     * Get Recent Run Csv Json
      * @param id 
-     * @returns BatchJobCsv Successful Response
+     * @returns RecentRunCsv Successful Response
      * @throws ApiError
      */
-    public getBatchJobCsvJson(
+    public getRecentRunCsvJson(
 id: string,
-): Observable<BatchJobCsv> {
+): Observable<RecentRunCsv> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/batch_job/{id}/csv_json',
+            url: '/api/recent_runs/{id}/csv_json',
             path: {
                 'id': id,
             },
@@ -162,17 +162,17 @@ id: string,
     }
 
     /**
-     * Get Batch Job Csv File
+     * Get Recent Run Csv File
      * @param id 
      * @returns any Successful Response
      * @throws ApiError
      */
-    public getBatchJobCsvFile(
+    public getRecentRunCsvFile(
 id: string,
 ): Observable<any> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/batch_job/{id}/csv_file',
+            url: '/api/recent_runs/{id}/csv_file',
             path: {
                 'id': id,
             },

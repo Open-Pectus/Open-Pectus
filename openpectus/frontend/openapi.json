@@ -536,7 +536,7 @@
           {
             "required": true,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "title": "Line Id"
             },
             "name": "line_id",
@@ -585,7 +585,7 @@
           {
             "required": true,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "title": "Line Id"
             },
             "name": "line_id",
@@ -614,21 +614,46 @@
         }
       }
     },
-    "/api/batch_job/{id}": {
+    "/api/recent_runs/": {
       "get": {
         "tags": [
-          "batch_job"
+          "recent_runs"
         ],
-        "summary": "Get Batch Job",
-        "operationId": "get_batch_job",
+        "summary": "Get Recent Runs",
+        "operationId": "get_recent_runs",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RecentRun"
+                  },
+                  "type": "array",
+                  "title": "Response Get Recent Runs"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recent_runs/{run_id}": {
+      "get": {
+        "tags": [
+          "recent_runs"
+        ],
+        "summary": "Get Recent Run",
+        "operationId": "get_recent_run",
         "parameters": [
           {
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Id"
+              "title": "Run Id"
             },
-            "name": "id",
+            "name": "run_id",
             "in": "path"
           }
         ],
@@ -638,7 +663,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BatchJob"
+                  "$ref": "#/components/schemas/RecentRun"
                 }
               }
             }
@@ -656,46 +681,21 @@
         }
       }
     },
-    "/api/recent_batch_jobs": {
+    "/api/recent_runs/{run_id}/method-and-state": {
       "get": {
         "tags": [
-          "batch_job"
+          "recent_runs"
         ],
-        "summary": "Get Recent Batch Jobs",
-        "operationId": "get_recent_batch_jobs",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/BatchJob"
-                  },
-                  "type": "array",
-                  "title": "Response Get Recent Batch Jobs"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/batch_job/{id}/method-and-state": {
-      "get": {
-        "tags": [
-          "batch_job"
-        ],
-        "summary": "Get Batch Job Method And State",
-        "operationId": "get_batch_job_method_and_state",
+        "summary": "Get Recent Run Method And State",
+        "operationId": "get_recent_run_method_and_state",
         "parameters": [
           {
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Id"
+              "title": "Run Id"
             },
-            "name": "id",
+            "name": "run_id",
             "in": "path"
           }
         ],
@@ -723,21 +723,21 @@
         }
       }
     },
-    "/api/batch_job/{id}/run_log": {
+    "/api/recent_runs/{run_id}/run_log": {
       "get": {
         "tags": [
-          "batch_job"
+          "recent_runs"
         ],
-        "summary": "Get Batch Job Run Log",
-        "operationId": "get_batch_job_run_log",
+        "summary": "Get Recent Run Run Log",
+        "operationId": "get_recent_run_run_log",
         "parameters": [
           {
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Id"
+              "title": "Run Id"
             },
-            "name": "id",
+            "name": "run_id",
             "in": "path"
           }
         ],
@@ -765,21 +765,21 @@
         }
       }
     },
-    "/api/batch_job/{id}/plot_configuration": {
+    "/api/recent_runs/{run_id}/plot_configuration": {
       "get": {
         "tags": [
-          "batch_job"
+          "recent_runs"
         ],
-        "summary": "Get Batch Job Plot Configuration",
-        "operationId": "get_batch_job_plot_configuration",
+        "summary": "Get Recent Run Plot Configuration",
+        "operationId": "get_recent_run_plot_configuration",
         "parameters": [
           {
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Id"
+              "title": "Run Id"
             },
-            "name": "id",
+            "name": "run_id",
             "in": "path"
           }
         ],
@@ -807,21 +807,21 @@
         }
       }
     },
-    "/api/batch_job/{id}/plot_log": {
+    "/api/recent_runs/{run_id}/plot_log": {
       "get": {
         "tags": [
-          "batch_job"
+          "recent_runs"
         ],
-        "summary": "Get Batch Job Plot Log",
-        "operationId": "get_batch_job_plot_log",
+        "summary": "Get Recent Run Plot Log",
+        "operationId": "get_recent_run_plot_log",
         "parameters": [
           {
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Id"
+              "title": "Run Id"
             },
-            "name": "id",
+            "name": "run_id",
             "in": "path"
           }
         ],
@@ -849,13 +849,13 @@
         }
       }
     },
-    "/api/batch_job/{id}/csv_json": {
+    "/api/recent_runs/{id}/csv_json": {
       "get": {
         "tags": [
-          "batch_job"
+          "recent_runs"
         ],
-        "summary": "Get Batch Job Csv Json",
-        "operationId": "get_batch_job_csv_json",
+        "summary": "Get Recent Run Csv Json",
+        "operationId": "get_recent_run_csv_json",
         "parameters": [
           {
             "required": true,
@@ -873,7 +873,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BatchJobCsv"
+                  "$ref": "#/components/schemas/RecentRunCsv"
                 }
               }
             }
@@ -891,13 +891,13 @@
         }
       }
     },
-    "/api/batch_job/{id}/csv_file": {
+    "/api/recent_runs/{id}/csv_file": {
       "get": {
         "tags": [
-          "batch_job"
+          "recent_runs"
         ],
-        "summary": "Get Batch Job Csv File",
-        "operationId": "get_batch_job_csv_file",
+        "summary": "Get Recent Run Csv File",
+        "operationId": "get_recent_run_csv_file",
         "parameters": [
           {
             "required": true,
@@ -1049,68 +1049,6 @@
           "use_auth"
         ],
         "title": "AuthConfig"
-      },
-      "BatchJob": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "unit_id": {
-            "type": "string",
-            "title": "Unit Id"
-          },
-          "unit_name": {
-            "type": "string",
-            "title": "Unit Name"
-          },
-          "started_date": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Started Date"
-          },
-          "completed_date": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Completed Date"
-          },
-          "contributors": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Contributors",
-            "default": []
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "unit_id",
-          "unit_name",
-          "started_date",
-          "completed_date"
-        ],
-        "title": "BatchJob",
-        "description": "Represents a current or historical run of a process unit. "
-      },
-      "BatchJobCsv": {
-        "properties": {
-          "filename": {
-            "type": "string",
-            "title": "Filename"
-          },
-          "csv_content": {
-            "type": "string",
-            "title": "Csv Content"
-          }
-        },
-        "type": "object",
-        "required": [
-          "filename",
-          "csv_content"
-        ],
-        "title": "BatchJobCsv"
       },
       "CommandExample": {
         "properties": {
@@ -1781,6 +1719,68 @@
         ],
         "title": "Ready"
       },
+      "RecentRun": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "engine_id": {
+            "type": "string",
+            "title": "Engine Id"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "started_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started Date"
+          },
+          "completed_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Completed Date"
+          },
+          "contributors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Contributors",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "engine_id",
+          "run_id",
+          "started_date",
+          "completed_date"
+        ],
+        "title": "RecentRun",
+        "description": "Represents a historical run of a process unit. "
+      },
+      "RecentRunCsv": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "csv_content": {
+            "type": "string",
+            "title": "Csv Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "csv_content"
+        ],
+        "title": "RecentRunCsv"
+      },
       "RunLog": {
         "properties": {
           "lines": {
@@ -1800,7 +1800,7 @@
       "RunLogLine": {
         "properties": {
           "id": {
-            "type": "integer",
+            "type": "string",
             "title": "Id"
           },
           "command": {

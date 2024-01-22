@@ -1,14 +1,15 @@
 import unittest
+from datetime import datetime
 
+import openpectus.aggregator.data.models as DMdl
+import openpectus.aggregator.models as Mdl
+import openpectus.aggregator.routers.dto as Dto
+from openpectus.aggregator.data import database
+from openpectus.aggregator.data.repository import RecentRunRepository
+from openpectus.aggregator.routers.serialization import deserialize, serialize
 from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Mapped, mapped_column
-
-import openpectus.aggregator.routers.dto as D
-from openpectus.aggregator.data import database
-from openpectus.aggregator.data.models import DBModel, BatchJobData
-from openpectus.aggregator.data.repository import BatchJobDataRepository
-from openpectus.aggregator.routers.serialization import deserialize, serialize
 
 
 def init_db():
@@ -17,7 +18,7 @@ def init_db():
 
 
 class DatabaseTest(unittest.TestCase):
-    class TestModel(DBModel):
+    class TestModel(DMdl.DBModel):
         __tablename__ = "TestModel"
         name: Mapped[str] = mapped_column()
 
@@ -96,16 +97,16 @@ class SerializationTest(unittest.TestCase):
     """ Test custom serialization for dto's used when serializing dto's as json database fields. """
 
     def test_json_serialization(self):
-        data = D.ControlState(is_running=True, is_holding=False, is_paused=True)
+        data = Dto.ControlState(is_running=True, is_holding=False, is_paused=True)
         json_dict = serialize(data)
         self.assertEqual({"_type": "ControlState", 'is_running': True, 'is_holding': False, "is_paused": True}, json_dict)
 
     def test_json_deserialization(self):
-        data = D.ControlState(is_running=True, is_holding=False, is_paused=True)
+        data = Dto.ControlState(is_running=True, is_holding=False, is_paused=True)
         json_dict = serialize(data)
         instance = deserialize(json_dict)
         self.assertIsNotNone(instance)
-        self.assertIsInstance(instance, D.ControlState)
+        self.assertIsInstance(instance, Dto.ControlState)
         self.assertEqual(instance.is_running, True)  # type: ignore
 
     # Enums not working. Not sure yet if they need to
@@ -115,16 +116,16 @@ class SerializationTest(unittest.TestCase):
     #     self.assertEqual({"_type": "UserRole"}, json_dict)
 
     def test_json_serialization_complex(self):
-        complex_data = D.ProcessUnitState.InProgress(state=D.ProcessUnitStateEnum.IN_PROGRESS, progress_pct=87)
+        complex_data = Dto.ProcessUnitState.InProgress(state=Dto.ProcessUnitStateEnum.IN_PROGRESS, progress_pct=87)
         json_str = serialize(complex_data)
         self.assertEqual({"_type": "ProcessUnitState.InProgress", "state": "in_progress", "progress_pct": 87}, json_str)
 
     def test_json_deserialization_complex(self):
-        complex_data = D.ProcessUnitState.InProgress(state=D.ProcessUnitStateEnum.IN_PROGRESS, progress_pct=87)
+        complex_data = Dto.ProcessUnitState.InProgress(state=Dto.ProcessUnitStateEnum.IN_PROGRESS, progress_pct=87)
         json_dict = serialize(complex_data)
         instance = deserialize(json_dict)
         self.assertIsNotNone(instance)
-        self.assertIsInstance(instance, D.ProcessUnitState.InProgress)
+        self.assertIsInstance(instance, Dto.ProcessUnitState.InProgress)
         self.assertEqual(instance.progress_pct, 87)  # type: ignore
 
 
@@ -133,10 +134,13 @@ class RepositoryTest(unittest.TestCase):
         init_db()
 
         # at the data level we can insert any kind of junk
-        entity = BatchJobData()
+        entity = DMdl.RecentRun()
         entity.engine_id = "my_eng_id"
         entity.computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
+        entity.run_id = 'a run id'
+        entity.started_date = datetime.now()
+        entity.completed_date = datetime.now()
 
         entity_id = 0
 
@@ -150,9 +154,9 @@ class RepositoryTest(unittest.TestCase):
 
         with database.create_scope():
             session = database.scoped_session()
-            repo = BatchJobDataRepository(session)
+            repo = RecentRunRepository(session)
 
-            created_entity = repo.get_by_id(entity_id)
+            created_entity = repo.get_by_run_id(entity.run_id)
             assert created_entity is not None
             self.assertEqual("my_computer_name", created_entity.computer_name)
             self.assertEqual("my_uod_name", created_entity.uod_name)
@@ -160,10 +164,13 @@ class RepositoryTest(unittest.TestCase):
     def test_can_update(self):
         init_db()
 
-        entity = BatchJobData()
+        entity = DMdl.RecentRun()
         entity.engine_id = "my_eng_id"
         entity.computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
+        entity.run_id = 'a run id'
+        entity.started_date = datetime.now()
+        entity.completed_date = datetime.now()
 
         entity_id = 0
 
@@ -173,22 +180,22 @@ class RepositoryTest(unittest.TestCase):
             session.commit()
             entity_id = entity.id
 
-        self.assertEqual(1, entity.id)
+        self.assertEqual(1, entity_id)
 
         with database.create_scope():
             session = database.scoped_session()
-            repo = BatchJobDataRepository(session)
+            repo = RecentRunRepository(session)
 
-            created_entity = repo.get_by_id(entity_id)
+            created_entity = repo.get_by_run_id(entity.run_id)
             assert created_entity is not None
             created_entity.computer_name = "updated_computer_name"
             session.commit()
 
         with database.create_scope():
             session = database.scoped_session()
-            repo = BatchJobDataRepository(session)
+            repo = RecentRunRepository(session)
 
-            updated_entity = repo.get_by_id(entity_id)
+            updated_entity = repo.get_by_run_id(entity.run_id)
             assert updated_entity is not None
             self.assertEqual("updated_computer_name", updated_entity.computer_name)
             self.assertEqual("my_uod_name", updated_entity.uod_name)
@@ -196,10 +203,13 @@ class RepositoryTest(unittest.TestCase):
     def test_can_find(self):
         init_db()
 
-        entity = BatchJobData()
+        entity = DMdl.RecentRun()
         entity.engine_id = "my_eng_id"
+        entity.run_id = 'a run id'
         entity.computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
+        entity.started_date = datetime.now()
+        entity.completed_date = datetime.now()
         entity.contributors = ['foo', 'bar']
 
         with database.create_scope():
@@ -209,19 +219,22 @@ class RepositoryTest(unittest.TestCase):
 
         with database.create_scope():
             session = database.scoped_session()
-            repo = BatchJobDataRepository(session)
-            created_entity = repo.get_by_engine_id("my_eng_id")
+            repo = RecentRunRepository(session)
+            created_entity = repo.get_by_run_id("a run id")
             self.assertIsNotNone(created_entity)
-            self.assertIsInstance(created_entity, BatchJobData)
+            self.assertIsInstance(created_entity, DMdl.RecentRun)
 
     def test_json(self):
         init_db()
 
-        entity = BatchJobData()
+        entity = DMdl.RecentRun()
         entity.engine_id = "my_eng_id"
         entity.computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
         entity.contributors = ['foo', 'bar']
+        entity.run_id = 'a run id'
+        entity.started_date = datetime.now()
+        entity.completed_date = datetime.now()
 
         entity_id = 0
 
@@ -235,9 +248,9 @@ class RepositoryTest(unittest.TestCase):
 
         with database.create_scope():
             session = database.scoped_session()
-            repo = BatchJobDataRepository(session)
+            repo = RecentRunRepository(session)
 
-            created_entity = repo.get_by_id(entity_id)
+            created_entity = repo.get_by_run_id(entity.run_id)
             assert created_entity is not None
             self.assertEqual(['foo', 'bar'], created_entity.contributors)
 
@@ -249,10 +262,33 @@ class RepositoryTest(unittest.TestCase):
 
         with database.create_scope():
             session = database.scoped_session()
-            repo = BatchJobDataRepository(session)
-            updated_entity = repo.get_by_id(entity_id)
+            repo = RecentRunRepository(session)
+            updated_entity = repo.get_by_run_id(entity.run_id)
             assert updated_entity is not None
             self.assertEqual(['foo', 'bar', 'baz'], updated_entity.contributors)
+
+    def test_nested_json(self):
+        init_db()
+
+        run_id = 'fdsa'
+
+        plot_configuration = Mdl.PlotConfiguration.empty()
+        plot_configuration.process_value_names_to_annotate = ['x']
+
+        recent_run_plot_configuration = DMdl.RecentRunPlotConfiguration()
+        recent_run_plot_configuration.run_id = run_id
+        recent_run_plot_configuration.plot_configuration = plot_configuration
+
+        with database.create_scope():
+            session = database.scoped_session()
+            session.add(recent_run_plot_configuration)
+            session.commit()
+
+            repo = RecentRunRepository(session)
+            from_db = repo.get_plot_configuration_by_run_id(run_id)
+            dto: Dto.PlotConfiguration = Dto.PlotConfiguration.validate(from_db)
+            self.assertIsInstance(dto, Dto.PlotConfiguration)
+            self.assertEqual(dto.process_value_names_to_annotate, plot_configuration.process_value_names_to_annotate)
 
 
 if __name__ == "__main__":

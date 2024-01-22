@@ -6,8 +6,8 @@ const source = '[Method Editor] ';
 export class MethodEditorActions {
   static methodEditorComponentInitializedForUnit = createAction(source + 'Method Editor Component Initialized For Unit',
     props<{ unitId: string }>());
-  static methodEditorComponentInitializedForBatchJob = createAction(source + 'Method Editor Component Initialized For Batch Job',
-    props<{ batchJobId: string }>());
+  static methodEditorComponentInitializedForRecentRun = createAction(source + 'Method Editor Component Initialized For Recent Run',
+    props<{ recentRunId: string }>());
   static methodEditorComponentDestroyed = createAction(source + 'Method Editor Component Destroyed');
   static monacoEditorComponentInitialized = createAction(source + 'Monaco Editor Component Initialized');
   static monacoEditorComponentDestroyed = createAction(source + 'Monaco Editor Component Destroyed');

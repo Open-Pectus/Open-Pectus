@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
-import { BatchJob } from '../../api';
+import { RecentRun } from '../../api';
 import { detailsUrlPart } from '../../app.routes';
 import { DetailsRoutingUrlParts } from '../../details/details-routing-url-parts';
 import { DefaultTableSort, TableColumn, TableComponent, TableSortDirection } from '../../shared/table.component';
@@ -12,7 +12,7 @@ import { DashboardSelectors } from '../ngrx/dashboard.selectors';
 
 
 @Component({
-  selector: 'app-recent-batch-jobs',
+  selector: 'app-recent-runs',
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [
@@ -21,19 +21,19 @@ import { DashboardSelectors } from '../ngrx/dashboard.selectors';
     PushPipe,
   ],
   template: `
-    <app-table class="w-full h-96" [columns]="columns" [data]="recentBatchJobs | ngrxPush" (rowClicked)="navigateToBatchJob($event)"
-               [defaultSort]="defaultSort" [filter]="recenterBatchJobFilter | ngrxPush"></app-table>
-    <div class="text-center p-2" *ngIf="(recentBatchJobs | ngrxPush)?.length === 0">No recent batch jobs available</div>
+    <app-table class="w-full h-96" [columns]="columns" [data]="recentRuns | ngrxPush" (rowClicked)="navigateToRecentRun($event)"
+               [defaultSort]="defaultSort" [filter]="recentRunsFilter | ngrxPush"></app-table>
+    <div class="text-center p-2" *ngIf="(recentRuns | ngrxPush)?.length === 0">No recent runs available</div>
   `,
 })
-export class RecentBatchJobsComponent implements OnInit {
-  protected readonly recenterBatchJobFilter = this.store.select(DashboardSelectors.recentBatchJobFilter);
-  protected readonly recentBatchJobs = this.store.select(DashboardSelectors.recentBatchJobs);
-  protected readonly defaultSort: DefaultTableSort<BatchJob> = {columnKey: 'completed_date', direction: TableSortDirection.Descending};
-  protected readonly columns: TableColumn<BatchJob>[] = [
+export class RecentRunsComponent implements OnInit {
+  protected readonly recentRunsFilter = this.store.select(DashboardSelectors.recentRunsFilter);
+  protected readonly recentRuns = this.store.select(DashboardSelectors.recentRuns);
+  protected readonly defaultSort: DefaultTableSort<RecentRun> = {columnKey: 'completed_date', direction: TableSortDirection.Descending};
+  protected readonly columns: TableColumn<RecentRun>[] = [
     {
       header: 'Unit',
-      key: 'unit_name',
+      key: 'engine_id',
     },
     {
       header: 'Started',
@@ -55,10 +55,10 @@ export class RecentBatchJobsComponent implements OnInit {
   constructor(private router: Router, private store: Store) {}
 
   ngOnInit() {
-    this.store.dispatch(DashboardActions.recentBatchJobsInitialized());
+    this.store.dispatch(DashboardActions.recentRunsInitialized());
   }
 
-  navigateToBatchJob(batchJob: BatchJob) {
-    this.router.navigate([detailsUrlPart, DetailsRoutingUrlParts.batchJobUrlPart, batchJob.id]).then();
+  navigateToRecentRun(recentRun: RecentRun) {
+    this.router.navigate([detailsUrlPart, DetailsRoutingUrlParts.recentRunUrlPart, recentRun.run_id]).then();
   }
 }

@@ -1,4 +1,3 @@
-
 import unittest
 
 from openpectus.lang.exec.analyzer import (
@@ -10,12 +9,11 @@ from openpectus.lang.exec.analyzer import (
 )
 from openpectus.lang.exec.commands import CommandCollection, Command
 from openpectus.lang.exec.tags import TagCollection, Tag
-from openpectus.test.engine.test_interpreter import build_program
+from test.engine.utility_methods import build_program
 
 
 # TODO present PErrorInstructions as errors
 # TODO present PErrors as errors
-
 
 class CommandVisitorTest(unittest.TestCase):
     def test_command_defined(self):

@@ -29,7 +29,7 @@ import { ProcessPlotComponent } from './process-plot.component';
 })
 export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
   @Input() unitId?: string;
-  @Input() batchJobId?: string;
+  @Input() recentRunId?: string;
 
   protected isCollapsed = false;
   protected plotIsModified = this.store.select(ProcessPlotSelectors.plotIsModified);
@@ -38,8 +38,8 @@ export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     if(this.unitId !== undefined) this.store.dispatch(ProcessPlotActions.processPlotComponentInitializedForUnit({unitId: this.unitId}));
-    if(this.batchJobId !== undefined) {
-      this.store.dispatch(ProcessPlotActions.processPlotComponentInitializedForBatchJob({batchJobId: this.batchJobId}));
+    if(this.recentRunId !== undefined) {
+      this.store.dispatch(ProcessPlotActions.processPlotComponentInitializedForRecentRun({recentRunId: this.recentRunId}));
     }
   }
 

@@ -118,9 +118,9 @@ class TagDirection(StrEnum):
     Direction of the tag is in relation to the physical IO. Sensors are regarded as inputs and
     actuators as outputs. Derived values are regarded as NA.
     """
-    INPUT = auto(),
+    INPUT = auto()
     """ Tag is read from hardware, e.g. a sensor """
-    OUTPUT = auto(),
+    OUTPUT = auto()
     """ Tag is written to hardware, e.g. an actuator """
     NA = auto()
     """ Tag is calculated/derived and neither read from or written to hw. """
@@ -322,7 +322,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
             (SystemTagName.RUN_COUNTER, 0, None),
             (SystemTagName.BLOCK_TIME, 0.0, "s"),
             (SystemTagName.PROCESS_TIME, 0.0, "s"),
-            (SystemTagName.RUN_TIME, 0.0, "s"),
+            (SystemTagName.RUN_TIME, 0.0, "second"),
             (SystemTagName.CLOCK, 0.0, "s"),
             (SystemTagName.SYSTEM_STATE, "Stopped", None),
             (SystemTagName.METHOD_STATUS, "OK", None),

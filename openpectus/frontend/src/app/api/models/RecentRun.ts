@@ -4,12 +4,12 @@
 /* eslint-disable */
 
 /**
- * Represents a current or historical run of a process unit. 
+ * Represents a historical run of a process unit. 
  */
-export type BatchJob = {
+export type RecentRun = {
     id: string;
-    unit_id: string;
-    unit_name: string;
+    engine_id: string;
+    run_id: string;
     started_date: string;
     completed_date: string;
     contributors?: Array<string>;

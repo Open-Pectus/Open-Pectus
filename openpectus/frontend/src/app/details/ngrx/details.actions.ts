@@ -1,5 +1,5 @@
 import { createAction, props } from '@ngrx/store';
-import { BatchJob, CommandExample, ControlState, ExecutableCommand, ProcessDiagram, ProcessValue } from '../../api';
+import { CommandExample, ControlState, ExecutableCommand, ProcessDiagram, ProcessValue, RecentRun } from '../../api';
 
 const source = '[Details] ';
 
@@ -16,9 +16,9 @@ export class DetailsActions {
   static commandExamplesFetched = createAction(source + 'Command Examples Fetched', props<{ commandExamples: CommandExample[] }>());
   static commandsComponentExecuteClicked = createAction(source + 'Commands Component Execute Clicked', props<{ command: ExecutableCommand }>());
   static controlStateFetched = createAction(source + 'Control State Fetched', props<{ controlState: ControlState }>());
-  static batchJobDetailsInitialized = createAction(source + 'Batch Job Details Initialized');
-  static batchJobDetailsDestroyed = createAction(source + 'Batch Job Details Destroyed');
-  static batchJobFetched = createAction(source + 'Batch Job Fetched', props<{ batchJob: BatchJob }>());
-  static batchJobDownloadCsvButtonClicked = createAction(source + 'Batch Job Download Csv Button Clicked', props<{ batchJobId: string }>());
+  static recentRunDetailsInitialized = createAction(source + 'Recent Run Details Initialized');
+  static recentRunDetailsDestroyed = createAction(source + 'Recent Run Details Destroyed');
+  static recentRunFetched = createAction(source + 'Recent Run Fetched', props<{ recentRun: RecentRun }>());
+  static recentRunDownloadCsvButtonClicked = createAction(source + 'Recent Run Download Csv Button Clicked', props<{ recentRunId: string }>());
   static controlStateUpdatedOnBackend = createAction(source + 'Control State Updated On Backend', props<{ unitId: string }>());
 }
