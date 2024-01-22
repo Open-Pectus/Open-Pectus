@@ -81,6 +81,9 @@ class OPCUA_Hardware(HardwareLayerBase):
             for browse_name in r.options["path"].split("/")[1:]:
                 if not browse_name.count(":") == 1:
                     raise HardwareLayerException(f"Invalid OPC-UA node path '{r.options['path']}' for register {r}. Node browse name '{browse_name}' specifically is not valid.")
+        # If a type is specified, check that it is sensible
+        if "type" in r.options and not isinstance(r.options["type"], asyncua.ua.VariantType):
+            raise HardwareLayerException(f"Invalid type '{r.options['type']}' specified for register {r}. Type must be an asyncua.ua.VariantType.")
         try:
             path = r.options["path"]
             node_id = self._client.nodes.root.get_child(path)
