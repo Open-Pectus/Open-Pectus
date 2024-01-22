@@ -5,7 +5,7 @@ from enum import StrEnum, auto
 from typing import Any, Dict
 
 import openpectus.aggregator.data.database as database
-from openpectus.aggregator.models import Method, MethodState, PlotConfiguration, PlotColorRegion, SubPlot, RunLogLine
+from openpectus.aggregator.models import Method, MethodState, PlotConfiguration, PlotColorRegion, SubPlot, RunLog
 from sqlalchemy import JSON, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, attribute_keyed_dict
 
@@ -52,17 +52,13 @@ class RecentRunMethodAndState(DBModel):
 class RecentRunRunLog(DBModel):
     __tablename__ = "RecentRunRunLogs"
     run_id: Mapped[str] = mapped_column()
-    lines: Mapped[list[RunLogLine]] = mapped_column(type_=JSON)
+    run_log: Mapped[RunLog] = mapped_column(type_=JSON)
 
 
 class RecentRunPlotConfiguration(DBModel):
     __tablename__ = "RecentRunPlotConfigurations"
     run_id: Mapped[str] = mapped_column()
-    # plot_configuration: Mapped[PlotConfiguration] = mapped_column(type_=JSON)
-    process_value_names_to_annotate: Mapped[list[str]] = mapped_column(type_=JSON)
-    color_regions: Mapped[list[PlotColorRegion]] = mapped_column(type_=JSON)
-    sub_plots: Mapped[list[SubPlot]] = mapped_column(type_=JSON)
-    x_axis_process_value_names: Mapped[list[str]] = mapped_column(type_=JSON)
+    plot_configuration: Mapped[PlotConfiguration] = mapped_column(type_=JSON)
 
 
 class PlotLogEntryValue(DBModel):
