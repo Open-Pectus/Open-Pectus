@@ -11,9 +11,7 @@ from openpectus.engine.hardware import (
 )
 
 import asyncua
-from asyncua.sync import Client as OPCUAClient
-from asyncua.sync import sync_uaclient_method
-from asyncua.client.ua_client import UaClient
+import asyncua.sync
 
 logger = logging.getLogger(__name__)
 
@@ -146,23 +144,23 @@ class OPCUA_Hardware(HardwareLayerBase):
                 if 'type' in r.options:
                     value = asyncua.ua.Variant(value, r.options['type'])
                 data_values.append(asyncua.ua.DataValue(value))
-            # This is quite convoluted. It is documented in opcua-asyncua asyncua/sync.py source code.
+            # This is quite convoluted because asyncua.sync does not offer a convenience method.
+            # The approach taken to get a synchronous "write_attributes" method is documented
+            # in opcua-asyncua asyncua/sync.py source code:
             # https://github.com/FreeOpcUa/opcua-asyncio/blob/master/asyncua/sync.py
-            write_attributes = sync_uaclient_method(UaClient.write_attributes)(self._client)
+            write_attributes = asyncua.sync.sync_uaclient_method(asyncua.client.ua_client.UaClient.write_attributes)(self._client)
             write_attributes(node_ids, data_values, asyncua.ua.AttributeIds.Value)
         except ConnectionError:
             self.connection_status.set_not_ok()
             raise HardwareLayerException(f"Not connected to {self.host}")
 
     def connect(self):
-        """ Connect to hardware. """
+        """ Connect to OPC-UA server. """
         logger.info(f"Attempting to connect to {self.host}")
         self.connection_status.register_connection_attempt()
         if self._client:
-            self._client.disconnect()
-            self._register_to_node.cache_clear()
             del self._client
-        self._client = OPCUAClient(self.host)
+        self._client = asyncua.sync.Client(self.host)
         try:
             self._client.connect()
         except ConnectionRefusedError:
@@ -173,7 +171,7 @@ class OPCUA_Hardware(HardwareLayerBase):
         self.connection_status.set_ok()
 
     def disconnect(self):
-        """ Disconnect hardware. Necessary because asyncua.client can hang if not disconnected. """
+        """ Disconnect hardware. """
         logger.info(f"Disconnecting from {self.host}")
         if self._client:
             self._client.disconnect()
