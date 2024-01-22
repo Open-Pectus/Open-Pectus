@@ -21,7 +21,6 @@ class ReadingCommand(ProtocolModel):
 
 
 class ReadingInfo(ProtocolModel):
-    label: str
     tag_name: str
     valid_value_units: List[str] | None
     commands: List[ReadingCommand]

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum, auto
-from typing import Any, List, Optional, Dict
+from typing import Any, Dict
 
 import openpectus.aggregator.data.database as database
 from openpectus.aggregator.models import Method, MethodState, PlotConfiguration, PlotColorRegion, SubPlot, RunLogLine
@@ -26,7 +26,7 @@ class ProcessUnit(DBModel):
     location: Mapped[str] = mapped_column()
     runtime_msec: Mapped[int] = mapped_column()
     current_user_role: Mapped[str] = mapped_column()
-    # users = JSONField()  # List[User] ?
+    # users = JSONField()  # list[User] ?
     # def set_state(self, state: ProcessUnitState):
 
 
@@ -52,26 +52,26 @@ class RecentRunMethodAndState(DBModel):
 class RecentRunRunLog(DBModel):
     __tablename__ = "RecentRunRunLogs"
     run_id: Mapped[str] = mapped_column()
-    lines: Mapped[List[RunLogLine]] = mapped_column(type_=JSON)
+    lines: Mapped[list[RunLogLine]] = mapped_column(type_=JSON)
 
 
 class RecentRunPlotConfiguration(DBModel):
     __tablename__ = "RecentRunPlotConfigurations"
     run_id: Mapped[str] = mapped_column()
     # plot_configuration: Mapped[PlotConfiguration] = mapped_column(type_=JSON)
-    process_value_names_to_annotate: Mapped[List[str]] = mapped_column(type_=JSON)
-    color_regions: Mapped[List[PlotColorRegion]] = mapped_column(type_=JSON)
-    sub_plots: Mapped[List[SubPlot]] = mapped_column(type_=JSON)
-    x_axis_process_value_names: Mapped[List[str]] = mapped_column(type_=JSON)
+    process_value_names_to_annotate: Mapped[list[str]] = mapped_column(type_=JSON)
+    color_regions: Mapped[list[PlotColorRegion]] = mapped_column(type_=JSON)
+    sub_plots: Mapped[list[SubPlot]] = mapped_column(type_=JSON)
+    x_axis_process_value_names: Mapped[list[str]] = mapped_column(type_=JSON)
 
 
 class PlotLogEntryValue(DBModel):
     __tablename__ = "PlotLogEntryValues"
     plot_log_entry_id: Mapped[int] = mapped_column(ForeignKey('PlotLogEntries.id'))
     tick_time: Mapped[float] = mapped_column()
-    value_str: Mapped[Optional[str]] = mapped_column()
-    value_float: Mapped[Optional[float]] = mapped_column()
-    value_int: Mapped[Optional[int]] = mapped_column()
+    value_str: Mapped[str | None] = mapped_column()
+    value_float: Mapped[float | None] = mapped_column()
+    value_int: Mapped[int | None] = mapped_column()
 
 
 ProcessValueValueType = str | float | int | None
@@ -101,7 +101,7 @@ def get_ProcessValueType_from_value(value: ProcessValueValueType) -> ProcessValu
 class PlotLogEntry(DBModel):
     __tablename__ = "PlotLogEntries"
     name: Mapped[str] = mapped_column()
-    values: Mapped[List[PlotLogEntryValue]] = relationship(cascade="all, delete-orphan")
+    values: Mapped[list[PlotLogEntryValue]] = relationship(cascade="all, delete-orphan")
     value_unit: Mapped[str | None] = mapped_column()
     value_type: Mapped[ProcessValueType] = mapped_column()
     plot_log_id: Mapped[int] = mapped_column(ForeignKey('PlotLogs.id'))

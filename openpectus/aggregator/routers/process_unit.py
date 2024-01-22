@@ -63,12 +63,12 @@ def get_process_values(
     # print("Readings", engine_data.readings)
     # print("Tags", tags_info)
 
-    pvs: List[Dto.ProcessValue] = []
-    for r in engine_data.readings:
-        ti = tags_info.get(r.tag_name)
-        if ti is not None:
-            pvs.append(Dto.ProcessValue.from_message(r, ti))
-    return pvs
+    process_values: List[Dto.ProcessValue] = []
+    for reading in engine_data.readings:
+        tag_value = tags_info.get(reading.tag_name)
+        if tag_value is not None:
+            process_values.append(Dto.ProcessValue.from_tag_value(tag_value))
+    return process_values
 
 
 @router.post("/process_unit/{unit_id}/execute_command")
@@ -128,7 +128,7 @@ def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)
 
     logger.info(f"Got runlog with {len(engine_data.run_data.runlog.lines)} lines")
     return Dto.RunLog(
-        lines=list(map(Dto.RunLogLine.from_line_model, engine_data.run_data.runlog.lines))
+        lines=list(map(Dto.RunLogLine.from_model, engine_data.run_data.runlog.lines))
     )
 
 
