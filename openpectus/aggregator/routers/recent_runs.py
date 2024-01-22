@@ -35,7 +35,7 @@ def get_recent_run_run_log(run_id: str) -> Dto.RunLog:
     if run_log_db is None:
         return Dto.RunLog.empty()
     run_log_mdl = Mdl.RunLog.from_orm(run_log_db)
-    return Dto.RunLog(lines=list(map(Dto.RunLogLine.from_line_model, run_log_mdl.lines)))
+    return Dto.RunLog(lines=list(map(Dto.RunLogLine.from_model, run_log_mdl.lines)))
 
 
 @router.get('/{run_id}/plot_configuration')

@@ -6,7 +6,6 @@ from typing import Literal, List, Dict
 
 import openpectus.aggregator.data.models as data_models
 import openpectus.aggregator.models as Mdl
-from openpectus.protocol.models import ReadingInfo, TagValue
 from pydantic import BaseModel
 
 
@@ -149,12 +148,12 @@ class ProcessValue(Dto):
     commands: List[ProcessValueCommand] | None
 
     @staticmethod
-    def from_message(r: ReadingInfo, ti: TagValue) -> ProcessValue:
+    def from_tag_value(tag: Mdl.TagValue) -> ProcessValue:
         return ProcessValue(
-            name=r.label,
-            value=ti.value,
-            value_type=get_ProcessValueType_from_value(ti.value),
-            value_unit=ti.value_unit,
+            name=tag.name,
+            value=tag.value,
+            value_type=get_ProcessValueType_from_value(tag.value),
+            value_unit=tag.value_unit,
             commands=[]
         )
         # commands=[ProcessValueCommand(name=c.name, command=c.command) for c in r.commands])
@@ -188,7 +187,7 @@ class RunLogLine(Dto):
     cancelled: bool | None
 
     @staticmethod
-    def from_line_model(model: Mdl.RunLogLine) -> RunLogLine:
+    def from_model(model: Mdl.RunLogLine) -> RunLogLine:
         return RunLogLine(
             id=model.id,
             command=ExecutableCommand(
@@ -199,8 +198,8 @@ class RunLogLine(Dto):
             start=datetime.fromtimestamp(model.start),
             end=None if model.end is None else datetime.fromtimestamp(model.end),
             progress=None,
-            start_values=[],
-            end_values=[],
+            start_values=list(map(ProcessValue.from_tag_value, model.start_values)),
+            end_values=list(map(ProcessValue.from_tag_value, model.end_values)),
             forcible=None,  # TODO map forcible,forced,cancellable and cancelled
             forced=None,
             cancellable=None,

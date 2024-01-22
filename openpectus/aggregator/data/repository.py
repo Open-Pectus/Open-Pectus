@@ -26,7 +26,7 @@ class PlotLogRepository(RepositoryBase):
             entry = PlotLogEntry()
             entry.plot_log = plot_log
             entry.value_type = ProcessValueType.NONE
-            entry.name = reading.label
+            entry.name = reading.tag_name
             return entry
 
         entries = map(map_reading, engine_data.readings)

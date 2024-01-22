@@ -322,7 +322,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
             (SystemTagName.RUN_COUNTER, 0, None),
             (SystemTagName.BLOCK_TIME, 0.0, "s"),
             (SystemTagName.PROCESS_TIME, 0.0, "s"),
-            (SystemTagName.RUN_TIME, 0.0, "s"),
+            (SystemTagName.RUN_TIME, 0.0, "second"),
             (SystemTagName.CLOCK, 0.0, "s"),
             (SystemTagName.SYSTEM_STATE, "Stopped", None),
             (SystemTagName.METHOD_STATUS, "OK", None),
