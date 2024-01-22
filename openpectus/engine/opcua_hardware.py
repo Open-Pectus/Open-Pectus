@@ -29,6 +29,16 @@ def _opcua_parent_path(path):
     else:
         return path
 
+## Monkeypatch asyncua library
+# The asyncua OPC-UA client launches a thread class called
+# ThreadLoop which is unfortunately not configured to be daemonic.
+# This can cause a python instance to hang if the client
+# connection is not deliberately disconnected.
+# A PR to asyncua petitioning them to set it daemonic in the
+# first place has been submitted, see
+# https://github.com/FreeOpcUa/opcua-asyncio/pull/1555.
+asyncua.sync.ThreadLoop.daemon = True
+
 class OPCUA_Hardware(HardwareLayerBase):
     """ Represents OPCUA hardware layer. """
     def __init__(self, host: str) -> None:
@@ -159,6 +169,9 @@ class OPCUA_Hardware(HardwareLayerBase):
         logger.info(f"Attempting to connect to {self.host}")
         self.connection_status.register_connection_attempt()
         if self._client:
+            self._client.disconnect()
+            # Remove potential stale references to nodes on re-connect
+            self._register_to_node.cache_clear()
             del self._client
         self._client = asyncua.sync.Client(self.host)
         try:
