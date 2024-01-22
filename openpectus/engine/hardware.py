@@ -2,6 +2,7 @@ from enum import Flag, auto
 from typing import Any, Dict, Iterable
 from datetime import datetime
 
+
 class RegisterDirection(Flag):
     Read = auto()
     Write = auto()
@@ -45,6 +46,7 @@ class Register():
     def __str__(self):
         return f"Register(name={self._name})"
 
+
 class HardwareLayerException(Exception):
     """ Raised when hardware connection issues occur. """
 
@@ -55,39 +57,41 @@ class HardwareLayerException(Exception):
     def __str__(self):
         return self.message
 
+
 class HardwareConnectionStatus():
     """ Represents the hardware connection status. """
     def __init__(self):
         self.is_connected: bool = False
         self.connection_attempt_time = None
         self.successful_connection_time = None
-    
+
     def set_ok(self):
         self.is_connected = True
         self.successful_connection_time = datetime.now()
-    
+
     def set_not_ok(self):
         self.is_connected = False
-    
+
     def register_connection_attempt(self):
         self.connection_attempt_time = datetime.now()
-    
+
     @property
     def status(self):
         return self.is_connected
 
 # TODO use better type than Any for hw values
 
+
 class HardwareLayerBase():
     """ Represents the hardware layer """
     def __init__(self) -> None:
         self.registers: Dict[str, Register] = {}
         self.connection_status: HardwareConnectionStatus = HardwareConnectionStatus()
-    
+
     def __enter__(self):
         """ Allow use as context manager. """
         self.connect()
-        
+
     def __exit__(self, type, value, traceback):
         self.disconnect()
 
