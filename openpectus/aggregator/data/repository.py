@@ -119,7 +119,7 @@ class RecentRunRepository(RepositoryBase):
 
         run_log = RecentRunRunLog()
         run_log.run_id = engine_data.run_id
-        run_log.lines = engine_data.run_data.runlog.lines
+        run_log.run_log = engine_data.run_data.runlog
 
         self.db_session.add(recent_run)
         self.db_session.add(method_and_state)
@@ -146,4 +146,4 @@ class RecentRunRepository(RepositoryBase):
         return self.db_session.scalar(select(RecentRunPlotConfiguration.plot_configuration).where(RecentRunPlotConfiguration.run_id==run_id))
 
     def get_run_log_by_run_id(self, run_id: str):
-        return self.db_session.scalar(select(RecentRunRunLog).where(RecentRunRunLog.run_id==run_id))
+        return self.db_session.scalar(select(RecentRunRunLog.run_log).where(RecentRunRunLog.run_id==run_id))
