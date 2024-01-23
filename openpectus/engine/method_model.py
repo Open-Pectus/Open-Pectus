@@ -30,7 +30,6 @@ class MethodModel():
         self._map_line_id_to_line_num: dict[str, int] = {}
         self._map_line_num_to_node_id: dict[int, UUID] = {}
         self._map_node_id_to_line_num: dict[UUID, int] = {}
-        self._dirty = False
         self._method_init_callback: Callable[[], None] | None = on_method_init
         self._method_error_callback: Callable[[Exception], None] | None = on_method_error
 
@@ -58,12 +57,14 @@ class MethodModel():
                 self._map_line_num_to_node_id[node.line] = node.id
                 self._map_node_id_to_line_num[node.id] = node.line
         self._program.iterate(map_node)
-        self._dirty = True
 
         if self._method_init_callback is not None:
             self._method_init_callback()
 
-    def update_state(self, runtimeinfo: RuntimeInfo):
+    def get_program(self) -> PProgram:
+        return self._program
+
+    def calculate_method_state(self, runtimeinfo: RuntimeInfo) -> Mdl.MethodState:
         method_state = Mdl.MethodState.empty()
         if self._pcode != "":
             for record in runtimeinfo.records:
@@ -75,14 +76,4 @@ class MethodModel():
                     method_state.started_line_ids.append(line_id)
                     if record.visit_end_time != -1:
                         method_state.executed_line_ids.append(line_id)
-
-        self._method_state = method_state
-        self._dirty = False
-
-    def get_program(self) -> PProgram:
-        return self._program
-
-    def get_method_state(self) -> Mdl.MethodState:
-        if self._dirty:
-            raise ValueError("MethodState dirty")
-        return self._method_state
+        return method_state

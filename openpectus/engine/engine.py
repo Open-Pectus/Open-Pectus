@@ -2,8 +2,7 @@ import itertools
 import logging
 import time
 import uuid
-from multiprocessing import Queue
-from queue import Empty
+from queue import Empty, Queue
 from typing import Iterable, List, Set
 from uuid import UUID
 
@@ -96,8 +95,7 @@ class Engine(InterpreterContext):
         return TagValueCollection(t.as_readonly() for t in self._iter_all_tags())
 
     def cleanup(self):
-        self.cmd_queue.cancel_join_thread()
-        self.tag_updates.cancel_join_thread()
+        pass
 
     @property
     def interpreter(self) -> PInterpreter:
@@ -320,6 +318,8 @@ class Engine(InterpreterContext):
                 self._runstate_holding = False
                 self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Stopped, self._tick_time)
                 self._system_tags[SystemTagName.RUN_ID].set_value(None, self._tick_time)
+                self.interpreter.stop()
+                self._interpreter = PInterpreter(self._method.get_program(), self)
                 cmds_done.add(cmd_request)
                 record_state_add_started_and_completed()
 
@@ -587,6 +587,5 @@ class Engine(InterpreterContext):
             logger.error("Failed to set method", exc_info=True)
             self.set_error_state()
 
-    def get_method_state(self) -> Mdl.MethodState:
-        self._method.update_state(self.interpreter.runtimeinfo)
-        return self._method.get_method_state()
+    def calculate_method_state(self) -> Mdl.MethodState:
+        return self._method.calculate_method_state(self.interpreter.runtimeinfo)
