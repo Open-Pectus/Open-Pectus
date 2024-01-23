@@ -253,7 +253,43 @@ class TestOPCUAHardware(unittest.TestCase):
         hwl.registers = {"FT01": FT01_type_not_ok}
         with test_server, hwl:
             with self.assertRaises(HardwareLayerException):
-                hwl.read(FT01_type_not_ok)
+                hwl.validate_offline()
+
+    def test_type_disparity_is_detected(self):
+        bool_register = Register("Bool",
+                                 RegisterDirection.Both,
+                                 path="Objects/2:Boolean value",
+                                 type=OPCUA_Types.Boolean)
+        registers = {
+            "Bool": bool_register,
+        }
+        test_server = OPCUATestServer(registers=registers)
+
+        bool_register = Register("Bool",
+                                 RegisterDirection.Both,
+                                 path="Objects/2:Boolean value",
+                                 type=OPCUA_Types.Float)
+        registers = {
+            "Bool": bool_register,
+        }
+        hwl = OPCUA_Hardware(host="opc.tcp://127.0.0.1:48401/")
+        hwl.registers = registers
+        with test_server, hwl:
+            with self.assertRaises(HardwareLayerException):
+                hwl.validate_online()
+
+    def test_access_level_disparity_is_detected(self):
+        FT01 = Register("FT01", RegisterDirection.Read, path="Objects/2:FT01")
+        registers = {"FT01": FT01}
+        test_server = OPCUATestServer(registers=registers)
+
+        FT01 = Register("FT01", RegisterDirection.Write, path="Objects/2:FT01")
+        registers = {"FT01": FT01}
+        hwl = OPCUA_Hardware(host="opc.tcp://127.0.0.1:48401/")
+        hwl.registers = registers
+        with test_server, hwl:
+            with self.assertRaises(HardwareLayerException):
+                hwl.validate_online()
 
 
 if __name__ == "__main__":

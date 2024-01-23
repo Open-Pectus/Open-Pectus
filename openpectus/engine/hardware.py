@@ -90,26 +90,24 @@ class HardwareLayerBase():
         self.disconnect()
 
     def read(self, r: Register) -> Any:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def read_batch(self, registers: list[Register]) -> list[Any]:
         """ Read batch of register values. Override to provide efficient implementation """
         values = []
         for r in registers:
-            if RegisterDirection.Read in r.direction:
-                values.append(self.read(r))
+            values.append(self.read(r))
         return values
 
     def write(self, value: Any, r: Register):
         if RegisterDirection.Write not in r.direction:
             pass
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def write_batch(self, values: Iterable[Any], registers: Iterable[Register]):
         """ Write batch of register values. Override to provide efficient implementation """
         for v, r in zip(values, registers):
-            if RegisterDirection.Write in r.direction:
-                self.write(v, r)
+            self.write(v, r)
 
     def connect(self):
         """ Connect to hardware. Throw HardwareLayerException on error. """
@@ -118,6 +116,14 @@ class HardwareLayerBase():
     def disconnect(self):
         """ Connect to hardware. Throw HardwareLayerException on error. """
         self.connection_status.set_not_ok()
+
+    def validate_offline(self):
+        """ Perform checks that verify that the registers definition is valid. """
+        raise NotImplementedError
+
+    def validate_online(self):
+        """ Perform checks that verify that the register definition works. """
+        raise NotImplementedError
 
 
 class NullHardware(HardwareLayerBase):

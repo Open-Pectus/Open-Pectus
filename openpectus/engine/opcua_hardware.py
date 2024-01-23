@@ -76,31 +76,60 @@ class OPCUA_Hardware(HardwareLayerBase):
         children = [child.read_browse_name() for child in children]
         return (path, children,)
 
+    def validate_offline(self):
+        for r in self.registers.values():
+            # Check that path is specified
+            if "path" not in r.options:
+                raise HardwareLayerException((f"OPC-UA hardware layer requires specification "
+                                              f"of a path to the register value. Please "
+                                              f"specify path for register {r}."))
+            # Check that path is sensible
+            if "/" not in r.options["path"]:
+                if not r.options["path"] == "Objects":
+                    raise HardwareLayerException(f"Invalid OPC-UA node path '{r.options['path']}' for register {r}.")
+            else:
+                for browse_name in r.options["path"].split("/")[1:]:
+                    if not browse_name.count(":") == 1:
+                        raise HardwareLayerException((f"Invalid OPC-UA node path '{r.options['path']}' "
+                                                      f"for register {r}. Node browse name "
+                                                      f"'{browse_name}' specifically is not valid."))
+            # If a type is specified, check that it is sensible
+            if "type" in r.options and not isinstance(r.options["type"], asyncua.ua.VariantType):
+                raise HardwareLayerException((f"Invalid type '{r.options['type']}' "
+                                              f"specified for register {r}. Type must "
+                                              f"be an asyncua.ua.VariantType."))
+
+    def validate_online(self):
+        for r in self.registers.values():
+            # Get the node
+            node = self._register_to_node(r)
+            # Read the type of the node
+            opcua_type = node.read_data_type_as_variant_type()
+            # Verify that register type and actual OPC-UA type match
+            if 'type' in r.options:
+                register_type = r.options["type"]
+                if register_type is not opcua_type:
+                    raise HardwareLayerException((f"Disparity between type '{OPCUA_Types(register_type).name}' "
+                                                  f"for register {r} and actual OPC-UA type "
+                                                  f"'{OPCUA_Types(opcua_type).name}'."))
+            # Verify access level
+            access_level = node.get_access_level()
+            if (
+               RegisterDirection.Read in r.direction and
+               asyncua.ua.AccessLevel.CurrentRead not in access_level
+               ) or (
+               RegisterDirection.Write in r.direction and
+               asyncua.ua.AccessLevel.CurrentWrite not in access_level
+               ):
+                raise HardwareLayerException((f"Disparity between register direction '{r.direction}' "
+                                              f"for register {r} and OPC-UA access level "
+                                              f"'{access_level}."))
+
     @functools.cache
     def _register_to_node(self, r: Register) -> asyncua.sync.SyncNode:
         """ Resolving a NodeId from a path requires an OPC-UA call.
         The NodeId's are fixed so it makes sense to resolve them once
         and cache the result for future use. """
-        # Check that path is specified
-        if "path" not in r.options:
-            raise HardwareLayerException((f"OPC-UA hardware layer requires specification "
-                                          f"of a path to the register value. Please "
-                                          f"specify path for register {r}."))
-        # Check that path is sensible
-        if "/" not in r.options["path"]:
-            if not r.options["path"] == "Objects":
-                raise HardwareLayerException(f"Invalid OPC-UA node path '{r.options['path']}' for register {r}.")
-        else:
-            for browse_name in r.options["path"].split("/")[1:]:
-                if not browse_name.count(":") == 1:
-                    raise HardwareLayerException((f"Invalid OPC-UA node path '{r.options['path']}' "
-                                                  f"for register {r}. Node browse name "
-                                                  f"'{browse_name}' specifically is not valid."))
-        # If a type is specified, check that it is sensible
-        if "type" in r.options and not isinstance(r.options["type"], asyncua.ua.VariantType):
-            raise HardwareLayerException((f"Invalid type '{r.options['type']}' "
-                                          f"specified for register {r}. Type must "
-                                          f"be an asyncua.ua.VariantType."))
         path = r.options["path"]
         try:
             node_id = self._client.nodes.root.get_child(path)
