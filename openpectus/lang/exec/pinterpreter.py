@@ -11,6 +11,7 @@ from openpectus.lang.exec.errors import InterpretationError
 from openpectus.lang.exec.runlog import RunLog, RuntimeInfo, RuntimeRecordStateEnum
 
 from openpectus.lang.model.pprogram import (
+    PErrorInstruction,
     PInjectedNode,
     PNode,
     PProgram,
@@ -143,8 +144,6 @@ class PInterpreter(PNodeVisitor):
     def __init__(self, program: PProgram, context: InterpreterContext) -> None:
         self._program = program
         self.context = context
-        self.logs: List[LogEntry] = []
-        self.pause_node: PNode | None = None
         self.stack: CallStack = CallStack()
         self.interrupts: List[Tuple[ActivationRecord, GenerationType]] = []
         self.running: bool = False
@@ -155,7 +154,6 @@ class PInterpreter(PNodeVisitor):
 
         self.process_instr: GenerationType = None
 
-        self.runlog: RunLog = RunLog()
         self.runtimeinfo: RuntimeInfo = RuntimeInfo()
         logger.info("Interpreter initialized")
 
@@ -196,14 +194,6 @@ class PInterpreter(PNodeVisitor):
         if tree is None:
             return None
         yield from self.visit(tree)
-
-    # TODO remove - replace logs with runtime records in tests
-    def _add_to_log(self, _time: float, unit_time: float | None, message: str):
-        self.logs.append(LogEntry(
-            time=_time,
-            unit_time=unit_time,
-            message=message)
-        )
 
     def _update_tags(self):
         # Engine has no concept of scopes - or at least only program and current block.
@@ -268,9 +258,6 @@ class PInterpreter(PNodeVisitor):
         if self.process_instr is None:
             self.process_instr = self._interpret()
 
-        program_end = False
-        interrupt_end = False
-
         # update interpreter tags
         self._update_tags()
 
@@ -279,7 +266,7 @@ class PInterpreter(PNodeVisitor):
         try:
             next(self.process_instr)
         except StopIteration:
-            program_end = True
+            pass
         except Exception as ex:
             logger.error("Interpretation error", exc_info=True)
             raise InterpretationError("Interpreter error", ex)
@@ -288,13 +275,10 @@ class PInterpreter(PNodeVisitor):
         try:
             work_done = self._run_interrupt_handlers()
             if not work_done:
-                interrupt_end = True
+                pass
         except Exception as ex:
             logger.error("Interpretation interrupt error", exc_info=True)
             raise InterpretationError("Interpreter error", ex)
-
-        # if program_end and interrupt_end:
-        #     self.stop()
 
     def stop(self):
         self.running = False
@@ -414,10 +398,9 @@ class PInterpreter(PNodeVisitor):
 
         logger.info(f"Mark {str(node)}")
 
-        # # HACK: Bad reuse of CommandRequest as placeholder in runlog
-        # req = CommandRequest(f"Mark: {node.name}")
-        # self.runlog.add_completed(req, self._tick_time, self._tick_number, self.context.tags.as_readonly())
-
+        record.add_state_started(
+            self._tick_time, self._tick_number,
+            self.context.tags.as_readonly())
         record.add_state_completed(
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
@@ -455,9 +438,16 @@ class PInterpreter(PNodeVisitor):
             self.context.tags.as_readonly())
 
     def visit_PEndBlock(self, node: PEndBlock):
+        record = self.runtimeinfo.get_last_node_record(node)
+        record.add_state_started(
+            self._tick_time, self._tick_number,
+            self.context.tags.as_readonly())
         for ar in reversed(self.stack.records):
             if ar.artype == ARType.BLOCK:
                 ar.complete = True
+                record.add_state_completed(
+                    self._tick_time, self._tick_number,
+                    self.context.tags.as_readonly())
                 return
         logger.warning("End block found no block to end")
 
@@ -469,6 +459,8 @@ class PInterpreter(PNodeVisitor):
             # we just move on to the next instruction when tick() is invoked
             # We do, however, provide the execution id to the context
             # so that it can update the runtime record appropriately
+
+            # Note: runtime record state is handled by the context command flow
 
             logger.debug(f"Executing command {str(node)}")
             self.context.schedule_execution(node.name, node.args, record.exec_id)
@@ -499,7 +491,6 @@ class PInterpreter(PNodeVisitor):
         if ar.owner is not node:
             ar = ActivationRecord(node)
             self._register_interrupt(ar, create_interrupt_handler(ar))
-
             record.add_state_awaiting_interrupt(
                 self._tick_time, self._tick_number,
                 self.context.tags.as_readonly())
@@ -560,3 +551,17 @@ class PInterpreter(PNodeVisitor):
             record.add_state_failed(
                 self._tick_time, self._tick_number,
                 self.context.tags.as_readonly())
+
+    def visit_PErrorInstruction(self, node: PErrorInstruction):
+        record = self.runtimeinfo.get_last_node_record(node)
+
+        logger.error(f"Invalid instruction: {str(node)}")
+
+        record.add_state_started(
+            self._tick_time, self._tick_number,
+            self.context.tags.as_readonly())
+        record.add_state_failed(
+            self._tick_time, self._tick_number,
+            self.context.tags.as_readonly())
+        
+        # TODO pause
