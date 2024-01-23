@@ -65,12 +65,19 @@ def get_recent_run_plot_log(run_id: str) -> Dto.PlotLog:
 
 @router.get('/{run_id}/csv_json')
 def get_recent_run_csv_json(run_id: str) -> Dto.RecentRunCsv:
-    repo = PlotLogRepository(database.scoped_session())
-    plot_log_model = repo.get_plot_log(run_id)
+    plot_log_repo = PlotLogRepository(database.scoped_session())
+    recent_run_repo = RecentRunRepository(database.scoped_session())
+
+    plot_log_model = plot_log_repo.get_plot_log(run_id)
     if plot_log_model is None:
         raise HTTPException(status_code=404, detail='Plot Log not found')
-    dto = Dto.PlotLog.validate(plot_log_model)
-    csv_string = generate_csv_string(dto)
+
+    recent_run = recent_run_repo.get_by_run_id(run_id)
+    if recent_run is None:
+        raise HTTPException(status_code=404, detail='Recent Run not found')
+
+    plot_log = Dto.PlotLog.validate(plot_log_model)
+    csv_string = generate_csv_string(plot_log, Dto.RecentRun.validate(recent_run))
     return Dto.RecentRunCsv(filename=f'RecentRun-{run_id}.csv', csv_content=csv_string.getvalue())
 
 
