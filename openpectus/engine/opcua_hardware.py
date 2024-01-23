@@ -179,11 +179,61 @@ class OPCUA_Hardware(HardwareLayerBase):
             raise HardwareLayerException("OPC-UA client is closed.")
         return values
 
+    def _coerce_value_to_proper_type(self, value: Any, r: Register) -> Any:
+        if "type" not in r.options:
+            return value
+
+        coercion_mapping = {
+            OPCUA_Types.Boolean: lambda x: bool(x),
+            OPCUA_Types.Byte: lambda x: int(x),
+            OPCUA_Types.Int16: lambda x: int(x),
+            OPCUA_Types.UInt16: lambda x: 0 if x < 0 else int(x),
+            OPCUA_Types.Int32: lambda x: int(x),
+            OPCUA_Types.UInt32: lambda x: 0 if x < 0 else int(x),
+            OPCUA_Types.Int64: lambda x: int(x),
+            OPCUA_Types.UInt64: lambda x: 0 if x < 0 else int(x),
+            OPCUA_Types.Float: lambda x: float(x),
+            OPCUA_Types.Double: lambda x: float(x),
+        }
+
+        limits_check_mapping = {
+            OPCUA_Types.Boolean: lambda x: x in [True, False],
+            OPCUA_Types.Byte: lambda x: x >= 0 and x < 256,
+            OPCUA_Types.Int16: lambda x: x >= -(2**15-1) and x < (2**15-1),
+            OPCUA_Types.UInt16: lambda x: x >= 0 and x < (2**16-1),
+            OPCUA_Types.Int32: lambda x: x >= -(2**31-1) and x < (2**31-1),
+            OPCUA_Types.UInt32: lambda x: x >= 0 and x < (2**32-1),
+            OPCUA_Types.Int64: lambda x: x >= -(2**63-1) and x < (2**63-1),
+            OPCUA_Types.UInt64: lambda x: x >= 0 and x < (2**64-1),
+        }
+
+        coercion_function = coercion_mapping.get(r.options["type"], None)
+        limits_check_function = limits_check_mapping.get(r.options["type"], None)
+
+        coerced_value = value
+        if coercion_function:
+            try:
+                coerced_value = coercion_function(value)
+            except Exception:
+                raise HardwareLayerException((f"Value '{value}' could not be coerced to type '{r.options['type']}' "
+                                              f"when writing register {r}."))
+            if coerced_value is not value:
+                logger.warning((f"Value '{value}' was coerced to '{coerced_value}' "
+                                f"when writing register {r}."))
+
+        if limits_check_function:
+            if not limits_check_function(coerced_value):
+                raise HardwareLayerException((f"Value '{coerced_value}' does not satisfy the limits that its "
+                                              f"type '{r.options['type']}' imposes when writing register {r}."))
+
+        return coerced_value
+
     def write(self, value: Any, r: Register):
         if RegisterDirection.Write not in r.direction:
             raise HardwareLayerException("Attempt to write unwritable register {r}.")
         try:
             opcua_node = self._register_to_node(r)
+            value = self._coerce_value_to_proper_type(value, r)
             if 'type' in r.options:
                 value = asyncua.ua.Variant(value, r.options['type'])
             data_value = asyncua.ua.DataValue(value)
@@ -205,6 +255,7 @@ class OPCUA_Hardware(HardwareLayerBase):
             node_ids = [node.nodeid for node in nodes]
             data_values = []
             for r, value in zip(registers, values):
+                value = self._coerce_value_to_proper_type(value, r)
                 if 'type' in r.options:
                     value = asyncua.ua.Variant(value, r.options['type'])
                 data_values.append(asyncua.ua.DataValue(value))
