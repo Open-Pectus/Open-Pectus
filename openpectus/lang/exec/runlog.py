@@ -54,7 +54,7 @@ class RuntimeInfo():
         understand.
 
         Notably, it removes records with no name and unscrambles uod states
-        such that each invocation gets its own record. This allows the client
+        such that each invocation gets its own runlog item. This allows the client
         to force or cancel a particular command instance.
         """
         items: list[RunLogItem] = []
@@ -64,7 +64,7 @@ class RuntimeInfo():
         for r in self.records:
             if isinstance(r.node, PProgram):
                 runlog.id = str(r.node.id)
-            if r.name is None:
+            if r.name is None:  # TODO document when this would occur
                 continue
 
             item = RunLogItem()
@@ -80,6 +80,14 @@ class RuntimeInfo():
                 assert set_count < 2, f"{set_count=} was greater than 1 - unexpected?!"
                 assert start_count < 2, f"{start_count=} was greater than 1 - unexpected?!"
                 assert complete_count < 2, f"{complete_count=} was greater than 1 - unexpected?!"
+
+            # fill in start values regardless of actual state
+            if r.has_state(RuntimeRecordStateEnum.Started):
+                state = r.get_state(RuntimeRecordStateEnum.Started)
+                item.start = state.state_time
+                item.start_values = state.values or TagValueCollection.empty()
+
+            # fill in state values in order of precedence
             if r.has_state(RuntimeRecordStateEnum.Completed):
                 item.state = RunLogItemState.Completed
                 state = r.get_state(RuntimeRecordStateEnum.Completed)
@@ -104,10 +112,6 @@ class RuntimeInfo():
                 item.start_values = state.values or TagValueCollection.empty()
             else:
                 item.state = RunLogItemState.Waiting
-
-            if item.start is None:
-                # TODO this should not happen, should it?
-                item.start = r.visit_start_time
 
             items.append(item)
         runlog.items = items
