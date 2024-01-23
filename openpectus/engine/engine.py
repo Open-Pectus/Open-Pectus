@@ -2,8 +2,7 @@ import itertools
 import logging
 import time
 import uuid
-from multiprocessing import Queue
-from queue import Empty
+from queue import Empty, Queue
 from typing import Iterable, List, Set
 from uuid import UUID
 
@@ -97,13 +96,14 @@ class Engine(InterpreterContext):
         return TagValueCollection(t.as_readonly() for t in self._iter_all_tags())
 
     def cleanup(self):
+        pass
         #self.cmd_queue.close()
         #self.cmd_queue.join_thread()
-        self.cmd_queue.cancel_join_thread()
+        # self.cmd_queue.cancel_join_thread()
         #del self.cmd_queue
         #self.tag_updates.close()
         #self.tag_updates.join_thread()
-        self.tag_updates.cancel_join_thread()
+        # self.tag_updates.cancel_join_thread()
         #self.tag_updates.close()
         #del self.tag_updates
         # Fix this. Leaks threads 'QueueFeederThread' in windows, both in Anaconda and VS Code.
@@ -316,6 +316,8 @@ class Engine(InterpreterContext):
                 self._runstate_holding = False
                 self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Stopped, self._tick_time)
                 self._system_tags[SystemTagName.RUN_ID].set_value(None, self._tick_time)
+                self.interpreter.stop()
+                self._interpreter = PInterpreter(self._method.get_program(), self)
                 cmds_done.add(cmd_request)
                 # self.runlog_records.add_completed(cmd_request, self._tick_time, self._tick_number, self.tags_as_readonly())
 
@@ -578,6 +580,5 @@ class Engine(InterpreterContext):
             logger.error("Failed to set method", exc_info=True)
             raise
 
-    def get_method_state(self) -> Mdl.MethodState:
-        self._method.update_state(self.interpreter.runtimeinfo)
-        return self._method.get_method_state()
+    def calculate_method_state(self) -> Mdl.MethodState:
+        return self._method.calculate_method_state(self.interpreter.runtimeinfo)

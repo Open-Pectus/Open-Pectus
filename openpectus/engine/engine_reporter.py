@@ -87,6 +87,7 @@ class EngineReporter():
                 if tag_name is not None:
                     assert tag.tick_time is not None, f'tick_time is None for tag {tag.name}'
                     tags.append(Mdl.TagValue(name=tag_name, tick_time=tag.tick_time, value=tag.get_value(), value_unit=tag.unit))
+                self.engine.tag_updates.task_done()
         except Empty:
             pass
         if len(tags) > 0:
@@ -136,6 +137,6 @@ class EngineReporter():
         self.dispatcher.post(msg)
 
     def send_method_state(self):
-        state = self.engine.get_method_state()
+        state = self.engine.calculate_method_state()
         msg = EM.MethodStateMsg(method_state=state)
         self.dispatcher.post(msg)
