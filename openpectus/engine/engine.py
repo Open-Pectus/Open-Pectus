@@ -51,7 +51,6 @@ class Engine(InterpreterContext):
         """ Tick count since last START command. It is incremented at the start of each tick.
         First tick is effectively number 0. """
 
-        # TODO does the uod need to know about these? Yes - we should make them available as read only
         self._system_tags = TagCollection.create_system_tags()
         self.uod.system_tags = self._system_tags
 
@@ -97,17 +96,8 @@ class Engine(InterpreterContext):
         return TagValueCollection(t.as_readonly() for t in self._iter_all_tags())
 
     def cleanup(self):
-        #self.cmd_queue.close()
-        #self.cmd_queue.join_thread()
         self.cmd_queue.cancel_join_thread()
-        #del self.cmd_queue
-        #self.tag_updates.close()
-        #self.tag_updates.join_thread()
         self.tag_updates.cancel_join_thread()
-        #self.tag_updates.close()
-        #del self.tag_updates
-        # Fix this. Leaks threads 'QueueFeederThread' in windows, both in Anaconda and VS Code.
-        # This leads to the tests not terminating
 
     @property
     def interpreter(self) -> PInterpreter:
