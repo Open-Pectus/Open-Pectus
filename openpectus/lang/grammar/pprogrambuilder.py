@@ -90,7 +90,7 @@ class PProgramBuilder(pcodeListener):
         instruction_text = ctx.getText()
         instruction_text = "" if instruction_text is None else instruction_text.strip()
 
-        def is_blank_or_comment():            
+        def is_blank_or_comment():
             if instruction_text == "":
                 return True
             elif instruction_text.startswith("#"):

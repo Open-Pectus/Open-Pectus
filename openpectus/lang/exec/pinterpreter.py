@@ -6,9 +6,8 @@ import pint
 import inspect
 from typing import Generator, List, Tuple
 from typing_extensions import override
-from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.errors import InterpretationError
-from openpectus.lang.exec.runlog import RunLog, RuntimeInfo, RuntimeRecordStateEnum
+from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
 
 from openpectus.lang.model.pprogram import (
     PErrorInstruction,
@@ -133,7 +132,7 @@ class InterpreterContext():
     def tags(self) -> TagCollection:
         raise NotImplementedError()
 
-    def schedule_execution(self, name: str, args: str | None = None, exec_id: UUID | None = None) -> CommandRequest:
+    def schedule_execution(self, name: str, args: str | None = None, exec_id: UUID | None = None):
         raise NotImplementedError()
 
 
@@ -305,7 +304,7 @@ class PInterpreter(PNodeVisitor):
         # TODO if not unit specified, pick base unit
         expected_value = pint.Quantity(c.tag_value_numeric, c.tag_unit)
         if not tag_value.is_compatible_with(expected_value):
-            logger.error("Incompatible units")
+            logger.error(f"Incompatible units for values {tag_value} vs {expected_value}")
             raise ValueError("Incompatible units")
 
         result = None
@@ -563,5 +562,5 @@ class PInterpreter(PNodeVisitor):
         record.add_state_failed(
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
-        
-        # TODO pause
+
+        raise InterpretationError(f"Invalid instruction {str(node)}")

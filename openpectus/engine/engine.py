@@ -159,7 +159,8 @@ class Engine(InterpreterContext):
 
         # Perform certain things in first tick
         if self._tick_number == 0:
-            # System tags are initialized before first tick, without a tick time, and some are never updated, so provide first tick time as a "default".
+            # System tags are initialized before first tick, without a tick time, and some are never updated, so
+            # provide first tick time as a "default".
             for tag in self._system_tags.tags.values():
                 tag.tick_time = self._tick_time
 
@@ -175,8 +176,10 @@ class Engine(InterpreterContext):
                 self._interpreter.tick(self._tick_time, self._tick_number)
             except InterpretationError:
                 logger.error("Interpretation error", exc_info=True)
+                self.set_error_state()
             except Exception:
                 logger.error("Unhandled interpretation error", exc_info=True)
+                self.set_error_state()
 
         # update calculated tags
         self.update_calculated_tags()
@@ -271,10 +274,14 @@ class Engine(InterpreterContext):
             cmds_done.add(cmd_request)
             return
 
-        if EngineCommandEnum.has_value(cmd_request.name):
-            self._execute_internal_command(cmd_request, cmds_done)
-        else:
-            self._execute_uod_command(cmd_request, cmds_done)
+        try:
+            if EngineCommandEnum.has_value(cmd_request.name):
+                self._execute_internal_command(cmd_request, cmds_done)
+            else:
+                self._execute_uod_command(cmd_request, cmds_done)
+        except Exception as ex:
+            logger.error(f"Error running command {cmd_request.name}", str(ex))
+            self.set_error_state()
 
     def _execute_internal_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
 
@@ -358,8 +365,8 @@ class Engine(InterpreterContext):
 
     def _execute_uod_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
         cmd_name = cmd_request.name
-        assert self.uod.has_command_name(cmd_name), f"Expected Uod to have command named {cmd_name}"
-        assert cmd_request.exec_id is not None, f"Expected uod command request {cmd_name} to have exec_id"
+        assert self.uod.has_command_name(cmd_name), f"Expected Uod to have command named '{cmd_name}'"
+        assert cmd_request.exec_id is not None, f"Expected uod command request '{cmd_name}' to have exec_id"
 
         record = self.interpreter.runtimeinfo.get_exec_record(cmd_request.exec_id)
 
@@ -367,7 +374,7 @@ class Engine(InterpreterContext):
         for c in self.cmd_executing:
             if c.name == cmd_name and not c == cmd_request:
                 cmds_done.add(c)
-                assert c.command_exec_id is not None, "command_exec_id should be set"
+                assert c.command_exec_id is not None, f"command_exec_id should be set for command '{cmd_name}'"
                 cmd_record = self.runtimeinfo.get_uod_command_and_record(c.command_exec_id)
                 assert cmd_record is not None
                 command, c_record = cmd_record
@@ -383,7 +390,7 @@ class Engine(InterpreterContext):
                 for overlap_list in self.uod.overlapping_command_names_lists:
                     if c.name in overlap_list and cmd_name in overlap_list:
                         cmds_done.add(c)
-                        assert c.command_exec_id is not None, "command_exec_id should be set"
+                        assert c.command_exec_id is not None, f"command_exec_id should be set for command '{c.name}'"
                         cmd_record = self.runtimeinfo.get_uod_command_and_record(c.command_exec_id)
                         assert cmd_record is not None
                         command, c_record = cmd_record
@@ -391,7 +398,7 @@ class Engine(InterpreterContext):
                         c_record.add_command_state_cancelled(
                             c.command_exec_id, self._tick_time, self._tick_number,
                             self.tags_as_readonly())
-                        logger.debug(
+                        logger.info(
                             f"Running command {c.name} cancelled because overlapping command " +
                             f"'{cmd_name}' was started")
                         break
@@ -407,12 +414,12 @@ class Engine(InterpreterContext):
         else:
             uod_command = self.uod.get_command(cmd_name)
 
-        assert uod_command is not None
+        assert uod_command is not None, f"Failed to get uod_command for command '{cmd_name}'"
 
         args = uod_command.parse_args(cmd_request.args, uod_command.context)  # TODO remove uod from method signature
         if args is None:
             logger.error(f"Invalid argument string: '{cmd_request.args}' for command '{cmd_name}'")
-            raise ValueError("Invalid arguments")
+            raise ValueError(f"Invalid arguments for command '{cmd_name}'")
 
         # execute command state flow
         try:
@@ -494,7 +501,7 @@ class Engine(InterpreterContext):
     def notify_initial_tags(self):
         for tag in self._iter_all_tags():
             if tag.tick_time is None:
-                logger.debug(f'setting a tick time on {tag.name} tag missing it in notify_initial_tags()')
+                logger.warning(f'Setting a tick time on {tag.name} tag missing it in notify_initial_tags()')
                 tag.tick_time = self._tick_time
             self.tag_updates.put(tag)
 
@@ -509,6 +516,10 @@ class Engine(InterpreterContext):
             tag = self.uod.tags[tag_name]
             self.tag_updates.put(tag)
         self._uod_listener.clear_changes()
+
+    def set_error_state(self):
+        logger.info("Paused because of error")
+        self._runstate_paused = True
 
     #TODO remove
     def parse_pcode(self, pcode: str) -> PProgram:
@@ -538,14 +549,14 @@ class Engine(InterpreterContext):
     def tags(self) -> TagCollection:
         return self._system_tags.merge_with(self.uod.tags)
 
-    def schedule_execution(self, name: str, args: str | None = None, exec_id: UUID | None = None) -> CommandRequest:
+    def schedule_execution(self, name: str, args: str | None = None, exec_id: UUID | None = None):
         """ Execute named command (engine internal or Uod), possibly with arguments. """
         if EngineCommandEnum.has_value(name) or self.uod.has_command_name(name):
             request = CommandRequest(name, args, exec_id)
             self.cmd_queue.put_nowait(request)
-            return request
         else:
-            raise ValueError(f"Invalid command type scheduled: {name}")
+            logger.error(f"Invalid command type scheduled: {name}")
+            self.set_error_state()
 
     def inject_command(self, name: str, args: str):
         """ Inject a command to run in the current scope of the current program. """
@@ -564,6 +575,7 @@ class Engine(InterpreterContext):
             logger.info("Injected code successful")
         except Exception as ex:
             logger.info("Injected code parse error: " + str(ex))
+            self.set_error_state()
 
     # code manipulation api
     def set_method(self, method: Mdl.Method):
@@ -573,7 +585,7 @@ class Engine(InterpreterContext):
             logger.info(f"New method set with {len(method.lines)} lines")
         except Exception:
             logger.error("Failed to set method", exc_info=True)
-            raise
+            self.set_error_state()
 
     def get_method_state(self) -> Mdl.MethodState:
         self._method.update_state(self.interpreter.runtimeinfo)

@@ -718,6 +718,18 @@ Mark: C
         continue_engine(e, 3)
         self.assertEqual(['A', 'B', 'C', 'I'], e.interpreter.get_marks())
 
+    def test_engine_error_causes_Paused_state(self):
+        e = self.engine
+        run_engine(e, "foo bar", 3)
+
+        self.assertTrue(e._runstate_paused)
+
+    def test_interpreter_error_causes_Paused_state(self):
+        e = self.engine
+        run_engine(e, """WATCH x > 2""", 3)
+
+        self.assertTrue(e._runstate_paused)
+
 
 class TestRunlog(unittest.TestCase):
     def setUp(self):

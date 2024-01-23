@@ -112,7 +112,7 @@ class RuntimeInfo():
                 item.start_values = state.values or TagValueCollection.empty()
             else:
                 item.state = RunLogItemState.Waiting
-            
+
             items.append(item)
         runlog.items = items
         return runlog
