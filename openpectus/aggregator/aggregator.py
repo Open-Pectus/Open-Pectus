@@ -6,8 +6,8 @@ import openpectus.aggregator.models as Mdl
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
-from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRepository
 from openpectus.aggregator.data import database
+from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRepository
 from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.aggregator.models import EngineData
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
@@ -58,14 +58,12 @@ class FromEngine:
 
         self._persist_tag_values(engine_data, plot_log_repo)
 
-    def _run_id_changed(self, plot_log_repo: PlotLogRepository, recent_run_repo: RecentRunRepository, engine_data: EngineData, run_id_tag: Mdl.TagValue):
+    def _run_id_changed(self, plot_log_repo: PlotLogRepository, recent_run_repo: RecentRunRepository, engine_data: EngineData,
+                        run_id_tag: Mdl.TagValue):
         """ Handles persistance related to start and end of a run """
-        logger.warning(f'run id changed to {run_id_tag.value}')
         if run_id_tag.value is None and engine_data.run_id is not None:
             # Run stopped
             recent_run_repo.store_recent_run(engine_data)
-            engine_data.run_data = Mdl.RunData()
-            # TODO: persist and clear from engine_map: method, run log,
         else:
             # Run started
             engine_data.run_data.run_started = datetime.fromtimestamp(run_id_tag.tick_time)
