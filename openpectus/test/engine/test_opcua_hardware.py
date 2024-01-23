@@ -307,5 +307,54 @@ class TestOPCUAHardware(unittest.TestCase):
             self.assertIn("OPC-UA client is closed.", str(context.exception))
 
 
+def attempt_to_use_hardware():
+    registers = {r.name: r for r in
+                 [
+                    Register("Readable",
+                             RegisterDirection.Read,
+                             path="Objects/3:ServerInterfaces/4:OPCUA/4:Readable",
+                             type=OPCUA_Types.Float),
+                    Register("Writable",
+                             RegisterDirection.Write,
+                             path="Objects/3:ServerInterfaces/4:OPCUA/4:Writable",
+                             type=OPCUA_Types.Float),
+                    Register("ReadableAndWritable",
+                             RegisterDirection.Both,
+                             path="Objects/3:ServerInterfaces/4:OPCUA/4:ReadableAndWritable",
+                             type=OPCUA_Types.Float),
+                    Register("Bool",
+                             RegisterDirection.Both,
+                             path="Objects/3:ServerInterfaces/4:OPCUA/4:UserDataType/4:Bool",
+                             type=OPCUA_Types.Boolean),
+                    Register("Float",
+                             RegisterDirection.Both,
+                             path="Objects/3:ServerInterfaces/4:OPCUA/4:UserDataType/4:Float",
+                             type=OPCUA_Types.Float),
+                    Register("Int",
+                             RegisterDirection.Both,
+                             path="Objects/3:ServerInterfaces/4:OPCUA/4:UserDataType/4:Int",
+                             type=OPCUA_Types.Int16),
+                    Register("Uint",
+                             RegisterDirection.Both,
+                             path="Objects/3:ServerInterfaces/4:OPCUA/4:UserDataType/4:Uint",
+                             type=OPCUA_Types.UInt16),
+                 ]
+                 }
+
+    hwl = OPCUA_Hardware(host="opc.tcp://192.168.0.1:4840/")
+    hwl.registers = registers
+    hwl.validate_offline()
+    with hwl:
+        hwl.validate_online()
+        for r in [r for r in hwl.registers.values() if RegisterDirection.Read in r.direction]:
+            print(r, hwl.read(r))
+        hwl.write(-5.0, registers["Writable"])
+        hwl.write(-6.0, registers["ReadableAndWritable"])
+        hwl.write(5, registers["Bool"])
+        hwl.write(1.02, registers["Float"])
+        hwl.write(-54000, registers["Int"])
+        hwl.write(-54, registers["Uint"])
+
+
 if __name__ == "__main__":
     unittest.main()
