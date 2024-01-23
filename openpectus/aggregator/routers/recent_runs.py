@@ -4,6 +4,7 @@ import openpectus.aggregator.models as Mdl
 import openpectus.aggregator.routers.dto as Dto
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
+from openpectus.aggregator.csv_generator import generate_csv_string
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import PlotLogRepository, RecentRunRepository
 
@@ -62,9 +63,16 @@ def get_recent_run_plot_log(run_id: str) -> Dto.PlotLog:
     return Dto.PlotLog.validate(plot_log_model)
 
 
-@router.get('/{id}/csv_json')
-def get_recent_run_csv_json(id: str) -> Dto.RecentRunCsv:
-    return Dto.RecentRunCsv(filename=f'RecentRun-{id}.csv', csv_content='some;CSV;here\nand;more;here')
+@router.get('/{run_id}/csv_json')
+def get_recent_run_csv_json(run_id: str) -> Dto.RecentRunCsv:
+    repo = PlotLogRepository(database.scoped_session())
+    plot_log_model = repo.get_plot_log(run_id)
+    if plot_log_model is None:
+        raise HTTPException(status_code=404, detail='Plot Log not found')
+    dto = Dto.PlotLog.validate(plot_log_model)
+    csv_string = generate_csv_string(dto)
+    return Dto.RecentRunCsv(filename=f'RecentRun-{run_id}.csv', csv_content=csv_string.getvalue())
+
 
 
 @router.get('/{id}/csv_file', response_class=StreamingResponse)
