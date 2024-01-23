@@ -291,6 +291,21 @@ class TestOPCUAHardware(unittest.TestCase):
             with self.assertRaises(HardwareLayerException):
                 hwl.validate_online()
 
+    def test_exception_when_attempting_to_access_using_disconnected_client(self):
+        FT01 = Register("FT01", RegisterDirection.Read, path="Objects/2:FT01")
+        registers = {"FT01": FT01}
+        test_server = OPCUATestServer(registers=registers)
+
+        hwl = OPCUA_Hardware(host="opc.tcp://127.0.0.1:48401/")
+        hwl.registers = registers
+        with test_server:
+            hwl.connect()
+            hwl.read(FT01)
+            hwl.disconnect()
+            with self.assertRaises(HardwareLayerException) as context:
+                hwl.read(FT01)
+            self.assertIn("OPC-UA client is closed.", str(context.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

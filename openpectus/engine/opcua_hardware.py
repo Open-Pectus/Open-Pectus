@@ -142,6 +142,8 @@ class OPCUA_Hardware(HardwareLayerBase):
             raise HardwareLayerException((f"Node at register {r} path {path} "
                                           f"cannot be found. The closest parent "
                                           f"node is '{valid_path}' with children: {children_string}"))
+        except asyncua.sync.ThreadLoopNotRunning:
+            raise HardwareLayerException("OPC-UA client is closed.")
         return node_id
 
     def _registers_to_nodes(self, registers: Iterable[Register]) -> list[asyncua.sync.SyncNode]:
@@ -151,12 +153,16 @@ class OPCUA_Hardware(HardwareLayerBase):
         return node_ids
 
     def read(self, r: Register) -> Any:
+        if RegisterDirection.Read not in r.direction:
+            raise HardwareLayerException("Attempt to read unreadable register {r}.")
         try:
             opcua_node = self._register_to_node(r)
             return opcua_node.read_value()
         except ConnectionError:
             self.connection_status.set_not_ok()
             raise HardwareLayerException(f"Not connected to {self.host}")
+        except asyncua.sync.ThreadLoopNotRunning:
+            raise HardwareLayerException("OPC-UA client is closed.")
 
     def read_batch(self, registers: Iterable[Register]) -> list[Any]:
         """ Read batch of register values with a single OPC-UA call. """
@@ -169,6 +175,8 @@ class OPCUA_Hardware(HardwareLayerBase):
         except ConnectionError:
             self.connection_status.set_not_ok()
             raise HardwareLayerException(f"Not connected to {self.host}")
+        except asyncua.sync.ThreadLoopNotRunning:
+            raise HardwareLayerException("OPC-UA client is closed.")
         return values
 
     def write(self, value: Any, r: Register):
@@ -183,6 +191,8 @@ class OPCUA_Hardware(HardwareLayerBase):
         except ConnectionError:
             self.connection_status.set_not_ok()
             raise HardwareLayerException(f"Not connected to {self.host}")
+        except asyncua.sync.ThreadLoopNotRunning:
+            raise HardwareLayerException("OPC-UA client is closed.")
 
     def write_batch(self, values: Iterable[Any], registers: Iterable[Register]):
         """ Write batch of register values with a single OPC-UA call. """
@@ -208,6 +218,8 @@ class OPCUA_Hardware(HardwareLayerBase):
         except ConnectionError:
             self.connection_status.set_not_ok()
             raise HardwareLayerException(f"Not connected to {self.host}")
+        except asyncua.sync.ThreadLoopNotRunning:
+            raise HardwareLayerException("OPC-UA client is closed.")
 
     def connect(self):
         """ Connect to OPC-UA server. """
