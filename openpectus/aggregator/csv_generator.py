@@ -1,9 +1,12 @@
 import csv
+import logging
 from io import StringIO
 from operator import concat
 from typing import Iterable
 
 from openpectus.aggregator.routers.dto import PlotLog, RecentRun, ProcessValueValueType
+
+logger = logging.getLogger(__name__)
 
 
 def generate_csv_string(plot_log: PlotLog, recent_run: RecentRun):
