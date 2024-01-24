@@ -1,3 +1,4 @@
+import logging
 from typing import Callable
 from uuid import UUID
 from openpectus.lang.exec.runlog import RuntimeInfo
@@ -5,6 +6,7 @@ from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.model.pprogram import PNode, PProgram
 import openpectus.protocol.models as Mdl
 
+logger = logging.getLogger(__name__)
 
 def parse_pcode(pcode: str) -> PProgram:
     p = PGrammar()
@@ -68,7 +70,7 @@ class MethodModel():
         method_state = Mdl.MethodState.empty()
         if self._pcode != "":
             for record in runtimeinfo.records:
-                if record.node is not PProgram:
+                if not isinstance(record.node, PProgram):
                     assert record.node is not None, "node is None"
                     assert record.node.line is not None, "node.line is None, node: " + str(record.node)
                     line_num = record.node.line
