@@ -49,5 +49,5 @@ def _write_header_row(csv_writer, plot_log: PlotLog):
     header_row: list[str] = []
     for entry in plot_log.entries.values():
         entry.values.sort(key=lambda e: e.tick_time)
-        header_row.append(f'{entry.name} [{entry.value_unit}]')
+        header_row.append(entry.name + (f' [{entry.value_unit}]' if entry.value_unit is not None else ''))
     csv_writer.writerow(header_row)
