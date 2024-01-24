@@ -10,7 +10,7 @@ from openpectus.engine.hardware import (
 from openpectus.engine.composite_hardware import Composite_Hardware
 
 logging.basicConfig(format=" %(name)s :: %(levelname)-8s :: %(message)s")
-logger = logging.getLogger("openpectus.engine.opcua_hardware.OPCUA_Hardware")
+logger = logging.getLogger("openpectus.engine.composite_hardware.Composite_Hardware")
 logger.setLevel(logging.DEBUG)
 
 
