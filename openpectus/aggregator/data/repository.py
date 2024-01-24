@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Iterable
 
 from openpectus.aggregator.data.models import RecentRunMethodAndState, ProcessValueType, RecentRun, PlotLogEntryValue, \
@@ -105,7 +105,7 @@ class RecentRunRepository(RepositoryBase):
         recent_run.computer_name = engine_data.computer_name
         recent_run.uod_name = engine_data.uod_name
         recent_run.started_date = engine_data.run_data.run_started
-        recent_run.completed_date = datetime.now()
+        recent_run.completed_date = datetime.now(timezone.utc)
         # recent_run.contributers = engine_data.
 
         method_and_state = RecentRunMethodAndState()

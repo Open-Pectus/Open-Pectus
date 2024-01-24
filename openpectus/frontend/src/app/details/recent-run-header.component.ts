@@ -21,7 +21,7 @@ import { DetailsSelectors } from './ngrx/details.selectors';
         <h1 class="text-4xl lg:text-5xl font-bold">{{ recentRun?.engine_id }}</h1>
 
         <button class="absolute top-0 right-0 px-3 py-1.5 rounded-md bg-sky-900 text-white flex items-center"
-                (click)="downloadCsv(recentRun?.id)">
+                (click)="downloadCsv(recentRun?.run_id)">
           <i class="codicon codicon-desktop-download !text-xl mr-2.5"></i>
           Data CSV-file
         </button>

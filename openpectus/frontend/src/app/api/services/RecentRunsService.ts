@@ -142,18 +142,18 @@ runId: string,
 
     /**
      * Get Recent Run Csv Json
-     * @param id 
+     * @param runId 
      * @returns RecentRunCsv Successful Response
      * @throws ApiError
      */
     public getRecentRunCsvJson(
-id: string,
+runId: string,
 ): Observable<RecentRunCsv> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/recent_runs/{id}/csv_json',
+            url: '/api/recent_runs/{run_id}/csv_json',
             path: {
-                'id': id,
+                'run_id': runId,
             },
             errors: {
                 422: `Validation Error`,

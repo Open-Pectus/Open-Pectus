@@ -59,7 +59,7 @@ class RunData(BaseModel):
     run_started: datetime | None = None
     method_state: MethodState = MethodState.empty()
     runlog: RunLog = RunLog(lines=[])
-    tags_last_persisted: datetime | None = None
+    latest_persisted_tick_time: float | None = None
 
 class EngineData(BaseModel):
     engine_id: str

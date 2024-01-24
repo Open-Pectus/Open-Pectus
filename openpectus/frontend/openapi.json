@@ -849,7 +849,7 @@
         }
       }
     },
-    "/api/recent_runs/{id}/csv_json": {
+    "/api/recent_runs/{run_id}/csv_json": {
       "get": {
         "tags": [
           "recent_runs"
@@ -861,9 +861,9 @@
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Id"
+              "title": "Run Id"
             },
-            "name": "id",
+            "name": "run_id",
             "in": "path"
           }
         ],
