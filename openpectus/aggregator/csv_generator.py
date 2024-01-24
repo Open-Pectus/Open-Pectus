@@ -1,5 +1,6 @@
 import csv
 from io import StringIO
+from operator import concat
 from typing import Iterable
 
 from openpectus.aggregator.routers.dto import PlotLog, RecentRun, ProcessValueValueType
@@ -17,9 +18,9 @@ def generate_csv_string(plot_log: PlotLog, recent_run: RecentRun):
 def _write_metadata_rows(csv_writer, plot_log: PlotLog, recent_run: RecentRun):
     csv_writer.writerow(['# Recent Run Id', recent_run.run_id])
     csv_writer.writerow(['# Process Unit Id', recent_run.engine_id])
-    csv_writer.writerow(['# Starting Time', recent_run.started_date])
-    csv_writer.writerow(['# Ending Time', recent_run.completed_date])
-    csv_writer.writerow(['# Contributors', recent_run.contributors])
+    csv_writer.writerow(['# Starting Time (UTC)', recent_run.started_date])
+    csv_writer.writerow(['# Ending Time (UTC)', recent_run.completed_date])
+    csv_writer.writerow(concat(['# Contributors'], recent_run.contributors))
     csv_writer.writerow([])
 
 
@@ -48,5 +49,5 @@ def _write_header_row(csv_writer, plot_log: PlotLog):
     header_row: list[str] = []
     for entry in plot_log.entries.values():
         entry.values.sort(key=lambda e: e.tick_time)
-        header_row.append(entry.name)
+        header_row.append(f'{entry.name} [{entry.value_unit}]')
     csv_writer.writerow(header_row)

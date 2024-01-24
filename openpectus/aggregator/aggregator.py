@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import openpectus.aggregator.models as Mdl
 import openpectus.protocol.aggregator_messages as AM
@@ -66,7 +66,7 @@ class FromEngine:
             recent_run_repo.store_recent_run(engine_data)
         else:
             # Run started
-            engine_data.run_data.run_started = datetime.fromtimestamp(run_id_tag.tick_time)
+            engine_data.run_data.run_started = datetime.fromtimestamp(run_id_tag.tick_time, timezone.utc)
             plot_log_repo.create_plot_log(engine_data, str(run_id_tag.value))
 
     def _persist_tag_values(self, engine_data: EngineData, plot_log_repo: PlotLogRepository):
