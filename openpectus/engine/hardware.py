@@ -40,6 +40,9 @@ class Register():
     def __str__(self):
         return f"Register(name={self._name})"
 
+    def __repr__(self):
+        return str(self)
+
 
 class HardwareLayerException(Exception):
     """ Raised when hardware connection issues occur. """
@@ -90,10 +93,15 @@ class HardwareLayerBase():
         self.disconnect()
 
     def read(self, r: Register) -> Any:
+        if RegisterDirection.Read not in r.direction:
+            raise HardwareLayerException("Attempt to read unreadable register {r}.")
         raise NotImplementedError
 
     def read_batch(self, registers: list[Register]) -> list[Any]:
         """ Read batch of register values. Override to provide efficient implementation """
+        for r in registers:
+            if RegisterDirection.Read not in r.direction:
+                raise HardwareLayerException("Attempt to read unreadable register {r}.")
         values = []
         for r in registers:
             values.append(self.read(r))
@@ -101,11 +109,14 @@ class HardwareLayerBase():
 
     def write(self, value: Any, r: Register):
         if RegisterDirection.Write not in r.direction:
-            pass
+            raise HardwareLayerException("Attempt to write unwritable register {r}.")
         raise NotImplementedError
 
     def write_batch(self, values: Iterable[Any], registers: Iterable[Register]):
         """ Write batch of register values. Override to provide efficient implementation """
+        for r in registers:
+            if RegisterDirection.Write not in r.direction:
+                raise HardwareLayerException("Attempt to write unwritable register {r}.")
         for v, r in zip(values, registers):
             self.write(v, r)
 
