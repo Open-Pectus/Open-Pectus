@@ -18,8 +18,8 @@ class Composite_Hardware(HardwareLayerBase):
         hwl_A = Hardware_1()
         hwl_B = Hardware_2()
         registers = dict()
-        registers['Reg 1'] = Register('Reg 1', RegisterDirection.Both, hardware=hwl_A)
-        registers['Reg 2'] = Register('Reg 2', RegisterDirection.Both, hardware=hwl_B)
+        registers["Reg 1"] = Register("Reg 1", RegisterDirection.Both, hardware=hwl_A)
+        registers["Reg 2"] = Register("Reg 2", RegisterDirection.Both, hardware=hwl_B)
         hwl = Composite_Hardware()
         hwl.registers = registers"""
     def _underlying_hardwares(self) -> list[HardwareLayerBase]:
