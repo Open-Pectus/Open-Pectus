@@ -53,6 +53,23 @@ class BuilderTest(unittest.TestCase):
         self.assertEqual("bar=baz", command.args)
         # print_program(program)
 
+    def test_start(self):
+        p = build("Start")
+        program = p.build_model()
+        p.printSyntaxTree(p.tree)
+        command: PCommand = program.get_instructions()[0]  # type: ignore
+        self.assertIsNotNone(command)
+        self.assertEqual("Start", command.name)
+
+    def test_increment_run_counter(self):
+        p = build("Increment run counter")
+        program = p.build_model()
+        p.printSyntaxTree(p.tree)
+
+        command: PCommand = program.get_instructions()[0]  # type: ignore
+        self.assertIsNotNone(command)
+        self.assertEqual("Increment run counter", command.name)
+
     def test_block(self):
         p = build("block: foo")
         program = p.build_model()
