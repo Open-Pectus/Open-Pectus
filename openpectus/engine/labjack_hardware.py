@@ -2,7 +2,10 @@ import logging
 import ctypes
 import os
 import sys
-from typing import Any, Sequence, Optional
+import json
+import functools
+import re
+from typing import Any, Sequence, Optional, Dict
 import labjack.ljm.ljm as ljm
 import labjack.ljm.constants
 
@@ -40,11 +43,22 @@ CONNECTION_TYPES = {
 # The Labjack DLL/so are not distributed with the python package.
 # They are included here along with the obligatory LICENSE.
 if sys.platform.startswith("win32"):
-    ljm._staticLib = ctypes.CDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)), "labjack", "LabJackM.dll"))  # type: ignore
+    ljm._staticLib = ctypes.CDLL(
+        os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "labjack",
+            "LabJackM.dll"))  # type: ignore
 elif sys.platform.startswith("linux"):
-    ljm._staticLib = ctypes.CDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)), "labjack", "libLabJackM.so"))
+    ljm._staticLib = ctypes.CDLL(
+        os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "labjack",
+            "libLabJackM.so"))
 
-constants_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "labjack", r"ljm_constants.json")
+constants_file = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "labjack",
+    "ljm_constants.json")
 ljm.loadConstantsFromFile(constants_file)
 
 
@@ -55,17 +69,57 @@ class Labjack_Hardware(HardwareLayerBase):
         self.serial_number: str = serial_number if serial_number else "ANY"
         self._handle = None
 
+    @functools.cached_property
+    def port_directions(self):
+        # Load ljm_constants.json
+        with open(constants_file, 'r') as f:
+            ljm_constants = json.load(f)
+        # Prepare regex and result dict
+        regex = re.compile(r"#\((?P<start>\d+):(?P<end>\d+)\)")
+        ljm_register_directions: Dict[str, RegisterDirection] = dict()
+        direction_to_register_direction = {"R": RegisterDirection.Read,
+                                           "W": RegisterDirection.Write,
+                                           "RW": RegisterDirection.Both}
+        # Note the port direction for each register
+        for register in ljm_constants["registers"]:
+            name = register["name"]
+            # Some register names cover ranges of registers.
+            # Example: "AIN#(0:254)"
+            match = re.search(regex, name)
+            if match:
+                match_dict = match.groupdict()
+                start, end = int(match_dict["start"]), int(match_dict["end"])
+                base_name = name.replace(match.group(0), "{i}")
+                names = [base_name.format(i=i) for i in range(start, end+1)]
+            else:
+                names = [name]
+            for name in names:
+                ljm_register_directions[name] = direction_to_register_direction[register["readwrite"]]
+        return ljm_register_directions
+
     def validate_offline(self):
         for r in self.registers.values():
             if "port" not in r.options:
                 raise HardwareLayerException((f"Labjack hardware layer requires specification of "
-                                              f" port. Please specify port for register {r}."))
+                                              f"port for register {r}."))
             # Check that the register port exists
             port = r.options["port"]
             try:
                 address, data_type = ljm.nameToAddress(port)
             except ljm.LJMError as error:
                 raise HardwareLayerException(f"Register {r} port '{port}' invalid. Labjack error: {error}.")
+            # Check the direction
+            labjack_port_direction = self.port_directions[port]
+            if (
+               RegisterDirection.Read in r.direction and
+               RegisterDirection.Read not in labjack_port_direction
+               ) or (
+               RegisterDirection.Write in r.direction and
+               RegisterDirection.Write not in labjack_port_direction
+               ):
+                raise HardwareLayerException((f"Disparity between register direction '{r.direction}' "
+                                              f"for register {r} and Labjack port direction "
+                                              f"'{labjack_port_direction}."))
 
     def validate_online(self):
         for r in self.registers.values():
