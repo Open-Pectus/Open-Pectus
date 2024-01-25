@@ -47,7 +47,7 @@ if sys.platform.startswith("win32"):
         os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             "labjack",
-            "LabJackM.dll"))  # type: ignore
+            "LabJackM.dll"))
 elif sys.platform.startswith("linux"):
     ljm._staticLib = ctypes.CDLL(
         os.path.join(

@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class Composite_Hardware(HardwareLayerBase):
-    """ Combining multiple hardware layers into one by
+    """ Combine multiple hardware layers into one by
         assigning the hardware layer on a per-register basis.
 
         Example pseudo-code:
@@ -21,7 +21,9 @@ class Composite_Hardware(HardwareLayerBase):
         registers["Reg 1"] = Register("Reg 1", RegisterDirection.Both, hardware=hwl_A)
         registers["Reg 2"] = Register("Reg 2", RegisterDirection.Both, hardware=hwl_B)
         hwl = Composite_Hardware()
-        hwl.registers = registers"""
+        hwl.registers = registers
+        with hwl:
+            hwl.read(registers["Reg 1"])"""
     def _underlying_hardwares(self) -> list[HardwareLayerBase]:
         """ Construct list of unique hardwares from list of registers """
         return list(dict.fromkeys(r.options["hardware"] for r in self.registers.values()))
