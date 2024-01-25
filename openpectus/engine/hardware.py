@@ -1,5 +1,5 @@
 from enum import Flag, auto
-from typing import Any, Dict, Iterable
+from typing import Any, Dict, Sequence
 from datetime import datetime
 
 
@@ -97,7 +97,7 @@ class HardwareLayerBase():
             raise HardwareLayerException("Attempt to read unreadable register {r}.")
         raise NotImplementedError
 
-    def read_batch(self, registers: list[Register]) -> list[Any]:
+    def read_batch(self, registers: Sequence[Register]) -> list[Any]:
         """ Read batch of register values. Override to provide efficient implementation """
         for r in registers:
             if RegisterDirection.Read not in r.direction:
@@ -107,12 +107,12 @@ class HardwareLayerBase():
             values.append(self.read(r))
         return values
 
-    def write(self, value: Any, r: Register):
+    def write(self, value: Any, r: Register) -> None:
         if RegisterDirection.Write not in r.direction:
             raise HardwareLayerException("Attempt to write unwritable register {r}.")
         raise NotImplementedError
 
-    def write_batch(self, values: Iterable[Any], registers: Iterable[Register]):
+    def write_batch(self, values: Sequence[Any], registers: Sequence[Register]):
         """ Write batch of register values. Override to provide efficient implementation """
         for r in registers:
             if RegisterDirection.Write not in r.direction:

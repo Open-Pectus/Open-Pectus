@@ -1,6 +1,6 @@
 import logging
 import functools
-from typing import Any, Iterable
+from typing import Any, Sequence
 import asyncua
 import asyncua.ua
 import asyncua.sync
@@ -146,7 +146,7 @@ class OPCUA_Hardware(HardwareLayerBase):
             raise HardwareLayerException("OPC-UA client is closed.")
         return node_id
 
-    def _registers_to_nodes(self, registers: Iterable[Register]) -> list[asyncua.sync.SyncNode]:
+    def _registers_to_nodes(self, registers: Sequence[Register]) -> list[asyncua.sync.SyncNode]:
         node_ids = []
         for r in registers:
             node_ids.append(self._register_to_node(r))
@@ -164,7 +164,7 @@ class OPCUA_Hardware(HardwareLayerBase):
         except asyncua.sync.ThreadLoopNotRunning:
             raise HardwareLayerException("OPC-UA client is closed.")
 
-    def read_batch(self, registers: Iterable[Register]) -> list[Any]:
+    def read_batch(self, registers: Sequence[Register]) -> list[Any]:
         """ Read batch of register values with a single OPC-UA call. """
         for r in registers:
             if RegisterDirection.Read not in r.direction:
@@ -244,7 +244,7 @@ class OPCUA_Hardware(HardwareLayerBase):
         except asyncua.sync.ThreadLoopNotRunning:
             raise HardwareLayerException("OPC-UA client is closed.")
 
-    def write_batch(self, values: Iterable[Any], registers: Iterable[Register]):
+    def write_batch(self, values: Sequence[Any], registers: Sequence[Register]):
         """ Write batch of register values with a single OPC-UA call. """
         for r in registers:
             if RegisterDirection.Write not in r.direction:

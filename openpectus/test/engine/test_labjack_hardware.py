@@ -49,7 +49,7 @@ class TestLabjackHardware(unittest.TestCase):
         hwl.registers = registers
         hwl.validate_offline()
         with hwl:
-            values = hwl.read_batch(registers.values())
+            values = hwl.read_batch(list(registers.values()))
         for value in values:
             self.assertEqual(0.0, value)
 
@@ -63,7 +63,7 @@ class TestLabjackHardware(unittest.TestCase):
         hwl.registers = registers
         hwl.validate_offline()
         with hwl:
-            hwl.write_batch(values_to_write, registers.values())
+            hwl.write_batch(values_to_write, list(registers.values()))
 
 
 if __name__ == "__main__":

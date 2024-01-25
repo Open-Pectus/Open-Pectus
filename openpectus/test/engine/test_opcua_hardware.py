@@ -178,7 +178,7 @@ class TestOPCUAHardware(unittest.TestCase):
         hwl = OPCUA_Hardware(host=opcua_host)
         hwl.registers = registers
         with test_server, hwl:
-            values = hwl.read_batch(registers.values())
+            values = hwl.read_batch(list(registers.values()))
             for value in values:
                 self.assertEqual(0.0, value)
 
@@ -192,7 +192,7 @@ class TestOPCUAHardware(unittest.TestCase):
         hwl = OPCUA_Hardware(host=opcua_host)
         hwl.registers = registers
         with test_server, hwl:
-            hwl.write_batch(values_to_write, registers.values())
+            hwl.write_batch(values_to_write, list(registers.values()))
         for register, value_to_write in zip(registers.values(), values_to_write):
             self.assertIn((register.options["path"], value_to_write,), test_server.server_write_events)
 
@@ -236,8 +236,8 @@ class TestOPCUAHardware(unittest.TestCase):
         hwl.registers = registers
 
         with test_server, hwl:
-            hwl.write_batch([1, 1, 1], registers.values())
-            values = hwl.read_batch(registers.values())
+            hwl.write_batch([1, 1, 1], list(registers.values()))
+            values = hwl.read_batch(list(registers.values()))
 
         self.assertIn((bool_register.options["path"], True), test_server.server_write_events)
         self.assertIn((float_register.options["path"], 1.0), test_server.server_write_events)

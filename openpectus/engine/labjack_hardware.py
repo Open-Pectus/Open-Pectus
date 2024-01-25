@@ -2,7 +2,7 @@ import logging
 import ctypes
 import os
 import sys
-from typing import Any, Iterable
+from typing import Any, Sequence, Optional
 import labjack.ljm.ljm as ljm
 import labjack.ljm.constants
 
@@ -40,14 +40,14 @@ CONNECTION_TYPES = {
 # The Labjack DLL/so are not distributed with the python package.
 # They are included here along with the obligatory LICENSE.
 if sys.platform.startswith("win32"):
-    ljm._staticLib = ctypes.WinDLL(os.path.dirname(os.path.abspath(__file__))+r'\LabJackM.dll')
+    ljm._staticLib = ctypes.WinDLL(os.path.dirname(os.path.abspath(__file__))+r'\LabJackM.dll')  # type: ignore
 elif sys.platform.startswith("linux"):
     ljm._staticLib = ctypes.CDLL(os.path.dirname(os.path.abspath(__file__))+r'/libLabJackM.so')
 
 
 class Labjack_Hardware(HardwareLayerBase):
     """ Represents OPCUA hardware layer. """
-    def __init__(self, serial_number: str = None) -> None:
+    def __init__(self, serial_number: Optional[str] = None) -> None:
         super().__init__()
         self.serial_number: str = serial_number if serial_number else "ANY"
         self._handle = None
@@ -77,7 +77,7 @@ class Labjack_Hardware(HardwareLayerBase):
             self.connection_status.set_not_ok()
             raise HardwareLayerException(f"Unable to read {r}. Labjack error: {error}.")
 
-    def read_batch(self, registers: Iterable[Register]) -> list[Any]:
+    def read_batch(self, registers: Sequence[Register]) -> list[Any]:
         """ Read batch of register values with a single OPC-UA call. """
         for r in registers:
             if RegisterDirection.Read not in r.direction:
@@ -97,7 +97,7 @@ class Labjack_Hardware(HardwareLayerBase):
             self.connection_status.set_not_ok()
             raise HardwareLayerException(f"Unable to write '{value}' to {r}. Labjack error: {error}.")
 
-    def write_batch(self, values: Iterable[Any], registers: Iterable[Register]):
+    def write_batch(self, values: Sequence[Any], registers: Sequence[Register]):
         """ Write batch of register values with a single OPC-UA call. """
         for r in registers:
             if RegisterDirection.Write not in r.direction:
