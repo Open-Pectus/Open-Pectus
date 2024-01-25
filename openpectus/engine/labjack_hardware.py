@@ -40,9 +40,12 @@ CONNECTION_TYPES = {
 # The Labjack DLL/so are not distributed with the python package.
 # They are included here along with the obligatory LICENSE.
 if sys.platform.startswith("win32"):
-    ljm._staticLib = ctypes.WinDLL(os.path.dirname(os.path.abspath(__file__))+r'\LabJackM.dll')  # type: ignore
+    ljm._staticLib = ctypes.CDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)), "labjack", "LabJackM.dll"))  # type: ignore
 elif sys.platform.startswith("linux"):
-    ljm._staticLib = ctypes.CDLL(os.path.dirname(os.path.abspath(__file__))+r'/libLabJackM.so')
+    ljm._staticLib = ctypes.CDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)), "labjack", "libLabJackM.so"))
+
+constants_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "labjack", r"ljm_constants.json")
+ljm.loadConstantsFromFile(constants_file)
 
 
 class Labjack_Hardware(HardwareLayerBase):
