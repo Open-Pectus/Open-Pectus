@@ -1,5 +1,6 @@
 import logging
 import functools
+import itertools
 from typing import Any, Sequence
 import asyncua
 import asyncua.ua
@@ -31,6 +32,19 @@ def _opcua_parent_path(path):
         return path
 
 
+def batched(iterable: Sequence[Any], n: int):
+    """ Batch data into tuples of length n. The last batch may be shorter.
+    Sourced from https://docs.python.org/3.11/library/itertools.html#itertools.batched.
+    In Python 3.12 this will become a part of the itertools package
+    and this function can be replaced by 'from itertools import batched'."""
+    # batched('ABCDEFG', 3) --> ABC DEF G
+    if n < 1:
+        raise ValueError('n must be at least one')
+    it = iter(iterable)
+    while batch := tuple(itertools.islice(it, n)):
+        yield batch
+
+
 #  Monkeypatch asyncua library
 # The asyncua OPC-UA client launches a thread class called
 # ThreadLoop which is unfortunately not configured to be daemonic.
@@ -48,6 +62,9 @@ class OPCUA_Hardware(HardwareLayerBase):
         super().__init__()
         self.host: str = host
         self._client: asyncua.sync.Client = asyncua.sync.Client(self.host)
+        # Siemens default maximum values
+        self._max_nodes_per_read: int = 1000
+        self._max_nodes_per_write: int = 1000
 
     def _browse_opcua_name_space_depth_first_until_path_is_valid(self, path: str) -> tuple[str, list[asyncua.ua.uatypes.QualifiedName]]:
         """ Given a path to a node that does not exist, find the closest
@@ -75,6 +92,18 @@ class OPCUA_Hardware(HardwareLayerBase):
                 break
         children = [child.read_browse_name() for child in children]
         return (path, children,)
+
+    def _query_server_operation_limits(self):
+        """ Ask the server about it's operational capabilities. """
+        registers = [
+            Register("max_nodes_per_read",
+                     RegisterDirection.Read,
+                     path="Objects/0:Server/0:ServerCapabilities/0:OperationLimits/0:MaxNodesPerRead"),
+            Register("max_nodes_per_write",
+                     RegisterDirection.Read,
+                     path="Objects/0:Server/0:ServerCapabilities/0:OperationLimits/0:MaxNodesPerWrite"),
+        ]
+        self._max_nodes_per_read, self._max_nodes_per_write = self.read_batch(registers)
 
     def validate_offline(self):
         for r in self.registers.values():
@@ -169,9 +198,11 @@ class OPCUA_Hardware(HardwareLayerBase):
         for r in registers:
             if RegisterDirection.Read not in r.direction:
                 raise HardwareLayerException("Attempt to read unreadable register {r}.")
+        values = []
         try:
-            nodes = self._registers_to_nodes(registers)
-            values = self._client.read_values(nodes)
+            for register_batch in batched(registers, self._max_nodes_per_read):
+                nodes = self._registers_to_nodes(register_batch)
+                values += self._client.read_values(nodes)
         except ConnectionError:
             self.connection_status.set_not_ok()
             raise HardwareLayerException(f"Not connected to {self.host}")
@@ -265,7 +296,9 @@ class OPCUA_Hardware(HardwareLayerBase):
             # https://github.com/FreeOpcUa/opcua-asyncio/blob/master/asyncua/sync.py
             write_attributes = asyncua.sync.sync_uaclient_method(
                                asyncua.client.ua_client.UaClient.write_attributes)(self._client)
-            write_attributes(node_ids, data_values, asyncua.ua.AttributeIds.Value)
+            for node_id_batch, data_value_batch in zip(batched(node_ids, self._max_nodes_per_write),
+                                                       batched(data_values, self._max_nodes_per_write)):
+                write_attributes(node_id_batch, data_value_batch, asyncua.ua.AttributeIds.Value)
         except ConnectionError:
             self.connection_status.set_not_ok()
             raise HardwareLayerException(f"Not connected to {self.host}")
@@ -290,6 +323,7 @@ class OPCUA_Hardware(HardwareLayerBase):
             raise HardwareLayerException(f"Unable to connect to {self.host}")
         logger.info(f"Connected to {self.host}")
         self.connection_status.set_ok()
+        self._query_server_operation_limits()
 
     def disconnect(self):
         """ Disconnect hardware. """
