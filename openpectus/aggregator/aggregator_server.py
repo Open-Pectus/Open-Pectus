@@ -50,7 +50,9 @@ class AggregatorServer:
         self.fastapi.mount("/", SinglePageApplication(directory=self.frontend_dist_dir))
 
     def init_db(self):
-        database.configure_db(Config("alembic.ini").get_main_option('sqlalchemy.url'))
+        alembic_ini_file_path = os.path.join(os.path.dirname(__file__), "alembic.ini")
+        sqlalchemy_url = Config(alembic_ini_file_path).get_main_option('sqlalchemy.url')
+        database.configure_db(sqlalchemy_url)
         self.fastapi.add_middleware(database.DBSessionMiddleware)
 
     def start(self):
