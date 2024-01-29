@@ -91,3 +91,7 @@ class DemoHardware(HardwareLayerBase):
 
     def write(self, value: Any, r: Register):
         pass
+
+    def connect(self): ...
+
+    def disconnect(self): ...

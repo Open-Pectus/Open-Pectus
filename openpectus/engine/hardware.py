@@ -129,12 +129,12 @@ class HardwareLayerBase():
         self.connection_status.set_not_ok()
 
     def validate_offline(self):
-        """ Perform checks that verify that the registers definition is valid. """
-        raise NotImplementedError
+        """ Perform checks that verify that the registers definition is valid. Raise on validation error. """
+        pass
 
     def validate_online(self):
-        """ Perform checks that verify that the register definition works. """
-        raise NotImplementedError
+        """ Perform checks that verify that the register definition works. Raise on validation error. """
+        pass
 
 
 class NullHardware(HardwareLayerBase):
