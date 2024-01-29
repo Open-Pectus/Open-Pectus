@@ -1,8 +1,8 @@
-"""bootstrap
+"""Bootstrap
 
-Revision ID: fde0aeeb29df
+Revision ID: 646d56d49b76
 Revises: 
-Create Date: 2024-01-29 10:58:31.671952
+Create Date: 2024-01-29 15:08:39.310025
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'fde0aeeb29df'
+revision: str = '646d56d49b76'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -24,7 +24,7 @@ def upgrade() -> None:
     sa.Column('engine_id', sa.String(), nullable=False),
     sa.Column('run_id', sa.String(), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_PlotLogs'))
     )
     op.create_table('ProcessUnits',
     sa.Column('engine_id', sa.String(), nullable=False),
@@ -33,26 +33,26 @@ def upgrade() -> None:
     sa.Column('runtime_msec', sa.Integer(), nullable=False),
     sa.Column('current_user_role', sa.String(), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_ProcessUnits'))
     )
     op.create_table('RecentRunMethodAndStates',
     sa.Column('run_id', sa.String(), nullable=False),
     sa.Column('method', sa.JSON(), nullable=False),
     sa.Column('state', sa.JSON(), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_RecentRunMethodAndStates'))
     )
     op.create_table('RecentRunPlotConfigurations',
     sa.Column('run_id', sa.String(), nullable=False),
     sa.Column('plot_configuration', sa.JSON(), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_RecentRunPlotConfigurations'))
     )
     op.create_table('RecentRunRunLogs',
     sa.Column('run_id', sa.String(), nullable=False),
     sa.Column('run_log', sa.JSON(), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_RecentRunRunLogs'))
     )
     op.create_table('RecentRuns',
     sa.Column('engine_id', sa.String(), nullable=False),
@@ -63,7 +63,7 @@ def upgrade() -> None:
     sa.Column('completed_date', sa.DateTime(), nullable=False),
     sa.Column('contributors', sa.JSON(), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_RecentRuns'))
     )
     op.create_table('PlotLogEntries',
     sa.Column('name', sa.String(), nullable=False),
@@ -71,8 +71,8 @@ def upgrade() -> None:
     sa.Column('value_type', sa.Enum('STRING', 'FLOAT', 'INT', 'CHOICE', 'NONE', name='processvaluetype'), nullable=False),
     sa.Column('plot_log_id', sa.Integer(), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['plot_log_id'], ['PlotLogs.id'], ),
-    sa.PrimaryKeyConstraint('id')
+    sa.ForeignKeyConstraint(['plot_log_id'], ['PlotLogs.id'], name=op.f('fk_PlotLogEntries_plot_log_id_PlotLogs')),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_PlotLogEntries'))
     )
     op.create_table('PlotLogEntryValues',
     sa.Column('plot_log_entry_id', sa.Integer(), nullable=False),
@@ -81,8 +81,8 @@ def upgrade() -> None:
     sa.Column('value_float', sa.Float(), nullable=True),
     sa.Column('value_int', sa.Integer(), nullable=True),
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['plot_log_entry_id'], ['PlotLogEntries.id'], ),
-    sa.PrimaryKeyConstraint('id')
+    sa.ForeignKeyConstraint(['plot_log_entry_id'], ['PlotLogEntries.id'], name=op.f('fk_PlotLogEntryValues_plot_log_entry_id_PlotLogEntries')),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_PlotLogEntryValues'))
     )
     # ### end Alembic commands ###
 
