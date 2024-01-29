@@ -13,7 +13,6 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.requests import Request
 from starlette.types import ASGIApp
 
-reg = registry()
 _engine: Engine | None = None
 _sessionmaker: sessionmaker[Session] | None = None
 _session_ctx: ContextVar[Session | None] = ContextVar("_session", default=None)

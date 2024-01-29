@@ -12,7 +12,6 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship,
 
 class DBModel(DeclarativeBase):
     """ Base model for data entity classes. """
-    registry = database.reg
     id: Mapped[int] = mapped_column(primary_key=True)
     metadata = MetaData(naming_convention={
         "ix": "ix_%(column_0_label)s",
