@@ -25,14 +25,6 @@ class Register():
     def direction(self) -> RegisterDirection:
         return self._direction
 
-    # @property
-    # def value(self):
-    #     return self._value
-
-    # @value.setter
-    # def value(self, val: Any):
-    #     self._value = val
-
     @property
     def options(self) -> Dict[str, Any]:
         return self._options
@@ -75,8 +67,6 @@ class HardwareConnectionStatus():
     @property
     def status(self):
         return self.is_connected
-
-# TODO use better type than Any for hw values
 
 
 class HardwareLayerBase():
