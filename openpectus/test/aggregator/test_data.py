@@ -24,6 +24,9 @@ def migrate_db():
     # alembic_cfg.set_main_option('script_location', prefixed_script_location)
     # alembic_cfg.set_main_option('sqlalchemy.url', sqlalchemy_url)
     # command.upgrade(alembic_cfg, 'head')
+
+    # we can't use the migrations scripts, as above, but must create the tables here on the fly,
+    # due to the TestModel only being registered here, and thus not being migrated by the migration scripts
     database.reg.metadata.create_all(database._engine)
 
 def init_db():

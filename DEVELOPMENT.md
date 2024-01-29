@@ -86,6 +86,21 @@ python -m build -o openpectus/dist
 ```
 
 
+**To create a new migration script:**  
+
+Change the database model(s) in aggregator/data/models.py first, then run:
+```shell
+alembic revision --autogenerate -m "<migration script name>"
+```
+This will create a new migration script in `aggregator/data/alembic/versions/` based on the model changes.  
+You **must** check that the changes within are acceptable, and change them if they are not.  
+It is a good idea to ensure the downgrade step will leave data as it was.  
+See https://alembic.sqlalchemy.org/en/latest/autogenerate.html#what-does-autogenerate-detect-and-what-does-it-not-detect for what autogenerate will and will not detect.
+
+You can then test your migration with `alembic upgrade head` and `alembic downgrade -1`.  
+`alembic upgrade head` is automatically run when aggregator starts, in aggregator/main.py main() function.
+
+Currently, automatic tests touching the database does not use the migration scripts, so you can't trust those to verify the migrations.
 
 # 3. Running Open Pectus
 
