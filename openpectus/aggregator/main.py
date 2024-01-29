@@ -1,6 +1,8 @@
 import logging
 from argparse import ArgumentParser
 
+from alembic import command
+from alembic.config import Config
 from openpectus import log_setup_colorlog
 from openpectus.aggregator.aggregator_server import AggregatorServer
 
@@ -45,6 +47,7 @@ def main():
     args = get_args()
     title = "Pectus Aggregator"
     print(f"*** {title} ***")
+    command.upgrade(Config("alembic.ini"), 'head')
     AggregatorServer(title, args.host, args.port, args.frontend_dist_dir).start()
 
 
