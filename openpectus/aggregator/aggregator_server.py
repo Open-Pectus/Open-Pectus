@@ -52,6 +52,8 @@ class AggregatorServer:
     def init_db(self):
         alembic_ini_file_path = os.path.join(os.path.dirname(__file__), "alembic.ini")
         sqlalchemy_url = Config(alembic_ini_file_path).get_main_option('sqlalchemy.url')
+        if sqlalchemy_url is None:
+            raise ValueError('sqlalchemy.url not set in alembic.ini file')
         database.configure_db(sqlalchemy_url)
         self.fastapi.add_middleware(database.DBSessionMiddleware)
 

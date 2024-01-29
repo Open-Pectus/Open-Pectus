@@ -27,6 +27,7 @@ def migrate_db():
 
     # we can't use the migrations scripts, as above, but must create the tables here on the fly,
     # due to the TestModel only being registered here, and thus not being migrated by the migration scripts
+    assert database._engine is not None
     database.reg.metadata.create_all(database._engine)
 
 def init_db():
