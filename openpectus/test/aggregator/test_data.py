@@ -4,6 +4,8 @@ from datetime import datetime
 import openpectus.aggregator.data.models as DMdl
 import openpectus.aggregator.models as Mdl
 import openpectus.aggregator.routers.dto as Dto
+from alembic import command
+from alembic.config import Config
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import RecentRunRepository
 from openpectus.aggregator.routers.serialization import deserialize, serialize
@@ -11,10 +13,22 @@ from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Mapped, mapped_column
 
+sqlalchemy_url = "sqlite:///:memory:"
+
+def configure_db():
+    database.configure_db(sqlalchemy_url)
+
+def migrate_db():
+    # alembic_cfg = Config("../../aggregator/alembic.ini")
+    # prefixed_script_location = '../../aggregator/' + alembic_cfg.get_main_option('script_location')
+    # alembic_cfg.set_main_option('script_location', prefixed_script_location)
+    # alembic_cfg.set_main_option('sqlalchemy.url', sqlalchemy_url)
+    # command.upgrade(alembic_cfg, 'head')
+    database.reg.metadata.create_all(database._engine)
 
 def init_db():
-    database.configure_db(":memory:")
-    database.create_db()
+    configure_db()
+    migrate_db()
 
 
 class DatabaseTest(unittest.TestCase):
@@ -23,7 +37,7 @@ class DatabaseTest(unittest.TestCase):
         name: Mapped[str] = mapped_column()
 
     def test_create_db(self):
-        database.configure_db(":memory:")
+        configure_db()
 
         stmt = select(DatabaseTest.TestModel)
 
@@ -35,7 +49,7 @@ class DatabaseTest(unittest.TestCase):
                 self.assertIsNotNone(result)
 
         # create the tables
-        database.create_db()
+        migrate_db()
 
         # now execute works
         with database.create_scope():

@@ -2,6 +2,7 @@ import os
 from typing import List
 
 import uvicorn
+from alembic.config import Config
 from fastapi import FastAPI, APIRouter
 from fastapi.routing import APIRoute
 from openpectus.aggregator.aggregator_message_handlers import AggregatorMessageHandlers
@@ -49,9 +50,8 @@ class AggregatorServer:
         self.fastapi.mount("/", SinglePageApplication(directory=self.frontend_dist_dir))
 
     def init_db(self):
-        database.configure_db()
+        database.configure_db(Config("alembic.ini").get_main_option('sqlalchemy.url'))
         self.fastapi.add_middleware(database.DBSessionMiddleware)
-        database.create_db()
 
     def start(self):
         print(f"Serving frontend at http://{self.host}:{self.port}")

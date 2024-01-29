@@ -17,7 +17,6 @@ reg = registry()
 _engine: Engine | None = None
 _sessionmaker: sessionmaker[Session] | None = None
 _session_ctx: ContextVar[Session | None] = ContextVar("_session", default=None)
-alembic_cfg = Config(f"{os.path.abspath(os.path.dirname(__file__))}/alembic.ini")
 
 
 @contextmanager
@@ -49,26 +48,16 @@ def scoped_session() -> Session:
     return session
 
 
-def configure_db():
+def configure_db(database_url: str):
     global _engine, _sessionmaker
     _engine = create_engine(
-        alembic_cfg.get_main_option('sqlalchemy.url'),
+        database_url,
         echo=False,
         connect_args={"check_same_thread": False},
         json_serializer=json_serialize,
         json_deserializer=json_deserialize)
     _sessionmaker = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
 
-
-def create_db():
-    """ Create database tables for registered models. """
-    if _engine is None:
-        raise DatabaseNotConfiguredError()
-    if len(reg.mappers) == 0:
-        raise ValueError("No data classes have been mapped")
-
-    reg.metadata.create_all(_engine)
-    command.stamp(alembic_cfg, "head") # https://alembic.sqlalchemy.org/en/latest/cookbook.html#building-uptodate
 
 
 def json_serialize(instance) -> str:
