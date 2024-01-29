@@ -102,6 +102,13 @@ You can then test your migration with `alembic upgrade head` and `alembic downgr
 
 Currently, automatic tests touching the database does not use the migration scripts, so you can't trust those to verify the migrations.
 
+SQLite has some severe limitations on what schema changes it supports. e.g. it doesn't support altering a column besides renaming it: https://sqlite.org/lang_altertable.html  
+To alter e.g. a column type, you will need to create a new table, copy the data over, and then drop the old one.
+Alembic supports this with "batch" migrations: https://alembic.sqlalchemy.org/en/latest/batch.html  
+The autogenerate feature has been configured to generate with batch migrations as described here: https://alembic.sqlalchemy.org/en/latest/batch.html#batch-mode-with-autogenerate
+
+
+
 # 3. Running Open Pectus
 
 ## 3.1. Aggregator

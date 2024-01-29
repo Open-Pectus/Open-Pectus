@@ -26,8 +26,7 @@ class ProcessUnit(DBModel):
     location: Mapped[str] = mapped_column()
     runtime_msec: Mapped[int] = mapped_column()
     current_user_role: Mapped[str] = mapped_column()
-    # users = JSONField()  # list[User] ?
-    # def set_state(self, state: ProcessUnitState):
+    # contributors: Mapped[list[str]] = mapped_column(type_=JSON, default=[])
 
 
 class RecentRun(DBModel):
