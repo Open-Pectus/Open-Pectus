@@ -6,14 +6,20 @@ from typing import Any, Dict
 
 import openpectus.aggregator.data.database as database
 from openpectus.aggregator.models import Method, MethodState, PlotConfiguration, PlotColorRegion, SubPlot, RunLog
-from sqlalchemy import JSON, ForeignKey
+from sqlalchemy import JSON, ForeignKey, MetaData
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, attribute_keyed_dict
 
 
 class DBModel(DeclarativeBase):
     """ Base model for data entity classes. """
-    registry = database.reg
     id: Mapped[int] = mapped_column(primary_key=True)
+    metadata = MetaData(naming_convention={
+        "ix": "ix_%(column_0_label)s",
+        "uq": "uq_%(table_name)s_%(column_0_name)s",
+        "ck": "ck_%(table_name)s_`%(constraint_name)s`",
+        "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+        "pk": "pk_%(table_name)s"
+    })
 
 
 class ProcessUnit(DBModel):
@@ -26,8 +32,7 @@ class ProcessUnit(DBModel):
     location: Mapped[str] = mapped_column()
     runtime_msec: Mapped[int] = mapped_column()
     current_user_role: Mapped[str] = mapped_column()
-    # users = JSONField()  # list[User] ?
-    # def set_state(self, state: ProcessUnitState):
+    # contributors: Mapped[list[str]] = mapped_column(type_=JSON, default=[])
 
 
 class RecentRun(DBModel):
