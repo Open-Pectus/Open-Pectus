@@ -1,3 +1,4 @@
+import os
 import unittest
 from datetime import datetime
 
@@ -13,31 +14,41 @@ from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Mapped, mapped_column
 
-sqlalchemy_url = "sqlite:///:memory:"
 
 def configure_db():
-    database.configure_db(sqlalchemy_url)
+    database.configure_db("sqlite:///:memory:")
 
-def migrate_db():
-    # alembic_cfg = Config("../../aggregator/alembic.ini")
-    # prefixed_script_location = '../../aggregator/' + alembic_cfg.get_main_option('script_location')
-    # alembic_cfg.set_main_option('script_location', prefixed_script_location)
-    # alembic_cfg.set_main_option('sqlalchemy.url', sqlalchemy_url)
-    # command.upgrade(alembic_cfg, 'head')
 
-    # we can't use the migrations scripts, as above, but must create the tables here on the fly,
+def create_db():
+    # we can't use the migrations scripts, as in the migrate_db function, but must create the tables here on the fly,
     # due to the TestModel only being registered here, and thus not being migrated by the migration scripts
     assert database._engine is not None
     DMdl.DBModel.metadata.create_all(database._engine)
 
+
+def migrate_db(alembic_cfg: Config):
+    command.upgrade(alembic_cfg, 'head')
+
+
+def get_modified_alembic_config():
+    aggregator_prefix = os.path.join(os.path.dirname(__file__), "../../aggregator")
+    alembic_cfg = Config(os.path.join(aggregator_prefix, "alembic.ini"))
+    existing_script_location = alembic_cfg.get_main_option('script_location')
+    assert existing_script_location is not None
+    prefixed_script_location = os.path.join(aggregator_prefix, existing_script_location)
+    alembic_cfg.set_main_option('script_location', prefixed_script_location)
+    return alembic_cfg
+
+
 def init_db():
     configure_db()
-    migrate_db()
+    create_db()
 
 
 class DatabaseTest(unittest.TestCase):
     class TestModel(DMdl.DBModel):
         __tablename__ = "TestModel"
+
         name: Mapped[str] = mapped_column()
 
     def test_create_db(self):
@@ -53,13 +64,25 @@ class DatabaseTest(unittest.TestCase):
                 self.assertIsNotNone(result)
 
         # create the tables
-        migrate_db()
+        create_db()
 
         # now execute works
         with database.create_scope():
             session = database.scoped_session()
             result = session.execute(stmt)
             self.assertIsNotNone(result)
+
+
+    def test_no_missing_migration(self):
+        db_filename = os.path.join(os.path.dirname(__file__), 'temp_db')
+        configure_db()
+        alembic_cfg = get_modified_alembic_config()
+        alembic_cfg.set_main_option('sqlalchemy.url', "sqlite:///"+db_filename)
+
+        migrate_db(alembic_cfg)
+        # command.current(alembic_cfg, True) # useful for debugging
+        command.check(alembic_cfg)
+        os.remove(db_filename)
 
     def test_create_row_scoped(self):
         init_db()
@@ -80,7 +103,6 @@ class DatabaseTest(unittest.TestCase):
             session.commit()
             # refresh is required ...
             session.refresh(model)
-
 
         # ... to access updated property outside of the session
         self.assertEqual(model.id, 1)

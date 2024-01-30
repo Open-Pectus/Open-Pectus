@@ -65,11 +65,21 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
 
+    def exclude_test_models(object, name: str | None, type_: str, reflected: bool, compare_to):
+        if (type_ == "table" and
+                not reflected and
+                name is not None and
+                name.lower().startswith('test')):
+            return False
+        else:
+            return True
+
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            render_as_batch=True
+            render_as_batch=True,
+            include_object=exclude_test_models
         )
 
         with context.begin_transaction():
