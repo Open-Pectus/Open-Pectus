@@ -102,7 +102,7 @@ class RecentRunRepository(RepositoryBase):
         recent_run = RecentRun()
         recent_run.engine_id = engine_data.engine_id
         recent_run.run_id = engine_data.run_id
-        recent_run.computer_name = engine_data.computer_name
+        recent_run.engine_computer_name = engine_data.computer_name
         recent_run.uod_name = engine_data.uod_name
         recent_run.started_date = engine_data.run_data.run_started
         recent_run.completed_date = datetime.now(timezone.utc)

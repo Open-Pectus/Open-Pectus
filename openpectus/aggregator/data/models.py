@@ -40,7 +40,7 @@ class RecentRun(DBModel):
     __tablename__ = "RecentRuns"
     engine_id: Mapped[str] = mapped_column()
     run_id: Mapped[str] = mapped_column()
-    computer_name: Mapped[str] = mapped_column()
+    engine_computer_name: Mapped[str] = mapped_column()
     uod_name: Mapped[str] = mapped_column()
     started_date: Mapped[datetime] = mapped_column()
     completed_date: Mapped[datetime] = mapped_column()
