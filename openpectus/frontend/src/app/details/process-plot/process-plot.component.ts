@@ -199,7 +199,7 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
 
     const hasNewValue = processValueNamesToConsider.map(processValueName => {
       const colorRegionData = plotLog.entries[processValueName]?.values;
-      if(colorRegionData === undefined) return;
+      if(colorRegionData === undefined || colorRegionData.length === 0) return;
       const newestValue = colorRegionData[colorRegionData.length - 1].value;
       const olderValues = colorRegionData.slice(0, colorRegionData.length - 1).map(value => value.value);
       return !olderValues.includes(newestValue);

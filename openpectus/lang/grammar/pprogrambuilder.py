@@ -79,11 +79,6 @@ class PProgramBuilder(pcodeListener):
     def get_program(self) -> PProgram:
         return self.program
 
-    # def with_whildren(self, ctx: ParserRuleContext, f: Callable[[ParserRuleContext], None]):
-    #     if ctx.children is not None:
-    #         for x in ctx.children:
-    #             f(x)
-
     def enterProgram(self, ctx: pcodeParser.ProgramContext):
         # set program as scope
         self.program.line = ctx.start.line  # type: ignore
@@ -95,7 +90,7 @@ class PProgramBuilder(pcodeListener):
         instruction_text = ctx.getText()
         instruction_text = "" if instruction_text is None else instruction_text.strip()
 
-        def is_blank_or_comment():            
+        def is_blank_or_comment():
             if instruction_text == "":
                 return True
             elif instruction_text.startswith("#"):
@@ -156,7 +151,11 @@ class PProgramBuilder(pcodeListener):
         # attach start position
         assert self.instruction_start is not None
         if self.instruction is None:
-            self.instruction = PErrorInstruction(self.scope, ctx.getText())
+            if ctx.getText().strip() == "Increment run counter":  # Hack until we can make another parser build
+                self.instruction = PCommand(self.scope)
+                self.instruction.name = "Increment run counter"
+            else:
+                self.instruction = PErrorInstruction(self.scope, ctx.getText())
 
         self.instruction.line = self.instruction_start.line
         self.instruction.indent = self.instruction_start.indent

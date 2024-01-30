@@ -1,13 +1,14 @@
 import asyncio
 import logging
-from datetime import datetime, timedelta
+import time
+from datetime import datetime, timezone
 
 import openpectus.aggregator.models as Mdl
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
-from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRepository
 from openpectus.aggregator.data import database
+from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRepository
 from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.aggregator.models import EngineData
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
@@ -58,29 +59,39 @@ class FromEngine:
 
         self._persist_tag_values(engine_data, plot_log_repo)
 
-    def _run_id_changed(self, plot_log_repo: PlotLogRepository, recent_run_repo: RecentRunRepository, engine_data: EngineData, run_id_tag: Mdl.TagValue):
+    def _run_id_changed(self, plot_log_repo: PlotLogRepository, recent_run_repo: RecentRunRepository, engine_data: EngineData,
+                        run_id_tag: Mdl.TagValue):
         """ Handles persistance related to start and end of a run """
-        logger.warning(f'run id changed to {run_id_tag.value}')
         if run_id_tag.value is None and engine_data.run_id is not None:
             # Run stopped
             recent_run_repo.store_recent_run(engine_data)
-            engine_data.run_data = Mdl.RunData()
-            # TODO: persist and clear from engine_map: method, run log,
         else:
             # Run started
-            engine_data.run_data.run_started = datetime.fromtimestamp(run_id_tag.tick_time)
+            engine_data.run_data.run_started = datetime.fromtimestamp(run_id_tag.tick_time, timezone.utc)
             plot_log_repo.create_plot_log(engine_data, str(run_id_tag.value))
 
     def _persist_tag_values(self, engine_data: EngineData, plot_log_repo: PlotLogRepository):
-        now = datetime.now()
-        last_persisted = engine_data.run_data.tags_last_persisted
-        time_threshold_exceeded = last_persisted is None or now - last_persisted > timedelta(seconds=persistance_threshold_seconds)
+        latest_persisted_tick_time = engine_data.run_data.latest_persisted_tick_time
+        time_threshold_exceeded = latest_persisted_tick_time is None or time.time() - latest_persisted_tick_time > persistance_threshold_seconds
         if engine_data.run_id is not None and time_threshold_exceeded:
-            tag_values_to_persist = [tag_value for tag_value in engine_data.tags_info.map.values()
-                                     if last_persisted is None
-                                     or tag_value.tick_time > last_persisted.timestamp()]
+            tag_values_to_persist = [tag_value.copy() for tag_value in engine_data.tags_info.map.values()
+                                     if latest_persisted_tick_time is None
+                                     or tag_value.tick_time > latest_persisted_tick_time]
+            """ 
+            We manipulate the tick_time of the tagValues we persist. But it's not changing it to something that didn't 
+            exist in the engine, because we change the tick_time to a tick_time that comes from an actual later reading 
+            where those tagValues we manipulate was read and simply had not changed value since the value we have been 
+            reported.
+            It's difficult to explain, but after this manipulation, the tagValues will still match an actual tagValue 
+            read in the engine, just not one reported.
+            We do this because it solves a lot of issues when we later try to match values based on the tick_time.
+            """
+            highest_tick_time_to_persist = max([tag_Value.tick_time for tag_Value in tag_values_to_persist])
+            for tag_value_to_persist in tag_values_to_persist:
+                tag_value_to_persist.tick_time = highest_tick_time_to_persist
+
             plot_log_repo.store_tag_values(engine_data.engine_id, engine_data.run_id, tag_values_to_persist)
-            engine_data.run_data.tags_last_persisted = now
+            engine_data.run_data.latest_persisted_tick_time = highest_tick_time_to_persist
 
     def runlog_changed(self, engine_id: str, runlog: Mdl.RunLog):
         try:

@@ -57,7 +57,7 @@ export class ProcessPlotTooltip {
 
     subplotBorders.on('mouseleave', () => {
       tooltip.call(this.callout.bind(this));
-      eventTargetParentElement.call(this.line.bind(this));
+      eventTargetParentElement?.call(this.line.bind(this));
     });
   }
 

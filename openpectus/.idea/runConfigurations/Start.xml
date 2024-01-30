@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Start" type="CompoundRunConfigurationType">
+    <toRun name="Aggregator" type="PythonConfigurationType" />
+    <toRun name="Engine" type="PythonConfigurationType" />
+    <method v="2" />
+  </configuration>
+</component>

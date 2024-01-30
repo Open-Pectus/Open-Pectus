@@ -2,15 +2,12 @@ import logging
 import time
 import unittest
 from typing import List, Any
-from uuid import UUID
 
 import pint
 from openpectus.engine.engine import Engine
-from openpectus.lang.exec.commands import CommandRequest
-from openpectus.lang.exec.pinterpreter import InterpreterContext, PInterpreter
-from openpectus.lang.exec.tags import Tag, TagCollection, SystemTagName
+from openpectus.lang.exec.pinterpreter import PInterpreter
+from openpectus.lang.exec.tags import Tag, SystemTagName
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
-from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.grammar.pprogramformatter import print_parsed_program as print_program
 from openpectus.lang.model.pprogram import PProgram
 from openpectus.test.engine.utility_methods import run_engine, build_program
@@ -416,16 +413,3 @@ Mark: b
 
 if __name__ == "__main__":
     unittest.main()
-
-
-class TestInterpreterContext(InterpreterContext):
-    def __init__(self, engine: Engine) -> None:
-        super().__init__()
-        self.engine = engine
-
-    @property
-    def tags(self) -> TagCollection:
-        return self.engine.tags
-
-    def schedule_execution(self, name: str, args: str | None = None, exec_id: UUID | None = None) -> CommandRequest:
-        return self.engine.schedule_execution(name, args, exec_id)
