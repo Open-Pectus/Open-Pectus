@@ -139,7 +139,12 @@ class Engine(InterpreterContext):
         self._tick_timer.start()
 
     def stop(self):
-        self.uod.hwl.disconnect()
+        try:
+            self.uod.hwl.disconnect()
+        except HardwareLayerException:
+            logger.error("Disconnect hardware error", exc_info=True)
+            # TODO handle disconnected state
+
         self._running = False
         self._tick_timer.stop()
         self.cleanup()
@@ -216,7 +221,13 @@ class Engine(InterpreterContext):
         #     tag.set_value(value)
 
         registers = self.uod.hwl.registers
-        register_values = self.uod.hwl.read_batch(list(registers.values()))
+        try:
+            register_values = self.uod.hwl.read_batch(list(registers.values()))
+        except HardwareLayerException:
+            logger.error("Hardware read_batch error", exc_info=True)
+            # TODO handle disconnected state
+            return
+
         for i, r in enumerate(registers.values()):
             tag = self.uod.tags.get(r.name)
             tag_value = register_values[i]
@@ -538,7 +549,11 @@ class Engine(InterpreterContext):
                 else r.options["from_tag"](tag_value)
             register_values.append(register_value)
 
-        hwl.write_batch(register_values, register_list)
+        try:
+            hwl.write_batch(register_values, register_list)
+        except HardwareLayerException:
+            logger.error("Hardware write_batch error", exc_info=True)
+            # TODO handle disconnected state
 
     # differentiate between injected commands (which are to be executed asap without modifying the program)
     # and non-injected which are either

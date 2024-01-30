@@ -1,5 +1,6 @@
 from enum import Flag, auto
-from typing import Any, Dict, Iterable
+from typing import Any, Dict, Sequence
+from datetime import datetime
 
 
 class RegisterDirection(Flag):
@@ -24,17 +25,15 @@ class Register():
     def direction(self) -> RegisterDirection:
         return self._direction
 
-    # @property
-    # def value(self):
-    #     return self._value
-
-    # @value.setter
-    # def value(self, val: Any):
-    #     self._value = val
-
     @property
-    def options(self):
+    def options(self) -> Dict[str, Any]:
         return self._options
+
+    def __str__(self):
+        return f"Register(name={self._name})"
+
+    def __repr__(self):
+        return str(self)
 
 
 class HardwareLayerException(Exception):
@@ -48,41 +47,83 @@ class HardwareLayerException(Exception):
         return self.message
 
 
-# TODO use better type than Any for hw values
+class HardwareConnectionStatus():
+    """ Represents the hardware connection status. """
+    def __init__(self):
+        self.is_connected: bool = False
+        self.connection_attempt_time = None
+        self.successful_connection_time = None
+
+    def set_ok(self):
+        self.is_connected = True
+        self.successful_connection_time = datetime.now()
+
+    def set_not_ok(self):
+        self.is_connected = False
+
+    def register_connection_attempt(self):
+        self.connection_attempt_time = datetime.now()
+
+    @property
+    def status(self):
+        return self.is_connected
+
 
 class HardwareLayerBase():
-    """ Represents the hardware layer, typically implemented via OPCUA"""
+    """ Represents the hardware layer """
     def __init__(self) -> None:
         self.registers: Dict[str, Register] = {}
+        self.connection_status: HardwareConnectionStatus = HardwareConnectionStatus()
+
+    def __enter__(self):
+        """ Allow use as context manager. """
+        self.connect()
+
+    def __exit__(self, type, value, traceback):
+        self.disconnect()
 
     def read(self, r: Register) -> Any:
-        raise NotImplementedError()
+        if RegisterDirection.Read not in r.direction:
+            raise HardwareLayerException("Attempt to read unreadable register {r}.")
+        raise NotImplementedError
 
-    def read_batch(self, registers: list[Register]) -> list[Any]:
+    def read_batch(self, registers: Sequence[Register]) -> list[Any]:
         """ Read batch of register values. Override to provide efficient implementation """
+        for r in registers:
+            if RegisterDirection.Read not in r.direction:
+                raise HardwareLayerException("Attempt to read unreadable register {r}.")
         values = []
         for r in registers:
-            if RegisterDirection.Read in r.direction:
-                values.append(self.read(r))
+            values.append(self.read(r))
         return values
 
-    def write(self, value: Any, r: Register):
+    def write(self, value: Any, r: Register) -> None:
         if RegisterDirection.Write not in r.direction:
-            pass
-        raise NotImplementedError()
+            raise HardwareLayerException("Attempt to write unwritable register {r}.")
+        raise NotImplementedError
 
-    def write_batch(self, values: Iterable[Any], registers: Iterable[Register]):
+    def write_batch(self, values: Sequence[Any], registers: Sequence[Register]):
         """ Write batch of register values. Override to provide efficient implementation """
+        for r in registers:
+            if RegisterDirection.Write not in r.direction:
+                raise HardwareLayerException("Attempt to write unwritable register {r}.")
         for v, r in zip(values, registers):
-            if RegisterDirection.Write in r.direction:
-                self.write(v, r)
+            self.write(v, r)
 
     def connect(self):
         """ Connect to hardware. Throw HardwareLayerException on error. """
-        pass
+        self.connection_status.register_connection_attempt()
 
     def disconnect(self):
         """ Connect to hardware. Throw HardwareLayerException on error. """
+        self.connection_status.set_not_ok()
+
+    def validate_offline(self):
+        """ Perform checks that verify that the registers definition is valid. Raise on validation error. """
+        pass
+
+    def validate_online(self):
+        """ Perform checks that verify that the register definition works. Raise on validation error. """
         pass
 
 
