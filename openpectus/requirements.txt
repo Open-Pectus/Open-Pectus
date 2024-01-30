@@ -13,7 +13,9 @@ fastapi_websocket_pubsub==0.3.8
 colorlog==6.7.0
 requests==2.31.0
 sqlalchemy==2.0.23
-pyright==1.1.348
+asyncua==1.0.6
+pyright==1.1.335
+labjack-ljm==1.23.0
 
 # simulation server
 #opcua
