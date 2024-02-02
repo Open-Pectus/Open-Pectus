@@ -49,7 +49,6 @@ class EngineReporter():
         self.engine.notify_initial_tags()
         self.send_tag_updates()
 
-
     def send_uod_info(self):
         readings: List[Mdl.ReadingInfo] = []
         for reading in self.engine.uod.readings:
@@ -61,7 +60,8 @@ class EngineReporter():
                     commands=[Mdl.ReadingCommand(name=c.name, command=c.command) for c in reading.commands])
                 readings.append(reading_info)
 
-        msg = EM.UodInfoMsg(readings=readings, plot_configuration=self.engine.uod.plot_configuration)
+        msg = EM.UodInfoMsg(readings=readings, plot_configuration=self.engine.uod.plot_configuration, hardware_str=str(self.engine.uod.hwl))
+
         response = self.dispatcher.post(msg)
         return not isinstance(response, M.ErrorMessage)
 

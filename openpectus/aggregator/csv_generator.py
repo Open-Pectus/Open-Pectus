@@ -25,6 +25,7 @@ def _write_metadata_rows(csv_writer, plot_log: PlotLog, recent_run: RecentRun):
     csv_writer.writerow(['# Engine Id', recent_run.engine_id])
     csv_writer.writerow(['# Engine Computer name', recent_run.engine_computer_name])
     csv_writer.writerow(['# Engine Version', recent_run.engine_version])
+    csv_writer.writerow(['# Engine Hardware string', recent_run.engine_hardware_str])
     csv_writer.writerow(['# Aggregator Computer name', gethostname()])
     csv_writer.writerow(['# Aggregator Version', __version__])
     csv_writer.writerow(['# Starting Time (UTC)', recent_run.started_date])
