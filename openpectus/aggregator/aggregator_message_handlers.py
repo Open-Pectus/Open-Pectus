@@ -40,7 +40,8 @@ class AggregatorMessageHandlers:
                 engine_id=engine_id,
                 computer_name=register_engine_msg.computer_name,
                 uod_name=register_engine_msg.uod_name,
-                location=register_engine_msg.location
+                location=register_engine_msg.location,
+                engine_version=register_engine_msg.engine_version
             ))
 
         logger.debug(f"Registration successful of client {engine_id}")

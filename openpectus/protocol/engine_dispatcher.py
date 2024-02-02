@@ -11,6 +11,7 @@ import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
 import requests
 from fastapi_websocket_rpc import RpcMethodsBase, WebSocketRpcClient
+from openpectus import __version__
 from openpectus.protocol.dispatch_interface import AGGREGATOR_REST_PATH, AGGREGATOR_RPC_WS_PATH, AGGREGATOR_HEALTH_PATH
 from openpectus.protocol.serialization import serialize, deserialize
 
@@ -45,7 +46,8 @@ class EngineDispatcher():
             return self.engine_id
 
     async def register_for_engine_id_async(self, uod_name: str, location: str):
-        register_engine_msg = EM.RegisterEngineMsg(computer_name=socket.gethostname(), uod_name=uod_name, location=location)
+        register_engine_msg = EM.RegisterEngineMsg(computer_name=socket.gethostname(), uod_name=uod_name, location=location,
+                                                   engine_version=__version__)
         register_response = self.post(register_engine_msg)
         logger.info("Registering for engine id")
         if not isinstance(register_response, AM.RegisterEngineReplyMsg) or not register_response.success:

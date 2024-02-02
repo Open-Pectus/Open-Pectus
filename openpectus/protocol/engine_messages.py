@@ -15,6 +15,7 @@ class RegisterEngineMsg(Msg.MessageBase):
     computer_name: str
     uod_name: str
     location: str
+    engine_version: str
     # uod file hash, file change date
 
 
