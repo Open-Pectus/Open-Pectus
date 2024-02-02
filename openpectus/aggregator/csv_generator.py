@@ -2,6 +2,7 @@ import csv
 import logging
 from io import StringIO
 from operator import concat
+from socket import gethostname
 from typing import Iterable
 
 from openpectus.aggregator.routers.dto import PlotLog, RecentRun, ProcessValueValueType
@@ -20,7 +21,9 @@ def generate_csv_string(plot_log: PlotLog, recent_run: RecentRun):
 
 def _write_metadata_rows(csv_writer, plot_log: PlotLog, recent_run: RecentRun):
     csv_writer.writerow(['# Recent Run Id', recent_run.run_id])
-    csv_writer.writerow(['# Process Unit Id', recent_run.engine_id])
+    csv_writer.writerow(['# Engine Id', recent_run.engine_id])
+    csv_writer.writerow(['# Engine Computer name', recent_run.engine_computer_name])
+    csv_writer.writerow(['# Aggregator Computer name', gethostname()])
     csv_writer.writerow(['# Starting Time (UTC)', recent_run.started_date])
     csv_writer.writerow(['# Ending Time (UTC)', recent_run.completed_date])
     csv_writer.writerow(concat(['# Contributors'], recent_run.contributors))

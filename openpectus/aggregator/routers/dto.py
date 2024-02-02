@@ -310,6 +310,7 @@ class RecentRun(Dto):
     run_id: str
     started_date: datetime
     completed_date: datetime
+    engine_computer_name: str
     contributors: List[str] = []
 
 class RecentRunMethod(Dto):
