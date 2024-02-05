@@ -1,5 +1,4 @@
 import logging
-import time
 import unittest
 import multiprocessing
 import asyncio
@@ -20,7 +19,8 @@ opcua_host = "opc.tcp://127.0.0.1:48401/"
 async def opcua_test_server_task(registers: Dict[str, Register],
                                  callback_output_queue,
                                  stop_event,
-                                 is_started_event) -> None:
+                                 is_started_event,
+                                 is_finished_event) -> None:
     post_write_callback_queue = multiprocessing.Queue()
     server = asyncua.Server()
     await server.init()
@@ -62,6 +62,7 @@ async def opcua_test_server_task(registers: Dict[str, Register],
         await asyncio.sleep(0.1)
         if not is_started_event.is_set():
             is_started_event.set()
+    server.unsubscribe_server_callback(asyncua.common.callback.CallbackType.PostWrite, post_write_callback)
 
     while not post_write_callback_queue.empty():
         write_value = post_write_callback_queue.get()
@@ -71,6 +72,8 @@ async def opcua_test_server_task(registers: Dict[str, Register],
         node_path = "/".join(node_path_list[1:])[2:]
         tag_value = write_value.Value.Value.Value
         callback_output_queue.put((node_path, tag_value,))
+    await server.stop()
+    is_finished_event.set()
 
 
 def sync_opcua_test_server_task(*args, **kwargs):
@@ -89,23 +92,25 @@ class OPCUATestServer():
     def __enter__(self):
         self.stop_event = multiprocessing.Event()  # Signal to OPC-UA test server that it should stop
         self.is_started_event = multiprocessing.Event()  # Signal from OPC-UA test server that it has started
+        self.is_finished_event = multiprocessing.Event()  # Signal from OPC-UA test server that it has finished
         self.process = multiprocessing.Process(target=sync_opcua_test_server_task,
                                                args=(self.registers,
                                                      self.callback_output_queue,
                                                      self.stop_event,
-                                                     self.is_started_event)
+                                                     self.is_started_event,
+                                                     self.is_finished_event,)
                                                )
         self.process.start()
         # Block until OPC-UA server is started
-        while not self.is_started_event.is_set():
-            time.sleep(0.1)
+        self.is_started_event.wait()
 
     def __exit__(self, type, value, traceback):
         self.stop_event.set()
-        self.process.join()
+        self.is_finished_event.wait()
         # Gather queue before closing the process to avoid corruption
         while not self.callback_output_queue.empty():
             self.server_write_events.append(self.callback_output_queue.get())
+        self.process.join()
         self.process.close()
 
 
