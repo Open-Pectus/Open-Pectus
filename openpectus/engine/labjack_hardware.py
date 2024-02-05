@@ -127,7 +127,7 @@ class Labjack_Hardware(HardwareLayerBase):
 
     def read(self, r: Register) -> Any:
         if RegisterDirection.Read not in r.direction:
-            raise HardwareLayerException("Attempt to read unreadable register {r}.")
+            raise HardwareLayerException(f"Attempt to read unreadable register {r}.")
         try:
             return ljm.eReadName(self._handle, r.options["port"])
         except ljm.LJMError as error:
@@ -138,7 +138,7 @@ class Labjack_Hardware(HardwareLayerBase):
         """ Read batch of register values with a single OPC-UA call. """
         for r in registers:
             if RegisterDirection.Read not in r.direction:
-                raise HardwareLayerException("Attempt to read unreadable register {r}.")
+                raise HardwareLayerException(f"Attempt to read unreadable register {r}.")
         try:
             return ljm.eReadNames(self._handle, len(registers), [r.options["port"] for r in registers])
         except ljm.LJMError as error:
@@ -147,7 +147,7 @@ class Labjack_Hardware(HardwareLayerBase):
 
     def write(self, value: Any, r: Register):
         if RegisterDirection.Write not in r.direction:
-            raise HardwareLayerException("Attempt to write unwritable register {r}.")
+            raise HardwareLayerException(f"Attempt to write unwritable register {r}.")
         try:
             return ljm.eWriteName(self._handle, r.options["port"], value)
         except ljm.LJMError as error:
@@ -158,7 +158,7 @@ class Labjack_Hardware(HardwareLayerBase):
         """ Write batch of register values with a single OPC-UA call. """
         for r in registers:
             if RegisterDirection.Write not in r.direction:
-                raise HardwareLayerException("Attempt to write unwritable register {r}.")
+                raise HardwareLayerException(f"Attempt to write unwritable register {r}.")
         try:
             ljm.eWriteNames(self._handle, len(registers), [r.options["port"] for r in registers], values)
         except ljm.LJMError as error:

@@ -21,8 +21,9 @@ def create_demo_uod() -> UnitOperationDefinitionBase:
     def get_plot_configuration() -> PlotConfiguration:
         return PlotConfiguration(
             color_regions=[
-                PlotColorRegion(process_value_name='Category',
-                            value_color_map={'Rising': '#66ff6633', 'Falling': '#6666ff33'})
+                PlotColorRegion(
+                    process_value_name='Category',
+                    value_color_map={'Rising': '#66ff6633', 'Falling': '#6666ff33'})
             ],
             sub_plots=[SubPlot(
                 axes=[PlotAxis(
