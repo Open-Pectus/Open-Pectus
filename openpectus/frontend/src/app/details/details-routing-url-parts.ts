@@ -1,7 +1,7 @@
 export class DetailsRoutingUrlParts {
   static processUnitUrlPart = 'process_unit';
-  static batchJobUrlPart = 'batch_job';
+  static recentRunUrlPart = 'recent_run';
   static processUnitIdParamName = 'process_unit_id';
-  static batchJobIdParamName = 'batch_job_id';
+  static recentRunIdParamName = 'recent_run_id';
 }
 

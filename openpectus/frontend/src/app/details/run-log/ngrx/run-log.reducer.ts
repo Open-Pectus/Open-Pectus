@@ -7,7 +7,7 @@ export interface RunLogState {
   runLog: RunLog;
   onlyRunning: boolean;
   filterText: string;
-  expandedLines: number[];
+  expandedLines: string[];
 }
 
 const initialState: RunLogState = {

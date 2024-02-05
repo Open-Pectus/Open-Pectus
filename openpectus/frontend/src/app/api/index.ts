@@ -8,8 +8,6 @@ export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { AuthConfig } from './models/AuthConfig';
-export type { BatchJob } from './models/BatchJob';
-export type { BatchJobCsv } from './models/BatchJobCsv';
 export type { CommandExample } from './models/CommandExample';
 export { CommandSource } from './models/CommandSource';
 export type { ControlState } from './models/ControlState';
@@ -37,6 +35,8 @@ export type { ProcessValueCommandNumberValue } from './models/ProcessValueComman
 export { ProcessValueType } from './models/ProcessValueType';
 export { PubSubTopic } from './models/PubSubTopic';
 export { Ready } from './models/Ready';
+export type { RecentRun } from './models/RecentRun';
+export type { RecentRunCsv } from './models/RecentRunCsv';
 export type { RunLog } from './models/RunLog';
 export type { RunLogLine } from './models/RunLogLine';
 export type { SubPlot } from './models/SubPlot';
@@ -45,6 +45,6 @@ export type { ValidationError } from './models/ValidationError';
 
 export { AggregatorService } from './services/AggregatorService';
 export { AuthService } from './services/AuthService';
-export { BatchJobService } from './services/BatchJobService';
 export { FrontendPubsubService } from './services/FrontendPubsubService';
 export { ProcessUnitService } from './services/ProcessUnitService';
+export { RecentRunsService } from './services/RecentRunsService';

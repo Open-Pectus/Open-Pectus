@@ -74,7 +74,7 @@ def setup_server_rest_routes(app: FastAPI, endpoint: PubSubEndpoint):
         engine_data = aggregator.get_registered_engine_data(engine_id)
         if engine_data is None:
             return Response("No data found for engine_id " + engine_id, status_code=400)
-        runlog = engine_data.runlog
+        runlog = engine_data.run_data.runlog
         print("runlog", runlog)
         if runlog is None:
             return Response("No runlog found for engine_id " + engine_id, status_code=400)

@@ -18,7 +18,7 @@ import { RunLogLineButtonComponent } from './run-log-line-button.component';
   `,
 })
 export class RunLogLineForceButtonComponent {
-  @Input() lineId?: number;
+  @Input() lineId?: string;
 
   constructor(private store: Store) {}
 

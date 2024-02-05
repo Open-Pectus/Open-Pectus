@@ -1,16 +1,18 @@
 import json
-from typing import Any
+import os
 from contextlib import contextmanager
 from contextvars import ContextVar
+from typing import Any
+
+from alembic import command
+from alembic.config import Config
+from pydantic.json import pydantic_encoder
 from sqlalchemy import create_engine, Engine
 from sqlalchemy.orm import registry, Session, sessionmaker
-
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.types import ASGIApp
 
-
-reg = registry()
 _engine: Engine | None = None
 _sessionmaker: sessionmaker[Session] | None = None
 _session_ctx: ContextVar[Session | None] = ContextVar("_session", default=None)
@@ -45,10 +47,10 @@ def scoped_session() -> Session:
     return session
 
 
-def configure_db(database_file_path: str):
+def configure_db(database_url: str):
     global _engine, _sessionmaker
     _engine = create_engine(
-        "sqlite://" + "/" + database_file_path,
+        database_url,
         echo=False,
         connect_args={"check_same_thread": False},
         json_serializer=json_serialize,
@@ -56,19 +58,9 @@ def configure_db(database_file_path: str):
     _sessionmaker = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
 
 
-def create_db():
-    """ Create database tables for registered models. """
-    if _engine is None:
-        raise DatabaseNotConfiguredError()
-    if len(reg.mappers) == 0:
-        raise ValueError("No data classes have been mapped")
-
-    reg.metadata.drop_all(_engine)
-    reg.metadata.create_all(_engine)
-
 
 def json_serialize(instance) -> str:
-    return json.dumps(instance)
+    return json.dumps(instance, default=pydantic_encoder)
 
 
 def json_deserialize(instance) -> dict[str, Any]:
@@ -86,7 +78,7 @@ class DBSessionMiddleware(BaseHTTPMiddleware):
         else:
             with create_scope():
                 response = await call_next(request)
-        return response
+            return response
 
 
 class DatabaseNotConfiguredError(Exception):

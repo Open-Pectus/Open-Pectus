@@ -1,13 +1,11 @@
 import logging
-from datetime import datetime
 from typing import List
-
-from fastapi import APIRouter, Depends, Response
 
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
 import openpectus.aggregator.routers.dto as Dto
 import openpectus.protocol.aggregator_messages as AM
+from fastapi import APIRouter, Depends, Response
 from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import PlotLogRepository
@@ -65,12 +63,12 @@ def get_process_values(
     # print("Readings", engine_data.readings)
     # print("Tags", tags_info)
 
-    pvs: List[Dto.ProcessValue] = []
-    for r in engine_data.readings:
-        ti = tags_info.get(r.tag_name)
-        if ti is not None:
-            pvs.append(Dto.ProcessValue.from_message(r, ti))
-    return pvs
+    process_values: List[Dto.ProcessValue] = []
+    for reading in engine_data.readings:
+        tag_value = tags_info.get(reading.tag_name)
+        if tag_value is not None:
+            process_values.append(Dto.ProcessValue.from_tag_value(tag_value))
+    return process_values
 
 
 @router.post("/process_unit/{unit_id}/execute_command")
@@ -126,41 +124,20 @@ def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)
     engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None:
         logger.warning("No engine data - thus no runlog")
-        return Dto.RunLog(lines=[])
+        return Dto.RunLog.empty()
 
-    def from_line_model(msg: Mdl.RunLogLine) -> Dto.RunLogLine:
-        cmd = Dto.ExecutableCommand(
-            command=msg.command_name,
-            name=None,
-            source=Dto.CommandSource.METHOD
-        )
-        line = Dto.RunLogLine(
-            id=0,  # TODO change type int to str
-            command=cmd,
-            start=datetime.fromtimestamp(msg.start),
-            end=None if msg.end is None else datetime.fromtimestamp(msg.end),
-            progress=None,
-            start_values=[],
-            end_values=[],
-            forcible=None,  # TODO map forcible,forced,cancellable and cancelled
-            forced=None,
-            cancellable=None,
-            cancelled=None
-        )
-        return line
-
-    logger.info(f"Got runlog with {len(engine_data.runlog.lines)} lines")
+    logger.info(f"Got runlog with {len(engine_data.run_data.runlog.lines)} lines")
     return Dto.RunLog(
-        lines=list(map(from_line_model, engine_data.runlog.lines)))
+        lines=list(map(Dto.RunLogLine.from_model, engine_data.run_data.runlog.lines))
+    )
 
 
 @router.get('/process_unit/{unit_id}/method-and-state')
 def get_method_and_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.MethodAndState:
     engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None:
-        logger.warning("No client data - thus no method")
-        return Dto.MethodAndState(method=Dto.Method(lines=[]),
-                                  state=Dto.MethodState(started_line_ids=[], executed_line_ids=[], injected_line_ids=[]))
+        logger.warning("No engine data - thus no method")
+        return Dto.MethodAndState.empty()
 
     def from_models(method: Mdl.Method, method_state: Mdl.MethodState) -> Dto.MethodAndState:
         return Dto.MethodAndState(
@@ -171,7 +148,7 @@ def get_method_and_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_ag
         )
 
     print("Returned client method")
-    return from_models(engine_data.method, engine_data.method_state)
+    return from_models(engine_data.method, engine_data.run_data.method_state)
 
 
 @router.post('/process_unit/{unit_id}/method')
@@ -183,28 +160,13 @@ async def save_method(unit_id: str, method_dto: Dto.Method, agg: Aggregator = De
 
 
 @router.get('/process_unit/{unit_id}/plot_configuration')
-def get_plot_configuration(unit_id: str) -> Dto.PlotConfiguration:
-    return Dto.PlotConfiguration(
-        color_regions=[],
-        sub_plots=[Dto.SubPlot(
-            axes=[Dto.PlotAxis(
-                label='FT01',
-                process_value_names=['FT01'],
-                y_max=20,
-                y_min=0,
-                color='#ff0000',
-            ), Dto.PlotAxis(
-                label='FT02',
-                process_value_names=['FT02'],
-                y_max=20,
-                y_min=0,
-                color='#0000ff',
-            )],
-            ratio=1
-        )],
-        process_value_names_to_annotate=[],
-        x_axis_process_value_names=['Time']
-    )
+def get_plot_configuration(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.PlotConfiguration:
+    engine_data = agg.get_registered_engine_data(unit_id)
+    if engine_data is None:
+        logger.warning("No engine data - thus no plot configuration")
+        return Dto.PlotConfiguration.empty()
+
+    return Dto.PlotConfiguration.validate(engine_data.plot_configuration)
 
 
 @router.get('/process_unit/{unit_id}/plot_log')
@@ -213,11 +175,10 @@ def get_plot_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator
     engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None or engine_data.run_id is None:
         return Dto.PlotLog(entries={})
-    plot_log_model = plot_log_repo.get_plot_log(engine_data.engine_id, engine_data.run_id)
+    plot_log_model = plot_log_repo.get_plot_log(engine_data.run_id)
     if plot_log_model is None:
         return Dto.PlotLog(entries={})
-    plot_log_dto = Dto.PlotLog.from_orm(plot_log_model)
-    return plot_log_dto
+    return Dto.PlotLog.validate(plot_log_model)
 
 
 @router.get('/process_unit/{unit_id}/control_state')
@@ -237,10 +198,10 @@ def get_control_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggre
 
 
 @router.post('/process_unit/{unit_id}/run_log/force_line/{line_id}')
-def force_run_log_line(unit_id: str, line_id: int):
+def force_run_log_line(unit_id: str, line_id: str):
     pass
 
 
 @router.post('/process_unit/{unit_id}/run_log/cancel_line/{line_id}')
-def cancel_run_log_line(unit_id: str, line_id: int):
+def cancel_run_log_line(unit_id: str, line_id: str):
     pass

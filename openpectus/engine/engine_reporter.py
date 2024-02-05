@@ -49,19 +49,19 @@ class EngineReporter():
         self.engine.notify_initial_tags()
         self.send_tag_updates()
 
+
     def send_uod_info(self):
         readings: List[Mdl.ReadingInfo] = []
-        for r in self.engine.uod.readings:
-            tag_name = self.map_and_filter_tag_name(r.tag_name)
+        for reading in self.engine.uod.readings:
+            tag_name = self.map_and_filter_tag_name(reading.tag_name)
             if tag_name is not None:
-                ri = Mdl.ReadingInfo(
-                    label=r.label,
+                reading_info = Mdl.ReadingInfo(
                     tag_name=str(tag_name),
-                    valid_value_units=r.valid_value_units,
-                    commands=[Mdl.ReadingCommand(name=c.name, command=c.command) for c in r.commands])
-                readings.append(ri)
+                    valid_value_units=reading.valid_value_units,
+                    commands=[Mdl.ReadingCommand(name=c.name, command=c.command) for c in reading.commands])
+                readings.append(reading_info)
 
-        msg = EM.UodInfoMsg(readings=readings)
+        msg = EM.UodInfoMsg(readings=readings, plot_configuration=self.engine.uod.plot_configuration)
         response = self.dispatcher.post(msg)
         return not isinstance(response, M.ErrorMessage)
 
@@ -87,6 +87,7 @@ class EngineReporter():
                 if tag_name is not None:
                     assert tag.tick_time is not None, f'tick_time is None for tag {tag.name}'
                     tags.append(Mdl.TagValue(name=tag_name, tick_time=tag.tick_time, value=tag.get_value(), value_unit=tag.unit))
+                self.engine.tag_updates.task_done()
         except Empty:
             pass
         if len(tags) > 0:
@@ -94,6 +95,15 @@ class EngineReporter():
             self.dispatcher.post(msg)
 
     def send_runlog(self):
+        tag_names: list[str] = []
+        for reading in self.engine.uod.readings:
+            tag_name = self.map_and_filter_tag_name(reading.tag_name)
+            if tag_name is not None:
+                tag_names.append(tag_name)
+
+        def filter_value(tag_value: TagValue) -> bool:
+            return tag_value.name in tag_names
+
         def to_value(t: TagValue) -> Mdl.TagValue:
             assert t.tick_time is not None
             return Mdl.TagValue(name=t.name, value=t.value, value_unit=t.unit, tick_time=t.tick_time)
@@ -106,8 +116,8 @@ class EngineReporter():
                 start=item.start,
                 end=item.end,
                 progress=item.progress,
-                start_values=[to_value(t) for t in item.start_values],
-                end_values=[to_value(t) for t in item.end_values]
+                start_values=[to_value(t) for t in filter(filter_value, item.start_values)],
+                end_values=[to_value(t) for t in filter(filter_value, item.end_values)]
             )
             return msg
 
@@ -127,6 +137,6 @@ class EngineReporter():
         self.dispatcher.post(msg)
 
     def send_method_state(self):
-        state = self.engine.get_method_state()
+        state = self.engine.calculate_method_state()
         msg = EM.MethodStateMsg(method_state=state)
         self.dispatcher.post(msg)

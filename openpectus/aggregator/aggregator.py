@@ -1,13 +1,14 @@
 import asyncio
 import logging
-from datetime import datetime, timedelta
+import time
+from datetime import datetime, timezone
 
 import openpectus.aggregator.models as Mdl
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
 from openpectus.aggregator.data import database
-from openpectus.aggregator.data.repository import PlotLogRepository
+from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRepository
 from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.aggregator.models import EngineData
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
@@ -16,6 +17,7 @@ from openpectus.protocol.models import SystemTagName
 logger = logging.getLogger(__name__)
 
 EngineDataMap = dict[str, EngineData]
+persistance_threshold_seconds = 5
 
 
 class FromEngine:
@@ -32,8 +34,15 @@ class FromEngine:
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set readings.')
 
+    def plot_configuration_changed(self, engine_id: str, plot_configuration: Mdl.PlotConfiguration):
+        try:
+            self._engine_data_map[engine_id].plot_configuration = plot_configuration
+        except KeyError:
+            logger.error(f'No engine registered under id {engine_id} when trying to set plot configuration.')
+
     def tag_values_changed(self, engine_id: str, changed_tag_values: list[Mdl.TagValue]):
         plot_log_repo = PlotLogRepository(database.scoped_session())
+        recent_run_repo = RecentRunRepository(database.scoped_session())
 
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is None:
@@ -42,7 +51,7 @@ class FromEngine:
 
         for changed_tag_value in changed_tag_values:
             if changed_tag_value.name == SystemTagName.run_id.value:
-                self._run_id_changed(plot_log_repo, engine_data, changed_tag_value)
+                self._run_id_changed(plot_log_repo, recent_run_repo, engine_data, changed_tag_value)
             was_inserted = engine_data.tags_info.upsert(changed_tag_value)
             # if a tag doesn't appear with value until after start and run_id, we need to store the info here
             if was_inserted and engine_data.run_id is not None:
@@ -50,30 +59,45 @@ class FromEngine:
 
         self._persist_tag_values(engine_data, plot_log_repo)
 
-    def _run_id_changed(self, plot_log_repo: PlotLogRepository, engine_data: EngineData, run_id_tag: Mdl.TagValue):
+    def _run_id_changed(self, plot_log_repo: PlotLogRepository, recent_run_repo: RecentRunRepository, engine_data: EngineData,
+                        run_id_tag: Mdl.TagValue):
         """ Handles persistance related to start and end of a run """
-        logger.warning(f'run id changed to {run_id_tag.value}')
-        if run_id_tag.value is None:
-            # TODO: persist and clear from engine_map: method, run log,
-            pass
+        if run_id_tag.value is None and engine_data.run_id is not None:
+            # Run stopped
+            recent_run_repo.store_recent_run(engine_data)
         else:
+            # Run started
+            engine_data.run_data.run_started = datetime.fromtimestamp(run_id_tag.tick_time, timezone.utc)
             plot_log_repo.create_plot_log(engine_data, str(run_id_tag.value))
 
     def _persist_tag_values(self, engine_data: EngineData, plot_log_repo: PlotLogRepository):
-        now = datetime.now()
-        time_threshold_exceeded = engine_data.tags_last_persisted is None or now - engine_data.tags_last_persisted > timedelta(seconds=5)
+        latest_persisted_tick_time = engine_data.run_data.latest_persisted_tick_time
+        time_threshold_exceeded = latest_persisted_tick_time is None or time.time() - latest_persisted_tick_time > persistance_threshold_seconds
         if engine_data.run_id is not None and time_threshold_exceeded:
-            tag_values_to_persist = [tag_value for tag_value in engine_data.tags_info.map.values()
-                                     if engine_data.tags_last_persisted is None
-                                     or tag_value.tick_time > engine_data.tags_last_persisted.timestamp()]
+            tag_values_to_persist = [tag_value.copy() for tag_value in engine_data.tags_info.map.values()
+                                     if latest_persisted_tick_time is None
+                                     or tag_value.tick_time > latest_persisted_tick_time]
+            """ 
+            We manipulate the tick_time of the tagValues we persist. But it's not changing it to something that didn't 
+            exist in the engine, because we change the tick_time to a tick_time that comes from an actual later reading 
+            where those tagValues we manipulate was read and simply had not changed value since the value we have been 
+            reported.
+            It's difficult to explain, but after this manipulation, the tagValues will still match an actual tagValue 
+            read in the engine, just not one reported.
+            We do this because it solves a lot of issues when we later try to match values based on the tick_time.
+            """
+            highest_tick_time_to_persist = max([tag_Value.tick_time for tag_Value in tag_values_to_persist])
+            for tag_value_to_persist in tag_values_to_persist:
+                tag_value_to_persist.tick_time = highest_tick_time_to_persist
+
             plot_log_repo.store_tag_values(engine_data.engine_id, engine_data.run_id, tag_values_to_persist)
-            engine_data.tags_last_persisted = now
+            engine_data.run_data.latest_persisted_tick_time = highest_tick_time_to_persist
 
     def runlog_changed(self, engine_id: str, runlog: Mdl.RunLog):
         try:
             engine_data = self._engine_data_map[engine_id]
-            if engine_data.runlog != runlog:
-                engine_data.runlog = runlog
+            if engine_data.run_data.runlog != runlog:
+                engine_data.run_data.runlog = runlog
                 asyncio.create_task(self.publisher.publish_run_log_changed(engine_id))
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set run log.')
@@ -90,8 +114,8 @@ class FromEngine:
     def method_state_changed(self, engine_id: str, method_state: Mdl.MethodState):
         try:
             engine_data = self._engine_data_map[engine_id]
-            if engine_data.method_state != method_state:
-                engine_data.method_state = method_state
+            if engine_data.run_data.method_state != method_state:
+                engine_data.run_data.method_state = method_state
                 asyncio.create_task(self.publisher.publish_method_state_changed(engine_id))
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set control state.')

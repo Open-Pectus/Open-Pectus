@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { map, of, switchMap } from 'rxjs';
-import { BatchJobService, ProcessUnitService } from '../../../api';
+import { ProcessUnitService, RecentRunsService } from '../../../api';
 import { AxesOverridesLocalStorageService } from '../axes-overrides-local-storage.service';
 import { ProcessPlotActions } from './process-plot.actions';
 import { ProcessPlotSelectors } from './process-plot.selectors';
@@ -19,11 +19,11 @@ export class ProcessPlotEffects {
     }),
   ));
 
-  fetchPlotConfigurationOnComponentInitializationForBatchJob = createEffect(() => this.actions.pipe(
-    ofType(ProcessPlotActions.processPlotComponentInitializedForBatchJob),
-    switchMap(({batchJobId}) => {
-      if(batchJobId === undefined) return of();
-      return this.batchJobService.getBatchJobPlotConfiguration(batchJobId).pipe(
+  fetchPlotConfigurationOnComponentInitializationForRecentRun = createEffect(() => this.actions.pipe(
+    ofType(ProcessPlotActions.processPlotComponentInitializedForRecentRun),
+    switchMap(({recentRunId}) => {
+      if(recentRunId === undefined) return of();
+      return this.recentRunsService.getRecentRunPlotConfiguration(recentRunId).pipe(
         map(configuration => ProcessPlotActions.plotConfigurationFetched({configuration})));
     }),
   ));
@@ -37,11 +37,11 @@ export class ProcessPlotEffects {
     }),
   ));
 
-  fetchPlotLogOnComponentInitializationForBatchJob = createEffect(() => this.actions.pipe(
-    ofType(ProcessPlotActions.processPlotComponentInitializedForBatchJob),
-    switchMap(({batchJobId}) => {
-      if(batchJobId === undefined) return of();
-      return this.processUnitService.getPlotLog(batchJobId).pipe(
+  fetchPlotLogOnComponentInitializationForRecentRun = createEffect(() => this.actions.pipe(
+    ofType(ProcessPlotActions.processPlotComponentInitializedForRecentRun),
+    switchMap(({recentRunId}) => {
+      if(recentRunId === undefined) return of();
+      return this.recentRunsService.getRecentRunPlotLog(recentRunId).pipe(
         map(plotLog => ProcessPlotActions.plotLogFetched({plotLog})));
     }),
   ));
@@ -86,5 +86,5 @@ export class ProcessPlotEffects {
               private store: Store,
               private processUnitService: ProcessUnitService,
               private axesOverridesLocalStorageService: AxesOverridesLocalStorageService,
-              private batchJobService: BatchJobService) {}
+              private recentRunsService: RecentRunsService) {}
 }

@@ -6,6 +6,7 @@ from openpectus.lang.exec.readings import Reading, ReadingCollection
 from openpectus.lang.exec.tags import Tag, TagCollection
 from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
 from openpectus.engine.commands import ContextEngineCommand
+from openpectus.protocol.models import PlotConfiguration
 
 logger = logging.getLogger(__name__)
 
@@ -18,19 +19,20 @@ class UnitOperationDefinitionBase:
                  hwl: HardwareLayerBase,
                  location: str,
                  tags: TagCollection,
-                 system_tags: TagCollection,
                  readings: ReadingCollection,
                  command_factories: Dict[str, UodCommandBuilder],
-                 overlapping_command_names_lists: List[List[str]]) -> None:
+                 overlapping_command_names_lists: List[List[str]],
+                 plot_configuration: PlotConfiguration) -> None:
         self.instrument = instrument_name
         self.hwl = hwl
         self.location = location
         self.tags = tags
-        self.system_tags = system_tags
+        self.system_tags: TagCollection | None = None
         self.readings = readings
         self.command_factories = command_factories
         self.command_instances: Dict[str, UodCommand] = {}
         self.overlapping_command_names_lists: List[List[str]] = overlapping_command_names_lists
+        self.plot_configuration = plot_configuration
 
     def define_register(self, name: str, direction: RegisterDirection, **options):
         assert isinstance(self.hwl, HardwareLayerBase)
@@ -226,11 +228,11 @@ class UodBuilder():
         self.instrument: str = ""
         self.hwl: HardwareLayerBase | None = None
         self.tags = TagCollection()
-        self.system_tags: TagCollection | None = None
         self.commands: Dict[str, UodCommandBuilder] = {}
         self.overlapping_command_names_lists: List[List[str]] = []
         self.readings = ReadingCollection()
         self.location: str = ""
+        self.plot_configuration: PlotConfiguration | None = None
 
     def validate(self):
         if len(self.instrument.strip()) == 0:
@@ -238,9 +240,6 @@ class UodBuilder():
 
         if self.hwl is None:
             raise ValueError("HardwareLayer must be set")
-
-        if self.system_tags is None:
-            raise ValueError("system_tags must be set")
 
         return
 
@@ -278,13 +277,6 @@ class UodBuilder():
         self.tags.add(tag)
         return self
 
-    def with_system_tags(self, system_tags: TagCollection) -> UodBuilder:
-        self.system_tags = system_tags
-        return self
-
-    def with_new_system_tags(self) -> UodBuilder:
-        return self.with_system_tags(TagCollection.create_system_tags())
-
     def with_command(self, cb: UodCommandBuilder) -> UodBuilder:
         if cb.name in self.commands.keys():
             raise ValueError(f"Duplicate command name: {cb.name}")
@@ -301,6 +293,10 @@ class UodBuilder():
         self.readings.add(pv)
         return self
 
+    def with_plot_configuration(self, plot_configuration: PlotConfiguration):
+        self.plot_configuration = plot_configuration
+        return self
+
     def build(self) -> UnitOperationDefinitionBase:
         self.validate()
 
@@ -309,9 +305,10 @@ class UodBuilder():
             self.hwl,  # type: ignore
             self.location,
             self.tags,
-            self.system_tags,  # type: ignore
             self.readings,
             self.commands,
-            self.overlapping_command_names_lists)
+            self.overlapping_command_names_lists,
+            self.plot_configuration or PlotConfiguration.empty()
+        )
 
         return uod

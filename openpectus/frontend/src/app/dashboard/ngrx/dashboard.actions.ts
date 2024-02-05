@@ -1,11 +1,11 @@
-import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import { BatchJob } from '../../api';
+import { createAction, props } from '@ngrx/store';
+import { RecentRun } from '../../api';
 
-export const DashboardActions = createActionGroup({
-  source: 'Dashboard',
-  events: {
-    'Recent Batch Job Filter Changed': props<{ filter: string }>(),
-    'Recent Batch Jobs Initialized': emptyProps(),
-    'Recent Batch Jobs Loaded': props<{ recentBatchJobs: BatchJob[] }>(),
-  },
-});
+export class DashboardActions {
+  static source = 'Dashboard';
+  static recentRunsFilterChanged = createAction(this.source + 'Recent Runs Filter Changed', props<{ filter: string }>());
+  static recentRunsInitialized = createAction(this.source + 'Recent Runs Initialized');
+  static recentRunsLoaded = createAction(this.source + 'Recent Runs Loaded', props<{ recentRuns: RecentRun[] }>());
+}
+
+

@@ -4,15 +4,16 @@ import time
 import unittest
 from typing import Any, List
 
+import openpectus.protocol.models as Mdl
 import pint
 from openpectus.engine.engine import Engine
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
 from openpectus.engine.models import EngineCommandEnum, SystemStateEnum
+from openpectus.lang.exec.runlog import RunLogItemState, RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import SystemTagName, Tag, ReadingTag, SelectTag, TagDirection
-from openpectus.lang.exec.runlog import RuntimeRecordStateEnum
 from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
-import openpectus.protocol.models as Mdl
+from openpectus.test.engine.utility_methods import run_engine, continue_engine
 from typing_extensions import override
 
 logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
@@ -25,48 +26,6 @@ logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.INFO)
 # to throw off timing of the first instruction.
 # so we initialize it first
 _ = pint.Quantity("0 sec")
-
-
-def run_engine(engine: Engine, pcode: str, max_ticks: int = -1):
-    print("Interpretation started")
-    ticks = 0
-    max_ticks = max_ticks
-
-    engine._running = True
-    engine.set_method(Mdl.Method.from_pcode(pcode=pcode))
-    engine.schedule_execution("Start")
-
-    while engine.is_running():
-        ticks += 1
-        if max_ticks != -1 and ticks > max_ticks:
-            print(f"Stopping because max_ticks {max_ticks} was reached")
-            return
-
-        time.sleep(0.1)
-        engine.tick()
-
-
-def continue_engine(engine: Engine, max_ticks: int = -1):
-    # This function (as well as run_engine) differs from just calling engine.tick() in that
-    # it passes the time before calling tick(). Some functionality depends on this, such as
-    # thresholds.
-
-    # TODO consider adding a SystemClock abstraction to avoid the need for waiting
-    # in tests
-    print("Interpretation continuing")
-    ticks = 0
-    max_ticks = max_ticks
-
-    engine._running = True
-
-    while engine.is_running():
-        ticks += 1
-        if max_ticks != -1 and ticks > max_ticks:
-            print(f"Stopping because max_ticks {max_ticks} was reached")
-            return
-
-        time.sleep(0.1)
-        engine.tick()
 
 
 def get_queue_items(q) -> list[Tag]:
@@ -107,7 +66,6 @@ def create_test_uod() -> UnitOperationDefinitionBase:
             to_tag=lambda x: "Reset" if x == 1 else "N/A",
         )
         # Readings
-        .with_new_system_tags()
         .with_tag(ReadingTag("FT01", "L/h"))
         .with_tag(SelectTag("Reset", value="N/A", unit=None, choices=["Reset", "N/A"]))
         .with_tag(Tag("Danger", value=True, unit=None, direction=TagDirection.OUTPUT, safe_value=False))
@@ -556,7 +514,7 @@ Mark: C
         for item in items:
             start_values = item.start_values
             assert start_values is not None
-            self.assertTrue(start_values.has("Base"))
+            self.assertTrue(start_values.has("Reset"))
 
     def test_runstate_start(self):
         e = self.engine
@@ -760,6 +718,99 @@ Mark: C
         continue_engine(e, 3)
         self.assertEqual(['A', 'B', 'C', 'I'], e.interpreter.get_marks())
 
+    def test_engine_error_causes_Paused_state(self):
+        e = self.engine
+        run_engine(e, "foo bar", 3)
+
+        self.assertTrue(e._runstate_paused)
+
+    def test_interpreter_error_causes_Paused_state(self):
+        e = self.engine
+        run_engine(e, """WATCH x > 2""", 3)
+
+        self.assertTrue(e._runstate_paused)
+
+
+class TestRunlog(unittest.TestCase):
+    def setUp(self):
+        self.engine: Engine = create_engine()
+
+    def tearDown(self):
+        self.engine.cleanup()
+
+    def assert_Runlog_HasItem(self, name: str):
+        runlog = self.engine.runtimeinfo.get_runlog()
+        for item in runlog.items:
+            if item.name == name:
+                return
+        self.fail(f"Runlog has no item named '{name}'")
+
+    def assert_Runlog_HasItem_Started(self, name: str):
+        runlog = self.engine.runtimeinfo.get_runlog()
+        for item in runlog.items:
+            if item.name == name and item.state == RunLogItemState.Started:
+                return
+        self.fail(f"Runlog has no item named '{name}' in Started state")
+
+    def assert_Runlog_HasItem_Completed(self, name: str):
+        runlog = self.engine.runtimeinfo.get_runlog()
+        for item in runlog.items:
+            if item.name == name and item.state == RunLogItemState.Completed:
+                return
+        self.fail(f"Runlog has no item named '{name}' in Completed state")
+
+    def assert_Runtime_HasRecord(self, name: str):
+        for r in self.engine.runtimeinfo.records:
+            if r.name == name:
+                return
+        self.fail(f"Runtime has no record named '{name}'")
+
+    def assert_Runtime_HasRecord_Started(self, name: str):
+        for r in self.engine.runtimeinfo.records:
+            if r.name == name and r.has_state(RuntimeRecordStateEnum.Started):
+                return
+        self.fail(f"Runtime has no record named '{name}' in state Started")
+
+    def assert_Runtime_HasRecord_Completed(self, name: str):
+        for r in self.engine.runtimeinfo.records:
+            if r.name == name and r.has_state(RuntimeRecordStateEnum.Started):
+                return
+        self.fail(f"Runtime has no record named '{name}' in state Completed")
+
+    def test_start_complete_UodCommand(self):
+        e = self.engine
+
+        run_engine(e, "Reset", 3)
+        self.assert_Runlog_HasItem_Started("Reset")
+
+        continue_engine(e, 5)
+        self.assert_Runlog_HasItem_Completed("Reset")
+
+        self.assert_Runtime_HasRecord_Started("Reset")
+        self.assert_Runtime_HasRecord_Completed("Reset")
+
+    def test_start_complete_InstructionUodCommand(self):
+        e = self.engine
+
+        run_engine(e, "Mark: A", 3)
+
+        self.assert_Runtime_HasRecord_Started("Mark: A")
+        self.assert_Runtime_HasRecord_Completed("Mark: A")
+
+        self.assert_Runlog_HasItem_Completed("Mark: A")
+
+    def test_start_complete_EngineInternalCommand(self):
+        e = self.engine
+
+        cmd = "Increment run counter"
+        run_engine(e, cmd, 5)
+
+        print_runtime_records(e)
+
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+
+        self.assert_Runlog_HasItem_Completed(cmd)
 
 # Test helpers
 
@@ -779,88 +830,6 @@ class TestHW(HardwareLayerBase):
     def write(self, value: Any, r: Register):
         if r.name in self.registers.keys():
             self.register_values[r.name] = value
-
-
-# TODO define a builder pattern for this
-# Consider using https://peps.python.org/pep-0544/#callback-protocols for the callbacks
-
-
-# TODO remove once tests are green
-# class TestUod(UnitOperationDefinitionBase):
-#     def __init__(self) -> None:
-#         super().__init__()
-
-#         self.define_instrument("TestUod")
-#         self.define_hardware_layer(TestHW())
-
-#         self.define_register(
-#             "FT01", RegisterDirection.Both, path="Objects;2:System;2:FT01"
-#         )
-#         self.define_register(
-#             "Reset",
-#             RegisterDirection.Both,
-#             path="Objects;2:System;2:RESET",
-#             from_tag=lambda x: 1 if x == "Reset" else 0,
-#             to_tag=lambda x: "Reset" if x == 1 else "N/A",
-#         )
-
-#         self.define_tag(tags.Reading("FT01", "L/h"))
-#         self.define_tag(
-#             tags.Select("Reset", value="N/A", unit=None, choices=["Reset", "N/A"])
-#         )
-
-#         # self.define_io('VA01', {'path': 'Objects;2:System;2:VA01', 'fn': self.valve_fn})
-#         # self.define_io('VA02', {'path': 'Objects;2:System;2:VA02', 'fn': self.valve_fn})
-#         # self.define_io('PU01', {'path': 'Objects;2:System;2:PU01', 'fn': self.pu_fn})
-#         # self.define_io('FT01', {'path': 'Objects;2:System;2:FT01'})
-#         # self.define_io('TT01', {'path': 'Objects;2:System;2:TT01'})
-#         # self.define_io('Reset', {'path': 'Objects;2:System;2:RESET', 'fn': lambda x: 1 if x == 'Reset' else 0})
-
-#         # self.define_command(UodCommand.builder()
-#         #                     .with_name("Reset")
-#         #                     .with_exec_fn(self.reset)
-#         #                     .build())
-
-#         #self.define_command(ResetCommand())
-
-#         self.define_command(
-#             UodCommand.builder().with_name("Foo").with_exec_fn(self.exec_foo).build()
-#         )
-
-#     def exec_foo(cmd: UodCommand, args: List[Any], uod: UnitOperationDefinitionBase):
-#         cmd = uod.get_command("Foo")
-#         if cmd is None:
-#             raise ValueError("command Foo not found")
-
-#         if cmd.iterations > 3:
-#             cmd.is_complete = True
-#             # cmd.reset()
-
-#     # def valve_fn(self, x: int | float) -> bool:
-#     #     return x > 0
-
-#     # def pu_fn(self, x: int | float) -> float:
-#     #     return min(max(x/100, 0), 1)
-
-#     # def reset_fn(self, x: str) -> int:
-#     #     return 1 if x == 'Reset' else 0
-
-#     # def _va01(self, state, io): io.fields['VA01'].write(self.valve); self.progress = True
-#     # def _va02(self, state, io): io.fields['VA02'].write(self.valve); self.progress = True
-#     # def _pu01(self, state, io): io.fields['PU01'].write(self.speed); self.progress = True
-#     # def reset(self, args, uod):
-#     #     cmd = self.get_command('Reset')
-#     #     assert isinstance(cmd, UodCommand)
-#     #     if cmd.iterations == 0:
-#     #         # io.fields['Reset'].write('Reset');
-#     #         self.tags.get("Reset").set_value('Reset')
-#     #     elif cmd.iterations == 5:
-#     #         # io.fields['Reset'].write('N/A');
-#     #         self.tags.get("Reset").set_value('N/A')
-#     #         self.progress = True
-#     #     for e in locals().copy():
-#     #         if '_' in e:
-#     #             setattr(self, e, locals()[e])
 
 
 if __name__ == "__main__":

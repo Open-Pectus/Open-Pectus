@@ -1,11 +1,15 @@
 from __future__ import annotations
+
+import logging
 from enum import StrEnum, auto
 from typing import Dict, List
 from uuid import UUID, uuid4
-from openpectus.engine.commands import EngineCommand
 
+from openpectus.engine.commands import EngineCommand
 from openpectus.lang.exec.tags import TagValueCollection
 from openpectus.lang.model.pprogram import PNode, PProgram
+
+logger = logging.getLogger(__name__)
 
 
 class RuntimeInfo():
@@ -36,6 +40,7 @@ class RuntimeInfo():
       particular command instance. This means that one record may hold states
       for different invocations (and instances) of the same command.
     """
+
     def __init__(self) -> None:
         self._records: list[RuntimeRecord] = []
         self._record_index: Dict[UUID, int] = {}
@@ -49,25 +54,23 @@ class RuntimeInfo():
         understand.
 
         Notably, it removes records with no name and unscrambles uod states
-        such that each invocation gets its own record. This allows the client
+        such that each invocation gets its own runlog item. This allows the client
         to force or cancel a particular command instance.
         """
         items: list[RunLogItem] = []
 
         runlog = RunLog()
-        runlog.id = ""
-        runlog.items = items
 
         for r in self.records:
             if isinstance(r.node, PProgram):
                 runlog.id = str(r.node.id)
-            if r.name is None:
+            if r.name is None:  # TODO document when this would occur
                 continue
 
             item = RunLogItem()
             item.name = r.name
             item.id = str(r.exec_id)
-            #item.progress
+            # item.progress
 
             if r.has_state(RuntimeRecordStateEnum.UodCommandSet):
                 # sanity check
@@ -77,6 +80,14 @@ class RuntimeInfo():
                 assert set_count < 2, f"{set_count=} was greater than 1 - unexpected?!"
                 assert start_count < 2, f"{start_count=} was greater than 1 - unexpected?!"
                 assert complete_count < 2, f"{complete_count=} was greater than 1 - unexpected?!"
+
+            # fill in start values regardless of actual state
+            if r.has_state(RuntimeRecordStateEnum.Started):
+                state = r.get_state(RuntimeRecordStateEnum.Started)
+                item.start = state.state_time
+                item.start_values = state.values or TagValueCollection.empty()
+
+            # fill in state values in order of precedence
             if r.has_state(RuntimeRecordStateEnum.Completed):
                 item.state = RunLogItemState.Completed
                 state = r.get_state(RuntimeRecordStateEnum.Completed)
@@ -102,11 +113,8 @@ class RuntimeInfo():
             else:
                 item.state = RunLogItemState.Waiting
 
-            if item.start is None:
-                # TODO this should not happen, should it?
-                item.start = r.visit_start_time
-
             items.append(item)
+        runlog.items = items
         return runlog
 
     def get_exec_record(self, exec_id: UUID) -> RuntimeRecord:
@@ -172,7 +180,7 @@ class RuntimeRecord():
         self.end_values: TagValueCollection | None = None
 
     def __repr__(self) -> str:
-        return f"{self.name} | States: {', '.join([str(st) for st in self.states ])}"
+        return f"{self.name} | States: {', '.join([str(st) for st in self.states])}"
 
     # -- regular state --
 
@@ -203,8 +211,8 @@ class RuntimeRecord():
     def add_state_awaiting_interrupt(self, time: float, tick: int, state_values: TagValueCollection | None):
         self.add_state(RuntimeRecordStateEnum.AwaitingInterrrupt, time, tick, state_values)
 
-    def add_state_started(self, time: float, tick: int, end_values: TagValueCollection):
-        self.add_state(RuntimeRecordStateEnum.Started, time, tick, end_values)
+    def add_state_started(self, time: float, tick: int, start_values: TagValueCollection):
+        self.add_state(RuntimeRecordStateEnum.Started, time, tick, start_values)
 
     def add_state_completed(self, time: float, tick: int, end_values: TagValueCollection):
         self.add_state(RuntimeRecordStateEnum.Completed, time, tick, end_values)
@@ -258,7 +266,7 @@ class RuntimeRecordState():
             state: RuntimeRecordStateEnum,
             time: float, tick: int,
             values: TagValueCollection | None
-            ) -> None:
+    ) -> None:
         self.state_name: RuntimeRecordStateEnum = state
         self.state_time: float = time
         self.state_tick: int = tick

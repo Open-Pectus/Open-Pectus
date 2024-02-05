@@ -43,7 +43,7 @@ import { RunLogLineComponent } from './run-log-line/run-log-line.component';
 })
 export class RunLogComponent implements OnInit, OnDestroy {
   @Input() unitId?: string;
-  @Input() batchJobId?: string;
+  @Input() recentRunId?: string;
   @ViewChildren(RunLogLineComponent) runLogLines?: QueryList<RunLogLineComponent>;
   protected runLog = this.store.select(RunLogSelectors.runLog);
   protected collapsed = false;
@@ -57,7 +57,9 @@ export class RunLogComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     if(this.unitId !== undefined) this.store.dispatch(RunLogActions.runLogComponentInitializedForUnit({unitId: this.unitId}));
-    if(this.batchJobId !== undefined) this.store.dispatch(RunLogActions.runLogComponentInitializedForBatchJob({batchJobId: this.batchJobId}));
+    if(this.recentRunId !== undefined) {
+      this.store.dispatch(RunLogActions.runLogComponentInitializedForRecentRun({recentRunId: this.recentRunId}));
+    }
   }
 
   ngOnDestroy() {

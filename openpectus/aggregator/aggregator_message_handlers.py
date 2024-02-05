@@ -59,6 +59,7 @@ class AggregatorMessageHandlers:
 
         logger.debug(f"Got UodInfo from client: {str(msg)}")
         self.aggregator.from_engine.readings_changed(msg.engine_id, msg.readings)
+        self.aggregator.from_engine.plot_configuration_changed(msg.engine_id, msg.plot_configuration)
         return AM.SuccessMessage()
 
     async def handle_TagsUpdatedMsg(self, msg: EM.TagsUpdatedMsg) -> AM.SuccessMessage | AM.ErrorMessage:
