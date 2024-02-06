@@ -6,8 +6,6 @@ import json
 import functools
 import re
 from typing import Any, Sequence, Optional, Dict
-import labjack.ljm.ljm as ljm
-import labjack.ljm.constants
 
 from openpectus.engine.hardware import (
     HardwareLayerBase,
@@ -18,6 +16,28 @@ from openpectus.engine.hardware import (
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+
+class SuppressPrint:
+    """ Supress print
+    Source: https://stackoverflow.com/questions/8391411/how-to-block-calls-to-print """
+    def __enter__(self):
+        self._original_stdout = sys.stdout
+        sys.stdout = open(os.devnull, 'w')
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        sys.stdout.close()
+        sys.stdout = self._original_stdout
+
+
+# The LabJack library executes code on import and this cannot be hindered.
+# The code attempts to load the LabJack DLL but fails if it is not installed.
+# This is not a problem, because the DLL is shipped with this sofware.
+# However, the error message is still printed and this may confuse the user.
+with SuppressPrint():
+    import labjack.ljm.ljm as ljm
+    import labjack.ljm.constants
+
 
 DEVICE_TYPES = {
     labjack.ljm.constants.dtT4: "T4",
@@ -72,7 +92,7 @@ class Labjack_Hardware(HardwareLayerBase):
     @functools.cached_property
     def port_directions(self):
         # Load ljm_constants.json
-        with open(constants_file, 'r') as f:
+        with open(constants_file, "r") as f:
             ljm_constants = json.load(f)
         # Prepare regex and result dict
         regex = re.compile(r"#\((?P<start>\d+):(?P<end>\d+)\)")
@@ -127,7 +147,7 @@ class Labjack_Hardware(HardwareLayerBase):
 
     def read(self, r: Register) -> Any:
         if RegisterDirection.Read not in r.direction:
-            raise HardwareLayerException("Attempt to read unreadable register {r}.")
+            raise HardwareLayerException(f"Attempt to read unreadable register {r}.")
         try:
             return ljm.eReadName(self._handle, r.options["port"])
         except ljm.LJMError as error:
@@ -138,7 +158,7 @@ class Labjack_Hardware(HardwareLayerBase):
         """ Read batch of register values with a single OPC-UA call. """
         for r in registers:
             if RegisterDirection.Read not in r.direction:
-                raise HardwareLayerException("Attempt to read unreadable register {r}.")
+                raise HardwareLayerException(f"Attempt to read unreadable register {r}.")
         try:
             return ljm.eReadNames(self._handle, len(registers), [r.options["port"] for r in registers])
         except ljm.LJMError as error:
@@ -147,7 +167,7 @@ class Labjack_Hardware(HardwareLayerBase):
 
     def write(self, value: Any, r: Register):
         if RegisterDirection.Write not in r.direction:
-            raise HardwareLayerException("Attempt to write unwritable register {r}.")
+            raise HardwareLayerException(f"Attempt to write unwritable register {r}.")
         try:
             return ljm.eWriteName(self._handle, r.options["port"], value)
         except ljm.LJMError as error:
@@ -158,7 +178,7 @@ class Labjack_Hardware(HardwareLayerBase):
         """ Write batch of register values with a single OPC-UA call. """
         for r in registers:
             if RegisterDirection.Write not in r.direction:
-                raise HardwareLayerException("Attempt to write unwritable register {r}.")
+                raise HardwareLayerException(f"Attempt to write unwritable register {r}.")
         try:
             ljm.eWriteNames(self._handle, len(registers), [r.options["port"] for r in registers], values)
         except ljm.LJMError as error:

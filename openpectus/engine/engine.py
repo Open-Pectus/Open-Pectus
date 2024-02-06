@@ -6,7 +6,7 @@ from queue import Empty, Queue
 from typing import Iterable, List, Set
 from uuid import UUID
 
-from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException
+from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException, RegisterDirection
 from openpectus.engine.method_model import MethodModel
 from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum
 from openpectus.lang.exec.commands import CommandRequest
@@ -198,37 +198,15 @@ class Engine(InterpreterContext):
 
     def read_process_image(self):
         """ Read data from relevant hw registers into tags"""
-
-        # call poi.read(requested_tags)
-        # this does in OPCUA:
-        #   get the 'path' from uod: tag_io = self.map.get(tag.name, None)
-        #   if available, collects tag, path, and fn
-        #       io_tags.append(tag)
-        #       pio_tags.append(tag_io['path'])
-        #       fns.append(tag_io.get('fn', lambda x: x))
-        #   performs batch read of raw io values:
-        #       values = self._read(pio_tags)
-        #   writes values to tags using the conversion fn defined in uod (or x->x if no fn defined):
-        #       if values:
-        #           [tag.write(fn(value)) for tag, fn, value in zip(io_tags, fns, values)]
-
-        # only do this for input tags:
-        #   if tag.direction is Direction.INPUT
-
-        # readable_tags = [t for t in self._iter_all_tags() if t.direction == TagDirection.INPUT]
-        # values = self.uod.hwl.read_batch(readable_tags)
-        # for tag, value in zip(readable_tags, values):
-        #     tag.set_value(value)
-
-        registers = self.uod.hwl.registers
+        registers = [r for r in self.uod.hwl.registers.values() if RegisterDirection.Read in r.direction]
         try:
-            register_values = self.uod.hwl.read_batch(list(registers.values()))
+            register_values = self.uod.hwl.read_batch(registers)
         except HardwareLayerException:
             logger.error("Hardware read_batch error", exc_info=True)
             # TODO handle disconnected state
             return
 
-        for i, r in enumerate(registers.values()):
+        for i, r in enumerate(registers):
             tag = self.uod.tags.get(r.name)
             tag_value = register_values[i]
             if "to_tag" in r.options:
@@ -542,15 +520,14 @@ class Engine(InterpreterContext):
         hwl: HardwareLayerBase = self.uod.hwl
 
         register_values = []
-        register_list = list(hwl.registers.values())
-        for r in register_list:
+        registers = [r for r in hwl.registers.values() if RegisterDirection.Write in r.direction]
+        for r in registers:
             tag_value = self.uod.tags[r.name].get_value()
             register_value = tag_value if "from_tag" not in r.options \
                 else r.options["from_tag"](tag_value)
             register_values.append(register_value)
-
         try:
-            hwl.write_batch(register_values, register_list)
+            hwl.write_batch(register_values, registers)
         except HardwareLayerException:
             logger.error("Hardware write_batch error", exc_info=True)
             # TODO handle disconnected state
