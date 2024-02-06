@@ -412,6 +412,8 @@ export const handlers = [
         engine_computer_name: 'A computer name',
         engine_version: '0.0.1',
         engine_hardware_str: 'something',
+        aggregator_version: '0.0.1',
+        aggregator_computer_name: 'aggregator computer name',
       },
       {
         id: '2',
@@ -423,6 +425,8 @@ export const handlers = [
         engine_computer_name: 'A computer name',
         engine_version: '0.0.1',
         engine_hardware_str: 'something',
+        aggregator_version: '0.0.1',
+        aggregator_computer_name: 'aggregator computer name',
       },
       {
         id: '3',
@@ -434,6 +438,8 @@ export const handlers = [
         engine_computer_name: 'A computer name',
         engine_version: '0.0.1',
         engine_hardware_str: 'something',
+        aggregator_version: '0.0.1',
+        aggregator_computer_name: 'aggregator computer name',
       },
       {
         id: '4',
@@ -445,6 +451,8 @@ export const handlers = [
         engine_computer_name: 'A computer name',
         engine_version: '0.0.1',
         engine_hardware_str: 'something',
+        aggregator_version: '0.0.1',
+        aggregator_computer_name: 'aggregator computer name',
       },
     ]);
   }),
@@ -841,6 +849,8 @@ export const handlers = [
       engine_computer_name: 'A computer name',
       engine_version: '0.0.1',
       engine_hardware_str: 'something',
+      aggregator_version: '0.0.1',
+      aggregator_computer_name: 'aggregator computer name',
     });
   }),
 

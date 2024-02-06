@@ -15,5 +15,7 @@ export type RecentRun = {
     engine_computer_name: string;
     engine_version: string;
     engine_hardware_str: string;
+    aggregator_computer_name: string;
+    aggregator_version: string;
     contributors?: Array<string>;
 };

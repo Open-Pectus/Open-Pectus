@@ -1755,6 +1755,14 @@
             "type": "string",
             "title": "Engine Hardware Str"
           },
+          "aggregator_computer_name": {
+            "type": "string",
+            "title": "Aggregator Computer Name"
+          },
+          "aggregator_version": {
+            "type": "string",
+            "title": "Aggregator Version"
+          },
           "contributors": {
             "items": {
               "type": "string"
@@ -1773,7 +1781,9 @@
           "completed_date",
           "engine_computer_name",
           "engine_version",
-          "engine_hardware_str"
+          "engine_hardware_str",
+          "aggregator_computer_name",
+          "aggregator_version"
         ],
         "title": "RecentRun",
         "description": "Represents a historical run of a process unit. "

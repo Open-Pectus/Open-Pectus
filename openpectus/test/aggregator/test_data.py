@@ -183,6 +183,8 @@ class RepositoryTest(unittest.TestCase):
         entity.completed_date = datetime.now()
         entity.engine_version = '0.0.1'
         entity.engine_hardware_str = 'hardware'
+        entity.aggregator_version = '0.0.1'
+        entity.aggregator_computer_name = 'aggregator computer name'
 
         entity_id = 0
 
@@ -215,6 +217,8 @@ class RepositoryTest(unittest.TestCase):
         entity.completed_date = datetime.now()
         entity.engine_version = '0.0.1'
         entity.engine_hardware_str = 'hardware'
+        entity.aggregator_version = '0.0.1'
+        entity.aggregator_computer_name = 'aggregator computer name'
 
         entity_id = 0
 
@@ -257,6 +261,8 @@ class RepositoryTest(unittest.TestCase):
         entity.contributors = ['foo', 'bar']
         entity.engine_version = '0.0.1'
         entity.engine_hardware_str = 'hardware'
+        entity.aggregator_version = '0.0.1'
+        entity.aggregator_computer_name = 'aggregator computer name'
 
         with database.create_scope():
             session = database.scoped_session()
@@ -283,6 +289,8 @@ class RepositoryTest(unittest.TestCase):
         entity.completed_date = datetime.now()
         entity.engine_version = '0.0.1'
         entity.engine_hardware_str = 'hardware'
+        entity.aggregator_version = '0.0.1'
+        entity.aggregator_computer_name = 'aggregator computer name'
 
         entity_id = 0
 
