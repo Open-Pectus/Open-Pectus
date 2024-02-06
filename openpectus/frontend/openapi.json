@@ -1743,6 +1743,18 @@
             "format": "date-time",
             "title": "Completed Date"
           },
+          "engine_computer_name": {
+            "type": "string",
+            "title": "Engine Computer Name"
+          },
+          "engine_version": {
+            "type": "string",
+            "title": "Engine Version"
+          },
+          "engine_hardware_str": {
+            "type": "string",
+            "title": "Engine Hardware Str"
+          },
           "contributors": {
             "items": {
               "type": "string"
@@ -1758,7 +1770,10 @@
           "engine_id",
           "run_id",
           "started_date",
-          "completed_date"
+          "completed_date",
+          "engine_computer_name",
+          "engine_version",
+          "engine_hardware_str"
         ],
         "title": "RecentRun",
         "description": "Represents a historical run of a process unit. "

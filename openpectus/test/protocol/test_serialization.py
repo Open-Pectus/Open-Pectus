@@ -12,7 +12,7 @@ class SerializationTest(unittest.TestCase):
         reg_s = serialize(reg)
         self.assertEqual(
             {'_type': 'RegisterEngineMsg', '_ns': 'openpectus.protocol.engine_messages',
-             'computer_name': 'foo', 'uod_name': 'bar', 'location': 'baz', 'version': 0},
+             'computer_name': 'foo', 'engine_version': '0.0.1', 'uod_name': 'bar', 'location': 'baz', 'version': 0},
             reg_s)
         self.assertIsNotNone(reg_s)
 

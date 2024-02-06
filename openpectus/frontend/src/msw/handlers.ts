@@ -409,6 +409,9 @@ export const handlers = [
         started_date: getStartedDate(),
         completed_date: getCompletedDate(),
         contributors: ['Eskild'],
+        engine_computer_name: 'A computer name',
+        engine_version: '0.0.1',
+        engine_hardware_str: 'something',
       },
       {
         id: '2',
@@ -417,6 +420,9 @@ export const handlers = [
         started_date: getStartedDate(),
         completed_date: getCompletedDate(),
         contributors: ['Eskild', 'Morten'],
+        engine_computer_name: 'A computer name',
+        engine_version: '0.0.1',
+        engine_hardware_str: 'something',
       },
       {
         id: '3',
@@ -425,6 +431,9 @@ export const handlers = [
         started_date: getStartedDate(),
         completed_date: getCompletedDate(),
         contributors: ['Eskild'],
+        engine_computer_name: 'A computer name',
+        engine_version: '0.0.1',
+        engine_hardware_str: 'something',
       },
       {
         id: '4',
@@ -433,6 +442,9 @@ export const handlers = [
         started_date: getStartedDate(),
         completed_date: getCompletedDate(),
         contributors: ['Eskild'],
+        engine_computer_name: 'A computer name',
+        engine_version: '0.0.1',
+        engine_hardware_str: 'something',
       },
     ]);
   }),
@@ -826,6 +838,9 @@ export const handlers = [
       contributors: ['Morten', 'Eskild'],
       engine_id: 'A process unit id',
       run_id: crypto.randomUUID(),
+      engine_computer_name: 'A computer name',
+      engine_version: '0.0.1',
+      engine_hardware_str: 'something',
     });
   }),
 
