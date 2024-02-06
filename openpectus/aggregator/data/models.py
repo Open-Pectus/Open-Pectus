@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum, auto
-from typing import Any, Dict
+from typing import Dict
 
-import openpectus.aggregator.data.database as database
-from openpectus.aggregator.models import Method, MethodState, PlotConfiguration, PlotColorRegion, SubPlot, RunLog
+from openpectus.aggregator.models import Method, MethodState, PlotConfiguration, RunLog
 from sqlalchemy import JSON, ForeignKey, MetaData
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, attribute_keyed_dict
 
@@ -40,7 +39,11 @@ class RecentRun(DBModel):
     __tablename__ = "RecentRuns"
     engine_id: Mapped[str] = mapped_column()
     run_id: Mapped[str] = mapped_column()
-    computer_name: Mapped[str] = mapped_column()
+    engine_computer_name: Mapped[str] = mapped_column()
+    engine_version: Mapped[str] = mapped_column()
+    engine_hardware_str: Mapped[str] = mapped_column()
+    aggregator_computer_name: Mapped[str] = mapped_column()
+    aggregator_version: Mapped[str] = mapped_column()
     uod_name: Mapped[str] = mapped_column()
     started_date: Mapped[datetime] = mapped_column()
     completed_date: Mapped[datetime] = mapped_column()
