@@ -4,7 +4,7 @@ from typing import List, Any
 
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
 from openpectus.lang.exec import tags, readings as R
-from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand, UodBuilder
+from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand, UodBuilder, logger
 from openpectus.protocol.models import PlotConfiguration, SubPlot, PlotAxis, PlotColorRegion
 
 
@@ -19,6 +19,7 @@ def create_demo_uod() -> UnitOperationDefinitionBase:
             cmd.set_complete()
 
     def get_plot_configuration() -> PlotConfiguration:
+        logger.warn('getting plot configuration')
         return PlotConfiguration(
             color_regions=[
                 PlotColorRegion(
@@ -77,6 +78,7 @@ def create_demo_uod() -> UnitOperationDefinitionBase:
 
 class DemoHardware(HardwareLayerBase):
     """ Simulation hardware. """
+
     def __init__(self) -> None:
         super().__init__()
         self.start_time: float = time()
@@ -103,6 +105,8 @@ class DemoHardware(HardwareLayerBase):
     def write(self, value: Any, r: Register):
         pass
 
-    def connect(self): ...
+    def connect(self):
+        ...
 
-    def disconnect(self): ...
+    def disconnect(self):
+        ...

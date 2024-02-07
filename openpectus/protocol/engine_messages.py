@@ -33,6 +33,8 @@ class RunLogMsg(EngineMessage):
     id: str
     runlog: Mdl.RunLog
 
+class PythonLogMsg(EngineMessage):
+    log: list[str]
 
 class MethodMsg(EngineMessage):
     method: Mdl.Method

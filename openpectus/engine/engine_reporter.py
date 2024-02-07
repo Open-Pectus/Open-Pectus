@@ -1,6 +1,8 @@
 import asyncio
 import logging
-from queue import Empty
+import queue
+from logging.handlers import QueueHandler
+from queue import Empty, SimpleQueue
 from typing import List
 
 import openpectus.protocol.engine_messages as EM
@@ -9,10 +11,15 @@ import openpectus.protocol.models as Mdl
 from openpectus.engine.engine import Engine
 from openpectus.lang.exec.runlog import RunLogItem
 from openpectus.lang.exec.tags import SystemTagName, TagValue
+from openpectus.lang.exec.uod import logger as uod_logger
 from openpectus.protocol.engine_dispatcher import EngineDispatcher
 
 logger = logging.getLogger(__name__)
 
+logging_queue: SimpleQueue[logging.LogRecord] = SimpleQueue()
+logging_handler = QueueHandler(logging_queue)
+logging_handler.setLevel(logging.WARN)
+uod_logger.addHandler(logging_handler)
 
 class EngineReporter():
     def __init__(self, engine: Engine, dispatcher: EngineDispatcher) -> None:
@@ -40,6 +47,7 @@ class EngineReporter():
                 self.send_runlog()
                 self.send_control_state()
                 self.send_method_state()
+                self.send_python_log()
         except asyncio.CancelledError:
             return
         except Exception:
@@ -126,6 +134,12 @@ class EngineReporter():
             id=runlog.id,
             runlog=Mdl.RunLog(lines=list(map(to_line, runlog.items)))
         )
+        self.dispatcher.post(msg)
+
+    def send_python_log(self):
+        msg = EM.PythonLogMsg(log=[])
+        while not logging_queue.empty():
+            msg.log.append(logging_queue.get_nowait().msg)
         self.dispatcher.post(msg)
 
     def send_control_state(self):

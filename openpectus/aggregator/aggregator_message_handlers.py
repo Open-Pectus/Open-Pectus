@@ -17,6 +17,7 @@ class AggregatorMessageHandlers:
         aggregator.dispatcher.set_post_handler(EM.RunLogMsg, self.handle_RunLogMsg)
         aggregator.dispatcher.set_post_handler(EM.ControlStateMsg, self.handle_ControlStateMsg)
         aggregator.dispatcher.set_post_handler(EM.MethodStateMsg, self.handle_MethodStateMsg)
+        aggregator.dispatcher.set_post_handler(EM.PythonLogMsg, self.handle_PythonLogMsg)
 
     async def handle_RegisterEngineMsg(self, register_engine_msg: EM.RegisterEngineMsg) -> AM.RegisterEngineReplyMsg:
         """ Registers engine """
@@ -96,4 +97,12 @@ class AggregatorMessageHandlers:
 
         logger.debug(f"Got method state from client: {str(msg)}")
         self.aggregator.from_engine.method_state_changed(msg.engine_id, msg.method_state)
+        return AM.SuccessMessage()
+
+    async def handle_PythonLogMsg(self, msg: EM.PythonLogMsg):
+        validation_errors = self.validate_msg(msg)
+        if validation_errors is not None:
+            return validation_errors
+
+        logger.warn(f'python log message from engine: {msg.log}')
         return AM.SuccessMessage()
