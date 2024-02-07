@@ -4,11 +4,14 @@ from typing import List, Any
 
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
 from openpectus.lang.exec import tags, readings as R
-from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand, UodBuilder, logger
+from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand, UodBuilder
 from openpectus.protocol.models import PlotConfiguration, SubPlot, PlotAxis, PlotColorRegion
 
 
 def create_demo_uod() -> UnitOperationDefinitionBase:
+    builder = UodBuilder()
+    logger = builder.get_logger()
+
     def reset(cmd: UodCommand, args: List[Any]) -> None:
         count = cmd.get_iteration_count()
         if count == 0:
@@ -47,7 +50,7 @@ def create_demo_uod() -> UnitOperationDefinitionBase:
         )
 
     return (
-        UodBuilder()
+        builder
         .with_instrument("DemoUod")
         .with_hardware(DemoHardware())
         .with_location("Demo location")
