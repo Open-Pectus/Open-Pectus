@@ -12,5 +12,10 @@ export type RecentRun = {
     run_id: string;
     started_date: string;
     completed_date: string;
+    engine_computer_name: string;
+    engine_version: string;
+    engine_hardware_str: string;
+    aggregator_computer_name: string;
+    aggregator_version: string;
     contributors?: Array<string>;
 };

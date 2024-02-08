@@ -1,7 +1,9 @@
 import logging
 from datetime import datetime, timezone
+from socket import gethostname
 from typing import List, Iterable
 
+from openpectus import __version__
 from openpectus.aggregator.data.models import RecentRunMethodAndState, ProcessValueType, RecentRun, PlotLogEntryValue, \
     get_ProcessValueType_from_value, PlotLog, PlotLogEntry, RecentRunPlotConfiguration, RecentRunRunLog
 from openpectus.aggregator.models import TagValue, ReadingInfo, EngineData
@@ -38,7 +40,6 @@ class PlotLogRepository(RepositoryBase):
         # store info from existing tags
         for tag in engine_data.tags_info.map.values():
             self.store_new_tag_info(engine_data.engine_id, run_id, tag)
-
 
     def store_new_tag_info(self, engine_id: str, run_id: str, tag: TagValue):
         existing_plot_log_entry = self.get_plot_log_entry(engine_id, run_id, tag)
@@ -102,7 +103,11 @@ class RecentRunRepository(RepositoryBase):
         recent_run = RecentRun()
         recent_run.engine_id = engine_data.engine_id
         recent_run.run_id = engine_data.run_id
-        recent_run.computer_name = engine_data.computer_name
+        recent_run.engine_computer_name = engine_data.computer_name
+        recent_run.engine_version = engine_data.engine_version
+        recent_run.engine_hardware_str = engine_data.hardware_str
+        recent_run.aggregator_version = __version__
+        recent_run.aggregator_computer_name = gethostname()
         recent_run.uod_name = engine_data.uod_name
         recent_run.started_date = engine_data.run_data.run_started
         recent_run.completed_date = datetime.now(timezone.utc)
@@ -128,7 +133,7 @@ class RecentRunRepository(RepositoryBase):
         self.db_session.commit()
 
     def get_by_run_id(self, run_id: str) -> RecentRun | None:
-        return self.db_session.scalar(select(RecentRun).where(RecentRun.run_id==run_id))
+        return self.db_session.scalar(select(RecentRun).where(RecentRun.run_id == run_id))
 
     def get_by_engine_id(self, engine_id: str) -> Iterable[RecentRun]:
         return self.db_session.scalars(
@@ -140,10 +145,10 @@ class RecentRunRepository(RepositoryBase):
         return self.db_session.scalars(select(RecentRun)).all()
 
     def get_method_and_state_by_run_id(self, run_id: str):
-        return self.db_session.scalar(select(RecentRunMethodAndState).where(RecentRunMethodAndState.run_id==run_id))
+        return self.db_session.scalar(select(RecentRunMethodAndState).where(RecentRunMethodAndState.run_id == run_id))
 
     def get_plot_configuration_by_run_id(self, run_id: str):
-        return self.db_session.scalar(select(RecentRunPlotConfiguration.plot_configuration).where(RecentRunPlotConfiguration.run_id==run_id))
+        return self.db_session.scalar(select(RecentRunPlotConfiguration.plot_configuration).where(RecentRunPlotConfiguration.run_id == run_id))
 
     def get_run_log_by_run_id(self, run_id: str):
-        return self.db_session.scalar(select(RecentRunRunLog.run_log).where(RecentRunRunLog.run_id==run_id))
+        return self.db_session.scalar(select(RecentRunRunLog.run_log).where(RecentRunRunLog.run_id == run_id))
