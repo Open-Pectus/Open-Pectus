@@ -113,6 +113,10 @@ class PNode():
                 return True
             parent = parent.parent
 
+    def reset_state(self):
+        """ Override to clear node runtime state. """
+        pass
+
 
 class PProgram(PNode):
     """ Represents a complete pectus program. """
@@ -134,6 +138,13 @@ class PProgram(PNode):
 
     def get_condition_nodes(self) -> List[PAlarm | PWatch]:
         return [c for c in self.get_instructions() if isinstance(c, PAlarm) or isinstance(c, PWatch)]
+
+    def reset_state(self):
+        """ Reset all runtime state from the program """
+        def reset(node: PNode):
+            if node != self:
+                node.reset_state()
+        self.iterate(reset)
 
 
 class PInjectedNode(PNode):
@@ -201,6 +212,9 @@ class PWatch(PInstruction):
     @property
     def runlog_name(self) -> str | None:
         return "Watch: " + self.condition_str
+
+    def reset_state(self):
+        self.activated = False
 
 
 class PAlarm(PInstruction):
