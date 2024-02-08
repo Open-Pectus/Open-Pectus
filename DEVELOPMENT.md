@@ -349,6 +349,8 @@ sequenceDiagram
 
 ## 7.2. Engine - Aggregator
 
+TODO update to include dispatcher changes
+
 ```mermaid
 sequenceDiagram
     participant A as Aggregator
@@ -390,11 +392,12 @@ Note on transition naming:
 - Lower case transitions (e.g. "register ok") denote some action in the system.
 - Capitalized transition (e.g. "Start") names denote a specific command being executed.
 
+
 ### 7.3.1 Engine states
 - TODO Handle Stop
 - TODO connect hardware and manage hardware states
 - TODO handle disconnect while Running
-- RunId is created in Start and deleted in Stop
+
 ```mermaid
 stateDiagram-v2  
   Disconnected --> Registered: [register ok]
@@ -412,6 +415,10 @@ stateDiagram-v2
   Holding --> Paused: [Unhold (paused)]  
 ```
 
+Notes:
+- The `run_id` system tag is created by the `Start` command and cleared by the `Stop` command.
+
+
 ### 7.3.2 Interpreter states
 The interpreter is managed by its Engine. In Paused and Hold states, the interpreter is not ticked.
 ```mermaid
@@ -423,10 +430,23 @@ stateDiagram-v2
   Running --> Running: [error]  
 ```
 
+Notes:
+- When entering the Stopped state (on `interpreter.stop()`), the program state is reset.
+
+
 ### 7.3.3 Aggregator states
 The aggregator manages a number of Engines and tracks the state of each one.
 
+TODO add state diagram based on 7.9 below.
+
+Notes:
+- Persistance of run state is based changes on the `run_id` system tag. If no longer set, save as recent run. 
+
+
 ## 7.9 Aggregator states per engine
+
+TODO this section is outdated. Remove once 7.3.3 is updated.
+
 ```mermaid
 stateDiagram-v2
     Engine_Unknown --> Engine_Registered: [engine registers]
