@@ -40,7 +40,8 @@ class AggregatorMessageHandlers:
                 engine_id=engine_id,
                 computer_name=register_engine_msg.computer_name,
                 uod_name=register_engine_msg.uod_name,
-                location=register_engine_msg.location
+                location=register_engine_msg.location,
+                engine_version=register_engine_msg.engine_version
             ))
 
         logger.debug(f"Registration successful of client {engine_id}")
@@ -58,8 +59,7 @@ class AggregatorMessageHandlers:
             return validation_errors
 
         logger.debug(f"Got UodInfo from client: {str(msg)}")
-        self.aggregator.from_engine.readings_changed(msg.engine_id, msg.readings)
-        self.aggregator.from_engine.plot_configuration_changed(msg.engine_id, msg.plot_configuration)
+        self.aggregator.from_engine.uod_info_changed(msg.engine_id, msg.readings, msg.plot_configuration, msg.hardware_str)
         return AM.SuccessMessage()
 
     async def handle_TagsUpdatedMsg(self, msg: EM.TagsUpdatedMsg) -> AM.SuccessMessage | AM.ErrorMessage:

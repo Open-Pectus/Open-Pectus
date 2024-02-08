@@ -28,17 +28,13 @@ class FromEngine:
     def register_engine_data(self, engine_data: EngineData):
         self._engine_data_map[engine_data.engine_id] = engine_data
 
-    def readings_changed(self, engine_id: str, readings: list[Mdl.ReadingInfo]):
+    def uod_info_changed(self, engine_id: str, readings: list[Mdl.ReadingInfo], plot_configuration: Mdl.PlotConfiguration, hardware_str: str):
         try:
             self._engine_data_map[engine_id].readings = readings
-        except KeyError:
-            logger.error(f'No engine registered under id {engine_id} when trying to set readings.')
-
-    def plot_configuration_changed(self, engine_id: str, plot_configuration: Mdl.PlotConfiguration):
-        try:
             self._engine_data_map[engine_id].plot_configuration = plot_configuration
+            self._engine_data_map[engine_id].hardware_str = hardware_str
         except KeyError:
-            logger.error(f'No engine registered under id {engine_id} when trying to set plot configuration.')
+            logger.error(f'No engine registered under id {engine_id} when trying to uod info.')
 
     def tag_values_changed(self, engine_id: str, changed_tag_values: list[Mdl.TagValue]):
         plot_log_repo = PlotLogRepository(database.scoped_session())

@@ -1,4 +1,5 @@
 import time
+from openpectus.engine.models import EngineCommandEnum
 
 import openpectus.protocol.models as Mdl
 from openpectus.engine.engine import Engine
@@ -19,7 +20,7 @@ def run_engine(engine: Engine, pcode: str, max_ticks: int = -1):
 
     engine._running = True
     engine.set_method(Mdl.Method.from_pcode(pcode=pcode))
-    engine.schedule_execution("Start")
+    engine.schedule_execution(EngineCommandEnum.START)
 
     while engine.is_running():
         ticks += 1

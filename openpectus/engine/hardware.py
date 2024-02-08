@@ -84,14 +84,14 @@ class HardwareLayerBase():
 
     def read(self, r: Register) -> Any:
         if RegisterDirection.Read not in r.direction:
-            raise HardwareLayerException("Attempt to read unreadable register {r}.")
+            raise HardwareLayerException(f"Attempt to read unreadable register {r}.")
         raise NotImplementedError
 
     def read_batch(self, registers: Sequence[Register]) -> list[Any]:
         """ Read batch of register values. Override to provide efficient implementation """
         for r in registers:
             if RegisterDirection.Read not in r.direction:
-                raise HardwareLayerException("Attempt to read unreadable register {r}.")
+                raise HardwareLayerException(f"Attempt to read unreadable register {r}.")
         values = []
         for r in registers:
             values.append(self.read(r))
@@ -99,14 +99,14 @@ class HardwareLayerBase():
 
     def write(self, value: Any, r: Register) -> None:
         if RegisterDirection.Write not in r.direction:
-            raise HardwareLayerException("Attempt to write unwritable register {r}.")
+            raise HardwareLayerException(f"Attempt to write unwritable register {r}.")
         raise NotImplementedError
 
     def write_batch(self, values: Sequence[Any], registers: Sequence[Register]):
         """ Write batch of register values. Override to provide efficient implementation """
         for r in registers:
             if RegisterDirection.Write not in r.direction:
-                raise HardwareLayerException("Attempt to write unwritable register {r}.")
+                raise HardwareLayerException(f"Attempt to write unwritable register {r}.")
         for v, r in zip(values, registers):
             self.write(v, r)
 

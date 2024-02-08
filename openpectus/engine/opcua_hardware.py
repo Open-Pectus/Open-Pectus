@@ -183,7 +183,7 @@ class OPCUA_Hardware(HardwareLayerBase):
 
     def read(self, r: Register) -> Any:
         if RegisterDirection.Read not in r.direction:
-            raise HardwareLayerException("Attempt to read unreadable register {r}.")
+            raise HardwareLayerException(f"Attempt to read unreadable register {r}.")
         try:
             opcua_node = self._register_to_node(r)
             return opcua_node.read_value()
@@ -197,7 +197,7 @@ class OPCUA_Hardware(HardwareLayerBase):
         """ Read batch of register values with a single OPC-UA call. """
         for r in registers:
             if RegisterDirection.Read not in r.direction:
-                raise HardwareLayerException("Attempt to read unreadable register {r}.")
+                raise HardwareLayerException(f"Attempt to read unreadable register {r}.")
         values = []
         try:
             for register_batch in batched(registers, self._max_nodes_per_read):
@@ -261,7 +261,7 @@ class OPCUA_Hardware(HardwareLayerBase):
 
     def write(self, value: Any, r: Register):
         if RegisterDirection.Write not in r.direction:
-            raise HardwareLayerException("Attempt to write unwritable register {r}.")
+            raise HardwareLayerException(f"Attempt to write unwritable register {r}.")
         try:
             opcua_node = self._register_to_node(r)
             value = self._coerce_value_to_proper_type(value, r)
@@ -279,7 +279,7 @@ class OPCUA_Hardware(HardwareLayerBase):
         """ Write batch of register values with a single OPC-UA call. """
         for r in registers:
             if RegisterDirection.Write not in r.direction:
-                raise HardwareLayerException("Attempt to write unwritable register {r}.")
+                raise HardwareLayerException(f"Attempt to write unwritable register {r}.")
         try:
             node_ids = []
             nodes = self._registers_to_nodes(registers)

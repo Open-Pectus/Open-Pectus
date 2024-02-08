@@ -64,6 +64,8 @@ class RunData(BaseModel):
 class EngineData(BaseModel):
     engine_id: str
     computer_name: str
+    engine_version: str
+    hardware_str: str = "N/A"
     uod_name: str
     location: str
     readings: List[Mdl.ReadingInfo] = []

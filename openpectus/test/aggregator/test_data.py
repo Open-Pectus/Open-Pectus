@@ -176,11 +176,15 @@ class RepositoryTest(unittest.TestCase):
         # at the data level we can insert any kind of junk
         entity = DMdl.RecentRun()
         entity.engine_id = "my_eng_id"
-        entity.computer_name = "my_computer_name"
+        entity.engine_computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
         entity.run_id = 'a run id'
         entity.started_date = datetime.now()
         entity.completed_date = datetime.now()
+        entity.engine_version = '0.0.1'
+        entity.engine_hardware_str = 'hardware'
+        entity.aggregator_version = '0.0.1'
+        entity.aggregator_computer_name = 'aggregator computer name'
 
         entity_id = 0
 
@@ -198,7 +202,7 @@ class RepositoryTest(unittest.TestCase):
 
             created_entity = repo.get_by_run_id(entity.run_id)
             assert created_entity is not None
-            self.assertEqual("my_computer_name", created_entity.computer_name)
+            self.assertEqual("my_computer_name", created_entity.engine_computer_name)
             self.assertEqual("my_uod_name", created_entity.uod_name)
 
     def test_can_update(self):
@@ -206,11 +210,15 @@ class RepositoryTest(unittest.TestCase):
 
         entity = DMdl.RecentRun()
         entity.engine_id = "my_eng_id"
-        entity.computer_name = "my_computer_name"
+        entity.engine_computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
         entity.run_id = 'a run id'
         entity.started_date = datetime.now()
         entity.completed_date = datetime.now()
+        entity.engine_version = '0.0.1'
+        entity.engine_hardware_str = 'hardware'
+        entity.aggregator_version = '0.0.1'
+        entity.aggregator_computer_name = 'aggregator computer name'
 
         entity_id = 0
 
@@ -228,7 +236,7 @@ class RepositoryTest(unittest.TestCase):
 
             created_entity = repo.get_by_run_id(entity.run_id)
             assert created_entity is not None
-            created_entity.computer_name = "updated_computer_name"
+            created_entity.engine_computer_name = "updated_computer_name"
             session.commit()
 
         with database.create_scope():
@@ -237,7 +245,7 @@ class RepositoryTest(unittest.TestCase):
 
             updated_entity = repo.get_by_run_id(entity.run_id)
             assert updated_entity is not None
-            self.assertEqual("updated_computer_name", updated_entity.computer_name)
+            self.assertEqual("updated_computer_name", updated_entity.engine_computer_name)
             self.assertEqual("my_uod_name", updated_entity.uod_name)
 
     def test_can_find(self):
@@ -246,11 +254,15 @@ class RepositoryTest(unittest.TestCase):
         entity = DMdl.RecentRun()
         entity.engine_id = "my_eng_id"
         entity.run_id = 'a run id'
-        entity.computer_name = "my_computer_name"
+        entity.engine_computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
         entity.started_date = datetime.now()
         entity.completed_date = datetime.now()
         entity.contributors = ['foo', 'bar']
+        entity.engine_version = '0.0.1'
+        entity.engine_hardware_str = 'hardware'
+        entity.aggregator_version = '0.0.1'
+        entity.aggregator_computer_name = 'aggregator computer name'
 
         with database.create_scope():
             session = database.scoped_session()
@@ -269,12 +281,16 @@ class RepositoryTest(unittest.TestCase):
 
         entity = DMdl.RecentRun()
         entity.engine_id = "my_eng_id"
-        entity.computer_name = "my_computer_name"
+        entity.engine_computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
         entity.contributors = ['foo', 'bar']
         entity.run_id = 'a run id'
         entity.started_date = datetime.now()
         entity.completed_date = datetime.now()
+        entity.engine_version = '0.0.1'
+        entity.engine_hardware_str = 'hardware'
+        entity.aggregator_version = '0.0.1'
+        entity.aggregator_computer_name = 'aggregator computer name'
 
         entity_id = 0
 

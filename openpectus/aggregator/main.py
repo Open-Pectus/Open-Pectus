@@ -1,4 +1,5 @@
 import logging
+import os
 from argparse import ArgumentParser
 
 from alembic import command
@@ -47,7 +48,8 @@ def main():
     args = get_args()
     title = "Pectus Aggregator"
     print(f"*** {title} ***")
-    command.upgrade(Config("alembic.ini"), 'head')
+    alembic_ini_file_path = os.path.join(os.path.dirname(__file__), "alembic.ini")
+    command.upgrade(Config(alembic_ini_file_path), 'head')
     AggregatorServer(title, args.host, args.port, args.frontend_dist_dir).start()
 
 
