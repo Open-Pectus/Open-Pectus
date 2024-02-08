@@ -281,6 +281,7 @@ class PInterpreter(PNodeVisitor):
 
     def stop(self):
         self.running = False
+        self._program.reset_state()
 
     def _is_awaiting_threshold(self, node: PNode):
         if isinstance(node, PInstruction) and node.time is not None:
