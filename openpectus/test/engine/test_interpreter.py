@@ -5,12 +5,13 @@ from typing import List, Any
 
 import pint
 from openpectus.engine.engine import Engine
+from openpectus.engine.models import EngineCommandEnum
 from openpectus.lang.exec.pinterpreter import PInterpreter
 from openpectus.lang.exec.tags import Tag, SystemTagName
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
 from openpectus.lang.grammar.pprogramformatter import print_parsed_program as print_program
 from openpectus.lang.model.pprogram import PProgram
-from openpectus.test.engine.utility_methods import run_engine, build_program
+from openpectus.test.engine.utility_methods import continue_engine, run_engine, build_program
 
 TICK_INTERVAL = 0.1
 
@@ -164,6 +165,26 @@ Watch: counter > 0
         # TODO abgiguous ...
         # self.assertEqual(["a", "c", "b", "e", "d"], engine.interpreter.get_marks())
         self.assertEqual(["a", "c", "b", "d", "e"], engine.interpreter.get_marks())
+
+    def test_watch_restart(self):
+        program = """
+Mark: a
+Watch: counter > 0
+    Mark: b
+Mark: c
+incr counter
+"""
+        engine = self.engine
+        run_engine(engine, program, 15)
+        self.assertEqual(["a", "c", "b"], engine.interpreter.get_marks())
+
+        engine.schedule_execution(EngineCommandEnum.STOP)
+        continue_engine(engine, 5)
+
+        # rerun program and assert "same" result
+        engine.schedule_execution(EngineCommandEnum.START)
+        continue_engine(engine, 15)
+        self.assertEqual(["a", "c", "b"], engine.interpreter.get_marks())
 
     def test_watch_long_running_order(self):
         # specify order of highly overlapping instructions

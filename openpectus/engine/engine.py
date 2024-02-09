@@ -279,8 +279,8 @@ class Engine(InterpreterContext):
 
         def record_state_add_started_and_completed():
             if cmd_request.exec_id is None:
-                # has been seen to fail for Stop - more runtime data needed to decide
-                logger.error(f"Expected exec_id set for command {cmd_request.name}")
+                # exec_id is only set for commands originating from interpreter.
+                logger.warning(f"Expected exec_id set for command {cmd_request.name}")
             else:
                 record = self.interpreter.runtimeinfo.get_exec_record(cmd_request.exec_id)
                 record.add_state_started(self._tick_time, self._tick_number, self.tags_as_readonly())
