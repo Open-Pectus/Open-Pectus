@@ -53,3 +53,31 @@ def continue_engine(engine: Engine, max_ticks: int = -1):
 
         time.sleep(0.1)
         engine.tick()
+
+
+def print_runlog(e: Engine, description=""):
+    runlog = e.interpreter.runtimeinfo.get_runlog()
+    print(f"Runlog {runlog.id} records: ", description)
+    #    print("line | start | end   | name                 | states")
+    #    print("-----|-------|-------|----------------------|-------------------")
+    for item in runlog.items:
+        name = f"{str(item.name):<20}"
+        prog = f"{item.progress:d2}" if item.progress else ""
+        print(f"{name}   {item.state:<15}    {prog}")
+
+
+#    print("-----|-------|-------|----------------------|-------------------")
+
+
+def print_runtime_records(e: Engine, description: str = ""):
+    records = e.interpreter.runtimeinfo.records
+    print("Runtime records: ", description)
+    print("line | start | end   | name                 | states")
+    print("-----|-------|-------|----------------------|-------------------")
+    for r in records:
+        name = f"{str(r.name):<20}" if r.name is not None else f"{str(r.node):<20}"
+        line = f"{int(r.node.line):4d}" if r.node.line is not None else "   -"
+        states = ", ".join([f"{st.state_name}: {st.state_tick}" for st in r.states])
+        end = f"{r.visit_end_tick:5d}" if r.visit_end_tick != -1 else "    -"
+        print(f"{line}   {r.visit_start_tick:5d}   {end}   {name}   {states}")
+    print("-----|-------|-------|----------------------|-------------------")

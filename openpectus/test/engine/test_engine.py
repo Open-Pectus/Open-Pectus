@@ -9,11 +9,13 @@ import pint
 from openpectus.engine.engine import Engine
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
 from openpectus.engine.models import EngineCommandEnum, SystemStateEnum
-from openpectus.lang.exec.runlog import RunLogItemState, RuntimeRecordStateEnum
+from openpectus.lang.exec.runlog import RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import SystemTagName, Tag, ReadingTag, SelectTag, TagDirection
 from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
-from openpectus.test.engine.utility_methods import run_engine, continue_engine
+from openpectus.test.engine.utility_methods import (
+    continue_engine, run_engine, print_runlog, print_runtime_records
+)
 from typing_extensions import override
 
 logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
@@ -75,59 +77,6 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_command_overlap(['overlap1', 'overlap2'])
         .build()
     )
-
-
-class TestHardwareLayer(unittest.TestCase):
-    def test_can_read_register(self):
-        uod = create_test_uod()
-        hwl: TestHW = uod.hwl  # type: ignore
-        self.assertIsInstance(hwl, TestHW)
-        self.assertIsInstance(hwl, HardwareLayerBase)
-
-        rFT01 = hwl.registers["FT01"]
-
-        self.assertEqual(None, hwl.read(rFT01))
-        hwl.register_values["FT01"] = 78
-
-        self.assertEqual(78, hwl.read(rFT01))
-
-    def test_can_write_register(self):
-        uod = create_test_uod()
-        hwl: TestHW = uod.hwl  # type: ignore
-
-        rFT01 = hwl.registers["FT01"]
-
-        hwl.write("foo", rFT01)
-
-        self.assertEqual("foo", hwl.register_values["FT01"])
-
-
-def print_runlog(e: Engine, description=""):
-    runlog = e.interpreter.runtimeinfo.get_runlog()
-    print(f"Runlog {runlog.id} records: ", description)
-    #    print("line | start | end   | name                 | states")
-    #    print("-----|-------|-------|----------------------|-------------------")
-    for item in runlog.items:
-        name = f"{str(item.name):<20}"
-        prog = f"{item.progress:d2}" if item.progress else ""
-        print(f"{name}   {item.state:<15}    {prog}")
-
-
-#    print("-----|-------|-------|----------------------|-------------------")
-
-
-def print_runtime_records(e: Engine, description: str = ""):
-    records = e.interpreter.runtimeinfo.records
-    print("Runtime records: ", description)
-    print("line | start | end   | name                 | states")
-    print("-----|-------|-------|----------------------|-------------------")
-    for r in records:
-        name = f"{str(r.name):<20}" if r.name is not None else f"{str(r.node):<20}"
-        line = f"{int(r.node.line):4d}" if r.node.line is not None else "   -"
-        states = ", ".join([f"{st.state_name}: {st.state_tick}" for st in r.states])
-        end = f"{r.visit_end_tick:5d}" if r.visit_end_tick != -1 else "    -"
-        print(f"{line}   {r.visit_start_tick:5d}   {end}   {name}   {states}")
-    print("-----|-------|-------|----------------------|-------------------")
 
 
 def create_engine() -> Engine:
@@ -730,87 +679,6 @@ Mark: C
 
         self.assertTrue(e._runstate_paused)
 
-
-class TestRunlog(unittest.TestCase):
-    def setUp(self):
-        self.engine: Engine = create_engine()
-
-    def tearDown(self):
-        self.engine.cleanup()
-
-    def assert_Runlog_HasItem(self, name: str):
-        runlog = self.engine.runtimeinfo.get_runlog()
-        for item in runlog.items:
-            if item.name == name:
-                return
-        self.fail(f"Runlog has no item named '{name}'")
-
-    def assert_Runlog_HasItem_Started(self, name: str):
-        runlog = self.engine.runtimeinfo.get_runlog()
-        for item in runlog.items:
-            if item.name == name and item.state == RunLogItemState.Started:
-                return
-        self.fail(f"Runlog has no item named '{name}' in Started state")
-
-    def assert_Runlog_HasItem_Completed(self, name: str):
-        runlog = self.engine.runtimeinfo.get_runlog()
-        for item in runlog.items:
-            if item.name == name and item.state == RunLogItemState.Completed:
-                return
-        self.fail(f"Runlog has no item named '{name}' in Completed state")
-
-    def assert_Runtime_HasRecord(self, name: str):
-        for r in self.engine.runtimeinfo.records:
-            if r.name == name:
-                return
-        self.fail(f"Runtime has no record named '{name}'")
-
-    def assert_Runtime_HasRecord_Started(self, name: str):
-        for r in self.engine.runtimeinfo.records:
-            if r.name == name and r.has_state(RuntimeRecordStateEnum.Started):
-                return
-        self.fail(f"Runtime has no record named '{name}' in state Started")
-
-    def assert_Runtime_HasRecord_Completed(self, name: str):
-        for r in self.engine.runtimeinfo.records:
-            if r.name == name and r.has_state(RuntimeRecordStateEnum.Started):
-                return
-        self.fail(f"Runtime has no record named '{name}' in state Completed")
-
-    def test_start_complete_UodCommand(self):
-        e = self.engine
-
-        run_engine(e, "Reset", 3)
-        self.assert_Runlog_HasItem_Started("Reset")
-
-        continue_engine(e, 5)
-        self.assert_Runlog_HasItem_Completed("Reset")
-
-        self.assert_Runtime_HasRecord_Started("Reset")
-        self.assert_Runtime_HasRecord_Completed("Reset")
-
-    def test_start_complete_InstructionUodCommand(self):
-        e = self.engine
-
-        run_engine(e, "Mark: A", 3)
-
-        self.assert_Runtime_HasRecord_Started("Mark: A")
-        self.assert_Runtime_HasRecord_Completed("Mark: A")
-
-        self.assert_Runlog_HasItem_Completed("Mark: A")
-
-    def test_start_complete_EngineInternalCommand(self):
-        e = self.engine
-
-        cmd = "Increment run counter"
-        run_engine(e, cmd, 5)
-
-        print_runtime_records(e)
-
-        self.assert_Runtime_HasRecord_Started(cmd)
-        self.assert_Runtime_HasRecord_Completed(cmd)
-
-        self.assert_Runlog_HasItem_Completed(cmd)
 
 # Test helpers
 

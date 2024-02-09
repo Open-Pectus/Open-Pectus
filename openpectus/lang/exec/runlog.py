@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import logging
 from enum import StrEnum, auto
-from typing import Dict, List
+from typing import Dict, List, Optional
 from uuid import UUID, uuid4
 
 from openpectus.engine.commands import EngineCommand
 from openpectus.lang.exec.tags import TagValueCollection
-from openpectus.lang.model.pprogram import PNode, PProgram
+from openpectus.lang.model.pprogram import PBlank, PNode, PProgram
 
 logger = logging.getLogger(__name__)
 
@@ -58,20 +58,26 @@ class RuntimeInfo():
         to force or cancel a particular command instance.
         """
         items: list[RunLogItem] = []
-
         runlog = RunLog()
 
         for r in self.records:
             if isinstance(r.node, PProgram):
                 runlog.id = str(r.node.id)
+                continue
+            if isinstance(r.node, PBlank):
+                continue
             if r.name is None:  # TODO document when this would occur
+                node_name = str(r.node) if r.node is not None else "node is None"
+                logger.error(f"Runtime record has empty name. Should this happen? node: {node_name}")
                 continue
 
-            item = RunLogItem()
-            item.name = r.name
-            item.id = str(r.exec_id)
-            # item.progress
+            if not r.has_state(RuntimeRecordStateEnum.Started):
+                continue
 
+            # Usually there is only a single start/complete state pair which is
+            # what is needed for a runlog item.
+            # But, alas, both uod commands and alarms can be invoked any number of times
+            # for which all state information is placed in the same runtime record.
             if r.has_state(RuntimeRecordStateEnum.UodCommandSet):
                 # sanity check
                 set_count = len([st for st in r.states if st.state_name == RuntimeRecordStateEnum.UodCommandSet])
@@ -81,39 +87,73 @@ class RuntimeInfo():
                 assert start_count < 2, f"{start_count=} was greater than 1 - unexpected?!"
                 assert complete_count < 2, f"{complete_count=} was greater than 1 - unexpected?!"
 
-            # fill in start values regardless of actual state
-            if r.has_state(RuntimeRecordStateEnum.Started):
-                state = r.get_state(RuntimeRecordStateEnum.Started)
-                item.start = state.state_time
-                item.start_values = state.values or TagValueCollection.empty()
+            # temporarily verify that states are always ordered
+            # if this is indeed the case, we can maybe ensure it as an invariant
+            for i, state in enumerate(r.states):
+                if i > 0:
+                    prev_state = r.states[i-1]
+                    assert prev_state.state_tick <= state.state_tick
+                    assert prev_state.state_time <= state.state_time
 
-            # fill in state values in order of precedence
-            if r.has_state(RuntimeRecordStateEnum.Completed):
-                item.state = RunLogItemState.Completed
-                state = r.get_state(RuntimeRecordStateEnum.Completed)
-                item.end = state.state_time
-                item.end_values = state.values or TagValueCollection.empty()
-            elif r.has_state(RuntimeRecordStateEnum.Failed):
-                item.state = RunLogItemState.Failed
-                state = r.get_state(RuntimeRecordStateEnum.Failed)
-                item.end = state.state_time
-                item.end_values = state.values or TagValueCollection.empty()
-            elif r.has_state(RuntimeRecordStateEnum.Cancelled):
-                item.state = RunLogItemState.Cancelled
-                state = r.get_state(RuntimeRecordStateEnum.Cancelled)
-                item.end = state.state_time
-                item.end_values = state.values or TagValueCollection.empty()
-            elif r.has_state(RuntimeRecordStateEnum.Forced):
-                item.state = RunLogItemState.Forced
-            elif r.has_state(RuntimeRecordStateEnum.Started):
-                item.state = RunLogItemState.Started
-                state = r.get_state(RuntimeRecordStateEnum.Started)
-                item.start = state.state_time
-                item.start_values = state.values or TagValueCollection.empty()
-            else:
-                item.state = RunLogItemState.Waiting
+            started_state_indices = [i for i, st in enumerate(r.states)
+                                     if st.state_name == RuntimeRecordStateEnum.Started]
 
-            items.append(item)
+            start_inx = 0
+            item: Optional[RunLogItem] = None
+            for i, state in enumerate(r.states):
+                has_more_start_states = start_inx < len(started_state_indices) - 1
+                has_more_states = i < started_state_indices[start_inx + 1] - 1 \
+                    if has_more_start_states \
+                    else i < len(r.states) - 1
+
+                if i < started_state_indices[start_inx]:  # before start state
+                    continue
+                
+                elif i == started_state_indices[start_inx]:  # at start state
+                    item = RunLogItem()
+                    item.name = r.name
+                    item.id = str(r.exec_id)
+                    item.state = RunLogItemState.Started
+                    # TODO progress?
+                    item.start = state.state_time
+                    item.start_values = state.values or TagValueCollection.empty()
+
+                    if not has_more_states:
+                        items.append(item)
+                        item = None
+
+                else:  # after start state - or before next start state
+                    if item is not None:
+                        is_conclusive_state = False
+                        if state.state_name == RuntimeRecordStateEnum.Completed:
+                            item.end = state.state_time
+                            item.end_values = state.values or TagValueCollection.empty()
+                            item.state = RunLogItemState.Completed
+                            is_conclusive_state = True
+                        elif state.state_name == RuntimeRecordStateEnum.Failed:
+                            item.end = state.state_time
+                            item.end_values = state.values or TagValueCollection.empty()
+                            item.state = RunLogItemState.Failed
+                            is_conclusive_state = True
+                        elif state.state_name == RuntimeRecordStateEnum.Cancelled:
+                            item.end = state.state_time
+                            item.end_values = state.values or TagValueCollection.empty()
+                            item.state = RunLogItemState.Cancelled
+                            is_conclusive_state = True
+                        elif state.state_name == RuntimeRecordStateEnum.Forced:
+                            item.state = RunLogItemState.Forced
+                        else:
+                            item.state = RunLogItemState.Waiting
+
+                        if is_conclusive_state or not has_more_states:
+                            items.append(item)
+                            item = None
+
+                    if has_more_start_states:
+                        start_inx += 1
+                    else:
+                        break
+
         runlog.items = items
         return runlog
 
@@ -335,7 +375,7 @@ class RunLogItemState(StrEnum):
     Cancelled = auto()
     """ Command was cancelled. Either by overlapping command or explicitly by user """
     Forced = auto()
-    """ Waiting command was forcibly started """
+    """ Waiting command was forcibly started by user """
     Completed = auto()
     """ Command has completed """
     Failed = auto()

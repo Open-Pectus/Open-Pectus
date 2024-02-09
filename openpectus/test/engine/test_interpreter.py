@@ -11,7 +11,10 @@ from openpectus.lang.exec.tags import Tag, SystemTagName
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
 from openpectus.lang.grammar.pprogramformatter import print_parsed_program as print_program
 from openpectus.lang.model.pprogram import PProgram
-from openpectus.test.engine.utility_methods import continue_engine, run_engine, build_program
+from openpectus.test.engine.utility_methods import (
+    continue_engine, run_engine, build_program, print_runlog, print_runtime_records
+)
+
 
 TICK_INTERVAL = 0.1
 
@@ -54,6 +57,7 @@ def create_engine(uod: UnitOperationDefinitionBase | None = None) -> Engine:
         uod = create_test_uod()
     e = Engine(uod)
     e._configure()
+    
     return e
 
 
@@ -121,6 +125,22 @@ incr counter
         run_engine(engine, program, 10)
 
         self.assertEqual(1, engine.uod.tags["counter"].as_number())
+        self.assertEqual("a", engine.interpreter.get_marks()[0])
+
+    def test_command_Increment_run_counter(self):
+        # same as test_command_incr_counter() but using builtin system tag and command rather than uod variant.
+        program = """
+Mark: a
+Increment run counter
+"""
+        print_program(program)
+        engine = self.engine
+
+        self.assertEqual(0, engine.tags[SystemTagName.RUN_COUNTER].as_number())
+
+        run_engine(engine, program, 10)
+
+        self.assertEqual(1, engine.tags[SystemTagName.RUN_COUNTER].as_number())
         self.assertEqual("a", engine.interpreter.get_marks()[0])
 
     @unittest.skip("TODO")
@@ -238,6 +258,52 @@ Mark: b
         # TODO fix intepretation error, watch instruction(s) not being executed
 
         self.assertEqual(["a", "b", "a1", "a2", "a3", "a4"], engine.interpreter.get_marks())
+
+    def test_alarm_triggers_by_condition(self):
+        program = """
+Mark: a
+Alarm: counter > 0
+    Mark: b
+Mark: c
+incr counter
+Mark: d
+"""
+        engine = self.engine
+        run_engine(engine, program, 15)
+
+        marks = engine.interpreter.get_marks()
+
+        # most important
+        self.assertEqual(["a", "c"], marks[:2])
+        # also important but specific order is really an implementation detail
+        self.assertTrue(marks[:4] == ["a", "c", "d", "b"] or marks[:4] == ["a", "c", "b", "d"])
+
+    def test_alarm_can_retrigger(self):
+        program = """
+Mark: a
+Alarm: counter > 0
+    Mark: b
+Mark: c
+incr counter
+Mark: d
+Mark: e
+Mark: f
+"""
+        engine = self.engine
+
+        logger = logging.getLogger("openpectus.lang.exec.pinterpreter")
+        logger.setLevel(logging.DEBUG)
+
+        run_engine(engine, program, 15)
+
+        print_runlog(engine)
+        #print_runtime_records(engine)
+
+        marks = engine.interpreter.get_marks()
+        # most important
+        self.assertEqual(["a", "c"], marks[:2])
+        # least important - exact ordering is an implementation
+        self.assertGreaterEqual(marks.count("b"), 2)
 
     def test_block(self):
         program = """
