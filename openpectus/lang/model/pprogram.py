@@ -224,6 +224,7 @@ class PAlarm(PInstruction):
 
         self.children = []
         self.condition: PCondition | None = None
+        self.activated: bool = False
 
     @property
     def condition_str(self) -> str:
@@ -236,6 +237,9 @@ class PAlarm(PInstruction):
     @property
     def runlog_name(self) -> str | None:
         return "Alarm: " + self.condition_str
+
+    def reset_state(self):
+        self.activated = False
 
 
 class PMark(PInstruction):

@@ -53,6 +53,7 @@ class ARType(Enum):
     PROGRAM = "PROGRAM",
     BLOCK = "BLOCK",
     WATCH = "WATCH",
+    ALARM = "ALARM",
     INJECTED = "INJECTED",
 
 
@@ -80,6 +81,8 @@ class ActivationRecord:
             return ARType.BLOCK
         elif isinstance(node, PWatch):
             return ARType.WATCH
+        elif isinstance(node, PAlarm):
+            return ARType.ALARM
         elif isinstance(node, PInjectedNode):
             return ARType.INJECTED
         else:
@@ -161,8 +164,8 @@ class PInterpreter(PNodeVisitor):
         for r in self.runtimeinfo.records:
             if isinstance(r.node, PMark):
                 completed_states = [st for st in r.states if st.state_name == RuntimeRecordStateEnum.Completed]
-                if any(completed_states):
-                    end_tick = completed_states[0].state_tick
+                for completed_state in completed_states:
+                    end_tick = completed_state.state_tick
                     records.append((r.node.name, end_tick))
 
         def sort_fn(t: tuple[str, int]) -> int:
@@ -175,16 +178,8 @@ class PInterpreter(PNodeVisitor):
         """ Inject the node into the running program in the current scope to be executed as next instruction. """
         node = PInjectedNode(None)
         node.children = program.children
-
-        def create_interrupt_handler(ar: ActivationRecord) -> GenerationType:
-            # TODO will this work with nested interrupt handlers,
-            # possibly including blocks?
-            self.stack.push(ar)
-            yield from self.visit(node)
-            self.stack.pop()
-
         ar = ActivationRecord(node, self._tick_time, self.context.tags.as_readonly())
-        self._register_interrupt(ar, create_interrupt_handler(ar))
+        self._register_interrupt(ar, self._create_interrupt_handler(node, ar))
 
     def _interpret(self) -> GenerationType:
         """ Create generator for interpreting the main program. """
@@ -233,7 +228,7 @@ class PInterpreter(PNodeVisitor):
         for ar, handler in list(self.interrupts):
             logger.debug(f"Handler count: {len(self.interrupts)}")
             node = ar.owner
-            if isinstance(node, (PWatch, PInjectedNode)):
+            if isinstance(node, (PWatch, PInjectedNode, PAlarm)):
                 logger.debug(f"Interrupt {str(node)}")
                 try:
                     assert handler is not None, "Handler is None"
@@ -243,10 +238,20 @@ class PInterpreter(PNodeVisitor):
                     pass
                 if ar.complete:
                     self._unregister_interrupt(ar)
+                    if isinstance(node, PAlarm):
+                        node.reset_state()
+                        ar = ActivationRecord(node)
+                        self._register_interrupt(ar, self._create_interrupt_handler(node, ar))
             else:
                 logger.error(f"Interrupt for node type {str(node)} not implemented")
                 raise NotImplementedError(f"Interrupt for node type {str(node)} not implemented")
         return instr_count > 0
+
+    def _create_interrupt_handler(self, node: PNode, ar: ActivationRecord) -> GenerationType:
+        ar.fill_start(self._tick_time, self.context.tags.as_readonly())
+        self.stack.push(ar)
+        yield from self.visit(node)
+        self.stack.pop()
 
     def tick(self, tick_time: float, tick_number: int):
         self._tick_time = tick_time
@@ -296,7 +301,7 @@ class PInterpreter(PNodeVisitor):
     def _evaluate_condition(self, condition_node: PWatch | PAlarm) -> bool:
         c = condition_node.condition
         assert c is not None, "Error in condition"
-        assert not c.error, "Error parsing condition"
+        assert not c.error, f"Error parsing condition '{c.condition_str}'"
         assert c.tag_name, "Error in condition tag"
         assert c.tag_value, "Error in condition value"
         assert self.context.tags.has(c.tag_name)
@@ -472,32 +477,24 @@ class PInterpreter(PNodeVisitor):
         yield
 
     def visit_PWatch(self, node: PWatch):
-        def create_interrupt_handler(ar: ActivationRecord) -> GenerationType:
-            # TODO will this work with nested interrupt handlers,
-            # possibly including blocks?
-            # TODO once this is determined we should have a single method
-            # to create interrupt handlers
+        yield from self.visit_WatchOrAlarm(node)
 
-            # update ar with actual time and tags
-            ar.fill_start(self._tick_time, self.context.tags.as_readonly())
+    def visit_PAlarm(self, node: PAlarm):
+        yield from self.visit_WatchOrAlarm(node)
 
-            self.stack.push(ar)
-            yield from self.visit(node)
-            self.stack.pop()
-
+    def visit_WatchOrAlarm(self, node: PWatch | PAlarm):
         record = self.runtimeinfo.get_last_node_record(node)
 
         ar = self.stack.peek()
         if ar.owner is not node:
             ar = ActivationRecord(node)
-            self._register_interrupt(ar, create_interrupt_handler(ar))
+            self._register_interrupt(ar, self._create_interrupt_handler(node, ar))
             record.add_state_awaiting_interrupt(
                 self._tick_time, self._tick_number,
                 self.context.tags.as_readonly())
         else:
-            # On subsequent visits (that originates from the interrupt handler)
-            # we evaluate the condition. When true, the node is 'activated' and its
-            # body will run
+            # On subsequent visits (originating from the interrupt handler), we evaluate
+            # the condition. When true, the node is 'activated' and its body will run
             logger.debug(f"{str(node)} interrupt invoked")
             if node.activated:
                 logger.debug(f"{str(node)} was previously activated")
