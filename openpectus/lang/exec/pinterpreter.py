@@ -477,48 +477,12 @@ class PInterpreter(PNodeVisitor):
         yield
 
     def visit_PWatch(self, node: PWatch):
-        record = self.runtimeinfo.get_last_node_record(node)
-
-        ar = self.stack.peek()
-        if ar.owner is not node:
-            ar = ActivationRecord(node)
-            self._register_interrupt(ar, self._create_interrupt_handler(node, ar))
-            record.add_state_awaiting_interrupt(
-                self._tick_time, self._tick_number,
-                self.context.tags.as_readonly())
-        else:
-            # On subsequent visits (originating from the interrupt handler), we evaluate
-            # the condition. When true, the node is 'activated' and its body will run
-            logger.debug(f"{str(node)} interrupt invoked")
-            if node.activated:
-                logger.debug(f"{str(node)} was previously activated")
-            else:
-                record.add_state_awaiting_condition(
-                    self._tick_time, self._tick_number,
-                    self.context.tags.as_readonly())
-
-                while not ar.complete and self.running:
-                    condition_result = self._evaluate_condition(node)
-                    logger.debug(f"{str(node)} condition evaluated: {condition_result}")
-                    if condition_result:
-                        node.activated = True
-                        logger.debug(f"{str(node)} executing")
-                        record.add_state_started(
-                            self._tick_time, self._tick_number,
-                            self.context.tags.as_readonly())
-
-                        yield from self._visit_children(node.children)
-                        logger.debug(f"{str(node)} executed")
-                        ar.complete = True
-                        record.add_state_completed(
-                            self._tick_time, self._tick_number,
-                            self.context.tags.as_readonly())
-
-                        logger.info(f"Interrupt complete {ar}")
-                    else:
-                        yield
+        yield from self.visit_WatchOrAlarm(node)
 
     def visit_PAlarm(self, node: PAlarm):
+        yield from self.visit_WatchOrAlarm(node)
+
+    def visit_WatchOrAlarm(self, node: PWatch | PAlarm):
         record = self.runtimeinfo.get_last_node_record(node)
 
         ar = self.stack.peek()
