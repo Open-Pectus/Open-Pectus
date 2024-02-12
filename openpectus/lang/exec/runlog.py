@@ -74,26 +74,27 @@ class RuntimeInfo():
             if not r.has_state(RuntimeRecordStateEnum.Started):
                 continue
 
-            # Usually there is only a single start/complete state pair which is
-            # what is needed for a runlog item.
-            # But, alas, both uod commands and alarms can be invoked any number of times
-            # for which all state information is placed in the same runtime record.
-            if r.has_state(RuntimeRecordStateEnum.UodCommandSet):
+            # Usually there is only a single start/complete state pair which is what is needed for a runlog item.
+            # But, alas, both uod commands and alarms can be invoked any number of times for which all state
+            # information is placed in the same runtime record. Therefore we need to expand these states into 
+            # seperate run log items.
+            if __debug__:
                 # sanity check
-                set_count = len([st for st in r.states if st.state_name == RuntimeRecordStateEnum.UodCommandSet])
-                start_count = len([st for st in r.states if st.state_name == RuntimeRecordStateEnum.Started])
-                complete_count = len([st for st in r.states if st.state_name == RuntimeRecordStateEnum.Completed])
-                assert set_count < 2, f"{set_count=} was greater than 1 - unexpected?!"
-                assert start_count < 2, f"{start_count=} was greater than 1 - unexpected?!"
-                assert complete_count < 2, f"{complete_count=} was greater than 1 - unexpected?!"
+                if r.has_state(RuntimeRecordStateEnum.UodCommandSet):
+                    set_count = len([st for st in r.states if st.state_name == RuntimeRecordStateEnum.UodCommandSet])
+                    start_count = len([st for st in r.states if st.state_name == RuntimeRecordStateEnum.Started])
+                    complete_count = len([st for st in r.states if st.state_name == RuntimeRecordStateEnum.Completed])
+                    assert set_count < 2, f"{set_count=} was greater than 1 - unexpected?!"
+                    assert start_count < 2, f"{start_count=} was greater than 1 - unexpected?!"
+                    assert complete_count < 2, f"{complete_count=} was greater than 1 - unexpected?!"
 
-            # temporarily verify that states are always ordered
-            # if this is indeed the case, we can maybe ensure it as an invariant
-            for i, state in enumerate(r.states):
-                if i > 0:
-                    prev_state = r.states[i-1]
-                    assert prev_state.state_tick <= state.state_tick
-                    assert prev_state.state_time <= state.state_time
+                # temporarily verify that states are always ordered
+                # if this is indeed the case, we can maybe ensure it as an invariant
+                for i, state in enumerate(r.states):
+                    if i > 0:
+                        prev_state = r.states[i-1]
+                        assert prev_state.state_tick <= state.state_tick
+                        assert prev_state.state_time <= state.state_time
 
             started_state_indices = [i for i, st in enumerate(r.states)
                                      if st.state_name == RuntimeRecordStateEnum.Started]
@@ -108,13 +109,12 @@ class RuntimeInfo():
 
                 if i < started_state_indices[start_inx]:  # before start state
                     continue
-                
+
                 elif i == started_state_indices[start_inx]:  # at start state
                     item = RunLogItem()
                     item.name = r.name
                     item.id = str(r.exec_id)
                     item.state = RunLogItemState.Started
-                    # TODO progress?
                     item.start = state.state_time
                     item.start_values = state.values or TagValueCollection.empty()
 

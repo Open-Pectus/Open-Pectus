@@ -114,11 +114,7 @@ Watch: Run Counter > -1
 Mark: c"""
         run_engine(e, cmd, 5)
 
-        # print_runtime_records(e)
-        # print_runlog(e)
-
         cmd = "Mark: b"
-
         self.assert_Runtime_HasRecord_Started(cmd)
         self.assert_Runtime_HasRecord_Completed(cmd)
         self.assert_Runlog_HasItem_Completed(cmd)
@@ -132,7 +128,7 @@ Alarm: Run Counter < 5
     Increment run counter
 """
         run_engine(e, cmd, 5)
-        
+
         cmd = "Mark: b"
         self.assert_Runtime_HasRecord_Started(cmd)
         self.assert_Runtime_HasRecord_Completed(cmd)
@@ -142,7 +138,7 @@ Alarm: Run Counter < 5
         e = self.engine
 
         cmd = """
-Alarm: Run Counter < 5
+Alarm: Run Counter < 3
     Mark: b
     Increment run counter
 """
