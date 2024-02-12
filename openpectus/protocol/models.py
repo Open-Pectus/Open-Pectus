@@ -126,6 +126,7 @@ class PlotConfiguration(ProtocolModel):
 class ErrorLogEntry(ProtocolModel):
     message: str
     created_time: float
+    severity: int
 
 class ErrorLog(ProtocolModel):
     entries: list[ErrorLogEntry]

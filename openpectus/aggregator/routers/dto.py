@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from enum import StrEnum, auto
 from typing import Literal
@@ -329,15 +330,21 @@ class RecentRunCsv(Dto):
     filename: str
     csv_content: str
 
+class ErrorLogSeverity(StrEnum):
+    Warning = auto()
+    Error = auto()
+
 class ErrorLogEntry(Dto):
     message: str
     created_time: datetime
+    severity: ErrorLogSeverity
 
     @staticmethod
     def from_model(model: Mdl.ErrorLogEntry) -> ErrorLogEntry:
         return ErrorLogEntry(
             message=model.message,
-            created_time=datetime.fromtimestamp(model.created_time)
+            created_time=datetime.fromtimestamp(model.created_time),
+            severity=ErrorLogSeverity.Error if model.severity == logging.ERROR else ErrorLogSeverity.Warning
         )
 
 class ErrorLog(Dto):

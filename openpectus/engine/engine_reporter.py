@@ -139,7 +139,7 @@ class EngineReporter():
         log: Mdl.ErrorLog = Mdl.ErrorLog(entries=[])
         while not logging_queue.empty():
             log_entry = logging_queue.get_nowait()
-            log.entries.append(Mdl.ErrorLogEntry(message=log_entry.getMessage(), created_time=log_entry.created))
+            log.entries.append(Mdl.ErrorLogEntry(message=log_entry.getMessage(), created_time=log_entry.created, severity=log_entry.levelno))
         if(len(log.entries) != 0):
             self.dispatcher.post(EM.ErrorLogMsg(log=log))
 

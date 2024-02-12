@@ -1170,14 +1170,27 @@
             "type": "string",
             "format": "date-time",
             "title": "Created Time"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/ErrorLogSeverity"
           }
         },
         "type": "object",
         "required": [
           "message",
-          "created_time"
+          "created_time",
+          "severity"
         ],
         "title": "ErrorLogEntry"
+      },
+      "ErrorLogSeverity": {
+        "type": "string",
+        "enum": [
+          "warning",
+          "error"
+        ],
+        "title": "ErrorLogSeverity",
+        "description": "An enumeration."
       },
       "ExecutableCommand": {
         "properties": {

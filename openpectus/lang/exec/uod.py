@@ -42,7 +42,7 @@ class UnitOperationDefinitionBase:
 
     def validate_configuration(self):
         fatal = False
-        logger.warn('validating configuration')
+        logger.error('validating configuration')
 
         def log_fatal(msg: str):
             nonlocal fatal
