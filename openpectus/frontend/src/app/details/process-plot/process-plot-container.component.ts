@@ -18,7 +18,7 @@ import { ProcessPlotComponent } from './process-plot.component';
     PushPipe,
   ],
   template: `
-    <app-collapsible-element [name]="'Process Plot'" [heightResizable]="true" [contentHeight]="400" [contentOverflow]="true"
+    <app-collapsible-element [name]="'Process Plot'" [heightResizable]="true" [contentHeight]="670" [contentOverflow]="true"
                              (collapseStateChanged)="isCollapsed = $event" [codiconName]="'codicon-graph-line'">
       <button *ngIf="plotIsModified | ngrxPush" buttons (click)="onReset()" class="bg-orange-800 rounded pl-2.5 pr-3 py-1 flex items-center">
         <span class="codicon codicon-discard mr-1.5"></span> Reset view

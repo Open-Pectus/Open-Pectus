@@ -14,7 +14,7 @@ import { ErrorLogSelectors } from './ngrx/error-log.selectors';
   imports: [CommonModule, CollapsibleElementComponent, LetDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-collapsible-element [name]="'Error Log'" [heightResizable]="true" [contentHeight]="200" [codiconName]="'codicon-warning'"
+    <app-collapsible-element [name]="'Error Log'" [heightResizable]="true" [contentHeight]="120" [codiconName]="'codicon-warning'"
                              (collapseStateChanged)="collapsed = $event" *ngrxLet="errorLog as errorLog">
       <div content class="p-1 font">
         <p [class.text-yellow-500]="entry.severity === ErrorLogSeverity.WARNING"
