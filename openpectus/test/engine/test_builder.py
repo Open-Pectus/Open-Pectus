@@ -1,7 +1,7 @@
 import unittest
 
 from openpectus.lang.grammar.pgrammar import PGrammar
-from openpectus.lang.grammar.pprogramformatter import PProgramFormatter
+from openpectus.lang.grammar.pprogramformatter import PProgramFormatter, print_program
 from openpectus.lang.model.pprogram import (
     PNode,
     PProgram,
@@ -10,7 +10,7 @@ from openpectus.lang.model.pprogram import (
     PEndBlock,
     # PEndBlocks,
     PWatch,
-    # PAlarm,
+    PAlarm,
     PMark,
     PCommand,
     PComment,
@@ -597,6 +597,39 @@ watch: counter > 0 ml
 
         self.assertIsInstance(blank_3, PBlank)
         self.assertEqual(10, blank_3.line)
+
+    def test_alarm(self):
+        p = build(
+            """
+Mark: A
+Alarm: counter > 0
+    Mark: b
+Mark: c
+Increment counter
+Mark: d
+""")
+        program = p.build_model()
+
+        #p.printSyntaxTree(p.tree)
+        #print_program(program, show_line_numbers=True, show_errors=True)
+
+        self.assertFalse(program.has_error(recursive=True))
+        n_mark_a, n_alarm, n_mark_b, n_mark_c, n_increment, n_mark_d = program.get_instructions()
+        self.assertIsInstance(n_alarm, PAlarm)
+        self.assertIsInstance(n_mark_a, PMark)
+        self.assertIsInstance(n_mark_b, PMark)
+        self.assertIsInstance(n_mark_c, PMark)
+        self.assertIsInstance(n_mark_d, PMark)
+        self.assertIsInstance(n_increment, PCommand)
+        self.assertTrue(n_alarm.get_child_nodes()[0], n_mark_b)
+
+        assert isinstance(n_alarm, PAlarm)
+        condition = n_alarm.condition
+        assert condition is not None
+        self.assertEqual("counter", condition.tag_name)
+        self.assertEqual(">", condition.op)
+        self.assertEqual("0", condition.tag_value)
+        self.assertEqual(None, condition.tag_unit)
 
     def test_program_mark(self):
         p = build(
