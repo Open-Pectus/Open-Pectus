@@ -933,6 +933,48 @@
         }
       }
     },
+    "/api/recent_runs/{run_id}/error_log": {
+      "get": {
+        "tags": [
+          "recent_runs"
+        ],
+        "summary": "Get Recent Run Error Log",
+        "operationId": "get_recent_run_error_log",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            },
+            "name": "run_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorLog"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/recent_runs/{id}/csv_file": {
       "get": {
         "tags": [

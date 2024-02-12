@@ -60,39 +60,12 @@ export class DetailsEffects {
     }),
   ));
 
-  fetchErrorLogWhenPageInitialized = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.unitDetailsInitialized),
-    switchMap(({unitId}) => {
-      return this.processUnitService.getErrorLog(unitId).pipe(
-        map(errorLog => DetailsActions.errorLogFetched({errorLog})),
-      );
-    }),
-  ));
-
-  subscribeForErrorLogUpdatesFromBackend = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.unitDetailsInitialized),
-    mergeMap(({unitId}) => {
-      return this.pubSubService.subscribeErrorLog(unitId).pipe(
-        takeUntil(this.actions.pipe(ofType(DetailsActions.unitDetailsDestroyed))),
-        map(_ => DetailsActions.errorLogUpdatedOnBackend({unitId})),
-      );
-    }),
-  ));
 
   fetchControlStateOnUpdateFromBackend = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.controlStateUpdatedOnBackend),
     mergeMap(({unitId}) => {
       return this.processUnitService.getControlState(unitId).pipe(
         map(controlState => DetailsActions.controlStateFetched({controlState})),
-      );
-    }),
-  ));
-
-  fetchErrorLogOnUpdateFromBackend = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.errorLogUpdatedOnBackend),
-    mergeMap(({unitId}) => {
-      return this.processUnitService.getErrorLog(unitId).pipe(
-        map(errorLog => DetailsActions.errorLogFetched({errorLog})),
       );
     }),
   ));

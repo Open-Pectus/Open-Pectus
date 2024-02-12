@@ -2,6 +2,8 @@ import { Routes } from '@angular/router';
 import { provideEffects } from '@ngrx/effects';
 import { provideState } from '@ngrx/store';
 import { DetailsRoutingUrlParts } from './details-routing-url-parts';
+import { ErrorLogEffects } from './error-log/ngrx/error-log.effects';
+import { errorLogSlice } from './error-log/ngrx/error-log.reducer';
 import { MethodEditorEffects } from './method-editor/ngrx/method-editor.effects';
 import { methodEditorSlice } from './method-editor/ngrx/method-editor.reducer';
 import { DetailsEffects } from './ngrx/details.effects';
@@ -24,6 +26,7 @@ export const routes: Routes = [
       provideState(processPlotSlice), provideEffects(ProcessPlotEffects),
       provideState(processValuesSlice), provideEffects(ProcessValuesEffects),
       provideState(runLogSlice), provideEffects(RunLogEffects),
+      provideState(errorLogSlice), provideEffects(ErrorLogEffects),
     ],
     children: [
       {

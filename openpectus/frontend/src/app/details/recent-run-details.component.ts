@@ -3,6 +3,7 @@ import { LetDirective } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { selectRouteParam } from '../ngrx/router.selectors';
 import { DetailsRoutingUrlParts } from './details-routing-url-parts';
+import { ErrorLogComponent } from './error-log/error-log.component';
 import { MethodEditorComponent } from './method-editor/method-editor.component';
 import { DetailsActions } from './ngrx/details.actions';
 import { ProcessPlotContainerComponent } from './process-plot/process-plot-container.component';
@@ -19,6 +20,7 @@ import { RunLogComponent } from './run-log/run-log.component';
     ProcessPlotContainerComponent,
     MethodEditorComponent,
     RunLogComponent,
+    ErrorLogComponent,
   ],
   template: `
     <div class="flex justify-center">
@@ -27,6 +29,7 @@ import { RunLogComponent } from './run-log/run-log.component';
         <app-process-plot-container [recentRunId]="recentRunId" class="2xl:col-span-2"></app-process-plot-container>
         <app-method-editor [recentRunId]="recentRunId"></app-method-editor>
         <app-run-log [recentRunId]="recentRunId"></app-run-log>
+        <app-error-log [recentRunId]="recentRunId" class="2xl:col-span-2"></app-error-log>
       </div>
     </div>
   `,

@@ -5,7 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { selectRouteParam } from '../ngrx/router.selectors';
 import { CommandsComponent } from './commands/commands.component';
 import { DetailsRoutingUrlParts } from './details-routing-url-parts';
-import { ErrorLogComponent } from './error-log.component';
+import { ErrorLogComponent } from './error-log/error-log.component';
 import { MethodEditorComponent } from './method-editor/method-editor.component';
 import { DetailsActions } from './ngrx/details.actions';
 import { ProcessDiagramComponent } from './process-diagram.component';
@@ -28,6 +28,7 @@ import { UnitHeaderComponent } from './unit-header/unit-header.component';
     ProcessDiagramComponent,
     ProcessPlotContainerComponent,
     ErrorLogComponent,
+    ErrorLogComponent,
   ],
   template: `
     <div class="flex justify-center">
@@ -39,7 +40,7 @@ import { UnitHeaderComponent } from './unit-header/unit-header.component';
         <app-run-log [unitId]="unitId"></app-run-log>
         <app-process-diagram></app-process-diagram>
         <app-process-plot-container class="2xl:col-span-2" [unitId]="unitId"></app-process-plot-container>
-        <app-error-log class="2xl:col-span-2"></app-error-log>
+        <app-error-log [unitId]="unitId" class="2xl:col-span-2"></app-error-log>
       </div>
     </div>
   `,

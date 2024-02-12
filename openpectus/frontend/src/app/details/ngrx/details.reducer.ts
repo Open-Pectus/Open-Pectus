@@ -44,9 +44,6 @@ const reducer = createReducer(initialState,
   on(DetailsActions.controlStateFetched, (state, {controlState}) => produce(state, draft => {
     draft.controlState = controlState;
   })),
-  on(DetailsActions.errorLogFetched, (state, {errorLog}) => produce(state, draft => {
-    draft.errorLog = errorLog;
-  })),
   on(DetailsActions.recentRunFetched, (state, {recentRun}) => produce(state, draft => {
     draft.recentRun = recentRun;
   })),

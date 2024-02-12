@@ -7,6 +7,8 @@ import {
   CommandExample,
   CommandSource,
   ControlState,
+  ErrorLog,
+  ErrorLogSeverity,
   ExecutableCommand,
   InProgress,
   MethodAndState,
@@ -833,6 +835,23 @@ export const handlers = [
               value_type: ProcessValueType.STRING,
             },
           ],
+        },
+      ],
+    });
+  }),
+
+  http.get('/api/recent_runs/:id/error_log', async () => {
+    return HttpResponse.json<ErrorLog>({
+      entries: [
+        {
+          created_time: sub(new Date(), {minutes: 5, seconds: Math.random() * 500}).toISOString(),
+          severity: ErrorLogSeverity.WARNING,
+          message: 'Just a warning',
+        },
+        {
+          created_time: sub(new Date(), {seconds: Math.random() * 500}).toISOString(),
+          severity: ErrorLogSeverity.ERROR,
+          message: 'Oh no! An error!',
         },
       ],
     });
