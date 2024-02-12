@@ -22,6 +22,8 @@ PlotColorRegion = Mdl.PlotColorRegion
 PlotAxis = Mdl.PlotAxis
 SubPlot = Mdl.SubPlot
 PlotConfiguration = Mdl.PlotConfiguration
+ErrorLogEntry = Mdl.ErrorLogEntry
+ErrorLog = Mdl.ErrorLog
 
 
 class ChannelStatusEnum(StrEnum):
@@ -74,6 +76,7 @@ class EngineData(BaseModel):
     method: Method = Method.empty()
     run_data: RunData = RunData()
     plot_configuration: PlotConfiguration = PlotConfiguration.empty()
+    error_log: ErrorLog = ErrorLog(entries=[])
 
     @property
     def runtime(self):

@@ -166,7 +166,7 @@ def get_plot_configuration(unit_id: str, agg: Aggregator = Depends(agg_deps.get_
         logger.warning("No engine data - thus no plot configuration")
         return Dto.PlotConfiguration.empty()
 
-    return Dto.PlotConfiguration.validate(engine_data.plot_configuration)
+    return Dto.PlotConfiguration.validate(engine_data.plot_configuration) # assumes Dto.PlotConfiguration and Mdl.PlotConfiguration are identical, change this when they diverge
 
 
 @router.get('/process_unit/{unit_id}/plot_log')
@@ -178,7 +178,7 @@ def get_plot_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator
     plot_log_model = plot_log_repo.get_plot_log(engine_data.run_id)
     if plot_log_model is None:
         return Dto.PlotLog(entries={})
-    return Dto.PlotLog.validate(plot_log_model)
+    return Dto.PlotLog.validate(plot_log_model) # assumes Dto.PlotLog and Mdl.PlotLog are identical, change this when they diverge
 
 
 @router.get('/process_unit/{unit_id}/control_state')
@@ -196,6 +196,15 @@ def get_control_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggre
 
     return from_message(engine_data.control_state)
 
+
+@router.get('/process_unit/{unit_id}/error_log')
+def get_error_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.ErrorLog:
+    engine_data = agg.get_registered_engine_data(unit_id)
+    if engine_data is None:
+        logger.warning("No client data - thus no error log")
+        return Dto.ErrorLog(entries=[])
+
+    return Dto.ErrorLog.from_model(engine_data.error_log)
 
 @router.post('/process_unit/{unit_id}/run_log/force_line/{line_id}')
 def force_run_log_line(unit_id: str, line_id: str):

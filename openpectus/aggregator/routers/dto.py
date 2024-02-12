@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum, auto
-from typing import Literal, List, Dict
+from typing import Literal
 
 import openpectus.aggregator.data.models as data_models
 import openpectus.aggregator.models as Mdl
@@ -81,7 +81,7 @@ class ProcessUnit(Dto):
     location: str | None
     runtime_msec: int | None
     current_user_role: UserRole
-    # users: List[User] ?
+    # users: list[User] ?
 
 
 class ProcessValueType(StrEnum):
@@ -96,7 +96,7 @@ class ProcessValueCommandNumberValue(Dto):
     value: float | int
     value_unit: str | None
     """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
-    valid_value_units: List[str] | None
+    valid_value_units: list[str] | None
     """ For values with a unit, provides the list valid alternative units """
     value_type: Literal[ProcessValueType.INT] | Literal[ProcessValueType.FLOAT]
     """ Specifies the type of allowed values. """
@@ -110,7 +110,7 @@ class ProcessValueCommandFreeTextValue(Dto):
 class ProcessValueCommandChoiceValue(Dto):
     value: str
     value_type: Literal[ProcessValueType.CHOICE]
-    options: List[str]
+    options: list[str]
 
 
 class ProcessValueCommand(Dto):
@@ -145,7 +145,7 @@ class ProcessValue(Dto):
     """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
     value_type: ProcessValueType
     """ Specifies the type of allowed values. """
-    commands: List[ProcessValueCommand] | None
+    commands: list[ProcessValueCommand] | None
 
     @staticmethod
     def from_tag_value(tag: Mdl.TagValue) -> ProcessValue:
@@ -179,8 +179,8 @@ class RunLogLine(Dto):
     start: datetime
     end: datetime | None
     progress: float | None  # between 0 and 1
-    start_values: List[ProcessValue]
-    end_values: List[ProcessValue]
+    start_values: list[ProcessValue]
+    end_values: list[ProcessValue]
     forcible: bool | None
     cancellable: bool | None
     forced: bool | None
@@ -208,7 +208,7 @@ class RunLogLine(Dto):
 
 
 class RunLog(Dto):
-    lines: List[RunLogLine]
+    lines: list[RunLogLine]
 
     @staticmethod
     def empty() -> RunLog:
@@ -221,7 +221,7 @@ class MethodLine(Dto):
 
 
 class Method(Dto):
-    lines: List[MethodLine]
+    lines: list[MethodLine]
 
     @staticmethod
     def empty() -> Method:
@@ -229,9 +229,9 @@ class Method(Dto):
 
 
 class MethodState(Dto):
-    started_line_ids: List[str]
-    executed_line_ids: List[str]
-    injected_line_ids: List[str]
+    started_line_ids: list[str]
+    executed_line_ids: list[str]
+    injected_line_ids: list[str]
 
     @staticmethod
     def empty() -> MethodState:
@@ -254,22 +254,22 @@ class PlotColorRegion(Dto):
 
 class PlotAxis(Dto):
     label: str
-    process_value_names: List[str]
+    process_value_names: list[str]
     y_max: int | float
     y_min: int | float
     color: str
 
 
 class SubPlot(Dto):
-    axes: List[PlotAxis]
+    axes: list[PlotAxis]
     ratio: int | float
 
 
 class PlotConfiguration(Dto):
-    process_value_names_to_annotate: List[str]
-    color_regions: List[PlotColorRegion]
-    sub_plots: List[SubPlot]
-    x_axis_process_value_names: List[str]
+    process_value_names_to_annotate: list[str]
+    color_regions: list[PlotColorRegion]
+    sub_plots: list[SubPlot]
+    x_axis_process_value_names: list[str]
 
     @staticmethod
     def empty() -> PlotConfiguration:
@@ -294,13 +294,13 @@ class PlotLogEntryValue(Dto):
 
 class PlotLogEntry(Dto):
     name: str
-    values: List[PlotLogEntryValue]
+    values: list[PlotLogEntryValue]
     value_unit: str | None
     value_type: ProcessValueType
 
 
 class PlotLog(Dto):
-    entries: Dict[str, PlotLogEntry]
+    entries: dict[str, PlotLogEntry]
 
 
 class RecentRun(Dto):
@@ -315,7 +315,7 @@ class RecentRun(Dto):
     engine_hardware_str: str
     aggregator_computer_name: str
     aggregator_version: str
-    contributors: List[str] = []
+    contributors: list[str] = []
 
 
 class RecentRunMethod(Dto):
@@ -328,3 +328,21 @@ class RecentRunMethod(Dto):
 class RecentRunCsv(Dto):
     filename: str
     csv_content: str
+
+class ErrorLogEntry(Dto):
+    message: str
+    created_time: datetime
+
+    @staticmethod
+    def from_model(model: Mdl.ErrorLogEntry) -> ErrorLogEntry:
+        return ErrorLogEntry(
+            message=model.message,
+            created_time=datetime.fromtimestamp(model.created_time)
+        )
+
+class ErrorLog(Dto):
+    entries: list[ErrorLogEntry]
+
+    @staticmethod
+    def from_model(model: Mdl.ErrorLog) -> ErrorLog:
+        return ErrorLog(entries=[ErrorLogEntry.from_model(entry) for entry in model.entries])

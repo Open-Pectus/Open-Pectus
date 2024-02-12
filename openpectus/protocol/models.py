@@ -122,3 +122,10 @@ class PlotConfiguration(ProtocolModel):
     @staticmethod
     def empty() -> PlotConfiguration:
         return PlotConfiguration(process_value_names_to_annotate=[], color_regions=[], sub_plots=[], x_axis_process_value_names=[])
+
+class ErrorLogEntry(ProtocolModel):
+    message: str
+    created_time: float
+
+class ErrorLog(ProtocolModel):
+    entries: list[ErrorLogEntry]

@@ -516,6 +516,48 @@
         }
       }
     },
+    "/api/process_unit/{unit_id}/error_log": {
+      "get": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Get Error Log",
+        "operationId": "get_error_log",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            },
+            "name": "unit_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorLog"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/process_unit/{unit_id}/run_log/force_line/{line_id}": {
       "post": {
         "tags": [
@@ -1101,6 +1143,41 @@
           "is_paused"
         ],
         "title": "ControlState"
+      },
+      "ErrorLog": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorLogEntry"
+            },
+            "type": "array",
+            "title": "Entries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entries"
+        ],
+        "title": "ErrorLog"
+      },
+      "ErrorLogEntry": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "created_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created Time"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "created_time"
+        ],
+        "title": "ErrorLogEntry"
       },
       "ExecutableCommand": {
         "properties": {
@@ -1698,7 +1775,8 @@
         "enum": [
           "run_log",
           "method",
-          "control_state"
+          "control_state",
+          "error_log"
         ],
         "title": "PubSubTopic",
         "description": "An enumeration."

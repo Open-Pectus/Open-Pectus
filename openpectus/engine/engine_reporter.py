@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import queue
 from logging.handlers import QueueHandler
 from queue import Empty, SimpleQueue
 from typing import List
@@ -47,7 +46,7 @@ class EngineReporter():
                 self.send_runlog()
                 self.send_control_state()
                 self.send_method_state()
-                self.send_python_log()
+                self.send_error_log()
         except asyncio.CancelledError:
             return
         except Exception:
@@ -136,11 +135,12 @@ class EngineReporter():
         )
         self.dispatcher.post(msg)
 
-    def send_python_log(self):
-        msg = EM.PythonLogMsg(log=[])
+    def send_error_log(self):
+        log: Mdl.ErrorLog = Mdl.ErrorLog(entries=[])
         while not logging_queue.empty():
-            msg.log.append(logging_queue.get_nowait().msg)
-        self.dispatcher.post(msg)
+            log_entry = logging_queue.get_nowait()
+            log.entries.append(Mdl.ErrorLogEntry(message=log_entry.getMessage(), created_time=log_entry.created))
+        self.dispatcher.post(EM.ErrorLogMsg(log=log))
 
     def send_control_state(self):
         msg = EM.ControlStateMsg(control_state=Mdl.ControlState(

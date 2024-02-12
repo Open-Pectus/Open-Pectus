@@ -8,6 +8,7 @@ import type { Observable } from 'rxjs';
 
 import type { CommandExample } from '../models/CommandExample';
 import type { ControlState } from '../models/ControlState';
+import type { ErrorLog } from '../models/ErrorLog';
 import type { ExecutableCommand } from '../models/ExecutableCommand';
 import type { Method } from '../models/Method';
 import type { MethodAndState } from '../models/MethodAndState';
@@ -270,6 +271,27 @@ unitId: string,
         return __request(OpenAPI, this.http, {
             method: 'GET',
             url: '/api/process_unit/{unit_id}/control_state',
+            path: {
+                'unit_id': unitId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
+    /**
+     * Get Error Log
+     * @param unitId 
+     * @returns ErrorLog Successful Response
+     * @throws ApiError
+     */
+    public getErrorLog(
+unitId: string,
+): Observable<ErrorLog> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/process_unit/{unit_id}/error_log',
             path: {
                 'unit_id': unitId,
             },

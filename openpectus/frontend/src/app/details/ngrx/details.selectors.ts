@@ -14,6 +14,7 @@ export class DetailsSelectors {
   static processDiagram = createSelector(this.selectFeature, state => state.processDiagram);
   static commandExamples = createSelector(this.selectFeature, state => state.commandExamples);
   static controlState = createSelector(this.selectFeature, state => state.controlState);
+  static errorLog = createSelector(this.selectFeature, state => state.errorLog);
   static recentRun = createSelector(this.selectFeature, state => state.recentRun);
   static shouldPoll = createSelector(this.selectFeature, state => state.shouldPoll);
 }

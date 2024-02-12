@@ -19,4 +19,8 @@ export class PubSubService {
   subscribeControlState(unitId: string) {
     return this.client.forTopic(`${unitId}/${PubSubTopic.CONTROL_STATE}`);
   }
+
+  subscribeErrorLog(unitId: string) {
+    return this.client.forTopic(`${unitId}/${PubSubTopic.ERROR_LOG}`);
+  }
 }
