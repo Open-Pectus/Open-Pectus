@@ -204,7 +204,7 @@ def get_error_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregato
         logger.warning("No client data - thus no error log")
         return Dto.ErrorLog(entries=[])
 
-    return Dto.ErrorLog.from_model(engine_data.error_log)
+    return Dto.ErrorLog.from_model(engine_data.run_data.error_log)
 
 @router.post('/process_unit/{unit_id}/run_log/force_line/{line_id}')
 def force_run_log_line(unit_id: str, line_id: str):

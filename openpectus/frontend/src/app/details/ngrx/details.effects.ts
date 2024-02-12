@@ -60,6 +60,15 @@ export class DetailsEffects {
     }),
   ));
 
+  fetchErrorLogWhenPageInitialized = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.unitDetailsInitialized),
+    switchMap(({unitId}) => {
+      return this.processUnitService.getErrorLog(unitId).pipe(
+        map(errorLog => DetailsActions.errorLogFetched({errorLog})),
+      );
+    }),
+  ));
+
   subscribeForErrorLogUpdatesFromBackend = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.unitDetailsInitialized),
     mergeMap(({unitId}) => {

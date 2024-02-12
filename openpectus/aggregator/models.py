@@ -62,6 +62,7 @@ class RunData(BaseModel):
     method_state: MethodState = MethodState.empty()
     runlog: RunLog = RunLog(lines=[])
     latest_persisted_tick_time: float | None = None
+    error_log: ErrorLog = ErrorLog.empty()
 
 class EngineData(BaseModel):
     engine_id: str
@@ -76,7 +77,6 @@ class EngineData(BaseModel):
     method: Method = Method.empty()
     run_data: RunData = RunData()
     plot_configuration: PlotConfiguration = PlotConfiguration.empty()
-    error_log: ErrorLog = ErrorLog(entries=[])
 
     @property
     def runtime(self):

@@ -129,3 +129,7 @@ class ErrorLogEntry(ProtocolModel):
 
 class ErrorLog(ProtocolModel):
     entries: list[ErrorLogEntry]
+
+    @staticmethod
+    def empty() -> ErrorLog:
+        return ErrorLog(entries=[])
