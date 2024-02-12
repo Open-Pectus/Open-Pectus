@@ -301,7 +301,7 @@ class PInterpreter(PNodeVisitor):
     def _evaluate_condition(self, condition_node: PWatch | PAlarm) -> bool:
         c = condition_node.condition
         assert c is not None, "Error in condition"
-        assert not c.error, "Error parsing condition"
+        assert not c.error, f"Error parsing condition '{c.condition_str}'"
         assert c.tag_name, "Error in condition tag"
         assert c.tag_value, "Error in condition value"
         assert self.context.tags.has(c.tag_name)
