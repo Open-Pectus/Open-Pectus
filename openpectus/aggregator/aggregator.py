@@ -48,7 +48,12 @@ class FromEngine:
         for changed_tag_value in changed_tag_values:
             if changed_tag_value.name == SystemTagName.run_id.value:
                 self._run_id_changed(plot_log_repo, recent_run_repo, engine_data, changed_tag_value)
+
             was_inserted = engine_data.tags_info.upsert(changed_tag_value)
+
+            if changed_tag_value.name == SystemTagName.system_state:
+                asyncio.create_task(self.publisher.public_process_units_changed())
+
             # if a tag doesn't appear with value until after start and run_id, we need to store the info here
             if was_inserted and engine_data.run_id is not None:
                 plot_log_repo.store_new_tag_info(engine_data.engine_id, engine_data.run_id, changed_tag_value)

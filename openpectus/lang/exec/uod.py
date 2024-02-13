@@ -42,7 +42,7 @@ class UnitOperationDefinitionBase:
 
     def validate_configuration(self):
         fatal = False
-        logger.error('validating configuration')
+        logger.error('FOR TESTING PURPOSES: validating configuration') # TODO: delete this when we have actual uod warnings and errors to test with
 
         def log_fatal(msg: str):
             nonlocal fatal

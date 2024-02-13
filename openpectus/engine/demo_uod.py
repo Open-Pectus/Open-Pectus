@@ -22,7 +22,7 @@ def create_demo_uod() -> UnitOperationDefinitionBase:
             cmd.set_complete()
 
     def get_plot_configuration() -> PlotConfiguration:
-        logger.warn('getting plot configuration')
+        logger.warn('FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
         return PlotConfiguration(
             color_regions=[
                 PlotColorRegion(
