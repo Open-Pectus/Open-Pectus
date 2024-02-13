@@ -24,6 +24,7 @@ SubPlot = Mdl.SubPlot
 PlotConfiguration = Mdl.PlotConfiguration
 ErrorLogEntry = Mdl.ErrorLogEntry
 ErrorLog = Mdl.ErrorLog
+SystemStateEnum = Mdl.SystemStateEnum
 
 
 class ChannelStatusEnum(StrEnum):
@@ -63,6 +64,7 @@ class RunData(BaseModel):
     runlog: RunLog = RunLog(lines=[])
     latest_persisted_tick_time: float | None = None
     error_log: ErrorLog = ErrorLog.empty()
+    interrupted_by_error: bool = False
 
 class EngineData(BaseModel):
     engine_id: str
@@ -86,3 +88,7 @@ class EngineData(BaseModel):
     def run_id(self):
         run_id_tag = self.tags_info.get(Mdl.SystemTagName.run_id)
         return str(run_id_tag.value) if run_id_tag is not None and run_id_tag.value is not None else None
+
+    @property
+    def system_state(self):
+        return self.tags_info.get(Mdl.SystemTagName.system_state)

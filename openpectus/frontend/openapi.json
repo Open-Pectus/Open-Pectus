@@ -1186,6 +1186,22 @@
         ],
         "title": "ControlState"
       },
+      "Error": {
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "title": "State"
+          }
+        },
+        "type": "object",
+        "required": [
+          "state"
+        ],
+        "title": "Error"
+      },
       "ErrorLog": {
         "properties": {
           "entries": {
@@ -1603,6 +1619,9 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/Ready"
+              },
+              {
+                "$ref": "#/components/schemas/Error"
               },
               {
                 "$ref": "#/components/schemas/InProgress"

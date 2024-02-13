@@ -17,10 +17,18 @@ router = APIRouter(tags=["process_unit"])
 
 def map_pu(engine_data: EngineData) -> Dto.ProcessUnit:
     # TODO define source of all fields
+
+    state = Dto.ProcessUnitState.Ready(state=Dto.ProcessUnitStateEnum.READY)
+    if engine_data.system_state.value == Mdl.SystemStateEnum.Running:
+        state = Dto.ProcessUnitState.InProgress(state=Dto.ProcessUnitStateEnum.IN_PROGRESS, progress_pct=0) # TODO: how do we know the progress_pct?
+    elif engine_data.run_data.interrupted_by_error:
+        state = Dto.ProcessUnitState.Error(state=Dto.ProcessUnitStateEnum.ERROR)
+        # TODO: how do we detect engine is not online?
+
     unit = Dto.ProcessUnit(
         id=engine_data.engine_id or "(error)",
         name=f"{engine_data.computer_name} ({engine_data.uod_name})",
-        state=Dto.ProcessUnitState.Ready(state=Dto.ProcessUnitStateEnum.READY),
+        state=state,
         location=engine_data.location,
         runtime_msec=engine_data.runtime.value if engine_data.runtime is not None and isinstance(engine_data.runtime.value, int) else 0,
         current_user_role=Dto.UserRole.ADMIN,

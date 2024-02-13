@@ -7,6 +7,7 @@ import {
   CommandExample,
   CommandSource,
   ControlState,
+  Error,
   ErrorLog,
   ErrorLogSeverity,
   ExecutableCommand,
@@ -86,8 +87,7 @@ const processUnits: ProcessUnit[] = [
     location: 'Narnia',
     runtime_msec: 85264,
     state: {
-      state: NotOnline.state.NOT_ONLINE,
-      last_seen_date: new Date().toJSON(),
+      state: Error.state.ERROR,
     },
     current_user_role: UserRole.VIEWER,
   },

@@ -30,6 +30,7 @@ class ServerErrorResponse(Dto):
 class ProcessUnitStateEnum(StrEnum):
     """ Represents the state of a process unit. """
     READY = auto()
+    ERROR = auto()
     IN_PROGRESS = auto()
     NOT_ONLINE = auto()
 
@@ -37,6 +38,9 @@ class ProcessUnitStateEnum(StrEnum):
 class ProcessUnitState:
     class Ready(Dto):
         state: Literal[ProcessUnitStateEnum.READY]
+
+    class Error(Dto):
+        state: Literal[ProcessUnitStateEnum.ERROR]
 
     class InProgress(Dto):
         state: Literal[ProcessUnitStateEnum.IN_PROGRESS]
@@ -78,7 +82,7 @@ class ProcessUnit(Dto):
     """Represents a process unit. """
     id: str
     name: str
-    state: ProcessUnitState.Ready | ProcessUnitState.InProgress | ProcessUnitState.NotOnline
+    state: ProcessUnitState.Ready | ProcessUnitState.Error | ProcessUnitState.InProgress | ProcessUnitState.NotOnline
     location: str | None
     runtime_msec: int | None
     current_user_role: UserRole

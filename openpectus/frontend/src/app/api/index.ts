@@ -11,6 +11,7 @@ export type { AuthConfig } from './models/AuthConfig';
 export type { CommandExample } from './models/CommandExample';
 export { CommandSource } from './models/CommandSource';
 export type { ControlState } from './models/ControlState';
+export { Error } from './models/Error';
 export type { ErrorLog } from './models/ErrorLog';
 export type { ErrorLogEntry } from './models/ErrorLogEntry';
 export { ErrorLogSeverity } from './models/ErrorLogSeverity';
