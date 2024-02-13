@@ -42,7 +42,7 @@ export enum SystemState {
 const startedLines = [2];
 const executedLines = [1, 4];
 let controlState: ControlState = {
-  is_running: true,
+  is_running: false,
   is_holding: false,
   is_paused: false,
 };
