@@ -12,6 +12,7 @@ class PubSubTopic(StrEnum):
     METHOD = auto()
     CONTROL_STATE = auto()
     ERROR_LOG = auto()
+    PROCESS_UNITS = auto()
 
 
 class FrontendPublisher:
@@ -30,6 +31,9 @@ class FrontendPublisher:
         self.router.add_api_route('/trigger-publish-msw', endpoint=self.trigger_publish_msw, methods=['POST'])
         self.pubsub_endpoint = PubSubEndpoint(methods_class=FrontendPublisher.MethodsWithUnsubscribe)
         self.pubsub_endpoint.register_route(self.router, path="/frontend-pubsub")
+
+    async def public_process_units_changed(self):
+        await self.pubsub_endpoint.publish(PubSubTopic.PROCESS_UNITS)
 
     async def publish_run_log_changed(self, unitId: str):
         await self.pubsub_endpoint.publish(f'{unitId}/{PubSubTopic.RUN_LOG}')

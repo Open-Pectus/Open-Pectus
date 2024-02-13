@@ -10,6 +10,8 @@ import openpectus.aggregator.models as Mdl
 from pydantic import BaseModel
 
 
+SystemStateEnum = Mdl.SystemStateEnum
+
 class Dto(BaseModel):
     class Config:
         smart_union = True

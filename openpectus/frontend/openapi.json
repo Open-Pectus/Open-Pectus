@@ -656,6 +656,27 @@
         }
       }
     },
+    "/api/process_units/system_state_enum": {
+      "get": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Expose System State Enum",
+        "operationId": "expose_system_state_enum",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemStateEnum"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/recent_runs/": {
       "get": {
         "tags": [
@@ -1850,7 +1871,8 @@
           "run_log",
           "method",
           "control_state",
-          "error_log"
+          "error_log",
+          "process_units"
         ],
         "title": "PubSubTopic",
         "description": "An enumeration."
@@ -2065,6 +2087,18 @@
           "ratio"
         ],
         "title": "SubPlot"
+      },
+      "SystemStateEnum": {
+        "type": "string",
+        "enum": [
+          "Running",
+          "Paused",
+          "Holding",
+          "Waiting",
+          "Stopped"
+        ],
+        "title": "SystemStateEnum",
+        "description": "An enumeration."
       },
       "UserRole": {
         "type": "string",

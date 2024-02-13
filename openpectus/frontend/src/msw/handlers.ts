@@ -26,18 +26,9 @@ import {
   RecentRunCsv,
   RunLog,
   RunLogLine,
+  SystemStateEnum,
   UserRole,
 } from '../app/api';
-
-// TODO: this should be exposed from backend or handled otherwise when using websocket
-// noinspection JSUnusedGlobalSymbols
-export enum SystemState {
-  Running = 'Running',
-  Paused = 'Paused',
-  Holding = 'Holding',
-  Waiting = 'Waiting',
-  Stopped = 'Stopped'
-}
 
 const startedLines = [2];
 const executedLines = [1, 4];
@@ -46,7 +37,7 @@ let controlState: ControlState = {
   is_holding: false,
   is_paused: false,
 };
-let systemState = SystemState.Running;
+let systemState = SystemStateEnum.RUNNING;
 
 const processUnits: ProcessUnit[] = [
   {
@@ -483,10 +474,10 @@ export const handlers = [
             break;
         }
 
-        systemState = !controlState.is_running ? SystemState.Stopped :
-                      controlState.is_paused ? SystemState.Paused :
-                      controlState.is_holding ? SystemState.Holding :
-                      SystemState.Running;
+        systemState = !controlState.is_running ? SystemStateEnum.STOPPED :
+                      controlState.is_paused ? SystemStateEnum.PAUSED :
+                      controlState.is_holding ? SystemStateEnum.HOLDING :
+                      SystemStateEnum.RUNNING;
       }
     });
     return new HttpResponse();

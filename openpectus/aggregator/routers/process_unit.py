@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Response
 from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import PlotLogRepository
-from openpectus.aggregator.models import EngineData
+from openpectus.aggregator.models import SystemStateEnum, EngineData
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])
@@ -19,7 +19,7 @@ def map_pu(engine_data: EngineData) -> Dto.ProcessUnit:
     # TODO define source of all fields
 
     state = Dto.ProcessUnitState.Ready(state=Dto.ProcessUnitStateEnum.READY)
-    if engine_data.system_state.value == Mdl.SystemStateEnum.Running:
+    if engine_data.system_state != None and engine_data.system_state.value == Mdl.SystemStateEnum.Running:
         state = Dto.ProcessUnitState.InProgress(state=Dto.ProcessUnitStateEnum.IN_PROGRESS, progress_pct=0) # TODO: how do we know the progress_pct?
     elif engine_data.run_data.interrupted_by_error:
         state = Dto.ProcessUnitState.Error(state=Dto.ProcessUnitStateEnum.ERROR)
@@ -222,3 +222,8 @@ def force_run_log_line(unit_id: str, line_id: str):
 @router.post('/process_unit/{unit_id}/run_log/cancel_line/{line_id}')
 def cancel_run_log_line(unit_id: str, line_id: str):
     pass
+
+
+@router.get('/process_units/system_state_enum')
+def expose_system_state_enum() -> Dto.SystemStateEnum:
+    return SystemStateEnum.Running;

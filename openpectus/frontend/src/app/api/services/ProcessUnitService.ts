@@ -18,6 +18,7 @@ import type { ProcessDiagram } from '../models/ProcessDiagram';
 import type { ProcessUnit } from '../models/ProcessUnit';
 import type { ProcessValue } from '../models/ProcessValue';
 import type { RunLog } from '../models/RunLog';
+import type { SystemStateEnum } from '../models/SystemStateEnum';
 
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -346,6 +347,18 @@ lineId: string,
             errors: {
                 422: `Validation Error`,
             },
+        });
+    }
+
+    /**
+     * Expose System State Enum
+     * @returns SystemStateEnum Successful Response
+     * @throws ApiError
+     */
+    public exposeSystemStateEnum(): Observable<SystemStateEnum> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/process_units/system_state_enum',
         });
     }
 
