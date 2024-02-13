@@ -11,6 +11,10 @@ export type { AuthConfig } from './models/AuthConfig';
 export type { CommandExample } from './models/CommandExample';
 export { CommandSource } from './models/CommandSource';
 export type { ControlState } from './models/ControlState';
+export { Error } from './models/Error';
+export type { ErrorLog } from './models/ErrorLog';
+export type { ErrorLogEntry } from './models/ErrorLogEntry';
+export { ErrorLogSeverity } from './models/ErrorLogSeverity';
 export type { ExecutableCommand } from './models/ExecutableCommand';
 export type { HTTPValidationError } from './models/HTTPValidationError';
 export { InProgress } from './models/InProgress';
@@ -40,6 +44,7 @@ export type { RecentRunCsv } from './models/RecentRunCsv';
 export type { RunLog } from './models/RunLog';
 export type { RunLogLine } from './models/RunLogLine';
 export type { SubPlot } from './models/SubPlot';
+export { SystemStateEnum } from './models/SystemStateEnum';
 export { UserRole } from './models/UserRole';
 export type { ValidationError } from './models/ValidationError';
 

@@ -6,6 +6,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 
+import type { ErrorLog } from '../models/ErrorLog';
 import type { MethodAndState } from '../models/MethodAndState';
 import type { PlotConfiguration } from '../models/PlotConfiguration';
 import type { PlotLog } from '../models/PlotLog';
@@ -152,6 +153,27 @@ runId: string,
         return __request(OpenAPI, this.http, {
             method: 'GET',
             url: '/api/recent_runs/{run_id}/csv_json',
+            path: {
+                'run_id': runId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
+    /**
+     * Get Recent Run Error Log
+     * @param runId 
+     * @returns ErrorLog Successful Response
+     * @throws ApiError
+     */
+    public getRecentRunErrorLog(
+runId: string,
+): Observable<ErrorLog> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/recent_runs/{run_id}/error_log',
             path: {
                 'run_id': runId,
             },

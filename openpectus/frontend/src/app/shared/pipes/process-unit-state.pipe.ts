@@ -1,5 +1,5 @@
 import { Pipe, PipeTransform } from '@angular/core';
-import { InProgress, NotOnline, Ready } from '../../api';
+import { Error, InProgress, NotOnline, Ready } from '../../api';
 import { ProcessUnitStateEnum } from '../../typings';
 import { UtilMethods } from '../util-methods';
 
@@ -13,9 +13,11 @@ export class ProcessUnitStatePipe implements PipeTransform {
       case Ready.state.READY:
         return 'Ready';
       case InProgress.state.IN_PROGRESS:
-        return 'In Progress';
+        return 'In progress';
       case NotOnline.state.NOT_ONLINE:
-        return 'Not Online';
+        return 'Not online';
+      case Error.state.ERROR:
+        return 'Interrupted by error';
       case undefined:
         return '';
       default:

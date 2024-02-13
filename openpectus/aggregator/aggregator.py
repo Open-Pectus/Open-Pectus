@@ -48,7 +48,12 @@ class FromEngine:
         for changed_tag_value in changed_tag_values:
             if changed_tag_value.name == SystemTagName.run_id.value:
                 self._run_id_changed(plot_log_repo, recent_run_repo, engine_data, changed_tag_value)
+
             was_inserted = engine_data.tags_info.upsert(changed_tag_value)
+
+            if changed_tag_value.name == SystemTagName.system_state:
+                asyncio.create_task(self.publisher.public_process_units_changed())
+
             # if a tag doesn't appear with value until after start and run_id, we need to store the info here
             if was_inserted and engine_data.run_id is not None:
                 plot_log_repo.store_new_tag_info(engine_data.engine_id, engine_data.run_id, changed_tag_value)
@@ -61,6 +66,8 @@ class FromEngine:
         if run_id_tag.value is None and engine_data.run_id is not None:
             # Run stopped
             recent_run_repo.store_recent_run(engine_data)
+            engine_data.run_data.error_log = Mdl.ErrorLog.empty()
+            asyncio.create_task(self.publisher.publish_error_log_changed(engine_data.engine_id))
         else:
             # Run started
             engine_data.run_data.run_started = datetime.fromtimestamp(run_id_tag.tick_time, timezone.utc)
@@ -115,6 +122,14 @@ class FromEngine:
                 asyncio.create_task(self.publisher.publish_method_state_changed(engine_id))
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set control state.')
+
+    def error_log_changed(self, engine_id: str, error_log: Mdl.ErrorLog):
+        try:
+            engine_data = self._engine_data_map[engine_id]
+            engine_data.run_data.error_log.entries.extend(error_log.entries)
+            asyncio.create_task(self.publisher.publish_error_log_changed(engine_id))
+        except KeyError:
+            logger.error(f'No engine registered under id {engine_id} when trying to set error log.')
 
 
 class FromFrontend:

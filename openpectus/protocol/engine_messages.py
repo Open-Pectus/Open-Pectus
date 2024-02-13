@@ -3,6 +3,7 @@ from typing import List
 import openpectus.protocol.messages as Msg
 import openpectus.protocol.models as Mdl
 
+
 # Note: These are the messages sent by EngineDispatcher and handled by AggregatorMessageHandlers.
 
 
@@ -32,6 +33,10 @@ class TagsUpdatedMsg(EngineMessage):
 class RunLogMsg(EngineMessage):
     id: str
     runlog: Mdl.RunLog
+
+
+class ErrorLogMsg(EngineMessage):
+    log: Mdl.ErrorLog
 
 
 class MethodMsg(EngineMessage):

@@ -50,7 +50,7 @@ export class DetailsEffects {
   ));
 
 
-  subscribeForUpdatesFromBackend = createEffect(() => this.actions.pipe(
+  subscribeForControlStateUpdatesFromBackend = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.unitDetailsInitialized),
     mergeMap(({unitId}) => {
       return this.pubSubService.subscribeControlState(unitId).pipe(
@@ -60,7 +60,8 @@ export class DetailsEffects {
     }),
   ));
 
-  fetchOnUpdateFromBackend = createEffect(() => this.actions.pipe(
+
+  fetchControlStateOnUpdateFromBackend = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.controlStateUpdatedOnBackend),
     mergeMap(({unitId}) => {
       return this.processUnitService.getControlState(unitId).pipe(

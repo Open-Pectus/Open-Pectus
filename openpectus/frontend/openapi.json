@@ -516,6 +516,48 @@
         }
       }
     },
+    "/api/process_unit/{unit_id}/error_log": {
+      "get": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Get Error Log",
+        "operationId": "get_error_log",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            },
+            "name": "unit_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorLog"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/process_unit/{unit_id}/run_log/force_line/{line_id}": {
       "post": {
         "tags": [
@@ -607,6 +649,27 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/process_units/system_state_enum": {
+      "get": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Expose System State Enum",
+        "operationId": "expose_system_state_enum",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemStateEnum"
                 }
               }
             }
@@ -891,6 +954,48 @@
         }
       }
     },
+    "/api/recent_runs/{run_id}/error_log": {
+      "get": {
+        "tags": [
+          "recent_runs"
+        ],
+        "summary": "Get Recent Run Error Log",
+        "operationId": "get_recent_run_error_log",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            },
+            "name": "run_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorLog"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/recent_runs/{id}/csv_file": {
       "get": {
         "tags": [
@@ -1101,6 +1206,70 @@
           "is_paused"
         ],
         "title": "ControlState"
+      },
+      "Error": {
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "title": "State"
+          }
+        },
+        "type": "object",
+        "required": [
+          "state"
+        ],
+        "title": "Error"
+      },
+      "ErrorLog": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorLogEntry"
+            },
+            "type": "array",
+            "title": "Entries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entries"
+        ],
+        "title": "ErrorLog"
+      },
+      "ErrorLogEntry": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "created_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created Time"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/ErrorLogSeverity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "created_time",
+          "severity"
+        ],
+        "title": "ErrorLogEntry"
+      },
+      "ErrorLogSeverity": {
+        "type": "string",
+        "enum": [
+          "warning",
+          "error"
+        ],
+        "title": "ErrorLogSeverity",
+        "description": "An enumeration."
       },
       "ExecutableCommand": {
         "properties": {
@@ -1473,6 +1642,9 @@
                 "$ref": "#/components/schemas/Ready"
               },
               {
+                "$ref": "#/components/schemas/Error"
+              },
+              {
                 "$ref": "#/components/schemas/InProgress"
               },
               {
@@ -1698,7 +1870,9 @@
         "enum": [
           "run_log",
           "method",
-          "control_state"
+          "control_state",
+          "error_log",
+          "process_units"
         ],
         "title": "PubSubTopic",
         "description": "An enumeration."
@@ -1913,6 +2087,18 @@
           "ratio"
         ],
         "title": "SubPlot"
+      },
+      "SystemStateEnum": {
+        "type": "string",
+        "enum": [
+          "Running",
+          "Paused",
+          "Holding",
+          "Waiting",
+          "Stopped"
+        ],
+        "title": "SystemStateEnum",
+        "description": "An enumeration."
       },
       "UserRole": {
         "type": "string",

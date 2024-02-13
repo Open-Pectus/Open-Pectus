@@ -1,11 +1,13 @@
 from __future__ import annotations
-from typing import Any, Callable, Dict, List
+
 import logging
+from typing import Any, Callable, Dict, List
+
+from openpectus.engine.commands import ContextEngineCommand
+from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
 from openpectus.lang.exec.errors import UodValidationError
 from openpectus.lang.exec.readings import Reading, ReadingCollection
 from openpectus.lang.exec.tags import Tag, TagCollection
-from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
-from openpectus.engine.commands import ContextEngineCommand
 from openpectus.protocol.models import PlotConfiguration
 
 logger = logging.getLogger(__name__)
@@ -40,6 +42,7 @@ class UnitOperationDefinitionBase:
 
     def validate_configuration(self):
         fatal = False
+        logger.error('FOR TESTING PURPOSES: validating configuration') # TODO: delete this when we have actual uod warnings and errors to test with
 
         def log_fatal(msg: str):
             nonlocal fatal
@@ -233,6 +236,9 @@ class UodBuilder():
         self.readings = ReadingCollection()
         self.location: str = ""
         self.plot_configuration: PlotConfiguration | None = None
+
+    def get_logger(self):
+        return logging.getLogger(f'{__name__}.user_uod')
 
     def validate(self):
         if len(self.instrument.strip()) == 0:

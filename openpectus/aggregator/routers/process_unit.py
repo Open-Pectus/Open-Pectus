@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Response
 from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import PlotLogRepository
-from openpectus.aggregator.models import EngineData
+from openpectus.aggregator.models import SystemStateEnum, EngineData
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])
@@ -17,10 +17,18 @@ router = APIRouter(tags=["process_unit"])
 
 def map_pu(engine_data: EngineData) -> Dto.ProcessUnit:
     # TODO define source of all fields
+
+    state = Dto.ProcessUnitState.Ready(state=Dto.ProcessUnitStateEnum.READY)
+    if engine_data.system_state != None and engine_data.system_state.value == Mdl.SystemStateEnum.Running:
+        state = Dto.ProcessUnitState.InProgress(state=Dto.ProcessUnitStateEnum.IN_PROGRESS, progress_pct=0) # TODO: how do we know the progress_pct?
+    elif engine_data.run_data.interrupted_by_error:
+        state = Dto.ProcessUnitState.Error(state=Dto.ProcessUnitStateEnum.ERROR)
+        # TODO: how do we detect engine is not online?
+
     unit = Dto.ProcessUnit(
         id=engine_data.engine_id or "(error)",
         name=f"{engine_data.computer_name} ({engine_data.uod_name})",
-        state=Dto.ProcessUnitState.Ready(state=Dto.ProcessUnitStateEnum.READY),
+        state=state,
         location=engine_data.location,
         runtime_msec=engine_data.runtime.value if engine_data.runtime is not None and isinstance(engine_data.runtime.value, int) else 0,
         current_user_role=Dto.UserRole.ADMIN,
@@ -166,7 +174,7 @@ def get_plot_configuration(unit_id: str, agg: Aggregator = Depends(agg_deps.get_
         logger.warning("No engine data - thus no plot configuration")
         return Dto.PlotConfiguration.empty()
 
-    return Dto.PlotConfiguration.validate(engine_data.plot_configuration)
+    return Dto.PlotConfiguration.validate(engine_data.plot_configuration) # assumes Dto.PlotConfiguration and Mdl.PlotConfiguration are identical, change this when they diverge
 
 
 @router.get('/process_unit/{unit_id}/plot_log')
@@ -178,7 +186,7 @@ def get_plot_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator
     plot_log_model = plot_log_repo.get_plot_log(engine_data.run_id)
     if plot_log_model is None:
         return Dto.PlotLog(entries={})
-    return Dto.PlotLog.validate(plot_log_model)
+    return Dto.PlotLog.validate(plot_log_model) # assumes Dto.PlotLog and Mdl.PlotLog are identical, change this when they diverge
 
 
 @router.get('/process_unit/{unit_id}/control_state')
@@ -197,6 +205,15 @@ def get_control_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggre
     return from_message(engine_data.control_state)
 
 
+@router.get('/process_unit/{unit_id}/error_log')
+def get_error_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.ErrorLog:
+    engine_data = agg.get_registered_engine_data(unit_id)
+    if engine_data is None:
+        logger.warning("No client data - thus no error log")
+        return Dto.ErrorLog(entries=[])
+
+    return Dto.ErrorLog.from_model(engine_data.run_data.error_log)
+
 @router.post('/process_unit/{unit_id}/run_log/force_line/{line_id}')
 def force_run_log_line(unit_id: str, line_id: str):
     pass
@@ -205,3 +222,8 @@ def force_run_log_line(unit_id: str, line_id: str):
 @router.post('/process_unit/{unit_id}/run_log/cancel_line/{line_id}')
 def cancel_run_log_line(unit_id: str, line_id: str):
     pass
+
+
+@router.get('/process_units/system_state_enum')
+def expose_system_state_enum() -> Dto.SystemStateEnum:
+    return SystemStateEnum.Running;

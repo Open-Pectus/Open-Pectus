@@ -45,8 +45,7 @@ export class MethodEditorComponent implements OnInit, OnDestroy {
   ngOnInit() {
     if(this.unitId !== undefined) {
       this.store.dispatch(MethodEditorActions.methodEditorComponentInitializedForUnit({unitId: this.unitId}));
-    }
-    if(this.recentRunId !== undefined) {
+    } else if(this.recentRunId !== undefined) {
       this.store.dispatch(MethodEditorActions.methodEditorComponentInitializedForRecentRun({recentRunId: this.recentRunId}));
     }
   }

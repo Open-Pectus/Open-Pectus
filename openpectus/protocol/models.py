@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import logging
 from enum import StrEnum, auto
-from typing import List
 
+from openpectus.engine.models import SystemStateEnum
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
+
+SystemStateEnum = SystemStateEnum
 
 
 class ProtocolModel(BaseModel):
@@ -22,8 +24,8 @@ class ReadingCommand(ProtocolModel):
 
 class ReadingInfo(ProtocolModel):
     tag_name: str
-    valid_value_units: List[str] | None
-    commands: List[ReadingCommand]
+    valid_value_units: list[str] | None
+    commands: list[ReadingCommand]
 
 
 TagValueType = float | int | str | None
@@ -33,7 +35,6 @@ class SystemTagName(StrEnum):
     run_time = auto()
     system_state = auto()
     run_id = auto()
-
 
 class TagValue(ProtocolModel):
     name: str = ""
@@ -48,12 +49,12 @@ class RunLogLine(ProtocolModel):
     start: float
     end: float | None
     progress: float | None  # between 0 and 1
-    start_values: List[TagValue]
-    end_values: List[TagValue]
+    start_values: list[TagValue]
+    end_values: list[TagValue]
 
 
 class RunLog(ProtocolModel):
-    lines: List[RunLogLine]
+    lines: list[RunLogLine]
 
 
 class MethodLine(ProtocolModel):
@@ -62,7 +63,7 @@ class MethodLine(ProtocolModel):
 
 
 class Method(ProtocolModel):
-    lines: List[MethodLine]
+    lines: list[MethodLine]
 
     @staticmethod
     def empty() -> Method:
@@ -79,9 +80,9 @@ class Method(ProtocolModel):
 
 
 class MethodState(ProtocolModel):
-    started_line_ids: List[str]
-    executed_line_ids: List[str]
-    injected_line_ids: List[str]
+    started_line_ids: list[str]
+    executed_line_ids: list[str]
+    injected_line_ids: list[str]
 
     @staticmethod
     def empty() -> MethodState:
@@ -102,23 +103,35 @@ class PlotColorRegion(ProtocolModel):
 
 class PlotAxis(ProtocolModel):
     label: str
-    process_value_names: List[str]
+    process_value_names: list[str]
     y_max: int | float
     y_min: int | float
     color: str
 
 
 class SubPlot(ProtocolModel):
-    axes: List[PlotAxis]
+    axes: list[PlotAxis]
     ratio: int | float
 
 
 class PlotConfiguration(ProtocolModel):
-    process_value_names_to_annotate: List[str]
-    color_regions: List[PlotColorRegion]
-    sub_plots: List[SubPlot]
-    x_axis_process_value_names: List[str]
+    process_value_names_to_annotate: list[str]
+    color_regions: list[PlotColorRegion]
+    sub_plots: list[SubPlot]
+    x_axis_process_value_names: list[str]
 
     @staticmethod
     def empty() -> PlotConfiguration:
         return PlotConfiguration(process_value_names_to_annotate=[], color_regions=[], sub_plots=[], x_axis_process_value_names=[])
+
+class ErrorLogEntry(ProtocolModel):
+    message: str
+    created_time: float
+    severity: int
+
+class ErrorLog(ProtocolModel):
+    entries: list[ErrorLogEntry]
+
+    @staticmethod
+    def empty() -> ErrorLog:
+        return ErrorLog(entries=[])

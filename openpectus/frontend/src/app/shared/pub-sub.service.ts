@@ -8,6 +8,10 @@ import { PubSubTopic } from '../api';
 export class PubSubService {
   private client = new PubSubRxjsClient({uri: `ws://${window.location.host}/api/frontend-pubsub`});
 
+  subscribeProcessUnits() {
+    return this.client.forTopic(PubSubTopic.PROCESS_UNITS);
+  }
+
   subscribeRunLog(unitId: string) {
     return this.client.forTopic(`${unitId}/${PubSubTopic.RUN_LOG}`);
   }
@@ -18,5 +22,9 @@ export class PubSubService {
 
   subscribeControlState(unitId: string) {
     return this.client.forTopic(`${unitId}/${PubSubTopic.CONTROL_STATE}`);
+  }
+
+  subscribeErrorLog(unitId: string) {
+    return this.client.forTopic(`${unitId}/${PubSubTopic.ERROR_LOG}`);
   }
 }
