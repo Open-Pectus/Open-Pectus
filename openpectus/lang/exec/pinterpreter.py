@@ -26,6 +26,7 @@ from openpectus.lang.model.pprogram import (
 )
 
 from openpectus.lang.exec.tags import (
+    BASE_VALID_UNITS,
     TagCollection,
     TagValueCollection,
     SystemTagName,
@@ -266,6 +267,12 @@ class PInterpreter(PNodeVisitor):
         self._update_tags()
 
         # execute one iteration of program
+
+        # TODO: be more clear about which errors to throw and which to handle
+        # If there is no reason for interpreter to handle errors, might as well
+        # just let engine do what it already does.
+        # Also clarify which errors are expected (InterpretationError) and which are
+        # unhandled (Exception)
         assert self.process_instr is not None, "self.process_instr is None"
         try:
             next(self.process_instr)
@@ -291,7 +298,10 @@ class PInterpreter(PNodeVisitor):
     def _is_awaiting_threshold(self, node: PNode):
         if isinstance(node, PInstruction) and node.time is not None:
             block_elapsed = self.context.tags.get(SystemTagName.BLOCK_TIME).as_quantity()
-            threshold_quantity = pint.Quantity(node.time, "sec")
+            base_unit = self.context.tags.get(SystemTagName.BASE).get_value()
+            assert isinstance(base_unit, str), \
+                f"Base tag value must contain the base unit as a string. But its current value is '{base_unit}'"
+            threshold_quantity = pint.Quantity(node.time, base_unit)
             if block_elapsed < threshold_quantity:
                 logger.debug(f"Awaiting threshold: {threshold_quantity}, current: {block_elapsed}, time: {self._tick_time}")
                 return True
@@ -304,7 +314,7 @@ class PInterpreter(PNodeVisitor):
         assert not c.error, f"Error parsing condition '{c.condition_str}'"
         assert c.tag_name, "Error in condition tag"
         assert c.tag_value, "Error in condition value"
-        assert self.context.tags.has(c.tag_name)
+        assert self.context.tags.has(c.tag_name), f"Unknown tag '{c.tag_name}' in condition '{c.condition_str}'"
         tag = self.context.tags.get(c.tag_name)
         tag_value = tag.as_quantity()
         # TODO if not unit specified, pick base unit
@@ -458,22 +468,35 @@ class PInterpreter(PNodeVisitor):
 
     def visit_PCommand(self, node: PCommand):
         record = self.runtimeinfo.get_last_node_record(node)
-        try:
-            # Note: Commands can be resident and last multiple ticks.
-            # The context (ExecutionEngine) keeps track of this and
-            # we just move on to the next instruction when tick() is invoked
-            # We do, however, provide the execution id to the context
-            # so that it can update the runtime record appropriately
 
-            # Note: runtime record state is handled by the context command flow
+        if SystemTagName.has_value(node.name):
+            logger.debug(f"Executing command {str(node)} as system instruction")
+            if node.name == SystemTagName.BASE:
+                if node.args in BASE_VALID_UNITS:
+                    self.context.tags[SystemTagName.BASE].set_value(node.args, self._tick_time)
+                else:
+                    raise InterpretationError(f"Base instruction has invalid argument '{node.args}'. \
+                                              Value must be one of {', '.join(BASE_VALID_UNITS)}")
+            else:
+                raise InterpretationError(f"System instruction '{node.name}' is not supported")
+        else:
+            try:
+                # Note: Commands can be resident and last multiple ticks.
+                # The context (ExecutionEngine) keeps track of this and
+                # we just move on to the next instruction when tick() is invoked
+                # We do, however, provide the execution id to the context
+                # so that it can update the runtime record appropriately
 
-            logger.debug(f"Executing command {str(node)}")
-            self.context.schedule_execution(node.name, node.args, record.exec_id)
-        except Exception:
-            record.add_state_failed(
-                self._tick_time, self._tick_number,
-                self.context.tags.as_readonly())
-            logger.error(f"Command {node.name} scheduling failed", exc_info=True)
+                # Note: runtime record state is handled by the context command flow
+
+                logger.debug(f"Executing command {str(node)} via engine")
+                self.context.schedule_execution(node.name, node.args, record.exec_id)
+            except Exception:
+                record.add_state_failed(
+                    self._tick_time, self._tick_number,
+                    self.context.tags.as_readonly())
+                logger.error(f"Command {node.name} scheduling failed", exc_info=True)
+        
         yield
 
     def visit_PWatch(self, node: PWatch):

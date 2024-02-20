@@ -636,6 +636,7 @@ Mark: A
 Mark: C
 """
         e = self.engine
+        e.tags[SystemTagName.BASE].set_value("s", e._tick_time)
         run_engine(e, program, 3)
 
         self.assertEqual(['A'], e.interpreter.get_marks())
@@ -655,6 +656,7 @@ Mark: A
 Mark: C
 """
         e = self.engine
+        e.tags[SystemTagName.BASE].set_value("s", e._tick_time)
         run_engine(e, program, 3)
 
         self.assertEqual(['A'], e.interpreter.get_marks())

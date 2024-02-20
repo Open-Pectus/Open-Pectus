@@ -27,19 +27,28 @@ class SystemTagName(StrEnum):
     METHOD_STATUS = "Method Status"
     RUN_ID = "Run Id"
 
+    @staticmethod
+    def has_value(value: str):
+        """ Determine if enum has this string value defined. Case sensitive. """
+        return value in SystemTagName.__members__.values()
+
 
 # Define the dimensions and units we want to use and the conversions we want to provide.
 # Pint has way too many built in to be usable for this and it is simpler than customizing it
 TAG_UNITS = {
     'length': ['m', 'cm'],
     'mass': ['kg', 'g'],
-    '[time]': ['s', 'm', 'h', 'ms'],
+    '[time]': ['s', 'm', 'h', 'ms'],  # Why 'm' and not 'min'?
     'flow': ['L/h', 'L/min', 'L/d'],  # Pint parses L/m as liter/meter
 }
 
 TAG_UNIT_DIMS = {
     'liter / hour': 'flow'
 }
+
+# These units are not stored as a tag unit but as a tag value in the Base tag,
+# so they need special treatment.
+BASE_VALID_UNITS = ['L', 'h', 'min', 's', 'mL', 'CV', 'g', 'kg']
 
 
 def _get_compatible_unit_names(tag: Tag):
