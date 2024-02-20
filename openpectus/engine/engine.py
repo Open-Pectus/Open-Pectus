@@ -343,12 +343,6 @@ class Engine(InterpreterContext):
                 cmds_done.add(cmd_request)
                 record_state_add_started_and_completed()
 
-            case EngineCommandEnum.INCREMENT_RUN_COUNTER:
-                value = self._system_tags[SystemTagName.RUN_COUNTER].as_number() + 1
-                self._system_tags[SystemTagName.RUN_COUNTER].set_value(value, self._tick_time)
-                cmds_done.add(cmd_request)
-                record_state_add_started_and_completed()
-
             case _:
                 raise NotImplementedError(f"Internal engine command '{cmd_request.name}' execution not implemented")
 

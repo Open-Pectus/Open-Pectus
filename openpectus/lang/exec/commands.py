@@ -1,6 +1,19 @@
 from __future__ import annotations
+from enum import StrEnum
 from typing import Callable, Dict, List
 from uuid import UUID
+
+
+class SystemCommandEnum(StrEnum):
+    """ Commands (instructions of type PCommand) that are executed by the interpreter """
+    INCREMENT_RUN_COUNTER = "Increment run counter"
+    BASE = "Base"
+
+    @staticmethod
+    def has_value(value: str):
+        """ Determine if enum has this string value defined. Case sensitive. """
+        return value in SystemCommandEnum.__members__.values()
+
 
 # Represents part of Engine API
 
