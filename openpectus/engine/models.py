@@ -8,7 +8,6 @@ class EngineCommandEnum(StrEnum):
     UNPAUSE = "Unpause"
     HOLD = "Hold"
     UNHOLD = "Unhold"
-    INCREMENT_RUN_COUNTER = "Increment run counter"
 
     @staticmethod
     def has_value(value: str):

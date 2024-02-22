@@ -400,7 +400,7 @@ Reset
         e.schedule_execution("Start")
         e.tick()
 
-        e.schedule_execution("Increment run counter")
+        e.inject_code("Increment run counter")
         e.tick()
 
         self.assertEqual(1, e._system_tags["Run Counter"].get_value())
@@ -608,7 +608,6 @@ Mark: C
 
     def test_enum_has(self):
         self.assertTrue(EngineCommandEnum.has_value("Stop"))
-        self.assertTrue(EngineCommandEnum.has_value("Increment run counter"))
         self.assertFalse(EngineCommandEnum.has_value("stop"))
         self.assertFalse(EngineCommandEnum.has_value("STOP"))
 
@@ -636,6 +635,7 @@ Mark: A
 Mark: C
 """
         e = self.engine
+        e.tags[SystemTagName.BASE].set_value("s", e._tick_time)
         run_engine(e, program, 3)
 
         self.assertEqual(['A'], e.interpreter.get_marks())
@@ -655,6 +655,7 @@ Mark: A
 Mark: C
 """
         e = self.engine
+        e.tags[SystemTagName.BASE].set_value("s", e._tick_time)
         run_engine(e, program, 3)
 
         self.assertEqual(['A'], e.interpreter.get_marks())
