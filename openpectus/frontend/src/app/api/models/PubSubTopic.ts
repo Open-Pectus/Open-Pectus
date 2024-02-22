@@ -10,4 +10,6 @@ export enum PubSubTopic {
     RUN_LOG = 'run_log',
     METHOD = 'method',
     CONTROL_STATE = 'control_state',
+    ERROR_LOG = 'error_log',
+    PROCESS_UNITS = 'process_units',
 }

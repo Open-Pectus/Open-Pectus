@@ -8,6 +8,7 @@ import type { Observable } from 'rxjs';
 
 import type { CommandExample } from '../models/CommandExample';
 import type { ControlState } from '../models/ControlState';
+import type { ErrorLog } from '../models/ErrorLog';
 import type { ExecutableCommand } from '../models/ExecutableCommand';
 import type { Method } from '../models/Method';
 import type { MethodAndState } from '../models/MethodAndState';
@@ -17,6 +18,7 @@ import type { ProcessDiagram } from '../models/ProcessDiagram';
 import type { ProcessUnit } from '../models/ProcessUnit';
 import type { ProcessValue } from '../models/ProcessValue';
 import type { RunLog } from '../models/RunLog';
+import type { SystemStateEnum } from '../models/SystemStateEnum';
 
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -280,6 +282,27 @@ unitId: string,
     }
 
     /**
+     * Get Error Log
+     * @param unitId 
+     * @returns ErrorLog Successful Response
+     * @throws ApiError
+     */
+    public getErrorLog(
+unitId: string,
+): Observable<ErrorLog> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/process_unit/{unit_id}/error_log',
+            path: {
+                'unit_id': unitId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
+    /**
      * Force Run Log Line
      * @param unitId 
      * @param lineId 
@@ -324,6 +347,18 @@ lineId: string,
             errors: {
                 422: `Validation Error`,
             },
+        });
+    }
+
+    /**
+     * Expose System State Enum
+     * @returns SystemStateEnum Successful Response
+     * @throws ApiError
+     */
+    public exposeSystemStateEnum(): Observable<SystemStateEnum> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/process_units/system_state_enum',
         });
     }
 

@@ -9,6 +9,9 @@ from openpectus.protocol.models import PlotConfiguration, SubPlot, PlotAxis, Plo
 
 
 def create_demo_uod() -> UnitOperationDefinitionBase:
+    builder = UodBuilder()
+    logger = builder.get_logger()
+
     def reset(cmd: UodCommand, args: List[Any]) -> None:
         count = cmd.get_iteration_count()
         if count == 0:
@@ -19,6 +22,7 @@ def create_demo_uod() -> UnitOperationDefinitionBase:
             cmd.set_complete()
 
     def get_plot_configuration() -> PlotConfiguration:
+        logger.warn('FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
         return PlotConfiguration(
             color_regions=[
                 PlotColorRegion(
@@ -46,7 +50,7 @@ def create_demo_uod() -> UnitOperationDefinitionBase:
         )
 
     return (
-        UodBuilder()
+        builder
         .with_instrument("DemoUod")
         .with_hardware(DemoHardware())
         .with_location("Demo location")
@@ -77,6 +81,7 @@ def create_demo_uod() -> UnitOperationDefinitionBase:
 
 class DemoHardware(HardwareLayerBase):
     """ Simulation hardware. """
+
     def __init__(self) -> None:
         super().__init__()
         self.start_time: float = time()
@@ -103,6 +108,8 @@ class DemoHardware(HardwareLayerBase):
     def write(self, value: Any, r: Register):
         pass
 
-    def connect(self): ...
+    def connect(self):
+        ...
 
-    def disconnect(self): ...
+    def disconnect(self):
+        ...

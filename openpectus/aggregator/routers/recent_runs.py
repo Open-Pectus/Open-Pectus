@@ -81,6 +81,14 @@ def get_recent_run_csv_json(run_id: str) -> Dto.RecentRunCsv:
     return Dto.RecentRunCsv(filename=f'RecentRun-{run_id}.csv', csv_content=csv_string.getvalue())
 
 
+@router.get('/{run_id}/error_log')
+def get_recent_run_error_log(run_id: str) -> Dto.ErrorLog:
+    repo = RecentRunRepository(database.scoped_session())
+    error_log = repo.get_error_log_by_run_id(run_id)
+    if error_log is None:
+        raise HTTPException(status_code=404, detail='Error Log not found')
+    return Dto.ErrorLog.from_model(Mdl.ErrorLog.validate(error_log))
+
 
 @router.get('/{id}/csv_file', response_class=StreamingResponse)
 def get_recent_run_csv_file(id: str) -> StreamingResponse:

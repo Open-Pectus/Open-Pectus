@@ -4,7 +4,7 @@ from socket import gethostname
 from typing import List, Iterable
 
 from openpectus import __version__
-from openpectus.aggregator.data.models import RecentRunMethodAndState, ProcessValueType, RecentRun, PlotLogEntryValue, \
+from openpectus.aggregator.data.models import RecentRunErrorLog, RecentRunMethodAndState, ProcessValueType, RecentRun, PlotLogEntryValue, \
     get_ProcessValueType_from_value, PlotLog, PlotLogEntry, RecentRunPlotConfiguration, RecentRunRunLog
 from openpectus.aggregator.models import TagValue, ReadingInfo, EngineData
 from sqlalchemy import select
@@ -126,10 +126,15 @@ class RecentRunRepository(RepositoryBase):
         run_log.run_id = engine_data.run_id
         run_log.run_log = engine_data.run_data.runlog
 
+        error_log = RecentRunErrorLog()
+        error_log.run_id = engine_data.run_id
+        error_log.error_log = engine_data.run_data.error_log
+
         self.db_session.add(recent_run)
         self.db_session.add(method_and_state)
         self.db_session.add(plot_configuration)
         self.db_session.add(run_log)
+        self.db_session.add(error_log)
         self.db_session.commit()
 
     def get_by_run_id(self, run_id: str) -> RecentRun | None:
@@ -152,3 +157,6 @@ class RecentRunRepository(RepositoryBase):
 
     def get_run_log_by_run_id(self, run_id: str):
         return self.db_session.scalar(select(RecentRunRunLog.run_log).where(RecentRunRunLog.run_id == run_id))
+
+    def get_error_log_by_run_id(self, run_id: str):
+        return self.db_session.scalar(select(RecentRunErrorLog.error_log).where(RecentRunErrorLog.run_id == run_id))
