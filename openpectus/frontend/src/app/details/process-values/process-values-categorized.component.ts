@@ -5,11 +5,12 @@ import { Store } from '@ngrx/store';
 import { ProcessValue, TagDirection } from '../../api';
 import { DetailsSelectors } from '../ngrx/details.selectors';
 import { ProcessValueComponent, PvAndPosition } from './process-value.component';
+import { TagDirectionPipe } from './tag-direction.pipe';
 
 @Component({
   selector: 'app-process-values-categorized',
   standalone: true,
-  imports: [CommonModule, ProcessValueComponent, PushPipe],
+  imports: [CommonModule, ProcessValueComponent, PushPipe, TagDirectionPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="flex gap-2 items-start flex-wrap" *ngIf="!(allProcessValues | ngrxPush)">
@@ -21,7 +22,7 @@ import { ProcessValueComponent, PvAndPosition } from './process-value.component'
 
     <div class="flex flex-col gap-4 -mt-1" *ngIf="allProcessValues | ngrxPush">
       <div *ngFor="let direction of Object.values(TagDirection)">
-        <span class="font-bold text-lg">{{ direction | titlecase }}:</span>
+        <span class="font-bold text-lg">{{ direction | tagDirection }}:</span>
         <div class="flex gap-2 items-start flex-wrap">
           <div class="" *ngIf="getProcessValuesOfCategory(direction).length === 0">No process values for this category</div>
           <app-process-value *ngFor="let processValue of getProcessValuesOfCategory(direction); trackBy: trackBy"
