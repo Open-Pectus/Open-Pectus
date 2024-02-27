@@ -95,7 +95,7 @@ class EngineReporter():
 
         def to_value(t: TagValue) -> Mdl.TagValue:
             assert t.tick_time is not None
-            return Mdl.TagValue(name=t.name, value=t.value, value_unit=t.unit, tick_time=t.tick_time)
+            return Mdl.TagValue(name=t.name, value=t.value, value_unit=t.unit, tick_time=t.tick_time, direction=t.direction)
 
         def to_line(item: RunLogItem) -> Mdl.RunLogLine:
             # TODO what about state - try the client in test mode
