@@ -151,11 +151,7 @@ class PProgramBuilder(pcodeListener):
         # attach start position
         assert self.instruction_start is not None
         if self.instruction is None:
-            if ctx.getText().strip() == "Increment run counter":  # Hack until we can make another parser build
-                self.instruction = PCommand(self.scope)
-                self.instruction.name = "Increment run counter"
-            else:
-                self.instruction = PErrorInstruction(self.scope, ctx.getText())
+            self.instruction = PErrorInstruction(self.scope, ctx.getText())
 
         self.instruction.line = self.instruction_start.line
         self.instruction.indent = self.instruction_start.indent
@@ -217,6 +213,21 @@ class PProgramBuilder(pcodeListener):
         self.instruction = PAlarm(self.scope)
         self.push_scope(self.instruction, ctx)
 
+    def enterIncrement_rc(self, ctx: pcodeParser.Increment_rcContext):
+        if self.instruction is None:
+            self.instruction = PCommand(self.scope)
+            self.instruction.name = ctx.getText()
+
+    def enterRestart(self, ctx: pcodeParser.RestartContext):
+        if self.instruction is None:
+            self.instruction = PCommand(self.scope)
+            self.instruction.name = ctx.getText()
+
+    def enterStop(self, ctx: pcodeParser.StopContext):
+        if self.instruction is None:
+            self.instruction = PCommand(self.scope)
+            self.instruction.name = ctx.getText()
+
     def enterMark(self, ctx: pcodeParser.MarkContext):
         self.instruction = PMark(self.scope)
 
@@ -248,7 +259,6 @@ class PProgramBuilder(pcodeListener):
 
     def enterError(self, ctx: pcodeParser.ErrorContext):
         pass
-
 
 class InstructionStart():
     def __init__(self, line: int, indent: int) -> None:

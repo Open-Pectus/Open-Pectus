@@ -56,7 +56,7 @@ class BuilderTest(unittest.TestCase):
     def test_start(self):
         p = build("Start")
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
+        # p.printSyntaxTree(p.tree)
         command: PCommand = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(command)
         self.assertEqual("Start", command.name)
@@ -64,8 +64,7 @@ class BuilderTest(unittest.TestCase):
     def test_increment_run_counter(self):
         p = build("Increment run counter")
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
-
+        # p.printSyntaxTree(p.tree)
         command: PCommand = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(command)
         self.assertEqual("Increment run counter", command.name)
@@ -74,7 +73,6 @@ class BuilderTest(unittest.TestCase):
         p = build("block: foo")
         program = p.build_model()
         # p.printSyntaxTree(p.tree)
-
         block: PBlock = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(block)
         self.assertEqual("foo", block.name)
@@ -698,6 +696,52 @@ mycommand: a  # foo
         # slight mishap here. we ignore it for now
         self.assertEqual(" bar# baz", comment2.comment)
         # self.assertEqual(" bar # baz", comment2.comment)
+
+    def test_restart(self):
+        p = build(
+            """
+Mark: A
+Restart
+        """
+        )
+
+        program = p.build_model()
+        # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        self.assertFalse(program.has_error(recursive=True))
+
+        all = program.get_instructions(include_blanks=True)
+        blank_1, mark, restart, blank_2 = all
+
+        self.assertIsInstance(blank_1, PBlank)
+        self.assertEqual(1, blank_1.line)
+
+        self.assertIsInstance(mark, PMark)
+        self.assertIsInstance(restart, PCommand)
+        assert isinstance(restart, PCommand)
+        self.assertEqual(restart.name, "Restart")
+
+    def test_stop(self):
+        p = build(
+            """
+Mark: A
+Stop
+        """
+        )
+
+        program = p.build_model()
+        # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        self.assertFalse(program.has_error(recursive=True))
+
+        all = program.get_instructions(include_blanks=True)
+        blank_1, mark, stop, blank_2 = all
+
+        self.assertIsInstance(blank_1, PBlank)
+        self.assertEqual(1, blank_1.line)
+
+        self.assertIsInstance(mark, PMark)
+        self.assertIsInstance(stop, PCommand)
+        assert isinstance(stop,  PCommand)
+        self.assertEqual(stop.name, "Stop")
 
     def test_program_errors(self):
         p = build(

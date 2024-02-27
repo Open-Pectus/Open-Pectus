@@ -10,32 +10,26 @@ instruction_line: WHITESPACE* instruction WHITESPACE* comment?
         ;
 
 instruction
-        : builtin_command
+        : block
+        | end_block | end_blocks
+        | watch
+        | alarm
+        | increment_rc
+        | restart
+        | stop
+        | pause
+        | mark
         | command
         | comment
         | blank
         | error
         ;
 
-builtin_command
-        : block
-        | end_block | end_blocks
-        | watch
-        | alarm
-        | increment_rc
-        | stop
-        | pause
-        | mark
-        ;
 
 block           : time? BLOCK COLON WHITESPACE* block_name; // allow whitespace before colon?
 block_name      : IDENTIFIER; 
 end_block       : time? END_BLOCK ;
 end_blocks      : time? END_BLOCKS ;
-
-command         : time? command_name (COLON WHITESPACE* command_args)?;
-command_name    : IDENTIFIER;
-command_args    : .*?  ~(NEWLINE | HASH);
 
 watch           : time? WATCH (COLON WHITESPACE* condition)?;
 alarm           : time? ALARM (COLON WHITESPACE* condition)?;
@@ -49,6 +43,7 @@ condition_unit  : CONDITION_UNIT;
 condition_error : .*?  ~(NEWLINE | HASH);
 
 increment_rc    : time? INCREMENT_RC ;
+restart         : time? RESTART ;
 stop            : time? STOP ;
 pause           : time? PAUSE ;
 
@@ -62,6 +57,10 @@ comment : HASH comment_text ;
 comment_text : .*? ~NEWLINE;
 
 blank   : WHITESPACE* ;
+
+command         : time? command_name (COLON WHITESPACE* command_args)?;
+command_name    : IDENTIFIER;
+command_args    : .*?  ~(NEWLINE | HASH);
 
 error   : .*?  ~(NEWLINE | HASH);
 
@@ -100,6 +99,7 @@ WATCH   : W A T C H ;
 ALARM   : A L A R M ;
 STOP    : S T O P  ;
 PAUSE   : P A U S E ;
+RESTART : R E S T A R T;
 MARK    : M A R K ;
 BLOCK   : B L O C K ;
 END_BLOCK       : E N D SPACE BLOCK ;
