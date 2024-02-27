@@ -15,7 +15,7 @@ requests==2.31.0
 sqlalchemy==2.0.23
 asyncua==1.0.6
 labjack-ljm==1.23.0
-pyright==1.1.350
+pyright==1.1.351
 alembic==1.13.1
 
 # simulation server

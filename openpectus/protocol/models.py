@@ -3,12 +3,13 @@ from __future__ import annotations
 import logging
 from enum import StrEnum, auto
 
-from openpectus.engine.models import SystemStateEnum
+from openpectus.engine.models import SystemStateEnum, SystemTagName
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
 SystemStateEnum = SystemStateEnum
+SystemTagName = SystemTagName
 
 
 class ProtocolModel(BaseModel):
@@ -30,11 +31,6 @@ class ReadingInfo(ProtocolModel):
 
 TagValueType = float | int | str | None
 
-
-class SystemTagName(StrEnum):
-    run_time = auto()
-    system_state = auto()
-    run_id = auto()
 
 class TagValue(ProtocolModel):
     name: str = ""
