@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable
 
 from openpectus.engine.commands import ContextEngineCommand
 from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
@@ -22,8 +22,8 @@ class UnitOperationDefinitionBase:
                  location: str,
                  tags: TagCollection,
                  readings: ReadingCollection,
-                 command_factories: Dict[str, UodCommandBuilder],
-                 overlapping_command_names_lists: List[List[str]],
+                 command_factories: dict[str, UodCommandBuilder],
+                 overlapping_command_names_lists: list[list[str]],
                  plot_configuration: PlotConfiguration) -> None:
         self.instrument = instrument_name
         self.hwl = hwl
@@ -32,8 +32,8 @@ class UnitOperationDefinitionBase:
         self.system_tags: TagCollection | None = None
         self.readings = readings
         self.command_factories = command_factories
-        self.command_instances: Dict[str, UodCommand] = {}
-        self.overlapping_command_names_lists: List[List[str]] = overlapping_command_names_lists
+        self.command_instances: dict[str, UodCommand] = {}
+        self.overlapping_command_names_lists: list[list[str]] = overlapping_command_names_lists
         self.plot_configuration = plot_configuration
 
     def define_register(self, name: str, direction: RegisterDirection, **options):
@@ -81,6 +81,9 @@ class UnitOperationDefinitionBase:
             raise ValueError("Command name is None or empty")
         return name in self.command_instances.keys()
 
+    def has_any_command_instances(self) -> bool:
+        return len(self.command_instances) > 0
+
     def create_command(self, name: str) -> UodCommand:
         """ Create a new command instance. Only one command instance with a given name can exist at a time. """
         if name.strip() == "":
@@ -107,7 +110,7 @@ class UnitOperationDefinitionBase:
             return self.command_instances[name]
         raise ValueError(f"Command instance named '{name}' not found")
 
-    def get_command_names(self) -> List[str]:
+    def get_command_names(self) -> list[str]:
         return list(self.command_factories.keys())
 
     def validate_tag_name(self, tag_name: str) -> bool:
@@ -122,11 +125,10 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
 
     Uod commands are specified/implemented by using the UodCommandBuilder class.
     """
-    def __init__(self, context: UnitOperationDefinitionBase) -> None:
-        super().__init__(context)
-        self.name: str = ""
+    def __init__(self, context: UnitOperationDefinitionBase, name: str) -> None:
+        super().__init__(context, name)
         self.init_fn: Callable[[], None] | None = None
-        self.exec_fn: Callable[[List[Any]], None] | None = None
+        self.exec_fn: Callable[[list[Any]], None] | None = None
         self.finalize_fn: Callable[[], None] | None = None
         self.arg_parse_fn: Callable[[str | None], None] | None = None
 
@@ -142,7 +144,7 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
         if self.init_fn is not None:
             self.init_fn()
 
-    def execute(self, args: List[Any]) -> None:
+    def execute(self, args: list[Any]) -> None:
         if self.exec_fn is None:
             raise ValueError(f"Command '{self.name}' has no execution function defined")
 
@@ -161,7 +163,7 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
 
         self.context.dispose_command(self)
 
-    def parse_args(self, args: str | None, uod: UnitOperationDefinitionBase) -> List[Any] | None:
+    def parse_args(self, args: str | None, uod: UnitOperationDefinitionBase) -> list[Any] | None:
         """ Parse argument input to concrete values. Return None to indicate invalid arguments. """
         if self.arg_parse_fn is None:
             return []
@@ -173,7 +175,7 @@ class UodCommandBuilder():
     def __init__(self) -> None:
         self.name = ""
         self.init_fn: Callable[[UodCommand], None] | None = None
-        self.exec_fn: Callable[[UodCommand, List[Any]], None] | None = None
+        self.exec_fn: Callable[[UodCommand, list[Any]], None] | None = None
         self.finalize_fn: Callable[[UodCommand], None] | None = None
         self.arg_parse_fn: Callable[[str | None], None] | None = None
 
@@ -186,7 +188,7 @@ class UodCommandBuilder():
         self.init_fn = init_fn
         return self
 
-    def with_exec_fn(self, exec_fn: Callable[[UodCommand, List[Any]], None]) \
+    def with_exec_fn(self, exec_fn: Callable[[UodCommand, list[Any]], None]) \
             -> UodCommandBuilder:
         self.exec_fn = exec_fn
         return self
@@ -208,7 +210,7 @@ class UodCommandBuilder():
             if self.init_fn is not None:
                 return self.init_fn(c)
 
-        def execute(args: List[Any]) -> None:
+        def execute(args: list[Any]) -> None:
             if self.exec_fn is not None:
                 return self.exec_fn(c, args)
 
@@ -216,10 +218,9 @@ class UodCommandBuilder():
             if self.finalize_fn is not None:
                 return self.finalize_fn(c)
 
-        c = UodCommand(uod)
         if self.name is None or self.name.strip() == '':
             raise ValueError("Name is not set")
-        c.name = self.name
+        c = UodCommand(uod, self.name)
         c.init_fn = initialize
         c.exec_fn = execute
         c.finalize_fn = finalize
@@ -231,8 +232,8 @@ class UodBuilder():
         self.instrument: str = ""
         self.hwl: HardwareLayerBase | None = None
         self.tags = TagCollection()
-        self.commands: Dict[str, UodCommandBuilder] = {}
-        self.overlapping_command_names_lists: List[List[str]] = []
+        self.commands: dict[str, UodCommandBuilder] = {}
+        self.overlapping_command_names_lists: list[list[str]] = []
         self.readings = ReadingCollection()
         self.location: str = ""
         self.plot_configuration: PlotConfiguration | None = None
@@ -289,7 +290,7 @@ class UodBuilder():
         self.commands[cb.name] = cb
         return self
 
-    def with_command_overlap(self, command_names: List[str]) -> UodBuilder:
+    def with_command_overlap(self, command_names: list[str]) -> UodBuilder:
         if len(command_names) < 2:
             raise ValueError("To define command overlap, at least two command names are required")
         self.overlapping_command_names_lists.append(command_names)
