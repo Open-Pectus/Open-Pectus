@@ -11,11 +11,11 @@ from openpectus.engine.internal_commands import (
 
 from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException, RegisterDirection
 from openpectus.engine.method_model import MethodModel
-from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum
+from openpectus.engine.models import MethodStatusEnum, EngineCommandEnum
 from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.errors import InterpretationError
 from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext
-from openpectus.lang.exec.runlog import RuntimeInfo, RunLog
+from openpectus.lang.exec.runlog import RuntimeInfo, RunLog, RuntimeRecord
 from openpectus.lang.exec.tags import (
     Tag,
     TagCollection,
@@ -80,6 +80,9 @@ class Engine(InterpreterContext):
         """ Indicates whether the engine is on hold"""
         self._runstate_stopping: bool = False
         """ Indicates whether the engine is on stopping"""
+
+        self._prev_state: TagValueCollection | None = None
+        """ The state prior to applying safe state """
 
         self._interpreter: PInterpreter = PInterpreter(PProgram(), self)
         """ The interpreter executing the current program. """
@@ -288,72 +291,42 @@ class Engine(InterpreterContext):
             cmds_done.add(cmd_request)
             return
 
-        def record_state_add_started_and_completed():
-            if cmd_request.exec_id is None:
-                # exec_id is only set for commands originating from interpreter.
-                logger.warning(f"Expected exec_id set for command {cmd_request.name}")
-            else:
+        # get the runtime record to use for tracking if possible
+        record = RuntimeRecord.null_record()
+        if cmd_request.exec_id is not None:  # happens for all commands not originating from interpreter
+            try:
                 record = self.interpreter.runtimeinfo.get_exec_record(cmd_request.exec_id)
-                record.add_state_started(self._tick_time, self._tick_number, self.tags_as_readonly())
-                record.add_state_completed(self._tick_time, self._tick_number, self.tags_as_readonly())
+            except ValueError:  # happens during restart
+                pass
 
-        # an existing, long running engine_command is running
+        # an existing, long running engine_command is running. other commands must wait
         command = get_running_internal_command()
         if command is not None:
-            # other commands will have to wait
             if cmd_request.name == command.name:
                 if not command.is_finalized():
                     command.tick()
-                if command.is_finalized():
+                if command.has_failed():
+                    record.add_state_failed(self._tick_time, self._tick_number, self.tags_as_readonly())
+                    cmds_done.add(cmd_request)
+                elif command.is_finalized():
+                    record.add_state_completed(self._tick_time, self._tick_number, self.tags_as_readonly())
                     cmds_done.add(cmd_request)
             return
 
-        # no engine command is running.
+        # no engine command is running - start one
+        try:
+            command = create_internal_command(cmd_request.name)
+        except ValueError:
+            raise NotImplementedError(f"Unknown internal engine command '{cmd_request.name}'")
 
-        match cmd_request.name:
-            case EngineCommandEnum.PAUSE:
-                self._runstate_paused = True
-                self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Paused, self._tick_time)
-                self._apply_safe_state()
-                cmds_done.add(cmd_request)
-                record_state_add_started_and_completed()
-
-            case EngineCommandEnum.UNPAUSE:
-                self._runstate_paused = False
-                if self._runstate_holding:
-                    self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Holding, self._tick_time)
-                else:
-                    self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, self._tick_time)
-                self._apply_safe_state()
-                cmds_done.add(cmd_request)
-                record_state_add_started_and_completed()
-
-            case EngineCommandEnum.HOLD:
-                self._runstate_holding = True
-                if not self._runstate_paused:
-                    self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Holding, self._tick_time)
-                cmds_done.add(cmd_request)
-                record_state_add_started_and_completed()
-
-            case EngineCommandEnum.UNHOLD:
-                self._runstate_holding = False
-                if not self._runstate_paused:
-                    self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, self._tick_time)
-                cmds_done.add(cmd_request)
-                record_state_add_started_and_completed()
-
-            case _:
-                try:
-                    command = create_internal_command(cmd_request.name)
-                except ValueError:
-                    raise NotImplementedError(f"Internal engine command '{cmd_request.name}' execution not implemented")
-
-                command.tick()
-                # this will fail for Restart which clears the tuntime records
-                #record_state_add_started_and_completed()
-                if command.is_finalized():
-                    cmds_done.add(cmd_request)
-
+        record.add_state_started(self._tick_time, self._tick_number, self.tags_as_readonly())
+        command.tick()
+        if command.has_failed():
+            record.add_state_failed(self._tick_time, self._tick_number, self.tags_as_readonly())
+            cmds_done.add(cmd_request)
+        elif command.is_finalized():
+            record.add_state_completed(self._tick_time, self._tick_number, self.tags_as_readonly())
+            cmds_done.add(cmd_request)
 
     def _set_run_id(self, op: Literal["new", "empty"]):
         if op == "new":

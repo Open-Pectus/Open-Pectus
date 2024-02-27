@@ -7,7 +7,9 @@ from openpectus.engine.models import EngineCommandEnum, SystemStateEnum
 from openpectus.lang.exec.tags import SystemTagName
 from openpectus.engine.engine import Engine
 
+
 logger = logging.getLogger(__name__)
+
 
 class StartEngineCommand(InternalEngineCommand):
     def __init__(self, engine: Engine) -> None:
@@ -25,6 +27,63 @@ class StartEngineCommand(InternalEngineCommand):
             e._runstate_paused = False
             e._runstate_holding = False
             e._set_run_id("new")
+            e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
+
+
+class PauseEngineCommand(InternalEngineCommand):
+    def __init__(self, engine: Engine) -> None:
+        super().__init__(EngineCommandEnum.PAUSE)
+        self.engine = engine
+
+    def _run(self):
+        e = self.engine
+        e._runstate_paused = True
+        e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Paused, e._tick_time)
+        e._prev_state = e._apply_safe_state()
+
+
+class UnpauseEngineCommand(InternalEngineCommand):
+    def __init__(self, engine: Engine) -> None:
+        super().__init__(EngineCommandEnum.UNPAUSE)
+        self.engine = engine
+
+    def _run(self):
+        e = self.engine
+
+        e._runstate_paused = False
+        if e._runstate_holding:
+            e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Holding, e._tick_time)
+        else:
+            e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
+
+        # TODO when/how to apply prev_state
+            if e._prev_state:
+                e._apply_state(e._prev_state)
+            else:
+                logger.error("Failed to apply state prior to safe state. Prior state was not available")
+
+
+class HoldEngineCommand(InternalEngineCommand):
+    def __init__(self, engine: Engine) -> None:
+        super().__init__(EngineCommandEnum.HOLD)
+        self.engine = engine
+
+    def _run(self):
+        e = self.engine
+        e._runstate_holding = True
+        if not e._runstate_paused:
+            e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Holding, e._tick_time)
+
+
+class UnholdEngineCommand(InternalEngineCommand):
+    def __init__(self, engine: Engine) -> None:
+        super().__init__(EngineCommandEnum.UNHOLD)
+        self.engine = engine
+
+    def _run(self):
+        e = self.engine
+        e._runstate_holding = False
+        if not e._runstate_paused:
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
 
 

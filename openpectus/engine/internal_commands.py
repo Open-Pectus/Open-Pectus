@@ -1,4 +1,5 @@
 from __future__ import annotations
+import importlib
 import logging
 from typing import Callable, Generator
 from openpectus.engine.commands import EngineCommand
@@ -14,14 +15,15 @@ _command_instances: dict[str, InternalEngineCommand] = {}
 
 def register_commands(engine):
     if len(_command_map) > 0:
-        raise ValueError("Register must only run once per engine lifetime. Engine was probably not cleaned up with .cleanup()")
+        raise ValueError("Register may only run once per engine lifetime." +
+                         "Engine was probably not cleaned up with .cleanup()")
 
     def register(command_name: str, cls):
         _command_map[command_name] = lambda : cls(engine)
         logger.debug(f"Registered command '{command_name}' with factory '{str(cls)}'")
 
-    # must use dynamic import to avoid static import cycle error
-    import openpectus.engine.internal_commands_impl as command_impl_module
+    # use dynamic import for introspection to avoid static import cycle error
+    command_impl_module = importlib.import_module("openpectus.engine.internal_commands_impl")
 
     # use introspection to auto-register classes in command_impl_module
     registered_classes = []
@@ -45,10 +47,10 @@ def create_internal_command(command_name: str) -> InternalEngineCommand:
         raise ValueError(f"Command name '{command_name}' is not a known internal engine command")
     if command_name in _command_instances.keys():
         raise ValueError(f"There is already a command instance for command name '{command_name}'")
- 
+
     instance = _command_map[command_name]()
     _command_instances[command_name] = instance
-    logger.debug(f"Created instance {type(instance).__name__} for command '{command_name}'")        
+    logger.debug(f"Created instance {type(instance).__name__} for command '{command_name}'")
     return instance
 
 def dispose_command(command_name):

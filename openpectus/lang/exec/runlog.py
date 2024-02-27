@@ -219,6 +219,11 @@ class RuntimeRecord():
         self.start_values: TagValueCollection | None = None
         self.end_values: TagValueCollection | None = None
 
+    @staticmethod
+    def null_record() -> RuntimeRecord:
+        # Returns a Null Object value that can be used when a real value is not available
+        return RuntimeRecord(PNode(None), exec_id=uuid4())
+
     def __repr__(self) -> str:
         return f"{self.name} | States: {', '.join([str(st) for st in self.states])}"
 
