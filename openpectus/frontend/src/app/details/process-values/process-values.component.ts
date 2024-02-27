@@ -33,13 +33,10 @@ import { ProcessValuesCategorizedComponent } from './process-values-categorized.
                          (changed)="onToggleAllProcessValues($event)"></app-toggle-button>
 
       <div class="py-2 px-1 lg:px-2" content *ngIf="!collapsed">
-        <!--        <div class="m-auto" *ngIf="(processValues | ngrxPush)?.length === 0">No process values available</div>-->
-        <!--        <app-process-value *ngFor="let processValue of (processValues | ngrxPush); trackBy: trackBy"-->
-        <!--                           [processValue]="processValue"-->
-        <!--                           (openCommands)="onOpenCommands($event)"></app-process-value>-->
         <app-process-values-categorized [processValues]="processValues | ngrxPush"
                                         (openCommands)="onOpenCommands($event)"></app-process-values-categorized>
       </div>
+      
       <app-process-value-commands *ngIf="showCommands" popover class="absolute p-0 block overflow-visible"
                                   [processValueCommands]="pvAndPositionForPopover?.processValue?.commands"
                                   (shouldClose)="onCloseCommands($event)"
