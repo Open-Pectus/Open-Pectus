@@ -50,6 +50,11 @@ Prerequisites:
   _Note: It is possible to install open pectus without conda but this will affect the global python environment on the developer pc
   so this in not recommended._
 - Java SE SDK (optional, only needed for parser generation when updating P-code grammar)
+  - The simplest way to get going using VS Code is this:
+    - Install java using `conda install -c conda-forge openjdk`
+    - Install VS Code extension 'ANTLR4 grammar syntax support' (https://github.com/mike-lischke/vscode-antlr4)
+    - This should cause the Antlr plugin to automatically regenerate parser code whenever pcode.g4 is modified. 
+    - openjdk-21.0.2 is known to work.
 
 All the following commands can only be run from within the (mini)conda prompt, and from the `Open-Pectus` folder.
 
