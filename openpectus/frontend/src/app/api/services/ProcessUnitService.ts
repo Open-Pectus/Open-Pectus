@@ -85,6 +85,27 @@ engineId: string,
     }
 
     /**
+     * Get All Process Values
+     * @param engineId 
+     * @returns ProcessValue Successful Response
+     * @throws ApiError
+     */
+    public getAllProcessValues(
+engineId: string,
+): Observable<Array<ProcessValue>> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/process_unit/{engine_id}/all_process_values',
+            path: {
+                'engine_id': engineId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+
+    /**
      * Execute Command
      * @param unitId 
      * @param requestBody 

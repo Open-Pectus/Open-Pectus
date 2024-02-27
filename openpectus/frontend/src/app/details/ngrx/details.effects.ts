@@ -28,12 +28,16 @@ export class DetailsEffects {
     delay(1000),
     concatLatestFrom(() => [
       this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName)),
+      this.store.select(DetailsSelectors.allProcessValues),
       this.store.select(DetailsSelectors.shouldPoll),
     ]),
-    filter(([_, __, shouldPoll]) => shouldPoll),
-    switchMap(([_, unitId]) => {
+    filter(([_, __, ___, shouldPoll]) => shouldPoll),
+    switchMap(([_, unitId, allProcessValues]) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.getProcessValues(unitId).pipe(
+      const request = allProcessValues
+                      ? this.processUnitService.getAllProcessValues(unitId)
+                      : this.processUnitService.getProcessValues(unitId);
+      return request.pipe(
         map(processValues => DetailsActions.processValuesFetched({processValues})),
         catchError(() => of(DetailsActions.processValuesFailedToLoad())),
       );

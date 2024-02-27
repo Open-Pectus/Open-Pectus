@@ -118,6 +118,52 @@
         }
       }
     },
+    "/api/process_unit/{engine_id}/all_process_values": {
+      "get": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Get All Process Values",
+        "operationId": "get_all_process_values",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Engine Id"
+            },
+            "name": "engine_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProcessValue"
+                  },
+                  "type": "array",
+                  "title": "Response Get All Process Values"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/process_unit/{unit_id}/execute_command": {
       "post": {
         "tags": [
