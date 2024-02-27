@@ -81,8 +81,8 @@ class PProgramBuilder(pcodeListener):
 
     def enterProgram(self, ctx: pcodeParser.ProgramContext):
         # set program as scope
-        self.program.line = ctx.start.line  # type: ignore
-        self.program.indent = ctx.start.column  # type: ignore
+        self.program.line = ctx.start.line
+        self.program.indent = ctx.start.column
         self.stack.append(self.program)
 
     def enterInstruction(self, ctx: pcodeParser.InstructionContext):
@@ -101,9 +101,9 @@ class PProgramBuilder(pcodeListener):
             self.prev_instruction = self.instruction
         self.instruction = None
         self.instruction_error = None
-        self.instruction_start = InstructionStart(ctx.start.line, ctx.start.column)  # type: ignore
+        self.instruction_start = InstructionStart(ctx.start.line, ctx.start.column)
 
-        indent = int(ctx.start.column)  # type: ignore
+        indent = int(ctx.start.column)
         if math.remainder(indent, INDENTATION_SPACES) != 0:
             # validate indentation as multiple of INDENTATION_SPACES
             self.instruction_error = PError(f'Bad indentation. Should be a multiple of {INDENTATION_SPACES}')
