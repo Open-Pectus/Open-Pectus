@@ -27,6 +27,7 @@ import {
   RunLog,
   RunLogLine,
   SystemStateEnum,
+  TagDirection,
   UserRole,
 } from '../app/api';
 
@@ -98,6 +99,7 @@ const runLogLines: RunLogLine[] = [
       value: 1.43253342,
       value_type: ProcessValueType.FLOAT,
       value_unit: 'afv',
+      direction: TagDirection.OUTPUT,
     }],
     end_values: [],
     forcible: true,
@@ -116,24 +118,28 @@ const runLogLines: RunLogLine[] = [
         value: 999,
         value_type: ProcessValueType.FLOAT,
         value_unit: 'afv',
+        direction: TagDirection.OUTPUT,
       },
       {
         name: 'Best value',
         value: 19.99,
         value_type: ProcessValueType.FLOAT,
         value_unit: 'afv',
+        direction: TagDirection.OUTPUT,
       },
       {
         name: 'Such prices',
         value: 4299,
         value_type: ProcessValueType.FLOAT,
         value_unit: 'afv',
+        direction: TagDirection.OUTPUT,
       },
       {
         name: 'Very affordable',
         value: 0.99,
         value_type: ProcessValueType.FLOAT,
         value_unit: 'afv',
+        direction: TagDirection.OUTPUT,
       },
     ],
     end_values: [],
@@ -152,11 +158,13 @@ const runLogLines: RunLogLine[] = [
         name: 'Waaagh?',
         value: 'No waagh',
         value_type: ProcessValueType.STRING,
+        direction: TagDirection.OUTPUT,
       },
       {
         name: 'Dakka?',
         value: 'No dakka 🙁',
         value_type: ProcessValueType.STRING,
+        direction: TagDirection.OUTPUT,
       },
     ],
     end_values: [
@@ -164,11 +172,13 @@ const runLogLines: RunLogLine[] = [
         name: 'Waaagh?',
         value: 'WAAAGH!',
         value_type: ProcessValueType.STRING,
+        direction: TagDirection.OUTPUT,
       },
       {
         name: 'Dakka?',
         value: 'DAKKA! 😀',
         value_type: ProcessValueType.STRING,
+        direction: TagDirection.OUTPUT,
       },
     ],
     forcible: false,
@@ -189,6 +199,7 @@ const runLogLines: RunLogLine[] = [
       value: 1.43253342,
       value_type: ProcessValueType.FLOAT,
       value_unit: 'afv',
+      direction: TagDirection.OUTPUT,
     }],
     end_values: [],
     forcible: false,
@@ -223,47 +234,56 @@ export const handlers = [
         value_type: ProcessValueType.INT,
         name: 'Timestamp',
         value: new Date().valueOf(),
+        direction: TagDirection.OUTPUT,
       },
       {
         value_type: ProcessValueType.INT,
         name: 'Timestamp2',
         value: new Date().valueOf() + 1000000000000,
+        direction: TagDirection.OUTPUT,
       },
       {
         value_type: ProcessValueType.FLOAT,
         name: 'PU01 Speed',
         value: 120,
         value_unit: '%',
+        direction: TagDirection.OUTPUT,
       }, {
         value_type: ProcessValueType.FLOAT,
         name: 'PU02 Speed',
         value: 121,
         value_unit: '%',
+        direction: TagDirection.OUTPUT,
       }, {
         value_type: ProcessValueType.FLOAT,
         name: 'PU03 Speed',
         value: 122,
         value_unit: '%',
+        direction: TagDirection.OUTPUT,
       }, {
         value_type: ProcessValueType.FLOAT,
         name: 'PU04 Speed',
         value: 123,
         value_unit: '%',
+        direction: TagDirection.OUTPUT,
       }, {
         value_type: ProcessValueType.FLOAT,
         name: 'PU05 Speed',
         value: 124,
         value_unit: '%',
+        direction: TagDirection.OUTPUT,
       }, {
         value_type: ProcessValueType.FLOAT,
         name: 'PU06 Speed',
         value: 125,
         value_unit: '%',
+        direction: TagDirection.OUTPUT,
       },
       {
         value_type: ProcessValueType.STRING,
         name: 'Some other Process Value',
         value: 'So very valuable',
+        direction: TagDirection.OUTPUT,
         commands: [
           {command: 'some_command', name: 'Some Command'},
           {command: 'some_other_command', name: 'Some Other Command'},
@@ -273,6 +293,7 @@ export const handlers = [
         name: 'A value with unit',
         value: 1000,
         value_unit: 'm',
+        direction: TagDirection.OUTPUT,
         commands: [
           {
             command: 'fdsa', name: 'fdsa', value: {
@@ -287,11 +308,13 @@ export const handlers = [
         value_type: ProcessValueType.STRING,
         name: 'Many Data',
         value: 'HANDLE IT',
+        direction: TagDirection.OUTPUT,
       }, {
         value_type: ProcessValueType.FLOAT,
         name: 'FT01 Flow',
         value: 123 + Math.random() * 2,
         value_unit: 'L/h',
+        direction: TagDirection.OUTPUT,
         commands: [
           {
             command: 'fdsafsa',
@@ -308,6 +331,7 @@ export const handlers = [
         value_type: ProcessValueType.STRING,
         name: 'Writable text',
         value: 'VaLuE',
+        direction: TagDirection.OUTPUT,
         commands: [
           {
             name: 'choice',
@@ -347,6 +371,7 @@ export const handlers = [
         name: 'TT01',
         value: 23.4 + Math.random() * 2,
         value_unit: 'degC',
+        direction: TagDirection.OUTPUT,
         commands: [{
           name: 'Set target temperature',
           command: 'set_target_temperature',
@@ -362,25 +387,30 @@ export const handlers = [
         name: 'TT02',
         value: 23.4 + Math.random() * 2,
         value_unit: 'degC',
+        direction: TagDirection.OUTPUT,
       }, {
         value_type: ProcessValueType.FLOAT,
         name: 'TT03',
         value: 23.4 + Math.random() * 2,
         value_unit: 'degC',
+        direction: TagDirection.OUTPUT,
       }, {
         value_type: ProcessValueType.FLOAT,
         name: 'TT04',
         value: 23.4 + Math.random() * 2,
         value_unit: 'degC',
+        direction: TagDirection.OUTPUT,
       }, {
         value_type: ProcessValueType.STRING,
         name: 'Flow path',
         value: (getSeconds(Date.now()) % 10 < 3) ? 'Bypass' : (getSeconds(Date.now()) % 10 < 6) ? 'Prime with a long name' : undefined,
+        direction: TagDirection.OUTPUT,
       },
       {
         value_type: ProcessValueType.STRING,
         name: 'System State',
         value: systemState,
+        direction: TagDirection.OUTPUT,
       },
     ]);
   }),
@@ -755,6 +785,7 @@ export const handlers = [
             value: 1.43253342,
             value_type: ProcessValueType.FLOAT,
             value_unit: 'afv',
+            direction: TagDirection.OUTPUT,
           }],
           end_values: [],
         }, {
@@ -771,24 +802,28 @@ export const handlers = [
               value: 999,
               value_type: ProcessValueType.FLOAT,
               value_unit: 'afv',
+              direction: TagDirection.OUTPUT,
             },
             {
               name: 'Best value',
               value: 19.99,
               value_type: ProcessValueType.FLOAT,
               value_unit: 'afv',
+              direction: TagDirection.OUTPUT,
             },
             {
               name: 'Such prices',
               value: 4299,
               value_type: ProcessValueType.FLOAT,
               value_unit: 'afv',
+              direction: TagDirection.OUTPUT,
             },
             {
               name: 'Very affordable',
               value: 0.99,
               value_type: ProcessValueType.FLOAT,
               value_unit: 'afv',
+              direction: TagDirection.OUTPUT,
             },
           ],
           end_values: [],
@@ -807,11 +842,13 @@ export const handlers = [
               name: 'Waaagh?',
               value: 'No waagh',
               value_type: ProcessValueType.STRING,
+              direction: TagDirection.OUTPUT,
             },
             {
               name: 'Dakka?',
               value: 'No dakka 🙁',
               value_type: ProcessValueType.STRING,
+              direction: TagDirection.OUTPUT,
             },
           ],
           end_values: [
@@ -819,11 +856,13 @@ export const handlers = [
               name: 'Waaagh?',
               value: 'WAAAGH!',
               value_type: ProcessValueType.STRING,
+              direction: TagDirection.OUTPUT,
             },
             {
               name: 'Dakka?',
               value: 'DAKKA! 😀',
               value_type: ProcessValueType.STRING,
+              direction: TagDirection.OUTPUT,
             },
           ],
         },

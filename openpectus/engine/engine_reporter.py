@@ -77,7 +77,7 @@ class EngineReporter():
             for _ in range(100):
                 tag = self.engine.tag_updates.get_nowait()
                 assert tag.tick_time is not None, f'tick_time is None for tag {tag.name}'
-                tags.append(Mdl.TagValue(name=tag.name, tick_time=tag.tick_time, value=tag.get_value(), value_unit=tag.unit))
+                tags.append(Mdl.TagValue(name=tag.name, tick_time=tag.tick_time, value=tag.get_value(), value_unit=tag.unit, direction=tag.direction))
                 self.engine.tag_updates.task_done()
         except Empty:
             pass

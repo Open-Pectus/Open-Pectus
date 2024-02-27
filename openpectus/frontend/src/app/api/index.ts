@@ -45,6 +45,7 @@ export type { RunLog } from './models/RunLog';
 export type { RunLogLine } from './models/RunLogLine';
 export type { SubPlot } from './models/SubPlot';
 export { SystemStateEnum } from './models/SystemStateEnum';
+export { TagDirection } from './models/TagDirection';
 export { UserRole } from './models/UserRole';
 export type { ValidationError } from './models/ValidationError';
 

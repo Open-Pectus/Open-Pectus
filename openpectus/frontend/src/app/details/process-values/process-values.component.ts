@@ -2,7 +2,7 @@ import { NgFor, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
-import { ProcessValue, ProcessValueCommand } from '../../api';
+import { ProcessValueCommand } from '../../api';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { ToggleButtonComponent } from '../../shared/toggle-button.component';
 import { UtilMethods } from '../../shared/util-methods';
@@ -11,6 +11,7 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
 import { ProcessValuesActions } from './ngrx/process-values.actions';
 import { ProcessValueCommandsComponent } from './process-value-commands.component';
 import { ProcessValueComponent, PvAndPosition } from './process-value.component';
+import { ProcessValuesCategorizedComponent } from './process-values-categorized.component';
 
 @Component({
   selector: 'app-process-values',
@@ -24,17 +25,20 @@ import { ProcessValueComponent, PvAndPosition } from './process-value.component'
     ProcessValueCommandsComponent,
     PushPipe,
     ToggleButtonComponent,
+    ProcessValuesCategorizedComponent,
   ],
   template: `
     <app-collapsible-element [name]="'Process Values'" (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-dashboard'">
       <app-toggle-button [label]="'All Process Values'" buttons [checked]="allProcessValues | ngrxPush"
                          (changed)="onToggleAllProcessValues($event)"></app-toggle-button>
 
-      <div class="flex gap-2 py-2 px-1 lg:px-2 items-start flex-wrap" content *ngIf="!collapsed">
-        <div class="m-auto" *ngIf="(processValues | ngrxPush)?.length === 0">No process values available</div>
-        <app-process-value *ngFor="let processValue of (processValues | ngrxPush); trackBy: trackBy"
-                           [processValue]="processValue"
-                           (openCommands)="onOpenCommands($event)"></app-process-value>
+      <div class="py-2 px-1 lg:px-2" content *ngIf="!collapsed">
+        <!--        <div class="m-auto" *ngIf="(processValues | ngrxPush)?.length === 0">No process values available</div>-->
+        <!--        <app-process-value *ngFor="let processValue of (processValues | ngrxPush); trackBy: trackBy"-->
+        <!--                           [processValue]="processValue"-->
+        <!--                           (openCommands)="onOpenCommands($event)"></app-process-value>-->
+        <app-process-values-categorized [processValues]="processValues | ngrxPush"
+                                        (openCommands)="onOpenCommands($event)"></app-process-values-categorized>
       </div>
       <app-process-value-commands *ngIf="showCommands" popover class="absolute p-0 block overflow-visible"
                                   [processValueCommands]="pvAndPositionForPopover?.processValue?.commands"
@@ -52,10 +56,6 @@ export class ProcessValuesComponent implements OnInit, OnDestroy {
   protected collapsed = false;
 
   constructor(private store: Store) {}
-
-  trackBy(index: number, processValue: ProcessValue) {
-    return processValue.name;
-  }
 
   ngOnInit() {
     this.store.dispatch(ProcessValuesActions.processValuesComponentInitialized());

@@ -25,6 +25,7 @@ PlotConfiguration = Mdl.PlotConfiguration
 ErrorLogEntry = Mdl.ErrorLogEntry
 ErrorLog = Mdl.ErrorLog
 SystemStateEnum = Mdl.SystemStateEnum
+TagDirection = Mdl.TagDirection
 
 
 class ChannelStatusEnum(StrEnum):

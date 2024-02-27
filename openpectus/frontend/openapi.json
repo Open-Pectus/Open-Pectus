@@ -1754,12 +1754,16 @@
             },
             "type": "array",
             "title": "Commands"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/TagDirection"
           }
         },
         "type": "object",
         "required": [
           "name",
-          "value_type"
+          "value_type",
+          "direction"
         ],
         "title": "ProcessValue",
         "description": "Represents a process value. "
@@ -2145,6 +2149,17 @@
         ],
         "title": "SystemStateEnum",
         "description": "An enumeration."
+      },
+      "TagDirection": {
+        "type": "string",
+        "enum": [
+          "input",
+          "output",
+          "na",
+          "unspecified"
+        ],
+        "title": "TagDirection",
+        "description": "Specifies whether a tag is read from or written to hardware and whether is can be changed in UI.\n\nDirection of the tag is in relation to the physical IO. Sensors are regarded as inputs and\nactuators as outputs. Derived values are regarded as NA."
       },
       "UserRole": {
         "type": "string",
