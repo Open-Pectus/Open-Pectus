@@ -30,6 +30,7 @@ const initialState: DetailsState = {
 const reducer = createReducer(initialState,
   on(DetailsActions.unitDetailsInitialized, state => produce(state, draft => {
     draft.shouldPoll = true;
+    draft.allProcessValues = false;
   })),
   on(DetailsActions.unitDetailsDestroyed, state => produce(state, draft => {
     draft.shouldPoll = false;

@@ -27,9 +27,9 @@ import { ProcessValueComponent, PvAndPosition } from './process-value.component'
   ],
   template: `
     <app-collapsible-element [name]="'Process Values'" (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-dashboard'">
-      <app-toggle-button [label]="'All Process Values'" buttons
+      <app-toggle-button [label]="'All Process Values'" buttons [checked]="allProcessValues | ngrxPush"
                          (changed)="onToggleAllProcessValues($event)"></app-toggle-button>
-      
+
       <div class="flex gap-2 py-2 px-1 lg:px-2 items-start flex-wrap" content *ngIf="!collapsed">
         <div class="m-auto" *ngIf="(processValues | ngrxPush)?.length === 0">No process values available</div>
         <app-process-value *ngFor="let processValue of (processValues | ngrxPush); trackBy: trackBy"
