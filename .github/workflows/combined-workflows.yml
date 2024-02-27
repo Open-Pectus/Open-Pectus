@@ -4,7 +4,7 @@ name: Combined Workflows
 
 on:
   push:
-    branches: [ "main", "326-implement-restart" ]
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
