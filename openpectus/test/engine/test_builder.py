@@ -608,9 +608,6 @@ Mark: d
 """)
         program = p.build_model()
 
-        #p.printSyntaxTree(p.tree)
-        #print_program(program, show_line_numbers=True, show_errors=True)
-
         self.assertFalse(program.has_error(recursive=True))
         n_mark_a, n_alarm, n_mark_b, n_mark_c, n_increment, n_mark_d = program.get_instructions()
         self.assertIsInstance(n_alarm, PAlarm)

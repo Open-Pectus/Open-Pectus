@@ -3,8 +3,11 @@ import logging
 import time
 import uuid
 from queue import Empty, Queue
-from typing import Iterable, List, Set
+from typing import Iterable, List, Literal, Set
 from uuid import UUID
+from openpectus.engine.internal_commands import (
+    create_internal_command, get_running_internal_command, dispose_command_map, register_commands
+)
 
 from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException, RegisterDirection
 from openpectus.engine.method_model import MethodModel
@@ -28,6 +31,7 @@ from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.model.pprogram import PProgram
 import openpectus.protocol.models as Mdl
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -43,6 +47,8 @@ class Engine(InterpreterContext):
         self.uod = uod
         self._running: bool = False
         """ Indicates whether the scan cycle loop is running, set to False to shut down"""
+
+        register_commands(self)
 
         self._tick_time: float = 0.0
         """ The time of the last tick """
@@ -68,11 +74,12 @@ class Engine(InterpreterContext):
         """ Indicates the current Start/Stop state"""
         self._runstate_started_time: float = 0
         """ Indicates the time of the last Start state"""
-
         self._runstate_paused: bool = False
         """ Indicates whether the engine is paused"""
         self._runstate_holding: bool = False
         """ Indicates whether the engine is on hold"""
+        self._runstate_stopping: bool = False
+        """ Indicates whether the engine is on stopping"""
 
         self._interpreter: PInterpreter = PInterpreter(PProgram(), self)
         """ The interpreter executing the current program. """
@@ -94,8 +101,12 @@ class Engine(InterpreterContext):
     def tags_as_readonly(self) -> TagValueCollection:
         return TagValueCollection(t.as_readonly() for t in self._iter_all_tags())
 
+    @property
+    def tags(self) -> TagCollection:
+        return self._system_tags.merge_with(self.uod.tags)
+
     def cleanup(self):
-        pass
+        dispose_command_map()
 
     @property
     def interpreter(self) -> PInterpreter:
@@ -167,14 +178,14 @@ class Engine(InterpreterContext):
             for tag in self._system_tags.tags.values():
                 tag.tick_time = self._tick_time
 
-        # sys_tags = self.system_tags.clone()  # TODO clone does not currently support the subclasses
-        # uod_tags = self.uod.tags.clone()
-
         # read
         self.read_process_image()
 
         # excecute interpreter tick
-        if self._runstate_started and not self._runstate_paused and not self._runstate_holding:
+        if self._runstate_started and\
+                not self._runstate_paused and\
+                not self._runstate_holding and\
+                not self._runstate_stopping:
             try:
                 self._interpreter.tick(self._tick_time, self._tick_number)
             except InterpretationError:
@@ -272,7 +283,7 @@ class Engine(InterpreterContext):
 
     def _execute_internal_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
 
-        if not self._runstate_started and cmd_request.name != EngineCommandEnum.START:
+        if not self._runstate_started and cmd_request.name not in [EngineCommandEnum.START, EngineCommandEnum.RESTART]:
             logger.warning(f"Command {cmd_request.name} is invalid when Engine is not running")
             cmds_done.add(cmd_request)
             return
@@ -286,32 +297,20 @@ class Engine(InterpreterContext):
                 record.add_state_started(self._tick_time, self._tick_number, self.tags_as_readonly())
                 record.add_state_completed(self._tick_time, self._tick_number, self.tags_as_readonly())
 
-        match cmd_request.name:
-            case EngineCommandEnum.START:
-                if self._runstate_started:
-                    logger.warning("Cannot start when already running")
+        # an existing, long running engine_command is running
+        command = get_running_internal_command()
+        if command is not None:
+            # other commands will have to wait
+            if cmd_request.name == command.name:
+                if not command.is_finalized():
+                    command.tick()
+                if command.is_finalized():
                     cmds_done.add(cmd_request)
-                    return
-                self._runstate_started = True
-                self._runstate_started_time = time.time()
-                self._runstate_paused = False
-                self._runstate_holding = False
-                self._system_tags[SystemTagName.RUN_ID].set_value(str(uuid.uuid4()), self._tick_time)
-                self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, self._tick_time)
-                cmds_done.add(cmd_request)
-                # Note: can't add record for Start command, because exec_id has not been set until Start has run
+            return
 
-            case EngineCommandEnum.STOP:
-                self._runstate_started = False
-                self._runstate_paused = False
-                self._runstate_holding = False
-                self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Stopped, self._tick_time)
-                self._system_tags[SystemTagName.RUN_ID].set_value(None, self._tick_time)
-                self.interpreter.stop()
-                self._interpreter = PInterpreter(self._method.get_program(), self)
-                cmds_done.add(cmd_request)
-                record_state_add_started_and_completed()
+        # no engine command is running.
 
+        match cmd_request.name:
             case EngineCommandEnum.PAUSE:
                 self._runstate_paused = True
                 self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Paused, self._tick_time)
@@ -344,7 +343,36 @@ class Engine(InterpreterContext):
                 record_state_add_started_and_completed()
 
             case _:
-                raise NotImplementedError(f"Internal engine command '{cmd_request.name}' execution not implemented")
+                try:
+                    command = create_internal_command(cmd_request.name)
+                except ValueError:
+                    raise NotImplementedError(f"Internal engine command '{cmd_request.name}' execution not implemented")
+
+                command.tick()
+                # this will fail for Restart which clears the tuntime records
+                #record_state_add_started_and_completed()
+                if command.is_finalized():
+                    cmds_done.add(cmd_request)
+
+
+    def _set_run_id(self, op: Literal["new", "empty"]):
+        if op == "new":
+            self._system_tags[SystemTagName.RUN_ID].set_value(str(uuid.uuid4()), self._tick_time)
+        elif op == "empty":
+            self._system_tags[SystemTagName.RUN_ID].set_value(None, self._tick_time)
+
+    def _stop_interpreter(self):
+        self._interpreter.stop()
+        self._interpreter = PInterpreter(self._method.get_program(), self)
+
+    def _cancel_uod_commands(self):
+        logger.debug("Cancelling uod commands")
+        for name, command in self.uod.command_instances.items():
+            if command.is_cancelled() or command.is_execution_complete() or command.is_finalized():
+                logger.debug(f"Skipping command '{name}' that is no longer running")
+            else:
+                logger.debug(f"Cancelling command '{name}'")
+                command.cancel()
 
     def _execute_uod_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
         cmd_name = cmd_request.name
@@ -464,6 +492,7 @@ class Engine(InterpreterContext):
     def _apply_safe_state(self) -> TagValueCollection:
         current_values: List[TagValue] = []
 
+        # TODO we should probably only consider uod tags here. would system tags ever have a safe value?
         for t in self._iter_all_tags():
             if t.direction == TagDirection.OUTPUT:
                 # TODO safe value can actually be None so we'll need
@@ -501,6 +530,7 @@ class Engine(InterpreterContext):
         self._uod_listener.clear_changes()
 
     def set_error_state(self):
+        # TODO set interrupted_by_error
         logger.info("Paused because of error")
         self._runstate_paused = True
 
@@ -526,15 +556,6 @@ class Engine(InterpreterContext):
             logger.error("Hardware write_batch error", exc_info=True)
             # TODO handle disconnected state
 
-    # differentiate between injected commands (which are to be executed asap without modifying the program)
-    # and non-injected which are either
-    # - already part of the program
-    # - uod commands that engine cant just execute (if they have no threshold)
-
-    @property
-    def tags(self) -> TagCollection:
-        return self._system_tags.merge_with(self.uod.tags)
-
     def schedule_execution(self, name: str, args: str | None = None, exec_id: UUID | None = None):
         """ Execute named command (engine internal or Uod), possibly with arguments. """
         if EngineCommandEnum.has_value(name) or self.uod.has_command_name(name):
@@ -543,11 +564,6 @@ class Engine(InterpreterContext):
         else:
             logger.error(f"Invalid command type scheduled: {name}")
             self.set_error_state()
-
-    def inject_command(self, name: str, args: str):
-        """ Inject a command to run in the current scope of the current program. """
-        # Helper for inject_code()
-        raise NotImplementedError()
 
     def inject_code(self, pcode: str):
         """ Inject a general code snippet to run in the current scope of the current program. """

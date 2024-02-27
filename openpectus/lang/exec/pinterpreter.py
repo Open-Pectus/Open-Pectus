@@ -37,10 +37,6 @@ from openpectus.lang.exec.tags import (
 logger = logging.getLogger(__name__)
 
 
-# TODO define pause + hold behavior
-# TODO add Alarm interpretation, including scope definition
-
-
 class PNodeVisitor:
     def visit(self, node):
         method_name = 'visit_' + type(node).__name__
@@ -310,6 +306,8 @@ class PInterpreter(PNodeVisitor):
         return False
 
     def _evaluate_condition(self, condition_node: PWatch | PAlarm) -> bool:
+        # TODO: improve error reporting. Even though these errors are caught by analyzers
+        # they can still turn up here so we must report them faithfully for the user to handle
         c = condition_node.condition
         assert c is not None, "Error in condition"
         assert not c.error, f"Error parsing condition '{c.condition_str}'"
@@ -477,9 +475,11 @@ class PInterpreter(PNodeVisitor):
                 raise InterpretationError(f"Base instruction has invalid argument '{node.args}'. \
                                             Value must be one of {', '.join(BASE_VALID_UNITS)}")
             self.context.tags[SystemTagName.BASE].set_value(node.args, self._tick_time)
+
         elif node.name == SystemCommandEnum.INCREMENT_RUN_COUNTER:
             rc_value = self.context.tags[SystemTagName.RUN_COUNTER].as_number() + 1
             self.context.tags[SystemTagName.RUN_COUNTER].set_value(rc_value, self._tick_time)
+
         else:
             record.add_state_failed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
             raise InterpretationError(f"System instruction '{node.name}' is not supported")
@@ -492,23 +492,21 @@ class PInterpreter(PNodeVisitor):
             self.execute_system_command(node)
         else:
             record = self.runtimeinfo.get_last_node_record(node)
+
+            # Note: Commands can be resident and last multiple ticks.
+            # The context (Engine) keeps track of this and we just
+            # move on to the next instruction when tick() is invoked.
+            # We do, however, provide the execution id to the context
+            # so that it can update the runtime record appropriately.
             try:
-                # Note: Commands can be resident and last multiple ticks.
-                # The context (ExecutionEngine) keeps track of this and
-                # we just move on to the next instruction when tick() is invoked
-                # We do, however, provide the execution id to the context
-                # so that it can update the runtime record appropriately
-
-                # Note: runtime record state is handled by the context command flow
-
-                logger.debug(f"Executing command {str(node)} via engine")
+                logger.debug(f"Executing command '{str(node)}' via engine")
                 self.context.schedule_execution(node.name, node.args, record.exec_id)
             except Exception:
                 record.add_state_failed(
                     self._tick_time, self._tick_number,
                     self.context.tags.as_readonly())
                 logger.error(f"Command {node.name} scheduling failed", exc_info=True)
-        
+
         yield
 
     def visit_PWatch(self, node: PWatch):
