@@ -36,6 +36,7 @@ class SystemTagName(StrEnum):
     system_state = auto()
     run_id = auto()
 
+
 class TagValue(ProtocolModel):
     name: str = ""
     tick_time: float
@@ -95,7 +96,6 @@ class ControlState(ProtocolModel):
     is_paused: bool
 
 
-
 class PlotColorRegion(ProtocolModel):
     process_value_name: str
     value_color_map: dict[str | int | float, str]  # color string compatible with css e.g.: '#aa33bb', 'rgb(0,0,0)', 'rgba(0,0,0,0)', 'red'
@@ -122,12 +122,19 @@ class PlotConfiguration(ProtocolModel):
 
     @staticmethod
     def empty() -> PlotConfiguration:
-        return PlotConfiguration(process_value_names_to_annotate=[], color_regions=[], sub_plots=[], x_axis_process_value_names=[])
+        return PlotConfiguration(
+            process_value_names_to_annotate=[],
+            color_regions=[],
+            sub_plots=[],
+            x_axis_process_value_names=[]
+        )
+
 
 class ErrorLogEntry(ProtocolModel):
     message: str
     created_time: float
     severity: int
+
 
 class ErrorLog(ProtocolModel):
     entries: list[ErrorLogEntry]
