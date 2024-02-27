@@ -38,7 +38,6 @@ TagValueType = int | float | str | None
 """ Represents the possible types of a tag value"""
 
 
-
 class TagsInfo(BaseModel):
     map: Dict[str, Mdl.TagValue]
 
@@ -49,13 +48,14 @@ class TagsInfo(BaseModel):
         current = self.map.get(tag_value.name)
         if current is None:
             self.map[tag_value.name] = tag_value
-            return True # was inserted
+            return True  # was inserted
         else:
             if current.value_unit != tag_value.value_unit:
-                logger.warning(f"Tag '{tag_value.name}' changed unit from '{current.value_unit}' to '{tag_value.value_unit}'. This is unexpected")
+                logger.warning(f"Tag '{tag_value.name}' changed unit from '{current.value_unit}' to " +
+                               f"'{tag_value.value_unit}'. This is unexpected")
             current.value = tag_value.value
             current.tick_time = tag_value.tick_time
-            return False # was updated
+            return False  # was updated
 
 
 class RunData(BaseModel):
@@ -65,6 +65,7 @@ class RunData(BaseModel):
     latest_persisted_tick_time: float | None = None
     error_log: ErrorLog = ErrorLog.empty()
     interrupted_by_error: bool = False
+
 
 class EngineData(BaseModel):
     engine_id: str
