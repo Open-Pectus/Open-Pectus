@@ -6,7 +6,8 @@ import { PubSubTopic } from '../api';
   providedIn: 'root',
 })
 export class PubSubService {
-  private client = new PubSubRxjsClient({uri: `ws://${window.location.host}/api/frontend-pubsub`});
+  private client = new PubSubRxjsClient(
+    {uri: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/frontend-pubsub`});
 
   subscribeProcessUnits() {
     return this.client.forTopic(PubSubTopic.PROCESS_UNITS);

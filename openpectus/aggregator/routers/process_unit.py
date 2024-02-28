@@ -20,7 +20,8 @@ def map_pu(engine_data: EngineData) -> Dto.ProcessUnit:
 
     state = Dto.ProcessUnitState.Ready(state=Dto.ProcessUnitStateEnum.READY)
     if engine_data.system_state != None and engine_data.system_state.value == Mdl.SystemStateEnum.Running:
-        state = Dto.ProcessUnitState.InProgress(state=Dto.ProcessUnitStateEnum.IN_PROGRESS, progress_pct=0) # TODO: how do we know the progress_pct?
+        state = Dto.ProcessUnitState.InProgress(state=Dto.ProcessUnitStateEnum.IN_PROGRESS,
+                                                progress_pct=0)  # TODO: how do we know the progress_pct?
     elif engine_data.run_data.interrupted_by_error:
         state = Dto.ProcessUnitState.Error(state=Dto.ProcessUnitStateEnum.ERROR)
         # TODO: how do we detect engine is not online?
@@ -58,24 +59,30 @@ def get_process_values(
         engine_id: str,
         response: Response,
         agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[Dto.ProcessValue]:
-    # parm last_seen
-
     response.headers["Cache-Control"] = "no-store"
 
     engine_data = agg.get_registered_engine_data(engine_id)
     if engine_data is None:
         return []
-
     tags_info = engine_data.tags_info.map
-
-    # print("Readings", engine_data.readings)
-    # print("Tags", tags_info)
-
     process_values: List[Dto.ProcessValue] = []
     for reading in engine_data.readings:
         tag_value = tags_info.get(reading.tag_name)
         if tag_value is not None:
             process_values.append(Dto.ProcessValue.from_tag_value(tag_value))
+    return process_values
+
+
+@router.get('/process_unit/{engine_id}/all_process_values')
+def get_all_process_values(engine_id: str, response: Response, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[Dto.ProcessValue]:
+    response.headers["Cache-Control"] = "no-store"
+    engine_data = agg.get_registered_engine_data(engine_id)
+    if engine_data is None:
+        return []
+    tags_info = engine_data.tags_info.map
+    process_values: List[Dto.ProcessValue] = []
+    for tag_value in tags_info.values():
+        process_values.append(Dto.ProcessValue.from_tag_value(tag_value))
     return process_values
 
 
@@ -174,7 +181,8 @@ def get_plot_configuration(unit_id: str, agg: Aggregator = Depends(agg_deps.get_
         logger.warning("No engine data - thus no plot configuration")
         return Dto.PlotConfiguration.empty()
 
-    return Dto.PlotConfiguration.validate(engine_data.plot_configuration) # assumes Dto.PlotConfiguration and Mdl.PlotConfiguration are identical, change this when they diverge
+    return Dto.PlotConfiguration.validate(
+        engine_data.plot_configuration)  # assumes Dto.PlotConfiguration and Mdl.PlotConfiguration are identical, change this when they diverge
 
 
 @router.get('/process_unit/{unit_id}/plot_log')
@@ -186,7 +194,7 @@ def get_plot_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator
     plot_log_model = plot_log_repo.get_plot_log(engine_data.run_id)
     if plot_log_model is None:
         return Dto.PlotLog(entries={})
-    return Dto.PlotLog.validate(plot_log_model) # assumes Dto.PlotLog and Mdl.PlotLog are identical, change this when they diverge
+    return Dto.PlotLog.validate(plot_log_model)  # assumes Dto.PlotLog and Mdl.PlotLog are identical, change this when they diverge
 
 
 @router.get('/process_unit/{unit_id}/control_state')
@@ -213,6 +221,7 @@ def get_error_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregato
         return Dto.ErrorLog(entries=[])
 
     return Dto.ErrorLog.from_model(engine_data.run_data.error_log)
+
 
 @router.post('/process_unit/{unit_id}/run_log/force_line/{line_id}')
 def force_run_log_line(unit_id: str, line_id: str):

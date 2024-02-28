@@ -25,6 +25,7 @@ PlotConfiguration = Mdl.PlotConfiguration
 ErrorLogEntry = Mdl.ErrorLogEntry
 ErrorLog = Mdl.ErrorLog
 SystemStateEnum = Mdl.SystemStateEnum
+TagDirection = Mdl.TagDirection
 
 
 class ChannelStatusEnum(StrEnum):
@@ -83,13 +84,13 @@ class EngineData(BaseModel):
 
     @property
     def runtime(self):
-        return self.tags_info.get(Mdl.SystemTagName.run_time)
+        return self.tags_info.get(Mdl.SystemTagName.RUN_TIME)
 
     @property
     def run_id(self):
-        run_id_tag = self.tags_info.get(Mdl.SystemTagName.run_id)
+        run_id_tag = self.tags_info.get(Mdl.SystemTagName.RUN_ID)
         return str(run_id_tag.value) if run_id_tag is not None and run_id_tag.value is not None else None
 
     @property
     def system_state(self):
-        return self.tags_info.get(Mdl.SystemTagName.system_state)
+        return self.tags_info.get(Mdl.SystemTagName.SYSTEM_STATE)

@@ -1,15 +1,21 @@
 from __future__ import annotations
-from enum import Enum
-import logging
-from uuid import UUID
-import pint
+
 import inspect
+import logging
+from enum import Enum
 from typing import Generator, List, Tuple
-from typing_extensions import override
+from uuid import UUID
+
+import pint
 from openpectus.lang.exec.commands import SystemCommandEnum
 from openpectus.lang.exec.errors import InterpretationError
 from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
-
+from openpectus.lang.exec.tags import (
+    BASE_VALID_UNITS,
+    TagCollection,
+    TagValueCollection,
+    SystemTagName,
+)
 from openpectus.lang.model.pprogram import (
     PErrorInstruction,
     PInjectedNode,
@@ -25,14 +31,7 @@ from openpectus.lang.model.pprogram import (
     PCommand,
     PMark,
 )
-
-from openpectus.lang.exec.tags import (
-    BASE_VALID_UNITS,
-    TagCollection,
-    TagValueCollection,
-    SystemTagName,
-)
-
+from typing_extensions import override
 
 logger = logging.getLogger(__name__)
 
@@ -57,10 +56,10 @@ class ARType(Enum):
 
 class ActivationRecord:
     def __init__(
-        self,
-        owner: PNode,
-        start_time: float = -1.0,
-        start_tags: TagValueCollection = TagValueCollection.empty()
+            self,
+            owner: PNode,
+            start_time: float = -1.0,
+            start_tags: TagValueCollection = TagValueCollection.empty()
     ) -> None:
         self.owner: PNode = owner
         self.start_time: float = start_time
@@ -335,7 +334,7 @@ class PInterpreter(PNodeVisitor):
                     result = tag_value >= expected_value
                 case '!=':
                     result = tag_value != expected_value
-                case  _:
+                case _:
                     pass
         except TypeError:
             msg = "Conversion error for values {!r} and {!r}".format(tag_value, expected_value)

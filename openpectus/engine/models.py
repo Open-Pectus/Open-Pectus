@@ -1,5 +1,8 @@
 from enum import StrEnum
+from openpectus.lang.exec.tags import SystemTagName, TagDirection
 
+SystemTagName = SystemTagName
+TagDirection = TagDirection
 
 class EngineCommandEnum(StrEnum):
     START = "Start"
@@ -28,3 +31,4 @@ class SystemStateEnum(StrEnum):
 class MethodStatusEnum(StrEnum):
     OK = "OK"
     ERROR = "Error"
+

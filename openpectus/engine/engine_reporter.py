@@ -8,8 +8,9 @@ import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
 import openpectus.protocol.models as Mdl
 from openpectus.engine.engine import Engine
+from openpectus.engine.models import SystemTagName
 from openpectus.lang.exec.runlog import RunLogItem
-from openpectus.lang.exec.tags import SystemTagName, TagValue
+from openpectus.lang.exec.tags import TagValue
 from openpectus.lang.exec.uod import logger as uod_logger
 from openpectus.protocol.engine_dispatcher import EngineDispatcher
 
@@ -59,41 +60,24 @@ class EngineReporter():
     def send_uod_info(self):
         readings: List[Mdl.ReadingInfo] = []
         for reading in self.engine.uod.readings:
-            tag_name = self.map_and_filter_tag_name(reading.tag_name)
-            if tag_name is not None:
-                reading_info = Mdl.ReadingInfo(
-                    tag_name=str(tag_name),
-                    valid_value_units=reading.valid_value_units,
-                    commands=[Mdl.ReadingCommand(name=c.name, command=c.command) for c in reading.commands])
-                readings.append(reading_info)
+            reading_info = Mdl.ReadingInfo(
+                tag_name=reading.tag_name,
+                valid_value_units=reading.valid_value_units,
+                commands=[Mdl.ReadingCommand(name=c.name, command=c.command) for c in reading.commands])
+            readings.append(reading_info)
 
         msg = EM.UodInfoMsg(readings=readings, plot_configuration=self.engine.uod.plot_configuration, hardware_str=str(self.engine.uod.hwl))
 
         response = self.dispatcher.post(msg)
         return not isinstance(response, M.ErrorMessage)
 
-    def map_and_filter_tag_name(self, tag_name: str):
-        match tag_name:
-            case SystemTagName.RUN_TIME:
-                return Mdl.SystemTagName.run_time
-            case SystemTagName.SYSTEM_STATE:
-                return Mdl.SystemTagName.system_state
-            case SystemTagName.RUN_ID:
-                return Mdl.SystemTagName.run_id
-            case name if name in [tag.value for tag in SystemTagName]:
-                return None
-            case _:
-                return tag_name
-
     def send_tag_updates(self):
         tags = []
         try:
             for _ in range(100):
                 tag = self.engine.tag_updates.get_nowait()
-                tag_name = self.map_and_filter_tag_name(tag.name)
-                if tag_name is not None:
-                    assert tag.tick_time is not None, f'tick_time is None for tag {tag.name}'
-                    tags.append(Mdl.TagValue(name=tag_name, tick_time=tag.tick_time, value=tag.get_value(), value_unit=tag.unit))
+                assert tag.tick_time is not None, f'tick_time is None for tag {tag.name}'
+                tags.append(Mdl.TagValue(name=tag.name, tick_time=tag.tick_time, value=tag.get_value(), value_unit=tag.unit, direction=tag.direction))
                 self.engine.tag_updates.task_done()
         except Empty:
             pass
@@ -104,16 +88,14 @@ class EngineReporter():
     def send_runlog(self):
         tag_names: list[str] = []
         for reading in self.engine.uod.readings:
-            tag_name = self.map_and_filter_tag_name(reading.tag_name)
-            if tag_name is not None:
-                tag_names.append(tag_name)
+            tag_names.append(reading.tag_name)
 
         def filter_value(tag_value: TagValue) -> bool:
             return tag_value.name in tag_names
 
         def to_value(t: TagValue) -> Mdl.TagValue:
             assert t.tick_time is not None
-            return Mdl.TagValue(name=t.name, value=t.value, value_unit=t.unit, tick_time=t.tick_time)
+            return Mdl.TagValue(name=t.name, value=t.value, value_unit=t.unit, tick_time=t.tick_time, direction=t.direction)
 
         def to_line(item: RunLogItem) -> Mdl.RunLogLine:
             # TODO what about state - try the client in test mode

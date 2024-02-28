@@ -8,9 +8,9 @@ import openpectus.protocol.models as Mdl
 import pint
 from openpectus.engine.engine import Engine
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
-from openpectus.engine.models import EngineCommandEnum, SystemStateEnum
+from openpectus.engine.models import EngineCommandEnum, SystemStateEnum, SystemTagName
 from openpectus.lang.exec.runlog import RuntimeRecordStateEnum
-from openpectus.lang.exec.tags import SystemTagName, Tag, ReadingTag, SelectTag, TagDirection
+from openpectus.lang.exec.tags import Tag, ReadingTag, SelectTag, TagDirection
 from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
 from openpectus.test.engine.utility_methods import (
