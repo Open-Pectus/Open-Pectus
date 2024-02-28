@@ -209,8 +209,6 @@ class PInterpreter(PNodeVisitor):
             q_block = pint.Quantity(f'{block_elapsed} sec')
             self.context.tags.get(SystemTagName.BLOCK_TIME).set_quantity(q_block, self._tick_time)
 
-            # TODO implement remaining tags, e.g. SYSTEM STATE, RUN COUNTER
-
     def _register_interrupt(self, ar: ActivationRecord, handler: GenerationType):
         logger.debug(f"Interrupt handler registered for {ar}")
         self.interrupts.append((ar, handler))

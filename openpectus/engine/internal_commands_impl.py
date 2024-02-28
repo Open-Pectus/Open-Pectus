@@ -11,6 +11,12 @@ from openpectus.engine.engine import Engine
 logger = logging.getLogger(__name__)
 
 
+# Note:
+# classes in this file are auto-registered as internal engine
+# commands during engine initialization, by
+# openpectus.engine.internal_commands.register_commands()
+
+
 class StartEngineCommand(InternalEngineCommand):
     def __init__(self, engine: Engine) -> None:
         super().__init__(EngineCommandEnum.START)
@@ -56,11 +62,11 @@ class UnpauseEngineCommand(InternalEngineCommand):
         else:
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
 
-        # TODO when/how to apply prev_state
-            if e._prev_state:
-                e._apply_state(e._prev_state)
-            else:
-                logger.error("Failed to apply state prior to safe state. Prior state was not available")
+        # pre-pause values are always applied on unpause, regardless of hold state.
+        if e._prev_state:
+            e._apply_state(e._prev_state)
+        else:
+            logger.error("Failed to apply state prior to safe state. Prior state was not available")
 
 
 class HoldEngineCommand(InternalEngineCommand):
@@ -71,7 +77,7 @@ class HoldEngineCommand(InternalEngineCommand):
     def _run(self):
         e = self.engine
         e._runstate_holding = True
-        if not e._runstate_paused:
+        if not e._runstate_paused:  # Pause takes precedence
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Holding, e._tick_time)
 
 
@@ -83,7 +89,7 @@ class UnholdEngineCommand(InternalEngineCommand):
     def _run(self):
         e = self.engine
         e._runstate_holding = False
-        if not e._runstate_paused:
+        if not e._runstate_paused:  # Pause takes precedence
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
 
 

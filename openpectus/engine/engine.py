@@ -11,7 +11,7 @@ from openpectus.engine.internal_commands import (
 
 from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException, RegisterDirection
 from openpectus.engine.method_model import MethodModel
-from openpectus.engine.models import MethodStatusEnum, EngineCommandEnum
+from openpectus.engine.models import MethodStatusEnum, EngineCommandEnum, SystemStateEnum
 from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.errors import InterpretationError
 from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext
@@ -171,6 +171,7 @@ class Engine(InterpreterContext):
             self._tick_timer.stop()
             # TODO shutdown
 
+        last_tick_time = self._tick_time
         self._tick_time = time.time()
         self._tick_number += 1
 
@@ -199,7 +200,7 @@ class Engine(InterpreterContext):
                 self.set_error_state()
 
         # update calculated tags
-        self.update_calculated_tags()
+        self.update_calculated_tags(last_tick_time)
 
         # execute queued commands
         self.execute_commands()
@@ -227,14 +228,23 @@ class Engine(InterpreterContext):
                 tag_value = r.options["to_tag"](tag_value)
             tag.set_value(tag_value, self._tick_time)
 
-    def update_calculated_tags(self):
-        # TODO: update calculated tags
-
+    def update_calculated_tags(self, last_tick_time: float):
         # TODO figure out engine/interpreter work split on clock tags
         # it appears that interpreter will have to update scope times
         # - unless we allow scope information to pass to engine (which we might)
+        sys_state = self._system_tags[SystemTagName.SYSTEM_STATE]
+
+        # Clock         - seconds since epoch
         clock = self._system_tags.get(SystemTagName.CLOCK)
         clock.set_value(time.time(), self._tick_time)
+
+        # Process Time  - 0 at start, increments when System State is Run
+        process_time = self.tags[SystemTagName.PROCESS_TIME]
+        process_time_value = process_time.as_number()
+        if sys_state.get_value() == SystemStateEnum.Running:
+            increment = self._tick_time - last_tick_time
+            new_process_time = process_time_value + increment
+            process_time.set_value(new_process_time, self._tick_time)
 
     def execute_commands(self):
         done = False

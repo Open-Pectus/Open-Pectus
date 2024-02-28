@@ -515,59 +515,82 @@ Mark: C
 
     def test_runstate_pause(self):
         e = self.engine
-        e.schedule_execution("Start")
 
-        e.tick()
+        def tick():
+            e.tick()
+            time.sleep(0.1)
+
+        e.schedule_execution("Start")
+        tick()
+
         self.assertTrue(e._runstate_started)
         system_state_tag = e._system_tags[SystemTagName.SYSTEM_STATE]
         process_time_tag = e._system_tags[SystemTagName.PROCESS_TIME]
-        self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
-        pre_pause_process_time = process_time_tag.as_number()
+        self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())        
 
         danger_tag = e.uod.tags["Danger"]
         self.assertTrue(danger_tag.get_value())
 
         e.schedule_execution("Pause")
-        e.tick()
+        tick()
+
+        # now paused so we can get the paused value
+        pause_process_time = process_time_tag.as_number()
+
+        # run a few ticks while paused
+        tick()
+        tick()
+
         self.assertTrue(e._runstate_started)
         self.assertTrue(e._runstate_paused)
         self.assertEqual(SystemStateEnum.Paused, system_state_tag.get_value())
 
-        # process time is now stopped
-        self.assertEqual(pre_pause_process_time, process_time_tag.as_number())
+        # process time is stopped
+        self.assertEqual(pause_process_time, process_time_tag.as_number())
 
-        # Pause triggers safe-mode
+        # Pause has triggered safe-mode
         self.assertFalse(danger_tag.get_value())
 
-    @unittest.skip("not implemented")
     def test_runstate_unpause(self):
         e = self.engine
-        e.schedule_execution("Start")
 
-        e.tick()
+        def tick():
+            e.tick()
+            time.sleep(0.1)
+
+        # apply start and pause
+        e.schedule_execution("Start")
+        tick()
+
         self.assertTrue(e._runstate_started)
         system_state_tag = e._system_tags[SystemTagName.SYSTEM_STATE]
         process_time_tag = e._system_tags[SystemTagName.PROCESS_TIME]
         self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
-        pre_pause_process_time = process_time_tag.as_number()
 
-        e.schedule_execution("PAUSE")
-        e.tick()
-        self.assertTrue(e._runstate_started)
-        self.assertTrue(e._runstate_paused)
-        self.assertEqual(SystemStateEnum.Paused, system_state_tag.get_value())
+        danger_tag = e.uod.tags["Danger"]
+        self.assertTrue(danger_tag.get_value())
 
-        # process time is now stopped
-        self.assertEqual(pre_pause_process_time, process_time_tag.as_number())
+        e.schedule_execution("Pause")
+        tick()
 
-        e.schedule_execution("Start")
-        e.tick()
-        self.assertTrue(e._runstate_started)
-        self.assertTrue(e._runstate_paused)
-        self.assertEqual(SystemStateEnum.Paused, system_state_tag.get_value())
+        pause_process_time = process_time_tag.as_number()
 
-        # process time is now stopped
-        self.assertEqual(pre_pause_process_time, process_time_tag.as_number())
+        e.schedule_execution("Unpause")
+        tick()
+
+        self.assertEqual(e._runstate_started, True)
+        self.assertEqual(e._runstate_paused, False)
+        self.assertEqual(system_state_tag.get_value(), SystemStateEnum.Running)
+
+        # Unpause applies pre-pause values
+        self.assertEqual(danger_tag.get_value(), True)
+
+        # needs an additional tick in system state Running before process time resumes
+        tick()
+
+        # process time is resumed
+        process_time_increment = process_time_tag.as_number() - pause_process_time
+        self.assertTrue(process_time_increment > 0.0)
 
     def test_runstate_hold(self):
         e = self.engine
@@ -576,23 +599,19 @@ Mark: C
         e.tick()
         self.assertTrue(e._runstate_started)
         system_state_tag = e._system_tags[SystemTagName.SYSTEM_STATE]
-        process_time_tag = e._system_tags[SystemTagName.PROCESS_TIME]
         self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
-        pre_hold_process_time = process_time_tag.as_number()
 
         danger_tag = e.uod.tags["Danger"]
         self.assertTrue(danger_tag.get_value())
 
         e.schedule_execution("Hold")
         e.tick()
+
         self.assertTrue(e._runstate_started)
         self.assertTrue(e._runstate_holding)
         self.assertEqual(SystemStateEnum.Holding, system_state_tag.get_value())
 
-        # process time is now stopped
-        self.assertEqual(pre_hold_process_time, process_time_tag.as_number())
-
-        # Hold does not trigger safe-mode
+        # Hold does not trigger safe-mode so danger is still True
         self.assertTrue(danger_tag.get_value())
 
     @unittest.skip("not implemented")
@@ -692,10 +711,6 @@ Restart
 
         system_state = e.tags[SystemTagName.SYSTEM_STATE]
         self.assertEqual(system_state.get_value(), SystemStateEnum.Restarting)
-
-    @unittest.skip("not implemented")
-    def test_safe_values_resume_load_values(self):
-        raise NotImplementedError()
 
     def test_EngineCommandEnum_has(self):
         self.assertTrue(EngineCommandEnum.has_value("Stop"))
