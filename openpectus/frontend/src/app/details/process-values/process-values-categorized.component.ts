@@ -49,7 +49,7 @@ export class ProcessValuesCategorizedComponent {
   protected getProcessValuesOfCategory(direction: string) {
     if(this.processValues === undefined) return [];
     const processValues = this.processValues.filter(processValue => processValue.direction === direction);
-    processValues.sort((a, b) => b.name.localeCompare(a.name));
+    processValues.sort((a, b) => a.name.localeCompare(b.name));
     return processValues;
   }
 }
