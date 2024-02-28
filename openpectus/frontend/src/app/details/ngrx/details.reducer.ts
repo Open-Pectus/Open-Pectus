@@ -5,6 +5,7 @@ import { DetailsActions } from './details.actions';
 
 export interface DetailsState {
   processValues: ProcessValue[];
+  allProcessValues: boolean;
   processDiagram?: ProcessDiagram;
   commandExamples: CommandExample[];
   controlState: ControlState;
@@ -15,6 +16,7 @@ export interface DetailsState {
 
 const initialState: DetailsState = {
   processValues: [],
+  allProcessValues: false,
   commandExamples: [],
   shouldPoll: false,
   errorLog: {entries: []},
@@ -28,6 +30,7 @@ const initialState: DetailsState = {
 const reducer = createReducer(initialState,
   on(DetailsActions.unitDetailsInitialized, state => produce(state, draft => {
     draft.shouldPoll = true;
+    draft.allProcessValues = false;
   })),
   on(DetailsActions.unitDetailsDestroyed, state => produce(state, draft => {
     draft.shouldPoll = false;
@@ -46,6 +49,9 @@ const reducer = createReducer(initialState,
   })),
   on(DetailsActions.recentRunFetched, (state, {recentRun}) => produce(state, draft => {
     draft.recentRun = recentRun;
+  })),
+  on(DetailsActions.toggleAllProcessValues, (state, {allProcessValues}) => produce(state, draft => {
+    draft.allProcessValues = allProcessValues;
   })),
 );
 

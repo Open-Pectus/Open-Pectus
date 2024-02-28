@@ -159,7 +159,7 @@ class Tag(ChangeSubject):
         self.safe_value: TagValueType = safe_value
 
     def as_readonly(self) -> TagValue:
-        return TagValue(self.name, self.tick_time, self.value, self.unit)
+        return TagValue(self.name, self.tick_time, self.value, self.unit, self.direction)
 
     def set_value(self, val: TagValueType, tick_time: float) -> None:
         if val != self.value:
@@ -343,14 +343,13 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
 
 
 class TagValue():
-    """ Read-only and immutable representation of a tag value. """
-
     def __init__(
             self,
             name: str,
             tick_time: float | None = None,
             value: TagValueType = None,
-            unit: str | None = None
+            unit: str | None = None,
+            direction: TagDirection = TagDirection.UNSPECIFIED,
     ):
         if name is None or name.strip() == '':
             raise ValueError("name is None or empty")
@@ -359,6 +358,9 @@ class TagValue():
         self.tick_time = tick_time
         self.value = value
         self.unit = unit
+        self.direction = direction
+
+    """ Read-only and immutable representation of a tag value. """
 
 
 class TagValueCollection(Iterable[TagValue]):

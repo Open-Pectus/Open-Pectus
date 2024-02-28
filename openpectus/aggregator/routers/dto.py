@@ -9,8 +9,8 @@ import openpectus.aggregator.data.models as data_models
 import openpectus.aggregator.models as Mdl
 from pydantic import BaseModel
 
-
 SystemStateEnum = Mdl.SystemStateEnum
+
 
 class Dto(BaseModel):
     class Config:
@@ -153,6 +153,7 @@ class ProcessValue(Dto):
     value_type: ProcessValueType
     """ Specifies the type of allowed values. """
     commands: list[ProcessValueCommand] | None
+    direction: Mdl.TagDirection
 
     @staticmethod
     def from_tag_value(tag: Mdl.TagValue) -> ProcessValue:
@@ -161,7 +162,8 @@ class ProcessValue(Dto):
             value=tag.value,
             value_type=get_ProcessValueType_from_value(tag.value),
             value_unit=tag.value_unit,
-            commands=[]
+            commands=[],
+            direction=tag.direction
         )
         # commands=[ProcessValueCommand(name=c.name, command=c.command) for c in r.commands])
 
@@ -336,9 +338,11 @@ class RecentRunCsv(Dto):
     filename: str
     csv_content: str
 
+
 class ErrorLogSeverity(StrEnum):
     Warning = auto()
     Error = auto()
+
 
 class ErrorLogEntry(Dto):
     message: str
@@ -352,6 +356,7 @@ class ErrorLogEntry(Dto):
             created_time=datetime.fromtimestamp(model.created_time),
             severity=ErrorLogSeverity.Error if model.severity == logging.ERROR else ErrorLogSeverity.Warning
         )
+
 
 class ErrorLog(Dto):
     entries: list[ErrorLogEntry]

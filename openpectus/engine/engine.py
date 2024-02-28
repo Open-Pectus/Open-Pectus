@@ -8,7 +8,7 @@ from uuid import UUID
 
 from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException, RegisterDirection
 from openpectus.engine.method_model import MethodModel
-from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum
+from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum, SystemTagName
 from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.errors import InterpretationError
 from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext
@@ -20,7 +20,6 @@ from openpectus.lang.exec.tags import (
     TagValue,
     TagValueCollection,
     ChangeListener,
-    SystemTagName,
 )
 from openpectus.lang.exec.timer import EngineTimer, OneThreadTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase

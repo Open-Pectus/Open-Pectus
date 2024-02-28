@@ -5,6 +5,7 @@
 
 import type { ProcessValueCommand } from './ProcessValueCommand';
 import type { ProcessValueType } from './ProcessValueType';
+import type { TagDirection } from './TagDirection';
 
 /**
  * Represents a process value. 
@@ -15,4 +16,5 @@ export type ProcessValue = {
     value_unit?: string;
     value_type: ProcessValueType;
     commands?: Array<ProcessValueCommand>;
+    direction: TagDirection;
 };

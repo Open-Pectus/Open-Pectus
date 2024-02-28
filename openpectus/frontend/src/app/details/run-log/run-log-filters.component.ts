@@ -1,13 +1,14 @@
 import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { Store } from '@ngrx/store';
+import { ToggleButtonComponent } from '../../shared/toggle-button.component';
 import { RunLogActions } from './ngrx/run-log.actions';
 
 @Component({
   selector: 'app-run-log-filters',
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [NgIf],
+  imports: [NgIf, ToggleButtonComponent],
   template: `
     <div class="flex gap-3 items-center flex-wrap justify-end">
       <label class="relative">
@@ -17,12 +18,7 @@ import { RunLogActions } from './ngrx/run-log.actions';
         <button *ngIf="filterInput.value.length !== 0" class="p-2 codicon codicon-chrome-close absolute right-0"
                 (click)="filterInput.value = ''; filterTextChanged('')"></button>
       </label>
-      <label class="flex items-center gap-1 cursor-pointer border rounded px-1 border-slate-200 h-8" *ngIf="showRunningFilter">
-        In progress only
-        <input type="checkbox" (input)="onlyRunningChanged(onlyRunningCheckbox.checked)" #onlyRunningCheckbox
-               [class.codicon-pass]="onlyRunningCheckbox.checked" [class.codicon-circle-large]="!onlyRunningCheckbox.checked"
-               class="w-5 !text-xl appearance-none font-bold opacity-25 text-white checked:opacity-100 codicon cursor-pointer">
-      </label>
+      <app-toggle-button [label]="'In progress only'" (changed)="onlyRunningChanged($event)"></app-toggle-button>
     </div>
   `,
 })
