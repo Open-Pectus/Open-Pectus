@@ -21,9 +21,10 @@ import { ProcessValuePipe } from './app/shared/pipes/process-value.pipe';
 import { handlers } from './msw/handlers';
 import { MswEnablement } from './msw/msw-enablement';
 
-if(MswEnablement.isEnabled) {
+async function enableMocking() {
+  if(!MswEnablement.isEnabled) return;
   const worker = setupWorker(...handlers);
-  await worker.start({
+  return worker.start({
     onUnhandledRequest: (request: Request) => {
       const url = new URL(request.url);
       const pathname = url.pathname;
@@ -36,6 +37,7 @@ if(MswEnablement.isEnabled) {
          || pathname.endsWith('.json')
          || pathname.endsWith('.ttf')
          || pathname.endsWith('.wasm')
+         || pathname.startsWith('/@fs')
          || url.host !== window.location.host
       ) {
         return;
@@ -45,7 +47,7 @@ if(MswEnablement.isEnabled) {
   });
 }
 
-bootstrapApplication(AppComponent, {
+enableMocking().then(() => bootstrapApplication(AppComponent, {
   providers: [
     provideStore(reducers, {
       metaReducers,
@@ -86,4 +88,4 @@ bootstrapApplication(AppComponent, {
     provideHttpClient(withInterceptorsFromDi()),
   ],
 })
-  .catch(err => console.error(err));
+  .catch(err => console.error(err)));
