@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from enum import StrEnum, auto
 
 import openpectus.engine.models as EM
 from pydantic import BaseModel
@@ -10,8 +9,8 @@ logger = logging.getLogger(__name__)
 
 SystemStateEnum = EM.SystemStateEnum
 SystemTagName = EM.SystemTagName
-TagDirection = EM.TagDirection
-
+TagDirection = EM.TagDirection  # TODO: engine internal, should not be exposed to protocol
+MethodStatusEnum = EM.MethodStatusEnum
 
 class ProtocolModel(BaseModel):
     class Config:

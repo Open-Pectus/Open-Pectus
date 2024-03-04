@@ -1,19 +1,15 @@
-import logging
 import unittest
 
 from openpectus.engine.engine import Engine
 from openpectus.lang.exec.runlog import RunLogItemState, RuntimeRecordStateEnum
 from openpectus.test.engine.test_engine import create_engine
 from openpectus.test.engine.utility_methods import (
-    continue_engine, run_engine, print_runlog, print_runtime_records
+    continue_engine, run_engine, print_runlog, print_runtime_records,
+    configure_test_logger, set_engine_debug_logging
 )
 
-logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
-logger = logging.getLogger("Engine")
-logger.setLevel(logging.DEBUG)
-
-logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.INFO)
-
+configure_test_logger()
+set_engine_debug_logging()
 
 class TestRunlog(unittest.TestCase):
     def setUp(self):

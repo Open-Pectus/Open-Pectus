@@ -23,6 +23,7 @@ from openpectus.lang.exec.tags import (
     TagValue,
     TagValueCollection,
     ChangeListener,
+    Unset,
 )
 from openpectus.lang.exec.timer import EngineTimer, OneThreadTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
@@ -260,20 +261,19 @@ class Engine(InterpreterContext):
 
         # execute a tick of each running command
         cmds_done: Set[CommandRequest] = set()
-        for c in self.cmd_executing:
-            if c not in cmds_done:
-                try:
+        try:
+            for c in self.cmd_executing:
+                if c not in cmds_done:
                     # Note: Executing one command may cause other commands to be cancelled (by identical or overlapping
                     # commands) Rather than modify self.cmd_executing (while iterating over it), cancelled/completed
                     # commands are added to the cmds_done set.
                     self._execute_command(c, cmds_done)
-                except Exception:
-                    logger.error("Error executing command: {c}", exc_info=True)
-                    self._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.ERROR, self._tick_time)
-                    # TODO stop or pause or something
-                    break
-        for c_done in cmds_done:
-            self.cmd_executing.remove(c_done)
+        except Exception:
+            logger.error("Error executing command: {c}", exc_info=True)
+            self.set_error_state()
+        finally:
+            for c_done in cmds_done:
+                self.cmd_executing.remove(c_done)
 
     def _execute_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
         # execute an internal engine command or a uod command
@@ -284,14 +284,10 @@ class Engine(InterpreterContext):
             cmds_done.add(cmd_request)
             return
 
-        try:
-            if EngineCommandEnum.has_value(cmd_request.name):
-                self._execute_internal_command(cmd_request, cmds_done)
-            else:
-                self._execute_uod_command(cmd_request, cmds_done)
-        except Exception as ex:
-            logger.error(f"Error running command {cmd_request.name}", str(ex))
-            self.set_error_state()
+        if EngineCommandEnum.has_value(cmd_request.name):
+            self._execute_internal_command(cmd_request, cmds_done)
+        else:
+            self._execute_uod_command(cmd_request, cmds_done)
 
     def _execute_internal_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
 
@@ -477,10 +473,8 @@ class Engine(InterpreterContext):
         # TODO we should probably only consider uod tags here. would system tags ever have a safe value?
         for t in self._iter_all_tags():
             if t.direction == TagDirection.OUTPUT:
-                # TODO safe value can actually be None so we'll need
-                # additional data to determine whether a safe value is present
                 safe_value = t.safe_value
-                if safe_value is not None:
+                if not isinstance(safe_value, Unset):
                     current_values.append(t.as_readonly())
                     t.set_value(safe_value, self._tick_time)
 
@@ -512,8 +506,9 @@ class Engine(InterpreterContext):
         self._uod_listener.clear_changes()
 
     def set_error_state(self):
-        # TODO set interrupted_by_error
-        logger.info("Paused because of error")
+        logger.info("Engine Paused because of error")
+        self._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.ERROR, self._tick_time)
+        self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Paused, self._tick_time)
         self._runstate_paused = True
 
     #TODO remove
@@ -545,7 +540,7 @@ class Engine(InterpreterContext):
             self.cmd_queue.put_nowait(request)
         else:
             logger.error(f"Invalid command type scheduled: {name}")
-            self.set_error_state()
+            raise ValueError(f"Invalid command type scheduled: {name}")
 
     def inject_code(self, pcode: str):
         """ Inject a general code snippet to run in the current scope of the current program. """
@@ -560,6 +555,7 @@ class Engine(InterpreterContext):
         except Exception as ex:
             logger.info("Injected code parse error: " + str(ex))
             self.set_error_state()
+            # TODO: possibly raise ...
 
     # code manipulation api
     def set_method(self, method: Mdl.Method):
@@ -570,6 +566,7 @@ class Engine(InterpreterContext):
         except Exception:
             logger.error("Failed to set method", exc_info=True)
             self.set_error_state()
+            # TODO: possibly raise ...
 
     def calculate_method_state(self) -> Mdl.MethodState:
         return self._method.calculate_method_state(self.interpreter.runtimeinfo)

@@ -16,7 +16,6 @@ log_setup_colorlog()
 logger = logging.getLogger("openpectus.engine.engine")
 logger.setLevel(logging.INFO)
 logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.INFO)
-logging.getLogger("Engine").setLevel(logging.INFO)
 
 
 def get_args():
