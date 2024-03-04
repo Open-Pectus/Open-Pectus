@@ -140,6 +140,16 @@ Increment run counter
         self.assertEqual(1, engine.tags[SystemTagName.RUN_COUNTER].as_number())
         self.assertEqual(["a"], engine.interpreter.get_marks())
 
+    def test_command_Run_counter(self):
+        program = "Run counter: 3"
+        engine = self.engine
+
+        self.assertEqual(0, engine.tags[SystemTagName.RUN_COUNTER].as_number())
+
+        run_engine(engine, program, 5)
+
+        self.assertEqual(3, engine.tags[SystemTagName.RUN_COUNTER].as_number())
+
     @unittest.skip("TODO")
     def test_condition_with_invalid_tag_fails(self):
         raise NotImplementedError()
@@ -294,7 +304,7 @@ Mark: f
         run_engine(engine, program, 15)
 
         print_runlog(engine)
-        #print_runtime_records(engine)
+        # print_runtime_records(engine)
 
         marks = engine.interpreter.get_marks()
         # most important

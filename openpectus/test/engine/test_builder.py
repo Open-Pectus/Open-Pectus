@@ -69,6 +69,15 @@ class BuilderTest(unittest.TestCase):
         self.assertIsNotNone(command)
         self.assertEqual("Increment run counter", command.name)
 
+    def test_run_counter(self):
+        p = build("Run counter: 4")
+        program = p.build_model()
+        # p.printSyntaxTree(p.tree)
+        command: PCommand = program.get_instructions()[0]  # type: ignore
+        self.assertIsNotNone(command)
+        self.assertEqual("Run counter", command.name)
+        self.assertEqual("4", command.args)
+
     def test_block(self):
         p = build("block: foo")
         program = p.build_model()

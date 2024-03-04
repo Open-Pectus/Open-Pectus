@@ -46,6 +46,13 @@ class PNode():
         self._id = new_id
 
     @property
+    def display_name(self) -> str:
+        """ The name of the instruction for general display"""
+        if hasattr(self, "name"):
+            return getattr(self, "name")
+        return str(self)
+
+    @property
     def runlog_name(self) -> str | None:
         """ Name to show in runlog. Return None to skip in runlog. """
         return None

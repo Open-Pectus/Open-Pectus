@@ -477,6 +477,13 @@ class PInterpreter(PNodeVisitor):
             rc_value = self.context.tags[SystemTagName.RUN_COUNTER].as_number() + 1
             self.context.tags[SystemTagName.RUN_COUNTER].set_value(rc_value, self._tick_time)
 
+        elif node.name == SystemCommandEnum.RUN_COUNTER:
+            try:
+                new_value = int(node.args)
+                self.context.tags[SystemTagName.RUN_COUNTER].set_value(new_value, self._tick_time)
+            except ValueError:
+                raise NodeInterpretationError(node, f"Invalid argument '{node.args}'. Argument must be an integer")
+
         else:
             record.add_state_failed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
             raise InterpretationError(f"System instruction '{node.name}' is not supported")
