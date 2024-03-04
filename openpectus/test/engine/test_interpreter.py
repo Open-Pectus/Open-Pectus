@@ -12,18 +12,17 @@ from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, Uo
 from openpectus.lang.grammar.pprogramformatter import print_parsed_program as print_program
 from openpectus.lang.model.pprogram import PProgram
 from openpectus.test.engine.utility_methods import (
-    continue_engine, run_engine, build_program, print_runlog, print_runtime_records
+    continue_engine, run_engine, build_program,
+    configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging,
+    print_runlog, print_runtime_records
 )
 
 
-logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
-logger = logging.getLogger("Engine")
-logger.setLevel(logging.DEBUG)
-logger = logging.getLogger("openpectus.lang.exec.pinterpreter")
-logger.setLevel(logging.DEBUG)
+configure_test_logger()
+set_engine_debug_logging()
+set_interpreter_debug_logging()
 
 
-# def warmup_pint(self):
 # pint takes forever to initialize - long enough
 # to throw off timing of the first instruction.
 # so we initialize it first
@@ -136,10 +135,20 @@ Increment run counter
 
         self.assertEqual(0, engine.tags[SystemTagName.RUN_COUNTER].as_number())
 
-        run_engine(engine, program, 10)
+        run_engine(engine, program, 5)
 
         self.assertEqual(1, engine.tags[SystemTagName.RUN_COUNTER].as_number())
-        self.assertEqual("a", engine.interpreter.get_marks()[0])
+        self.assertEqual(["a"], engine.interpreter.get_marks())
+
+    def test_command_Run_counter(self):
+        program = "Run counter: 3"
+        engine = self.engine
+
+        self.assertEqual(0, engine.tags[SystemTagName.RUN_COUNTER].as_number())
+
+        run_engine(engine, program, 5)
+
+        self.assertEqual(3, engine.tags[SystemTagName.RUN_COUNTER].as_number())
 
     @unittest.skip("TODO")
     def test_condition_with_invalid_tag_fails(self):
@@ -295,7 +304,7 @@ Mark: f
         run_engine(engine, program, 15)
 
         print_runlog(engine)
-        #print_runtime_records(engine)
+        # print_runtime_records(engine)
 
         marks = engine.interpreter.get_marks()
         # most important

@@ -69,7 +69,7 @@ class ParserTest(unittest.TestCase):
         self.assertIsNotNone(c)
         p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.WatchContext)
-        self.assertConditionValue(c.condition(), "A", ">", "2", "ml")  # type: ignore
+        self.assertConditionValue(c.condition(), "A", ">", "2", "ml")
 
     def test_watch_unitless(self):
         p = parse("watch: A > 2")
@@ -77,7 +77,7 @@ class ParserTest(unittest.TestCase):
         self.assertIsNotNone(c)
         p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.WatchContext)
-        self.assertConditionValue(c.condition(), "A", ">", "2", None)  # type: ignore
+        self.assertConditionValue(c.condition(), "A", ">", "2", None)
 
     def test_watch_with_mark(self):
         p = parse("""
@@ -231,6 +231,13 @@ watch: A > 2 ml
         self.assertIsNotNone(c)
         p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.PauseContext)
+
+    def test_restart(self):
+        p = parse("restart")
+        c = p.parser.restart()  # type: ignore
+        self.assertIsNotNone(c)
+        p.printSyntaxTree(c)
+        self.assertIsInstance(c, pcodeParser.RestartContext)
 
     def assertIsPCommandWithNameArgs(self, c: ParserRuleContext, name: str, args: str):
         self.assertIsNotNone(c)

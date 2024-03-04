@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import StrEnum, auto
-from typing import Any, Dict, Iterable, List, Set
+from typing import Any, Callable, Dict, Iterable, List, Set
 
 import pint
 from pint import UnitRegistry, Quantity
@@ -135,6 +135,14 @@ class TagDirection(StrEnum):
     UNSPECIFIED = auto()
 
 
+class Unset():
+    """ Used to specify that a value has not been set.
+
+    Used for nullable values to distinguish between being set to None and not being set.
+    """
+    pass
+
+
 class Tag(ChangeSubject):
     def __init__(
             self,
@@ -143,7 +151,8 @@ class Tag(ChangeSubject):
             value: TagValueType = None,
             unit: str | None = None,
             direction: TagDirection = TagDirection.NA,
-            safe_value: TagValueType = None) -> None:
+            safe_value: TagValueType | Unset = Unset(),
+            on_stop: Callable[[], None] | None = None) -> None:
 
         super().__init__()
 
@@ -156,7 +165,8 @@ class Tag(ChangeSubject):
         self.unit: str | None = unit
         self.choices: List[str] | None = None
         self.direction: TagDirection = direction
-        self.safe_value: TagValueType = safe_value
+        self.safe_value: TagValueType | Unset = safe_value
+        self.on_stop = on_stop
 
     def as_readonly(self) -> TagValue:
         return TagValue(self.name, self.tick_time, self.value, self.unit, self.direction)
@@ -189,6 +199,10 @@ class Tag(ChangeSubject):
     def set_quantity(self, q: QuantityType, tick_time: float):
         self.unit = None if q.dimensionless else str(q.units)
         self.set_value(q.magnitude, tick_time)
+
+    def stop(self):
+        if self.on_stop is not None:
+            self.on_stop()
 
     def clone(self) -> Tag:
         return Tag(self.name, self.tick_time, self.value, self.unit)

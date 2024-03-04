@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from enum import StrEnum, auto
 
 import openpectus.engine.models as EM
 from pydantic import BaseModel
@@ -10,8 +9,8 @@ logger = logging.getLogger(__name__)
 
 SystemStateEnum = EM.SystemStateEnum
 SystemTagName = EM.SystemTagName
-TagDirection = EM.TagDirection
-
+TagDirection = EM.TagDirection  # TODO: engine internal, should not be exposed to protocol
+MethodStatusEnum = EM.MethodStatusEnum
 
 class ProtocolModel(BaseModel):
     class Config:
@@ -31,6 +30,7 @@ class ReadingInfo(ProtocolModel):
 
 
 TagValueType = float | int | str | None
+
 
 
 class TagValue(ProtocolModel):
@@ -93,7 +93,6 @@ class ControlState(ProtocolModel):
     is_paused: bool
 
 
-
 class PlotColorRegion(ProtocolModel):
     process_value_name: str
     value_color_map: dict[str | int | float, str]  # color string compatible with css e.g.: '#aa33bb', 'rgb(0,0,0)', 'rgba(0,0,0,0)', 'red'
@@ -120,12 +119,19 @@ class PlotConfiguration(ProtocolModel):
 
     @staticmethod
     def empty() -> PlotConfiguration:
-        return PlotConfiguration(process_value_names_to_annotate=[], color_regions=[], sub_plots=[], x_axis_process_value_names=[])
+        return PlotConfiguration(
+            process_value_names_to_annotate=[],
+            color_regions=[],
+            sub_plots=[],
+            x_axis_process_value_names=[]
+        )
+
 
 class ErrorLogEntry(ProtocolModel):
     message: str
     created_time: float
     severity: int
+
 
 class ErrorLog(ProtocolModel):
     entries: list[ErrorLogEntry]

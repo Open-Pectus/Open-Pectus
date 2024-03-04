@@ -2145,7 +2145,8 @@
           "Paused",
           "Holding",
           "Waiting",
-          "Stopped"
+          "Stopped",
+          "Restarting"
         ],
         "title": "SystemStateEnum",
         "description": "An enumeration."

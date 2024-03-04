@@ -11,6 +11,7 @@ class EngineCommandEnum(StrEnum):
     UNPAUSE = "Unpause"
     HOLD = "Hold"
     UNHOLD = "Unhold"
+    RESTART = "Restart"
 
     @staticmethod
     def has_value(value: str):
@@ -24,6 +25,7 @@ class SystemStateEnum(StrEnum):
     Holding = "Holding"
     Waiting = "Waiting"
     Stopped = "Stopped"
+    Restarting = "Restarting"
 
 
 class MethodStatusEnum(StrEnum):

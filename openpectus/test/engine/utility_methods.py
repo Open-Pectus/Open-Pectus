@@ -1,3 +1,4 @@
+import logging
 import time
 from openpectus.engine.models import EngineCommandEnum
 
@@ -81,3 +82,21 @@ def print_runtime_records(e: Engine, description: str = ""):
         end = f"{r.visit_end_tick:5d}" if r.visit_end_tick != -1 else "    -"
         print(f"{line}   {r.visit_start_tick:5d}   {end}   {name}   {states}")
     print("-----|-------|-------|----------------------|-------------------")
+
+
+def configure_test_logger():
+    logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
+
+
+def set_engine_debug_logging():
+    engine_modules = ["openpectus.engine.engine",
+                      "openpectus.engine.internal_commands",
+                      "openpectus.engine.internal_commands_impl"]
+    for m in engine_modules:
+        logger = logging.getLogger(m)
+        logger.setLevel(logging.DEBUG)
+
+
+def set_interpreter_debug_logging():
+    logger = logging.getLogger("openpectus.lang.exec.pinterpreter")
+    logger.setLevel(logging.DEBUG)

@@ -8,10 +8,10 @@ import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
 import openpectus.protocol.models as Mdl
 from openpectus.engine.engine import Engine
-from openpectus.engine.models import SystemTagName
 from openpectus.lang.exec.runlog import RunLogItem
 from openpectus.lang.exec.tags import TagValue
 from openpectus.lang.exec.uod import logger as uod_logger
+from openpectus.engine.engine import logger as engine_logger
 from openpectus.protocol.engine_dispatcher import EngineDispatcher
 
 logger = logging.getLogger(__name__)
@@ -20,6 +20,7 @@ logging_queue: SimpleQueue[logging.LogRecord] = SimpleQueue()
 logging_handler = QueueHandler(logging_queue)
 logging_handler.setLevel(logging.WARN)
 uod_logger.addHandler(logging_handler)
+engine_logger.addHandler(logging_handler)
 
 class EngineReporter():
     def __init__(self, engine: Engine, dispatcher: EngineDispatcher) -> None:
@@ -66,7 +67,10 @@ class EngineReporter():
                 commands=[Mdl.ReadingCommand(name=c.name, command=c.command) for c in reading.commands])
             readings.append(reading_info)
 
-        msg = EM.UodInfoMsg(readings=readings, plot_configuration=self.engine.uod.plot_configuration, hardware_str=str(self.engine.uod.hwl))
+        msg = EM.UodInfoMsg(
+            readings=readings,
+            plot_configuration=self.engine.uod.plot_configuration,
+            hardware_str=str(self.engine.uod.hwl))
 
         response = self.dispatcher.post(msg)
         return not isinstance(response, M.ErrorMessage)
@@ -77,7 +81,12 @@ class EngineReporter():
             for _ in range(100):
                 tag = self.engine.tag_updates.get_nowait()
                 assert tag.tick_time is not None, f'tick_time is None for tag {tag.name}'
-                tags.append(Mdl.TagValue(name=tag.name, tick_time=tag.tick_time, value=tag.get_value(), value_unit=tag.unit, direction=tag.direction))
+                tags.append(Mdl.TagValue(
+                    name=tag.name,
+                    tick_time=tag.tick_time,
+                    value=tag.get_value(),
+                    value_unit=tag.unit,
+                    direction=tag.direction))
                 self.engine.tag_updates.task_done()
         except Empty:
             pass
@@ -121,8 +130,11 @@ class EngineReporter():
         log: Mdl.ErrorLog = Mdl.ErrorLog(entries=[])
         while not logging_queue.empty():
             log_entry = logging_queue.get_nowait()
-            log.entries.append(Mdl.ErrorLogEntry(message=log_entry.getMessage(), created_time=log_entry.created, severity=log_entry.levelno))
-        if(len(log.entries) != 0):
+            log.entries.append(Mdl.ErrorLogEntry(
+                message=log_entry.getMessage(),
+                created_time=log_entry.created,
+                severity=log_entry.levelno))
+        if len(log.entries) != 0:
             self.dispatcher.post(EM.ErrorLogMsg(log=log))
 
     def send_control_state(self):

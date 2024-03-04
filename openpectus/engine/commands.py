@@ -4,7 +4,8 @@ from typing import Any, Generic, List, TypeVar
 
 class EngineCommand():
     """ Interface for commands runnable by engine. """
-    def __init__(self) -> None:
+    def __init__(self, name) -> None:
+        self.name: str = name
         self._cancelled: bool = False
         self._initialized: bool = False
         self._exec_started: bool = False
@@ -56,7 +57,10 @@ TContext = TypeVar('TContext')
 
 
 class ContextEngineCommand(Generic[TContext], EngineCommand):
-    """ Extension of EngineCommand that provides a typed context. """
-    def __init__(self, context: TContext) -> None:
-        super().__init__()
+    """ Extension of EngineCommand that provides a typed context.
+
+    This allows Uod commands to extend EngineCommand without importing Engine.
+    """
+    def __init__(self, context: TContext, name: str) -> None:
+        super().__init__(name)
         self.context: TContext = context

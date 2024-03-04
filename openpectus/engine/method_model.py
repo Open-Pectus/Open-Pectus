@@ -41,9 +41,12 @@ class MethodModel():
         try:
             self._program = parse_pcode(pcode=self._pcode)
         except Exception as ex:
+            logger.error(f"Parse error, pcode:\n{self._pcode}", exc_info=True)
             if self._method_error_callback is not None:
                 self._method_error_callback(ex)
-            return
+            
+            # TODO: Figure out whether we need to raise here - how is error callback used
+            raise
 
         # fill mapping between line_num and line_id
         line_num: int = 1

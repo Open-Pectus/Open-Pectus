@@ -8,7 +8,7 @@ from uuid import UUID
 
 import pint
 from openpectus.lang.exec.commands import SystemCommandEnum
-from openpectus.lang.exec.errors import InterpretationError
+from openpectus.lang.exec.errors import InterpretationError, NodeInterpretationError
 from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import (
     BASE_VALID_UNITS,
@@ -34,10 +34,6 @@ from openpectus.lang.model.pprogram import (
 from typing_extensions import override
 
 logger = logging.getLogger(__name__)
-
-
-# TODO define pause + hold behavior
-# TODO add Alarm interpretation, including scope definition
 
 
 class PNodeVisitor:
@@ -212,8 +208,6 @@ class PInterpreter(PNodeVisitor):
             q_block = pint.Quantity(f'{block_elapsed} sec')
             self.context.tags.get(SystemTagName.BLOCK_TIME).set_quantity(q_block, self._tick_time)
 
-            # TODO implement remaining tags, e.g. SYSTEM STATE, RUN COUNTER
-
     def _register_interrupt(self, ar: ActivationRecord, handler: GenerationType):
         logger.debug(f"Interrupt handler registered for {ar}")
         self.interrupts.append((ar, handler))
@@ -244,7 +238,6 @@ class PInterpreter(PNodeVisitor):
                         ar = ActivationRecord(node)
                         self._register_interrupt(ar, self._create_interrupt_handler(node, ar))
             else:
-                logger.error(f"Interrupt for node type {str(node)} not implemented")
                 raise NotImplementedError(f"Interrupt for node type {str(node)} not implemented")
         return instr_count > 0
 
@@ -278,18 +271,22 @@ class PInterpreter(PNodeVisitor):
             next(self.process_instr)
         except StopIteration:
             pass
+        except InterpretationError:
+            raise
         except Exception as ex:
-            logger.error("Interpretation error", exc_info=True)
-            raise InterpretationError("Interpreter error", ex)
+            logger.error("Unhandled interpretation error", exc_info=True)
+            raise InterpretationError("Interpreter error") from ex
 
         # execute one iteration of each interrupt
         try:
             work_done = self._run_interrupt_handlers()
             if not work_done:
                 pass
+        except InterpretationError as ex:
+            raise InterpretationError("Interpreter error in interrupt handler") from ex
         except Exception as ex:
-            logger.error("Interpretation interrupt error", exc_info=True)
-            raise InterpretationError("Interpreter error", ex)
+            logger.error("Unhandled interpretation error in interrupt handler", exc_info=True)
+            raise InterpretationError("Interpreter error in interrupt handler") from ex
 
     def stop(self):
         self.running = False
@@ -320,8 +317,7 @@ class PInterpreter(PNodeVisitor):
         # TODO if not unit specified, pick base unit
         expected_value = pint.Quantity(c.tag_value_numeric, c.tag_unit)
         if not tag_value.is_compatible_with(expected_value):
-            logger.error(f"Incompatible units for values {tag_value} vs {expected_value}")
-            raise ValueError("Incompatible units")
+            raise ValueError(f"Incompatible units for values {tag_value} vs {expected_value}")
 
         result = None
         try:
@@ -473,15 +469,24 @@ class PInterpreter(PNodeVisitor):
         if node.name == SystemCommandEnum.BASE:
             if node.args not in BASE_VALID_UNITS:
                 record.add_state_failed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
-                raise InterpretationError(f"Base instruction has invalid argument '{node.args}'. \
-                                            Value must be one of {', '.join(BASE_VALID_UNITS)}")
+                raise NodeInterpretationError(node, f"Base instruction has invalid argument '{node.args}'. \
+                    Value must be one of {', '.join(BASE_VALID_UNITS)}")
             self.context.tags[SystemTagName.BASE].set_value(node.args, self._tick_time)
+
         elif node.name == SystemCommandEnum.INCREMENT_RUN_COUNTER:
             rc_value = self.context.tags[SystemTagName.RUN_COUNTER].as_number() + 1
             self.context.tags[SystemTagName.RUN_COUNTER].set_value(rc_value, self._tick_time)
+
+        elif node.name == SystemCommandEnum.RUN_COUNTER:
+            try:
+                new_value = int(node.args)
+                self.context.tags[SystemTagName.RUN_COUNTER].set_value(new_value, self._tick_time)
+            except ValueError:
+                raise NodeInterpretationError(node, f"Invalid argument '{node.args}'. Argument must be an integer")
+
         else:
             record.add_state_failed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
-            raise InterpretationError(f"System instruction '{node.name}' is not supported")
+            raise NodeInterpretationError(node, f"System instruction '{node.name}' is not supported")
 
         record.add_state_completed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
 
@@ -491,22 +496,20 @@ class PInterpreter(PNodeVisitor):
             self.execute_system_command(node)
         else:
             record = self.runtimeinfo.get_last_node_record(node)
+
+            # Note: Commands can be resident and last multiple ticks.
+            # The context (Engine) keeps track of this and we just
+            # move on to the next instruction when tick() is invoked.
+            # We do, however, provide the execution id to the context
+            # so that it can update the runtime record appropriately.
             try:
-                # Note: Commands can be resident and last multiple ticks.
-                # The context (ExecutionEngine) keeps track of this and
-                # we just move on to the next instruction when tick() is invoked
-                # We do, however, provide the execution id to the context
-                # so that it can update the runtime record appropriately
-
-                # Note: runtime record state is handled by the context command flow
-
-                logger.debug(f"Executing command {str(node)} via engine")
+                logger.debug(f"Executing command '{str(node)}' via engine")
                 self.context.schedule_execution(node.name, node.args, record.exec_id)
-            except Exception:
+            except Exception as ex:
                 record.add_state_failed(
                     self._tick_time, self._tick_number,
                     self.context.tags.as_readonly())
-                logger.error(f"Command {node.name} scheduling failed", exc_info=True)
+                raise NodeInterpretationError(node, "Failed to pass command to engine") from ex
 
         yield
 
@@ -538,7 +541,10 @@ class PInterpreter(PNodeVisitor):
                     self.context.tags.as_readonly())
 
                 while not ar.complete and self.running:
-                    condition_result = self._evaluate_condition(node)
+                    try:
+                        condition_result = self._evaluate_condition(node)
+                    except Exception as ex:
+                        raise NodeInterpretationError(node, "Error evaluating condition: " + str(ex))
                     logger.debug(f"{str(node)} condition evaluated: {condition_result}")
                     if condition_result:
                         node.activated = True
@@ -595,4 +601,4 @@ class PInterpreter(PNodeVisitor):
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
 
-        raise InterpretationError(f"Invalid instruction {str(node)}")
+        raise NodeInterpretationError(node, f"Invalid instruction '{node.code}'")

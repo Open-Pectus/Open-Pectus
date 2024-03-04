@@ -6,8 +6,9 @@ from uuid import UUID
 
 class SystemCommandEnum(StrEnum):
     """ Commands (instructions of type PCommand) that are executed by the interpreter """
-    INCREMENT_RUN_COUNTER = "Increment run counter"
     BASE = "Base"
+    INCREMENT_RUN_COUNTER = "Increment run counter"
+    RUN_COUNTER = "Run counter"
 
     @staticmethod
     def has_value(value: str):

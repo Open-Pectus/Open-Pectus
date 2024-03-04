@@ -1,6 +1,6 @@
-# Generated from c:\Projects\Novo\Open-Pectus\openpectus\lang\grammar\pcode.g4 by ANTLR 4.9.2
+# Generated from c:/Projects/Novo/Open-Pectus/openpectus/lang/grammar/pcode.g4 by ANTLR 4.13.1
 from antlr4 import *
-if __name__ is not None and "." in __name__:
+if "." in __name__:
     from .pcodeParser import pcodeParser
 else:
     from pcodeParser import pcodeParser
@@ -32,15 +32,6 @@ class pcodeListener(ParseTreeListener):
 
     # Exit a parse tree produced by pcodeParser#instruction.
     def exitInstruction(self, ctx:pcodeParser.InstructionContext):
-        pass
-
-
-    # Enter a parse tree produced by pcodeParser#builtin_command.
-    def enterBuiltin_command(self, ctx:pcodeParser.Builtin_commandContext):
-        pass
-
-    # Exit a parse tree produced by pcodeParser#builtin_command.
-    def exitBuiltin_command(self, ctx:pcodeParser.Builtin_commandContext):
         pass
 
 
@@ -77,33 +68,6 @@ class pcodeListener(ParseTreeListener):
 
     # Exit a parse tree produced by pcodeParser#end_blocks.
     def exitEnd_blocks(self, ctx:pcodeParser.End_blocksContext):
-        pass
-
-
-    # Enter a parse tree produced by pcodeParser#command.
-    def enterCommand(self, ctx:pcodeParser.CommandContext):
-        pass
-
-    # Exit a parse tree produced by pcodeParser#command.
-    def exitCommand(self, ctx:pcodeParser.CommandContext):
-        pass
-
-
-    # Enter a parse tree produced by pcodeParser#command_name.
-    def enterCommand_name(self, ctx:pcodeParser.Command_nameContext):
-        pass
-
-    # Exit a parse tree produced by pcodeParser#command_name.
-    def exitCommand_name(self, ctx:pcodeParser.Command_nameContext):
-        pass
-
-
-    # Enter a parse tree produced by pcodeParser#command_args.
-    def enterCommand_args(self, ctx:pcodeParser.Command_argsContext):
-        pass
-
-    # Exit a parse tree produced by pcodeParser#command_args.
-    def exitCommand_args(self, ctx:pcodeParser.Command_argsContext):
         pass
 
 
@@ -188,6 +152,15 @@ class pcodeListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by pcodeParser#restart.
+    def enterRestart(self, ctx:pcodeParser.RestartContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#restart.
+    def exitRestart(self, ctx:pcodeParser.RestartContext):
+        pass
+
+
     # Enter a parse tree produced by pcodeParser#stop.
     def enterStop(self, ctx:pcodeParser.StopContext):
         pass
@@ -266,6 +239,33 @@ class pcodeListener(ParseTreeListener):
 
     # Exit a parse tree produced by pcodeParser#blank.
     def exitBlank(self, ctx:pcodeParser.BlankContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#command.
+    def enterCommand(self, ctx:pcodeParser.CommandContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#command.
+    def exitCommand(self, ctx:pcodeParser.CommandContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#command_name.
+    def enterCommand_name(self, ctx:pcodeParser.Command_nameContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#command_name.
+    def exitCommand_name(self, ctx:pcodeParser.Command_nameContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#command_args.
+    def enterCommand_args(self, ctx:pcodeParser.Command_argsContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#command_args.
+    def exitCommand_args(self, ctx:pcodeParser.Command_argsContext):
         pass
 
 

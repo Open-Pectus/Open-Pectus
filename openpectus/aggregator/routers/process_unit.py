@@ -19,7 +19,7 @@ def map_pu(engine_data: EngineData) -> Dto.ProcessUnit:
     # TODO define source of all fields
 
     state = Dto.ProcessUnitState.Ready(state=Dto.ProcessUnitStateEnum.READY)
-    if engine_data.system_state != None and engine_data.system_state.value == Mdl.SystemStateEnum.Running:
+    if engine_data.system_state is not None and engine_data.system_state.value == Mdl.SystemStateEnum.Running:
         state = Dto.ProcessUnitState.InProgress(state=Dto.ProcessUnitStateEnum.IN_PROGRESS,
                                                 progress_pct=0)  # TODO: how do we know the progress_pct?
     elif engine_data.run_data.interrupted_by_error:

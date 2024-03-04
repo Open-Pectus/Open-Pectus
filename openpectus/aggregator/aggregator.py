@@ -12,7 +12,7 @@ from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRe
 from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.aggregator.models import EngineData
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
-from openpectus.protocol.models import SystemTagName
+from openpectus.protocol.models import SystemTagName, MethodStatusEnum
 
 logger = logging.getLogger(__name__)
 
@@ -46,13 +46,19 @@ class FromEngine:
             return
 
         for changed_tag_value in changed_tag_values:
+            if changed_tag_value.name == SystemTagName.METHOD_STATUS.value:
+                if changed_tag_value.value == MethodStatusEnum.ERROR:
+                    engine_data.run_data.interrupted_by_error = True
+                else:
+                    engine_data.run_data.interrupted_by_error = False
+
             if changed_tag_value.name == SystemTagName.RUN_ID.value:
                 self._run_id_changed(plot_log_repo, recent_run_repo, engine_data, changed_tag_value)
 
             was_inserted = engine_data.tags_info.upsert(changed_tag_value)
 
             if changed_tag_value.name == SystemTagName.SYSTEM_STATE.value:
-                asyncio.create_task(self.publisher.public_process_units_changed())
+                asyncio.create_task(self.publisher.publish_process_units_changed())
 
             # if a tag doesn't appear with value until after start and run_id, we need to store the info here
             if was_inserted and engine_data.run_id is not None:
