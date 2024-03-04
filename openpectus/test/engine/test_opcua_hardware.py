@@ -6,6 +6,7 @@ import asyncua
 import asyncua.ua
 import asyncua.common.callback
 from typing import Any, Dict
+import os
 from openpectus.engine.hardware import Register, RegisterDirection, HardwareLayerException
 from openpectus.engine.opcua_hardware import OPCUA_Hardware, OPCUA_Types
 
@@ -114,6 +115,7 @@ class OPCUATestServer():
         self.process.close()
 
 
+@unittest.skipIf(bool(os.environ.get("OPENPECTUS_ENGINE_SKIP_SLOW_TESTS")), reason="Skipping slow tests as configured")
 class TestOPCUAHardware(unittest.TestCase):
     def test_can_connect(self):
         test_server = OPCUATestServer()
