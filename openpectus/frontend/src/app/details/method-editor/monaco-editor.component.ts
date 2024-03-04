@@ -13,7 +13,6 @@ import { initServices, MonacoLanguageClient } from 'monaco-languageclient';
 import { combineLatest, filter, firstValueFrom, Observable, Subject, take, takeUntil } from 'rxjs';
 import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient/lib/common/client';
 import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
-import { createConfiguredEditor, createModelReference } from 'vscode/monaco';
 import { MethodLine } from '../../api';
 import { UtilMethods } from '../../shared/util-methods';
 import { MethodEditorActions } from './ngrx/method-editor.actions';
@@ -127,13 +126,9 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   private async constructEditor() {
     const uri = Uri.parse('/tmp/model.json');
     const methodContent = await firstValueFrom(this.methodContent);
-    const modelRef = await createModelReference(uri, methodContent);
-    // noinspection JSUnresolvedReference
-    modelRef.object.setLanguageId(this.languageId);
-
-    // noinspection JSUnresolvedReference
-    const editor = createConfiguredEditor(this.editorElement.nativeElement, {
-      model: modelRef.object.textEditorModel,
+    const model = MonacoEditor.createModel(methodContent, this.languageId, uri);
+    const editor = MonacoEditor.create(this.editorElement.nativeElement, {
+      model: model,
       fontSize: 18,
       glyphMargin: false,
       fixedOverflowWidgets: true,
@@ -144,8 +139,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       autoIndent: 'none',
     });
     this.componentDestroyed.pipe(take(1)).subscribe(() => {
-      modelRef.object.dispose();
-      modelRef.dispose();
+      model.dispose();
       editor.dispose();
     });
     return editor;

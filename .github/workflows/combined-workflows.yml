@@ -12,7 +12,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/main' }}
-  NODE_VERSION: 20.8
+  NODE_VERSION: 20.11
 
 jobs:
 
@@ -146,6 +146,10 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           context: .
           file: ./Dockerfile
+      # https://docs.digitalocean.com/reference/api/api-reference/#operation/apps_create_deployment
+      - name: Trigger deployment in Digital Ocean after push to Github container registry
+        run: |
+          curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer ${{ secrets.DIGITALOCEAN_TOKEN }}" "https://api.digitalocean.com/v2/apps/${{ secrets.DIGITALOCEAN_APP_ID }}/deployments"
 
   deploy_image:
     needs: [publish_docker_image]
