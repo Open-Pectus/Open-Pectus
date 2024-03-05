@@ -189,15 +189,23 @@ class PBlock(PInstruction):
 
 
 class PEndBlock(PInstruction):
-    """ Represents an End Block intruction. """
+    """ Represents an End block intruction. """
     def __init__(self, parent: PNode) -> None:
         super().__init__(parent)
+
+    @property
+    def runlog_name(self) -> str | None:
+        return "End block"
 
 
 class PEndBlocks(PInstruction):
-    """ Represents an End Blocks intruction. """
+    """ Represents an End blocks intruction. """
     def __init__(self, parent: PNode) -> None:
         super().__init__(parent)
+
+    @property
+    def runlog_name(self) -> str | None:
+        return "End blocks"
 
 
 class PWatch(PInstruction):

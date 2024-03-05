@@ -386,6 +386,59 @@ Mark: A5
 
         self.assertEqual(["A1", "A4", "A2", "A3", "A5"], engine.interpreter.get_marks())
 
+    def test_block_end_block(self):
+        program = """
+Block: A
+    Mark: A1
+    End block
+Mark: A2
+"""
+        engine = self.engine
+        run_engine(engine, program, 10)
+
+        self.assertEqual(["A1", "A2"], engine.interpreter.get_marks())
+
+    def test_block_nested_end_block(self):
+        program = """
+Block: A
+    Mark: A1
+    Block: B
+        Mark: B1
+        End block
+Mark: A2
+"""
+        engine = self.engine
+        run_engine(engine, program, 15)
+
+        self.assertEqual(["A1", "B1"], engine.interpreter.get_marks())
+
+    def test_block_end_blocks(self):
+        program = """
+Block: A
+    Mark: A1
+    End blocks
+Mark: A2
+"""
+        engine = self.engine
+        run_engine(engine, program, 10)
+
+
+        self.assertEqual(["A1", "A2"], engine.interpreter.get_marks())
+
+    def test_block_nested_end_blocks(self):
+        program = """
+Block: A
+    Mark: A1
+    Block: B
+        Mark: B1
+        End blocks
+Mark: A2
+"""
+        engine = self.engine
+        run_engine(engine, program, 15)
+
+        self.assertEqual(["A1", "B1", "A2"], engine.interpreter.get_marks())
+
     def test_base_command_sec(self):
         program = "Base: s"
         e = self.engine

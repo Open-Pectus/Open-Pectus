@@ -17,6 +17,7 @@ from openpectus.lang.exec.tags import (
     SystemTagName,
 )
 from openpectus.lang.model.pprogram import (
+    PComment,
     PErrorInstruction,
     PInjectedNode,
     PNode,
@@ -25,7 +26,7 @@ from openpectus.lang.model.pprogram import (
     PBlank,
     PBlock,
     PEndBlock,
-    # PEndBlocks,
+    PEndBlocks,
     PWatch,
     PAlarm,
     PCommand,
@@ -423,6 +424,7 @@ class PInterpreter(PNodeVisitor):
 
         ar = ActivationRecord(node, self._tick_time, self.context.tags.as_readonly())
         self.stack.push(ar)
+        self.context.tags[SystemTagName.BLOCK].set_value(node.display_name, self._tick_number)
 
         yield  # comment if we dont want block to always consume a tick
 
@@ -448,6 +450,12 @@ class PInterpreter(PNodeVisitor):
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
 
+        #restore previous block name
+        self.context.tags[SystemTagName.BLOCK].set_value(None, self._tick_number)
+        for ar in reversed(self.stack.records):
+            if ar.artype == ARType.BLOCK:
+                self.context.tags[SystemTagName.BLOCK].set_value(ar.owner.display_name, self._tick_number)
+
     def visit_PEndBlock(self, node: PEndBlock):
         record = self.runtimeinfo.get_last_node_record(node)
         record.add_state_started(
@@ -461,6 +469,19 @@ class PInterpreter(PNodeVisitor):
                     self.context.tags.as_readonly())
                 return
         logger.warning("End block found no block to end")
+
+    def visit_PEndBlocks(self, node: PEndBlocks):
+        record = self.runtimeinfo.get_last_node_record(node)
+        record.add_state_started(
+            self._tick_time, self._tick_number,
+            self.context.tags.as_readonly())
+        for ar in reversed(self.stack.records):
+            if ar.artype == ARType.BLOCK:
+                ar.complete = True
+                logger.debug(f"EndBlocks ended block {ar.owner.display_name}")
+        record.add_state_completed(
+            self._tick_time, self._tick_number,
+            self.context.tags.as_readonly())
 
     def execute_system_command(self, node: PCommand):
         record = self.runtimeinfo.get_last_node_record(node)
@@ -588,6 +609,9 @@ class PInterpreter(PNodeVisitor):
             record.add_state_failed(
                 self._tick_time, self._tick_number,
                 self.context.tags.as_readonly())
+
+    def visit_PComment(self, node: PComment):
+        pass
 
     def visit_PErrorInstruction(self, node: PErrorInstruction):
         record = self.runtimeinfo.get_last_node_record(node)

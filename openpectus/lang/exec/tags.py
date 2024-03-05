@@ -18,6 +18,7 @@ QuantityType = pint.Quantity | PlainQuantity[Any]
 class SystemTagName(StrEnum):
     BASE = "Base"
     RUN_COUNTER = "Run Counter"
+    BLOCK = "Block"
     BLOCK_TIME = "Block Time"
     PROCESS_TIME = "Process Time"
     RUN_TIME = "Run Time"
@@ -342,6 +343,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
         defaults = [
             (SystemTagName.BASE, "min", None),  # TODO this should not be wrapped in pint quantity
             (SystemTagName.RUN_COUNTER, 0, None),
+            (SystemTagName.BLOCK, None, None),
             (SystemTagName.BLOCK_TIME, 0.0, "s"),
             (SystemTagName.PROCESS_TIME, 0.0, "s"),
             (SystemTagName.RUN_TIME, 0.0, "second"),
