@@ -14,7 +14,7 @@ export interface PvAndPosition {
   standalone: true,
   imports: [NgIf, ProcessValuePipe],
   template: `
-    <div class="flex flex-col bg-sky-200 p-1 items-center gap-1 lg:gap-2 rounded select-none"
+    <div class="flex flex-col bg-sky-100 p-1 items-center gap-1 lg:gap-2 rounded select-none"
          [class.cursor-pointer]="hasCommands(processValue)" (click)="onClick()">
       <div class="mx-1 font-semibold">{{ processValue?.name }}</div>
       <div class="bg-white rounded py-0.5 px-2 whitespace-nowrap min-h-[1.75rem] relative w-full text-center">

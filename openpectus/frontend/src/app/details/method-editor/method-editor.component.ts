@@ -21,14 +21,16 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
   template: `
     <app-collapsible-element [name]="'Method Editor'" [heightResizable]="true" (contentHeightChanged)="onContentHeightChanged()"
                              [contentHeight]="400" (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-list-flat'">
-      <button *ngIf="methodEditorIsDirty | ngrxPush" (click)="onSaveButtonClicked()" buttons
-              class="bg-green-400 flex items-center text-gray-800 px-2.5 rounded-md">
-        <span class="codicon codicon-save !text-xl"></span>
-        <span class="ml-2 font-semibold">Save</span>
-      </button>
+
       <app-monaco-editor class="block rounded-sm h-full" [editorSizeChange]="editorSizeChange"
                          content *ngIf="!collapsed" (keydown.control.s)="onCtrlS($event)"
                          [readOnlyEditor]="recentRunId !== undefined"></app-monaco-editor>
+
+      <button *ngIf="!collapsed && (methodEditorIsDirty | ngrxPush)" (click)="onSaveButtonClicked()" content
+              class="bg-green-300 flex items-center text-black px-3 py-1.5 rounded-md absolute right-9 bottom-6 z-10">
+        <span class="codicon codicon-save !text-lg"></span>
+        <span class="ml-2">Save method</span>
+      </button>
     </app-collapsible-element>
   `,
 })

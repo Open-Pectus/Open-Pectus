@@ -9,7 +9,7 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
   imports: [NgIf, NgClass],
   template: `
     <div
-        class="flex flex-col bg-gray-100 py-1 lg:rounded-md lg:p-1 shadow-md shadow-gray-400 border-gray-300 border relative transition-[padding-bottom]"
+        class="flex flex-col bg-neutral-100 py-1 lg:rounded-md lg:p-1 shadow-md shadow-neutral-400 border-neutral-300 border relative transition-[padding-bottom]"
         [class.pb-0]="collapsed">
       <div class="flex items-center flex-wrap py-1 px-2 gap-3 cursor-pointer select-none" (click)="toggleCollapsed()">
         <div class="flex flex-1 items-center mr-1">

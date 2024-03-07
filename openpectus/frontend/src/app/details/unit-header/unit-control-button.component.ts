@@ -9,7 +9,7 @@ import { DetailsActions } from '../ngrx/details.actions';
   standalone: true,
   imports: [NgClass, TitleCasePipe],
   template: `
-    <button class="py-2 pr-4 pl-3.5 rounded-lg text-white bg-sky-900 flex items-center gap-2"
+    <button class="py-2 pr-4 pl-3.5 rounded-lg text-white bg-sky-800 flex items-center gap-2"
             (click)="executeCommand()"
             [disabled]="disabled || (toggled && unCommand === undefined)"
             [class.bg-slate-400]="disabled"

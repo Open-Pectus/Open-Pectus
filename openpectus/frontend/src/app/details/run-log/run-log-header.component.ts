@@ -9,11 +9,11 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from 
       <b>Start</b>
       <b>End</b>
       <b>Command</b>
-      <button class="bg-slate-400 text-white rounded px-2 ml-2 flex items-center py-0.5" (click)="expandAll.emit()">
+      <button class="bg-gray-50 border-gray-300 border rounded px-2 ml-2 flex items-center py-0.5" (click)="expandAll.emit()">
         <i class="codicon codicon-unfold mr-1"></i>
         <span class="whitespace-pre">Expand all</span>
       </button>
-      <button class="bg-slate-400 text-white rounded px-2 ml-2 flex items-center py-0.5" (click)="collapseAll.emit()">
+      <button class="bg-gray-50 border-gray-300 border rounded px-2 ml-2 flex items-center py-0.5" (click)="collapseAll.emit()">
         <i class="codicon codicon-fold mr-1"></i>
         <span class="whitespace-pre">Collapse all</span>
       </button>
