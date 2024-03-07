@@ -38,7 +38,7 @@ export interface DefaultTableSort<T> {
         </tr>
         </thead>
         <tbody class="cursor-pointer">
-        <tr *ngFor="let row of data" class="border-y last-of-type:border-none border-slate-500" (click)="rowClicked.emit(row)">
+        <tr *ngFor="let row of data" class="border-y last-of-type:border-none border-gray-300" (click)="rowClicked.emit(row)">
           <td *ngFor="let column of columns" class="text-center px-3 py-2">
             {{ format(row[column.key], column) }}
           </td>

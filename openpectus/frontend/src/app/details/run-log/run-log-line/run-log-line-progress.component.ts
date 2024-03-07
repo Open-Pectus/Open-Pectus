@@ -7,7 +7,7 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
   standalone: true,
   imports: [NgIf, DecimalPipe],
   template: `
-    <div class="border-slate-400 bg-neutral-100 border rounded-md overflow-hidden w-28 h-full flex items-center relative">
+    <div class="border-gray-400 bg-white border rounded-md overflow-hidden w-28 h-full flex items-center relative">
       <div class="bg-sky-600 saturate-50 h-full overflow-visible flex items-center"
            [style.width.%]="value * 100" *ngIf="value !== undefined">
       </div>

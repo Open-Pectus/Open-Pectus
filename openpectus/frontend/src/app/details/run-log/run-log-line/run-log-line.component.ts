@@ -25,10 +25,10 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
     DatePipe,
   ],
   template: `
-    <div [class.!bg-neutral-100]="rowIndex % 2 === 1"
+    <div [class.!bg-stone-100]="rowIndex % 2 === 1"
          [class.!bg-yellow-100]="runLogLine?.forced"
          [class.!bg-red-200]="runLogLine?.cancelled"
-         class="bg-neutral-50 border-b border-white cursor-pointer"
+         class="bg-white border-b border-white cursor-pointer"
          *ngrxLet="expanded as expanded" (click)="toggleCollapse(expanded)">
       <div class="grid gap-2 px-3 py-2" [style.grid]="gridFormat">
         <p>{{ runLogLine?.start ?? '' | date }}</p>

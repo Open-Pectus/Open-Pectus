@@ -10,7 +10,7 @@ import { MswEnablementComponent } from './msw-enablement.component';
   standalone: true,
   imports: [MswEnablementComponent, LetDirective],
   template: `
-    <div class="w-full flex items-center justify-between px-4 bg-sky-950 text-white relative">
+    <div class="w-full flex items-center justify-between px-4 bg-sky-900 text-white relative">
       <app-msw-enablement class="flex-1"></app-msw-enablement>
       <button class="text-3xl font-bold mx-4 my-2.5" (click)="navigateToRoot()">Open Pectus</button>
       <ng-container *ngrxLet="oidcSecurityService.userData$ as userData">

@@ -8,14 +8,15 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
   standalone: true,
   imports: [NgIf, NgClass],
   template: `
-    <div class="flex flex-col bg-sky-800 py-1 lg:rounded-md lg:p-1 shadow-lg relative transition-[padding-bottom]"
-         [class.pb-0]="collapsed">
-      <div class="flex items-center flex-wrap text-gray-100 py-1 px-2 gap-3 cursor-pointer select-none" (click)="toggleCollapsed()">
+    <div
+        class="flex flex-col bg-gray-100 py-1 lg:rounded-md lg:p-1 shadow-md shadow-gray-400 border-gray-300 border relative transition-[padding-bottom]"
+        [class.pb-0]="collapsed">
+      <div class="flex items-center flex-wrap py-1 px-2 gap-3 cursor-pointer select-none" (click)="toggleCollapsed()">
         <div class="flex flex-1 items-center mr-1">
           <span class="codicon !text-xl mr-2" *ngIf="codiconName !== undefined" [ngClass]="codiconName"
                 [style.margin-bottom.px]="codiconName === 'codicon-graph-line' ? -1 : codiconName === 'codicon-dashboard' ? -1 : null"
                 [style.--vscode-symbolIcon-keywordForeground]="'initial'"></span>
-          <span class="text-xl font-bold">{{ name }}</span>
+          <span class="text-lg font-bold text-gray-800">{{ name }}</span>
         </div>
         <div class="flex gap-4 items-center mr-10" *ngIf="!collapsed" (click)="$event.stopPropagation()">
           <ng-content select="[buttons]"></ng-content>

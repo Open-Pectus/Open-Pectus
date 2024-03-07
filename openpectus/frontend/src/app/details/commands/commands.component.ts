@@ -31,10 +31,10 @@ import { CommandExamplesListComponent } from './command-examples-list.component'
           </textarea>
           <textarea #commandToExecute placeholder="Paste or write here to execute"
                     class="resize-none outline-none whitespace-pre flex-1 px-2 py-1.5 min-w-[15rem]"></textarea>
-          <button class="absolute right-4 bottom-4 rounded-md bg-green-400 text-gray-800 p-2 flex items-center"
+          <button class="absolute right-4 bottom-4 rounded-md bg-green-300 text-black p-2 flex items-center"
                   (click)="onExecute(commandToExecute.value); commandToExecute.value = ''">
-            <i class="codicon codicon-symbol-event !text-gray-800"></i>
-            <span class="font-semibold ml-1">Execute!</span>
+            <i class="codicon codicon-symbol-event !text-black"></i>
+            <span class="ml-1">Execute!</span>
           </button>
         </div>
       </div>
