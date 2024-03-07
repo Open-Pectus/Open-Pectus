@@ -84,6 +84,9 @@ class Engine(InterpreterContext):
         self._prev_state: TagValueCollection | None = None
         """ The state prior to applying safe state """
 
+        self.block_times: dict[str, float] = {}
+        """ holds time spent in each block"""
+
         self._interpreter: PInterpreter = PInterpreter(PProgram(), self)
         """ The interpreter executing the current program. """
 
@@ -233,18 +236,32 @@ class Engine(InterpreterContext):
         # it appears that interpreter will have to update scope times
         # - unless we allow scope information to pass to engine (which we might)
         sys_state = self._system_tags[SystemTagName.SYSTEM_STATE]
+        time_increment = self._tick_time - last_tick_time if last_tick_time > 0.0 else 0.0
+        logger.debug(f"{time_increment = }")
 
         # Clock         - seconds since epoch
         clock = self._system_tags.get(SystemTagName.CLOCK)
         clock.set_value(time.time(), self._tick_time)
 
         # Process Time  - 0 at start, increments when System State is Run
-        process_time = self.tags[SystemTagName.PROCESS_TIME]
+        process_time = self._system_tags[SystemTagName.PROCESS_TIME]
         process_time_value = process_time.as_number()
         if sys_state.get_value() == SystemStateEnum.Running:
-            increment = self._tick_time - last_tick_time
-            new_process_time = process_time_value + increment
-            process_time.set_value(new_process_time, self._tick_time)
+            process_time.set_value(process_time_value + time_increment, self._tick_time)
+
+        # Run Time      - 0 at start, increments when System State is not Stopped
+        run_time = self._system_tags[SystemTagName.RUN_TIME]
+        run_time_value = run_time.as_number()
+        if sys_state.get_value() not in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
+            run_time.set_value(run_time_value + time_increment, self._tick_time)
+
+        # Block Time    - 0 at Block start, global but value refers to active block
+        block_name = self._system_tags[SystemTagName.BLOCK].get_value() or ""
+        assert isinstance(block_name, str)
+        if block_name not in self.block_times.keys():
+            self.block_times[block_name] = 0.0
+        self.block_times[block_name] += time_increment        
+        self._system_tags[SystemTagName.BLOCK_TIME].set_value(self.block_times[block_name], self._tick_time)
 
     def execute_commands(self):
         done = False
@@ -458,7 +475,7 @@ class Engine(InterpreterContext):
             if cmd_record is not None:
                 assert cmd_record[1].exec_id == record.exec_id
                 command = cmd_record[0]
-                if command is not None and not command.is_cancelled:
+                if command is not None and not command.is_cancelled():
                     command.cancel()
                     logger.info(f"Cleaned up failed command {cmd_name}")
 

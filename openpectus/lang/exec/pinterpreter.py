@@ -13,7 +13,6 @@ from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import (
     BASE_VALID_UNITS,
     TagCollection,
-    TagValueCollection,
     SystemTagName,
 )
 from openpectus.lang.model.pprogram import (
@@ -60,17 +59,15 @@ class ActivationRecord:
             self,
             owner: PNode,
             start_time: float = -1.0,
-            start_tags: TagValueCollection = TagValueCollection.empty()
     ) -> None:
         self.owner: PNode = owner
         self.start_time: float = start_time
-        self.start_tags = start_tags
         self.complete: bool = False
         self.artype: ARType = self._get_artype(owner)
 
-    def fill_start(self, start_time: float, start_tags: TagValueCollection):
+
+    def fill_start(self, start_time: float):
         self.start_time: float = start_time
-        self.start_tags = start_tags
 
     def _get_artype(self, node: PNode) -> ARType:
         if isinstance(node, PProgram):
@@ -187,27 +184,6 @@ class PInterpreter(PNodeVisitor):
             return None
         yield from self.visit(tree)
 
-    def _update_tags(self):
-        # Engine has no concept of scopes - or at least only program and current block.
-        # What about intermediate blocks/scopes?
-        # Does this relate to RunLog? Should that show intermediate scope times?
-
-        # Clock         - seconds since epoch
-        # Run Time      - 0 at start, increments when System State is not Stopped
-        # Process Time  - 0 at start, increments when System State is Run
-        # Block Time    - 0 at Block start, global but value refers to active block
-
-        if self.stack.any():
-            ar_program = self.stack.records[0]
-            program_elapsed = self._tick_time - ar_program.start_time
-            q_program = pint.Quantity(f'{program_elapsed} sec')
-            self.context.tags.get(SystemTagName.RUN_TIME).set_quantity(q_program, self._tick_time)
-
-            ar_block = self.stack.peek()
-            # TODO block time should not include pause and hold time
-            block_elapsed = self._tick_time - ar_block.start_time
-            q_block = pint.Quantity(f'{block_elapsed} sec')
-            self.context.tags.get(SystemTagName.BLOCK_TIME).set_quantity(q_block, self._tick_time)
 
     def _register_interrupt(self, ar: ActivationRecord, handler: GenerationType):
         logger.debug(f"Interrupt handler registered for {ar}")
@@ -243,7 +219,7 @@ class PInterpreter(PNodeVisitor):
         return instr_count > 0
 
     def _create_interrupt_handler(self, node: PNode, ar: ActivationRecord) -> GenerationType:
-        ar.fill_start(self._tick_time, self.context.tags.as_readonly())
+        ar.fill_start(self._tick_time)
         self.stack.push(ar)
         yield from self.visit(node)
         self.stack.pop()
@@ -295,15 +271,15 @@ class PInterpreter(PNodeVisitor):
 
     def _is_awaiting_threshold(self, node: PNode):
         if isinstance(node, PInstruction) and node.time is not None:
-            block_elapsed = self.context.tags.get(SystemTagName.BLOCK_TIME).as_quantity()
+            block_time = self.context.tags.get(SystemTagName.BLOCK_TIME).as_quantity()
             base_unit = self.context.tags.get(SystemTagName.BASE).get_value()
             assert isinstance(base_unit, str), \
                 f"Base tag value must contain the base unit as a string. But its current value is '{base_unit}'"
-            threshold_quantity = pint.Quantity(node.time, base_unit)
-            if block_elapsed < threshold_quantity:
-                logger.debug(f"Awaiting threshold: {threshold_quantity}, current: {block_elapsed}, time: {self._tick_time}")
+            threshold_quantity = pint.Quantity(node.time, base_unit)            
+            if block_time < threshold_quantity:
+                logger.debug(f"Awaiting threshold: {threshold_quantity}, block time: {block_time}, tick time: {self._tick_time}")
                 return True
-            logger.debug(f"Done awaiting threshold {threshold_quantity} @ tick time: {self._tick_time}")
+            logger.debug(f"Done awaiting threshold {threshold_quantity}, block time: {block_time}, tick time: {self._tick_time}")
         return False
 
     def _evaluate_condition(self, condition_node: PWatch | PAlarm) -> bool:
@@ -397,7 +373,7 @@ class PInterpreter(PNodeVisitor):
         logger.debug(f"Visit {node} done")
 
     def visit_PProgram(self, node: PProgram):
-        ar = ActivationRecord(node, self._tick_time, self.context.tags.as_readonly())
+        ar = ActivationRecord(node, self._tick_time)
         self.stack.push(ar)
         yield from self._visit_children(node.children)
         self.stack.pop()
@@ -422,7 +398,7 @@ class PInterpreter(PNodeVisitor):
     def visit_PBlock(self, node: PBlock):
         record = self.runtimeinfo.get_last_node_record(node)
 
-        ar = ActivationRecord(node, self._tick_time, self.context.tags.as_readonly())
+        ar = ActivationRecord(node, self._tick_time)
         self.stack.push(ar)
         self.context.tags[SystemTagName.BLOCK].set_value(node.display_name, self._tick_number)
 
@@ -450,7 +426,7 @@ class PInterpreter(PNodeVisitor):
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
 
-        #restore previous block name
+        # restore previous block name
         self.context.tags[SystemTagName.BLOCK].set_value(None, self._tick_number)
         for ar in reversed(self.stack.records):
             if ar.artype == ARType.BLOCK:
