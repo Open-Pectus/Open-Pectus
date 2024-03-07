@@ -8,7 +8,7 @@ import { FrontendPubsubService } from './api';
   standalone: true,
   template: `
     <div class="text-xs text-slate-400">
-      <button class="rounded p-1.5 bg-blue-900"
+      <button class="rounded p-1.5 bg-blue-950"
               (click)="onButtonClick()">
         <label class="flex pointer-events-none">
           <span>MSW:</span>

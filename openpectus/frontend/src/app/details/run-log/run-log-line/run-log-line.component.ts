@@ -25,17 +25,17 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
     DatePipe,
   ],
   template: `
-    <div [class.!bg-gray-200]="rowIndex % 2 === 1"
+    <div [class.!bg-neutral-100]="rowIndex % 2 === 1"
          [class.!bg-yellow-100]="runLogLine?.forced"
          [class.!bg-red-200]="runLogLine?.cancelled"
-         class="bg-gray-100 border-b border-white cursor-pointer"
+         class="bg-neutral-50 border-b border-white cursor-pointer"
          *ngrxLet="expanded as expanded" (click)="toggleCollapse(expanded)">
       <div class="grid gap-2 px-3 py-2" [style.grid]="gridFormat">
-        <p>{{runLogLine?.start ?? '' | date}}</p>
-        <p *ngIf="runLogLine?.end !== undefined">{{runLogLine?.end ?? '' | date}}</p>
+        <p>{{ runLogLine?.start ?? '' | date }}</p>
+        <p *ngIf="runLogLine?.end !== undefined">{{ runLogLine?.end ?? '' | date }}</p>
         <app-run-log-line-progress [value]="runLogLine?.progress" class="py-0.5"
                                    *ngIf="runLogLine?.end === undefined"></app-run-log-line-progress>
-        <p>{{runLogLine?.command?.command}}</p>
+        <p>{{ runLogLine?.command?.command }}</p>
         <div class="col-end-6 flex gap-2">
           <app-run-log-line-force-button *ngIf="runLogLine?.forcible" [lineId]="runLogLine?.id"
                                          (click)="$event.stopPropagation()"></app-run-log-line-force-button>
