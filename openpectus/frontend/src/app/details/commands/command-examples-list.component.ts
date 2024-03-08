@@ -21,6 +21,7 @@ import { CommandExample } from '../../api';
       <div *ngIf="(commandExamples | ngrxPush)?.length === 0" class="m-auto">No examples available</div>
       <button *ngFor="let commandExample of commandExamples | ngrxPush"
               class="rounded-l-2xl p-2 bg-gray-50 select-none border border-r-0 border-gray-400"
+              [class.text-gray-600]="commandExample !== chosenExample"
               [class.!bg-white]="commandExample === chosenExample"
               [class.z-10]="commandExample === chosenExample"
               (click)="exampleChosen.emit(commandExample)">
