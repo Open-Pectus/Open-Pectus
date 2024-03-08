@@ -5,7 +5,7 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from 
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   template: `
-    <div class="grid bg-gray-100 text-gray-900 items-center gap-2 px-3 py-2" [style.grid]="gridFormat">
+    <div class="grid bg-slate-100 text-gray-900 items-center gap-2 px-3 py-2" [style.grid]="gridFormat">
       <b>Start</b>
       <b>End</b>
       <b>Command</b>
