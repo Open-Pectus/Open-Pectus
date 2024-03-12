@@ -11,7 +11,7 @@ import { RunLogLineButtonComponent } from './run-log-line-button.component';
   template: `
     <app-run-log-line-button buttonText="Force"
                              colorClass="bg-yellow-100"
-                             confirmColorClass="bg-yellow-600"
+                             confirmColorClass="bg-yellow-700"
                              codiconClass="codicon-play"
                              (confirmedClick)="onClick()">
     </app-run-log-line-button>
