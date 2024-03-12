@@ -9,7 +9,7 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
   imports: [NgIf, NgClass],
   template: `
     <div
-        class="flex flex-col bg-sky-50 py-1 lg:rounded-md lg:p-1 shadow-md shadow-slate-400 border-slate-400 border relative transition-[padding-bottom]"
+        class="flex flex-col bg-sky-100 py-1 lg:rounded-md lg:p-1 shadow-md shadow-slate-400 border-slate-400 border relative transition-[padding-bottom]"
         [class.pb-0]="collapsed">
       <div class="flex items-center flex-wrap py-1 px-2 gap-3 cursor-pointer select-none" (click)="toggleCollapsed()">
         <div class="flex flex-1 items-center mr-1 !text-gray-800">
@@ -26,8 +26,8 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
              [class.codicon-chevron-down]="!collapsed"
              (click)="$event.stopPropagation(); toggleCollapsed()"></div>
       </div>
-      <div class="bg-white lg:rounded-sm mt-1.5 h-full outline outline-1 outline-gray-300" [class.transition-[height]]="!isDragging" #content
-           [class.overflow-hidden]="!contentOverflow"
+      <div class="bg-white lg:rounded-sm mt-1.5 h-full outline-1 outline-gray-300" [class.transition-[height]]="!isDragging" #content
+           [class.overflow-hidden]="!contentOverflow" [class.outline]="!collapsed"
            [style.height.px]="height" (transitionend)="onTransitionEndContentContainer($event)">
         <ng-content select="[content]"></ng-content>
       </div>

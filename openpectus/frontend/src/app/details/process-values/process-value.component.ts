@@ -14,10 +14,10 @@ export interface PvAndPosition {
   standalone: true,
   imports: [NgIf, ProcessValuePipe],
   template: `
-    <div class="flex flex-col bg-sky-100 p-0.5 items-center gap-1 rounded select-none border border-sky-200"
+    <div class="flex flex-col bg-sky-200 p-0.5 items-center gap-1 rounded select-none border border-sky-300"
          [class.cursor-pointer]="hasCommands(processValue)" (click)="onClick()">
       <div class="mx-1 font-semibold">{{ processValue?.name }}</div>
-      <div class="bg-white rounded py-0.5 px-2 whitespace-nowrap min-h-[1.75rem] relative w-full text-center border border-sky-200">
+      <div class="bg-white rounded py-0.5 px-2 whitespace-nowrap min-h-[1.75rem] relative w-full text-center border border-sky-300">
         {{ processValue | processValue }}
 
         <div *ngIf="hasCommands(processValue)" [class.codicon-wand]="hasCommands(processValue)"
