@@ -32,7 +32,7 @@ type FocusableCommandComponent = ProcessValueCommandButtonComponent | ProcessVal
   ],
   template: `
     <div tabindex="0" #container
-         class="absolute left-1/2 -translate-x-1/2 top-0.5 z-10 flex flex-col gap-2 bg-white border border-slate-500 outline-none rounded-md p-2"
+         class="absolute left-1/2 -translate-x-1/2 top-0.5 z-10 flex flex-col gap-3 p-3 bg-white border-4 border-sky-50 outline outline-1 outline-slate-500 rounded-md shadow-lg shadow-slate-500"
          (blur)="onBlur($event)">
 
       <ng-container *ngFor="let command of processValueCommands">

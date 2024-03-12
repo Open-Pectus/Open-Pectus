@@ -17,11 +17,13 @@ export interface PvAndPosition {
     <div class="flex flex-col bg-sky-200 p-0.5 items-center gap-1 rounded select-none border border-sky-300"
          [class.cursor-pointer]="hasCommands(processValue)" (click)="onClick()">
       <div class="mx-1 font-semibold">{{ processValue?.name }}</div>
-      <div class="bg-white rounded py-0.5 px-2 whitespace-nowrap min-h-[1.75rem] relative w-full text-center border border-sky-300">
+      <div class="bg-white rounded py-0.5 px-3 whitespace-nowrap min-h-[1.75rem] relative w-full text-center border border-sky-300">
         {{ processValue | processValue }}
 
-        <div *ngIf="hasCommands(processValue)" [class.codicon-wand]="hasCommands(processValue)"
-             class="absolute -top-2 -right-1 p-[2.5px] codicon !text-[0.6rem] bg-vscode-background-grey-hover rounded-full"></div>
+        <div *ngIf="hasCommands(processValue)"
+             class="absolute -top-2 -right-0.5 !text-[0] bg-sky-200 rounded-full border-sky-300 border-b rotate-45">
+          <div class="codicon-wand codicon !text-[0.6rem] p-[2.5px]  -rotate-45"></div>
+        </div>
       </div>
     </div>
   `,

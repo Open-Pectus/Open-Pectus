@@ -26,9 +26,7 @@ import { CommandExamplesListComponent } from './command-examples-list.component'
                                    (exampleChosen)="chosenExample = $event"></app-command-examples-list>
         <div class="flex justify-between flex-1 relative">
           <textarea placeholder="Example to copy from" readonly
-                    class="resize-none outline-none whitespace-pre flex-1 px-2 py-1.5 border-l border-r border-slate-500 -ml-[1px] min-w-[15rem]">
-            {{chosenExample?.example}}
-          </textarea>
+                    class="resize-none outline-none whitespace-pre flex-1 px-2 py-1.5 border-l border-r border-slate-500 -ml-[1px] min-w-[15rem]">{{ chosenExample?.example }}</textarea>
           <textarea #commandToExecute placeholder="Paste or write here to execute"
                     class="resize-none outline-none whitespace-pre flex-1 px-2 py-1.5 min-w-[15rem]"></textarea>
           <button class="absolute right-4 bottom-4 rounded-md bg-green-300 text-black px-3 py-2 flex items-center"
