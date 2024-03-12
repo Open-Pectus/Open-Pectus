@@ -22,8 +22,8 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
           <ng-content select="[buttons]"></ng-content>
         </div>
 
-        <div class="codicon !text-2xl !font-bold absolute right-3 lg:right-4" [class.codicon-chevron-right]="collapsed"
-             [class.codicon-chevron-down]="!collapsed"
+        <div class="codicon !text-2xl !font-bold absolute right-3 lg:right-4 transition-transform codicon-chevron-down"
+             [class.-rotate-90]="collapsed"
              (click)="$event.stopPropagation(); toggleCollapsed()"></div>
       </div>
       <div class="bg-white lg:rounded-sm mt-1.5 h-full outline-1 outline-gray-300" [class.transition-[height]]="!isDragging" #content
