@@ -13,10 +13,10 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
         [class.pb-0]="collapsed">
       <div class="flex items-center flex-wrap py-1 px-2 gap-3 cursor-pointer select-none" (click)="toggleCollapsed()">
         <div class="flex flex-1 items-center mr-1 !text-gray-800">
-          <span class="codicon !text-xl mr-2" *ngIf="codiconName !== undefined" [ngClass]="codiconName"
+          <span class="codicon !text-2xl mr-2.5" *ngIf="codiconName !== undefined" [ngClass]="codiconName"
                 [style.margin-bottom.px]="codiconName === 'codicon-graph-line' ? -1 : codiconName === 'codicon-dashboard' ? -1 : null"
                 [style.--vscode-symbolIcon-keywordForeground]="'initial'"></span>
-          <span class="text-lg font-bold">{{ name }}</span>
+          <span class="text-lg">{{ name }}</span>
         </div>
         <div class="flex gap-4 items-center mr-10" *ngIf="!collapsed" (click)="$event.stopPropagation()">
           <ng-content select="[buttons]"></ng-content>
@@ -26,7 +26,7 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
              [class.-rotate-90]="collapsed"
              (click)="$event.stopPropagation(); toggleCollapsed()"></div>
       </div>
-      <div class="bg-white lg:rounded-sm mt-1.5 h-full outline-1 outline-gray-300" [class.transition-[height]]="!isDragging" #content
+      <div class="bg-white lg:rounded-sm mt-1 h-full outline-1 outline-gray-300" [class.transition-[height]]="!isDragging" #content
            [class.overflow-hidden]="!contentOverflow" [class.outline]="!collapsed"
            [style.height.px]="height" (transitionend)="onTransitionEndContentContainer($event)">
         <ng-content select="[content]"></ng-content>
