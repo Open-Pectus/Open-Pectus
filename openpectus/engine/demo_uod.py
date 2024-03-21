@@ -3,7 +3,8 @@ from time import time
 from typing import List, Any
 
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
-from openpectus.lang.exec import tags, readings as R
+from openpectus.lang.exec import readings as R
+import openpectus.lang.exec.tags_impl as tags
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand, UodBuilder
 from openpectus.protocol.models import PlotConfiguration, SubPlot, PlotAxis, PlotColorRegion
 

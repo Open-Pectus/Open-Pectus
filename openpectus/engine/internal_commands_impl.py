@@ -12,8 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 # Note:
-# classes in this file are auto-registered as internal engine
-# commands during engine initialization, by
+# classes in this file are auto-registered as internal engine commands during engine initialization, by
 # openpectus.engine.internal_commands.register_commands()
 
 
@@ -35,6 +34,8 @@ class StartEngineCommand(InternalEngineCommand):
             e._set_run_id("new")
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
             e._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.OK, e._tick_time)
+
+            e.tag_context.emit_on_start()
 
 
 class PauseEngineCommand(InternalEngineCommand):
@@ -64,8 +65,9 @@ class UnpauseEngineCommand(InternalEngineCommand):
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
 
         # pre-pause values are always applied on unpause, regardless of hold state.
-        if e._prev_state:
+        if e._prev_state is not None:
             e._apply_state(e._prev_state)
+            e._prev_state = None
         else:
             logger.error("Failed to apply state prior to safe state. Prior state was not available")
 
@@ -75,6 +77,7 @@ class UnpauseEngineCommand(InternalEngineCommand):
         # which can be complex and requires the full editing feature. For now, we just take the error
         # flag down and hope for the best
         e._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.OK, e._tick_time)
+
 
 class HoldEngineCommand(InternalEngineCommand):
     def __init__(self, engine: Engine) -> None:
@@ -130,11 +133,7 @@ class StopEngineCommand(InternalEngineCommand):
             e._runstate_holding = False
             e._runstate_stopping = False
 
-            for tag in e.tags:
-                try:
-                    tag.stop()
-                except Exception:
-                    logger.error(f"Error invoking stop on tag {tag.name}", exc_info=True)
+            e.tag_context.emit_on_stop()
 
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Stopped, e._tick_time)
             e._set_run_id("empty")
@@ -173,11 +172,7 @@ class RestartEngineCommand(InternalEngineCommand):
             e._runstate_stopping = False
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Stopped, e._tick_time)
 
-            for tag in e.tags:
-                try:
-                    tag.stop()
-                except Exception:
-                    logger.error(f"Error invoking stop on tag {tag.name}", exc_info=True)
+            e.tag_context.emit_on_stop()
 
             e._set_run_id("empty")
             e._stop_interpreter()
@@ -192,6 +187,9 @@ class RestartEngineCommand(InternalEngineCommand):
             e._tick_number = 0
             e._runstate_paused = False
             e._runstate_holding = False
+
+            e.tag_context.emit_on_start()
+
             e._set_run_id("new")
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
             logger.info("Restarting engine complete")

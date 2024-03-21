@@ -15,7 +15,7 @@ _command_instances: dict[str, InternalEngineCommand] = {}
 
 def register_commands(engine):
     if len(_command_map) > 0:
-        raise ValueError("Register may only run once per engine lifetime." +
+        raise ValueError("Register may only run once per engine lifetime. " +
                          "Engine was probably not cleaned up with .cleanup()")
 
     def register(command_name: str, cls):

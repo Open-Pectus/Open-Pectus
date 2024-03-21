@@ -12,10 +12,12 @@ from openpectus.engine.internal_commands import (
 from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException, RegisterDirection
 from openpectus.engine.method_model import MethodModel
 from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum, SystemTagName
+from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.commands import CommandRequest
-from openpectus.lang.exec.errors import InterpretationError
+from openpectus.lang.exec.errors import EngineNotInitializedError, InterpretationError, InterpretationInternalError
 from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext
 from openpectus.lang.exec.runlog import RuntimeInfo, RunLog, RuntimeRecord
+from openpectus.lang.exec.tag_lifetime import TagContext
 from openpectus.lang.exec.tags import (
     Tag,
     TagCollection,
@@ -87,6 +89,12 @@ class Engine(InterpreterContext):
         self.block_times: dict[str, float] = {}
         """ holds time spent in each block"""
 
+        self._tags: TagCollection | None = None
+        self._tag_context: TagContext | None = None
+
+        self.block_popped: str | None = None
+        self.block_pushed: str | None = None
+
         self._interpreter: PInterpreter = PInterpreter(PProgram(), self)
         """ The interpreter executing the current program. """
 
@@ -109,20 +117,42 @@ class Engine(InterpreterContext):
 
     @property
     def tags(self) -> TagCollection:
-        return self._system_tags.merge_with(self.uod.tags)
+        if self._tags is None:
+            raise EngineNotInitializedError("Tags not set")
+        return self._tags
 
-    def cleanup(self):
-        dispose_command_map()
+    @property
+    def base_unit_provider(self) -> BaseUnitProvider:
+        return self.uod.base_unit_provider
+
+    def block_started(self, name: str):
+        self.block_pushed = name
+        self.block_popped = None
+
+    def block_ended(self, name: str, new_name: str):
+        self.block_pushed = new_name
+        self.block_popped = name
 
     @property
     def interpreter(self) -> PInterpreter:
         if self._interpreter is None:
-            raise ValueError("No interpreter set")
+            raise EngineNotInitializedError("No interpreter set")
         return self._interpreter
+
+    @property
+    def tag_context(self) -> TagContext:
+        if self._tag_context is None:
+            raise EngineNotInitializedError("Tag context not set")
+        return self._tag_context
 
     @property
     def runtimeinfo(self) -> RuntimeInfo:
         return self.interpreter.runtimeinfo
+
+    def cleanup(self):
+        if self._tag_context is not None:
+            self.tag_context.emit_on_engine_shutdown()
+        dispose_command_map()
 
     def get_runlog(self) -> RunLog:
         return self.runtimeinfo.get_runlog()
@@ -131,6 +161,8 @@ class Engine(InterpreterContext):
         self.uod.validate_configuration()
         self.uod.tags.add_listener(self._uod_listener)
         self._system_tags.add_listener(self._system_listener)
+        self._tags = self._system_tags.merge_with(self.uod.tags)
+        self._tag_context = TagContext(self.tags)
 
     def run(self):
         self._configure()
@@ -154,6 +186,8 @@ class Engine(InterpreterContext):
 
         self._running = True
         self._tick_timer.start()
+
+        self.tag_context.emit_on_engine_configured()
 
     def stop(self):
         try:
@@ -195,6 +229,10 @@ class Engine(InterpreterContext):
                 not self._runstate_stopping:
             try:
                 self._interpreter.tick(self._tick_time, self._tick_number)
+            except InterpretationInternalError:
+                logger.fatal("A serious internal interpreter error occured. The method should be stopped. If it is resumed, \
+                             additional errors may occur.", exc_info=True)
+                self.set_error_state()
             except InterpretationError:
                 logger.error("Interpretation error", exc_info=True)
                 self.set_error_state()
@@ -203,7 +241,8 @@ class Engine(InterpreterContext):
                 self.set_error_state()
 
         # update calculated tags
-        self.update_calculated_tags(last_tick_time)
+        if self._runstate_started:
+            self.update_calculated_tags(last_tick_time)
 
         # execute queued commands
         self.execute_commands()
@@ -232,9 +271,6 @@ class Engine(InterpreterContext):
             tag.set_value(tag_value, self._tick_time)
 
     def update_calculated_tags(self, last_tick_time: float):
-        # TODO figure out engine/interpreter work split on clock tags
-        # it appears that interpreter will have to update scope times
-        # - unless we allow scope information to pass to engine (which we might)
         sys_state = self._system_tags[SystemTagName.SYSTEM_STATE]
         time_increment = self._tick_time - last_tick_time if last_tick_time > 0.0 else 0.0
         logger.debug(f"{time_increment = }")
@@ -255,13 +291,26 @@ class Engine(InterpreterContext):
         if sys_state.get_value() not in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
             run_time.set_value(run_time_value + time_increment, self._tick_time)
 
-        # Block Time    - 0 at Block start, global but value refers to active block
+        # Block name + signal block changes to tag_context
         block_name = self._system_tags[SystemTagName.BLOCK].get_value() or ""
         assert isinstance(block_name, str)
+        if self.block_pushed is not None and self.block_popped is not None:
+            block_name, old_block_name = self.block_pushed, self.block_popped
+            self.block_popped, self.block_pushed = None, None
+            self.tag_context.emit_on_block_end(old_block_name, block_name, self._tick_number)
+        elif self.block_pushed is not None:
+            block_name = self.block_pushed
+            self.block_pushed = None
+            self.tag_context.emit_on_block_start(block_name, self._tick_number)
+
+        # Block Time    - 0 at Block start, global but value refers to active block
         if block_name not in self.block_times.keys():
             self.block_times[block_name] = 0.0
-        self.block_times[block_name] += time_increment        
+        self.block_times[block_name] += time_increment
         self._system_tags[SystemTagName.BLOCK_TIME].set_value(self.block_times[block_name], self._tick_time)
+
+        # Execute the tick lifetime hook on tags
+        self.tag_context.emit_on_tick()
 
     def execute_commands(self):
         done = False

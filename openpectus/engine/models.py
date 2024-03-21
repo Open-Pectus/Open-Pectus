@@ -31,4 +31,3 @@ class SystemStateEnum(StrEnum):
 class MethodStatusEnum(StrEnum):
     OK = "OK"
     ERROR = "Error"
-
