@@ -6,7 +6,7 @@ from typing import List, Any
 import pint
 from openpectus.engine.engine import Engine
 from openpectus.engine.models import EngineCommandEnum
-from openpectus.lang.exec.pinterpreter import PInterpreter
+from openpectus.lang.exec.pinterpreter import CallStack, PInterpreter
 from openpectus.lang.exec.tags import Tag, SystemTagName
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
 from openpectus.lang.grammar.pprogramformatter import print_parsed_program as print_program
@@ -446,12 +446,19 @@ Mark: A2
         base_tag = e._system_tags[SystemTagName.BASE]
         self.assertEqual("s", base_tag.get_value())
 
-    def test_base_command_L(self):
-        program = "Base: L"
+    def test_base_command_min(self):
+        program = "Base: min"
         e = self.engine
         run_engine(e, program, 5)
         base_tag = e._system_tags[SystemTagName.BASE]
-        self.assertEqual("L", base_tag.get_value())
+        self.assertEqual("min", base_tag.get_value())
+
+    def test_base_command_h(self):
+        program = "Base: h"
+        e = self.engine
+        run_engine(e, program, 5)
+        base_tag = e._system_tags[SystemTagName.BASE]
+        self.assertEqual("h", base_tag.get_value())
 
     def test_base_default_is_set_to_minutes(self):
         e = self.engine

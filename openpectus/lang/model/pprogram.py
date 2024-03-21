@@ -167,7 +167,7 @@ class PInstruction(PNode):
         super().__init__(parent)
 
         self.time: float | None = None
-        """ The delay threshold specified for the instruction. """
+        """ The delay threshold specified for the instruction measured in the Base unit. """
 
         self.comment: str = ''
 

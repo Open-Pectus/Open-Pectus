@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from enum import StrEnum, auto
-from typing import Any, Callable, Dict, Iterable, List, Set
+from typing import Any, Iterable, List, Set
 
 import pint
 from pint import UnitRegistry, Quantity
 from pint.facets.plain import PlainQuantity
+
+from openpectus.lang.exec.tag_lifetime import TagLifetime
 
 ureg = UnitRegistry(cache_folder="./pint-cache")
 Q_ = Quantity
@@ -27,6 +29,13 @@ class SystemTagName(StrEnum):
     METHOD_STATUS = "Method Status"
     RUN_ID = "Run Id"
 
+    # these tags are only present if defined in uod.
+    BLOCK_VOLUME = "Block Volume"
+    ACCUMULATED_VOLUME = "Accumulated Volume"
+    BLOCK_CV = "Block CV"
+    ACCUMULATED_CV = "Accumulated CV"
+
+
     @staticmethod
     def has_value(value: str):
         """ Determine if enum has this string value defined. Case sensitive. """
@@ -34,12 +43,13 @@ class SystemTagName(StrEnum):
 
 
 # Define the dimensions and units we want to use and the conversions we want to provide.
-# Pint has way too many built in to be usable for this and it is simpler than customizing it
+# Pint has way too many built in to be usable for this and this is simpler than customizing it
 TAG_UNITS = {
     'length': ['m', 'cm'],
     'mass': ['kg', 'g'],
-    '[time]': ['s', 'm', 'h', 'ms'],  # Why 'm' and not 'min'?
+    '[time]': ['s', 'min', 'h', 'ms'],
     'flow': ['L/h', 'L/min', 'L/d'],  # Pint parses L/m as liter/meter
+    'volume': ['L', 'mL'],
 }
 
 TAG_UNIT_DIMS = {
@@ -48,6 +58,8 @@ TAG_UNIT_DIMS = {
 
 # These units are not stored as a tag unit but as a tag value in the Base tag,
 # so they need special treatment.
+# Note that this list is a total static list. The actual valid units depend on the
+# totalizers that are defined in the uod.
 BASE_VALID_UNITS = ['L', 'h', 'min', 's', 'mL', 'CV', 'g', 'kg']
 
 
@@ -144,7 +156,7 @@ class Unset():
     pass
 
 
-class Tag(ChangeSubject):
+class Tag(ChangeSubject, TagLifetime):
     def __init__(
             self,
             name: str,
@@ -153,7 +165,7 @@ class Tag(ChangeSubject):
             unit: str | None = None,
             direction: TagDirection = TagDirection.NA,
             safe_value: TagValueType | Unset = Unset(),
-            on_stop: Callable[[], None] | None = None) -> None:
+            ) -> None:
 
         super().__init__()
 
@@ -167,7 +179,6 @@ class Tag(ChangeSubject):
         self.choices: List[str] | None = None
         self.direction: TagDirection = direction
         self.safe_value: TagValueType | Unset = safe_value
-        self.on_stop = on_stop
 
     def as_readonly(self) -> TagValue:
         return TagValue(self.name, self.tick_time, self.value, self.unit, self.direction)
@@ -194,65 +205,20 @@ class Tag(ChangeSubject):
 
     def as_number(self) -> int | float:
         if not isinstance(self.value, (int, float)):
-            raise ValueError(f"Value is not numerical: '{self.value}'")
+            raise ValueError(f"Value is not numerical: '{self.value}' has type '{type(self. value).__name__}'")
+        return self.value
+
+    def as_float(self) -> float:
+        if not isinstance(self.value, (float)):
+            raise ValueError(f"Value is not a float: '{self.value}' has type '{type(self. value).__name__}'")
         return self.value
 
     def set_quantity(self, q: QuantityType, tick_time: float):
         self.unit = None if q.dimensionless else str(q.units)
         self.set_value(q.magnitude, tick_time)
 
-    def stop(self):
-        if self.on_stop is not None:
-            self.on_stop()
-
-    def clone(self) -> Tag:
-        return Tag(self.name, self.tick_time, self.value, self.unit)
-
-
-class ReadingTag(Tag):
-    def __init__(self, name: str, unit: str | None = None) -> None:
-        super().__init__(name, value=0.0, unit=unit, direction=TagDirection.INPUT)
-
-
-class SelectTag(Tag):
-    def __init__(self, name: str, value, unit: str | None,
-                 choices: List[str], direction: TagDirection = TagDirection.NA) -> None:
-        super().__init__(name=name, value=value, unit=unit, direction=direction)
-        if choices is None or len(choices) == 0:
-            raise ValueError("choices must be non-empty")
-        self.choices = choices
-
 
 # TODO consider builder pattern for Tag - may replace so many tags - or at least make ctor args managable
-
-# class Select_old(Tag):
-#     '''Implements a tag that can hold discrete values.'''
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-#         self.states = kwargs.pop('choices')
-#         self.direction = kwargs.pop('direction', Direction.NA)
-#         self.default = kwargs.pop('default', None)
-#         if self.direction == Direction.OUTPUT:
-#             self.state = None
-#         else:
-#             self.state = self.default
-#         self.archive = self.read
-#         self.hw_value = self.read
-#     def read(self):
-#         return self.state
-#     def write(self, request):
-#         if isinstance(request, int):
-#             if request < len(self.states):
-#                 request = self.states[request]
-#         if request in self.states:
-#             if self.state is not request:
-#                 self.state = request
-#                 self.notify()
-#     def reset(self):
-#         self.write(self.default)
-#         self.notify()
-#     def safe(self):
-#         self.write(self.default)
 
 
 class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
@@ -260,7 +226,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
 
     def __init__(self) -> None:
         super().__init__()
-        self.tags: Dict[str, Tag] = {}
+        self.tags: dict[str, Tag] = {}
 
     def as_readonly(self) -> TagValueCollection:
         return TagValueCollection([t.as_readonly() for t in self.tags.values()])
@@ -315,13 +281,6 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
         if not self.has(tag_name):
             return None
         return self.tags[tag_name].get_value()
-
-    def clone(self) -> TagCollection:
-        """ Returns a deep clone of the collection. """
-        tags = TagCollection()
-        for tag in self.tags.values():
-            tags.add(tag.clone())
-        return tags
 
     def merge_with(self, other: TagCollection) -> TagCollection:
         """ Returns a new TagCollection with the combined tags of both collections.
@@ -384,7 +343,7 @@ class TagValueCollection(Iterable[TagValue]):
 
     def __init__(self, values: Iterable[TagValue]) -> None:
         super().__init__()
-        self._tag_values: Dict[str, TagValue] = {}
+        self._tag_values: dict[str, TagValue] = {}
         for v in values:
             self._add(v)
 

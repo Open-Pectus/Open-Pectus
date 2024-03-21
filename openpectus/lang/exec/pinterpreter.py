@@ -3,15 +3,15 @@ from __future__ import annotations
 import inspect
 import logging
 from enum import Enum
-from typing import Generator, List, Tuple
+from typing import Generator, Iterable, List, Tuple
 from uuid import UUID
 
 import pint
+from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.commands import SystemCommandEnum
-from openpectus.lang.exec.errors import InterpretationError, NodeInterpretationError
+from openpectus.lang.exec.errors import InterpretationError, InterpretationInternalError, NodeInterpretationError
 from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import (
-    BASE_VALID_UNITS,
     TagCollection,
     SystemTagName,
 )
@@ -35,6 +35,7 @@ from typing_extensions import override
 
 logger = logging.getLogger(__name__)
 
+term_uod = "Unit Operation Definition file."
 
 class PNodeVisitor:
     def visit(self, node):
@@ -131,6 +132,16 @@ class InterpreterContext():
         raise NotImplementedError()
 
     def schedule_execution(self, name: str, args: str | None = None, exec_id: UUID | None = None):
+        raise NotImplementedError()
+
+    @property
+    def base_unit_provider(self) -> BaseUnitProvider:
+        raise NotImplementedError()
+
+    def block_started(self, name: str):
+        raise NotImplementedError()
+
+    def block_ended(self, name: str, new_name: str):
         raise NotImplementedError()
 
 
@@ -233,22 +244,13 @@ class PInterpreter(PNodeVisitor):
         if self.process_instr is None:
             self.process_instr = self._interpret()
 
-        # update interpreter tags
-        self._update_tags()
-
         # execute one iteration of program
-
-        # TODO: be more clear about which errors to throw and which to handle
-        # If there is no reason for interpreter to handle errors, might as well
-        # just let engine do what it already does.
-        # Also clarify which errors are expected (InterpretationError) and which are
-        # unhandled (Exception)
         assert self.process_instr is not None, "self.process_instr is None"
         try:
             next(self.process_instr)
         except StopIteration:
             pass
-        except InterpretationError:
+        except (InterpretationInternalError, InterpretationError):
             raise
         except Exception as ex:
             logger.error("Unhandled interpretation error", exc_info=True)
@@ -275,11 +277,37 @@ class PInterpreter(PNodeVisitor):
             base_unit = self.context.tags.get(SystemTagName.BASE).get_value()
             assert isinstance(base_unit, str), \
                 f"Base tag value must contain the base unit as a string. But its current value is '{base_unit}'"
-            threshold_quantity = pint.Quantity(node.time, base_unit)            
-            if block_time < threshold_quantity:
-                logger.debug(f"Awaiting threshold: {threshold_quantity}, block time: {block_time}, tick time: {self._tick_time}")
-                return True
-            logger.debug(f"Done awaiting threshold {threshold_quantity}, block time: {block_time}, tick time: {self._tick_time}")
+            unit_provider = self.context.base_unit_provider
+            if not unit_provider.has(base_unit):
+                raise NodeInterpretationError(node, f"Base unit error. The current base unit '{base_unit}' is \
+                                              not registered in the {term_uod}")
+
+            value_tag, block_value_tag = unit_provider.get_tags(base_unit)
+            if not self.context.tags.has(value_tag):
+                raise InterpretationInternalError(f"Threshold calculation error. The registered tag \
+                                              '{value_tag}' for unit '{base_unit}' is currently unavailable")
+            if not self.context.tags.has(block_value_tag):
+                raise InterpretationInternalError(f"Threshold calculation error. The registered block tag \
+                                              '{block_value_tag}' for unit '{base_unit}' is currently unavailable")
+
+            value_tag, block_value_tag = self.context.tags[value_tag], self.context.tags[block_value_tag]
+            is_in_block = self.context.tags[SystemTagName.BLOCK].get_value() not in [None, ""]
+            try:
+                threshold = pint.Quantity(node.time, base_unit)
+                value = block_value_tag.as_quantity() if is_in_block else value_tag.as_quantity()
+            except pint.UndefinedUnitError:
+                threshold = node.time
+                value = block_value_tag.as_float() if is_in_block else value_tag.as_float()
+
+            try:
+                if value < threshold:
+                    logger.debug(f"Node {node} is awaiting threshold: {threshold}, current: {value}, base unit: '{base_unit}'")
+                    return True
+
+                logger.debug(f"Node {node} is done awaiting threshold {threshold}, current: {value}, base unit: '{base_unit}'")
+            except Exception as ex:
+                raise NodeInterpretationError(node, f"Threshold comparison error. Failed to compare \
+                                              value '{value}' to threshold '{threshold}'") from ex
         return False
 
     def _evaluate_condition(self, condition_node: PWatch | PAlarm) -> bool:
@@ -400,7 +428,9 @@ class PInterpreter(PNodeVisitor):
 
         ar = ActivationRecord(node, self._tick_time)
         self.stack.push(ar)
-        self.context.tags[SystemTagName.BLOCK].set_value(node.display_name, self._tick_number)
+        self.context.tags[SystemTagName.BLOCK].set_value(node.name, self._tick_number)
+        self.context.block_started(node.name)
+        logger.debug(f"Block Tag set to {node.name}")
 
         yield  # comment if we dont want block to always consume a tick
 
@@ -427,10 +457,19 @@ class PInterpreter(PNodeVisitor):
             self.context.tags.as_readonly())
 
         # restore previous block name
-        self.context.tags[SystemTagName.BLOCK].set_value(None, self._tick_number)
-        for ar in reversed(self.stack.records):
+        block_restored = False
+        for ar in self.stack.iterate_from_top():
             if ar.artype == ARType.BLOCK:
-                self.context.tags[SystemTagName.BLOCK].set_value(ar.owner.display_name, self._tick_number)
+                assert isinstance(ar.owner, PBlock)
+                self.context.tags[SystemTagName.BLOCK].set_value(ar.owner.name, self._tick_number)
+                self.context.block_ended(node.name, ar.owner.name)
+                logger.debug(f"Block Tag popped to {ar.owner.name}")
+                block_restored = True
+        if not block_restored:
+            self.context.tags[SystemTagName.BLOCK].set_value(None, self._tick_number)
+            self.context.block_ended(node.name, "")
+            logger.debug(f"Block Tag cleared from {node.name}")
+
 
     def visit_PEndBlock(self, node: PEndBlock):
         record = self.runtimeinfo.get_last_node_record(node)
@@ -464,10 +503,11 @@ class PInterpreter(PNodeVisitor):
         record.add_state_started(self._tick_time, self._tick_number, self.context.tags.as_readonly())
 
         if node.name == SystemCommandEnum.BASE:
-            if node.args not in BASE_VALID_UNITS:
+            valid_units = self.context.base_unit_provider.get_units()
+            if node.args is None or node.args not in valid_units:
                 record.add_state_failed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
                 raise NodeInterpretationError(node, f"Base instruction has invalid argument '{node.args}'. \
-                    Value must be one of {', '.join(BASE_VALID_UNITS)}")
+                    Value must be one of {', '.join(valid_units)}")
             self.context.tags[SystemTagName.BASE].set_value(node.args, self._tick_time)
 
         elif node.name == SystemCommandEnum.INCREMENT_RUN_COUNTER:
