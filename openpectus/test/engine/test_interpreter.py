@@ -232,7 +232,7 @@ Mark: b3
 
         self.assertEqual(["a", "b", "a1", "b1", "a2", "b2", "a3", "b3"], engine.interpreter.get_marks())
 
-    @unittest.skip("TODO")
+    @unittest.skip("Block in Watch not supported")
     def test_watch_block_long_running_block_time(self):
         # question for another test: is Block time defined for alarm without block? Yes
 
@@ -261,8 +261,6 @@ Mark: b
         print_program(program)
         engine = self.engine
         run_engine(engine, program, 15)
-
-        # TODO fix intepretation error, watch instruction(s) not being executed
 
         self.assertEqual(["a", "b", "a1", "a2", "a3", "a4"], engine.interpreter.get_marks())
 
@@ -368,7 +366,7 @@ Mark: A3
 
         self.assertEqual(["A1", "A2", "A3"], engine.interpreter.get_marks())
 
-    @unittest.skip(reason="TODO BUG")
+
     def test_block_time_watch_complex(self):
         program = """
 Block: A
@@ -382,7 +380,7 @@ Block: A
 Mark: A5
 """
         engine = self.engine
-        run_engine(engine, program, 30)
+        run_engine(engine, program, 25)
 
         self.assertEqual(["A1", "A4", "A2", "A3", "A5"], engine.interpreter.get_marks())
 

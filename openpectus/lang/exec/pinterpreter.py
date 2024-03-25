@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 import logging
 from enum import Enum
-from typing import Generator, Iterable, List, Tuple
+from typing import Generator, Iterable
 from uuid import UUID
 
 import pint
@@ -93,9 +93,13 @@ class CallStack:
         self._records = []
 
     @property
-    def records(self) -> List[ActivationRecord]:
+    def records(self) -> list[ActivationRecord]:
         return list(self._records)
 
+    def iterate_from_top(self) -> Iterable[ActivationRecord]:
+        for ar in reversed(self._records):
+            yield ar
+            
     def push(self, ar: ActivationRecord):
         self._records.append(ar)
 
@@ -104,9 +108,6 @@ class CallStack:
 
     def peek(self) -> ActivationRecord:
         return self._records[-1]
-
-    def any(self) -> bool:
-        return len(self._records) > 0
 
     def __str__(self):
         s = '\n'.join(repr(ar) for ar in reversed(self._records))
@@ -139,9 +140,12 @@ class InterpreterContext():
         raise NotImplementedError()
 
     def block_started(self, name: str):
+        """ Invoked when a block is started. Not invoked for the main block"""
         raise NotImplementedError()
 
     def block_ended(self, name: str, new_name: str):
+        """ Invoked when block is completed. If back in the main block,
+        new_name is the empty string. """
         raise NotImplementedError()
 
 
@@ -153,7 +157,7 @@ class PInterpreter(PNodeVisitor):
         self._program = program
         self.context = context
         self.stack: CallStack = CallStack()
-        self.interrupts: List[Tuple[ActivationRecord, GenerationType]] = []
+        self.interrupts: list[tuple[ActivationRecord, GenerationType]] = []
         self.running: bool = False
 
         self.start_time: float = 0
@@ -165,7 +169,7 @@ class PInterpreter(PNodeVisitor):
         self.runtimeinfo: RuntimeInfo = RuntimeInfo()
         logger.info("Interpreter initialized")
 
-    def get_marks(self) -> List[str]:
+    def get_marks(self) -> list[str]:
         records: list[tuple[str, int]] = []
         for r in self.runtimeinfo.records:
             if isinstance(r.node, PMark):
@@ -184,7 +188,7 @@ class PInterpreter(PNodeVisitor):
         """ Inject the node into the running program in the current scope to be executed as next instruction. """
         node = PInjectedNode(None)
         node.children = program.children
-        ar = ActivationRecord(node, self._tick_time, self.context.tags.as_readonly())
+        ar = ActivationRecord(node, self._tick_time)
         self._register_interrupt(ar, self._create_interrupt_handler(node, ar))
 
     def _interpret(self) -> GenerationType:
@@ -213,12 +217,16 @@ class PInterpreter(PNodeVisitor):
             node = ar.owner
             if isinstance(node, (PWatch, PInjectedNode, PAlarm)):
                 logger.debug(f"Interrupt {str(node)}")
+                self.stack.push(ar)
                 try:
                     assert handler is not None, "Handler is None"
                     next(handler)
                     instr_count += 1
                 except StopIteration:
                     pass
+                finally:
+                    self.stack.pop()
+
                 if ar.complete:
                     self._unregister_interrupt(ar)
                     if isinstance(node, PAlarm):
@@ -231,9 +239,9 @@ class PInterpreter(PNodeVisitor):
 
     def _create_interrupt_handler(self, node: PNode, ar: ActivationRecord) -> GenerationType:
         ar.fill_start(self._tick_time)
-        self.stack.push(ar)
+        #self.stack.push(ar)
         yield from self.visit(node)
-        self.stack.pop()
+        #self.stack.pop()
 
     def tick(self, tick_time: float, tick_number: int):
         self._tick_time = tick_time
@@ -273,7 +281,6 @@ class PInterpreter(PNodeVisitor):
 
     def _is_awaiting_threshold(self, node: PNode):
         if isinstance(node, PInstruction) and node.time is not None:
-            block_time = self.context.tags.get(SystemTagName.BLOCK_TIME).as_quantity()
             base_unit = self.context.tags.get(SystemTagName.BASE).get_value()
             assert isinstance(base_unit, str), \
                 f"Base tag value must contain the base unit as a string. But its current value is '{base_unit}'"
@@ -295,16 +302,18 @@ class PInterpreter(PNodeVisitor):
             try:
                 threshold = pint.Quantity(node.time, base_unit)
                 value = block_value_tag.as_quantity() if is_in_block else value_tag.as_quantity()
-            except pint.UndefinedUnitError:
+            except pint.UndefinedUnitError:  # e.g. CV is not a known pint unit
                 threshold = node.time
                 value = block_value_tag.as_float() if is_in_block else value_tag.as_float()
 
             try:
                 if value < threshold:
-                    logger.debug(f"Node {node} is awaiting threshold: {threshold}, current: {value}, base unit: '{base_unit}'")
+                    logger.debug(
+                        f"Node {node} is awaiting threshold: {threshold}, current: {value}, base unit: '{base_unit}'")
                     return True
 
-                logger.debug(f"Node {node} is done awaiting threshold {threshold}, current: {value}, base unit: '{base_unit}'")
+                logger.debug(
+                    f"Node {node} is done awaiting threshold {threshold}, current: {value}, base unit: '{base_unit}'")
             except Exception as ex:
                 raise NodeInterpretationError(node, f"Threshold comparison error. Failed to compare \
                                               value '{value}' to threshold '{threshold}'") from ex
@@ -351,7 +360,7 @@ class PInterpreter(PNodeVisitor):
 
         return result  # type: ignore
 
-    def _visit_children(self, children: List[PNode] | None):
+    def _visit_children(self, children: list[PNode] | None):
         ar = self.stack.peek()
         if children is not None:
             for child in children:
@@ -380,6 +389,10 @@ class PInterpreter(PNodeVisitor):
 
         # possibly wait for node threshold to expire
         while self._is_awaiting_threshold(node):
+            if self.stack.peek().complete:
+                logger.debug("Aborting threshold because parent block was complete")
+                return
+
             record.add_state_awaiting_threshold(
                 self._tick_time, self._tick_number,
                 self.context.tags.as_readonly())
