@@ -310,10 +310,10 @@ class UodBuilder():
         if not self.tags.has(totalizer_tag_name):
             raise ValueError(f"The specified totalizer tag name '{totalizer_tag_name}' was not found")
         cv = self.tags[cv_tag_name]
-        totalizer = self.tags[totalizer_tag_name]
-        # TODO check that tag units match
+        totalizer = self.tags[totalizer_tag_name]        
         self.with_tag(AccumulatedColumnVolume(SystemTagName.ACCUMULATED_CV, cv, totalizer))
-        self.with_tag(AccumulatedColumnVolume(SystemTagName.BLOCK_CV, cv, totalizer))
+        acc_cv = self.tags[SystemTagName.ACCUMULATED_CV]
+        self.with_tag(AccumulatorBlockTag(SystemTagName.BLOCK_CV, acc_cv))
         self.with_base_unit_provider(["CV"], SystemTagName.ACCUMULATED_CV, SystemTagName.BLOCK_CV)
         return self
 

@@ -90,11 +90,16 @@ class AccumulatedColumnVolume(Tag):
         super().__init__(name)
         self.totalizer: Tag = totalizer
         self.column_volume: Tag = column_volume
-        self.unit = self.totalizer.unit
+        self.unit = "CV"
         self.v0 = 0.0
 
-    def on_start(self, context: TagContext):
+    def reset(self):
         self.v0 = self.totalizer.as_float()
+        self.value = 0.0
+        assert self.v0 is not None
+
+    def on_start(self, context: TagContext):
+        self.reset()
 
     def on_tick(self):
         cv = self.column_volume.as_float()
