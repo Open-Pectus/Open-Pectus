@@ -8,7 +8,7 @@ from openpectus.lang.model.pprogram import (
     PBlank,
     PBlock,
     PEndBlock,
-    # PEndBlocks,
+    PEndBlocks,
     PWatch,
     PAlarm,
     PMark,
@@ -301,6 +301,12 @@ Block: Equilibration
         instr = instructions[8]
         self.assertIsInstance(instr, PEndBlock)
         self.assertFalse(instr.has_error())
+
+    def test_end_blocks(self):
+        p = build("End blocks")
+        program = p.build_model()
+        instructions = program.get_instructions()
+        self.assertIsInstance(instructions[0], PEndBlocks)
 
     def test_mark(self):
         p = build("Mark: A")
@@ -638,7 +644,7 @@ Mark: d
     def test_program_mark(self):
         p = build(
             """
-Mark:  a  
+Mark:  a
         """
         )
 

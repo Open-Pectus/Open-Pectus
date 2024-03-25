@@ -5,9 +5,11 @@ from typing import Any, Callable
 
 from openpectus.engine.commands import ContextEngineCommand
 from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
+from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.errors import UodValidationError
 from openpectus.lang.exec.readings import Reading, ReadingCollection
-from openpectus.lang.exec.tags import Tag, TagCollection
+from openpectus.lang.exec.tags import TAG_UNITS, SystemTagName, Tag, TagCollection
+from openpectus.lang.exec.tags_impl import AccumulatorBlockTag, AccumulatedColumnVolume, AccumulatorTag
 from openpectus.protocol.models import PlotConfiguration
 
 logger = logging.getLogger(__name__)
@@ -24,7 +26,9 @@ class UnitOperationDefinitionBase:
                  readings: ReadingCollection,
                  command_factories: dict[str, UodCommandBuilder],
                  overlapping_command_names_lists: list[list[str]],
-                 plot_configuration: PlotConfiguration) -> None:
+                 plot_configuration: PlotConfiguration,
+                 base_unit_provider: BaseUnitProvider
+                 ) -> None:
         self.instrument = instrument_name
         self.hwl = hwl
         self.location = location
@@ -35,6 +39,7 @@ class UnitOperationDefinitionBase:
         self.command_instances: dict[str, UodCommand] = {}
         self.overlapping_command_names_lists: list[list[str]] = overlapping_command_names_lists
         self.plot_configuration = plot_configuration
+        self.base_unit_provider: BaseUnitProvider = base_unit_provider
 
     def define_register(self, name: str, direction: RegisterDirection, **options):
         assert isinstance(self.hwl, HardwareLayerBase)
@@ -236,6 +241,10 @@ class UodBuilder():
         self.readings = ReadingCollection()
         self.location: str = ""
         self.plot_configuration: PlotConfiguration | None = None
+        self.base_unit_provider: BaseUnitProvider = BaseUnitProvider()
+        self.base_unit_provider.set("s", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
+        self.base_unit_provider.set("min", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
+        self.base_unit_provider.set("h", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
 
     def get_logger(self):
         return logging.getLogger(f'{__name__}.user_uod')
@@ -283,6 +292,50 @@ class UodBuilder():
         self.tags.add(tag)
         return self
 
+    def with_accumulated_volume(self, totalizer_tag_name: str) -> UodBuilder:
+        if not self.tags.has(totalizer_tag_name):
+            raise ValueError(f"The specified totalizer tag name '{totalizer_tag_name}' was not found")
+        totalizer = self.tags[totalizer_tag_name]
+        volume_units = TAG_UNITS["volume"]
+        if totalizer.unit not in volume_units:
+            raise ValueError(f"The totalizer tag '{totalizer_tag_name}' must have a volume unit")        
+        self.with_tag(AccumulatorTag(name=SystemTagName.ACCUMULATED_VOLUME, totalizer=totalizer))
+        self.with_tag(AccumulatorBlockTag(name=SystemTagName.BLOCK_VOLUME, totalizer=totalizer))
+        self.with_base_unit_provider(volume_units, SystemTagName.ACCUMULATED_VOLUME, SystemTagName.BLOCK_VOLUME)
+        return self
+
+    def with_accumulated_cv(self, cv_tag_name: str, totalizer_tag_name: str) -> UodBuilder:
+        if not self.tags.has(cv_tag_name):
+            raise ValueError(f"The specified column volume tag name '{cv_tag_name}' was not found")
+        if not self.tags.has(totalizer_tag_name):
+            raise ValueError(f"The specified totalizer tag name '{totalizer_tag_name}' was not found")
+        cv = self.tags[cv_tag_name]
+        totalizer = self.tags[totalizer_tag_name]        
+        self.with_tag(AccumulatedColumnVolume(SystemTagName.ACCUMULATED_CV, cv, totalizer))
+        acc_cv = self.tags[SystemTagName.ACCUMULATED_CV]
+        self.with_tag(AccumulatorBlockTag(SystemTagName.BLOCK_CV, acc_cv))
+        self.with_base_unit_provider(["CV"], SystemTagName.ACCUMULATED_CV, SystemTagName.BLOCK_CV)
+        return self
+
+    def with_base_unit_provider(self, units: list[str], provider_tag_name: str, provider_block_tag_name: str):
+        if provider_tag_name is None or provider_tag_name.strip() == "":
+            raise ValueError("provider_tag_name is required")
+        if not self.tags.has(provider_tag_name):
+            raise ValueError(f"The specified provider_tag_name '{provider_tag_name}' was not found ")
+        if provider_block_tag_name is None or provider_block_tag_name.strip() == "":
+            raise ValueError("provider_block_tag_name is required")
+        if not self.tags.has(provider_block_tag_name):
+            raise ValueError(f"The specified provider_block_tag_name '{provider_block_tag_name}' was not found ")
+
+        if len(units) == 0:
+            raise ValueError("At least one unit is required")
+        for unit in units:
+            if self.base_unit_provider.has(unit):
+                logger.warning(f"The base unit provider for unit '{unit}' was \
+                               overwritten with tag name '{provider_tag_name}'")
+            self.base_unit_provider.set(unit, provider_tag_name, provider_block_tag_name)
+        return self
+
     def with_command(self, cb: UodCommandBuilder) -> UodBuilder:
         if cb.name in self.commands.keys():
             raise ValueError(f"Duplicate command name: {cb.name}")
@@ -314,7 +367,8 @@ class UodBuilder():
             self.readings,
             self.commands,
             self.overlapping_command_names_lists,
-            self.plot_configuration or PlotConfiguration.empty()
+            self.plot_configuration or PlotConfiguration.empty(),
+            self.base_unit_provider
         )
 
         return uod
