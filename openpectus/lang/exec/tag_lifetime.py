@@ -72,7 +72,8 @@ class TagLifetime():
     """
 
     def on_engine_configured(self, context: TagContext):
-        """ Invoked once on engine startup. When? Before after configuration? """
+        """ Invoked once on engine startup, after configuration and after
+        the connection to hardware has been established. """
         pass
 
     def on_start(self, context: TagContext):
@@ -86,12 +87,8 @@ class TagLifetime():
         pass
 
     def on_block_end(self, block_info: BlockInfo, new_block_info: BlockInfo | None):
-        """ Invoked when a block is completed. 
-        TODO: should fire when? before or after tick? just before block ends or just after it has ended?
-        new_block_info is needed to know the new block (if any)
-        need example use cases to determine this
-        some placements in time may be difficult to implement - may need interpreter lookahead
-        """
+        """ Invoked just after a block is completed, before on_tick,
+        in the same engine tick. """
         pass
 
     def on_tick(self):

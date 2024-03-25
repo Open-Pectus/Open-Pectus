@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import StrEnum, auto
-from typing import Any, Iterable, List, Set
+from typing import Any, Iterable, Set
 
 import pint
 from pint import UnitRegistry, Quantity
@@ -107,7 +107,7 @@ class ChangeListener():
         self._changes.clear()
 
     @property
-    def changes(self) -> List[str]:
+    def changes(self) -> list[str]:
         return list(self._changes)
 
 
@@ -117,7 +117,7 @@ class ChangeSubject():
     def __init__(self) -> None:
         super().__init__()
 
-        self._listeners: List[ChangeListener] = []
+        self._listeners: list[ChangeListener] = []
 
     def add_listener(self, listener: ChangeListener):
         self._listeners.append(listener)
@@ -176,7 +176,7 @@ class Tag(ChangeSubject, TagLifetime):
         self.tick_time = tick_time
         self.value: TagValueType = value  # Do we need default also? sometimes it is used as safe but are the other uses?
         self.unit: str | None = unit
-        self.choices: List[str] | None = None
+        self.choices: list[str] | None = None
         self.direction: TagDirection = direction
         self.safe_value: TagValueType | Unset = safe_value
 
@@ -236,7 +236,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
         self.notify_listeners(elm)
 
     @property
-    def names(self) -> List[str]:
+    def names(self) -> list[str]:
         """ Return the tag names """
         return list(self.tags.keys())
 
