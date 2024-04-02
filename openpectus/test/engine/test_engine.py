@@ -345,7 +345,7 @@ overlap2
     def test_runlog_block(self):
         program = """
 Block: A
-    End Block
+    End block
 Mark: X
 """
         e = self.engine

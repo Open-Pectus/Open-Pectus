@@ -4,7 +4,7 @@ from typing import Callable, Dict, List
 from uuid import UUID
 
 
-class SystemCommandEnum(StrEnum):
+class InterpreterCommandEnum(StrEnum):
     """ Commands (instructions of type PCommand) that are executed by the interpreter """
     BASE = "Base"
     INCREMENT_RUN_COUNTER = "Increment run counter"
@@ -13,7 +13,7 @@ class SystemCommandEnum(StrEnum):
     @staticmethod
     def has_value(value: str):
         """ Determine if enum has this string value defined. Case sensitive. """
-        return value in SystemCommandEnum.__members__.values()
+        return value in InterpreterCommandEnum.__members__.values()
 
 
 # Represents part of Engine API
@@ -105,11 +105,9 @@ class CommandCollection():
         return cmds
 
     def merge_with(self, other: CommandCollection) -> CommandCollection:
-        """ Returns a new CommandCollection with the combined commands
-        of both collections.
+        """ Returns a new CommandCollection with the combined commands of both collections.
 
-        In case of duplicate commands names, tags from other collection
-        are used.
+        In case of duplicate commands names, tags from other collection are used.
         """
         cmds = CommandCollection()
         for cmd in self.commands.values():

@@ -90,7 +90,7 @@ Watch: A > 2
 
     def test_tag_unit_unexpected(self):
         program = build_program("""
-Watch: A > 2 ml
+Watch: A > 2 mL
     Mark: a
 """)
         tags = TagCollection().with_tag(Tag("A"))
@@ -112,7 +112,7 @@ Watch: A > 2
 
     def test_tag_units_incompatible(self):
         program = build_program("""
-Watch: A > 2 ml
+Watch: A > 2 mL
     Mark: a
 """)
         tags = TagCollection().with_tag(Tag("A", unit="sec"))
@@ -123,7 +123,7 @@ Watch: A > 2 ml
 
     def test_tag_units_equal(self):
         program = build_program("""
-Watch: A > 2 l
+Watch: A > 2 L
     Mark: a
 """)
         tags = TagCollection().with_tag(Tag("A", unit="L"))
@@ -133,7 +133,7 @@ Watch: A > 2 l
 
     def test_tag_units_compatible(self):
         program = build_program("""
-Watch: A > 2 ml
+Watch: A > 2 mL
     Mark: a
 """)
         tags = TagCollection().with_tag(Tag("A", unit="L"))
@@ -154,10 +154,10 @@ class UnreachableCodeVisitorTest(unittest.TestCase):
     def test_UnreachableCodeVisitor(self):
         program = build_program("""
 Block: A
-    mark: a
+    Mark: a
     End block
-    mark: b
-mark: c
+    Mark: b
+Mark: c
 """)
         analyzer = UnreachableCodeVisitor()
         analyzer.visit(program)
@@ -168,8 +168,8 @@ class InfiniteBlockVisitorTest(unittest.TestCase):
     def test_missing_global_end(self):
         program = build_program("""
 Block: A
-    mark: a
-mark: c
+    Mark: a
+Mark: c
 """)
         sa = InfiniteBlockVisitor()
         sa.visit(program)
@@ -181,8 +181,8 @@ Watch: Run counter > 0
     End block
 
 Block: A
-    mark: a
-mark: c
+    Mark: a
+Mark: c
 """)
         sa = InfiniteBlockVisitor()
         sa.visit(program)
@@ -191,10 +191,10 @@ mark: c
     def test_has_local_end(self):
         program = build_program("""
 Block: A
-    mark: a
+    Mark: a
     Watch: Run counter > 0
         End block
-mark: c
+Mark: c
 """)
         sa = InfiniteBlockVisitor()
         sa.visit(program)
@@ -203,12 +203,12 @@ mark: c
     def test_has_no_local_end(self):
         program = build_program("""
 Block: A
-    mark: a
+    Mark: a
     Watch: Run counter > 0
         End block
-mark: c
+Mark: c
 Block: B
-    mark: b
+    Mark: b
 """)
         sa = InfiniteBlockVisitor()
         sa.visit(program)
@@ -218,9 +218,9 @@ Block: B
 class SemanticAnalyzerTest(unittest.TestCase):
     def test_basic(self):
         program = build_program("""
-mark: a
-mark: b
-mark: c
+Mark: a
+Mark: b
+Mark: c
 """)
         analyzer = SemanticAnalyzer(TagCollection(), CommandCollection())
         analyzer.analyze(program)
@@ -229,10 +229,10 @@ mark: c
     def test_warning_UnreachableCode(self):
         program = build_program("""
 Block: A
-    mark: a
+    Mark: a
     End block
-    mark: b
-mark: c
+    Mark: b
+Mark: c
 """)
         analyzer = SemanticAnalyzer(TagCollection(), CommandCollection())
         analyzer.analyze(program)

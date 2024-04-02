@@ -356,7 +356,7 @@ Mark: A3
         program = """
 Block: A
     Mark: A1
-    Watch: Block Time > 1 sec
+    Watch: Block Time > 1 s
         End block
     Mark: A2
 Mark: A3
@@ -371,9 +371,9 @@ Mark: A3
         program = """
 Block: A
     Mark: A1
-    Watch: Block Time > 0.5 sec
+    Watch: Block Time > 0.5 s
         Mark: A2
-    Watch: Block Time > 1 sec
+    Watch: Block Time > 1 s
         Mark: A3
         End block
     Mark: A4

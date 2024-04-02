@@ -8,7 +8,7 @@ from uuid import UUID
 
 import pint
 from openpectus.lang.exec.base_unit import BaseUnitProvider
-from openpectus.lang.exec.commands import SystemCommandEnum
+from openpectus.lang.exec.commands import InterpreterCommandEnum
 from openpectus.lang.exec.errors import InterpretationError, InterpretationInternalError, NodeInterpretationError
 from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import (
@@ -511,11 +511,11 @@ class PInterpreter(PNodeVisitor):
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
 
-    def execute_system_command(self, node: PCommand):
+    def execute_interpreter_command(self, node: PCommand):
         record = self.runtimeinfo.get_last_node_record(node)
         record.add_state_started(self._tick_time, self._tick_number, self.context.tags.as_readonly())
 
-        if node.name == SystemCommandEnum.BASE:
+        if node.name == InterpreterCommandEnum.BASE:
             valid_units = self.context.base_unit_provider.get_units()
             if node.args is None or node.args not in valid_units:
                 record.add_state_failed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
@@ -523,11 +523,11 @@ class PInterpreter(PNodeVisitor):
                     Value must be one of {', '.join(valid_units)}")
             self.context.tags[SystemTagName.BASE].set_value(node.args, self._tick_time)
 
-        elif node.name == SystemCommandEnum.INCREMENT_RUN_COUNTER:
+        elif node.name == InterpreterCommandEnum.INCREMENT_RUN_COUNTER:
             rc_value = self.context.tags[SystemTagName.RUN_COUNTER].as_number() + 1
             self.context.tags[SystemTagName.RUN_COUNTER].set_value(rc_value, self._tick_time)
 
-        elif node.name == SystemCommandEnum.RUN_COUNTER:
+        elif node.name == InterpreterCommandEnum.RUN_COUNTER:
             try:
                 new_value = int(node.args)
                 self.context.tags[SystemTagName.RUN_COUNTER].set_value(new_value, self._tick_time)
@@ -536,14 +536,14 @@ class PInterpreter(PNodeVisitor):
 
         else:
             record.add_state_failed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
-            raise NodeInterpretationError(node, f"System instruction '{node.name}' is not supported")
+            raise NodeInterpretationError(node, f"Interpreter command '{node.name}' is not supported")
 
         record.add_state_completed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
 
     def visit_PCommand(self, node: PCommand):
-        if SystemCommandEnum.has_value(node.name):
-            logger.debug(f"Executing command {str(node)} as system instruction")
-            self.execute_system_command(node)
+        if InterpreterCommandEnum.has_value(node.name):
+            logger.debug(f"Executing interpreter command {str(node)}")
+            self.execute_interpreter_command(node)
         else:
             record = self.runtimeinfo.get_last_node_record(node)
 

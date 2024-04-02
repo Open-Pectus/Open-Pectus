@@ -79,7 +79,7 @@ class BuilderTest(unittest.TestCase):
         self.assertEqual("4", command.args)
 
     def test_block(self):
-        p = build("block: foo")
+        p = build("Block: foo")
         program = p.build_model()
         # p.printSyntaxTree(p.tree)
         block: PBlock = program.get_instructions()[0]  # type: ignore
@@ -89,8 +89,8 @@ class BuilderTest(unittest.TestCase):
 
     def test_block_with_end_block(self):
         p = build(
-            """block: foo
-    end block"""
+            """Block: foo
+    End block"""
         )
         program = p.build_model()
         # p.printSyntaxTree(p.tree)
@@ -104,7 +104,7 @@ class BuilderTest(unittest.TestCase):
         self.assertIsInstance(end_block, PEndBlock)
 
     def test_block_with_invalid_indentation(self):
-        p = build(" block: foo")
+        p = build(" Block: foo")
         program = p.build_model()
         # p.printSyntaxTree(p.tree)
 
@@ -115,7 +115,7 @@ class BuilderTest(unittest.TestCase):
         self.assertTrue(block.has_error())
 
     def test_block_with_invalid_scope_indentation(self):
-        p = build("    block: foo")
+        p = build("    Block: foo")
         program = p.build_model()
         # p.printSyntaxTree(p.tree)
 
@@ -127,8 +127,8 @@ class BuilderTest(unittest.TestCase):
 
     def test_block_with_end_block_with_invalid_indentation(self):
         p = build(
-            """block: foo
- end block"""
+            """Block: foo
+ End block"""
         )
         program = p.build_model()
         # p.printSyntaxTree(p.tree)
@@ -167,8 +167,8 @@ End block"""
 
     def test_block_with_mark_with_missing_indentation(self):
         p = build(
-            """block: foo
-mark: foo"""
+            """Block: foo
+Mark: foo"""
         )
         program = p.build_model()
         # p.printSyntaxTree(p.tree)
@@ -186,9 +186,9 @@ mark: foo"""
 
     def test_block_with_command_and_end_block(self):
         p = build(
-            """block: foo
+            """Block: foo
     cmd: args
-    end block"""
+    End block"""
         )
         program = p.build_model()
         # p.printSyntaxTree(p.tree)
@@ -504,13 +504,13 @@ Watch: 1
     def test_watch_unit(self):
         p = build(
             """
-mark: a
-watch: counter > 0 ml
-    mark: b
-mark: c
+Mark: a
+Watch: counter > 0 mL
+    Mark: b
+Mark: c
 incr counter
-watch: counter > 0 ml
-    mark: d
+Watch: counter > 0 mL
+    Mark: d
         """
         )
         program = p.build_model()
@@ -528,18 +528,18 @@ watch: counter > 0 ml
         self.assertEqual("counter", condition.tag_name)
         self.assertEqual(">", condition.op)
         self.assertEqual("0", condition.tag_value)
-        self.assertEqual("ml", condition.tag_unit)
+        self.assertEqual("mL", condition.tag_unit)
 
     def test_watch_unitless(self):
         p = build(
             """
-mark: a
-watch: counter > 0
-    mark: b
-mark: c
+Mark: a
+Watch: counter > 0
+    Mark: b
+Mark: c
 incr counter
-watch: counter > 0
-    mark: d
+Watch: counter > 0
+    Mark: d
         """
         )
         program = p.build_model()
@@ -562,13 +562,13 @@ watch: counter > 0
     def test_navigation(self):
         p = build(
             """
-mark: a
-watch: counter > 0
-    mark: b
-mark: c
+Mark: a
+Watch: counter > 0
+    Mark: b
+Mark: c
 incr counter
-watch: counter > 0 ml
-    mark: d
+Watch: counter > 0 ml
+    Mark: d
 
         """
         )
@@ -760,7 +760,7 @@ Stop
             """
 Mark:  a  
 Mark  b  # comment
-watch: counter >  
+Watch: counter >  
     Mark: c
 Bad command
 :
@@ -769,7 +769,7 @@ Bad command
 
         program = p.build_model()
 
-        # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
         self.assertFalse(program.has_error(recursive=True))
         all = program.get_instructions(include_blanks=True)
 

@@ -6,7 +6,8 @@ program : instruction_line
           (NEWLINE instruction_line)*
           EOF;
 
-instruction_line: WHITESPACE* instruction WHITESPACE* comment?
+instruction_line
+        : WHITESPACE* instruction WHITESPACE* comment?
         ;
 
 instruction
@@ -27,7 +28,7 @@ instruction
 
 
 block           : time? BLOCK COLON WHITESPACE* block_name; // allow whitespace before colon?
-block_name      : IDENTIFIER; 
+block_name      : identifier ; 
 end_block       : time? END_BLOCK ;
 end_blocks      : time? END_BLOCKS ;
 
@@ -35,9 +36,9 @@ watch           : time? WATCH (COLON WHITESPACE* condition)?;
 alarm           : time? ALARM (COLON WHITESPACE* condition)?;
  
 condition       : condition_tag WHITESPACE* compare_op WHITESPACE* condition_value (WHITESPACE* condition_unit)? WHITESPACE*
-                | condition_error;
-condition_tag   : IDENTIFIER;
-compare_op      : COMPARE_OP;
+                | condition_error ;
+condition_tag   : identifier ;
+compare_op      : COMPARE_OP ;
 condition_value : POSITIVE_FLOAT | MINUS POSITIVE_FLOAT ; // TODO support text 
 condition_unit  : CONDITION_UNIT; 
 condition_error : .*?  ~(NEWLINE | HASH);
@@ -48,7 +49,7 @@ stop            : time? STOP ;
 pause           : time? PAUSE ;
 
 mark            : time? MARK COLON WHITESPACE* mark_name?;
-mark_name       : IDENTIFIER ;
+mark_name       : identifier ;
 
 time    : timeexp WHITESPACE+ ;
 timeexp : POSITIVE_FLOAT ;
@@ -59,52 +60,32 @@ comment_text : .*? ~NEWLINE;
 blank   : WHITESPACE* ;
 
 command         : time? command_name (COLON WHITESPACE* command_args)?;
-command_name    : IDENTIFIER;
+command_name    : identifier ;
 command_args    : .*?  ~(NEWLINE | HASH);
 
+identifier      : IDENTIFIER ;
 error   : .*?  ~(NEWLINE | HASH);
 
 
 fragment LETTER     : [a-zA-Z] ;
 fragment DIGIT      : [0-9] ;
 
-fragment A:('a'|'A');
-fragment B:('b'|'B');
-fragment C:('c'|'C');
-fragment D:('d'|'D');
-fragment E:('e'|'E');
-fragment F:('f'|'F');
-fragment G:('g'|'G');
-fragment H:('h'|'H');
-fragment I:('i'|'I');
-fragment J:('j'|'J');
-fragment K:('k'|'K');
-fragment L:('l'|'L');
-fragment M:('m'|'M');
-fragment N:('n'|'N');
-fragment O:('o'|'O');
-fragment P:('p'|'P');
-fragment Q:('q'|'Q');
-fragment R:('r'|'R');
-fragment S:('s'|'S');
-fragment T:('t'|'T');
-fragment U:('u'|'U');
-fragment V:('v'|'V');
-fragment W:('w'|'W');
-fragment X:('x'|'X');
-fragment Y:('y'|'Y');
-fragment Z:('z'|'Z');
 
-WATCH   : W A T C H ;
-ALARM   : A L A R M ;
-STOP    : S T O P  ;
-PAUSE   : P A U S E ;
-RESTART : R E S T A R T;
-MARK    : M A R K ;
-BLOCK   : B L O C K ;
-END_BLOCK       : E N D SPACE BLOCK ;
-END_BLOCKS      : E N D SPACE B L O C K S ;
-INCREMENT_RC    : I N C R E M E N T SPACE R U N SPACE C O U N T E R ;
+WATCH   : 'Watch' ;
+ALARM   : 'Alarm' ;
+STOP    : 'Stop' ;
+PAUSE   : 'Pause' ;
+RESTART : 'Restart' ;
+MARK    : 'Mark' ;
+BLOCK   : 'Block' ;
+END_BLOCK       : 'End block' ;
+END_BLOCKS      : 'End blocks' ;
+INCREMENT_RC    : 'Increment run counter' ;
+
+// does not play well with identifier - and is also not what we want
+// CONDITION_UNIT  : UNIT_CHAR UNIT_CHAR? UNIT_CHAR? UNIT_CHAR? ;
+// UNIT_CHAR       : LETTER | '%' | '/' ;
+
 
 CONDITION_UNIT  : VOLUME_UNIT
                 | MASS_UNIT
@@ -113,11 +94,12 @@ CONDITION_UNIT  : VOLUME_UNIT
                 | OTHER_UNIT
                 ;
 
-VOLUME_UNIT     : L | M L ;
-MASS_UNIT       : K G | G ;
-DISTANCE_UNIT   : M | C M ;
-DURATION_UNIT   : H | M I N | S | S E C;
-OTHER_UNIT      : '%' | C V | A U | L '/' H | K G '/' H | M S '/' C M ;
+VOLUME_UNIT     : 'L' | 'mL' ;
+MASS_UNIT       : 'kg' | 'g' ;
+DISTANCE_UNIT   : 'm' | 'cm' ;
+DURATION_UNIT   : 'h' | 'min' | 's';
+OTHER_UNIT      : '%' | 'CV' | 'AU' | 'L/h' | 'kg/h' | 'ms/cm' ;
+
 /*
 Known units:
 L|min|h|CV|s|mL        
