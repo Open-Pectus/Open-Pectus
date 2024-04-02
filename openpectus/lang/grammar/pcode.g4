@@ -19,6 +19,8 @@ instruction
         | restart
         | stop
         | pause
+        | hold
+        | wait
         | mark
         | command
         | comment
@@ -35,18 +37,18 @@ end_blocks      : time? END_BLOCKS ;
 watch           : time? WATCH (COLON WHITESPACE* condition)?;
 alarm           : time? ALARM (COLON WHITESPACE* condition)?;
  
-condition       : condition_tag WHITESPACE* compare_op WHITESPACE* condition_value (WHITESPACE* condition_unit)? WHITESPACE*
-                | condition_error ;
-condition_tag   : identifier ;
+condition       : condition_lhs WHITESPACE* compare_op WHITESPACE* condition_rhs ;
 compare_op      : COMPARE_OP ;
-condition_value : POSITIVE_FLOAT | MINUS POSITIVE_FLOAT ; // TODO support text 
-condition_unit  : CONDITION_UNIT; 
-condition_error : .*?  ~(NEWLINE | HASH);
+condition_lhs   : .*?  ~(NEWLINE | HASH | COMPARE_OP | COLON);
+condition_rhs   : .*?  ~(NEWLINE | HASH | COMPARE_OP | COLON);
 
 increment_rc    : time? INCREMENT_RC ;
 restart         : time? RESTART ;
 stop            : time? STOP ;
-pause           : time? PAUSE ;
+pause           : time? PAUSE (COLON WHITESPACE* duration)? ;
+hold            : time? HOLD (COLON WHITESPACE* duration)? ;
+wait            : time? WAIT COLON WHITESPACE* duration ;
+duration        : .*?  ~(NEWLINE | HASH | COLON);
 
 mark            : time? MARK COLON WHITESPACE* mark_name?;
 mark_name       : identifier ;
@@ -75,30 +77,14 @@ WATCH   : 'Watch' ;
 ALARM   : 'Alarm' ;
 STOP    : 'Stop' ;
 PAUSE   : 'Pause' ;
+HOLD    : 'Hold' ;
+WAIT    : 'Wait' ;
 RESTART : 'Restart' ;
 MARK    : 'Mark' ;
 BLOCK   : 'Block' ;
 END_BLOCK       : 'End block' ;
 END_BLOCKS      : 'End blocks' ;
 INCREMENT_RC    : 'Increment run counter' ;
-
-// does not play well with identifier - and is also not what we want
-// CONDITION_UNIT  : UNIT_CHAR UNIT_CHAR? UNIT_CHAR? UNIT_CHAR? ;
-// UNIT_CHAR       : LETTER | '%' | '/' ;
-
-
-CONDITION_UNIT  : VOLUME_UNIT
-                | MASS_UNIT
-                | DISTANCE_UNIT
-                | DURATION_UNIT
-                | OTHER_UNIT
-                ;
-
-VOLUME_UNIT     : 'L' | 'mL' ;
-MASS_UNIT       : 'kg' | 'g' ;
-DISTANCE_UNIT   : 'm' | 'cm' ;
-DURATION_UNIT   : 'h' | 'min' | 's';
-OTHER_UNIT      : '%' | 'CV' | 'AU' | 'L/h' | 'kg/h' | 'ms/cm' ;
 
 /*
 Known units:

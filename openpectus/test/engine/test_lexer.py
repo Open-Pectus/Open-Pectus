@@ -55,6 +55,26 @@ class LexerTest(unittest.TestCase):
         code = "watch:foo > 3 ml"
         self.assertEqual(['watch', ':', 'foo', ' ', '>', ' ', '3', ' ', 'ml'], get_token_texts(code))
 
+    def test_pause(self):
+        code = "Pause"
+        self.assertEqual(['Pause'], get_token_texts(code))
+
+    def test_pause_w_arg(self):
+        code = "Pause: 2 s"
+        self.assertEqual(['Pause', ':', ' ', '2', ' ', 's'], get_token_texts(code))
+
+    def test_hold(self):
+        code = "Hold"
+        self.assertEqual(['Hold'], get_token_texts(code))
+
+    def test_hold_w_arg(self):
+        code = "Hold: 2 s"
+        self.assertEqual(['Hold', ':', ' ', '2', ' ', 's'], get_token_texts(code))
+
+    def test_hold_w_arg2(self):
+        code = "Hold: 2.0 min"
+        self.assertEqual(['Hold', ':', ' ', '2.0', ' ', 'min'], get_token_texts(code))
+
 
 if __name__ == "__main__":
     unittest.main()
