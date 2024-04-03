@@ -8,10 +8,10 @@ from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.model.pprogram import PProgram
 
 
-def build_program(s) -> PProgram:
+def build_program(s, skip_enrich_analyzers=False) -> PProgram:
     p = PGrammar()
     p.parse(s)
-    return p.build_model()
+    return p.build_model(skip_enrich_analyzers=skip_enrich_analyzers)
 
 
 def run_engine(engine: Engine, pcode: str, max_ticks: int = -1):

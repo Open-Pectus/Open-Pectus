@@ -3,6 +3,7 @@ from typing import List
 from antlr4 import InputStream, CommonTokenStream, Token, ParserRuleContext
 from antlr4.tree.Tree import ParseTree, ParseTreeWalker
 
+from openpectus.lang.exec.analyzer import EnrichAnalyzer
 from openpectus.lang.grammar.codegen.pcodeLexer import pcodeLexer
 from openpectus.lang.grammar.codegen.pcodeParser import pcodeParser
 from openpectus.lang.model.pprogram import PProgram
@@ -20,12 +21,15 @@ class PGrammar:
         stream = CommonTokenStream(self.lexer)
         self.parser = pcodeParser(stream)
 
-    def build_model(self) -> PProgram:
+    def build_model(self, skip_enrich_analyzers=False) -> PProgram:
         self.tree: pcodeParser.ProgramContext = self.parser.program()  # type: ignore
         listener = PProgramBuilder()
         walker = ParseTreeWalker()
         walker.walk(listener, self.tree)
-        return listener.get_program()
+        program = listener.get_program()
+        if not skip_enrich_analyzers:
+            EnrichAnalyzer().visit(program)
+        return program
 
     @property
     def tokens(self) -> List[Token]:

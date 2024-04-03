@@ -3,6 +3,7 @@ import unittest
 from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.grammar.pprogramformatter import PProgramFormatter, print_program
 from openpectus.lang.model.pprogram import (
+    PCommandWithDuration,
     PNode,
     PProgram,
     PBlank,
@@ -487,7 +488,7 @@ Incr counter: foo='bar',2
     def test_watch(self):
         p = build(
             """
-Watch: 1
+Watch
     Mark: A
         """
         )
@@ -754,6 +755,94 @@ Stop
         self.assertIsInstance(stop, PCommand)
         assert isinstance(stop,  PCommand)
         self.assertEqual(stop.name, "Stop")
+
+    def test_pause(self):
+        p = build("Pause")
+        program = p.build_model()
+        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        self.assertFalse(program.has_error(recursive=True))
+
+        [pause] = program.get_instructions(include_blanks=True)
+
+        self.assertIsInstance(pause, PCommandWithDuration)
+        assert isinstance(pause,  PCommandWithDuration)
+        self.assertEqual(pause.name, "Pause")
+        self.assertEqual(pause.duration, None)
+
+    def test_pause_w_arg(self):
+        p = build("Pause: 2 min")
+        program = p.build_model()
+        p.printSyntaxTree(p.tree)
+
+        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        self.assertFalse(program.has_error(recursive=True))
+
+        [pause] = program.get_instructions(include_blanks=True)
+
+        self.assertIsInstance(pause, PCommandWithDuration)
+        assert isinstance(pause,  PCommandWithDuration)
+        self.assertEqual(pause.name, "Pause")
+        assert isinstance(pause.duration,  PDuration)
+        self.assertEqual(pause.duration.time, 2.0)
+        self.assertEqual(pause.duration.unit, "min")
+
+
+    def test_hold(self):
+        p = build("Hold")
+        program = p.build_model()
+        p.printSyntaxTree(p.tree)
+
+        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        self.assertFalse(program.has_error(recursive=True))
+
+        [hold] = program.get_instructions(include_blanks=True)
+
+        self.assertIsInstance(hold, PCommandWithDuration)
+        assert isinstance(hold,  PCommandWithDuration)
+        self.assertEqual(hold.name, "Hold")
+        self.assertEqual(hold.duration, None)
+
+    def test_hold_w_arg(self):
+        p = build("Hold: 27.35 s")
+        program = p.build_model()
+        p.printSyntaxTree(p.tree)
+
+        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        self.assertFalse(program.has_error(recursive=True))
+
+        [hold] = program.get_instructions(include_blanks=True)
+
+        self.assertIsInstance(hold, PCommandWithDuration)
+        assert isinstance(hold,  PCommandWithDuration)
+        self.assertEqual(hold.name, "Hold")
+        assert isinstance(hold.duration,  PDuration)
+        self.assertEqual(hold.duration.time, 27.35)
+        self.assertEqual(hold.duration.unit, "s")
+
+    def test_wait_must_have_duration(self):
+        p = build("Wait")
+        program = p.build_model()
+        p.printSyntaxTree(p.tree)
+
+        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        self.assertTrue(program.has_error(recursive=True))
+
+    def test_wait_w_arg(self):
+        p = build("Wait:2h")
+        program = p.build_model()
+        p.printSyntaxTree(p.tree)
+
+        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        self.assertFalse(program.has_error(recursive=True))
+
+        [wait] = program.get_instructions(include_blanks=True)
+
+        self.assertIsInstance(wait, PCommandWithDuration)
+        assert isinstance(wait,  PCommandWithDuration)
+        self.assertEqual(wait.name, "Wait")
+        assert isinstance(wait.duration,  PDuration)
+        self.assertEqual(wait.duration.time, 2.0)
+        self.assertEqual(wait.duration.unit, "h")
 
     def test_program_errors(self):
         p = build(

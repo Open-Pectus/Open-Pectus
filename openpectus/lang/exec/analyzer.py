@@ -1,11 +1,15 @@
 from __future__ import annotations
 from enum import Enum
 import logging
+import re
 from typing import List
 
 import pint
 
 from openpectus.lang.model.pprogram import (
+    PCommandWithDuration,
+    PComment,
+    PErrorInstruction,
     PNode,
     PProgram,
     PBlank,
@@ -21,6 +25,7 @@ from openpectus.lang.model.pprogram import (
 from openpectus.lang.exec.tags import TagCollection
 from openpectus.lang.exec.commands import CommandCollection
 from openpectus.lang.exec.pinterpreter import PNodeVisitor
+from openpectus.lang import float_re, unit_re, identifier_re
 
 
 logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
@@ -80,14 +85,86 @@ class AnalyzerVisitorBase(PNodeVisitor):
     def visit_PEndBlock(self, node: PEndBlock):
         pass
 
+    def visit_PEndBlocks(self, node: PEndBlocks):
+        pass
+
     def visit_PWatch(self, node: PWatch):
         self.visit_children(node.children)
 
     def visit_PAlarm(self, node: PAlarm):
         self.visit_children(node.children)
 
+    def visit_PCommand(self, node: PCommand):
+        self.visit_children(node.children)
 
-class UnreachableCodeVisitor(AnalyzerVisitorBase):
+    def visit_PCommandWithDuration(self, node: PCommandWithDuration):
+        self.visit_children(node.children)
+
+    def visit_PErrorInstruction(self, node: PErrorInstruction):
+        self.visit_children(node.children)
+
+    def visit_PComment(self, node: PComment):
+        pass
+
+# --- Enriching analyzers ---
+
+class ConditionEnrichAnalyzer(AnalyzerVisitorBase):
+    """ Analyzer that enriches parsed conditions with tag name, value and unit """
+    def __init__(self) -> None:
+        super().__init__()
+
+    def visit_PWatch(self, node: PWatch):
+        self.enrich_condition(node)
+        return super().visit_PWatch(node)
+
+    def visit_PAlarm(self, node: PAlarm):
+        self.enrich_condition(node)
+        return super().visit_PAlarm(node)
+
+    def enrich_condition(self, node: PAlarm | PWatch):
+        if node.condition is None:
+            return
+        c = node.condition
+        if c.op is None or c.op not in ['<', '<=', '>', '>=', '==', '=', '!=']:
+            return
+        if c.lhs is None or c.lhs.strip() == '' or c.rhs is None or c.rhs.strip() == '':
+            return
+        c.tag_name = c.lhs
+
+        re_rhs = '^' + '(?P<float>' + float_re + ')' + '\\s*' + '(?P<unit>' + unit_re + ')' + '$'
+        re_rhs_no_unit = '^' + '(?P<float>' + float_re + ')' + '\\s*$'
+        match = re.search(re_rhs, c.rhs)
+        if match:
+            c.tag_value = match.group('float')
+            c.tag_value_numeric = float(c.tag_value)
+            c.tag_unit = match.group('unit')
+            c.error = False
+        else:
+            match = re.search(re_rhs_no_unit, c.rhs)
+            if match:
+                c.tag_value = match.group('float')
+                c.tag_value_numeric = float(c.tag_value)
+                c.error = False
+
+
+class EnrichAnalyzer(AnalyzerVisitorBase):
+    """ Facade that combines the enrich analyzers into a single analyzer. """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.analyzers = [
+            ConditionEnrichAnalyzer()
+        ]
+
+    def analyze(self, program: PProgram):
+        for analyzer in self.analyzers:
+            analyzer.visit(program)
+
+
+# --- Check analyzers ---
+
+class UnreachableCodeCheckAnalyzer(AnalyzerVisitorBase):
+    """ Analyser that checks for unreachable code """
 
     def create_item(self, node: PNode):
         return AnalyzerItem(
@@ -109,7 +186,8 @@ class UnreachableCodeVisitor(AnalyzerVisitorBase):
                     self.add_item(self.create_item(child))
 
 
-class InfiniteBlockVisitor(AnalyzerVisitorBase):
+class InfiniteBlockCheckAnalyzer(AnalyzerVisitorBase):
+    """ Analyser that checks for non-terminated blocks """
 
     def create_item(self, node: PNode):
         return AnalyzerItem(
@@ -167,7 +245,9 @@ class InfiniteBlockVisitor(AnalyzerVisitorBase):
         self.check_global_end_block(node)
 
 
-class ConditionAnalyzerVisitor(AnalyzerVisitorBase):
+class ConditionCheckAnalyzer(AnalyzerVisitorBase):
+    """ Analyser that checks whether conditions are present and refer to valid tag names """
+
     def __init__(self, tags: TagCollection) -> None:
         super().__init__()
         self.tags = tags
@@ -253,7 +333,9 @@ class ConditionAnalyzerVisitor(AnalyzerVisitorBase):
                 return
 
 
-class CommandAnalyzerVisitor(AnalyzerVisitorBase):
+class CommandCheckAnalyzer(AnalyzerVisitorBase):
+    """ Analyzer that checks commands and arguments. """
+
     def __init__(self, commands: CommandCollection) -> None:
         super().__init__()
         self.commands = commands
@@ -284,15 +366,17 @@ class CommandAnalyzerVisitor(AnalyzerVisitorBase):
             return
 
 
-class SemanticAnalyzer():
+class SemanticCheckAnalyzer():
+    """ Facade that combines the check analyzers into a single analyzer. """
+
     def __init__(self, tags: TagCollection, commands: CommandCollection) -> None:
         super().__init__()
         self.items: List[AnalyzerItem] = []
         self.analyzers = [
-            UnreachableCodeVisitor(),
-            InfiniteBlockVisitor(),
-            ConditionAnalyzerVisitor(tags),
-            CommandAnalyzerVisitor(commands)
+            UnreachableCodeCheckAnalyzer(),
+            InfiniteBlockCheckAnalyzer(),
+            ConditionCheckAnalyzer(tags),
+            CommandCheckAnalyzer(commands)
         ]
 
     def analyze(self, program: PProgram):

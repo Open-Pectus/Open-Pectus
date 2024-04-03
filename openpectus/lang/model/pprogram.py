@@ -278,12 +278,30 @@ class PCommand(PInstruction):
     def __init__(self, parent: PNode) -> None:
         super().__init__(parent)
 
-        # self.children = [] possibly?
         self.name: str = ''
         self.args: str = ''
 
     def __str__(self) -> str:
         return super().__str__() + ": " + self.name
+
+    @property
+    def runlog_name(self) -> str | None:
+        return self.name
+
+
+class PCommandWithDuration(PInstruction):
+    """ Represents a Command instruction with a possible duration. """
+    def __init__(self, parent: PNode) -> None:
+        super().__init__(parent)
+
+        self.name: str = ''
+        """ Command name """
+        self.duration: str | None = None
+        """ Unresolved duration expression """
+
+    def __str__(self) -> str:
+        duration = "" if self.duration is None else ", duration: " + str(self.duration)
+        return super().__str__() + ": " + self.name + duration
 
     @property
     def runlog_name(self) -> str | None:
@@ -307,7 +325,12 @@ class PErrorInstruction(PInstruction):
     def __init__(self, parent: PNode, code: str) -> None:
         super().__init__(parent)
         self.children = []
+        if self.errors is None or len(self.errors) == 0:
+            self.errors = [PError("Parse error")]
         self.code: str = code
+
+    def has_error(self, recursive: bool = False):
+        return True
 
     def __str__(self) -> str:
         return super().__str__() + ": Code: " + self.code
@@ -325,12 +348,16 @@ class PCondition:
     """ Represents a condition expression for alarms and watches. """
     def __init__(self, condition_str: str) -> None:
         self.condition_str = condition_str
+        """ Original condition string expression """
         self.op = ""
-        self.tag_name = ""
-        self.tag_value = ""
-        self.tag_unit: str | None = None
-        self.error: bool = False
+        """ Unresolved condition operator """
+        self.lhs = ""
+        """ Unresolved condition left-hand-side expression """
+        self.rhs = ""
+        """ Unresolved condition right-hand-side expression """
 
-    @property
-    def tag_value_numeric(self) -> float:
-        return float(self.tag_value)
+        self.error : bool = True
+        self.tag_name: str | None = None
+        self.tag_value: str | None = None
+        self.tag_unit: str | None = None
+        self.tag_value_numeric: int | float | None = None

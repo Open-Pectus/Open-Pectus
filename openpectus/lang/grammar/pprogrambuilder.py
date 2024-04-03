@@ -7,6 +7,7 @@ from openpectus.lang.grammar.codegen.pcodeParser import pcodeParser
 from openpectus.lang.grammar.codegen.pcodeListener import pcodeListener
 
 from openpectus.lang.model.pprogram import (
+    PCommandWithDuration,
     PNode,
     PProgram,
     PInstruction,
@@ -78,6 +79,17 @@ class PProgramBuilder(pcodeListener):
 
     def get_program(self) -> PProgram:
         return self.program
+
+    # def get_first_child(self, ctx: ParserRuleContext, ctx_type: type) -> ParserRuleContext | None:
+    #     if ctx is None:
+    #         return None
+    #     if isinstance(ctx, ctx_type):
+    #         return ctx
+    #     if hasattr(ctx, "getChildren"):
+    #         for child in ctx.getChildren():
+    #             result = self.get_first_child(child, ctx_type)
+    #             if result is not None:
+    #                 return result
 
     def enterProgram(self, ctx: pcodeParser.ProgramContext):
         # set program as scope
@@ -189,25 +201,17 @@ class PProgramBuilder(pcodeListener):
         assert isinstance(self.scope, PWatch | PAlarm)
         self.scope.condition = PCondition(ctx.getText())
 
-    def enterCondition_tag(self, ctx: pcodeParser.Condition_tagContext):
-        if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
-            self.scope.condition.tag_name = ctx.getText()
-
     def enterCompare_op(self, ctx: pcodeParser.Compare_opContext):
         if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
             self.scope.condition.op = ctx.getText()
 
-    def enterCondition_value(self, ctx: pcodeParser.Condition_valueContext):
+    def enterCondition_lhs(self, ctx: pcodeParser.Condition_lhsContext):
         if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
-            self.scope.condition.tag_value = ctx.getText()
+            self.scope.condition.lhs = ctx.getText()
 
-    def enterCondition_unit(self, ctx: pcodeParser.Condition_unitContext):
+    def enterCondition_rhs(self, ctx: pcodeParser.Condition_rhsContext):
         if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
-            self.scope.condition.tag_unit = ctx.getText()
-
-    def enterCondition_error(self, ctx: pcodeParser.Condition_errorContext):
-        if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
-            self.scope.condition.error = True
+            self.scope.condition.rhs = ctx.getText()
 
     def enterAlarm(self, ctx: pcodeParser.AlarmContext):
         self.instruction = PAlarm(self.scope)
@@ -227,6 +231,25 @@ class PProgramBuilder(pcodeListener):
         if self.instruction is None:
             self.instruction = PCommand(self.scope)
             self.instruction.name = ctx.getText()
+
+    def enterPause(self, ctx: pcodeParser.PauseContext):
+        assert self.instruction is None
+        self.instruction = PCommandWithDuration(self.scope)
+        self.instruction.name = ctx.PAUSE().getText()
+
+    def enterHold(self, ctx: pcodeParser.HoldContext):
+        assert self.instruction is None
+        self.instruction = PCommandWithDuration(self.scope)
+        self.instruction.name = ctx.HOLD().getText()
+
+    def enterWait(self, ctx: pcodeParser.WaitContext):
+        assert self.instruction is None
+        self.instruction = PCommandWithDuration(self.scope)
+        self.instruction.name = ctx.WAIT().getText()
+
+    def enterDuration(self, ctx: pcodeParser.DurationContext):
+        assert isinstance(self.instruction, PCommandWithDuration)
+        self.instruction.duration = ctx.getText()
 
     def enterMark(self, ctx: pcodeParser.MarkContext):
         self.instruction = PMark(self.scope)
