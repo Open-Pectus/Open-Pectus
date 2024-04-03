@@ -7,8 +7,8 @@ import { FrontendPubsubService } from './api';
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   template: `
-    <div class="text-xs text-slate-400">
-      <button class="rounded p-1.5 bg-sky-800 border border-sky-900"
+    <div class="text-xs text-slate-300">
+      <button class="rounded p-1.5 bg-slate-700 border border-slate-900"
               (click)="onButtonClick()">
         <label class="flex pointer-events-none">
           <span>MSW:</span>

@@ -20,7 +20,7 @@ import { CommandExample } from '../../api';
     <div class="flex flex-col gap-1 w-56 overflow-y-auto h-full pl-2 py-2" [style.scrollbar-width]="'none'">
       <div *ngIf="(commandExamples | ngrxPush)?.length === 0" class="m-auto">No examples available</div>
       <button *ngFor="let commandExample of commandExamples | ngrxPush"
-              class="rounded-l-2xl p-2 bg-slate-50 select-none border border-r-0 border-gray-400"
+              class="rounded-l-lg p-2 bg-sky-50 select-none border border-r-0 border-gray-400"
               [class.text-gray-700]="commandExample !== chosenExample"
               [class.!bg-white]="commandExample === chosenExample"
               [class.z-10]="commandExample === chosenExample"
