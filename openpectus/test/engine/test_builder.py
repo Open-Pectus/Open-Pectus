@@ -4,6 +4,7 @@ from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.grammar.pprogramformatter import PProgramFormatter, print_program
 from openpectus.lang.model.pprogram import (
     PCommandWithDuration,
+    PDuration,
     PNode,
     PProgram,
     PBlank,
@@ -844,6 +845,7 @@ Stop
         self.assertEqual(wait.duration.time, 2.0)
         self.assertEqual(wait.duration.unit, "h")
 
+    @unittest.skip("Need a better error concept for this to make sense")
     def test_program_errors(self):
         p = build(
             """

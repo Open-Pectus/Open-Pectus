@@ -290,13 +290,13 @@ class PCommand(PInstruction):
 
 
 class PCommandWithDuration(PInstruction):
-    """ Represents a Command instruction with a possible duration. """
+    """ Represents a Command instruction with a possible duration (Pause, Hold and Wait). """
     def __init__(self, parent: PNode) -> None:
         super().__init__(parent)
 
         self.name: str = ''
         """ Command name """
-        self.duration: str | None = None
+        self.duration: PDuration | None = None
         """ Unresolved duration expression """
 
     def __str__(self) -> str:
@@ -345,7 +345,7 @@ class PError:
 
 
 class PCondition:
-    """ Represents a condition expression for alarms and watches. """
+    """ Represents a condition expression for Alarm and Watch instructions. """
     def __init__(self, condition_str: str) -> None:
         self.condition_str = condition_str
         """ Original condition string expression """
@@ -361,3 +361,13 @@ class PCondition:
         self.tag_value: str | None = None
         self.tag_unit: str | None = None
         self.tag_value_numeric: int | float | None = None
+
+class PDuration:
+    """ Represents a duration for PCommandWithDuration (Pause, Hold and Wait) instructions. """
+
+    def __init__(self, duration_str: str) -> None:
+        self.duration_str: str = duration_str
+
+        self.error : bool = True
+        self.time: float | None = None
+        self.unit: str | None = None

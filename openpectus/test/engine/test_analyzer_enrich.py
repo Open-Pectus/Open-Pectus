@@ -3,20 +3,19 @@ import unittest
 
 from openpectus.lang.exec.analyzer import (
     ConditionEnrichAnalyzer,
+    DurationEnrichAnalyzer,
 )
-from openpectus.lang.model.pprogram import PCondition, PWatch
+from openpectus.lang.model.pprogram import PCommandWithDuration, PCondition, PDuration, PWatch
 from openpectus.lang import float_re, unit_re, identifier_re
 from test.engine.utility_methods import build_program as _build_program
 
-def build_program(code: str):
+def build_program_wo_analyzers(code: str):
     return _build_program(code, skip_enrich_analyzers=True)
 
 
-units = ['s', 'min', 'L', 'mL']
-
 class ConditionEnrichAnalyzerTest(unittest.TestCase):
     def test_watch_tag(self):
-        program = build_program("""
+        program = build_program_wo_analyzers("""
 Watch: counter > 0 mL
     Mark: b
 """)
@@ -39,7 +38,7 @@ Watch: counter > 0 mL
 
 
     def test_watch_value_unit(self):
-        program = build_program("""
+        program = build_program_wo_analyzers("""
 Watch: counter > 0 mL
     Mark: b
 """)
@@ -110,7 +109,7 @@ Watch: counter > 0 mL
     def test_watch_combinations(self):
         def test(code, expected_tag, expected_value, expected_unit):
             with self.subTest(code):
-                program = build_program(code)
+                program = build_program_wo_analyzers(code)
                 analyzer = ConditionEnrichAnalyzer()
                 watch = program.get_instructions()[0]
                 assert isinstance(watch, PWatch) and isinstance(watch.condition, PCondition)
@@ -125,3 +124,41 @@ Watch: counter > 0 mL
         test("Watch: a > 0 ", "a", "0", None)
         test("Watch: foo bar > 0 mL ", "foo bar", "0", "mL")
         test("Watch: foo bar > 0   ", "foo bar", "0", None)
+
+
+class DurationEnrichAnalyzerTest(unittest.TestCase):
+    def test_pause_w_unit(self):
+        program = build_program_wo_analyzers("Pause: 5 s")
+        analyzer = DurationEnrichAnalyzer()
+        pause = program.get_instructions()[0]
+        assert isinstance(pause, PCommandWithDuration)
+        assert isinstance(pause.duration, PDuration)
+
+        self.assertEqual(pause.duration.duration_str, "5 s")
+        self.assertEqual(pause.duration.time, None)
+        self.assertEqual(pause.duration.unit, None)
+        self.assertEqual(pause.duration.error, True)
+
+        analyzer.visit(program)
+
+        self.assertEqual(pause.duration.time, 5.0)
+        self.assertEqual(pause.duration.unit, "s")
+        self.assertEqual(pause.duration.error, False)
+
+    def test_pause_wo_unit(self):
+        program = build_program_wo_analyzers("Pause: 3.14")
+        analyzer = DurationEnrichAnalyzer()
+        pause = program.get_instructions()[0]
+        assert isinstance(pause, PCommandWithDuration)
+        assert isinstance(pause.duration, PDuration)
+
+        self.assertEqual(pause.duration.duration_str, "3.14")
+        self.assertEqual(pause.duration.time, None)
+        self.assertEqual(pause.duration.unit, None)
+        self.assertEqual(pause.duration.error, True)
+
+        analyzer.visit(program)
+
+        self.assertEqual(pause.duration.time, 3.14)
+        self.assertEqual(pause.duration.unit, None)
+        self.assertEqual(pause.duration.error, False)

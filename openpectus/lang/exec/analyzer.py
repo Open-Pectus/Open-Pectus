@@ -147,13 +147,42 @@ class ConditionEnrichAnalyzer(AnalyzerVisitorBase):
                 c.error = False
 
 
+class DurationEnrichAnalyzer(AnalyzerVisitorBase):
+    """ Analyzer that enriches parsed durations with time and unit """
+    def __init__(self) -> None:
+        super().__init__()
+
+    def visit_PCommandWithDuration(self, node: PCommandWithDuration):
+        self.enrich_duration(node)
+        return super().visit_PCommandWithDuration(node)
+
+    def enrich_duration(self, node: PCommandWithDuration):
+        if node.duration is None:
+            return
+        d = node.duration
+
+        re_time_unit = '^' + '(?P<float>' + float_re + ')' + '\\s*' + '(?P<unit>' + unit_re + ')' + '$'
+        re_time = '^' + '(?P<float>' + float_re + ')' + '\\s*$'
+        match = re.search(re_time_unit, d.duration_str)
+        if match:
+            d.time = float(match.group('float'))
+            d.unit = match.group('unit')
+            d.error = False
+        else:
+            match = re.search(re_time, d.duration_str)
+            if match:
+                d.time = float(match.group('float'))
+                d.error = False
+
+
 class EnrichAnalyzer():
     """ Facade that combines the enrich analyzers into a single analyzer. """
 
     def __init__(self) -> None:
         super().__init__()
         self.analyzers = [
-            ConditionEnrichAnalyzer()
+            ConditionEnrichAnalyzer(),
+            DurationEnrichAnalyzer(),
         ]
 
     def analyze(self, program: PProgram):

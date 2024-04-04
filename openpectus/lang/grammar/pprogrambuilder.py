@@ -8,6 +8,7 @@ from openpectus.lang.grammar.codegen.pcodeListener import pcodeListener
 
 from openpectus.lang.model.pprogram import (
     PCommandWithDuration,
+    PDuration,
     PNode,
     PProgram,
     PInstruction,
@@ -150,8 +151,8 @@ class PProgramBuilder(pcodeListener):
     def exitInstruction(self, ctx: pcodeParser.InstructionContext):
         # attach any error to current instruction
         if self.instruction_error is not None:
-            if self.instruction is None:
-                raise NotImplementedError(f"TODO Instruction not implemented: {ctx.getText()}")
+            if self.instruction is None:                
+                self.instruction = PErrorInstruction(self.scope, ctx.getText())
             elif isinstance(self.instruction, PBlank):
                 # skip indentation errors in blank lines
                 # TODO use error code instead
@@ -249,7 +250,7 @@ class PProgramBuilder(pcodeListener):
 
     def enterDuration(self, ctx: pcodeParser.DurationContext):
         assert isinstance(self.instruction, PCommandWithDuration)
-        self.instruction.duration = ctx.getText()
+        self.instruction.duration = PDuration(ctx.getText())
 
     def enterMark(self, ctx: pcodeParser.MarkContext):
         self.instruction = PMark(self.scope)
