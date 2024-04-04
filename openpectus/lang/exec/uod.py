@@ -167,7 +167,7 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
 
         self.context.dispose_command(self)
 
-    def parse_args(self, args: str | None, uod: UnitOperationDefinitionBase) -> list[Any] | None:
+    def parse_args(self, args: str | None, uod: UnitOperationDefinitionBase) -> dict[str, Any] | None:
         """ Parse argument input to concrete values. Return None to indicate invalid arguments. """
         if self.arg_parse_fn is None:
             return []
