@@ -28,7 +28,7 @@ class PGrammar:
         walker.walk(listener, self.tree)
         program = listener.get_program()
         if not skip_enrich_analyzers:
-            EnrichAnalyzer().visit(program)
+            EnrichAnalyzer().analyze(program)
         return program
 
     @property

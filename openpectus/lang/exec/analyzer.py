@@ -147,7 +147,7 @@ class ConditionEnrichAnalyzer(AnalyzerVisitorBase):
                 c.error = False
 
 
-class EnrichAnalyzer(AnalyzerVisitorBase):
+class EnrichAnalyzer():
     """ Facade that combines the enrich analyzers into a single analyzer. """
 
     def __init__(self) -> None:
