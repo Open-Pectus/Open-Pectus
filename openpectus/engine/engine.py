@@ -496,10 +496,10 @@ class Engine(InterpreterContext):
                     cmd_request.command_exec_id,
                     self._tick_time, self._tick_number,
                     self.tags_as_readonly())
-                uod_command.execute(args)
+                uod_command.execute(**args)
                 logger.debug(f"Command {cmd_request.name} executed first iteration {uod_command._exec_iterations}")
             elif not uod_command.is_execution_complete():
-                uod_command.execute(args)
+                uod_command.execute(**args)
                 logger.debug(f"Command {cmd_request.name} executed another iteration {uod_command._exec_iterations}")
 
             if uod_command.is_execution_complete() and not uod_command.is_finalized():
