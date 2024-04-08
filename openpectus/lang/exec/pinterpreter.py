@@ -16,6 +16,7 @@ from openpectus.lang.exec.tags import (
     SystemTagName,
 )
 from openpectus.lang.model.pprogram import (
+    PCommandWithDuration,
     PComment,
     PErrorInstruction,
     PInjectedNode,
@@ -132,7 +133,7 @@ class InterpreterContext():
     def tags(self) -> TagCollection:
         raise NotImplementedError()
 
-    def schedule_execution(self, name: str, args: str | None = None, exec_id: UUID | None = None):
+    def schedule_execution(self, name: str, exec_id: UUID | None = None, **kvargs):
         raise NotImplementedError()
 
     @property
@@ -239,9 +240,7 @@ class PInterpreter(PNodeVisitor):
 
     def _create_interrupt_handler(self, node: PNode, ar: ActivationRecord) -> GenerationType:
         ar.fill_start(self._tick_time)
-        #self.stack.push(ar)
         yield from self.visit(node)
-        #self.stack.pop()
 
     def tick(self, tick_time: float, tick_number: int):
         self._tick_time = tick_time
@@ -554,7 +553,10 @@ class PInterpreter(PNodeVisitor):
             # so that it can update the runtime record appropriately.
             try:
                 logger.debug(f"Executing command '{str(node)}' via engine")
-                self.context.schedule_execution(node.name, node.args, record.exec_id)
+                self.context.schedule_execution(
+                    name=node.name,
+                    exec_id=record.exec_id,
+                    unparsed_args=node.args)
             except Exception as ex:
                 record.add_state_failed(
                     self._tick_time, self._tick_number,
@@ -562,6 +564,32 @@ class PInterpreter(PNodeVisitor):
                 raise NodeInterpretationError(node, "Failed to pass command to engine") from ex
 
         yield
+
+    def visit_PCommandWithDuration(self, node: PCommandWithDuration):
+        record = self.runtimeinfo.get_last_node_record(node)
+
+        if node.duration is not None and node.duration.error:
+            record.add_state_failed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+            raise NodeInterpretationError(node, "Parse error. Command duration duration not valid") from None
+        try:
+            logger.debug(f"Executing command '{str(node)}' via engine")
+            if node.duration is None:
+                self.context.schedule_execution(name=node.name, exec_id=record.exec_id)
+            else:
+                self.context.schedule_execution(
+                    name=node.name,
+                    exec_id=record.exec_id,
+                    time=node.duration.time,
+                    unit=node.duration.unit
+                )
+        except Exception as ex:
+            record.add_state_failed(
+                self._tick_time, self._tick_number,
+                self.context.tags.as_readonly())
+            raise NodeInterpretationError(node, "Failed to pass command to engine") from ex
+
+        yield
+
 
     def visit_PWatch(self, node: PWatch):
         yield from self.visit_WatchOrAlarm(node)

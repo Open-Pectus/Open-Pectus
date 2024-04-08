@@ -1,6 +1,6 @@
 import math
 from time import time
-from typing import List, Any
+from typing import Any
 
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
 from openpectus.lang.exec import readings as R
@@ -13,7 +13,7 @@ def create_demo_uod() -> UnitOperationDefinitionBase:
     builder = UodBuilder()
     logger = builder.get_logger()
 
-    def reset(cmd: UodCommand, args: List[Any]) -> None:
+    def reset(cmd: UodCommand, _) -> None:
         count = cmd.get_iteration_count()
         if count == 0:
             cmd.context.tags.get("Reset").set_value("Reset", time())

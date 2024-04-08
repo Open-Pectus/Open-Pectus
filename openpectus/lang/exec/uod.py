@@ -124,6 +124,22 @@ class UnitOperationDefinitionBase:
         return command_name in self.get_command_names()
 
 
+ARGS = dict[str, Any]
+""" Command arguments"""
+
+INIT_FN = Callable[[], None]
+""" Command initialization method. """
+
+EXEC_FN = Callable[[ARGS], None]
+""" Command execution function. May be invoked multiple times. """
+
+FINAL_FN = Callable[[], None]
+""" Command finalization method. """
+
+PARSE_FN = Callable[[str | None], ARGS | None] | None
+""" Command argument parse function. Parses a string into a dictionary. Returns None on invalid input. """
+
+
 class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
     """ Represents a command that targets hardware, such as setting a valve state.
 
@@ -131,10 +147,10 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
     """
     def __init__(self, context: UnitOperationDefinitionBase, name: str) -> None:
         super().__init__(context, name)
-        self.init_fn: Callable[[], None] | None = None
-        self.exec_fn: Callable[[list[Any]], None] | None = None
-        self.finalize_fn: Callable[[], None] | None = None
-        self.arg_parse_fn: Callable[[str | None], None] | None = None
+        self.init_fn: INIT_FN | None = None
+        self.exec_fn: EXEC_FN | None = None
+        self.finalize_fn: FINAL_FN | None = None
+        self.arg_parse_fn: PARSE_FN | None = None
 
     @staticmethod
     def builder() -> UodCommandBuilder:
@@ -148,12 +164,12 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
         if self.init_fn is not None:
             self.init_fn()
 
-    def execute(self, args: list[Any]) -> None:
+    def execute(self, **kvargs) -> None:
         if self.exec_fn is None:
             raise ValueError(f"Command '{self.name}' has no execution function defined")
 
-        super().execute(args)
-        self.exec_fn(args)
+        super().execute(**kvargs)
+        self.exec_fn(kvargs)
 
     def cancel(self):
         super().cancel()
@@ -167,10 +183,10 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
 
         self.context.dispose_command(self)
 
-    def parse_args(self, args: str | None, uod: UnitOperationDefinitionBase) -> list[Any] | None:
+    def parse_args(self, args: str | None) -> ARGS | None:
         """ Parse argument input to concrete values. Return None to indicate invalid arguments. """
         if self.arg_parse_fn is None:
-            return []
+            return {}
         else:
             return self.arg_parse_fn(args)
 
@@ -179,9 +195,9 @@ class UodCommandBuilder():
     def __init__(self) -> None:
         self.name = ""
         self.init_fn: Callable[[UodCommand], None] | None = None
-        self.exec_fn: Callable[[UodCommand, list[Any]], None] | None = None
+        self.exec_fn: Callable[[UodCommand, dict[str, Any]], None] | None = None
         self.finalize_fn: Callable[[UodCommand], None] | None = None
-        self.arg_parse_fn: Callable[[str | None], None] | None = None
+        self.arg_parse_fn: Callable[[str | None], ARGS | None] | None = None
 
     def with_name(self, name: str) -> UodCommandBuilder:
         self.name = name
@@ -192,7 +208,7 @@ class UodCommandBuilder():
         self.init_fn = init_fn
         return self
 
-    def with_exec_fn(self, exec_fn: Callable[[UodCommand, list[Any]], None]) \
+    def with_exec_fn(self, exec_fn: Callable[[UodCommand, dict[str, Any]], None]) \
             -> UodCommandBuilder:
         self.exec_fn = exec_fn
         return self
@@ -202,8 +218,7 @@ class UodCommandBuilder():
         self.finalize_fn = finalize_fn
         return self
 
-    # TODO consider removing None as argument. Does  not seem to make sence
-    def with_arg_parse_fn(self, arg_parse_fn: Callable[[str | None], None]) \
+    def with_arg_parse_fn(self, arg_parse_fn: PARSE_FN) \
             -> UodCommandBuilder:
         self.arg_parse_fn = arg_parse_fn
         return self
@@ -214,7 +229,7 @@ class UodCommandBuilder():
             if self.init_fn is not None:
                 return self.init_fn(c)
 
-        def execute(args: list[Any]) -> None:
+        def execute(args: ARGS) -> None:
             if self.exec_fn is not None:
                 return self.exec_fn(c, args)
 
@@ -298,7 +313,7 @@ class UodBuilder():
         totalizer = self.tags[totalizer_tag_name]
         volume_units = TAG_UNITS["volume"]
         if totalizer.unit not in volume_units:
-            raise ValueError(f"The totalizer tag '{totalizer_tag_name}' must have a volume unit")        
+            raise ValueError(f"The totalizer tag '{totalizer_tag_name}' must have a volume unit")
         self.with_tag(AccumulatorTag(name=SystemTagName.ACCUMULATED_VOLUME, totalizer=totalizer))
         self.with_tag(AccumulatorBlockTag(name=SystemTagName.BLOCK_VOLUME, totalizer=totalizer))
         self.with_base_unit_provider(volume_units, SystemTagName.ACCUMULATED_VOLUME, SystemTagName.BLOCK_VOLUME)
@@ -310,7 +325,7 @@ class UodBuilder():
         if not self.tags.has(totalizer_tag_name):
             raise ValueError(f"The specified totalizer tag name '{totalizer_tag_name}' was not found")
         cv = self.tags[cv_tag_name]
-        totalizer = self.tags[totalizer_tag_name]        
+        totalizer = self.tags[totalizer_tag_name]
         self.with_tag(AccumulatedColumnVolume(SystemTagName.ACCUMULATED_CV, cv, totalizer))
         acc_cv = self.tags[SystemTagName.ACCUMULATED_CV]
         self.with_tag(AccumulatorBlockTag(SystemTagName.BLOCK_CV, acc_cv))

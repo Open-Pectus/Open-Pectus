@@ -3,7 +3,7 @@ import logging
 import threading
 import time
 import unittest
-from typing import Any, Generator, List
+from typing import Any, Generator
 from openpectus.lang.exec.tag_lifetime import TagContext
 from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 
@@ -44,7 +44,7 @@ def get_queue_items(q) -> list[Tag]:
 
 
 def create_test_uod() -> UnitOperationDefinitionBase:
-    def reset(cmd: UodCommand, args: List[Any]) -> None:
+    def reset(cmd: UodCommand, _) -> None:
         count = cmd.get_iteration_count()
         if count == 0:
             cmd.context.tags.get("Reset").set_value("Reset", time.time())
@@ -52,7 +52,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
             cmd.context.tags.get("Reset").set_value("N/A", time.time())
             cmd.set_complete()
 
-    def overlap_exec(cmd: UodCommand, args: List[Any]) -> None:
+    def overlap_exec(cmd: UodCommand, _) -> None:
         count = cmd.get_iteration_count()
         if count >= 9:
             cmd.set_complete()
@@ -636,6 +636,42 @@ Mark: C
     def test_runstate_unhold(self):
         raise NotImplementedError()
 
+
+    def test_pause_w_duration(self):
+        e = self.engine
+        program = """
+Mark: a
+Pause: .5s
+Mark: b
+"""
+        run_engine(e, program, 5)
+        self.assertTrue(e._runstate_started)
+        self.assertTrue(e._runstate_paused)
+        system_state_tag = e._system_tags[SystemTagName.SYSTEM_STATE]
+
+        self.assertEqual(SystemStateEnum.Paused, system_state_tag.get_value())
+
+        continue_engine(e, 5)
+
+        self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
+
+    def test_hold_w_duration(self):
+        e = self.engine
+        program = """
+Mark: a
+Hold: .5s
+Mark: b
+"""
+        run_engine(e, program, 5)
+        self.assertTrue(e._runstate_started)
+        self.assertTrue(e._runstate_holding)
+        system_state_tag = e._system_tags[SystemTagName.SYSTEM_STATE]
+
+        self.assertEqual(SystemStateEnum.Holding, system_state_tag.get_value())
+
+        continue_engine(e, 5)
+
+        self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
 
     # --- Safe values ---
 

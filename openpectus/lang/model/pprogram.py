@@ -371,3 +371,6 @@ class PDuration:
         self.error : bool = True
         self.time: float | None = None
         self.unit: str | None = None
+
+    def __str__(self) -> str:
+        return f"Duration {self.time} {self.unit}"

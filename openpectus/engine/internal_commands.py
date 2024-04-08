@@ -1,7 +1,7 @@
 from __future__ import annotations
 import importlib
 import logging
-from typing import Callable, Generator
+from typing import Any, Callable, Generator
 from openpectus.engine.commands import EngineCommand
 from openpectus.engine.models import EngineCommandEnum
 
@@ -70,11 +70,15 @@ class InternalEngineCommand(EngineCommand):
         self._failed = False
         self.has_run = False
         self.run_result: Generator[None, None, None] | None = None
+        self.kvargs: dict[str, Any] = {}
 
     def _run(self) -> Generator[None, None, None] | None:
         """ Override to implement the command using a generator style
         where each yield pauses execution until the next tick (i.e. call to execute()). """
         raise NotImplementedError()
+
+    def init_args(self, kvargs: dict[str, Any]):
+        self.kvargs = kvargs
 
     def fail(self):
         self._failed = True

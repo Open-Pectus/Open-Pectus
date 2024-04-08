@@ -30,7 +30,7 @@ _ = pint.Quantity("0 sec")
 
 
 def create_test_uod() -> UnitOperationDefinitionBase:
-    def incr_counter(cmd: UodCommand, args: List[Any]):
+    def incr_counter(cmd: UodCommand, _):
         counter = cmd.context.tags["counter"]
         count = counter.as_number()
         count = count + 1
@@ -575,6 +575,23 @@ Mark: d
         i = engine.interpreter
 
         self.assertEqual(["a", "b", "c", "d"], i.get_marks())
+
+    def test_wait(self):
+        program = """
+Mark: a
+Wait: 0.5 s
+Mark: b"""
+        engine = self.engine
+        run_engine(engine, program, 4)
+        i = engine.interpreter
+        self.assertEqual(["a"], i.get_marks())
+
+        continue_engine(engine, 4)
+        self.assertEqual(["a"], i.get_marks())
+
+        continue_engine(engine, 2)
+
+        self.assertEqual(["a", "b"], i.get_marks())
 
     @unittest.skip("TODO")
     def test_threshold_column_volume(self):

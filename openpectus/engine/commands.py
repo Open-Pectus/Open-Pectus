@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Generic, List, TypeVar
+from typing import Any, Generic, TypeVar
 
 
 class EngineCommand():
@@ -20,7 +20,7 @@ class EngineCommand():
     def is_initialized(self) -> bool:
         return self._initialized
 
-    def execute(self, args: List[Any]) -> None:
+    def execute(self, **kvargs: Any) -> None:
         self._exec_started = True
         self._exec_iterations += 1
 

@@ -92,7 +92,7 @@ def set_engine_debug_logging():
     engine_modules = [
         "openpectus.engine.engine",
         # "openpectus.engine.internal_commands",
-        # "openpectus.engine.internal_commands_impl",
+        "openpectus.engine.internal_commands_impl",
     ]
     for m in engine_modules:
         logger = logging.getLogger(m)
