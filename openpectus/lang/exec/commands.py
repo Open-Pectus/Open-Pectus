@@ -1,10 +1,10 @@
 from __future__ import annotations
 from enum import StrEnum
-from typing import Callable, Dict, List
+from typing import Any, Callable, Dict, List
 from uuid import UUID
 
 
-class SystemCommandEnum(StrEnum):
+class InterpreterCommandEnum(StrEnum):
     """ Commands (instructions of type PCommand) that are executed by the interpreter """
     BASE = "Base"
     INCREMENT_RUN_COUNTER = "Increment run counter"
@@ -13,7 +13,7 @@ class SystemCommandEnum(StrEnum):
     @staticmethod
     def has_value(value: str):
         """ Determine if enum has this string value defined. Case sensitive. """
-        return value in SystemCommandEnum.__members__.values()
+        return value in InterpreterCommandEnum.__members__.values()
 
 
 # Represents part of Engine API
@@ -21,16 +21,33 @@ class SystemCommandEnum(StrEnum):
 
 class CommandRequest():
     """ Represents a command request for engine to execute. """
-    def __init__(self, name: str, args: str | None = None, exec_id: UUID | None = None) -> None:
+    def __init__(self, name: str, source: str, exec_id: UUID | None = None, kvargs: dict[str, Any] = {}) -> None:
         self.name: str = name
-        self.args: str | None = args
+        self.unparsed_args: str | None = None
+        self.kvargs: dict[str, Any] | None = kvargs
         self.exec_id: UUID | None = exec_id
+        self.source: str = source
 
         # allows tracking individual commands
         self.command_exec_id: UUID | None = None
 
+    @staticmethod
+    def from_user(name: str, unparsed_args: str | None = None) -> CommandRequest:
+        cmd_req = CommandRequest(name=name, source='user')
+        cmd_req.unparsed_args = unparsed_args
+        return cmd_req
+
+    @staticmethod
+    def from_interpreter(name: str, exec_id: UUID | None, **kvargs) -> CommandRequest:
+        if "unparsed_args" in kvargs.keys():
+            cmd_req = CommandRequest(name=name, source="@interpreter", exec_id=exec_id)
+            cmd_req.unparsed_args = kvargs["unparsed_args"]
+            return cmd_req
+        else:
+            return CommandRequest(name=name, source="@interpreter", exec_id=exec_id, kvargs=kvargs)
+
     def __str__(self) -> str:
-        return f"EngineCommand {self.name} | args: {self.args}"
+        return f"EngineCommand {self.name} | args: {str(self.kvargs)}"
 
 
 # Represents command API towards interpreter
@@ -105,11 +122,9 @@ class CommandCollection():
         return cmds
 
     def merge_with(self, other: CommandCollection) -> CommandCollection:
-        """ Returns a new CommandCollection with the combined commands
-        of both collections.
+        """ Returns a new CommandCollection with the combined commands of both collections.
 
-        In case of duplicate commands names, tags from other collection
-        are used.
+        In case of duplicate commands names, tags from other collection are used.
         """
         cmds = CommandCollection()
         for cmd in self.commands.values():

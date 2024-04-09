@@ -30,7 +30,7 @@ _ = pint.Quantity("0 sec")
 
 
 def create_test_uod() -> UnitOperationDefinitionBase:
-    def incr_counter(cmd: UodCommand, args: List[Any]):
+    def incr_counter(cmd: UodCommand, **kvargs):
         counter = cmd.context.tags["counter"]
         count = counter.as_number()
         count = count + 1
@@ -54,7 +54,6 @@ def create_engine(uod: UnitOperationDefinitionBase | None = None) -> Engine:
         uod = create_test_uod()
     e = Engine(uod)
     e._configure()
-    
     return e
 
 
@@ -356,7 +355,7 @@ Mark: A3
         program = """
 Block: A
     Mark: A1
-    Watch: Block Time > 1 sec
+    Watch: Block Time > 1 s
         End block
     Mark: A2
 Mark: A3
@@ -371,9 +370,9 @@ Mark: A3
         program = """
 Block: A
     Mark: A1
-    Watch: Block Time > 0.5 sec
+    Watch: Block Time > 0.5 s
         Mark: A2
-    Watch: Block Time > 1 sec
+    Watch: Block Time > 1 s
         Mark: A3
         End block
     Mark: A4
@@ -575,6 +574,23 @@ Mark: d
         i = engine.interpreter
 
         self.assertEqual(["a", "b", "c", "d"], i.get_marks())
+
+    def test_wait(self):
+        program = """
+Mark: a
+Wait: 0.5 s
+Mark: b"""
+        engine = self.engine
+        run_engine(engine, program, 4)
+        i = engine.interpreter
+        self.assertEqual(["a"], i.get_marks())
+
+        continue_engine(engine, 4)
+        self.assertEqual(["a"], i.get_marks())
+
+        continue_engine(engine, 2)
+
+        self.assertEqual(["a", "b"], i.get_marks())
 
     @unittest.skip("TODO")
     def test_threshold_column_volume(self):

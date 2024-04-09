@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable
 
-from openpectus.engine.commands import ContextEngineCommand
+from openpectus.engine.commands import ContextEngineCommand, CommandArgs
 from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.errors import UodValidationError
@@ -70,8 +70,27 @@ class UnitOperationDefinitionBase:
                 except UodValidationError as vex:
                     logging.error(vex.args[0])
 
+        try:
+            self.verify_command_signatures()
+        except UodValidationError as vex:
+            log_fatal("Error in command definition. " + str(vex))
+
         if fatal:
             exit(1)
+
+    def verify_command_signatures(self):
+        import inspect
+
+        for key, builder in self.command_factories.items():
+            if builder.exec_fn is None:
+                raise UodValidationError(f"Command '{key}' must have an execution function")
+            spec = inspect.getfullargspec(builder.exec_fn)
+            # def exec(cmd: UodCommand, **kvargs)"
+            if 'cmd' not in spec.args:
+                raise UodValidationError(f"Execution function for command '{key}' is missing a 'cmd' argument")
+            if spec.varkw is None or spec.varkw != 'kvargs':
+                raise UodValidationError(f"Execution function for command '{key}' is missing a '**kvargs' argument")
+
 
     def has_command_name(self, name: str) -> bool:
         """ Check whether the command name is defined in the Uod """
@@ -124,6 +143,27 @@ class UnitOperationDefinitionBase:
         return command_name in self.get_command_names()
 
 
+INIT_FN = Callable[[], None]
+""" Command initialization method. """
+
+EXEC_FN = Callable[..., None]
+""" Command execution function. Must take UodCommand and **kvargs as inputs. May be invoked multiple times.
+
+NOTE: The type system does not seem to support describing the real signature (which should be something like
+Callable[[UodCommand, Unpack[CommandArgs]], None]).
+
+For this reason we validate the exec function dynamically during uod validation. This validation check must be
+updated if EXEC_FN changes. It is implemented in UnitOperationDefinitionBase.verify_command_signatures().
+"""
+
+FINAL_FN = Callable[[], None]
+""" Command finalization method. """
+
+PARSE_FN = Callable[[str | None], CommandArgs | None]
+""" Command argument parse function. Parses a string into a dictionary. Returns None on invalid input. """
+
+
+
 class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
     """ Represents a command that targets hardware, such as setting a valve state.
 
@@ -131,10 +171,10 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
     """
     def __init__(self, context: UnitOperationDefinitionBase, name: str) -> None:
         super().__init__(context, name)
-        self.init_fn: Callable[[], None] | None = None
-        self.exec_fn: Callable[[list[Any]], None] | None = None
-        self.finalize_fn: Callable[[], None] | None = None
-        self.arg_parse_fn: Callable[[str | None], None] | None = None
+        self.init_fn: INIT_FN | None = None
+        self.exec_fn: EXEC_FN | None = None
+        self.finalize_fn: FINAL_FN | None = None
+        self.arg_parse_fn: PARSE_FN | None = None
 
     @staticmethod
     def builder() -> UodCommandBuilder:
@@ -148,9 +188,13 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
         if self.init_fn is not None:
             self.init_fn()
 
-    def execute(self, args: list[Any]) -> None:
+    def execute(self, args: CommandArgs) -> None:
         if self.exec_fn is None:
             raise ValueError(f"Command '{self.name}' has no execution function defined")
+
+        if not isinstance(args, dict):
+            raise TypeError(
+                f"Invalid arguments provided to command '{self.name}'. Must be a dictionary, not {type(args).__name__}")
 
         super().execute(args)
         self.exec_fn(args)
@@ -167,10 +211,10 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
 
         self.context.dispose_command(self)
 
-    def parse_args(self, args: str | None, uod: UnitOperationDefinitionBase) -> list[Any] | None:
+    def parse_args(self, args: str | None) -> CommandArgs | None:
         """ Parse argument input to concrete values. Return None to indicate invalid arguments. """
         if self.arg_parse_fn is None:
-            return []
+            return {}
         else:
             return self.arg_parse_fn(args)
 
@@ -179,44 +223,77 @@ class UodCommandBuilder():
     def __init__(self) -> None:
         self.name = ""
         self.init_fn: Callable[[UodCommand], None] | None = None
-        self.exec_fn: Callable[[UodCommand, list[Any]], None] | None = None
+        self.exec_fn: Callable[[UodCommand, Any], None] | None = None
         self.finalize_fn: Callable[[UodCommand], None] | None = None
-        self.arg_parse_fn: Callable[[str | None], None] | None = None
+        self.arg_parse_fn: Callable[[str | None], CommandArgs | None] | None = None
 
     def with_name(self, name: str) -> UodCommandBuilder:
+        """ Define the name of the command. Required. """
         self.name = name
         return self
 
-    def with_init_fn(self, init_fn: Callable[[UodCommand], None]) \
-            -> UodCommandBuilder:
+    def with_init_fn(self, init_fn: Callable[[UodCommand], None]) -> UodCommandBuilder:
+        """ Define an initialization function for the command. Optional. """
         self.init_fn = init_fn
         return self
 
-    def with_exec_fn(self, exec_fn: Callable[[UodCommand, list[Any]], None]) \
-            -> UodCommandBuilder:
+    def with_exec_fn(self, exec_fn: Callable[..., None]) -> UodCommandBuilder:
+        """ Define the command's execution function. Required.
+
+        Example::
+
+          def my_command_exec(cmd: UodCommand, **kvargs):
+              # kvargs contains the result of the arg_parse function.
+              pass
+
+        """
         self.exec_fn = exec_fn
         return self
 
-    def with_finalize_fn(self, finalize_fn: Callable[[UodCommand], None]) \
-            -> UodCommandBuilder:
+    def with_finalize_fn(self, finalize_fn: Callable[[UodCommand], None]) -> UodCommandBuilder:
+        """ Define a finalizer function for the command. Optional. """
         self.finalize_fn = finalize_fn
         return self
 
-    # TODO consider removing None as argument. Does  not seem to make sence
-    def with_arg_parse_fn(self, arg_parse_fn: Callable[[str | None], None]) \
+    def with_arg_parse_fn(self, arg_parse_fn: Callable[[str | None], CommandArgs | None]) \
             -> UodCommandBuilder:
+        """ Define an argument parser function. Optional.
+
+        The function is given the command argument string from the method and should parse that
+        and return the result as a dictionary. The result is passed to the excution function automatically.
+
+        If not arg_parse function is defined, no arguments are provided to the execute function.
+
+        Example::
+
+          def my_command_parse_args(args: str | None) -> dict[str, Any] | None:
+            # parse the argument string and return the values as a dictionary.
+            return None # if args are invalid.
+        """
         self.arg_parse_fn = arg_parse_fn
         return self
 
     def build(self, uod: UnitOperationDefinitionBase) -> UodCommand:
 
+        def arg_parse(args: str | None) -> CommandArgs | None:
+            if self.arg_parse_fn is None:
+                return {}
+            return self.arg_parse_fn(args)
+
         def initialize() -> None:
             if self.init_fn is not None:
                 return self.init_fn(c)
 
-        def execute(args: list[Any]) -> None:
+        def execute(args: CommandArgs) -> None:
             if self.exec_fn is not None:
-                return self.exec_fn(c, args)
+                try:
+                    return self.exec_fn(c, **args)  # type: ignore
+                except TypeError:
+                    logger.error(
+                        f"Could not call the execution function for the uod command '{self.name}'. " +
+                        "Make sure the function signature is 'def exec(uod: UodCommand, **kvargs)'"
+                    )
+                    raise Exception(f"Execution function type error in uod command '{self.name}'")
 
         def finalize() -> None:
             if self.finalize_fn is not None:
@@ -228,6 +305,7 @@ class UodCommandBuilder():
         c.init_fn = initialize
         c.exec_fn = execute
         c.finalize_fn = finalize
+        c.arg_parse_fn = arg_parse
         return c
 
 
@@ -298,7 +376,7 @@ class UodBuilder():
         totalizer = self.tags[totalizer_tag_name]
         volume_units = TAG_UNITS["volume"]
         if totalizer.unit not in volume_units:
-            raise ValueError(f"The totalizer tag '{totalizer_tag_name}' must have a volume unit")        
+            raise ValueError(f"The totalizer tag '{totalizer_tag_name}' must have a volume unit")
         self.with_tag(AccumulatorTag(name=SystemTagName.ACCUMULATED_VOLUME, totalizer=totalizer))
         self.with_tag(AccumulatorBlockTag(name=SystemTagName.BLOCK_VOLUME, totalizer=totalizer))
         self.with_base_unit_provider(volume_units, SystemTagName.ACCUMULATED_VOLUME, SystemTagName.BLOCK_VOLUME)
@@ -310,7 +388,7 @@ class UodBuilder():
         if not self.tags.has(totalizer_tag_name):
             raise ValueError(f"The specified totalizer tag name '{totalizer_tag_name}' was not found")
         cv = self.tags[cv_tag_name]
-        totalizer = self.tags[totalizer_tag_name]        
+        totalizer = self.tags[totalizer_tag_name]
         self.with_tag(AccumulatedColumnVolume(SystemTagName.ACCUMULATED_CV, cv, totalizer))
         acc_cv = self.tags[SystemTagName.ACCUMULATED_CV]
         self.with_tag(AccumulatorBlockTag(SystemTagName.BLOCK_CV, acc_cv))
@@ -337,6 +415,7 @@ class UodBuilder():
         return self
 
     def with_command(self, cb: UodCommandBuilder) -> UodBuilder:
+        # TODO improve usage by creating UodCommandBuilder and exposing it via a Context
         if cb.name in self.commands.keys():
             raise ValueError(f"Duplicate command name: {cb.name}")
         self.commands[cb.name] = cb

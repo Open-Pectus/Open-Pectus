@@ -98,15 +98,6 @@ class pcodeListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by pcodeParser#condition_tag.
-    def enterCondition_tag(self, ctx:pcodeParser.Condition_tagContext):
-        pass
-
-    # Exit a parse tree produced by pcodeParser#condition_tag.
-    def exitCondition_tag(self, ctx:pcodeParser.Condition_tagContext):
-        pass
-
-
     # Enter a parse tree produced by pcodeParser#compare_op.
     def enterCompare_op(self, ctx:pcodeParser.Compare_opContext):
         pass
@@ -116,30 +107,21 @@ class pcodeListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by pcodeParser#condition_value.
-    def enterCondition_value(self, ctx:pcodeParser.Condition_valueContext):
+    # Enter a parse tree produced by pcodeParser#condition_lhs.
+    def enterCondition_lhs(self, ctx:pcodeParser.Condition_lhsContext):
         pass
 
-    # Exit a parse tree produced by pcodeParser#condition_value.
-    def exitCondition_value(self, ctx:pcodeParser.Condition_valueContext):
-        pass
-
-
-    # Enter a parse tree produced by pcodeParser#condition_unit.
-    def enterCondition_unit(self, ctx:pcodeParser.Condition_unitContext):
-        pass
-
-    # Exit a parse tree produced by pcodeParser#condition_unit.
-    def exitCondition_unit(self, ctx:pcodeParser.Condition_unitContext):
+    # Exit a parse tree produced by pcodeParser#condition_lhs.
+    def exitCondition_lhs(self, ctx:pcodeParser.Condition_lhsContext):
         pass
 
 
-    # Enter a parse tree produced by pcodeParser#condition_error.
-    def enterCondition_error(self, ctx:pcodeParser.Condition_errorContext):
+    # Enter a parse tree produced by pcodeParser#condition_rhs.
+    def enterCondition_rhs(self, ctx:pcodeParser.Condition_rhsContext):
         pass
 
-    # Exit a parse tree produced by pcodeParser#condition_error.
-    def exitCondition_error(self, ctx:pcodeParser.Condition_errorContext):
+    # Exit a parse tree produced by pcodeParser#condition_rhs.
+    def exitCondition_rhs(self, ctx:pcodeParser.Condition_rhsContext):
         pass
 
 
@@ -176,6 +158,33 @@ class pcodeListener(ParseTreeListener):
 
     # Exit a parse tree produced by pcodeParser#pause.
     def exitPause(self, ctx:pcodeParser.PauseContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#hold.
+    def enterHold(self, ctx:pcodeParser.HoldContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#hold.
+    def exitHold(self, ctx:pcodeParser.HoldContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#wait.
+    def enterWait(self, ctx:pcodeParser.WaitContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#wait.
+    def exitWait(self, ctx:pcodeParser.WaitContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#duration.
+    def enterDuration(self, ctx:pcodeParser.DurationContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#duration.
+    def exitDuration(self, ctx:pcodeParser.DurationContext):
         pass
 
 
@@ -266,6 +275,15 @@ class pcodeListener(ParseTreeListener):
 
     # Exit a parse tree produced by pcodeParser#command_args.
     def exitCommand_args(self, ctx:pcodeParser.Command_argsContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#identifier.
+    def enterIdentifier(self, ctx:pcodeParser.IdentifierContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#identifier.
+    def exitIdentifier(self, ctx:pcodeParser.IdentifierContext):
         pass
 
 

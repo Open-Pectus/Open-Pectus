@@ -8,7 +8,7 @@ from uuid import UUID
 
 import pint
 from openpectus.lang.exec.base_unit import BaseUnitProvider
-from openpectus.lang.exec.commands import SystemCommandEnum
+from openpectus.lang.exec.commands import InterpreterCommandEnum
 from openpectus.lang.exec.errors import InterpretationError, InterpretationInternalError, NodeInterpretationError
 from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import (
@@ -16,6 +16,7 @@ from openpectus.lang.exec.tags import (
     SystemTagName,
 )
 from openpectus.lang.model.pprogram import (
+    PCommandWithDuration,
     PComment,
     PErrorInstruction,
     PInjectedNode,
@@ -132,7 +133,7 @@ class InterpreterContext():
     def tags(self) -> TagCollection:
         raise NotImplementedError()
 
-    def schedule_execution(self, name: str, args: str | None = None, exec_id: UUID | None = None):
+    def schedule_execution(self, name: str, exec_id: UUID | None = None, **kvargs):
         raise NotImplementedError()
 
     @property
@@ -239,9 +240,7 @@ class PInterpreter(PNodeVisitor):
 
     def _create_interrupt_handler(self, node: PNode, ar: ActivationRecord) -> GenerationType:
         ar.fill_start(self._tick_time)
-        #self.stack.push(ar)
         yield from self.visit(node)
-        #self.stack.pop()
 
     def tick(self, tick_time: float, tick_number: int):
         self._tick_time = tick_time
@@ -511,11 +510,11 @@ class PInterpreter(PNodeVisitor):
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
 
-    def execute_system_command(self, node: PCommand):
+    def execute_interpreter_command(self, node: PCommand):
         record = self.runtimeinfo.get_last_node_record(node)
         record.add_state_started(self._tick_time, self._tick_number, self.context.tags.as_readonly())
 
-        if node.name == SystemCommandEnum.BASE:
+        if node.name == InterpreterCommandEnum.BASE:
             valid_units = self.context.base_unit_provider.get_units()
             if node.args is None or node.args not in valid_units:
                 record.add_state_failed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
@@ -523,11 +522,11 @@ class PInterpreter(PNodeVisitor):
                     Value must be one of {', '.join(valid_units)}")
             self.context.tags[SystemTagName.BASE].set_value(node.args, self._tick_time)
 
-        elif node.name == SystemCommandEnum.INCREMENT_RUN_COUNTER:
+        elif node.name == InterpreterCommandEnum.INCREMENT_RUN_COUNTER:
             rc_value = self.context.tags[SystemTagName.RUN_COUNTER].as_number() + 1
             self.context.tags[SystemTagName.RUN_COUNTER].set_value(rc_value, self._tick_time)
 
-        elif node.name == SystemCommandEnum.RUN_COUNTER:
+        elif node.name == InterpreterCommandEnum.RUN_COUNTER:
             try:
                 new_value = int(node.args)
                 self.context.tags[SystemTagName.RUN_COUNTER].set_value(new_value, self._tick_time)
@@ -536,14 +535,14 @@ class PInterpreter(PNodeVisitor):
 
         else:
             record.add_state_failed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
-            raise NodeInterpretationError(node, f"System instruction '{node.name}' is not supported")
+            raise NodeInterpretationError(node, f"Interpreter command '{node.name}' is not supported")
 
         record.add_state_completed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
 
     def visit_PCommand(self, node: PCommand):
-        if SystemCommandEnum.has_value(node.name):
-            logger.debug(f"Executing command {str(node)} as system instruction")
-            self.execute_system_command(node)
+        if InterpreterCommandEnum.has_value(node.name):
+            logger.debug(f"Executing interpreter command {str(node)}")
+            self.execute_interpreter_command(node)
         else:
             record = self.runtimeinfo.get_last_node_record(node)
 
@@ -554,7 +553,10 @@ class PInterpreter(PNodeVisitor):
             # so that it can update the runtime record appropriately.
             try:
                 logger.debug(f"Executing command '{str(node)}' via engine")
-                self.context.schedule_execution(node.name, node.args, record.exec_id)
+                self.context.schedule_execution(
+                    name=node.name,
+                    exec_id=record.exec_id,
+                    unparsed_args=node.args)
             except Exception as ex:
                 record.add_state_failed(
                     self._tick_time, self._tick_number,
@@ -562,6 +564,32 @@ class PInterpreter(PNodeVisitor):
                 raise NodeInterpretationError(node, "Failed to pass command to engine") from ex
 
         yield
+
+    def visit_PCommandWithDuration(self, node: PCommandWithDuration):
+        record = self.runtimeinfo.get_last_node_record(node)
+
+        if node.duration is not None and node.duration.error:
+            record.add_state_failed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+            raise NodeInterpretationError(node, "Parse error. Command duration duration not valid") from None
+        try:
+            logger.debug(f"Executing command '{str(node)}' via engine")
+            if node.duration is None:
+                self.context.schedule_execution(name=node.name, exec_id=record.exec_id)
+            else:
+                self.context.schedule_execution(
+                    name=node.name,
+                    exec_id=record.exec_id,
+                    time=node.duration.time,
+                    unit=node.duration.unit
+                )
+        except Exception as ex:
+            record.add_state_failed(
+                self._tick_time, self._tick_number,
+                self.context.tags.as_readonly())
+            raise NodeInterpretationError(node, "Failed to pass command to engine") from ex
+
+        yield
+
 
     def visit_PWatch(self, node: PWatch):
         yield from self.visit_WatchOrAlarm(node)

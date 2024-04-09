@@ -1,11 +1,11 @@
 import unittest
 
 from openpectus.lang.exec.analyzer import (
-    SemanticAnalyzer,
-    UnreachableCodeVisitor,
-    InfiniteBlockVisitor,
-    ConditionAnalyzerVisitor,
-    CommandAnalyzerVisitor,
+    SemanticCheckAnalyzer,
+    UnreachableCodeCheckAnalyzer,
+    InfiniteBlockCheckAnalyzer,
+    ConditionCheckAnalyzer,
+    CommandCheckAnalyzer,
 )
 from openpectus.lang.exec.commands import CommandCollection, Command
 from openpectus.lang.exec.tags import TagCollection, Tag
@@ -15,13 +15,13 @@ from test.engine.utility_methods import build_program
 # TODO present PErrorInstructions as errors
 # TODO present PErrors as errors
 
-class CommandVisitorTest(unittest.TestCase):
+class CommandCheckAnalyzerTest(unittest.TestCase):
     def test_command_defined(self):
         program = build_program("""
 Foo
 """)
         cmds = CommandCollection().with_cmd(Command("Foo"))
-        analyzer = CommandAnalyzerVisitor(cmds)
+        analyzer = CommandCheckAnalyzer(cmds)
         analyzer.visit(program)
         self.assertEqual(0, len(analyzer.items))
 
@@ -30,7 +30,7 @@ Foo
 Foo
 """)
         cmds = CommandCollection()
-        analyzer = CommandAnalyzerVisitor(cmds)
+        analyzer = CommandCheckAnalyzer(cmds)
         analyzer.visit(program)
         self.assertEqual(1, len(analyzer.items))
 
@@ -39,7 +39,7 @@ Foo
 Foo: bar
 """)
         cmds = CommandCollection().with_cmd(Command("Foo"))
-        analyzer = CommandAnalyzerVisitor(cmds)
+        analyzer = CommandCheckAnalyzer(cmds)
         analyzer.visit(program)
         self.assertEqual(0, len(analyzer.items))
 
@@ -51,19 +51,19 @@ Foo: bar
 Foo: bar
 """)
         cmds = CommandCollection().with_cmd(Command("Foo", is_valid_cmd))
-        analyzer = CommandAnalyzerVisitor(cmds)
+        analyzer = CommandCheckAnalyzer(cmds)
         analyzer.visit(program)
         self.assertEqual(1, len(analyzer.items))
 
 
-class ConditionVisitorTest(unittest.TestCase):
+class ConditionCheckAnalyzerTest(unittest.TestCase):
     def test_tag_name_defined(self):
         program = build_program("""
 Watch: A > 2
     Mark: a
 """)
         tags = TagCollection().with_tag(Tag("A"))
-        analyzer = ConditionAnalyzerVisitor(tags)
+        analyzer = ConditionCheckAnalyzer(tags)
         analyzer.visit(program)
         self.assertEqual(0, len(analyzer.items))
 
@@ -73,7 +73,7 @@ Watch: A > 2
     Mark: a
 """)
         tags = TagCollection()
-        analyzer = ConditionAnalyzerVisitor(tags)
+        analyzer = ConditionCheckAnalyzer(tags)
         analyzer.visit(program)
         self.assertEqual(1, len(analyzer.items))
         self.assertEqual("UndefinedTag", analyzer.items[0].id)
@@ -84,17 +84,17 @@ Watch: A > 2
     Mark: a
 """)
         tags = TagCollection().with_tag(Tag("A"))
-        analyzer = ConditionAnalyzerVisitor(tags)
+        analyzer = ConditionCheckAnalyzer(tags)
         analyzer.visit(program)
         self.assertEqual(0, len(analyzer.items))
 
     def test_tag_unit_unexpected(self):
         program = build_program("""
-Watch: A > 2 ml
+Watch: A > 2 mL
     Mark: a
 """)
         tags = TagCollection().with_tag(Tag("A"))
-        analyzer = ConditionAnalyzerVisitor(tags)
+        analyzer = ConditionCheckAnalyzer(tags)
         analyzer.visit(program)
         self.assertEqual(1, len(analyzer.items))
         self.assertEqual("UnexpectedUnit", analyzer.items[0].id)
@@ -105,41 +105,54 @@ Watch: A > 2
     Mark: a
 """)
         tags = TagCollection().with_tag(Tag("A", unit="ml"))
-        analyzer = ConditionAnalyzerVisitor(tags)
+        analyzer = ConditionCheckAnalyzer(tags)
         analyzer.visit(program)
         self.assertEqual(1, len(analyzer.items))
         self.assertEqual("MissingUnit", analyzer.items[0].id)
 
     def test_tag_units_incompatible(self):
         program = build_program("""
-Watch: A > 2 ml
+Watch: A > 2 mL
     Mark: a
 """)
         tags = TagCollection().with_tag(Tag("A", unit="sec"))
-        analyzer = ConditionAnalyzerVisitor(tags)
+        analyzer = ConditionCheckAnalyzer(tags)
         analyzer.visit(program)
         self.assertEqual(1, len(analyzer.items))
         self.assertEqual("IncompatibleUnits", analyzer.items[0].id)
 
     def test_tag_units_equal(self):
         program = build_program("""
-Watch: A > 2 l
+Watch: A > 2 L
     Mark: a
 """)
         tags = TagCollection().with_tag(Tag("A", unit="L"))
-        analyzer = ConditionAnalyzerVisitor(tags)
+        analyzer = ConditionCheckAnalyzer(tags)
         analyzer.visit(program)
         self.assertEqual(0, len(analyzer.items))
 
     def test_tag_units_compatible(self):
         program = build_program("""
-Watch: A > 2 ml
+Watch: A > 2 mL
     Mark: a
 """)
         tags = TagCollection().with_tag(Tag("A", unit="L"))
-        analyzer = ConditionAnalyzerVisitor(tags)
+        analyzer = ConditionCheckAnalyzer(tags)
         analyzer.visit(program)
         self.assertEqual(0, len(analyzer.items))
+
+    @unittest.skip("TODO Fix this somehow")
+    def test_tag_unit_CV(self):
+        # need to test CV comparison, CV being a custom unit unknown by pint
+        program = build_program("""
+Watch: A > 2 CV
+    Mark: a
+""")
+        tags = TagCollection().with_tag(Tag("A", unit="CV"))
+        analyzer = ConditionCheckAnalyzer(tags)
+        analyzer.visit(program)
+        self.assertEqual(0, len(analyzer.items))
+
 
     @unittest.skip("TODO")
     def test_tag_categorized_valid(self):
@@ -150,28 +163,28 @@ Watch: A > 2 ml
         pass
 
 
-class UnreachableCodeVisitorTest(unittest.TestCase):
+class UnreachableCodeCheckAnalyzerTest(unittest.TestCase):
     def test_UnreachableCodeVisitor(self):
         program = build_program("""
 Block: A
-    mark: a
+    Mark: a
     End block
-    mark: b
-mark: c
+    Mark: b
+Mark: c
 """)
-        analyzer = UnreachableCodeVisitor()
+        analyzer = UnreachableCodeCheckAnalyzer()
         analyzer.visit(program)
         self.assertEqual(1, len(analyzer.items))
 
 
-class InfiniteBlockVisitorTest(unittest.TestCase):
+class InfiniteBlockCheckAnalyzerTest(unittest.TestCase):
     def test_missing_global_end(self):
         program = build_program("""
 Block: A
-    mark: a
-mark: c
+    Mark: a
+Mark: c
 """)
-        sa = InfiniteBlockVisitor()
+        sa = InfiniteBlockCheckAnalyzer()
         sa.visit(program)
         self.assertEqual(1, len(sa.items))
 
@@ -181,60 +194,60 @@ Watch: Run counter > 0
     End block
 
 Block: A
-    mark: a
-mark: c
+    Mark: a
+Mark: c
 """)
-        sa = InfiniteBlockVisitor()
+        sa = InfiniteBlockCheckAnalyzer()
         sa.visit(program)
         self.assertEqual(0, len(sa.items))
 
     def test_has_local_end(self):
         program = build_program("""
 Block: A
-    mark: a
+    Mark: a
     Watch: Run counter > 0
         End block
-mark: c
+Mark: c
 """)
-        sa = InfiniteBlockVisitor()
+        sa = InfiniteBlockCheckAnalyzer()
         sa.visit(program)
         self.assertEqual(0, len(sa.items))
 
     def test_has_no_local_end(self):
         program = build_program("""
 Block: A
-    mark: a
+    Mark: a
     Watch: Run counter > 0
         End block
-mark: c
+Mark: c
 Block: B
-    mark: b
+    Mark: b
 """)
-        sa = InfiniteBlockVisitor()
+        sa = InfiniteBlockCheckAnalyzer()
         sa.visit(program)
         self.assertEqual(1, len(sa.items))
 
 
-class SemanticAnalyzerTest(unittest.TestCase):
+class SemanticCheckAnalyzerTest(unittest.TestCase):
     def test_basic(self):
         program = build_program("""
-mark: a
-mark: b
-mark: c
+Mark: a
+Mark: b
+Mark: c
 """)
-        analyzer = SemanticAnalyzer(TagCollection(), CommandCollection())
+        analyzer = SemanticCheckAnalyzer(TagCollection(), CommandCollection())
         analyzer.analyze(program)
         self.assertEqual(0, len(analyzer.errors))
 
     def test_warning_UnreachableCode(self):
         program = build_program("""
 Block: A
-    mark: a
+    Mark: a
     End block
-    mark: b
-mark: c
+    Mark: b
+Mark: c
 """)
-        analyzer = SemanticAnalyzer(TagCollection(), CommandCollection())
+        analyzer = SemanticCheckAnalyzer(TagCollection(), CommandCollection())
         analyzer.analyze(program)
         xs = [e for e in analyzer.items if e.id == 'UnreachableCode']
         self.assertEqual(1, len(xs))

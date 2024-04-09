@@ -32,7 +32,7 @@ class EngineMessageHandlers():
             logger.info("Starting engine on first start command")
             self.engine.run()
 
-        self.engine.schedule_execution(name=msg.name, args=msg.arguments)
+        self.engine.schedule_execution_user(name=msg.name, args=msg.arguments)
         return AM.SuccessMessage()
 
     async def handle_injectCodeMsg(self, msg: AM.InjectCodeMsg):

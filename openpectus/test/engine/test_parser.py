@@ -1,5 +1,7 @@
 import unittest
 
+from antlr4.tree.Tree import ErrorNode as antlrErrorNode
+
 from openpectus.lang.grammar.codegen.pcodeParser import ParserRuleContext, pcodeParser
 from openpectus.lang.grammar.pgrammar import PGrammar
 
@@ -10,7 +12,7 @@ def parse(s):
     return p
 
 
-def get_first_child(ctx: ParserRuleContext, type):
+def get_first_child(ctx: ParserRuleContext, type) -> ParserRuleContext | None:
     if isinstance(ctx, type):
         return ctx
     if hasattr(ctx, "getChildren"):
@@ -23,90 +25,149 @@ def get_first_child(ctx: ParserRuleContext, type):
 
 
 class ParserTest(unittest.TestCase):
+
+    def assertContextHasNoChildError(self, ctx: ParserRuleContext):
+        # if hasattr(ctx, 'exception'):
+        #     self.assertIsNone(ctx.exception)
+        if hasattr(ctx, "getChildren"):
+            for child in ctx.getChildren():
+                self.assertNotIsInstance(
+                    child,
+                    antlrErrorNode,
+                    f"Child of context '{ctx.getText()}' with type '{type(ctx).__name__}' was unexpectedly an ErrorNode")
+                self.assertContextHasNoChildError(child)
+
     def test_mark(self):
         p = parse("Mark:   a  ")
         c = p.parser.mark()  # type: ignore
         self.assertIsNotNone(c)
         p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.MarkContext)
+        self.assertContextHasNoChildError(c)
 
     def test_block(self):
-        p = parse("block: foo")
+        p = parse("Block: foo")
         c = p.parser.block()  # type: ignore
         self.assertIsNotNone(c)
         p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.BlockContext)
+        self.assertContextHasNoChildError(c)
 
-        p = parse("block: foo")
+        p = parse("Block: foo")
         c = p.parser.program()  # type: ignore
         self.assertIsNotNone(c)
         self.assertIsInstance(c, pcodeParser.ProgramContext)
+        self.assertContextHasNoChildError(c)
 
     def test_end_block(self):
-        p = parse("end block")
+        p = parse("End block")
         c = p.parser.end_block()  # type: ignore
         self.assertIsNotNone(c)
         p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.End_blockContext)
+        self.assertContextHasNoChildError(c)
 
     def test_end_blocks(self):
-        p = parse("end blocks")
+        p = parse("End blocks")
         c = p.parser.end_blocks()  # type: ignore
         self.assertIsNotNone(c)
         p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.End_blocksContext)
+        self.assertContextHasNoChildError(c)
 
     def test_watch(self):
-        p = parse("watch")
+        p = parse("Watch")
         c = p.parser.watch()  # type: ignore
         self.assertIsNotNone(c)
-        p.printSyntaxTree(c)
+        # p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.WatchContext)
+        self.assertContextHasNoChildError(c)
 
     def test_watch_unit(self):
-        p = parse("watch: A > 2 ml")
+        p = parse("Watch: A > 2 mL")
         c = p.parser.watch()  # type: ignore
         self.assertIsNotNone(c)
         p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.WatchContext)
-        self.assertConditionValue(c.condition(), "A", ">", "2", "ml")
+        self.assertConditionValue(c.condition(), "A", ">", "2 mL")
+        self.assertContextHasNoChildError(c)
 
     def test_watch_unitless(self):
-        p = parse("watch: A > 2")
+        p = parse("Watch: A > 2")
         c = p.parser.watch()  # type: ignore
         self.assertIsNotNone(c)
-        p.printSyntaxTree(c)
+        # p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.WatchContext)
-        self.assertConditionValue(c.condition(), "A", ">", "2", None)
+        self.assertConditionValue(c.condition(), "A", ">", "2")
+        self.assertContextHasNoChildError(c)
 
     def test_watch_with_mark(self):
         p = parse("""
-watch: A > 2 ml
-    mark: a
+Watch: A > 2 mL
+    Mark: a
 """)
         program = p.parser.program()  # type: ignore
         watch = get_first_child(program, pcodeParser.WatchContext)
         self.assertIsInstance(watch, pcodeParser.WatchContext)
-        self.assertIsWatchWithCondition(watch, "A > 2 ml")  # type: ignore
-        self.assertConditionValue(watch.condition(), "A", ">", "2", "ml")  # type: ignore
+        self.assertIsWatchWithCondition(watch, "A > 2 mL")  # type: ignore
+        self.assertConditionValue(watch.condition(), "A", ">", "2 mL")  # type: ignore
 
         mark = get_first_child(program, pcodeParser.MarkContext)
         self.assertIsInstance(mark, pcodeParser.MarkContext)
 
     def test_condition_unit(self):
-        p = parse("X > 10 ml")
+        p = parse("X > 10 mL")
         c = p.parser.condition()  # type: ignore
         self.assertIsNotNone(c)
         self.assertIsInstance(c, pcodeParser.ConditionContext)
-        self.assertConditionValue(c, "X", ">", "10", "ml")
+        self.assertConditionValue(c, "X", ">", "10 mL")
+        self.assertContextHasNoChildError(c)
 
     def test_condition_ws(self):
-        p = parse("X> 10ml")
+        p = parse("X> 10mL")
         c = p.parser.condition()  # type: ignore
         self.assertIsNotNone(c)
         p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.ConditionContext)
-        self.assertConditionValue(c, "X", ">", "10", "ml")
+        self.assertConditionValue(c, "X", ">", "10mL")
+        self.assertContextHasNoChildError(c)
+
+    def test_identifier(self):
+        def test(tag: str):
+            with self.subTest(tag):
+                p = parse(tag)
+                c = p.parser.identifier()  # type: ignore
+                self.assertIsNotNone(c)
+                p.printSyntaxTree(c)
+                self.assertIsInstance(c, pcodeParser.IdentifierContext)
+                self.assertContextHasNoChildError(c)
+        test("X2")
+        test("XY2")
+        test("x2")
+        test("foo")
+        test("foo bar")
+
+        test("KaZ")
+        test("e 2")
+        test("e")
+        test("X")
+        test("xY")
+        test("Xy")
+
+        # these are also valid identifierseven though they are also units
+        test("s")
+        test("L")
+        test("min")
+        test("mL")
+
+    def test_condition_tag_ws(self):
+        p = parse("Block Time > 0.2 min")
+        c = p.parser.condition()  # type: ignore
+        self.assertIsNotNone(c)
+        p.printSyntaxTree(c)
+        self.assertIsInstance(c, pcodeParser.ConditionContext)
+        self.assertConditionValue(c, "Block Time", ">", "0.2 min")
+        self.assertContextHasNoChildError(c)
 
     def test_condition_unitless(self):
         p = parse("X > 10")
@@ -114,7 +175,8 @@ watch: A > 2 ml
         self.assertIsNotNone(c)
         p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.ConditionContext)
-        self.assertConditionValue(c, "X", ">", "10", None)
+        self.assertConditionValue(c, "X", ">", "10")
+        self.assertContextHasNoChildError(c)
 
     def test_condition_negative_value(self):
         p = parse("X > -10")
@@ -122,23 +184,26 @@ watch: A > 2 ml
         self.assertIsNotNone(c)
         p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.ConditionContext)
-        self.assertConditionValue(c, "X", ">", "-10", None)
+        self.assertConditionValue(c, "X", ">", "-10")
+        self.assertContextHasNoChildError(c)
 
     def test_condition_error(self):
-        p = parse("X > ab ml")
+        p = parse("X > ab mL")
         c = p.parser.condition()  # type: ignore
         self.assertIsNotNone(c)
         p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.ConditionContext)
-        self.assertConditionError(c)
+        # this is not a parse error - will fail during build
+        self.assertConditionValue(c, "X", ">", "ab mL")
 
     def test_condition_error_2(self):
-        p = parse("X > -ab ml")
+        p = parse("X>-ab mL")
         c = p.parser.condition()  # type: ignore
         self.assertIsNotNone(c)
         p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.ConditionContext)
-        self.assertConditionError(c)
+        # this is not a parse error - will fail during build
+        self.assertConditionValue(c, "X", ">", "-ab mL")
 
     def assertIsWatchWithCondition(self, c: ParserRuleContext, condition: str):
         self.assertIsNotNone(c)
@@ -151,38 +216,28 @@ watch: A > 2 ml
         self.assertEqual(_args, condition)
 
     def assertConditionValue(self, c: pcodeParser.ConditionContext,
-                             expected_tag_name, expected_op,
-                             expected_tag_value, expected_tag_unit):
-        name, op, value, unit = None, None, None, None
+                             expected_lhs, expected_op, expected_rhs):
+        lhs, op, rhs = None, None, None
         if c.children is not None:
             for x in c.children:
-                if isinstance(x, pcodeParser.Condition_errorContext):
-                    raise AssertionError("Did not expect condition error")
-                elif isinstance(x, pcodeParser.Condition_tagContext):
-                    name = x.getText()
+                if isinstance(x, pcodeParser.Condition_lhsContext):
+                    lhs = x.getText()
                 elif isinstance(x, pcodeParser.Compare_opContext):
                     op = x.getText()
-                elif isinstance(x, pcodeParser.Condition_valueContext):
-                    value = x.getText()
-                elif isinstance(x, pcodeParser.Condition_unitContext):
-                    unit = x.getText()
-        self.assertEqual(name, expected_tag_name)
+                elif isinstance(x, pcodeParser.Condition_rhsContext):
+                    rhs = x.getText()
+        self.assertEqual(lhs, expected_lhs)
         self.assertEqual(op, expected_op)
-        self.assertEqual(value, expected_tag_value)
-        self.assertEqual(unit, expected_tag_unit)
-
-    def assertConditionError(self, c: pcodeParser.ConditionContext):
-        if c.children is not None:
-            for x in c.children:
-                if not isinstance(x, pcodeParser.Condition_errorContext):
-                    raise AssertionError("Expected condition error")
+        self.assertEqual(rhs, expected_rhs)
 
     def test_watch_with_condition(self):
-        p = parse("watch: X > 10 ml")
+        p = parse("Watch: X > 10 mL")
         c = p.parser.watch()  # type: ignore
         self.assertIsNotNone(c)
-        p.printSyntaxTree(c)
-        self.assertIsWatchWithCondition(c, "X > 10 ml")
+        # p.printSyntaxTree(c)
+        self.assertIsWatchWithCondition(c, "X > 10 mL")
+        self.assertConditionValue(c.condition(), "X", ">", "10 mL")
+        self.assertContextHasNoChildError(c)
 
     def assertIsAlarmWithCondition(self, c: ParserRuleContext, condition: str):
         self.assertIsNotNone(c)
@@ -195,21 +250,23 @@ watch: A > 2 ml
         self.assertEqual(_args, condition)
 
     def test_alarm(self):
-        p = parse("alarm")
+        p = parse("Alarm")
         c = p.parser.alarm()  # type: ignore
         self.assertIsNotNone(c)
         p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.AlarmContext)
+        self.assertContextHasNoChildError(c)
 
     def test_alarm_with_condition(self):
-        p = parse("alarm: X > 10 ml")
+        p = parse("Alarm: X > 10 mL")
         c = p.parser.alarm()  # type: ignore
         condition = c.condition()
         assert isinstance(condition, pcodeParser.ConditionContext)
         self.assertIsNotNone(c)
         p.printSyntaxTree(c)
-        self.assertIsAlarmWithCondition(c, "X > 10 ml")
-        self.assertConditionValue(condition, "X", ">", "10", "ml")
+        self.assertIsAlarmWithCondition(c, "X > 10 mL")
+        self.assertConditionValue(condition, "X", ">", "10 mL")
+        self.assertContextHasNoChildError(c)
 
     def test_increment_rc(self):
         p = parse("Increment run counter")
@@ -217,27 +274,82 @@ watch: A > 2 ml
         self.assertIsNotNone(c)
         p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.Increment_rcContext)
+        self.assertContextHasNoChildError(c)
 
     def test_stop(self):
-        p = parse("sTop")
+        p = parse("Stop")
         c = p.parser.stop()  # type: ignore
         self.assertIsNotNone(c)
         p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.StopContext)
+        self.assertContextHasNoChildError(c)
 
     def test_pause(self):
-        p = parse("PAuSe")
+        p = parse("Pause")
         c = p.parser.pause()  # type: ignore
         self.assertIsNotNone(c)
         p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.PauseContext)
+        self.assertContextHasNoChildError(c)
+
+    def test_pause_w_arg(self):
+        p = parse("Pause: 1 min")
+        c = p.parser.pause()  # type: ignore
+        self.assertIsNotNone(c)
+        p.printSyntaxTree(c)
+        self.assertIsInstance(c, pcodeParser.PauseContext)
+        self.assertContextHasNoChildError(c)
+
+    def test_hold(self):
+        p = parse("Hold")
+        c = p.parser.hold()  # type: ignore
+        self.assertIsNotNone(c)
+        p.printSyntaxTree(c)
+        self.assertIsInstance(c, pcodeParser.HoldContext)
+        self.assertContextHasNoChildError(c)
+
+    def test_hold_w_arg(self):
+        p = parse("Hold: 1 min")
+        c = p.parser.hold()  # type: ignore
+        self.assertIsNotNone(c)
+        p.printSyntaxTree(c)
+        self.assertIsInstance(c, pcodeParser.HoldContext)
+        self.assertContextHasNoChildError(c)
+
+    def test_wait_w_arg(self):
+        p = parse("Wait:1s")
+        c = p.parser.wait()  # type: ignore
+        self.assertIsNotNone(c)
+        p.printSyntaxTree(c)
+        self.assertIsInstance(c, pcodeParser.WaitContext)
+        self.assertContextHasNoChildError(c)
+
+    def test_duration(self):
+        def test(code):
+            with self.subTest(code):
+                p = parse(code)
+                c = p.parser.duration()  # type: ignore
+                self.assertIsNotNone(c)
+                p.printSyntaxTree(c)
+                self.assertIsInstance(c, pcodeParser.DurationContext)
+                self.assertContextHasNoChildError(c)
+
+        test("1 min")
+        test("1.0 min")
+        test("131,654 min")
+        test("1.0 s")
+        test("1s")
+        test("87 h")
+        test("87 foo")
+
 
     def test_restart(self):
-        p = parse("restart")
+        p = parse("Restart")
         c = p.parser.restart()  # type: ignore
         self.assertIsNotNone(c)
         p.printSyntaxTree(c)
         self.assertIsInstance(c, pcodeParser.RestartContext)
+        self.assertContextHasNoChildError(c)
 
     def assertIsPCommandWithNameArgs(self, c: ParserRuleContext, name: str, args: str):
         self.assertIsNotNone(c)
@@ -281,6 +393,7 @@ watch: A > 2 ml
                 c = parse(code).parser.command()  # type: ignore
                 self.assertIsNotNone(c)
                 self.assertIsInstance(c, pcodeParser.CommandContext)
+                #self.assertContextHasNoChildError(c)
 
         test("foo")
         test(" foo")
@@ -308,6 +421,7 @@ watch: A > 2 ml
                 print("Tree:")
                 p.printSyntaxTree(c)
                 self.assertIsPCommandWithNameArgs(c, expected_name, expected_args)
+                self.assertContextHasNoChildError(c)
 
         test("foo", "foo", None)
         test("foo: bar", "foo", "bar")
@@ -325,6 +439,7 @@ watch: A > 2 ml
                 print("Tree:")
                 p.printSyntaxTree(c)
                 self.assertIsPCommandWithNameArgs(c, expected_name, expected_args)
+                self.assertContextHasNoChildError(c)
 
         test("1.23 foo bar", "foo bar", None)
         test("foo: bar,baz", "foo", "bar,baz")
@@ -344,6 +459,7 @@ Block
         ctx = p.parser.program()  # type: ignore
 
         p.printSyntaxTree(ctx)
+        self.assertContextHasNoChildError(ctx)
 
 
 if __name__ == "__main__":

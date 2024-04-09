@@ -82,6 +82,8 @@ class Engine(InterpreterContext):
         """ Indicates whether the engine is on hold"""
         self._runstate_stopping: bool = False
         """ Indicates whether the engine is on stopping"""
+        self._runstate_waiting: bool = False
+        """ Indicates whether the engine is waiting in a Wait command"""
 
         self._prev_state: TagValueCollection | None = None
         """ The state prior to applying safe state """
@@ -226,6 +228,7 @@ class Engine(InterpreterContext):
         if self._runstate_started and\
                 not self._runstate_paused and\
                 not self._runstate_holding and\
+                not self._runstate_waiting and\
                 not self._runstate_stopping:
             try:
                 self._interpreter.tick(self._tick_time, self._tick_number)
@@ -387,6 +390,11 @@ class Engine(InterpreterContext):
         # no engine command is running - start one
         try:
             command = create_internal_command(cmd_request.name)
+            if cmd_request.kvargs is not None:
+                try:
+                    command.init_args(cmd_request.kvargs)
+                except Exception:
+                    raise Exception(f"Failed to initialize arguments for command '{cmd_request.name}'")
         except ValueError:
             raise NotImplementedError(f"Unknown internal engine command '{cmd_request.name}'")
 
@@ -471,15 +479,15 @@ class Engine(InterpreterContext):
 
         assert uod_command is not None, f"Failed to get uod_command for command '{cmd_name}'"
 
-        args = uod_command.parse_args(cmd_request.args, uod_command.context)  # TODO remove uod from method signature
-        if args is None:
-            logger.error(f"Invalid argument string: '{cmd_request.args}' for command '{cmd_name}'")
+        parsed_args = uod_command.parse_args(cmd_request.unparsed_args)
+        if parsed_args is None:
+            logger.error(f"Invalid argument string: '{cmd_request.unparsed_args}' for command '{cmd_name}'")
             raise ValueError(f"Invalid arguments for command '{cmd_name}'")
 
         # execute command state flow
         try:
             logger.debug(
-                f"Executing uod command: '{cmd_request.name}' with args '{cmd_request.args}', " +
+                f"Executing uod command: '{cmd_request.name}' with args '{cmd_request.unparsed_args}', " +
                 f"iteration {uod_command._exec_iterations}")
             if uod_command.is_cancelled():
                 if not uod_command.is_finalized():
@@ -496,10 +504,10 @@ class Engine(InterpreterContext):
                     cmd_request.command_exec_id,
                     self._tick_time, self._tick_number,
                     self.tags_as_readonly())
-                uod_command.execute(args)
+                uod_command.execute(parsed_args)
                 logger.debug(f"Command {cmd_request.name} executed first iteration {uod_command._exec_iterations}")
             elif not uod_command.is_execution_complete():
-                uod_command.execute(args)
+                uod_command.execute(parsed_args)
                 logger.debug(f"Command {cmd_request.name} executed another iteration {uod_command._exec_iterations}")
 
             if uod_command.is_execution_complete() and not uod_command.is_finalized():
@@ -530,7 +538,7 @@ class Engine(InterpreterContext):
 
             logger.error(
                 f"Uod command execution failed. Command: '{cmd_request.name}', " +
-                f"argument string: '{cmd_request.args}'", exc_info=True)
+                f"argument string: '{cmd_request.unparsed_args}'", exc_info=True)
             raise ex
 
     def _apply_safe_state(self) -> TagValueCollection:
@@ -599,14 +607,27 @@ class Engine(InterpreterContext):
             logger.error("Hardware write_batch error", exc_info=True)
             # TODO handle disconnected state
 
-    def schedule_execution(self, name: str, args: str | None = None, exec_id: UUID | None = None):
-        """ Execute named command (engine internal or Uod), possibly with arguments. """
+    def schedule_execution(self, name: str, exec_id: UUID | None = None, **kvargs):
+        """ Execute named command from interpreter """
         if EngineCommandEnum.has_value(name) or self.uod.has_command_name(name):
-            request = CommandRequest(name, args, exec_id)
+            request = CommandRequest.from_interpreter(name, exec_id, **kvargs)
             self.cmd_queue.put_nowait(request)
         else:
             logger.error(f"Invalid command type scheduled: {name}")
             raise ValueError(f"Invalid command type scheduled: {name}")
+
+    def schedule_execution_user(self, name: str, args: str | None = None):
+        """ Execute named command from user """
+        # TODO args format needs to be specified in more detail. Its intended usage is
+        # to contain argument values added to tag buttons. But in that case why not just use pcode?
+        if EngineCommandEnum.has_value(name) or self.uod.has_command_name(name):
+            if args is not None:
+                raise NotImplementedError("User arguments format not implemented - command name: " + name)
+            request = CommandRequest.from_user(name)
+            self.cmd_queue.put_nowait(request)
+        else:
+            logger.error(f"Invalid user command type scheduled: {name}")
+            raise ValueError(f"Invalid user command type scheduled: {name}")
 
     def inject_code(self, pcode: str):
         """ Inject a general code snippet to run in the current scope of the current program. """

@@ -11,6 +11,7 @@ class EngineCommandEnum(StrEnum):
     UNPAUSE = "Unpause"
     HOLD = "Hold"
     UNHOLD = "Unhold"
+    WAIT = "Wait"
     RESTART = "Restart"
 
     @staticmethod
