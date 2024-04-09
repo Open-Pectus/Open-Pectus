@@ -61,14 +61,12 @@ class PauseEngineCommand(InternalEngineCommand):
         self.duration_end_time : float | None = None
 
     def init_args(self, kvargs: dict[str, Any]):
-        #TODO more precise error handling. We either have
-        # -no arguments or
-        # -both arguments that are vell formed
-        # double check what parser does
         if "time" in kvargs.keys() and "unit" in kvargs.keys():
             time = float(kvargs.pop("time"))
             unit = kvargs.pop("unit")
             self.duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
+        elif "time" in kvargs.keys() or "unit" in kvargs.keys():
+            raise ValueError("Invalid Pause arguments. Specify either no duration arguments or both time and unit")
 
     def _run(self):
         e = self.engine
@@ -128,6 +126,8 @@ class HoldEngineCommand(InternalEngineCommand):
             time = float(kvargs.pop("time"))
             unit = kvargs.pop("unit")
             self.duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
+        elif "time" in kvargs.keys() or "unit" in kvargs.keys():
+            raise ValueError("Invalid Hold arguments. Specify either no duration arguments or both time and unit")
 
     def _run(self):
         e = self.engine
