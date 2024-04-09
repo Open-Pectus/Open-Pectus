@@ -30,7 +30,7 @@ _ = pint.Quantity("0 sec")
 
 
 def create_test_uod() -> UnitOperationDefinitionBase:
-    def incr_counter(cmd: UodCommand, _):
+    def incr_counter(cmd: UodCommand, **kvargs):
         counter = cmd.context.tags["counter"]
         count = counter.as_number()
         count = count + 1
@@ -54,7 +54,6 @@ def create_engine(uod: UnitOperationDefinitionBase | None = None) -> Engine:
         uod = create_test_uod()
     e = Engine(uod)
     e._configure()
-    
     return e
 
 

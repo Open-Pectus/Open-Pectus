@@ -61,9 +61,14 @@ class PauseEngineCommand(InternalEngineCommand):
         self.duration_end_time : float | None = None
 
     def init_args(self, kvargs: dict[str, Any]):
-        time = float(kvargs.pop("time"))
-        unit = kvargs.pop("unit")
-        self.duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
+        #TODO more precise error handling. We either have
+        # -no arguments or
+        # -both arguments that are vell formed
+        # double check what parser does
+        if "time" in kvargs.keys() and "unit" in kvargs.keys():
+            time = float(kvargs.pop("time"))
+            unit = kvargs.pop("unit")
+            self.duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
 
     def _run(self):
         e = self.engine
@@ -75,9 +80,8 @@ class PauseEngineCommand(InternalEngineCommand):
             logger.debug("Pause duration set. Waiting to unpause.")
             while self.engine._tick_time < self.duration_end_time:
                 yield
-
-        logger.debug("Resume using Unpause")
-        UnpauseEngineCommand(self.engine)._run()
+            logger.debug("Resuming using Unpause")
+            UnpauseEngineCommand(self.engine)._run()
 
 
 class UnpauseEngineCommand(InternalEngineCommand):
@@ -120,9 +124,10 @@ class HoldEngineCommand(InternalEngineCommand):
         self.duration_end_time : float | None = None
 
     def init_args(self, kvargs: dict[str, Any]):
-        time = float(kvargs.pop("time"))
-        unit = kvargs.pop("unit")
-        self.duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
+        if "time" in kvargs.keys() and "unit" in kvargs.keys():
+            time = float(kvargs.pop("time"))
+            unit = kvargs.pop("unit")
+            self.duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
 
     def _run(self):
         e = self.engine
@@ -134,9 +139,8 @@ class HoldEngineCommand(InternalEngineCommand):
             logger.debug("Hold duration set. Waiting to unhold.")
             while self.engine._tick_time < self.duration_end_time:
                 yield
-
-        logger.debug("Resume using Unhold")
-        UnholdEngineCommand(self.engine)._run()
+            logger.debug("Resuming using Unhold")
+            UnholdEngineCommand(self.engine)._run()
 
 class UnholdEngineCommand(InternalEngineCommand):
     def __init__(self, engine: Engine) -> None:

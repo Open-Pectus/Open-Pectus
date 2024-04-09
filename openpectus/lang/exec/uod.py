@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable
 
-from openpectus.engine.commands import ContextEngineCommand
+from openpectus.engine.commands import ContextEngineCommand, CommandArgs
 from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.errors import UodValidationError
@@ -124,20 +124,18 @@ class UnitOperationDefinitionBase:
         return command_name in self.get_command_names()
 
 
-ARGS = dict[str, Any]
-""" Command arguments"""
-
 INIT_FN = Callable[[], None]
 """ Command initialization method. """
 
-EXEC_FN = Callable[[ARGS], None]
-""" Command execution function. May be invoked multiple times. """
+EXEC_FN = Callable[..., None]
+""" Command execution function. Must take UodCommand and **kvargs as inputs. May be invoked multiple times. """
 
 FINAL_FN = Callable[[], None]
 """ Command finalization method. """
 
-PARSE_FN = Callable[[str | None], ARGS | None] | None
+PARSE_FN = Callable[[str | None], CommandArgs | None]
 """ Command argument parse function. Parses a string into a dictionary. Returns None on invalid input. """
+
 
 
 class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
@@ -164,12 +162,16 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
         if self.init_fn is not None:
             self.init_fn()
 
-    def execute(self, **kvargs) -> None:
+    def execute(self, args: CommandArgs) -> None:
         if self.exec_fn is None:
             raise ValueError(f"Command '{self.name}' has no execution function defined")
 
-        super().execute(**kvargs)
-        self.exec_fn(kvargs)
+        if not isinstance(args, dict):
+            raise TypeError(
+                f"Invalid arguments provided to command '{self.name}'. Must be a dictionary, not {type(args).__name__}")
+
+        super().execute(args)
+        self.exec_fn(args)
 
     def cancel(self):
         super().cancel()
@@ -183,7 +185,7 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
 
         self.context.dispose_command(self)
 
-    def parse_args(self, args: str | None) -> ARGS | None:
+    def parse_args(self, args: str | None) -> CommandArgs | None:
         """ Parse argument input to concrete values. Return None to indicate invalid arguments. """
         if self.arg_parse_fn is None:
             return {}
@@ -195,43 +197,77 @@ class UodCommandBuilder():
     def __init__(self) -> None:
         self.name = ""
         self.init_fn: Callable[[UodCommand], None] | None = None
-        self.exec_fn: Callable[[UodCommand, dict[str, Any]], None] | None = None
+        self.exec_fn: Callable[[UodCommand, Any], None] | None = None
         self.finalize_fn: Callable[[UodCommand], None] | None = None
-        self.arg_parse_fn: Callable[[str | None], ARGS | None] | None = None
+        self.arg_parse_fn: Callable[[str | None], CommandArgs | None] | None = None
 
     def with_name(self, name: str) -> UodCommandBuilder:
+        """ Define the name of the command. Required. """
         self.name = name
         return self
 
-    def with_init_fn(self, init_fn: Callable[[UodCommand], None]) \
-            -> UodCommandBuilder:
+    def with_init_fn(self, init_fn: Callable[[UodCommand], None]) -> UodCommandBuilder:
+        """ Define an initialization function for the command. Optional. """
         self.init_fn = init_fn
         return self
 
-    def with_exec_fn(self, exec_fn: Callable[[UodCommand, dict[str, Any]], None]) \
-            -> UodCommandBuilder:
+    def with_exec_fn(self, exec_fn: Callable[..., None]) -> UodCommandBuilder:
+        """ Define the command's execution function. Required.
+
+        Example::
+
+          def my_command_exec(cmd: UodCommand, **kvargs):
+              # kvargs contains the result of the arg_parse function.
+              pass
+
+        """
         self.exec_fn = exec_fn
         return self
 
-    def with_finalize_fn(self, finalize_fn: Callable[[UodCommand], None]) \
-            -> UodCommandBuilder:
+    def with_finalize_fn(self, finalize_fn: Callable[[UodCommand], None]) -> UodCommandBuilder:
+        """ Define a finalizer function for the command. Optional. """
         self.finalize_fn = finalize_fn
         return self
 
-    def with_arg_parse_fn(self, arg_parse_fn: PARSE_FN) \
+    def with_arg_parse_fn(self, arg_parse_fn: Callable[[str | None], CommandArgs | None]) \
             -> UodCommandBuilder:
+        """ Define an argument parser function. Optional.
+
+        The function is given the command argument string from the method and should parse that
+        and return the result as a dictionary. The result is passed to the excution function automatically.
+
+        If not arg_parse function is defined, no arguments are provided to the execute function.
+
+        Example::
+
+          def my_command_parse_args(args: str | None) -> dict[str, Any] | None:
+            # parse the argument string and return the values as a dictionary.
+            return None # if args are invalid.
+        """
         self.arg_parse_fn = arg_parse_fn
         return self
 
     def build(self, uod: UnitOperationDefinitionBase) -> UodCommand:
 
+        def arg_parse(args: str | None) -> CommandArgs | None:
+            if self.arg_parse_fn is None:
+                return {}
+            return self.arg_parse_fn(args)
+
         def initialize() -> None:
             if self.init_fn is not None:
                 return self.init_fn(c)
 
-        def execute(args: ARGS) -> None:
+        def execute(args: CommandArgs) -> None:
             if self.exec_fn is not None:
-                return self.exec_fn(c, args)
+                try:
+                    return self.exec_fn(c, **args)  # type: ignore
+                except TypeError:
+                    logger.error(
+                        f"Could not call the execution function for the uod command '{self.name}'. " +
+                        "Make sure the function signature is 'def exec(uod: UodCommand, **kvargs)'"
+                    )
+                    raise Exception(f"Execution function type error in uod command '{self.name}'")
 
         def finalize() -> None:
             if self.finalize_fn is not None:
@@ -243,6 +279,7 @@ class UodCommandBuilder():
         c.init_fn = initialize
         c.exec_fn = execute
         c.finalize_fn = finalize
+        c.arg_parse_fn = arg_parse
         return c
 
 
@@ -352,6 +389,7 @@ class UodBuilder():
         return self
 
     def with_command(self, cb: UodCommandBuilder) -> UodBuilder:
+        # TODO improve usage by creating UodCommandBuilder and exposing it via a Context
         if cb.name in self.commands.keys():
             raise ValueError(f"Duplicate command name: {cb.name}")
         self.commands[cb.name] = cb

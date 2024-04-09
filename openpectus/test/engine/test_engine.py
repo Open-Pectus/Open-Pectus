@@ -44,7 +44,8 @@ def get_queue_items(q) -> list[Tag]:
 
 
 def create_test_uod() -> UnitOperationDefinitionBase:
-    def reset(cmd: UodCommand, _) -> None:
+    def reset(cmd: UodCommand) -> None: # TODO verify signature at runtime
+    #def reset(cmd: UodCommand, **kvargs) -> None:
         count = cmd.get_iteration_count()
         if count == 0:
             cmd.context.tags.get("Reset").set_value("Reset", time.time())
@@ -52,7 +53,19 @@ def create_test_uod() -> UnitOperationDefinitionBase:
             cmd.context.tags.get("Reset").set_value("N/A", time.time())
             cmd.set_complete()
 
-    def overlap_exec(cmd: UodCommand, _) -> None:
+    def cmd_with_args(cmd: UodCommand, **kvargs) -> None:
+        print("arguments: " + str(kvargs))
+        cmd.set_complete()
+
+    def cmd_arg_parse(args: str | None) -> dict[str, Any] | None:
+        if args is None or args == "":
+            return None
+        result = {}
+        for i, item in enumerate(args.split(",")):
+            result[f"item{i}"] = item.strip()
+        return result
+
+    def overlap_exec(cmd: UodCommand, **kvargs) -> None:
         count = cmd.get_iteration_count()
         if count >= 9:
             cmd.set_complete()
@@ -78,6 +91,9 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_tag(SelectTag("Reset", value="N/A", unit=None, choices=["Reset", "N/A"]))
         .with_tag(Tag("Danger", value=True, unit=None, direction=TagDirection.OUTPUT, safe_value=False))
         .with_command(UodCommand.builder().with_name("Reset").with_exec_fn(reset))
+        .with_command(UodCommand.builder().with_name("CmdWithArgs")
+                      .with_exec_fn(cmd_with_args)
+                      .with_arg_parse_fn(cmd_arg_parse))
         .with_command(UodCommand.builder().with_name("overlap1").with_exec_fn(overlap_exec))
         .with_command(UodCommand.builder().with_name("overlap2").with_exec_fn(overlap_exec))
         .with_command_overlap(['overlap1', 'overlap2'])
@@ -248,6 +264,11 @@ class TestEngine(unittest.TestCase):
         # assert values written to registers
         self.assertEqual(22, hwl.register_values["FT01"])
         self.assertEqual(1, hwl.register_values["Reset"])
+
+    def test_uod_command_w_arguments(self):
+        e = self.engine
+        program = "CmdWithArgs: a, b,c ,  d"
+        run_engine(e, program, 10)
 
     def test_uod_command_can_execute_valid_command(self):
         e = self.engine
