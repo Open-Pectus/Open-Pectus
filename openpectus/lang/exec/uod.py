@@ -70,8 +70,27 @@ class UnitOperationDefinitionBase:
                 except UodValidationError as vex:
                     logging.error(vex.args[0])
 
+        try:
+            self.verify_command_signatures()
+        except UodValidationError as vex:
+            log_fatal("Error in command definition. " + str(vex))
+
         if fatal:
             exit(1)
+
+    def verify_command_signatures(self):
+        import inspect
+
+        for key, builder in self.command_factories.items():
+            if builder.exec_fn is None:
+                raise UodValidationError(f"Command '{key}' must have an execution function")
+            spec = inspect.getfullargspec(builder.exec_fn)
+            # def exec(cmd: UodCommand, **kvargs)"
+            if 'cmd' not in spec.args:
+                raise UodValidationError(f"Execution function for command '{key}' is missing a 'cmd' argument")
+            if spec.varkw is None or spec.varkw != 'kvargs':
+                raise UodValidationError(f"Execution function for command '{key}' is missing a '**kvargs' argument")
+
 
     def has_command_name(self, name: str) -> bool:
         """ Check whether the command name is defined in the Uod """
@@ -128,7 +147,14 @@ INIT_FN = Callable[[], None]
 """ Command initialization method. """
 
 EXEC_FN = Callable[..., None]
-""" Command execution function. Must take UodCommand and **kvargs as inputs. May be invoked multiple times. """
+""" Command execution function. Must take UodCommand and **kvargs as inputs. May be invoked multiple times.
+
+NOTE: The type system does not seem to support describing the real signature (which should be something like
+Callable[[UodCommand, Unpack[CommandArgs]], None]).
+
+For this reason we validate the exec function dynamically during uod validation. This validation check must be
+updated if EXEC_FN changes. It is implemented in UnitOperationDefinitionBase.verify_command_signatures().
+"""
 
 FINAL_FN = Callable[[], None]
 """ Command finalization method. """

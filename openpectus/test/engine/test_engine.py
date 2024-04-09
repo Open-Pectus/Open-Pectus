@@ -44,8 +44,7 @@ def get_queue_items(q) -> list[Tag]:
 
 
 def create_test_uod() -> UnitOperationDefinitionBase:
-    def reset(cmd: UodCommand) -> None: # TODO verify signature at runtime
-    #def reset(cmd: UodCommand, **kvargs) -> None:
+    def reset(cmd: UodCommand, **kvargs) -> None:
         count = cmd.get_iteration_count()
         if count == 0:
             cmd.context.tags.get("Reset").set_value("Reset", time.time())
