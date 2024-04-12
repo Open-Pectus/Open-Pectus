@@ -393,8 +393,10 @@ class Engine(InterpreterContext):
             if cmd_request.kvargs is not None:
                 try:
                     command.init_args(cmd_request.kvargs)
+                    logger.debug(f"Initialized command {cmd_request.name} with arguments {cmd_request.kvargs}")
                 except Exception:
-                    raise Exception(f"Failed to initialize arguments for command '{cmd_request.name}'")
+                    raise Exception(
+                        f"Failed to initialize arguments '{cmd_request.kvargs}' for command '{cmd_request.name}'")
         except ValueError:
             raise NotImplementedError(f"Unknown internal engine command '{cmd_request.name}'")
 
@@ -479,7 +481,9 @@ class Engine(InterpreterContext):
 
         assert uod_command is not None, f"Failed to get uod_command for command '{cmd_name}'"
 
-        parsed_args = uod_command.parse_args(cmd_request.unparsed_args)
+        logger.debug(f"Parsing arguments '{cmd_request.unparsed_args}' for uod command {cmd_name}")
+        parsed_args = uod_command.parse_args(cmd_request.unparsed_args or "")
+
         if parsed_args is None:
             logger.error(f"Invalid argument string: '{cmd_request.unparsed_args}' for command '{cmd_name}'")
             raise ValueError(f"Invalid arguments for command '{cmd_name}'")
@@ -487,7 +491,7 @@ class Engine(InterpreterContext):
         # execute command state flow
         try:
             logger.debug(
-                f"Executing uod command: '{cmd_request.name}' with args '{cmd_request.unparsed_args}', " +
+                f"Executing uod command: '{cmd_request.name}' with parsed args '{parsed_args}', " +
                 f"iteration {uod_command._exec_iterations}")
             if uod_command.is_cancelled():
                 if not uod_command.is_finalized():

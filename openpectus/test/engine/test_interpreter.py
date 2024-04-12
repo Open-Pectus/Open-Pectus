@@ -44,7 +44,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_location("Test location")
         # Readings
         .with_tag(Tag(name="counter", value=0))
-        .with_command(UodCommand.builder().with_name("incr counter").with_exec_fn(incr_counter))
+        .with_command(name="incr counter", exec_fn=incr_counter)
         .build()
     )
 

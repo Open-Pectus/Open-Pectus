@@ -9,7 +9,7 @@ from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand, Uo
 from openpectus.protocol.models import PlotConfiguration, SubPlot, PlotAxis, PlotColorRegion
 
 
-def create_demo_uod() -> UnitOperationDefinitionBase:
+def create() -> UnitOperationDefinitionBase:
     builder = UodBuilder()
     logger = builder.get_logger()
 
@@ -67,7 +67,7 @@ def create_demo_uod() -> UnitOperationDefinitionBase:
         .with_tag(tags.ReadingTag("Category"))
         .with_tag(tags.ReadingTag("Time"))
         .with_tag(tags.SelectTag("Reset", value="N/A", unit=None, choices=['Reset', "N/A"]))
-        .with_command(UodCommand.builder().with_name("Reset").with_exec_fn(reset))
+        .with_command(name="Reset", exec_fn=reset)
         .with_process_value(R.Reading(tag_name="Run Time"))
         .with_process_value(R.Reading(tag_name="FT01"))
         .with_process_value(R.Reading(tag_name="FT02"))
