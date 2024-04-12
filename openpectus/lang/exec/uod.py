@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from inspect import _ParameterKind
 import logging
+import re
 from typing import Any, Callable
 
 from openpectus.engine.commands import ContextEngineCommand, CommandArgs
@@ -71,26 +73,56 @@ class UnitOperationDefinitionBase:
                     logging.error(vex.args[0])
 
         try:
-            self.verify_command_signatures()
+            self.validate_command_signatures()
         except UodValidationError as vex:
             log_fatal("Error in command definition. " + str(vex))
 
         if fatal:
             exit(1)
 
-    def verify_command_signatures(self):
+    def validate_command_signatures(self):
         import inspect
 
         for key, builder in self.command_factories.items():
             if builder.exec_fn is None:
                 raise UodValidationError(f"Command '{key}' must have an execution function")
             spec = inspect.getfullargspec(builder.exec_fn)
-            # def exec(cmd: UodCommand, **kvargs)"
+            signature = inspect.signature(builder.exec_fn)
+            # Expected signature:
+            #   def some_name(cmd: UodCommand, **kvargs)" or
+            #   def some_name(cmd: UodCommand, foo, bar)
             if 'cmd' not in spec.args:
                 raise UodValidationError(f"Execution function for command '{key}' is missing a 'cmd' argument")
-            if spec.varkw is None or spec.varkw != 'kvargs':
-                raise UodValidationError(f"Execution function for command '{key}' is missing a '**kvargs' argument")
 
+            regex_parser = RegexNamedArgumentParser.get_instance(builder.arg_parse_fn)
+            if regex_parser is not None:
+                # The command is using RegexNamedArgumentParser as argument parser. In this case we can validate the exec function
+                # thoroughly, by checking that named arguments to the exec function matches the named groups in the regular expression
+                try:
+                    named_groups = sorted(regex_parser.get_named_groups())
+                except Exception as ex:
+                    raise UodValidationError(
+                        f"Error in command '{key}'. Failed to find named groups in regex: '{regex_parser.regex}'. Ex: {ex}")
+
+                parameters = sorted(list(signature.parameters.keys()))
+                parameters.remove("cmd")
+
+                if parameters == named_groups:
+                    pass
+                elif len(parameters) == 1 and signature.parameters[parameters[0]].kind == _ParameterKind.VAR_KEYWORD:
+                    pass
+                else:
+                    raise UodValidationError(f"""Command '{key}' has an error.
+The parameters for the execution function do not match those defined in the regular expression
+{regex_parser.regex} .
+The expected execution function signature is:
+    def some_name(cmd: UodCommand, {', '.join(named_groups)})""")
+
+            else:
+                # custom arg parsing. we can only check that a ** arg is present if only one positional arg is present
+                if len(spec.args) == 1 and spec.varkw is None:
+                    raise UodValidationError(f"""Command '{key}' has an error.
+The execution function is missing named arguments or a '**kvargs' argument""")
 
     def has_command_name(self, name: str) -> bool:
         """ Check whether the command name is defined in the Uod """
@@ -159,7 +191,7 @@ updated if EXEC_FN changes. It is implemented in UnitOperationDefinitionBase.ver
 FINAL_FN = Callable[[], None]
 """ Command finalization method. """
 
-PARSE_FN = Callable[[str | None], CommandArgs | None]
+PARSE_FN = Callable[[str], CommandArgs | None]
 """ Command argument parse function. Parses a string into a dictionary. Returns None on invalid input. """
 
 
@@ -211,7 +243,7 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
 
         self.context.dispose_command(self)
 
-    def parse_args(self, args: str | None) -> CommandArgs | None:
+    def parse_args(self, args: str) -> CommandArgs | None:
         """ Parse argument input to concrete values. Return None to indicate invalid arguments. """
         if self.arg_parse_fn is None:
             return {}
@@ -220,12 +252,13 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
 
 
 class UodCommandBuilder():
+    """ Used to builds command specifications and as factory to instantiate commands from the specifications. """
     def __init__(self) -> None:
         self.name = ""
         self.init_fn: Callable[[UodCommand], None] | None = None
-        self.exec_fn: Callable[[UodCommand, Any], None] | None = None
+        self.exec_fn: Callable[..., None] | None = None
         self.finalize_fn: Callable[[UodCommand], None] | None = None
-        self.arg_parse_fn: Callable[[str | None], CommandArgs | None] | None = None
+        self.arg_parse_fn: Callable[[str], CommandArgs | None] | None = None
 
     def with_name(self, name: str) -> UodCommandBuilder:
         """ Define the name of the command. Required. """
@@ -255,8 +288,7 @@ class UodCommandBuilder():
         self.finalize_fn = finalize_fn
         return self
 
-    def with_arg_parse_fn(self, arg_parse_fn: Callable[[str | None], CommandArgs | None]) \
-            -> UodCommandBuilder:
+    def with_arg_parse_fn(self, arg_parse_fn: Callable[[str], CommandArgs | None]) -> UodCommandBuilder:
         """ Define an argument parser function. Optional.
 
         The function is given the command argument string from the method and should parse that
@@ -266,7 +298,7 @@ class UodCommandBuilder():
 
         Example::
 
-          def my_command_parse_args(args: str | None) -> dict[str, Any] | None:
+          def my_command_parse_args(args: str) -> dict[str, Any] | None:
             # parse the argument string and return the values as a dictionary.
             return None # if args are invalid.
         """
@@ -274,8 +306,9 @@ class UodCommandBuilder():
         return self
 
     def build(self, uod: UnitOperationDefinitionBase) -> UodCommand:
+        """ Construct the command """
 
-        def arg_parse(args: str | None) -> CommandArgs | None:
+        def arg_parse(args: str) -> CommandArgs | None:
             if self.arg_parse_fn is None:
                 return {}
             return self.arg_parse_fn(args)
@@ -287,13 +320,9 @@ class UodCommandBuilder():
         def execute(args: CommandArgs) -> None:
             if self.exec_fn is not None:
                 try:
-                    return self.exec_fn(c, **args)  # type: ignore
-                except TypeError:
-                    logger.error(
-                        f"Could not call the execution function for the uod command '{self.name}'. " +
-                        "Make sure the function signature is 'def exec(uod: UodCommand, **kvargs)'"
-                    )
-                    raise Exception(f"Execution function type error in uod command '{self.name}'")
+                    return self.exec_fn(c, **args)
+                except TypeError as te:
+                    raise Exception(f"Execution function type error in uod command '{self.name}'") from te
 
         def finalize() -> None:
             if self.finalize_fn is not None:
@@ -414,10 +443,40 @@ class UodBuilder():
             self.base_unit_provider.set(unit, provider_tag_name, provider_block_tag_name)
         return self
 
-    def with_command(self, cb: UodCommandBuilder) -> UodBuilder:
-        # TODO improve usage by creating UodCommandBuilder and exposing it via a Context
+    def with_command(
+            self,
+            name: str,
+            exec_fn: Callable[..., None],
+            init_fn: Callable[[UodCommand], None] | None = None,
+            finalize_fn: Callable[[UodCommand], None] | None = None,
+            arg_parse_fn: Callable[[str], CommandArgs | None] | None = None,
+            ) -> UodBuilder:
+        cb = UodCommandBuilder().with_name(name).with_exec_fn(exec_fn)
+        if init_fn is not None:
+            cb.with_init_fn(init_fn)
+        if finalize_fn is not None:
+            cb.with_finalize_fn(finalize_fn)
+        if arg_parse_fn is not None:
+            cb.with_arg_parse_fn(arg_parse_fn)
         if cb.name in self.commands.keys():
             raise ValueError(f"Duplicate command name: {cb.name}")
+        self.commands[cb.name] = cb
+        return self
+
+    def with_command_regex_arguments(
+            self,
+            name: str,
+            arg_parse_regex: str,
+            exec_fn: Callable[..., None],
+            init_fn: Callable[[UodCommand], None] | None = None,
+            finalize_fn: Callable[[UodCommand], None] | None = None,
+            ) -> UodBuilder:
+        cb = UodCommandBuilder().with_name(name).with_exec_fn(exec_fn).with_arg_parse_fn(
+            RegexNamedArgumentParser(arg_parse_regex).parse)
+        if init_fn is not None:
+            cb.with_init_fn(init_fn)
+        if finalize_fn is not None:
+            cb.with_finalize_fn(finalize_fn)
         self.commands[cb.name] = cb
         return self
 
@@ -451,3 +510,31 @@ class UodBuilder():
         )
 
         return uod
+
+
+class RegexNamedArgumentParser():
+    def __init__(self, regex: str) -> None:
+        self.regex = regex
+
+    def parse(self, args: str) -> dict[str, Any] | None:
+        match = re.search(self.regex, args)
+        if not match:
+            return None
+        return match.groupdict()
+
+    def get_named_groups(self) -> list[str]:
+        # ex: r"(?P<value>[0-9]+[.][0-9]*?|[.][0-9]+|[0-9]+) ?(?P<unit>m2)"
+        result = []
+        p = re.compile(r"\<(?P<name>[a-zA-Z]+)\>")
+        for match in p.finditer(self.regex):
+            result.append(match.group("name"))
+        return result
+
+    @staticmethod
+    def get_instance(parse_func) -> RegexNamedArgumentParser | None:
+        try:
+            instance = getattr(parse_func, "__self__", None)
+            if instance is not None and isinstance(instance, RegexNamedArgumentParser):
+                return instance
+        except Exception:
+            return None

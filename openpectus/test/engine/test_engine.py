@@ -4,6 +4,7 @@ import threading
 import time
 import unittest
 from typing import Any, Generator
+from openpectus.lang.exec.errors import UodValidationError
 from openpectus.lang.exec.tag_lifetime import TagContext
 from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 
@@ -15,7 +16,12 @@ from openpectus.engine.models import EngineCommandEnum, MethodStatusEnum, System
 from openpectus.lang.exec.runlog import RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import Tag, TagDirection
 from openpectus.lang.exec.timer import NullTimer
-from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
+from openpectus.lang.exec.uod import (
+    UnitOperationDefinitionBase,
+    UodCommand,
+    UodBuilder,
+    RegexNamedArgumentParser,
+)
 from openpectus.test.engine.utility_methods import (
     continue_engine, run_engine,
     configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging,
@@ -56,20 +62,22 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         print("arguments: " + str(kvargs))
         cmd.set_complete()
 
-    def cmd_arg_parse(args: str | None) -> dict[str, Any] | None:
-        if args is None or args == "":
+    def cmd_arg_parse(args: str) -> dict[str, Any] | None:
+        if args is None or args == "" or args == "FAIL":
             return None
         result = {}
         for i, item in enumerate(args.split(",")):
             result[f"item{i}"] = item.strip()
         return result
 
+    def cmd_regex(cmd: UodCommand, value, unit) -> None:
+        cmd.context.tags["CmdWithRegex_Area"].set_value(value + unit, time.time())
+        cmd.set_complete()
+
     def overlap_exec(cmd: UodCommand, **kvargs) -> None:
         count = cmd.get_iteration_count()
         if count >= 9:
             cmd.set_complete()
-
-    # TODO def exec_with_args()
 
     return (
         UodBuilder()
@@ -89,13 +97,16 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_tag(ReadingTag("FT01", "L/h"))
         .with_tag(SelectTag("Reset", value="N/A", unit=None, choices=["Reset", "N/A"]))
         .with_tag(Tag("Danger", value=True, unit=None, direction=TagDirection.OUTPUT, safe_value=False))
-        .with_command(UodCommand.builder().with_name("Reset").with_exec_fn(reset))
-        .with_command(UodCommand.builder().with_name("CmdWithArgs")
-                      .with_exec_fn(cmd_with_args)
-                      .with_arg_parse_fn(cmd_arg_parse))
-        .with_command(UodCommand.builder().with_name("overlap1").with_exec_fn(overlap_exec))
-        .with_command(UodCommand.builder().with_name("overlap2").with_exec_fn(overlap_exec))
+        .with_command(name="Reset", exec_fn=reset)
+        .with_command(name="CmdWithArgs", exec_fn=cmd_with_args, arg_parse_fn=cmd_arg_parse)
+        .with_command(name="overlap1", exec_fn=overlap_exec)
+        .with_command(name="overlap2", exec_fn=overlap_exec)
         .with_command_overlap(['overlap1', 'overlap2'])
+        .with_tag(Tag("CmdWithRegex_Area", value=""))
+        .with_command_regex_arguments(
+            name="CmdWithRegexArgs",
+            arg_parse_regex=r"(?P<value>[0-9]+[.][0-9]*?|[.][0-9]+|[0-9]+) ?(?P<unit>m2)",
+            exec_fn=cmd_regex)
         .build()
     )
 
@@ -268,6 +279,86 @@ class TestEngine(unittest.TestCase):
         e = self.engine
         program = "CmdWithArgs: a, b,c ,  d"
         run_engine(e, program, 10)
+
+        self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.OK)
+
+    def test_uod_command_w_arguments_fail(self):
+        e = self.engine
+        program = "CmdWithArgs: FAIL"
+        run_engine(e, program, 10)
+
+        self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
+
+    def test_uod_command_w_regex_arguments(self):
+        e = self.engine
+        program = "CmdWithRegexArgs: 3.14 m2"
+        run_engine(e, program, 10)
+
+        self.assertEqual("3.14m2", e.tags["CmdWithRegex_Area"].get_value())
+
+    def test_RegexNamedArgumentParser_parse(self):
+        regex = r"(?P<value>[0-9]+[.][0-9]*?|[.][0-9]+|[0-9]+) ?(?P<unit>m2)"
+        parser = RegexNamedArgumentParser(regex)
+        result = parser.parse("3.14m2")
+
+        assert result is not None
+        self.assertEqual(2, len(result))
+        self.assertEqual("3.14", result["value"])
+        self.assertEqual("m2", result["unit"])
+
+    def test_RegexNamedArgumentParser_get_named_groups(self):
+        regex = r"(?P<value>[0-9]+[.][0-9]*?|[.][0-9]+|[0-9]+) ?(?P<unit>m2)"
+        parser = RegexNamedArgumentParser(regex)
+        self.assertEqual(['value', 'unit'], parser.get_named_groups())
+
+    def test_uod_verify_command_signatures_regex(self):
+
+        def no_args(cmd: UodCommand):
+            pass
+
+        def kvargs(cmd: UodCommand, **kvargs):
+            pass
+
+        def two_args(cmd: UodCommand, value, unit):
+            pass
+
+        def two_args_bad_names(cmd: UodCommand, one, two):
+            pass
+
+        exec_functions = {
+            'no_args': no_args,
+            'kvargs': kvargs,
+            'two_args': two_args,
+            'two_args_bad_names': two_args_bad_names
+        }
+        regexes = {
+            'two_parms': "(?P<value>[0-9]+[.][0-9]*?|[.][0-9]+|[0-9]+) ?(?P<unit>m2)",
+            'no_parms': ""
+        }
+
+        def test(exec_name, regex_name, expect_success: bool = True):
+            with self.subTest(exec_name + ", " + regex_name + ", " + ("success" if expect_success else "fail")):
+                exec_fn = exec_functions[exec_name]
+                regex = regexes[regex_name]
+                uod = (
+                    UodBuilder()
+                    .with_instrument("foo")
+                    .with_no_hardware()
+                    .with_command_regex_arguments("", regex, exec_fn)
+                    .build()
+                )
+
+                if expect_success:
+                    uod.validate_command_signatures()
+                else:
+                    self.assertRaises(UodValidationError, uod.validate_command_signatures)
+
+        test('kvargs', "two_parms")
+        test('no_args', "no_parms")
+        test('two_args', "two_parms")
+
+        test('no_args', "two_parms", False)
+        test('two_args_bad_names', "two_parms", False)
 
     def test_uod_command_can_execute_valid_command(self):
         e = self.engine
