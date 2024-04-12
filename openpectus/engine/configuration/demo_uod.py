@@ -9,7 +9,7 @@ from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand, Uo
 from openpectus.protocol.models import PlotConfiguration, SubPlot, PlotAxis, PlotColorRegion
 
 
-def create_demo_uod() -> UnitOperationDefinitionBase:
+def create() -> UnitOperationDefinitionBase:
     builder = UodBuilder()
     logger = builder.get_logger()
 
