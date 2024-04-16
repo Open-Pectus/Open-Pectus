@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 
 from openpectus.engine.commands import EngineCommand
 from openpectus.lang.exec.tags import TagValueCollection
-from openpectus.lang.model.pprogram import PBlank, PNode, PProgram
+from openpectus.lang.model.pprogram import PBlank, PInjectedNode, PNode, PProgram
 
 logger = logging.getLogger(__name__)
 
@@ -67,8 +67,10 @@ class RuntimeInfo():
             if isinstance(r.node, PBlank):
                 continue
             if r.name is None:  # TODO document when this would occur
+                if isinstance(r.node, PInjectedNode):
+                    continue
                 node_name = str(r.node) if r.node is not None else "node is None"
-                logger.error(f"Runtime record has empty name. Should this happen? node: {node_name}")
+                logger.error(f"Runtime record has empty name. node: {node_name}. Fix this error or add a rule exception.")
                 continue
 
             if not r.has_state(RuntimeRecordStateEnum.Started):
