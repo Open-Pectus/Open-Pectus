@@ -1319,6 +1319,10 @@
       },
       "ExecutableCommand": {
         "properties": {
+          "command_id": {
+            "type": "string",
+            "title": "Command Id"
+          },
           "command": {
             "type": "string",
             "title": "Command"
@@ -1784,6 +1788,10 @@
       },
       "ProcessValueCommand": {
         "properties": {
+          "command_id": {
+            "type": "string",
+            "title": "Command Id"
+          },
           "name": {
             "type": "string",
             "title": "Name"

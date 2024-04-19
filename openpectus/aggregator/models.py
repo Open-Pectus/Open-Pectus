@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime
 from enum import StrEnum, auto
-from typing import Dict, List
 
 import openpectus.protocol.models as Mdl
 from pydantic import BaseModel
@@ -40,7 +39,7 @@ TagValueType = int | float | str | None
 
 
 class TagsInfo(BaseModel):
-    map: Dict[str, Mdl.TagValue]
+    map: dict[str, Mdl.TagValue]
 
     def get(self, tag_name: str):
         return self.map.get(tag_name)
@@ -75,7 +74,7 @@ class EngineData(BaseModel):
     hardware_str: str = "N/A"
     uod_name: str
     location: str
-    readings: List[Mdl.ReadingInfo] = []
+    readings: list[Mdl.ReadingInfo] = []
     tags_info: TagsInfo = TagsInfo(map={})
     control_state: ControlState = ControlState(is_running=False, is_holding=False, is_paused=False)
     method: Method = Method.empty()

@@ -9,6 +9,7 @@ import type { ProcessValueCommandFreeTextValue } from './ProcessValueCommandFree
 import type { ProcessValueCommandNumberValue } from './ProcessValueCommandNumberValue';
 
 export type ExecutableCommand = {
+    command_id?: string;
     command: string;
     source: CommandSource;
     name?: string;

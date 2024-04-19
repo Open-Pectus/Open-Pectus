@@ -71,7 +71,7 @@ class UnitOperationDefinitionBase:
                     r.match_with_tags(tags)
                 except UodValidationError as vex:
                     logging.error(vex.args[0])
-
+                r.build_commands_list()
         try:
             self.validate_command_signatures()
         except UodValidationError as vex:
