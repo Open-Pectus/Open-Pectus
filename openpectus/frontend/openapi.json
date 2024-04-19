@@ -1329,6 +1329,20 @@
           "name": {
             "type": "string",
             "title": "Name"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProcessValueCommandNumberValue"
+              },
+              {
+                "$ref": "#/components/schemas/ProcessValueCommandFreeTextValue"
+              },
+              {
+                "$ref": "#/components/schemas/ProcessValueCommandChoiceValue"
+              }
+            ],
+            "title": "Value"
           }
         },
         "type": "object",

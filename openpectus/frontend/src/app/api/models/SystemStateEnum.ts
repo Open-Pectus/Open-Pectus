@@ -12,4 +12,5 @@ export enum SystemStateEnum {
     HOLDING = 'Holding',
     WAITING = 'Waiting',
     STOPPED = 'Stopped',
+    RESTARTING = 'Restarting',
 }

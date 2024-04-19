@@ -2,9 +2,7 @@
 import json
 import os
 import subprocess
-from unittest.mock import Mock
 
-from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.aggregator_server import AggregatorServer
 from fastapi.testclient import TestClient
 
@@ -16,7 +14,7 @@ if not (cwd.endswith("openpectus/aggregator") or cwd.endswith("openpectus\\aggre
 # update spec file
 frontend_path = "../frontend"
 openapi_file = os.path.join(frontend_path, "openapi.json")
-print("Generate update openapi spec file " + openapi_file)
+print("Generate/update openapi spec file " + openapi_file)
 client = TestClient(AggregatorServer().fastapi)
 response = client.get("/openapi.json")
 assert response.status_code == 200
