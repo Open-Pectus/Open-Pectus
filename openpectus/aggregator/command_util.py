@@ -122,9 +122,10 @@ def create_commands(tag: Mdl.TagValue, reading: Mdl.ReadingInfo) -> list[Dto.Pro
                     options=[choice for choice in cmd.choice_names]
                 )
             )
-            commands.append(command)
 
         else:
             NotImplementedError("Reading discriminator not implemented: " + reading.discriminator)
+
+        commands.append(command)
 
     return commands

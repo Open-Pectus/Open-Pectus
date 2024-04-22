@@ -53,7 +53,7 @@ class CommantUtilTest(unittest.TestCase):
         self.assertEqual("foo", msg.pcode)
 
 
-    def test_cmd_with_value_Number_float_no_unit(self):        
+    def test_cmd_with_value_Number_float_no_unit(self):
         reading = create_ReadingInfo(ReadingWithEntry(tag_name="foo", entry_data_type="float"))
 
         cmd = Dto.ExecutableCommand(
@@ -74,7 +74,7 @@ class CommantUtilTest(unittest.TestCase):
         assert isinstance(msg, AM.InjectCodeMsg)
         self.assertEqual("foo: 13.5", msg.pcode)
 
-    def test_cmd_with_value_Number_int_unit(self):        
+    def test_cmd_with_value_Number_int_unit(self):
         reading = create_ReadingInfo(ReadingWithEntry(tag_name="bar", entry_data_type="int"))
 
         cmd = Dto.ExecutableCommand(

@@ -90,7 +90,6 @@ class ReadingWithEntry(Reading):
         super().match_with_tags(tags)
 
     def build_commands_list(self):
-        print("build_commands_list ReadingWithEntry " + self.tag_name)
         self.commands.append(ReadingCommand(self.tag_name, self.execute_command_name))
 
 class ReadingWithChoice(Reading):
@@ -126,8 +125,6 @@ class ReadingWithChoice(Reading):
                 self.command_options[choice] = choice
 
     def build_commands_list(self):
-        print("build_commands_list ReadingWithChoice " + self.tag_name)
-
         assert self.command_options is not None
         choices = list(self.command_options.keys())
         command = ReadingCommand(self.tag_name, "(empty)")

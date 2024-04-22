@@ -71,6 +71,8 @@ class UnitOperationDefinitionBase:
                     r.match_with_tags(tags)
                 except UodValidationError as vex:
                     logging.error(vex.args[0])
+
+                # now that tag validation was completed, the command list can be built
                 r.build_commands_list()
         try:
             self.validate_command_signatures()
@@ -322,7 +324,8 @@ class UodCommandBuilder():
                 try:
                     return self.exec_fn(c, **args)
                 except TypeError as te:
-                    raise Exception(f"Execution function type error in uod command '{self.name}'") from te
+                    raise Exception(f"Execution function type error in uod command '{self.name}' with **args '{args}'")\
+                        from te
 
         def finalize() -> None:
             if self.finalize_fn is not None:
@@ -456,7 +459,9 @@ class UodBuilder():
             cb.with_init_fn(init_fn)
         if finalize_fn is not None:
             cb.with_finalize_fn(finalize_fn)
-        if arg_parse_fn is not None:
+        if arg_parse_fn is None:
+            cb.with_arg_parse_fn(defaultArgumentParser)
+        else:
             cb.with_arg_parse_fn(arg_parse_fn)
         if cb.name in self.commands.keys():
             raise ValueError(f"Duplicate command name: {cb.name}")
@@ -510,6 +515,9 @@ class UodBuilder():
         )
 
         return uod
+
+def defaultArgumentParser(args: str) -> CommandArgs:
+    return {'value': args}
 
 
 class RegexNamedArgumentParser():
