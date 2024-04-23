@@ -1319,6 +1319,10 @@
       },
       "ExecutableCommand": {
         "properties": {
+          "command_id": {
+            "type": "string",
+            "title": "Command Id"
+          },
           "command": {
             "type": "string",
             "title": "Command"
@@ -1329,6 +1333,20 @@
           "name": {
             "type": "string",
             "title": "Name"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProcessValueCommandNumberValue"
+              },
+              {
+                "$ref": "#/components/schemas/ProcessValueCommandFreeTextValue"
+              },
+              {
+                "$ref": "#/components/schemas/ProcessValueCommandChoiceValue"
+              }
+            ],
+            "title": "Value"
           }
         },
         "type": "object",
@@ -1770,6 +1788,10 @@
       },
       "ProcessValueCommand": {
         "properties": {
+          "command_id": {
+            "type": "string",
+            "title": "Command Id"
+          },
           "name": {
             "type": "string",
             "title": "Name"

@@ -1,4 +1,5 @@
 from enum import StrEnum
+from typing import Literal
 from openpectus.lang.exec.tags import SystemTagName, TagDirection
 
 SystemTagName = SystemTagName
@@ -32,3 +33,6 @@ class SystemStateEnum(StrEnum):
 class MethodStatusEnum(StrEnum):
     OK = "OK"
     ERROR = "Error"
+
+
+EntryDataType = Literal["str"] | Literal["int"] | Literal["float"] | Literal["auto"]

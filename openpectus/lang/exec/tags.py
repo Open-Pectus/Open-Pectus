@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from enum import StrEnum, auto
+import time
 from typing import Any, Iterable, Set
 
 import pint
@@ -46,7 +47,7 @@ class SystemTagName(StrEnum):
 # Pint has way too many built in to be usable for this and this is simpler than customizing it
 TAG_UNITS = {
     'length': ['m', 'cm'],
-    'mass': ['kg', 'g'],
+    '[mass]': ['kg', 'g'],
     '[time]': ['s', 'min', 'h', 'ms'],
     'flow': ['L/h', 'L/min', 'L/d'],  # Pint parses L/m as liter/meter
     'volume': ['L', 'mL'],
@@ -173,7 +174,7 @@ class Tag(ChangeSubject, TagLifetime):
             raise ValueError("unit must be None or a string")
 
         self.name: str = name
-        self.tick_time = tick_time
+        self.tick_time = tick_time or time.time()
         self.value: TagValueType = value  # Do we need default also? sometimes it is used as safe but are the other uses?
         self.unit: str | None = unit
         self.choices: list[str] | None = None

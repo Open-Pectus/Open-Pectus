@@ -59,14 +59,9 @@ class EngineReporter():
         self.send_tag_updates()
 
     def send_uod_info(self):
-        readings: List[Mdl.ReadingInfo] = []
-        for reading in self.engine.uod.readings:
-            reading_info = Mdl.ReadingInfo(
-                tag_name=reading.tag_name,
-                valid_value_units=reading.valid_value_units,
-                commands=[Mdl.ReadingCommand(name=c.name, command=c.command) for c in reading.commands])
-            readings.append(reading_info)
-
+        readings: List[Mdl.ReadingInfo] = [
+            reading.as_ReadingInfo() for reading in self.engine.uod.readings
+        ]
         msg = EM.UodInfoMsg(
             readings=readings,
             plot_configuration=self.engine.uod.plot_configuration,

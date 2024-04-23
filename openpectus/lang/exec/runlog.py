@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 
 from openpectus.engine.commands import EngineCommand
 from openpectus.lang.exec.tags import TagValueCollection
-from openpectus.lang.model.pprogram import PBlank, PNode, PProgram
+from openpectus.lang.model.pprogram import PBlank, PInjectedNode, PNode, PProgram, PErrorInstruction
 
 logger = logging.getLogger(__name__)
 
@@ -66,9 +66,11 @@ class RuntimeInfo():
                 continue
             if isinstance(r.node, PBlank):
                 continue
-            if r.name is None:  # TODO document when this would occur
+            if r.name is None:
+                if isinstance(r.node, (PInjectedNode, PErrorInstruction)):
+                    continue
                 node_name = str(r.node) if r.node is not None else "node is None"
-                logger.error(f"Runtime record has empty name. Should this happen? node: {node_name}")
+                logger.error(f"Runtime record has empty name. node: {node_name}. Fix this error or add a rule exception.")
                 continue
 
             if not r.has_state(RuntimeRecordStateEnum.Started):
@@ -76,7 +78,7 @@ class RuntimeInfo():
 
             # Usually there is only a single start/complete state pair which is what is needed for a runlog item.
             # But, alas, both uod commands and alarms can be invoked any number of times for which all state
-            # information is placed in the same runtime record. Therefore we need to expand these states into 
+            # information is placed in the same runtime record. Therefore we need to expand these states into
             # seperate run log items.
             if __debug__:
                 # sanity check

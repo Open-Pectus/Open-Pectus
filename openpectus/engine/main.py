@@ -53,14 +53,14 @@ def create_uod(uod_name: str) -> UnitOperationDefinitionBase:
         raise ValueError("Uod is not specified")
 
     uod_module_package = "openpectus.engine.configuration." + uod_name
-    
+
     try:
         uod_module = importlib.import_module(uod_module_package)
         logger.info(f"Imported uod module '{uod_module_package}' from path '{uod_module.__file__}'")
     except Exception as ex:
         raise Exception("Failed to import uod module " + uod_module_package) from ex
 
-    try:        
+    try:
         uod = uod_module.create()
         logger.info("Created uod")
         return uod

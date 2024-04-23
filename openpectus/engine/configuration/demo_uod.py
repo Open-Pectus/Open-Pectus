@@ -5,7 +5,7 @@ from typing import Any
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
 from openpectus.lang.exec import readings as R
 import openpectus.lang.exec.tags_impl as tags
-from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand, UodBuilder
+from openpectus.lang.exec.uod import RegexNumberWithUnit, UnitOperationDefinitionBase, UodCommand, UodBuilder
 from openpectus.protocol.models import PlotConfiguration, SubPlot, PlotAxis, PlotColorRegion
 
 
@@ -21,6 +21,17 @@ def create() -> UnitOperationDefinitionBase:
         elif count == 4:
             cmd.context.tags.get("Reset").set_value("N/A", time())
             cmd.set_complete()
+
+    def test_cmd(cmd: UodCommand, value):
+        print("test_cmd executing with arg: " + value)
+        cmd.context.tags.get("TestInt").set_value(value, time())
+        cmd.set_complete()
+
+    def cmd_regex(cmd: UodCommand, number, number_unit=None):
+        # optional arg is ok when regex's named groups do not include it
+        print("cmd_regex executing with number: " + str(number))
+        print("and number_unit: " + str(number_unit))
+        cmd.set_complete()
 
     def get_plot_configuration() -> PlotConfiguration:
         logger.warn('FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
@@ -54,7 +65,7 @@ def create() -> UnitOperationDefinitionBase:
         builder
         .with_instrument("DemoUod")
         .with_hardware(DemoHardware())
-        .with_location("Demo location")
+        .with_location("Demo location")        
         .with_hardware_register("FT01", RegisterDirection.Read, path='Objects;2:System;2:FT01')
         .with_hardware_register("FT02", RegisterDirection.Read, path='Objects;2:System;2:FT02')
         .with_hardware_register("Category", RegisterDirection.Read, path='Objects;2:System;2:Category')
@@ -65,16 +76,28 @@ def create() -> UnitOperationDefinitionBase:
         .with_tag(tags.ReadingTag("FT01", "L/h"))
         .with_tag(tags.ReadingTag("FT02", "L/h"))
         .with_tag(tags.ReadingTag("Category"))
-        .with_tag(tags.ReadingTag("Time"))
+        .with_tag(tags.ReadingTag("Time", unit=None))
+        .with_tag(tags.Tag("TestInt", value="42"))
+        .with_tag(tags.Tag("TestFloat", value="9.87", unit="kg"))
+        .with_tag(tags.Tag("TestString", value="test"))
         .with_tag(tags.SelectTag("Reset", value="N/A", unit=None, choices=['Reset', "N/A"]))
         .with_command(name="Reset", exec_fn=reset)
+        .with_command(name="TestInt", exec_fn=test_cmd)
         .with_process_value(R.Reading(tag_name="Run Time"))
         .with_process_value(R.Reading(tag_name="FT01"))
+        .with_process_value(R.ReadingWithEntry(tag_name="TestInt"))
+        .with_process_value(R.ReadingWithEntry(tag_name="TestFloat", execute_command_name="TestInt"))
+        .with_process_value(R.ReadingWithChoice(tag_name="TestString", command_options={'A': 'Mark: A', 'B': 'Mark: B'}))
         .with_process_value(R.Reading(tag_name="FT02"))
         .with_process_value(R.Reading(tag_name="Category"))
         .with_process_value(R.Reading(tag_name="Time"))
-        .with_process_value(R.Reading(tag_name="Reset"))
+        .with_process_value(R.ReadingWithChoice(tag_name="Reset", command_options={'Reset': 'Reset'}))
         .with_process_value(R.Reading(tag_name="System State"))
+        .with_command_regex_arguments(
+            name="CmdWithRegexArgs",
+            arg_parse_regex=RegexNumberWithUnit(units=None),
+            #arg_parse_regex=RegexNumberWithUnit(units=['kg']),
+            exec_fn=cmd_regex)
         .with_plot_configuration(get_plot_configuration())
         .build()
     )
@@ -108,6 +131,9 @@ class DemoHardware(HardwareLayerBase):
 
     def write(self, value: Any, r: Register):
         pass
+        # if r.name == "Reset":
+        #     return
+        # print(f"DemoHardware: Wrote value '{value}' to register '{r.name}'")
 
     def connect(self):
         ...
