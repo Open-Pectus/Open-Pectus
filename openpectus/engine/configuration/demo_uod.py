@@ -5,7 +5,7 @@ from typing import Any
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
 from openpectus.lang.exec import readings as R
 import openpectus.lang.exec.tags_impl as tags
-from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand, UodBuilder
+from openpectus.lang.exec.uod import RegexNumberWithUnit, UnitOperationDefinitionBase, UodCommand, UodBuilder
 from openpectus.protocol.models import PlotConfiguration, SubPlot, PlotAxis, PlotColorRegion
 
 
@@ -25,6 +25,12 @@ def create() -> UnitOperationDefinitionBase:
     def test_cmd(cmd: UodCommand, value):
         print("test_cmd executing with arg: " + value)
         cmd.context.tags.get("TestInt").set_value(value, time())
+        cmd.set_complete()
+
+    def cmd_regex(cmd: UodCommand, number, number_unit=None):
+        # optional arg is ok when regex's named groups do not include it
+        print("cmd_regex executing with number: " + str(number))
+        print("and number_unit: " + str(number_unit))
         cmd.set_complete()
 
     def get_plot_configuration() -> PlotConfiguration:
@@ -87,6 +93,11 @@ def create() -> UnitOperationDefinitionBase:
         .with_process_value(R.Reading(tag_name="Time"))
         .with_process_value(R.ReadingWithChoice(tag_name="Reset", command_options={'Reset': 'Reset'}))
         .with_process_value(R.Reading(tag_name="System State"))
+        .with_command_regex_arguments(
+            name="CmdWithRegexArgs",
+            arg_parse_regex=RegexNumberWithUnit(units=None),
+            #arg_parse_regex=RegexNumberWithUnit(units=['kg']),
+            exec_fn=cmd_regex)
         .with_plot_configuration(get_plot_configuration())
         .build()
     )

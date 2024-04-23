@@ -75,12 +75,16 @@ class ReadingWithEntry(Reading):
             tag_name: str,
             entry_data_type: EntryDataType = "auto",
             execute_command_name: str | None = None) -> None:
-        """ Arguments:
+        """ Create a reading with a command that takes an input value from the user.
 
-        - tag_name: str       The tag to get the value from
-        - entry_data_type:    The data type to display in the UI. Default is auto which
-                            uses the type of the tag's value.
-        - execute_command_name:   The command name. Defaults to the name of the tag.
+        Parameters:
+
+            tag_name:
+                The tag to get the value from
+            entry_data_type: optional, default="auto"
+                The data type to display in the UI. Default is auto which uses the type of the tag's value.
+            execute_command_name: optional
+                The command name. Defaults to the name of the tag.
         """
         super().__init__(tag_name, execute_command_name)
         self.discriminator = "reading_with_entry"
@@ -96,19 +100,25 @@ class ReadingWithChoice(Reading):
     """ A reading that is displayed with a list of possible commands. """
 
     def __init__(self, tag_name: str, command_options: dict[str, str] | None = None) -> None:
-        """ Arguments:
+        """ Create a reading with command choices.
 
-        - tag_name: str     The tag to get choices from if command_options are not specified.
-        - command_options   Optional dictionary that maps command names to their pcode implementation.
-                            If not specified, the tag's choices are used as both names and
-                            pcode implementation. If specified, the tag choices are not used and the
-                            tag does not need to have choices defined.
+        Parameters:
+
+            tag_name: str
+                The tag to get value from. The tag's choices are also used as commands, unless
+                command_options are specified.
+            command_options: optional
+                Dictionary that maps command names to their pcode implementation.
+                If not specified, the tag's choices are used as both names and
+                pcode implementation. If specified, the tag's choices are not used and the
+                tag does not need to have choices defined.
         """
         super().__init__(tag_name)
         self.discriminator = "reading_with_choice"
         self.command_options = command_options
 
     def match_with_tags(self, tags: TagCollection):
+        """ Internal, used in validation."""
         super().match_with_tags(tags)
 
         assert self.tag is not None
@@ -125,6 +135,7 @@ class ReadingWithChoice(Reading):
                 self.command_options[choice] = choice
 
     def build_commands_list(self):
+        """ Internal, used during validation. """
         assert self.command_options is not None
         choices = list(self.command_options.keys())
         command = ReadingCommand(self.tag_name, "(empty)")

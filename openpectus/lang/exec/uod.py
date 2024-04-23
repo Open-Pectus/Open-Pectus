@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from inspect import _ParameterKind
+from inspect import _ParameterKind, Parameter
 import logging
 import re
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
 from openpectus.engine.commands import ContextEngineCommand, CommandArgs
 from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
@@ -83,37 +83,66 @@ class UnitOperationDefinitionBase:
             exit(1)
 
     def validate_command_signatures(self):
+        """ Validate the signatures of command exec functions"""
         import inspect
 
         for key, builder in self.command_factories.items():
+            # builder.exec_fn is the function we are validating
             if builder.exec_fn is None:
                 raise UodValidationError(f"Command '{key}' must have an execution function")
-            spec = inspect.getfullargspec(builder.exec_fn)
+
             signature = inspect.signature(builder.exec_fn)
-            # Expected signature:
-            #   def some_name(cmd: UodCommand, **kvargs)" or
-            #   def some_name(cmd: UodCommand, foo, bar)
-            if 'cmd' not in spec.args:
+
+            # 'cmd' is part of the framework and is always required
+            if 'cmd' not in signature.parameters.keys():
                 raise UodValidationError(f"Execution function for command '{key}' is missing a 'cmd' argument")
 
             regex_parser = RegexNamedArgumentParser.get_instance(builder.arg_parse_fn)
             if regex_parser is not None:
-                # The command is using RegexNamedArgumentParser as argument parser. In this case we can validate the exec function
-                # thoroughly, by checking that named arguments to the exec function matches the named groups in the regular expression
+                # The command is using RegexNamedArgumentParser as argument parser. In this case we can validate the exec
+                # function thoroughly by checking that its parameters matches the named groups in the regular expression.
+
+                # Given a regex with named groups ['foo', 'bar'], the expected signature is:
+                #   def some_name(cmd: UodCommand, foo, bar) or
+                #   def some_name(cmd: UodCommand, **kvargs)
+                # However, it can also be a more intricate variation where default values are used
+                # for arguments that may or may not be available depending on the regex...
+                # Like this:
+                #   some_name(cmd: UodCommand, foo, whynot=None, nevertheless=True, bar) or
+                #   some_name(cmd: UodCommand, foo, whynot=None, **myargs)
+                # which are also  both valid.
                 try:
                     named_groups = sorted(regex_parser.get_named_groups())
                 except Exception as ex:
                     raise UodValidationError(
                         f"Error in command '{key}'. Failed to find named groups in regex: '{regex_parser.regex}'. Ex: {ex}")
 
-                parameters = sorted(list(signature.parameters.keys()))
-                parameters.remove("cmd")
+                # Account for each signature parameter and each named group in the regex:
+                parameter_unmatched = False
+                named_groups_unmatched = set(named_groups)
+                # A parameter has to either:
+                for name, p in signature.parameters.items():
+                    # 0) be named "cmd" which is part of the framework
+                    if name == "cmd":
+                        continue
+                    # 1) be matched by a named group in the regex
+                    if name in named_groups:
+                        named_groups_unmatched.discard(name)
+                        continue
+                    # 2) have a default value
+                    if p.default is not Parameter.empty:
+                        named_groups_unmatched.discard(name)
+                        continue
+                    # 3) be a kvargs parameter
+                    if p.kind == _ParameterKind.VAR_KEYWORD:
+                        named_groups_unmatched.clear()
+                        continue
 
-                if parameters == named_groups:
-                    pass
-                elif len(parameters) == 1 and signature.parameters[parameters[0]].kind == _ParameterKind.VAR_KEYWORD:
-                    pass
-                else:
+                    parameter_unmatched = True
+
+                if len(named_groups_unmatched) > 0 or parameter_unmatched:
+                    # Parameter not accounted for. This means we cant provide a value for it when invoking exec_fn
+                    # so we fail the validation                    
                     raise UodValidationError(f"""Command '{key}' has an error.
 The parameters for the execution function do not match those defined in the regular expression
 {regex_parser.regex} .
@@ -121,8 +150,12 @@ The expected execution function signature is:
     def some_name(cmd: UodCommand, {', '.join(named_groups)})""")
 
             else:
-                # custom arg parsing. we can only check that a ** arg is present if only one positional arg is present
-                if len(spec.args) == 1 and spec.varkw is None:
+                # Custom arg parsing. we can only verify that a **kvargs parameter is present
+                # if only one positional arg is present.
+                param_count = len(signature.parameters)
+                last_param_name = list(signature.parameters.keys())[param_count - 1]
+                last_param = signature.parameters[last_param_name]
+                if param_count == 2 and last_param.kind != _ParameterKind.VAR_KEYWORD:
                     raise UodValidationError(f"""Command '{key}' has an error.
 The execution function is missing named arguments or a '**kvargs' argument""")
 
@@ -452,16 +485,35 @@ class UodBuilder():
             exec_fn: Callable[..., None],
             init_fn: Callable[[UodCommand], None] | None = None,
             finalize_fn: Callable[[UodCommand], None] | None = None,
-            arg_parse_fn: Callable[[str], CommandArgs | None] | None = None,
+            arg_parse_fn: Callable[[str], CommandArgs | None] | Literal["default"] | None = "default"
             ) -> UodBuilder:
+        """ Define a custom unit operation command that can be executed from pcode.
+
+        Parameters:
+            name (str):
+                The command name. Used in pcode to refer to the command
+            exec_fn:
+                The function to execute when the command is run. The function will be called
+                once in each engine tick until it is completed. To signal completion, use
+                `cmd.set_complete()`.
+            init_fn, optional:
+                An optional initialization function that is invoked once before the command runs
+            finalize_fn, optional:
+                An optional function that is run once when the command is completed
+            arg_parse_fn, optional:
+                An optional function that is used to parse the command argument in pcode to
+                **kvargs that are given as named arguments to the exec function.
+                The default parsing function passes the pcode argument verbatim with the argument
+                name 'value'. If no parse function is set, no arguments are passed to exec.
+        """
         cb = UodCommandBuilder().with_name(name).with_exec_fn(exec_fn)
         if init_fn is not None:
             cb.with_init_fn(init_fn)
         if finalize_fn is not None:
             cb.with_finalize_fn(finalize_fn)
-        if arg_parse_fn is None:
+        if arg_parse_fn == "default":
             cb.with_arg_parse_fn(defaultArgumentParser)
-        else:
+        elif arg_parse_fn is not None:
             cb.with_arg_parse_fn(arg_parse_fn)
         if cb.name in self.commands.keys():
             raise ValueError(f"Duplicate command name: {cb.name}")
@@ -476,6 +528,23 @@ class UodBuilder():
             init_fn: Callable[[UodCommand], None] | None = None,
             finalize_fn: Callable[[UodCommand], None] | None = None,
             ) -> UodBuilder:
+        """ Define a custom unit operation command with a regular expression as argument parser.
+
+        Parameters:
+            name (str):
+                The command name. Used in pcode to refer to the command
+            arg_parse_regex (str):
+                The regular expression to use for parsing. The expression must use named groups
+                to specify the argument names and values.
+            exec_fn:
+                The function to execute when the command is run. The function will be called
+                once in each engine tick until it is completed. To signal completion, use
+                `cmd.set_complete()`.
+            init_fn, optional:
+                An optional initialization function that is invoked once before the command runs
+            finalize_fn, optional:
+                An optional function that is run once when the command is completed
+        """
         cb = UodCommandBuilder().with_name(name).with_exec_fn(exec_fn).with_arg_parse_fn(
             RegexNamedArgumentParser(arg_parse_regex).parse)
         if init_fn is not None:
@@ -516,7 +585,21 @@ class UodBuilder():
 
         return uod
 
+
 def defaultArgumentParser(args: str) -> CommandArgs:
+    """ The default command argument parser.
+
+    Passes the string argument verbatim to the command exec function as a single argument
+    named `value`.
+
+    E.g. for the command pcode `MyCommand: 87`, `value` will have the value '87'.
+
+    When using this argument parser, the exec function looks like this::
+
+      def exec(cmd: UodCommand, value: str):
+        # implementation here
+        cmd.set_complete()
+    """
     return {'value': args}
 
 
@@ -532,8 +615,9 @@ class RegexNamedArgumentParser():
 
     def get_named_groups(self) -> list[str]:
         # ex: r"(?P<value>[0-9]+[.][0-9]*?|[.][0-9]+|[0-9]+) ?(?P<unit>m2)"
+        # ex2: ' ?(?P<number_unit>kg)'
         result = []
-        p = re.compile(r"\<(?P<name>[a-zA-Z]+)\>")
+        p = re.compile(r"\<(?P<name>([a-zA-Z]|_)+)\>")
         for match in p.finditer(self.regex):
             result.append(match.group("name"))
         return result
@@ -546,3 +630,55 @@ class RegexNamedArgumentParser():
                 return instance
         except Exception:
             return None
+
+
+# Common regular expressions for use with RegexNamedArgumentParser
+
+def RegexNumberWithUnit(units: list[str] | None, non_negative: bool = False) -> str:
+    """ Parses a number with a unit to arguments `number` and `number_unit`. """
+    sign_part = "" if non_negative else "-?"
+    unit_part = " ?(?P<number_unit>" + "|".join(re.escape(unit).replace(r"/", r"\/") for unit in units) + ")" \
+        if units else ""
+    return rf"^\s*(?P<number>{sign_part}[0-9]+[.][0-9]*?|{sign_part}[.][0-9]+|{sign_part}[0-9]+)\s*{unit_part}\s*$"
+
+
+def RegexCategorical(exclusive_options: list[str] | None = None, additive_options: list[str] | None = None) -> str:
+    """ Parses categorical text into an argument named `option`.
+
+    Examples - exclusive::
+
+        regex = RegexCategorical(exclusive_options=["Open", "Closed"])
+
+        self.assertEqual(re.search(regex, "Closed").groupdict(), dict(option="Closed"))
+
+        self.assertEqual(re.search(regex, "VA01"), None)
+
+        self.assertEqual(re.search(regex, "Open").groupdict(), dict(option="Open"))
+
+        self.assertEqual(re.search(regex, "Open+Closed"), None)
+
+
+    Examples - exclusive and additive::
+
+        regex = RegexCategorical(exclusive_options=['Closed'], additive_options=['VA01', 'VA02', 'VA03'])
+
+        self.assertEqual(re.search(regex, "Closed").groupdict(), dict(option="Closed"))
+
+        self.assertEqual(re.search(regex, "Closed+VA01"), None)
+
+        self.assertEqual(re.search(regex, "VA01").groupdict(), dict(option="VA01"))
+
+        self.assertEqual(re.search(regex, "VA01+VA02").groupdict(), dict(option="VA01+VA02"))
+
+        self.assertEqual(re.search(regex, "Open+Closed"), None)
+    """
+    if exclusive_options is None and additive_options is None:
+        raise TypeError("RegexCategorical() missing argument 'exclusive_options' or 'additive_options'.")
+    exclusive_option_part = "|".join(re.escape(option) for option in exclusive_options) if exclusive_options else ""
+    additive_option_part = "|".join(re.escape(option) for option in additive_options) if additive_options else ""
+    return rf"^(?P<option>({exclusive_option_part}|({additive_option_part}|\+)+))\s*$"
+
+def RegexText(allow_empty: bool = False):
+    """ Parses text into an argument named `text`."""
+    allow_empty_part = "*" if allow_empty else "+"
+    return rf"^(?P<text>.{allow_empty_part})$"

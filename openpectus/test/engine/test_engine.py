@@ -21,6 +21,7 @@ from openpectus.lang.exec.uod import (
     UodCommand,
     UodBuilder,
     RegexNamedArgumentParser,
+    RegexNumberWithUnit,
 )
 from openpectus.test.engine.utility_methods import (
     continue_engine, run_engine,
@@ -70,8 +71,8 @@ def create_test_uod() -> UnitOperationDefinitionBase:
             result[f"item{i}"] = item.strip()
         return result
 
-    def cmd_regex(cmd: UodCommand, value, unit) -> None:
-        cmd.context.tags["CmdWithRegex_Area"].set_value(value + unit, time.time())
+    def cmd_regex(cmd: UodCommand, number, number_unit) -> None:
+        cmd.context.tags["CmdWithRegex_Area"].set_value(number + number_unit, time.time())
         cmd.set_complete()
 
     def overlap_exec(cmd: UodCommand, **kvargs) -> None:
@@ -105,7 +106,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_tag(Tag("CmdWithRegex_Area", value=""))
         .with_command_regex_arguments(
             name="CmdWithRegexArgs",
-            arg_parse_regex=r"(?P<value>[0-9]+[.][0-9]*?|[.][0-9]+|[0-9]+) ?(?P<unit>m2)",
+            arg_parse_regex=RegexNumberWithUnit(units=['m2']),
             exec_fn=cmd_regex)
         .build()
     )
@@ -325,15 +326,20 @@ class TestEngine(unittest.TestCase):
         def two_args_bad_names(cmd: UodCommand, one, two):
             pass
 
+        def two_args_def(cmd: UodCommand, value, unit=None):
+            pass
+
         exec_functions = {
             'no_args': no_args,
             'kvargs': kvargs,
             'two_args': two_args,
-            'two_args_bad_names': two_args_bad_names
+            'two_args_bad_names': two_args_bad_names,
+            'two_args_def': two_args_def,
         }
         regexes = {
             'two_parms': "(?P<value>[0-9]+[.][0-9]*?|[.][0-9]+|[0-9]+) ?(?P<unit>m2)",
-            'no_parms': ""
+            'one_parms': "(?P<value>[0-9]+[.][0-9]*?|[.][0-9]+|[0-9]+) ?",
+            'no_parms': "",
         }
 
         def test(exec_name, regex_name, expect_success: bool = True):
@@ -344,7 +350,7 @@ class TestEngine(unittest.TestCase):
                     UodBuilder()
                     .with_instrument("foo")
                     .with_no_hardware()
-                    .with_command_regex_arguments("", regex, exec_fn)
+                    .with_command_regex_arguments("bar", regex, exec_fn)
                     .build()
                 )
 
@@ -356,9 +362,11 @@ class TestEngine(unittest.TestCase):
         test('kvargs', "two_parms")
         test('no_args', "no_parms")
         test('two_args', "two_parms")
+        test('two_args_def', "one_parms")
 
         test('no_args', "two_parms", False)
         test('two_args_bad_names', "two_parms", False)
+        test('two_args', "one_parms", False)
 
     def test_uod_command_can_execute_valid_command(self):
         e = self.engine
