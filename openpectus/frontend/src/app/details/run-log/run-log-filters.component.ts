@@ -13,7 +13,7 @@ import { RunLogActions } from './ngrx/run-log.actions';
     <div class="flex gap-3 items-center flex-wrap justify-end">
       <label class="relative">
         <input type="text" placeholder="Filter Run Log" size="20"
-               class="bg-white border border-gray-300 placeholder:text-gray-400 text-white bg-transparent outline-none rounded p-1 h-8"
+               class="bg-white border border-gray-300 placeholder:text-gray-400 bg-transparent outline-none rounded p-1 h-8"
                #filterInput (input)="filterTextChanged(filterInput.value)">
         <button *ngIf="filterInput.value.length !== 0" class="p-2 codicon codicon-chrome-close absolute right-0"
                 (click)="filterInput.value = ''; filterTextChanged('')"></button>

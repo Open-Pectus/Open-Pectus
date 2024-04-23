@@ -27,7 +27,7 @@ export interface DefaultTableSort<T> {
     <div class="bg-stone-100 rounded-md shadow-lg overflow-hidden">
       <table class="w-full table-fixed border-collapse">
         <thead>
-        <tr class="bg-sky-800 text-white cursor-pointer select-none">
+        <tr class="bg-slate-600 text-white cursor-pointer select-none">
           <th *ngFor="let column of columns" class="px-3 py-2" (click)="setSortByColumn(column)">
             <span>{{ column.header }}</span>
             <ng-container *ngIf="sortColumn === column">

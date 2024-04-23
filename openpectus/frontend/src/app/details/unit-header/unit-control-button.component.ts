@@ -15,7 +15,7 @@ import { DetailsActions } from '../ngrx/details.actions';
             [class.bg-slate-400]="disabled"
             [style.margin]="toggled ? '3px 0 0 2px' : '0 2px 3px 0'"
             [style.background-color]="toggled ? toggledColor : null"
-            [style.box-shadow]="toggled ? null : disabled ? '2.5px 3px #cbd5e1' : '2.5px 3px #0C4A6E'">
+            [style.box-shadow]="toggled ? null : disabled ? '2.5px 3px #cbd5e1' : '2.5px 3px #075985'">
       <span class="codicon" [ngClass]="'codicon-'+iconName"></span>{{ command | titlecase }}
     </button>
   `,
