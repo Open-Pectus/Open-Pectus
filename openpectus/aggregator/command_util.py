@@ -107,7 +107,7 @@ def create_commands(tag: Mdl.TagValue, reading: Mdl.ReadingInfo) -> list[Dto.Pro
                     valid_value_units=reading.valid_value_units
                 )
             else:
-                raise ValueError("Should not happen")
+                raise ValueError("Internal error. Failed to determine entry_data_type")
 
         elif reading.discriminator == "reading_with_choice":
             current_value = str(tag.value)
@@ -124,7 +124,7 @@ def create_commands(tag: Mdl.TagValue, reading: Mdl.ReadingInfo) -> list[Dto.Pro
             )
 
         else:
-            NotImplementedError("Reading discriminator not implemented: " + reading.discriminator)
+            raise NotImplementedError("Reading discriminator not implemented: " + reading.discriminator)
 
         commands.append(command)
 
