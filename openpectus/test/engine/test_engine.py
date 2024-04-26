@@ -368,6 +368,95 @@ class TestEngine(unittest.TestCase):
         test('two_args_bad_names', "two_parms", False)
         test('two_args', "one_parms", False)
 
+    def test_uod_verify_command_signatures_default(self):
+
+        def no_args(cmd: UodCommand):
+            pass
+
+        def kvargs(cmd: UodCommand, **kvargs):
+            pass
+
+        def value_arg(cmd: UodCommand, value):
+            pass
+
+        def value_arg_default(cmd: UodCommand, value=None):
+            pass
+
+        exec_functions = {
+            'no_args': no_args,
+            'kvargs': kvargs,
+            'value_arg': value_arg,
+            'value_arg_default': value_arg_default,
+        }
+
+        def test(exec_name, expect_success: bool = True):
+            with self.subTest(exec_name + ", " + ("success" if expect_success else "fail")):
+                uod = (
+                    UodBuilder()
+                    .with_instrument("foo")
+                    .with_no_hardware()
+                    .with_command("bar", exec_fn=exec_functions[exec_name])
+                    .build()
+                )
+
+                if expect_success:
+                    uod.validate_command_signatures()
+                else:
+                    self.assertRaises(UodValidationError, uod.validate_command_signatures)
+
+        test('kvargs')
+        test('value_arg')
+        test("value_arg_default")
+
+        test('no_args', False)
+
+    def test_uod_invoke_command_signatures(self):
+
+        def no_args(cmd: UodCommand):
+            pass
+
+        def kvargs(cmd: UodCommand, **kvargs):
+            pass
+
+        def value_arg(cmd: UodCommand, value):
+            pass
+
+        def value_arg_default(cmd: UodCommand, value=None):
+            pass
+
+        exec_functions = {
+            'no_args': no_args,
+            'kvargs': kvargs,
+            'value_arg': value_arg,
+            'value_arg_default': value_arg_default,
+        }
+
+        def test(exec_name, parsed_args: dict[str, Any], expect_success: bool = True):
+            with self.subTest(exec_name + ", " + str(parsed_args) + ", " + ("success" if expect_success else "fail")):
+                exec_fn = exec_functions[exec_name]
+                try:
+                    exec_fn(cmd=None, **parsed_args)
+                    if not expect_success:
+                        raise AssertionError("Expected execution error but none occurred")
+                except TypeError:
+                    if expect_success:
+                        raise AssertionError("Expected no execution error but one occurred")
+                except Exception as ex:
+                    raise AssertionError("Did not expect exception") from ex
+
+        test('no_args', {})
+        test('kvargs', {'bar': 1})
+        test('kvargs', {})
+        test('value_arg', {'value': 23})
+        test("value_arg_default", {})
+        test("value_arg_default", {'value': 34})        
+
+        test('no_args', {'bar': 1}, False)
+        test('value_arg', {}, False)
+        test('value_arg', {'foo': 34}, False)
+        test('value_arg', {'value': 1, 'foo': 34}, False)
+        test("value_arg_default", {'foo': 34}, False)
+
     def test_uod_command_can_execute_valid_command(self):
         e = self.engine
         run_engine(e, "", 3)
