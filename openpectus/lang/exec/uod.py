@@ -149,6 +149,21 @@ The parameters for the execution function do not match those defined in the regu
 The expected execution function signature is:
     def some_name(cmd: UodCommand, {', '.join(named_groups)})""")
 
+            elif builder.arg_parse_fn == defaultArgumentParser:
+                # Default argument parser. Require a "value" parameter or a **kvargs parameter:
+                param_count = len(signature.parameters)
+                last_param_name = list(signature.parameters.keys())[param_count - 1]
+                last_param = signature.parameters[last_param_name]
+                if param_count == 1:
+                    raise UodValidationError(f"""Command '{key}' has an error.
+The execution function is using the default argument parser and requires
+either a 'value' argument or a '**kvargs' argument""")
+                if param_count == 2:
+                    if last_param.kind != _ParameterKind.VAR_KEYWORD and last_param_name != "value":
+                        raise UodValidationError(f"""Command '{key}' has an error.
+The execution function is using the default argument parser and requires
+either a 'value' argument or a '**kvargs' argument""")
+
             else:
                 # Custom arg parsing. we can only verify that a **kvargs parameter is present
                 # if only one positional arg is present.
