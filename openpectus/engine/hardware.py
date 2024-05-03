@@ -1,5 +1,5 @@
 from enum import Flag, auto
-from typing import Any, Dict, Sequence
+from typing import Any, Sequence
 from datetime import datetime
 
 
@@ -15,7 +15,7 @@ class Register():
         self._name: str = name
         self._direction: RegisterDirection = direction
         # self._value: Any = None
-        self._options: Dict[str, Any] = options
+        self._options: dict[str, Any] = options
 
     @property
     def name(self):
@@ -26,7 +26,7 @@ class Register():
         return self._direction
 
     @property
-    def options(self) -> Dict[str, Any]:
+    def options(self) -> dict[str, Any]:
         return self._options
 
     def __str__(self):
@@ -72,7 +72,7 @@ class HardwareConnectionStatus():
 class HardwareLayerBase():
     """ Represents the hardware layer """
     def __init__(self) -> None:
-        self.registers: Dict[str, Register] = {}
+        self.registers: dict[str, Register] = {}
         self.connection_status: HardwareConnectionStatus = HardwareConnectionStatus()
 
     def __enter__(self):
