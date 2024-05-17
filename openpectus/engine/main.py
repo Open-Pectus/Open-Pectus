@@ -3,7 +3,7 @@ import logging
 from argparse import ArgumentParser, BooleanOptionalAction
 import importlib
 
-from openpectus import log_setup_colorlog
+from openpectus import log_setup_colorlog, sentry
 from openpectus.engine.engine import Engine
 from openpectus.engine.engine_message_handlers import EngineMessageHandlers
 from openpectus.engine.engine_reporter import EngineReporter
@@ -27,6 +27,9 @@ def get_args():
                         help="Aggregator websocket port number. Default is 9800")
     parser.add_argument("-uod", "--uod", required=False, default="demo_uod", help="The UOD to use")
     parser.add_argument("-validate", "--validate", action=BooleanOptionalAction, help="Run Uod validation and exit")
+    parser.add_argument("-sev", "--sentry_event_level", required=False,
+                        default=sentry.EVENT_LEVEL_DEFAULT, choices=sentry.EVENT_LEVEL_NAMES,
+                        help=f"Minimum log level to send as sentry events. Default is '{sentry.EVENT_LEVEL_DEFAULT}'")
     return parser.parse_args()
 
 
@@ -50,10 +53,10 @@ async def async_main(args):
         logger.error("An hardware related error occurred. Engine cannot start.")
         return
 
-    #sentry.set_engine_uod(uod)
+    sentry.set_engine_uod(uod)
 
     # wrap hwl with error recovery decorator
-    connection_status_tag = engine.tags[SystemTagName.CONNECTION_STATUS]
+    connection_status_tag = engine._system_tags[SystemTagName.CONNECTION_STATUS]
     uod.hwl = ErrorRecoveryDecorator(uod.hwl, ErrorRecoveryConfig(), connection_status_tag)
 
     engine_reporter = EngineReporter(engine, dispatcher)
@@ -131,6 +134,8 @@ def validate_and_exit(uod_name: str):
 
 def main():
     args = get_args()
+
+    sentry.init_engine(args.sentry_event_level)
 
     if args.validate:
         validate_and_exit(args.uod)

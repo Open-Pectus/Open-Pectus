@@ -75,6 +75,15 @@ Install open pectus in the environment:
 pip install -e .
 ```
 
+Set the SENTRY_DSN environment variable (optional):
+To enable the sentry logger, the SENTRY_DSN environment variable needs to be set.
+* Find the value by logging in to https://sentry.io and navigate to `settings/projects/openpectus/keys`
+* Save the value as an environment variable on your developer pc:
+```shell
+setx SENTRY_DSN value
+```
+
+
 ### 2.2.2. Other commands
 **To update an existing conda environment with all dependencies (e.g. when requirements.txt has changed):**
 ```shell
