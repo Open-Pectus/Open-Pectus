@@ -43,6 +43,9 @@ class UnitOperationDefinitionBase:
         self.plot_configuration = plot_configuration
         self.base_unit_provider: BaseUnitProvider = base_unit_provider
 
+    def __str__(self) -> str:
+        return f"UnitOperationDefinition({self.instrument=},{self.location=},hwl={str(self.hwl)})"
+
     def define_register(self, name: str, direction: RegisterDirection, **options):
         assert isinstance(self.hwl, HardwareLayerBase)
         self.hwl.registers[name] = Register(name, direction, **options)

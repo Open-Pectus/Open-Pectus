@@ -33,7 +33,7 @@ class Register():
         return self._options
 
     def __str__(self):
-        return f"Register(name={self._name})"
+        return f"Register({self.name=})"
 
     def __repr__(self):
         return str(self)
@@ -66,6 +66,9 @@ class HardwareLayerBase():
     def tick(self):
         """ Invoked on each tick by engine. """
         pass
+
+    def __str__(self) -> str:
+        return f"HardwareLayer(type={type(self).__name__},registers={','.join(self.registers)})"
 
     @property
     def registers(self) -> dict[str, Register]:
