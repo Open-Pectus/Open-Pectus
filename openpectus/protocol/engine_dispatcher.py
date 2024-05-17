@@ -60,12 +60,16 @@ class EngineDispatcher():
         try:
             resp = httpx.get(aggregator_health_url)
         except httpx.ConnectError as ex:
+            logger.fatal(f"Connection to Aggregator health end point {aggregator_health_url} failed.", exc_info=True)
             print("Connection to Aggregator health end point failed.")
             print(f"Status url: {aggregator_health_url}")
             print(f"Error: {ex}")
             print("OpenPectus Engine cannot start.")
             exit(1)
         if resp.is_error:
+            logger.fatal(
+                f"Aggregator health end point {aggregator_health_url} returned an unsuccessful result: {resp.status_code}.",
+                exc_info=True)
             print("Aggregator health end point returned an unsuccessful result.")
             print(f"Status url: {aggregator_health_url}")
             print(f"HTTP status code returned: {resp.status_code}")

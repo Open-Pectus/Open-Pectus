@@ -80,7 +80,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         if count >= 9:
             cmd.set_complete()
 
-    return (
+    builder = (
         UodBuilder()
         .with_instrument("TestUod")
         .with_hardware(TestHW())
@@ -107,9 +107,11 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_command_regex_arguments(
             name="CmdWithRegexArgs",
             arg_parse_regex=RegexNumberWithUnit(units=['m2']),
-            exec_fn=cmd_regex)
-        .build()
+            exec_fn=cmd_regex) 
     )
+    uod = builder.build()
+    uod.hwl.connect()
+    return uod
 
 
 def create_engine() -> Engine:
@@ -149,19 +151,6 @@ class TestEngineSetup(unittest.TestCase):
         self.assertTrue(len(uod.tags) > 0)
 
         e.cleanup()
-
-    @unittest.skip("not implemented")
-    def test_uod_reading_to_process_values(self):
-        uod = create_test_uod()
-        e = Engine(uod)
-        e._configure()
-        e.cleanup()
-
-        # assert process values match the defined readings
-
-    @unittest.skip("not implemented")
-    def test_load_uod(self):
-        pass
 
 
 class TestEngine(unittest.TestCase):
@@ -1318,6 +1307,14 @@ class TestHW(HardwareLayerBase):
     def write(self, value: Any, r: Register):
         if r.name in self.registers.keys():
             self.register_values[r.name] = value
+
+    @override
+    def connect(self):
+        self._is_connected = True
+
+    @override
+    def disconnect(self):
+        self._is_connected = False
 
 
 class CalculatedLinearTag(Tag):

@@ -1,7 +1,7 @@
 from __future__ import annotations
 import logging
 import time
-from typing import Any, Callable
+from typing import Any
 import unittest
 
 from openpectus.engine.hardware import (
@@ -16,15 +16,15 @@ from openpectus.engine.hardware_error import (
     ErrorRecoveryState,
 )
 from openpectus.engine.models import ConnectionStatusEnum
+from openpectus.lang.exec.tags import SystemTagName, TagCollection
 from openpectus.test.engine.test_engine import TestHW, create_test_uod
 
 
 FORMAT = "%(asctime)-15s %(message)s"
-logging.basicConfig(format='%(asctime)-15s :: %(name)s :: %(levelname)-8s :: %(message)s', datefmt='%Y-%m-%d %H:%M:%S', force=True)
-#logging.basicConfig(format=FORMAT, level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S', force=True)
+logging.basicConfig(format='%(asctime)-15s :: %(name)s :: %(levelname)-8s :: %(message)s', datefmt='%Y-%m-%d %H:%M:%S',
+                    force=True)
 logger = logging.getLogger("openpectus.engine.hardware_error")
 logger.setLevel(logging.DEBUG)
-
 
 
 class TestHardwareLayer(unittest.TestCase):
@@ -54,50 +54,37 @@ class TestHardwareLayer(unittest.TestCase):
 
 class TestHardwareErrorRecovery(unittest.TestCase):
 
-    def create_hardware(
-            self,
-            connect_error_callback: Callable[[Exception], None] | None = None,
-            error_callback:  Callable[[], None] | None = None,
-            fail_callback:  Callable[[], None] | None = None,
-            ) -> tuple[ErrorRecoveryDecorator, ErrorTestHardware]:
-
-        def default_conn_cb(exception: Exception):
-            pass
-
-        def default_cb():
-            pass
-
-        connect_error_callback = connect_error_callback or default_conn_cb
-        error_callback = error_callback or default_cb
-        fail_callback = fail_callback or default_cb
-
+    def create_hardwares(self) -> tuple[ErrorRecoveryDecorator, ErrorTestHardware]:
         hwl = ErrorTestHardware()
         error_config = ErrorRecoveryConfig()
-        #error_config.fail_timeout_seconds
-        return ErrorRecoveryDecorator(hwl, error_config, connect_error_callback, error_callback, fail_callback), hwl
+        connection_status_tag = TagCollection.create_system_tags()[SystemTagName.CONNECTION_STATUS]
+        return ErrorRecoveryDecorator(hwl, error_config, connection_status_tag), hwl
 
+    def test_initial_state_Disconnected(self):
+        decorator, hwl = self.create_hardwares()
+        self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.Disconnected)
+        self.assertEqual(decorator.connection_status_tag.get_value(), ConnectionStatusEnum.Disconnected)
 
     def test_state_Disconnected_connect_ok_Connected(self):
-        decorator, hwl = self.create_hardware()
+        decorator, hwl = self.create_hardwares()
         self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.Disconnected)
 
         decorator.connect()
 
         self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.OK)
-        self.assertEqual(decorator.get_connection_state(), ConnectionStatusEnum.Connected)
-        # self.assertEqual(decorator.get_method_state_error(), False)
+        self.assertEqual(decorator.connection_status_tag.get_value(), ConnectionStatusEnum.Connected)
 
     def test_state_Disconnected_connect_error_Disconnected(self):
-        decorator, hwl = self.create_hardware()
+        decorator, hwl = self.create_hardwares()
         hwl.connect_fail = True
 
-        decorator.connect()
-        self.assertEqual(decorator.get_connection_state(), ConnectionStatusEnum.Disconnected)
-        # self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.Issue)
-        # self.assertEqual(decorator.get_method_state_error(), False)
+        with self.assertRaises(HardwareLayerException):
+            decorator.connect()
+
+        self.assertEqual(decorator.connection_status_tag.get_value(), ConnectionStatusEnum.Disconnected)
 
     def test_state_Disconnected_read_raises(self):
-        decorator, hwl = self.create_hardware()
+        decorator, hwl = self.create_hardwares()
         decorator.connect()
         decorator.state = ErrorRecoveryState.Disconnected
         reg_A = hwl.reg_A
@@ -107,10 +94,10 @@ class TestHardwareErrorRecovery(unittest.TestCase):
         with self.assertRaises(HardwareLayerException):
             decorator.read_batch([reg_A])
 
-    def test_state_Failed_read_raises(self):
-        decorator, hwl = self.create_hardware()
+    def test_state_Error_read_raises(self):
+        decorator, hwl = self.create_hardwares()
         decorator.connect()
-        decorator.state = ErrorRecoveryState.Failure
+        decorator.state = ErrorRecoveryState.Error
         reg_A = hwl.reg_A
 
         with self.assertRaises(HardwareLayerException):
@@ -119,7 +106,7 @@ class TestHardwareErrorRecovery(unittest.TestCase):
             decorator.read_batch([reg_A])
 
     def test_read_error_returns_last_known_good_value_masking_error(self):
-        decorator, hwl = self.create_hardware()
+        decorator, hwl = self.create_hardwares()
         decorator.connect()
 
         reg_A = hwl.reg_A
@@ -132,7 +119,7 @@ class TestHardwareErrorRecovery(unittest.TestCase):
         self.assertEqual(val_A_fail, 3)
 
     def test_read_error_in_state_OK_transitions_to_state_Issue(self):
-        decorator, hwl = self.create_hardware()
+        decorator, hwl = self.create_hardwares()
         decorator.connect()
         self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.OK)
 
@@ -140,10 +127,10 @@ class TestHardwareErrorRecovery(unittest.TestCase):
         _ = decorator.read(hwl.reg_A)
         self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.Issue)
 
-    def test_read_error_in_state_Issue_transitions_to_state_Error(self):
-        decorator, hwl = self.create_hardware()
-        decorator.config.error_timeout_seconds = 1
-        decorator.config.fail_timeout_seconds = 2
+    def test_read_error_in_state_Issue_transitions_to_state_Reconnect(self):
+        decorator, hwl = self.create_hardwares()
+        decorator.config.reconnect_timeout_seconds = 1
+        decorator.config.error_timeout_seconds = 2
         decorator.connect()
         _ = decorator.read(hwl.reg_A)  # make last_known_good value available
         hwl.read_fail = True
@@ -154,12 +141,13 @@ class TestHardwareErrorRecovery(unittest.TestCase):
         time.sleep(1)
 
         _ = decorator.read(hwl.reg_A)
-        self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.Error)
+        self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.Reconnect)
+        self.assertEqual(decorator.connection_status_tag.get_value(), ConnectionStatusEnum.Connected)
 
-    def test_read_error_in_state_Error_transitions_to_state_Failure(self):
-        decorator, hwl = self.create_hardware()
+    def test_read_in_state_Reconnect_transitions_to_state_Error_after_timeout(self):
+        decorator, hwl = self.create_hardwares()
+        decorator.config.reconnect_timeout_seconds = 1
         decorator.config.error_timeout_seconds = 1
-        decorator.config.fail_timeout_seconds = 2
         decorator.connect()
         _ = decorator.read(hwl.reg_A)  # make last_known_good value available
         hwl.read_fail = True
@@ -167,17 +155,15 @@ class TestHardwareErrorRecovery(unittest.TestCase):
         _ = decorator.read(hwl.reg_A)
         time.sleep(1)
         _ = decorator.read(hwl.reg_A)
-        self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.Error)
+        self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.Reconnect)
 
         time.sleep(1)
 
         _ = decorator.read(hwl.reg_A)
-        self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.Failure)
+        self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.Error)
 
     def test_read_success_in_state_Issue_transitions_to_state_OK(self):
-        decorator, hwl = self.create_hardware()
-        decorator.config.error_timeout_seconds = 1
-        decorator.config.fail_timeout_seconds = 2
+        decorator, hwl = self.create_hardwares()
         decorator.connect()
         _ = decorator.read(hwl.reg_A)  # make last_known_good value available
         hwl.read_fail = True
@@ -189,10 +175,10 @@ class TestHardwareErrorRecovery(unittest.TestCase):
         _ = decorator.read(hwl.reg_A)
         self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.OK)
 
-    def test_read_success_in_state_Error_keeps_state_Error(self):
-        decorator, hwl = self.create_hardware()
+    def test_read_success_in_state_Reconnect_keeps_state_Reconnect(self):
+        decorator, hwl = self.create_hardwares()
+        decorator.config.reconnect_timeout_seconds = 1
         decorator.config.error_timeout_seconds = 1
-        decorator.config.fail_timeout_seconds = 2
         decorator.connect()
         _ = decorator.read(hwl.reg_A)  # make last_known_good value available
         hwl.read_fail = True
@@ -200,16 +186,17 @@ class TestHardwareErrorRecovery(unittest.TestCase):
         _ = decorator.read(hwl.reg_A)
         time.sleep(1)
         _ = decorator.read(hwl.reg_A)
-        self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.Error)
+        self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.Reconnect)
 
         hwl.read_fail = False
         _ = decorator.read(hwl.reg_A)
 
-        self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.Error)
+        self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.Reconnect)
+
     # Writes
 
     def test_state_Disconnected_write_raises(self):
-        decorator, hwl = self.create_hardware()
+        decorator, hwl = self.create_hardwares()
         decorator.connect()
         decorator.state = ErrorRecoveryState.Disconnected
         reg_B = hwl.reg_B
@@ -219,10 +206,10 @@ class TestHardwareErrorRecovery(unittest.TestCase):
         with self.assertRaises(HardwareLayerException):
             decorator.write_batch([4], [reg_B])
 
-    def test_state_Failed_write_raises(self):
-        decorator, hwl = self.create_hardware()
+    def test_state_Error_write_raises(self):
+        decorator, hwl = self.create_hardwares()
         decorator.connect()
-        decorator.state = ErrorRecoveryState.Failure
+        decorator.state = ErrorRecoveryState.Error
         reg_B = hwl.reg_B
 
         with self.assertRaises(HardwareLayerException):
@@ -232,7 +219,7 @@ class TestHardwareErrorRecovery(unittest.TestCase):
 
 
     def test_failing_write_masks_error_and_adds_to_pending(self):
-        decorator, hwl = self.create_hardware()
+        decorator, hwl = self.create_hardwares()
         decorator.connect()
         decorator.state = ErrorRecoveryState.OK
         reg_B = hwl.reg_B
@@ -244,8 +231,8 @@ class TestHardwareErrorRecovery(unittest.TestCase):
         self.assertEqual(decorator.pending_writes[reg_B], 3)  # value added to pending
 
 
-    def test_write_ok_after_Issue_writes_pending_values(self):
-        decorator, hwl = self.create_hardware()
+    def test_write_ok_in_state_Issue_writes_pending_values(self):
+        decorator, hwl = self.create_hardwares()
         decorator.connect()
         decorator.state = ErrorRecoveryState.Issue
         hwl.reg_B_value = 2
@@ -257,7 +244,55 @@ class TestHardwareErrorRecovery(unittest.TestCase):
         # applies the pending write to B
         self.assertEqual(hwl.reg_B_value, 3)
 
-    def test_tag_HwErrorCount(self):
+    # Reconnect
+
+    def test_reconnect_is_correctly_backed_off(self):
+        decorator, hwl = self.create_hardwares()
+        decorator.connect()
+        decorator.state = ErrorRecoveryState.Reconnect
+
+        # collect the ticks for which reconnect is called
+        hwl.connect_fail = True  # make all reconnects fail
+        reconnected_ticks = []
+        decorator.reconnecting_callback = lambda : reconnected_ticks.append(decorator.reconnect_tick)
+
+        largest = decorator.reconnect_backoff_ticks[-1]
+        for _ in range(0, 2 * (largest + 1)):
+            decorator.tick()
+
+        expected_ticks = decorator.reconnect_backoff_ticks + [2 * largest]
+
+        # because all reconnects fail, we collected all the backoff ticks
+        self.assertEqual(reconnected_ticks, expected_ticks)
+
+    def test_in_state_Reconnect_reconnect_is_automatically_performed_on_tick(self):
+        decorator, hwl = self.create_hardwares()
+        decorator.config.reconnect_timeout_seconds = 1
+        decorator.config.error_timeout_seconds = 5
+        decorator.connect()
+        _ = decorator.read(hwl.reg_A)  # make last_known_good value available
+        hwl.read_fail = True
+
+        is_reconnecting = False
+
+        def on_reconnecting():
+            nonlocal is_reconnecting
+            is_reconnecting = True
+        decorator.on_reconnecting = on_reconnecting
+
+        _ = decorator.read(hwl.reg_A)
+        time.sleep(1)
+        _ = decorator.read(hwl.reg_A)
+        self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.Reconnect)
+
+        self.assertEqual(is_reconnecting, False)
+
+        for _ in range(1 + decorator.reconnect_backoff_ticks[0]):
+            decorator.tick()
+
+        self.assertEqual(is_reconnecting, True)
+
+    def test_tag_HardwareReconnectCount(self):
         pass
 
 
@@ -299,12 +334,16 @@ class ErrorTestHardware(HardwareLayerBase):
     def connect(self):
         if self.connect_fail:
             raise HardwareLayerException("Connect failed as requested")
-        return super().connect()
+        self._is_connected = True
 
     def disconnect(self):
+        # The order here is tricky. If it fails, we cannot reasonably know
+        # whether self._is_connected is set and to what value. But when
+        # we are using the decorator we don't use this value because the
+        # decorator knows better.
+        self._is_connected = False
         if self.disconnect_fail:
             raise HardwareLayerException("Disconnect failed as requested")
-        return super().disconnect()
 
 
 if __name__ == "__main__":

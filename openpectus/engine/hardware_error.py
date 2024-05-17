@@ -6,6 +6,7 @@ from typing import Any, Callable, Sequence
 
 from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException, Register, RegisterDirection
 from openpectus.engine.models import ConnectionStatusEnum
+from openpectus.lang.exec.tags import Tag
 
 
 logger = logging.getLogger(__name__)
@@ -15,112 +16,98 @@ class ErrorRecoveryState(Enum):
     Disconnected = 0
     """ No connection attempt yet """
     OK = 1
-    """ No problem with hardware connection """
+    """ No problem with the hardware connection """
     Issue = 2
-    """ There may be an issue. A few errors detected. Trying to recover by waiting for success reades or writes"""
-    Error = 3
-    """ Connection is considered lost because of persistent errors. Trying to recover by reconnecting. """
-    Failure = 4
-    """ Hardware connection has failed. Too many errors encountered, recovery not possible """
-
+    """ There may be an issue. A few errors detected. Trying to recover by waiting for success reads/writes
+    while masking errors."""
+    Reconnect = 3
+    """ There is a connection an issue. Trying to recover by reconnecting while still masking errors."""
+    Error = 4
+    """ Connection is lost and reconnection has not been successful. Trying to recover by reconnecting.
+    Errors are no longer masked."""
+   
 
 @dataclass
 class ErrorRecoveryConfig():
-    error_timeout_seconds = 10
-    """ Number of seconds in state Issue before changing to state Error """
-    fail_timeout_seconds = 120
-    """ Number of seconds since state Issue before changing to state Failure """
+    reconnect_timeout_seconds = 10
+    """ Number of seconds in state Issue before changing to state Reconnect """
+    error_timeout_seconds = 5*60*60
+    """ Number of seconds in state Reconnect before changing to state Error """
 
 
 class ErrorRecoveryDecorator(HardwareLayerBase):
-    """ Implements error recovery as a decorator around concrete hardware, uncoupling it from Engine.
+    """ Implements error recovery as a decorator around concrete hardware, without coupling it to Engine.
 
-    Error recovery has the 5 states defined in `ErrorRecoveryState`. It is configured using the time thresholds
+    Error recovery has the 6 states defined in `ErrorRecoveryState`. It is configured using the time thresholds
     defined in `ErrorRecoveryConfig`.
 
-    Once connected, state is `OK`. This state is kept until read or write errors occur (`read()` or `write()`
-    raises `HardwareLayerException`), which causes state to transition to `Issue`. In this state, if a success read/write
-    occurs, state transitions back to `OK`. If no success read/write occurs before `error_timeout_seconds`
-    passes, state is set to `Error`.
+    Once connected, state is `OK`. This state is kept until a read or write error occurs (`read()`, `write()` or
+    one of the batch variants raise `HardwareLayerException`). Such an error causes state to transition to `Issue`.
+    In this state, if a success read/write occurs, state transitions back to `OK`. If no success read/write occurs
+    within a duration of `issue_timeout_seconds`, state is set to `Reconnect`.
 
-    While in states `Issue` and `Error`, any read and write errors are masked by returning last-known-good values for reads
-    and caching values for writes.
+    In state `Reconnect`, reconnect attempts are started. If successful, state is set to `OK`. If not successful
+    within a duration of `error_timeout_seconds`, state is set to `Error`.
 
-    In state `Error`, the connection is considered lost and reconnects are attempted. If successful, state is set to `OK`.
-    If not successful before `fail_timeout_seconds` passes, the connection is considered unrecoverable and state is
-    set to `Failure`.
+    While in states `Issue` and `Reconnect`, any read and write errors are masked by returning last-known-good values for
+    reads and caching values for writes. This means that the Engine (and the user) will not notice the connection loss.
 
-    In the `Failure` state, all reads and writes fail, which the Engine should consider an error and terminate
-    any method running.
+    The one exception to this is uod commands. We have to assume that a uod command cannot execute correctly
+    without hardware connection so we have to fail uod commands. (A possible improvement would be to require uod
+    commands to consider the connection and fail with predefined exception types).
 
+    In state `Error` reconnect attempts continue but errors are no longer masked. The  `Connection Status` tag is set to
+    'Disconnected'. If reconnect is successful, state is set to `OK` and `Connection Status` is set to `Connected`.
 
-    How to restart to leave the Failure state? Do we have to restart the engine? That's not great.
+    The consequence of no longer masking errors, is that the Engine will enter the "paused on error" state where the
+    user can decide whether to continue or not.
 
-    TODO
-    Should probably replace HardwareConnectionStatus
-    Child classes already signal errors to HardwareConnectionStatus like this
+    Note: It is unlikely but possible that errors occur so soon after successful connection that no value is yet available
+    as last-known-good. In this case, a read returns a None value is returned and the error is logged.
 
-        except ConnectionError:
-            self.connection_status.set_not_ok()
-            raise HardwareLayerException(f"Not connected to {self.host}")
-        except asyncua.sync.ThreadLoopNotRunning:
-            raise HardwareLayerException("OPC-UA client is closed.")
-
-    Reconnect:
-    - when can we try this? Is it ok within the read or write cycles? Let's assume this until we know otherwise
-    - can we do this automatically? looks that way. engine._run() calls connect(). We should just call this start instead
-        and have decorator do this
-        
-    TODO : Engine now has to support hardware in disconnected state. So rules must be implemented in Engine;
-        - don't allow method start if hw is disconnected
-        - while running, check error recovery state and stop the run if state is Failure.
-          - maybe dont check this directly but maybe just handle exception in read/write. When using decorator
-            there exceptions should only occur in state Failure in which it is fine to stop any current run.
-    TODO remove connection_status from hwl, including calls
-            self.connection_status.set_not_ok()
-            self.connection_status.set_ok()
-            self.connection_status.register_connection_attempt()
-        in concrete hwls
+    Reconnect note:
+    The default implementation uses the tick() method to detect and execute reconnect. If this takes too long
+    and hurts engine timing, the hardware should instead implement its reconnect via threading.
     """
 
     def __str__(self) -> str:
         return f"ErrorRecoveryDecorator(state={self.state},decoratee={type(self.decorated).__name__})"
 
 
-    def __init__(
-            self,
-            decorated: HardwareLayerBase,
-            config: ErrorRecoveryConfig,
-            connect_error_callback: Callable[[Exception], None],
-            error_callback:  Callable[[], None],
-            fail_callback:  Callable[[], None],
-            ) -> None:
+    def __init__(self, decorated: HardwareLayerBase, config: ErrorRecoveryConfig, connection_status_tag: Tag) -> None:
         super().__init__()
         self.decorated = decorated
         self.config = config
-        self.connect_error_callback = connect_error_callback
-        self.error_callback = error_callback
-        self.fail_callback = fail_callback
+        self.connection_status_tag = connection_status_tag
+        self.connect_error_callback: Callable[[Exception], None] | None = None
+        self.error_callback: Callable[[], None] | None = None
+        self.reconnect_callback: Callable[[], None] | None = None
+        self.reconnecting_callback: Callable[[], None] | None = None
+        self.reconnected_callback: Callable[[], None] | None = None
 
         self.last_known_good_reads: dict[str, Any] = {}
         self.pending_writes: dict[Register, Any] = {}
 
         self.state: ErrorRecoveryState = ErrorRecoveryState.Disconnected
-        self.method_state_error: bool = False
 
         self.last_success_read_write = time.time()
         self.last_success_connect = time.time()
+        self.last_state_reconnect_time = time.time()
+        """ The time of the last transition to state Reconnect"""
+
+        self.reconnect_count = 0
+        self.reconnect_tick = -1
+        # Hardcoded ticks for exponential backoff. Multiples of the largest value are implicitly included
+        self.reconnect_backoff_ticks = [5, 20, 100, 300, 1200, 18000]
 
     def get_recovery_state(self) -> ErrorRecoveryState:
         return self.state
 
-    def get_method_state_error(self) -> bool:
-        return self.method_state_error
+    @property
+    def is_connected(self) -> bool:
+        """ Returns a value indicating whether there is an active connection to the hardware."""
+        return self.state in [ErrorRecoveryState.OK, ErrorRecoveryState.Issue]
 
-    def get_connection_state(self) -> ConnectionStatusEnum:
-        if self.state in [ErrorRecoveryState.Disconnected, ErrorRecoveryState.Failure]:
-            return ConnectionStatusEnum.Disconnected
-        return ConnectionStatusEnum.Connected
 
     def success_read_write(self):
         now = time.time()
@@ -129,6 +116,7 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
         if self.state == ErrorRecoveryState.Issue:
             logger.debug(f"RW success, state transition: {ErrorRecoveryState.Issue} -> {ErrorRecoveryState.OK}")
             self.state = ErrorRecoveryState.OK
+            self.on_ok()
 
     def error_read_write(self):
         now = time.time()
@@ -136,43 +124,93 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
         if self.state == ErrorRecoveryState.OK:
             logger.debug(f"RW error, state transition: {ErrorRecoveryState.OK} -> {ErrorRecoveryState.Issue}")
             self.state = ErrorRecoveryState.Issue
+            self.on_issue()
         elif self.state == ErrorRecoveryState.Issue:
-            if self.last_success_read_write + self.config.error_timeout_seconds < now:
-                logger.debug(f"RW error, state transition: {ErrorRecoveryState.Issue} -> {ErrorRecoveryState.Error}")
+            if self.last_success_read_write + self.config.reconnect_timeout_seconds < now:
+                logger.debug(f"RW error, state transition: {ErrorRecoveryState.Issue} -> {ErrorRecoveryState.Reconnect}")
+                self.state = ErrorRecoveryState.Reconnect
+                self.on_reconnect()
+        elif self.state == ErrorRecoveryState.Reconnect:
+            if self.last_state_reconnect_time + self.config.error_timeout_seconds < now:
+                logger.debug(f"RW error, state transition: {ErrorRecoveryState.Reconnect} -> {ErrorRecoveryState.Error}")
                 self.state = ErrorRecoveryState.Error
                 self.on_error()
-        elif self.state == ErrorRecoveryState.Error:
-            if self.last_success_read_write + self.config.fail_timeout_seconds < now:
-                logger.debug(f"RW error, state transition: {ErrorRecoveryState.Error} -> {ErrorRecoveryState.Failure}")
-                self.state = ErrorRecoveryState.Failure
-                self.on_fail()
+
+    def _is_backoff_tick(self, tick: int) -> bool:
+        if tick in self.reconnect_backoff_ticks:
+            return True
+        last = self.reconnect_backoff_ticks[-1]
+        if tick > last and tick % last == 0:
+            return True
+        return False
+
+    def tick(self):
+        if self.state in [ErrorRecoveryState.Reconnect, ErrorRecoveryState.Error]:
+            self.reconnect_tick += 1
+            if self._is_backoff_tick(self.reconnect_tick):
+                logger.info("Reconnecting")
+                self.on_reconnecting()
+                try:
+                    self.reconnect()
+                    self.reconnect_tick = -1
+                    self.state = ErrorRecoveryState.OK
+                except Exception:
+                    logger.error("Reconnect failed", exc_info=True)
+
+    def _update_connection_status(self):
+        if self.state in [ErrorRecoveryState.Disconnected, ErrorRecoveryState.Error]:
+            value = ConnectionStatusEnum.Disconnected
+        else:
+            value = ConnectionStatusEnum.Connected
+        self.connection_status_tag.set_value(str(value), time.time())
 
     # Callbacks
 
-    def on_connect_error(self, exception: Exception):
-        if self.connect_error_callback is not None:
-            self.connect_error_callback(exception)
+    def on_ok(self):
+        logger.debug("on_ok fired")
+        self.decorated._is_connected = True
+        self._update_connection_status()
+
+    def on_issue(self):
+        logger.debug("on_issue fired")
+        self._update_connection_status()
 
     def on_error(self):
+        logger.debug("on_error fired")
+        self._update_connection_status()
+        self.decorated._is_connected = False
         if self.error_callback is not None:
             self.error_callback()
 
-    def on_fail(self):
-        if self.fail_callback is not None:
-            self.fail_callback()
+    def on_reconnect(self):
+        logger.debug("on_reconnect fired")
+        self.last_state_reconnect_time = time.time()
+
+    def on_reconnecting(self):
+        logger.debug("on_reconnecting fired")
+        if self.reconnecting_callback is not None:
+            self.reconnecting_callback()
+
+    def on_reconnected(self):
+        logger.debug("on_reconnected fired")
+        self._update_connection_status()
+        self.decorated._is_connected = True
+        if self.reconnected_callback is not None:
+            self.reconnected_callback()
 
     # Decorator impl
+
 
     def read(self, r: Register) -> Any:
         if RegisterDirection.Read not in r.direction:
             raise KeyError(f"Cannot read from register {r.name} which has direction {r.direction}")
 
-        if self.state in [ErrorRecoveryState.Disconnected, ErrorRecoveryState.Failure]:
+        if self.state in [ErrorRecoveryState.Disconnected, ErrorRecoveryState.Error]:
             raise HardwareLayerException(f"Cannot read in state {self.state}")
 
-        if self.state == ErrorRecoveryState.Error:
+        if self.state == ErrorRecoveryState.Reconnect:
             # in this state we are reconnecting. we do not want a possible success read to interfere
-            # with reconnection. But we do want a possible transition to Failure so we note an error.
+            # with reconnection. But we do want a possible transition to Error so we note an error.
             self.error_read_write()
             if r.name in self.last_known_good_reads.keys():
                 return self.last_known_good_reads[r.name]
@@ -194,10 +232,10 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
             if RegisterDirection.Read not in r.direction:
                 raise KeyError(f"Cannot read from register {r.name} which has direction {r.direction}")
 
-        if self.state in [ErrorRecoveryState.Disconnected, ErrorRecoveryState.Failure]:
+        if self.state in [ErrorRecoveryState.Disconnected, ErrorRecoveryState.Error]:
             raise HardwareLayerException(f"Cannot read in state {self.state}")
 
-        if self.state == ErrorRecoveryState.Error:
+        if self.state == ErrorRecoveryState.Reconnect:
             self.error_read_write()
             return self._get_last_known_good_values(registers)
 
@@ -225,10 +263,10 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
         if RegisterDirection.Write not in r.direction:
             raise KeyError(f"Cannot write to register {r.name} which has direction {r.direction}")
 
-        if self.state in [ErrorRecoveryState.Disconnected, ErrorRecoveryState.Failure]:
+        if self.state in [ErrorRecoveryState.Disconnected, ErrorRecoveryState.Error]:
             raise HardwareLayerException(f"Cannot write in state {self.state}")
 
-        if self.state == ErrorRecoveryState.Error:
+        if self.state == ErrorRecoveryState.Reconnect:
             self.error_read_write()
             self.pending_writes[r] = value
             return
@@ -239,7 +277,7 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
             self._write_pending_values(except_names=[r.name])
         except HardwareLayerException:
             self.error_read_write()
-            if self.state == ErrorRecoveryState.Failure:
+            if self.state == ErrorRecoveryState.Error:
                 return
             self.pending_writes[r] = value
 
@@ -249,10 +287,10 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
             if RegisterDirection.Write not in r.direction:
                 raise KeyError(f"Cannot write to register {r.name} which has direction {r.direction}")
 
-        if self.state in [ErrorRecoveryState.Disconnected, ErrorRecoveryState.Failure]:
+        if self.state in [ErrorRecoveryState.Disconnected, ErrorRecoveryState.Error]:
             raise HardwareLayerException(f"Cannot write in state {self.state}")
 
-        if self.state == ErrorRecoveryState.Error:
+        if self.state == ErrorRecoveryState.Reconnect:
             self.error_read_write()
             for value, r in zip(values, registers):
                 self.pending_writes[r] = value
@@ -264,7 +302,7 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
             self._write_pending_values(except_names=[r.name for r in registers])
         except HardwareLayerException:
             self.error_read_write()
-            if self.state == ErrorRecoveryState.Failure:
+            if self.state == ErrorRecoveryState.Error:
                 return
             for value, r in zip(values, registers):
                 self.pending_writes[r] = value
@@ -287,17 +325,13 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
 
             if self.state == ErrorRecoveryState.Disconnected:
                 self.state = ErrorRecoveryState.OK
+                self.on_ok()
 
             self.connection_state = ConnectionStatusEnum.Connected
             self.last_success_connect = time.time()
         except HardwareLayerException:
-            self.error_read_write()
+            logger.error("Decorated connect failed", exc_info=True)
+            raise
 
     def disconnect(self):
         return self.decorated.disconnect()
-
-    # could be a way to do it
-    # def maintain_connection(self):
-    #     if self.state == ErrorRecoveryState.Error:
-    #         try:
-    #             self.decoratee.connect()

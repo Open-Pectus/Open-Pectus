@@ -1,6 +1,9 @@
 from enum import Flag, auto
+import logging
 from typing import Any, Sequence
-from datetime import datetime
+
+
+logger = logging.getLogger(__name__)
 
 
 class RegisterDirection(Flag):
@@ -47,33 +50,11 @@ class HardwareLayerException(Exception):
         return self.message
 
 
-class HardwareConnectionStatus():
-    """ Represents the hardware connection status. """
-    def __init__(self):
-        self.is_connected: bool = False
-        self.connection_attempt_time = None
-        self.successful_connection_time = None
-
-    def set_ok(self):
-        self.is_connected = True
-        self.successful_connection_time = datetime.now()
-
-    def set_not_ok(self):
-        self.is_connected = False
-
-    def register_connection_attempt(self):
-        self.connection_attempt_time = datetime.now()
-
-    @property
-    def status(self):
-        return self.is_connected
-
-
 class HardwareLayerBase():
     """ Represents the hardware layer """
     def __init__(self) -> None:
         self.registers: dict[str, Register] = {}
-        self.connection_status: HardwareConnectionStatus = HardwareConnectionStatus()
+        self._is_connected: bool = False
 
     def __enter__(self):
         """ Allow use as context manager. """
@@ -81,6 +62,15 @@ class HardwareLayerBase():
 
     def __exit__(self, type, value, traceback):
         self.disconnect()
+
+    def tick(self):
+        """ Invoked on each tick by engine. """
+        pass
+
+    @property
+    def is_connected(self) -> bool:
+        """ Returns a value indicating whether there is an active connection to the hardware."""
+        return self._is_connected
 
     def read(self, r: Register) -> Any:
         if RegisterDirection.Read not in r.direction:
@@ -111,12 +101,33 @@ class HardwareLayerBase():
             self.write(v, r)
 
     def connect(self):
-        """ Connect to hardware. Throw HardwareLayerException on error. """
-        self.connection_status.register_connection_attempt()
+        """ Connect to hardware. Throw HardwareLayerException on error. Abstract method. """
+        raise NotImplementedError()
 
     def disconnect(self):
-        """ Connect to hardware. Throw HardwareLayerException on error. """
-        self.connection_status.set_not_ok()
+        """ Connect to hardware. Throw HardwareLayerException on error. Abstract method. """
+        raise NotImplementedError()
+
+    def reconnect(self):
+        """ Perform a reconnect. The default implementation just disconnects (ignoring any error)
+        and connects. Override to perform a more advanced reconnect, like using a thread.
+        """
+        logger.info("Reconnecting")
+        try:
+            logger.info("Reconnect - disconnect")
+            self.disconnect()
+        except Exception:
+            logger.error("Reconnect - disconnect error", exc_info=True)
+            # we continue - disconnect should not fail but even if it does,
+            # connect might still work
+
+        try:
+            self.connect()
+            logger.info("Reconnect complete")
+        except Exception:
+            logger.error("Reconnect - connect error", exc_info=True)
+            raise HardwareLayerException("Reconnect attempt failed")
+
 
     def validate_offline(self):
         """ Perform checks that verify that the registers definition is valid. Raise on validation error. """
@@ -131,6 +142,7 @@ class NullHardware(HardwareLayerBase):
     """ Represents no hardware. Used by tests. """
     def __init__(self) -> None:
         super().__init__()
+        self._is_connected = True
 
     def read(self, r: Register) -> Any:
         return None
