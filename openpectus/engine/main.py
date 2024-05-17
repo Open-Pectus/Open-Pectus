@@ -50,7 +50,7 @@ async def async_main(args):
         logger.error("An hardware related error occurred. Engine cannot start.")
         return
 
-    sentry.set_engine_uod(uod)
+    #sentry.set_engine_uod(uod)
 
     # wrap hwl with error recovery decorator
     connection_status_tag = engine.tags[SystemTagName.CONNECTION_STATUS]
