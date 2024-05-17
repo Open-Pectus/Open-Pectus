@@ -33,7 +33,7 @@ class Register():
         return self._options
 
     def __str__(self):
-        return f"Register({self.name=})"
+        return f"Register(name={self.name})"
 
     def __repr__(self):
         return str(self)
