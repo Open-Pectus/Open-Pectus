@@ -7,7 +7,8 @@ from openpectus import log_setup_colorlog
 from openpectus.engine.engine import Engine
 from openpectus.engine.engine_message_handlers import EngineMessageHandlers
 from openpectus.engine.engine_reporter import EngineReporter
-from openpectus.lang.exec.tags import TagCollection
+from openpectus.engine.hardware_error import ErrorRecoveryConfig, ErrorRecoveryDecorator
+from openpectus.lang.exec.tags import SystemTagName, TagCollection
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 from openpectus.protocol.engine_dispatcher import EngineDispatcher
 
@@ -37,6 +38,24 @@ async def async_main(args):
         engine.uod.instrument,
         engine.uod.location)
     await dispatcher.connect_websocket_async()
+
+    try:
+        logger.info("Verifying hardware configuration and connection")
+        uod.validate_configuration()
+        uod.hwl.validate_offline()
+        uod.hwl.connect()
+        uod.hwl.validate_online()
+        logger.info("Hardware validation successful")
+    except Exception:
+        logger.error("An hardware related error occurred. Engine cannot start.")
+        return
+
+    #sentry.set_engine_uod(uod)
+
+    # wrap hwl with error recovery decorator
+    connection_status_tag = engine.tags[SystemTagName.CONNECTION_STATUS]
+    uod.hwl = ErrorRecoveryDecorator(uod.hwl, ErrorRecoveryConfig(), connection_status_tag)
+
     engine_reporter = EngineReporter(engine, dispatcher)
     args.engine_reporter = engine_reporter
     _ = EngineMessageHandlers(engine, dispatcher)
@@ -56,13 +75,13 @@ def create_uod(uod_name: str) -> UnitOperationDefinitionBase:
 
     try:
         uod_module = importlib.import_module(uod_module_package)
-        logger.info(f"Imported uod module '{uod_module_package}' from path '{uod_module.__file__}'")
+        logger.info(f"Imported uod '{uod_name}' from path '{uod_module.__file__}'")
     except Exception as ex:
         raise Exception("Failed to import uod module " + uod_module_package) from ex
 
     try:
         uod = uod_module.create()
-        logger.info("Created uod")
+        logger.info(f"Created uod: {uod}")
         return uod
     except Exception as ex:
         raise Exception("Failed to create uod instance") from ex

@@ -6,12 +6,14 @@ from queue import Empty, Queue
 from typing import Iterable, List, Literal, Set
 from uuid import UUID
 from openpectus.engine.internal_commands import (
-    create_internal_command, get_running_internal_command, dispose_command_map, register_commands
+    create_internal_command,
+    get_running_internal_command,
+    dispose_command_map,
+    register_commands
 )
-
-from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException, RegisterDirection
+from openpectus.engine.hardware import HardwareLayerException, RegisterDirection
 from openpectus.engine.method_model import MethodModel
-from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum, SystemTagName
+from openpectus.engine.models import ConnectionStatusEnum, MethodStatusEnum, SystemStateEnum, EngineCommandEnum, SystemTagName
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.errors import EngineNotInitializedError, InterpretationError, InterpretationInternalError
@@ -160,7 +162,6 @@ class Engine(InterpreterContext):
         return self.runtimeinfo.get_runlog()
 
     def _configure(self):
-        self.uod.validate_configuration()
         self.uod.tags.add_listener(self._uod_listener)
         self._system_tags.add_listener(self._system_listener)
         self._tags = self._system_tags.merge_with(self.uod.tags)
@@ -178,13 +179,7 @@ class Engine(InterpreterContext):
 
         assert self.uod is not None
         assert self.uod.hwl is not None
-
-        try:
-            self.uod.hwl.connect()
-            logger.info("Hardware connected")
-        except HardwareLayerException:
-            logger.error("Hardware connect error", exc_info=True)
-            return  # TODO retry/reconnect
+        assert self.uod.hwl.is_connected, "Hardware is not connected. Engine cannot start"
 
         self._running = True
         self._tick_timer.start()
@@ -192,11 +187,11 @@ class Engine(InterpreterContext):
         self.tag_context.emit_on_engine_configured()
 
     def stop(self):
+        logger.info("Engine shutting down")
         try:
             self.uod.hwl.disconnect()
         except HardwareLayerException:
             logger.error("Disconnect hardware error", exc_info=True)
-            # TODO handle disconnected state
 
         self._running = False
         self._tick_timer.stop()
@@ -214,12 +209,14 @@ class Engine(InterpreterContext):
         self._tick_time = time.time()
         self._tick_number += 1
 
-        # Perform certain things in first tick
+        # Perform certain actions in first tick
         if self._tick_number == 0:
             # System tags are initialized before first tick, without a tick time, and some are never updated, so
             # provide first tick time as a "default".
             for tag in self._system_tags.tags.values():
                 tag.tick_time = self._tick_time
+
+        self.uod.hwl.tick()
 
         # read
         self.read_process_image()
@@ -263,7 +260,7 @@ class Engine(InterpreterContext):
             register_values = self.uod.hwl.read_batch(registers)
         except HardwareLayerException:
             logger.error("Hardware read_batch error", exc_info=True)
-            # TODO handle disconnected state
+            self.stop()
             return
 
         for i, r in enumerate(registers):
@@ -433,6 +430,9 @@ class Engine(InterpreterContext):
         assert self.uod.has_command_name(cmd_name), f"Expected Uod to have command named '{cmd_name}'"
         assert cmd_request.exec_id is not None, f"Expected uod command request '{cmd_name}' to have exec_id"
 
+        if not self.uod.hwl.is_connected:
+            raise HardwareLayerException("The hardware is not currently connected. Uod command was not allowed to start.")
+
         record = self.interpreter.runtimeinfo.get_exec_record(cmd_request.exec_id)
 
         # cancel any existing instance with same name
@@ -596,7 +596,7 @@ class Engine(InterpreterContext):
         return p.build_model()
 
     def write_process_image(self):
-        hwl: HardwareLayerBase = self.uod.hwl
+        hwl = self.uod.hwl
 
         register_values = []
         registers = [r for r in hwl.registers.values() if RegisterDirection.Write in r.direction]
@@ -609,7 +609,7 @@ class Engine(InterpreterContext):
             hwl.write_batch(register_values, registers)
         except HardwareLayerException:
             logger.error("Hardware write_batch error", exc_info=True)
-            # TODO handle disconnected state
+            self.stop()
 
     def schedule_execution(self, name: str, exec_id: UUID | None = None, **kvargs):
         """ Execute named command from interpreter """

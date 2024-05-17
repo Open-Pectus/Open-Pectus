@@ -28,6 +28,7 @@ class SystemTagName(StrEnum):
     CLOCK = "Clock"
     SYSTEM_STATE = "System State"
     METHOD_STATUS = "Method Status"
+    CONNECTION_STATUS = "Connection Status"
     RUN_ID = "Run Id"
 
     # these tags are only present if defined in uod.
@@ -310,6 +311,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
             (SystemTagName.CLOCK, 0.0, "s"),
             (SystemTagName.SYSTEM_STATE, "Stopped", None),
             (SystemTagName.METHOD_STATUS, "OK", None),
+            (SystemTagName.CONNECTION_STATUS, "Disconnected", None),
             (SystemTagName.RUN_ID, None, None)
         ]
         for name, value, unit in defaults:
@@ -319,6 +321,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
 
 
 class TagValue():
+    """ Read-only and immutable representation of a tag value. """
     def __init__(
             self,
             name: str,
@@ -335,8 +338,6 @@ class TagValue():
         self.value = value
         self.unit = unit
         self.direction = direction
-
-    """ Read-only and immutable representation of a tag value. """
 
 
 class TagValueCollection(Iterable[TagValue]):

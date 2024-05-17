@@ -35,4 +35,9 @@ class MethodStatusEnum(StrEnum):
     ERROR = "Error"
 
 
+class ConnectionStatusEnum(StrEnum):
+    Disconnected = "Disconnected"
+    Connected = "Connected"
+
+
 EntryDataType = Literal["str"] | Literal["int"] | Literal["float"] | Literal["auto"]

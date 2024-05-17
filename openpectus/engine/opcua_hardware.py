@@ -188,9 +188,10 @@ class OPCUA_Hardware(HardwareLayerBase):
             opcua_node = self._register_to_node(r)
             return opcua_node.read_value()
         except ConnectionError:
-            self.connection_status.set_not_ok()
+            logger.error("Not connected", exc_info=True)
             raise HardwareLayerException(f"Not connected to {self.host}")
         except asyncua.sync.ThreadLoopNotRunning:
+            logger.error("Thread loop not running", exc_info=True)
             raise HardwareLayerException("OPC-UA client is closed.")
 
     def read_batch(self, registers: Sequence[Register]) -> list[Any]:
@@ -204,9 +205,10 @@ class OPCUA_Hardware(HardwareLayerBase):
                 nodes = self._registers_to_nodes(register_batch)
                 values += self._client.read_values(nodes)
         except ConnectionError:
-            self.connection_status.set_not_ok()
+            logger.error("Not connected", exc_info=True)
             raise HardwareLayerException(f"Not connected to {self.host}")
         except asyncua.sync.ThreadLoopNotRunning:
+            logger.error("Thread loop not running", exc_info=True)
             raise HardwareLayerException("OPC-UA client is closed.")
         return values
 
@@ -270,9 +272,10 @@ class OPCUA_Hardware(HardwareLayerBase):
             data_value = asyncua.ua.DataValue(value)
             opcua_node.write_attribute(asyncua.ua.AttributeIds.Value, data_value)
         except ConnectionError:
-            self.connection_status.set_not_ok()
+            logger.error("Not connected", exc_info=True)
             raise HardwareLayerException(f"Not connected to {self.host}")
         except asyncua.sync.ThreadLoopNotRunning:
+            logger.error("Thread loop not running", exc_info=True)
             raise HardwareLayerException("OPC-UA client is closed.")
 
     def write_batch(self, values: Sequence[Any], registers: Sequence[Register]):
@@ -300,15 +303,15 @@ class OPCUA_Hardware(HardwareLayerBase):
                                                        batched(data_values, self._max_nodes_per_write)):
                 write_attributes(node_id_batch, data_value_batch, asyncua.ua.AttributeIds.Value)
         except ConnectionError:
-            self.connection_status.set_not_ok()
+            logger.error("Not connected", exc_info=True)
             raise HardwareLayerException(f"Not connected to {self.host}")
         except asyncua.sync.ThreadLoopNotRunning:
+            logger.error("Thread loop not running", exc_info=True)
             raise HardwareLayerException("OPC-UA client is closed.")
 
     def connect(self):
         """ Connect to OPC-UA server. """
         logger.info(f"Attempting to connect to {self.host}")
-        self.connection_status.register_connection_attempt()
         if self._client:
             self._client.disconnect()
             # Remove potential stale references to nodes on re-connect
@@ -318,11 +321,9 @@ class OPCUA_Hardware(HardwareLayerBase):
         try:
             self._client.connect()
         except ConnectionRefusedError:
-            logger.info(f"Unable to connect to {self.host}")
-            self.connection_status.set_not_ok()
+            logger.error(f"Unable to connect to {self.host}")
             raise HardwareLayerException(f"Unable to connect to {self.host}")
-        logger.info(f"Connected to {self.host}")
-        self.connection_status.set_ok()
+        logger.info(f"Connected to {self.host}")        
         self._query_server_operation_limits()
 
     def disconnect(self):
@@ -330,7 +331,6 @@ class OPCUA_Hardware(HardwareLayerBase):
         logger.info(f"Disconnecting from {self.host}")
         if self._client:
             self._client.disconnect()
-        self.connection_status.set_not_ok()
 
     def __str__(self):
         return f"OPCUA_Hardware(host={self.host})"
