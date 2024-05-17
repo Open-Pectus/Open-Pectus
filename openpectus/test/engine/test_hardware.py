@@ -74,6 +74,16 @@ class TestHardwareErrorRecovery(unittest.TestCase):
         self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.OK)
         self.assertEqual(decorator.connection_status_tag.get_value(), ConnectionStatusEnum.Connected)
 
+    def test_initialize_with_connected_hwl(self):
+        hwl = ErrorTestHardware()
+        hwl._is_connected = True
+        error_config = ErrorRecoveryConfig()
+        connection_status_tag = TagCollection.create_system_tags()[SystemTagName.CONNECTION_STATUS]
+        decorator = ErrorRecoveryDecorator(hwl, error_config, connection_status_tag)
+
+        self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.OK)
+        self.assertEqual(decorator.is_connected, True)
+
     def test_state_Disconnected_connect_error_Disconnected(self):
         decorator, hwl = self.create_hardwares()
         hwl.connect_fail = True
@@ -292,8 +302,10 @@ class TestHardwareErrorRecovery(unittest.TestCase):
 
         self.assertEqual(is_reconnecting, True)
 
-    def test_tag_HardwareReconnectCount(self):
-        pass
+    def test_registers_are_delegated(self):
+        decorator, hwl = self.create_hardwares()
+        self.assertEqual(hwl.reg_A, decorator.registers["A"])
+        self.assertEqual(len(hwl.registers), len(decorator.registers))
 
 
 class ErrorTestHardware(HardwareLayerBase):

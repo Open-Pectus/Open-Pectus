@@ -13,7 +13,7 @@ from openpectus.engine.internal_commands import (
 )
 from openpectus.engine.hardware import HardwareLayerException, RegisterDirection
 from openpectus.engine.method_model import MethodModel
-from openpectus.engine.models import ConnectionStatusEnum, MethodStatusEnum, SystemStateEnum, EngineCommandEnum, SystemTagName
+from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum, SystemTagName
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.errors import EngineNotInitializedError, InterpretationError, InterpretationInternalError

@@ -100,6 +100,11 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
         # Hardcoded ticks for exponential backoff. Multiples of the largest value are implicitly included
         self.reconnect_backoff_ticks = [5, 20, 100, 300, 1200, 18000]
 
+        # support initialization with connected hwl, which is the default case
+        if decorated.is_connected:
+            self.state = ErrorRecoveryState.OK
+            self.on_ok()
+
     def get_recovery_state(self) -> ErrorRecoveryState:
         return self.state
 
@@ -108,6 +113,9 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
         """ Returns a value indicating whether there is an active connection to the hardware."""
         return self.state in [ErrorRecoveryState.OK, ErrorRecoveryState.Issue]
 
+    @property
+    def registers(self):
+        return self.decorated.registers
 
     def success_read_write(self):
         now = time.time()

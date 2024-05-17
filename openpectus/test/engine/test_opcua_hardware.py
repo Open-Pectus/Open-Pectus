@@ -132,7 +132,7 @@ class TestOPCUAHardware(unittest.TestCase):
         registers = {"FT01": FT01}
 
         hwl = OPCUA_Hardware(host=opcua_host)
-        hwl.registers = registers
+        hwl._registers = registers
 
         # Connect and read
         with OPCUATestServer(registers=registers):
@@ -151,7 +151,7 @@ class TestOPCUAHardware(unittest.TestCase):
         test_server = OPCUATestServer(registers=registers)
 
         hwl = OPCUA_Hardware(host=opcua_host)
-        hwl.registers = registers
+        hwl._registers = registers
         with test_server:
             hwl.connect()  # Connection is opened but not closed subsequently
 
@@ -161,7 +161,7 @@ class TestOPCUAHardware(unittest.TestCase):
         test_server = OPCUATestServer(registers=registers)
 
         hwl = OPCUA_Hardware(host="opc.tcp://127.0.0.1:48401/")
-        hwl.registers = registers
+        hwl._registers = registers
         with test_server, hwl:
             self.assertEqual(0.0, hwl.read(FT01))
 
@@ -171,7 +171,7 @@ class TestOPCUAHardware(unittest.TestCase):
         test_server = OPCUATestServer(registers=registers)
 
         hwl = OPCUA_Hardware(host=opcua_host)
-        hwl.registers = registers
+        hwl._registers = registers
         with test_server, hwl:
             hwl.write(10.2, PU01)
         self.assertIn((PU01.options["path"], 10.2,), test_server.server_write_events)
@@ -183,7 +183,7 @@ class TestOPCUAHardware(unittest.TestCase):
         test_server = OPCUATestServer(registers=registers)
 
         hwl = OPCUA_Hardware(host=opcua_host)
-        hwl.registers = registers
+        hwl._registers = registers
         with test_server, hwl:
             values = hwl.read_batch(list(registers.values()))
             for value in values:
@@ -197,7 +197,7 @@ class TestOPCUAHardware(unittest.TestCase):
         values_to_write = [float(i) for i in range(len(registers))]
 
         hwl = OPCUA_Hardware(host=opcua_host)
-        hwl.registers = registers
+        hwl._registers = registers
         with test_server, hwl:
             hwl.write_batch(values_to_write, list(registers.values()))
         for register, value_to_write in zip(registers.values(), values_to_write):
@@ -213,7 +213,7 @@ class TestOPCUAHardware(unittest.TestCase):
         test_server = OPCUATestServer(registers={"FT01": FT01_totalizer_1_total_proper})
 
         hwl = OPCUA_Hardware(host=opcua_host)
-        hwl.registers = {"FT01": FT01_totalizer_1_total_with_typo}
+        hwl._registers = {"FT01": FT01_totalizer_1_total_with_typo}
         with test_server, hwl:
             with self.assertRaises(HardwareLayerException) as context:
                 hwl.read(FT01_totalizer_1_total_with_typo)
@@ -240,7 +240,7 @@ class TestOPCUAHardware(unittest.TestCase):
         test_server = OPCUATestServer(registers=registers)
 
         hwl = OPCUA_Hardware(host=opcua_host)
-        hwl.registers = registers
+        hwl._registers = registers
 
         with test_server, hwl:
             hwl.write_batch([1, 1, 1], list(registers.values()))
@@ -257,7 +257,7 @@ class TestOPCUAHardware(unittest.TestCase):
         test_server = OPCUATestServer(registers={"FT01": FT01_type_ok})
 
         hwl = OPCUA_Hardware(host=opcua_host)
-        hwl.registers = {"FT01": FT01_type_not_ok}
+        hwl._registers = {"FT01": FT01_type_not_ok}
         with test_server, hwl:
             with self.assertRaises(HardwareLayerException):
                 hwl.validate_offline()
@@ -280,7 +280,7 @@ class TestOPCUAHardware(unittest.TestCase):
             "Bool": bool_register,
         }
         hwl = OPCUA_Hardware(host="opc.tcp://127.0.0.1:48401/")
-        hwl.registers = registers
+        hwl._registers = registers
         with test_server, hwl:
             with self.assertRaises(HardwareLayerException):
                 hwl.validate_online()
@@ -293,7 +293,7 @@ class TestOPCUAHardware(unittest.TestCase):
         FT01 = Register("FT01", RegisterDirection.Write, path="Objects/2:FT01")
         registers = {"FT01": FT01}
         hwl = OPCUA_Hardware(host="opc.tcp://127.0.0.1:48401/")
-        hwl.registers = registers
+        hwl._registers = registers
         with test_server, hwl:
             with self.assertRaises(HardwareLayerException):
                 hwl.validate_online()
@@ -304,7 +304,7 @@ class TestOPCUAHardware(unittest.TestCase):
         test_server = OPCUATestServer(registers=registers)
 
         hwl = OPCUA_Hardware(host="opc.tcp://127.0.0.1:48401/")
-        hwl.registers = registers
+        hwl._registers = registers
         with test_server:
             hwl.connect()
             hwl.read(FT01)
@@ -349,7 +349,7 @@ def attempt_to_use_hardware():
                  }
 
     hwl = OPCUA_Hardware(host="opc.tcp://192.168.0.1:4840/")
-    hwl.registers = registers
+    hwl._registers = registers
     hwl.validate_offline()
     with hwl:
         hwl.validate_online()

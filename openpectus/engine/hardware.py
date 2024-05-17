@@ -51,9 +51,9 @@ class HardwareLayerException(Exception):
 
 
 class HardwareLayerBase():
-    """ Represents the hardware layer """
+    """ Base class for hardware layer implementations. """
     def __init__(self) -> None:
-        self.registers: dict[str, Register] = {}
+        self._registers: dict[str, Register] = {}
         self._is_connected: bool = False
 
     def __enter__(self):
@@ -68,17 +68,22 @@ class HardwareLayerBase():
         pass
 
     @property
+    def registers(self) -> dict[str, Register]:
+        return self._registers
+
+    @property
     def is_connected(self) -> bool:
-        """ Returns a value indicating whether there is an active connection to the hardware."""
+        """ Returns a value indicating whether there is an active connection to the hardware. Virtual property. """
         return self._is_connected
 
     def read(self, r: Register) -> Any:
+        """ Read single register value. Abstract method. """
         if RegisterDirection.Read not in r.direction:
             raise HardwareLayerException(f"Attempt to read unreadable register {r}.")
         raise NotImplementedError
 
     def read_batch(self, registers: Sequence[Register]) -> list[Any]:
-        """ Read batch of register values. Override to provide efficient implementation """
+        """ Read batch of register values. Override to provide efficient implementation. Virtual method. """
         for r in registers:
             if RegisterDirection.Read not in r.direction:
                 raise HardwareLayerException(f"Attempt to read unreadable register {r}.")
@@ -88,12 +93,13 @@ class HardwareLayerBase():
         return values
 
     def write(self, value: Any, r: Register) -> None:
+        """ Write single register value. Abstract method. """
         if RegisterDirection.Write not in r.direction:
             raise HardwareLayerException(f"Attempt to write unwritable register {r}.")
         raise NotImplementedError
 
     def write_batch(self, values: Sequence[Any], registers: Sequence[Register]):
-        """ Write batch of register values. Override to provide efficient implementation """
+        """ Write batch of register values. Override to provide efficient implementation. Virtual method. """
         for r in registers:
             if RegisterDirection.Write not in r.direction:
                 raise HardwareLayerException(f"Attempt to write unwritable register {r}.")
@@ -101,12 +107,12 @@ class HardwareLayerBase():
             self.write(v, r)
 
     def connect(self):
-        """ Connect to hardware. Throw HardwareLayerException on error. Abstract method. """
-        raise NotImplementedError()
+        """ Connect to hardware. Throw HardwareLayerException on error. Virtual method. """
+        self._is_connected = True
 
     def disconnect(self):
-        """ Connect to hardware. Throw HardwareLayerException on error. Abstract method. """
-        raise NotImplementedError()
+        """ Connect to hardware. Throw HardwareLayerException on error. Virtual method. """
+        self._is_connected = False
 
     def reconnect(self):
         """ Perform a reconnect. The default implementation just disconnects (ignoring any error)
@@ -130,11 +136,11 @@ class HardwareLayerBase():
 
 
     def validate_offline(self):
-        """ Perform checks that verify that the registers definition is valid. Raise on validation error. """
+        """ Perform checks that verify that the registers definition is valid. Raise on validation error. Virtual method. """
         pass
 
     def validate_online(self):
-        """ Perform checks that verify that the register definition works. Raise on validation error. """
+        """ Perform checks that verify that the register definition works. Raise on validation error.Virtual method. """
         pass
 
 
