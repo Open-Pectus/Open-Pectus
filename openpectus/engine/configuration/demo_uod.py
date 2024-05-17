@@ -134,9 +134,3 @@ class DemoHardware(HardwareLayerBase):
         # if r.name == "Reset":
         #     return
         # print(f"DemoHardware: Wrote value '{value}' to register '{r.name}'")
-
-    def connect(self):
-        ...
-
-    def disconnect(self):
-        ...
