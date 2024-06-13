@@ -2,6 +2,7 @@ import asyncio
 import logging
 from argparse import ArgumentParser, BooleanOptionalAction
 import importlib
+import time
 
 from openpectus import log_setup_colorlog, sentry
 from openpectus.engine.engine import Engine
@@ -41,7 +42,7 @@ async def async_main(args):
         f"{args.aggregator_hostname}:{args.aggregator_port}",
         engine.uod.instrument,
         engine.uod.location)
-    await dispatcher.connect_websocket_async()
+    await dispatcher.connect_async()
 
     try:
         logger.info("Verifying hardware configuration and connection")
@@ -151,8 +152,14 @@ def main():
         loop.run_until_complete(async_main(args))
     except KeyboardInterrupt:
         loop.run_until_complete(close_async(args.engine_reporter))
+    except ConnectionError:
+        logger.warning("ConnectionError. Trying new connection??")
+        time.sleep(2)
     finally:
-        print('Engine stopped')
+        pass
+        logger.error("Engine stopped by exception", exc_info=True)
+        # loop.run_until_complete(close_async(args.engine_reporter))
+        # print('Engine stopped')
 
 
 if __name__ == "__main__":

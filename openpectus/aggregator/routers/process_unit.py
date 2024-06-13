@@ -21,11 +21,19 @@ def map_pu(engine_data: Mdl.EngineData) -> Dto.ProcessUnit:
 
     state = Dto.ProcessUnitState.Ready(state=Dto.ProcessUnitStateEnum.READY)
     if engine_data.system_state is not None and engine_data.system_state.value == Mdl.SystemStateEnum.Running:
-        state = Dto.ProcessUnitState.InProgress(state=Dto.ProcessUnitStateEnum.IN_PROGRESS,
-                                                progress_pct=0)  # TODO: how do we know the progress_pct?
+        state = Dto.ProcessUnitState.InProgress(
+            state=Dto.ProcessUnitStateEnum.IN_PROGRESS,
+            progress_pct=0  # TODO: how do we know the progress_pct?
+        )
+    elif engine_data.connection_faulty:
+        state = Dto.ProcessUnitState.NotOnline(
+            state=Dto.ProcessUnitStateEnum.NOT_ONLINE,
+            last_seen_date=engine_data.last_modified
+        )
     elif engine_data.run_data.interrupted_by_error:
-        state = Dto.ProcessUnitState.Error(state=Dto.ProcessUnitStateEnum.ERROR)
-        # TODO: how do we detect engine is not online?
+        state = Dto.ProcessUnitState.Error(
+            state=Dto.ProcessUnitStateEnum.ERROR
+        )
 
     unit = Dto.ProcessUnit(
         id=engine_data.engine_id or "(error)",
@@ -33,8 +41,8 @@ def map_pu(engine_data: Mdl.EngineData) -> Dto.ProcessUnit:
         state=state,
         location=engine_data.location,
         runtime_msec=engine_data.runtime.value if (
-            engine_data.runtime is not None and isinstance(engine_data.runtime.value, int))
-        else 0,
+            engine_data.runtime is not None and isinstance(engine_data.runtime.value, int)
+        ) else 0,
         current_user_role=Dto.UserRole.ADMIN,
     )
     return unit
@@ -54,8 +62,8 @@ def get_units(agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[Dto.Pr
     for engine_data in agg.get_all_registered_engine_data():
         unit = map_pu(engine_data)
         units.append(unit)
+        # we could possibly append some units that have recent runs as NotOnline
     return units
-
 
 @router.get("/process_unit/{engine_id}/process_values")
 def get_process_values(

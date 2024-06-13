@@ -4,6 +4,7 @@ from logging.handlers import QueueHandler
 from queue import Empty, SimpleQueue
 from typing import List
 
+from openpectus.protocol.engine_dispatcher import EngineDispatcherBase
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
 import openpectus.protocol.models as Mdl
@@ -12,7 +13,6 @@ from openpectus.lang.exec.runlog import RunLogItem
 from openpectus.lang.exec.tags import TagValue
 from openpectus.lang.exec.uod import logger as uod_logger
 from openpectus.engine.engine import logger as engine_logger
-from openpectus.protocol.engine_dispatcher import EngineDispatcher
 
 logger = logging.getLogger(__name__)
 
@@ -22,11 +22,16 @@ logging_handler.setLevel(logging.WARN)
 uod_logger.addHandler(logging_handler)
 engine_logger.addHandler(logging_handler)
 
+MAX_SIZE_TagsUpdatedMsg = 100
+""" The maximum number of tags to include in a single TagsUpdatedMsg message """
+
+
 class EngineReporter():
-    def __init__(self, engine: Engine, dispatcher: EngineDispatcher) -> None:
+    def __init__(self, engine: Engine, dispatcher: EngineDispatcherBase) -> None:
         self.dispatcher = dispatcher
         self.engine = engine
         self.engine.run()
+        self._init_succeeded = False
 
     async def stop_async(self):
         await self.dispatcher.disconnect_async()
@@ -34,46 +39,66 @@ class EngineReporter():
 
     async def run_loop_async(self):
         try:
-            init_succeeded = False
-            while not init_succeeded:
-                init_succeeded = self.send_uod_info()
-                if init_succeeded:
-                    self.notify_initial_tags()
-                if not init_succeeded:
+            valid_uod_info_sent = False
+            while not self._init_succeeded:
+                valid_uod_info_sent = self.send_uod_info()
+                if valid_uod_info_sent:
+                    await self.notify_initial_tags()
+                    self._init_succeeded = True
+                else:
+                    logger.error(
+                        "Failed to send valid uod info. Connection to aggregator is not fully initialized. Retrying...")
+                if not self._init_succeeded:
                     await asyncio.sleep(10)
 
             while True:
                 await asyncio.sleep(1)
-                self.send_tag_updates()
-                self.send_runlog()
-                self.send_control_state()
-                self.send_method_state()
-                self.send_error_log()
+                await self.send_tag_updates()
+                await self.send_runlog()
+                await self.send_control_state()
+                await self.send_method_state()
+                await self.send_error_log()
         except asyncio.CancelledError:
             return
         except Exception:
             logger.error("Unhandled exception in run_loop_async", exc_info=True)
+            logger.info("Waiting - then trying disconnect")
+            await asyncio.sleep(3)
+            try:
+                await self.dispatcher.disconnect_async()
+            except Exception:
+                logger.error("Error disconnecting", exc_info=True)
+            logger.info("Waiting - then trying reconnect")
+            await asyncio.sleep(3)
+            try:
+                await self.dispatcher.connect_async()
+            except Exception:
+                logger.critical("Diapatcher connect failed", exc_info=True)
+                exit(7)
 
-    def notify_initial_tags(self):
+    async def notify_initial_tags(self):
         self.engine.notify_initial_tags()
-        self.send_tag_updates()
+        await self.send_tag_updates()
 
-    def send_uod_info(self):
+    async def send_uod_info(self):
         readings: List[Mdl.ReadingInfo] = [
-            reading.as_ReadingInfo() for reading in self.engine.uod.readings
+            reading.as_reading_info() for reading in self.engine.uod.readings
         ]
         msg = EM.UodInfoMsg(
             readings=readings,
             plot_configuration=self.engine.uod.plot_configuration,
             hardware_str=str(self.engine.uod.hwl))
 
-        response = self.dispatcher.post(msg)
-        return not isinstance(response, M.ErrorMessage)
+        try:
+            response = await self.dispatcher.post_async(msg)
+            return not isinstance(response, M.ErrorMessage)
+        except Exception:
+            return False
 
-    def send_tag_updates(self):
+    async def send_tag_updates(self):
         tags = []
         try:
-            for _ in range(100):
+            for _ in range(MAX_SIZE_TagsUpdatedMsg):
                 tag = self.engine.tag_updates.get_nowait()
                 assert tag.tick_time is not None, f'tick_time is None for tag {tag.name}'
                 tags.append(Mdl.TagValue(
@@ -87,9 +112,9 @@ class EngineReporter():
             pass
         if len(tags) > 0:
             msg = EM.TagsUpdatedMsg(tags=tags)
-            self.dispatcher.post(msg)
+            await self.dispatcher.post_async(msg)
 
-    def send_runlog(self):
+    async def send_runlog(self):
         tag_names: list[str] = []
         for reading in self.engine.uod.readings:
             tag_names.append(reading.tag_name)
@@ -119,9 +144,9 @@ class EngineReporter():
             id=runlog.id,
             runlog=Mdl.RunLog(lines=list(map(to_line, runlog.items)))
         )
-        self.dispatcher.post(msg)
+        await self.dispatcher.post_async(msg)
 
-    def send_error_log(self):
+    async def send_error_log(self):
         log: Mdl.ErrorLog = Mdl.ErrorLog(entries=[])
         while not logging_queue.empty():
             log_entry = logging_queue.get_nowait()
@@ -130,17 +155,17 @@ class EngineReporter():
                 created_time=log_entry.created,
                 severity=log_entry.levelno))
         if len(log.entries) != 0:
-            self.dispatcher.post(EM.ErrorLogMsg(log=log))
+            await self.dispatcher.post_async(EM.ErrorLogMsg(log=log))
 
-    def send_control_state(self):
+    async def send_control_state(self):
         msg = EM.ControlStateMsg(control_state=Mdl.ControlState(
             is_running=self.engine._runstate_started,
             is_holding=self.engine._runstate_holding,
             is_paused=self.engine._runstate_paused
         ))
-        self.dispatcher.post(msg)
+        await self.dispatcher.post_async(msg)
 
-    def send_method_state(self):
+    async def send_method_state(self):
         state = self.engine.calculate_method_state()
         msg = EM.MethodStateMsg(method_state=state)
-        self.dispatcher.post(msg)
+        await self.dispatcher.post_async(msg)

@@ -36,6 +36,7 @@ class MethodStatusEnum(StrEnum):
 
 
 class ConnectionStatusEnum(StrEnum):
+    """ Defines status for the connectedness of the Engine-Hardware connection. """
     Disconnected = "Disconnected"
     Connected = "Connected"
 

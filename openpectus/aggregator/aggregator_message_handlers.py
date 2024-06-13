@@ -22,12 +22,12 @@ class AggregatorMessageHandlers:
     async def handle_RegisterEngineMsg(self, register_engine_msg: EM.RegisterEngineMsg) -> AM.RegisterEngineReplyMsg:
         """ Registers engine """
         engine_id = self.aggregator.create_engine_id(register_engine_msg)
-        if self.aggregator.dispatcher.has_engine_id(engine_id):
+        if self.aggregator.dispatcher.has_connected_engine_id(engine_id):
             logger.error(
                 f"""Registration failed for engine_id {engine_id}. An engine with that engine_id already
                 has a websocket connection. """
             )
-            return AM.RegisterEngineReplyMsg(success=False)
+            return AM.RegisterEngineReplyMsg(success=False, engine_id=engine_id)
 
         # TODO consider how to handle registrations
         # - disconnect/reconnect should work
@@ -37,13 +37,15 @@ class AggregatorMessageHandlers:
 
         # initialize client data
         if not self.aggregator.has_registered_engine_id(engine_id):
-            self.aggregator.from_engine.register_engine_data(Mdl.EngineData(
-                engine_id=engine_id,
-                computer_name=register_engine_msg.computer_name,
-                uod_name=register_engine_msg.uod_name,
-                location=register_engine_msg.location,
-                engine_version=register_engine_msg.engine_version
-            ))
+            self.aggregator.from_engine.register_engine_data(
+                Mdl.EngineData(
+                    engine_id=engine_id,
+                    computer_name=register_engine_msg.computer_name,
+                    uod_name=register_engine_msg.uod_name,
+                    location=register_engine_msg.location,
+                    engine_version=register_engine_msg.engine_version
+                )
+            )
 
         logger.debug(f"Registration successful of client {engine_id}")
         return AM.RegisterEngineReplyMsg(success=True, engine_id=engine_id)

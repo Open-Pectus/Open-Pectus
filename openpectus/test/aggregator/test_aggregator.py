@@ -37,7 +37,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
         channel.close.assert_called()
 
         # registering while not registered before should succceed
-        resultMessage = await dispatcher._dispatch_post(register_engine_msg)
+        resultMessage = await dispatcher.dispatch_post(register_engine_msg)
         assert isinstance(resultMessage, AM.RegisterEngineReplyMsg)
         self.assertEqual(resultMessage.success, True)
 
@@ -46,13 +46,13 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
         channel.close.assert_not_called()
 
         # registering while already registered and still connected should fail
-        resultMessage = await dispatcher._dispatch_post(register_engine_msg)
+        resultMessage = await dispatcher.dispatch_post(register_engine_msg)
         assert isinstance(resultMessage, AM.RegisterEngineReplyMsg)
         self.assertEqual(resultMessage.success, False)
 
         # registering while already registered, but after disconnect should succeed
         await self.disconnectRpc(dispatcher, engine_id)
-        resultMessage = await dispatcher._dispatch_post(register_engine_msg)
+        resultMessage = await dispatcher.dispatch_post(register_engine_msg)
         assert isinstance(resultMessage, AM.RegisterEngineReplyMsg)
         self.assertEqual(resultMessage.success, True)
 

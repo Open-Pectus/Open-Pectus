@@ -1,5 +1,3 @@
-from typing import List
-
 import openpectus.protocol.messages as Msg
 import openpectus.protocol.models as Mdl
 
@@ -11,36 +9,30 @@ ErrorMessage = Msg.ErrorMessage
 
 
 class AggregatorMessage(Msg.MessageBase):
+    """ Marker class that indicates a protocol message sent by Aggregator to Engine. 
+
+    On the Engine side, they are handled by EngineMessageHandlers.
+    """
     pass
 
 
 class RegisterEngineReplyMsg(AggregatorMessage):
+    """ Reply to a RegisterEngineMsg from engine. """
     success: bool
     engine_id: str | None = None
 
 
-class UnregisteredEngineErrorMsg(Msg.ErrorMessage):
-    pass
-
-
 class InvokeCommandMsg(AggregatorMessage):
+    """ Request from user to invoke a command. """
     name: str = ""
     arguments: str | None = None
 
 
 class InjectCodeMsg(AggregatorMessage):
+    """ Request from user to inject pcode. """
     pcode: str
 
 
-class TagSpec(AggregatorMessage):
-    tag_name: str
-    tag_unit: str | None
-
-
-# class UodSpecMsg(AggregatorMessage):
-#     name: str
-#     tags: List[TagSpec] = []
-
-
 class MethodMsg(AggregatorMessage):
+    """ Request from user to set a new method to be executed by engine. """
     method: Mdl.Method

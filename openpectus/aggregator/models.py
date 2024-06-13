@@ -57,6 +57,15 @@ class TagsInfo(BaseModel):
             current.tick_time = tag_value.tick_time
             return False  # was updated
 
+    def __str__(self) -> str:
+        return f"TagsInfo({','.join(self.map.keys())})"
+
+    def get_last_modified_time(self) -> datetime | None:
+        if len(self.map.keys()) == 0:
+            return None
+        max_tick_time = max(t.tick_time for t in self.map.values())
+        return datetime.fromtimestamp(max_tick_time)
+
 
 class RunData(BaseModel):
     run_started: datetime | None = None
@@ -80,6 +89,7 @@ class EngineData(BaseModel):
     method: Method = Method.empty()
     run_data: RunData = RunData()
     plot_configuration: PlotConfiguration = PlotConfiguration.empty()
+    connection_faulty: bool = False
 
     @property
     def runtime(self):
@@ -93,3 +103,12 @@ class EngineData(BaseModel):
     @property
     def system_state(self):
         return self.tags_info.get(Mdl.SystemTagName.SYSTEM_STATE)
+
+    @property
+    def last_modified(self) -> datetime:
+        # It is very unlikely to not get a time from the tags. If no tags are set,
+        # it is because the engine is just getting started so now() is close enough
+        return self.tags_info.get_last_modified_time() or datetime.now()
+
+    def __str__(self) -> str:        
+        return f"EngineData(engine_id:{self.engine_id}, tags:{len(self.tags_info.map)}, 'state':'{self.control_state}')"

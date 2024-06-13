@@ -54,7 +54,7 @@ class Reading():
         """
         pass
 
-    def as_ReadingInfo(self) -> Mdl.ReadingInfo:
+    def as_reading_info(self) -> Mdl.ReadingInfo:
         return Mdl.ReadingInfo(
             discriminator=self.discriminator,
             tag_name=self.tag_name,

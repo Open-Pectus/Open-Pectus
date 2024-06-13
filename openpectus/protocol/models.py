@@ -26,7 +26,7 @@ class ReadingCommand(ProtocolModel):
     choice_names: list[str]
 
 
-class ReadingInfo(ProtocolModel):
+class   ReadingInfo(ProtocolModel):
     discriminator: str
     tag_name: str
     valid_value_units: list[str] | None
