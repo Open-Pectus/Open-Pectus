@@ -96,9 +96,6 @@ class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
         await self.stop_engine()
         await super().asyncTearDown()
 
-        self.log("asyncTearDown")
-
-
     async def start_engine(self):
         assert self.ctx is not None
         self.ctx.engine.run()

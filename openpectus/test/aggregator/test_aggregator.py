@@ -1,12 +1,14 @@
 import unittest
 from unittest.mock import Mock, AsyncMock
 
+from openpectus.aggregator.data import database
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 from fastapi_websocket_rpc.schemas import RpcResponse
 from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.aggregator_message_handlers import AggregatorMessageHandlers
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
+import openpectus.aggregator.data.models as DMdl
 
 
 class AggregatorTest(unittest.IsolatedAsyncioTestCase):
@@ -24,9 +26,12 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
         channel = dispatcher._engine_id_channel_map[engine_id]
         await dispatcher.on_client_disconnect(channel)
 
+    def createPublisherMock(self):
+        return Mock(publish_process_units_changed=AsyncMock())
+
     async def test_register_engine(self):
         dispatcher = AggregatorDispatcher()
-        aggregator = Aggregator(dispatcher, Mock())
+        aggregator = Aggregator(dispatcher, self.createPublisherMock())
         _ = AggregatorMessageHandlers(aggregator)
         register_engine_msg = EM.RegisterEngineMsg(computer_name='computer-name', uod_name='uod-name',
                                                    location="test location", engine_version='0.0.1')
@@ -50,11 +55,15 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
         assert isinstance(resultMessage, AM.RegisterEngineReplyMsg)
         self.assertEqual(resultMessage.success, False)
 
-        # registering while already registered, but after disconnect should succeed
-        await self.disconnectRpc(dispatcher, engine_id)
-        resultMessage = await dispatcher.dispatch_post(register_engine_msg)
-        assert isinstance(resultMessage, AM.RegisterEngineReplyMsg)
-        self.assertEqual(resultMessage.success, True)
+        # setup in-memory database - required for engine_disconnected
+        database.configure_db("sqlite:///:memory:")
+        DMdl.DBModel.metadata.create_all(database._engine)  # type: ignore
+        with database.create_scope():
+            # registering while already registered, but after disconnect should succeed
+            await self.disconnectRpc(dispatcher, engine_id)
+            resultMessage = await dispatcher.dispatch_post(register_engine_msg)
+            assert isinstance(resultMessage, AM.RegisterEngineReplyMsg)
+            self.assertEqual(resultMessage.success, True)
 
     async def test_register_engine_different_name(self):
         dispatcher = AggregatorDispatcher()
