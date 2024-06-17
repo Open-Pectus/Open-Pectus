@@ -2,17 +2,16 @@ import asyncio
 import logging
 from argparse import ArgumentParser, BooleanOptionalAction
 import importlib
-import time
 
 from openpectus import log_setup_colorlog, sentry
 from openpectus.engine.engine import Engine
 from openpectus.engine.engine_message_handlers import EngineMessageHandlers
 from openpectus.engine.engine_reporter import EngineReporter
-from openpectus.engine.hardware_error import ErrorRecoveryConfig, ErrorRecoveryDecorator
+import openpectus.engine.hardware_error as hardware_error
 from openpectus.lang.exec.tags import SystemTagName, TagCollection
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
-from openpectus.protocol.engine_dispatcher import EngineDispatcher
-from openpectus.protocol.exceptions import ProtocolNetworkException
+from openpectus.protocol.engine_dispatcher import EngineDispatcher, EngineDispatcherBase
+from openpectus.protocol.engine_dispatcher_error import EngineDispatcherErrorRecoveryDecorator
 
 log_setup_colorlog()
 
@@ -37,7 +36,7 @@ def get_args():
 
 
 engine: Engine
-dispatcher: EngineDispatcher
+dispatcher: EngineDispatcherBase
 reporter: EngineReporter
 
 def run_validations(uod: UnitOperationDefinitionBase) -> bool:
@@ -69,7 +68,10 @@ async def main_async(args):
 
     # wrap hwl with error recovery decorator
     connection_status_tag = engine._system_tags[SystemTagName.CONNECTION_STATUS]
-    uod.hwl = ErrorRecoveryDecorator(uod.hwl, ErrorRecoveryConfig(), connection_status_tag)
+    uod.hwl = hardware_error.ErrorRecoveryDecorator(uod.hwl, hardware_error.ErrorRecoveryConfig(), connection_status_tag)
+
+    # wrap dispatcher in error recovery decorator
+    dispatcher = EngineDispatcherErrorRecoveryDecorator(dispatcher)
 
     reporter = EngineReporter(engine, dispatcher)
     _ = EngineMessageHandlers(engine, dispatcher)
@@ -81,10 +83,11 @@ async def main_async(args):
 
     while True:
         try:
-            await reporter.send_init_messages_async()
-            await reporter.run_loop_async()
-        except ProtocolNetworkException:
-            await dispatcher.reconnect_async()
+            await reporter.send_config_messages()
+            await asyncio.sleep(1)
+            while True:
+                await reporter.send_data_messages()
+                await asyncio.sleep(1)
         except Exception:
             logger.error("Unhandled exception in main loop. Trying to continue", exc_info=True)
             await asyncio.sleep(5)
@@ -93,8 +96,6 @@ async def main_async(args):
 async def close_async():
     global engine, dispatcher, reporter
     logger.debug("Stopping engine components")
-    if reporter is not None:
-        reporter.stop()
     if engine is not None:
         engine.stop()
     if dispatcher is not None:

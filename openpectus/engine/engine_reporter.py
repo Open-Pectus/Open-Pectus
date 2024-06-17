@@ -4,9 +4,8 @@ from logging.handlers import QueueHandler
 from queue import Empty, SimpleQueue
 from typing import List
 
-from openpectus.protocol.engine_dispatcher import EngineDispatcher
+from openpectus.protocol.engine_dispatcher import EngineDispatcherBase
 import openpectus.protocol.engine_messages as EM
-from openpectus.protocol.exceptions import ProtocolNetworkException
 import openpectus.protocol.messages as M
 import openpectus.protocol.models as Mdl
 from openpectus.engine.engine import Engine
@@ -28,46 +27,40 @@ MAX_SIZE_TagsUpdatedMsg = 100
 
 
 class EngineReporter():
-    def __init__(self, engine: Engine, dispatcher: EngineDispatcher) -> None:
+    def __init__(self, engine: Engine, dispatcher: EngineDispatcherBase) -> None:
         self.dispatcher = dispatcher
         self.engine = engine
-        self._init_succeeded = False
-        self._running = True
+        self._config_data_sent = False
 
-    async def send_init_messages_async(self):
-        valid_uod_info_sent = False
-        while not self._init_succeeded:
-            valid_uod_info_sent = await self.send_uod_info()
-            if valid_uod_info_sent:
-                await self.notify_initial_tags()
-                self._init_succeeded = True
-            else:
-                logger.error(
-                    "Failed to send valid uod info. Connection to aggregator is not fully initialized. Retrying...")
-            if not self._init_succeeded:
-                await asyncio.sleep(10)
+    async def send_config_messages(self) -> bool:
+        """ Send configuration messages to aggregator. These are required when connection is created or re-established. """
+        valid_uod_info_sent = await self.send_uod_info()
+        if valid_uod_info_sent:
+            await self.notify_initial_tags()
+            self._config_data_sent = True
+            return True
+        else:
+            logger.error("Failed to send valid uod info. Connection to aggregator is not fully initialized.")
+            return False
 
-    def stop(self):
-        self._running = False
-
-    async def run_loop_async(self):
-        if not self._init_succeeded:
-            logger.error("Reporter initialization not complete")
+    async def send_data_messages(self):
+        """ Send a batch of data messages to aggregator. """
+        if not self._config_data_sent:
+            logger.warning("Reporter initialization not complete")
+            await self.send_config_messages()
             return
         try:
-            while self._running:
-                await asyncio.sleep(1)
-                await self.send_tag_updates()
-                await self.send_runlog()
-                await self.send_control_state()
-                await self.send_method_state()
-                await self.send_error_log()
+            await self.send_tag_updates()
+            await self.send_runlog()
+            await self.send_control_state()
+            await self.send_method_state()
+            await self.send_error_log()
         except asyncio.CancelledError:
-            logger.info("run_loop_async was cancelled")  # , exc_info=True)
+            logger.info("send_data_messages() was cancelled")  # , exc_info=True)
             return
         except Exception:
-            logger.error("Unhandled exception in run_loop_async", exc_info=True)
-            raise ProtocolNetworkException()
+            logger.error("Unhandled exception in send_data_messages()", exc_info=True)
+            raise
 
     async def notify_initial_tags(self):
         self.engine.notify_initial_tags()
@@ -86,6 +79,7 @@ class EngineReporter():
             response = await self.dispatcher.post_async(msg)
             return not isinstance(response, M.ErrorMessage)
         except Exception:
+            logger.error("Failed to send uod_info", exc_info=True)
             return False
 
     async def send_tag_updates(self):

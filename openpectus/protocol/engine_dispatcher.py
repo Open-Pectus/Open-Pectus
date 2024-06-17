@@ -22,8 +22,26 @@ logger = logging.getLogger(__name__)
 EngineMessageHandler = Callable[[AM.AggregatorMessage], Awaitable[M.MessageBase]]
 """ Handler in engine that handles aggregator messages of a given type """
 
+class EngineDispatcherBase():
+    """ Base class that defines the Engine dispatcher interface """
 
-class EngineDispatcher():
+    async def connect_async(self):
+        raise NotImplementedError()
+
+    async def disconnect_async(self):
+        raise NotImplementedError()
+
+    async def post_async(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
+        raise NotImplementedError()
+
+    def set_rpc_handler(self, message_type: type[AM.AggregatorMessage], handler: EngineMessageHandler):
+        """ Register handler for given message_type. """
+        raise NotImplementedError()
+
+    async def _dispatch_message_async(self, message: M.MessageBase):
+        raise NotImplementedError()
+
+class EngineDispatcher(EngineDispatcherBase):
     """
     Engine dispatcher for the Aggregator-Engine Protocol.
     Allows sending messages via HTTP POST and receiving messages via JSON-RPC.
@@ -58,7 +76,6 @@ class EngineDispatcher():
         self._rpc_client: WebSocketRpcClient | None = None
         self._handlers: dict[type, Callable[[Any], Awaitable[M.MessageBase]]] = {}
         self._engine_id = None
-        self._is_reconnecting = False
 
         # TODO consider https/wss
         self._post_url = f"http://{aggregator_host}{AGGREGATOR_REST_PATH}"
@@ -109,7 +126,10 @@ class EngineDispatcher():
             "retry_error_callback": logerror
         }
         self._rpc_client = WebSocketRpcClient(uri=rpc_url, methods=rpc_methods, retry_config=retry_config)
-        await self._rpc_client.__aenter__()
+        try:
+            await self._rpc_client.__aenter__()
+        except Exception:
+            raise ProtocolNetworkException()
         logger.info("Websocket connected")
 
     async def disconnect_async(self):
@@ -117,30 +137,6 @@ class EngineDispatcher():
         if self._rpc_client is not None:
             await self._rpc_client.__aexit__()
             self._rpc_client = None
-
-    async def reconnect_async(self):
-        if self._is_reconnecting:
-            logger.info("Already disconnecting")
-            return
-
-        self._is_reconnecting = True
-        while self._is_reconnecting:
-            logger.info("Reconnecting")
-            await asyncio.sleep(3)
-
-            try:
-                await self.disconnect_async()
-            except Exception as ex:
-                logger.error("Reconnect - disconnect failed: " + str(ex))
-
-            await asyncio.sleep(3)
-            try:
-                await self.connect_async()
-                logger.info("Reconnect successful")
-                self._is_reconnecting = False
-                return
-            except Exception as ex:
-                logger.error("Reconnect - connect failed: " + str(ex))
 
     async def post_async(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
         """ Send message via HTTP POST. """

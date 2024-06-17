@@ -1,8 +1,8 @@
 from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
+from datetime import timedelta
 import logging
-from typing import Any, Awaitable, Callable
 import unittest
 
 from openpectus.aggregator.aggregator_message_handlers import AggregatorMessageHandlers
@@ -14,7 +14,8 @@ from openpectus.engine.engine_message_handlers import EngineMessageHandlers
 from openpectus.engine.engine_reporter import EngineReporter
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 import openpectus.protocol.aggregator_messages as AM
-from openpectus.protocol.engine_dispatcher import EngineDispatcher
+from openpectus.protocol.engine_dispatcher import EngineDispatcher, EngineDispatcherBase
+from openpectus.protocol.engine_dispatcher_error import EngineDispatcherErrorRecoveryDecorator
 import openpectus.protocol.engine_messages as EM
 from openpectus.protocol.exceptions import ProtocolException, ProtocolNetworkException
 import openpectus.protocol.messages as M
@@ -30,6 +31,8 @@ logger.setLevel(logging.DEBUG)
 
 logging.getLogger('asyncio').setLevel(logging.ERROR)
 logging.getLogger('openpectus.engine.engine_message_handlers').setLevel(logging.DEBUG)
+logging.getLogger('openpectus.protocol.engine_dispatcher').setLevel(logging.DEBUG)
+logging.getLogger('openpectus.protocol.engine_dispatcher_error').setLevel(logging.DEBUG)
 logging.getLogger('openpectus.engine.engine_reporter').setLevel(logging.DEBUG)
 logging.getLogger('openpectus.aggregator.aggregator').setLevel(logging.DEBUG)
 logging.getLogger('openpectus.protocol.aggregator_dispatcher').setLevel(logging.DEBUG)
@@ -39,8 +42,10 @@ class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
 
     @dataclass
     class Context:
+        """ Test helper class """
         engine: Engine
         engineDispatcher: EngineTestDispatcher
+        engineErrorDispatcher: EngineDispatcherErrorRecoveryDecorator
         engineMessageHandlers: EngineMessageHandlers
         engineReporter: EngineReporter
 
@@ -48,19 +53,13 @@ class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
         frontendPublisher: FrontendPublisher
         aggregator: Aggregator
 
-    def log(self, s):
-        print("*** ProtocolIntegrationTestCase " + s)
-
-
     def __init__(self, methodName: str = "runTest") -> None:
         super().__init__(methodName)
         self.ctx: ProtocolIntegrationTestCase.Context | None = None
-        self.log("ctor")
 
     async def asyncSetUp(self) -> None:
         assert self.ctx is None
         await super().asyncSetUp()
-        self.log("asyncSetUp")
 
         # setup in-memory database
         database.configure_db("sqlite:///:memory:")
@@ -72,20 +71,21 @@ class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
         uod = create_test_uod()
         engine = Engine(uod)
         engineDispatcher = EngineTestDispatcher(loop)
+        engineErrorDispatcher = EngineDispatcherErrorRecoveryDecorator(engineDispatcher)
         engineMessageHandlers = EngineMessageHandlers(engine, engineDispatcher)
-        engineReporter = EngineReporter(engine, engineDispatcher)
+        engineReporter = EngineReporter(engine, engineErrorDispatcher)
 
         aggregatorDispatcher = AggregatorTestDispatcher()
         frontendPublisher = FrontendPublisher()
         aggregator = Aggregator(aggregatorDispatcher, frontendPublisher)
         _ = AggregatorMessageHandlers(aggregator)
 
-        # connect the two test dispatchers for direct commonication
-        aggregatorDispatcher.engineDispatcher = engineDispatcher
+        # connect the two test dispatchers for direct communication
+        aggregatorDispatcher.engineDispatcher = engineErrorDispatcher
         engineDispatcher.aggregatorDispatcher = aggregatorDispatcher
 
         self.ctx = ProtocolIntegrationTestCase.Context(
-            engine, engineDispatcher, engineMessageHandlers, engineReporter,
+            engine, engineDispatcher, engineErrorDispatcher, engineMessageHandlers, engineReporter,
             aggregatorDispatcher, frontendPublisher, aggregator)
 
         # not sure why this is necessary. asyncTeardown should be doing this already
@@ -102,11 +102,9 @@ class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
     async def start_engine(self):
         assert self.ctx is not None
         self.ctx.engine.run()
-        #await self.engineReporter.run_loop_async()
 
     async def stop_engine(self):
         assert self.ctx is not None
-        self.ctx.engineReporter.stop()
         await self.ctx.engineDispatcher.disconnect_async()
 
     async def register(self) -> str:
@@ -124,6 +122,7 @@ class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.ctx.engineDispatcher._engine_id, engine_id)
         self.assertTrue(self.ctx.aggregatorDispatcher.has_connected_engine_id(engine_id))
         return engine_id
+
 
 class ProtocolIntegrationTest(ProtocolIntegrationTestCase):
 
@@ -153,37 +152,54 @@ class ProtocolIntegrationTest(ProtocolIntegrationTestCase):
         await self.register()
 
         with database.create_scope():
-            await self.ctx.engineReporter.send_init_messages_async()
-            
-            self.ctx.engineDispatcher.network_failing = True
-            try:
-                await self.ctx.engineReporter.run_loop_async()
-            except ProtocolNetworkException:
-                await self.ctx.engineDispatcher.reconnect_async()
+            await self.ctx.engineReporter.send_config_messages()
+            await self.ctx.engineReporter.send_data_messages()
 
+            self.ctx.engineDispatcher.network_failing = True
+            self.ctx.engineErrorDispatcher._buffer_duration = timedelta(seconds=.5)
+            self.assertTrue(self.ctx.engineErrorDispatcher._get_buffer_size() == 0)
+
+            # trigger tick()
+            await self.ctx.engineReporter.send_data_messages()
+
+            self.assertEqual(self.ctx.engineErrorDispatcher._is_reconnecting, True)
+            self.assertTrue(self.ctx.engineErrorDispatcher._get_buffer_size() > 0)
+
+    async def test_can_send_buffered_messages_when_connection_is_restored(self):
+        assert self.ctx is not None
+        await self.register()
+
+        with database.create_scope():
+            await self.ctx.engineReporter.send_config_messages()
+            await self.ctx.engineReporter.send_data_messages()
+
+            self.ctx.engineDispatcher.network_failing = True
+            self.ctx.engineErrorDispatcher._buffer_duration = timedelta(seconds=.5)
+            self.assertTrue(self.ctx.engineErrorDispatcher._get_buffer_size() == 0)
+            await self.ctx.engineReporter.send_data_messages()
+            self.assertEqual(self.ctx.engineErrorDispatcher._is_reconnecting, True)
+            self.assertTrue(self.ctx.engineErrorDispatcher._get_buffer_size() > 0)
+
+            self.ctx.engineDispatcher.network_failing = False
+            await self.ctx.engineReporter.send_data_messages()
+
+            self.assertEqual(self.ctx.engineErrorDispatcher._is_reconnecting, False)
+            self.assertTrue(self.ctx.engineErrorDispatcher._get_buffer_size() == 0)
 
 
     # aggregator must store data, even before a recent run is created. In case it dies and comes back we must have available
     # the engine data from before it went down.
 
 class AggregatorErrorTest(ProtocolIntegrationTestCase):
-    async def test_default_state_is_connected(self):
+    async def test_can_get_engine_data_for_registered_engine(self):
         # register engine and check engine_data.connected == True
         assert self.ctx is not None
         engine_id = await self.register()
 
-#        with database.create_scope():
-#            ...
-#            self.ctx.engineReporter.send_uod_info()
-#            self.ctx.engineReporter.notify_initial_tags()
-
         engine_data = self.ctx.aggregator.get_registered_engine_data(engine_id)
         self.assertIsNotNone(engine_data)
 
-    async def test_rpc_call_fail_with_network_exception_state_is_disconnected(self):
-        # register engine and check engine_data.connected == True
-        # make rpc_call fail and check engine_data.connected == False
-
+    async def test_rpc_call_fail_with_network_error_engine_state_is_removed(self):
         assert self.ctx is not None
         engine_id = await self.register()
 
@@ -203,54 +219,10 @@ class AggregatorErrorTest(ProtocolIntegrationTestCase):
         self.assertIsNone(engine_data)
 
 
-    @unittest.skip("TODO remove - timeout feature removed")
-    async def test_if_aggregator_gets_no_data_before_timeout_state_is_disconnected(self):
-        assert self.ctx is not None
-        engine_id = await self.register()
-        #self.ctx.aggregatorDispatcher.connection_fault_timeout_seconds = 0.5
-
-        with database.create_scope():
-            await self.ctx.engineReporter.send_uod_info()
-            await self.ctx.engineReporter.notify_initial_tags()
-
-        # wait longer than timeout
-        await asyncio.sleep(1.2)
-
-        # we need to add a timer thread to AggregatorDispatcher for this to work
-        # - or add the timer in aggregator and add a tick() method in AggregatorDispatcher
-        engine_data = self.ctx.aggregator.get_registered_engine_data(engine_id)
-        assert engine_data is not None
-        self.assertEqual(engine_data.connection_faulty, True)
-
-    @unittest.skip("TODO remove - timeout feature removed")
-    async def test_if_aggregator_gets_data_before_timeout_state_is_not_disconnected(self):
-        assert self.ctx is not None
-        engine_id = await self.register()
-        #self.ctx.aggregatorDispatcher.connection_fault_timeout_seconds = 1.0
-
-        with database.create_scope():
-            await self.ctx.engineReporter.send_uod_info()
-            await self.ctx.engineReporter.notify_initial_tags()
-
-        # wait longer than timeout
-        await asyncio.sleep(0.5)
-        await self.ctx.engineReporter.send_runlog()
-        await asyncio.sleep(0.5)
-        await self.ctx.engineReporter.send_runlog()
-        await asyncio.sleep(0.5)
-
-        # we need to add a timer thread to AggregatorDispatcher for this to work
-        # - or add the timer in aggregator and add a tick() method in AggregatorDispatcher
-        engine_data = self.ctx.aggregator.get_registered_engine_data(engine_id)
-        assert engine_data is not None
-        self.assertEqual(engine_data.connection_faulty, False)
-
-
-
 class AggregatorTestDispatcher(AggregatorDispatcher):
     def __init__(self) -> None:
         super().__init__()
-        self.engineDispatcher: EngineTestDispatcher
+        self.engineDispatcher: EngineDispatcherBase
         self.connected_engines: set[str] = set()
         self.failing_engines: set[str] = set()
 
