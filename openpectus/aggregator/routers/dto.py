@@ -28,6 +28,8 @@ class ServerErrorResponse(Dto):
     error: bool = True
     message: str
 
+class ServerSuccessResponse(Dto):
+    message: str | None = None
 
 class ProcessUnitStateEnum(StrEnum):
     """ Represents the state of a process unit. """

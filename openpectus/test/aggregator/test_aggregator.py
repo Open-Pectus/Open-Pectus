@@ -17,7 +17,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
 
     async def connectRpc(self, dispatcher: AggregatorDispatcher, engine_id: str | None):
         channel = await self.create_channel_mock(engine_id)
-        await dispatcher.on_delayed_client_connect(channel)
+        await dispatcher._on_delayed_client_connect(channel)
         return channel
 
     async def disconnectRpc(self, dispatcher: AggregatorDispatcher, engine_id: str):

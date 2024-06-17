@@ -12,6 +12,7 @@ from openpectus.engine.hardware_error import ErrorRecoveryConfig, ErrorRecoveryD
 from openpectus.lang.exec.tags import SystemTagName, TagCollection
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 from openpectus.protocol.engine_dispatcher import EngineDispatcher
+from openpectus.protocol.exceptions import ProtocolNetworkException
 
 log_setup_colorlog()
 
@@ -35,15 +36,11 @@ def get_args():
     return parser.parse_args()
 
 
-async def async_main(args):
-    uod = create_uod(args.uod)
-    engine = Engine(uod, tick_interval=1)
-    dispatcher = EngineDispatcher(
-        f"{args.aggregator_hostname}:{args.aggregator_port}",
-        engine.uod.instrument,
-        engine.uod.location)
-    await dispatcher.connect_async()
+engine: Engine
+dispatcher: EngineDispatcher
+reporter: EngineReporter
 
+def run_validations(uod: UnitOperationDefinitionBase) -> bool:
     try:
         logger.info("Verifying hardware configuration and connection")
         uod.validate_configuration()
@@ -51,9 +48,22 @@ async def async_main(args):
         uod.hwl.connect()
         uod.hwl.validate_online()
         logger.info("Hardware validation successful")
+        return True
     except Exception:
         logger.error("An hardware related error occurred. Engine cannot start.")
-        return
+        return False
+
+async def main_async(args):
+    global engine, dispatcher, reporter
+    uod = create_uod(args.uod)
+    engine = Engine(uod, tick_interval=1)
+    dispatcher = EngineDispatcher(
+        f"{args.aggregator_hostname}:{args.aggregator_port}",
+        engine.uod.instrument,
+        engine.uod.location)
+
+    if not run_validations(uod):
+        exit(1)
 
     sentry.set_engine_uod(uod)
 
@@ -61,15 +71,35 @@ async def async_main(args):
     connection_status_tag = engine._system_tags[SystemTagName.CONNECTION_STATUS]
     uod.hwl = ErrorRecoveryDecorator(uod.hwl, ErrorRecoveryConfig(), connection_status_tag)
 
-    engine_reporter = EngineReporter(engine, dispatcher)
-    args.engine_reporter = engine_reporter
+    reporter = EngineReporter(engine, dispatcher)
     _ = EngineMessageHandlers(engine, dispatcher)
-    await engine_reporter.run_loop_async()
+
+    # TODO Possibly check dispatcher.check_aggregator_alive() and exit early
+
+    await dispatcher.connect_async()
+    engine.run()
+
+    while True:
+        try:
+            await reporter.send_init_messages_async()
+            await reporter.run_loop_async()
+        except ProtocolNetworkException:
+            await dispatcher.reconnect_async()
+        except Exception:
+            logger.error("Unhandled exception in main loop. Trying to continue", exc_info=True)
+            await asyncio.sleep(5)
 
 
-async def close_async(engine_reporter: EngineReporter):
-    if engine_reporter is not None:
-        await engine_reporter.stop_async()
+async def close_async():
+    global engine, dispatcher, reporter
+    logger.debug("Stopping engine components")
+    if reporter is not None:
+        reporter.stop()
+    if engine is not None:
+        engine.stop()
+    if dispatcher is not None:
+        await dispatcher.disconnect_async()
+    logger.debug("Engine components stopped. Exiting")
 
 
 def create_uod(uod_name: str) -> UnitOperationDefinitionBase:
@@ -149,17 +179,16 @@ def main():
     # https://stackoverflow.com/questions/54525836/where-do-i-catch-the-keyboardinterrupt-exception-in-this-async-setup#54528397
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(async_main(args))
+        loop.run_until_complete(main_async(args))
+        logger.info("Loop terminated - should only occur on stop")
     except KeyboardInterrupt:
-        loop.run_until_complete(close_async(args.engine_reporter))
-    except ConnectionError:
-        logger.warning("ConnectionError. Trying new connection??")
-        time.sleep(2)
-    finally:
-        pass
-        logger.error("Engine stopped by exception", exc_info=True)
-        # loop.run_until_complete(close_async(args.engine_reporter))
-        # print('Engine stopped')
+        logger.info("User requested engine to stop")
+        loop.run_until_complete(close_async())
+    except Exception:
+        logger.error("Unhandled exception in main. Stopping", exc_info=True)
+        loop.run_until_complete(close_async())
+
+    logger.info("Engine stopped")
 
 
 if __name__ == "__main__":

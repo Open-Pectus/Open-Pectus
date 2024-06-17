@@ -22,6 +22,8 @@ _session_ctx: ContextVar[Session | None] = ContextVar("_session", default=None)
 def create_scope():
     """ Used from middleware to create a request context (scope), in which scoped_session() will work.
 
+    Can also be used in non-request contexts to enable scoped_session() there.
+
     Also used in tests to provide a scope
     """
     if _sessionmaker is None:

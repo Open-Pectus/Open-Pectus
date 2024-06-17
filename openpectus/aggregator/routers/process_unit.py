@@ -9,7 +9,7 @@ import openpectus.aggregator.routers.dto as Dto
 from fastapi import APIRouter, Depends, Response
 from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.data import database
-from openpectus.aggregator.data.repository import PlotLogRepository
+from openpectus.aggregator.data.repository import PlotLogRepository, RecentEngineRepository
 
 
 logger = logging.getLogger(__name__)
@@ -24,11 +24,6 @@ def map_pu(engine_data: Mdl.EngineData) -> Dto.ProcessUnit:
         state = Dto.ProcessUnitState.InProgress(
             state=Dto.ProcessUnitStateEnum.IN_PROGRESS,
             progress_pct=0  # TODO: how do we know the progress_pct?
-        )
-    elif engine_data.connection_faulty:
-        state = Dto.ProcessUnitState.NotOnline(
-            state=Dto.ProcessUnitStateEnum.NOT_ONLINE,
-            last_seen_date=engine_data.last_modified
         )
     elif engine_data.run_data.interrupted_by_error:
         state = Dto.ProcessUnitState.Error(
@@ -62,7 +57,24 @@ def get_units(agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[Dto.Pr
     for engine_data in agg.get_all_registered_engine_data():
         unit = map_pu(engine_data)
         units.append(unit)
-        # we could possibly append some units that have recent runs as NotOnline
+    # append recent engines from the database
+    repo = RecentEngineRepository(database.scoped_session())
+    recent_engines = repo.get_recent_engines()
+    for recent_engine in recent_engines:
+        if recent_engine.engine_id not in [u.id for u in units]:
+            unit = Dto.ProcessUnit(
+                id=recent_engine.engine_id or "(error)",
+                name=recent_engine.name,
+                state=Dto.ProcessUnitState.NotOnline(
+                    state=Dto.ProcessUnitStateEnum.NOT_ONLINE,
+                    last_seen_date=recent_engine.last_update
+                ),
+                location=recent_engine.location,
+                runtime_msec=0,
+                current_user_role=Dto.UserRole.ADMIN,
+            )
+            units.append(unit)
+
     return units
 
 @router.get("/process_unit/{engine_id}/process_values")
@@ -111,15 +123,18 @@ async def execute_command(unit_id: str, command: Dto.ExecutableCommand, agg: Agg
     if engine_data is None:
         logger.error(f"No registered engine with engine_id '{unit_id}'")
         return Dto.ServerErrorResponse(message=f"No registered engine with engine_id '{unit_id}'")
-
     try:
         msg = command_util.parse_as_message(command, engine_data.readings)
-    except Exception as ex:
+    except Exception:
         logger.error(f"Parse error for command: {command}", exc_info=True)
-        return Dto.ServerErrorResponse(message=str(ex))
-
+        return Dto.ServerErrorResponse(message="Message parse error")
     logger.info(f"Sending msg '{str(msg)}' of type {type(msg)} to client '{unit_id}'")
-    await agg.dispatcher.rpc_call(unit_id, msg)
+    try:
+        await agg.dispatcher.rpc_call(unit_id, msg)        
+    except Exception:
+        logger.error(f"Rpc call to engine_id '{unit_id}' failed", exc_info=True)
+        return Dto.ServerErrorResponse(message="Failed to send message")
+    return Dto.ServerSuccessResponse()
 
 
 @router.get("/process_unit/{unit_id}/process_diagram")

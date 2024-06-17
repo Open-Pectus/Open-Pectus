@@ -36,7 +36,10 @@ during a run and then comes back up later, both Aggregator and Engine should be 
     - Aggregator notices that Engine is available and reports this status to the front end
       - If the run is still active, continue as if nothing happened
       - If run is failed or completed, update the persisted state to reflect this, same as if it was connected when it happened
-  
+3. Aggregator restart must be supported.such that
+   - Any connected engines reconnect when aggregator comes back up
+   - Aggregator detects whether engines are in an active run or have completed a run and stores the correct information
+
 
 ## 3.2 Engine
 Error handling is added to engine_dispatcher which can detect connection errors and sample and batch up messages. When connection is reestablished,

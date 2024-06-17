@@ -1,15 +1,15 @@
 import asyncio
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 import openpectus.aggregator.models as Mdl
-from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcherBase
+from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
 from openpectus.aggregator.data import database
-from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRepository
+from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRepository, RecentEngineRepository
 from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.aggregator.models import EngineData
 from openpectus.protocol.models import SystemTagName, MethodStatusEnum
@@ -27,6 +27,18 @@ class FromEngine:
 
     def register_engine_data(self, engine_data: EngineData):
         self._engine_data_map[engine_data.engine_id] = engine_data
+
+    def engine_disconnected(self, engine_id: str):
+        engine_data = self._engine_data_map.get(engine_id)
+        if engine_data is not None:
+            with database.create_scope():
+                repo = RecentEngineRepository(database.scoped_session())
+                repo.store_recent_engine(engine_data)
+            logger.info("Recent engine saved")
+            del self._engine_data_map[engine_id]
+            asyncio.create_task(self.publisher.publish_process_units_changed())
+        else:
+            logger.warning("No data to save for engine " + engine_id)
 
     def uod_info_changed(self, engine_id: str, readings: list[Mdl.ReadingInfo], plot_configuration: Mdl.PlotConfiguration,
                          hardware_str: str):
@@ -144,7 +156,7 @@ class FromEngine:
 
 
 class FromFrontend:
-    def __init__(self, engine_data_map: EngineDataMap, dispatcher: AggregatorDispatcherBase):
+    def __init__(self, engine_data_map: EngineDataMap, dispatcher: AggregatorDispatcher):
         self._engine_data_map = engine_data_map
         self.dispatcher = dispatcher
 
@@ -167,20 +179,12 @@ class FromFrontend:
 
 
 class Aggregator:
-    def __init__(self, dispatcher: AggregatorDispatcherBase, publisher: FrontendPublisher) -> None:
+    def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher) -> None:
         self._engine_data_map: EngineDataMap = {}
         """ all client data except channels, indexed by engine_id """
         self.dispatcher = dispatcher
-        dispatcher.set_connection_fault_callback(self.on_connection_fault_changed)
         self.from_frontend = FromFrontend(self._engine_data_map, dispatcher)
         self.from_engine = FromEngine(self._engine_data_map, publisher)
-
-    def on_connection_fault_changed(self, faulty: bool, engine_id: str):
-        engine_data = self._engine_data_map.get(engine_id, None)
-        if engine_data is not None:
-            engine_data.connection_faulty = faulty
-        else:
-            logger.warning(f"on_connection_fault_changed was called with engine_id '{engine_id}' which has no engine_data")
 
     def create_engine_id(self, register_engine_msg: EM.RegisterEngineMsg):
         """ Defines the generation of the engine_id that is uniquely assigned to each engine.

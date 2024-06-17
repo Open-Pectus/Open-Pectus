@@ -3,14 +3,14 @@ import logging
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.messages as M
 from openpectus.engine.engine import Engine
-from openpectus.protocol.engine_dispatcher import EngineDispatcherBase
+from openpectus.protocol.engine_dispatcher import EngineDispatcher
 
 
 logger = logging.getLogger(__name__)
 
 
 class EngineMessageHandlers():
-    def __init__(self, engine: Engine, dispatcher: EngineDispatcherBase) -> None:
+    def __init__(self, engine: Engine, dispatcher: EngineDispatcher) -> None:
         self.engine = engine
         dispatcher.set_rpc_handler(AM.InvokeCommandMsg, self.handle_invokeCommandMsg)
         dispatcher.set_rpc_handler(AM.InjectCodeMsg, self.handle_injectCodeMsg)

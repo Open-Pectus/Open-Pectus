@@ -34,6 +34,17 @@ class ProcessUnit(DBModel):
     # contributors: Mapped[list[str]] = mapped_column(type_=JSON, default=[])
 
 
+class RecentEngine(DBModel):
+    __tablename__ = "RecentEngines"
+
+    engine_id: Mapped[str] = mapped_column(unique=True)
+    run_id: Mapped[str] = mapped_column()
+    name: Mapped[str] = mapped_column()
+    system_state: Mapped[str] = mapped_column()
+    location: Mapped[str] = mapped_column()
+    last_update: Mapped[datetime] = mapped_column()
+
+
 class RecentRun(DBModel):
     """ Represents a historical run of a process unit. """
     __tablename__ = "RecentRuns"

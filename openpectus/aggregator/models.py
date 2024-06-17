@@ -89,7 +89,6 @@ class EngineData(BaseModel):
     method: Method = Method.empty()
     run_data: RunData = RunData()
     plot_configuration: PlotConfiguration = PlotConfiguration.empty()
-    connection_faulty: bool = False
 
     @property
     def runtime(self):
