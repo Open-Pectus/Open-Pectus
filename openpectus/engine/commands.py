@@ -1,5 +1,9 @@
 from __future__ import annotations
-from typing import Any, Generic, List, TypeVar
+from typing import Any, Generic, TypeVar
+
+
+CommandArgs = dict[str, Any]
+""" Command arguments"""
 
 
 class EngineCommand():
@@ -20,7 +24,7 @@ class EngineCommand():
     def is_initialized(self) -> bool:
         return self._initialized
 
-    def execute(self, args: List[Any]) -> None:
+    def execute(self, args: CommandArgs) -> None:
         self._exec_started = True
         self._exec_iterations += 1
 

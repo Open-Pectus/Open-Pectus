@@ -59,16 +59,25 @@ class AggregatorDispatcher():
             if engine_id in self._engine_id_channel_map:
                 logger.error("Engine tried connecting with engine_id that is already connected. Closing connection.")
                 return await channel.close()
-            logger.info(f"Engine connected with engine_id: {engine_id}")
+            logger.info(f"Engine '{engine_id}' connected")
             self._engine_id_channel_map[engine_id] = channel
         except Exception:
-            logger.error("on_client_connect failed with exception", exc_info=True)
+            logger.error("on_delayed_client_connect failed with exception", exc_info=True)
             return await channel.close()
 
     async def on_client_connect(self, channel: RpcChannel):
         asyncio.create_task(self.on_delayed_client_connect(channel))
 
     async def on_client_disconnect(self, channel: RpcChannel):
+        engine_id: str | None = None
+        for key, value in self._engine_id_channel_map.items():
+            if value == channel:
+                engine_id = key
+                break
+        if engine_id is not None:
+            logger.info(f"Engine '{engine_id}' disconnected")
+        else:
+            logger.error("Unknown engine disconnected")
         self._engine_id_channel_map = {key: value for key, value in self._engine_id_channel_map.items() if value != channel}
 
     async def rpc_call(self, engine_id: str, message: M.MessageBase) -> M.MessageBase:

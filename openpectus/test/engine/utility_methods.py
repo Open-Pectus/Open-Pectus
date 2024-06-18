@@ -8,10 +8,10 @@ from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.model.pprogram import PProgram
 
 
-def build_program(s) -> PProgram:
+def build_program(s, skip_enrich_analyzers=False) -> PProgram:
     p = PGrammar()
     p.parse(s)
-    return p.build_model()
+    return p.build_model(skip_enrich_analyzers=skip_enrich_analyzers)
 
 
 def run_engine(engine: Engine, pcode: str, max_ticks: int = -1):
@@ -89,9 +89,11 @@ def configure_test_logger():
 
 
 def set_engine_debug_logging():
-    engine_modules = ["openpectus.engine.engine",
-                      "openpectus.engine.internal_commands",
-                      "openpectus.engine.internal_commands_impl"]
+    engine_modules = [
+        "openpectus.engine.engine",
+        # "openpectus.engine.internal_commands",
+        "openpectus.engine.internal_commands_impl",
+    ]
     for m in engine_modules:
         logger = logging.getLogger(m)
         logger.setLevel(logging.DEBUG)

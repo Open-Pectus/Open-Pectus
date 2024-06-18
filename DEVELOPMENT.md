@@ -75,6 +75,15 @@ Install open pectus in the environment:
 pip install -e .
 ```
 
+Set the SENTRY_DSN environment variable (optional):
+To enable the sentry logger, the SENTRY_DSN environment variable needs to be set.
+* Find the value by logging in to https://sentry.io and navigate to `settings/projects/openpectus/keys`
+* Save the value as an environment variable on your developer pc:
+```shell
+setx SENTRY_DSN value
+```
+
+
 ### 2.2.2. Other commands
 **To update an existing conda environment with all dependencies (e.g. when requirements.txt has changed):**
 ```shell
@@ -280,7 +289,7 @@ The frontend generates and uses typescript skeleton interfaces from the Aggregat
 
 To ensure that the implemented backend, the API specification file and the typescript interfaces all match, the flow for modification is as follows:
 1. A change is made in the Aggregator API implementation.
-2. The script `update_api_spec_and_typescript.sh` must be manually invoked. This updates the api spec file and generates updated typescript interfaces from it.
+2. The script `generate_openapi_spec_and_typescript_interfaces.sh` must be manually invoked. This updates the api spec file and generates updated typescript interfaces from it.
 3. The frontend build must be run to check the updated interfaces. If the frontend build fails, the build server build will fail. This indicates an integration error caused
    by an incompatible API change. This should be fixed before the branch is merged, either by updating the frontend to support the API change or by reworking the API change to be compatible with the frontend.
 4. Steps 1-3 must be repeated until both frontend and backend build successfully.

@@ -60,12 +60,16 @@ class EngineDispatcher():
         try:
             resp = httpx.get(aggregator_health_url)
         except httpx.ConnectError as ex:
+            logger.fatal(f"Connection to Aggregator health end point {aggregator_health_url} failed.", exc_info=True)
             print("Connection to Aggregator health end point failed.")
             print(f"Status url: {aggregator_health_url}")
             print(f"Error: {ex}")
             print("OpenPectus Engine cannot start.")
             exit(1)
         if resp.is_error:
+            logger.fatal(
+                f"Aggregator health end point {aggregator_health_url} returned an unsuccessful result: {resp.status_code}.",
+                exc_info=True)
             print("Aggregator health end point returned an unsuccessful result.")
             print(f"Status url: {aggregator_health_url}")
             print(f"HTTP status code returned: {resp.status_code}")
@@ -87,14 +91,17 @@ class EngineDispatcher():
         self.check_aggregator_alive_or_exit(self._aggregator_host)
         while self._engine_id is None:
             self._engine_id = await self.register_for_engine_id_async(self._uod_name, self._location)
+            logger.info(f"Received registration engine_id: {self._engine_id}")
 
         rpc_url = f"ws://{self._aggregator_host}{AGGREGATOR_RPC_WS_PATH}"
         rpc_methods = EngineDispatcher.EngineRpcMethods(self, self._engine_id)
         self.rpc_client = WebSocketRpcClient(uri=rpc_url, methods=rpc_methods)
         atexit.register(self.disconnect_async)
         await self.rpc_client.__aenter__()
+        logger.info("Websocket connected")
 
     async def disconnect_async(self):
+        logger.info("Websocket disconnected")
         await self.rpc_client.__aexit__()
 
     def post(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:

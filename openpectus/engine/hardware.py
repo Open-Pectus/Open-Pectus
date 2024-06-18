@@ -1,6 +1,9 @@
 from enum import Flag, auto
-from typing import Any, Dict, Sequence
-from datetime import datetime
+import logging
+from typing import Any, Sequence
+
+
+logger = logging.getLogger(__name__)
 
 
 class RegisterDirection(Flag):
@@ -15,7 +18,7 @@ class Register():
         self._name: str = name
         self._direction: RegisterDirection = direction
         # self._value: Any = None
-        self._options: Dict[str, Any] = options
+        self._options: dict[str, Any] = options
 
     @property
     def name(self):
@@ -26,11 +29,11 @@ class Register():
         return self._direction
 
     @property
-    def options(self) -> Dict[str, Any]:
+    def options(self) -> dict[str, Any]:
         return self._options
 
     def __str__(self):
-        return f"Register(name={self._name})"
+        return f"Register(name={self.name})"
 
     def __repr__(self):
         return str(self)
@@ -47,33 +50,11 @@ class HardwareLayerException(Exception):
         return self.message
 
 
-class HardwareConnectionStatus():
-    """ Represents the hardware connection status. """
-    def __init__(self):
-        self.is_connected: bool = False
-        self.connection_attempt_time = None
-        self.successful_connection_time = None
-
-    def set_ok(self):
-        self.is_connected = True
-        self.successful_connection_time = datetime.now()
-
-    def set_not_ok(self):
-        self.is_connected = False
-
-    def register_connection_attempt(self):
-        self.connection_attempt_time = datetime.now()
-
-    @property
-    def status(self):
-        return self.is_connected
-
-
 class HardwareLayerBase():
-    """ Represents the hardware layer """
+    """ Base class for hardware layer implementations. """
     def __init__(self) -> None:
-        self.registers: Dict[str, Register] = {}
-        self.connection_status: HardwareConnectionStatus = HardwareConnectionStatus()
+        self._registers: dict[str, Register] = {}
+        self._is_connected: bool = False
 
     def __enter__(self):
         """ Allow use as context manager. """
@@ -82,13 +63,30 @@ class HardwareLayerBase():
     def __exit__(self, type, value, traceback):
         self.disconnect()
 
+    def tick(self):
+        """ Invoked on each tick by engine. """
+        pass
+
+    def __str__(self) -> str:
+        return f"HardwareLayer(type={type(self).__name__},registers={','.join(self.registers)})"
+
+    @property
+    def registers(self) -> dict[str, Register]:
+        return self._registers
+
+    @property
+    def is_connected(self) -> bool:
+        """ Returns a value indicating whether there is an active connection to the hardware. Virtual property. """
+        return self._is_connected
+
     def read(self, r: Register) -> Any:
+        """ Read single register value. Abstract method. """
         if RegisterDirection.Read not in r.direction:
             raise HardwareLayerException(f"Attempt to read unreadable register {r}.")
         raise NotImplementedError
 
     def read_batch(self, registers: Sequence[Register]) -> list[Any]:
-        """ Read batch of register values. Override to provide efficient implementation """
+        """ Read batch of register values. Override to provide efficient implementation. Virtual method. """
         for r in registers:
             if RegisterDirection.Read not in r.direction:
                 raise HardwareLayerException(f"Attempt to read unreadable register {r}.")
@@ -98,12 +96,13 @@ class HardwareLayerBase():
         return values
 
     def write(self, value: Any, r: Register) -> None:
+        """ Write single register value. Abstract method. """
         if RegisterDirection.Write not in r.direction:
             raise HardwareLayerException(f"Attempt to write unwritable register {r}.")
         raise NotImplementedError
 
     def write_batch(self, values: Sequence[Any], registers: Sequence[Register]):
-        """ Write batch of register values. Override to provide efficient implementation """
+        """ Write batch of register values. Override to provide efficient implementation. Virtual method. """
         for r in registers:
             if RegisterDirection.Write not in r.direction:
                 raise HardwareLayerException(f"Attempt to write unwritable register {r}.")
@@ -111,19 +110,40 @@ class HardwareLayerBase():
             self.write(v, r)
 
     def connect(self):
-        """ Connect to hardware. Throw HardwareLayerException on error. """
-        self.connection_status.register_connection_attempt()
+        """ Connect to hardware. Throw HardwareLayerException on error. Virtual method. """
+        self._is_connected = True
 
     def disconnect(self):
-        """ Connect to hardware. Throw HardwareLayerException on error. """
-        self.connection_status.set_not_ok()
+        """ Connect to hardware. Throw HardwareLayerException on error. Virtual method. """
+        self._is_connected = False
+
+    def reconnect(self):
+        """ Perform a reconnect. The default implementation just disconnects (ignoring any error)
+        and connects. Override to perform a more advanced reconnect, like using a thread.
+        """
+        logger.info("Reconnecting")
+        try:
+            logger.info("Reconnect - disconnect")
+            self.disconnect()
+        except Exception:
+            logger.error("Reconnect - disconnect error", exc_info=True)
+            # we continue - disconnect should not fail but even if it does,
+            # connect might still work
+
+        try:
+            self.connect()
+            logger.info("Reconnect complete")
+        except Exception:
+            logger.error("Reconnect - connect error", exc_info=True)
+            raise HardwareLayerException("Reconnect attempt failed")
+
 
     def validate_offline(self):
-        """ Perform checks that verify that the registers definition is valid. Raise on validation error. """
+        """ Perform checks that verify that the registers definition is valid. Raise on validation error. Virtual method. """
         pass
 
     def validate_online(self):
-        """ Perform checks that verify that the register definition works. Raise on validation error. """
+        """ Perform checks that verify that the register definition works. Raise on validation error.Virtual method. """
         pass
 
 
@@ -131,6 +151,7 @@ class NullHardware(HardwareLayerBase):
     """ Represents no hardware. Used by tests. """
     def __init__(self) -> None:
         super().__init__()
+        self._is_connected = True
 
     def read(self, r: Register) -> Any:
         return None

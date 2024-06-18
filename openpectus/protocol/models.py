@@ -9,8 +9,9 @@ logger = logging.getLogger(__name__)
 
 SystemStateEnum = EM.SystemStateEnum
 SystemTagName = EM.SystemTagName
-TagDirection = EM.TagDirection  # TODO: engine internal, should not be exposed to protocol
+TagDirection = EM.TagDirection
 MethodStatusEnum = EM.MethodStatusEnum
+EntryDataType = EM.EntryDataType
 
 class ProtocolModel(BaseModel):
     class Config:
@@ -19,18 +20,28 @@ class ProtocolModel(BaseModel):
 
 
 class ReadingCommand(ProtocolModel):
+    command_id: str
     name: str
     command: str
+    choice_names: list[str]
 
 
 class ReadingInfo(ProtocolModel):
+    discriminator: str
     tag_name: str
     valid_value_units: list[str] | None
+    entry_data_type: EntryDataType | None
     commands: list[ReadingCommand]
+    command_options: dict[str, str] | None
+
+    def has_command_id(self, command_id: str) -> bool:
+        for c in self.commands:
+            if c.command_id == command_id:
+                return True
+        return False
 
 
 TagValueType = float | int | str | None
-
 
 
 class TagValue(ProtocolModel):

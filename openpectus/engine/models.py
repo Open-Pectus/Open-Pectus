@@ -1,4 +1,5 @@
 from enum import StrEnum
+from typing import Literal
 from openpectus.lang.exec.tags import SystemTagName, TagDirection
 
 SystemTagName = SystemTagName
@@ -11,6 +12,7 @@ class EngineCommandEnum(StrEnum):
     UNPAUSE = "Unpause"
     HOLD = "Hold"
     UNHOLD = "Unhold"
+    WAIT = "Wait"
     RESTART = "Restart"
 
     @staticmethod
@@ -32,3 +34,10 @@ class MethodStatusEnum(StrEnum):
     OK = "OK"
     ERROR = "Error"
 
+
+class ConnectionStatusEnum(StrEnum):
+    Disconnected = "Disconnected"
+    Connected = "Connected"
+
+
+EntryDataType = Literal["str"] | Literal["int"] | Literal["float"] | Literal["auto"]

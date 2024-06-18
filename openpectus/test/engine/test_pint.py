@@ -1,7 +1,7 @@
 import unittest
 
 import pint
-from pint import UnitRegistry, Quantity, Unit, DimensionalityError
+from pint import UndefinedUnitError, UnitRegistry, Quantity, Unit, DimensionalityError
 from pint.util import UnitsContainer
 
 ureg = UnitRegistry()
@@ -173,6 +173,10 @@ class PintTest(unittest.TestCase):
         self.assertTrue(a < b)
         self.assertTrue(a < c)
         self.assertEqual(b, c)
+
+    def test_test_for_unknown_unit(self):
+        with self.assertRaises(UndefinedUnitError):
+            _ = Q_("7.0 CV")
 
     def test_list_compatible_units(self):
         a = Q_("10 cm")

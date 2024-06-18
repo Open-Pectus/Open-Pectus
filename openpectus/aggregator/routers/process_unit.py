@@ -1,21 +1,22 @@
 import logging
 from typing import List
 
+from openpectus.aggregator import command_util
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
 import openpectus.aggregator.routers.dto as Dto
-import openpectus.protocol.aggregator_messages as AM
+
 from fastapi import APIRouter, Depends, Response
 from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import PlotLogRepository
-from openpectus.aggregator.models import SystemStateEnum, EngineData
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])
 
 
-def map_pu(engine_data: EngineData) -> Dto.ProcessUnit:
+def map_pu(engine_data: Mdl.EngineData) -> Dto.ProcessUnit:
     # TODO define source of all fields
 
     state = Dto.ProcessUnitState.Ready(state=Dto.ProcessUnitStateEnum.READY)
@@ -31,7 +32,9 @@ def map_pu(engine_data: EngineData) -> Dto.ProcessUnit:
         name=f"{engine_data.computer_name} ({engine_data.uod_name})",
         state=state,
         location=engine_data.location,
-        runtime_msec=engine_data.runtime.value if engine_data.runtime is not None and isinstance(engine_data.runtime.value, int) else 0,
+        runtime_msec=engine_data.runtime.value if (
+            engine_data.runtime is not None and isinstance(engine_data.runtime.value, int))
+        else 0,
         current_user_role=Dto.UserRole.ADMIN,
     )
     return unit
@@ -69,12 +72,17 @@ def get_process_values(
     for reading in engine_data.readings:
         tag_value = tags_info.get(reading.tag_name)
         if tag_value is not None:
-            process_values.append(Dto.ProcessValue.from_tag_value(tag_value))
+            cmds = command_util.create_commands(tag_value, reading)
+            process_values.append(Dto.ProcessValue.create_w_commands(tag_value, cmds))
     return process_values
 
 
 @router.get('/process_unit/{engine_id}/all_process_values')
-def get_all_process_values(engine_id: str, response: Response, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[Dto.ProcessValue]:
+def get_all_process_values(
+        engine_id: str,
+        response: Response,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)
+        ) -> List[Dto.ProcessValue]:
     response.headers["Cache-Control"] = "no-store"
     engine_data = agg.get_registered_engine_data(engine_id)
     if engine_data is None:
@@ -82,33 +90,25 @@ def get_all_process_values(engine_id: str, response: Response, agg: Aggregator =
     tags_info = engine_data.tags_info.map
     process_values: List[Dto.ProcessValue] = []
     for tag_value in tags_info.values():
-        process_values.append(Dto.ProcessValue.from_tag_value(tag_value))
+        process_values.append(Dto.ProcessValue.create(tag_value))
     return process_values
 
 
 @router.post("/process_unit/{unit_id}/execute_command")
 async def execute_command(unit_id: str, command: Dto.ExecutableCommand, agg: Aggregator = Depends(agg_deps.get_aggregator)):
-    # logger.debug("execute_command", str(command))
-    if command is None or command.command is None or command.command.strip() == '':
-        logger.error("Cannot invoke empty command")
-        return Dto.ServerErrorResponse(message="Cannot invoke empty command")
+    if __debug__:
+        print("ExecutableCommand", command)
 
-    # print("command.command", command.command)
+    engine_data = agg.get_registered_engine_data(unit_id)
+    if engine_data is None:
+        logger.error(f"No registered engine with engine_id '{unit_id}'")
+        return Dto.ServerErrorResponse(message=f"No registered engine with engine_id '{unit_id}'")
 
-    lines = command.command.splitlines(keepends=False)
-    line_count = len(lines)
-    if line_count < 1:
-        logger.error("Cannot invoke command with no lines")
-        return Dto.ServerErrorResponse(message="Cannot invoke command with no lines")
-
-    if command.source == Dto.CommandSource.UNIT_BUTTON:
-        # Make simple commands title cased, eg 'start' -> 'Start
-        # TODO remove once frontend is updated to title cased commands
-        code = lines[0]
-        code = code.title()
-        msg = AM.InvokeCommandMsg(name=code)
-    else:
-        msg = AM.InjectCodeMsg(pcode=command.command)
+    try:
+        msg = command_util.parse_as_message(command, engine_data.readings)
+    except Exception as ex:
+        logger.error(f"Parse error for command: {command}", exc_info=True)
+        return Dto.ServerErrorResponse(message=str(ex))
 
     logger.info(f"Sending msg '{str(msg)}' of type {type(msg)} to client '{unit_id}'")
     await agg.dispatcher.rpc_call(unit_id, msg)
@@ -235,4 +235,4 @@ def cancel_run_log_line(unit_id: str, line_id: str):
 
 @router.get('/process_units/system_state_enum')
 def expose_system_state_enum() -> Dto.SystemStateEnum:
-    return SystemStateEnum.Running;
+    return Mdl.SystemStateEnum.Running

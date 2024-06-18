@@ -75,10 +75,10 @@ class MethodModel():
             for record in runtimeinfo.records:
                 if not isinstance(record.node, PProgram):
                     assert record.node is not None, "node is None"
-                    assert record.node.line is not None, "node.line is None, node: " + str(record.node)
-                    line_num = record.node.line
-                    line_id = self._map_line_num_to_line_id[line_num]
-                    method_state.started_line_ids.append(line_id)
-                    if record.visit_end_time != -1:
-                        method_state.executed_line_ids.append(line_id)
+                    if record.node.line is not None:  # Note: injected nodes have no line numbers
+                        line_num = record.node.line
+                        line_id = self._map_line_num_to_line_id[line_num]
+                        method_state.started_line_ids.append(line_id)
+                        if record.visit_end_time != -1:
+                            method_state.executed_line_ids.append(line_id)
         return method_state

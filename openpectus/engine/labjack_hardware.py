@@ -151,7 +151,7 @@ class Labjack_Hardware(HardwareLayerBase):
         try:
             return ljm.eReadName(self._handle, r.options["port"])
         except ljm.LJMError as error:
-            self.connection_status.set_not_ok()
+            logger.error(f"Unable to read {r}", exc_info=True)
             raise HardwareLayerException(f"Unable to read {r}. Labjack error: {error}.")
 
     def read_batch(self, registers: Sequence[Register]) -> list[Any]:
@@ -162,7 +162,7 @@ class Labjack_Hardware(HardwareLayerBase):
         try:
             return ljm.eReadNames(self._handle, len(registers), [r.options["port"] for r in registers])
         except ljm.LJMError as error:
-            self.connection_status.set_not_ok()
+            logger.error(f"Unable to read registers {registers}", exc_info=True)
             raise HardwareLayerException(f"Unable to read registers {registers}. Labjack error: {error}.")
 
     def write(self, value: Any, r: Register):
@@ -171,7 +171,7 @@ class Labjack_Hardware(HardwareLayerBase):
         try:
             return ljm.eWriteName(self._handle, r.options["port"], value)
         except ljm.LJMError as error:
-            self.connection_status.set_not_ok()
+            logger.error(f"Unable to write '{value}' to {r}", exc_info=True)
             raise HardwareLayerException(f"Unable to write '{value}' to {r}. Labjack error: {error}.")
 
     def write_batch(self, values: Sequence[Any], registers: Sequence[Register]):
@@ -182,7 +182,7 @@ class Labjack_Hardware(HardwareLayerBase):
         try:
             ljm.eWriteNames(self._handle, len(registers), [r.options["port"] for r in registers], values)
         except ljm.LJMError as error:
-            self.connection_status.set_not_ok()
+            logger.error("Unable to write batch", exc_info=True)
             raise HardwareLayerException(f"Unable to write registers {registers}. Labjack error: {error}.")
 
     def setup(self):
@@ -191,13 +191,10 @@ class Labjack_Hardware(HardwareLayerBase):
 
     def _reconnect(self, handle):
         logger.info(f"Reconnected to Labjack with serial number {self.serial_number}")
-        self.connection_status.register_connection_attempt()
-        self.connection_status.set_ok()
 
     def connect(self):
         """ Connect to Labjack. """
         logger.info(f"Attempting to connect to Labjack with serial number {self.serial_number}")
-        self.connection_status.register_connection_attempt()
         if self._handle:
             self.disconnect()
         try:
@@ -222,10 +219,8 @@ class Labjack_Hardware(HardwareLayerBase):
                                  f"{CONNECTION_TYPES[connection_type]:<12}  "
                                  f"{serial_number:<10}       "
                                  f"{ip_addresse:<15}"))
-            self.connection_status.set_not_ok()
             raise HardwareLayerException(f"Unable to connect to Labjack with serial number {self.serial_number}")
         logger.info(f"Connected to {self.serial_number}")
-        self.connection_status.set_ok()
         self.setup()
         ljm.registerDeviceReconnectCallback(self._handle, self._reconnect)
 
@@ -235,7 +230,6 @@ class Labjack_Hardware(HardwareLayerBase):
         if self._handle:
             ljm.close(self._handle)
             self._handle = None
-        self.connection_status.set_not_ok()
 
     def __str__(self):
         return f"Labjack_Hardware(serial_number={self.serial_number})"

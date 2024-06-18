@@ -75,7 +75,7 @@ def setup_composite_hardware(i0=0):
         for i in range(2):
             registers[f"Reg {j}_{i}"] = Register(f"Reg {j}_{i}", RegisterDirection.Both, hardware=hardware, value=i+j*10)
 
-    composite_hardware.registers = registers
+    composite_hardware._registers = registers
     return composite_hardware
 
 

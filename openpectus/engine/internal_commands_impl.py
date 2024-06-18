@@ -1,6 +1,7 @@
 from __future__ import annotations
 import logging
 import time
+from typing import Any
 
 from openpectus.engine.internal_commands import InternalEngineCommand
 from openpectus.engine.models import EngineCommandEnum, MethodStatusEnum, SystemStateEnum
@@ -12,9 +13,19 @@ logger = logging.getLogger(__name__)
 
 
 # Note:
-# classes in this file are auto-registered as internal engine
-# commands during engine initialization, by
+# classes in this file are auto-registered as internal engine commands during engine initialization, by
 # openpectus.engine.internal_commands.register_commands()
+
+def get_duration_end(tick_time: float, time: float, unit: str) -> float:
+    if unit not in ['s', 'min', 'h']:
+        raise ValueError(f"Wait argument unit must be a time unit, not '{unit}'")
+
+    seconds = time
+    if unit == 'min':
+        seconds = 60 * time
+    elif unit == 'h':
+        seconds = 60 * 60 * time
+    return tick_time + seconds
 
 
 class StartEngineCommand(InternalEngineCommand):
@@ -36,17 +47,39 @@ class StartEngineCommand(InternalEngineCommand):
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
             e._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.OK, e._tick_time)
 
+            e.tag_context.emit_on_start()
+
 
 class PauseEngineCommand(InternalEngineCommand):
+    """ Pause execution of commands and time. Put output tag into safe state.
+
+    See also Hold and Wait.
+    """
     def __init__(self, engine: Engine) -> None:
         super().__init__(EngineCommandEnum.PAUSE)
         self.engine = engine
+        self.duration_end_time : float | None = None
+
+    def init_args(self, kvargs: dict[str, Any]):
+        if "time" in kvargs.keys() and "unit" in kvargs.keys():
+            time = float(kvargs.pop("time"))
+            unit = kvargs.pop("unit")
+            self.duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
+        elif "time" in kvargs.keys() or "unit" in kvargs.keys():
+            raise ValueError("Invalid Pause arguments. Specify either no duration arguments or both time and unit")
 
     def _run(self):
         e = self.engine
         e._runstate_paused = True
         e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Paused, e._tick_time)
         e._prev_state = e._apply_safe_state()
+
+        if self.duration_end_time is not None:
+            logger.debug("Pause duration set. Waiting to unpause.")
+            while self.engine._tick_time < self.duration_end_time:
+                yield
+            logger.debug("Resuming using Unpause")
+            UnpauseEngineCommand(self.engine)._run()
 
 
 class UnpauseEngineCommand(InternalEngineCommand):
@@ -64,8 +97,9 @@ class UnpauseEngineCommand(InternalEngineCommand):
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
 
         # pre-pause values are always applied on unpause, regardless of hold state.
-        if e._prev_state:
+        if e._prev_state is not None:
             e._apply_state(e._prev_state)
+            e._prev_state = None
         else:
             logger.error("Failed to apply state prior to safe state. Prior state was not available")
 
@@ -76,10 +110,24 @@ class UnpauseEngineCommand(InternalEngineCommand):
         # flag down and hope for the best
         e._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.OK, e._tick_time)
 
+
 class HoldEngineCommand(InternalEngineCommand):
+    """ Hold execution of commands and time, keeping ouput tags in their current state.
+
+    See also Pause and Wait.
+    """
     def __init__(self, engine: Engine) -> None:
         super().__init__(EngineCommandEnum.HOLD)
         self.engine = engine
+        self.duration_end_time : float | None = None
+
+    def init_args(self, kvargs: dict[str, Any]):
+        if "time" in kvargs.keys() and "unit" in kvargs.keys():
+            time = float(kvargs.pop("time"))
+            unit = kvargs.pop("unit")
+            self.duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
+        elif "time" in kvargs.keys() or "unit" in kvargs.keys():
+            raise ValueError("Invalid Hold arguments. Specify either no duration arguments or both time and unit")
 
     def _run(self):
         e = self.engine
@@ -87,6 +135,12 @@ class HoldEngineCommand(InternalEngineCommand):
         if not e._runstate_paused:  # Pause takes precedence
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Holding, e._tick_time)
 
+        if self.duration_end_time is not None:
+            logger.debug("Hold duration set. Waiting to unhold.")
+            while self.engine._tick_time < self.duration_end_time:
+                yield
+            logger.debug("Resuming using Unhold")
+            UnholdEngineCommand(self.engine)._run()
 
 class UnholdEngineCommand(InternalEngineCommand):
     def __init__(self, engine: Engine) -> None:
@@ -130,15 +184,34 @@ class StopEngineCommand(InternalEngineCommand):
             e._runstate_holding = False
             e._runstate_stopping = False
 
-            for tag in e.tags:
-                try:
-                    tag.stop()
-                except Exception:
-                    logger.error(f"Error invoking stop on tag {tag.name}", exc_info=True)
+            e.tag_context.emit_on_stop()
 
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Stopped, e._tick_time)
             e._set_run_id("empty")
             e._stop_interpreter()
+
+
+class WaitEngineCommand(InternalEngineCommand):
+    """ Pause execution of commands for the specified duration, keeping time running and output tags in their current state.
+
+    See also Pause and Hold.
+    """
+    def __init__(self, engine: Engine) -> None:
+        super().__init__(EngineCommandEnum.WAIT)
+        self.engine = engine
+
+    def init_args(self, kvargs: dict[str, Any]):
+        time = float(kvargs.pop("time"))
+        unit = kvargs.pop("unit")
+        self.duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
+
+    def _run(self):
+        self.engine._runstate_waiting = True
+
+        while self.engine._tick_time < self.duration_end_time:            
+            yield
+
+        self.engine._runstate_waiting = False
 
 
 class RestartEngineCommand(InternalEngineCommand):
@@ -173,11 +246,7 @@ class RestartEngineCommand(InternalEngineCommand):
             e._runstate_stopping = False
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Stopped, e._tick_time)
 
-            for tag in e.tags:
-                try:
-                    tag.stop()
-                except Exception:
-                    logger.error(f"Error invoking stop on tag {tag.name}", exc_info=True)
+            e.tag_context.emit_on_stop()
 
             e._set_run_id("empty")
             e._stop_interpreter()
@@ -192,6 +261,9 @@ class RestartEngineCommand(InternalEngineCommand):
             e._tick_number = 0
             e._runstate_paused = False
             e._runstate_holding = False
+
+            e.tag_context.emit_on_start()
+
             e._set_run_id("new")
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
             logger.info("Restarting engine complete")

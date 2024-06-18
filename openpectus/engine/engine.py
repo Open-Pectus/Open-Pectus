@@ -6,16 +6,20 @@ from queue import Empty, Queue
 from typing import Iterable, List, Literal, Set
 from uuid import UUID
 from openpectus.engine.internal_commands import (
-    create_internal_command, get_running_internal_command, dispose_command_map, register_commands
+    create_internal_command,
+    get_running_internal_command,
+    dispose_command_map,
+    register_commands
 )
-
-from openpectus.engine.hardware import HardwareLayerBase, HardwareLayerException, RegisterDirection
+from openpectus.engine.hardware import HardwareLayerException, RegisterDirection
 from openpectus.engine.method_model import MethodModel
 from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum, SystemTagName
+from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.commands import CommandRequest
-from openpectus.lang.exec.errors import InterpretationError
+from openpectus.lang.exec.errors import EngineNotInitializedError, InterpretationError, InterpretationInternalError
 from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext
 from openpectus.lang.exec.runlog import RuntimeInfo, RunLog, RuntimeRecord
+from openpectus.lang.exec.tag_lifetime import TagContext
 from openpectus.lang.exec.tags import (
     Tag,
     TagCollection,
@@ -80,9 +84,20 @@ class Engine(InterpreterContext):
         """ Indicates whether the engine is on hold"""
         self._runstate_stopping: bool = False
         """ Indicates whether the engine is on stopping"""
+        self._runstate_waiting: bool = False
+        """ Indicates whether the engine is waiting in a Wait command"""
 
         self._prev_state: TagValueCollection | None = None
         """ The state prior to applying safe state """
+
+        self.block_times: dict[str, float] = {}
+        """ holds time spent in each block"""
+
+        self._tags: TagCollection | None = None
+        self._tag_context: TagContext | None = None
+
+        self.block_popped: str | None = None
+        self.block_pushed: str | None = None
 
         self._interpreter: PInterpreter = PInterpreter(PProgram(), self)
         """ The interpreter executing the current program. """
@@ -106,28 +121,51 @@ class Engine(InterpreterContext):
 
     @property
     def tags(self) -> TagCollection:
-        return self._system_tags.merge_with(self.uod.tags)
+        if self._tags is None:
+            raise EngineNotInitializedError("Tags not set")
+        return self._tags
 
-    def cleanup(self):
-        dispose_command_map()
+    @property
+    def base_unit_provider(self) -> BaseUnitProvider:
+        return self.uod.base_unit_provider
+
+    def block_started(self, name: str):
+        self.block_pushed = name
+        self.block_popped = None
+
+    def block_ended(self, name: str, new_name: str):
+        self.block_pushed = new_name
+        self.block_popped = name
 
     @property
     def interpreter(self) -> PInterpreter:
         if self._interpreter is None:
-            raise ValueError("No interpreter set")
+            raise EngineNotInitializedError("No interpreter set")
         return self._interpreter
+
+    @property
+    def tag_context(self) -> TagContext:
+        if self._tag_context is None:
+            raise EngineNotInitializedError("Tag context not set")
+        return self._tag_context
 
     @property
     def runtimeinfo(self) -> RuntimeInfo:
         return self.interpreter.runtimeinfo
 
+    def cleanup(self):
+        if self._tag_context is not None:
+            self.tag_context.emit_on_engine_shutdown()
+        dispose_command_map()
+
     def get_runlog(self) -> RunLog:
         return self.runtimeinfo.get_runlog()
 
     def _configure(self):
-        self.uod.validate_configuration()
         self.uod.tags.add_listener(self._uod_listener)
         self._system_tags.add_listener(self._system_listener)
+        self._tags = self._system_tags.merge_with(self.uod.tags)
+        self._tag_context = TagContext(self.tags)
 
     def run(self):
         self._configure()
@@ -141,23 +179,19 @@ class Engine(InterpreterContext):
 
         assert self.uod is not None
         assert self.uod.hwl is not None
-
-        try:
-            self.uod.hwl.connect()
-            logger.info("Hardware connected")
-        except HardwareLayerException:
-            logger.error("Hardware connect error", exc_info=True)
-            return  # TODO retry/reconnect
+        assert self.uod.hwl.is_connected, "Hardware is not connected. Engine cannot start"
 
         self._running = True
         self._tick_timer.start()
 
+        self.tag_context.emit_on_engine_configured()
+
     def stop(self):
+        logger.info("Engine shutting down")
         try:
             self.uod.hwl.disconnect()
         except HardwareLayerException:
             logger.error("Disconnect hardware error", exc_info=True)
-            # TODO handle disconnected state
 
         self._running = False
         self._tick_timer.stop()
@@ -175,12 +209,14 @@ class Engine(InterpreterContext):
         self._tick_time = time.time()
         self._tick_number += 1
 
-        # Perform certain things in first tick
+        # Perform certain actions in first tick
         if self._tick_number == 0:
             # System tags are initialized before first tick, without a tick time, and some are never updated, so
             # provide first tick time as a "default".
             for tag in self._system_tags.tags.values():
                 tag.tick_time = self._tick_time
+
+        self.uod.hwl.tick()
 
         # read
         self.read_process_image()
@@ -189,9 +225,14 @@ class Engine(InterpreterContext):
         if self._runstate_started and\
                 not self._runstate_paused and\
                 not self._runstate_holding and\
+                not self._runstate_waiting and\
                 not self._runstate_stopping:
             try:
                 self._interpreter.tick(self._tick_time, self._tick_number)
+            except InterpretationInternalError:
+                logger.fatal("A serious internal interpreter error occured. The method should be stopped. If it is resumed, \
+                             additional errors may occur.", exc_info=True)
+                self.set_error_state()
             except InterpretationError:
                 logger.error("Interpretation error", exc_info=True)
                 self.set_error_state()
@@ -200,7 +241,8 @@ class Engine(InterpreterContext):
                 self.set_error_state()
 
         # update calculated tags
-        self.update_calculated_tags(last_tick_time)
+        if self._runstate_started:
+            self.update_calculated_tags(last_tick_time)
 
         # execute queued commands
         self.execute_commands()
@@ -218,7 +260,7 @@ class Engine(InterpreterContext):
             register_values = self.uod.hwl.read_batch(registers)
         except HardwareLayerException:
             logger.error("Hardware read_batch error", exc_info=True)
-            # TODO handle disconnected state
+            self.stop()
             return
 
         for i, r in enumerate(registers):
@@ -229,22 +271,46 @@ class Engine(InterpreterContext):
             tag.set_value(tag_value, self._tick_time)
 
     def update_calculated_tags(self, last_tick_time: float):
-        # TODO figure out engine/interpreter work split on clock tags
-        # it appears that interpreter will have to update scope times
-        # - unless we allow scope information to pass to engine (which we might)
         sys_state = self._system_tags[SystemTagName.SYSTEM_STATE]
+        time_increment = self._tick_time - last_tick_time if last_tick_time > 0.0 else 0.0
+        logger.debug(f"{time_increment = }")
 
         # Clock         - seconds since epoch
         clock = self._system_tags.get(SystemTagName.CLOCK)
         clock.set_value(time.time(), self._tick_time)
 
         # Process Time  - 0 at start, increments when System State is Run
-        process_time = self.tags[SystemTagName.PROCESS_TIME]
+        process_time = self._system_tags[SystemTagName.PROCESS_TIME]
         process_time_value = process_time.as_number()
         if sys_state.get_value() == SystemStateEnum.Running:
-            increment = self._tick_time - last_tick_time
-            new_process_time = process_time_value + increment
-            process_time.set_value(new_process_time, self._tick_time)
+            process_time.set_value(process_time_value + time_increment, self._tick_time)
+
+        # Run Time      - 0 at start, increments when System State is not Stopped
+        run_time = self._system_tags[SystemTagName.RUN_TIME]
+        run_time_value = run_time.as_number()
+        if sys_state.get_value() not in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
+            run_time.set_value(run_time_value + time_increment, self._tick_time)
+
+        # Block name + signal block changes to tag_context
+        block_name = self._system_tags[SystemTagName.BLOCK].get_value() or ""
+        assert isinstance(block_name, str)
+        if self.block_pushed is not None and self.block_popped is not None:
+            block_name, old_block_name = self.block_pushed, self.block_popped
+            self.block_popped, self.block_pushed = None, None
+            self.tag_context.emit_on_block_end(old_block_name, block_name, self._tick_number)
+        elif self.block_pushed is not None:
+            block_name = self.block_pushed
+            self.block_pushed = None
+            self.tag_context.emit_on_block_start(block_name, self._tick_number)
+
+        # Block Time    - 0 at Block start, global but value refers to active block
+        if block_name not in self.block_times.keys():
+            self.block_times[block_name] = 0.0
+        self.block_times[block_name] += time_increment
+        self._system_tags[SystemTagName.BLOCK_TIME].set_value(self.block_times[block_name], self._tick_time)
+
+        # Execute the tick lifetime hook on tags
+        self.tag_context.emit_on_tick()
 
     def execute_commands(self):
         done = False
@@ -321,6 +387,13 @@ class Engine(InterpreterContext):
         # no engine command is running - start one
         try:
             command = create_internal_command(cmd_request.name)
+            if cmd_request.kvargs is not None:
+                try:
+                    command.init_args(cmd_request.kvargs)
+                    logger.debug(f"Initialized command {cmd_request.name} with arguments {cmd_request.kvargs}")
+                except Exception:
+                    raise Exception(
+                        f"Failed to initialize arguments '{cmd_request.kvargs}' for command '{cmd_request.name}'")
         except ValueError:
             raise NotImplementedError(f"Unknown internal engine command '{cmd_request.name}'")
 
@@ -356,6 +429,9 @@ class Engine(InterpreterContext):
         cmd_name = cmd_request.name
         assert self.uod.has_command_name(cmd_name), f"Expected Uod to have command named '{cmd_name}'"
         assert cmd_request.exec_id is not None, f"Expected uod command request '{cmd_name}' to have exec_id"
+
+        if not self.uod.hwl.is_connected:
+            raise HardwareLayerException("The hardware is not currently connected. Uod command was not allowed to start.")
 
         record = self.interpreter.runtimeinfo.get_exec_record(cmd_request.exec_id)
 
@@ -405,15 +481,17 @@ class Engine(InterpreterContext):
 
         assert uod_command is not None, f"Failed to get uod_command for command '{cmd_name}'"
 
-        args = uod_command.parse_args(cmd_request.args, uod_command.context)  # TODO remove uod from method signature
-        if args is None:
-            logger.error(f"Invalid argument string: '{cmd_request.args}' for command '{cmd_name}'")
+        logger.debug(f"Parsing arguments '{cmd_request.unparsed_args}' for uod command {cmd_name}")
+        parsed_args = uod_command.parse_args(cmd_request.unparsed_args or "")
+
+        if parsed_args is None:
+            logger.error(f"Invalid argument string: '{cmd_request.unparsed_args}' for command '{cmd_name}'")
             raise ValueError(f"Invalid arguments for command '{cmd_name}'")
 
         # execute command state flow
         try:
             logger.debug(
-                f"Executing uod command: '{cmd_request.name}' with args '{cmd_request.args}', " +
+                f"Executing uod command: '{cmd_request.name}' with parsed args '{parsed_args}', " +
                 f"iteration {uod_command._exec_iterations}")
             if uod_command.is_cancelled():
                 if not uod_command.is_finalized():
@@ -430,10 +508,10 @@ class Engine(InterpreterContext):
                     cmd_request.command_exec_id,
                     self._tick_time, self._tick_number,
                     self.tags_as_readonly())
-                uod_command.execute(args)
+                uod_command.execute(parsed_args)
                 logger.debug(f"Command {cmd_request.name} executed first iteration {uod_command._exec_iterations}")
             elif not uod_command.is_execution_complete():
-                uod_command.execute(args)
+                uod_command.execute(parsed_args)
                 logger.debug(f"Command {cmd_request.name} executed another iteration {uod_command._exec_iterations}")
 
             if uod_command.is_execution_complete() and not uod_command.is_finalized():
@@ -458,13 +536,13 @@ class Engine(InterpreterContext):
             if cmd_record is not None:
                 assert cmd_record[1].exec_id == record.exec_id
                 command = cmd_record[0]
-                if command is not None and not command.is_cancelled:
+                if command is not None and not command.is_cancelled():
                     command.cancel()
                     logger.info(f"Cleaned up failed command {cmd_name}")
 
             logger.error(
                 f"Uod command execution failed. Command: '{cmd_request.name}', " +
-                f"argument string: '{cmd_request.args}'", exc_info=True)
+                f"argument string: '{cmd_request.unparsed_args}'", exc_info=True)
             raise ex
 
     def _apply_safe_state(self) -> TagValueCollection:
@@ -518,7 +596,7 @@ class Engine(InterpreterContext):
         return p.build_model()
 
     def write_process_image(self):
-        hwl: HardwareLayerBase = self.uod.hwl
+        hwl = self.uod.hwl
 
         register_values = []
         registers = [r for r in hwl.registers.values() if RegisterDirection.Write in r.direction]
@@ -531,16 +609,29 @@ class Engine(InterpreterContext):
             hwl.write_batch(register_values, registers)
         except HardwareLayerException:
             logger.error("Hardware write_batch error", exc_info=True)
-            # TODO handle disconnected state
+            self.stop()
 
-    def schedule_execution(self, name: str, args: str | None = None, exec_id: UUID | None = None):
-        """ Execute named command (engine internal or Uod), possibly with arguments. """
+    def schedule_execution(self, name: str, exec_id: UUID | None = None, **kvargs):
+        """ Execute named command from interpreter """
         if EngineCommandEnum.has_value(name) or self.uod.has_command_name(name):
-            request = CommandRequest(name, args, exec_id)
+            request = CommandRequest.from_interpreter(name, exec_id, **kvargs)
             self.cmd_queue.put_nowait(request)
         else:
             logger.error(f"Invalid command type scheduled: {name}")
             raise ValueError(f"Invalid command type scheduled: {name}")
+
+    def schedule_execution_user(self, name: str, args: str | None = None):
+        """ Execute named command from user """
+        # TODO args format needs to be specified in more detail. Its intended usage is
+        # to contain argument values added to tag buttons. But in that case why not just use pcode?
+        if EngineCommandEnum.has_value(name) or self.uod.has_command_name(name):
+            if args is not None:
+                raise NotImplementedError("User arguments format not implemented - command name: " + name)
+            request = CommandRequest.from_user(name)
+            self.cmd_queue.put_nowait(request)
+        else:
+            logger.error(f"Invalid user command type scheduled: {name}")
+            raise ValueError(f"Invalid user command type scheduled: {name}")
 
     def inject_code(self, pcode: str):
         """ Inject a general code snippet to run in the current scope of the current program. """

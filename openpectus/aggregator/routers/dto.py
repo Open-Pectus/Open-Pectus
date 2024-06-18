@@ -121,6 +121,7 @@ class ProcessValueCommandChoiceValue(Dto):
 
 
 class ProcessValueCommand(Dto):
+    command_id: str | None
     name: str
     command: str
     disabled: bool | None
@@ -156,7 +157,7 @@ class ProcessValue(Dto):
     direction: Mdl.TagDirection
 
     @staticmethod
-    def from_tag_value(tag: Mdl.TagValue) -> ProcessValue:
+    def create(tag: Mdl.TagValue) -> ProcessValue:
         return ProcessValue(
             name=tag.name,
             value=tag.value,
@@ -165,7 +166,17 @@ class ProcessValue(Dto):
             commands=[],
             direction=tag.direction
         )
-        # commands=[ProcessValueCommand(name=c.name, command=c.command) for c in r.commands])
+
+    @staticmethod
+    def create_w_commands(tag: Mdl.TagValue, commands) -> ProcessValue:
+        return ProcessValue(
+            name=tag.name,
+            value=tag.value,
+            value_type=get_ProcessValueType_from_value(tag.value),
+            value_unit=tag.value_unit,
+            commands=commands,
+            direction=tag.direction
+        )
 
 
 class CommandSource(StrEnum):
@@ -177,9 +188,11 @@ class CommandSource(StrEnum):
 
 
 class ExecutableCommand(Dto):
+    command_id: str | None
     command: str  # full command string, e.g. "start" or "foo: bar"
     source: CommandSource
     name: str | None
+    value: ProcessValueCommandNumberValue | ProcessValueCommandFreeTextValue | ProcessValueCommandChoiceValue | None
 
 
 class RunLogLine(Dto):
@@ -200,15 +213,17 @@ class RunLogLine(Dto):
         return RunLogLine(
             id=model.id,
             command=ExecutableCommand(
+                command_id=None,
                 command=model.command_name,
                 name=None,
-                source=CommandSource.METHOD
+                source=CommandSource.METHOD,
+                value=None
             ),
             start=datetime.fromtimestamp(model.start),
             end=None if model.end is None else datetime.fromtimestamp(model.end),
             progress=None,
-            start_values=list(map(ProcessValue.from_tag_value, model.start_values)),
-            end_values=list(map(ProcessValue.from_tag_value, model.end_values)),
+            start_values=list(map(ProcessValue.create, model.start_values)),
+            end_values=list(map(ProcessValue.create, model.end_values)),
             forcible=None,  # TODO map forcible,forced,cancellable and cancelled
             forced=None,
             cancellable=None,
@@ -295,9 +310,12 @@ class PlotLogEntryValue(Dto):
     @classmethod
     def from_orm(cls, obj: data_models.PlotLogEntryValue) -> PlotLogEntryValue:
         mapped = super().from_orm(obj)
-        if obj.value_int is not None: mapped.value = obj.value_int
-        if obj.value_float is not None: mapped.value = obj.value_float
-        if obj.value_str is not None: mapped.value = obj.value_str
+        if obj.value_int is not None:
+            mapped.value = obj.value_int
+        if obj.value_float is not None:
+            mapped.value = obj.value_float
+        if obj.value_str is not None:
+            mapped.value = obj.value_str
         return mapped
 
 

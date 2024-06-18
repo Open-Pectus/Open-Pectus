@@ -8,6 +8,7 @@ import type { ProcessValueCommandFreeTextValue } from './ProcessValueCommandFree
 import type { ProcessValueCommandNumberValue } from './ProcessValueCommandNumberValue';
 
 export type ProcessValueCommand = {
+    command_id?: string;
     name: string;
     command: string;
     disabled?: boolean;

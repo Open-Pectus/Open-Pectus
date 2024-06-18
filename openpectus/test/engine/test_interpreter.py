@@ -6,7 +6,7 @@ from typing import List, Any
 import pint
 from openpectus.engine.engine import Engine
 from openpectus.engine.models import EngineCommandEnum
-from openpectus.lang.exec.pinterpreter import PInterpreter
+from openpectus.lang.exec.pinterpreter import CallStack, PInterpreter
 from openpectus.lang.exec.tags import Tag, SystemTagName
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
 from openpectus.lang.grammar.pprogramformatter import print_parsed_program as print_program
@@ -30,7 +30,7 @@ _ = pint.Quantity("0 sec")
 
 
 def create_test_uod() -> UnitOperationDefinitionBase:
-    def incr_counter(cmd: UodCommand, args: List[Any]):
+    def incr_counter(cmd: UodCommand, **kvargs):
         counter = cmd.context.tags["counter"]
         count = counter.as_number()
         count = count + 1
@@ -44,7 +44,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_location("Test location")
         # Readings
         .with_tag(Tag(name="counter", value=0))
-        .with_command(UodCommand.builder().with_name("incr counter").with_exec_fn(incr_counter))
+        .with_command(name="incr counter", exec_fn=incr_counter)
         .build()
     )
 
@@ -54,7 +54,6 @@ def create_engine(uod: UnitOperationDefinitionBase | None = None) -> Engine:
         uod = create_test_uod()
     e = Engine(uod)
     e._configure()
-    
     return e
 
 
@@ -232,7 +231,7 @@ Mark: b3
 
         self.assertEqual(["a", "b", "a1", "b1", "a2", "b2", "a3", "b3"], engine.interpreter.get_marks())
 
-    @unittest.skip("TODO")
+    @unittest.skip("Block in Watch not supported")
     def test_watch_block_long_running_block_time(self):
         # question for another test: is Block time defined for alarm without block? Yes
 
@@ -261,8 +260,6 @@ Mark: b
         print_program(program)
         engine = self.engine
         run_engine(engine, program, 15)
-
-        # TODO fix intepretation error, watch instruction(s) not being executed
 
         self.assertEqual(["a", "b", "a1", "a2", "a3", "a4"], engine.interpreter.get_marks())
 
@@ -358,7 +355,7 @@ Mark: A3
         program = """
 Block: A
     Mark: A1
-    Watch: Block Time > 1 sec
+    Watch: Block Time > 1 s
         End block
     Mark: A2
 Mark: A3
@@ -368,23 +365,76 @@ Mark: A3
 
         self.assertEqual(["A1", "A2", "A3"], engine.interpreter.get_marks())
 
-    @unittest.skip(reason="TODO BUG")
+
     def test_block_time_watch_complex(self):
         program = """
 Block: A
     Mark: A1
-    Watch: Block Time > 0.5 sec
+    Watch: Block Time > 0.5 s
         Mark: A2
-    Watch: Block Time > 1 sec
+    Watch: Block Time > 1 s
         Mark: A3
         End block
     Mark: A4
 Mark: A5
 """
         engine = self.engine
-        run_engine(engine, program, 30)
+        run_engine(engine, program, 25)
 
         self.assertEqual(["A1", "A4", "A2", "A3", "A5"], engine.interpreter.get_marks())
+
+    def test_block_end_block(self):
+        program = """
+Block: A
+    Mark: A1
+    End block
+Mark: A2
+"""
+        engine = self.engine
+        run_engine(engine, program, 10)
+
+        self.assertEqual(["A1", "A2"], engine.interpreter.get_marks())
+
+    def test_block_nested_end_block(self):
+        program = """
+Block: A
+    Mark: A1
+    Block: B
+        Mark: B1
+        End block
+Mark: A2
+"""
+        engine = self.engine
+        run_engine(engine, program, 15)
+
+        self.assertEqual(["A1", "B1"], engine.interpreter.get_marks())
+
+    def test_block_end_blocks(self):
+        program = """
+Block: A
+    Mark: A1
+    End blocks
+Mark: A2
+"""
+        engine = self.engine
+        run_engine(engine, program, 10)
+
+
+        self.assertEqual(["A1", "A2"], engine.interpreter.get_marks())
+
+    def test_block_nested_end_blocks(self):
+        program = """
+Block: A
+    Mark: A1
+    Block: B
+        Mark: B1
+        End blocks
+Mark: A2
+"""
+        engine = self.engine
+        run_engine(engine, program, 15)
+
+        self.assertEqual(["A1", "B1", "A2"], engine.interpreter.get_marks())
 
     def test_base_command_sec(self):
         program = "Base: s"
@@ -393,12 +443,19 @@ Mark: A5
         base_tag = e._system_tags[SystemTagName.BASE]
         self.assertEqual("s", base_tag.get_value())
 
-    def test_base_command_L(self):
-        program = "Base: L"
+    def test_base_command_min(self):
+        program = "Base: min"
         e = self.engine
         run_engine(e, program, 5)
         base_tag = e._system_tags[SystemTagName.BASE]
-        self.assertEqual("L", base_tag.get_value())
+        self.assertEqual("min", base_tag.get_value())
+
+    def test_base_command_h(self):
+        program = "Base: h"
+        e = self.engine
+        run_engine(e, program, 5)
+        base_tag = e._system_tags[SystemTagName.BASE]
+        self.assertEqual("h", base_tag.get_value())
 
     def test_base_default_is_set_to_minutes(self):
         e = self.engine
@@ -517,6 +574,23 @@ Mark: d
         i = engine.interpreter
 
         self.assertEqual(["a", "b", "c", "d"], i.get_marks())
+
+    def test_wait(self):
+        program = """
+Mark: a
+Wait: 0.5 s
+Mark: b"""
+        engine = self.engine
+        run_engine(engine, program, 4)
+        i = engine.interpreter
+        self.assertEqual(["a"], i.get_marks())
+
+        continue_engine(engine, 4)
+        self.assertEqual(["a"], i.get_marks())
+
+        continue_engine(engine, 2)
+
+        self.assertEqual(["a", "b"], i.get_marks())
 
     @unittest.skip("TODO")
     def test_threshold_column_volume(self):

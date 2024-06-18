@@ -26,7 +26,7 @@ class TestLabjackHardware(unittest.TestCase):
         registers = {"FT01": FT01}
 
         hwl = Labjack_Hardware(serial_number=SN)
-        hwl.registers = registers
+        hwl._registers = registers
         with hwl:
             value = hwl.read(FT01)
         self.assertEqual(value, 0.0)
@@ -36,7 +36,7 @@ class TestLabjackHardware(unittest.TestCase):
         registers = {"PU01": PU01}
 
         hwl = Labjack_Hardware(serial_number=SN)
-        hwl.registers = registers
+        hwl._registers = registers
         with hwl:
             hwl.write(10.2, PU01)
 
@@ -46,7 +46,7 @@ class TestLabjackHardware(unittest.TestCase):
                                                    port=f"AIN{i}") for i in range(5)}
 
         hwl = Labjack_Hardware(serial_number=SN)
-        hwl.registers = registers
+        hwl._registers = registers
         hwl.validate_offline()
         with hwl:
             values = hwl.read_batch(list(registers.values()))
@@ -60,7 +60,7 @@ class TestLabjackHardware(unittest.TestCase):
         values_to_write = [float(i) for i in range(len(registers))]
 
         hwl = Labjack_Hardware(serial_number=SN)
-        hwl.registers = registers
+        hwl._registers = registers
         hwl.validate_offline()
         with hwl:
             hwl.write_batch(values_to_write, list(registers.values()))
