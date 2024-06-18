@@ -11,7 +11,7 @@ import { UnitControlButtonComponent } from './unit-control-button.component';
   standalone: true,
   imports: [LetDirective, UnitControlButtonComponent],
   template: `
-    <div class="flex gap-3 flex-wrap" *ngrxLet="controlState as controlState">
+    <div class="flex gap-3.5 flex-wrap" *ngrxLet="controlState as controlState">
       <app-unit-control-button [command]="'Start'" [iconName]="'play'" [toggledColor]="startColor"
                                [toggled]="controlState.is_running"></app-unit-control-button>
       <app-unit-control-button [command]="'Pause'" [iconName]="'debug-pause'"

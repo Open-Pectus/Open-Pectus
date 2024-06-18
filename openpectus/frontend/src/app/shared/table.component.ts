@@ -24,11 +24,11 @@ export interface DefaultTableSort<T> {
   standalone: true,
   imports: [NgFor, NgIf],
   template: `
-    <div class="bg-vscode-background-grey rounded-md shadow-lg overflow-hidden">
+    <div class="bg-stone-100 rounded-md shadow-lg overflow-hidden">
       <table class="w-full table-fixed border-collapse">
         <thead>
-        <tr class="bg-sky-700 text-white cursor-pointer select-none">
-          <th *ngFor="let column of columns" class="p-3" (click)="setSortByColumn(column)">
+        <tr class="bg-slate-600 text-white cursor-pointer select-none">
+          <th *ngFor="let column of columns" class="px-3 py-2" (click)="setSortByColumn(column)">
             <span>{{ column.header }}</span>
             <ng-container *ngIf="sortColumn === column">
               <span *ngIf="sortDir === TableSortDirection.Descending" class="codicon codicon-arrow-up ml-1 -mr-5"></span>
@@ -38,8 +38,8 @@ export interface DefaultTableSort<T> {
         </tr>
         </thead>
         <tbody class="cursor-pointer">
-        <tr *ngFor="let row of data" class="border-y last-of-type:border-none border-slate-500" (click)="rowClicked.emit(row)">
-          <td *ngFor="let column of columns" class="text-center p-3">
+        <tr *ngFor="let row of data" class="border-y last-of-type:border-none border-gray-300" (click)="rowClicked.emit(row)">
+          <td *ngFor="let column of columns" class="text-center px-3 py-2">
             {{ format(row[column.key], column) }}
           </td>
         </tr>

@@ -9,14 +9,14 @@ import { DetailsActions } from '../ngrx/details.actions';
   standalone: true,
   imports: [NgClass, TitleCasePipe],
   template: `
-    <button class="py-2 pr-4 pl-3.5 rounded-lg text-white bg-slate-700 flex items-center gap-2"
+    <button class="py-2 pr-5 pl-3.5 rounded-lg text-white bg-sky-700 flex items-center gap-2 tracking-wider"
             (click)="executeCommand()"
             [disabled]="disabled || (toggled && unCommand === undefined)"
             [class.bg-slate-400]="disabled"
             [style.margin]="toggled ? '3px 0 0 2px' : '0 2px 3px 0'"
             [style.background-color]="toggled ? toggledColor : null"
-            [style.box-shadow]="toggled ? null : disabled ? '2px 3px #cbd5e1' : '2px 3px #64748b'">
-      <span class="codicon" [ngClass]="'codicon-'+iconName"></span>{{command | titlecase}}
+            [style.box-shadow]="toggled ? null : disabled ? '2.5px 3px #cbd5e1' : '2.5px 3px #075985'">
+      <span class="codicon" [ngClass]="'codicon-'+iconName"></span>{{ command | titlecase }}
     </button>
   `,
 })
