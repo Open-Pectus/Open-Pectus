@@ -38,7 +38,9 @@ class RecentEngine(DBModel):
     __tablename__ = "RecentEngines"
 
     engine_id: Mapped[str] = mapped_column(unique=True)
-    run_id: Mapped[str] = mapped_column()
+    run_id: Mapped[str | None] = mapped_column()
+    run_started: Mapped[datetime | None] = mapped_column()
+    run_stopped: Mapped[datetime | None] = mapped_column()
     name: Mapped[str] = mapped_column()
     system_state: Mapped[str] = mapped_column()
     location: Mapped[str] = mapped_column()

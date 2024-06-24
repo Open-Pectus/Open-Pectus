@@ -53,6 +53,8 @@ class TagsInfo(BaseModel):
             if current.value_unit != tag_value.value_unit:
                 logger.warning(f"Tag '{tag_value.name}' changed unit from '{current.value_unit}' to " +
                                f"'{tag_value.value_unit}'. This is unexpected")
+            if current.tick_time > tag_value.tick_time:
+                logger.warning(f"Tag '{tag_value.name}' was updated with an earlier time than the current value.")
             current.value = tag_value.value
             current.tick_time = tag_value.tick_time
             return False  # was updated
@@ -72,6 +74,7 @@ class RunData(BaseModel):
     method_state: MethodState = MethodState.empty()
     runlog: RunLog = RunLog(lines=[])
     latest_persisted_tick_time: float | None = None
+    latest_persisted_time: float | None = None
     error_log: ErrorLog = ErrorLog.empty()
     interrupted_by_error: bool = False
 
@@ -103,11 +106,6 @@ class EngineData(BaseModel):
     def system_state(self):
         return self.tags_info.get(Mdl.SystemTagName.SYSTEM_STATE)
 
-    @property
-    def last_modified(self) -> datetime:
-        # It is very unlikely to not get a time from the tags. If no tags are set,
-        # it is because the engine is just getting started so now() is close enough
-        return self.tags_info.get_last_modified_time() or datetime.now()
-
-    def __str__(self) -> str:        
-        return f"EngineData(engine_id:{self.engine_id}, tags:{len(self.tags_info.map)}, 'state':'{self.control_state}')"
+    def __str__(self) -> str:
+        return f"EngineData(engine_id:{self.engine_id}, run_id:{self.run_id}, tags:{len(self.tags_info.map)}," +\
+               f" state':{self.control_state})"

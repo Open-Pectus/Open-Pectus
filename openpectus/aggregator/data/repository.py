@@ -10,7 +10,7 @@ from openpectus.aggregator.data.models import (
     RecentRunErrorLog, RecentRunMethodAndState, RecentRun, PlotLogEntryValue,
     RecentRunPlotConfiguration, RecentRunRunLog,
     get_ProcessValueType_from_value, 
-    PlotLog, PlotLogEntry,    
+    PlotLog, PlotLogEntry   
 )
 from openpectus.aggregator.models import TagValue, ReadingInfo, EngineData
 from sqlalchemy import select
@@ -109,7 +109,7 @@ class RecentRunRepository(RepositoryBase):
         if engine_data.run_id is None:
             raise ValueError('missing run_id when trying to store recent run')
         if engine_data.run_data.run_started is None:
-            raise ValueError('misisng run_started when trying to store recent run')
+            raise ValueError('missing run_started when trying to store recent run')
         recent_run = RecentRun()
         recent_run.engine_id = engine_data.engine_id
         recent_run.run_id = engine_data.run_id
@@ -194,11 +194,25 @@ class RecentEngineRepository(RepositoryBase):
         else:
             recent_engine = existing
         recent_engine.engine_id = engine_data.engine_id
-        recent_engine.run_id = engine_data.run_id or ""
+        recent_engine.run_id = engine_data.run_id
+        recent_engine.run_started = engine_data.run_data.run_started
+        recent_engine.run_stopped = None
         recent_engine.name = f"{engine_data.computer_name} ({engine_data.uod_name})"
         recent_engine.location = engine_data.location
         recent_engine.last_update = datetime.now(UTC)
         system_tag = engine_data.tags_info.get(SystemTagName.SYSTEM_STATE)
         recent_engine.system_state = str(system_tag.value) if system_tag is not None else ""
         self.db_session.add(recent_engine)
+        self.db_session.commit()
+
+    def mark_recent_engine_stopped(self, engine_data: EngineData):
+        if engine_data.engine_id == "":
+            raise ValueError("Missing/empty engine_id when trying to store recent_engine")
+        existing = self.get_recent_engine_by_engine_id(engine_data.engine_id)
+        if existing is None:
+            raise ValueError("Missing RecentEngine when trying to mark recent_engine stopped" +
+                             f"Engine: {engine_data.engine_id}")
+        existing.run_stopped = datetime.now(UTC)
+        existing.last_update = datetime.now(UTC)
+        self.db_session.add(existing)
         self.db_session.commit()

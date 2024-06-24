@@ -42,16 +42,18 @@ class FromEngine:
 
     def uod_info_changed(self, engine_id: str, readings: list[Mdl.ReadingInfo], plot_configuration: Mdl.PlotConfiguration,
                          hardware_str: str):
+        logger.info("Got uod_info message")
         try:
             self._engine_data_map[engine_id].readings = readings
             self._engine_data_map[engine_id].plot_configuration = plot_configuration
             self._engine_data_map[engine_id].hardware_str = hardware_str
         except KeyError:
-            logger.error(f'No engine registered under id {engine_id} when trying to uod info.')
+            logger.error(f'No engine registered under id {engine_id} when trying to set uod info.')
 
     def tag_values_changed(self, engine_id: str, changed_tag_values: list[Mdl.TagValue]):
         plot_log_repo = PlotLogRepository(database.scoped_session())
         recent_run_repo = RecentRunRepository(database.scoped_session())
+        recent_engine_repo = RecentEngineRepository(database.scoped_session())
 
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is None:
@@ -66,11 +68,15 @@ class FromEngine:
                     engine_data.run_data.interrupted_by_error = False
 
             if changed_tag_value.name == SystemTagName.RUN_ID.value:
-                self._run_id_changed(plot_log_repo, recent_run_repo, engine_data, changed_tag_value)
+                self._run_id_changed(plot_log_repo, recent_run_repo, recent_engine_repo, engine_data, changed_tag_value)
 
             was_inserted = engine_data.tags_info.upsert(changed_tag_value)
 
-            if changed_tag_value.name == SystemTagName.SYSTEM_STATE.value:
+            if changed_tag_value.name in [
+                SystemTagName.METHOD_STATUS.value,
+                SystemTagName.SYSTEM_STATE.value,
+                SystemTagName.RUN_ID.value,
+            ]:
                 asyncio.create_task(self.publisher.publish_process_units_changed())
 
             # if a tag doesn't appear with value until after start and run_id, we need to store the info here
@@ -79,16 +85,46 @@ class FromEngine:
 
         self._persist_tag_values(engine_data, plot_log_repo)
 
-    def _run_id_changed(self, plot_log_repo: PlotLogRepository, recent_run_repo: RecentRunRepository,
-                        engine_data: EngineData, run_id_tag: Mdl.TagValue):
+    def _run_id_changed(
+            self,
+            plot_log_repo: PlotLogRepository,
+            recent_run_repo: RecentRunRepository,
+            recent_engine_repo: RecentEngineRepository,
+            engine_data: EngineData,
+            run_id_tag: Mdl.TagValue):
         """ Handles persistance related to start and end of a run """
+
+        # Check whether we've been restarted while a run was ongoing. If so, we need to
+        # prepare the engine_data state the run to continue by setting engine_data properties
+        if engine_data.run_id is None and run_id_tag.value is not None:
+            # yes, our run_id was not set but the incoming run_id tag was set.
+            # depending on recent_engine state this either means the run was already running
+            # or that it just started
+            recent_engine = recent_engine_repo.get_recent_engine_by_engine_id(engine_data.engine_id)
+            if recent_engine is not None and recent_engine.run_id is not None and recent_engine.run_stopped is None:
+                if recent_engine.run_id == run_id_tag.value:
+                    engine_data.tags_info.upsert(run_id_tag)  # sets engine_data.run_id
+                    engine_data.run_data.run_started = recent_engine.run_started
+
         logger.info(f"RunId changed from {engine_data.run_id} to {run_id_tag.value}, Engine: {engine_data.engine_id}")
-        if run_id_tag.value is None and engine_data.run_id is not None:
+        if run_id_tag.value is None and engine_data.run_id is None:
+            # Engine was reconnected            
+            # if recent_engine is not None:
+            #     if recent_engine.run_started is not None and recent_engine.run_stopped is None:
+                    
+
+            logger.info("Engine has no active run")
+        elif run_id_tag.value is None and engine_data.run_id is not None:
             # Run stopped
             logger.info(f"Run was stopped. Saving Recent Run. Engine: {engine_data.engine_id}")
             recent_run_repo.store_recent_run(engine_data)
+            recent_engine_repo.mark_recent_engine_stopped(engine_data)
             engine_data.run_data.error_log = Mdl.ErrorLog.empty()
             asyncio.create_task(self.publisher.publish_error_log_changed(engine_data.engine_id))
+        elif run_id_tag.value is not None and engine_data.run_id is not None:
+            # Ongoing run. run_id was only detected as changed because of aggregator restart
+            assert run_id_tag.value == engine_data.run_id
+            logger.info(f"Run {run_id_tag.value} resumed")
         else:
             # Run started
             logger.info(f"A new Run was started, Engine: {engine_data.engine_id}, Run_Id: {str(run_id_tag.value)}")
@@ -97,12 +133,17 @@ class FromEngine:
 
     def _persist_tag_values(self, engine_data: EngineData, plot_log_repo: PlotLogRepository):
         latest_persisted_tick_time = engine_data.run_data.latest_persisted_tick_time
+        tag_values = engine_data.tags_info.map.values()
+        latest_tag_tick_time = max([tag.tick_time for tag in tag_values]) if len(tag_values) > 0 else 0
         time_threshold_exceeded = latest_persisted_tick_time is None \
-            or time.time() - latest_persisted_tick_time > persistance_threshold_seconds
+            or latest_tag_tick_time - latest_persisted_tick_time > persistance_threshold_seconds
+        # time_threshold_exceeded = latest_persisted_tick_time is None \
+        #     or time.time() - latest_persisted_tick_time > persistance_threshold_seconds
         if engine_data.run_id is not None and time_threshold_exceeded:
             tag_values_to_persist = [tag_value.copy() for tag_value in engine_data.tags_info.map.values()
                                      if latest_persisted_tick_time is None
                                      or tag_value.tick_time > latest_persisted_tick_time]
+            logger.info(f"Persisting {len(tag_values_to_persist)} of possible {len(engine_data.tags_info.map.keys())}")
             """ 
             We manipulate the tick_time of the tagValues we persist. But it's not changing it to something that didn't 
             exist in the engine, because we change the tick_time to a tick_time that comes from an actual later reading 

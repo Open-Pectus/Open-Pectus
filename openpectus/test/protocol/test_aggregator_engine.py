@@ -237,7 +237,7 @@ class AggregatorTestDispatcher(AggregatorDispatcher):
             raise ProtocolNetworkException()
         if not self.has_connected_engine_id(engine_id):
             raise ProtocolException("Unknown engine: " + engine_id)
-        response = await self.engineDispatcher._dispatch_message_async(message)
+        response = await self.engineDispatcher.dispatch_message_async(message)
         assert isinstance(response, M.MessageBase)
         return response
 

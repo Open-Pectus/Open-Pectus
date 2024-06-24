@@ -32,21 +32,23 @@ class EngineReporter():
         self.engine = engine
         self._config_data_sent = False
 
-    async def send_config_messages(self) -> bool:
-        """ Send configuration messages to aggregator. These are required when connection is created or re-established. """
+    def restart(self):
+        self._config_data_sent = False
+
+    async def send_config_messages(self):
+        """ Send configuration messages to aggregator. These are required when the connection is created or re-established.
+        """
+        logger.info("Sending initialization messages")
         valid_uod_info_sent = await self.send_uod_info()
         if valid_uod_info_sent:
             await self.notify_initial_tags()
             self._config_data_sent = True
-            return True
         else:
             logger.error("Failed to send valid uod info. Connection to aggregator is not fully initialized.")
-            return False
 
     async def send_data_messages(self):
         """ Send a batch of data messages to aggregator. """
         if not self._config_data_sent:
-            logger.warning("Reporter initialization not complete")
             await self.send_config_messages()
             return
         try:

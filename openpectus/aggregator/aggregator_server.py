@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import List
 
@@ -62,7 +63,7 @@ class AggregatorServer:
 
     def start(self):
         print(f"Serving frontend at http://{self.host}:{self.port}")
-        uvicorn.run(self.fastapi, host=self.host, port=self.port)
+        uvicorn.run(self.fastapi, host=self.host, port=self.port, log_level=logging.WARNING)
 
     async def on_shutdown(self):
         await self.dispatcher.shutdown()

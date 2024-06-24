@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import Mock, AsyncMock
 
 from openpectus.aggregator.data import database
+from openpectus.aggregator.models import EngineData, TagValue
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 from fastapi_websocket_rpc.schemas import RpcResponse
@@ -9,7 +10,7 @@ from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.aggregator_message_handlers import AggregatorMessageHandlers
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 import openpectus.aggregator.data.models as DMdl
-
+from openpectus.protocol.models import SystemTagName
 
 class AggregatorTest(unittest.IsolatedAsyncioTestCase):
 
@@ -94,6 +95,92 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
         resultMessage = await messageHandlers.handle_RegisterEngineMsg(register_engine_msg_different_computer)
         assert isinstance(resultMessage, AM.RegisterEngineReplyMsg)
         self.assertEqual(resultMessage.success, True)
+
+class AggregatorEventsTest(unittest.IsolatedAsyncioTestCase):
+
+    def __init__(self, methodName: str = "runTest") -> None:
+        super().__init__(methodName)
+        self.stored_tags = []
+        self.plot_log_repo = Mock(store_tag_values=self.store_tag_values)
+        self.aggregator = Aggregator(Mock(), Mock())
+        self.engine_data = EngineData(engine_id="test_engine", computer_name="", engine_version="", hardware_str="",
+                                      uod_name="", location="")
+
+    def createTag(self, name: str, tick: float, value: str):
+        return TagValue(name=name, tick_time=tick, value=value, value_unit=None)
+
+    def store_tag_values(self, engine_id: str, run_id: str, tags: list[TagValue]):
+        self.stored_tags.extend(tags)
+
+    def process_tags(self, tags: list[TagValue]):
+        for tag in tags:
+            self.engine_data.tags_info.upsert(tag)
+
+
+    async def test_persist_tag_values_can_save_new_tags(self):
+        run_id = self.createTag(SystemTagName.RUN_ID.value, 1, "run1")
+        tags = [
+            run_id,
+            self.createTag("a", 1, "v1"),
+            self.createTag("b", 1, "v1"),
+        ]
+        self.process_tags(tags)
+
+        self.aggregator.from_engine._persist_tag_values(self.engine_data, self.plot_log_repo)
+
+        self.assertEqual(tags, self.stored_tags)
+
+    async def test_persist_tag_values_can_update_tag_with_newer_after_threshold(self):
+        run_id = self.createTag(SystemTagName.RUN_ID.value, 1, "run1")
+        
+        tags = [
+            run_id,
+            self.createTag("a", 1, "v1"),
+            self.createTag("b", 1, "v1"),
+        ]
+        self.process_tags(tags)
+        self.aggregator.from_engine._persist_tag_values(self.engine_data, self.plot_log_repo)
+        self.stored_tags.clear()
+
+        # data newer but not beyond threshold is not saved
+        tmp_tags = [
+            self.createTag("a", 1.1 + 3, "v2"),  # threshold is 5 seconds
+        ]
+        self.process_tags(tmp_tags)
+        self.aggregator.from_engine._persist_tag_values(self.engine_data, self.plot_log_repo)
+
+        self.assertEqual([], self.stored_tags)
+
+        # data newer and beyond threshold is saved
+        new_tags = [
+            self.createTag("a", 1.1 + 5, "v2"),  # threshold is 5 seconds
+        ]
+        self.process_tags(new_tags)
+        self.aggregator.from_engine._persist_tag_values(self.engine_data, self.plot_log_repo)
+
+        self.assertEqual(new_tags, self.stored_tags)
+
+    async def test_persist_tag_values_cannot_update_tag_with_older(self):
+        run_id = self.createTag(SystemTagName.RUN_ID.value, 1, "run1")
+        tags = [
+            run_id,
+            self.createTag("a", 2, "v1"),
+            self.createTag("b", 2, "v1"),
+        ]
+        self.process_tags(tags)
+
+        self.aggregator.from_engine._persist_tag_values(self.engine_data, self.plot_log_repo)
+        self.stored_tags.clear()
+        self.engine_data.run_data.latest_persisted_tick_time = 2
+
+        new_tags = [
+            self.createTag("a", 1, "v2"),
+        ]
+        self.process_tags(new_tags)
+
+        self.aggregator.from_engine._persist_tag_values(self.engine_data, self.plot_log_repo)
+
+        self.assertEqual(new_tags, self.stored_tags)
 
 
 if __name__ == '__main__':

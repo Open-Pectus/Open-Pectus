@@ -78,19 +78,39 @@ async def main_async(args):
 
     # TODO Possibly check dispatcher.check_aggregator_alive() and exit early
 
+    # Whether we need this or not is ultimately as protocol decision
+    # if aggregator only needs te config messages once, we get a simpler protocol
+    # with fewer states.
+    dispatcher.connected_callback = lambda : reporter.restart()
     await dispatcher.connect_async()
     engine.run()
 
     while True:
         try:
-            await reporter.send_config_messages()
+            await reporter.send_data_messages()  # this is what drives the buffering of messages for recovering
             await asyncio.sleep(1)
-            while True:
-                await reporter.send_data_messages()
-                await asyncio.sleep(1)
         except Exception:
             logger.error("Unhandled exception in main loop. Trying to continue", exc_info=True)
             await asyncio.sleep(5)
+
+    # connected = False
+
+    # def start_reporter():
+    #     nonlocal connected
+    #     connected = True
+
+    # dispatcher.connected_callback = start_reporter
+    # dispatcher.disconnected_callback = lambda : reporter.restart()
+    # await dispatcher.connect_async()
+    # engine.run()
+
+    # while True:
+    #     try:
+    #         await reporter.send_data_messages()
+    #         await asyncio.sleep(1)
+    #     except Exception:
+    #         logger.error("Unhandled exception in reporter loop. Trying to continue", exc_info=True)
+    #         await asyncio.sleep(5)
 
 
 async def close_async():
@@ -167,9 +187,7 @@ def validate_and_exit(uod_name: str):
 
 def main():
     args = get_args()
-
     sentry.init_engine(args.sentry_event_level)
-
     if args.validate:
         validate_and_exit(args.uod)
 
