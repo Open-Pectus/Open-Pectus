@@ -14,16 +14,16 @@ export enum AdditionalValueType {
   standalone: true,
   imports: [NgFor, ProcessValuePipe],
   template: `
-    <div #additionalValues class="grid grid-rows-1 px-3 pb-2.5 gap-2.5 grid-flow-col justify-end items-center">
-      <p class="text-sm">At {{type}}:</p>
+    <div #additionalValues class="flex flex-wrap px-3 pb-2.5 gap-2.5 justify-end items-start">
+      <p class="text-sm">At {{ type }}:</p>
       <div *ngFor="let value of values; let valueIndex = index"
            class="border border-sky-700 rounded-md text-right overflow-hidden">
         <p class="text-white px-2 py-0.5"
            [class.bg-teal-700]="type === AdditionalValueType.Start"
            [class.bg-pink-900]="type === AdditionalValueType.End">
-          {{value.name}}
+          {{ value.name }}
         </p>
-        <p class="px-2 py-0.5 bg-white ">{{value | processValue}}</p>
+        <p class="px-2 py-0.5 bg-white ">{{ value | processValue }}</p>
       </div>
     </div>
   `,

@@ -15,7 +15,7 @@ import { UtilMethods } from '../../shared/util-methods';
     ProcessUnitStatePipe,
   ],
   template: `
-    <div class="rounded-md shadow-md cursor-pointer bg-vscode-background-grey hover:brightness-95">
+    <div class="rounded-md shadow-md cursor-pointer bg-stone-100 hover:brightness-95">
       <div [class]="'px-5 py-3 text-white rounded-t-md flex justify-between ' + backgroundColor">
         <div class="font-semibold text-lg">{{ processUnit?.name }}</div>
         <div class="ml-2 codicon !text-xl" [ngClass]="statusIcon"></div>
@@ -39,7 +39,7 @@ export class ProcessUnitCardComponent {
       case InProgress.state.IN_PROGRESS:
         return 'bg-emerald-700';
       case Ready.state.READY:
-        return 'bg-sky-700';
+        return 'bg-sky-800';
       case NotOnline.state.NOT_ONLINE:
         return 'bg-gray-600';
       case Error.state.ERROR:

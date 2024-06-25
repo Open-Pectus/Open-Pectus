@@ -7,11 +7,11 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from 
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <label class="flex items-center gap-1 cursor-pointer border rounded px-1.5 border-slate-200 h-8">
+    <label class="flex items-center gap-1 cursor-pointer rounded px-2 bg-gray-50 border-gray-300 border !text-black h-8">
       {{ label }}
       <input type="checkbox" (change)="checked = checkbox.checked; changed.emit(checkbox.checked)" #checkbox [checked]="checked"
              [class.codicon-pass]="checked" [class.codicon-circle-large]="!checked"
-             class="w-5 !text-xl appearance-none font-bold opacity-25 text-white checked:opacity-100 codicon cursor-pointer">
+             class="w-5 !text-xl appearance-none font-bold codicon cursor-pointer">
     </label>
   `,
 })

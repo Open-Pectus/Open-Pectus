@@ -19,7 +19,7 @@ import { ProcessUnitCardComponent } from './process-unit-card.component';
     PushPipe,
   ],
   template: `
-    <div class="grid gap-6 grid-cols-1 lg:grid-cols-2 lg:grid-cols-3">
+    <div class="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
       <app-process-unit-card *ngFor="let processUnit of (processUnits | ngrxPush)" [processUnit]="processUnit"
                              (click)="onCardClick(processUnit.id)"></app-process-unit-card>
     </div>

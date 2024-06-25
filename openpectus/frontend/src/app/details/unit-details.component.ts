@@ -31,17 +31,15 @@ import { UnitHeaderComponent } from './unit-header/unit-header.component';
     ErrorLogComponent,
   ],
   template: `
-    <div class="flex justify-center">
-      <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:py-6 gap-4 lg:gap-6" *ngrxLet="unitId as unitId">
-        <app-unit-header class="mx-2 my-3 lg:m-0"></app-unit-header>
-        <app-process-values></app-process-values>
-        <app-method-editor [unitId]="unitId"></app-method-editor>
-        <app-commands></app-commands>
-        <app-run-log [unitId]="unitId"></app-run-log>
-        <app-process-diagram></app-process-diagram>
-        <app-process-plot-container class="2xl:col-span-2" [unitId]="unitId"></app-process-plot-container>
-        <app-error-log [unitId]="unitId" class="2xl:col-span-2"></app-error-log>
-      </div>
+    <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:py-6 gap-6 lg:gap-8" *ngrxLet="unitId as unitId">
+      <app-unit-header class="mx-2 my-3 lg:m-0"></app-unit-header>
+      <app-process-values></app-process-values>
+      <app-method-editor [unitId]="unitId"></app-method-editor>
+      <app-commands></app-commands>
+      <app-run-log [unitId]="unitId"></app-run-log>
+      <app-process-diagram></app-process-diagram>
+      <app-process-plot-container class="2xl:col-span-2" [unitId]="unitId"></app-process-plot-container>
+      <app-error-log [unitId]="unitId" class="2xl:col-span-2"></app-error-log>
     </div>
   `,
 })

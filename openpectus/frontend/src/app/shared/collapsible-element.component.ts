@@ -8,24 +8,26 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
   standalone: true,
   imports: [NgIf, NgClass],
   template: `
-    <div class="flex flex-col bg-sky-700 py-1.5 lg:rounded-md lg:p-1.5 shadow-lg relative transition-[padding-bottom]" [class.pb-0]="collapsed">
-      <div class="flex items-center flex-wrap text-gray-100 p-2 gap-3 cursor-pointer select-none" (click)="toggleCollapsed()">
-        <div class="flex flex-1 items-center mr-1">
-          <span class="codicon !text-2xl mr-2" *ngIf="codiconName !== undefined" [ngClass]="codiconName"
+    <div
+        class="flex flex-col bg-slate-100 py-1 lg:rounded-lg lg:p-1 shadow-md shadow-slate-200 border-slate-400 border relative transition-[padding-bottom]"
+        [class.pb-0]="collapsed">
+      <div class="flex items-center flex-wrap py-1 px-2 gap-3 cursor-pointer select-none" (click)="toggleCollapsed()">
+        <div class="flex flex-1 items-center mr-1 !text-slate-900 tracking-wide">
+          <span class="codicon !text-2xl mr-2.5" *ngIf="codiconName !== undefined" [ngClass]="codiconName"
                 [style.margin-bottom.px]="codiconName === 'codicon-graph-line' ? -1 : codiconName === 'codicon-dashboard' ? -1 : null"
                 [style.--vscode-symbolIcon-keywordForeground]="'initial'"></span>
-          <span class="text-2xl font-bold">{{name}}</span>
+          <span class="text-lg">{{ name }}</span>
         </div>
         <div class="flex gap-4 items-center mr-10" *ngIf="!collapsed" (click)="$event.stopPropagation()">
           <ng-content select="[buttons]"></ng-content>
         </div>
 
-        <div class="codicon !text-2xl !font-bold absolute right-3 lg:right-4" [class.codicon-chevron-right]="collapsed"
-             [class.codicon-chevron-down]="!collapsed"
+        <div class="codicon !text-2xl !font-bold absolute right-3 lg:right-4 transition-transform codicon-chevron-down"
+             [class.-rotate-90]="collapsed"
              (click)="$event.stopPropagation(); toggleCollapsed()"></div>
       </div>
-      <div class="bg-white lg:rounded-sm mt-1.5 h-full" [class.transition-[height]]="!isDragging" #content
-           [class.overflow-hidden]="!contentOverflow"
+      <div class="bg-white lg:rounded-sm mt-1 h-full outline-1 outline-gray-300" [class.transition-[height]]="!isDragging" #content
+           [class.overflow-hidden]="!contentOverflow" [class.outline]="!collapsed"
            [style.height.px]="height" (transitionend)="onTransitionEndContentContainer($event)">
         <ng-content select="[content]"></ng-content>
       </div>
