@@ -18,7 +18,9 @@ log_setup_colorlog()
 logger = logging.getLogger("openpectus.engine.engine")
 logger.setLevel(logging.INFO)
 logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.INFO)
-logging.getLogger("openpectus.protocol.engine_dispatcher").setLevel(logging.INFO)
+logging.getLogger("openpectus.protocol.engine_dispatcher").setLevel(logging.DEBUG)
+logging.getLogger("openpectus.protocol.engine_dispatcher_error").setLevel(logging.DEBUG)
+logging.getLogger("openpectus.engine.engine_reporter").setLevel(logging.DEBUG)
 
 
 def get_args():
@@ -79,9 +81,11 @@ async def main_async(args):
     # TODO Possibly check dispatcher.check_aggregator_alive() and exit early
 
     # Whether we need this or not is ultimately as protocol decision
-    # if aggregator only needs te config messages once, we get a simpler protocol
+    # if aggregator only needs the config messages once, we get a simpler protocol
     # with fewer states.
-    dispatcher.connected_callback = lambda : reporter.restart()
+    dispatcher.connected_callback = reporter.restart
+    dispatcher.disconnected_callback = reporter.collect_reconnect_tags
+    dispatcher.reconnected_callback = reporter.send_reconnected_message
     await dispatcher.connect_async()
     engine.run()
 
@@ -92,25 +96,6 @@ async def main_async(args):
         except Exception:
             logger.error("Unhandled exception in main loop. Trying to continue", exc_info=True)
             await asyncio.sleep(5)
-
-    # connected = False
-
-    # def start_reporter():
-    #     nonlocal connected
-    #     connected = True
-
-    # dispatcher.connected_callback = start_reporter
-    # dispatcher.disconnected_callback = lambda : reporter.restart()
-    # await dispatcher.connect_async()
-    # engine.run()
-
-    # while True:
-    #     try:
-    #         await reporter.send_data_messages()
-    #         await asyncio.sleep(1)
-    #     except Exception:
-    #         logger.error("Unhandled exception in reporter loop. Trying to continue", exc_info=True)
-    #         await asyncio.sleep(5)
 
 
 async def close_async():

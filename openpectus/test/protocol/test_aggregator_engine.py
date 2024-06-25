@@ -178,6 +178,7 @@ class ProtocolIntegrationTest(ProtocolIntegrationTestCase):
             self.assertTrue(self.ctx.engineErrorDispatcher._get_buffer_size() > 0)
 
             self.ctx.engineDispatcher.network_failing = False
+            await self.ctx.engineReporter.send_reconnected_message()
             await self.ctx.engineReporter.send_data_messages()
 
             self.assertEqual(self.ctx.engineErrorDispatcher._is_reconnecting, False)

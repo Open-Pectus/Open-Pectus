@@ -13,6 +13,7 @@ class AggregatorMessageHandlers:
         self.aggregator = aggregator
         aggregator.dispatcher.set_register_handler(self.handle_RegisterEngineMsg)
         aggregator.dispatcher.set_disconnect_handler(self.handle_EngineDisconnected)
+        aggregator.dispatcher.set_connect_handler(self.handle_EngineConnected)
         aggregator.dispatcher.set_post_handler(EM.UodInfoMsg, self.handle_UodInfoMsg)
         aggregator.dispatcher.set_post_handler(EM.TagsUpdatedMsg, self.handle_TagsUpdatedMsg)
         aggregator.dispatcher.set_post_handler(EM.RunLogMsg, self.handle_RunLogMsg)
@@ -48,8 +49,11 @@ class AggregatorMessageHandlers:
                 )
             )
 
-        logger.debug(f"Registration successful of client {engine_id}")
+        logger.info(f"Registration of engine {engine_id} successful")
         return AM.RegisterEngineReplyMsg(success=True, engine_id=engine_id)
+
+    async def handle_EngineConnected(self, engine_id: str):        
+        self.aggregator.from_engine.engine_connected(engine_id)
 
     async def handle_EngineDisconnected(self, engine_id: str):        
         self.aggregator.from_engine.engine_disconnected(engine_id)

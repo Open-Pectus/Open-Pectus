@@ -31,9 +31,24 @@ class EngineReporter():
         self.dispatcher = dispatcher
         self.engine = engine
         self._config_data_sent = False
+        self._reconnect_tags: list[Mdl.TagValue] = []
+
+    def collect_reconnect_tags(self):
+        logger.info("collect_reconnect_tags")
+
+        self.engine.notify_all_tags()
+        self._reconnect_tags = self.collect_tag_updates()
+        logger.info(f"Collected {len(self._reconnect_tags)} reconnect tags")
 
     def restart(self):
+        logger.info("restart")
         self._config_data_sent = False
+
+    async def send_reconnected_message(self):
+        logger.info("reconnect")
+        recon_msg = EM.ReconnectedMsg(run_id=None, run_started=None, tags=self._reconnect_tags)
+        await self.dispatcher.post_async(recon_msg)
+        self.restart()
 
     async def send_config_messages(self):
         """ Send configuration messages to aggregator. These are required when the connection is created or re-established.
@@ -43,6 +58,7 @@ class EngineReporter():
         if valid_uod_info_sent:
             await self.notify_initial_tags()
             self._config_data_sent = True
+            logger.info("Config messages sent")
         else:
             logger.error("Failed to send valid uod info. Connection to aggregator is not fully initialized.")
 
@@ -65,7 +81,7 @@ class EngineReporter():
             raise
 
     async def notify_initial_tags(self):
-        self.engine.notify_initial_tags()
+        self.engine.notify_all_tags()
         await self.send_tag_updates()
 
     async def send_uod_info(self):
@@ -84,7 +100,7 @@ class EngineReporter():
             logger.error("Failed to send uod_info", exc_info=True)
             return False
 
-    async def send_tag_updates(self):
+    def collect_tag_updates(self) -> list[Mdl.TagValue]:
         tags = []
         try:
             for _ in range(MAX_SIZE_TagsUpdatedMsg):
@@ -99,6 +115,10 @@ class EngineReporter():
                 self.engine.tag_updates.task_done()
         except Empty:
             pass
+        return tags
+
+    async def send_tag_updates(self):
+        tags = self.collect_tag_updates()
         if len(tags) > 0:
             msg = EM.TagsUpdatedMsg(tags=tags)
             await self.dispatcher.post_async(msg)

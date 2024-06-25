@@ -74,10 +74,15 @@ class RunData(BaseModel):
     method_state: MethodState = MethodState.empty()
     runlog: RunLog = RunLog(lines=[])
     latest_persisted_tick_time: float | None = None
-    latest_persisted_time: float | None = None
+    """ The time assigned to the last persisted set of values """
+    latest_tag_time: float | None = None
+    """ The time of the latest tag update, persisted or not """
     error_log: ErrorLog = ErrorLog.empty()
     interrupted_by_error: bool = False
 
+    def __str__(self) -> str:
+        return f"RunData(run_started:{self.run_started}, method_state:{self.method_state}, " + \
+               f"interrupted_by_error:{self.interrupted_by_error})"
 
 class EngineData(BaseModel):
     engine_id: str
@@ -107,5 +112,5 @@ class EngineData(BaseModel):
         return self.tags_info.get(Mdl.SystemTagName.SYSTEM_STATE)
 
     def __str__(self) -> str:
-        return f"EngineData(engine_id:{self.engine_id}, run_id:{self.run_id}, tags:{len(self.tags_info.map)}," +\
-               f" state':{self.control_state})"
+        return f"EngineData(engine_id:{self.engine_id}, run_id:{self.run_id}," +\
+               f" control_state':{self.control_state})"

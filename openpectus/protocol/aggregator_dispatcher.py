@@ -20,6 +20,9 @@ logger = logging.getLogger(__name__)
 RegisterHandler = Callable[[EM.RegisterEngineMsg], Awaitable[AM.RegisterEngineReplyMsg]]
 """ Specific handler for register messages from engine """
 
+EngineConnectHandler = Callable[[str], Awaitable[None]]
+""" Specific handler for engine disconnect notifications from dispatcher """
+
 EngineDisconnectHandler = Callable[[str], Awaitable[None]]
 """ Specific handler for engine disconnect notifications from dispatcher """
 
@@ -36,6 +39,7 @@ class AggregatorDispatcher():
     def __init__(self) -> None:
         self._handlers: dict[type, AggregatorMessageHandler] = {}
         self._register_handler: RegisterHandler | None = None
+        self._connect_handler: EngineConnectHandler | None = None
         self._disconnect_handler: EngineDisconnectHandler | None = None
         self.router = APIRouter(tags=["aggregator"])
         self._engine_id_channel_map: dict[str, RpcChannel] = {}
@@ -75,6 +79,9 @@ class AggregatorDispatcher():
 
             logger.info(f"Engine '{engine_id}' connected")
             self._engine_id_channel_map[engine_id] = channel
+
+            if self._connect_handler is not None:
+                await self._connect_handler(engine_id)
         except Exception:
             logger.error("on_delayed_client_connect failed with exception", exc_info=True)
             try:
@@ -147,6 +154,7 @@ class AggregatorDispatcher():
 
     async def dispatch_post(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
         """ Dispatch incoming message to registered handler. """
+        logger.debug(f"Incoming message: {message.ident}")
         if isinstance(message, EM.RegisterEngineMsg):
             if self._register_handler is None:
                 return M.ProtocolErrorMessage(protocol_msg="Missing handler for registering engine")
@@ -181,10 +189,14 @@ class AggregatorDispatcher():
     def set_register_handler(self, handler: RegisterHandler):
         self._register_handler = handler
 
+    def set_connect_handler(self, handler: EngineConnectHandler):
+        self._connect_handler = handler
+
     def set_disconnect_handler(self, handler: EngineDisconnectHandler):
         self._disconnect_handler = handler
 
     async def shutdown(self):
+        logger.info("shutdown started")
         self._handlers.clear()
         for _, channel in self._engine_id_channel_map.items():
             await channel.close()

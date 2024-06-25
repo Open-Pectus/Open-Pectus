@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 import socket
 from typing import Callable, Any, Awaitable
@@ -38,7 +37,10 @@ class EngineDispatcherBase():
         """ Register handler for given message_type. """
         raise NotImplementedError()
 
-    async def _dispatch_message_async(self, message: M.MessageBase):
+    async def dispatch_message_async(self, message: M.MessageBase):
+        raise NotImplementedError()
+
+    def assign_sequence_number(self, message: EM.EngineMessage | EM.RegisterEngineMsg):
         raise NotImplementedError()
 
 class EngineDispatcher(EngineDispatcherBase):
@@ -62,7 +64,7 @@ class EngineDispatcher(EngineDispatcherBase):
                 logger.error("Dispatch failed. Message deserialization failed.", exc_info=True)
                 return
 
-            return await self.disp._dispatch_message_async(message)
+            return await self.disp.dispatch_message_async(message)
 
         async def get_engine_id_async(self):
             # Note: Must be declared async to be usable by RPC
@@ -76,6 +78,7 @@ class EngineDispatcher(EngineDispatcherBase):
         self._rpc_client: WebSocketRpcClient | None = None
         self._handlers: dict[type, Callable[[Any], Awaitable[M.MessageBase]]] = {}
         self._engine_id = None
+        self._sequence_number = 1
 
         # TODO consider https/wss
         self._post_url = f"http://{aggregator_host}{AGGREGATOR_REST_PATH}"
@@ -105,11 +108,10 @@ class EngineDispatcher(EngineDispatcherBase):
 
     async def connect_async(self):
         if self._engine_id is None:
-            logger.info("Registering for engine_id")
             self._engine_id = await self._register_for_engine_id_async(self._uod_name, self._location)
             if self._engine_id is None:
-                logger.error("Failed to register. Aggregator refused registration.")
-                exit(2)  # TODO hmm this is not great
+                logger.error("Failed to register because Aggregator refused the registration.")
+                raise ProtocolNetworkException("Registration failed")
 
         rpc_url = f"ws://{self._aggregator_host}{AGGREGATOR_RPC_WS_PATH}"
         rpc_methods = EngineDispatcher.EngineRpcMethods(self, self._engine_id)
@@ -129,8 +131,8 @@ class EngineDispatcher(EngineDispatcherBase):
         try:
             await self._rpc_client.__aenter__()
         except Exception:
-            raise ProtocolNetworkException()
-        logger.info("Websocket connected")
+            raise ProtocolNetworkException("Error creating websocket connection")
+        logger.info("Websocket connected")        
 
     async def disconnect_async(self):
         logger.info("Websocket disconnected")
@@ -146,6 +148,8 @@ class EngineDispatcher(EngineDispatcherBase):
                 return M.ErrorMessage(message="Engine did not have engine_id yet")
             message.engine_id = self._engine_id
 
+        self.assign_sequence_number(message)
+
         try:
             message_json = serialize(message)
         except Exception:
@@ -154,7 +158,9 @@ class EngineDispatcher(EngineDispatcherBase):
 
         try:
             response = requests.post(url=self._post_url, json=message_json)
+            logger.debug(f"Sent message: {message.ident}")
         except Exception as ex:
+            logger.debug(f"Message not sent: {message.ident}")
             raise ProtocolNetworkException("Post failed with exception") from ex
 
         if response.status_code == 200:
@@ -168,7 +174,8 @@ class EngineDispatcher(EngineDispatcherBase):
         else:
             message_type = type(message)
             logger.error(f"Non-success http status code: {response.status_code} for input message type: {message_type}")
-            raise ProtocolNetworkException(f"Post failed with non-success http status code: {response.status_code} for input message type: {message_type}")
+            raise ProtocolNetworkException(f"Post failed with non-success http status code: {response.status_code}" +
+                                           " for input message type: {message_type}")
 
     def set_rpc_handler(self, message_type: type[AM.AggregatorMessage], handler: EngineMessageHandler):
         """ Register handler for given message_type. """
@@ -176,7 +183,7 @@ class EngineDispatcher(EngineDispatcherBase):
             logger.error(f"Handler for message type {message_type} is already set.")
         self._handlers[message_type] = handler
 
-    async def _dispatch_message_async(self, message: M.MessageBase):
+    async def dispatch_message_async(self, message: M.MessageBase):
         """ Dispath incoming message to registered handler. """
         message_type = type(message)
         try:
@@ -194,6 +201,11 @@ class EngineDispatcher(EngineDispatcherBase):
                                                    engine_version=__version__)
         register_response = await self.post_async(register_engine_msg)
         if not isinstance(register_response, AM.RegisterEngineReplyMsg) or not register_response.success:
-            print("Failed to Register")
-            return
+            return None
         return register_response.engine_id
+
+    def assign_sequence_number(self, message: EM.EngineMessage | EM.RegisterEngineMsg):
+        # only assign sequence number once (otherwise buffered messages would be reassigned)
+        if message.sequence_number == -1:
+            self._sequence_number += 1
+            message.sequence_number = self._sequence_number

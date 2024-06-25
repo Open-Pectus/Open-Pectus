@@ -24,11 +24,48 @@ class FromEngine:
     def __init__(self, engine_data_map: EngineDataMap, publisher: FrontendPublisher):
         self._engine_data_map = engine_data_map
         self.publisher = publisher
+        self.was_connected = False
+        self.is_connected = False
 
     def register_engine_data(self, engine_data: EngineData):
+        # Why do we do this?
+        # - initially because run_started is a value we generated - could calculate it again looking at plot log values
+        #   the value is used when _ to  _ 
+
+        # repo = RecentEngineRepository(database.scoped_session())
+        # recent_engine = repo.get_recent_engine_by_engine_id(engine_id=engine_data.engine_id)
+        # if recent_engine is not None:
+        #     # update engine provided data with RecentEngine db data
+        #     engine_data.run_data.run_started = recent_engine.run_started        
+        logger.info(f"Data for engine {engine_data.engine_id} registered")
         self._engine_data_map[engine_data.engine_id] = engine_data
 
+    def engine_connected(self, engine_id: str):
+        logger.info("engine_connected")
+        self.is_connected = True
+        if self.was_connected:
+            self.engine_reconnected()
+            return
+        
+        self.was_connected = True
+    #     if not engine_id in self._engine_data_map.keys():
+    #         logger.info(f"Pre-registered engine {engine_id} connected")
+    #         repo = RecentEngineRepository(database.scoped_session())
+    #         recent_engine = repo.get_recent_engine_by_engine_id(engine_id=engine_id)
+    #         if recent_engine is None:
+    #             raise KeyError("Preregisttered engine had no RecenEngine data. What to do?")            
+            
+    #         engine_data = Mdl.EngineData(
+    #                 engine_id=engine_id,
+    #                 computer_name=recent_engine.com,
+    #                 uod_name=register_engine_msg.uod_name,
+    #                 location=register_engine_msg.location,
+    #                 engine_version=register_engine_msg.engine_version
+    #             )
+
+
     def engine_disconnected(self, engine_id: str):
+        self.is_connected = False
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is not None:
             with database.create_scope():
@@ -40,9 +77,18 @@ class FromEngine:
         else:
             logger.warning("No data to save for engine " + engine_id)
 
+    def engine_reconnected(self):
+        logger.info("engine_reconnected")
+
+    def run_started(self):  # to replace run_id_changed guessing
+        raise NotImplementedError()
+    
+    def run_stopped(self):
+        raise NotImplementedError()
+    
+
     def uod_info_changed(self, engine_id: str, readings: list[Mdl.ReadingInfo], plot_configuration: Mdl.PlotConfiguration,
                          hardware_str: str):
-        logger.info("Got uod_info message")
         try:
             self._engine_data_map[engine_id].readings = readings
             self._engine_data_map[engine_id].plot_configuration = plot_configuration
@@ -157,8 +203,10 @@ class FromEngine:
             for tag_value_to_persist in tag_values_to_persist:
                 tag_value_to_persist.tick_time = highest_tick_time_to_persist
 
+            # Note: to store tag values, the run_id is needed
             plot_log_repo.store_tag_values(engine_data.engine_id, engine_data.run_id, tag_values_to_persist)
             engine_data.run_data.latest_persisted_tick_time = highest_tick_time_to_persist
+            engine_data.run_data.latest_tag_time = highest_tick_time_to_persist
 
     def runlog_changed(self, engine_id: str, runlog: Mdl.RunLog):
         try:

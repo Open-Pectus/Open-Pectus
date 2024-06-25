@@ -171,16 +171,19 @@ class AggregatorEventsTest(unittest.IsolatedAsyncioTestCase):
 
         self.aggregator.from_engine._persist_tag_values(self.engine_data, self.plot_log_repo)
         self.stored_tags.clear()
-        self.engine_data.run_data.latest_persisted_tick_time = 2
+        self.assertEqual(2, self.engine_data.run_data.latest_persisted_tick_time)
 
         new_tags = [
             self.createTag("a", 1, "v2"),
         ]
+
+        # So we allow this to update the tag value with an older time and give a warning
+        # - but we disallow persisting this older value??
         self.process_tags(new_tags)
 
         self.aggregator.from_engine._persist_tag_values(self.engine_data, self.plot_log_repo)
 
-        self.assertEqual(new_tags, self.stored_tags)
+        self.assertEqual([], self.stored_tags)
 
 
 if __name__ == '__main__':
