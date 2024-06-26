@@ -88,8 +88,8 @@ export class CollapsibleElementComponent implements OnInit {
     const top = parentElement.offsetTop;
     const contentTop = this.contentElementRef?.nativeElement.offsetTop;
     if(top === undefined || contentTop === undefined) return;
-    const height = event.pageY - top - contentTop - 3; // 3 is half the draghandler height when not widened;
-    if(height < this.minHeight) return;
+    let height = event.pageY - top - contentTop - 3; // 3 is half the draghandler height when not widened;
+    if(height < this.minHeight) height = this.minHeight;
     this.height = height;
   }
 

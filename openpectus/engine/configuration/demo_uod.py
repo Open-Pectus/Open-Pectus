@@ -34,7 +34,16 @@ def create() -> UnitOperationDefinitionBase:
         cmd.set_complete()
 
     def get_plot_configuration() -> PlotConfiguration:
-        logger.warn('FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
+        logger.warn('1FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
+        logger.warn('2FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
+        logger.warn('3FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
+        logger.warn('4FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
+        logger.warn('5FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
+        logger.warn('6FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
+        logger.warn('7FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
+        logger.warn('8FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
+        logger.warn('9FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
+        logger.warn('10FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
         return PlotConfiguration(
             color_regions=[
                 PlotColorRegion(
@@ -65,7 +74,7 @@ def create() -> UnitOperationDefinitionBase:
         builder
         .with_instrument("DemoUod")
         .with_hardware(DemoHardware())
-        .with_location("Demo location")        
+        .with_location("Demo location")
         .with_hardware_register("FT01", RegisterDirection.Read, path='Objects;2:System;2:FT01')
         .with_hardware_register("FT02", RegisterDirection.Read, path='Objects;2:System;2:FT02')
         .with_hardware_register("Category", RegisterDirection.Read, path='Objects;2:System;2:Category')
