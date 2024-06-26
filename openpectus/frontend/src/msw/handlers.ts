@@ -85,6 +85,191 @@ const processUnits: ProcessUnit[] = [
   },
 ];
 
+const processValues: ProcessValue[] = [
+  {
+    value_type: ProcessValueType.INT,
+    name: 'Timestamp',
+    value: new Date().valueOf(),
+    direction: TagDirection.OUTPUT,
+  },
+  {
+    value_type: ProcessValueType.INT,
+    name: 'Timestamp2',
+    value: new Date().valueOf() + 1000000000000,
+    direction: TagDirection.OUTPUT,
+  },
+  {
+    value_type: ProcessValueType.FLOAT,
+    name: 'PU01 Speed',
+    value: 120,
+    value_unit: '%',
+    direction: TagDirection.OUTPUT,
+  }, {
+    value_type: ProcessValueType.FLOAT,
+    name: 'PU02 Speed',
+    value: 121,
+    value_unit: '%',
+    direction: TagDirection.OUTPUT,
+  }, {
+    value_type: ProcessValueType.FLOAT,
+    name: 'PU03 Speed',
+    value: 122,
+    value_unit: '%',
+    direction: TagDirection.OUTPUT,
+  }, {
+    value_type: ProcessValueType.FLOAT,
+    name: 'PU04 Speed',
+    value: 123,
+    value_unit: '%',
+    direction: TagDirection.OUTPUT,
+  }, {
+    value_type: ProcessValueType.FLOAT,
+    name: 'PU05 Speed',
+    value: 124,
+    value_unit: '%',
+    direction: TagDirection.OUTPUT,
+  }, {
+    value_type: ProcessValueType.FLOAT,
+    name: 'PU06 Speed',
+    value: 125,
+    value_unit: '%',
+    direction: TagDirection.OUTPUT,
+  },
+  {
+    value_type: ProcessValueType.STRING,
+    name: 'Some other Process Value',
+    value: 'So very valuable',
+    direction: TagDirection.OUTPUT,
+    commands: [
+      {command: 'some_command', name: 'Some Command'},
+      {command: 'some_other_command', name: 'Some Other Command'},
+    ],
+  }, {
+    value_type: ProcessValueType.INT,
+    name: 'A value with unit',
+    value: 1000,
+    value_unit: 'm',
+    direction: TagDirection.OUTPUT,
+    commands: [
+      {
+        command: 'fdsa', name: 'fdsa', value: {
+          value: 1000,
+          value_type: ProcessValueType.INT,
+          value_unit: 'm',
+          valid_value_units: ['m', 'cm', 'mm', 'km'],
+        },
+      },
+    ],
+  }, {
+    value_type: ProcessValueType.STRING,
+    name: 'Many Data',
+    value: 'HANDLE IT',
+    direction: TagDirection.OUTPUT,
+  }, {
+    value_type: ProcessValueType.FLOAT,
+    name: 'FT01 Flow',
+    value: 123 + Math.random() * 2,
+    value_unit: 'L/h',
+    direction: TagDirection.OUTPUT,
+    commands: [
+      {
+        command: 'fdsafsa',
+        name: 'Set',
+        value: {
+          value: 123 + Math.random() * 2,
+          value_unit: 'L/h',
+          valid_value_units: ['L/h', 'm3/h', 'L/m', 'm3/m'],
+          value_type: ProcessValueType.FLOAT,
+        },
+      },
+    ],
+  }, {
+    value_type: ProcessValueType.STRING,
+    name: 'Writable text',
+    value: 'VaLuE',
+    direction: TagDirection.OUTPUT,
+    commands: [
+      {
+        name: 'choice',
+        command: 'choice',
+        value: {
+          value_type: ProcessValueCommandChoiceValue.value_type.CHOICE,
+          value: 'first',
+          options: ['first', 'second', 'third'],
+        },
+      },
+      {
+        name: 'jiojio',
+        command: 'jiojio',
+        value: {
+          value: 'Writable text',
+          value_type: ProcessValueCommandFreeTextValue.value_type.STRING,
+        },
+      }, {
+        name: 'something',
+        command: 'something',
+      }, {
+        name: 'something disabled',
+        command: 'something disabled',
+        disabled: true,
+      }, {
+        name: 'number',
+        command: 'set number',
+        value: {
+          value: 123,
+          value_unit: 'no',
+          valid_value_units: ['no'],
+          value_type: ProcessValueType.INT,
+        },
+      }],
+  }, {
+    value_type: ProcessValueType.FLOAT,
+    name: 'TT01',
+    value: 23.4 + Math.random() * 2,
+    value_unit: 'degC',
+    direction: TagDirection.OUTPUT,
+    commands: [{
+      name: 'Set target temperature',
+      command: 'set_target_temperature',
+      value: {
+        value: 23.4 + Math.random() * 2,
+        value_unit: 'degC',
+        valid_value_units: ['degC', 'degF'],
+        value_type: ProcessValueType.FLOAT,
+      },
+    }],
+  }, {
+    value_type: ProcessValueType.FLOAT,
+    name: 'TT02',
+    value: 23.4 + Math.random() * 2,
+    value_unit: 'degC',
+    direction: TagDirection.OUTPUT,
+  }, {
+    value_type: ProcessValueType.FLOAT,
+    name: 'TT03',
+    value: 23.4 + Math.random() * 2,
+    value_unit: 'degC',
+    direction: TagDirection.OUTPUT,
+  }, {
+    value_type: ProcessValueType.FLOAT,
+    name: 'TT04',
+    value: 23.4 + Math.random() * 2,
+    value_unit: 'degC',
+    direction: TagDirection.OUTPUT,
+  }, {
+    value_type: ProcessValueType.STRING,
+    name: 'Flow path',
+    value: (getSeconds(Date.now()) % 10 < 3) ? 'Bypass' : (getSeconds(Date.now()) % 10 < 6) ? 'Prime with a long name' : undefined,
+    direction: TagDirection.OUTPUT,
+  },
+  {
+    value_type: ProcessValueType.STRING,
+    name: 'System State',
+    value: systemState,
+    direction: TagDirection.OUTPUT,
+  },
+];
+
 
 const runLogLines: RunLogLine[] = [
   {
@@ -229,190 +414,12 @@ export const handlers = [
 
   http.get('/api/process_unit/:processUnitId/process_values', async () => {
     await delay();
-    return HttpResponse.json<ProcessValue[]>([
-      {
-        value_type: ProcessValueType.INT,
-        name: 'Timestamp',
-        value: new Date().valueOf(),
-        direction: TagDirection.OUTPUT,
-      },
-      {
-        value_type: ProcessValueType.INT,
-        name: 'Timestamp2',
-        value: new Date().valueOf() + 1000000000000,
-        direction: TagDirection.OUTPUT,
-      },
-      {
-        value_type: ProcessValueType.FLOAT,
-        name: 'PU01 Speed',
-        value: 120,
-        value_unit: '%',
-        direction: TagDirection.OUTPUT,
-      }, {
-        value_type: ProcessValueType.FLOAT,
-        name: 'PU02 Speed',
-        value: 121,
-        value_unit: '%',
-        direction: TagDirection.OUTPUT,
-      }, {
-        value_type: ProcessValueType.FLOAT,
-        name: 'PU03 Speed',
-        value: 122,
-        value_unit: '%',
-        direction: TagDirection.OUTPUT,
-      }, {
-        value_type: ProcessValueType.FLOAT,
-        name: 'PU04 Speed',
-        value: 123,
-        value_unit: '%',
-        direction: TagDirection.OUTPUT,
-      }, {
-        value_type: ProcessValueType.FLOAT,
-        name: 'PU05 Speed',
-        value: 124,
-        value_unit: '%',
-        direction: TagDirection.OUTPUT,
-      }, {
-        value_type: ProcessValueType.FLOAT,
-        name: 'PU06 Speed',
-        value: 125,
-        value_unit: '%',
-        direction: TagDirection.OUTPUT,
-      },
-      {
-        value_type: ProcessValueType.STRING,
-        name: 'Some other Process Value',
-        value: 'So very valuable',
-        direction: TagDirection.OUTPUT,
-        commands: [
-          {command: 'some_command', name: 'Some Command'},
-          {command: 'some_other_command', name: 'Some Other Command'},
-        ],
-      }, {
-        value_type: ProcessValueType.INT,
-        name: 'A value with unit',
-        value: 1000,
-        value_unit: 'm',
-        direction: TagDirection.OUTPUT,
-        commands: [
-          {
-            command: 'fdsa', name: 'fdsa', value: {
-              value: 1000,
-              value_type: ProcessValueType.INT,
-              value_unit: 'm',
-              valid_value_units: ['m', 'cm', 'mm', 'km'],
-            },
-          },
-        ],
-      }, {
-        value_type: ProcessValueType.STRING,
-        name: 'Many Data',
-        value: 'HANDLE IT',
-        direction: TagDirection.OUTPUT,
-      }, {
-        value_type: ProcessValueType.FLOAT,
-        name: 'FT01 Flow',
-        value: 123 + Math.random() * 2,
-        value_unit: 'L/h',
-        direction: TagDirection.OUTPUT,
-        commands: [
-          {
-            command: 'fdsafsa',
-            name: 'Set',
-            value: {
-              value: 123 + Math.random() * 2,
-              value_unit: 'L/h',
-              valid_value_units: ['L/h', 'm3/h', 'L/m', 'm3/m'],
-              value_type: ProcessValueType.FLOAT,
-            },
-          },
-        ],
-      }, {
-        value_type: ProcessValueType.STRING,
-        name: 'Writable text',
-        value: 'VaLuE',
-        direction: TagDirection.OUTPUT,
-        commands: [
-          {
-            name: 'choice',
-            command: 'choice',
-            value: {
-              value_type: ProcessValueCommandChoiceValue.value_type.CHOICE,
-              value: 'first',
-              options: ['first', 'second', 'third'],
-            },
-          },
-          {
-            name: 'jiojio',
-            command: 'jiojio',
-            value: {
-              value: 'Writable text',
-              value_type: ProcessValueCommandFreeTextValue.value_type.STRING,
-            },
-          }, {
-            name: 'something',
-            command: 'something',
-          }, {
-            name: 'something disabled',
-            command: 'something disabled',
-            disabled: true,
-          }, {
-            name: 'number',
-            command: 'set number',
-            value: {
-              value: 123,
-              value_unit: 'no',
-              valid_value_units: ['no'],
-              value_type: ProcessValueType.INT,
-            },
-          }],
-      }, {
-        value_type: ProcessValueType.FLOAT,
-        name: 'TT01',
-        value: 23.4 + Math.random() * 2,
-        value_unit: 'degC',
-        direction: TagDirection.OUTPUT,
-        commands: [{
-          name: 'Set target temperature',
-          command: 'set_target_temperature',
-          value: {
-            value: 23.4 + Math.random() * 2,
-            value_unit: 'degC',
-            valid_value_units: ['degC', 'degF'],
-            value_type: ProcessValueType.FLOAT,
-          },
-        }],
-      }, {
-        value_type: ProcessValueType.FLOAT,
-        name: 'TT02',
-        value: 23.4 + Math.random() * 2,
-        value_unit: 'degC',
-        direction: TagDirection.OUTPUT,
-      }, {
-        value_type: ProcessValueType.FLOAT,
-        name: 'TT03',
-        value: 23.4 + Math.random() * 2,
-        value_unit: 'degC',
-        direction: TagDirection.OUTPUT,
-      }, {
-        value_type: ProcessValueType.FLOAT,
-        name: 'TT04',
-        value: 23.4 + Math.random() * 2,
-        value_unit: 'degC',
-        direction: TagDirection.OUTPUT,
-      }, {
-        value_type: ProcessValueType.STRING,
-        name: 'Flow path',
-        value: (getSeconds(Date.now()) % 10 < 3) ? 'Bypass' : (getSeconds(Date.now()) % 10 < 6) ? 'Prime with a long name' : undefined,
-        direction: TagDirection.OUTPUT,
-      },
-      {
-        value_type: ProcessValueType.STRING,
-        name: 'System State',
-        value: systemState,
-        direction: TagDirection.OUTPUT,
-      },
-    ]);
+    return HttpResponse.json<ProcessValue[]>(processValues);
+  }),
+
+  http.get('/api/process_unit/:processUnitId/all_process_values', async () => {
+    await delay();
+    return HttpResponse.json<ProcessValue[]>(processValues);
   }),
 
   http.get('/api/recent_runs/', () => {
