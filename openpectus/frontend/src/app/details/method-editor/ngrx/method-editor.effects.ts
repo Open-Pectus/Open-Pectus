@@ -3,9 +3,8 @@ import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
 import { ProcessUnitService, RecentRunsService } from '../../../api';
-import { selectRouteParam } from '../../../ngrx/router.selectors';
 import { PubSubService } from '../../../shared/pub-sub.service';
-import { DetailsRoutingUrlParts } from '../../details-routing-url-parts';
+import { DetailsSelectors } from '../../ngrx/details.selectors';
 import { MethodEditorActions } from './method-editor.actions';
 import { MethodEditorSelectors } from './method-editor.selectors';
 
@@ -15,7 +14,7 @@ export class MethodEditorEffects {
   saveMethodEditorModel = createEffect(() => this.actions.pipe(
     ofType(MethodEditorActions.saveButtonClicked, MethodEditorActions.saveKeyboardShortcutPressed),
     concatLatestFrom(() => [
-      this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName)),
+      this.store.select(DetailsSelectors.processUnitId),
       this.store.select(MethodEditorSelectors.method),
     ]),
     switchMap(([_, unitId, method]) => {
