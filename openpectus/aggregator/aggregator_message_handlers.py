@@ -12,6 +12,9 @@ class AggregatorMessageHandlers:
     def __init__(self, aggregator: Aggregator):
         self.aggregator = aggregator
         aggregator.dispatcher.set_register_handler(self.handle_RegisterEngineMsg)
+        aggregator.dispatcher.set_disconnect_handler(self.handle_EngineDisconnected)
+        aggregator.dispatcher.set_connect_handler(self.handle_EngineConnected)
+        aggregator.dispatcher.set_post_handler(EM.ReconnectedMsg, self.handle_ReconnectedMsg)
         aggregator.dispatcher.set_post_handler(EM.UodInfoMsg, self.handle_UodInfoMsg)
         aggregator.dispatcher.set_post_handler(EM.TagsUpdatedMsg, self.handle_TagsUpdatedMsg)
         aggregator.dispatcher.set_post_handler(EM.RunLogMsg, self.handle_RunLogMsg)
@@ -22,12 +25,12 @@ class AggregatorMessageHandlers:
     async def handle_RegisterEngineMsg(self, register_engine_msg: EM.RegisterEngineMsg) -> AM.RegisterEngineReplyMsg:
         """ Registers engine """
         engine_id = self.aggregator.create_engine_id(register_engine_msg)
-        if self.aggregator.dispatcher.has_engine_id(engine_id):
+        if self.aggregator.dispatcher.has_connected_engine_id(engine_id):
             logger.error(
                 f"""Registration failed for engine_id {engine_id}. An engine with that engine_id already
                 has a websocket connection. """
             )
-            return AM.RegisterEngineReplyMsg(success=False)
+            return AM.RegisterEngineReplyMsg(success=False, engine_id=engine_id)
 
         # TODO consider how to handle registrations
         # - disconnect/reconnect should work
@@ -37,16 +40,28 @@ class AggregatorMessageHandlers:
 
         # initialize client data
         if not self.aggregator.has_registered_engine_id(engine_id):
-            self.aggregator.from_engine.register_engine_data(Mdl.EngineData(
-                engine_id=engine_id,
-                computer_name=register_engine_msg.computer_name,
-                uod_name=register_engine_msg.uod_name,
-                location=register_engine_msg.location,
-                engine_version=register_engine_msg.engine_version
-            ))
+            self.aggregator.from_engine.register_engine_data(
+                Mdl.EngineData(
+                    engine_id=engine_id,
+                    computer_name=register_engine_msg.computer_name,
+                    uod_name=register_engine_msg.uod_name,
+                    location=register_engine_msg.location,
+                    engine_version=register_engine_msg.engine_version
+                )
+            )
 
-        logger.debug(f"Registration successful of client {engine_id}")
+        logger.info(f"Registration of engine {engine_id} successful")
         return AM.RegisterEngineReplyMsg(success=True, engine_id=engine_id)
+
+    async def handle_EngineConnected(self, engine_id: str):        
+        self.aggregator.from_engine.engine_connected(engine_id)
+
+    async def handle_EngineDisconnected(self, engine_id: str):        
+        self.aggregator.from_engine.engine_disconnected(engine_id)
+
+    async def handle_ReconnectedMsg(self, msg: EM.ReconnectedMsg):
+        self.aggregator.from_engine.engine_reconnected(msg)
+        return AM.SuccessMessage()
 
     def validate_msg(self, msg: EM.EngineMessage):
         if not self.aggregator.has_registered_engine_id(msg.engine_id):

@@ -25,7 +25,7 @@ class ErrorRecoveryState(Enum):
     Error = 4
     """ Connection is lost and reconnection has not been successful. Trying to recover by reconnecting.
     Errors are no longer masked."""
-   
+
 
 @dataclass
 class ErrorRecoveryConfig():
@@ -38,7 +38,7 @@ class ErrorRecoveryConfig():
 class ErrorRecoveryDecorator(HardwareLayerBase):
     """ Implements error recovery as a decorator around concrete hardware, without coupling it to Engine.
 
-    Error recovery has the 6 states defined in `ErrorRecoveryState`. It is configured using the time thresholds
+    Error recovery has the 5 states defined in `ErrorRecoveryState`. It is configured using the time thresholds
     defined in `ErrorRecoveryConfig`.
 
     Once connected, state is `OK`. This state is kept until a read or write error occurs (`read()`, `write()` or

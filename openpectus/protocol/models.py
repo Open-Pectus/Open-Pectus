@@ -106,7 +106,8 @@ class ControlState(ProtocolModel):
 
 class PlotColorRegion(ProtocolModel):
     process_value_name: str
-    value_color_map: dict[str | int | float, str]  # color string compatible with css e.g.: '#aa33bb', 'rgb(0,0,0)', 'rgba(0,0,0,0)', 'red'
+    # color string compatible with css e.g.: '#aa33bb', 'rgb(0,0,0)', 'rgba(0,0,0,0)', 'red'
+    value_color_map: dict[str | int | float, str]
 
 
 class PlotAxis(ProtocolModel):

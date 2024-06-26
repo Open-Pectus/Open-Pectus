@@ -564,7 +564,8 @@ class Engine(InterpreterContext):
                 tag_value = state.get(t.name)
                 t.set_value(tag_value.value, self._tick_time)
 
-    def notify_initial_tags(self):
+    def notify_all_tags(self):
+        """ Collect tag updates from all tags, even unmodified tags """
         for tag in self._iter_all_tags():
             if tag.tick_time is None:
                 logger.warning(f'Setting a tick time on {tag.name} tag missing it in notify_initial_tags()')
@@ -572,6 +573,7 @@ class Engine(InterpreterContext):
             self.tag_updates.put(tag)
 
     def notify_tag_updates(self):
+        """ Collect tag updates from tags modified since last cycle """
         # pick up changes from listeners and queue them up
         for tag_name in self._system_listener.changes:
             tag = self._system_tags[tag_name]

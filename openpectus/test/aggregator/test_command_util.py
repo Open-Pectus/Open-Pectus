@@ -10,7 +10,7 @@ from openpectus.aggregator import command_util as cu
 
 def create_ReadingInfo(reading: Reading) -> Mdl.ReadingInfo:
     reading.build_commands_list()
-    return reading.as_ReadingInfo()
+    return reading.as_reading_info()
 
 
 class CommantUtilTest(unittest.TestCase):

@@ -1,14 +1,16 @@
-import logging
-from typing import Awaitable, Callable, Any
+from typing import Awaitable, Callable, Any, TypeVar
 
-from openpectus.protocol.messages import MessageBase
+import openpectus.protocol.aggregator_messages as AM
+import openpectus.protocol.engine_messages as EM
+import openpectus.protocol.messages as M
 
 # --------- Dispatch interfaces ------------
 
 AGGREGATOR_RPC_WS_PATH = "/engine-rpc"
 AGGREGATOR_REST_PATH = "/engine-rest"
 AGGREGATOR_HEALTH_PATH = "/health"
-MessageHandler = Callable[[Any], Awaitable[MessageBase]]
+MessageHandler = Callable[[Any], Awaitable[M.MessageBase]]
 
-logger = logging.getLogger(__name__)
-
+AnyMessageType = TypeVar("AnyMessageType", bound=M.MessageBase)
+EngineMessageType = TypeVar("EngineMessageType", bound=EM.EngineMessage)
+AggregatorMessageType = TypeVar("AggregatorMessageType", bound=AM.AggregatorMessage)

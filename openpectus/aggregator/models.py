@@ -53,9 +53,20 @@ class TagsInfo(BaseModel):
             if current.value_unit != tag_value.value_unit:
                 logger.warning(f"Tag '{tag_value.name}' changed unit from '{current.value_unit}' to " +
                                f"'{tag_value.value_unit}'. This is unexpected")
+            if current.tick_time > tag_value.tick_time:
+                logger.warning(f"Tag '{tag_value.name}' was updated with an earlier time than the current value.")
             current.value = tag_value.value
             current.tick_time = tag_value.tick_time
             return False  # was updated
+
+    def __str__(self) -> str:
+        return f"TagsInfo({','.join(self.map.keys())})"
+
+    def get_last_modified_time(self) -> datetime | None:
+        if len(self.map.keys()) == 0:
+            return None
+        max_tick_time = max(t.tick_time for t in self.map.values())
+        return datetime.fromtimestamp(max_tick_time)
 
 
 class RunData(BaseModel):
@@ -63,9 +74,15 @@ class RunData(BaseModel):
     method_state: MethodState = MethodState.empty()
     runlog: RunLog = RunLog(lines=[])
     latest_persisted_tick_time: float | None = None
+    """ The time assigned to the last persisted set of values """
+    latest_tag_time: float | None = None
+    """ The time of the latest tag update, persisted or not """
     error_log: ErrorLog = ErrorLog.empty()
     interrupted_by_error: bool = False
 
+    def __str__(self) -> str:
+        return f"RunData(run_started:{self.run_started}, method_state:{self.method_state}, " + \
+               f"interrupted_by_error:{self.interrupted_by_error})"
 
 class EngineData(BaseModel):
     engine_id: str
@@ -93,3 +110,7 @@ class EngineData(BaseModel):
     @property
     def system_state(self):
         return self.tags_info.get(Mdl.SystemTagName.SYSTEM_STATE)
+
+    def __str__(self) -> str:
+        return f"EngineData(engine_id:{self.engine_id}, run_id:{self.run_id}," +\
+               f" control_state':{self.control_state})"

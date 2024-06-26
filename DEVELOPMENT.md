@@ -104,6 +104,7 @@ python -m build -o openpectus/dist
 
 Change the database model(s) in aggregator/data/models.py first, then run:
 ```shell
+cd openpectus/aggregator
 alembic revision --autogenerate -m "<migration script name>"
 ```
 This will create a new migration script in `aggregator/data/alembic/versions/` based on the model changes.  

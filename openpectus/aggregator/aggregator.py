@@ -1,17 +1,16 @@
 import asyncio
 import logging
-import time
 from datetime import datetime, timezone
 
 import openpectus.aggregator.models as Mdl
+from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
 from openpectus.aggregator.data import database
-from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRepository
+from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRepository, RecentEngineRepository
 from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.aggregator.models import EngineData
-from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.protocol.models import SystemTagName, MethodStatusEnum
 
 logger = logging.getLogger(__name__)
@@ -26,15 +25,89 @@ class FromEngine:
         self.publisher = publisher
 
     def register_engine_data(self, engine_data: EngineData):
+        # Why do we do this?
+        # - initially because run_started is a value we generated - could calculate it again looking at plot log values
+        #   the value is used when _ to  _ 
+
+        # repo = RecentEngineRepository(database.scoped_session())
+        # recent_engine = repo.get_recent_engine_by_engine_id(engine_id=engine_data.engine_id)
+        # if recent_engine is not None:
+        #     # update engine provided data with RecentEngine db data
+        #     engine_data.run_data.run_started = recent_engine.run_started        
+        logger.info(f"Data for engine {engine_data.engine_id} registered")
         self._engine_data_map[engine_data.engine_id] = engine_data
 
-    def uod_info_changed(self, engine_id: str, readings: list[Mdl.ReadingInfo], plot_configuration: Mdl.PlotConfiguration, hardware_str: str):
+    def engine_connected(self, engine_id: str):
+        logger.info("engine_connected")
+
+    def engine_disconnected(self, engine_id: str):
+        engine_data = self._engine_data_map.get(engine_id)
+        if engine_data is not None:
+            with database.create_scope():
+                repo = RecentEngineRepository(database.scoped_session())
+                repo.store_recent_engine(engine_data)
+            logger.info("Recent engine saved")
+            del self._engine_data_map[engine_id]
+            asyncio.create_task(self.publisher.publish_process_units_changed())
+        else:
+            logger.warning("No data to save for engine " + engine_id)
+
+    def engine_reconnected(self, msg: EM.ReconnectedMsg):
+        logger.info(f"Engine_reconnected. Processing ReconnectedMsg {msg.ident}")
+        engine_id = msg.engine_id
+        engine_data = self._engine_data_map.get(engine_id)
+        if engine_data is None:
+            logger.error("No engine data available on reconnect for engine " + engine_id)
+            return
+
+        # apply the state from msg to the current state
+        run_id_tag = next((tag for tag in msg.tags if tag.name == SystemTagName.RUN_ID), None)
+        # verify consistent message
+        # logger.info(f"msg runid {msg.run_id}, tag runid {run_id_tag.value if run_id_tag is not None else None}")
+        if msg.run_id is None:
+            if run_id_tag is not None and run_id_tag.value is not None:
+                logger.error(f"Mismatch in ReconnectedMsg, tag run_id {run_id_tag.value}, msg run_id {msg.run_id}")
+                return
+        else:
+            if run_id_tag is None or run_id_tag.value is None:
+                logger.error(f"Mismatch in ReconnectedMsg, tag run_id {None}, msg run_id {msg.run_id}")
+                return
+            engine_data.run_data.run_started = datetime.fromtimestamp(msg.run_started_tick) \
+                if msg.run_started_tick is not None else None
+            engine_data.tags_info.upsert(run_id_tag)  # sets engine_data.run_id
+
+        # handle possible change to recent engine
+        with database.create_scope():
+            repo = RecentEngineRepository(database.scoped_session())
+            recent_engine = repo.get_recent_engine_by_engine_id(engine_id)
+            if recent_engine is None:
+                logger.info(f"Reconnected engine {engine_id} has no recent engine data")
+            else:
+                if recent_engine.run_id != msg.run_id and recent_engine.run_id is not None:
+                    logger.info("Marking recent engine stopped ")
+                    repo.mark_recent_engine_stopped(engine_data)
+
+        # process tag values normally
+        self.tag_values_changed(engine_id, msg.tags)
+
+        logger.info(f"Done processing ReconnectedMsg {msg.ident}")
+
+
+    def run_started(self):  # to replace run_id_changed guessing
+        raise NotImplementedError()
+    
+    def run_stopped(self):
+        raise NotImplementedError()
+    
+
+    def uod_info_changed(self, engine_id: str, readings: list[Mdl.ReadingInfo], plot_configuration: Mdl.PlotConfiguration,
+                         hardware_str: str):
         try:
             self._engine_data_map[engine_id].readings = readings
             self._engine_data_map[engine_id].plot_configuration = plot_configuration
             self._engine_data_map[engine_id].hardware_str = hardware_str
         except KeyError:
-            logger.error(f'No engine registered under id {engine_id} when trying to uod info.')
+            logger.error(f'No engine registered under id {engine_id} when trying to set uod info.')
 
     def tag_values_changed(self, engine_id: str, changed_tag_values: list[Mdl.TagValue]):
         plot_log_repo = PlotLogRepository(database.scoped_session())
@@ -57,7 +130,11 @@ class FromEngine:
 
             was_inserted = engine_data.tags_info.upsert(changed_tag_value)
 
-            if changed_tag_value.name == SystemTagName.SYSTEM_STATE.value:
+            if changed_tag_value.name in [
+                SystemTagName.METHOD_STATUS.value,
+                SystemTagName.SYSTEM_STATE.value,
+                SystemTagName.RUN_ID.value,
+            ]:
                 asyncio.create_task(self.publisher.publish_process_units_changed())
 
             # if a tag doesn't appear with value until after start and run_id, we need to store the info here
@@ -66,26 +143,49 @@ class FromEngine:
 
         self._persist_tag_values(engine_data, plot_log_repo)
 
-    def _run_id_changed(self, plot_log_repo: PlotLogRepository, recent_run_repo: RecentRunRepository, engine_data: EngineData,
-                        run_id_tag: Mdl.TagValue):
+    def _run_id_changed(
+            self,
+            plot_log_repo: PlotLogRepository,
+            recent_run_repo: RecentRunRepository,
+            engine_data: EngineData,
+            run_id_tag: Mdl.TagValue):
         """ Handles persistance related to start and end of a run """
-        if run_id_tag.value is None and engine_data.run_id is not None:
+
+        logger.info(f"RunId changed from {engine_data.run_id} to {run_id_tag.value}, Engine: {engine_data.engine_id}")
+        if run_id_tag.value is None and engine_data.run_id is None:
+            logger.info("Engine has no active run")
+        elif run_id_tag.value is None and engine_data.run_id is not None:
             # Run stopped
+            logger.info(f"Run was stopped. Saving Recent Run. Engine: {engine_data.engine_id}")
             recent_run_repo.store_recent_run(engine_data)
             engine_data.run_data.error_log = Mdl.ErrorLog.empty()
             asyncio.create_task(self.publisher.publish_error_log_changed(engine_data.engine_id))
+        elif run_id_tag.value is not None and engine_data.run_id is not None:
+            # Ongoing run. run_id was only detected as changed because of complete tags set,
+            # caused by e.g. an aggregator restart
+            if run_id_tag.value != engine_data.run_id:
+                logger.error(f"Run_Id inconsistent, run_id tag {run_id_tag.value}, engine_data {engine_data.run_id}")
+            else:
+                logger.info(f"Run {run_id_tag.value} resumed")
         else:
             # Run started
+            logger.info(f"A new Run was started, Engine: {engine_data.engine_id}, Run_Id: {str(run_id_tag.value)}")
             engine_data.run_data.run_started = datetime.fromtimestamp(run_id_tag.tick_time, timezone.utc)
             plot_log_repo.create_plot_log(engine_data, str(run_id_tag.value))
 
     def _persist_tag_values(self, engine_data: EngineData, plot_log_repo: PlotLogRepository):
         latest_persisted_tick_time = engine_data.run_data.latest_persisted_tick_time
-        time_threshold_exceeded = latest_persisted_tick_time is None or time.time() - latest_persisted_tick_time > persistance_threshold_seconds
+        tag_values = engine_data.tags_info.map.values()
+        latest_tag_tick_time = max([tag.tick_time for tag in tag_values]) if len(tag_values) > 0 else 0
+        time_threshold_exceeded = latest_persisted_tick_time is None \
+            or latest_tag_tick_time - latest_persisted_tick_time > persistance_threshold_seconds
+        # time_threshold_exceeded = latest_persisted_tick_time is None \
+        #     or time.time() - latest_persisted_tick_time > persistance_threshold_seconds
         if engine_data.run_id is not None and time_threshold_exceeded:
             tag_values_to_persist = [tag_value.copy() for tag_value in engine_data.tags_info.map.values()
                                      if latest_persisted_tick_time is None
                                      or tag_value.tick_time > latest_persisted_tick_time]
+            logger.info(f"Persisting {len(tag_values_to_persist)} of possible {len(engine_data.tags_info.map.keys())}")
             """ 
             We manipulate the tick_time of the tagValues we persist. But it's not changing it to something that didn't 
             exist in the engine, because we change the tick_time to a tick_time that comes from an actual later reading 
@@ -99,8 +199,10 @@ class FromEngine:
             for tag_value_to_persist in tag_values_to_persist:
                 tag_value_to_persist.tick_time = highest_tick_time_to_persist
 
+            # Note: to store tag values, the run_id is needed
             plot_log_repo.store_tag_values(engine_data.engine_id, engine_data.run_id, tag_values_to_persist)
             engine_data.run_data.latest_persisted_tick_time = highest_tick_time_to_persist
+            engine_data.run_data.latest_tag_time = highest_tick_time_to_persist
 
     def runlog_changed(self, engine_id: str, runlog: Mdl.RunLog):
         try:
@@ -163,8 +265,6 @@ class FromFrontend:
 
 class Aggregator:
     def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher) -> None:
-        # self.channel_map: Dict[str, ChannelInfo] = {}
-        # """ channel data, indexed by channel_id"""
         self._engine_data_map: EngineDataMap = {}
         """ all client data except channels, indexed by engine_id """
         self.dispatcher = dispatcher

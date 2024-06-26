@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import List
 
@@ -17,6 +18,7 @@ from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 class AggregatorServer:
     default_title = "Pectus Aggregator"
     default_frontend_dist_dir = os.path.join(os.path.dirname(__file__), "frontend-dist")
+    # default_frontend_dist_dir = ".\\openpectus\\frontend\\dist"
     default_host = "127.0.0.1"
     default_port = 9800
 
@@ -26,11 +28,11 @@ class AggregatorServer:
         self.host = host
         self.port = port
         self.frontend_dist_dir = frontend_dist_dir
-        dispatcher = AggregatorDispatcher()
-        publisher = FrontendPublisher()
-        aggregator = _create_aggregator(dispatcher, publisher)
-        _ = AggregatorMessageHandlers(aggregator)
-        self.setup_fastapi([dispatcher.router, publisher.router])
+        self.dispatcher = AggregatorDispatcher()
+        self.publisher = FrontendPublisher()
+        self.aggregator = _create_aggregator(self.dispatcher, self.publisher)
+        _ = AggregatorMessageHandlers(self.aggregator)
+        self.setup_fastapi([self.dispatcher.router, self.publisher.router])
         self.init_db()
 
     def setup_fastapi(self, additional_routers: List[APIRouter] = []):
@@ -39,7 +41,9 @@ class AggregatorServer:
         def custom_generate_unique_id(route: APIRoute):
             return f"{route.name}"
 
-        self.fastapi = FastAPI(title=self.title, generate_unique_id_function=custom_generate_unique_id)
+        self.fastapi = FastAPI(title=self.title,
+                               generate_unique_id_function=custom_generate_unique_id,
+                               on_shutdown=[self.on_shutdown])
         self.fastapi.include_router(process_unit.router, prefix=api_prefix)
         self.fastapi.include_router(recent_runs.router, prefix=api_prefix)
         self.fastapi.include_router(auth.router, prefix='/auth')
@@ -59,4 +63,7 @@ class AggregatorServer:
 
     def start(self):
         print(f"Serving frontend at http://{self.host}:{self.port}")
-        uvicorn.run(self.fastapi, host=self.host, port=self.port)
+        uvicorn.run(self.fastapi, host=self.host, port=self.port, log_level=logging.WARNING)
+
+    async def on_shutdown(self):
+        await self.dispatcher.shutdown()
