@@ -37,10 +37,10 @@ export class ProcessValuePipe implements PipeTransform {
         return value.toString();
       case ProcessValueType.FLOAT:
       case 'float':
-        return `${this.decimalPipe.transform(value, '1.2-2')} ${unit}`.trim();
+        return `${this.decimalPipe.transform(value, '1.2-2')} ${unit ?? ''}`.trim();
       case ProcessValueType.INT:
       case 'int':
-        return `${this.decimalPipe.transform(value, '1.0-0')} ${unit}`.trim();
+        return `${this.decimalPipe.transform(value, '1.0-0')} ${unit ?? ''}`.trim();
       default:
         UtilMethods.assertNever(type);
     }
