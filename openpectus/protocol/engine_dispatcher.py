@@ -132,7 +132,7 @@ class EngineDispatcher(EngineDispatcherBase):
             await self._rpc_client.__aenter__()
         except Exception:
             raise ProtocolNetworkException("Error creating websocket connection")
-        logger.info("Websocket connected")        
+        logger.info("Websocket connected")
 
     async def disconnect_async(self):
         logger.info("Websocket disconnected")
@@ -158,7 +158,7 @@ class EngineDispatcher(EngineDispatcherBase):
 
         try:
             response = requests.post(url=self._post_url, json=message_json)
-            logger.debug(f"Sent message: {message.ident}")
+            # logger.debug(f"Sent message: {message.ident}")
         except Exception as ex:
             logger.debug(f"Message not sent: {message.ident}")
             raise ProtocolNetworkException("Post failed with exception") from ex

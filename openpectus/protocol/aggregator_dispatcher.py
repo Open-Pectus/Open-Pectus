@@ -157,7 +157,7 @@ class AggregatorDispatcher():
 
     async def dispatch_post(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
         """ Dispatch incoming message to registered handler. """
-        logger.debug(f"Incoming message: {message.ident}")
+        # logger.debug(f"Incoming message: {message.ident}")
         if isinstance(message, EM.RegisterEngineMsg):
             if self._register_handler is None:
                 return M.ProtocolErrorMessage(protocol_msg="Missing handler for registering engine")
