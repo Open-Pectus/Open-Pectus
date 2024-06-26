@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, UTC, timedelta
+from datetime import timedelta
 import logging
 from typing import Awaitable, Callable
 
@@ -29,8 +29,6 @@ class EngineDispatcherErrorRecoveryDecorator(EngineDispatcherBase):
         self._is_reconnecting = False
         self._is_reconnecting_disconnect = False
         self._message_buffer: list[EM.EngineMessage] = []
-        self._message_buffer_time: dict[str, datetime] = {}
-        """ maps message types to the last time such a message was buffered """
         self._lock = asyncio.Lock()
         self.connected_callback: ConnectionCallback | None = None
         self.reconnected_callback: AsyncConnectionCallback | None = None
@@ -45,12 +43,6 @@ class EngineDispatcherErrorRecoveryDecorator(EngineDispatcherBase):
             if not self.was_connected:
                 self.was_connected = True
                 self._on_connected()
-            else:
-                pass
-                #await self._on_reconnected()
-
-                # self._is_reconnecting = False
-                # await self._on_reconnected()
         except Exception:
             logger.warning("Connect failed")
             self._reconnect_begin()
@@ -58,9 +50,10 @@ class EngineDispatcherErrorRecoveryDecorator(EngineDispatcherBase):
     async def disconnect_async(self):
         try:
             await self._decorated.disconnect_async()
-            self._on_disconnected()
         except Exception:
             logger.error("Disconnect failed")
+        finally:
+            self._on_disconnected()
 
     async def post_async(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
         await self._tick()
@@ -117,16 +110,18 @@ class EngineDispatcherErrorRecoveryDecorator(EngineDispatcherBase):
                         await self._decorated.disconnect_async()
                         self._on_disconnected()
                     except Exception:
-                        logger.warning("Reconnect - disconnect failed")  # , exc_info=True)
+                        logger.warning("Reconnect - disconnect failed")
                 else:
                     try:
                         await asyncio.sleep(2)
                         await self._decorated.connect_async()
                         logger.info("Reconnect successful")
-                        self._is_reconnecting = False # important here to avoid registration failure
+                        # Note: important to clear this flag here rather than
+                        # in connect_async() to avoid registration failure
+                        self._is_reconnecting = False
                         asyncio.create_task(self._on_reconnected())  # avoid deadlock
                     except Exception:
-                        logger.warning("Reconnect - connect failed")  # , exc_info=True)
+                        logger.warning("Reconnect - connect failed")
             else:
                 await self._send_buffered_messages()
 
@@ -135,13 +130,13 @@ class EngineDispatcherErrorRecoveryDecorator(EngineDispatcherBase):
             return
         buffered_message_count = self._get_buffer_size()
         if buffered_message_count > 0:
-            logger.info(f"Buffered messages remaining to be sent: {buffered_message_count}")
+            logger.debug(f"Buffered messages remaining to be sent: {buffered_message_count}")
             message_batch = self._pop_buffer_batch()
-            logger.info(f"Buffer sq: {','.join([str(m.sequence_number) for m in self._message_buffer])}")
-            logger.info(f"Batch sq : {','.join([str(m.sequence_number) for m in message_batch])}")
+            logger.debug(f"Buffer sq: {','.join([str(m.sequence_number) for m in self._message_buffer])}")
+            logger.debug(f"Batch sq : {','.join([str(m.sequence_number) for m in message_batch])}")
 
             for message in message_batch:
-                logger.info("Message send order "+message.ident)
+                logger.info(f"Sending buffered message {message.ident}")
                 # last_message_tick_time = 0
                 # for i, m in enumerate(message_batch):                            
                 #     if isinstance(m, EM.TagsUpdatedMsg):
@@ -155,27 +150,22 @@ class EngineDispatcherErrorRecoveryDecorator(EngineDispatcherBase):
                     _ = await self._decorated.post_async(message)
                 except ProtocolNetworkException:
                     logger.error(f"Error sending buffered message {message.ident}. Returning it to buffer")
+                    logger.debug("err", exc_info=True)
                     self._buffer_message(message)
             if self._get_buffer_size() == 0:
                 logger.info("All caught up sending buffered messages")
 
     def _buffer_message(self, message: EM.EngineMessage):
-        """ Append message to the end of its type's buffer """
-        now = datetime.now(UTC)
+        """ Append message to the buffer """
         msg_type = type(message).__name__
         self.assign_sequence_number(message)
         if isinstance(message, EM.ReconnectedMsg):
-            self._message_buffer_time[msg_type] = now
-            self._message_buffer.insert(0, message)
+            logger.debug("ReconnectedMsg replaces buffer")
+            self._message_buffer = [message]
             self.buf_recon = True
-        elif msg_type not in self._message_buffer_time.keys():
-            self._message_buffer_time[msg_type] = now
-            self._message_buffer.append(message)
         else:
-            if self._message_buffer_time[msg_type] + self._buffer_duration < now:
-                logger.info(f"Buffering {msg_type} message")
-                self._message_buffer_time[msg_type] = now
-                self._message_buffer.append(message)
+            logger.info(f"Buffering {msg_type} message")
+            self._message_buffer.append(message)
 
     def _get_buffer_size(self) -> int:
         return len(self._message_buffer)

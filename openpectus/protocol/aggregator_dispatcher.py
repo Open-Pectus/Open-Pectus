@@ -143,6 +143,9 @@ class AggregatorDispatcher():
             if not isinstance(message, EM.RegisterEngineMsg) and not isinstance(message, EM.EngineMessage):
                 raise ValueError(f"Invalid type of message sent from Engine: {type(message).__name__}")
             response_message = await self.dispatch_post(message)
+            if response_message is None:
+                logger.error(f"Invalid response (None) returned from handler for message type {type(message).__name__}")
+                response_message = M.ProtocolErrorMessage(protocol_msg="Invalid response from handler")
 
             try:
                 message_json = serialize(response_message)

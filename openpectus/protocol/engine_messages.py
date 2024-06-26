@@ -39,7 +39,7 @@ class UodInfoMsg(EngineMessage):
 
 class ReconnectedMsg(EngineMessage):
     run_id: str | None
-    run_started: datetime | None
+    run_started_tick: float | None
     tags: List[Mdl.TagValue] = []
     sequence_number = -3
 

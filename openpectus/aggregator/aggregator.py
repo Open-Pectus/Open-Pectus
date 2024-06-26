@@ -1,7 +1,6 @@
 import asyncio
 import logging
-import time
-from datetime import UTC, datetime, timezone
+from datetime import datetime, timezone
 
 import openpectus.aggregator.models as Mdl
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
@@ -24,8 +23,6 @@ class FromEngine:
     def __init__(self, engine_data_map: EngineDataMap, publisher: FrontendPublisher):
         self._engine_data_map = engine_data_map
         self.publisher = publisher
-        self.was_connected = False
-        self.is_connected = False
 
     def register_engine_data(self, engine_data: EngineData):
         # Why do we do this?
@@ -42,30 +39,8 @@ class FromEngine:
 
     def engine_connected(self, engine_id: str):
         logger.info("engine_connected")
-        self.is_connected = True
-        if self.was_connected:
-            self.engine_reconnected()
-            return
-        
-        self.was_connected = True
-    #     if not engine_id in self._engine_data_map.keys():
-    #         logger.info(f"Pre-registered engine {engine_id} connected")
-    #         repo = RecentEngineRepository(database.scoped_session())
-    #         recent_engine = repo.get_recent_engine_by_engine_id(engine_id=engine_id)
-    #         if recent_engine is None:
-    #             raise KeyError("Preregisttered engine had no RecenEngine data. What to do?")            
-            
-    #         engine_data = Mdl.EngineData(
-    #                 engine_id=engine_id,
-    #                 computer_name=recent_engine.com,
-    #                 uod_name=register_engine_msg.uod_name,
-    #                 location=register_engine_msg.location,
-    #                 engine_version=register_engine_msg.engine_version
-    #             )
-
 
     def engine_disconnected(self, engine_id: str):
-        self.is_connected = False
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is not None:
             with database.create_scope():
@@ -77,8 +52,46 @@ class FromEngine:
         else:
             logger.warning("No data to save for engine " + engine_id)
 
-    def engine_reconnected(self):
-        logger.info("engine_reconnected")
+    def engine_reconnected(self, msg: EM.ReconnectedMsg):
+        logger.info(f"Engine_reconnected. Processing ReconnectedMsg {msg.ident}")
+        engine_id = msg.engine_id
+        engine_data = self._engine_data_map.get(engine_id)
+        if engine_data is None:
+            logger.error("No engine data available on reconnect for engine " + engine_id)
+            return
+
+        # apply the state from msg to the current state
+        run_id_tag = next((tag for tag in msg.tags if tag.name == SystemTagName.RUN_ID), None)
+        # verify consistent message
+        # logger.info(f"msg runid {msg.run_id}, tag runid {run_id_tag.value if run_id_tag is not None else None}")
+        if msg.run_id is None:
+            if run_id_tag is not None and run_id_tag.value is not None:
+                logger.error(f"Mismatch in ReconnectedMsg, tag run_id {run_id_tag.value}, msg run_id {msg.run_id}")
+                return
+        else:
+            if run_id_tag is None or run_id_tag.value is None:
+                logger.error(f"Mismatch in ReconnectedMsg, tag run_id {None}, msg run_id {msg.run_id}")
+                return
+            engine_data.run_data.run_started = datetime.fromtimestamp(msg.run_started_tick) \
+                if msg.run_started_tick is not None else None
+            engine_data.tags_info.upsert(run_id_tag)  # sets engine_data.run_id
+
+        # handle possible change to recent engine
+        with database.create_scope():
+            repo = RecentEngineRepository(database.scoped_session())
+            recent_engine = repo.get_recent_engine_by_engine_id(engine_id)
+            if recent_engine is None:
+                logger.info(f"Reconnected engine {engine_id} has no recent engine data")
+            else:
+                if recent_engine.run_id != msg.run_id and recent_engine.run_id is not None:
+                    logger.info("Marking recent engine stopped ")
+                    repo.mark_recent_engine_stopped(engine_data)
+
+        # process tag values normally
+        self.tag_values_changed(engine_id, msg.tags)
+
+        logger.info(f"Done processing ReconnectedMsg {msg.ident}")
+
 
     def run_started(self):  # to replace run_id_changed guessing
         raise NotImplementedError()
@@ -99,7 +112,6 @@ class FromEngine:
     def tag_values_changed(self, engine_id: str, changed_tag_values: list[Mdl.TagValue]):
         plot_log_repo = PlotLogRepository(database.scoped_session())
         recent_run_repo = RecentRunRepository(database.scoped_session())
-        recent_engine_repo = RecentEngineRepository(database.scoped_session())
 
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is None:
@@ -114,7 +126,7 @@ class FromEngine:
                     engine_data.run_data.interrupted_by_error = False
 
             if changed_tag_value.name == SystemTagName.RUN_ID.value:
-                self._run_id_changed(plot_log_repo, recent_run_repo, recent_engine_repo, engine_data, changed_tag_value)
+                self._run_id_changed(plot_log_repo, recent_run_repo, engine_data, changed_tag_value)
 
             was_inserted = engine_data.tags_info.upsert(changed_tag_value)
 
@@ -135,42 +147,26 @@ class FromEngine:
             self,
             plot_log_repo: PlotLogRepository,
             recent_run_repo: RecentRunRepository,
-            recent_engine_repo: RecentEngineRepository,
             engine_data: EngineData,
             run_id_tag: Mdl.TagValue):
         """ Handles persistance related to start and end of a run """
 
-        # Check whether we've been restarted while a run was ongoing. If so, we need to
-        # prepare the engine_data state the run to continue by setting engine_data properties
-        if engine_data.run_id is None and run_id_tag.value is not None:
-            # yes, our run_id was not set but the incoming run_id tag was set.
-            # depending on recent_engine state this either means the run was already running
-            # or that it just started
-            recent_engine = recent_engine_repo.get_recent_engine_by_engine_id(engine_data.engine_id)
-            if recent_engine is not None and recent_engine.run_id is not None and recent_engine.run_stopped is None:
-                if recent_engine.run_id == run_id_tag.value:
-                    engine_data.tags_info.upsert(run_id_tag)  # sets engine_data.run_id
-                    engine_data.run_data.run_started = recent_engine.run_started
-
         logger.info(f"RunId changed from {engine_data.run_id} to {run_id_tag.value}, Engine: {engine_data.engine_id}")
         if run_id_tag.value is None and engine_data.run_id is None:
-            # Engine was reconnected            
-            # if recent_engine is not None:
-            #     if recent_engine.run_started is not None and recent_engine.run_stopped is None:
-                    
-
             logger.info("Engine has no active run")
         elif run_id_tag.value is None and engine_data.run_id is not None:
             # Run stopped
             logger.info(f"Run was stopped. Saving Recent Run. Engine: {engine_data.engine_id}")
             recent_run_repo.store_recent_run(engine_data)
-            recent_engine_repo.mark_recent_engine_stopped(engine_data)
             engine_data.run_data.error_log = Mdl.ErrorLog.empty()
             asyncio.create_task(self.publisher.publish_error_log_changed(engine_data.engine_id))
         elif run_id_tag.value is not None and engine_data.run_id is not None:
-            # Ongoing run. run_id was only detected as changed because of aggregator restart
-            assert run_id_tag.value == engine_data.run_id
-            logger.info(f"Run {run_id_tag.value} resumed")
+            # Ongoing run. run_id was only detected as changed because of complete tags set,
+            # caused by e.g. an aggregator restart
+            if run_id_tag.value != engine_data.run_id:
+                logger.error(f"Run_Id inconsistent, run_id tag {run_id_tag.value}, engine_data {engine_data.run_id}")
+            else:
+                logger.info(f"Run {run_id_tag.value} resumed")
         else:
             # Run started
             logger.info(f"A new Run was started, Engine: {engine_data.engine_id}, Run_Id: {str(run_id_tag.value)}")

@@ -2,7 +2,7 @@ import asyncio
 import logging
 from logging.handlers import QueueHandler
 from queue import Empty, SimpleQueue
-from typing import List
+import time
 
 from openpectus.protocol.engine_dispatcher import EngineDispatcherBase
 import openpectus.protocol.engine_messages as EM
@@ -10,7 +10,7 @@ import openpectus.protocol.messages as M
 import openpectus.protocol.models as Mdl
 from openpectus.engine.engine import Engine
 from openpectus.lang.exec.runlog import RunLogItem
-from openpectus.lang.exec.tags import TagValue
+from openpectus.lang.exec.tags import SystemTagName, TagValue
 from openpectus.lang.exec.uod import logger as uod_logger
 from openpectus.engine.engine import logger as engine_logger
 
@@ -31,14 +31,21 @@ class EngineReporter():
         self.dispatcher = dispatcher
         self.engine = engine
         self._config_data_sent = False
-        self._reconnect_tags: list[Mdl.TagValue] = []
+        self.reconnect_message: EM.ReconnectedMsg | None = None
 
-    def collect_reconnect_tags(self):
-        logger.info("collect_reconnect_tags")
-
+    def build_reconnected_message(self):
+        """ Build the reconnect message to be sent just after reconnect. This should be called
+        just when the connection is lost. """
+        logger.info("Build message ReconnectedMsg")
         self.engine.notify_all_tags()
-        self._reconnect_tags = self.collect_tag_updates()
-        logger.info(f"Collected {len(self._reconnect_tags)} reconnect tags")
+        tags = self.collect_tag_updates()
+        run_id_tag = next((tag for tag in tags if tag.name == SystemTagName.RUN_ID), None)
+        run_id = str(run_id_tag.value) if run_id_tag is not None else None
+        # TODO collect run_started from somewhere
+        # either add an event in engine containing this value - then take it from there
+        # or - remove it from the message and have aggregator read it from recent engine 
+        self.reconnect_message = EM.ReconnectedMsg(run_id=run_id, run_started_tick=time.time(), tags=tags)
+        logger.debug(f"Collected {len(tags)} reconnect tags")
 
     def restart(self):
         logger.info("restart")
@@ -46,8 +53,10 @@ class EngineReporter():
 
     async def send_reconnected_message(self):
         logger.info("reconnect")
-        recon_msg = EM.ReconnectedMsg(run_id=None, run_started=None, tags=self._reconnect_tags)
-        await self.dispatcher.post_async(recon_msg)
+        if self.reconnect_message is None:
+            logger.error("No reconnect message built")
+        else:
+            await self.dispatcher.post_async(self.reconnect_message)
         self.restart()
 
     async def send_config_messages(self):
@@ -85,7 +94,7 @@ class EngineReporter():
         await self.send_tag_updates()
 
     async def send_uod_info(self):
-        readings: List[Mdl.ReadingInfo] = [
+        readings: list[Mdl.ReadingInfo] = [
             reading.as_reading_info() for reading in self.engine.uod.readings
         ]
         msg = EM.UodInfoMsg(
@@ -101,21 +110,21 @@ class EngineReporter():
             return False
 
     def collect_tag_updates(self) -> list[Mdl.TagValue]:
-        tags = []
+        tags = {}  # using dict to de-duplicate
         try:
             for _ in range(MAX_SIZE_TagsUpdatedMsg):
                 tag = self.engine.tag_updates.get_nowait()
                 assert tag.tick_time is not None, f'tick_time is None for tag {tag.name}'
-                tags.append(Mdl.TagValue(
+                tags[tag.name] = Mdl.TagValue(
                     name=tag.name,
                     tick_time=tag.tick_time,
                     value=tag.get_value(),
                     value_unit=tag.unit,
-                    direction=tag.direction))
+                    direction=tag.direction)
                 self.engine.tag_updates.task_done()
         except Empty:
             pass
-        return tags
+        return [tag for tag in tags.values()]
 
     async def send_tag_updates(self):
         tags = self.collect_tag_updates()

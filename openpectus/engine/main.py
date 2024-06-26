@@ -84,7 +84,7 @@ async def main_async(args):
     # if aggregator only needs the config messages once, we get a simpler protocol
     # with fewer states.
     dispatcher.connected_callback = reporter.restart
-    dispatcher.disconnected_callback = reporter.collect_reconnect_tags
+    dispatcher.disconnected_callback = reporter.build_reconnected_message
     dispatcher.reconnected_callback = reporter.send_reconnected_message
     await dispatcher.connect_async()
     engine.run()
