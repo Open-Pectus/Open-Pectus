@@ -10,9 +10,12 @@ export type PubSubCallback = (_: PubSubCallbackParameters) => void
 
 export interface PubSubPromiseClientConfig {
   uri: string;
+  imitatePublishOnReconnect?: boolean;
+  onDisconnect?: () => void;
+  onReconnect?: () => void;
 }
 
-const RECONNECT_DELAY_MS = 10000;
+const RECONNECT_DELAY_MS = 3000;
 
 export class PubSubClient {
   // TODO: handle subscriptions on ALL_TOPICS key
@@ -62,14 +65,20 @@ export class PubSubClient {
   }
 
   private createRpcClient() {
-    return new WebsocketRpcClient(this.config.uri, this.rpcClientMethods, () => setTimeout(this.reconnect.bind(this), RECONNECT_DELAY_MS));
+    return new WebsocketRpcClient(this.config.uri, this.rpcClientMethods, () => {
+      if(this.config.onDisconnect !== undefined) this.config.onDisconnect();
+      setTimeout(this.reconnect.bind(this), RECONNECT_DELAY_MS);
+    });
   }
 
   private async reconnect() {
     this.rpcClient = this.createRpcClient();
     const topics = Object.keys(this._callbacks);
     await this.rpcClient.call('subscribe', {topics});
-    // imitate backend publishing to all topics, as we might have missed some while websocket connection was down.
-    Object.entries(this._callbacks).forEach(([topic, callbacks]) => callbacks.forEach(callback => callback({topic})));
+    if(this.config.onReconnect !== undefined) this.config.onReconnect();
+    if(this.config.imitatePublishOnReconnect) {
+      // imitate backend publishing to all topics, as we might have missed some while websocket connection was down.
+      Object.entries(this._callbacks).forEach(([topic, callbacks]) => callbacks.forEach(callback => callback({topic})));
+    }
   }
 }

@@ -14,6 +14,7 @@ import { AppComponent } from './app/app.component';
 import { APP_ROUTES } from './app/app.routes';
 import { AuthConfigModule } from './app/auth/auth-config.module';
 import { Defaults } from './app/defaults';
+import { DetailsActions } from './app/details/ngrx/details.actions';
 import { metaReducers, reducers } from './app/ngrx';
 import { AppEffects } from './app/ngrx/app.effects';
 import { ProcessValuePipe } from './app/shared/pipes/process-value.pipe';
@@ -67,7 +68,7 @@ enableMocking().then(() => bootstrapApplication(AppComponent, {
       logOnly: !isDevMode(),
       actionsBlocklist: [
         '@ngrx',
-        // DetailsActions.processValuesFetched.type,
+        DetailsActions.processValuesFetched.type,
         // RunLogActions.runLogPolledForUnit.type,
         // DetailsActions.controlStateFetched.type,
         // MethodEditorActions.methodPolledForUnit.type,
