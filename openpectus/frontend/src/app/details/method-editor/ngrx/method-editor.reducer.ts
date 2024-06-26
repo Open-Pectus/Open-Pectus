@@ -42,8 +42,8 @@ const reducer = createReducer(initialState,
       draft.methodState.started_line_ids = methodAndState.state.started_line_ids;
     }
 
-    // take content only from executed or started (and therefore locked) lines.
-    methodAndState.state.executed_line_ids.concat(methodAndState.state.started_line_ids).forEach((lockedLineId) => {
+    const lockedLineIds = methodAndState.state.executed_line_ids.concat(methodAndState.state.started_line_ids);
+    lockedLineIds.forEach((lockedLineId) => {
       const oldLine = draft.method.lines.find(line => line.id === lockedLineId);
       const newLineIndex = methodAndState.method.lines.findIndex(line => line.id === lockedLineId);
       const newLine = methodAndState.method.lines[newLineIndex];

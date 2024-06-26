@@ -9,8 +9,9 @@ export class WebsocketRpcClient {
   private readonly maxReadyPingAttempts = 5;
   private readonly delayBetweenReadyPingsMs = 1000;
 
-  constructor(private uri: string, private readonly methods: RpcMethods) {
+  constructor(private uri: string, private readonly methods: RpcMethods, private readonly onDisconnect?: () => void) {
     this.methods = extendWithBaseMethods(methods);
+    if(onDisconnect !== undefined) this.ws.onclose = onDisconnect;
   }
 
   async call(method: string, args: Object = {}) {
