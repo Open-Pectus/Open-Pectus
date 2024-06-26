@@ -3,9 +3,8 @@ import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
 import { ProcessUnitService, RecentRunsService } from '../../../api';
-import { selectRouteParam } from '../../../ngrx/router.selectors';
 import { PubSubService } from '../../../shared/pub-sub.service';
-import { DetailsRoutingUrlParts } from '../../details-routing-url-parts';
+import { DetailsSelectors } from '../../ngrx/details.selectors';
 import { RunLogActions } from './run-log.actions';
 
 // noinspection JSUnusedGlobalSymbols
@@ -52,7 +51,7 @@ export class RunLogEffects {
 
   forceRunLogLineWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(RunLogActions.forceLineButtonClicked),
-    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
+    concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
     switchMap(([{lineId}, unitId]) => {
       if(unitId === undefined) return of();
       return this.processUnitService.forceRunLogLine(unitId, lineId);
@@ -61,7 +60,7 @@ export class RunLogEffects {
 
   cancelRunLogLineWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(RunLogActions.cancelLineButtonClicked),
-    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
+    concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
     switchMap(([{lineId}, unitId]) => {
       if(unitId === undefined) return of();
       return this.processUnitService.cancelRunLogLine(unitId, lineId);

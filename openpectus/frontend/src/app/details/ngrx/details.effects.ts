@@ -27,7 +27,7 @@ export class DetailsEffects {
     ofType(DetailsActions.processValuesFetched, DetailsActions.processValuesFailedToLoad),
     delay(1000),
     concatLatestFrom(() => [
-      this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName)),
+      this.store.select(DetailsSelectors.processUnitId),
       this.store.select(DetailsSelectors.allProcessValues),
       this.store.select(DetailsSelectors.shouldPoll),
     ]),
@@ -76,7 +76,7 @@ export class DetailsEffects {
 
   executeUnitControlCommandWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processUnitCommandButtonClicked),
-    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
+    concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
     mergeMap(([{command}, unitId]) => {
       if(unitId === undefined) return of();
       return this.processUnitService.executeCommand(unitId, {command, source: CommandSource.UNIT_BUTTON});
@@ -85,7 +85,7 @@ export class DetailsEffects {
 
   executeManuallyEnteredCommandWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.commandsComponentExecuteClicked),
-    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
+    concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
     switchMap(([{command}, unitId]) => {
       if(unitId === undefined) return of();
       return this.processUnitService.executeCommand(unitId, {...command});
@@ -94,7 +94,7 @@ export class DetailsEffects {
 
   fetchProcessDiagramWhenComponentInitialized = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processDiagramInitialized),
-    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
+    concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
     switchMap(([_, unitId]) => {
       if(unitId === undefined) return of();
       return this.processUnitService.getProcessDiagram(unitId).pipe(
@@ -105,7 +105,7 @@ export class DetailsEffects {
 
   fetchCommandExamplesWhenComponentInitialized = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.commandsComponentInitialized),
-    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName))),
+    concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
     switchMap(([_, unitId]) => {
       if(unitId === undefined) return of();
       return this.processUnitService.getCommandExamples(unitId).pipe(
