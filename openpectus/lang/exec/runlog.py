@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 
 from openpectus.engine.commands import EngineCommand
 from openpectus.lang.exec.tags import TagValueCollection
-from openpectus.lang.model.pprogram import PBlank, PInjectedNode, PNode, PProgram, PErrorInstruction
+from openpectus.lang.model.pprogram import PBlank, PComment, PInjectedNode, PNode, PProgram, PErrorInstruction
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ class RuntimeInfo():
             if isinstance(r.node, PProgram):
                 runlog.id = str(r.node.id)
                 continue
-            if isinstance(r.node, PBlank):
+            if isinstance(r.node, (PBlank, PComment)):
                 continue
             if r.name is None:
                 if isinstance(r.node, (PInjectedNode, PErrorInstruction)):
