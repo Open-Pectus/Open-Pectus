@@ -85,7 +85,7 @@ const processUnits: ProcessUnit[] = [
   },
 ];
 
-const processValues: ProcessValue[] = [
+const getProcessValues: () => ProcessValue[] = () => [
   {
     value_type: ProcessValueType.INT,
     name: 'Timestamp',
@@ -414,12 +414,12 @@ export const handlers = [
 
   http.get('/api/process_unit/:processUnitId/process_values', async () => {
     await delay();
-    return HttpResponse.json<ProcessValue[]>(processValues);
+    return HttpResponse.json<ProcessValue[]>(getProcessValues());
   }),
 
   http.get('/api/process_unit/:processUnitId/all_process_values', async () => {
     await delay();
-    return HttpResponse.json<ProcessValue[]>(processValues);
+    return HttpResponse.json<ProcessValue[]>(getProcessValues());
   }),
 
   http.get('/api/recent_runs/', () => {
