@@ -5,7 +5,7 @@ import getModelServiceOverride from '@codingame/monaco-vscode-model-service-over
 import getTextmateServiceOverride from '@codingame/monaco-vscode-textmate-service-override';
 import '@codingame/monaco-vscode-theme-defaults-default-extension';
 import getThemeServiceOverride from '@codingame/monaco-vscode-theme-service-override';
-import { concatLatestFrom } from '@ngrx/effects';
+import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { editor as MonacoEditor, KeyCode, languages, Range, Uri } from 'monaco-editor';
 import { buildWorkerDefinition } from 'monaco-editor-workers';
