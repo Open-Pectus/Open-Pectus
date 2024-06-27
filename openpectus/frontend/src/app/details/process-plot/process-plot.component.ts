@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostBinding, NgZone, OnDestroy, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostBinding, OnDestroy, ViewChild } from '@angular/core';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { axisBottom, ScaleLinear, scaleLinear, select } from 'd3';
@@ -56,8 +56,7 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
   private axesOverrides?: ProcessPlotAxesOverrides;
 
   constructor(private store: Store,
-              private processValuePipe: ProcessValuePipe,
-              private ngZone: NgZone) {}
+              private processValuePipe: ProcessValuePipe) {}
 
   @HostBinding('style.padding') get padding() {
     return '1rem .5rem';
@@ -99,7 +98,7 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
     const resizeObserver = new ResizeObserver((entries) => {
       // when collapsing, contentRect is 0 width and height, and errors will occur if we try placing elements.
       if(entries.some(entry => entry.contentRect.height === 0)) return;
-      this.ngZone.run(() => this.store.dispatch(ProcessPlotActions.processPlotResized()));
+      this.store.dispatch(ProcessPlotActions.processPlotResized());
     });
     resizeObserver.observe(element);
   }
