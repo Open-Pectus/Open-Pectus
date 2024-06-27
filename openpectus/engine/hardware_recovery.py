@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+import inspect
 import logging
 import time
 from typing import Any, Callable, Sequence
@@ -105,6 +106,11 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
             self.state = ErrorRecoveryState.OK
             self.on_ok()
 
+        try:
+            self._setup_decorated_method_forwards()
+        except Exception:
+            logger.error("Error setting up decorated hardware method forwards", exc_info=True)
+
     def get_recovery_state(self) -> ErrorRecoveryState:
         return self.state
 
@@ -207,7 +213,6 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
             self.reconnected_callback()
 
     # Decorator impl
-
 
     def read(self, r: Register) -> Any:
         if RegisterDirection.Read not in r.direction:
@@ -315,18 +320,6 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
             for value, r in zip(values, registers):
                 self.pending_writes[r] = value
 
-    def _write_pending_values(self, except_names: list[str] = []):
-        if self.state == ErrorRecoveryState.OK and len(self.pending_writes) > 0:
-            pending_items = list(self.pending_writes.items())
-            for register, value in pending_items:
-                if register.name in except_names:
-                    continue
-                try:
-                    self.decorated.write(value, register)
-                    del self.pending_writes[register]
-                except HardwareLayerException:
-                    pass  # Better luck next time. We just had a success write so chances are good
-
     def connect(self):
         try:
             self.decorated.connect()
@@ -343,3 +336,40 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
 
     def disconnect(self):
         return self.decorated.disconnect()
+
+    def _write_pending_values(self, except_names: list[str] = []):
+        if self.state == ErrorRecoveryState.OK and len(self.pending_writes) > 0:
+            pending_items = list(self.pending_writes.items())
+            for register, value in pending_items:
+                if register.name in except_names:
+                    continue
+                try:
+                    self.decorated.write(value, register)
+                    del self.pending_writes[register]
+                except HardwareLayerException:
+                    pass  # Better luck next time. We just had a success write so chances are good
+
+    def _setup_decorated_method_forwards(self):
+        """ Set up method forwards to avoid the decorator breaking commands that are implemented as methods
+            on the concrete hardware
+        """
+        def callable_publics_predicate(member):
+            if not inspect.ismethod(member) and not inspect.isfunction(member):
+                return False
+            if (name := getattr(member, "__name__", None)) is not None:
+                if name.startswith("__"):
+                    return False
+            return True
+
+        decorated_members = inspect.getmembers_static(self.decorated, callable_publics_predicate)
+        self_member_names = [member[0] for member in inspect.getmembers_static(self, callable_publics_predicate)]
+        for member in decorated_members:
+            name: str = member[0]
+            if name not in self_member_names:
+                logger.info(f"Forwarding method {name} from hardware class {type(self.decorated).__name__} to decorator")
+                func = member[1]
+
+                # define local method that forwards calls to func using self.decorated as its self
+                def caller(*args, **kvargs):
+                    return func(self.decorated, *args, **kvargs)
+                setattr(self, name, caller)

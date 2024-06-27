@@ -7,7 +7,7 @@ from openpectus import log_setup_colorlog, sentry
 from openpectus.engine.engine import Engine
 from openpectus.engine.engine_message_handlers import EngineMessageHandlers
 from openpectus.engine.engine_reporter import EngineReporter
-import openpectus.engine.hardware_error as hardware_error
+from openpectus.engine.hardware_recovery import ErrorRecoveryConfig, ErrorRecoveryDecorator
 from openpectus.lang.exec.tags import SystemTagName, TagCollection
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 from openpectus.protocol.engine_dispatcher import EngineDispatcher, EngineDispatcherBase
@@ -70,9 +70,9 @@ async def main_async(args):
 
     # wrap hwl with error recovery decorator
     connection_status_tag = engine._system_tags[SystemTagName.CONNECTION_STATUS]
-    uod.hwl = hardware_error.ErrorRecoveryDecorator(uod.hwl, hardware_error.ErrorRecoveryConfig(), connection_status_tag)
+    uod.hwl = ErrorRecoveryDecorator(uod.hwl, ErrorRecoveryConfig(), connection_status_tag)
 
-    # wrap dispatcher in error recovery decorator
+    # wrap dispatcher with error recovery decorator
     dispatcher = EngineDispatcherErrorRecoveryDecorator(dispatcher)
 
     reporter = EngineReporter(engine, dispatcher)
