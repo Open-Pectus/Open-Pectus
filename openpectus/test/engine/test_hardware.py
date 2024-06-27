@@ -10,7 +10,7 @@ from openpectus.engine.hardware import (
     Register,
     RegisterDirection,
 )
-from openpectus.engine.hardware_error import (
+from openpectus.engine.hardware_recovery import (
     ErrorRecoveryConfig,
     ErrorRecoveryDecorator,
     ErrorRecoveryState,
@@ -307,6 +307,11 @@ class TestHardwareErrorRecovery(unittest.TestCase):
         self.assertEqual(hwl.reg_A, decorator.registers["A"])
         self.assertEqual(len(hwl.registers), len(decorator.registers))
 
+    def test_methods_are_delegated(self):
+        decorator, hwl = self.create_hardwares()
+        # Since test hardware has this method, it should also be callable on the decorator. This is done using
+        # method forwarding, implemented in ErrorRecoveryDecorator._setup_base_method_forwards()
+        decorator.test_cmd()  # type: ignore
 
 class ErrorTestHardware(HardwareLayerBase):
     """ A test hardware class that can fail its operations when so directed by the test"""
@@ -324,6 +329,9 @@ class ErrorTestHardware(HardwareLayerBase):
         self.reg_A_value = 0
         self.reg_B_value = 0
         self.reg_C_value = 0
+
+    def test_cmd(self):
+        print("Test Cmd executed")
 
     def read(self, r: Register) -> Any:
         if self.read_fail:

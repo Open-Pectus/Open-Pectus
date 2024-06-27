@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, Response
 from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import PlotLogRepository, RecentEngineRepository
-
+from openpectus.aggregator.command_examples import examples
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])
@@ -130,7 +130,7 @@ async def execute_command(unit_id: str, command: Dto.ExecutableCommand, agg: Agg
         return Dto.ServerErrorResponse(message="Message parse error")
     logger.info(f"Sending msg '{str(msg)}' of type {type(msg)} to client '{unit_id}'")
     try:
-        await agg.dispatcher.rpc_call(unit_id, msg)        
+        await agg.dispatcher.rpc_call(unit_id, msg)
     except Exception:
         logger.error(f"Rpc call to engine_id '{unit_id}' failed", exc_info=True)
         return Dto.ServerErrorResponse(message="Failed to send message")
@@ -144,17 +144,7 @@ def get_process_diagram(unit_id: str) -> Dto.ProcessDiagram:
 
 @router.get('/process_unit/{unit_id}/command_examples')
 def get_command_examples(unit_id: str) -> List[Dto.CommandExample]:
-    return [
-        Dto.CommandExample(name="Some Example", example="Some example text"),
-        Dto.CommandExample(name="Watch Example", example="""
-Watch: Block Time > 3s
-    Mark: A
-Mark: X
-
-Watch: Block Time > 7s
-    Mark: B
-Mark: Y""")
-    ]
+    return examples
 
 
 @router.get('/process_unit/{unit_id}/run_log')
