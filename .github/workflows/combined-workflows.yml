@@ -12,7 +12,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/main' }}
-  NODE_VERSION: 20.11
+  NODE_VERSION: 20.15
 
 jobs:
 
@@ -47,7 +47,7 @@ jobs:
             echo "::warning::Flake8 Lint Warning"
           fi
       - name: Type check with pyright
-        run: |          
+        run: |
           pyright
       - name: Test with unittest
         run: |

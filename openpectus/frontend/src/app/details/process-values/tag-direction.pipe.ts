@@ -1,5 +1,5 @@
 import { Pipe, PipeTransform } from '@angular/core';
-import { TagDirection } from '../../api';
+import { TagDirection } from '../../api/models/TagDirection';
 
 @Pipe({
   name: 'tagDirection',

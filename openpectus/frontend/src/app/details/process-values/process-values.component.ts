@@ -2,7 +2,7 @@ import { NgFor, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
-import { ProcessValueCommand } from '../../api';
+import { ProcessValueCommand } from '../../api/models/ProcessValueCommand';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { ToggleButtonComponent } from '../../shared/toggle-button.component';
 import { UtilMethods } from '../../shared/util-methods';
@@ -36,7 +36,7 @@ import { ProcessValuesCategorizedComponent } from './process-values-categorized.
         <app-process-values-categorized [processValues]="processValues | ngrxPush"
                                         (openCommands)="onOpenCommands($event)"></app-process-values-categorized>
       </div>
-      
+
       <app-process-value-commands *ngIf="showCommands" popover class="absolute p-0 block overflow-visible"
                                   [processValueCommands]="pvAndPositionForPopover?.processValue?.commands"
                                   (shouldClose)="onCloseCommands($event)"

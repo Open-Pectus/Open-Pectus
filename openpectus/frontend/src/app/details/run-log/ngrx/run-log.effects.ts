@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
-import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
+import { Actions, createEffect, ofType } from '@ngrx/effects';
+import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
-import { ProcessUnitService, RecentRunsService } from '../../../api';
+import { ProcessUnitService } from '../../../api/services/ProcessUnitService';
+import { RecentRunsService } from '../../../api/services/RecentRunsService';
 import { PubSubService } from '../../../shared/pub-sub.service';
 import { DetailsSelectors } from '../../ngrx/details.selectors';
 import { RunLogActions } from './run-log.actions';

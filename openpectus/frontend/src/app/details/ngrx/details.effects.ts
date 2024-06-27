@@ -1,8 +1,11 @@
 import { Injectable } from '@angular/core';
-import { Actions, concatLatestFrom, createEffect, ofType } from '@ngrx/effects';
+import { Actions, createEffect, ofType } from '@ngrx/effects';
+import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { catchError, delay, filter, map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
-import { CommandSource, ProcessUnitService, RecentRunsService } from '../../api';
+import { CommandSource } from '../../api/models/CommandSource';
+import { ProcessUnitService } from '../../api/services/ProcessUnitService';
+import { RecentRunsService } from '../../api/services/RecentRunsService';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { PubSubService } from '../../shared/pub-sub.service';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';

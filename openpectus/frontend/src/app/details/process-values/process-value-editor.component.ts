@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
-import { ProcessValueCommand, ProcessValueCommandChoiceValue, ProcessValueCommandFreeTextValue } from '../../api';
+import { ProcessValueCommand } from '../../api/models/ProcessValueCommand';
+import { ProcessValueCommandChoiceValue } from '../../api/models/ProcessValueCommandChoiceValue';
+import { ProcessValueCommandFreeTextValue } from '../../api/models/ProcessValueCommandFreeTextValue';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 
 export interface ValueAndUnit {
@@ -22,7 +24,7 @@ export interface ValueAndUnit {
       <button #saveButtonElement class="px-3 py-2 rounded-r-md bg-green-400 text-gray-800 font-semibold"
               [class.bg-vscode-background-grey-hover]="!isValid" tabindex="-1"
               (click)="$event.stopPropagation(); onSaveInput(inputElement.value)">
-        {{command?.name}}
+        {{ command?.name }}
       </button>
     </div>
   `,

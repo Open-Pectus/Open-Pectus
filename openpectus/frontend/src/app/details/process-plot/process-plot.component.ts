@@ -1,9 +1,10 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostBinding, NgZone, OnDestroy, ViewChild } from '@angular/core';
-import { concatLatestFrom } from '@ngrx/effects';
+import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { axisBottom, ScaleLinear, scaleLinear, select } from 'd3';
 import { combineLatest, filter, identity, Subject, take, takeUntil } from 'rxjs';
-import { PlotConfiguration, PlotLog } from '../../api';
+import { PlotConfiguration } from '../../api/models/PlotConfiguration';
+import { PlotLog } from '../../api/models/PlotLog';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 import { UtilMethods } from '../../shared/util-methods';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';

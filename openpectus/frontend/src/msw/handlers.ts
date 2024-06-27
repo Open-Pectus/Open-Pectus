@@ -2,34 +2,32 @@
 
 import { format, getSeconds, sub } from 'date-fns';
 import { delay, http, HttpResponse, PathParams } from 'msw';
-import {
-  AuthConfig,
-  CommandExample,
-  CommandSource,
-  ControlState,
-  Error,
-  ErrorLog,
-  ErrorLogSeverity,
-  ExecutableCommand,
-  InProgress,
-  MethodAndState,
-  NotOnline,
-  PlotConfiguration,
-  PlotLog,
-  ProcessUnit,
-  ProcessValue,
-  ProcessValueCommandChoiceValue,
-  ProcessValueCommandFreeTextValue,
-  ProcessValueType,
-  Ready,
-  RecentRun,
-  RecentRunCsv,
-  RunLog,
-  RunLogLine,
-  SystemStateEnum,
-  TagDirection,
-  UserRole,
-} from '../app/api';
+import { AuthConfig } from '../app/api/models/AuthConfig';
+import { CommandExample } from '../app/api/models/CommandExample';
+import { CommandSource } from '../app/api/models/CommandSource';
+import { ControlState } from '../app/api/models/ControlState';
+import { Error } from '../app/api/models/Error';
+import { ErrorLog } from '../app/api/models/ErrorLog';
+import { ErrorLogSeverity } from '../app/api/models/ErrorLogSeverity';
+import { ExecutableCommand } from '../app/api/models/ExecutableCommand';
+import { InProgress } from '../app/api/models/InProgress';
+import { MethodAndState } from '../app/api/models/MethodAndState';
+import { NotOnline } from '../app/api/models/NotOnline';
+import { PlotConfiguration } from '../app/api/models/PlotConfiguration';
+import { PlotLog } from '../app/api/models/PlotLog';
+import { ProcessUnit } from '../app/api/models/ProcessUnit';
+import { ProcessValue } from '../app/api/models/ProcessValue';
+import { ProcessValueCommandChoiceValue } from '../app/api/models/ProcessValueCommandChoiceValue';
+import { ProcessValueCommandFreeTextValue } from '../app/api/models/ProcessValueCommandFreeTextValue';
+import { ProcessValueType } from '../app/api/models/ProcessValueType';
+import { Ready } from '../app/api/models/Ready';
+import { RecentRun } from '../app/api/models/RecentRun';
+import { RecentRunCsv } from '../app/api/models/RecentRunCsv';
+import { RunLog } from '../app/api/models/RunLog';
+import { RunLogLine } from '../app/api/models/RunLogLine';
+import { SystemStateEnum } from '../app/api/models/SystemStateEnum';
+import { TagDirection } from '../app/api/models/TagDirection';
+import { UserRole } from '../app/api/models/UserRole';
 
 const startedLines = [2];
 const executedLines = [1, 4];
@@ -85,7 +83,7 @@ const processUnits: ProcessUnit[] = [
   },
 ];
 
-const processValues: ProcessValue[] = [
+const getProcessValues: () => ProcessValue[] = () => [
   {
     value_type: ProcessValueType.INT,
     name: 'Timestamp',
@@ -414,12 +412,12 @@ export const handlers = [
 
   http.get('/api/process_unit/:processUnitId/process_values', async () => {
     await delay();
-    return HttpResponse.json<ProcessValue[]>(processValues);
+    return HttpResponse.json<ProcessValue[]>(getProcessValues());
   }),
 
   http.get('/api/process_unit/:processUnitId/all_process_values', async () => {
     await delay();
-    return HttpResponse.json<ProcessValue[]>(processValues);
+    return HttpResponse.json<ProcessValue[]>(getProcessValues());
   }),
 
   http.get('/api/recent_runs/', () => {

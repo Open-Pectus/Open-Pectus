@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit } from '@a
 import { LetDirective } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { map } from 'rxjs/operators';
-import { ErrorLogSeverity } from '../../api';
+import { ErrorLogSeverity } from '../../api/models/ErrorLogSeverity';
 import { Defaults } from '../../defaults';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { ErrorLogActions } from './ngrx/error-log.actions';

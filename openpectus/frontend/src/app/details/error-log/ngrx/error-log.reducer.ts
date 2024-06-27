@@ -1,6 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { ErrorLog } from '../../../api';
+import { ErrorLog } from '../../../api/models/ErrorLog';
 import { ErrorLogActions } from './error-log.actions';
 
 export interface ErrorLogState {

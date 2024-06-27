@@ -12,7 +12,9 @@ import {
   ViewChildren,
 } from '@angular/core';
 import { produce } from 'immer';
-import { ProcessValueCommand, ProcessValueCommandChoiceValue, ProcessValueType } from '../../api';
+import { ProcessValueCommand } from '../../api/models/ProcessValueCommand';
+import { ProcessValueCommandChoiceValue } from '../../api/models/ProcessValueCommandChoiceValue';
+import { ProcessValueType } from '../../api/models/ProcessValueType';
 import { ProcessValueCommandButtonComponent } from './process-value-command-button.component';
 import { ProcessValueCommandChoiceComponent } from './process-value-command-choice.component';
 import { ProcessValueEditorComponent, ValueAndUnit } from './process-value-editor.component';

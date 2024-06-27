@@ -5,15 +5,16 @@ import getModelServiceOverride from '@codingame/monaco-vscode-model-service-over
 import getTextmateServiceOverride from '@codingame/monaco-vscode-textmate-service-override';
 import '@codingame/monaco-vscode-theme-defaults-default-extension';
 import getThemeServiceOverride from '@codingame/monaco-vscode-theme-service-override';
-import { concatLatestFrom } from '@ngrx/effects';
+import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { editor as MonacoEditor, KeyCode, languages, Range, Uri } from 'monaco-editor';
 import { buildWorkerDefinition } from 'monaco-editor-workers';
-import { initServices, MonacoLanguageClient } from 'monaco-languageclient';
+import { MonacoLanguageClient } from 'monaco-languageclient';
+import { initServices } from 'monaco-languageclient/vscode/services';
 import { combineLatest, filter, firstValueFrom, Observable, Subject, take, takeUntil } from 'rxjs';
 import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient/lib/common/client';
 import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
-import { MethodLine } from '../../api';
+import { MethodLine } from '../../api/models/MethodLine';
 import { UtilMethods } from '../../shared/util-methods';
 import { MethodEditorActions } from './ngrx/method-editor.actions';
 import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
@@ -94,13 +95,15 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     const alreadyInitialized = await firstValueFrom(this.monacoServicesInitialized);
     if(alreadyInitialized) return;
     await initServices({
-      userServices: {
-        ...getThemeServiceOverride(),
-        ...getTextmateServiceOverride(),
-        ...getModelServiceOverride(),
-        ...getLanguagesServiceOverride(),
+      serviceConfig: {
+        userServices: {
+          ...getThemeServiceOverride(),
+          ...getTextmateServiceOverride(),
+          ...getModelServiceOverride(),
+          ...getLanguagesServiceOverride(),
+        },
+        debugLogging: false,
       },
-      debugLogging: false,
     });
   }
 
@@ -220,7 +223,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       });
       languageClient.start().then();
       this.componentDestroyed.pipe(take(1)).subscribe(() => {
-        setTimeout(() => languageClient.stop().then(), 100);
+        setTimeout(() => void languageClient.stop(), 100);
       });
       reader.onClose(() => languageClient.stop());
     };

@@ -1,10 +1,10 @@
 import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, Input, ViewChild } from '@angular/core';
 import { LetDirective } from '@ngrx/component';
-import { concatLatestFrom } from '@ngrx/effects';
+import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { map, Observable, tap } from 'rxjs';
-import { PlotAxis } from '../../api';
+import { PlotAxis } from '../../api/models/PlotAxis';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
 import { AxisLimits } from './process-plot.types';
@@ -28,7 +28,7 @@ import { AxisLimits } from './process-plot.types';
              (keyup.enter)="saveButton.click()"
              (keyup.escape)="onClose()">
           <p class="whitespace-nowrap">
-            Override y limits for <span [style.color]="axisConfiguration?.color">{{axisConfiguration?.label}}</span>
+            Override y limits for <span [style.color]="axisConfiguration?.color">{{ axisConfiguration?.label }}</span>
           </p>
           <label class="flex justify-between">
             Max: <input #max min="0" type="number" class="border-b border-gray-500 w-32 text-right" [valueAsNumber]="axisConfiguration?.y_max">

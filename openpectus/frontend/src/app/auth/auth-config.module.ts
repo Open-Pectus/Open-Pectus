@@ -1,9 +1,10 @@
-import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { NgModule } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { AuthInterceptor, AuthModule, LogLevel, OpenIdConfiguration, StsConfigHttpLoader, StsConfigLoader } from 'angular-auth-oidc-client';
 import { map } from 'rxjs';
-import { AuthConfig, AuthService } from '../api';
+import { AuthConfig } from '../api/models/AuthConfig';
+import { AuthService } from '../api/services/AuthService';
 import { authCallbackUrlPart } from '../app.routes';
 import { AppActions } from '../ngrx/app.actions';
 import { AuthCallbackComponent } from './auth-callback.component';
@@ -54,11 +55,11 @@ export const httpLoaderFactory = (authService: AuthService, store: Store) => {
         deps: [AuthService, Store],
       },
     }),
-    HttpClientModule,
     AuthCallbackComponent,
   ],
   providers: [
     {provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true},
+    provideHttpClient(withInterceptorsFromDi()),
   ],
   exports: [
     AuthModule,

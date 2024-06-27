@@ -1,5 +1,7 @@
 import { ScaleLinear } from 'd3';
-import { PlotColorRegion, PlotConfiguration, PlotLog } from '../../api';
+import { PlotColorRegion } from '../../api/models/PlotColorRegion';
+import { PlotConfiguration } from '../../api/models/PlotConfiguration';
+import { PlotLog } from '../../api/models/PlotLog';
 import { ColoredRegionRect, D3Selection } from './process-plot.types';
 
 export class ProcessPlotColoredRegions {
