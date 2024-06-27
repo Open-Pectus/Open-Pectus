@@ -109,7 +109,7 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
         try:
             self._setup_decorated_method_forwards()
         except Exception:
-            logger.error("Error setting up hardware base method forwards", exc_info=True)
+            logger.error("Error setting up decorated hardware method forwards", exc_info=True)
 
     def get_recovery_state(self) -> ErrorRecoveryState:
         return self.state
