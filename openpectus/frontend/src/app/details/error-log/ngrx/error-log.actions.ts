@@ -1,5 +1,5 @@
 import { createAction, props } from '@ngrx/store';
-import { ErrorLog } from '../../../api';
+import { ErrorLog } from '../../../api/models/ErrorLog';
 
 const source = '[Error Log] ';
 

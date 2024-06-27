@@ -1,5 +1,5 @@
 import { createAction, props } from '@ngrx/store';
-import { ProcessUnit } from '../api';
+import { ProcessUnit } from '../api/models/ProcessUnit';
 
 const source = '[App] ';
 

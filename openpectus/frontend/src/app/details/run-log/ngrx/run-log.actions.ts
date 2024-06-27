@@ -1,5 +1,5 @@
 import { createAction, props } from '@ngrx/store';
-import { RunLog } from '../../../api';
+import { RunLog } from '../../../api/models/RunLog';
 
 const source = '[Run Log] ';
 

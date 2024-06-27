@@ -1,6 +1,10 @@
 import { NgClass } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
-import { Error, InProgress, NotOnline, ProcessUnit, Ready } from '../../api';
+import { Error } from '../../api/models/Error';
+import { InProgress } from '../../api/models/InProgress';
+import { NotOnline } from '../../api/models/NotOnline';
+import { ProcessUnit } from '../../api/models/ProcessUnit';
+import { Ready } from '../../api/models/Ready';
 import { FormatDurationMsecPipe } from '../../shared/pipes/format-duration-msec.pipe';
 import { ProcessUnitStatePipe } from '../../shared/pipes/process-unit-state.pipe';
 import { UtilMethods } from '../../shared/util-methods';

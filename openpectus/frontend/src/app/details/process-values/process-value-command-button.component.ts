@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
-import { ProcessValueCommand } from '../../api';
+import { ProcessValueCommand } from '../../api/models/ProcessValueCommand';
 
 @Component({
   selector: 'app-process-value-command-button',
@@ -8,7 +8,8 @@ import { ProcessValueCommand } from '../../api';
   template: `
     <button #button [attr.disabled]="command?.disabled" [class.!bg-gray-400]="command?.disabled"
             class="bg-green-400 text-gray-800 rounded-md py-2 px-3 whitespace-pre font-semibold"
-            (blur)="buttonBlur.emit($event)">{{command?.name}}</button>
+            (blur)="buttonBlur.emit($event)">{{ command?.name }}
+    </button>
   `,
 })
 export class ProcessValueCommandButtonComponent {

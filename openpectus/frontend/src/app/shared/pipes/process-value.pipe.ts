@@ -1,12 +1,10 @@
 import { DecimalPipe } from '@angular/common';
 import { Pipe, PipeTransform } from '@angular/core';
-import {
-  ProcessValue,
-  ProcessValueCommandChoiceValue,
-  ProcessValueCommandFreeTextValue,
-  ProcessValueCommandNumberValue,
-  ProcessValueType,
-} from '../../api';
+import { ProcessValue } from '../../api/models/ProcessValue';
+import { ProcessValueCommandChoiceValue } from '../../api/models/ProcessValueCommandChoiceValue';
+import { ProcessValueCommandFreeTextValue } from '../../api/models/ProcessValueCommandFreeTextValue';
+import { ProcessValueCommandNumberValue } from '../../api/models/ProcessValueCommandNumberValue';
+import { ProcessValueType } from '../../api/models/ProcessValueType';
 import { UtilMethods } from '../util-methods';
 
 @Pipe({

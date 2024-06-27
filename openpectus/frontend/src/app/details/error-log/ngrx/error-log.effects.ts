@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
-import { ProcessUnitService, RecentRunsService } from '../../../api';
+import { ProcessUnitService } from '../../../api/services/ProcessUnitService';
+import { RecentRunsService } from '../../../api/services/RecentRunsService';
 import { PubSubService } from '../../../shared/pub-sub.service';
 import { ErrorLogActions } from './error-log.actions';
 

@@ -1,5 +1,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
-import { Error, InProgress, NotOnline, Ready } from '../../api';
+import { Error } from '../../api/models/Error';
+import { InProgress } from '../../api/models/InProgress';
+import { NotOnline } from '../../api/models/NotOnline';
+import { Ready } from '../../api/models/Ready';
 import { ProcessUnitStateEnum } from '../../typings';
 import { UtilMethods } from '../util-methods';
 

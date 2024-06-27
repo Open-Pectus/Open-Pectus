@@ -1,5 +1,5 @@
 import { Store } from '@ngrx/store';
-import { PlotConfiguration } from '../../api';
+import { PlotConfiguration } from '../../api/models/PlotConfiguration';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { D3Selection } from './process-plot.types';
 

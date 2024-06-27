@@ -2,7 +2,7 @@ import { NgIf, TitleCasePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { LetDirective, PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
-import { Error } from '../../api';
+import { Error } from '../../api/models/Error';
 import { AppSelectors } from '../../ngrx/app.selectors';
 import { DetailsSelectors } from '../ngrx/details.selectors';
 import { UnitControlsComponent } from './unit-controls.component';

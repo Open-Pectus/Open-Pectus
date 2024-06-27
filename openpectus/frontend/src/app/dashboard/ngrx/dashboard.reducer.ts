@@ -1,6 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { RecentRun } from '../../api';
+import { RecentRun } from '../../api/models/RecentRun';
 import { DashboardActions } from './dashboard.actions';
 
 export interface DashboardState {

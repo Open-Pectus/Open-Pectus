@@ -3,7 +3,8 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { of, switchMap } from 'rxjs';
-import { CommandSource, ProcessUnitService } from '../../../api';
+import { CommandSource } from '../../../api/models/CommandSource';
+import { ProcessUnitService } from '../../../api/services/ProcessUnitService';
 import { DetailsSelectors } from '../../ngrx/details.selectors';
 import { ProcessValuesActions } from './process-values.actions';
 

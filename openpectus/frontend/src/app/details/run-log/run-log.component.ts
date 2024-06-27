@@ -2,7 +2,7 @@ import { NgFor, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit, QueryList, ViewChildren } from '@angular/core';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
-import { RunLogLine } from '../../api';
+import { RunLogLine } from '../../api/models/RunLogLine';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { RunLogActions } from './ngrx/run-log.actions';
 import { RunLogSelectors } from './ngrx/run-log.selectors';

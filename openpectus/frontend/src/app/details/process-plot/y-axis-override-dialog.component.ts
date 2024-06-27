@@ -4,7 +4,7 @@ import { LetDirective } from '@ngrx/component';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { map, Observable, tap } from 'rxjs';
-import { PlotAxis } from '../../api';
+import { PlotAxis } from '../../api/models/PlotAxis';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
 import { AxisLimits } from './process-plot.types';

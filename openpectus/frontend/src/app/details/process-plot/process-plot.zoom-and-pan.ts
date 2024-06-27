@@ -1,7 +1,7 @@
 import { Store } from '@ngrx/store';
 import { path, ScaleLinear } from 'd3';
 import { firstValueFrom, Subject, takeUntil } from 'rxjs';
-import { PlotConfiguration } from '../../api';
+import { PlotConfiguration } from '../../api/models/PlotConfiguration';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
 import { AxisLimits, D3Selection } from './process-plot.types';

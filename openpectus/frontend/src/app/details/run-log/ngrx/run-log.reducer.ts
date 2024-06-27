@@ -1,6 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { RunLog } from '../../../api';
+import { RunLog } from '../../../api/models/RunLog';
 import { RunLogActions } from './run-log.actions';
 
 export interface RunLogState {

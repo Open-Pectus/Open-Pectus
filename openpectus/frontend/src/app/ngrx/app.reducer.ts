@@ -1,6 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { ProcessUnit } from '../api';
+import { ProcessUnit } from '../api/models/ProcessUnit';
 import { AppActions } from './app.actions';
 
 export const appFeatureKey = 'app';

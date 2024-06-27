@@ -9,7 +9,7 @@
     "start prod": "ng serve --configuration production",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "generate": "openapi --input ./openapi.json --output ./src/app/api --client angular"
+    "generate": "openapi-ts"
   },
   "private": true,
   "dependencies": {
@@ -49,12 +49,12 @@
     "@angular-devkit/build-angular": "^18.0.6",
     "@angular/cli": "^18.0.6",
     "@angular/compiler-cli": "^18.0.5",
+    "@hey-api/openapi-ts": "^0.48.0",
     "@types/d3": "^7.4.0",
     "@types/node": "^20.14.9",
     "@types/vscode": "1.89",
     "autoprefixer": "^10.4.19",
     "msw": "^2.3.1",
-    "openapi-typescript-codegen": "^0.25.0",
     "path-browserify": "^1.0.1",
     "postcss": "^8.4.38",
     "style-loader": "^4.0.0",
