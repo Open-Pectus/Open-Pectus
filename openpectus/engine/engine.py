@@ -186,6 +186,10 @@ class Engine(InterpreterContext):
 
         self.tag_context.emit_on_engine_configured()
 
+        # On engine start, write safe output values to hardware to bring hw to a known state
+        self._apply_safe_state()
+        self.write_process_image()
+
     def stop(self):
         logger.info("Engine shutting down")
         try:

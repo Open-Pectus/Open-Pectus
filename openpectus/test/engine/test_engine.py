@@ -265,6 +265,19 @@ class TestEngine(unittest.TestCase):
         self.assertEqual(22, hwl.register_values["FT01"])
         self.assertEqual(1, hwl.register_values["Reset"])
 
+    def test_engine_start_writes_safe_values_to_hw(self):
+        e = self.engine
+
+        # get Dange tag which has an initial value of True
+        danger_tag = e.tags["Danger"]
+        self.assertEqual(True, danger_tag.value)
+
+        # trigger startup to write safe values
+        e._run()
+
+        # safe value has now been set
+        self.assertEqual(False, danger_tag.value)
+
     def test_uod_command_w_arguments(self):
         e = self.engine
         program = "CmdWithArgs: a, b,c ,  d"

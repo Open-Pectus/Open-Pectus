@@ -6,7 +6,10 @@ Notes:
   - [2.1. Frontend setup](#21-frontend-setup)
   - [2.2. Backend setup](#22-backend-setup)
     - [2.2.1. One-time setup](#221-one-time-setup)
-    - [2.2.2. Other commands](#222-other-commands)
+  - [2.3 Other commands](#23-other-commands)
+    - [2.3.1 Update conda environment](#231-update-conda-environment)
+    - [2.3.2 Build distribution](#232-build-distribution)
+    - [2.3.3 Alembic database migrations](#233-alembic-database-migrations)
 - [3. Running Open Pectus](#3-running-open-pectus)
   - [3.1. Aggregator](#31-aggregator)
   - [3.2. Engine](#32-engine)
@@ -84,13 +87,15 @@ setx SENTRY_DSN value
 ```
 
 
-### 2.2.2. Other commands
+## 2.3 Other commands
+
+### 2.3.1 Update conda environment
 **To update an existing conda environment with all dependencies (e.g. when requirements.txt has changed):**
 ```shell
 conda env update -p=./conda --file=environment.yml --prune
 ```
 
-
+### 2.3.2 Build distribution
 **To build a distribution:**
 _The build server builds a distribution. This is not normally needed in a developer environment but can be necessary to test building docker images.
 Optionally, to include frontend in the build, build the frontend and copy the contents of `openpectus/frontend/dist` into `openpectus/aggregator/frontend-dist` before building the distribution._
@@ -99,7 +104,7 @@ Optionally, to include frontend in the build, build the frontend and copy the co
 python -m build -o openpectus/dist
 ```
 
-
+### 2.3.3 Alembic database migrations
 **To create a new migration script:**  
 
 Change the database model(s) in aggregator/data/models.py first, then run:
