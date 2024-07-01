@@ -14,7 +14,7 @@ export class WebsocketRpcClient {
     if(onDisconnect !== undefined) this.ws.onclose = onDisconnect;
   }
 
-  async call(method: string, args: Object = {}) {
+  async call(method: string, args: object = {}) {
     await this.waitForReady();
     return await this.channel.call(method, args);
   }

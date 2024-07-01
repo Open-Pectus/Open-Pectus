@@ -11,7 +11,7 @@ import { UtilMethods } from '../util-methods';
   standalone: true,
 })
 export class ProcessUnitStatePipe implements PipeTransform {
-  transform(value: ProcessUnitStateEnum | undefined, ...args: unknown[]): string {
+  transform(value: ProcessUnitStateEnum | undefined): string {
     switch(value) {
       case Ready.state.READY:
         return 'Ready';

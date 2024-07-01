@@ -5,7 +5,7 @@ import { Pipe, PipeTransform } from '@angular/core';
   standalone: true,
 })
 export class FormatDurationMsecPipe implements PipeTransform {
-  transform(value: number | undefined, ...args: unknown[]): string {
+  transform(value: number | undefined): string {
     if(value === undefined) return '';
     const minutes = value / 1000 / 60;
     const seconds = (minutes % 1) * 60;

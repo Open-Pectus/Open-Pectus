@@ -54,11 +54,12 @@ export class ProcessValueEditorComponent {
   toValueAndUnit(asString: string): ValueAndUnit | undefined {
     switch(this.command?.value?.value_type) {
       case 'int':
-      case 'float':
+      case 'float': {
         const matchArray = /^\s*(?<value>[0-9,.]+)\s*(?<unit>[^0-9,.]*)\s*$/.exec(asString);
         if(matchArray === null) return undefined;
         const [_, value, unit] = matchArray;
         return {value, unit};
+      }
       case ProcessValueCommandFreeTextValue.value_type.STRING:
         return {value: asString};
       case ProcessValueCommandChoiceValue.value_type.CHOICE:

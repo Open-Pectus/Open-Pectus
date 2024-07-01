@@ -8,8 +8,6 @@ export class AxesOverridesLocalStorageService {
   readonly yAxesLimitsOverrideKey = 'yAxesLimitsOverride';
   readonly xAxisProcessValueNameKey = 'xAxisProcessValueName';
 
-  constructor() { }
-
   storeYAxesLimitsOverride(yAxesLimitsOverride: YAxesLimitsOverride | undefined) {
     if(yAxesLimitsOverride === undefined) {
       window.localStorage.removeItem(this.yAxesLimitsOverrideKey);

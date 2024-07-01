@@ -31,7 +31,7 @@ import { UserRole } from '../app/api/models/UserRole';
 
 const startedLines = [2];
 const executedLines = [1, 4];
-let controlState: ControlState = {
+const controlState: ControlState = {
   is_running: false,
   is_holding: false,
   is_paused: false,

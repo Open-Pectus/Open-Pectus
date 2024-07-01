@@ -14,7 +14,7 @@ export class ProcessValuesEffects {
   executeProcessValueCommandWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(ProcessValuesActions.processValueCommandClicked),
     concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
-    switchMap(([{command, processValueName}, unitId]) => {
+    switchMap(([{command}, unitId]) => {
       if(unitId === undefined) return of();
       return this.processUnitService.executeCommand(unitId, {...command, source: CommandSource.PROCESS_VALUE});
     }),

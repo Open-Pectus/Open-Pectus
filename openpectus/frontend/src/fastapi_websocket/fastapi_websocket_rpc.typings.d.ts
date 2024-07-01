@@ -1,6 +1,6 @@
 export interface RpcRequest {
   method: string,
-  arguments?: Object,
+  arguments?: object,
   call_id: string,
 }
 
@@ -10,7 +10,7 @@ export interface RpcResponse<T> {
   call_id: string,
 }
 
-export interface RpcMessage<T = any> {
+export interface RpcMessage<T = unknown> {
   request?: RpcRequest | null,
   response?: RpcResponse<T> | null
 }

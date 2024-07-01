@@ -63,8 +63,8 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
 })
 export class RunLogLineComponent implements AfterViewInit {
   @Input() runLogLine?: RunLogLine;
-  @Input() rowIndex: number = 0;
-  @Input() gridFormat?: string = 'auto / 1fr 1fr 1fr';
+  @Input() rowIndex = 0;
+  @Input() gridFormat? = 'auto / 1fr 1fr 1fr';
   @Output() collapseToggled = new EventEmitter<boolean>();
   protected readonly AdditionalValueType = AdditionalValueType;
   protected readonly expanded = this.store.select(RunLogSelectors.expandedLines).pipe(
