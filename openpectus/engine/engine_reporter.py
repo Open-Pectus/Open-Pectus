@@ -13,14 +13,18 @@ from openpectus.lang.exec.runlog import RunLogItem
 from openpectus.lang.exec.tags import SystemTagName, TagValue
 from openpectus.lang.exec.uod import logger as uod_logger
 from openpectus.engine.engine import logger as engine_logger
+from openpectus.engine.archiver import logger as archiver_logger
 
 logger = logging.getLogger(__name__)
 
 logging_queue: SimpleQueue[logging.LogRecord] = SimpleQueue()
 logging_handler = QueueHandler(logging_queue)
 logging_handler.setLevel(logging.WARN)
+
+# add handler for selected loggers
 uod_logger.addHandler(logging_handler)
 engine_logger.addHandler(logging_handler)
+archiver_logger.addHandler(logging_handler)
 
 MAX_SIZE_TagsUpdatedMsg = 100
 """ The maximum number of tags to include in a single TagsUpdatedMsg message """

@@ -1,6 +1,6 @@
 
 
-from openpectus.lang.exec.tags import TAG_UNITS, SystemTagName, Tag, TagDirection
+from openpectus.lang.exec.tags import Tag, TagDirection
 from openpectus.lang.exec.tag_lifetime import BlockInfo, TagContext
 
 

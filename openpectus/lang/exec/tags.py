@@ -94,10 +94,11 @@ def _get_compatible_unit_names(tag: Tag):
 
 
 TagValueType = int | float | str | None
+""" Represents the types of tag values """
 
 
 class ChangeListener():
-    """ Collects named changes """
+    """ Collects named changes. Used by engine to track tag changes """
 
     def __init__(self) -> None:
         self._changes: Set[str] = set()
@@ -114,7 +115,7 @@ class ChangeListener():
 
 
 class ChangeSubject():
-    """ Inherit to support change notification """
+    """ Inherit to support change notification. Used by engine to track tag changes """
 
     def __init__(self) -> None:
         super().__init__()
@@ -159,6 +160,12 @@ class Unset():
 
 
 class Tag(ChangeSubject, TagLifetime):
+    """ Base class for tags. Most tags do not need their own class but can just use this class.
+
+    Supports change tracking which is used by engine to detect changes between reads of hardware values.
+
+    Supports lifetime notification events that are automatically invoked by the engine.
+    """
     def __init__(
             self,
             name: str,
@@ -183,6 +190,7 @@ class Tag(ChangeSubject, TagLifetime):
         self.safe_value: TagValueType | Unset = safe_value
 
     def as_readonly(self) -> TagValue:
+        """ Convert the value to a readonly and immutable TagValue instance """
         return TagValue(self.name, self.tick_time, self.value, self.unit, self.direction)
 
     def set_value(self, val: TagValueType, tick_time: float) -> None:
@@ -219,8 +227,14 @@ class Tag(ChangeSubject, TagLifetime):
         self.unit = None if q.dimensionless else str(q.units)
         self.set_value(q.magnitude, tick_time)
 
-
-# TODO consider builder pattern for Tag - may replace so many tags - or at least make ctor args managable
+    def archive(self) -> str | None:
+        """ The value to write to archive or None to skip that tag from archival """
+        if self.value is None:
+            return ""
+        elif isinstance(self.value, float):
+            return f"{self.as_float():0.5f}"
+        else:
+            return str(self.value)
 
 
 class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
