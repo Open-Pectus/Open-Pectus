@@ -21,6 +21,4 @@ export class RunLogSelectors {
       draft.lines.sort((a, b) => new Date(a.start).valueOf() - new Date(b.start).valueOf());
     }));
   static expandedLines = createSelector(this.selectFeature, state => state.expandedLines);
-
-  constructor() {}
 }

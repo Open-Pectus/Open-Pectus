@@ -20,7 +20,7 @@ const RECONNECT_DELAY_MS = 3000;
 export class PubSubClient {
   // TODO: handle subscriptions on ALL_TOPICS key
 
-  private readonly _callbacks: { [topic: string]: PubSubCallback[] } = {};
+  private readonly _callbacks: Record<string, PubSubCallback[]> = {};
   private readonly rpcClientMethods = {
     notify: (subscription: RpcSubscription, data: unknown) => {
       this.getCallbacks(subscription.topic).forEach(callback => callback({data, topic: subscription.topic}));

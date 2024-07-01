@@ -1,7 +1,7 @@
 import { BaseType, Selection } from 'd3';
 
 // export type D3Selection<T extends BaseType> = Selection<T, unknown, null, any>;
-export type D3Selection<T extends BaseType = BaseType, Datum = unknown> = Selection<T, Datum, any, any>;
+export type D3Selection<T extends BaseType = BaseType, Datum = unknown> = Selection<T, Datum, BaseType, unknown>;
 
 export interface LeftRight {
   left: number;

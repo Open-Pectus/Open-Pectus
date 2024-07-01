@@ -8,11 +8,11 @@ export class RpcChannel {
     this.socket.addEventListener('message', this.onMessage.bind(this));
   }
 
-  async call<T = unknown>(method: string, args: Object = {}, call_id: string = crypto.randomUUID()) {
+  async call<T = unknown>(method: string, args: object = {}, call_id: string = crypto.randomUUID()) {
     const message: RpcMessage = {request: {method, arguments: args, call_id}};
     return new Promise<RpcResponse<T>>((resolve, reject) => {
       const onmessage = (msgEvent: MessageEvent) => {
-        const parsedData = JSON.parse(msgEvent.data) as RpcMessage;
+        const parsedData = JSON.parse(msgEvent.data) as RpcMessage<T>;
         if(parsedData.response?.call_id === call_id) {
           this.socket.removeEventListener('message', onmessage);
           resolve(parsedData.response);

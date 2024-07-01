@@ -34,6 +34,7 @@ import { YAxisOverrideDialogComponent } from './y-axis-override-dialog.component
 })
 export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
   @ViewChild('plot', {static: false}) plotElement?: ElementRef<SVGSVGElement>;
+  @HostBinding('style.padding') readonly padding = '1rem .5rem';
   private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(
     filter(UtilMethods.isNotNullOrUndefined));
   private plotLog = this.store.select(ProcessPlotSelectors.plotLog);
@@ -57,10 +58,6 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
 
   constructor(private store: Store,
               private processValuePipe: ProcessValuePipe) {}
-
-  @HostBinding('style.padding') get padding() {
-    return '1rem .5rem';
-  }
 
   ngOnDestroy() {
     this.componentDestroyed.next();
