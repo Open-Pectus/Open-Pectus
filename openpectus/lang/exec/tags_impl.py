@@ -5,9 +5,6 @@ from openpectus.lang.exec.tags import Tag, TagDirection
 from openpectus.lang.exec.tag_lifetime import BlockInfo, TagContext
 
 
-logger = logging.getLogger(__name__)
-
-
 MARK_SEPARATOR = ", "
 
 
@@ -37,7 +34,6 @@ class MarkTag(Tag):
             value = str(val)
         else:
             value += MARK_SEPARATOR + str(val)
-        logger.warning(f"Setting Mark value to: '{value}'")
         super().set_value(value, tick_time)
 
     def archive(self) -> str | None:
