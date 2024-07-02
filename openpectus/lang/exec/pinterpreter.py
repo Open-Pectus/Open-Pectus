@@ -426,6 +426,12 @@ class PInterpreter(PNodeVisitor):
 
         logger.info(f"Mark {str(node)}")
 
+        try:
+            mark_tag = self.context.tags.get("Mark")
+            mark_tag.set_value(node.name, self._tick_time)
+        except ValueError:
+            logger.error("Failed to get Mark tag")
+
         record.add_state_started(
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())

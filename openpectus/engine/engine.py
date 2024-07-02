@@ -29,12 +29,13 @@ from openpectus.lang.exec.tags import (
     ChangeListener,
     Unset,
 )
+from openpectus.lang.exec.tags_impl import MarkTag
 from openpectus.lang.exec.timer import EngineTimer, OneThreadTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.model.pprogram import PProgram
 import openpectus.protocol.models as Mdl
-
+from openpectus.engine.archiver import ArchiverTag
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ class Engine(InterpreterContext):
     - accepts commands from cmd_queue (from interpreter and from aggregator)
     """
 
-    def __init__(self, uod: UnitOperationDefinitionBase, tick_interval=0.1) -> None:
+    def __init__(self, uod: UnitOperationDefinitionBase, tick_interval=0.1, enable_archiver=False) -> None:
         self.uod = uod
         self._running: bool = False
         """ Indicates whether the scan cycle loop is running, set to False to shut down"""
@@ -61,6 +62,13 @@ class Engine(InterpreterContext):
         First tick is effectively number 0. """
 
         self._system_tags = TagCollection.create_system_tags()
+        self._system_tags.add(MarkTag())
+        # Add archiver which is implemented as a tag. The lambda getting the runlog works because the
+        # tag_lifetime.on_stop event is emitted just before resetting the interpreter and runlog
+        if enable_archiver:
+            archiver = ArchiverTag(lambda : self.runtimeinfo.get_runlog())
+            self._system_tags.add(archiver)
+
         self.uod.system_tags = self._system_tags
 
         self.cmd_queue: Queue[CommandRequest] = Queue()

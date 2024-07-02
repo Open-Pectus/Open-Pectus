@@ -57,7 +57,7 @@ def run_validations(uod: UnitOperationDefinitionBase) -> bool:
 async def main_async(args):
     global engine, dispatcher, reporter
     uod = create_uod(args.uod)
-    engine = Engine(uod, tick_interval=1)
+    engine = Engine(uod, tick_interval=0.1, enable_archiver=True)
     dispatcher = EngineDispatcher(
         f"{args.aggregator_hostname}:{args.aggregator_port}",
         engine.uod.instrument,
