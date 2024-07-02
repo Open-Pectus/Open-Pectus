@@ -21,7 +21,7 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from 
   `,
 })
 export class RunLogHeaderComponent {
-  @Input() gridFormat: string = '';
+  @Input() gridFormat = '';
   @Output() expandAll = new EventEmitter<void>();
   @Output() collapseAll = new EventEmitter<void>();
 }

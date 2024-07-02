@@ -1,7 +1,6 @@
 import { createReducer } from '@ngrx/store';
 
-export interface ProcessValuesState {
-}
+export type ProcessValuesState = object;
 
 const initialState: ProcessValuesState = {};
 
