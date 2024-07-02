@@ -25,6 +25,8 @@ encoding = 'utf-8'
 # delimiter = ','     # used in old system
 delimiter = ';'    # makes Excel 365 understand it out of the box
 quoting = csv.QUOTE_NONE
+escapechar = None
+# Note:  The MarkTag value may include a separator char/string. Make sure that does not conflict with the options here.
 
 
 def get_free_space_mb(dirname):
@@ -50,15 +52,15 @@ class ArchiverTag(Tag):
         super().__init__("Archive filename")
         self.runlog_accessor = runlog_accessor
         path = os.path.dirname(os.path.realpath(__file__))
-        self.logs_directory = os.path.join(path, "logs")
+        self.data_path = os.path.join(path, "data")
         self.last_save_tick: float = 0.0
         self.tags = TagCollection()
         self.file_path: str | None = None
         self.file_ready = False
 
-        if not os.path.exists(self.logs_directory):
-            os.makedirs(self.logs_directory)
-            logger.info("Created archive directory: " + self.logs_directory)
+        if not os.path.exists(self.data_path):
+            os.makedirs(self.data_path)
+            logger.info("Created archive directory: " + self.data_path)
 
         self.check_diskspace()
 
@@ -66,7 +68,7 @@ class ArchiverTag(Tag):
         return None
 
     def check_diskspace(self) -> bool:
-        diskspace_free = get_free_space_mb(self.logs_directory)
+        diskspace_free = get_free_space_mb(self.data_path)
         if diskspace_free < VERY_LOW_DISKSPACE_MB:
             logger.error("Drive is VERY low on diskspace.")
             return False
@@ -78,7 +80,7 @@ class ArchiverTag(Tag):
         """ Create file and write header row"""
         assert self.file_path is not None
         with open(self.file_path, 'xt', newline='', encoding=encoding) as f:
-            writer = csv.writer(f, delimiter=delimiter, quoting=quoting)
+            writer = csv.writer(f, delimiter=delimiter, quoting=quoting, escapechar=escapechar)
             tag_values = [tag.archive() for tag in self.tags]
             writer.writerow(
                 ['Datetime (UTC)',] +
@@ -92,15 +94,18 @@ class ArchiverTag(Tag):
         if self.file_ready:
             assert self.file_path is not None
             with open(self.file_path, 'at', newline='', encoding=encoding) as f:
-                writer = csv.writer(f, delimiter=delimiter, quoting=quoting)
+                writer = csv.writer(f, delimiter=delimiter, quoting=quoting, escapechar=escapechar)
                 tag_values = [tag.archive() for tag in self.tags]
                 utc_now = datetime.now(UTC)
                 row = [str(utc_now)] + [val for val in tag_values if val is not None]
-                writer.writerow(row)
+                try:
+                    writer.writerow(row)
+                except Exception:
+                    logger.error(f"Error writing row: {row}", exc_info=True)
 
     def write_runlog(self):
         date_part = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-        runlog_file_path = os.path.join(self.logs_directory, "archiver-runlog-" + date_part + ".csv")
+        runlog_file_path = os.path.join(self.data_path, "archiver-runlog-" + date_part + ".csv")
 
         logger.info(f"Writing runlog to {runlog_file_path}")
         with open(runlog_file_path, 'xt', newline='', encoding=encoding) as f:
@@ -123,7 +128,7 @@ class ArchiverTag(Tag):
         date_part = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         filename = "archiver-" + date_part + ".csv"
         self.set_value(filename, tick_time)
-        self.file_path = os.path.join(self.logs_directory, filename)
+        self.file_path = os.path.join(self.data_path, filename)
         if self.check_diskspace():
             logger.info("Archiver started using logfile " + self.file_path)
             self.prepare_tags_file()

@@ -29,6 +29,7 @@ from openpectus.lang.exec.tags import (
     ChangeListener,
     Unset,
 )
+from openpectus.lang.exec.tags_impl import MarkTag
 from openpectus.lang.exec.timer import EngineTimer, OneThreadTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 from openpectus.lang.grammar.pgrammar import PGrammar
@@ -61,6 +62,7 @@ class Engine(InterpreterContext):
         First tick is effectively number 0. """
 
         self._system_tags = TagCollection.create_system_tags()
+        self._system_tags.add(MarkTag())
         # Add archiver which is implemented as a tag. The lambda getting the runlog works because the
         # tag_lifetime.on_stop event is emitted just before resetting the interpreter and runlog
         if enable_archiver:

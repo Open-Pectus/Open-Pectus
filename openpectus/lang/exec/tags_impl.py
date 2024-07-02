@@ -1,7 +1,14 @@
-
+import logging
+import time
 
 from openpectus.lang.exec.tags import Tag, TagDirection
 from openpectus.lang.exec.tag_lifetime import BlockInfo, TagContext
+
+
+logger = logging.getLogger(__name__)
+
+
+MARK_SEPARATOR = ", "
 
 
 class ReadingTag(Tag):
@@ -16,6 +23,28 @@ class SelectTag(Tag):
         if choices is None or len(choices) == 0:
             raise ValueError("choices must be non-empty")
         self.choices = choices
+
+
+class MarkTag(Tag):
+    def __init__(self) -> None:
+        super().__init__(name="Mark")
+
+    def set_value(self, val: int | float | str | None, tick_time: float) -> None:
+        """ Append value to existing value """
+        assert isinstance(val, str), f"The Mark tag value must be a str, not a {type(val).__name__}"
+        value = str(self.get_value() or "")
+        if value == "":
+            value = str(val)
+        else:
+            value += MARK_SEPARATOR + str(val)
+        logger.warning(f"Setting Mark value to: '{value}'")
+        super().set_value(value, tick_time)
+
+    def archive(self) -> str | None:
+        """ Reset value and return it """
+        value = self.value
+        super().set_value("", time.time())
+        return str(value or "")
 
 
 class AccumulatorTag(Tag):
