@@ -9,7 +9,7 @@ from openpectus.lang.exec.analyzer import (
 )
 from openpectus.lang.exec.commands import CommandCollection, Command
 from openpectus.lang.exec.tags import TagCollection, Tag
-from test.engine.utility_methods import build_program
+from openpectus.test.engine.utility_methods import build_program
 
 
 # TODO present PErrorInstructions as errors
