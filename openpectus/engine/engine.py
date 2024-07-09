@@ -161,6 +161,10 @@ class Engine(InterpreterContext):
     def runtimeinfo(self) -> RuntimeInfo:
         return self.interpreter.runtimeinfo
 
+    @property
+    def method(self) -> MethodModel:
+        return self._method
+
     def cleanup(self):
         if self._tag_context is not None:
             self.tag_context.emit_on_engine_shutdown()
@@ -648,9 +652,8 @@ class Engine(InterpreterContext):
             raise ValueError(f"Invalid user command type scheduled: {name}")
 
     def inject_code(self, pcode: str):
-        """ Inject a general code snippet to run in the current scope of the current program. """
-        # TODO return status for frontend client
-        # TODO set updated method content and signal Method change
+        """ Inject a code snippet to run in the current scope of the current program """
+        # TODO review signal Method change
         # TODO perform this change via _method
         logger.warning("TODO set updated method content and signal Method change")
         try:
@@ -659,8 +662,8 @@ class Engine(InterpreterContext):
             logger.info("Injected code successful")
         except Exception as ex:
             logger.info("Injected code parse error: " + str(ex))
-            self.set_error_state()
-            # TODO: possibly raise ...
+            self.set_error_state()  # ?
+            raise
 
     # code manipulation api
     def set_method(self, method: Mdl.Method):
@@ -671,7 +674,7 @@ class Engine(InterpreterContext):
         except Exception:
             logger.error("Failed to set method", exc_info=True)
             self.set_error_state()
-            # TODO: possibly raise ...
+            raise
 
     def calculate_method_state(self) -> Mdl.MethodState:
         return self._method.calculate_method_state(self.interpreter.runtimeinfo)

@@ -25,22 +25,14 @@ class FromEngine:
         self.publisher = publisher
 
     def register_engine_data(self, engine_data: EngineData):
-        # Why do we do this?
-        # - initially because run_started is a value we generated - could calculate it again looking at plot log values
-        #   the value is used when _ to  _ 
-
-        # repo = RecentEngineRepository(database.scoped_session())
-        # recent_engine = repo.get_recent_engine_by_engine_id(engine_id=engine_data.engine_id)
-        # if recent_engine is not None:
-        #     # update engine provided data with RecentEngine db data
-        #     engine_data.run_data.run_started = recent_engine.run_started        
-        logger.info(f"Data for engine {engine_data.engine_id} registered")
+        logger.debug(f"Data for engine {engine_data.engine_id} registered")
         self._engine_data_map[engine_data.engine_id] = engine_data
 
     def engine_connected(self, engine_id: str):
-        logger.info("engine_connected")
+        logger.debug("engine_connected")
 
     def engine_disconnected(self, engine_id: str):
+        logger.debug("engine_disconnected")
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is not None:
             with database.create_scope():
@@ -61,9 +53,10 @@ class FromEngine:
             return
 
         # apply the state from msg to the current state
+        engine_data.method = msg.method        
         run_id_tag = next((tag for tag in msg.tags if tag.name == SystemTagName.RUN_ID), None)
         # verify consistent message
-        # logger.info(f"msg runid {msg.run_id}, tag runid {run_id_tag.value if run_id_tag is not None else None}")
+        #logger.info(f"msg runid {msg.run_id}, tag runid {run_id_tag.value if run_id_tag is not None else 'tag not present'}")
         if msg.run_id is None:
             if run_id_tag is not None and run_id_tag.value is not None:
                 logger.error(f"Mismatch in ReconnectedMsg, tag run_id {run_id_tag.value}, msg run_id {msg.run_id}")
@@ -88,6 +81,8 @@ class FromEngine:
                     repo.mark_recent_engine_stopped(engine_data)
 
         # process tag values normally
+        time_tag = next(tag for tag in msg.tags if tag.name == "Time")
+        logger.info(f"Time tag in reconnect msg: {time_tag.value}")
         self.tag_values_changed(engine_id, msg.tags)
 
         logger.info(f"Done processing ReconnectedMsg {msg.ident}")
@@ -185,7 +180,6 @@ class FromEngine:
             tag_values_to_persist = [tag_value.copy() for tag_value in engine_data.tags_info.map.values()
                                      if latest_persisted_tick_time is None
                                      or tag_value.tick_time > latest_persisted_tick_time]
-            logger.info(f"Persisting {len(tag_values_to_persist)} of possible {len(engine_data.tags_info.map.keys())}")
             """ 
             We manipulate the tick_time of the tagValues we persist. But it's not changing it to something that didn't 
             exist in the engine, because we change the tick_time to a tick_time that comes from an actual later reading 

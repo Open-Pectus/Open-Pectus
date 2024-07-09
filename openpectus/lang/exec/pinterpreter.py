@@ -186,7 +186,8 @@ class PInterpreter(PNodeVisitor):
         return [t[0] for t in records]
 
     def inject_node(self, program: PProgram):
-        """ Inject the node into the running program in the current scope to be executed as next instruction. """
+        """ Inject the child nodes of program into the running program in the current scope
+        to be executed as the next instruction. """
         node = PInjectedNode(None)
         node.children = program.children
         ar = ActivationRecord(node, self._tick_time)

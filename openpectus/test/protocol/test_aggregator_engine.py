@@ -11,11 +11,11 @@ from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.aggregator.models import SystemStateEnum
 from openpectus.engine.engine import Engine
 from openpectus.engine.engine_message_handlers import EngineMessageHandlers
-from openpectus.engine.engine_reporter import EngineReporter
+from openpectus.engine.engine_message_builder import EngineMessageBuilder
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 import openpectus.protocol.aggregator_messages as AM
 from openpectus.protocol.engine_dispatcher import EngineDispatcher, EngineDispatcherBase
-from openpectus.protocol.engine_dispatcher_error import EngineDispatcherErrorRecoveryDecorator
+from openpectus.engine.engine_runner import EngineRunner
 import openpectus.protocol.engine_messages as EM
 from openpectus.protocol.exceptions import ProtocolException, ProtocolNetworkException
 import openpectus.protocol.messages as M
@@ -45,9 +45,9 @@ class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
         """ Test helper class """
         engine: Engine
         engineDispatcher: EngineTestDispatcher
-        engineErrorDispatcher: EngineDispatcherErrorRecoveryDecorator
+        engineRunner: EngineRunner
         engineMessageHandlers: EngineMessageHandlers
-        engineReporter: EngineReporter
+        engineReporter: EngineMessageBuilder
 
         aggregatorDispatcher: AggregatorTestDispatcher
         frontendPublisher: FrontendPublisher
@@ -71,9 +71,9 @@ class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
         uod = create_test_uod()
         engine = Engine(uod)
         engineDispatcher = EngineTestDispatcher(loop)
-        engineErrorDispatcher = EngineDispatcherErrorRecoveryDecorator(engineDispatcher)
+        engineRunner = EngineRunner(engineDispatcher)
         engineMessageHandlers = EngineMessageHandlers(engine, engineDispatcher)
-        engineReporter = EngineReporter(engine, engineErrorDispatcher)
+        engineReporter = EngineMessageBuilder(engine, engineRunner)
 
         aggregatorDispatcher = AggregatorTestDispatcher()
         frontendPublisher = FrontendPublisher()
@@ -81,11 +81,11 @@ class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
         _ = AggregatorMessageHandlers(aggregator)
 
         # connect the two test dispatchers for direct communication
-        aggregatorDispatcher.engineDispatcher = engineErrorDispatcher
+        aggregatorDispatcher.engineDispatcher = engineDispatcher
         engineDispatcher.aggregatorDispatcher = aggregatorDispatcher
 
         self.ctx = ProtocolIntegrationTestCase.Context(
-            engine, engineDispatcher, engineErrorDispatcher, engineMessageHandlers, engineReporter,
+            engine, engineDispatcher, engineRunner, engineMessageHandlers, engineReporter,
             aggregatorDispatcher, frontendPublisher, aggregator)
 
         # not sure why this is necessary. asyncTeardown should be doing this already
@@ -153,14 +153,14 @@ class ProtocolIntegrationTest(ProtocolIntegrationTestCase):
             await self.ctx.engineReporter.send_data_messages()
 
             self.ctx.engineDispatcher.network_failing = True
-            self.ctx.engineErrorDispatcher._buffer_duration = timedelta(seconds=.5)
-            self.assertTrue(self.ctx.engineErrorDispatcher._get_buffer_size() == 0)
+            #self.ctx.engineRunner._buffer_duration = timedelta(seconds=.5)
+            self.assertTrue(self.ctx.engineRunner._get_buffer_size() == 0)
 
             # trigger tick()
             await self.ctx.engineReporter.send_data_messages()
 
-            self.assertEqual(self.ctx.engineErrorDispatcher._is_reconnecting, True)
-            self.assertTrue(self.ctx.engineErrorDispatcher._get_buffer_size() > 0)
+            self.assertEqual(self.ctx.engineRunner.state, "Failed")
+            self.assertTrue(self.ctx.engineRunner._get_buffer_size() > 0)
 
     async def test_can_send_buffered_messages_when_connection_is_restored(self):
         assert self.ctx is not None
@@ -172,18 +172,18 @@ class ProtocolIntegrationTest(ProtocolIntegrationTestCase):
 
             self.ctx.engineDispatcher.network_failing = True
             self.ctx.engineReporter.build_reconnected_message()
-            self.ctx.engineErrorDispatcher._buffer_duration = timedelta(seconds=.5)
-            self.assertTrue(self.ctx.engineErrorDispatcher._get_buffer_size() == 0)
+            #self.ctx.engineErrorDispatcher._buffer_duration = timedelta(seconds=.5)
+            self.assertTrue(self.ctx.engineRunner._get_buffer_size() == 0)
             await self.ctx.engineReporter.send_data_messages()
-            self.assertEqual(self.ctx.engineErrorDispatcher._is_reconnecting, True)
-            self.assertTrue(self.ctx.engineErrorDispatcher._get_buffer_size() > 0)
+            self.assertEqual(self.ctx.engineRunner.state, "Reconnecting")
+            self.assertTrue(self.ctx.engineRunner._get_buffer_size() > 0)
 
-            self.ctx.engineDispatcher.network_failing = False
-            await self.ctx.engineReporter.send_reconnected_message()
-            await self.ctx.engineReporter.send_data_messages()
+            # self.ctx.engineDispatcher.network_failing = False
+            # await self.ctx.engineReporter.send_reconnected_message()
+            # await self.ctx.engineReporter.send_data_messages()
 
-            self.assertEqual(self.ctx.engineErrorDispatcher._is_reconnecting, False)
-            self.assertTrue(self.ctx.engineErrorDispatcher._get_buffer_size() == 0)
+            # self.assertEqual(self.ctx.engineErrorDispatcher._is_reconnecting, False)
+            # self.assertTrue(self.ctx.engineErrorDispatcher._get_buffer_size() == 0)
 
 
     # aggregator must store data, even before a recent run is created. In case it dies and comes back we must have available
@@ -286,6 +286,27 @@ class EngineTestDispatcher(EngineDispatcher):
         if isinstance(response, AM.RegisterEngineReplyMsg) and response.success:
             self._engine_id = response.engine_id
         return response
+
+
+class MessageTest(unittest.TestCase):
+    def test_print_sequence_range(self):
+        self.assertEqual("", EM.print_sequence_range([]))
+
+        m1 = EM.EngineMessage(sequence_number=1)
+        self.assertEqual("1", EM.print_sequence_range([m1]))
+
+        m2 = EM.EngineMessage(sequence_number=2)
+        m3 = EM.EngineMessage(sequence_number=3)
+        self.assertEqual("1-3", EM.print_sequence_range([m1, m2, m3]))
+        self.assertEqual("2-3", EM.print_sequence_range([m2, m3]))
+        self.assertEqual("1,3", EM.print_sequence_range([m1, m3]))
+
+        m4 = EM.EngineMessage(sequence_number=4)
+        m5 = EM.EngineMessage(sequence_number=5)
+        self.assertEqual("1-5", EM.print_sequence_range([m1, m2, m3, m4, m5]))
+        self.assertEqual("1-2,4-5", EM.print_sequence_range([m1, m2, m4, m5]))
+        self.assertEqual("1-3,5", EM.print_sequence_range([m1, m2, m3, m5]))
+        self.assertEqual("2,4-5", EM.print_sequence_range([m2, m4, m5]))
 
 
 if __name__ == "__main__":

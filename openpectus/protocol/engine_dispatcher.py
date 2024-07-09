@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import socket
 from typing import Callable, Any, Awaitable
@@ -41,6 +42,9 @@ class EngineDispatcherBase():
         raise NotImplementedError()
 
     def assign_sequence_number(self, message: EM.EngineMessage | EM.RegisterEngineMsg):
+        raise NotImplementedError()
+    
+    async def shutdown(self):
         raise NotImplementedError()
 
 class EngineDispatcher(EngineDispatcherBase):
