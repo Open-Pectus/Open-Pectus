@@ -82,15 +82,6 @@ class EngineRunner():
         while self.state != "Stopped":
             await asyncio.sleep(0.2)
 
-    def set_reconnect_msg(self, msg: EM.ReconnectedMsg):
-        if self._reconnect_msg is not None:
-            logger.warning("Trying to set reconnect msg when it has already been set. Ignoring request")
-        else:
-            self._reconnect_msg = msg
-
-    def has__reconnect_msg(self) -> bool:
-        return self._reconnect_msg is not None
-
     async def _connect_async(self):
         if self.state == "Stopped":
             return
@@ -146,13 +137,6 @@ class EngineRunner():
             self._timer.stop()
             await self._disconnect_async(set_state_disconnected=False)
 
-    # TODO: Probably remove this?
-    async def post_async(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
-        # using lock when called externally and no lock when called internally
-        # because that deadlocks (because asyncio.Lock in not reentrant)
-        async with self._lock:
-            return await self._post_async(message)
-
     async def _post_async(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
         states_to_post: list[RecoverState] = ["Connected", "Reconnected", "CatchingUp"]
         states_to_buffer: list[RecoverState] = ["Failed", "Disconnected", "Reconnecting"]
@@ -184,18 +168,6 @@ class EngineRunner():
             err_msg = f"Invalid operation 'post_async' for state: {self.state}"
             logger.error(err_msg)
             raise ProtocolException(err_msg)
-
-    def set_rpc_handler(self, message_type: type[AM.AggregatorMessage], handler: EngineMessageHandler):
-        """ Register handler for given message_type. """
-        if message_type in self._dispatcher._handlers.keys():
-            logger.error(f"Handler for message type {message_type} is already set.")
-        self._dispatcher._handlers[message_type] = handler
-
-    def dispatch_message_async(self, message: M.MessageBase):
-        return self._dispatcher.dispatch_message_async(message)
-
-    def assign_sequence_number(self, message: EM.EngineMessage | EM.RegisterEngineMsg):
-        self._dispatcher.assign_sequence_number(message)
 
     async def _tick(self):
         async with self._lock:
@@ -317,7 +289,7 @@ class EngineRunner():
             logger.error(err_msg)
             raise ProtocolException(err_msg)
         else:
-            self.assign_sequence_number(message)
+            self._dispatcher.assign_sequence_number(message)
             logger.debug(f"Buffering message: {message.ident}")
             self._message_buffer.append(message)
 
@@ -340,10 +312,11 @@ class EngineRunner():
     async def _on_failed(self):
         logger.debug("on_failed")
 
-        if not self.has__reconnect_msg():
+        if self._reconnect_msg is None:
             self._reconnect_msg = self._message_builder.build_reconnected_message()
 
         async def buffer_messages():
+            logger.info("Started buffer_messages loop")
             while True:
                 for msg in [
                     self._message_builder.create_tag_updates_msg(),                    
@@ -352,7 +325,6 @@ class EngineRunner():
                 ]:
                     if msg is not None:
                         self._buffer_message(msg)
-
                 await asyncio.sleep(5)
 
         # need to run long running job in spawn task
@@ -377,7 +349,6 @@ class EngineRunner():
 
     async def on_steady_state(self):
         """ Steady-State message sending loop """
-        logger.info("Started steady-state sending loop")
 
         # raise first steady state event that should start engine
         if self._first_steady_state:
@@ -386,11 +357,10 @@ class EngineRunner():
                 await self.first_steady_state_callback()
 
         async def send_messages():
-            await self.post_async(self._message_builder.create_uod_info())
-            await self.post_async(self._message_builder.create_tag_updates_snapshot_msg())
-
+            logger.info("Started steady-state sending loop")
+            await self._post_async(self._message_builder.create_uod_info())
+            await self._post_async(self._message_builder.create_tag_updates_snapshot_msg())
             await asyncio.sleep(1)
-
             while True:
                 for msg in [
                     self._message_builder.create_control_state_msg(),
@@ -400,8 +370,7 @@ class EngineRunner():
                     self._message_builder.create_tag_updates_msg(),
                 ]:
                     if msg is not None:
-                        await self.post_async(msg)
-
+                        await self._post_async(msg)
                 await asyncio.sleep(1)
 
         # need to run long running job in spawn task

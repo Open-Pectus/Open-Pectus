@@ -23,8 +23,7 @@ logger = logging.getLogger("openpectus.engine.engine")
 logger.setLevel(logging.INFO)
 logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.INFO)
 logging.getLogger("openpectus.protocol.engine_dispatcher").setLevel(logging.DEBUG)
-logging.getLogger("openpectus.engine.engine_runner").setLevel(logging.DEBUG)
-logging.getLogger("openpectus.engine.engine_reporter").setLevel(logging.DEBUG)
+logging.getLogger("openpectus.engine.engine_runner").setLevel(logging.INFO)
 
 
 def get_args():
@@ -42,7 +41,6 @@ def get_args():
 
 
 engine: Engine
-#dispatcher: EngineDispatcherBase
 runner: EngineRunner
 reporter: EngineMessageBuilder
 
