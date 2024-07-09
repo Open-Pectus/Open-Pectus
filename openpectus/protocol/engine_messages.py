@@ -98,6 +98,7 @@ def print_sequence_range(messages: Sequence[EngineMessage]) -> str:
         return ""
     msgs_sorted: list[EngineMessage] = sorted(messages, key=lambda x: x.sequence_number)
     ranges = []
+    range_start: int | None = None
 
     prev: EngineMessage | None = None
     for i, msg in enumerate(msgs_sorted):
@@ -110,7 +111,7 @@ def print_sequence_range(messages: Sequence[EngineMessage]) -> str:
             range_start = msg.sequence_number
         prev = msg
 
-    if range_start <= msgs_sorted[-1].sequence_number:
+    if range_start is not None and range_start <= msgs_sorted[-1].sequence_number:
         ranges.append((range_start, msgs_sorted[-1].sequence_number))
 
     out = []
