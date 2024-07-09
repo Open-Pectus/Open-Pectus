@@ -52,6 +52,15 @@ class FromEngine:
             logger.error("No engine data available on reconnect for engine " + engine_id)
             return
 
+        # Use this to debug reconnect msg timestamps/older tags
+        # created_time = datetime.fromtimestamp(msg.created_tick).strftime("%H:%M:%S")
+        # logger.debug(f"ReconnectedMsg created_tick_time: {created_time})")
+
+        # ft02 = next((tag for tag in msg.tags if tag.name == "FT02"))
+        # ft02_time = datetime.fromtimestamp(ft02.tick_time).strftime("%H:%M:%S")
+        # logger.debug(f"ReconnectedMsg ft02_time: {ft02_time})")
+
+
         # apply the state from msg to the current state
         engine_data.method = msg.method        
         run_id_tag = next((tag for tag in msg.tags if tag.name == SystemTagName.RUN_ID), None)

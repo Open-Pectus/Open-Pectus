@@ -22,32 +22,8 @@ logger = logging.getLogger(__name__)
 EngineMessageHandler = Callable[[AM.AggregatorMessage], Awaitable[M.MessageBase]]
 """ Handler in engine that handles aggregator messages of a given type """
 
-class EngineDispatcherBase():
-    """ Base class that defines the Engine dispatcher interface """
 
-    async def connect_async(self):
-        raise NotImplementedError()
-
-    async def disconnect_async(self):
-        raise NotImplementedError()
-
-    async def post_async(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
-        raise NotImplementedError()
-
-    def set_rpc_handler(self, message_type: type[AM.AggregatorMessage], handler: EngineMessageHandler):
-        """ Register handler for given message_type. """
-        raise NotImplementedError()
-
-    async def dispatch_message_async(self, message: M.MessageBase):
-        raise NotImplementedError()
-
-    def assign_sequence_number(self, message: EM.EngineMessage | EM.RegisterEngineMsg):
-        raise NotImplementedError()
-    
-    async def shutdown(self):
-        raise NotImplementedError()
-
-class EngineDispatcher(EngineDispatcherBase):
+class EngineDispatcher():
     """
     Engine dispatcher for the Aggregator-Engine Protocol.
     Allows sending messages via HTTP POST and receiving messages via JSON-RPC.

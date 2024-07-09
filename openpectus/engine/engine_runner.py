@@ -6,8 +6,7 @@ import random
 from typing import Awaitable, Callable, Literal
 
 from openpectus.engine.engine_message_builder import EngineMessageBuilder
-import openpectus.protocol.aggregator_messages as AM
-from openpectus.protocol.engine_dispatcher import EngineDispatcher, EngineMessageHandler
+from openpectus.protocol.engine_dispatcher import EngineDispatcher
 import openpectus.protocol.engine_messages as EM
 from openpectus.protocol.exceptions import ProtocolException, ProtocolNetworkException
 import openpectus.protocol.messages as M
