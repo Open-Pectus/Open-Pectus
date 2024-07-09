@@ -107,12 +107,23 @@ class EngineDispatcher():
             'reraise': True,
             "retry_error_callback": logerror
         }
-        self._rpc_client = WebSocketRpcClient(uri=rpc_url, methods=rpc_methods, retry_config=retry_config)
+        self._rpc_client = WebSocketRpcClient(uri=rpc_url, methods=rpc_methods, retry_config=retry_config,
+                                              on_disconnect=[self.on_disconnect]
+                                              )
         try:
             await self._rpc_client.__aenter__()
         except Exception:
             raise ProtocolNetworkException("Error creating websocket connection")
         logger.info("Websocket connected")
+
+    async def on_disconnect(self, channel):
+        # Hooking up this handler with an INFO message seems to mostly avoid the reconnect
+        # hang issue that sometimes occur when aggregator is down very briefly. Not all the
+        # issues though. The offending call is WebSocketRpcClient.close() which logs this message:
+        # INFO:fastapi_ws_rpc.RPC_CLIENT:Closing RPC client
+        logger.info("on_websocket_disconnect")
+        # asyncio.create_task(self.disconnect_async()) # this does not help - it must be one of the
+        # calls in WebSocketRpcClient.close()
 
     async def disconnect_async(self):
         logger.info("Websocket disconnected")
