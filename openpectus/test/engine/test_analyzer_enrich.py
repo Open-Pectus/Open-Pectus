@@ -7,7 +7,7 @@ from openpectus.lang.exec.analyzer import (
 )
 from openpectus.lang.model.pprogram import PCommandWithDuration, PCondition, PDuration, PWatch
 from openpectus.lang import float_re, unit_re, identifier_re
-from test.engine.utility_methods import build_program as _build_program
+from openpectus.test.engine.utility_methods import build_program as _build_program
 
 def build_program_wo_analyzers(code: str):
     return _build_program(code, skip_enrich_analyzers=True)

@@ -141,10 +141,6 @@ class Labjack_Hardware(HardwareLayerBase):
                                               f"for register {r} and Labjack port direction "
                                               f"'{labjack_port_direction}."))
 
-    def validate_online(self):
-        for r in self.registers.values():
-            self.read(r)
-
     def read(self, r: Register) -> Any:
         if RegisterDirection.Read not in r.direction:
             raise HardwareLayerException(f"Attempt to read unreadable register {r}.")

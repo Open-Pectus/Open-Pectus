@@ -37,6 +37,7 @@ class MethodModel():
 
     def set_method(self, method: Mdl.Method):
         # initialize new method
+        self._method = method
         self._pcode = '\n'.join(line.content for line in method.lines)
         try:
             self._program = parse_pcode(pcode=self._pcode)
@@ -68,6 +69,9 @@ class MethodModel():
 
     def get_program(self) -> PProgram:
         return self._program
+
+    def get_code_lines(self) -> list[Mdl.MethodLine]:
+        return list([line for line in self._method.lines])
 
     def calculate_method_state(self, runtimeinfo: RuntimeInfo) -> Mdl.MethodState:
         method_state = Mdl.MethodState.empty()

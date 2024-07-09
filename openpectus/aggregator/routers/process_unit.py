@@ -175,7 +175,6 @@ def get_method_and_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_ag
                                   injected_line_ids=[_id for _id in method_state.injected_line_ids])
         )
 
-    print("Returned client method")
     return from_models(engine_data.method, engine_data.run_data.method_state)
 
 

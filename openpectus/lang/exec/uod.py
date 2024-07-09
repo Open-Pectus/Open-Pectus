@@ -51,6 +51,13 @@ class UnitOperationDefinitionBase:
         self.hwl.registers[name] = Register(name, direction, **options)
 
     def validate_configuration(self):
+        """ Validates these areas:
+        - Each Reading match a defined tag
+        - Each Command is verified
+            - Must have an exec function with an appropriate signature
+            - If the command uses a regular expression as parser function, it is verified that
+              the exec function arguments match the regular expression.
+        """
         fatal = False
 
         def log_fatal(msg: str):

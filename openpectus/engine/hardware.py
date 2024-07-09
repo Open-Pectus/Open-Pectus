@@ -143,8 +143,14 @@ class HardwareLayerBase():
         pass
 
     def validate_online(self):
-        """ Perform checks that verify that the register definition works. Raise on validation error.Virtual method. """
-        pass
+        """ Perform checks that verify online hardware access. Raise on validation error. Virtual method.
+        
+        The default implementation checks that all Read registers can be read. Override to add additional
+        checks.
+        """
+        for r in self.registers.values():
+            if RegisterDirection.Read in r.direction:
+                _ = self.read(r)
 
 
 class NullHardware(HardwareLayerBase):

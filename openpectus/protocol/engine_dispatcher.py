@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import socket
 from typing import Callable, Any, Awaitable
@@ -21,29 +22,8 @@ logger = logging.getLogger(__name__)
 EngineMessageHandler = Callable[[AM.AggregatorMessage], Awaitable[M.MessageBase]]
 """ Handler in engine that handles aggregator messages of a given type """
 
-class EngineDispatcherBase():
-    """ Base class that defines the Engine dispatcher interface """
 
-    async def connect_async(self):
-        raise NotImplementedError()
-
-    async def disconnect_async(self):
-        raise NotImplementedError()
-
-    async def post_async(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
-        raise NotImplementedError()
-
-    def set_rpc_handler(self, message_type: type[AM.AggregatorMessage], handler: EngineMessageHandler):
-        """ Register handler for given message_type. """
-        raise NotImplementedError()
-
-    async def dispatch_message_async(self, message: M.MessageBase):
-        raise NotImplementedError()
-
-    def assign_sequence_number(self, message: EM.EngineMessage | EM.RegisterEngineMsg):
-        raise NotImplementedError()
-
-class EngineDispatcher(EngineDispatcherBase):
+class EngineDispatcher():
     """
     Engine dispatcher for the Aggregator-Engine Protocol.
     Allows sending messages via HTTP POST and receiving messages via JSON-RPC.
@@ -127,12 +107,23 @@ class EngineDispatcher(EngineDispatcherBase):
             'reraise': True,
             "retry_error_callback": logerror
         }
-        self._rpc_client = WebSocketRpcClient(uri=rpc_url, methods=rpc_methods, retry_config=retry_config)
+        self._rpc_client = WebSocketRpcClient(uri=rpc_url, methods=rpc_methods, retry_config=retry_config,
+                                              on_disconnect=[self.on_disconnect]
+                                              )
         try:
             await self._rpc_client.__aenter__()
         except Exception:
             raise ProtocolNetworkException("Error creating websocket connection")
         logger.info("Websocket connected")
+
+    async def on_disconnect(self, channel):
+        # Hooking up this handler with an INFO message seems to mostly avoid the reconnect
+        # hang issue that sometimes occur when aggregator is down very briefly. Not all the
+        # issues though. The offending call is WebSocketRpcClient.close() which logs this message:
+        # INFO:fastapi_ws_rpc.RPC_CLIENT:Closing RPC client
+        logger.info("on_websocket_disconnect")
+        # asyncio.create_task(self.disconnect_async()) # this does not help - it must be one of the
+        # calls in WebSocketRpcClient.close()
 
     async def disconnect_async(self):
         logger.info("Websocket disconnected")

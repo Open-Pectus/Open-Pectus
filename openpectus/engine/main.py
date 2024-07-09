@@ -2,25 +2,28 @@ import asyncio
 import logging
 from argparse import ArgumentParser, BooleanOptionalAction
 import importlib
+from typing import Literal
 
-from openpectus import log_setup_colorlog, sentry
+
+from openpectus import log_setup_colorlog, sentry, __version__
 from openpectus.engine.engine import Engine
 from openpectus.engine.engine_message_handlers import EngineMessageHandlers
-from openpectus.engine.engine_reporter import EngineReporter
+from openpectus.engine.engine_message_builder import EngineMessageBuilder
 from openpectus.engine.hardware_recovery import ErrorRecoveryConfig, ErrorRecoveryDecorator
 from openpectus.lang.exec.tags import SystemTagName, TagCollection
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
-from openpectus.protocol.engine_dispatcher import EngineDispatcher, EngineDispatcherBase
-from openpectus.protocol.engine_dispatcher_error import EngineDispatcherErrorRecoveryDecorator
+from openpectus.protocol.engine_dispatcher import EngineDispatcher
+from openpectus.engine.engine_runner import EngineRunner, RecoverState
 
 log_setup_colorlog()
+
+StateKind = Literal["Started", "Connected", "Disconnected", "Reconnecting", "Reconnected"]
 
 logger = logging.getLogger("openpectus.engine.engine")
 logger.setLevel(logging.INFO)
 logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.INFO)
 logging.getLogger("openpectus.protocol.engine_dispatcher").setLevel(logging.DEBUG)
-logging.getLogger("openpectus.protocol.engine_dispatcher_error").setLevel(logging.DEBUG)
-logging.getLogger("openpectus.engine.engine_reporter").setLevel(logging.DEBUG)
+logging.getLogger("openpectus.engine.engine_runner").setLevel(logging.INFO)
 
 
 def get_args():
@@ -38,8 +41,8 @@ def get_args():
 
 
 engine: Engine
-dispatcher: EngineDispatcherBase
-reporter: EngineReporter
+runner: EngineRunner
+reporter: EngineMessageBuilder
 
 def run_validations(uod: UnitOperationDefinitionBase) -> bool:
     try:
@@ -55,7 +58,7 @@ def run_validations(uod: UnitOperationDefinitionBase) -> bool:
         return False
 
 async def main_async(args):
-    global engine, dispatcher, reporter
+    global engine, runner, reporter
     uod = create_uod(args.uod)
     engine = Engine(uod, tick_interval=0.1, enable_archiver=True)
     dispatcher = EngineDispatcher(
@@ -72,39 +75,31 @@ async def main_async(args):
     connection_status_tag = engine._system_tags[SystemTagName.CONNECTION_STATUS]
     uod.hwl = ErrorRecoveryDecorator(uod.hwl, ErrorRecoveryConfig(), connection_status_tag)
 
-    # wrap dispatcher with error recovery decorator
-    dispatcher = EngineDispatcherErrorRecoveryDecorator(dispatcher)
-
-    reporter = EngineReporter(engine, dispatcher)
+    message_builder = EngineMessageBuilder(engine)
+    # create runner that orchestrates the error recovery mechanism
+    runner = EngineRunner(dispatcher, message_builder)
+    
     _ = EngineMessageHandlers(engine, dispatcher)
 
     # TODO Possibly check dispatcher.check_aggregator_alive() and exit early
 
-    # Whether we need this or not is ultimately as protocol decision
-    # if aggregator only needs the config messages once, we get a simpler protocol
-    # with fewer states.
-    dispatcher.connected_callback = reporter.restart
-    dispatcher.disconnected_callback = reporter.build_reconnected_message
-    dispatcher.reconnected_callback = reporter.send_reconnected_message
-    await dispatcher.connect_async()
-    engine.run()
 
-    while True:
-        try:
-            await reporter.send_data_messages()  # this is what drives the buffering of messages for recovering
-            await asyncio.sleep(1)
-        except Exception:
-            logger.error("Unhandled exception in main loop. Trying to continue", exc_info=True)
-            await asyncio.sleep(5)
+    async def on_steady_state():
+        logger.info("Starting engine on first steady-state")
+        engine.run()
+
+    runner.first_steady_state_callback = on_steady_state
+    await runner.run()
+
 
 
 async def close_async():
-    global engine, dispatcher, reporter
+    global engine, runner, reporter
     logger.debug("Stopping engine components")
     if engine is not None:
         engine.stop()
-    if dispatcher is not None:
-        await dispatcher.disconnect_async()
+    if runner is not None:
+        await runner.shutdown()
     logger.debug("Engine components stopped. Exiting")
 
 
@@ -171,6 +166,7 @@ def validate_and_exit(uod_name: str):
 
 
 def main():
+    print(f"OpenPectus Engine v. {__version__}")
     args = get_args()
     sentry.init_engine(args.sentry_event_level)
     if args.validate:
