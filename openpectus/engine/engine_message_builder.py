@@ -45,6 +45,7 @@ class EngineMessageBuilder():
 
         return EM.ReconnectedMsg(
             run_id=run_id,
+            created_tick=time.time(),
             run_started_tick=time.time(),
             tags=tags,
             method=Mdl.Method(lines=self.engine.method.get_code_lines())

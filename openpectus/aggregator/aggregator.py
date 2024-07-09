@@ -56,7 +56,6 @@ class FromEngine:
         engine_data.method = msg.method        
         run_id_tag = next((tag for tag in msg.tags if tag.name == SystemTagName.RUN_ID), None)
         # verify consistent message
-        #logger.info(f"msg runid {msg.run_id}, tag runid {run_id_tag.value if run_id_tag is not None else 'tag not present'}")
         if msg.run_id is None:
             if run_id_tag is not None and run_id_tag.value is not None:
                 logger.error(f"Mismatch in ReconnectedMsg, tag run_id {run_id_tag.value}, msg run_id {msg.run_id}")
@@ -81,12 +80,8 @@ class FromEngine:
                     repo.mark_recent_engine_stopped(engine_data)
 
         # process tag values normally
-        time_tag = next(tag for tag in msg.tags if tag.name == "Time")
-        logger.info(f"Time tag in reconnect msg: {time_tag.value}")
         self.tag_values_changed(engine_id, msg.tags)
-
         logger.info(f"Done processing ReconnectedMsg {msg.ident}")
-
 
     def run_started(self):  # to replace run_id_changed guessing
         raise NotImplementedError()

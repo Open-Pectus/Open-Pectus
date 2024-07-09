@@ -50,6 +50,7 @@ class UodInfoMsg(EngineMessage):
 
 class ReconnectedMsg(EngineMessage):
     run_id: str | None
+    created_tick: float
     run_started_tick: float | None
     tags: List[Mdl.TagValue] = []
     method: Mdl.Method
