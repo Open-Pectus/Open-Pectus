@@ -180,7 +180,7 @@ class RepositoryTest(unittest.TestCase):
         entity.uod_name = "my_uod_name"
         entity.uod_filename = "my_uod_filename.py"
         entity.uod_author_name = "my_uod_author_name"
-        # entity.uod_author_email = "my_uod_email"  # skip nullable field
+        entity.uod_author_email = ""
         entity.run_id = 'a run id'
         entity.started_date = datetime.now()
         entity.completed_date = datetime.now()
