@@ -339,6 +339,9 @@ class RecentRun(Dto):
     run_id: str
     started_date: datetime
     completed_date: datetime
+    uod_filename: str
+    uod_author_name: str
+    uod_author_email: str
     engine_computer_name: str
     engine_version: str
     engine_hardware_str: str

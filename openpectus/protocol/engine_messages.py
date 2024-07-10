@@ -31,6 +31,9 @@ class RegisterEngineMsg(Msg.MessageBase):
     """ Doesn't extend EngineMessage, because we don't have the engine_id yet """
     computer_name: str
     uod_name: str
+    uod_author_name: str
+    uod_author_email: str
+    uod_filename: str
     location: str
     engine_version: str
     # uod file hash, file change date

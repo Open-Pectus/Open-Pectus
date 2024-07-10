@@ -23,6 +23,9 @@ class UnitOperationDefinitionBase:
     def __init__(self,
                  instrument_name: str,
                  hwl: HardwareLayerBase,
+                 author_name: str,
+                 author_email: str,
+                 filename: str,
                  location: str,
                  tags: TagCollection,
                  readings: ReadingCollection,
@@ -33,6 +36,9 @@ class UnitOperationDefinitionBase:
                  ) -> None:
         self.instrument = instrument_name
         self.hwl = hwl
+        self.author_name = author_name
+        self.author_email = author_email
+        self.filename = filename
         self.location = location
         self.tags = tags
         self.system_tags: TagCollection | None = None
@@ -45,6 +51,16 @@ class UnitOperationDefinitionBase:
 
     def __str__(self) -> str:
         return f"UnitOperationDefinition({self.instrument=},{self.location=},hwl={str(self.hwl)})"
+
+    @property
+    def options(self) -> dict[str, str]:
+        return {
+            'uod_name': self.instrument,
+            'uod_author_name': self.author_name,
+            'uod_author_email': self.author_email,
+            'uod_filename': self.filename,
+            'location': self.location
+        }
 
     def define_register(self, name: str, direction: RegisterDirection, **options):
         assert isinstance(self.hwl, HardwareLayerBase)
@@ -152,7 +168,7 @@ class UnitOperationDefinitionBase:
 
                 if len(named_groups_unmatched) > 0 or parameter_unmatched:
                     # Parameter not accounted for. This means we cant provide a value for it when invoking exec_fn
-                    # so we fail the validation                    
+                    # so we fail the validation
                     raise UodValidationError(f"""Command '{key}' has an error.
 The parameters for the execution function do not match those defined in the regular expression
 {regex_parser.regex} .
@@ -407,6 +423,9 @@ class UodBuilder():
         self.commands: dict[str, UodCommandBuilder] = {}
         self.overlapping_command_names_lists: list[list[str]] = []
         self.readings = ReadingCollection()
+        self.author_name: str = ""
+        self.author_email: str = ""
+        self.filename: str = ""
         self.location: str = ""
         self.plot_configuration: PlotConfiguration | None = None
         self.base_unit_provider: BaseUnitProvider = BaseUnitProvider()
@@ -420,6 +439,12 @@ class UodBuilder():
     def validate(self):
         if len(self.instrument.strip()) == 0:
             raise ValueError("Instrument name must be set")
+
+        if len(self.author_name.strip()) == 0 or len(self.author_email.strip()) == 0:
+            raise ValueError("Author must be set")
+
+        if len(self.filename.strip()) == 0:
+            raise ValueError("Filename must be set")
 
         if self.hwl is None:
             raise ValueError("HardwareLayer must be set")
@@ -435,6 +460,15 @@ class UodBuilder():
 
     def with_hardware(self, hwl: HardwareLayerBase) -> UodBuilder:
         self.hwl = hwl
+        return self
+
+    def with_author(self, name: str, email: str) -> UodBuilder:
+        self.author_name = name
+        self.author_email = email
+        return self
+
+    def with_filename(self, filename: str) -> UodBuilder:
+        self.filename = filename
         return self
 
     def with_location(self, location: str) -> UodBuilder:
@@ -599,6 +633,9 @@ class UodBuilder():
         uod = UnitOperationDefinitionBase(
             self.instrument,
             self.hwl,  # type: ignore
+            self.author_name,
+            self.author_email,
+            self.filename,
             self.location,
             self.tags,
             self.readings,

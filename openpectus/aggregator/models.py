@@ -93,6 +93,9 @@ class EngineData(BaseModel):
     engine_version: str
     hardware_str: str = "N/A"
     uod_name: str
+    uod_author_name: str
+    uod_author_email: str
+    uod_filename: str
     location: str
     readings: list[Mdl.ReadingInfo] = []
     tags_info: TagsInfo = TagsInfo(map={})

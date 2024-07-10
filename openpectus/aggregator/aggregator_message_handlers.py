@@ -45,6 +45,9 @@ class AggregatorMessageHandlers:
                     engine_id=engine_id,
                     computer_name=register_engine_msg.computer_name,
                     uod_name=register_engine_msg.uod_name,
+                    uod_author_name=register_engine_msg.uod_author_name,
+                    uod_author_email=register_engine_msg.uod_author_email,
+                    uod_filename=register_engine_msg.uod_filename,
                     location=register_engine_msg.location,
                     engine_version=register_engine_msg.engine_version
                 )
@@ -53,10 +56,10 @@ class AggregatorMessageHandlers:
         logger.info(f"Registration of engine {engine_id} successful")
         return AM.RegisterEngineReplyMsg(success=True, engine_id=engine_id)
 
-    async def handle_EngineConnected(self, engine_id: str):        
+    async def handle_EngineConnected(self, engine_id: str):
         self.aggregator.from_engine.engine_connected(engine_id)
 
-    async def handle_EngineDisconnected(self, engine_id: str):        
+    async def handle_EngineDisconnected(self, engine_id: str):
         self.aggregator.from_engine.engine_disconnected(engine_id)
 
     async def handle_ReconnectedMsg(self, msg: EM.ReconnectedMsg):

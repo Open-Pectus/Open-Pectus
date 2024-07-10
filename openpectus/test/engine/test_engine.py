@@ -83,6 +83,8 @@ def create_test_uod() -> UnitOperationDefinitionBase:
     builder = (
         UodBuilder()
         .with_instrument("TestUod")
+        .with_author("Test Author", "test@openpectus.org")
+        .with_filename(__file__)
         .with_hardware(TestHW())
         .with_location("Test location")
         .with_hardware_register(
@@ -107,7 +109,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_command_regex_arguments(
             name="CmdWithRegexArgs",
             arg_parse_regex=RegexNumberWithUnit(units=['m2']),
-            exec_fn=cmd_regex) 
+            exec_fn=cmd_regex)
     )
     uod = builder.build()
     uod.hwl.connect()
@@ -351,6 +353,8 @@ class TestEngine(unittest.TestCase):
                 uod = (
                     UodBuilder()
                     .with_instrument("foo")
+                    .with_author("Test Author", "test@openpectus.org")
+                    .with_filename(__file__)
                     .with_no_hardware()
                     .with_command_regex_arguments("bar", regex, exec_fn)
                     .build()
@@ -396,6 +400,8 @@ class TestEngine(unittest.TestCase):
                 uod = (
                     UodBuilder()
                     .with_instrument("foo")
+                    .with_author("Test Author", "test@openpectus.org")
+                    .with_filename(__file__)
                     .with_no_hardware()
                     .with_command("bar", exec_fn=exec_functions[exec_name])
                     .build()
@@ -451,7 +457,7 @@ class TestEngine(unittest.TestCase):
         test('kvargs', {})
         test('value_arg', {'value': 23})
         test("value_arg_default", {})
-        test("value_arg_default", {'value': 34})        
+        test("value_arg_default", {'value': 34})
 
         test('no_args', {'bar': 1}, False)
         test('value_arg', {}, False)
@@ -754,7 +760,7 @@ Mark: C
         self.assertTrue(e._runstate_started)
         system_state_tag = e._system_tags[SystemTagName.SYSTEM_STATE]
         process_time_tag = e._system_tags[SystemTagName.PROCESS_TIME]
-        self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())        
+        self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
 
         danger_tag = e.uod.tags["Danger"]
         self.assertTrue(danger_tag.get_value())
@@ -928,11 +934,13 @@ Restart
             run_engine(e, "Base: L\n0.1 Mark: A", 5)
             self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
 
-    def test_totalizer_base_units_with_accumulator_volume(self):        
+    def test_totalizer_base_units_with_accumulator_volume(self):
         self.engine.cleanup()  # dispose the test default engine
 
         uod = (UodBuilder()
                .with_instrument("TestUod")
+               .with_author("Test Author", "test@openpectus.org")
+               .with_filename(__file__)
                .with_hardware(TestHW())
                .with_location("Test location")
                .with_tag(ReadingTag("Meter", "L"))
@@ -959,6 +967,8 @@ Restart
 
         uod = (UodBuilder()
                .with_instrument("TestUod")
+               .with_author("Test Author", "test@openpectus.org")
+               .with_filename(__file__)
                .with_hardware(TestHW())
                .with_location("Test location")
                .with_tag(ReadingTag("Meter", "L"))
@@ -989,6 +999,8 @@ Restart
 
         uod = (UodBuilder()
                .with_instrument("TestUod")
+               .with_author("Test Author", "test@openpectus.org")
+               .with_filename(__file__)
                .with_hardware(TestHW())
                .with_location("Test location")
                .with_tag(CalculatedLinearTag("calc", "L"))
@@ -1020,6 +1032,8 @@ Base: s
 
         uod = (UodBuilder()
                .with_instrument("TestUod")
+               .with_author("Test Author", "test@openpectus.org")
+               .with_filename(__file__)
                .with_hardware(TestHW())
                .with_location("Test location")
                .with_tag(CalculatedLinearTag("calc", "L"))
@@ -1071,6 +1085,8 @@ Block: A
 
         uod = (UodBuilder()
                .with_instrument("TestUod")
+               .with_author("Test Author", "test@openpectus.org")
+               .with_filename(__file__)
                .with_hardware(TestHW())
                .with_location("Test location")
                .with_tag(ReadingTag("CV", "L"))
@@ -1104,6 +1120,8 @@ Base: s
 
         uod = (UodBuilder()
                .with_instrument("TestUod")
+               .with_author("Test Author", "test@openpectus.org")
+               .with_filename(__file__)
                .with_hardware(TestHW())
                .with_location("Test location")
                .with_tag(ReadingTag("CV", "L"))
@@ -1286,7 +1304,7 @@ Mark: C
 
         continue_engine(e, 3)
         # self.assertEqual(['A', 'B', 'C', 'I'], e.interpreter.get_marks())
-        self.assertTrue(['A', 'B', 'C', 'I'] == e.interpreter.get_marks() 
+        self.assertTrue(['A', 'B', 'C', 'I'] == e.interpreter.get_marks()
                         or ['A', 'B', 'I', 'C'] == e.interpreter.get_marks())
 
     def test_engine_error_causes_Paused_state(self):

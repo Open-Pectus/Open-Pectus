@@ -1,12 +1,11 @@
 import logging
 import time
 import unittest
-from typing import List, Any
 
 import pint
 from openpectus.engine.engine import Engine
 from openpectus.engine.models import EngineCommandEnum
-from openpectus.lang.exec.pinterpreter import CallStack, PInterpreter
+from openpectus.lang.exec.pinterpreter import PInterpreter
 from openpectus.lang.exec.tags import Tag, SystemTagName
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
 from openpectus.lang.grammar.pprogramformatter import print_parsed_program as print_program
@@ -40,6 +39,8 @@ def create_test_uod() -> UnitOperationDefinitionBase:
     return (
         UodBuilder()
         .with_instrument("TestUod")
+        .with_author("Test Author", "test@openpectus.org")
+        .with_filename(__file__)
         .with_no_hardware()
         .with_location("Test location")
         # Readings

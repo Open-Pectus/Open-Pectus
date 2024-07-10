@@ -8,17 +8,33 @@ from openpectus.protocol.serialization import serialize, deserialize
 
 class SerializationTest(unittest.TestCase):
     def test_serialization_RegisterEngineMsg(self):
-        reg = EM.RegisterEngineMsg(computer_name="foo", uod_name="bar", location="baz", engine_version='0.0.1')
+        reg = EM.RegisterEngineMsg(
+            computer_name="foo",
+            uod_name="bar",
+            uod_author_name="author_name",
+            uod_author_email="",
+            uod_filename="",
+            location="baz",
+            engine_version='0.0.1')
         reg_s = serialize(reg)
         self.assertEqual(
             {'_type': 'RegisterEngineMsg', '_ns': 'openpectus.protocol.engine_messages',
-             'computer_name': 'foo', 'engine_version': '0.0.1', 'uod_name': 'bar', 'location': 'baz', 
+             'computer_name': 'foo', 'engine_version': '0.0.1', 'uod_name': 'bar',
+             'uod_author_name': 'author_name', 'uod_author_email': '', 'uod_filename': '',
+             'location': 'baz',
              'sequence_number': -2, 'version': 0},
             reg_s)
         self.assertIsNotNone(reg_s)
 
     def test_round_trip_RegisterEngineMsg(self):
-        reg = EM.RegisterEngineMsg(computer_name="foo", uod_name="bar", location="baz", engine_version='0.0.1')
+        reg = EM.RegisterEngineMsg(
+            computer_name="foo",
+            uod_name="bar",
+            uod_author_name="author_name",
+            uod_author_email="",
+            uod_filename="",
+            location="baz",
+            engine_version='0.0.1')
         reg_s = serialize(reg)
         reg_d = deserialize(reg_s)
         self.assertIsNotNone(reg_d)
