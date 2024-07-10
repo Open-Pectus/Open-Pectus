@@ -9,8 +9,8 @@ from openpectus.aggregator.data.models import (
     ProcessValueType,
     RecentRunErrorLog, RecentRunMethodAndState, RecentRun, PlotLogEntryValue,
     RecentRunPlotConfiguration, RecentRunRunLog,
-    get_ProcessValueType_from_value, 
-    PlotLog, PlotLogEntry   
+    get_ProcessValueType_from_value,
+    PlotLog, PlotLogEntry
 )
 from openpectus.aggregator.models import TagValue, ReadingInfo, EngineData
 from sqlalchemy import select
@@ -119,6 +119,9 @@ class RecentRunRepository(RepositoryBase):
         recent_run.aggregator_version = __version__
         recent_run.aggregator_computer_name = gethostname()
         recent_run.uod_name = engine_data.uod_name
+        recent_run.uod_author_name = engine_data.uod_author_name
+        recent_run.uod_author_email = engine_data.uod_author_email
+        recent_run.uod_filename = engine_data.uod_filename
         recent_run.started_date = engine_data.run_data.run_started
         recent_run.completed_date = datetime.now(timezone.utc)
         # recent_run.contributers = engine_data.

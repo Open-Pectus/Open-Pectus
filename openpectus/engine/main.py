@@ -13,7 +13,7 @@ from openpectus.engine.hardware_recovery import ErrorRecoveryConfig, ErrorRecove
 from openpectus.lang.exec.tags import SystemTagName, TagCollection
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 from openpectus.protocol.engine_dispatcher import EngineDispatcher
-from openpectus.engine.engine_runner import EngineRunner, RecoverState
+from openpectus.engine.engine_runner import EngineRunner
 
 log_setup_colorlog()
 
@@ -61,10 +61,7 @@ async def main_async(args):
     global engine, runner, reporter
     uod = create_uod(args.uod)
     engine = Engine(uod, tick_interval=0.1, enable_archiver=True)
-    dispatcher = EngineDispatcher(
-        f"{args.aggregator_hostname}:{args.aggregator_port}",
-        engine.uod.instrument,
-        engine.uod.location)
+    dispatcher = EngineDispatcher(f"{args.aggregator_hostname}:{args.aggregator_port}", uod.options)
 
     if not run_validations(uod):
         exit(1)
@@ -78,7 +75,6 @@ async def main_async(args):
     message_builder = EngineMessageBuilder(engine)
     # create runner that orchestrates the error recovery mechanism
     runner = EngineRunner(dispatcher, message_builder)
-    
     _ = EngineMessageHandlers(engine, dispatcher)
 
     # TODO Possibly check dispatcher.check_aggregator_alive() and exit early

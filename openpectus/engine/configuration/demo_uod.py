@@ -73,6 +73,8 @@ def create() -> UnitOperationDefinitionBase:
     return (
         builder
         .with_instrument("DemoUod")
+        .with_author("Demo Author", "demo@openpectus.org")
+        .with_filename(__file__)
         .with_hardware(DemoHardware())
         .with_location("Demo location")
         .with_hardware_register("FT01", RegisterDirection.Read, path='Objects;2:System;2:FT01')

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 import socket
 from typing import Callable, Any, Awaitable
@@ -50,11 +49,14 @@ class EngineDispatcher():
             # Note: Must be declared async to be usable by RPC
             return self.engine_id
 
-    def __init__(self, aggregator_host: str, uod_name: str, location: str) -> None:
+    def __init__(self, aggregator_host: str, uod_options: dict[str, str]) -> None:
         super().__init__()
         self._aggregator_host = aggregator_host
-        self._uod_name = uod_name
-        self._location = location
+        self._uod_name = uod_options.pop("uod_name")
+        self._uod_author_name = uod_options.pop("uod_author_name")
+        self._uod_author_email = uod_options.pop("uod_author_email")
+        self._uod_filename = uod_options.pop("uod_filename")
+        self._location = uod_options.pop("location")
         self._rpc_client: WebSocketRpcClient | None = None
         self._handlers: dict[type, Callable[[Any], Awaitable[M.MessageBase]]] = {}
         self._engine_id = None
@@ -88,7 +90,7 @@ class EngineDispatcher():
 
     async def connect_async(self):
         if self._engine_id is None:
-            self._engine_id = await self._register_for_engine_id_async(self._uod_name, self._location)
+            self._engine_id = await self._register_for_engine_id_async()
             if self._engine_id is None:
                 logger.error("Failed to register because Aggregator refused the registration.")
                 raise ProtocolNetworkException("Registration failed")
@@ -186,10 +188,16 @@ class EngineDispatcher():
                 f"Dispatch failed for message type: {message_type}. A handler was registered, but failed somehow.",
                 exc_info=True)
 
-    async def _register_for_engine_id_async(self, uod_name: str, location: str) -> str | None:
+    async def _register_for_engine_id_async(self) -> str | None:
         logger.info("Registering for engine id")
-        register_engine_msg = EM.RegisterEngineMsg(computer_name=socket.gethostname(), uod_name=uod_name, location=location,
-                                                   engine_version=__version__)
+        register_engine_msg = EM.RegisterEngineMsg(
+            computer_name=socket.gethostname(),
+            uod_name=self._uod_name,
+            uod_author_name=self._uod_author_name,
+            uod_author_email=self._uod_author_email,
+            uod_filename=self._uod_filename,
+            location=self._location,
+            engine_version=__version__)
         register_response = await self.post_async(register_engine_msg)
         if not isinstance(register_response, AM.RegisterEngineReplyMsg) or not register_response.success:
             return None

@@ -34,8 +34,14 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
         dispatcher = AggregatorDispatcher()
         aggregator = Aggregator(dispatcher, self.createPublisherMock())
         _ = AggregatorMessageHandlers(aggregator)
-        register_engine_msg = EM.RegisterEngineMsg(computer_name='computer-name', uod_name='uod-name',
-                                                   location="test location", engine_version='0.0.1')
+        register_engine_msg = EM.RegisterEngineMsg(
+            computer_name='computer-name',
+            uod_name='uod-name',
+            uod_author_name="uod-author-name",
+            uod_author_email="uod-author-email",
+            uod_filename="uod-filename",
+            location="test location",
+            engine_version='0.0.1')
         engine_id = aggregator.create_engine_id(register_engine_msg)
 
         # connecting rpc with no response for engine id should close connection
@@ -71,9 +77,21 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
         aggregator = Aggregator(dispatcher, Mock())
         messageHandlers = AggregatorMessageHandlers(aggregator)
         register_engine_msg = EM.RegisterEngineMsg(
-            computer_name='computer-name', uod_name='uod-name', location="test-loc", engine_version='0.0.1')
+            computer_name='computer-name',
+            uod_name='uod-name',
+            uod_author_name="uod-author-name",
+            uod_author_email="uod-author-email",
+            uod_filename="uod-filename",
+            location="test-loc",
+            engine_version='0.0.1')
         register_engine_msg_different_computer = EM.RegisterEngineMsg(
-            computer_name='computer-name2', uod_name='uod-name', location="test-loc", engine_version='0.0.1')
+            computer_name='computer-name2',
+            uod_name='uod-name',
+            uod_author_name="uod-author-name",
+            uod_author_email="uod-author-email",
+            uod_filename="uod-filename",
+            location="test-loc",
+            engine_version='0.0.1')
         engine_id1 = aggregator.create_engine_id(register_engine_msg)
         engine_id2 = aggregator.create_engine_id(register_engine_msg_different_computer)
 
@@ -104,7 +122,7 @@ class AggregatorEventsTest(unittest.IsolatedAsyncioTestCase):
         self.plot_log_repo = Mock(store_tag_values=self.store_tag_values)
         self.aggregator = Aggregator(Mock(), Mock())
         self.engine_data = EngineData(engine_id="test_engine", computer_name="", engine_version="", hardware_str="",
-                                      uod_name="", location="")
+                                      uod_name="", uod_author_name="", uod_author_email="", uod_filename="", location="")
 
     def createTag(self, name: str, tick: float, value: str):
         return TagValue(name=name, tick_time=tick, value=value, value_unit=None)
@@ -132,7 +150,7 @@ class AggregatorEventsTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_persist_tag_values_can_update_tag_with_newer_after_threshold(self):
         run_id = self.createTag(SystemTagName.RUN_ID.value, 1, "run1")
-        
+
         tags = [
             run_id,
             self.createTag("a", 1, "v1"),

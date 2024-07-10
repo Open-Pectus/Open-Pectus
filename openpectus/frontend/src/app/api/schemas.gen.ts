@@ -719,6 +719,18 @@ export const $RecentRun = {
             format: 'date-time',
             title: 'Completed Date'
         },
+        uod_filename: {
+            type: 'string',
+            title: 'Uod Filename'
+        },
+        uod_author_name: {
+            type: 'string',
+            title: 'Uod Author Name'
+        },
+        uod_author_email: {
+            type: 'string',
+            title: 'Uod Author Email'
+        },
         engine_computer_name: {
             type: 'string',
             title: 'Engine Computer Name'
@@ -749,7 +761,7 @@ export const $RecentRun = {
         }
     },
     type: 'object',
-    required: ['id', 'engine_id', 'run_id', 'started_date', 'completed_date', 'engine_computer_name', 'engine_version', 'engine_hardware_str', 'aggregator_computer_name', 'aggregator_version'],
+    required: ['id', 'engine_id', 'run_id', 'started_date', 'completed_date', 'uod_filename', 'uod_author_name', 'uod_author_email', 'engine_computer_name', 'engine_version', 'engine_hardware_str', 'aggregator_computer_name', 'aggregator_version'],
     title: 'RecentRun',
     description: 'Represents a historical run of a process unit. '
 } as const;

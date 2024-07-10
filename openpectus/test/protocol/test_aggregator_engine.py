@@ -106,7 +106,13 @@ class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
         assert self.ctx is not None
 
         register_message = EM.RegisterEngineMsg(
-            computer_name="test_host", uod_name="test_uod_name", location="test_location", engine_version="1")
+            computer_name="test_host",
+            uod_name="test_uod_name",
+            uod_author_name="uod-author-name",
+            uod_author_email="uod-author-email",
+            uod_filename="uod-filename",
+            location="test_location",
+            engine_version="1")
 
         register_response = await self.ctx.engineDispatcher.post_async(register_message)
         assert isinstance(register_response, AM.RegisterEngineReplyMsg)
@@ -234,7 +240,14 @@ class AggregatorTestDispatcher(AggregatorDispatcher):
 
 class EngineTestDispatcher(EngineDispatcher):
     def __init__(self, event_loop: asyncio.AbstractEventLoop) -> None:
-        super().__init__(aggregator_host="", uod_name="", location="")
+        uod_options = {
+            'uod_name': 'my_uod_name',
+            'uod_author_name': 'my_uod_author_name',
+            'uod_author_email': 'my_uod_author_email',
+            'uod_filename': 'my_uod_filename',
+            'location': 'my_location'
+        }
+        super().__init__(aggregator_host="", uod_options=uod_options)
         self.event_loop = event_loop
         self.aggregatorDispatcher: AggregatorTestDispatcher
         self.network_failing = False
@@ -242,7 +255,7 @@ class EngineTestDispatcher(EngineDispatcher):
     async def connect_async(self):
         if self._engine_id is None:
             logger.info("Registering for engine_id")
-            self._engine_id = await self._register_for_engine_id_async(self._uod_name, self._location)
+            self._engine_id = await self._register_for_engine_id_async()
             if self._engine_id is None:
                 logger.error("Failed to register. Aggregator refused registration.")
                 raise ValueError("Failed to register. Aggregator refused registration.")
