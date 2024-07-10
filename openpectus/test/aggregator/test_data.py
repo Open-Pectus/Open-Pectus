@@ -178,6 +178,9 @@ class RepositoryTest(unittest.TestCase):
         entity.engine_id = "my_eng_id"
         entity.engine_computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
+        entity.uod_filename = "my_uod_filename.py"
+        entity.uod_author_name = "my_uod_author_name"
+        # entity.uod_author_email = "my_uod_email"  # skip nullable field
         entity.run_id = 'a run id'
         entity.started_date = datetime.now()
         entity.completed_date = datetime.now()
@@ -212,6 +215,9 @@ class RepositoryTest(unittest.TestCase):
         entity.engine_id = "my_eng_id"
         entity.engine_computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
+        entity.uod_filename = "my_uod_filename.py"
+        entity.uod_author_name = "my_uod_author_name"
+        entity.uod_author_email = "my_uod_email"
         entity.run_id = 'a run id'
         entity.started_date = datetime.now()
         entity.completed_date = datetime.now()
@@ -256,6 +262,9 @@ class RepositoryTest(unittest.TestCase):
         entity.run_id = 'a run id'
         entity.engine_computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
+        entity.uod_filename = "my_uod_filename.py"
+        entity.uod_author_name = "my_uod_author_name"
+        entity.uod_author_email = "my_uod_email"
         entity.started_date = datetime.now()
         entity.completed_date = datetime.now()
         entity.contributors = ['foo', 'bar']
@@ -283,6 +292,9 @@ class RepositoryTest(unittest.TestCase):
         entity.engine_id = "my_eng_id"
         entity.engine_computer_name = "my_computer_name"
         entity.uod_name = "my_uod_name"
+        entity.uod_filename = "my_uod_filename.py"
+        entity.uod_author_name = "my_uod_author_name"
+        entity.uod_author_email = "my_uod_email"
         entity.contributors = ['foo', 'bar']
         entity.run_id = 'a run id'
         entity.started_date = datetime.now()
