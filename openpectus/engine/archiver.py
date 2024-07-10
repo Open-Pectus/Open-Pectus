@@ -22,8 +22,8 @@ THRESHOLD_SECONDS = 5
 encoding = 'utf-8'
 
 # csv option defaults
-# delimiter = ','     # used in old system
-delimiter = ';'    # makes Excel 365 understand it out of the box
+delimiter = ','     # used in old system
+#delimiter = ';'    # makes Excel 365 understand it out of the box
 quoting = csv.QUOTE_NONE
 escapechar = None
 # Note:  The MarkTag value may include a separator char/string. Make sure that does not conflict with the options here.
@@ -105,7 +105,7 @@ class ArchiverTag(Tag):
 
     def write_runlog(self):
         date_part = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-        runlog_file_path = os.path.join(self.data_path, "archiver-runlog-" + date_part + ".csv")
+        runlog_file_path = os.path.join(self.data_path, "archiver-runlog-" + date_part + ".txt")
 
         logger.info(f"Writing runlog to {runlog_file_path}")
         with open(runlog_file_path, 'xt', newline='', encoding=encoding) as f:
@@ -126,7 +126,7 @@ class ArchiverTag(Tag):
         self.tags = context.tags
         tick_time = time.time()
         date_part = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-        filename = "archiver-" + date_part + ".csv"
+        filename = "archiver-" + date_part + ".txt"
         self.set_value(filename, tick_time)
         self.file_path = os.path.join(self.data_path, filename)
         if self.check_diskspace():
