@@ -1,11 +1,12 @@
-import logging
 import time
 
 from openpectus.lang.exec.tags import Tag, TagDirection
 from openpectus.lang.exec.tag_lifetime import BlockInfo, TagContext
 
-
-MARK_SEPARATOR = ", "
+# Make sure the mark separator does not conflict with ArchiverTag delimiter.
+# This wold make the archiver unable to write its archive file.
+#MARK_SEPARATOR = ", "
+MARK_SEPARATOR = "; "
 
 
 class ReadingTag(Tag):
