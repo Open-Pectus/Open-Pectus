@@ -137,3 +137,4 @@ conda/*
 
 **/pint-cache/*
 *.db
+openpectus/engine/data/*.txt
