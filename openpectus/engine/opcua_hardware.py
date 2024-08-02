@@ -323,14 +323,16 @@ class OPCUA_Hardware(HardwareLayerBase):
         except ConnectionRefusedError:
             logger.error(f"Unable to connect to {self.host}")
             raise HardwareLayerException(f"Unable to connect to {self.host}")
-        logger.info(f"Connected to {self.host}")        
+        logger.info(f"Connected to {self.host}")
         self._query_server_operation_limits()
+        super().connect()
 
     def disconnect(self):
         """ Disconnect hardware. """
         logger.info(f"Disconnecting from {self.host}")
         if self._client:
             self._client.disconnect()
+        super().disconnect()
 
     def __str__(self):
         return f"OPCUA_Hardware(host={self.host})"
