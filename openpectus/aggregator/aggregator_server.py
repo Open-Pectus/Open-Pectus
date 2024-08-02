@@ -10,7 +10,7 @@ from openpectus.aggregator.aggregator_message_handlers import AggregatorMessageH
 from openpectus.aggregator.data import database
 from openpectus.aggregator.deps import _create_aggregator
 from openpectus.aggregator.frontend_publisher import FrontendPublisher
-from openpectus.aggregator.routers import process_unit, recent_runs, auth
+from openpectus.aggregator.routers import process_unit, recent_runs, auth, version
 from openpectus.aggregator.spa import SinglePageApplication
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 
@@ -32,7 +32,7 @@ class AggregatorServer:
         self.publisher = FrontendPublisher()
         self.aggregator = _create_aggregator(self.dispatcher, self.publisher)
         _ = AggregatorMessageHandlers(self.aggregator)
-        self.setup_fastapi([self.dispatcher.router, self.publisher.router])
+        self.setup_fastapi([self.dispatcher.router, self.publisher.router, version.router])
         self.init_db()
 
     def setup_fastapi(self, additional_routers: List[APIRouter] = []):
