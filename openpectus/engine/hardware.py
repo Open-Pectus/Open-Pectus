@@ -110,11 +110,15 @@ class HardwareLayerBase():
             self.write(v, r)
 
     def connect(self):
-        """ Connect to hardware. Throw HardwareLayerException on error. Virtual method. """
+        """ Connect to hardware. Throw HardwareLayerException on error. Virtual method.
+        Implementations must call base method on completed connect.
+        """
         self._is_connected = True
 
     def disconnect(self):
-        """ Connect to hardware. Throw HardwareLayerException on error. Virtual method. """
+        """ Disconnect from hardware. Throw HardwareLayerException on error. Virtual method.
+        Implementations must call base method on completed disconnect.
+        """
         self._is_connected = False
 
     def reconnect(self):
@@ -144,7 +148,7 @@ class HardwareLayerBase():
 
     def validate_online(self):
         """ Perform checks that verify online hardware access. Raise on validation error. Virtual method.
-        
+
         The default implementation checks that all Read registers can be read. Override to add additional
         checks.
         """

@@ -103,8 +103,12 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
 
         # support initialization with connected hwl, which is the default case
         if decorated.is_connected:
+            logger.debug("Initializing recovery with state OK from connected hardware")
             self.state = ErrorRecoveryState.OK
             self.on_ok()
+        else:
+            logger.debug("Initializing recovery from disconnected hardware")
+
 
         try:
             self._setup_decorated_method_forwards()
