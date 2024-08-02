@@ -24,7 +24,7 @@ logger.setLevel(logging.INFO)
 logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.INFO)
 logging.getLogger("openpectus.protocol.engine_dispatcher").setLevel(logging.DEBUG)
 logging.getLogger("openpectus.engine.engine_runner").setLevel(logging.INFO)
-
+logging.getLogger("asyncua.client.ua_client.UaClient").setLevel(logging.WARNING)
 
 def get_args():
     parser = ArgumentParser("Start Pectus Engine")
@@ -69,8 +69,9 @@ async def main_async(args):
     sentry.set_engine_uod(uod)
 
     # wrap hwl with error recovery decorator
-    connection_status_tag = engine._system_tags[SystemTagName.CONNECTION_STATUS]
-    uod.hwl = ErrorRecoveryDecorator(uod.hwl, ErrorRecoveryConfig(), connection_status_tag)
+    #disabled while debugging opcua_hardware
+    #connection_status_tag = engine._system_tags[SystemTagName.CONNECTION_STATUS]
+    #uod.hwl = ErrorRecoveryDecorator(uod.hwl, ErrorRecoveryConfig(), connection_status_tag)
 
     message_builder = EngineMessageBuilder(engine)
     # create runner that orchestrates the error recovery mechanism
