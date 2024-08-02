@@ -4,7 +4,7 @@ name: Combined Workflows
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "410-output-version-number" ]
   pull_request:
     branches: [ "main" ]
 
@@ -96,7 +96,10 @@ jobs:
           path: openpectus/aggregator/frontend-dist
       - name: Build OpenPectus with frontend dist
         run: |
-          python -m build -o openpectus/dist
+#         build openpectus-x.y.z.tar.gz using source version (__version__ in __init__.py)
+          python -m build --sdist -o openpectus/dist
+#         rename output file to openpectus.tar.gz to enable Dockerfile to refer to it without version number
+          mv openpectus/dist/openpectus-*.tar.gz openpectus/dist/openpectus.tar.gz
       - name: Archive production bundle artifact
         uses: actions/upload-artifact@v4
         with:
