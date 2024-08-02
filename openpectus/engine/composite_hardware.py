@@ -88,10 +88,12 @@ class Composite_Hardware(HardwareLayerBase):
     def connect(self):
         for hardware in self._underlying_hardwares():
             hardware.connect()
+        super().connect()
 
     def disconnect(self):
         for hardware in self._underlying_hardwares():
             hardware.disconnect()
+        super().disconnect()
 
     def __str__(self):
         return f"Composite_Hardware(hardwares={self._underlying_hardwares()})"

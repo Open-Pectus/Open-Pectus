@@ -219,6 +219,7 @@ class Labjack_Hardware(HardwareLayerBase):
         logger.info(f"Connected to {self.serial_number}")
         self.setup()
         ljm.registerDeviceReconnectCallback(self._handle, self._reconnect)
+        super().connect()
 
     def disconnect(self):
         """ Disconnect hardware. """
@@ -226,6 +227,7 @@ class Labjack_Hardware(HardwareLayerBase):
         if self._handle:
             ljm.close(self._handle)
             self._handle = None
+        super().disconnect()
 
     def __str__(self):
         return f"Labjack_Hardware(serial_number={self.serial_number})"
