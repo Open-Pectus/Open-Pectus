@@ -94,11 +94,13 @@ jobs:
         with:
           name: frontend-dist
           path: openpectus/aggregator/frontend-dist
-      - name: Build OpenPectus with frontend dist
-        # build openpectus-x.y.z.tar.gz using source version (__version__ in __init__.py)
-        # rename output file to openpectus.tar.gz to enable Dockerfile to refer to it without version number
-        run: |          
-          python -m build --sdist -o openpectus/dist          
+      - name: Build OpenPectus with frontend dist (package openpectus-x.y.z.tar.gz)
+        # build openpectus-x.y.z.tar.gz using version number defined in source (__version__ in __init__.py)
+        run: |
+          python -m build --sdist -o openpectus/dist
+      - name: Rename package to remove version number (openpectus.tar.gz)
+        # rename package file openpectus-x.y.z.tar.gz to openpectus.tar.gz for a Dockerfile independent of version
+        run: |
           mv openpectus/dist/openpectus-*.tar.gz openpectus/dist/openpectus.tar.gz
       - name: Archive production bundle artifact
         uses: actions/upload-artifact@v4
