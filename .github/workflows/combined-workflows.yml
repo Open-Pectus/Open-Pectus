@@ -4,7 +4,7 @@ name: Combined Workflows
 
 on:
   push:
-    branches: [ "main", "410-output-version-number" ]
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
