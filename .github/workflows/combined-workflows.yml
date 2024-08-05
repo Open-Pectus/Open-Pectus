@@ -105,9 +105,10 @@ jobs:
       - name: Add build number to build.json
         env:
           #Version: ${{ github.run_id }}.${{ github.run_number }}.${{ github.run_attempt }}
-          run_attempt: ${{ github.run_attempt }}        
+          build_number: ${{ github.run_number }} . "/" . ${{ github.run_attempt }}
         run: |
-          echo "{\"build_number\": \"$run_attempt\"}" > openpectus/build.json
+          echo "{\"build_number\": \"$build_number\"}" > openpectus/build.json
+          echo "Build number: $build_number"
       - name: Build OpenPectus with frontend dist (package openpectus-x.y.z.tar.gz)
         # build openpectus-x.y.z.tar.gz using version number defined in source (__version__ in __init__.py)
         run: |
