@@ -94,14 +94,6 @@ jobs:
         with:
           name: frontend-dist
           path: openpectus/aggregator/frontend-dist
-
-      - name: Output Run ID
-        run: echo ${{ github.run_id }}
-      - name: Output Run Number
-        run: echo ${{ github.run_number }}
-      - name: Output Run Attempt
-        run: echo ${{ github.run_attempt }}
-
       - name: Add build number to build.json
         env:
           #Version: ${{ github.run_id }}.${{ github.run_number }}.${{ github.run_attempt }}
