@@ -105,7 +105,7 @@ jobs:
       - name: Add build number to build.json
         env:
           #Version: ${{ github.run_id }}.${{ github.run_number }}.${{ github.run_attempt }}
-          build_number: ${{ github.run_number/github.run_attempt }}
+          build_number: ${{ github.run_number }}/${{ github.run_attempt }}
         run: |
           echo "{\"build_number\": \"$build_number\"}" > openpectus/build.json
           echo "Build number: $build_number"
