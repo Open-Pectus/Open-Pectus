@@ -4,7 +4,7 @@ from sentry_sdk.integrations.starlette import StarletteIntegration
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 
-from openpectus import __version__ as openpectus_version
+from openpectus import __version__ as openpectus_version, build_number
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 
 # Sentry docs: https://docs.sentry.io/platforms/python
@@ -69,6 +69,7 @@ def init_aggregator(event_level_name: str):
     )
     # this seems to attach component to all events
     sentry_sdk.set_tag("component", "aggregator")
+    sentry_sdk.set_tag("build_number", build_number)
 
     with sentry_sdk.new_scope():
         sentry_sdk.capture_message("Aggregator sentry logging initialized")
@@ -96,6 +97,7 @@ def init_engine(event_level_name: str):
     )
     # this seems to attach component to all events
     sentry_sdk.set_tag("component", "engine")
+    sentry_sdk.set_tag("build_number", build_number)
 
     with sentry_sdk.new_scope():
         sentry_sdk.capture_message("Engine sentry logging initialized")
