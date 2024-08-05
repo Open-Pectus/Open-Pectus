@@ -6,7 +6,7 @@ from alembic import command
 from alembic.config import Config
 from openpectus import log_setup_colorlog
 from openpectus.aggregator.aggregator_server import AggregatorServer
-from openpectus import sentry, __version__
+from openpectus import sentry, __version__, build_number
 
 # - add lsp thingys
 # - start (manage) lsp server instance for each client
@@ -36,7 +36,7 @@ def get_args():
 def main():
     args = get_args()
     title = "OpenPectus Aggregator"
-    print(f"*** {title} v. {__version__} ***")
+    print(f"*** {title} v. {__version__}, build: {build_number} ***")
     sentry.init_aggregator(args.sentry_event_level)
     alembic_ini_file_path = os.path.join(os.path.dirname(__file__), "alembic.ini")
     command.upgrade(Config(alembic_ini_file_path), 'head')

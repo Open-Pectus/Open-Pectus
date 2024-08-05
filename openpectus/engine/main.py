@@ -5,7 +5,7 @@ import importlib
 from typing import Literal
 
 
-from openpectus import log_setup_colorlog, sentry, __version__
+from openpectus import log_setup_colorlog, sentry, __version__, build_number
 from openpectus.engine.engine import Engine
 from openpectus.engine.engine_message_handlers import EngineMessageHandlers
 from openpectus.engine.engine_message_builder import EngineMessageBuilder
@@ -169,7 +169,7 @@ def validate_and_exit(uod_name: str):
 
 
 def main():
-    print(f"OpenPectus Engine v. {__version__}")
+    print(f"OpenPectus Engine v. {__version__}, build: {build_number}")
     args = get_args()
     sentry.init_engine(args.sentry_event_level)
     if args.validate:
