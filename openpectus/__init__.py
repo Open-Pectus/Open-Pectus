@@ -12,7 +12,7 @@ import colorlog
 build_number = "build_number not set"
 
 path = os.path.dirname(os.path.realpath(__file__))
-with open(f"{path}\\build.json") as file:
+with open(os.path.join(path, "build.json")) as file:
     dct = json.load(file)
     build_number = dct["build_number"]
 
