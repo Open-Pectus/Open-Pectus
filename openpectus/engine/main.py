@@ -40,9 +40,9 @@ def get_args():
     return parser.parse_args()
 
 
-engine: Engine
-runner: EngineRunner
-reporter: EngineMessageBuilder
+engine: Engine | None = None
+runner: EngineRunner | None = None
+
 
 def run_validations(uod: UnitOperationDefinitionBase) -> bool:
     try:
@@ -58,8 +58,13 @@ def run_validations(uod: UnitOperationDefinitionBase) -> bool:
         return False
 
 async def main_async(args):
-    global engine, runner, reporter
-    uod = create_uod(args.uod)
+    global engine, runner
+    try:
+        uod = create_uod(args.uod)
+    except Exception as ex:
+        logger.error(f"Failed to create uod: {ex}")
+        return
+
     engine = Engine(uod, tick_interval=0.1, enable_archiver=True)
     dispatcher = EngineDispatcher(f"{args.aggregator_hostname}:{args.aggregator_port}", uod.options)
 
@@ -83,6 +88,7 @@ async def main_async(args):
 
     async def on_steady_state():
         logger.info("Starting engine on first steady-state")
+        assert engine is not None, "Engine was unexpectedly None on first stady_state"
         engine.run()
 
     runner.first_steady_state_callback = on_steady_state
@@ -91,7 +97,7 @@ async def main_async(args):
 
 
 async def close_async():
-    global engine, runner, reporter
+    global engine, runner
     logger.debug("Stopping engine components")
     if engine is not None:
         engine.stop()
@@ -177,12 +183,12 @@ def main():
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(main_async(args))
-        logger.info("Loop terminated - should only occur on stop")
+        logger.info("Main loop completed")
     except KeyboardInterrupt:
         logger.info("User requested engine to stop")
         loop.run_until_complete(close_async())
     except Exception:
-        logger.error("Unhandled exception in main. Stopping", exc_info=True)
+        logger.error("Unhandled exception in main. Stopping.", exc_info=True)
         loop.run_until_complete(close_async())
 
     logger.info("Engine stopped")
