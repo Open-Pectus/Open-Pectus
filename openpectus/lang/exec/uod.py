@@ -458,6 +458,22 @@ class UodBuilder():
         self.instrument = instrument_name
         return self
 
+    def with_hardware_none(self) -> UodBuilder:
+        """ Use no hardware. Mainly used for testing. """
+        return self.with_hardware(NullHardware())
+
+    def with_hardware_opcua(self, host: str) -> UodBuilder:
+        """ Use OPCUA hardware """
+        from openpectus.engine.opcua_hardware import OPCUA_Hardware
+        hwl = OPCUA_Hardware(host)
+        return self.with_hardware(hwl)
+
+    def with_hardware_labjack(self, serial_number: str | None = None) -> UodBuilder:
+        """ Use LabJack hardware """
+        from openpectus.engine.labjack_hardware import Labjack_Hardware
+        hwl = Labjack_Hardware(serial_number)
+        return self.with_hardware(hwl)
+
     def with_hardware(self, hwl: HardwareLayerBase) -> UodBuilder:
         self.hwl = hwl
         return self
@@ -481,10 +497,6 @@ class UodBuilder():
         if name in self.hwl.registers.keys():
             raise ValueError(f"Register {name} already defined")
         self.hwl.registers[name] = Register(name, direction, **options)
-        return self
-
-    def with_no_hardware(self):
-        self.hwl = NullHardware()
         return self
 
     def with_tag(self, tag: Tag) -> UodBuilder:
