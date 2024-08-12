@@ -89,13 +89,13 @@ class TestCompositeHardware(unittest.TestCase):
             pass
 
         self.assertListEqual(global_list, [
-                                          ("CONNECT", "Test_Hardware(0)"),
-                                          ("CONNECT", "Test_Hardware(1)"),
-                                          ("CONNECT", "Test_Hardware(2)"),
-                                          ("DISCONNECT", "Test_Hardware(0)"),
-                                          ("DISCONNECT", "Test_Hardware(1)"),
-                                          ("DISCONNECT", "Test_Hardware(2)")
-                                          ])
+            ("CONNECT", "Test_Hardware(0)"),
+            ("CONNECT", "Test_Hardware(1)"),
+            ("CONNECT", "Test_Hardware(2)"),
+            ("DISCONNECT", "Test_Hardware(0)"),
+            ("DISCONNECT", "Test_Hardware(1)"),
+            ("DISCONNECT", "Test_Hardware(2)")
+        ])
 
     def test_read_register(self):
         global global_list
@@ -108,14 +108,14 @@ class TestCompositeHardware(unittest.TestCase):
 
         self.assertEqual(read, 10)
         self.assertListEqual(global_list, [
-                                          ("CONNECT", "Test_Hardware(0)"),
-                                          ("CONNECT", "Test_Hardware(1)"),
-                                          ("CONNECT", "Test_Hardware(2)"),
-                                          ("READ", "Test_Hardware(1)", "Register(name=Reg 1_0)"),
-                                          ("DISCONNECT", "Test_Hardware(0)"),
-                                          ("DISCONNECT", "Test_Hardware(1)"),
-                                          ("DISCONNECT", "Test_Hardware(2)")
-                                          ])
+            ("CONNECT", "Test_Hardware(0)"),
+            ("CONNECT", "Test_Hardware(1)"),
+            ("CONNECT", "Test_Hardware(2)"),
+            ("READ", "Test_Hardware(1)", "Register(name=Reg 1_0,direction=RegisterDirection.Both)"),
+            ("DISCONNECT", "Test_Hardware(0)"),
+            ("DISCONNECT", "Test_Hardware(1)"),
+            ("DISCONNECT", "Test_Hardware(2)")
+        ])
 
     def test_write_register(self):
         global global_list
@@ -127,14 +127,14 @@ class TestCompositeHardware(unittest.TestCase):
             composite_hardware.write(10.1, registers["Reg 2_1"])
 
         self.assertListEqual(global_list, [
-                                          ("CONNECT", "Test_Hardware(0)"),
-                                          ("CONNECT", "Test_Hardware(1)"),
-                                          ("CONNECT", "Test_Hardware(2)"),
-                                          ("WRITE", "Test_Hardware(2)", "Register(name=Reg 2_1)", 10.1),
-                                          ("DISCONNECT", "Test_Hardware(0)"),
-                                          ("DISCONNECT", "Test_Hardware(1)"),
-                                          ("DISCONNECT", "Test_Hardware(2)")
-                                          ])
+            ("CONNECT", "Test_Hardware(0)"),
+            ("CONNECT", "Test_Hardware(1)"),
+            ("CONNECT", "Test_Hardware(2)"),
+            ("WRITE", "Test_Hardware(2)", "Register(name=Reg 2_1,direction=RegisterDirection.Both)", 10.1),
+            ("DISCONNECT", "Test_Hardware(0)"),
+            ("DISCONNECT", "Test_Hardware(1)"),
+            ("DISCONNECT", "Test_Hardware(2)")
+        ])
 
     def test_read_multiple_registers(self):
         global global_list
@@ -150,18 +150,20 @@ class TestCompositeHardware(unittest.TestCase):
                                                                                "Reg 1_1"]])
 
         self.assertListEqual(read, [21, 0, 1, 20, 11])
-        self.assertListEqual(global_list, [("CONNECT", "Test_Hardware(0)"),
-                                           ("CONNECT", "Test_Hardware(1)"),
-                                           ("CONNECT", "Test_Hardware(2)"),
-                                           ("READ", "Test_Hardware(2)",
-                                           "[Register(name=Reg 2_1), Register(name=Reg 2_0)]"),
-                                           ("READ", "Test_Hardware(0)",
-                                           "[Register(name=Reg 0_0), Register(name=Reg 0_1)]"),
-                                           ("READ", "Test_Hardware(1)",
-                                           "[Register(name=Reg 1_1)]"),
-                                           ("DISCONNECT", "Test_Hardware(0)"),
-                                           ("DISCONNECT", "Test_Hardware(1)"),
-                                           ("DISCONNECT", "Test_Hardware(2)")])
+        self.assertListEqual(global_list, [
+            ("CONNECT", "Test_Hardware(0)"),
+            ("CONNECT", "Test_Hardware(1)"),
+            ("CONNECT", "Test_Hardware(2)"),
+            ("READ", "Test_Hardware(2)",
+                "[Register(name=Reg 2_1,direction=RegisterDirection.Both), Register(name=Reg 2_0,direction=RegisterDirection.Both)]"),
+            ("READ", "Test_Hardware(0)",
+                "[Register(name=Reg 0_0,direction=RegisterDirection.Both), Register(name=Reg 0_1,direction=RegisterDirection.Both)]"),
+            ("READ", "Test_Hardware(1)",
+                "[Register(name=Reg 1_1,direction=RegisterDirection.Both)]"),
+            ("DISCONNECT", "Test_Hardware(0)"),
+            ("DISCONNECT", "Test_Hardware(1)"),
+            ("DISCONNECT", "Test_Hardware(2)")
+        ])
 
     def test_write_multiple_registers(self):
         global global_list
@@ -178,18 +180,20 @@ class TestCompositeHardware(unittest.TestCase):
             vals = [1, 2, 3, 4, 5,]
             composite_hardware.write_batch(vals, regs)
 
-        self.assertListEqual(global_list, [("CONNECT", "Test_Hardware(0)"),
-                                           ("CONNECT", "Test_Hardware(1)"),
-                                           ("CONNECT", "Test_Hardware(2)"),
-                                           ("WRITE", "Test_Hardware(2)",
-                                           "[Register(name=Reg 2_1), Register(name=Reg 2_0)]", "[1, 4]"),
-                                           ("WRITE", "Test_Hardware(0)",
-                                           "[Register(name=Reg 0_0), Register(name=Reg 0_1)]", "[2, 3]"),
-                                           ("WRITE", "Test_Hardware(1)",
-                                           "[Register(name=Reg 1_1)]", "[5]"),
-                                           ("DISCONNECT", "Test_Hardware(0)"),
-                                           ("DISCONNECT", "Test_Hardware(1)"),
-                                           ("DISCONNECT", "Test_Hardware(2)")])
+        self.assertListEqual(global_list, [
+            ("CONNECT", "Test_Hardware(0)"),
+            ("CONNECT", "Test_Hardware(1)"),
+            ("CONNECT", "Test_Hardware(2)"),
+            ("WRITE", "Test_Hardware(2)",
+                "[Register(name=Reg 2_1,direction=RegisterDirection.Both), Register(name=Reg 2_0,direction=RegisterDirection.Both)]", "[1, 4]"),
+            ("WRITE", "Test_Hardware(0)",
+                "[Register(name=Reg 0_0,direction=RegisterDirection.Both), Register(name=Reg 0_1,direction=RegisterDirection.Both)]", "[2, 3]"),
+            ("WRITE", "Test_Hardware(1)",
+                "[Register(name=Reg 1_1,direction=RegisterDirection.Both)]", "[5]"),
+            ("DISCONNECT", "Test_Hardware(0)"),
+            ("DISCONNECT", "Test_Hardware(1)"),
+            ("DISCONNECT", "Test_Hardware(2)")
+        ])
 
     def test_missing_hardware_layer(self):
         global global_list
@@ -199,7 +203,10 @@ class TestCompositeHardware(unittest.TestCase):
 
         with self.assertRaises(HardwareLayerException) as context:
             composite_hardware.validate_offline()
-        self.assertEqual("Hardware layer undefined for register Register(name=Reg 0_1).", str(context.exception))
+        self.assertEqual(
+            "Hardware layer undefined for register Register(name=Reg 0_1,direction=RegisterDirection.Both).",
+            str(context.exception)
+        )
 
     def test_hardware_layer_is_itself_composite(self):
         global global_list
@@ -210,10 +217,15 @@ class TestCompositeHardware(unittest.TestCase):
 
         with self.assertRaises(HardwareLayerException) as context:
             composite_hardware_A.validate_offline()
-        self.assertEqual(("Hardware layer Composite_Hardware(hardwares=[Test_Hardware(10), "
-                          "Test_Hardware(11), Test_Hardware(12)]) specified for register "
-                          "Register(name=Reg 0_1) is itself a composite hardware layer. "
-                          "This is not allowed."), str(context.exception))
+        self.assertEqual(
+            (
+                "Hardware layer Composite_Hardware(hardwares=[Test_Hardware(10), "
+                "Test_Hardware(11), Test_Hardware(12)]) specified for register "
+                "Register(name=Reg 0_1,direction=RegisterDirection.Both) is itself a composite hardware layer. "
+                "This is not allowed."
+            ),
+            str(context.exception)
+        )
 
 
 if __name__ == "__main__":
