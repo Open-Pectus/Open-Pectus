@@ -415,6 +415,7 @@ class UodCommandBuilder():
 
 
 class UodBuilder():
+    """ Provides a builder api to define a Unit Operation Definition """
     def __init__(self) -> None:
         self.instrument: str = ""
         self.hwl: HardwareLayerBase | None = None
@@ -796,8 +797,11 @@ class RegexNamedArgumentParser():
 
 # Common regular expressions for use with RegexNamedArgumentParser
 
-def RegexNumberWithUnit(units: list[str] | None, non_negative: bool = False) -> str:
-    """ Parses a number with a unit to arguments `number` and `number_unit`. """
+def RegexNumber(units: list[str] | None, non_negative: bool = False) -> str:
+    """ Parses a number with optional unit to arguments `number` and optionally `number_unit`.
+
+    `number_unit` is only provided if one or more units are given.
+    """
     sign_part = "" if non_negative else "-?"
     unit_part = " ?(?P<number_unit>" + "|".join(re.escape(unit).replace(r"/", r"\/") for unit in units) + ")" \
         if units else ""

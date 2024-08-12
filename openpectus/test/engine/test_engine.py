@@ -11,7 +11,7 @@ from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 import openpectus.protocol.models as Mdl
 import pint
 from openpectus.engine.engine import Engine
-from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
+from openpectus.engine.hardware import HardwareLayerBase, Register
 from openpectus.engine.models import EngineCommandEnum, MethodStatusEnum, SystemStateEnum, SystemTagName
 from openpectus.lang.exec.runlog import RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import Tag, TagDirection
@@ -21,7 +21,7 @@ from openpectus.lang.exec.uod import (
     UodCommand,
     UodBuilder,
     RegexNamedArgumentParser,
-    RegexNumberWithUnit,
+    RegexNumber,
 )
 from openpectus.test.engine.utility_methods import (
     continue_engine, run_engine,
@@ -87,11 +87,10 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_filename(__file__)
         .with_hardware(TestHW())
         .with_location("Test location")
-        .with_hardware_register(
-            "FT01", RegisterDirection.Both, path="Objects;2:System;2:FT01")
+        .with_hardware_register("FT01", "Both", path="Objects;2:System;2:FT01")
         .with_hardware_register(
             "Reset",
-            RegisterDirection.Both,
+            "Both",
             path="Objects;2:System;2:RESET",
             from_tag=lambda x: 1 if x == "Reset" else 0,
             to_tag=lambda x: "Reset" if x == 1 else "N/A",
@@ -108,7 +107,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_tag(Tag("CmdWithRegex_Area", value=""))
         .with_command_regex_arguments(
             name="CmdWithRegexArgs",
-            arg_parse_regex=RegexNumberWithUnit(units=['m2']),
+            arg_parse_regex=RegexNumber(units=['m2']),
             exec_fn=cmd_regex)
     )
     uod = builder.build()

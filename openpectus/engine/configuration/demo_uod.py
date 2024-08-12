@@ -2,10 +2,13 @@ import math
 from time import time
 from typing import Any
 
-from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
-import openpectus.lang.exec.tags_impl as tags
-from openpectus.lang.exec.uod import RegexNumberWithUnit, UnitOperationDefinitionBase, UodCommand, UodBuilder
-from openpectus.protocol.models import PlotConfiguration, SubPlot, PlotAxis, PlotColorRegion
+from openpectus.engine.uod_builder_api import (
+    UnitOperationDefinitionBase, UodBuilder, UodCommand,
+    tags,
+    PlotConfiguration, SubPlot, PlotAxis, PlotColorRegion,
+    RegexNumber,
+    HardwareLayerBase, Register,  # special import required by custom hardware, DemoHardware
+)
 
 
 def create() -> UnitOperationDefinitionBase:
@@ -105,7 +108,7 @@ def create() -> UnitOperationDefinitionBase:
         .with_process_value(tag_name="System State")
         .with_command_regex_arguments(
             name="CmdWithRegexArgs",
-            arg_parse_regex=RegexNumberWithUnit(units=None),
+            arg_parse_regex=RegexNumber(units=None),
             #arg_parse_regex=RegexNumberWithUnit(units=['kg']),
             exec_fn=cmd_regex)
         .with_plot_configuration(get_plot_configuration())
