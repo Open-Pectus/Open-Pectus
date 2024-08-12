@@ -20,10 +20,10 @@ def parse_as_message(cmd: Dto.ExecutableCommand, readings: list[Mdl.ReadingInfo]
             raise ValueError("Unit Button commands must be title cased")
         return AM.InvokeCommandMsg(name=code)
 
-    return parse_advanced_command(cmd, readings)
+    return _parse_advanced_command(cmd, readings)
 
 
-def parse_advanced_command(cmd: Dto.ExecutableCommand, readings: list[Mdl.ReadingInfo]) -> AM.AggregatorMessage:
+def _parse_advanced_command(cmd: Dto.ExecutableCommand, readings: list[Mdl.ReadingInfo]) -> AM.AggregatorMessage:
     if cmd.value is None:
         return AM.InjectCodeMsg(pcode=cmd.command)
 
