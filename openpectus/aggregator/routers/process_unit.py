@@ -128,7 +128,7 @@ async def execute_command(unit_id: str, command: Dto.ExecutableCommand, agg: Agg
     except Exception:
         logger.error(f"Parse error for command: {command}", exc_info=True)
         return Dto.ServerErrorResponse(message="Message parse error")
-    logger.info(f"Sending msg '{str(msg)}' of type {type(msg)} to client '{unit_id}'")
+    logger.info(f"Sending msg '{str(msg)}' of type {type(msg)} to engine '{unit_id}'")
     try:
         await agg.dispatcher.rpc_call(unit_id, msg)
     except Exception:

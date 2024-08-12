@@ -41,7 +41,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_instrument("TestUod")
         .with_author("Test Author", "test@openpectus.org")
         .with_filename(__file__)
-        .with_no_hardware()
+        .with_hardware_none()
         .with_location("Test location")
         # Readings
         .with_tag(Tag(name="counter", value=0))

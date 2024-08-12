@@ -33,7 +33,7 @@ class Register():
         return self._options
 
     def __str__(self):
-        return f"Register(name={self.name})"
+        return f"Register(name={self.name},direction={self.direction})"
 
     def __repr__(self):
         return str(self)
@@ -156,6 +156,28 @@ class HardwareLayerBase():
             if RegisterDirection.Read in r.direction:
                 _ = self.read(r)
 
+    def show_online_register_details(self):
+        """ Displays online register details to use in uod definition. """
+        print("----- Register details -----")
+        for r in self.registers.values():
+            print(r)
+            if RegisterDirection.Read in r.direction:
+                try:
+                    val = self.read(r)
+                    print("Read successful")
+                    print(f"Raw value read: '{val}', raw value type: {type(val)}")
+                    if "to_tag" in r.options:
+                        print("Register has 'to_tag' option defined")
+                        try:
+                            val = r.options["to_tag"](val)
+                            print(f"'to_tag' value: '{val}', 'to_tag' value type: {type(val)}")
+                        except Exception as ex:
+                            print(f"Exception was raised trying to evaluate the to_tag option function: {ex}")
+                except Exception:
+                    logger.debug(f"Read of register '{r.name}' failed")
+                    logger.error("Read exception", exc_info=True)
+                print("")
+        print("----------")
 
 class NullHardware(HardwareLayerBase):
     """ Represents no hardware. Used by tests. """

@@ -3,18 +3,21 @@ from __future__ import annotations
 from inspect import _ParameterKind, Parameter
 import logging
 import re
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Literal, overload
 
 from openpectus.engine.commands import ContextEngineCommand, CommandArgs
 from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.errors import UodValidationError
-from openpectus.lang.exec.readings import Reading, ReadingCollection
+from openpectus.lang.exec.readings import Reading, ReadingCollection, ReadingWithChoice, ReadingWithEntry
 from openpectus.lang.exec.tags import TAG_UNITS, SystemTagName, Tag, TagCollection
 from openpectus.lang.exec.tags_impl import AccumulatorBlockTag, AccumulatedColumnVolume, AccumulatorTag
-from openpectus.protocol.models import PlotConfiguration
+from openpectus.protocol.models import EntryDataType, PlotConfiguration
 
 logger = logging.getLogger(__name__)
+
+
+RegisterDirectionArgument = Literal["Read", "Write", "Both"]
 
 
 class UnitOperationDefinitionBase:
@@ -61,10 +64,6 @@ class UnitOperationDefinitionBase:
             'uod_filename': self.filename,
             'location': self.location
         }
-
-    def define_register(self, name: str, direction: RegisterDirection, **options):
-        assert isinstance(self.hwl, HardwareLayerBase)
-        self.hwl.registers[name] = Register(name, direction, **options)
 
     def validate_configuration(self):
         """ Validates these areas:
@@ -416,6 +415,7 @@ class UodCommandBuilder():
 
 
 class UodBuilder():
+    """ Provides a builder api to define a Unit Operation Definition """
     def __init__(self) -> None:
         self.instrument: str = ""
         self.hwl: HardwareLayerBase | None = None
@@ -458,6 +458,22 @@ class UodBuilder():
         self.instrument = instrument_name
         return self
 
+    def with_hardware_none(self) -> UodBuilder:
+        """ Use no hardware. Mainly used for testing. """
+        return self.with_hardware(NullHardware())
+
+    def with_hardware_opcua(self, host: str) -> UodBuilder:
+        """ Use OPCUA hardware """
+        from openpectus.engine.opcua_hardware import OPCUA_Hardware
+        hwl = OPCUA_Hardware(host)
+        return self.with_hardware(hwl)
+
+    def with_hardware_labjack(self, serial_number: str | None = None) -> UodBuilder:
+        """ Use LabJack hardware """
+        from openpectus.engine.labjack_hardware import Labjack_Hardware
+        hwl = Labjack_Hardware(serial_number)
+        return self.with_hardware(hwl)
+
     def with_hardware(self, hwl: HardwareLayerBase) -> UodBuilder:
         self.hwl = hwl
         return self
@@ -475,20 +491,46 @@ class UodBuilder():
         self.location = location
         return self
 
-    def with_hardware_register(self, name: str, direction: RegisterDirection, **options) -> UodBuilder:
+    def with_hardware_register(self, name: str, direction: RegisterDirectionArgument = "Read", **options) -> UodBuilder:
+        """ Define a hardware register.
+
+        Parameters:
+            name (str):
+                The register name. Used to match the register to a tag.
+            direction:
+                Specify whether the register is read, written or both
+            options:
+                Specify additional named options. Specific hardwares may require certain options,
+                e.g. the opcua hardware requires a 'path' option.
+
+                Two special options are callbacks named 'to_tag' and 'from_tag'. If specified, these callbacks
+                convert between hardware values and tag values.
+        """
+        if direction == "Read":
+            _direction = RegisterDirection.Read
+        elif direction == "Write":
+            _direction = RegisterDirection.Write
+        else:
+            _direction = RegisterDirection.Both
+        register = Register(name, _direction, **options)
+        return self._with_hardware_register(register)
+
+    def _with_hardware_register(self, register: Register) -> UodBuilder:
         if self.hwl is None:
             raise ValueError("HardwareLayber must be defined before defining a register")
-        if name in self.hwl.registers.keys():
-            raise ValueError(f"Register {name} already defined")
-        self.hwl.registers[name] = Register(name, direction, **options)
-        return self
-
-    def with_no_hardware(self):
-        self.hwl = NullHardware()
+        if register.name is None or register.name == "":
+            raise ValueError("Register name must be non-empty")
+        if register.name in self.hwl.registers.keys():
+            raise ValueError(f"Register {register.name} is already defined")
+        self.hwl.registers[register.name] = register
         return self
 
     def with_tag(self, tag: Tag) -> UodBuilder:
-        # TODO Replace Tag as input with TagBuilder
+        # TODO Replace Tag as input with specific named variations
+        # eg. with_tag_choice, with_tag_reading, with_tag
+        return self._with_tag(tag)
+
+    def _with_tag(self, tag: Tag) -> UodBuilder:
         if self.tags.has(tag.name):
             raise ValueError(f"Duplicate tag name: {tag.name}")
         self.tags.add(tag)
@@ -501,8 +543,8 @@ class UodBuilder():
         volume_units = TAG_UNITS["volume"]
         if totalizer.unit not in volume_units:
             raise ValueError(f"The totalizer tag '{totalizer_tag_name}' must have a volume unit")
-        self.with_tag(AccumulatorTag(name=SystemTagName.ACCUMULATED_VOLUME, totalizer=totalizer))
-        self.with_tag(AccumulatorBlockTag(name=SystemTagName.BLOCK_VOLUME, totalizer=totalizer))
+        self._with_tag(AccumulatorTag(name=SystemTagName.ACCUMULATED_VOLUME, totalizer=totalizer))
+        self._with_tag(AccumulatorBlockTag(name=SystemTagName.BLOCK_VOLUME, totalizer=totalizer))
         self.with_base_unit_provider(volume_units, SystemTagName.ACCUMULATED_VOLUME, SystemTagName.BLOCK_VOLUME)
         return self
 
@@ -513,9 +555,9 @@ class UodBuilder():
             raise ValueError(f"The specified totalizer tag name '{totalizer_tag_name}' was not found")
         cv = self.tags[cv_tag_name]
         totalizer = self.tags[totalizer_tag_name]
-        self.with_tag(AccumulatedColumnVolume(SystemTagName.ACCUMULATED_CV, cv, totalizer))
+        self._with_tag(AccumulatedColumnVolume(SystemTagName.ACCUMULATED_CV, cv, totalizer))
         acc_cv = self.tags[SystemTagName.ACCUMULATED_CV]
-        self.with_tag(AccumulatorBlockTag(SystemTagName.BLOCK_CV, acc_cv))
+        self._with_tag(AccumulatorBlockTag(SystemTagName.BLOCK_CV, acc_cv))
         self.with_base_unit_provider(["CV"], SystemTagName.ACCUMULATED_CV, SystemTagName.BLOCK_CV)
         return self
 
@@ -614,13 +656,72 @@ class UodBuilder():
         return self
 
     def with_command_overlap(self, command_names: list[str]) -> UodBuilder:
+        """ Specify that the given commands names overlap, i.e. at most one can run at a time. """
         if len(command_names) < 2:
             raise ValueError("To define command overlap, at least two command names are required")
         self.overlapping_command_names_lists.append(command_names)
         return self
 
-    def with_process_value(self, pv: Reading) -> UodBuilder:
-        self.readings.add(pv)
+    def with_process_value(self, tag_name: str) -> UodBuilder:
+        """ Add process value that displays the given tag in the UI. """
+        reading = Reading(tag_name=tag_name)
+        return self._with_process_value(reading)
+
+    def with_process_value_entry(
+            self,
+            tag_name: str,
+            entry_data_type: EntryDataType = "auto",
+            execute_command_name: str | None = None
+            ) -> UodBuilder:
+        """ Add process value for the given tag and enable setting its value by typing in a value in the UI.
+
+        Parameters:
+            tag_name: str
+                The tag to display
+            entry_data_type: "str" | "int" | "float" | "auto", optional, default="auto"
+                The data type to display in the UI. Default is "auto" which uses the type of the tag's value.
+                The "auto" value requires that the tag has a default value with the correct type.
+            execute_command_name: str: optional
+                The command to execute to 'set the process value'. In principle, this can be any pcode command that takes a
+                single argument as given by the user. However, the intension is that the command 'sets the process value',
+                probably by writing the value to the register backing the tag.
+
+                If not specified, it defaults to the tag name, assuming that there is a command with the same name as
+                the tag that takes a single argument.
+        """
+        reading = ReadingWithEntry(
+            tag_name=tag_name,
+            entry_data_type=entry_data_type,
+            execute_command_name=execute_command_name)
+        return self._with_process_value(reading)
+
+    def with_process_value_choice(self, tag_name: str, command_options: dict[str, str] | None = None) -> UodBuilder:
+        """ Add process value for the given tag and enable command choices.
+
+        Parameters:
+            tag_name: str
+                The tag to display. The tag's choices are also used as commands, unless
+                command_options are specified.
+            command_options: optional
+                Dictionary that maps command names to their pcode implementation.
+                If not specified, the tag's choices are used as both names and
+                pcode implementation. If specified, the tag's choices are not used and the
+                tag does not need to have choices defined.
+        """
+        if not self.tags.has(tag_name):
+            raise ValueError(f"Cannot add process value choice for tag name {tag_name}. The tag name was not found")
+        tag = self.tags.get(tag_name)
+        if command_options is not None:
+            reading = ReadingWithChoice(tag_name, command_options)
+        elif tag.choices is None or len(tag.choices) == 0:
+            raise ValueError(f"Cannot add process value choice for tag name {tag_name}. " +
+                             "The tag has no choices defined and no options were given")
+        else:
+            reading = ReadingWithChoice(tag_name)
+        return self._with_process_value(reading)
+
+    def _with_process_value(self, reading: Reading) -> UodBuilder:
+        self.readings.add(reading)
         return self
 
     def with_plot_configuration(self, plot_configuration: PlotConfiguration):
@@ -696,8 +797,11 @@ class RegexNamedArgumentParser():
 
 # Common regular expressions for use with RegexNamedArgumentParser
 
-def RegexNumberWithUnit(units: list[str] | None, non_negative: bool = False) -> str:
-    """ Parses a number with a unit to arguments `number` and `number_unit`. """
+def RegexNumber(units: list[str] | None, non_negative: bool = False) -> str:
+    """ Parses a number with optional unit to arguments `number` and optionally `number_unit`.
+
+    `number_unit` is only provided if one or more units are given.
+    """
     sign_part = "" if non_negative else "-?"
     unit_part = " ?(?P<number_unit>" + "|".join(re.escape(unit).replace(r"/", r"\/") for unit in units) + ")" \
         if units else ""

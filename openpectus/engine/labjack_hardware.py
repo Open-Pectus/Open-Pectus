@@ -83,7 +83,7 @@ ljm.loadConstantsFromFile(constants_file)
 
 
 class Labjack_Hardware(HardwareLayerBase):
-    """ Represents OPCUA hardware layer. """
+    """ Represents LabJack hardware layer. """
     def __init__(self, serial_number: Optional[str] = None) -> None:
         super().__init__()
         self.serial_number: str = serial_number if serial_number else "ANY"

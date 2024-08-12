@@ -19,19 +19,21 @@ class Reading():
     """ Defines a reading that is displayed to the frontend user as a Process Value.
 
     It is typically defined by matching it with a tag to display that tag's value and with one or
-    more commands to allow the user to invoke these commands.
+    more commands to allow the user to invoke these commands. The cases where commands are added are
+    handled by Reading subclasses.
 
     execute_command_name is the name of the command to execute when the command is posted from the
     frontend. It defaults to tag_name which is usually fine. It can be set to something else if so
     desired.
+
+    Question - is execute_command_name ever used in this class? Seems it is only used by ReadingWithEntry
     """
 
-    def __init__(self, tag_name: str, execute_command_name: str | None = None) -> None:
+    def __init__(self, tag_name: str) -> None:
         if tag_name is None or tag_name == "":
             raise ValueError("tag_name in Reading must not be empty")
         self.discriminator = "reading"
         self.tag_name = tag_name
-        self.execute_command_name = execute_command_name or tag_name
         self.commands : list[ReadingCommand] = []
         self.tag: Tag | None = None
         self.valid_value_units: list[str] | None = None
@@ -78,15 +80,15 @@ class ReadingWithEntry(Reading):
         """ Create a reading with a command that takes an input value from the user.
 
         Parameters:
-
             tag_name:
-                The tag to get the value from
+                The tag to display
             entry_data_type: optional, default="auto"
                 The data type to display in the UI. Default is auto which uses the type of the tag's value.
             execute_command_name: optional
                 The command name. Defaults to the name of the tag.
         """
-        super().__init__(tag_name, execute_command_name)
+        super().__init__(tag_name)
+        self.execute_command_name = execute_command_name or tag_name
         self.discriminator = "reading_with_entry"
         self.entry_data_type = entry_data_type
 
@@ -103,9 +105,8 @@ class ReadingWithChoice(Reading):
         """ Create a reading with command choices.
 
         Parameters:
-
             tag_name: str
-                The tag to get value from. The tag's choices are also used as commands, unless
+                The tag to display. The tag's choices are used as commands, unless
                 command_options are specified.
             command_options: optional
                 Dictionary that maps command names to their pcode implementation.

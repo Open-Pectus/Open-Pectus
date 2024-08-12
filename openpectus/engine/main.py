@@ -33,7 +33,11 @@ def get_args():
     parser.add_argument("-ap", "--aggregator_port", required=False, default="9800",
                         help="Aggregator websocket port number. Default is 9800")
     parser.add_argument("-uod", "--uod", required=False, default="demo_uod", help="The UOD to use")
-    parser.add_argument("-validate", "--validate", action=BooleanOptionalAction, help="Run Uod validation and exit")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-validate", "--validate", action=BooleanOptionalAction,
+                       help="Run Uod validation and exit. Cannot be used with -rd")
+    group.add_argument("-rd", "--show_register_details", action=BooleanOptionalAction,
+                       help="Show register details for UOD authoring and exit. Cannot be used with -validate")
     parser.add_argument("-sev", "--sentry_event_level", required=False,
                         default=sentry.EVENT_LEVEL_DEFAULT, choices=sentry.EVENT_LEVEL_NAMES,
                         help=f"Minimum log level to send as sentry events. Default is '{sentry.EVENT_LEVEL_DEFAULT}'")
@@ -168,12 +172,43 @@ def validate_and_exit(uod_name: str):
     exit(0)
 
 
+def show_register_details_and_exit(uod_name: str):
+    logger.info("Engine started in register details mode")
+
+    try:
+        uod = create_uod(uod_name)
+        logger.info(f"Uod '{uod_name}' created successfully")
+    except Exception:
+        logger.error(f"Validation failed. Failed to create uod '{uod_name}'", exc_info=True)
+        exit(1)
+
+    uod.system_tags = TagCollection.create_system_tags()
+
+    try:
+        logger.info("Connecting to hardware")
+        uod.hwl.connect()
+        logger.info("Hardware connected")
+    except Exception:
+        logger.info("Hardware connection failed", exc_info=True)
+        exit(1)
+
+    try:
+        uod.hwl.show_online_register_details()
+    except Exception:
+        logger.error("Error showing register details")
+        exit(1)
+
+    exit(0)
+
+
 def main():
     print(f"OpenPectus Engine v. {__version__}, build: {build_number}")
     args = get_args()
     sentry.init_engine(args.sentry_event_level)
     if args.validate:
         validate_and_exit(args.uod)
+    elif args.show_register_details:
+        show_register_details_and_exit(args.uod)
 
     logger.info("Engine starting")
 

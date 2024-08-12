@@ -1,17 +1,17 @@
 import re
 import unittest
 
-from openpectus.lang.exec.uod import RegexCategorical, RegexNamedArgumentParser, RegexNumberWithUnit, RegexText
+from openpectus.lang.exec.uod import RegexCategorical, RegexNamedArgumentParser, RegexNumber, RegexText
 
 class TestRegexs_(unittest.TestCase):
 
     def test_named_groups_RegexNumberWithUnit(self):
-        parser = RegexNamedArgumentParser(RegexNumberWithUnit(units=None))
+        parser = RegexNamedArgumentParser(RegexNumber(units=None))
         self.assertEqual(['number'], parser.get_named_groups())
 
         #TODO test signature in validation...
 
-        parser = RegexNamedArgumentParser(RegexNumberWithUnit(units=['kg']))
+        parser = RegexNamedArgumentParser(RegexNumber(units=['kg']))
         self.assertEqual(['number', 'number_unit'], parser.get_named_groups())
 
     def test_named_groups_RegexText(self):
@@ -31,7 +31,7 @@ class TestRegexs_(unittest.TestCase):
 
 class TestRegexs(unittest.TestCase):
     def test_regex_number_with_unit(self):
-        regex = RegexNumberWithUnit(units=["mS/cm", "L/h", "bar"])
+        regex = RegexNumber(units=["mS/cm", "L/h", "bar"])
 
         self.assertEqual(
             re.search(regex, "12 L/h").groupdict(),  # type: ignore
@@ -66,19 +66,19 @@ class TestRegexs(unittest.TestCase):
             None)
 
     def test_regex_number_ws(self):
-        regex = RegexNumberWithUnit(units=["mS/cm", "L/h", "bar"])
+        regex = RegexNumber(units=["mS/cm", "L/h", "bar"])
         self.assertEqual(
             re.search(regex, " 12  L/h   ").groupdict(),  # type: ignore
             dict(number="12", number_unit="L/h"))
 
-        regex = RegexNumberWithUnit(units=None)
+        regex = RegexNumber(units=None)
         self.assertEqual(
             re.search(regex, " 12  ").groupdict(),  # type: ignore
             dict(number="12"))
 
 
     def test_regex_number_with_unit_non_negative(self):
-        regex = RegexNumberWithUnit(units=['mS/cm', 'L/h', 'bar'], non_negative=True)
+        regex = RegexNumber(units=['mS/cm', 'L/h', 'bar'], non_negative=True)
 
         self.assertEqual(
             re.search(regex, "12 L/h").groupdict(),  # type: ignore
@@ -105,7 +105,7 @@ class TestRegexs(unittest.TestCase):
             None)
 
     def test_regex_number_without_unit(self):
-        regex = RegexNumberWithUnit(units=None)
+        regex = RegexNumber(units=None)
 
         self.assertEqual(
             re.search(regex, "12").groupdict(),  # type: ignore
