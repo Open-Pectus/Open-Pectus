@@ -10,11 +10,13 @@ MARK_SEPARATOR = "; "
 
 
 class ReadingTag(Tag):
+    """ Represents a common reading, i.e. a input tag with float values. """
     def __init__(self, name: str, unit: str | None = None) -> None:
         super().__init__(name, value=0.0, unit=unit, direction=TagDirection.INPUT)
 
 
 class SelectTag(Tag):
+    """ Represents a tag with choice values. """
     def __init__(self, name: str, value, unit: str | None,
                  choices: list[str], direction: TagDirection = TagDirection.NA) -> None:
         super().__init__(name=name, value=value, unit=unit, direction=direction)

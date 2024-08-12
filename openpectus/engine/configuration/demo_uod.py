@@ -3,7 +3,6 @@ from time import time
 from typing import Any
 
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
-from openpectus.lang.exec import readings as R
 import openpectus.lang.exec.tags_impl as tags
 from openpectus.lang.exec.uod import RegexNumberWithUnit, UnitOperationDefinitionBase, UodCommand, UodBuilder
 from openpectus.protocol.models import PlotConfiguration, SubPlot, PlotAxis, PlotColorRegion
@@ -77,11 +76,11 @@ def create() -> UnitOperationDefinitionBase:
         .with_filename(__file__)
         .with_hardware(DemoHardware())
         .with_location("Demo location")
-        .with_hardware_register("FT01", RegisterDirection.Read, path='Objects;2:System;2:FT01')
-        .with_hardware_register("FT02", RegisterDirection.Read, path='Objects;2:System;2:FT02')
-        .with_hardware_register("Category", RegisterDirection.Read, path='Objects;2:System;2:Category')
-        .with_hardware_register("Time", RegisterDirection.Read)
-        .with_hardware_register("Reset", RegisterDirection.Both, path='Objects;2:System;2:RESET',
+        .with_hardware_register("FT01", "Read", path='Objects;2:System;2:FT01')
+        .with_hardware_register("FT02", "Read", path='Objects;2:System;2:FT02')
+        .with_hardware_register("Category", "Read", path='Objects;2:System;2:Category')
+        .with_hardware_register("Time", "Read")
+        .with_hardware_register("Reset", "Both", path='Objects;2:System;2:RESET',
                                 from_tag=lambda x: 1 if x == 'Reset' else 0,
                                 to_tag=lambda x: "Reset" if x == 1 else "N/A")
         .with_tag(tags.ReadingTag("FT01", "L/h"))
@@ -94,16 +93,16 @@ def create() -> UnitOperationDefinitionBase:
         .with_tag(tags.SelectTag("Reset", value="N/A", unit=None, choices=['Reset', "N/A"]))
         .with_command(name="Reset", exec_fn=reset)
         .with_command(name="TestInt", exec_fn=test_cmd)
-        .with_process_value(R.Reading(tag_name="Run Time"))
-        .with_process_value(R.Reading(tag_name="FT01"))
-        .with_process_value(R.ReadingWithEntry(tag_name="TestInt"))
-        .with_process_value(R.ReadingWithEntry(tag_name="TestFloat", execute_command_name="TestInt"))
-        .with_process_value(R.ReadingWithChoice(tag_name="TestString", command_options={'A': 'Mark: A', 'B': 'Mark: B'}))
-        .with_process_value(R.Reading(tag_name="FT02"))
-        .with_process_value(R.Reading(tag_name="Category"))
-        .with_process_value(R.Reading(tag_name="Time"))
-        .with_process_value(R.ReadingWithChoice(tag_name="Reset", command_options={'Reset': 'Reset'}))
-        .with_process_value(R.Reading(tag_name="System State"))
+        .with_process_value(tag_name="Run Time")
+        .with_process_value(tag_name="FT01")
+        .with_process_value_entry(tag_name="TestInt")
+        .with_process_value_entry(tag_name="TestFloat", execute_command_name="TestInt")
+        .with_process_value_choice(tag_name="TestString", command_options={'A': 'Mark: A', 'B': 'Mark: B'})
+        .with_process_value(tag_name="FT02")
+        .with_process_value(tag_name="Category")
+        .with_process_value(tag_name="Time")
+        .with_process_value_choice(tag_name="Reset", command_options={'Reset': 'Reset'})
+        .with_process_value(tag_name="System State")
         .with_command_regex_arguments(
             name="CmdWithRegexArgs",
             arg_parse_regex=RegexNumberWithUnit(units=None),

@@ -27,7 +27,9 @@ class CommantUtilTest(unittest.TestCase):
                     value=None)
 
                 if expectSuccess:
-                    cu.parse_as_message(cmd, [])
+                    msg = cu.parse_as_message(cmd, [])
+                    if expectedResultType is not None:
+                        self.assertIsInstance(msg, expectedResultType)
                 else:
                     with self.assertRaises(ValueError, msg="Expected parse error"):
                         cu.parse_as_message(cmd, [])
