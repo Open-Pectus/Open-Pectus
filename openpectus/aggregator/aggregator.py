@@ -232,7 +232,7 @@ class FromEngine:
     def error_log_changed(self, engine_id: str, error_log: Mdl.ErrorLog):
         try:
             engine_data = self._engine_data_map[engine_id]
-            engine_data.run_data.error_log.entries.extend(error_log.entries)
+            engine_data.run_data.error_log.aggregate_with(error_log)            
             asyncio.create_task(self.publisher.publish_error_log_changed(engine_id))
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set error log.')
