@@ -564,7 +564,7 @@ register options `to_tag` and `from_tag` specify how to convert between the regi
 from the hardware)  and `tag` values (the values used in pcode). If these options are not set, no conversion of
 the value is performed.
 
-As an example, a unit may have a valve that is exposed as a register whose values are the interers 0 and 1. The
+As an example, a unit may have a valve that is exposed as a register whose values are the integers 0 and 1. The
 `to_tag` and `from_tag` options can be used to map theses values to a tag with the string values 'On' and 'Off' 
 which would be a more natural choice for OpenPectus users.
 
@@ -651,7 +651,7 @@ function when the command is executed.
 
 Note that the argument names to the exec funcion are defined in the regular expression. RegexNumber defines 'number'
 (and 'number_unit' if one or more units are given). The exec function argument must use the same name. Validation is 
-built in to help ensure that arguments and names match up correectly. This validation runs at engine startup.
+built in to help ensure that arguments and names match up correctly. This validation runs at engine startup.
 
 There are predefined regex parsers for numbers (RegexNumber), text (RegexText) and categorical values (RegexCategorical).
 
