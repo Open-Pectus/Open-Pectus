@@ -6,6 +6,7 @@ import { ProcessValueCommand } from '../../api/models/ProcessValueCommand';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { ToggleButtonComponent } from '../../shared/toggle-button.component';
 import { UtilMethods } from '../../shared/util-methods';
+import { DetailQueries } from '../detail.queries';
 import { DetailsActions } from '../ngrx/details.actions';
 import { DetailsSelectors } from '../ngrx/details.selectors';
 import { ProcessValuesActions } from './ngrx/process-values.actions';
@@ -33,7 +34,7 @@ import { ProcessValuesCategorizedComponent } from './process-values-categorized.
                          (changed)="onToggleAllProcessValues($event)"></app-toggle-button>
 
       <div class="py-2 px-1 lg:px-2" content *ngIf="!collapsed">
-        <app-process-values-categorized [processValues]="processValues | ngrxPush"
+        <app-process-values-categorized [processValues]="processValues.data()"
                                         (openCommands)="onOpenCommands($event)"></app-process-values-categorized>
       </div>
 
@@ -47,7 +48,7 @@ import { ProcessValuesCategorizedComponent } from './process-values-categorized.
 })
 export class ProcessValuesComponent implements OnInit, OnDestroy {
   allProcessValues = this.store.select(DetailsSelectors.allProcessValues);
-  processValues = this.store.select(DetailsSelectors.processValues);
+  processValues = DetailQueries.processValues();
   protected showCommands = false;
   protected pvAndPositionForPopover?: PvAndPosition;
   protected collapsed = false;

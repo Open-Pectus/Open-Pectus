@@ -13,6 +13,7 @@ export class DetailQueries {
     const engineId = inject(ActivatedRoute).snapshot.paramMap.get(DetailsRoutingUrlParts.processUnitIdParamName);
     if(engineId === null) throw Error(`Missing route param ${DetailsRoutingUrlParts.processUnitIdParamName} in processValues query`);
     return injectQuery(() => ({
+      refetchInterval: 1000,
       queryKey: ['processValues', engineId],
       queryFn: () => lastValueFrom(processUnitService.getProcessValues(engineId)),
     }));

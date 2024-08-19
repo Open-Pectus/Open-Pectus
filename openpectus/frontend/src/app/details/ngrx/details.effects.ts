@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
-import { catchError, delay, filter, map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
+import { map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
 import { CommandSource } from '../../api/models/CommandSource';
 import { ProcessUnitService } from '../../api/services/ProcessUnitService';
 import { RecentRunsService } from '../../api/services/RecentRunsService';
@@ -15,38 +15,6 @@ import { DetailsSelectors } from './details.selectors';
 // noinspection JSUnusedGlobalSymbols
 @Injectable()
 export class DetailsEffects {
-  fetchProcessValuesWhenPageInitialized = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.unitDetailsInitialized),
-    switchMap(({unitId}) => {
-      return this.processUnitService.getProcessValues(unitId).pipe(
-        map(processValues => DetailsActions.processValuesFetched({processValues})),
-        catchError(() => of(DetailsActions.processValuesFailedToLoad())),
-      );
-    }),
-  ));
-
-  // TODO: When we introduce websocket pubsub, figure out if it makes sense to push process_value changes through it, or polling is fine.
-  continuouslyPollProcessValues = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.processValuesFetched, DetailsActions.processValuesFailedToLoad),
-    delay(1000),
-    concatLatestFrom(() => [
-      this.store.select(DetailsSelectors.processUnitId),
-      this.store.select(DetailsSelectors.allProcessValues),
-      this.store.select(DetailsSelectors.shouldPoll),
-    ]),
-    filter(([_, __, ___, shouldPoll]) => shouldPoll),
-    switchMap(([_, unitId, allProcessValues]) => {
-      if(unitId === undefined) return of();
-      const request = allProcessValues
-                      ? this.processUnitService.getAllProcessValues(unitId)
-                      : this.processUnitService.getProcessValues(unitId);
-      return request.pipe(
-        map(processValues => DetailsActions.processValuesFetched({processValues})),
-        catchError(() => of(DetailsActions.processValuesFailedToLoad())),
-      );
-    }),
-  ));
-
   fetchControlStateWhenPageInitialized = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.unitDetailsInitialized),
     switchMap(({unitId}) => {
@@ -94,17 +62,6 @@ export class DetailsEffects {
       return this.processUnitService.executeCommand(unitId, {...command});
     }),
   ), {dispatch: false});
-
-  fetchProcessDiagramWhenComponentInitialized = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.processDiagramInitialized),
-    concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
-    switchMap(([_, unitId]) => {
-      if(unitId === undefined) return of();
-      return this.processUnitService.getProcessDiagram(unitId).pipe(
-        map(processDiagram => DetailsActions.processDiagramFetched({processDiagram})),
-      );
-    }),
-  ));
 
   fetchCommandExamplesWhenComponentInitialized = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.commandsComponentInitialized),

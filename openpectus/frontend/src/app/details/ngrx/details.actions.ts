@@ -2,7 +2,6 @@ import { createAction, props } from '@ngrx/store';
 import { CommandExample } from '../../api/models/CommandExample';
 import { ControlState } from '../../api/models/ControlState';
 import { ExecutableCommand } from '../../api/models/ExecutableCommand';
-import { ProcessDiagram } from '../../api/models/ProcessDiagram';
 import { ProcessValue } from '../../api/models/ProcessValue';
 import { RecentRun } from '../../api/models/RecentRun';
 
@@ -12,11 +11,8 @@ export class DetailsActions {
   static unitDetailsInitialized = createAction(source + 'Unit Details Initialized', props<{ unitId: string }>());
   static unitDetailsDestroyed = createAction(source + 'Unit Details Destroyed');
   static processValuesFetched = createAction(source + 'Process Values Fetched', props<{ processValues: ProcessValue[] }>());
-  static processValuesFailedToLoad = createAction(source + 'Process Values Failed to load');
   static processUnitCommandButtonClicked = createAction(source + 'Process Unit Command Button Clicked',
     props<{ command: string }>());
-  static processDiagramInitialized = createAction(source + 'Process Diagram Initialized');
-  static processDiagramFetched = createAction(source + 'Process Diagram Fetched', props<{ processDiagram: ProcessDiagram }>());
   static commandsComponentInitialized = createAction(source + 'Commands Component Initialized');
   static commandExamplesFetched = createAction(source + 'Command Examples Fetched', props<{ commandExamples: CommandExample[] }>());
   static commandsComponentExecuteClicked = createAction(source + 'Commands Component Execute Clicked', props<{ command: ExecutableCommand }>());

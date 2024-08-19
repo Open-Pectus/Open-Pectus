@@ -1,8 +1,10 @@
 import { NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, Input, OnDestroy, OnInit } from '@angular/core';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
+import { DetailQueries } from '../detail.queries';
+import { DetailsActions } from '../ngrx/details.actions';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
 import { ProcessPlotComponent } from './process-plot.component';
@@ -34,6 +36,10 @@ export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
 
   protected isCollapsed = false;
   protected plotIsModified = this.store.select(ProcessPlotSelectors.plotIsModified);
+  private processValues = DetailQueries.processValues();
+  private storeFetchedProcessValues = effect(() => {
+    this.store.dispatch(DetailsActions.processValuesFetched({processValues: this.processValues.data() ?? []}));
+  });
 
   constructor(private store: Store) {}
 

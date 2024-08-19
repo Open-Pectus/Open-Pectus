@@ -1,14 +1,12 @@
 import { NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { DomSanitizer } from '@angular/platform-browser';
 import { PushPipe } from '@ngrx/component';
-import { Store } from '@ngrx/store';
 import { combineLatest, map } from 'rxjs';
 import { CollapsibleElementComponent } from '../shared/collapsible-element.component';
 import { ProcessValuePipe } from '../shared/pipes/process-value.pipe';
 import { DetailQueries } from './detail.queries';
-import { DetailsActions } from './ngrx/details.actions';
 
 @Component({
   selector: 'app-process-diagram',
@@ -32,12 +30,9 @@ import { DetailsActions } from './ngrx/details.actions';
     </app-collapsible-element>
   `,
 })
-export class ProcessDiagramComponent implements OnInit {
-  // engineId = input.required<string>();
+export class ProcessDiagramComponent {
   processValues = DetailQueries.processValues();
   processDiagram = DetailQueries.processDiagram();
-  // processDiagram = this.store.select(DetailsSelectors.processDiagram);
-  // processValues = this.store.select(DetailsSelectors.processValues);
   diagramWithValues = combineLatest([toObservable(this.processDiagram.data), toObservable(this.processValues.data)]).pipe(
     map(([processDiagram, processValues]) => {
       return processDiagram?.svg?.replaceAll(/{{(?<inCurlyBraces>[^}]+)}}/g, (match, inCurlyBraces: string) => {
@@ -61,11 +56,6 @@ export class ProcessDiagramComponent implements OnInit {
   );
   protected collapsed = false;
 
-  constructor(private store: Store,
-              private domSanitizer: DomSanitizer,
+  constructor(private domSanitizer: DomSanitizer,
               private processValuePipe: ProcessValuePipe) {}
-
-  ngOnInit() {
-    this.store.dispatch(DetailsActions.processDiagramInitialized());
-  }
 }
