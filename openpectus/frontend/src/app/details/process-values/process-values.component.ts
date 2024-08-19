@@ -49,13 +49,12 @@ import { ProcessValuesCategorizedComponent } from './process-values-categorized.
 export class ProcessValuesComponent implements OnInit, OnDestroy {
   engineId = input<string>();
   allProcessValues = this.store.select(DetailsSelectors.allProcessValues);
-  processValues = this.detailQueries.processValues(this.engineId);
+  processValues = DetailQueries.processValues(this.engineId);
   protected showCommands = false;
   protected pvAndPositionForPopover?: PvAndPosition;
   protected collapsed = false;
 
-  constructor(private store: Store,
-              private detailQueries: DetailQueries) {}
+  constructor(private store: Store) {}
 
   ngOnInit() {
     this.store.dispatch(ProcessValuesActions.processValuesComponentInitialized());

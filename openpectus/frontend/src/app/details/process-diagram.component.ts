@@ -32,8 +32,8 @@ import { DetailQueries } from './detail.queries';
 })
 export class ProcessDiagramComponent {
   engineId = input<string>();
-  processValuesQuery = this.detailQueries.processValues(this.engineId);
-  processDiagramQuery = this.detailQueries.processDiagram(this.engineId);
+  processValuesQuery = DetailQueries.processValues(this.engineId);
+  processDiagramQuery = DetailQueries.processDiagram(this.engineId);
   diagramWithValues = combineLatest([toObservable(this.processDiagramQuery.data), toObservable(this.processValuesQuery.data)]).pipe(
     map(([processDiagram, processValues]) => {
       return processDiagram?.svg?.replaceAll(/{{(?<inCurlyBraces>[^}]+)}}/g, (match, inCurlyBraces: string) => {
@@ -58,6 +58,5 @@ export class ProcessDiagramComponent {
   protected collapsed = false;
 
   constructor(private domSanitizer: DomSanitizer,
-              private processValuePipe: ProcessValuePipe,
-              private detailQueries: DetailQueries) {}
+              private processValuePipe: ProcessValuePipe) {}
 }

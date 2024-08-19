@@ -37,7 +37,7 @@ export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
   protected isCollapsed = false;
   protected plotIsModified = this.store.select(ProcessPlotSelectors.plotIsModified);
 
-  private processValuesQuery = this.detailQueries.processValues(this.unitId);
+  private processValuesQuery = DetailQueries.processValues(this.unitId);
   private storeFetchedProcessValues = effect(() => {
     if(this.unitId() === undefined) return;
     const processValues = this.processValuesQuery.data();
@@ -46,8 +46,7 @@ export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
     setTimeout(() => this.store.dispatch(DetailsActions.processValuesFetched({processValues})));
   });
 
-  constructor(private store: Store,
-              private detailQueries: DetailQueries) {}
+  constructor(private store: Store) {}
 
   ngOnInit() {
     const unitId = this.unitId();
