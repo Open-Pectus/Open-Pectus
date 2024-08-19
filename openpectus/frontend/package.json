@@ -33,6 +33,7 @@
     "@ngrx/router-store": "^18.0.0",
     "@ngrx/store": "^18.0.0",
     "@ngrx/store-devtools": "^18.0.0",
+    "@tanstack/angular-query-experimental": "^5.49.1",
     "@vscode/codicons": "^0.0.36",
     "angular-auth-oidc-client": "^18.0.1",
     "d3": "^7.8.5",

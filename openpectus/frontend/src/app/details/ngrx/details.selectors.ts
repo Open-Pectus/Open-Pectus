@@ -17,5 +17,6 @@ export class DetailsSelectors {
   static processUnit = createSelector(AppSelectors.processUnits, DetailsSelectors.processUnitId,
     (processUnits, unitId) => {
       return processUnits.find(processUnit => processUnit.id.toString() === unitId);
-    });
+    },
+  );
 }

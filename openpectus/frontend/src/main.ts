@@ -9,6 +9,7 @@ import { provideEffects } from '@ngrx/effects';
 import { provideRouterStore, RouterState } from '@ngrx/router-store';
 import { provideStore } from '@ngrx/store';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
+import { provideAngularQuery, QueryClient } from '@tanstack/angular-query-experimental';
 import { setupWorker } from 'msw/browser';
 import { AppComponent } from './app/app.component';
 import { APP_ROUTES } from './app/app.routes';
@@ -18,7 +19,6 @@ import { DetailsActions } from './app/details/ngrx/details.actions';
 import { metaReducers, reducers } from './app/ngrx';
 import { AppEffects } from './app/ngrx/app.effects';
 import { ProcessValuePipe } from './app/shared/pipes/process-value.pipe';
-
 import { handlers } from './msw/handlers';
 import { MswEnablement } from './msw/msw-enablement';
 
@@ -88,6 +88,7 @@ enableMocking().then(() => bootstrapApplication(AppComponent, {
     ProcessValuePipe,
     {provide: DATE_PIPE_DEFAULT_OPTIONS, useValue: {dateFormat: Defaults.dateFormat}},
     provideHttpClient(withInterceptorsFromDi()),
+    provideAngularQuery(new QueryClient()),
   ],
 })
   .catch(err => console.error(err)));
