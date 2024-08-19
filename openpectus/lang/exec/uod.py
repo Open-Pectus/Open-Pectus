@@ -67,7 +67,7 @@ class UnitOperationDefinitionBase:
 
     def validate_configuration(self):
         """ Validates these areas:
-        - Each Reading match a defined tag
+        - Each Reading matches a defined tag
         - Each Command is verified
             - Must have an exec function with an appropriate signature
             - If the command uses a regular expression as parser function, it is verified that

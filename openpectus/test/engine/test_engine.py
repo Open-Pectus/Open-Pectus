@@ -1168,6 +1168,33 @@ Block: A
             # block_vol is reset to value before block A - so it matches acc_vol again
             self.assertAlmostEqual(block_cv.as_float(), 0.9/2, delta=0.1)
 
+
+    # --- Units ---
+
+
+    def test_units(self):
+        self.engine.cleanup()  # dispose the test default engine
+
+        uod = (UodBuilder()
+               .with_instrument("TestUod")
+               .with_author("Test Author", "test@openpectus.org")
+               .with_filename(__file__)
+               .with_hardware(TestHW())
+               .with_location("Test location")
+               .with_tag(ReadingTag("X1", "L"))
+               .with_tag(ReadingTag("X2", "g"))
+               .with_tag(ReadingTag("X3", "%"))
+               .build())
+
+        with self.subTest("test units"):
+            with create_engine_context(uod) as e:
+                run_engine(e, "", 5)
+                self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.OK)
+
+                percent_tag = uod.tags["X3"]
+                self.assertEqual(percent_tag.unit, "%")
+
+
     # --- Restart ---
 
 

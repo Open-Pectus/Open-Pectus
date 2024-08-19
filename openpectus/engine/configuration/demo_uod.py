@@ -35,6 +35,10 @@ def create() -> UnitOperationDefinitionBase:
         print("and number_unit: " + str(number_unit))
         cmd.set_complete()
 
+    def test_percentage(cmd: UodCommand, number, number_unit):
+        cmd.context.tags.get("TestPercentage").set_value(float(number), time())
+        cmd.set_complete()
+
     def get_plot_configuration() -> PlotConfiguration:
         logger.warn('1FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
         logger.warn('2FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
@@ -91,9 +95,10 @@ def create() -> UnitOperationDefinitionBase:
         .with_tag(tags.ReadingTag("Category"))
         .with_tag(tags.ReadingTag("Time", unit=None))
         .with_tag(tags.Tag("TestInt", value="42"))
-        .with_tag(tags.Tag("TestFloat", value="9.87", unit="kg"))
+        .with_tag(tags.Tag("TestFloat", value=9.87, unit="kg"))
         .with_tag(tags.Tag("TestString", value="test"))
         .with_tag(tags.SelectTag("Reset", value="N/A", unit=None, choices=['Reset', "N/A"]))
+        .with_tag(tags.Tag("TestPercentage", value=34.87, unit="%"))
         .with_command(name="Reset", exec_fn=reset)
         .with_command(name="TestInt", exec_fn=test_cmd)
         .with_process_value(tag_name="Run Time")
@@ -106,11 +111,17 @@ def create() -> UnitOperationDefinitionBase:
         .with_process_value(tag_name="Time")
         .with_process_value_choice(tag_name="Reset", command_options={'Reset': 'Reset'})
         .with_process_value(tag_name="System State")
+        .with_process_value(tag_name="TestPercentage")
         .with_command_regex_arguments(
             name="CmdWithRegexArgs",
             arg_parse_regex=RegexNumber(units=None),
-            #arg_parse_regex=RegexNumberWithUnit(units=['kg']),
             exec_fn=cmd_regex)
+        .with_command_regex_arguments(
+            name="TestPercentage",
+            arg_parse_regex=RegexNumber(units=['%']),
+            exec_fn=test_percentage)
+        .with_process_value_entry(tag_name="TestPercentage")
+
         .with_plot_configuration(get_plot_configuration())
         .build()
     )

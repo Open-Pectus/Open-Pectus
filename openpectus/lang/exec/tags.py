@@ -65,14 +65,15 @@ TAG_UNIT_DIMS = {
 BASE_VALID_UNITS = ['L', 'h', 'min', 's', 'mL', 'CV', 'g', 'kg']
 
 
-def _get_compatible_unit_names(tag: Tag):
-    # TODO define the difference between None and [""]
+def _get_compatible_unit_names(tag: Tag) -> list[str]:
     if tag.unit is None:
         return [""]
 
     pu = tag.get_pint_unit()
     if pu is None:
         return [""]
+    elif tag.unit == "%":
+        return ['%']
     elif pu.dimensionless:
         return [""]
     else:
