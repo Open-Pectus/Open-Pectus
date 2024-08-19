@@ -1,5 +1,5 @@
 import { NgFor, NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, OnDestroy, OnInit } from '@angular/core';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { ProcessValueCommand } from '../../api/models/ProcessValueCommand';
@@ -47,13 +47,15 @@ import { ProcessValuesCategorizedComponent } from './process-values-categorized.
   `,
 })
 export class ProcessValuesComponent implements OnInit, OnDestroy {
+  engineId = input<string>();
   allProcessValues = this.store.select(DetailsSelectors.allProcessValues);
-  processValues = DetailQueries.processValues();
+  processValues = this.detailQueries.processValues(this.engineId);
   protected showCommands = false;
   protected pvAndPositionForPopover?: PvAndPosition;
   protected collapsed = false;
 
-  constructor(private store: Store) {}
+  constructor(private store: Store,
+              private detailQueries: DetailQueries) {}
 
   ngOnInit() {
     this.store.dispatch(ProcessValuesActions.processValuesComponentInitialized());

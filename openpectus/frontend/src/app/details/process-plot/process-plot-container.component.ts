@@ -1,5 +1,5 @@
 import { NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, effect, Input, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, input, Input, OnDestroy, OnInit } from '@angular/core';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
@@ -31,20 +31,27 @@ import { ProcessPlotComponent } from './process-plot.component';
   `,
 })
 export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
-  @Input() unitId?: string;
+  unitId = input<string>();
   @Input() recentRunId?: string;
 
   protected isCollapsed = false;
   protected plotIsModified = this.store.select(ProcessPlotSelectors.plotIsModified);
-  private processValues = DetailQueries.processValues();
+
+  private processValuesQuery = this.detailQueries.processValues(this.unitId);
   private storeFetchedProcessValues = effect(() => {
-    this.store.dispatch(DetailsActions.processValuesFetched({processValues: this.processValues.data() ?? []}));
+    if(this.unitId() === undefined) return;
+    const processValues = this.processValuesQuery.data();
+    if(processValues === undefined) return;
+    // setTimeout to break out of the reactive context, which for some reason causes some problems: TODO: figure out why
+    setTimeout(() => this.store.dispatch(DetailsActions.processValuesFetched({processValues})));
   });
 
-  constructor(private store: Store) {}
+  constructor(private store: Store,
+              private detailQueries: DetailQueries) {}
 
   ngOnInit() {
-    if(this.unitId !== undefined) this.store.dispatch(ProcessPlotActions.processPlotComponentInitializedForUnit({unitId: this.unitId}));
+    const unitId = this.unitId();
+    if(unitId !== undefined) this.store.dispatch(ProcessPlotActions.processPlotComponentInitializedForUnit({unitId}));
     if(this.recentRunId !== undefined) {
       this.store.dispatch(ProcessPlotActions.processPlotComponentInitializedForRecentRun({recentRunId: this.recentRunId}));
     }

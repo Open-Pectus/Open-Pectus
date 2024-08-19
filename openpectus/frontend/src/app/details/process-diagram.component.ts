@@ -1,5 +1,5 @@
 import { NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { DomSanitizer } from '@angular/platform-browser';
 import { PushPipe } from '@ngrx/component';
@@ -24,16 +24,17 @@ import { DetailQueries } from './detail.queries';
     <app-collapsible-element [name]="'Process Diagram'" [heightResizable]="true" [contentHeight]="400"
                              (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-circuit-board'">
       <div class="flex justify-center h-full" content *ngIf="!collapsed">
-        <div class="m-auto" *ngIf="processDiagram.data()?.svg === ''">No diagram available</div>
+        <div class="m-auto" *ngIf="processDiagramQuery.data()?.svg === ''">No diagram available</div>
         <div class="bg-white rounded-sm p-2" [innerHTML]="diagramWithValues | ngrxPush"></div>
       </div>
     </app-collapsible-element>
   `,
 })
 export class ProcessDiagramComponent {
-  processValues = DetailQueries.processValues();
-  processDiagram = DetailQueries.processDiagram();
-  diagramWithValues = combineLatest([toObservable(this.processDiagram.data), toObservable(this.processValues.data)]).pipe(
+  engineId = input<string>();
+  processValuesQuery = this.detailQueries.processValues(this.engineId);
+  processDiagramQuery = this.detailQueries.processDiagram(this.engineId);
+  diagramWithValues = combineLatest([toObservable(this.processDiagramQuery.data), toObservable(this.processValuesQuery.data)]).pipe(
     map(([processDiagram, processValues]) => {
       return processDiagram?.svg?.replaceAll(/{{(?<inCurlyBraces>[^}]+)}}/g, (match, inCurlyBraces: string) => {
         const withoutSvgTags = inCurlyBraces.replaceAll(/<.+>/g, '').trim();
@@ -57,5 +58,6 @@ export class ProcessDiagramComponent {
   protected collapsed = false;
 
   constructor(private domSanitizer: DomSanitizer,
-              private processValuePipe: ProcessValuePipe) {}
+              private processValuePipe: ProcessValuePipe,
+              private detailQueries: DetailQueries) {}
 }
