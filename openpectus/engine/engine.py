@@ -231,6 +231,13 @@ class Engine(InterpreterContext):
             # provide first tick time as a "default".
             for tag in self._system_tags.tags.values():
                 tag.tick_time = self._tick_time
+            
+            # Verify that read registers all have matching tag.
+            read_registers = [r for r in self.uod.hwl.registers.values() if RegisterDirection.Read in r.direction]
+            for i, r in enumerate(read_registers):
+                if not self.uod.tags.has(r.name):
+                    logger.fatal("Invalid uod configuration. One or more registers have no matching tag.")
+                    exit(1)
 
         self.uod.hwl.tick()
 
@@ -271,15 +278,15 @@ class Engine(InterpreterContext):
 
     def read_process_image(self):
         """ Read data from relevant hw registers into tags"""
-        registers = [r for r in self.uod.hwl.registers.values() if RegisterDirection.Read in r.direction]
+        read_registers = [r for r in self.uod.hwl.registers.values() if RegisterDirection.Read in r.direction]
         try:
-            register_values = self.uod.hwl.read_batch(registers)
+            register_values = self.uod.hwl.read_batch(read_registers)
         except HardwareLayerException:
             logger.error("Hardware read_batch error", exc_info=True)
             self.stop()
             return
 
-        for i, r in enumerate(registers):
+        for i, r in enumerate(read_registers):
             tag = self.uod.tags.get(r.name)
             tag_value = register_values[i]
             if "to_tag" in r.options:

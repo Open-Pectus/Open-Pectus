@@ -532,6 +532,29 @@ Watch: counter > 0 mL
         self.assertEqual("0", condition.tag_value)
         self.assertEqual("mL", condition.tag_unit)
 
+    def test_watch_unit_percent(self):
+        p = build(
+            """
+Watch: counter > 0 %
+    Mark: A
+"""
+        )
+        program = p.build_model()
+
+        # p.printSyntaxTree(p.tree)
+        # print_program(program, show_line_numbers=True, show_errors=True)
+        self.assertFalse(program.has_error(recursive=True))
+        non_blanks = program.get_instructions()
+        self.assertIsInstance(non_blanks[0], PWatch)
+        self.assertIsInstance(non_blanks[0].get_child_nodes()[0], PMark)
+        assert isinstance(non_blanks[0], PWatch)
+        condition = non_blanks[0].condition
+        assert condition is not None
+        self.assertEqual("counter", condition.tag_name)
+        self.assertEqual(">", condition.op)
+        self.assertEqual("0", condition.tag_value)
+        self.assertEqual("%", condition.tag_unit)
+
     def test_watch_unitless(self):
         p = build(
             """

@@ -72,9 +72,11 @@ export class ProcessValueCommandsComponent implements AfterViewInit {
     if(valueAndUnit === undefined) return this.shouldClose.emit(command);
     const editedCommand = produce(command, draft => {
       if(draft.value === undefined) return;
-      draft.value.value = valueAndUnit.value;
       if(draft.value.value_type === ProcessValueType.INT || draft.value.value_type === ProcessValueType.FLOAT) {
+        draft.value.value = parseFloat(valueAndUnit.value.replace(',', '.'));
         draft.value.value_unit = valueAndUnit.unit;
+      } else {
+        draft.value.value = valueAndUnit.value;
       }
     });
     this.shouldClose.emit(editedCommand);
