@@ -68,6 +68,14 @@ class PintTest(unittest.TestCase):
         self.assertTrue(u1.dimensionless)
         self.assertEqual("<Unit('dimensionless')>", u1.__repr__())
 
+    def test_dimensionless_percentage(self):
+        count = Q_(3, "%")
+        self.assertTrue(count.dimensionless)
+        self.assertTrue(count.unitless)        
+        self.assertEqual("<Quantity(3, 'percent')>", "{!r}".format(count))
+        self.assertEqual(count.units.__repr__(), "<Unit('percent')>")
+
+
     def test_formatting(self):
         weight = 2 * ureg.kg
         s = 'The magnitude is {0.magnitude} with units {0.units}'.format(weight)

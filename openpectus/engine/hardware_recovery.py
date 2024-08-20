@@ -180,6 +180,7 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
             value = ConnectionStatusEnum.Disconnected
         else:
             value = ConnectionStatusEnum.Connected
+        logger.debug(f"Setting connection status to: {value} based on state: {self.state}")
         self.connection_status_tag.set_value(str(value), time.time())
 
     # Callbacks
@@ -202,10 +203,12 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
 
     def on_reconnect(self):
         logger.debug("on_reconnect fired")
+        self._update_connection_status()
         self.last_state_reconnect_time = time.time()
 
     def on_reconnecting(self):
         logger.debug("on_reconnecting fired")
+        self._update_connection_status()
         if self.reconnecting_callback is not None:
             self.reconnecting_callback()
 

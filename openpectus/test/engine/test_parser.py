@@ -123,6 +123,22 @@ Watch: A > 2 mL
         self.assertConditionValue(c, "X", ">", "10 mL")
         self.assertContextHasNoChildError(c)
 
+    def test_condition_unit_no_ws(self):
+        p = parse("X > 10mL")
+        c = p.parser.condition()  # type: ignore
+        self.assertIsNotNone(c)
+        self.assertIsInstance(c, pcodeParser.ConditionContext)
+        self.assertConditionValue(c, "X", ">", "10mL")
+        self.assertContextHasNoChildError(c)
+
+    def test_condition_unit_percentage(self):
+        p = parse("X > 10 %")
+        c = p.parser.condition()  # type: ignore
+        self.assertIsNotNone(c)
+        self.assertIsInstance(c, pcodeParser.ConditionContext)
+        self.assertConditionValue(c, "X", ">", "10 %")
+        self.assertContextHasNoChildError(c)
+
     def test_condition_ws(self):
         p = parse("X> 10mL")
         c = p.parser.condition()  # type: ignore
@@ -154,7 +170,7 @@ Watch: A > 2 mL
         test("xY")
         test("Xy")
 
-        # these are also valid identifierseven though they are also units
+        # these are also valid identifiers even though they are also units
         test("s")
         test("L")
         test("min")
