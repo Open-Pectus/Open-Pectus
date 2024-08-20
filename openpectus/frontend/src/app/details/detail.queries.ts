@@ -1,9 +1,8 @@
-import { inject, Injectable, Signal } from '@angular/core';
+import { inject, Signal } from '@angular/core';
 import { injectQuery } from '@tanstack/angular-query-experimental';
 import { lastValueFrom } from 'rxjs';
 import { ProcessUnitService } from '../api/services/ProcessUnitService';
 
-@Injectable()
 export class DetailQueries {
   static processValues(engineId: Signal<string | undefined>) {
     const processUnitService = inject(ProcessUnitService);
