@@ -16,7 +16,7 @@ from openpectus.engine.method_model import MethodModel
 from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum, SystemTagName
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.commands import CommandRequest
-from openpectus.lang.exec.errors import EngineNotInitializedError, InterpretationError, InterpretationInternalError
+from openpectus.lang.exec.errors import EngineError, EngineNotInitializedError, InterpretationError, InterpretationInternalError
 from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext
 from openpectus.lang.exec.runlog import RuntimeInfo, RunLog, RuntimeRecord
 from openpectus.lang.exec.tag_lifetime import TagContext
@@ -38,6 +38,7 @@ import openpectus.protocol.models as Mdl
 from openpectus.engine.archiver import ArchiverTag
 
 logger = logging.getLogger(__name__)
+frontend_logger = logging.getLogger(__name__ + ".frontend")
 
 
 class Engine(InterpreterContext):
@@ -231,7 +232,7 @@ class Engine(InterpreterContext):
             # provide first tick time as a "default".
             for tag in self._system_tags.tags.values():
                 tag.tick_time = self._tick_time
-            
+
             # Verify that read registers all have matching tag.
             read_registers = [r for r in self.uod.hwl.registers.values() if RegisterDirection.Read in r.direction]
             for i, r in enumerate(read_registers):
@@ -241,7 +242,7 @@ class Engine(InterpreterContext):
 
         self.uod.hwl.tick()
 
-        # read
+        # read, stop on HardwareLayerException
         self.read_process_image()
 
         # excecute interpreter tick
@@ -251,29 +252,39 @@ class Engine(InterpreterContext):
                 not self._runstate_waiting and\
                 not self._runstate_stopping:
             try:
+                # run one tick of interpretation, i.e. one instruction
                 self._interpreter.tick(self._tick_time, self._tick_number)
             except InterpretationInternalError:
                 logger.fatal("A serious internal interpreter error occured. The method should be stopped. If it is resumed, \
                              additional errors may occur.", exc_info=True)
                 self.set_error_state()
-            except InterpretationError:
+            except EngineError as eex:
+                logger.error(eex.message)
+                if eex.user_message is not None:
+                    frontend_logger.error(eex.user_message)
+                self.set_error_state()
+            except InterpretationError as ie:
                 logger.error("Interpretation error", exc_info=True)
+                if ie.user_message is not None:
+                    frontend_logger.error(ie.user_message)
                 self.set_error_state()
             except Exception:
                 logger.error("Unhandled interpretation error", exc_info=True)
+                # TODO user message
+                frontend_logger.error("Interpretation error")
                 self.set_error_state()
 
         # update calculated tags
         if self._runstate_started:
             self.update_calculated_tags(last_tick_time)
 
-        # execute queued commands
+        # execute queued commands, go to error_state on error
         self.execute_commands()
 
         # notify of tag changes
         self.notify_tag_updates()
 
-        # write
+        # write, stop on HardwareLayerException
         self.write_process_image()
 
     def read_process_image(self):
@@ -350,15 +361,18 @@ class Engine(InterpreterContext):
 
         # execute a tick of each running command
         cmds_done: Set[CommandRequest] = set()
+        latest_cmd = "(none)"
         try:
             for c in self.cmd_executing:
+                latest_cmd = c.source or c.name
                 if c not in cmds_done:
                     # Note: Executing one command may cause other commands to be cancelled (by identical or overlapping
                     # commands) Rather than modify self.cmd_executing (while iterating over it), cancelled/completed
                     # commands are added to the cmds_done set.
                     self._execute_command(c, cmds_done)
         except Exception:
-            logger.error("Error executing command: {c}", exc_info=True)
+            logger.error(f"Error executing command: '{latest_cmd}'", exc_info=True)
+            frontend_logger.error(f"Error executing command: '{latest_cmd}'")
             self.set_error_state()
         finally:
             for c_done in cmds_done:
@@ -370,6 +384,7 @@ class Engine(InterpreterContext):
         logger.debug("Executing command: " + cmd_request.name)
         if cmd_request.name is None or len(cmd_request.name.strip()) == 0:
             logger.error("Command name empty")
+            frontend_logger.error("Cannot execute command with empty name")
             cmds_done.add(cmd_request)
             return
 
@@ -415,10 +430,15 @@ class Engine(InterpreterContext):
                     command.init_args(cmd_request.kvargs)
                     logger.debug(f"Initialized command {cmd_request.name} with arguments {cmd_request.kvargs}")
                 except Exception:
-                    raise Exception(
-                        f"Failed to initialize arguments '{cmd_request.kvargs}' for command '{cmd_request.name}'")
+                    raise EngineError(
+                        f"Failed to initialize arguments '{cmd_request.kvargs}' for command '{cmd_request.name}'",
+                        "same"
+                    )
+
         except ValueError:
-            raise NotImplementedError(f"Unknown internal engine command '{cmd_request.name}'")
+            raise EngineError(
+                f"Unknown internal engine command '{cmd_request.name}'",
+                f"Unknown command '{cmd_request.name}'")
 
         record.add_state_started(self._tick_time, self._tick_number, self.tags_as_readonly())
         command.tick()
@@ -454,7 +474,9 @@ class Engine(InterpreterContext):
         assert cmd_request.exec_id is not None, f"Expected uod command request '{cmd_name}' to have exec_id"
 
         if not self.uod.hwl.is_connected:
-            raise HardwareLayerException("The hardware is not currently connected. Uod command was not allowed to start.")
+            raise EngineError(
+                f"The hardware is disconnected. The command '{cmd_name}' was not allowed to start.",
+                "same")
 
         record = self.interpreter.runtimeinfo.get_exec_record(cmd_request.exec_id)
 
@@ -642,8 +664,10 @@ class Engine(InterpreterContext):
             request = CommandRequest.from_interpreter(name, exec_id, **kvargs)
             self.cmd_queue.put_nowait(request)
         else:
-            logger.error(f"Invalid command type scheduled: {name}")
-            raise ValueError(f"Invalid command type scheduled: {name}")
+            raise EngineError(
+                f"Invalid command type scheduled: '{name}'",
+                f"Unknown command: '{name}'"
+            )
 
     def schedule_execution_user(self, name: str, args: str | None = None):
         """ Execute named command from user """
@@ -655,8 +679,9 @@ class Engine(InterpreterContext):
             request = CommandRequest.from_user(name)
             self.cmd_queue.put_nowait(request)
         else:
-            logger.error(f"Invalid user command type scheduled: {name}")
-            raise ValueError(f"Invalid user command type scheduled: {name}")
+            logger.error(f"Invalid command type scheduled: '{name}'")
+            frontend_logger.error(f"Unknown command: '{name}'")
+            raise Exception(f"Invalid command type scheduled: '{name}'")
 
     def inject_code(self, pcode: str):
         """ Inject a code snippet to run in the current scope of the current program """
