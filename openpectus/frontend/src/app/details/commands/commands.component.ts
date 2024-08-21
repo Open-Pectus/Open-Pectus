@@ -6,7 +6,7 @@ import { injectQuery } from '@tanstack/angular-query-experimental';
 import { CommandExample } from '../../api/models/CommandExample';
 import { CommandSource } from '../../api/models/CommandSource';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
-import { DetailQueries } from '../detail.queries';
+import { DetailsQueriesService } from '../details-queries.service';
 import { DetailsActions } from '../ngrx/details.actions';
 import { CommandExamplesListComponent } from './command-examples-list.component';
 
@@ -44,10 +44,11 @@ import { CommandExamplesListComponent } from './command-examples-list.component'
 export class CommandsComponent {
   engineId = input.required<string>();
   protected collapsed = false;
-  protected commandExamples = injectQuery(() => DetailQueries.commandExamples(this.engineId));
+  protected commandExamples = injectQuery(() => this.detailsQueriesService.commandExamples(this.engineId));
   protected chosenExample?: CommandExample;
 
-  constructor(private store: Store) {}
+  constructor(private store: Store,
+              private detailsQueriesService: DetailsQueriesService) {}
 
   onExecute(commandToExecute: string) {
     this.store.dispatch(DetailsActions.commandsComponentExecuteClicked({

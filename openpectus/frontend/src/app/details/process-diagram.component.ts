@@ -5,7 +5,7 @@ import { PushPipe } from '@ngrx/component';
 import { injectQuery } from '@tanstack/angular-query-experimental';
 import { CollapsibleElementComponent } from '../shared/collapsible-element.component';
 import { ProcessValuePipe } from '../shared/pipes/process-value.pipe';
-import { DetailQueries } from './detail.queries';
+import { DetailsQueriesService } from './details-queries.service';
 
 @Component({
   selector: 'app-process-diagram',
@@ -31,8 +31,8 @@ import { DetailQueries } from './detail.queries';
 })
 export class ProcessDiagramComponent {
   engineId = input.required<string>();
-  processValuesQuery = injectQuery(() => DetailQueries.processValues(this.engineId));
-  processDiagramQuery = injectQuery(() => DetailQueries.processDiagram(this.engineId));
+  processValuesQuery = injectQuery(() => this.detailsQueriesService.processValues(this.engineId));
+  processDiagramQuery = injectQuery(() => this.detailsQueriesService.processDiagram(this.engineId));
   diagramWithValues = computed(() => {
     return this.domSanitizer.bypassSecurityTrustHtml(
       this.processDiagramQuery.data()?.svg?.replaceAll(/{{(?<inCurlyBraces>[^}]+)}}/g,
@@ -56,5 +56,6 @@ export class ProcessDiagramComponent {
   protected collapsed = false;
 
   constructor(private domSanitizer: DomSanitizer,
-              private processValuePipe: ProcessValuePipe) {}
+              private processValuePipe: ProcessValuePipe,
+              private detailsQueriesService: DetailsQueriesService) {}
 }

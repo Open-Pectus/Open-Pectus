@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
-import { map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
+import { map, mergeMap, of, switchMap } from 'rxjs';
 import { CommandSource } from '../../api/models/CommandSource';
 import { ProcessUnitService } from '../../api/services/ProcessUnitService';
 import { RecentRunsService } from '../../api/services/RecentRunsService';
@@ -15,36 +15,6 @@ import { DetailsSelectors } from './details.selectors';
 // noinspection JSUnusedGlobalSymbols
 @Injectable()
 export class DetailsEffects {
-  fetchControlStateWhenPageInitialized = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.unitDetailsInitialized),
-    switchMap(({unitId}) => {
-      return this.processUnitService.getControlState(unitId).pipe(
-        map(controlState => DetailsActions.controlStateFetched({controlState})),
-      );
-    }),
-  ));
-
-
-  subscribeForControlStateUpdatesFromBackend = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.unitDetailsInitialized),
-    mergeMap(({unitId}) => {
-      return this.pubSubService.subscribeControlState(unitId).pipe(
-        takeUntil(this.actions.pipe(ofType(DetailsActions.unitDetailsDestroyed))),
-        map(_ => DetailsActions.controlStateUpdatedOnBackend({unitId})),
-      );
-    }),
-  ));
-
-
-  fetchControlStateOnUpdateFromBackend = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.controlStateUpdatedOnBackend),
-    mergeMap(({unitId}) => {
-      return this.processUnitService.getControlState(unitId).pipe(
-        map(controlState => DetailsActions.controlStateFetched({controlState})),
-      );
-    }),
-  ));
-
   executeUnitControlCommandWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processUnitCommandButtonClicked),
     concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),

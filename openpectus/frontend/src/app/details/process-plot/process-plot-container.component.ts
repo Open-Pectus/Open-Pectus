@@ -4,7 +4,7 @@ import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { injectQuery } from '@tanstack/angular-query-experimental';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
-import { DetailQueries } from '../detail.queries';
+import { DetailsQueriesService } from '../details-queries.service';
 import { DetailsActions } from '../ngrx/details.actions';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
@@ -38,7 +38,7 @@ export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
   protected isCollapsed = false;
   protected plotIsModified = this.store.select(ProcessPlotSelectors.plotIsModified);
 
-  private processValuesQuery = this.unitId() === '' ? undefined : injectQuery(() => DetailQueries.processValues(this.unitId));
+  private processValuesQuery = this.unitId() === '' ? undefined : injectQuery(() => this.detailsQueriesService.processValues(this.unitId));
   private storeFetchedProcessValues = effect(() => {
     if(this.processValuesQuery === undefined) return;
     const processValues = this.processValuesQuery.data();
@@ -47,7 +47,8 @@ export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
     setTimeout(() => this.store.dispatch(DetailsActions.processValuesFetched({processValues})));
   });
 
-  constructor(private store: Store) {}
+  constructor(private store: Store,
+              private detailsQueriesService: DetailsQueriesService) {}
 
   ngOnInit() {
     const unitId = this.unitId();

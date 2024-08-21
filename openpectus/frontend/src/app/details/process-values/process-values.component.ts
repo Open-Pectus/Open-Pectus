@@ -7,7 +7,7 @@ import { ProcessValueCommand } from '../../api/models/ProcessValueCommand';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { ToggleButtonComponent } from '../../shared/toggle-button.component';
 import { UtilMethods } from '../../shared/util-methods';
-import { DetailQueries } from '../detail.queries';
+import { DetailsQueriesService } from '../details-queries.service';
 import { DetailsActions } from '../ngrx/details.actions';
 import { DetailsSelectors } from '../ngrx/details.selectors';
 import { ProcessValuesActions } from './ngrx/process-values.actions';
@@ -50,12 +50,13 @@ import { ProcessValuesCategorizedComponent } from './process-values-categorized.
 export class ProcessValuesComponent implements OnInit, OnDestroy {
   engineId = input.required<string>();
   allProcessValues = this.store.select(DetailsSelectors.allProcessValues);
-  processValues = injectQuery(() => DetailQueries.processValues(this.engineId));
+  processValues = injectQuery(() => this.detailsQueriesService.processValues(this.engineId));
   protected showCommands = false;
   protected pvAndPositionForPopover?: PvAndPosition;
   protected collapsed = false;
 
-  constructor(private store: Store) {}
+  constructor(private store: Store,
+              private detailsQueriesService: DetailsQueriesService) {}
 
   ngOnInit() {
     this.store.dispatch(ProcessValuesActions.processValuesComponentInitialized());

@@ -24,7 +24,9 @@ import { UnitControlsComponent } from './unit-controls.component';
         <span class="text-xs mb-2">User role: <b>{{ processUnit?.current_user_role | titlecase }}</b></span>
         <h1 class="text-4xl lg:text-5xl font-bold">{{ processUnit?.name }}</h1>
       </div>
-      <app-unit-controls></app-unit-controls>
+      @if (processUnit !== undefined) {
+        <app-unit-controls [engineId]="processUnit.id"></app-unit-controls>
+      }
       <div class="text-rose-800 mt-2 font-bold">
         @if (processUnit?.state?.state === Error.state.ERROR) {
           Interrupted by error! Please see the Error Log below.
