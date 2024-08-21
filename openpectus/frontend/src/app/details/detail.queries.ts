@@ -1,25 +1,23 @@
 import { inject, Signal } from '@angular/core';
-import { injectQuery } from '@tanstack/angular-query-experimental';
+import { queryOptions } from '@tanstack/angular-query-experimental';
 import { lastValueFrom } from 'rxjs';
 import { ProcessUnitService } from '../api/services/ProcessUnitService';
 
 export class DetailQueries {
-  static processValues(engineId: Signal<string | undefined>) {
+  static processValues(engineId: Signal<string>) {
     const processUnitService = inject(ProcessUnitService);
-    return injectQuery(() => ({
+    return queryOptions({
       refetchInterval: 1000,
       queryKey: ['processValues', engineId()],
-      queryFn: () => lastValueFrom(processUnitService.getProcessValues(engineId()!)),
-      enabled: () => engineId() !== undefined,
-    }));
+      queryFn: () => lastValueFrom(processUnitService.getProcessValues(engineId())),
+    });
   }
 
-  static processDiagram(engineId: Signal<string | undefined>) {
+  static processDiagram(engineId: Signal<string>) {
     const processUnitService = inject(ProcessUnitService);
-    return injectQuery(() => ({
+    return queryOptions({
       queryKey: ['processDiagram', engineId()],
-      queryFn: () => lastValueFrom(processUnitService.getProcessDiagram(engineId()!)),
-      enabled: () => engineId() !== undefined,
-    }));
+      queryFn: () => lastValueFrom(processUnitService.getProcessDiagram(engineId())),
+    });
   }
 }

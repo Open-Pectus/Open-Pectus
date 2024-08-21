@@ -2,6 +2,7 @@ import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, effect, input, Input, OnDestroy, OnInit } from '@angular/core';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
+import { injectQuery } from '@tanstack/angular-query-experimental';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { DetailQueries } from '../detail.queries';
 import { DetailsActions } from '../ngrx/details.actions';
@@ -31,15 +32,15 @@ import { ProcessPlotComponent } from './process-plot.component';
   `,
 })
 export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
-  unitId = input<string>();
+  unitId = input<string>('');
   @Input() recentRunId?: string;
 
   protected isCollapsed = false;
   protected plotIsModified = this.store.select(ProcessPlotSelectors.plotIsModified);
 
-  private processValuesQuery = DetailQueries.processValues(this.unitId);
+  private processValuesQuery = this.unitId() === '' ? undefined : injectQuery(() => DetailQueries.processValues(this.unitId));
   private storeFetchedProcessValues = effect(() => {
-    if(this.unitId() === undefined) return;
+    if(this.processValuesQuery === undefined) return;
     const processValues = this.processValuesQuery.data();
     if(processValues === undefined) return;
     // setTimeout to break out of the reactive context, which for some reason causes some problems: TODO: figure out why
