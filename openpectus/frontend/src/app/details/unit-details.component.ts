@@ -38,7 +38,7 @@ import { UnitHeaderComponent } from './unit-header/unit-header.component';
         @if (unitId !== undefined) {
           <app-process-values [engineId]="unitId"></app-process-values>
           <app-method-editor [unitId]="unitId"></app-method-editor>
-          <app-commands></app-commands>
+          <app-commands [engineId]="unitId"></app-commands>
           <app-run-log [unitId]="unitId"></app-run-log>
           <app-process-diagram [engineId]="unitId"></app-process-diagram>
           <app-process-plot-container class="2xl:col-span-2" [unitId]="unitId"></app-process-plot-container>

@@ -20,4 +20,12 @@ export class DetailQueries {
       queryFn: () => lastValueFrom(processUnitService.getProcessDiagram(engineId())),
     });
   }
+
+  static commandExamples(engineId: Signal<string>) {
+    const processUnitService = inject(ProcessUnitService);
+    return queryOptions({
+      queryKey: ['commandExamples', engineId()],
+      queryFn: () => lastValueFrom(processUnitService.getCommandExamples(engineId())),
+    });
+  }
 }

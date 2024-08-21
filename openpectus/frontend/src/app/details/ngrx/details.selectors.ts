@@ -6,7 +6,6 @@ import { detailsSlice, DetailsState } from './details.reducer';
 
 export class DetailsSelectors {
   static selectFeature = createFeatureSelector<DetailsState>(detailsSlice.name);
-  static commandExamples = createSelector(this.selectFeature, state => state.commandExamples);
   static controlState = createSelector(this.selectFeature, state => state.controlState);
   static recentRun = createSelector(this.selectFeature, state => state.recentRun);
   static allProcessValues = createSelector(this.selectFeature, state => state.allProcessValues);

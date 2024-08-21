@@ -1,12 +1,13 @@
 import { NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
+import { injectQuery } from '@tanstack/angular-query-experimental';
 import { CommandExample } from '../../api/models/CommandExample';
 import { CommandSource } from '../../api/models/CommandSource';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
+import { DetailQueries } from '../detail.queries';
 import { DetailsActions } from '../ngrx/details.actions';
-import { DetailsSelectors } from '../ngrx/details.selectors';
 import { CommandExamplesListComponent } from './command-examples-list.component';
 
 @Component({
@@ -23,7 +24,7 @@ import { CommandExamplesListComponent } from './command-examples-list.component'
     <app-collapsible-element [name]="'Commands'" [heightResizable]="true" [contentHeight]="400" (collapseStateChanged)="collapsed = $event"
                              [codiconName]="'codicon-terminal'">
       <div content class="flex h-full overflow-x-auto" *ngIf="!collapsed">
-        <app-command-examples-list [commandExamples]="commandExamples | ngrxPush" [chosenExample]="chosenExample"
+        <app-command-examples-list [commandExamples]="commandExamples.data()" [chosenExample]="chosenExample"
                                    (exampleChosen)="chosenExample = $event"></app-command-examples-list>
         <div class="flex justify-between flex-1 relative">
           <textarea placeholder="Example to copy from" readonly
@@ -40,16 +41,13 @@ import { CommandExamplesListComponent } from './command-examples-list.component'
     </app-collapsible-element>
   `,
 })
-export class CommandsComponent implements OnInit {
+export class CommandsComponent {
+  engineId = input.required<string>();
   protected collapsed = false;
-  protected commandExamples = this.store.select(DetailsSelectors.commandExamples);
+  protected commandExamples = injectQuery(() => DetailQueries.commandExamples(this.engineId));
   protected chosenExample?: CommandExample;
 
   constructor(private store: Store) {}
-
-  ngOnInit() {
-    this.store.dispatch(DetailsActions.commandsComponentInitialized());
-  }
 
   onExecute(commandToExecute: string) {
     this.store.dispatch(DetailsActions.commandsComponentExecuteClicked({

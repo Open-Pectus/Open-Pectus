@@ -63,17 +63,6 @@ export class DetailsEffects {
     }),
   ), {dispatch: false});
 
-  fetchCommandExamplesWhenComponentInitialized = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.commandsComponentInitialized),
-    concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
-    switchMap(([_, unitId]) => {
-      if(unitId === undefined) return of();
-      return this.processUnitService.getCommandExamples(unitId).pipe(
-        map(commandExamples => DetailsActions.commandExamplesFetched({commandExamples})),
-      );
-    }),
-  ));
-
   fetchRecentRunWhenComponentInitialized = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.recentRunDetailsInitialized),
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.recentRunIdParamName))),
