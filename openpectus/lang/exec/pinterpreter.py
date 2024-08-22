@@ -9,7 +9,7 @@ from uuid import UUID
 import pint
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.commands import InterpreterCommandEnum
-from openpectus.lang.exec.errors import InterpretationError, InterpretationInternalError, NodeInterpretationError
+from openpectus.lang.exec.errors import EngineError, InterpretationError, InterpretationInternalError, NodeInterpretationError
 from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import (
     TagCollection,
@@ -258,7 +258,11 @@ class PInterpreter(PNodeVisitor):
             next(self.process_instr)
         except StopIteration:
             pass
+        except AssertionError as ae:
+            raise InterpretationError(message=str(ae), exception=ae)
         except (InterpretationInternalError, InterpretationError):
+            raise
+        except EngineError:  # a method call on context failed - engine will know what to do
             raise
         except Exception as ex:
             logger.error("Unhandled interpretation error", exc_info=True)
@@ -269,11 +273,14 @@ class PInterpreter(PNodeVisitor):
             work_done = self._run_interrupt_handlers()
             if not work_done:
                 pass
-        except InterpretationError as ex:
-            raise InterpretationError("Interpreter error in interrupt handler") from ex
+        except AssertionError as ae:
+            raise InterpretationError(message=str(ae), exception=ae)
+        except (InterpretationInternalError, InterpretationError):
+            logger.error("Interpreter error in interrupt handler", exc_info=True)
+            raise
         except Exception as ex:
             logger.error("Unhandled interpretation error in interrupt handler", exc_info=True)
-            raise InterpretationError("Interpreter error in interrupt handler") from ex
+            raise InterpretationError("Interpreter error") from ex
 
     def stop(self):
         self.running = False
@@ -568,7 +575,11 @@ class PInterpreter(PNodeVisitor):
                 record.add_state_failed(
                     self._tick_time, self._tick_number,
                     self.context.tags.as_readonly())
-                raise NodeInterpretationError(node, "Failed to pass command to engine") from ex
+
+                if isinstance(ex, EngineError):
+                    raise
+                else:
+                    raise NodeInterpretationError(node, "Failed to pass command to engine") from ex
 
         yield
 
@@ -628,6 +639,8 @@ class PInterpreter(PNodeVisitor):
                 while not ar.complete and self.running:
                     try:
                         condition_result = self._evaluate_condition(node)
+                    except AssertionError:
+                        raise
                     except Exception as ex:
                         raise NodeInterpretationError(node, "Error evaluating condition: " + str(ex))
                     logger.debug(f"{str(node)} condition evaluated: {condition_result}")

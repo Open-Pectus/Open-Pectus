@@ -72,6 +72,9 @@ class UnitOperationDefinitionBase:
             - Must have an exec function with an appropriate signature
             - If the command uses a regular expression as parser function, it is verified that
               the exec function arguments match the regular expression.
+        - Each process value is verified
+            - Checks that entry process values have matching tag value type and 
+              process value entry_data_type.
         """
         fatal = False
 
@@ -87,6 +90,8 @@ class UnitOperationDefinitionBase:
         if self.hwl is None:
             log_fatal("Hardware Layer is not configured")
 
+        self.validate_read_registers()
+
         if self.system_tags is None:
             log_fatal("System tags have not been set")
         else:
@@ -95,7 +100,8 @@ class UnitOperationDefinitionBase:
                 try:
                     r.match_with_tags(tags)
                 except UodValidationError as vex:
-                    logging.error(vex.args[0])
+                    #logging.error(vex.args[0])
+                    log_fatal(str(vex))
 
                 # now that tag validation was completed, the command list can be built
                 r.build_commands_list()
@@ -198,6 +204,14 @@ either a 'value' argument or a '**kvargs' argument""")
                 if param_count == 2 and last_param.kind != _ParameterKind.VAR_KEYWORD:
                     raise UodValidationError(f"""Command '{key}' has an error.
 The execution function is missing named arguments or a '**kvargs' argument""")
+
+    def validate_read_registers(self):
+        """ Verify that all read registers have a matching tag. """
+        read_registers = [r for r in self.hwl.registers.values() if RegisterDirection.Read in r.direction]
+        for r in read_registers:
+            if not self.tags.has(r.name):
+                raise UodValidationError(
+                    f"Register '{r.name}' has read direction but no matching tag")
 
     def has_command_name(self, name: str) -> bool:
         """ Check whether the command name is defined in the Uod """
@@ -679,8 +693,8 @@ class UodBuilder():
             tag_name: str
                 The tag to display
             entry_data_type: "str" | "int" | "float" | "auto", optional, default="auto"
-                The data type to display in the UI. Default is "auto" which uses the type of the tag's value.
-                The "auto" value requires that the tag has a default value with the correct type.
+                The data type to display and validate in the UI. Default is "auto" which uses the type of the tag's
+                value. The "auto" value requires that the tag has a default value with the correct type.
             execute_command_name: str: optional
                 The command to execute to 'set the process value'. In principle, this can be any pcode command that takes a
                 single argument as given by the user. However, the intension is that the command 'sets the process value',

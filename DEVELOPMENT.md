@@ -559,7 +559,7 @@ with_hardware_register("FT01", "Read", path='Objects;2:System;3:FT01')
 Note that the `name` argument specifies the name to use for the register inside OpenPectus while the `path`
 option specifies how to refer to the register when communicating with the hardware.
 
-Registers are not used directly. Instead register values are wrapped in instances og the `Tag` class. Two special
+Registers are not used directly. Instead register values are wrapped in instances of the `Tag` class. Two special
 register options `to_tag` and `from_tag` specify how to convert between the register values (the raw values read
 from the hardware)  and `tag` values (the values used in pcode). If these options are not set, no conversion of
 the value is performed.
@@ -613,7 +613,8 @@ def reset(cmd: UodCommand, **kvargs) -> None:
     # implement command logic
     # possibly use one or more tags, available as cmd.context.tags
     # posibly using hardware directly, available as cmd.context.hwl
-    # possily using the command instance, available as cmd
+    # possily using the command instance, available as cmd.
+    # raise ValueError if an error occurs, to report it to the user.
     pass
 ```
 
@@ -645,6 +646,10 @@ This can be achieved using the `with_command_regex_arguments` method:
     arg_parse_regex=RegexNumber(units=None)
     )
 ```
+
+TODO: This is not currently correct. The regex wil not convert it to float. exec_fn needs to do that, but
+it is assured that this will always work
+
 
 This allows OpenPectus to parse the argument to a float via a predefined regular expression, and pass it to the `power`
 function when the command is executed.
