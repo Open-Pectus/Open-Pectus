@@ -4,6 +4,7 @@ from typing import Any
 
 from openpectus.engine.uod_builder_api import (
     UnitOperationDefinitionBase, UodBuilder, UodCommand,
+    as_float,
     tags,
     PlotConfiguration, SubPlot, PlotAxis, PlotColorRegion,
     RegexNumber,
@@ -26,6 +27,10 @@ def create() -> UnitOperationDefinitionBase:
 
     def test_cmd(cmd: UodCommand, value):
         print("test_cmd executing with arg: " + value)
+        fval = as_float(value)
+        if fval is None:
+            # raising ValueError will display the error to the user
+            raise ValueError("value must be a number")
         cmd.context.tags.get("TestInt").set_value(value, time())
         cmd.set_complete()
 

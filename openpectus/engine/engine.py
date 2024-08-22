@@ -364,12 +364,16 @@ class Engine(InterpreterContext):
         latest_cmd = "(none)"
         try:
             for c in self.cmd_executing:
-                latest_cmd = c.source or c.name
+                latest_cmd = c.name
                 if c not in cmds_done:
                     # Note: Executing one command may cause other commands to be cancelled (by identical or overlapping
                     # commands) Rather than modify self.cmd_executing (while iterating over it), cancelled/completed
                     # commands are added to the cmds_done set.
                     self._execute_command(c, cmds_done)
+        except ValueError as ve:
+            logger.error(f"Error executing command: '{latest_cmd}'. Command failed with error: {ve}", exc_info=True)
+            frontend_logger.error(f"Command '{latest_cmd}' failed: {ve}")
+            self.set_error_state()
         except Exception:
             logger.error(f"Error executing command: '{latest_cmd}'", exc_info=True)
             frontend_logger.error(f"Error executing command: '{latest_cmd}'")
