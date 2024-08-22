@@ -1,16 +1,18 @@
 import re
 import unittest
 
-from openpectus.lang.exec.uod import RegexCategorical, RegexNamedArgumentParser, RegexNumber, RegexText
 
-class TestRegexs_(unittest.TestCase):
+from openpectus.lang.exec.uod import RegexNamedArgumentParser
+from openpectus.engine.uod_builder_api import (
+    RegexCategorical, RegexNumber, RegexText,
+    as_float, as_int
+)
+
+class TestRegexs_named_groups(unittest.TestCase):
 
     def test_named_groups_RegexNumberWithUnit(self):
         parser = RegexNamedArgumentParser(RegexNumber(units=None))
         self.assertEqual(['number'], parser.get_named_groups())
-
-        #TODO test signature in validation...
-
         parser = RegexNamedArgumentParser(RegexNumber(units=['kg']))
         self.assertEqual(['number', 'number_unit'], parser.get_named_groups())
 
@@ -208,6 +210,40 @@ class TestRegexs(unittest.TestCase):
         self.assertEqual(
             re.search(regex, "").groupdict(),  # type: ignore
             dict(text=""))
+
+class TestConversions(unittest.TestCase):
+
+    def test_as_float(self):
+        def test_value(value: str, expected_result: float | None):
+            with self.subTest(value):
+                result = as_float(value)
+                self.assertEqual(result, expected_result)
+
+        test_value("0",  0)
+        test_value("0.002",  0.002)
+        test_value("-34",  -34)
+        test_value("-37.31",  -37.31)
+        test_value("0.0",  0.0)
+        test_value("  3  ",  3.0)
+
+        test_value("",  None)        
+        test_value("3f",  None)
+        test_value("f",  None)
+
+    def test_as_int(self):
+        def test_value(value: str, expected_result: int | None):
+            with self.subTest(value):
+                result = as_int(value)
+                self.assertEqual(result, expected_result)
+
+        test_value("0",  0)
+        test_value("3",  3)
+        test_value("-34",  -34)
+        test_value("   4  ",  4)
+
+        test_value("-37.31",  None)
+        test_value("",  None)
+        test_value("3.2",  None)
 
 
 if __name__ == "__main__":
