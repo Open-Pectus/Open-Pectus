@@ -559,7 +559,7 @@ with_hardware_register("FT01", "Read", path='Objects;2:System;3:FT01')
 Note that the `name` argument specifies the name to use for the register inside OpenPectus while the `path`
 option specifies how to refer to the register when communicating with the hardware.
 
-Registers are not used directly. Instead register values are wrapped in instances og the `Tag` class. Two special
+Registers are not used directly. Instead register values are wrapped in instances of the `Tag` class. Two special
 register options `to_tag` and `from_tag` specify how to convert between the register values (the raw values read
 from the hardware)  and `tag` values (the values used in pcode). If these options are not set, no conversion of
 the value is performed.
