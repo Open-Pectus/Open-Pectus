@@ -1,12 +1,12 @@
 import re
 import unittest
 
-
 from openpectus.lang.exec.uod import RegexNamedArgumentParser
 from openpectus.engine.uod_builder_api import (
     RegexCategorical, RegexNumber, RegexText,
     as_float, as_int
 )
+
 
 class TestRegexs_named_groups(unittest.TestCase):
 
@@ -30,6 +30,7 @@ class TestRegexs_named_groups(unittest.TestCase):
         regex = RegexCategorical(exclusive_options=['Closed'], additive_options=['VA01', 'VA02', 'VA03'])
         parser = RegexNamedArgumentParser(regex)
         self.assertEqual(['option'], parser.get_named_groups())
+
 
 class TestRegexs(unittest.TestCase):
     def test_regex_number_with_unit(self):
@@ -210,6 +211,7 @@ class TestRegexs(unittest.TestCase):
         self.assertEqual(
             re.search(regex, "").groupdict(),  # type: ignore
             dict(text=""))
+
 
 class TestConversions(unittest.TestCase):
 

@@ -233,13 +233,6 @@ class Engine(InterpreterContext):
             for tag in self._system_tags.tags.values():
                 tag.tick_time = self._tick_time
 
-            # Verify that read registers all have matching tag.
-            read_registers = [r for r in self.uod.hwl.registers.values() if RegisterDirection.Read in r.direction]
-            for i, r in enumerate(read_registers):
-                if not self.uod.tags.has(r.name):
-                    logger.fatal("Invalid uod configuration. One or more registers have no matching tag.")
-                    exit(1)
-
         self.uod.hwl.tick()
 
         # read, stop on HardwareLayerException

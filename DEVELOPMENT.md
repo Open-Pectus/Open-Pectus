@@ -613,7 +613,8 @@ def reset(cmd: UodCommand, **kvargs) -> None:
     # implement command logic
     # possibly use one or more tags, available as cmd.context.tags
     # posibly using hardware directly, available as cmd.context.hwl
-    # possily using the command instance, available as cmd
+    # possily using the command instance, available as cmd.
+    # raise ValueError if an error occurs, to report it to the user.
     pass
 ```
 
@@ -645,6 +646,10 @@ This can be achieved using the `with_command_regex_arguments` method:
     arg_parse_regex=RegexNumber(units=None)
     )
 ```
+
+TODO: This is not currently correct. The regex wil not convert it to float. exec_fn needs to do that, but
+it is assured that this will always work
+
 
 This allows OpenPectus to parse the argument to a float via a predefined regular expression, and pass it to the `power`
 function when the command is executed.
