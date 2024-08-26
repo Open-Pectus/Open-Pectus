@@ -1,6 +1,7 @@
 import { createAction, props } from '@ngrx/store';
 import { PlotConfiguration } from '../../../api/models/PlotConfiguration';
 import { PlotLog } from '../../../api/models/PlotLog';
+import { ProcessValue } from '../../../api/models/ProcessValue';
 import { AxisLimits, XAxisOverrideDialogData, YAxesLimitsOverride, YAxisOverrideDialogData } from '../process-plot.types';
 
 const source = '[Process Plot] ';
@@ -10,6 +11,7 @@ export class ProcessPlotActions {
     props<{ unitId: string }>());
   static processPlotComponentInitializedForRecentRun = createAction(source + 'Process Plot Component Initialized For Recent Run',
     props<{ recentRunId: string }>());
+  static processValuesFetched = createAction(source + 'Process Values Fetched', props<{ processValues: ProcessValue[] }>());
   static processPlotComponentDestroyed = createAction(source + 'Process Plot Component Destroyed');
   static plotConfigurationFetched = createAction(source + 'Plot Configuration Fetched', props<{ configuration: PlotConfiguration }>());
   static processPlotZoomed = createAction(source + 'Process Plot Zoomed',

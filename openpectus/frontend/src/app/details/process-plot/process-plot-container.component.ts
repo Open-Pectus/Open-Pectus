@@ -6,7 +6,6 @@ import { CreateQueryResult } from '@tanstack/angular-query-experimental';
 import { ProcessValue } from '../../api/models/ProcessValue';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { DetailsQueriesService } from '../details-queries.service';
-import { DetailsActions } from '../ngrx/details.actions';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
 import { ProcessPlotComponent } from './process-plot.component';
@@ -45,7 +44,7 @@ export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
     const processValues = this.processValuesQuery.data();
     if(processValues === undefined) return;
     // setTimeout to break out of the reactive context, which for some reason causes some problems: TODO: figure out why
-    setTimeout(() => this.store.dispatch(DetailsActions.processValuesFetched({processValues})));
+    setTimeout(() => this.store.dispatch(ProcessPlotActions.processValuesFetched({processValues})));
   });
 
   constructor(private store: Store,

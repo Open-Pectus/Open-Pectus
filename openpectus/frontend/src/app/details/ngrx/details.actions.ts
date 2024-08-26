@@ -1,13 +1,11 @@
 import { createAction, props } from '@ngrx/store';
 import { ExecutableCommand } from '../../api/models/ExecutableCommand';
-import { ProcessValue } from '../../api/models/ProcessValue';
 
 const source = '[Details] ';
 
 export class DetailsActions {
   static unitDetailsInitialized = createAction(source + 'Unit Details Initialized', props<{ unitId: string }>());
   static unitDetailsDestroyed = createAction(source + 'Unit Details Destroyed');
-  static processValuesFetched = createAction(source + 'Process Values Fetched', props<{ processValues: ProcessValue[] }>());
   static processUnitCommandButtonClicked = createAction(source + 'Process Unit Command Button Clicked',
     props<{ command: string }>());
   static commandsComponentExecuteClicked = createAction(source + 'Commands Component Execute Clicked', props<{ command: ExecutableCommand }>());

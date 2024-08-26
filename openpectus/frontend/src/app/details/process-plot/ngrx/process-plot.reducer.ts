@@ -3,7 +3,6 @@ import { produce } from 'immer';
 import { PlotConfiguration } from '../../../api/models/PlotConfiguration';
 import { PlotLog } from '../../../api/models/PlotLog';
 import { PlotLogEntry } from '../../../api/models/PlotLogEntry';
-import { DetailsActions } from '../../ngrx/details.actions';
 import { XAxisOverrideDialogData, YAxesLimitsOverride, YAxisOverrideDialogData, ZoomAndPanDomainOverrides } from '../process-plot.types';
 import { ProcessPlotActions } from './process-plot.actions';
 
@@ -56,7 +55,7 @@ const reducer = createReducer(initialState,
     state => produce(state, draft => {
       draft.markedDirty = true;
     })),
-  on(DetailsActions.processValuesFetched, (state, {processValues}) => produce(state, draft => {
+  on(ProcessPlotActions.processValuesFetched, (state, {processValues}) => produce(state, draft => {
     processValues.forEach(processValue => {
       const existing = draft.plotLog.entries[processValue.name];
       if(existing === undefined) {
