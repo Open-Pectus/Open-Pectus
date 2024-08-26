@@ -170,7 +170,7 @@ class ProcessValue(Dto):
         )
 
     @staticmethod
-    def create_w_commands(tag: Mdl.TagValue, commands) -> ProcessValue:
+    def create_w_commands(tag: Mdl.TagValue, commands: list[ProcessValueCommand]) -> ProcessValue:
         return ProcessValue(
             name=tag.name,
             value=tag.value,

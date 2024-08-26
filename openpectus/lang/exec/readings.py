@@ -94,6 +94,20 @@ class ReadingWithEntry(Reading):
 
     def match_with_tags(self, tags: TagCollection):
         super().match_with_tags(tags)
+        assert isinstance(self.tag, Tag)
+
+        if self.entry_data_type == "int":
+            if not isinstance(self.tag.value, int):
+                raise UodValidationError(
+                    f"The process value for tag '{self.tag_name}' specifies the entry_data_type: {self.entry_data_type}. " +
+                    f"This conflicts with the tag's current value '{self.tag.value}' which is of type {type(self.tag.value)}"
+                )
+        elif self.entry_data_type == "float":
+            if not isinstance(self.tag.value, float):
+                raise UodValidationError(
+                    f"The process value for tag '{self.tag_name}' specifies the entry_data_type: {self.entry_data_type}. " +
+                    f"This conflicts with the tag's current value '{self.tag.value}' which is of type {type(self.tag.value)}"
+                )
 
     def build_commands_list(self):
         self.commands.append(ReadingCommand(self.tag_name, self.execute_command_name))

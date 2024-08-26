@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 class TagContext():
+    """ Abstraction around a TagCollection that enables emitting the TagLifetime events
+    to the wrapped tags. """
     def __init__(self, tags: TagCollection) -> None:
         self.tags: TagCollection = tags
 
