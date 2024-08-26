@@ -1,9 +1,10 @@
-import { effect, Injectable } from '@angular/core';
+import { effect, Injectable, Injector } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
 import { injectQuery, injectQueryClient } from '@tanstack/angular-query-experimental';
 import { lastValueFrom } from 'rxjs';
 import { ProcessUnitService } from '../api/services/ProcessUnitService';
+import { RecentRunsService } from '../api/services/RecentRunsService';
 import { PubSubService } from '../shared/pub-sub.service';
 import { UtilMethods } from '../shared/util-methods';
 import { DetailsSelectors } from './ngrx/details.selectors';
@@ -12,15 +13,16 @@ import { DetailsSelectors } from './ngrx/details.selectors';
 export class DetailsQueriesService {
   constructor(private processUnitService: ProcessUnitService,
               private store: Store,
-              private pubSubService: PubSubService) {}
+              private pubSubService: PubSubService,
+              private recentRunsService: RecentRunsService) {}
 
-  injectProcessValuesQuery() {
-    const engineId = UtilMethods.throwIfEmpty(toSignal(this.store.select(DetailsSelectors.processUnitId)));
+  injectProcessValuesQuery(injector?: Injector) {
+    const engineId = UtilMethods.throwIfEmpty(toSignal(this.store.select(DetailsSelectors.processUnitId), {injector}));
     return injectQuery(() => ({
       refetchInterval: 1000,
       queryKey: ['processValues', engineId()],
       queryFn: () => lastValueFrom(this.processUnitService.getProcessValues(engineId())),
-    }));
+    }), injector);
   }
 
   injectProcessDiagramQuery() {
@@ -52,6 +54,14 @@ export class DetailsQueriesService {
     return injectQuery(() => ({
       queryKey: [controlStateKey, engineId()],
       queryFn: () => lastValueFrom(this.processUnitService.getControlState(engineId())),
+    }));
+  }
+
+  injectRecentRunQuery() {
+    const recentRunId = UtilMethods.throwIfEmpty(toSignal(this.store.select(DetailsSelectors.recentRunId)));
+    return injectQuery(() => ({
+      queryKey: ['recentRuns', recentRunId()],
+      queryFn: () => lastValueFrom(this.recentRunsService.getRecentRun(recentRunId())),
     }));
   }
 }

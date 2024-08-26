@@ -2,8 +2,8 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { LetDirective } from '@ngrx/component';
 import { Store } from '@ngrx/store';
+import { DetailsQueriesService } from './details-queries.service';
 import { DetailsActions } from './ngrx/details.actions';
-import { DetailsSelectors } from './ngrx/details.selectors';
 
 @Component({
   selector: 'app-recent-run-header',
@@ -11,7 +11,7 @@ import { DetailsSelectors } from './ngrx/details.selectors';
   standalone: true,
   imports: [LetDirective, DatePipe],
   template: `
-    <ng-container *ngrxLet="recentRun as recentRun">
+    <ng-container *ngrxLet="recentRunQuery.data() as recentRun">
       <div class="text-slate-700 mb-1 relative">
         <div class="text-xs flex gap-4 mb-2">
           <span>Started at: <b class="whitespace-nowrap">{{ recentRun?.started_date | date }}</b></span>
@@ -30,9 +30,10 @@ import { DetailsSelectors } from './ngrx/details.selectors';
   `,
 })
 export class RecentRunHeaderComponent {
-  protected recentRun = this.store.select(DetailsSelectors.recentRun);
+  protected recentRunQuery = this.detailsQueriesService.injectRecentRunQuery();
 
-  constructor(private store: Store) {}
+  constructor(private store: Store,
+              private detailsQueriesService: DetailsQueriesService) {}
 
   downloadCsv(recentRunId?: string) {
     if(recentRunId === undefined) return;

@@ -6,9 +6,7 @@ import { map, mergeMap, of, switchMap } from 'rxjs';
 import { CommandSource } from '../../api/models/CommandSource';
 import { ProcessUnitService } from '../../api/services/ProcessUnitService';
 import { RecentRunsService } from '../../api/services/RecentRunsService';
-import { selectRouteParam } from '../../ngrx/router.selectors';
 import { PubSubService } from '../../shared/pub-sub.service';
-import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
 import { DetailsActions } from './details.actions';
 import { DetailsSelectors } from './details.selectors';
 
@@ -32,17 +30,6 @@ export class DetailsEffects {
       return this.processUnitService.executeCommand(unitId, {...command});
     }),
   ), {dispatch: false});
-
-  fetchRecentRunWhenComponentInitialized = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.recentRunDetailsInitialized),
-    concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.recentRunIdParamName))),
-    switchMap(([_, recentRunId]) => {
-      if(recentRunId === undefined) return of();
-      return this.recentRunsService.getRecentRun(recentRunId).pipe(
-        map(recentRun => DetailsActions.recentRunFetched({recentRun})),
-      );
-    }),
-  ));
 
   downloadRecentRunCsvWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.recentRunDownloadCsvButtonClicked),

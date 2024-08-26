@@ -1,7 +1,9 @@
 import { NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, effect, input, Input, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, Injector, input, OnDestroy, OnInit } from '@angular/core';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
+import { CreateQueryResult } from '@tanstack/angular-query-experimental';
+import { ProcessValue } from '../../api/models/ProcessValue';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { DetailsQueriesService } from '../details-queries.service';
 import { DetailsActions } from '../ngrx/details.actions';
@@ -31,13 +33,13 @@ import { ProcessPlotComponent } from './process-plot.component';
   `,
 })
 export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
-  unitId = input<string>('');
-  @Input() recentRunId?: string;
+  unitId = input<string>();
+  recentRunId = input<string>();
 
   protected isCollapsed = false;
   protected plotIsModified = this.store.select(ProcessPlotSelectors.plotIsModified);
 
-  private processValuesQuery = this.detailsQueriesService.injectProcessValuesQuery();
+  private processValuesQuery?: CreateQueryResult<ProcessValue[], Error>;
   private storeFetchedProcessValues = effect(() => {
     if(this.processValuesQuery === undefined) return;
     const processValues = this.processValuesQuery.data();
@@ -47,13 +49,18 @@ export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
   });
 
   constructor(private store: Store,
-              private detailsQueriesService: DetailsQueriesService) {}
+              private detailsQueriesService: DetailsQueriesService,
+              private injector: Injector) {}
 
   ngOnInit() {
     const unitId = this.unitId();
-    if(unitId !== undefined) this.store.dispatch(ProcessPlotActions.processPlotComponentInitializedForUnit({unitId}));
-    if(this.recentRunId !== undefined) {
-      this.store.dispatch(ProcessPlotActions.processPlotComponentInitializedForRecentRun({recentRunId: this.recentRunId}));
+    if(unitId !== undefined) {
+      this.store.dispatch(ProcessPlotActions.processPlotComponentInitializedForUnit({unitId}));
+      this.processValuesQuery = this.detailsQueriesService.injectProcessValuesQuery(this.injector);
+    }
+    const recentRunId = this.recentRunId();
+    if(recentRunId !== undefined) {
+      this.store.dispatch(ProcessPlotActions.processPlotComponentInitializedForRecentRun({recentRunId}));
     }
   }
 

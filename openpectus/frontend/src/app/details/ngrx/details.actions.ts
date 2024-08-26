@@ -1,7 +1,6 @@
 import { createAction, props } from '@ngrx/store';
 import { ExecutableCommand } from '../../api/models/ExecutableCommand';
 import { ProcessValue } from '../../api/models/ProcessValue';
-import { RecentRun } from '../../api/models/RecentRun';
 
 const source = '[Details] ';
 
@@ -12,9 +11,6 @@ export class DetailsActions {
   static processUnitCommandButtonClicked = createAction(source + 'Process Unit Command Button Clicked',
     props<{ command: string }>());
   static commandsComponentExecuteClicked = createAction(source + 'Commands Component Execute Clicked', props<{ command: ExecutableCommand }>());
-  static recentRunDetailsInitialized = createAction(source + 'Recent Run Details Initialized');
-  static recentRunDetailsDestroyed = createAction(source + 'Recent Run Details Destroyed');
-  static recentRunFetched = createAction(source + 'Recent Run Fetched', props<{ recentRun: RecentRun }>());
   static recentRunDownloadCsvButtonClicked = createAction(source + 'Recent Run Download Csv Button Clicked', props<{ recentRunId: string }>());
   static toggleAllProcessValues = createAction(source + 'All Process Values Toggled', props<{ allProcessValues: boolean }>());
 }

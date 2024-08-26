@@ -6,9 +6,9 @@ import { detailsSlice, DetailsState } from './details.reducer';
 
 export class DetailsSelectors {
   static selectFeature = createFeatureSelector<DetailsState>(detailsSlice.name);
-  static recentRun = createSelector(this.selectFeature, state => state.recentRun);
   static allProcessValues = createSelector(this.selectFeature, state => state.allProcessValues);
   static processUnitId = selectRouteParam(DetailsRoutingUrlParts.processUnitIdParamName);
+  static recentRunId = selectRouteParam(DetailsRoutingUrlParts.recentRunIdParamName);
   static processUnit = createSelector(AppSelectors.processUnits, DetailsSelectors.processUnitId,
     (processUnits, unitId) => {
       return processUnits.find(processUnit => processUnit.id === unitId);
