@@ -1,3 +1,5 @@
+import { computed, Signal } from '@angular/core';
+
 export class UtilMethods {
   static get isMobile() {
     return window.innerWidth < 1024;
@@ -33,5 +35,12 @@ export class UtilMethods {
 
   static arrayEquals<T>(a: T[], b: T[]): boolean {
     return a.length === b.length && a.every((value, index) => b[index] === value);
+  }
+
+  static throwIfEmpty<T>(signal: Signal<T | undefined | null>): Signal<T> {
+    return computed(() => {
+      if(signal() === undefined || signal() === null) throw Error('A signal was unexpectedly null or undefined');
+      return signal()!;
+    });
   }
 }

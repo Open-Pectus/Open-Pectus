@@ -1,7 +1,5 @@
-import { ChangeDetectionStrategy, Component, effect, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { LetDirective } from '@ngrx/component';
-import { injectQuery, injectQueryClient } from '@tanstack/angular-query-experimental';
-import { PubSubService } from '../../shared/pub-sub.service';
 import { DetailsQueriesService } from '../details-queries.service';
 import { UnitControlButtonComponent } from './unit-control-button.component';
 
@@ -31,16 +29,7 @@ export class UnitControlsComponent {
   readonly startColor = '#047857';
   readonly pauseColor = '#ca8a04';
   readonly stopColor = '#b91c1c';
-  protected controlStateQuery = injectQuery(() => this.detailsQueriesService.controlState(this.engineId));
-  private queryClient = injectQueryClient();
+  protected controlStateQuery = this.detailsQueriesService.injectControlStateQuery();
 
-  private invalidateOnWebsocketNotification = effect((onCleanup) => {
-    const queryKey = this.detailsQueriesService.controlState(this.engineId).queryKey;
-    const subscription = this.pubSubService.subscribeControlState(this.engineId())
-      .subscribe(() => void this.queryClient.invalidateQueries({queryKey}));
-    onCleanup(() => subscription.unsubscribe());
-  });
-
-  constructor(private pubSubService: PubSubService,
-              private detailsQueriesService: DetailsQueriesService) {}
+  constructor(private detailsQueriesService: DetailsQueriesService) {}
 }

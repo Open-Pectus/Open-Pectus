@@ -1,8 +1,7 @@
 import { NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { PushPipe } from '@ngrx/component';
-import { injectQuery } from '@tanstack/angular-query-experimental';
 import { CollapsibleElementComponent } from '../shared/collapsible-element.component';
 import { ProcessValuePipe } from '../shared/pipes/process-value.pipe';
 import { DetailsQueriesService } from './details-queries.service';
@@ -30,9 +29,9 @@ import { DetailsQueriesService } from './details-queries.service';
   `,
 })
 export class ProcessDiagramComponent {
-  engineId = input.required<string>();
-  processValuesQuery = injectQuery(() => this.detailsQueriesService.processValues(this.engineId));
-  processDiagramQuery = injectQuery(() => this.detailsQueriesService.processDiagram(this.engineId));
+  processDiagramQuery = this.detailsQueriesService.injectProcessDiagramQuery();
+  protected collapsed = false;
+  private processValuesQuery = this.detailsQueriesService.injectProcessValuesQuery();
   diagramWithValues = computed(() => {
     return this.domSanitizer.bypassSecurityTrustHtml(
       this.processDiagramQuery.data()?.svg?.replaceAll(/{{(?<inCurlyBraces>[^}]+)}}/g,
@@ -53,7 +52,6 @@ export class ProcessDiagramComponent {
           return formattedProcessValue;
         }) ?? '');
   });
-  protected collapsed = false;
 
   constructor(private domSanitizer: DomSanitizer,
               private processValuePipe: ProcessValuePipe,

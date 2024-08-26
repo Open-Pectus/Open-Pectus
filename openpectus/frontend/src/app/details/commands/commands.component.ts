@@ -1,8 +1,7 @@
 import { NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
-import { injectQuery } from '@tanstack/angular-query-experimental';
 import { CommandExample } from '../../api/models/CommandExample';
 import { CommandSource } from '../../api/models/CommandSource';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
@@ -42,9 +41,8 @@ import { CommandExamplesListComponent } from './command-examples-list.component'
   `,
 })
 export class CommandsComponent {
-  engineId = input.required<string>();
   protected collapsed = false;
-  protected commandExamples = injectQuery(() => this.detailsQueriesService.commandExamples(this.engineId));
+  protected commandExamples = this.detailsQueriesService.injectCommandExamplesQuery();
   protected chosenExample?: CommandExample;
 
   constructor(private store: Store,
