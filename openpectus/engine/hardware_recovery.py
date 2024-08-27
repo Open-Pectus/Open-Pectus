@@ -72,7 +72,7 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
     """
 
     def __str__(self) -> str:
-        return f"ErrorRecoveryDecorator(state={self.state},decoratee={type(self.decorated).__name__})"
+        return f"ErrorRecoveryDecorator(state={self.state},decorated={type(self.decorated).__name__})"
 
 
     def __init__(self, decorated: HardwareLayerBase, config: ErrorRecoveryConfig, connection_status_tag: Tag) -> None:
@@ -100,6 +100,7 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
         self.reconnect_tick = -1
         # Hardcoded ticks for exponential backoff. Multiples of the largest value are implicitly included
         self.reconnect_backoff_ticks = [5, 20, 100, 300, 1200, 18000]
+        #self.reconnect_backoff_ticks = [5, 20, 100, 300, 400]
 
         # support initialization with connected hwl, which is the default case
         if decorated.is_connected:
@@ -108,7 +109,6 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
             self.on_ok()
         else:
             logger.debug("Initializing recovery from disconnected hardware")
-
 
         try:
             self._setup_decorated_method_forwards()
@@ -172,6 +172,7 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
                     self.reconnect()
                     self.reconnect_tick = -1
                     self.state = ErrorRecoveryState.OK
+                    self.on_reconnected()
                 except Exception:
                     logger.error("Reconnect failed", exc_info=True)
 
