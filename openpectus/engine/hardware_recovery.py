@@ -100,7 +100,6 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
         self.reconnect_tick = -1
         # Hardcoded ticks for exponential backoff. Multiples of the largest value are implicitly included
         self.reconnect_backoff_ticks = [5, 20, 100, 300, 1200, 18000]
-        #self.reconnect_backoff_ticks = [5, 20, 100, 300, 400]
 
         # support initialization with connected hwl, which is the default case
         if decorated.is_connected:
