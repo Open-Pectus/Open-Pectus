@@ -41,7 +41,10 @@ def create() -> UnitOperationDefinitionBase:
         cmd.set_complete()
 
     def test_percentage(cmd: UodCommand, number, number_unit):
-        cmd.context.tags.get("TestPercentage").set_value(float(number), time())
+        # Note: When using RegexNumber, the number argument is still a
+        # string but it will always support conversion to float
+        number = float(number)
+        cmd.context.tags.get("TestPercentage").set_value(number, time())
         cmd.set_complete()
 
     def get_plot_configuration() -> PlotConfiguration:
