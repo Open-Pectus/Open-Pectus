@@ -637,8 +637,9 @@ Power: 0.5
 
 The exec function of the command may look like this:
 ```
-def power(cmd: UodCommand, number: float):
-    pass
+def power(cmd: UodCommand, number):
+    number = float(number)
+    ...
 ```
 
 This can be achieved using the `with_command_regex_arguments` method:
@@ -650,12 +651,10 @@ This can be achieved using the `with_command_regex_arguments` method:
     )
 ```
 
-TODO: This is not currently correct. The regex wil not convert it to float. exec_fn needs to do that, but
-it is assured that this will always work
+This allows OpenPectus to parse the argument to a float via a predefined regular expression, and pass it to the `power` function when the command is executed.
 
-
-This allows OpenPectus to parse the argument to a float via a predefined regular expression, and pass it to the `power`
-function when the command is executed.
+Note that, currently, the regex wil not convert the argument to a float. The execution
+function needs to do that `number = float(number)`. The regex does ensure that this conversion will work. If the value cannot be parsed as a float, the regex parsing function will pause the method and alert the user.
 
 Note that the argument names to the exec funcion are defined in the regular expression. RegexNumber defines 'number'
 (and 'number_unit' if one or more units are given). The exec function argument must use the same name. Validation is 
