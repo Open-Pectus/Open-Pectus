@@ -104,7 +104,7 @@ Watch: A > 2 mL
 Watch: A > 2
     Mark: a
 """)
-        tags = TagCollection().with_tag(Tag("A", unit="ml"))
+        tags = TagCollection().with_tag(Tag("A", unit="mL"))
         analyzer = ConditionCheckAnalyzer(tags)
         analyzer.visit(program)
         self.assertEqual(1, len(analyzer.items))
@@ -115,7 +115,7 @@ Watch: A > 2
 Watch: A > 2 mL
     Mark: a
 """)
-        tags = TagCollection().with_tag(Tag("A", unit="sec"))
+        tags = TagCollection().with_tag(Tag("A", unit="s"))
         analyzer = ConditionCheckAnalyzer(tags)
         analyzer.visit(program)
         self.assertEqual(1, len(analyzer.items))

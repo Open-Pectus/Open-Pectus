@@ -4,8 +4,6 @@ import logging
 import re
 from typing import List
 
-import pint
-
 from openpectus.lang.model.pprogram import (
     PCommandWithDuration,
     PComment,
@@ -23,6 +21,7 @@ from openpectus.lang.model.pprogram import (
 )
 
 from openpectus.lang.exec.tags import TagCollection
+from openpectus.lang.exec.units import are_comparable
 from openpectus.lang.exec.commands import CommandCollection
 from openpectus.lang.exec.pinterpreter import PNodeVisitor
 from openpectus.lang import float_re, unit_re, identifier_re
@@ -344,20 +343,15 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
             ))
             return
 
-        def create_pint_unit(unit: str | None) -> pint.Unit:
-            return pint.Unit(unit)   # type: ignore
-
         if tag.unit is not None:
-            tag_unit = tag.get_pint_unit()
-            assert tag_unit is not None
-            condition_unit = create_pint_unit(condition.tag_unit)
-            if not tag_unit.is_compatible_with(condition_unit):
+            assert condition.tag_unit is not None
+            if not are_comparable(tag.unit, condition.tag_unit):
                 self.add_item(AnalyzerItem(
                     "IncompatibleUnits",
                     "Incompatible units",
                     node,
                     AnalyzerItemType.ERROR,
-                    f"The tag unit '{tag_unit}' is not compatible with the provided unit '{condition_unit}'"
+                    f"The tag unit '{tag.unit}' is not compatible with the provided unit '{condition.tag_unit}'"
                 ))
                 return
 

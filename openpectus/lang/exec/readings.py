@@ -3,6 +3,7 @@ import uuid
 
 from openpectus.engine.models import EntryDataType
 from openpectus.lang.exec.tags import Tag, TagCollection
+from openpectus.lang.exec.units import get_compatible_unit_names
 from openpectus.lang.exec.errors import UodValidationError
 import openpectus.protocol.models as Mdl
 
@@ -47,7 +48,7 @@ class Reading():
             raise UodValidationError(f"Reading with tag name: {self.tag_name} has no matching tag defined")
 
         self.tag = tags[self.tag_name]
-        self.valid_value_units = self.tag.get_compatible_units()
+        self.valid_value_units = get_compatible_unit_names(self.tag.unit)
 
     def build_commands_list(self):
         """ Override to specify the commands available in the UI for this process value.
