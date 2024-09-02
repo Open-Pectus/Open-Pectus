@@ -314,10 +314,6 @@ class PInterpreter(PNodeVisitor):
             time_value = str(block_value_tag.get_value() if is_in_block else value_tag.get_value())
             time_unit = block_value_tag.unit if is_in_block else value_tag.unit
 
-
-            # TODO move unit mangling away
-            #units.compare_values('<', )
-
             try:
                 # calculate result of 'value < threshold'
                 result = units.compare_values(
