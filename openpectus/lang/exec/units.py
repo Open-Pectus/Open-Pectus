@@ -9,20 +9,22 @@ ureg = UnitRegistry(cache_folder="./pint-cache")
 Q_ = Quantity
 logger = logging.getLogger(__name__)
 
-# TODO add CV - is not a pint unit, needs special treatment
 # https://en.wikipedia.org/wiki/International_System_of_Units
-# defines all the units we accept, each with their quantity name (dimension in pint).
+# defines all the units we accept, each with their quantity name (similar to pint dimensionality).
 QUANTITY_UNIT_MAP = {
-    'time': ['s', 'min', 'hour', 'ms'],         # SI quantity
-    'length': ['m', 'cm'],                      # SI quantity
-    'mass': ['kg', 'g'],                        # SI quantity
-    'temperature': ['degC', 'degF', 'degK'],    # SI quantity
-    'amount_of_substance': ['mol'],             # SI quantity
-    'volume': ['L', 'mL'],                      # Derived quantity
-    'flow': ['L/h', 'L/min', 'L/d'],            # Derived quantity
-    'percentage': ['%'],                        # Custom quantity
+    'time': ['s', 'min', 'h', 'ms'],            # SI quantities
+    'length': ['m', 'cm'],
+    'mass': ['kg', 'g'],
+    'temperature': ['degC', 'degF', 'degK'],
+    'amount_of_substance': ['mol'],
+    'volume': ['L', 'mL'],                      # Derived quantities
+    'flow': ['L/h', 'L/min', 'L/d'],
+    'pressure': ['Pa', 'bar', 'pascal'],        # Note: pint prefers pascal over Pa so we define both.
+    'mass flow rate': ['kg/h', 'g/s', 'g/min', 'g/h'],
+    'percentage': ['%'],                        # Custom quantity but supported by pint
     'column volume': ['CV']                     # Custom quantity
 }
+""" Map quantity names to unit names. """
 
 QUANTITY_PINT_MAP: dict[str, str | None] = {
     'time': '[time]',
@@ -32,7 +34,9 @@ QUANTITY_PINT_MAP: dict[str, str | None] = {
     'volume': '[length] ** 3',
     'temperature': '[temperature]',
     'amount_of_substance': '[substance]',
-    'percentage': None,
+    'pressure': '[mass] / [length] / [time] ** 2',
+    'mass flow rate': '[mass] / [time]',
+    'percentage': 'percentage',
     'column volume': None
 }
 """ Map quantity names to pint dimensions or None if not a pint dimension. """
@@ -101,16 +105,15 @@ def get_compatible_unit_names(unit: str | None) -> list[str]:
         return [""]
     else:
         dims = pu.dimensionality
-        if len(dims) == 1:
-            quantity_name = _get_quantity_name_for_pint_dim(str(dims))
-            if quantity_name is None:
-                raise ValueError(f"Unit {pu} with dimensionality {dims} has no defined compatible units")
+        quantity_name = _get_quantity_name_for_pint_dim(str(dims))
+        if quantity_name is not None:            
             return QUANTITY_UNIT_MAP[quantity_name]
         else:
             quantity_name = QUANTITY_PINT_MULTIDIM_MAP.get(str(pu))
-            if quantity_name is None:
-                raise NotImplementedError(f"Pint unit '{pu}' has no defined quantity name")
-            return QUANTITY_UNIT_MAP[quantity_name]
+            if quantity_name is not None:
+                return QUANTITY_UNIT_MAP[quantity_name]
+        
+        raise NotImplementedError(f"Pint unit '{pu}' with dimensionality '{str(dims)}' has no defined quantity name")
 
 def are_comparable(unit_a: str | None, unit_b: str | None) -> bool:
     """ Determine whether two supported units are comparable, i.e. have the same quantity name.

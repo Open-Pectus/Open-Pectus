@@ -23,6 +23,11 @@ class TestUnits(unittest.TestCase):
         test_unit("degF", True)
         test_unit("degK", True)
         test_unit("CV", True)
+        test_unit("bar", True)
+        test_unit("kg/h", True)
+        # TODO add these if requested
+        # test_unit("au", True) # astrological unit, a very large distance
+        # test_unit("mS/cm", True) # milisiemens/cm, electrical conductance
 
         for quantity_name in QUANTITY_UNIT_MAP.keys():
             for unit in QUANTITY_UNIT_MAP[quantity_name]:
@@ -121,6 +126,10 @@ class TestUnits(unittest.TestCase):
         self.comp('==', '5.0', 's', '7', 's', False)
         self.comp('!=', '5', 's', '7', 's', True)
 
+        self.comp('=', '5', 'kg/h', '7', 'kg/h', False)        
+        self.comp('!=', '5', 'kg/h', '5', 'g/s', True)
+
+
     def test_compare_values_numeric_equality_w_unit_error(self):
         self.comp('=', '5', 's', '5', None, None, "Cannot compare values with incompatible units 's' and 'None'")
         self.comp('=', '5', None, '5', 's', None, "Cannot compare values with incompatible units 'None' and 's'")
@@ -152,17 +161,22 @@ class TestUnits(unittest.TestCase):
         self.comp('<=', '60', 's', '1', 'min', True)
         self.comp('>', '70', 's', '1', 'min', True)
         
-        #self.comp('=', '0', 'degC', '32', 'degF', True)  # is this a rounding bug?! - they should be equal
+        # self.comp('=', '0', 'degC', '32', 'degF', True)  # is this a rounding bug?! - they should be equal
         self.comp('>', '1', 'degC', '32', 'degF', True)
         self.comp('>=', '1', 'degC', '32', 'degF', True)
         self.comp('>', '0', 'degC', '33', 'degF', False)
         self.comp('>=', '0', 'degC', '33', 'degF', False)
 
-        #self.comp('=', '0', 'degC', '273.15', 'degF', True)  # is this a rounding bug?! - they should be equal
+        # self.comp('=', '0', 'degC', '273.15', 'degF', True)  # is this a rounding bug?! - they should be equal
         self.comp('>', '1', 'degC', '274', 'degK', True)
         self.comp('>=', '1', 'degC', '274', 'degK', True)
         self.comp('>', '0', 'degC', '274', 'degK', False)
         self.comp('>=', '0', 'degC', '274', 'degK', False)
+
+        self.comp('<=', '5', 'kg/h', '5000', 'g/h', True)
+        self.comp('>=', '5', 'kg/h', '5000', 'g/h', True)
+        self.comp('<', '5', 'kg/h', '5001', 'g/h', True)
+        self.comp('>', '5', 'kg/h', '4999', 'g/h', True)
 
     def test_compare_multidimensional_pint_units(self):
         # pint treats 'L/d' as 'liter / day' which must be mapped back
@@ -170,12 +184,19 @@ class TestUnits(unittest.TestCase):
         self.comp('<', '48', 'L/d', "2.1", "L/h", True)
         self.comp('>', '48.1', 'L/d', "2", "L/h", True)
 
+    def test_troublesome_pint_units(self):
+        # pint prefers pascal over Pa so we have defined both. As long as pint
+        # is used for comparison via Quantity, it still works.
+        self.comp('=', '5', 'Pa', "5", "pascal", True)
+        self.comp('<', '5', 'Pa', "5.1", "pascal", True)
+        self.comp('>', '5.1', 'Pa', "5", "pascal", True)
+
+
     def test_custom_units(self):
         def test(unit: str):
             with self.subTest(unit):
                 self.assertTrue(is_supported_unit(unit))
 
-        test("%")
         test("CV")
 
     def test_compare_custom_units(self):
@@ -184,6 +205,6 @@ class TestUnits(unittest.TestCase):
 
         # TODO: comparison of % to no unit? would seem to be valid 10% == 0.1?
 
-        #self.comp("<", "5", "CV", "5.0", "CV", False)
-        #self.comp("==", "5", "CV", "5.0", "CV", True)
+        self.comp("<", "5", "CV", "5.0", "CV", False)
+        self.comp("==", "5", "CV", "5.0", "CV", True)
 
