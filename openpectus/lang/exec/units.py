@@ -18,9 +18,10 @@ QUANTITY_UNIT_MAP = {
     'mass': ['kg', 'g'],                        # SI quantity
     'temperature': ['degC', 'degF', 'degK'],    # SI quantity
     'amount_of_substance': ['mol'],             # SI quantity
-    'volume': ['L', 'mL'],                      # Derived quantity - CV is custom
+    'volume': ['L', 'mL'],                      # Derived quantity
     'flow': ['L/h', 'L/min', 'L/d'],            # Derived quantity
-    'percentage': ['%']                         # Custom quantity
+    'percentage': ['%'],                        # Custom quantity
+    'column volume': ['CV']                     # Custom quantity
 }
 
 QUANTITY_PINT_MAP: dict[str, str | None] = {
@@ -31,7 +32,8 @@ QUANTITY_PINT_MAP: dict[str, str | None] = {
     'volume': '[length] ** 3',
     'temperature': '[temperature]',
     'amount_of_substance': '[substance]',
-    'percentage': None
+    'percentage': None,
+    'column volume': None
 }
 """ Map quantity names to pint dimensions or None if not a pint dimension. """
 

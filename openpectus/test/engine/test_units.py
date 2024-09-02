@@ -22,6 +22,7 @@ class TestUnits(unittest.TestCase):
         test_unit("degC", True)
         test_unit("degF", True)
         test_unit("degK", True)
+        test_unit("CV", True)
 
         for quantity_name in QUANTITY_UNIT_MAP.keys():
             for unit in QUANTITY_UNIT_MAP[quantity_name]:
@@ -175,7 +176,7 @@ class TestUnits(unittest.TestCase):
                 self.assertTrue(is_supported_unit(unit))
 
         test("%")
-        #test("CV")
+        test("CV")
 
     def test_compare_custom_units(self):
         self.comp("<", "5", "%", "5.0", "%", False)
