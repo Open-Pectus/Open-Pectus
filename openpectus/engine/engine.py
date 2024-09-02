@@ -16,7 +16,9 @@ from openpectus.engine.method_model import MethodModel
 from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum, SystemTagName
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.commands import CommandRequest
-from openpectus.lang.exec.errors import EngineError, EngineNotInitializedError, InterpretationError, InterpretationInternalError
+from openpectus.lang.exec.errors import (
+    EngineError, EngineNotInitializedError, InterpretationError, InterpretationInternalError
+)
 from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext
 from openpectus.lang.exec.runlog import RuntimeInfo, RunLog, RuntimeRecord
 from openpectus.lang.exec.tag_lifetime import TagContext

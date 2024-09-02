@@ -191,7 +191,6 @@ class TestUnits(unittest.TestCase):
         self.comp('<', '5', 'Pa', "5.1", "pascal", True)
         self.comp('>', '5.1', 'Pa', "5", "pascal", True)
 
-
     def test_custom_units(self):
         def test(unit: str):
             with self.subTest(unit):
