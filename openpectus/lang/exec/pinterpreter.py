@@ -6,14 +6,15 @@ from enum import Enum
 from typing import Generator, Iterable
 from uuid import UUID
 
-import pint
+import openpectus.lang.exec.units as units
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.commands import InterpreterCommandEnum
-from openpectus.lang.exec.errors import EngineError, InterpretationError, InterpretationInternalError, NodeInterpretationError
+from openpectus.lang.exec.errors import (
+    EngineError, InterpretationError, InterpretationInternalError, NodeInterpretationError
+)
 from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import (
-    TagCollection,
-    SystemTagName,
+    TagCollection, SystemTagName,
 )
 from openpectus.lang.model.pprogram import (
     PCommandWithDuration,
@@ -306,24 +307,32 @@ class PInterpreter(PNodeVisitor):
 
             value_tag, block_value_tag = self.context.tags[value_tag], self.context.tags[block_value_tag]
             is_in_block = self.context.tags[SystemTagName.BLOCK].get_value() not in [None, ""]
-            try:
-                threshold = pint.Quantity(node.time, base_unit)
-                value = block_value_tag.as_quantity() if is_in_block else value_tag.as_quantity()
-            except pint.UndefinedUnitError:  # e.g. CV is not a known pint unit
-                threshold = node.time
-                value = block_value_tag.as_float() if is_in_block else value_tag.as_float()
+
+            threshold_value = str(node.time)
+            threshold_unit = base_unit
+
+            time_value = str(block_value_tag.get_value() if is_in_block else value_tag.get_value())
+            time_unit = block_value_tag.unit if is_in_block else value_tag.unit
 
             try:
-                if value < threshold:
+                # calculate result of 'value < threshold'
+                result = units.compare_values(
+                    '<', time_value, time_unit,
+                    threshold_value, threshold_unit)
+                if result:
                     logger.debug(
-                        f"Node {node} is awaiting threshold: {threshold}, current: {value}, base unit: '{base_unit}'")
+                        f"Node {node} is awaiting threshold: {threshold_value}, " +
+                        f"current: {time_value}, base unit: '{base_unit}'")
                     return True
 
                 logger.debug(
-                    f"Node {node} is done awaiting threshold {threshold}, current: {value}, base unit: '{base_unit}'")
+                    f"Node {node} is done awaiting threshold {threshold_value}, " +
+                    f"current: {time_value}, base unit: '{base_unit}'")
             except Exception as ex:
-                raise NodeInterpretationError(node, f"Threshold comparison error. Failed to compare \
-                                              value '{value}' to threshold '{threshold}'") from ex
+                raise NodeInterpretationError(
+                    node,
+                    "Threshold comparison error. Failed to compare " +
+                    f"value '{time_value}' to threshold '{threshold_value}'") from ex
         return False
 
     def _evaluate_condition(self, condition_node: PWatch | PAlarm) -> bool:
@@ -334,38 +343,16 @@ class PInterpreter(PNodeVisitor):
         assert c.tag_value, "Error in condition value"
         assert self.context.tags.has(c.tag_name), f"Unknown tag '{c.tag_name}' in condition '{c.condition_str}'"
         tag = self.context.tags.get(c.tag_name)
-        tag_value = tag.as_quantity()
+        tag_value, tag_unit = str(tag.get_value()), tag.unit
         # TODO if not unit specified, pick base unit
-        expected_value = pint.Quantity(c.tag_value_numeric, c.tag_unit)
-        if not tag_value.is_compatible_with(expected_value):
-            raise ValueError(f"Incompatible units for values {tag_value} vs {expected_value}")
+        expected_value, expected_unit = c.tag_value, c.tag_unit
 
-        result = None
-        try:
-            match c.op:
-                case '<':
-                    result = tag_value < expected_value
-                case '<=':
-                    result = tag_value <= expected_value
-                case '=' | '==':
-                    result = tag_value == expected_value
-                case '>':
-                    result = tag_value > expected_value
-                case '>=':
-                    result = tag_value >= expected_value
-                case '!=':
-                    result = tag_value != expected_value
-                case _:
-                    pass
-        except TypeError:
-            msg = "Conversion error for values {!r} and {!r}".format(tag_value, expected_value)
-            logger.error(msg, exc_info=True)
-            raise ValueError("Conversion error")
-
-        if result is None:
-            raise ValueError(f"Unsupported operation: '{c.op}'")
-
-        return result  # type: ignore
+        return units.compare_values(
+            c.op,
+            tag_value,
+            tag_unit,
+            expected_value,
+            expected_unit)
 
     def _visit_children(self, children: list[PNode] | None):
         ar = self.stack.peek()

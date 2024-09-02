@@ -3,14 +3,15 @@ from __future__ import annotations
 from inspect import _ParameterKind, Parameter
 import logging
 import re
-from typing import Any, Callable, Literal, overload
+from typing import Any, Callable, Literal
 
 from openpectus.engine.commands import ContextEngineCommand, CommandArgs
 from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.errors import UodValidationError
 from openpectus.lang.exec.readings import Reading, ReadingCollection, ReadingWithChoice, ReadingWithEntry
-from openpectus.lang.exec.tags import TAG_UNITS, SystemTagName, Tag, TagCollection
+from openpectus.lang.exec.tags import SystemTagName, Tag, TagCollection
+from openpectus.lang.exec.units import get_volume_units
 from openpectus.lang.exec.tags_impl import AccumulatorBlockTag, AccumulatedColumnVolume, AccumulatorTag
 from openpectus.protocol.models import EntryDataType, PlotConfiguration
 
@@ -554,7 +555,7 @@ class UodBuilder():
         if not self.tags.has(totalizer_tag_name):
             raise ValueError(f"The specified totalizer tag name '{totalizer_tag_name}' was not found")
         totalizer = self.tags[totalizer_tag_name]
-        volume_units = TAG_UNITS["volume"]
+        volume_units = get_volume_units()
         if totalizer.unit not in volume_units:
             raise ValueError(f"The totalizer tag '{totalizer_tag_name}' must have a volume unit")
         self._with_tag(AccumulatorTag(name=SystemTagName.ACCUMULATED_VOLUME, totalizer=totalizer))
