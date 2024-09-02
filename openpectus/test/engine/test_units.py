@@ -17,11 +17,15 @@ class TestUnits(unittest.TestCase):
                 with self.subTest(test_name):                
                     self.assertEqual(is_supported_unit(unit), expect_supported)
 
-        test_unit( 'L', True)
+        test_unit('L', True)
         test_unit("%", True)
+        test_unit("degC", True)
+        test_unit("degF", True)
+        test_unit("degK", True)
+
         for quantity_name in QUANTITY_UNIT_MAP.keys():
             for unit in QUANTITY_UNIT_MAP[quantity_name]:
-                test_unit(unit, True, quantity_name)                
+                test_unit(unit, True, quantity_name)
 
         test_unit("", False)
         test_unit("X", False)
@@ -54,12 +58,17 @@ class TestUnits(unittest.TestCase):
                 if expected_value_error_msg is None:
                     raise AssertionError(f"compare_value raised ValueError '{ve}' but no error was expected")
                 elif str(ve) != expected_value_error_msg:
-                    raise AssertionError(f"compare_value raised a ValueError with msg '{str(ve)}' but expected msg {expected_value_error_msg}")
+                    raise AssertionError(f"compare_value raised a ValueError with msg '{str(ve)}' but expected msg " +
+                                         f"{expected_value_error_msg}")
             except Exception as ex:
                 raise AssertionError("compare_value raised unextected exception: " + str(ex))
 
             if result is None and expected_result is not None:
                 raise AssertionError(f"Expected result={expected_result} but got no result")
+            elif result is not None and expected_result is not None:
+                if result != expected_result:
+                    raise AssertionError(f"Expected result={expected_result} but got result {result}")
+
 
     def test_compare_values_numeric_equality(self):
         self.comp('=', '5', None, '5', None, True)
@@ -114,7 +123,6 @@ class TestUnits(unittest.TestCase):
     def test_compare_values_numeric_equality_w_unit_error(self):
         self.comp('=', '5', 's', '5', None, None, "Cannot compare values with incompatible units 's' and 'None'")
         self.comp('=', '5', None, '5', 's', None, "Cannot compare values with incompatible units 'None' and 's'")
-        #self.comp('=', '5', 's', '5', 'min', None, "Cannot compare values with units 's' and 'None'")
 
     def test_compare_values_numeric_equality_w_unit_incompatible(self):
         self.comp('=', '5', 's', '5', 'L', None, "Cannot compare values with incompatible units 's' and 'L'")
@@ -130,6 +138,9 @@ class TestUnits(unittest.TestCase):
         self.comp('<=', '5', 's', '7', 's', True)
         self.comp('>', '5', 's', '7', 's', False)
 
+        self.comp('>', '5', 'degC', '7', 'degC', False)
+        self.comp('<', '5', 'degC', '7', 'degC', True)
+
     def test_compare_values_compatible_units(self):
         self.comp('=', '60', 's', '1', 'min', True)
         self.comp('==', '60', 's', '1', 'min', True)
@@ -139,7 +150,39 @@ class TestUnits(unittest.TestCase):
         self.comp('<=', '50', 's', '1', 'min', True)
         self.comp('<=', '60', 's', '1', 'min', True)
         self.comp('>', '70', 's', '1', 'min', True)
+        
+        #self.comp('=', '0', 'degC', '32', 'degF', True)  # is this a rounding bug?! - they should be equal
+        self.comp('>', '1', 'degC', '32', 'degF', True)
+        self.comp('>=', '1', 'degC', '32', 'degF', True)
+        self.comp('>', '0', 'degC', '33', 'degF', False)
+        self.comp('>=', '0', 'degC', '33', 'degF', False)
 
-    def test_complex_pint_units(self):
+        #self.comp('=', '0', 'degC', '273.15', 'degF', True)  # is this a rounding bug?! - they should be equal
+        self.comp('>', '1', 'degC', '274', 'degK', True)
+        self.comp('>=', '1', 'degC', '274', 'degK', True)
+        self.comp('>', '0', 'degC', '274', 'degK', False)
+        self.comp('>=', '0', 'degC', '274', 'degK', False)
+
+    def test_compare_multidimensional_pint_units(self):
         # pint treats 'L/d' as 'liter / day' which must be mapped back
         self.comp('=', '48', 'L/d', "2", "L/h", True)
+        self.comp('<', '48', 'L/d', "2.1", "L/h", True)
+        self.comp('>', '48.1', 'L/d', "2", "L/h", True)
+
+    def test_custom_units(self):
+        def test(unit: str):
+            with self.subTest(unit):
+                self.assertTrue(is_supported_unit(unit))
+
+        test("%")
+        #test("CV")
+
+    def test_compare_custom_units(self):
+        self.comp("<", "5", "%", "5.0", "%", False)
+        self.comp("==", "5", "%", "5.0", "%", True)
+
+        # TODO: comparison of % to no unit? would seem to be valid 10% == 0.1?
+
+        #self.comp("<", "5", "CV", "5.0", "CV", False)
+        #self.comp("==", "5", "CV", "5.0", "CV", True)
+

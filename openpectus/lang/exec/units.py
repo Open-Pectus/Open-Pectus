@@ -9,18 +9,18 @@ ureg = UnitRegistry(cache_folder="./pint-cache")
 Q_ = Quantity
 logger = logging.getLogger(__name__)
 
-# TODO add temperatures degF, degK, CV is not a known pint unit
+# TODO add CV - is not a pint unit, needs special treatment
 # https://en.wikipedia.org/wiki/International_System_of_Units
 # defines all the units we accept, each with their quantity name (dimension in pint).
 QUANTITY_UNIT_MAP = {
-    'time': ['s', 'min', 'hour', 'ms'],     # SI quantity
-    'length': ['m', 'cm'],                  # SI quantity
-    'mass': ['kg', 'g'],                    # SI quantity
-    'temperature': ['degC'],                # SI quantity
-    'amount_of_substance': ['mol'],         # SI quantity
-    'volume': ['L', 'mL'],                  # Derived quantity
-    'flow': ['L/h', 'L/min', 'L/d'],        # Derived quantity
-    'percentage': ['%']                     # Custom quantity
+    'time': ['s', 'min', 'hour', 'ms'],         # SI quantity
+    'length': ['m', 'cm'],                      # SI quantity
+    'mass': ['kg', 'g'],                        # SI quantity
+    'temperature': ['degC', 'degF', 'degK'],    # SI quantity
+    'amount_of_substance': ['mol'],             # SI quantity
+    'volume': ['L', 'mL'],                      # Derived quantity - CV is custom
+    'flow': ['L/h', 'L/min', 'L/d'],            # Derived quantity
+    'percentage': ['%']                         # Custom quantity
 }
 
 QUANTITY_PINT_MAP: dict[str, str | None] = {
@@ -29,7 +29,7 @@ QUANTITY_PINT_MAP: dict[str, str | None] = {
     'mass': '[mass]',
     'flow': 'flow',
     'volume': '[length] ** 3',
-    'temperature': None,
+    'temperature': '[temperature]',
     'amount_of_substance': '[substance]',
     'percentage': None
 }
@@ -166,17 +166,23 @@ def compare_values(op: str, value_a: str, unit_a: str | None, value_b: str, unit
     # we can now ignore units and conversion - either they're None or equal - or they are
     # pint units for which Quantity handles comparison automatically
 
-    # infer when to do numeric vs string comparison
-    if op in ['<', '<=', '>', '>=']:  # these operators only make sence for numeric values
-        if not is_pint_units:
+    # infer when to do numeric vs string comparison. this is only relevant for non-pint units
+    if not is_pint_units:
+        if op in ['<', '<=', '>', '>=']:  # these operators only make sence for numeric values
             assert isinstance(quantity_a, str), f"quantity_a '{quantity_a}' should be a str here"
             assert isinstance(quantity_b, str), f"quantity_b '{quantity_b}' should be a str here"
-            quantity_a = as_float(quantity_a)
-            quantity_b = as_float(quantity_b)
+            quantity_a, quantity_b = as_float(quantity_a), as_float(quantity_b)
             if quantity_a is None:
                 raise ValueError("Cannot compare values, first value is missing or not numeric")
             if quantity_b is None:
                 raise ValueError("Cannot compare values, second value is missing or not numeric")
+        else:
+            # if both are numerical, perform a numerical comparison
+            assert isinstance(quantity_a, str), f"quantity_a '{quantity_a}' should be a str here"
+            assert isinstance(quantity_b, str), f"quantity_b '{quantity_b}' should be a str here"
+            quantity_a_f, quantity_b_f = as_float(quantity_a), as_float(quantity_b)
+            if quantity_a_f is not None and quantity_b_f is not None:
+                quantity_a, quantity_b = quantity_a_f, quantity_b_f
 
     try:
         match op:
