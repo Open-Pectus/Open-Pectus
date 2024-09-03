@@ -87,6 +87,10 @@ class Method(ProtocolModel):
             line_num += 1
         return method
 
+    def as_pcode(self) -> str:
+        pcode = '\n'.join([line.content for line in self.lines])
+        return pcode
+
 
 class MethodState(ProtocolModel):
     started_line_ids: list[str]
