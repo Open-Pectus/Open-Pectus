@@ -1,6 +1,7 @@
 import logging
 from typing import Protocol
 
+import openpectus.sentry as sentry
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.messages as M
 from openpectus.engine.engine import Engine
@@ -27,6 +28,7 @@ class EngineMessageHandlers():
         logger.info("Incomming set_method command from aggregator")
         try:
             self.engine.set_method(msg.method)
+            sentry.engine_method_set(msg.method.as_pcode())
             return AM.SuccessMessage()
         except Exception as ex:
             logger.error("Failed to set method")
