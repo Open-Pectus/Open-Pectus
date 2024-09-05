@@ -133,16 +133,19 @@ class ConditionEnrichAnalyzer(AnalyzerVisitorBase):
         re_rhs = '^' + '(?P<float>' + float_re + ')' + '\\s*' + '(?P<unit>' + unit_re + ')' + '$'
         re_rhs_no_unit = '^' + '(?P<float>' + float_re + ')' + '\\s*$'
         match = re.search(re_rhs, c.rhs)
-        if match:
+        if match:  # float with unit
             c.tag_value = match.group('float')
             c.tag_value_numeric = float(c.tag_value or "")
             c.tag_unit = match.group('unit')
             c.error = False
         else:
             match = re.search(re_rhs_no_unit, c.rhs)
-            if match:
+            if match:  # float without unit
                 c.tag_value = match.group('float')
                 c.tag_value_numeric = float(c.tag_value or "")
+                c.error = False
+            else:  # str
+                c.tag_value = c.rhs
                 c.error = False
 
 
