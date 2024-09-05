@@ -344,7 +344,7 @@ class PInterpreter(PNodeVisitor):
         assert self.context.tags.has(c.tag_name), f"Unknown tag '{c.tag_name}' in condition '{c.condition_str}'"
         tag = self.context.tags.get(c.tag_name)
         tag_value, tag_unit = str(tag.get_value()), tag.unit
-        # TODO if not unit specified, pick base unit
+        # TODO: Possible enhancement: if no unit specified, pick base unit?
         expected_value, expected_unit = c.tag_value, c.tag_unit
 
         return units.compare_values(
