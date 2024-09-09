@@ -49,7 +49,8 @@ class TagValue(ProtocolModel):
     tick_time: float
     value: TagValueType = None
     value_unit: str | None
-    direction: EM.TagDirection = TagDirection.UNSPECIFIED
+    value_formatted: str | None
+    direction: TagDirection = TagDirection.UNSPECIFIED
 
 
 class RunLogLine(ProtocolModel):
