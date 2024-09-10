@@ -1,8 +1,8 @@
 import datetime
 import unittest
 
-from openpectus.lang.exec.tags import Tag, format_time_as_clock
-
+from openpectus.lang.exec.tags import Tag
+from openpectus.lang.exec.tags_impl import format_time_as_clock
 
 
 class TagTest(unittest.TestCase):

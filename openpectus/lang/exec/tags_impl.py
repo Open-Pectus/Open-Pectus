@@ -136,3 +136,10 @@ class AccumulatedColumnVolume(Tag):
             self.value = None
         else:
             self.value = (v-self.v0) / cv
+
+
+def format_time_as_clock(value: float) -> str:
+    import datetime
+    date = datetime.datetime.fromtimestamp(value, datetime.UTC)
+    tm = date.time()
+    return f"{tm.hour:02}:{tm.minute:02}:{tm.second:02}"
