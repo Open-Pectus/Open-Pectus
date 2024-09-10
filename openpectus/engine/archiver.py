@@ -135,7 +135,7 @@ class ArchiverTag(Tag):
         else:
             logger.error("Archiver will not run due to low diskspace")
 
-    def on_tick(self):
+    def on_tick(self, tick_time: float):
         now = time.time()
         is_row_due = self.last_save_tick == 0 or self.last_save_tick + THRESHOLD_SECONDS < now
         if is_row_due:
@@ -147,4 +147,5 @@ class ArchiverTag(Tag):
         logger.info("Stopped")
         self.set_value(None, tick_time)
         self.file_path = None
+        self.file_ready = False
         self.write_runlog()

@@ -59,6 +59,7 @@ class TagsInfo(BaseModel):
                     new_time = datetime.fromtimestamp(tag_value.tick_time).strftime("%H:%M:%S")
                     logger.warning(f"Tag '{tag_value.name}' was updated with an earlier time {new_time} than the current time {cur_time}.")
             current.value = tag_value.value
+            current.value_formatted = tag_value.value_formatted
             current.tick_time = tag_value.tick_time
             return False  # was updated
 

@@ -64,7 +64,7 @@ class AccumulatorTag(Tag):
     def on_start(self, context: TagContext):
         self.reset()
 
-    def on_tick(self):
+    def on_tick(self, tick_time: float):
         assert self.v0 is not None
         self.value = self.totalizer.as_float() - self.v0
 
@@ -90,10 +90,10 @@ class AccumulatorBlockTag(Tag):
         self.context = context
         self.cur_accumulator.on_start(context)
 
-    def on_tick(self):
+    def on_tick(self, tick_time: float):
         # tick all accumulators in scope to update block values
         for acc in self.accumulator_stack:
-            acc.on_tick()
+            acc.on_tick(tick_time)
 
         # apply the current value
         self.value = self.cur_accumulator.get_value()
@@ -129,10 +129,17 @@ class AccumulatedColumnVolume(Tag):
     def on_start(self, context: TagContext):
         self.reset()
 
-    def on_tick(self):
+    def on_tick(self, tick_time: float):
         cv = self.column_volume.as_float()
         v = self.totalizer.as_float()
         if cv == 0.0:
             self.value = None
         else:
             self.value = (v-self.v0) / cv
+
+
+def format_time_as_clock(value: float) -> str:
+    import datetime
+    date = datetime.datetime.fromtimestamp(value, datetime.UTC)
+    tm = date.time()
+    return f"{tm.hour:02}:{tm.minute:02}:{tm.second:02}"

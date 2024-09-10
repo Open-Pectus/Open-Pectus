@@ -151,6 +151,7 @@ class ProcessValue(Dto):
     """ Represents a process value. """
     name: str
     value: ProcessValueValueType
+    value_formatted: str | None
     value_unit: str | None
     """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
     value_type: ProcessValueType
@@ -163,6 +164,7 @@ class ProcessValue(Dto):
         return ProcessValue(
             name=tag.name,
             value=tag.value,
+            value_formatted=tag.value_formatted,
             value_type=get_ProcessValueType_from_value(tag.value),
             value_unit=tag.value_unit,
             commands=[],
@@ -171,15 +173,9 @@ class ProcessValue(Dto):
 
     @staticmethod
     def create_w_commands(tag: Mdl.TagValue, commands: list[ProcessValueCommand]) -> ProcessValue:
-        return ProcessValue(
-            name=tag.name,
-            value=tag.value,
-            value_type=get_ProcessValueType_from_value(tag.value),
-            value_unit=tag.value_unit,
-            commands=commands,
-            direction=tag.direction
-        )
-
+        pv = ProcessValue.create(tag)
+        pv.commands = commands
+        return pv
 
 class CommandSource(StrEnum):
     PROCESS_VALUE = auto()
