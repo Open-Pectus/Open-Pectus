@@ -341,7 +341,7 @@ class Engine(InterpreterContext):
         self._system_tags[SystemTagName.BLOCK_TIME].set_value(self.block_times[block_name], self._tick_time)
 
         # Execute the tick lifetime hook on tags
-        self.tag_context.emit_on_tick()
+        self.tag_context.emit_on_tick(self._tick_time)
 
     def execute_commands(self):
         done = False
