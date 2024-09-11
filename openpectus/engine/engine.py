@@ -67,7 +67,8 @@ class Engine(InterpreterContext):
         self._system_tags = TagCollection.create_system_tags()
         self._system_tags.add(MarkTag())
         # Add archiver which is implemented as a tag. The lambda getting the runlog works because the
-        # tag_lifetime.on_stop event is emitted just before resetting the interpreter and runlog
+        # tag_lifetime.on_stop event is emitted just before resetting the interpreter and runlog (and
+        # not after).
         if enable_archiver:
             archiver = ArchiverTag(lambda : self.runtimeinfo.get_runlog())
             self._system_tags.add(archiver)
@@ -271,6 +272,13 @@ class Engine(InterpreterContext):
         # update calculated tags
         if self._runstate_started:
             self.update_calculated_tags(last_tick_time)
+
+        # # Execute the tick lifetime hook on tags
+        # We really want to do this on all ticks - but it makes
+        # tags fail because they need to handle more troublesome cases
+        # which in turn means writing correct tag subclasses gets
+        # weird and difficult. What to do...
+        # self.tag_context.emit_on_tick(self._tick_time)
 
         # execute queued commands, go to error_state on error
         self.execute_commands()
