@@ -24,7 +24,7 @@ from openpectus.lang.exec.uod import (
     RegexNumber,
 )
 from openpectus.test.engine.utility_methods import (
-    continue_engine, run_engine,
+    continue_engine, continue_engine_until, run_engine,
     configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging,
     print_runlog, print_runtime_records
 )
@@ -1422,6 +1422,187 @@ Mark: C
         run_engine(e, """WATCH x > 2""", 3)
 
         self.assertTrue(e._runstate_paused)
+
+# ---------- Lifetime -------------
+
+    def test_tag_process_time(self):
+        e = self.engine
+        run_engine(e, "", 2)
+
+        process_time = e.tags[SystemTagName.PROCESS_TIME]
+        self.assertAlmostEqual(0.2, process_time.as_float(), delta=0.1)
+
+        e.schedule_execution(EngineCommandEnum.STOP)
+        continue_engine(e, 10)
+
+        self.assertAlmostEqual(0.3, process_time.as_float(), delta=0.1)
+
+        e.schedule_execution(EngineCommandEnum.START)
+        continue_engine(e, 5)
+
+        # is reset on system Start
+        self.assertAlmostEqual(0.5, process_time.as_float(), delta=0.1)
+
+        e.schedule_execution(EngineCommandEnum.PAUSE)
+        continue_engine(e, 5)
+
+        # is paused while system is Paused
+        self.assertAlmostEqual(0.6, process_time.as_float(), delta=0.1)
+
+    def test_tag_run_time(self):
+        e = self.engine
+        run_engine(e, "", 2)
+
+        run_time = e.tags[SystemTagName.RUN_TIME]
+        self.assertAlmostEqual(0.2, run_time.as_float(), delta=0.1)
+
+        e.schedule_execution(EngineCommandEnum.STOP)
+        continue_engine(e, 10)
+
+        self.assertAlmostEqual(0.3, run_time.as_float(), delta=0.1)
+
+        e.schedule_execution(EngineCommandEnum.START)
+        continue_engine(e, 5)
+
+        # is reset on system Start
+        self.assertAlmostEqual(0.5, run_time.as_float(), delta=0.1)
+
+        e.schedule_execution(EngineCommandEnum.PAUSE)
+        continue_engine(e, 5)
+
+        # not paused while system is Paused
+        self.assertAlmostEqual(1.0, run_time.as_float(), delta=0.1)
+
+    def test_tag_block_time(self):
+        p = """
+Wait: 0.25s
+Block: B1
+    Wait: 0.25s
+    End block
+"""
+        e = self.engine
+        run_engine(e, p, 2)
+
+        block_time = e.tags[SystemTagName.BLOCK_TIME]
+        block = e.tags[SystemTagName.BLOCK]
+
+        self.assertEqual(None, block.get_value())
+        self.assertAlmostEqual(0.2, block_time.as_number(), delta=0.1)
+
+        continue_engine(e, 4)
+        self.assertEqual(None, block.get_value())
+        self.assertAlmostEqual(0.6, block_time.as_number(), delta=0.1)
+
+        continue_engine(e, 1)
+        self.assertEqual("B1", block.get_value())
+        self.assertAlmostEqual(0.1, block_time.as_number(), delta=0.1)
+
+        continue_engine(e, 6)
+        self.assertEqual(None, block.get_value())
+        self.assertAlmostEqual(0.1 + 0.6, block_time.as_number(), delta=0.1)
+
+    @unittest.skip("Test is wrong. Should discuss")
+    def test_tag_block_time_nested_blocks(self):
+        p = """
+Block: B1
+    Wait: 0.15s
+    Block: B2
+        Wait: 0.05s
+        End block
+    Wait: 0.25s
+    End block
+"""
+        delta = 0.1
+        e = self.engine
+        run_engine(e, p, 2)
+
+        block_time = e.tags[SystemTagName.BLOCK_TIME]
+        block = e.tags[SystemTagName.BLOCK]
+
+        self.assertEqual(None, block.get_value())
+        self.assertAlmostEqual(0.2, block_time.as_number(), delta=delta)
+
+        continue_engine(e, 1)
+        self.assertEqual("B1", block.get_value())
+        self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)
+        continue_engine(e, 3)
+        self.assertEqual("B1", block.get_value())
+        self.assertAlmostEqual(0.4, block_time.as_number(), delta=delta)
+
+        continue_engine(e, 1)
+        self.assertEqual("B2", block.get_value())
+        self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)
+        continue_engine(e, 3)
+        self.assertEqual("B2", block.get_value())
+        self.assertAlmostEqual(0.4, block_time.as_number(), delta=delta)
+
+        continue_engine(e, 1)
+        self.assertEqual("B1", block.get_value())
+        self.assertAlmostEqual(0.5, block_time.as_number(), delta=delta)  # 0.4 + 0.4 ???        
+        continue_engine(e, 4)
+        self.assertEqual("B1", block.get_value())
+        self.assertAlmostEqual(0.9, block_time.as_number(), delta=delta)
+
+        continue_engine(e, 1)
+        self.assertEqual(None, block.get_value())
+        self.assertAlmostEqual(0.2, block_time.as_number(), delta=delta)  # 0.9 + 0.2 ???
+
+    def test_tag_block_time_restart(self):
+        p = """
+Wait: 0.25s
+Block: B1
+    Wait: 0.25s
+    End block
+"""
+        e = self.engine
+        run_engine(e, p, 2)
+
+        block_time = e.tags[SystemTagName.BLOCK_TIME]
+        block = e.tags[SystemTagName.BLOCK]
+
+        self.assertEqual(None, block.get_value())
+        self.assertAlmostEqual(0.2, block_time.as_number(), delta=0.1)
+
+        continue_engine(e, 4)
+        self.assertEqual(None, block.get_value())
+        self.assertAlmostEqual(0.6, block_time.as_number(), delta=0.1)
+
+        continue_engine(e, 1)
+        self.assertEqual("B1", block.get_value())
+        self.assertAlmostEqual(0.1, block_time.as_number(), delta=0.1)
+
+        continue_engine(e, 6)
+        self.assertEqual(None, block.get_value())
+        self.assertAlmostEqual(0.1 + 0.6, block_time.as_number(), delta=0.1)
+
+        e.schedule_execution(EngineCommandEnum.RESTART)
+        continue_engine(e, 3)
+        self.assertAlmostEqual(0.1, block_time.as_number(), delta=0.1)  # is reset after restart
+
+        continue_engine_until(e, lambda i: block.get_value() == "B1")
+        self.assertAlmostEqual(0.1, block_time.as_number(), delta=0.1)  # nested timer is also reset
+
+        # Can't easily test that timer is also reset after a Stop-Start cycle because
+        # the current test "runner" (continue_engine, ...) does not support it
+
+# TODO Rework test runner
+
+# Consider a better approach to the above that does not require waiting specific times.
+# This can be fragile, takes much work to count the ticks - and there is so much of it.
+# - We should have test primitives that uses TagContext to wait for specific
+#   events - and then assert something...
+# - TagContext -> EngineStateContext. We may need more events, like on_starting/on_started
+#   We need enough events to make tests easy to write correctly without counting ticks.
+#   Maybe on_instruction (starting/started, leaving/left, threshold_waiting/threshold_completed)
+# - Expose TagContext to tests so tests can listen to events and wait for them
+#   Do a spike on this to verify that tests are simpler and less fragile. The started/starting
+#   distinction may be problematic unless they do describe an important domain fact.
+#   - Design a test runner that mimics the actions from the frontend, start/stop etc. and allows
+#     awaiting events. Maybe even as an async.
+#   - Needs to be as flexible as the current runner regarding uod
+#   - Exceptions in engine and interpreter must be re-raised by default. We rarely need to handle
+#     those errors in tests
+
 
 
 # Test helpers

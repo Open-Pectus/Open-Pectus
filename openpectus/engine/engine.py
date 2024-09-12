@@ -67,7 +67,8 @@ class Engine(InterpreterContext):
         self._system_tags = TagCollection.create_system_tags()
         self._system_tags.add(MarkTag())
         # Add archiver which is implemented as a tag. The lambda getting the runlog works because the
-        # tag_lifetime.on_stop event is emitted just before resetting the interpreter and runlog
+        # tag_lifetime.on_stop event is emitted just before resetting the interpreter and runlog (and
+        # not after).
         if enable_archiver:
             archiver = ArchiverTag(lambda : self.runtimeinfo.get_runlog())
             self._system_tags.add(archiver)

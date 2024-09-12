@@ -1,5 +1,6 @@
 import logging
 import time
+from typing import Callable
 from openpectus.engine.models import EngineCommandEnum
 
 import openpectus.protocol.models as Mdl
@@ -55,6 +56,24 @@ def continue_engine(engine: Engine, max_ticks: int = -1):
         time.sleep(0.1)
         engine.tick()
 
+def continue_engine_until(engine: Engine, condition: Callable[[int], bool], fail_ticks=30) -> int:
+    print("Interpretation continuing")
+    tick = 0
+    engine._running = True
+
+    while engine.is_running():
+        if condition(tick):
+            print(f"Stopping at tick {tick} because condition was True")
+            return tick
+        if tick >= fail_ticks:
+            print("Failing because condition did not occur before max_ticks was reached")
+            raise TimeoutError("Condition did not occur before max_ticks was reached")
+
+        time.sleep(0.1)
+        engine.tick()
+        tick += 1
+
+    raise RuntimeError("Engine stopped for no good reason")
 
 def print_runlog(e: Engine, description=""):
     runlog = e.interpreter.runtimeinfo.get_runlog()
