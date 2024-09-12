@@ -273,13 +273,6 @@ class Engine(InterpreterContext):
         if self._runstate_started:
             self.update_calculated_tags(last_tick_time)
 
-        # # Execute the tick lifetime hook on tags
-        # We really want to do this on all ticks - but it makes
-        # tags fail because they need to handle more troublesome cases
-        # which in turn means writing correct tag subclasses gets
-        # weird and difficult. What to do...
-        # self.tag_context.emit_on_tick(self._tick_time)
-
         # execute queued commands, go to error_state on error
         self.execute_commands()
 

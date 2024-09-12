@@ -1585,10 +1585,24 @@ Block: B1
         # Can't easily test that timer is also reset after a Stop-Start cycle because
         # the current test "runner" (continue_engine, ...) does not support it
 
-        # TODO consider a better approach to the above that does not require waiting specific times.
-        # This can be fragile and there is so much of it.
-        # We should have test primitives that uses TagContext to wait for specific
-        # events - and then assert something...
+# TODO Rework test runner
+
+# Consider a better approach to the above that does not require waiting specific times.
+# This can be fragile, takes much work to count the ticks - and there is so much of it.
+# - We should have test primitives that uses TagContext to wait for specific
+#   events - and then assert something...
+# - TagContext -> EngineStateContext. We may need more events, like on_starting/on_started
+#   We need enough events to make tests easy to write correctly without counting ticks.
+#   Maybe on_instruction (starting/started, leaving/left, threshold_waiting/threshold_completed)
+# - Expose TagContext to tests so tests can listen to events and wait for them
+#   Do a spike on this to verify that tests are simpler and less fragile. The started/starting
+#   distinction may be problematic unless they do describe an important domain fact.
+#   - Design a test runner that mimics the actions from the frontend, start/stop etc. and allows
+#     awaiting events. Maybe even as an async.
+#   - Needs to be as flexible as the current runner regarding uod
+#   - Exceptions in engine and interpreter must be re-raised by default. We rarely need to handle
+#     those errors in tests
+
 
 
 # Test helpers
