@@ -123,7 +123,7 @@ class ArchiverTag(Tag):
                 writer.writerow([x.name, start, end])
 
     def on_start(self, context: TagContext):
-        self.tags = context.tags
+        self.tags = [elm for elm in context.elements if isinstance(elm, Tag)]
         tick_time = time.time()
         date_part = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         filename = "archiver-" + date_part + ".txt"

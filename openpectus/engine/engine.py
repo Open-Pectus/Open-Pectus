@@ -1,6 +1,5 @@
 import itertools
 import logging
-import time
 import uuid
 from queue import Empty, Queue
 from typing import Iterable, List, Literal, Set
@@ -15,6 +14,7 @@ from openpectus.engine.hardware import HardwareLayerException, RegisterDirection
 from openpectus.engine.method_model import MethodModel
 from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum, SystemTagName
 from openpectus.lang.exec.base_unit import BaseUnitProvider
+from openpectus.lang.exec.clock import Clock, WallClock
 from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.errors import (
     EngineError, EngineNotInitializedError, InterpretationError, InterpretationInternalError
@@ -58,6 +58,9 @@ class Engine(InterpreterContext):
 
         register_commands(self)
 
+        self._clock: Clock = WallClock()
+        """ The time source """
+
         self._tick_time: float = 0.0
         """ The time of the last tick """
         self._tick_number: int = -1
@@ -85,6 +88,7 @@ class Engine(InterpreterContext):
         self._uod_listener = ChangeListener()
         self._system_listener = ChangeListener()
         self._tick_timer: EngineTimer = OneThreadTimer(tick_interval, self.tick)
+        """ Timer that invokes tick() """
 
         self._runstate_started: bool = False
         """ Indicates the current Start/Stop state"""
@@ -226,7 +230,7 @@ class Engine(InterpreterContext):
             # TODO shutdown
 
         last_tick_time = self._tick_time
-        self._tick_time = time.time()
+        self._tick_time = self._clock.get_time()
         self._tick_number += 1
 
         # Perform certain actions in first tick
@@ -309,7 +313,7 @@ class Engine(InterpreterContext):
 
         # Clock         - seconds since epoch
         clock = self._system_tags.get(SystemTagName.CLOCK)
-        clock.set_value(time.time(), self._tick_time)
+        clock.set_value(self._tick_time, self._tick_time)
 
         # Process Time  - 0 at start, increments when System State is Run
         process_time = self._system_tags[SystemTagName.PROCESS_TIME]
@@ -708,7 +712,10 @@ class Engine(InterpreterContext):
 
     # code manipulation api
     def set_method(self, method: Mdl.Method):
-        """ Set new method. This will replace the current method and invoke the on_method_init callback. """
+        """ Set new method. This will replace the current method and invoke the on_method_init callback.
+
+        On error, sets error_state and re-raises the error.
+        """
         try:
             self._method.set_method(method)
             logger.info(f"New method set with {len(method.lines)} lines")
