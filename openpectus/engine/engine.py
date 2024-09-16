@@ -67,7 +67,8 @@ class Engine(InterpreterContext):
         self._system_tags = TagCollection.create_system_tags()
         self._system_tags.add(MarkTag())
         # Add archiver which is implemented as a tag. The lambda getting the runlog works because the
-        # tag_lifetime.on_stop event is emitted just before resetting the interpreter and runlog
+        # tag_lifetime.on_stop event is emitted just before resetting the interpreter and runlog (and
+        # not after).
         if enable_archiver:
             archiver = ArchiverTag(lambda : self.runtimeinfo.get_runlog())
             self._system_tags.add(archiver)
@@ -341,7 +342,7 @@ class Engine(InterpreterContext):
         self._system_tags[SystemTagName.BLOCK_TIME].set_value(self.block_times[block_name], self._tick_time)
 
         # Execute the tick lifetime hook on tags
-        self.tag_context.emit_on_tick()
+        self.tag_context.emit_on_tick(self._tick_time)
 
     def execute_commands(self):
         done = False

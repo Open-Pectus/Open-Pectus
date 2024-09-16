@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from enum import StrEnum, auto
 import time
-from typing import Iterable, Set
-
-# TODO remove all pint references
+from typing import Any, Callable, Iterable, Set
 
 from openpectus.lang.exec.tag_lifetime import TagLifetime
 from openpectus.lang.exec.units import is_supported_unit
@@ -40,6 +38,9 @@ class SystemTagName(StrEnum):
 
 TagValueType = int | float | str | None
 """ Represents the types of tag values """
+
+TagFormatFunction = Callable[[Any], str]
+""" Represents a function that is used to format tag values for display """
 
 
 class ChangeListener():
@@ -119,6 +120,7 @@ class Tag(ChangeSubject, TagLifetime):
             unit: str | None = None,
             direction: TagDirection = TagDirection.NA,
             safe_value: TagValueType | Unset = Unset(),
+            format_fn: TagFormatFunction | None = None
             ) -> None:
 
         super().__init__()
@@ -136,10 +138,12 @@ class Tag(ChangeSubject, TagLifetime):
         self.choices: list[str] | None = None
         self.direction: TagDirection = direction
         self.safe_value: TagValueType | Unset = safe_value
+        self.format_fn = format_fn
 
     def as_readonly(self) -> TagValue:
         """ Convert the value to a readonly and immutable TagValue instance """
-        return TagValue(self.name, self.tick_time, self.value, self.unit, self.direction)
+        value_formatted = None if self.format_fn is None else self.format_fn(self.get_value())
+        return TagValue(self.name, self.tick_time, self.value, value_formatted, self.unit, self.direction)
 
     def set_value(self, val: TagValueType, tick_time: float) -> None:
         if val != self.value:
@@ -272,8 +276,9 @@ class TagValue():
     def __init__(
             self,
             name: str,
-            tick_time: float | None = None,
+            tick_time: float = 0.0,
             value: TagValueType = None,
+            value_formatted: str | None = None,
             unit: str | None = None,
             direction: TagDirection = TagDirection.UNSPECIFIED,
     ):
@@ -283,6 +288,7 @@ class TagValue():
         self.name = name
         self.tick_time = tick_time
         self.value = value
+        self.value_formatted = value_formatted
         self.unit = unit
         self.direction = direction
 

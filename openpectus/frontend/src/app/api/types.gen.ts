@@ -151,6 +151,7 @@ export type ProcessUnit = {
 export type ProcessValue = {
     name: string;
     value?: number | string;
+    value_formatted?: string;
     value_unit?: string;
     value_type: ProcessValueType;
     commands?: Array<ProcessValueCommand>;

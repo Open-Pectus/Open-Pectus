@@ -32,10 +32,10 @@ class TagContext():
             except Exception:
                 logger.error(f"on_engine_start failed for tag '{tag.name}'", exc_info=True)
 
-    def emit_on_tick(self):
+    def emit_on_tick(self, tick_time: float):
         for tag in self.tags:
             try:
-                tag.on_tick()
+                tag.on_tick(tick_time)
             except Exception:
                 logger.error(f"on_tick failed for tag '{tag.name}'", exc_info=True)
 
@@ -93,7 +93,7 @@ class TagLifetime():
         in the same engine tick. """
         pass
 
-    def on_tick(self):
+    def on_tick(self, tick_time: float):
         """ Is invoked on each tick.
 
         Intended for NA (calculated/derived) tags to calculate the
