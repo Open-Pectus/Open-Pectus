@@ -19,34 +19,31 @@ QUANTITY_UNIT_MAP = {
     'amount_of_substance': ['mol'],
     'volume': ['L', 'mL'],                      # Derived quantities
     'flow': ['L/h', 'L/min', 'L/d'],
+    'frequency': ['Hz', 'kHz'],
     'pressure': ['Pa', 'bar', 'pascal'],        # Note: pint prefers pascal over Pa so we define both.
     'mass flow rate': ['kg/h', 'g/s', 'g/min', 'g/h'],
+    'electrical conductance': ['mS/cm'],
     'percentage': ['%'],                        # Custom quantity but supported by pint
-    'column volume': ['CV']                     # Custom quantity
+    'column volume': ['CV'],                    # Custom quantity
+    'absorbance': ['AU'],
 }
 """ Map quantity names to unit names. """
 
-QUANTITY_PINT_MAP: dict[str, str | None] = {
+QUANTITY_PINT_MAP: dict[str, str] = {
     'time': '[time]',
     'length': '[length]',
     'mass': '[mass]',
-    'flow': 'flow',
+    'flow': '[length] ** 3 / [time]',
     'volume': '[length] ** 3',
+    'frequency': '1 / [time]',
     'temperature': '[temperature]',
     'amount_of_substance': '[substance]',
     'pressure': '[mass] / [length] / [time] ** 2',
     'mass flow rate': '[mass] / [time]',
+    'electrical conductance': '[current] ** 2 * [time] ** 3 / [length] ** 3 / [mass]',
     'percentage': 'percentage',
-    'column volume': None
 }
 """ Map quantity names to pint dimensions or None if not a pint dimension. """
-
-QUANTITY_PINT_MULTIDIM_MAP = {
-    'liter / hour': 'flow',
-    'liter / minute': 'flow',
-    'liter / day': 'flow'
-}
-""" Map pint units with multi-dimensionality to quantity name"""
 
 # build list of all supported units
 _supported_units: list[None | str] = [None]
@@ -80,7 +77,7 @@ def _get_quantity_name_for_pint_dim(pint_dimension: str) -> str | None:
     for key in QUANTITY_PINT_MAP.keys():
         vals = QUANTITY_PINT_MAP[key]
         if vals is not None:
-            if pint_dimension in vals:
+            if pint_dimension == vals:
                 return key
 
 def get_compatible_unit_names(unit: str | None) -> list[str]:
@@ -91,7 +88,7 @@ def get_compatible_unit_names(unit: str | None) -> list[str]:
     quantity_name = get_unit_quantity_name(unit)
     assert quantity_name is not None and quantity_name != ""
 
-    pint_mapping = QUANTITY_PINT_MAP[quantity_name]
+    pint_mapping = QUANTITY_PINT_MAP.get(quantity_name)
     if pint_mapping is None:
         # non-pint unit, return all units of this quantity name
         return QUANTITY_UNIT_MAP[quantity_name]
@@ -106,13 +103,8 @@ def get_compatible_unit_names(unit: str | None) -> list[str]:
     else:
         dims = pu.dimensionality
         quantity_name = _get_quantity_name_for_pint_dim(str(dims))
-        if quantity_name is not None:            
+        if quantity_name is not None:
             return QUANTITY_UNIT_MAP[quantity_name]
-        else:
-            quantity_name = QUANTITY_PINT_MULTIDIM_MAP.get(str(pu))
-            if quantity_name is not None:
-                return QUANTITY_UNIT_MAP[quantity_name]
-        
         raise NotImplementedError(f"Pint unit '{pu}' with dimensionality '{str(dims)}' has no defined quantity name")
 
 def are_comparable(unit_a: str | None, unit_b: str | None) -> bool:
@@ -142,19 +134,21 @@ def compare_values(op: str, value_a: str, unit_a: str | None, value_b: str, unit
     if not are_comparable(unit_a, unit_b):
         raise ValueError(f"Cannot compare values with incompatible units '{unit_a}' and '{unit_b}'")
 
-    is_pint_units = False
-    if unit_a is not None and unit_a != unit_b:
-        quantity_name = get_unit_quantity_name(unit_a)
-        assert quantity_name is not None and quantity_name != ""
+    def is_pint():
+        if unit_a is not None and unit_a != unit_b:
+            quantity_name = get_unit_quantity_name(unit_a)
+            assert quantity_name is not None and quantity_name != ""
 
-        pint_mapping = QUANTITY_PINT_MAP.get(quantity_name, None)
-        if pint_mapping is None:
-            # different non-pint units cannot currently be compared. To support these, we must provide a conversion
-            # to the base (SI) unit that can be applied before comparison.
-            raise NotImplementedError(f"Custom comparison of non-pint units {unit_a} and {unit_b} is not implemented")
-        else:
-            is_pint_units = True
+            pint_mapping = QUANTITY_PINT_MAP.get(quantity_name, None)
+            if pint_mapping is None:
+                # different non-pint units cannot currently be compared. To support these, we must provide a conversion
+                # to the base (SI) unit that can be applied before comparison. We don't currently need this.
+                raise NotImplementedError(f"Custom comparison of non-pint units {unit_a} and {unit_b} is not supported")
+            else:
+                return True
+        return False
 
+    is_pint_units = is_pint()
     if is_pint_units:
         fval_a, fval_b = as_float(value_a), as_float(value_b)
         if fval_a is None:
