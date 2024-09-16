@@ -365,7 +365,7 @@ class PInterpreter(PNodeVisitor):
     # Visitor Impl
 
     @override
-    def visit(self, node):
+    def visit(self, node: PNode):
         if not self.running:
             return
 
@@ -430,11 +430,12 @@ class PInterpreter(PNodeVisitor):
         record.add_state_started(
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
+
+        yield
+
         record.add_state_completed(
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
-
-        yield  # comment if we dont want mark to always consume a tick
 
     def visit_PBlock(self, node: PBlock):
         record = self.runtimeinfo.get_last_node_record(node)
