@@ -19,6 +19,7 @@ QUANTITY_UNIT_MAP = {
     'amount_of_substance': ['mol'],
     'volume': ['L', 'mL'],                      # Derived quantities
     'flow': ['L/h', 'L/min', 'L/d'],
+    'frequency': ['Hz', 'kHz'],
     'pressure': ['Pa', 'bar', 'pascal'],        # Note: pint prefers pascal over Pa so we define both.
     'mass flow rate': ['kg/h', 'g/s', 'g/min', 'g/h'],
     'electrical conductance': ['mS/cm'],
@@ -34,6 +35,7 @@ QUANTITY_PINT_MAP: dict[str, str] = {
     'mass': '[mass]',
     'flow': '[length] ** 3 / [time]',
     'volume': '[length] ** 3',
+    'frequency': '1 / [time]',
     'temperature': '[temperature]',
     'amount_of_substance': '[substance]',
     'pressure': '[mass] / [length] / [time] ** 2',
@@ -75,7 +77,7 @@ def _get_quantity_name_for_pint_dim(pint_dimension: str) -> str | None:
     for key in QUANTITY_PINT_MAP.keys():
         vals = QUANTITY_PINT_MAP[key]
         if vals is not None:
-            if pint_dimension in vals:
+            if pint_dimension == vals:
                 return key
 
 def get_compatible_unit_names(unit: str | None) -> list[str]:

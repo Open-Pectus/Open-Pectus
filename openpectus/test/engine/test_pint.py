@@ -101,6 +101,11 @@ class PintTest(unittest.TestCase):
         exp_dimensionality = "[mass] / [time]"
         self.assertEqual(exp_dimensionality, str(val.dimensionality))
 
+    def test_frequency(self):
+        val = Q_(1, "Hz")
+        exp_dimensionality = "1 / [time]"
+        self.assertEqual(exp_dimensionality, str(val.dimensionality))
+
     def test_absorbance(self):
         val = Q_(1, "mS/cm")
         exp_dimensionality = "[current] ** 2 * [time] ** 3 / [length] ** 3 / [mass]"

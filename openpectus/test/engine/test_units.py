@@ -27,6 +27,8 @@ class TestUnits(unittest.TestCase):
         test_unit("kg/h", True)
         test_unit("AU", True)  # absorbance unit, not 'au'
         test_unit("mS/cm", True)  # milisiemens/cm, electrical conductance
+        test_unit("Hz", True)
+        test_unit("kHz", True)
 
         for quantity_name in QUANTITY_UNIT_MAP.keys():
             for unit in QUANTITY_UNIT_MAP[quantity_name]:
