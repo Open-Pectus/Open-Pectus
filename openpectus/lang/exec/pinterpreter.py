@@ -6,6 +6,7 @@ from enum import Enum
 from typing import Generator, Iterable
 from uuid import UUID
 
+from openpectus.lang.exec.tag_lifetime import TagContext
 import openpectus.lang.exec.units as units
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.commands import InterpreterCommandEnum
@@ -101,7 +102,7 @@ class CallStack:
     def iterate_from_top(self) -> Iterable[ActivationRecord]:
         for ar in reversed(self._records):
             yield ar
-            
+
     def push(self, ar: ActivationRecord):
         self._records.append(ar)
 
@@ -135,6 +136,10 @@ class InterpreterContext():
         raise NotImplementedError()
 
     def schedule_execution(self, name: str, exec_id: UUID | None = None, **kvargs):
+        raise NotImplementedError()
+
+    @property
+    def lifetime(self) -> TagContext:
         raise NotImplementedError()
 
     @property
@@ -411,6 +416,7 @@ class PInterpreter(PNodeVisitor):
         ar = ActivationRecord(node, self._tick_time)
         self.stack.push(ar)
         yield from self._visit_children(node.children)
+        self.context.lifetime.emit_on_method_end()
         self.stack.pop()
 
     def visit_PBlank(self, node: PBlank):
@@ -431,7 +437,8 @@ class PInterpreter(PNodeVisitor):
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
 
-        yield
+        # we want this in but it breaks a lot of tests. we want to be able to manage that first
+        # yield
 
         record.add_state_completed(
             self._tick_time, self._tick_number,
@@ -525,12 +532,15 @@ class PInterpreter(PNodeVisitor):
             self.context.tags[SystemTagName.BASE].set_value(node.args, self._tick_time)
 
         elif node.name == InterpreterCommandEnum.INCREMENT_RUN_COUNTER:
-            rc_value = self.context.tags[SystemTagName.RUN_COUNTER].as_number() + 1
-            self.context.tags[SystemTagName.RUN_COUNTER].set_value(rc_value, self._tick_time)
+            run_counter = self.context.tags[SystemTagName.RUN_COUNTER]            
+            rc_value = run_counter.as_number() + 1
+            logger.debug(f"Run Counter incremented from {rc_value - 1} to {rc_value}")
+            run_counter.set_value(rc_value, self._tick_time)
 
         elif node.name == InterpreterCommandEnum.RUN_COUNTER:
             try:
                 new_value = int(node.args)
+                logger.debug(f"Run Counter set to {new_value}")
                 self.context.tags[SystemTagName.RUN_COUNTER].set_value(new_value, self._tick_time)
             except ValueError:
                 raise NodeInterpretationError(node, f"Invalid argument '{node.args}'. Argument must be an integer")

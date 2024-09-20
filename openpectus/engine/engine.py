@@ -142,6 +142,12 @@ class Engine(InterpreterContext):
         return self._tags
 
     @property
+    def lifetime(self) -> TagContext:
+        if self._tag_context is None:
+            raise EngineNotInitializedError("TagContext not set")
+        return self._tag_context
+
+    @property
     def base_unit_provider(self) -> BaseUnitProvider:
         return self.uod.base_unit_provider
 

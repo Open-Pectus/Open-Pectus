@@ -53,6 +53,13 @@ class TagContext():
             except Exception:
                 logger.error(f"on_block_end failed for element '{str(element)}'", exc_info=True)
 
+    def emit_on_method_end(self):
+        for element in self.elements:
+            try:
+                element.on_method_end()
+            except Exception:
+                logger.error(f"on_method_end failed for element '{str(element)}'", exc_info=True)
+
     def emit_on_stop(self):
         for element in self.elements:
             try:
@@ -98,6 +105,10 @@ class TagLifetime():
 
         Intended for NA (calculated/derived) tags to calculate the
         value for the tick and apply it to the value property. """
+        pass
+
+    def on_method_end(self):
+        """ Is invoked when method interpretation is complete. """
         pass
 
     def on_stop(self):
