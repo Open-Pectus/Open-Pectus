@@ -69,7 +69,7 @@ async def main_async(args):
         logger.error(f"Failed to create uod: {ex}")
         return
 
-    engine = Engine(uod, tick_interval=0.1, enable_archiver=True)
+    engine = Engine(uod, enable_archiver=True)
     dispatcher = EngineDispatcher(f"{args.aggregator_hostname}:{args.aggregator_port}", uod.options)
 
     if not run_validations(uod):

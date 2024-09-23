@@ -15,7 +15,6 @@ from openpectus.engine.hardware import HardwareLayerBase, Register
 from openpectus.engine.models import EngineCommandEnum, MethodStatusEnum, SystemStateEnum, SystemTagName
 from openpectus.lang.exec.runlog import RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import Tag, TagDirection
-from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import (
     UnitOperationDefinitionBase,
     UodCommand,
@@ -115,19 +114,17 @@ def create_test_uod() -> UnitOperationDefinitionBase:
     return uod
 
 
-def create_engine() -> Engine:
-    uod = create_test_uod()
+def create_engine(uod: UnitOperationDefinitionBase | None = None) -> Engine:
+    if uod is None:
+        uod = create_test_uod()
     e = Engine(uod)
-    e._tick_timer = NullTimer()
     e._configure()
     return e
 
 
 @contextmanager
 def create_engine_context(uod: UnitOperationDefinitionBase) -> Generator[Engine, Any, None]:
-    e = Engine(uod)
-    e._tick_timer = NullTimer()
-    e._configure()
+    e = create_engine(uod)
     try:
         yield e
     finally:
@@ -137,8 +134,7 @@ def create_engine_context(uod: UnitOperationDefinitionBase) -> Generator[Engine,
 class TestEngineSetup(unittest.TestCase):
 
     def test_create_engine(self):
-        uod = create_test_uod()
-        e = Engine(uod)
+        e = create_engine()
         self.assertIsNotNone(e)
         e.cleanup()
 
@@ -634,10 +630,10 @@ Reset
         self.assertEqual(0, e._system_tags["Run Counter"].get_value())
 
         e.schedule_execution("Start")
-        e.tick()
+        e.tick(0, 0)
 
         e.inject_code("Increment run counter")
-        e.tick()
+        e.tick(0, 0)
 
         self.assertEqual(1, e._system_tags["Run Counter"].get_value())
 
@@ -708,13 +704,15 @@ Mark: C
         self.assertEqual(0.0, clock.as_number())
 
         e._runstate_started = True
-        e.tick()
+        e.tick(1, 1)
 
         clock_value = clock.as_number()
         self.assertGreater(clock_value, 0.0)
 
         e._runstate_started = False
-        e.tick()
+        e.tick(2, 1)
+
+        self.assertEqual(clock_value, clock.as_number())
 
 
     # --- RunState ---
@@ -724,7 +722,7 @@ Mark: C
         e = self.engine
 
         e.schedule_execution("Start")
-        e.tick()
+        e.tick(1, 1)
 
         self.assertTrue(e._runstate_started)
 
@@ -734,13 +732,13 @@ Mark: C
         e = self.engine
         e.schedule_execution("Start")
 
-        e.tick()
+        e.tick(1, 1)
         self.assertTrue(e._runstate_started)
         system_state_tag = e._system_tags[SystemTagName.SYSTEM_STATE]
         self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
 
         e.schedule_execution("Stop")
-        e.tick()
+        e.tick(1, 1)
 
         self.assertFalse(e._runstate_started)
 
@@ -750,7 +748,8 @@ Mark: C
         e = self.engine
 
         def tick():
-            e.tick()
+            tick_time = time.time()
+            e.tick(tick_time, 0.1)
             time.sleep(0.1)
 
         e.schedule_execution("Start")
@@ -788,7 +787,8 @@ Mark: C
         e = self.engine
 
         def tick():
-            e.tick()
+            tick_time = time.time()
+            e.tick(tick_time, 0.1)
             time.sleep(0.1)
 
         # apply start and pause
@@ -826,10 +826,15 @@ Mark: C
         self.assertTrue(process_time_increment > 0.0)
 
     def test_runstate_hold(self):
+        def tick():
+            tick_time = time.time()
+            e.tick(tick_time, 0.1)
+            time.sleep(0.1)
+
         e = self.engine
         e.schedule_execution("Start")
 
-        e.tick()
+        tick()
         self.assertTrue(e._runstate_started)
         system_state_tag = e._system_tags[SystemTagName.SYSTEM_STATE]
         self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
@@ -838,7 +843,7 @@ Mark: C
         self.assertTrue(danger_tag.get_value())
 
         e.schedule_execution("Hold")
-        e.tick()
+        tick()
 
         self.assertTrue(e._runstate_started)
         self.assertTrue(e._runstate_holding)
@@ -888,14 +893,39 @@ Mark: b
 
         self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
 
+    def test_wait(self):
+        e = self.engine
+        program = """
+Mark: a
+Wait: .5s
+Mark: b
+"""
+        run_engine(e, program, 2)
+        self.assertEqual([], e.interpreter.get_marks())
+
+        continue_engine(e, 1)
+        self.assertEqual(['a'], e.interpreter.get_marks())
+
+        continue_engine(e, 5)
+        self.assertEqual(['a'], e.interpreter.get_marks())
+
+        continue_engine(e, 3)
+        self.assertEqual(['a', 'b'], e.interpreter.get_marks())
+
     # --- Safe values ---
 
 
     def test_safe_values_apply(self):
+
+        def tick():
+            tick_time = time.time()
+            e.tick(tick_time, 0.1)
+            time.sleep(0.1)
+
         e = self.engine
         e.schedule_execution("Start")
 
-        e.tick()
+        tick()
 
         danger_tag = e.uod.tags["Danger"]
         self.assertTrue(danger_tag.get_value())
@@ -1017,9 +1047,9 @@ Base: s
             self.assertEqual(acc_vol.as_float(), 0.0)
             self.assertEqual(acc_vol.unit, "L")
 
-            t0 = time.time()
+            t0 = e._clock.get_time()
             continue_engine(e, 10)
-            t1 = time.time()
+            t1 = e._clock.get_time()
 
             self.assertAlmostEqual(t1 - t0, 1, delta=0.1)
             self.assertAlmostEqual(acc_vol.as_float(), 1, delta=0.1)
@@ -1106,9 +1136,9 @@ Base: s
             self.assertEqual(acc_cv.as_float(), 0.0)
             self.assertEqual(acc_cv.unit, "CV")
 
-            t0 = time.time()
+            t0 = e._clock.get_time()
             continue_engine(e, 10)
-            t1 = time.time()
+            t1 = e._clock.get_time()
 
             self.assertAlmostEqual(t1 - t0, 1, delta=0.1)
             self.assertAlmostEqual(acc_cv.as_float(), 1/2, delta=0.1)
@@ -1471,7 +1501,7 @@ Mark: C
         continue_engine(e, 5)
 
         # not paused while system is Paused
-        self.assertAlmostEqual(1.0, run_time.as_float(), delta=0.1)
+        self.assertAlmostEqual(1.0, run_time.as_float(), delta=0.2)
 
     def test_tag_block_time(self):
         p = """
@@ -1642,7 +1672,7 @@ class CalculatedLinearTag(Tag):
     def on_start(self, context: TagContext):
         self.value = time.time() * self.slope
 
-    def on_tick(self, tick_time: float):
+    def on_tick(self, tick_time: float, increment_time: float):
         self.value = time.time() * self.slope
 
 

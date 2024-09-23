@@ -207,8 +207,13 @@ class RuntimeInfo():
         self._add_record(record, exec_id=exec_id)
         return record
 
-    def find_instruction(self, instruction_name: str, start_index: int) -> int | None:
-        """ Find the first record with the given instruction name starting from start_index (incl).
+    def find_instruction(
+            self,
+            instruction_name: str,
+            start_index: int,
+            instruction_state: RuntimeRecordStateEnum | None
+            ) -> int | None:
+        """ Find the first record with the given instruction name and state starting from start_index (incl).
 
         Return the index of the found record or None if record is not found.
 
@@ -228,7 +233,10 @@ class RuntimeInfo():
             if r.node.instruction_name == instruction_name:
                 # logger.debug(f"Find record result: {i}, {instruction_name=}, {start_index=}")
                 # logger.debug(self.get_as_table())
-                return i
+                if instruction_state is None:
+                    return i
+                elif r.has_state(instruction_state):
+                    return i
 
     def get_record_by_index(self, index: int) -> RuntimeRecord | None:
         if index < 0:

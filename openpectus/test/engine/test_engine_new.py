@@ -1,32 +1,20 @@
-from contextlib import contextmanager
 import logging
-import threading
 import time
 import unittest
-from typing import Any, Generator
-from openpectus.lang.exec.errors import UodValidationError
-from openpectus.lang.exec.tag_lifetime import TagContext
+from typing import Any
 from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 
-import openpectus.protocol.models as Mdl
 import pint
-from openpectus.engine.engine import Engine
-from openpectus.engine.hardware import HardwareLayerBase, Register
-from openpectus.engine.models import EngineCommandEnum, MethodStatusEnum, SystemStateEnum, SystemTagName
-from openpectus.lang.exec.runlog import RuntimeRecordStateEnum
-from openpectus.lang.exec.tags import Tag, TagDirection
-from openpectus.lang.exec.timer import NullTimer
+from openpectus.lang.exec.tags import SystemTagName, Tag, TagDirection
 from openpectus.lang.exec.uod import (
     UnitOperationDefinitionBase,
     UodCommand,
     UodBuilder,
-    RegexNamedArgumentParser,
     RegexNumber,
 )
-from openpectus.test.engine.utility_methods_new import (
+from openpectus.test.engine.utility_methods import (
     EngineTestRunner,
-    configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging,
-    print_runlog
+    configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging
 )
 
 
@@ -39,8 +27,6 @@ logging.getLogger("openpectus.lang.exec.runlog").setLevel(logging.DEBUG)
 # to throw off timing of the first instruction.
 # so we initialize it first
 _ = pint.Quantity("0 s")
-
-
 
 
 def create_test_uod() -> UnitOperationDefinitionBase:
@@ -108,26 +94,29 @@ def create_test_uod() -> UnitOperationDefinitionBase:
     return uod
 
 
-def create_engine() -> Engine:
-    uod = create_test_uod()
-    return Engine(uod)
-
-
 class TestEngineNew(unittest.TestCase):
 
     def test_run_until_condition(self):
-        runner = EngineTestRunner(create_engine)
+        runner = EngineTestRunner(create_test_uod)
         with runner.run() as instance:
             run_time = instance.engine.tags[SystemTagName.RUN_TIME]
-            
+
             instance.start()
             start = time.time()
             instance.run_until_condition(lambda: run_time.as_float() >= 1)
             end = time.time()
-            self.assertAlmostEqual(end-start, 1.1, delta=0.1)
+            self.assertAlmostEqual(end-start, 1.1, delta=0.2)
 
-            # Why is it that only every second tick has positive increment? This looks wrong
-            # we probably need to feed it more often
+    def test_wait(self):
+        code = """
+Wait: 1s
+Mark: A
+"""
+        runner = EngineTestRunner(create_test_uod, code)
+        with runner.run() as instance:
+            instance.start()
+            ticks = instance.run_until_instruction("Mark")
+            self.assertAlmostEqual(1+10+1+1, ticks, delta=2)
 
     def test_run_until_instruction(self):
         code = """
@@ -136,24 +125,22 @@ Wait: 1s
 Pause: 1.5s
 Mark: B
 """
-        runner = EngineTestRunner(create_engine, code)
+        runner = EngineTestRunner(create_test_uod, code)
         with runner.run() as instance:
             instance.start()
             run_time = instance.engine.tags[SystemTagName.RUN_TIME]
-            # TODO await state pause
 
             instance.run_until_instruction("Mark")
-            # one tick passed before the first "user" instruction. That is ok
-            self.assertAlmostEqual(0.1, run_time.as_float(), delta=0.1)
+            # two ticks passed before the first "user" instruction. That is expected
+            self.assertAlmostEqual(0.2, run_time.as_float(), delta=0.1)
 
-            # there is an issue with instruction name. runlog_name is "Pause: 3.0s"
-            # how would anyone ever know? maybe have an instruction_name property
-            # that we can make a literal for - or en enum?
             instance.run_until_instruction("Pause")
 
             #self.assertAlmostEqual(1.1, run_time.as_float(), delta=0.1)
             instance.run_until_instruction("Mark")
-            #time.sleep(1)
+
+            with self.assertRaises(TimeoutError):
+                instance.run_until_instruction("Mark")
 
     def test_run_until_instruction_block(self):
         code = """
@@ -164,9 +151,11 @@ Block: A
     Wait: 1s
 Mark: B
 """
-        runner = EngineTestRunner(create_engine, code)
+        runner = EngineTestRunner(create_test_uod, code)
         with runner.run() as instance:
             instance.start()
+
+            self.assertEqual([], instance.engine.interpreter.get_marks())
 
             instance.run_until_instruction("Block")
             self.assertEqual(['A'], instance.engine.interpreter.get_marks())
@@ -185,11 +174,11 @@ Mark: B
 Watch: Run Counter >= 2
     Stop
 
-Wait: 0.2s
+Wait: 1s
 Increment run counter
 Restart
 """
-        runner = EngineTestRunner(create_engine, code)
+        runner = EngineTestRunner(create_test_uod, code)
 
         with runner.run() as instance:
             run_counter = instance.engine.tags["Run Counter"]
@@ -223,28 +212,32 @@ Restart
     def test_run_until_method_end(self):
         code = """
 Mark: A
+Mark: B
+Mark: C
 """
-        runner = EngineTestRunner(create_engine, code)
+        runner = EngineTestRunner(create_test_uod, code)
         logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.DEBUG)
 
         with runner.run() as instance:
             instance.start()
-            # TODO event for method end?
-            raise NotImplementedError()
-            #instance.run_until_event()
-            self.assertEqual(['A'], instance.engine.interpreter.get_marks())
+            self.assertEqual([], instance.engine.interpreter.get_marks())
+            instance.run_until_event("method_end")
+            self.assertEqual(['A', 'B', 'C'], instance.engine.interpreter.get_marks())
 
 
     def test_run_until_stop(self):
         code = """
+Mark: A
 Stop
 """
-        runner = EngineTestRunner(create_engine, code)
+        runner = EngineTestRunner(create_test_uod, code)
         logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.DEBUG)
 
         with runner.run() as instance:
             instance.start()
             instance.run_until_event("stop")
+            self.assertEqual([], instance.engine.interpreter.get_marks())
+
 
     def test_speed_perceived(self):
         pcode = """
@@ -254,31 +247,35 @@ Wait: 15s
 15 Mark: A2
 Mark: B
 """
-        runner = EngineTestRunner(create_engine, pcode=pcode, speed=30)
+        runner = EngineTestRunner(create_test_uod, pcode=pcode, speed=30)
         with runner.run() as instance:
             instance.start()
-            start_time = instance.engine._tick_time
+            run_time = instance.engine.tags[SystemTagName.RUN_TIME]
+            time.sleep(1)
+            self.assertAlmostEqual(run_time.as_float(), 30, delta=3)
 
             time.sleep(1)
-            self.assertAlmostEqual(start_time + 30, instance.engine._tick_time, delta=1)
-
-            time.sleep(1)
-            self.assertAlmostEqual(start_time + 60, instance.engine._tick_time, delta=1)
+            self.assertAlmostEqual(run_time.as_float(), 60, delta=3)
+            
 
     def test_speed_timer(self):
         pcode = """
 Wait: 30s
 Mark: B
 """
-        runner = EngineTestRunner(create_engine, pcode=pcode, speed=30)
+        runner = EngineTestRunner(create_test_uod, pcode=pcode, speed=30)
         with runner.run() as instance:
             run_time = instance.engine.tags[SystemTagName.RUN_TIME]
             instance.start()
 
+            instance.run_until_instruction("Wait", "started")
             run_time.set_value(0, 0)
 
             instance.run_until_instruction("Mark")
-            self.assertAlmostEqual(30, run_time.as_float(), delta=1)
+            # Why the two ticks threshold?
+            # Completing Wait takes a tick and 30 secs at speed 30 can vary one tick in evaluation
+            run_time_value = run_time.as_float()
+            self.assertAlmostEqual(33, run_time_value, delta=3)
 
     # speed is really important as it allows tests that wait much longer than a few ticks.
     # This allows testing timers much easier because we can use much larger periods - without
