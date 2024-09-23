@@ -14,7 +14,7 @@ class TestUnits(unittest.TestCase):
         def test_unit(unit: str | None, expect_supported, quantity_name: str = ""):
             if unit is not None:
                 test_name = unit if quantity_name == "" else quantity_name + ': ' + unit
-                with self.subTest(test_name):                
+                with self.subTest(test_name):
                     self.assertEqual(is_supported_unit(unit), expect_supported)
 
         test_unit('L', True)
@@ -25,9 +25,10 @@ class TestUnits(unittest.TestCase):
         test_unit("CV", True)
         test_unit("bar", True)
         test_unit("kg/h", True)
-        # TODO add these if requested
-        # test_unit("au", True) # astrological unit, a very large distance
-        # test_unit("mS/cm", True) # milisiemens/cm, electrical conductance
+        test_unit("AU", True)  # absorbance unit, not 'au'
+        test_unit("mS/cm", True)  # milisiemens/cm, electrical conductance
+        test_unit("Hz", True)
+        test_unit("kHz", True)
 
         for quantity_name in QUANTITY_UNIT_MAP.keys():
             for unit in QUANTITY_UNIT_MAP[quantity_name]:
@@ -103,7 +104,7 @@ class TestUnits(unittest.TestCase):
         self.comp('==', 'foo', None, 'bar', None, False)
         self.comp('!=', 'foo', None, 'bar', None, True)
 
-    def test_compare_values_string_inequality(self):        
+    def test_compare_values_string_inequality(self):
         self.comp('<', 'foo', None, 'foo', None, None, "Cannot compare values, first value is missing or not numeric")
         self.comp('<=', 'foo', None, 'foo', None, None, "Cannot compare values, first value is missing or not numeric")
         self.comp('>', 'foo', None, 'foo', None, None, "Cannot compare values, first value is missing or not numeric")
@@ -126,8 +127,12 @@ class TestUnits(unittest.TestCase):
         self.comp('==', '5.0', 's', '7', 's', False)
         self.comp('!=', '5', 's', '7', 's', True)
 
-        self.comp('=', '5', 'kg/h', '7', 'kg/h', False)        
+        self.comp('=', '5', 'kg/h', '7', 'kg/h', False)
         self.comp('!=', '5', 'kg/h', '5', 'g/s', True)
+
+        self.comp('=', '60', 'L/h', '1', 'L/min', True)
+        self.comp('>', '61', 'L/h', '1', 'L/min', True)
+        self.comp('<', '59', 'L/h', '1', 'L/min', True)
 
 
     def test_compare_values_numeric_equality_w_unit_error(self):
@@ -160,7 +165,7 @@ class TestUnits(unittest.TestCase):
         self.comp('<=', '50', 's', '1', 'min', True)
         self.comp('<=', '60', 's', '1', 'min', True)
         self.comp('>', '70', 's', '1', 'min', True)
-        
+
         # self.comp('=', '0', 'degC', '32', 'degF', True)  # is this a rounding bug?! - they should be equal
         self.comp('>', '1', 'degC', '32', 'degF', True)
         self.comp('>=', '1', 'degC', '32', 'degF', True)
@@ -206,4 +211,3 @@ class TestUnits(unittest.TestCase):
 
         self.comp("<", "5", "CV", "5.0", "CV", False)
         self.comp("==", "5", "CV", "5.0", "CV", True)
-

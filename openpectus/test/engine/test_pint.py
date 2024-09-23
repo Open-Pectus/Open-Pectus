@@ -91,9 +91,24 @@ class PintTest(unittest.TestCase):
         val2 = Q_(1, "Pa")
         self.assertEqual(exp_dimensionality, str(val2.dimensionality))
 
+    def test_flow(self):
+        val = Q_(1, "l/h")
+        exp_dimensionality = "[length] ** 3 / [time]"
+        self.assertEqual(exp_dimensionality, str(val.dimensionality))
+
     def test_mass_flow_rate(self):
         val = Q_(1, "kg/h")
         exp_dimensionality = "[mass] / [time]"
+        self.assertEqual(exp_dimensionality, str(val.dimensionality))
+
+    def test_frequency(self):
+        val = Q_(1, "Hz")
+        exp_dimensionality = "1 / [time]"
+        self.assertEqual(exp_dimensionality, str(val.dimensionality))
+
+    def test_absorbance(self):
+        val = Q_(1, "mS/cm")
+        exp_dimensionality = "[current] ** 2 * [time] ** 3 / [length] ** 3 / [mass]"
         self.assertEqual(exp_dimensionality, str(val.dimensionality))
 
     def test_formatting(self):
