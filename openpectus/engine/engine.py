@@ -145,9 +145,6 @@ class Engine(InterpreterContext):
         self._tags: TagCollection | None = None
         self._tag_context: TagContext | None = None
 
-        self.block_popped: str | None = None
-        self.block_pushed: str | None = None
-
         self._interpreter: PInterpreter = PInterpreter(PProgram(), self)
         """ The interpreter executing the current program. """
 
@@ -183,14 +180,6 @@ class Engine(InterpreterContext):
     @property
     def base_unit_provider(self) -> BaseUnitProvider:
         return self.uod.base_unit_provider
-
-    def block_started(self, name: str):
-        self.block_pushed = name
-        self.block_popped = None
-
-    def block_ended(self, name: str, new_name: str):
-        self.block_pushed = new_name
-        self.block_popped = name
 
     @property
     def interpreter(self) -> PInterpreter:
@@ -268,8 +257,7 @@ class Engine(InterpreterContext):
 
         if not self._running:
             self._tick_timer.stop()
-            # TODO shutdown
-        
+
         self._tick_time = tick_time
         self._tick_number += 1
 
@@ -369,16 +357,6 @@ class Engine(InterpreterContext):
         # Block name + signal block changes to tag_context
         block_name = self._system_tags[SystemTagName.BLOCK].get_value() or ""
         assert isinstance(block_name, str)
-
-        # TODO see if interpreter can just emit these events and avoid all this
-        if self.block_pushed is not None and self.block_popped is not None:
-            block_name, old_block_name = self.block_pushed, self.block_popped
-            self.block_popped, self.block_pushed = None, None
-            self.tag_context.emit_on_block_end(old_block_name, block_name, self._tick_number)
-        elif self.block_pushed is not None:
-            block_name = self.block_pushed
-            self.block_pushed = None
-            self.tag_context.emit_on_block_start(block_name, self._tick_number)
 
         # Block Time    - 0 at Block start, global but value refers to active block
         if block_name not in self.block_times.keys():

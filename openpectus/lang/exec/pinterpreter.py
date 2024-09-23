@@ -146,15 +146,6 @@ class InterpreterContext():
     def base_unit_provider(self) -> BaseUnitProvider:
         raise NotImplementedError()
 
-    def block_started(self, name: str):
-        """ Invoked when a block is started. Not invoked for the main block"""
-        raise NotImplementedError()
-
-    def block_ended(self, name: str, new_name: str):
-        """ Invoked when block is completed. If back in the main block,
-        new_name is the empty string. """
-        raise NotImplementedError()
-
 
 GenerationType = Generator[None, None, None] | None
 
@@ -450,7 +441,7 @@ class PInterpreter(PNodeVisitor):
         ar = ActivationRecord(node, self._tick_time)
         self.stack.push(ar)
         self.context.tags[SystemTagName.BLOCK].set_value(node.name, self._tick_number)
-        self.context.block_started(node.name)
+        self.context.lifetime.emit_on_block_start(node.name, self._tick_number)
         logger.debug(f"Block Tag set to {node.name}")
 
         yield  # comment if we dont want block to always consume a tick
@@ -483,12 +474,12 @@ class PInterpreter(PNodeVisitor):
             if ar.artype == ARType.BLOCK:
                 assert isinstance(ar.owner, PBlock)
                 self.context.tags[SystemTagName.BLOCK].set_value(ar.owner.name, self._tick_number)
-                self.context.block_ended(node.name, ar.owner.name)
+                self.context.lifetime.emit_on_block_end(node.name, ar.owner.name, self._tick_number)
                 logger.debug(f"Block Tag popped to {ar.owner.name}")
                 block_restored = True
         if not block_restored:
             self.context.tags[SystemTagName.BLOCK].set_value(None, self._tick_number)
-            self.context.block_ended(node.name, "")
+            self.context.lifetime.emit_on_block_end(node.name, "", self._tick_number)
             logger.debug(f"Block Tag cleared from {node.name}")
 
 
