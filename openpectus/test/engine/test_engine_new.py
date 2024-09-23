@@ -305,7 +305,6 @@ Mark: C
             instance.run_until_event("method_end")
             self.assertEqual(['A', 'B', 'I', 'C'], instance.marks)
 
-
     def test_inject_thresholds_1(self):
         pcode = """
 Mark: A

@@ -205,7 +205,7 @@ class TestEngine(unittest.TestCase):
 
         self.assertEqual("N/A", e.uod.tags["Reset"].get_value())
 
-        run_engine(e, "Reset", 3)
+        run_engine(e, "Reset", 4)
 
         self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
 
