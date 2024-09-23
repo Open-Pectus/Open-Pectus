@@ -71,6 +71,10 @@ class EngineTestInstance(TagLifetime):
         self.engine.schedule_execution(EngineCommandEnum.START)
         self.timing.timer.start()
 
+    @property
+    def marks(self) -> list[str]:
+        return self.engine.interpreter.get_marks()
+
     # def stop(self):
     #     pass
 

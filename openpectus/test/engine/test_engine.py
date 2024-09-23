@@ -1378,68 +1378,7 @@ Restart
         self.assertFalse(EngineCommandEnum.has_value("stop"))
         self.assertFalse(EngineCommandEnum.has_value("STOP"))
 
-
-    # --- Inject ---
-
-
-    def test_inject_command(self):
-        program = """
-Mark: A
-Mark: B
-Mark: C
-"""
-        e = self.engine
-        run_engine(e, program, 3)
-        self.assertEqual(['A'], e.interpreter.get_marks())
-
-        e.inject_code("Mark: I")
-        continue_engine(e, 1)
-        self.assertEqual(['A', 'B', 'I'], e.interpreter.get_marks())
-
-        continue_engine(e, 1)
-        self.assertEqual(['A', 'B', 'I', 'C'], e.interpreter.get_marks())
-
-    def test_inject_thresholds_1(self):
-        program = """
-Mark: A
-0.25 Mark: B
-Mark: C
-"""
-        e = self.engine
-        e.tags[SystemTagName.BASE].set_value("s", e._tick_time)
-        run_engine(e, program, 3)
-
-        self.assertEqual(['A'], e.interpreter.get_marks())
-
-        e.inject_code("Mark: I")
-        continue_engine(e, 1)
-        self.assertEqual(['A', 'I'], e.interpreter.get_marks())
-
-        continue_engine(e, 3)
-        # print_runtime_records(e)
-        self.assertEqual(['A', 'I', 'B', 'C'], e.interpreter.get_marks())
-
-    def test_inject_thresholds_2(self):
-        program = """
-Mark: A
-0.2 Mark: B
-Mark: C
-"""
-        e = self.engine
-        e.tags[SystemTagName.BASE].set_value("s", e._tick_time)
-        run_engine(e, program, 3)
-
-        self.assertEqual(['A'], e.interpreter.get_marks())
-
-        e.inject_code("0.3 Mark: I")
-        continue_engine(e, 1)
-
-        self.assertEqual(['A', 'B'], e.interpreter.get_marks())
-
-        continue_engine(e, 3)
-        # self.assertEqual(['A', 'B', 'C', 'I'], e.interpreter.get_marks())
-        self.assertTrue(['A', 'B', 'C', 'I'] == e.interpreter.get_marks()
-                        or ['A', 'B', 'I', 'C'] == e.interpreter.get_marks())
+# ----------- Engine Error -------------
 
     def test_engine_error_causes_Paused_state(self):
         e = self.engine

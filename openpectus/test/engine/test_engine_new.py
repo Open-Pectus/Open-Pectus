@@ -282,3 +282,71 @@ Mark: B
     # longer test runs. The key is that single ticks drown in long waiting times and becomes
     # irrelevant, just as they are in practice.
 
+ # --- Inject ---
+
+
+    def test_inject_command(self):
+        pcode = """
+Mark: A
+Mark: B
+Mark: C
+"""
+        runner = EngineTestRunner(create_test_uod, pcode=pcode)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_instruction("Mark")
+            self.assertEqual(['A'], instance.marks)
+
+            instance.engine.inject_code("Mark: I")
+
+            instance.run_until_condition(lambda: 'B' in instance.marks)
+            self.assertEqual(['A', 'B', 'I'], instance.marks)
+
+            instance.run_until_event("method_end")
+            self.assertEqual(['A', 'B', 'I', 'C'], instance.marks)
+
+
+    def test_inject_thresholds_1(self):
+        pcode = """
+Mark: A
+0.25 Mark: B
+Mark: C
+"""
+        runner = EngineTestRunner(create_test_uod, pcode=pcode)
+        with runner.run() as instance:
+            instance.start()
+
+            instance.engine.tags[SystemTagName.BASE].set_value("s", instance.engine._tick_time)
+
+            instance.run_until_instruction("Mark")
+            self.assertEqual(['A'], instance.marks)
+
+            instance.engine.inject_code("Mark: I")
+            instance.run_until_condition(lambda: 'I' in instance.marks)
+            self.assertEqual(['A', 'I'], instance.marks)
+
+            instance.run_until_event("method_end")
+            self.assertEqual(['A', 'I', 'B', 'C'], instance.marks)
+
+
+    def test_inject_thresholds_2(self):
+        pcode = """
+Mark: A
+0.2 Mark: B
+Mark: C
+"""
+        runner = EngineTestRunner(create_test_uod, pcode=pcode)
+        with runner.run() as instance:
+            instance.start()
+
+            instance.engine.tags[SystemTagName.BASE].set_value("s", instance.engine._tick_time)
+
+            instance.run_until_instruction("Mark")
+            self.assertEqual(['A'], instance.marks)
+
+            instance.engine.inject_code("0.3 Mark: I")
+            instance.run_until_condition(lambda: 'B' in instance.marks)
+            self.assertEqual(['A', 'B'], instance.marks)
+
+            instance.run_until_event("method_end")
+            self.assertTrue(['A', 'B', 'C', 'I'] == instance.marks or ['A', 'B', 'I', 'C'] == instance.marks)
