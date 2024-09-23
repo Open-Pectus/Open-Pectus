@@ -202,12 +202,13 @@ class TestEngine(unittest.TestCase):
 
     def test_execute_command_marks_assigned_tags_dirty(self):
         e = self.engine
+        reset_tag = e.uod.tags["Reset"]
 
-        self.assertEqual("N/A", e.uod.tags["Reset"].get_value())
+        self.assertEqual("N/A", reset_tag.get_value())
 
-        run_engine(e, "Reset", 4)
-
-        self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
+        run_engine(e, "Reset", 3)
+        time.sleep(0.1)
+        self.assertEqual("Reset", reset_tag.get_value())
 
         # assert tags marked dirty
         dirty_names = [t.name for t in get_queue_items(e.tag_updates)]
