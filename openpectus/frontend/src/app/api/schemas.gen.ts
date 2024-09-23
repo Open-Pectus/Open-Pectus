@@ -522,6 +522,10 @@ export const $ProcessValue = {
             ],
             title: 'Value'
         },
+        value_formatted: {
+            type: 'string',
+            title: 'Value Formatted'
+        },
         value_unit: {
             type: 'string',
             title: 'Value Unit'

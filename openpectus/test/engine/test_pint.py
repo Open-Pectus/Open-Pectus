@@ -75,6 +75,41 @@ class PintTest(unittest.TestCase):
         self.assertEqual("<Quantity(3, 'percent')>", "{!r}".format(count))
         self.assertEqual(count.units.__repr__(), "<Unit('percent')>")
 
+    def test_pressure(self):
+        val = Q_(1, "bar")
+        exp_dimensionality = "[mass] / [length] / [time] ** 2"
+        self.assertEqual(exp_dimensionality, str(val.dimensionality))
+
+        compatibles = ureg.get_compatible_units(exp_dimensionality)  # type: ignore
+        self.assertIn('bar', [str(c) for c in compatibles])
+
+        # Note: 'Pa' is not in compatibles but 'pascal' is
+        self.assertNotIn('Pa', [str(c) for c in compatibles])
+        self.assertIn('pascal', [str(c) for c in compatibles])
+
+        # but Pa is a valid unit
+        val2 = Q_(1, "Pa")
+        self.assertEqual(exp_dimensionality, str(val2.dimensionality))
+
+    def test_flow(self):
+        val = Q_(1, "l/h")
+        exp_dimensionality = "[length] ** 3 / [time]"
+        self.assertEqual(exp_dimensionality, str(val.dimensionality))
+
+    def test_mass_flow_rate(self):
+        val = Q_(1, "kg/h")
+        exp_dimensionality = "[mass] / [time]"
+        self.assertEqual(exp_dimensionality, str(val.dimensionality))
+
+    def test_frequency(self):
+        val = Q_(1, "Hz")
+        exp_dimensionality = "1 / [time]"
+        self.assertEqual(exp_dimensionality, str(val.dimensionality))
+
+    def test_absorbance(self):
+        val = Q_(1, "mS/cm")
+        exp_dimensionality = "[current] ** 2 * [time] ** 3 / [length] ** 3 / [mass]"
+        self.assertEqual(exp_dimensionality, str(val.dimensionality))
 
     def test_formatting(self):
         weight = 2 * ureg.kg

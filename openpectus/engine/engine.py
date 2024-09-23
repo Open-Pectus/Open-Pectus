@@ -16,7 +16,9 @@ from openpectus.engine.method_model import MethodModel
 from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum, SystemTagName
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.commands import CommandRequest
-from openpectus.lang.exec.errors import EngineError, EngineNotInitializedError, InterpretationError, InterpretationInternalError
+from openpectus.lang.exec.errors import (
+    EngineError, EngineNotInitializedError, InterpretationError, InterpretationInternalError
+)
 from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext
 from openpectus.lang.exec.runlog import RuntimeInfo, RunLog, RuntimeRecord
 from openpectus.lang.exec.tag_lifetime import TagContext
@@ -65,7 +67,8 @@ class Engine(InterpreterContext):
         self._system_tags = TagCollection.create_system_tags()
         self._system_tags.add(MarkTag())
         # Add archiver which is implemented as a tag. The lambda getting the runlog works because the
-        # tag_lifetime.on_stop event is emitted just before resetting the interpreter and runlog
+        # tag_lifetime.on_stop event is emitted just before resetting the interpreter and runlog (and
+        # not after).
         if enable_archiver:
             archiver = ArchiverTag(lambda : self.runtimeinfo.get_runlog())
             self._system_tags.add(archiver)
@@ -235,7 +238,7 @@ class Engine(InterpreterContext):
 
         self.uod.hwl.tick()
 
-        # read, stop on HardwareLayerException
+        # read, error_state on HardwareLayerException
         self.read_process_image()
 
         # excecute interpreter tick
@@ -263,8 +266,7 @@ class Engine(InterpreterContext):
                 self.set_error_state()
             except Exception:
                 logger.error("Unhandled interpretation error", exc_info=True)
-                # TODO user message
-                frontend_logger.error("Interpretation error")
+                frontend_logger.error("Method error")
                 self.set_error_state()
 
         # update calculated tags
@@ -277,17 +279,20 @@ class Engine(InterpreterContext):
         # notify of tag changes
         self.notify_tag_updates()
 
-        # write, stop on HardwareLayerException
+        # write, error_state on HardwareLayerException
         self.write_process_image()
 
     def read_process_image(self):
         """ Read data from relevant hw registers into tags"""
         read_registers = [r for r in self.uod.hwl.registers.values() if RegisterDirection.Read in r.direction]
         try:
+            # possibly add guard for ConnectionState=Disconnected to avoid read errors
+            # flooding the log
             register_values = self.uod.hwl.read_batch(read_registers)
         except HardwareLayerException:
-            logger.error("Hardware read_batch error", exc_info=True)
-            self.stop()
+            if not self.has_error_state():
+                logger.error("Hardware read_batch error", exc_info=True)
+                self.set_error_state()
             return
 
         for i, r in enumerate(read_registers):
@@ -337,7 +342,7 @@ class Engine(InterpreterContext):
         self._system_tags[SystemTagName.BLOCK_TIME].set_value(self.block_times[block_name], self._tick_time)
 
         # Execute the tick lifetime hook on tags
-        self.tag_context.emit_on_tick()
+        self.tag_context.emit_on_tick(self._tick_time)
 
     def execute_commands(self):
         done = False
@@ -633,6 +638,10 @@ class Engine(InterpreterContext):
         self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Paused, self._tick_time)
         self._runstate_paused = True
 
+    def has_error_state(self) -> bool:
+        method_status = self._system_tags[SystemTagName.METHOD_STATUS]
+        return method_status.get_value() == MethodStatusEnum.ERROR
+
     #TODO remove
     def parse_pcode(self, pcode: str) -> PProgram:
         p = PGrammar()
@@ -650,10 +659,13 @@ class Engine(InterpreterContext):
                 else r.options["from_tag"](tag_value)
             register_values.append(register_value)
         try:
+            # possibly add guard for ConnectionState=Disconnected to avoid write errors
+            # flooding the log
             hwl.write_batch(register_values, registers)
         except HardwareLayerException:
-            logger.error("Hardware write_batch error", exc_info=True)
-            self.stop()
+            if not self.has_error_state():
+                logger.error("Hardware write_batch error", exc_info=True)
+                self.set_error_state()
 
     def schedule_execution(self, name: str, exec_id: UUID | None = None, **kvargs):
         """ Execute named command from interpreter """

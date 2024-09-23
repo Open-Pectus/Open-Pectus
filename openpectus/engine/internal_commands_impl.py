@@ -46,6 +46,12 @@ class StartEngineCommand(InternalEngineCommand):
             e._set_run_id("new")
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
             e._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.OK, e._tick_time)
+            e._system_tags[SystemTagName.RUN_TIME].set_value(0.0, e._tick_time)
+            e._system_tags[SystemTagName.PROCESS_TIME].set_value(0.0, e._tick_time)
+            e._system_tags[SystemTagName.RUN_COUNTER].set_value(0, e._tick_time)
+
+            e._system_tags[SystemTagName.BLOCK_TIME].set_value(0.0, e._tick_time)
+            e.block_times.clear()  # kinda hackish, tag should be self-contained
 
             e.tag_context.emit_on_start()
 
@@ -209,7 +215,7 @@ class WaitEngineCommand(InternalEngineCommand):
     def _run(self):
         self.engine._runstate_waiting = True
 
-        while self.engine._tick_time < self.duration_end_time:            
+        while self.engine._tick_time < self.duration_end_time:
             yield
 
         self.engine._runstate_waiting = False
@@ -262,6 +268,8 @@ class RestartEngineCommand(InternalEngineCommand):
             e._tick_number = 0
             e._runstate_paused = False
             e._runstate_holding = False
+            e._system_tags[SystemTagName.BLOCK_TIME].set_value(0.0, e._tick_time)
+            e.block_times.clear()  # kinda hackish, tag should be self-contained
 
             e.tag_context.emit_on_start()
 

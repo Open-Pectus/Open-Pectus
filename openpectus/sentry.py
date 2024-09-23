@@ -1,4 +1,5 @@
 import logging
+import os
 import sentry_sdk
 from sentry_sdk.integrations.starlette import StarletteIntegration
 from sentry_sdk.integrations.fastapi import FastApiIntegration
@@ -34,6 +35,11 @@ def init_aggregator(event_level_name: str):
     - Enables integrations FastAPI and Starlette
     - Attaches component='aggregator' to all events
     """
+    if os.getenv('SENTRY_DSN'):
+        print("Sentry is active")
+    else:
+        print("Sentry is not active")
+
     event_level_int = _get_event_level_from_name(event_level_name)
 
     sentry_sdk.init(
@@ -79,6 +85,11 @@ def init_engine(event_level_name: str):
 
     - Attaches tag component='engine' to all events
     """
+    if os.getenv('SENTRY_DSN'):
+        print("Sentry is active")
+    else:
+        print("Sentry is not active")
+
     event_level_int = _get_event_level_from_name(event_level_name)
 
     sentry_sdk.init(
@@ -106,3 +117,10 @@ def set_engine_uod(uod: UnitOperationDefinitionBase):
     """ Attaches tags uod_instrument and uod_location to events. """
     sentry_sdk.set_tag("uod_instrument", uod.instrument)
     sentry_sdk.set_tag("uod_location", uod.location)
+
+def engine_method_set(pcode: str):
+    """ Attaches tag 'method' with pcode source to events """
+    # Note: There is no great format to use but this works reasonably well.
+    # To recover pcode formatting, replace \\n with \n (extended/regex) in vscode or npp
+    dct = {"pcode": pcode}
+    sentry_sdk.set_tag("method", dct)

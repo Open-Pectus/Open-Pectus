@@ -49,7 +49,8 @@ class TagValue(ProtocolModel):
     tick_time: float
     value: TagValueType = None
     value_unit: str | None
-    direction: EM.TagDirection = TagDirection.UNSPECIFIED
+    value_formatted: str | None
+    direction: TagDirection = TagDirection.UNSPECIFIED
 
 
 class RunLogLine(ProtocolModel):
@@ -86,6 +87,10 @@ class Method(ProtocolModel):
             method.lines.append(MethodLine(id=f"id_{line_num}", content=line))
             line_num += 1
         return method
+
+    def as_pcode(self) -> str:
+        pcode = '\n'.join([line.content for line in self.lines])
+        return pcode
 
 
 class MethodState(ProtocolModel):

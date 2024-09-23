@@ -125,7 +125,7 @@ class AggregatorEventsTest(unittest.IsolatedAsyncioTestCase):
                                       uod_name="", uod_author_name="", uod_author_email="", uod_filename="", location="")
 
     def createTag(self, name: str, tick: float, value: str):
-        return TagValue(name=name, tick_time=tick, value=value, value_unit=None)
+        return TagValue(name=name, tick_time=tick, value=value, value_formatted=None, value_unit=None)
 
     def store_tag_values(self, engine_id: str, run_id: str, tags: list[TagValue]):
         self.stored_tags.extend(tags)
