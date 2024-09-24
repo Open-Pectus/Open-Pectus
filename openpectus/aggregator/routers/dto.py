@@ -18,7 +18,7 @@ class Dto(BaseModel):
         orm_mode = True
 
     # deliver undefined instead of null for None values. Adapted from https://github.com/fastapi/fastapi/issues/3314#issuecomment-962932368
-    def dict(self, *args, **kwargs) -> Dict[str, Any]:
+    def dict(self, *args, **kwargs) -> dict[str, any]:
         kwargs.pop('exclude_none')
         return super().dict(*args, exclude_none=True, **kwargs)
 
