@@ -15,7 +15,7 @@ import { TagDirectionPipe } from './tag-direction.pipe';
   template: `
     @if (allProcessValues | ngrxPush) {
       <div class="flex flex-col gap-4 -mt-1">
-        @for (direction of Object.values(TagDirection); track direction) {
+        @for (direction of tagDirections; track direction) {
           <div>
             <span class="font-bold text-lg">{{ direction | tagDirection }}:</span>
             <div class="flex gap-2 items-start flex-wrap mt-1">
@@ -45,7 +45,7 @@ export class ProcessValuesCategorizedComponent {
   processValues = input<ProcessValue[]>();
   @Output() openCommands = new EventEmitter<PvAndPosition>();
   allProcessValues = this.store.select(DetailsSelectors.allProcessValues);
-  protected readonly TagDirection = TagDirection;
+  protected readonly tagDirections: TagDirection[] = ['input', 'output', 'na', 'unspecified']
   protected readonly Object = Object;
 
   constructor(private store: Store) {}

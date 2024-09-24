@@ -12,7 +12,7 @@ import {
   ViewChildren,
 } from '@angular/core';
 import { produce } from 'immer';
-import { ProcessValueCommand, ProcessValueType } from '../../api';
+import { ProcessValueCommand } from '../../api';
 import { ProcessValueCommandButtonComponent } from './process-value-command-button.component';
 import { ProcessValueCommandChoiceComponent } from './process-value-command-choice.component';
 import { ProcessValueEditorComponent, ValueAndUnit } from './process-value-editor.component';
@@ -70,7 +70,7 @@ export class ProcessValueCommandsComponent implements AfterViewInit {
     if(valueAndUnit === undefined) return this.shouldClose.emit(command);
     const editedCommand = produce(command, draft => {
       if(draft.value === undefined) return;
-      if(draft.value.value_type === ProcessValueType.INT || draft.value.value_type === ProcessValueType.FLOAT) {
+      if(draft.value.value_type === 'int' || draft.value.value_type === 'float') {
         draft.value.value = parseFloat(valueAndUnit.value.replace(',', '.'));
         draft.value.value_unit = valueAndUnit.unit;
       } else {

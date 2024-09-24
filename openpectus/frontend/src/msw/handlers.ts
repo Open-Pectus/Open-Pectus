@@ -5,24 +5,19 @@ import { delay, http, HttpResponse, PathParams } from 'msw';
 import {
   AuthConfig,
   CommandExample,
-  CommandSource,
   ControlState,
   ErrorLog,
-  ErrorLogSeverity,
   ExecutableCommand,
   MethodAndState,
   PlotConfiguration,
   PlotLog,
   ProcessUnit,
   ProcessValue,
-  ProcessValueType,
   RecentRun,
   RecentRunCsv,
   RunLog,
   RunLogLine,
   SystemStateEnum,
-  TagDirection,
-  UserRole,
 } from '../app/api';
 
 const startedLines = [2];
@@ -32,7 +27,7 @@ const controlState: ControlState = {
   is_holding: false,
   is_paused: false,
 };
-let systemState = SystemStateEnum.RUNNING;
+let systemState: SystemStateEnum = 'Running';
 
 const processUnits: ProcessUnit[] = [
   {
@@ -44,7 +39,7 @@ const processUnits: ProcessUnit[] = [
       state: 'in_progress',
       progress_pct: 30,
     },
-    current_user_role: UserRole.ADMIN,
+    current_user_role: 'admin',
   },
   {
     name: 'Some other unit with a long title',
@@ -54,7 +49,7 @@ const processUnits: ProcessUnit[] = [
     state: {
       state: 'ready',
     },
-    current_user_role: UserRole.ADMIN,
+    current_user_role: 'admin',
   },
   {
     name: 'Some third unit',
@@ -65,7 +60,7 @@ const processUnits: ProcessUnit[] = [
       state: 'not_online',
       last_seen_date: new Date().toJSON(),
     },
-    current_user_role: UserRole.ADMIN,
+    current_user_role: 'admin',
   },
   {
     name: 'A fourth for linebreak',
@@ -75,96 +70,96 @@ const processUnits: ProcessUnit[] = [
     state: {
       state: 'error',
     },
-    current_user_role: UserRole.VIEWER,
+    current_user_role: 'viewer',
   },
 ];
 
 const getProcessValues: () => ProcessValue[] = () => [
   {
-    value_type: ProcessValueType.INT,
+    value_type: 'int',
     name: 'Timestamp',
     value: new Date().valueOf(),
-    direction: TagDirection.OUTPUT,
+    direction: 'output',
   },
   {
-    value_type: ProcessValueType.INT,
+    value_type: 'int',
     name: 'Timestamp2',
     value: new Date().valueOf() + 1000000000000,
-    direction: TagDirection.OUTPUT,
+    direction: 'output',
   },
   {
-    value_type: ProcessValueType.FLOAT,
+    value_type: 'float',
     name: 'PU01 Speed',
     value: 120,
     value_unit: '%',
-    direction: TagDirection.OUTPUT,
+    direction: 'output',
   }, {
-    value_type: ProcessValueType.FLOAT,
+    value_type: 'float',
     name: 'PU02 Speed',
     value: 121,
     value_unit: '%',
-    direction: TagDirection.OUTPUT,
+    direction: 'output',
   }, {
-    value_type: ProcessValueType.FLOAT,
+    value_type: 'float',
     name: 'PU03 Speed',
     value: 122,
     value_unit: '%',
-    direction: TagDirection.OUTPUT,
+    direction: 'output',
   }, {
-    value_type: ProcessValueType.FLOAT,
+    value_type: 'float',
     name: 'PU04 Speed',
     value: 123,
     value_unit: '%',
-    direction: TagDirection.OUTPUT,
+    direction: 'output',
   }, {
-    value_type: ProcessValueType.FLOAT,
+    value_type: 'float',
     name: 'PU05 Speed',
     value: 124,
     value_unit: '%',
-    direction: TagDirection.OUTPUT,
+    direction: 'output',
   }, {
-    value_type: ProcessValueType.FLOAT,
+    value_type: 'float',
     name: 'PU06 Speed',
     value: 125,
     value_unit: '%',
-    direction: TagDirection.OUTPUT,
+    direction: 'output',
   },
   {
-    value_type: ProcessValueType.STRING,
+    value_type: 'string',
     name: 'Some other Process Value',
     value: 'So very valuable',
-    direction: TagDirection.OUTPUT,
+    direction: 'output',
     commands: [
       {command: 'some_command', name: 'Some Command'},
       {command: 'some_other_command', name: 'Some Other Command'},
     ],
   }, {
-    value_type: ProcessValueType.INT,
+    value_type: 'int',
     name: 'A value with unit',
     value: 1000,
     value_unit: 'm',
-    direction: TagDirection.OUTPUT,
+    direction: 'output',
     commands: [
       {
         command: 'fdsa', name: 'fdsa', value: {
           value: 1000,
-          value_type: ProcessValueType.INT,
+          value_type: 'int',
           value_unit: 'm',
           valid_value_units: ['m', 'cm', 'mm', 'km'],
         },
       },
     ],
   }, {
-    value_type: ProcessValueType.STRING,
+    value_type: 'string',
     name: 'Many Data',
     value: 'HANDLE IT',
-    direction: TagDirection.OUTPUT,
+    direction: 'output',
   }, {
-    value_type: ProcessValueType.FLOAT,
+    value_type: 'float',
     name: 'FT01 Flow',
     value: 123 + Math.random() * 2,
     value_unit: 'L/h',
-    direction: TagDirection.OUTPUT,
+    direction: 'output',
     commands: [
       {
         command: 'fdsafsa',
@@ -173,15 +168,15 @@ const getProcessValues: () => ProcessValue[] = () => [
           value: 123 + Math.random() * 2,
           value_unit: 'L/h',
           valid_value_units: ['L/h', 'm3/h', 'L/m', 'm3/m'],
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
         },
       },
     ],
   }, {
-    value_type: ProcessValueType.STRING,
+    value_type: 'string',
     name: 'Writable text',
     value: 'VaLuE',
-    direction: TagDirection.OUTPUT,
+    direction: 'output',
     commands: [
       {
         name: 'choice',
@@ -213,15 +208,15 @@ const getProcessValues: () => ProcessValue[] = () => [
           value: 123,
           value_unit: 'no',
           valid_value_units: ['no'],
-          value_type: ProcessValueType.INT,
+          value_type: 'int',
         },
       }],
   }, {
-    value_type: ProcessValueType.FLOAT,
+    value_type: 'float',
     name: 'TT01',
     value: 23.4 + Math.random() * 2,
     value_unit: 'degC',
-    direction: TagDirection.OUTPUT,
+    direction: 'output',
     commands: [{
       name: 'Set target temperature',
       command: 'set_target_temperature',
@@ -229,38 +224,38 @@ const getProcessValues: () => ProcessValue[] = () => [
         value: 23.4 + Math.random() * 2,
         value_unit: 'degC',
         valid_value_units: ['degC', 'degF'],
-        value_type: ProcessValueType.FLOAT,
+        value_type: 'float',
       },
     }],
   }, {
-    value_type: ProcessValueType.FLOAT,
+    value_type: 'float',
     name: 'TT02',
     value: 23.4 + Math.random() * 2,
     value_unit: 'degC',
-    direction: TagDirection.OUTPUT,
+    direction: 'output',
   }, {
-    value_type: ProcessValueType.FLOAT,
+    value_type: 'float',
     name: 'TT03',
     value: 23.4 + Math.random() * 2,
     value_unit: 'degC',
-    direction: TagDirection.OUTPUT,
+    direction: 'output',
   }, {
-    value_type: ProcessValueType.FLOAT,
+    value_type: 'float',
     name: 'TT04',
     value: 23.4 + Math.random() * 2,
     value_unit: 'degC',
-    direction: TagDirection.OUTPUT,
+    direction: 'output',
   }, {
-    value_type: ProcessValueType.STRING,
+    value_type: 'string',
     name: 'Flow path',
     value: (getSeconds(Date.now()) % 10 < 3) ? 'Bypass' : (getSeconds(Date.now()) % 10 < 6) ? 'Prime with a long name' : undefined,
-    direction: TagDirection.OUTPUT,
+    direction: 'output',
   },
   {
-    value_type: ProcessValueType.STRING,
+    value_type: 'string',
     name: 'System State',
     value: systemState,
-    direction: TagDirection.OUTPUT,
+    direction: 'output',
   },
 ];
 
@@ -271,14 +266,14 @@ const runLogLines: RunLogLine[] = [
     start: sub(Date.now(), {days: 0, hours: 2, seconds: 20}).toISOString(),
     command: {
       command: 'Some Other Command',
-      source: CommandSource.MANUALLY_ENTERED,
+      source: 'manually_entered',
     },
     start_values: [{
       name: 'Amazing float value',
       value: 1.43253342,
-      value_type: ProcessValueType.FLOAT,
+      value_type: 'float',
       value_unit: 'afv',
-      direction: TagDirection.OUTPUT,
+      direction: 'output',
     }],
     end_values: [],
     forcible: true,
@@ -289,36 +284,36 @@ const runLogLines: RunLogLine[] = [
     progress: 0.1234678,
     command: {
       command: 'Some Third Command With A Long Name',
-      source: CommandSource.MANUALLY_ENTERED,
+      source: 'manually_entered',
     },
     start_values: [
       {
         name: 'Amazing float value',
         value: 999,
-        value_type: ProcessValueType.FLOAT,
+        value_type: 'float',
         value_unit: 'afv',
-        direction: TagDirection.OUTPUT,
+        direction: 'output',
       },
       {
         name: 'Best value',
         value: 19.99,
-        value_type: ProcessValueType.FLOAT,
+        value_type: 'float',
         value_unit: 'afv',
-        direction: TagDirection.OUTPUT,
+        direction: 'output',
       },
       {
         name: 'Such prices',
         value: 4299,
-        value_type: ProcessValueType.FLOAT,
+        value_type: 'float',
         value_unit: 'afv',
-        direction: TagDirection.OUTPUT,
+        direction: 'output',
       },
       {
         name: 'Very affordable',
         value: 0.99,
-        value_type: ProcessValueType.FLOAT,
+        value_type: 'float',
         value_unit: 'afv',
-        direction: TagDirection.OUTPUT,
+        direction: 'output',
       },
     ],
     end_values: [],
@@ -330,34 +325,34 @@ const runLogLines: RunLogLine[] = [
     end: sub(Date.now(), {days: 1, hours: 3}).toISOString(),
     command: {
       command: 'Supply the dakka',
-      source: CommandSource.MANUALLY_ENTERED,
+      source: 'manually_entered',
     },
     start_values: [
       {
         name: 'Waaagh?',
         value: 'No waagh',
-        value_type: ProcessValueType.STRING,
-        direction: TagDirection.OUTPUT,
+        value_type: 'string',
+        direction: 'output',
       },
       {
         name: 'Dakka?',
         value: 'No dakka 🙁',
-        value_type: ProcessValueType.STRING,
-        direction: TagDirection.OUTPUT,
+        value_type: 'string',
+        direction: 'output',
       },
     ],
     end_values: [
       {
         name: 'Waaagh?',
         value: 'WAAAGH!',
-        value_type: ProcessValueType.STRING,
-        direction: TagDirection.OUTPUT,
+        value_type: 'string',
+        direction: 'output',
       },
       {
         name: 'Dakka?',
         value: 'DAKKA! 😀',
-        value_type: ProcessValueType.STRING,
-        direction: TagDirection.OUTPUT,
+        value_type: 'string',
+        direction: 'output',
       },
     ],
     forcible: false,
@@ -371,14 +366,14 @@ const runLogLines: RunLogLine[] = [
     progress: 0.5123,
     command: {
       command: 'Some Command',
-      source: CommandSource.MANUALLY_ENTERED,
+      source: 'manually_entered',
     },
     start_values: [{
       name: 'Amazing float value',
       value: 1.43253342,
-      value_type: ProcessValueType.FLOAT,
+      value_type: 'float',
       value_unit: 'afv',
-      direction: TagDirection.OUTPUT,
+      direction: 'output',
     }],
     end_values: [],
     forcible: false,
@@ -495,7 +490,7 @@ export const handlers = [
 
   http.post<PathParams, ExecutableCommand>('/api/process_unit/:unitId/execute_command', ({request}) => {
     request.json().then(executableCommand => {
-      if(executableCommand.source === CommandSource.UNIT_BUTTON) {
+      if(executableCommand.source === 'unit_button') {
         switch(executableCommand.command) {
           case 'Start':
             controlState.is_running = true;
@@ -517,10 +512,10 @@ export const handlers = [
             break;
         }
 
-        systemState = !controlState.is_running ? SystemStateEnum.STOPPED :
-                      controlState.is_paused ? SystemStateEnum.PAUSED :
-                      controlState.is_holding ? SystemStateEnum.HOLDING :
-                      SystemStateEnum.RUNNING;
+        systemState = !controlState.is_running ? 'Stopped' :
+                      controlState.is_paused ? 'Paused' :
+                      controlState.is_holding ? 'Holding' :
+                      'Running';
       }
     });
     return new HttpResponse();
@@ -660,87 +655,87 @@ export const handlers = [
     return HttpResponse.json<PlotLog>({
       entries: {
         'Timestamp': {
-          value_type: ProcessValueType.INT,
+          value_type: 'int',
           name: 'Timestamp',
           values: new Array(noOfValues).fill(undefined).map(
             (_, index) => ({value: new Date().valueOf() - 1000 * (noOfValues - index)}))
             .map(attachTickTime),
         },
         'Timestamp2': {
-          value_type: ProcessValueType.INT,
+          value_type: 'int',
           name: 'Timestamp2',
           values: new Array(noOfValues).fill(undefined).map(
             (_, index) => ({value: new Date().valueOf() - 1000 * (noOfValues - index) + 1000000000000}))
             .map(attachTickTime),
         },
         'PU01 Speed': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'PU01 Speed',
           values: new Array(noOfValues).fill({value: 120}).map(attachTickTime),
           value_unit: '%',
         },
         'PU02 Speed': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'PU02 Speed',
           values: new Array(noOfValues).fill({value: 121}).map(attachTickTime),
           value_unit: '%',
         },
         'PU03 Speed': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'PU03 Speed',
           values: new Array(noOfValues).fill({value: 122}).map(attachTickTime),
           value_unit: '%',
         },
         'PU04 Speed': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'PU04 Speed',
           values: new Array(noOfValues).fill({value: 123}).map(attachTickTime),
           value_unit: '%',
         },
         'PU05 Speed': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'PU05 Speed',
           values: new Array(noOfValues).fill({value: 124}).map(attachTickTime),
           value_unit: '%',
         },
         'PU06 Speed': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'PU06 Speed',
           values: new Array(noOfValues).fill({value: 125}).map(attachTickTime),
           value_unit: '%',
         },
         'FT01 Flow': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'FT01 Flow',
           values: new Array(noOfValues).fill(undefined).map(() => ({value: 123 + Math.random() * 2})).map(attachTickTime),
           value_unit: 'L/h',
         },
         'TT01': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'TT01',
           values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2})).map(attachTickTime),
           value_unit: 'degC',
         },
         'TT02': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'TT02',
           values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2})).map(attachTickTime),
           value_unit: 'degC',
         },
         'TT03': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'TT03',
           values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2})).map(attachTickTime),
           value_unit: 'degC',
         },
         'TT04': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'TT04',
           values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2})).map(attachTickTime),
           value_unit: 'degC',
         },
         'Flow path': {
-          value_type: ProcessValueType.STRING,
+          value_type: 'string',
           name: 'Flow path',
           values: new Array(noOfValues).fill(undefined).map((_, index) =>
             ({value: (index % 9 < 3) ? 'Bypass' : (index % 9 < 6) ? 'Prime with a long name' : undefined}),
@@ -791,14 +786,14 @@ export const handlers = [
           end: sub(Date.now(), {days: 0, hours: 1, seconds: 20}).toISOString(),
           command: {
             command: 'Some Other Command',
-            source: CommandSource.MANUALLY_ENTERED,
+            source: 'manually_entered',
           },
           start_values: [{
             name: 'Amazing float value',
             value: 1.43253342,
-            value_type: ProcessValueType.FLOAT,
+            value_type: 'float',
             value_unit: 'afv',
-            direction: TagDirection.OUTPUT,
+            direction: 'output',
           }],
           end_values: [],
         }, {
@@ -807,36 +802,36 @@ export const handlers = [
           end: sub(Date.now(), {days: 0, hours: 0, seconds: 10}).toISOString(),
           command: {
             command: 'Some Third Command',
-            source: CommandSource.MANUALLY_ENTERED,
+            source: 'manually_entered',
           },
           start_values: [
             {
               name: 'Amazing float value',
               value: 999,
-              value_type: ProcessValueType.FLOAT,
+              value_type: 'float',
               value_unit: 'afv',
-              direction: TagDirection.OUTPUT,
+              direction: 'output',
             },
             {
               name: 'Best value',
               value: 19.99,
-              value_type: ProcessValueType.FLOAT,
+              value_type: 'float',
               value_unit: 'afv',
-              direction: TagDirection.OUTPUT,
+              direction: 'output',
             },
             {
               name: 'Such prices',
               value: 4299,
-              value_type: ProcessValueType.FLOAT,
+              value_type: 'float',
               value_unit: 'afv',
-              direction: TagDirection.OUTPUT,
+              direction: 'output',
             },
             {
               name: 'Very affordable',
               value: 0.99,
-              value_type: ProcessValueType.FLOAT,
+              value_type: 'float',
               value_unit: 'afv',
-              direction: TagDirection.OUTPUT,
+              direction: 'output',
             },
           ],
           end_values: [],
@@ -848,34 +843,34 @@ export const handlers = [
           end: sub(Date.now(), {days: 1, hours: 3}).toISOString(),
           command: {
             command: 'Supply the dakka',
-            source: CommandSource.MANUALLY_ENTERED,
+            source: 'manually_entered',
           },
           start_values: [
             {
               name: 'Waaagh?',
               value: 'No waagh',
-              value_type: ProcessValueType.STRING,
-              direction: TagDirection.OUTPUT,
+              value_type: 'string',
+              direction: 'output',
             },
             {
               name: 'Dakka?',
               value: 'No dakka 🙁',
-              value_type: ProcessValueType.STRING,
-              direction: TagDirection.OUTPUT,
+              value_type: 'string',
+              direction: 'output',
             },
           ],
           end_values: [
             {
               name: 'Waaagh?',
               value: 'WAAAGH!',
-              value_type: ProcessValueType.STRING,
-              direction: TagDirection.OUTPUT,
+              value_type: 'string',
+              direction: 'output',
             },
             {
               name: 'Dakka?',
               value: 'DAKKA! 😀',
-              value_type: ProcessValueType.STRING,
-              direction: TagDirection.OUTPUT,
+              value_type: 'string',
+              direction: 'output',
             },
           ],
         },
@@ -888,12 +883,12 @@ export const handlers = [
       entries: [
         {
           created_time: sub(new Date(), {minutes: 5, seconds: Math.random() * 500}).toISOString(),
-          severity: ErrorLogSeverity.WARNING,
+          severity: 'warning',
           message: 'Just a warning',
         },
         {
           created_time: sub(new Date(), {seconds: Math.random() * 500}).toISOString(),
-          severity: ErrorLogSeverity.ERROR,
+          severity: 'error',
           message: 'Oh no! An error!',
         },
       ],
@@ -984,87 +979,87 @@ export const handlers = [
     return HttpResponse.json<PlotLog>({
       entries: {
         'Timestamp': {
-          value_type: ProcessValueType.INT,
+          value_type: 'int',
           name: 'Timestamp',
           values: new Array(noOfValues).fill(undefined).map(
             (_, index) => ({value: new Date().valueOf() - 1000 * (noOfValues - index)}))
             .map(attachTickTime),
         },
         'Timestamp2': {
-          value_type: ProcessValueType.INT,
+          value_type: 'int',
           name: 'Timestamp2',
           values: new Array(noOfValues).fill(undefined).map(
             (_, index) => ({value: new Date().valueOf() - 1000 * (noOfValues - index) + 1000000000000}))
             .map(attachTickTime),
         },
         'PU01 Speed': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'PU01 Speed',
           values: new Array(noOfValues).fill({value: 120}).map(attachTickTime),
           value_unit: '%',
         },
         'PU02 Speed': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'PU02 Speed',
           values: new Array(noOfValues).fill({value: 121}).map(attachTickTime),
           value_unit: '%',
         },
         'PU03 Speed': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'PU03 Speed',
           values: new Array(noOfValues).fill({value: 122}).map(attachTickTime),
           value_unit: '%',
         },
         'PU04 Speed': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'PU04 Speed',
           values: new Array(noOfValues).fill({value: 123}).map(attachTickTime),
           value_unit: '%',
         },
         'PU05 Speed': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'PU05 Speed',
           values: new Array(noOfValues).fill({value: 124}).map(attachTickTime),
           value_unit: '%',
         },
         'PU06 Speed': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'PU06 Speed',
           values: new Array(noOfValues).fill({value: 125}).map(attachTickTime),
           value_unit: '%',
         },
         'FT01 Flow': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'FT01 Flow',
           values: new Array(noOfValues).fill(undefined).map(() => ({value: 123 + Math.random() * 2})).map(attachTickTime),
           value_unit: 'L/h',
         },
         'TT01': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'TT01',
           values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2})).map(attachTickTime),
           value_unit: 'degC',
         },
         'TT02': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'TT02',
           values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2})).map(attachTickTime),
           value_unit: 'degC',
         },
         'TT03': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'TT03',
           values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2})).map(attachTickTime),
           value_unit: 'degC',
         },
         'TT04': {
-          value_type: ProcessValueType.FLOAT,
+          value_type: 'float',
           name: 'TT04',
           values: new Array(noOfValues).fill(undefined).map(() => ({value: 23.4 + Math.random() * 2})).map(attachTickTime),
           value_unit: 'degC',
         },
         'Flow path': {
-          value_type: ProcessValueType.STRING,
+          value_type: 'string',
           name: 'Flow path',
           values: new Array(noOfValues).fill(undefined).map((_, index) =>
             ({value: (index % 9 < 3) ? 'Bypass' : (index % 9 < 6) ? 'Prime with a long name' : undefined}),

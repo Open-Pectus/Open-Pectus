@@ -1,5 +1,6 @@
 import { Pipe, PipeTransform } from '@angular/core';
 import { TagDirection } from '../../api';
+import { UtilMethods } from '../../shared/util-methods';
 
 @Pipe({
   name: 'tagDirection',
@@ -7,18 +8,18 @@ import { TagDirection } from '../../api';
 })
 export class TagDirectionPipe implements PipeTransform {
 
-  transform(value: string): string {
+  transform(value: TagDirection): string {
     switch(value) {
-      case TagDirection.INPUT:
+      case 'input':
         return 'Input';
-      case TagDirection.OUTPUT:
+      case 'output':
         return 'Output';
-      case TagDirection.NA:
+      case 'na':
         return 'N/A';
-      case TagDirection.UNSPECIFIED:
+      case 'unspecified':
         return 'Unspecified';
       default:
-        return '';
+        return UtilMethods.assertNever(value);
     }
   }
 

@@ -3,7 +3,7 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { catchError, delay, filter, map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
-import { CommandSource, ProcessUnitService, RecentRunsService } from '../../api';
+import { ProcessUnitService, RecentRunsService } from '../../api';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { PubSubService } from '../../shared/pub-sub.service';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
@@ -80,7 +80,7 @@ export class DetailsEffects {
     concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
     mergeMap(([{command}, unitId]) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.executeCommand({unitId, requestBody: {command, source: CommandSource.UNIT_BUTTON}});
+      return this.processUnitService.executeCommand({unitId, requestBody: {command, source: 'unit_button'}});
     }),
   ), {dispatch: false});
 

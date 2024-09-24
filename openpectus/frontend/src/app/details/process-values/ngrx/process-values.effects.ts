@@ -3,7 +3,7 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { of, switchMap } from 'rxjs';
-import { CommandSource, ProcessUnitService } from '../../../api';
+import { ProcessUnitService } from '../../../api';
 import { DetailsSelectors } from '../../ngrx/details.selectors';
 import { ProcessValuesActions } from './process-values.actions';
 
@@ -15,7 +15,7 @@ export class ProcessValuesEffects {
     concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
     switchMap(([{command}, unitId]) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.executeCommand({unitId, requestBody: {...command, source: CommandSource.PROCESS_VALUE}});
+      return this.processUnitService.executeCommand({unitId, requestBody: {...command, source: 'process_value'}});
     }),
   ), {dispatch: false});
 

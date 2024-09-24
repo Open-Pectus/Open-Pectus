@@ -8,6 +8,13 @@ import { AppActions } from '../ngrx/app.actions';
   providedIn: 'root',
 })
 export class PubSubService {
+  private readonly pubSubTopics: Record<PubSubTopic, PubSubTopic> = {
+    process_units: 'process_units',
+    control_state: 'control_state',
+    error_log: 'error_log',
+    method: 'method',
+    run_log: 'run_log',
+  }
   private client = new PubSubRxjsClient({
     uri: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/frontend-pubsub`,
     imitatePublishOnReconnect: true,
@@ -18,22 +25,22 @@ export class PubSubService {
   constructor(private store: Store) {}
 
   subscribeProcessUnits() {
-    return this.client.forTopic(PubSubTopic.PROCESS_UNITS);
+    return this.client.forTopic(this.pubSubTopics.process_units);
   }
 
   subscribeRunLog(unitId: string) {
-    return this.client.forTopic(`${unitId}/${PubSubTopic.RUN_LOG}`);
+    return this.client.forTopic(`${unitId}/${this.pubSubTopics.run_log}`);
   }
 
   subscribeMethod(unitId: string) {
-    return this.client.forTopic(`${unitId}/${PubSubTopic.METHOD}`);
+    return this.client.forTopic(`${unitId}/${this.pubSubTopics.method}`);
   }
 
   subscribeControlState(unitId: string) {
-    return this.client.forTopic(`${unitId}/${PubSubTopic.CONTROL_STATE}`);
+    return this.client.forTopic(`${unitId}/${this.pubSubTopics.control_state}`);
   }
 
   subscribeErrorLog(unitId: string) {
-    return this.client.forTopic(`${unitId}/${PubSubTopic.ERROR_LOG}`);
+    return this.client.forTopic(`${unitId}/${this.pubSubTopics.error_log}`);
   }
 }

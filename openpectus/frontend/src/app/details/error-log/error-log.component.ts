@@ -3,7 +3,6 @@ import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit } from '@a
 import { LetDirective } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { map } from 'rxjs/operators';
-import { ErrorLogSeverity } from '../../api';
 import { Defaults } from '../../defaults';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { ErrorLogActions } from './ngrx/error-log.actions';
@@ -19,8 +18,8 @@ import { ErrorLogSelectors } from './ngrx/error-log.selectors';
                              (collapseStateChanged)="collapsed = $event" *ngrxLet="errorLog as errorLog">
       @if (!collapsed) {
         <div content class="p-1 h-full">
-          <p [class.text-yellow-500]="entry.severity === ErrorLogSeverity.WARNING"
-             [class.text-red-500]="entry.severity === ErrorLogSeverity.ERROR"
+          <p [class.text-yellow-500]="entry.severity === 'warning'"
+             [class.text-red-500]="entry.severity === 'error'"
              *ngFor="let entry of errorLog.entries">
             {{ entry.created_time | date:dateFormat }}: [{{ entry.severity }}] {{ entry.message }}
           </p>
@@ -32,7 +31,6 @@ import { ErrorLogSelectors } from './ngrx/error-log.selectors';
 export class ErrorLogComponent implements OnInit, OnDestroy {
   @Input() unitId?: string;
   @Input() recentRunId?: string;
-  protected readonly ErrorLogSeverity = ErrorLogSeverity;
   protected readonly dateFormat = Defaults.dateFormat + '.SSS';
   protected readonly errorLog = this.store.select(ErrorLogSelectors.errorLog).pipe(
     map(errorLog => {

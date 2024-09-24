@@ -1,12 +1,6 @@
 import { DecimalPipe } from '@angular/common';
 import { Pipe, PipeTransform } from '@angular/core';
-import {
-  ProcessValue,
-  ProcessValueCommandChoiceValue,
-  ProcessValueCommandFreeTextValue,
-  ProcessValueCommandNumberValue,
-  ProcessValueType,
-} from '../../api';
+import { ProcessValue, ProcessValueCommandChoiceValue, ProcessValueCommandFreeTextValue, ProcessValueCommandNumberValue } from '../../api';
 import { UtilMethods } from '../util-methods';
 
 @Pipe({
@@ -28,17 +22,13 @@ export class ProcessValuePipe implements PipeTransform {
     if(value === undefined) return null;
     if(type === undefined) return null;
     switch(type) {
-      case ProcessValueType.NONE:
+      case 'none':
         return null;
-      case ProcessValueType.STRING:
-      case ProcessValueType.CHOICE:
       case 'string':
       case 'choice':
         return value.toString();
-      case ProcessValueType.FLOAT:
       case 'float':
         return `${this.decimalPipe.transform(value, '1.2-2')} ${unit ?? ''}`.trim();
-      case ProcessValueType.INT:
       case 'int':
         return `${this.decimalPipe.transform(value, '1.0-0')} ${unit ?? ''}`.trim();
       default:
