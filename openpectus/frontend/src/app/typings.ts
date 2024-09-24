@@ -1,4 +1,4 @@
-import { ProcessUnit } from './api/models/ProcessUnit';
+import { ProcessUnit } from './api';
 
 export type ProcessUnitStateEnum = ProcessUnit['state']['state']
 

@@ -1,8 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
-import { ProcessUnitService } from '../../../api/services/ProcessUnitService';
-import { RecentRunsService } from '../../../api/services/RecentRunsService';
+import { ProcessUnitService, RecentRunsService } from '../../../api';
 import { PubSubService } from '../../../shared/pub-sub.service';
 import { ErrorLogActions } from './error-log.actions';
 
@@ -13,7 +12,7 @@ export class ErrorLogEffects {
     ofType(ErrorLogActions.errorLogComponentInitializedForUnit),
     switchMap(({unitId}) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.getErrorLog(unitId).pipe(
+      return this.processUnitService.getErrorLog({unitId}).pipe(
         map(errorLog => ErrorLogActions.errorLogFetched({errorLog})),
       );
     }),
@@ -23,7 +22,7 @@ export class ErrorLogEffects {
     ofType(ErrorLogActions.errorLogComponentInitializedForRecentRun),
     switchMap(({recentRunId}) => {
       if(recentRunId === undefined) return of();
-      return this.recentRunsService.getRecentRunErrorLog(recentRunId).pipe(
+      return this.recentRunsService.getRecentRunErrorLog({runId: recentRunId}).pipe(
         map(errorLog => ErrorLogActions.errorLogFetched({errorLog})),
       );
     }),
@@ -42,7 +41,7 @@ export class ErrorLogEffects {
   fetchOnUpdateFromBackend = createEffect(() => this.actions.pipe(
     ofType(ErrorLogActions.errorLogUpdatedOnBackend),
     mergeMap(({unitId}) => {
-      return this.processUnitService.getErrorLog(unitId).pipe(
+      return this.processUnitService.getErrorLog({unitId}).pipe(
         map(errorLog => ErrorLogActions.errorLogFetched({errorLog})),
       );
     }),

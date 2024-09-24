@@ -1,7 +1,6 @@
 import { NgFor } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
-import { ProcessValueCommand } from '../../api/models/ProcessValueCommand';
-import { ProcessValueCommandChoiceValue } from '../../api/models/ProcessValueCommandChoiceValue';
+import { ProcessValueCommand } from '../../api';
 
 @Component({
   selector: 'app-process-value-command-choice',
@@ -25,7 +24,7 @@ export class ProcessValueCommandChoiceComponent {
   @ViewChild('button') button!: ElementRef<HTMLButtonElement>;
 
   get options() {
-    if(this.command?.value?.value_type !== ProcessValueCommandChoiceValue.value_type.CHOICE) return [];
+    if(this.command?.value?.value_type !== 'choice') return [];
     return this.command.value.options;
   }
 

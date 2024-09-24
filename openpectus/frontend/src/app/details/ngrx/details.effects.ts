@@ -3,9 +3,7 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { catchError, delay, filter, map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
-import { CommandSource } from '../../api/models/CommandSource';
-import { ProcessUnitService } from '../../api/services/ProcessUnitService';
-import { RecentRunsService } from '../../api/services/RecentRunsService';
+import { ProcessUnitService, RecentRunsService } from '../../api';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { PubSubService } from '../../shared/pub-sub.service';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
@@ -18,7 +16,7 @@ export class DetailsEffects {
   fetchProcessValuesWhenPageInitialized = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.unitDetailsInitialized),
     switchMap(({unitId}) => {
-      return this.processUnitService.getProcessValues(unitId).pipe(
+      return this.processUnitService.getProcessValues({engineId: unitId}).pipe(
         map(processValues => DetailsActions.processValuesFetched({processValues})),
         catchError(() => of(DetailsActions.processValuesFailedToLoad())),
       );
@@ -38,8 +36,8 @@ export class DetailsEffects {
     switchMap(([_, unitId, allProcessValues]) => {
       if(unitId === undefined) return of();
       const request = allProcessValues
-                      ? this.processUnitService.getAllProcessValues(unitId)
-                      : this.processUnitService.getProcessValues(unitId);
+                      ? this.processUnitService.getAllProcessValues({engineId: unitId})
+                      : this.processUnitService.getProcessValues({engineId: unitId});
       return request.pipe(
         map(processValues => DetailsActions.processValuesFetched({processValues})),
         catchError(() => of(DetailsActions.processValuesFailedToLoad())),
@@ -50,7 +48,7 @@ export class DetailsEffects {
   fetchControlStateWhenPageInitialized = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.unitDetailsInitialized),
     switchMap(({unitId}) => {
-      return this.processUnitService.getControlState(unitId).pipe(
+      return this.processUnitService.getControlState({unitId}).pipe(
         map(controlState => DetailsActions.controlStateFetched({controlState})),
       );
     }),
@@ -71,7 +69,7 @@ export class DetailsEffects {
   fetchControlStateOnUpdateFromBackend = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.controlStateUpdatedOnBackend),
     mergeMap(({unitId}) => {
-      return this.processUnitService.getControlState(unitId).pipe(
+      return this.processUnitService.getControlState({unitId}).pipe(
         map(controlState => DetailsActions.controlStateFetched({controlState})),
       );
     }),
@@ -82,7 +80,7 @@ export class DetailsEffects {
     concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
     mergeMap(([{command}, unitId]) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.executeCommand(unitId, {command, source: CommandSource.UNIT_BUTTON});
+      return this.processUnitService.executeCommand({unitId, requestBody: {command, source: 'unit_button'}});
     }),
   ), {dispatch: false});
 
@@ -91,7 +89,7 @@ export class DetailsEffects {
     concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
     switchMap(([{command}, unitId]) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.executeCommand(unitId, {...command});
+      return this.processUnitService.executeCommand({unitId, requestBody: {...command}});
     }),
   ), {dispatch: false});
 
@@ -100,7 +98,7 @@ export class DetailsEffects {
     concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
     switchMap(([_, unitId]) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.getProcessDiagram(unitId).pipe(
+      return this.processUnitService.getProcessDiagram({unitId}).pipe(
         map(processDiagram => DetailsActions.processDiagramFetched({processDiagram})),
       );
     }),
@@ -111,7 +109,7 @@ export class DetailsEffects {
     concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
     switchMap(([_, unitId]) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.getCommandExamples(unitId).pipe(
+      return this.processUnitService.getCommandExamples({unitId}).pipe(
         map(commandExamples => DetailsActions.commandExamplesFetched({commandExamples})),
       );
     }),
@@ -122,7 +120,7 @@ export class DetailsEffects {
     concatLatestFrom(() => this.store.select(selectRouteParam(DetailsRoutingUrlParts.recentRunIdParamName))),
     switchMap(([_, recentRunId]) => {
       if(recentRunId === undefined) return of();
-      return this.recentRunsService.getRecentRun(recentRunId).pipe(
+      return this.recentRunsService.getRecentRun({runId: recentRunId}).pipe(
         map(recentRun => DetailsActions.recentRunFetched({recentRun})),
       );
     }),
@@ -131,7 +129,7 @@ export class DetailsEffects {
   downloadRecentRunCsvWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.recentRunDownloadCsvButtonClicked),
     switchMap(({recentRunId}) => {
-      return this.recentRunsService.getRecentRunCsvJson(recentRunId).pipe(
+      return this.recentRunsService.getRecentRunCsvJson({runId: recentRunId}).pipe(
         map(RecentRunCsv => {
           const link = document.createElement('a');
           link.download = RecentRunCsv.filename;

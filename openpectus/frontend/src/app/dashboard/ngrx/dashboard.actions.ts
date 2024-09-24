@@ -1,5 +1,5 @@
 import { createAction, props } from '@ngrx/store';
-import { RecentRun } from '../../api/models/RecentRun';
+import { RecentRun } from '../../api';
 
 export class DashboardActions {
   static source = 'Dashboard';

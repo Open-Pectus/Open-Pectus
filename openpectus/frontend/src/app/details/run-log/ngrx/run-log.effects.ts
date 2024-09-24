@@ -3,8 +3,7 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
-import { ProcessUnitService } from '../../../api/services/ProcessUnitService';
-import { RecentRunsService } from '../../../api/services/RecentRunsService';
+import { ProcessUnitService, RecentRunsService } from '../../../api';
 import { PubSubService } from '../../../shared/pub-sub.service';
 import { DetailsSelectors } from '../../ngrx/details.selectors';
 import { RunLogActions } from './run-log.actions';
@@ -16,7 +15,7 @@ export class RunLogEffects {
     ofType(RunLogActions.runLogComponentInitializedForUnit),
     switchMap(({unitId}) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.getRunLog(unitId).pipe(
+      return this.processUnitService.getRunLog({unitId}).pipe(
         map(runLog => RunLogActions.runLogFetched({runLog})),
       );
     }),
@@ -26,7 +25,7 @@ export class RunLogEffects {
     ofType(RunLogActions.runLogComponentInitializedForRecentRun),
     switchMap(({recentRunId}) => {
       if(recentRunId === undefined) return of();
-      return this.recentRunsService.getRecentRunRunLog(recentRunId).pipe(
+      return this.recentRunsService.getRecentRunRunLog({runId: recentRunId}).pipe(
         map(runLog => RunLogActions.runLogFetched({runLog})),
       );
     }),
@@ -45,7 +44,7 @@ export class RunLogEffects {
   fetchOnUpdateFromBackend = createEffect(() => this.actions.pipe(
     ofType(RunLogActions.runLogUpdatedOnBackend),
     mergeMap(({unitId}) => {
-      return this.processUnitService.getRunLog(unitId).pipe(
+      return this.processUnitService.getRunLog({unitId}).pipe(
         map(runLog => RunLogActions.runLogFetched({runLog})),
       );
     }),
@@ -56,7 +55,7 @@ export class RunLogEffects {
     concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
     switchMap(([{lineId}, unitId]) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.forceRunLogLine(unitId, lineId);
+      return this.processUnitService.forceRunLogLine({unitId, lineId});
     }),
   ), {dispatch: false});
 
@@ -65,7 +64,7 @@ export class RunLogEffects {
     concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
     switchMap(([{lineId}, unitId]) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.cancelRunLogLine(unitId, lineId);
+      return this.processUnitService.cancelRunLogLine({unitId, lineId});
     }),
   ), {dispatch: false});
 

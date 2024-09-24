@@ -1,8 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { PlotConfiguration } from '../../../api/models/PlotConfiguration';
-import { PlotLog } from '../../../api/models/PlotLog';
-import { PlotLogEntry } from '../../../api/models/PlotLogEntry';
+import { PlotConfiguration, PlotLog, PlotLogEntry } from '../../../api';
 import { DetailsActions } from '../../ngrx/details.actions';
 import { XAxisOverrideDialogData, YAxesLimitsOverride, YAxisOverrideDialogData, ZoomAndPanDomainOverrides } from '../process-plot.types';
 import { ProcessPlotActions } from './process-plot.actions';
