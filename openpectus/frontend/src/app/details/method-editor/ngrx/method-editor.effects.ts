@@ -3,8 +3,7 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
-import { ProcessUnitService } from '../../../api/services/ProcessUnitService';
-import { RecentRunsService } from '../../../api/services/RecentRunsService';
+import { ProcessUnitService, RecentRunsService } from '../../../api';
 import { PubSubService } from '../../../shared/pub-sub.service';
 import { DetailsSelectors } from '../../ngrx/details.selectors';
 import { MethodEditorActions } from './method-editor.actions';
@@ -21,7 +20,7 @@ export class MethodEditorEffects {
     ]),
     switchMap(([_, unitId, method]) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.saveMethod(unitId, method).pipe(
+      return this.processUnitService.saveMethod({unitId, requestBody: method}).pipe(
         map(() => MethodEditorActions.modelSaved()));
     }),
   ));
@@ -30,7 +29,7 @@ export class MethodEditorEffects {
     ofType(MethodEditorActions.methodEditorComponentInitializedForUnit),
     switchMap(({unitId}) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.getMethodAndState(unitId).pipe(
+      return this.processUnitService.getMethodAndState({unitId}).pipe(
         map(methodAndState => MethodEditorActions.methodFetchedInitially({methodAndState})));
     }),
   ));
@@ -39,7 +38,7 @@ export class MethodEditorEffects {
     ofType(MethodEditorActions.methodEditorComponentInitializedForRecentRun),
     switchMap(({recentRunId}) => {
       if(recentRunId === undefined) return of();
-      return this.recentRunsService.getRecentRunMethodAndState(recentRunId).pipe(
+      return this.recentRunsService.getRecentRunMethodAndState({runId: recentRunId}).pipe(
         map(methodAndState => MethodEditorActions.methodFetchedInitially({methodAndState})));
     }),
   ));
@@ -57,7 +56,7 @@ export class MethodEditorEffects {
   fetchOnUpdateFromBackend = createEffect(() => this.actions.pipe(
     ofType(MethodEditorActions.methodUpdatedOnBackend),
     mergeMap(({unitId}) => {
-      return this.processUnitService.getMethodAndState(unitId).pipe(
+      return this.processUnitService.getMethodAndState({unitId}).pipe(
         map(methodAndState => MethodEditorActions.methodFetchedDueToUpdate({methodAndState})),
       );
     }),

@@ -2,7 +2,6 @@ import { NgIf, TitleCasePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { LetDirective, PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
-import { Error } from '../../api/models/Error';
 import { AppSelectors } from '../../ngrx/app.selectors';
 import { DetailsSelectors } from '../ngrx/details.selectors';
 import { UnitControlsComponent } from './unit-controls.component';
@@ -28,7 +27,7 @@ import { UnitControlsComponent } from './unit-controls.component';
         <app-unit-controls [engineId]="processUnit.id"></app-unit-controls>
       }
       <div class="text-rose-800 mt-2 font-bold">
-        @if (processUnit?.state?.state === Error.state.ERROR) {
+        @if (processUnit?.state?.state === 'error') {
           Interrupted by error! Please see the Error Log below.
         }
         @if (webSocketIsDisconnected | ngrxPush) {
@@ -39,7 +38,6 @@ import { UnitControlsComponent } from './unit-controls.component';
   `,
 })
 export class UnitHeaderComponent {
-  protected Error = Error;
   protected processUnit = this.store.select(DetailsSelectors.processUnit);
   protected webSocketIsDisconnected = this.store.select(AppSelectors.webSocketIsDisconnected);
 

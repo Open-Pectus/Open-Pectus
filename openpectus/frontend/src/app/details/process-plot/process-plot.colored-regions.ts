@@ -1,7 +1,5 @@
 import { ScaleLinear } from 'd3';
-import { PlotColorRegion } from '../../api/models/PlotColorRegion';
-import { PlotConfiguration } from '../../api/models/PlotConfiguration';
-import { PlotLog } from '../../api/models/PlotLog';
+import { PlotColorRegion, PlotConfiguration, PlotLog } from '../../api';
 import { ColoredRegionRect, D3Selection } from './process-plot.types';
 
 export class ProcessPlotColoredRegions {
@@ -29,7 +27,7 @@ export class ProcessPlotColoredRegions {
           .attr('x', d => this.xScale(d.start))
           .attr('y', subPlotTop)
           .attr('width', d => this.xScale(d.end) - this.xScale(d.start))
-          .attr('height', subPlotBottom - subPlotTop)
+          .attr('height', Math.max(subPlotBottom - subPlotTop, 0))
           .attr('fill', d => d.color);
       });
 

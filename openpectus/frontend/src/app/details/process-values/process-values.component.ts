@@ -2,7 +2,7 @@ import { NgFor, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
-import { ProcessValueCommand } from '../../api/models/ProcessValueCommand';
+import { ProcessValueCommand } from '../../api';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { ToggleButtonComponent } from '../../shared/toggle-button.component';
 import { UtilMethods } from '../../shared/util-methods';

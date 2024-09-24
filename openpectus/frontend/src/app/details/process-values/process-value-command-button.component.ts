@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
-import { ProcessValueCommand } from '../../api/models/ProcessValueCommand';
+import { ProcessValueCommand } from 'src/app/api';
 
 @Component({
   selector: 'app-process-value-command-button',

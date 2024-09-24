@@ -1,5 +1,5 @@
 import { createAction, props } from '@ngrx/store';
-import { ExecutableCommand } from '../../api/models/ExecutableCommand';
+import { ExecutableCommand } from '../../api';
 
 const source = '[Details] ';
 

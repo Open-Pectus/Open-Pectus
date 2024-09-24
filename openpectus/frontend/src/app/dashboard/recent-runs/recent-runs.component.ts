@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
-import { RecentRun } from '../../api/models/RecentRun';
+import { RecentRun } from '../../api';
 import { detailsUrlPart } from '../../app.routes';
 import { DetailsRoutingUrlParts } from '../../details/details-routing-url-parts';
 import { DefaultTableSort, TableColumn, TableComponent, TableSortDirection } from '../../shared/table.component';

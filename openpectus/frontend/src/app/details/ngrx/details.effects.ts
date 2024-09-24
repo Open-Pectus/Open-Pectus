@@ -3,10 +3,7 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { map, mergeMap, of, switchMap } from 'rxjs';
-import { CommandSource } from '../../api/models/CommandSource';
-import { ProcessUnitService } from '../../api/services/ProcessUnitService';
-import { RecentRunsService } from '../../api/services/RecentRunsService';
-import { PubSubService } from '../../shared/pub-sub.service';
+import { ProcessUnitService, RecentRunsService } from '../../api';
 import { DetailsActions } from './details.actions';
 import { DetailsSelectors } from './details.selectors';
 
@@ -18,7 +15,7 @@ export class DetailsEffects {
     concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
     mergeMap(([{command}, unitId]) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.executeCommand(unitId, {command, source: CommandSource.UNIT_BUTTON});
+      return this.processUnitService.executeCommand({unitId, requestBody: {command, source: 'unit_button'}});
     }),
   ), {dispatch: false});
 
@@ -27,14 +24,14 @@ export class DetailsEffects {
     concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
     switchMap(([{command}, unitId]) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.executeCommand(unitId, {...command});
+      return this.processUnitService.executeCommand({unitId, requestBody: {...command}});
     }),
   ), {dispatch: false});
 
   downloadRecentRunCsvWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.recentRunDownloadCsvButtonClicked),
     switchMap(({recentRunId}) => {
-      return this.recentRunsService.getRecentRunCsvJson(recentRunId).pipe(
+      return this.recentRunsService.getRecentRunCsvJson({runId: recentRunId}).pipe(
         map(RecentRunCsv => {
           const link = document.createElement('a');
           link.download = RecentRunCsv.filename;
@@ -48,6 +45,5 @@ export class DetailsEffects {
   constructor(private actions: Actions,
               private store: Store,
               private processUnitService: ProcessUnitService,
-              private recentRunsService: RecentRunsService,
-              private pubSubService: PubSubService) {}
+              private recentRunsService: RecentRunsService) {}
 }

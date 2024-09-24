@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/
 import { LetDirective, PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { firstValueFrom } from 'rxjs';
-import { NotOnline } from '../api/models/NotOnline';
 import { CommandsComponent } from './commands/commands.component';
 import { ErrorLogComponent } from './error-log/error-log.component';
 import { MethodEditorComponent } from './method-editor/method-editor.component';
@@ -32,7 +31,7 @@ import { UnitHeaderComponent } from './unit-header/unit-header.component';
     PushPipe,
   ],
   template: `
-    @if ((processUnit | ngrxPush)?.state?.state !== NotOnline.state.NOT_ONLINE) {
+    @if ((processUnit | ngrxPush)?.state?.state !== 'not_online') {
       <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:py-6 gap-6 lg:gap-8" *ngrxLet="unitId as unitId">
         <app-unit-header class="mx-2 my-3 lg:m-0"></app-unit-header>
         @if (unitId !== undefined) {
@@ -55,7 +54,6 @@ import { UnitHeaderComponent } from './unit-header/unit-header.component';
 export class UnitDetailsComponent implements OnInit, OnDestroy {
   protected readonly unitId = this.store.select(DetailsSelectors.processUnitId);
   protected readonly processUnit = this.store.select(DetailsSelectors.processUnit);
-  protected readonly NotOnline = NotOnline;
 
   constructor(private store: Store) {}
 
