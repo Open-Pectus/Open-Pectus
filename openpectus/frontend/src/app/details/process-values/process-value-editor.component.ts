@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
-import { ProcessValueCommand, ProcessValueCommandChoiceValue } from '../../api';
+import { ProcessValueCommand } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 
 export interface ValueAndUnit {

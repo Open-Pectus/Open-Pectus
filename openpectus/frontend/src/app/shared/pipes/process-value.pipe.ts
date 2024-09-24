@@ -10,29 +10,25 @@ import { UtilMethods } from '../util-methods';
 export class ProcessValuePipe implements PipeTransform {
   constructor(private decimalPipe: DecimalPipe) {}
 
-  transform(value: ProcessValue['value'] | Pick<ProcessValue, 'value' | 'value_type' | 'value_unit'> | ProcessValueCommandChoiceValue | ProcessValueCommandFreeTextValue | ProcessValueCommandNumberValue,
-            type?: ProcessValue['value_type'] | ProcessValueCommandNumberValue['value_type'] | ProcessValueCommandFreeTextValue['value_type'] | ProcessValueCommandChoiceValue['value_type'],
-            unit?: ProcessValue['value_unit']): string | null {
-    if(typeof value === 'object') {
-      const processValue = value as ProcessValue;
-      value = processValue.value;
-      type = processValue.value_type;
-      unit = processValue.value_unit;
-    }
-    if(value === undefined) return null;
-    if(type === undefined) return null;
-    switch(type) {
+  transform(processValue: Pick<ProcessValue, 'value' | 'value_type' | 'value_unit'>
+      | ProcessValueCommandChoiceValue | ProcessValueCommandFreeTextValue | ProcessValueCommandNumberValue
+      | undefined,
+  ): string | null {
+    if(processValue?.value === undefined) return null;
+    const valueType = processValue.value_type;
+    if(valueType === undefined) return null;
+    switch(valueType) {
       case 'none':
         return null;
       case 'string':
       case 'choice':
-        return value.toString();
+        return processValue.value.toString();
       case 'float':
-        return `${this.decimalPipe.transform(value, '1.2-2')} ${unit ?? ''}`.trim();
+        return `${this.decimalPipe.transform(processValue.value, '1.2-2')} ${processValue.value_unit ?? ''}`.trim();
       case 'int':
-        return `${this.decimalPipe.transform(value, '1.0-0')} ${unit ?? ''}`.trim();
+        return `${this.decimalPipe.transform(processValue.value, '1.0-0')} ${processValue.value_unit ?? ''}`.trim();
       default:
-        UtilMethods.assertNever(type);
+        UtilMethods.assertNever(valueType);
     }
   }
 }
