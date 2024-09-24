@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { MswEnablement } from '../msw/msw-enablement';
-import { FrontendPubsubService } from './api/services/FrontendPubsubService';
+import { FrontendPubsubService } from './api';
 
 @Component({
   selector: 'app-msw-enablement',

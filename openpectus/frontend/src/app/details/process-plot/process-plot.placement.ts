@@ -1,6 +1,5 @@
 import { Axis, axisBottom, axisLeft, axisRight, axisTop, NumberValue, ScaleLinear, sum } from 'd3';
-import { PlotConfiguration } from '../../api/models/PlotConfiguration';
-import { SubPlot } from '../../api/models/SubPlot';
+import { PlotConfiguration, SubPlot } from '../../api';
 import { ProcessPlotFontSizes } from './process-plot.font-sizes';
 import { D3Selection, LeftRight, TopBottom } from './process-plot.types';
 

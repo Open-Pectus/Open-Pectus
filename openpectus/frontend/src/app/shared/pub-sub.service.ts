@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { PubSubRxjsClient } from '../../fastapi_websocket/pub-sub-rxjs-client';
-import { PubSubTopic } from '../api/models/PubSubTopic';
+import { PubSubTopic } from '../api';
 import { AppActions } from '../ngrx/app.actions';
 
 @Injectable({

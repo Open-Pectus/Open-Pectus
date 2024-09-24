@@ -1,10 +1,12 @@
 import { DecimalPipe } from '@angular/common';
 import { Pipe, PipeTransform } from '@angular/core';
-import { ProcessValue } from '../../api/models/ProcessValue';
-import { ProcessValueCommandChoiceValue } from '../../api/models/ProcessValueCommandChoiceValue';
-import { ProcessValueCommandFreeTextValue } from '../../api/models/ProcessValueCommandFreeTextValue';
-import { ProcessValueCommandNumberValue } from '../../api/models/ProcessValueCommandNumberValue';
-import { ProcessValueType } from '../../api/models/ProcessValueType';
+import {
+  ProcessValue,
+  ProcessValueCommandChoiceValue,
+  ProcessValueCommandFreeTextValue,
+  ProcessValueCommandNumberValue,
+  ProcessValueType,
+} from '../../api';
 import { UtilMethods } from '../util-methods';
 
 @Pipe({
@@ -30,8 +32,8 @@ export class ProcessValuePipe implements PipeTransform {
         return null;
       case ProcessValueType.STRING:
       case ProcessValueType.CHOICE:
-      case ProcessValueCommandFreeTextValue.value_type.STRING:
-      case ProcessValueCommandChoiceValue.value_type.CHOICE:
+      case 'string':
+      case 'choice':
         return value.toString();
       case ProcessValueType.FLOAT:
       case 'float':

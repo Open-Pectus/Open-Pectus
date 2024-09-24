@@ -1,6 +1,5 @@
 import { createAction, props } from '@ngrx/store';
-import { MethodAndState } from '../../../api/models/MethodAndState';
-import { MethodLine } from '../../../api/models/MethodLine';
+import { MethodAndState, MethodLine } from '../../../api';
 
 const source = '[Method Editor] ';
 

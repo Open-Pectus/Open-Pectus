@@ -1,10 +1,6 @@
 import { NgClass } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
-import { Error } from '../../api/models/Error';
-import { InProgress } from '../../api/models/InProgress';
-import { NotOnline } from '../../api/models/NotOnline';
-import { ProcessUnit } from '../../api/models/ProcessUnit';
-import { Ready } from '../../api/models/Ready';
+import { ProcessUnit } from '../../api';
 import { FormatDurationMsecPipe } from '../../shared/pipes/format-duration-msec.pipe';
 import { ProcessUnitStatePipe } from '../../shared/pipes/process-unit-state.pipe';
 import { UtilMethods } from '../../shared/util-methods';
@@ -40,13 +36,13 @@ export class ProcessUnitCardComponent {
     switch(state) {
       case undefined:
         return '';
-      case InProgress.state.IN_PROGRESS:
+      case 'in_progress':
         return 'bg-emerald-700';
-      case Ready.state.READY:
+      case 'ready':
         return 'bg-sky-800';
-      case NotOnline.state.NOT_ONLINE:
+      case 'not_online':
         return 'bg-gray-600';
-      case Error.state.ERROR:
+      case 'error':
         return 'bg-rose-700';
       default:
         return UtilMethods.assertNever(state);
@@ -58,13 +54,13 @@ export class ProcessUnitCardComponent {
     switch(state) {
       case undefined:
         return '';
-      case InProgress.state.IN_PROGRESS:
+      case 'in_progress':
         return 'codicon-play-circle';
-      case Ready.state.READY:
+      case 'ready':
         return 'codicon-pass';
-      case NotOnline.state.NOT_ONLINE:
+      case 'not_online':
         return 'codicon-circle-slash';
-      case Error.state.ERROR:
+      case 'error':
         return 'codicon-warning';
       default:
         return UtilMethods.assertNever(state);

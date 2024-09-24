@@ -1,8 +1,4 @@
 import { Pipe, PipeTransform } from '@angular/core';
-import { Error } from '../../api/models/Error';
-import { InProgress } from '../../api/models/InProgress';
-import { NotOnline } from '../../api/models/NotOnline';
-import { Ready } from '../../api/models/Ready';
 import { ProcessUnitStateEnum } from '../../typings';
 import { UtilMethods } from '../util-methods';
 
@@ -13,13 +9,13 @@ import { UtilMethods } from '../util-methods';
 export class ProcessUnitStatePipe implements PipeTransform {
   transform(value: ProcessUnitStateEnum | undefined): string {
     switch(value) {
-      case Ready.state.READY:
+      case 'ready':
         return 'Ready';
-      case InProgress.state.IN_PROGRESS:
+      case 'in_progress':
         return 'In progress';
-      case NotOnline.state.NOT_ONLINE:
+      case 'not_online':
         return 'Not online';
-      case Error.state.ERROR:
+      case 'error':
         return 'Interrupted by error';
       case undefined:
         return '';

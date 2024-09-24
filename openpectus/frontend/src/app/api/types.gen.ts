@@ -14,7 +14,12 @@ export type CommandExample = {
 /**
  * An enumeration.
  */
-export type CommandSource = 'process_value' | 'manually_entered' | 'unit_button' | 'method';
+export enum CommandSource {
+    PROCESS_VALUE = 'process_value',
+    MANUALLY_ENTERED = 'manually_entered',
+    UNIT_BUTTON = 'unit_button',
+    METHOD = 'method'
+}
 
 export type ControlState = {
     is_running: boolean;
@@ -26,7 +31,9 @@ export type Error = {
     state: 'error';
 };
 
-export type state = 'error';
+export enum state {
+    ERROR = 'error'
+}
 
 export type ErrorLog = {
     entries: Array<ErrorLogEntry>;
@@ -41,7 +48,10 @@ export type ErrorLogEntry = {
 /**
  * An enumeration.
  */
-export type ErrorLogSeverity = 'warning' | 'error';
+export enum ErrorLogSeverity {
+    WARNING = 'warning',
+    ERROR = 'error'
+}
 
 export type ExecutableCommand = {
     command_id?: string;
@@ -60,7 +70,9 @@ export type InProgress = {
     progress_pct: number;
 };
 
-export type state2 = 'in_progress';
+export enum state2 {
+    IN_PROGRESS = 'in_progress'
+}
 
 export type Method = {
     lines: Array<MethodLine>;
@@ -87,7 +99,9 @@ export type NotOnline = {
     last_seen_date: string;
 };
 
-export type state3 = 'not_online';
+export enum state3 {
+    NOT_ONLINE = 'not_online'
+}
 
 export type PlotAxis = {
     label: string;
@@ -172,14 +186,18 @@ export type ProcessValueCommandChoiceValue = {
     options: Array<(string)>;
 };
 
-export type value_type = 'choice';
+export enum value_type {
+    CHOICE = 'choice'
+}
 
 export type ProcessValueCommandFreeTextValue = {
     value: string;
     value_type: 'string';
 };
 
-export type value_type2 = 'string';
+export enum value_type2 {
+    STRING = 'string'
+}
 
 export type ProcessValueCommandNumberValue = {
     value: number;
@@ -191,18 +209,32 @@ export type ProcessValueCommandNumberValue = {
 /**
  * An enumeration.
  */
-export type ProcessValueType = 'string' | 'float' | 'int' | 'choice' | 'none';
+export enum ProcessValueType {
+    STRING = 'string',
+    FLOAT = 'float',
+    INT = 'int',
+    CHOICE = 'choice',
+    NONE = 'none'
+}
 
 /**
  * An enumeration.
  */
-export type PubSubTopic = 'run_log' | 'method' | 'control_state' | 'error_log' | 'process_units';
+export enum PubSubTopic {
+    RUN_LOG = 'run_log',
+    METHOD = 'method',
+    CONTROL_STATE = 'control_state',
+    ERROR_LOG = 'error_log',
+    PROCESS_UNITS = 'process_units'
+}
 
 export type Ready = {
     state: 'ready';
 };
 
-export type state4 = 'ready';
+export enum state4 {
+    READY = 'ready'
+}
 
 /**
  * Represents a historical run of a process unit.
@@ -255,7 +287,14 @@ export type SubPlot = {
 /**
  * An enumeration.
  */
-export type SystemStateEnum = 'Running' | 'Paused' | 'Holding' | 'Waiting' | 'Stopped' | 'Restarting';
+export enum SystemStateEnum {
+    RUNNING = 'Running',
+    PAUSED = 'Paused',
+    HOLDING = 'Holding',
+    WAITING = 'Waiting',
+    STOPPED = 'Stopped',
+    RESTARTING = 'Restarting'
+}
 
 /**
  * Specifies whether a tag is read from or written to hardware and whether is can be changed in UI.
@@ -263,12 +302,20 @@ export type SystemStateEnum = 'Running' | 'Paused' | 'Holding' | 'Waiting' | 'St
  * Direction of the tag is in relation to the physical IO. Sensors are regarded as inputs and
  * actuators as outputs. Derived values are regarded as NA.
  */
-export type TagDirection = 'input' | 'output' | 'na' | 'unspecified';
+export enum TagDirection {
+    INPUT = 'input',
+    OUTPUT = 'output',
+    NA = 'na',
+    UNSPECIFIED = 'unspecified'
+}
 
 /**
  * An enumeration.
  */
-export type UserRole = 'viewer' | 'admin';
+export enum UserRole {
+    VIEWER = 'viewer',
+    ADMIN = 'admin'
+}
 
 export type ValidationError = {
     loc: Array<(string | number)>;

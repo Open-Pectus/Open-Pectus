@@ -12,9 +12,7 @@ import {
   ViewChildren,
 } from '@angular/core';
 import { produce } from 'immer';
-import { ProcessValueCommand } from '../../api/models/ProcessValueCommand';
-import { ProcessValueCommandChoiceValue } from '../../api/models/ProcessValueCommandChoiceValue';
-import { ProcessValueType } from '../../api/models/ProcessValueType';
+import { ProcessValueCommand, ProcessValueType } from '../../api';
 import { ProcessValueCommandButtonComponent } from './process-value-command-button.component';
 import { ProcessValueCommandChoiceComponent } from './process-value-command-choice.component';
 import { ProcessValueEditorComponent, ValueAndUnit } from './process-value-editor.component';
@@ -83,11 +81,11 @@ export class ProcessValueCommandsComponent implements AfterViewInit {
   }
 
   shouldUseEditor(command: ProcessValueCommand) {
-    return command.value?.value_type !== undefined && command.value?.value_type !== ProcessValueCommandChoiceValue.value_type.CHOICE;
+    return command.value?.value_type !== undefined && command.value?.value_type !== 'choice';
   }
 
   shouldUseChoice(command: ProcessValueCommand) {
-    return command.value?.value_type === ProcessValueCommandChoiceValue.value_type.CHOICE;
+    return command.value?.value_type === 'choice';
   }
 
   shouldUseButton(command: ProcessValueCommand) {

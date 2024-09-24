@@ -2,32 +2,28 @@
 
 import { format, getSeconds, sub } from 'date-fns';
 import { delay, http, HttpResponse, PathParams } from 'msw';
-import { AuthConfig } from '../app/api/models/AuthConfig';
-import { CommandExample } from '../app/api/models/CommandExample';
-import { CommandSource } from '../app/api/models/CommandSource';
-import { ControlState } from '../app/api/models/ControlState';
-import { Error } from '../app/api/models/Error';
-import { ErrorLog } from '../app/api/models/ErrorLog';
-import { ErrorLogSeverity } from '../app/api/models/ErrorLogSeverity';
-import { ExecutableCommand } from '../app/api/models/ExecutableCommand';
-import { InProgress } from '../app/api/models/InProgress';
-import { MethodAndState } from '../app/api/models/MethodAndState';
-import { NotOnline } from '../app/api/models/NotOnline';
-import { PlotConfiguration } from '../app/api/models/PlotConfiguration';
-import { PlotLog } from '../app/api/models/PlotLog';
-import { ProcessUnit } from '../app/api/models/ProcessUnit';
-import { ProcessValue } from '../app/api/models/ProcessValue';
-import { ProcessValueCommandChoiceValue } from '../app/api/models/ProcessValueCommandChoiceValue';
-import { ProcessValueCommandFreeTextValue } from '../app/api/models/ProcessValueCommandFreeTextValue';
-import { ProcessValueType } from '../app/api/models/ProcessValueType';
-import { Ready } from '../app/api/models/Ready';
-import { RecentRun } from '../app/api/models/RecentRun';
-import { RecentRunCsv } from '../app/api/models/RecentRunCsv';
-import { RunLog } from '../app/api/models/RunLog';
-import { RunLogLine } from '../app/api/models/RunLogLine';
-import { SystemStateEnum } from '../app/api/models/SystemStateEnum';
-import { TagDirection } from '../app/api/models/TagDirection';
-import { UserRole } from '../app/api/models/UserRole';
+import {
+  AuthConfig,
+  CommandExample,
+  CommandSource,
+  ControlState,
+  ErrorLog,
+  ErrorLogSeverity,
+  ExecutableCommand,
+  MethodAndState,
+  PlotConfiguration,
+  PlotLog,
+  ProcessUnit,
+  ProcessValue,
+  ProcessValueType,
+  RecentRun,
+  RecentRunCsv,
+  RunLog,
+  RunLogLine,
+  SystemStateEnum,
+  TagDirection,
+  UserRole,
+} from '../app/api';
 
 const startedLines = [2];
 const executedLines = [1, 4];
@@ -45,7 +41,7 @@ const processUnits: ProcessUnit[] = [
     location: 'Some place',
     runtime_msec: 59999,
     state: {
-      state: InProgress.state.IN_PROGRESS,
+      state: 'in_progress',
       progress_pct: 30,
     },
     current_user_role: UserRole.ADMIN,
@@ -56,7 +52,7 @@ const processUnits: ProcessUnit[] = [
     location: 'Some place else',
     runtime_msec: 456498,
     state: {
-      state: Ready.state.READY,
+      state: 'ready',
     },
     current_user_role: UserRole.ADMIN,
   },
@@ -66,7 +62,7 @@ const processUnits: ProcessUnit[] = [
     location: 'Some third place',
     runtime_msec: 12365,
     state: {
-      state: NotOnline.state.NOT_ONLINE,
+      state: 'not_online',
       last_seen_date: new Date().toJSON(),
     },
     current_user_role: UserRole.ADMIN,
@@ -77,7 +73,7 @@ const processUnits: ProcessUnit[] = [
     location: 'Narnia',
     runtime_msec: 85264,
     state: {
-      state: Error.state.ERROR,
+      state: 'error',
     },
     current_user_role: UserRole.VIEWER,
   },
@@ -191,7 +187,7 @@ const getProcessValues: () => ProcessValue[] = () => [
         name: 'choice',
         command: 'choice',
         value: {
-          value_type: ProcessValueCommandChoiceValue.value_type.CHOICE,
+          value_type: 'choice',
           value: 'first',
           options: ['first', 'second', 'third'],
         },
@@ -201,7 +197,7 @@ const getProcessValues: () => ProcessValue[] = () => [
         command: 'jiojio',
         value: {
           value: 'Writable text',
-          value_type: ProcessValueCommandFreeTextValue.value_type.STRING,
+          value_type: 'string',
         },
       }, {
         name: 'something',
@@ -442,6 +438,9 @@ export const handlers = [
         engine_hardware_str: 'something',
         aggregator_version: '0.0.1',
         aggregator_computer_name: 'aggregator computer name',
+        uod_author_name: 'someone',
+        uod_author_email: 'someone@example.com',
+        uod_filename: 'some_uod_file',
       },
       {
         id: '2',
@@ -455,6 +454,9 @@ export const handlers = [
         engine_hardware_str: 'something',
         aggregator_version: '0.0.1',
         aggregator_computer_name: 'aggregator computer name',
+        uod_author_name: 'someone',
+        uod_author_email: 'someone@example.com',
+        uod_filename: 'some_uod_file',
       },
       {
         id: '3',
@@ -468,6 +470,9 @@ export const handlers = [
         engine_hardware_str: 'something',
         aggregator_version: '0.0.1',
         aggregator_computer_name: 'aggregator computer name',
+        uod_author_name: 'someone',
+        uod_author_email: 'someone@example.com',
+        uod_filename: 'some_uod_file',
       },
       {
         id: '4',
@@ -481,6 +486,9 @@ export const handlers = [
         engine_hardware_str: 'something',
         aggregator_version: '0.0.1',
         aggregator_computer_name: 'aggregator computer name',
+        uod_author_name: 'someone',
+        uod_author_email: 'someone@example.com',
+        uod_filename: 'some_uod_file',
       },
     ]);
   }),
@@ -905,6 +913,9 @@ export const handlers = [
       engine_hardware_str: 'something',
       aggregator_version: '0.0.1',
       aggregator_computer_name: 'aggregator computer name',
+      uod_author_name: 'someone',
+      uod_author_email: 'someone@example.com',
+      uod_filename: 'some_uod_file',
     });
   }),
 

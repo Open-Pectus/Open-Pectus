@@ -3,8 +3,7 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { map, of, switchMap } from 'rxjs';
-import { ProcessUnitService } from '../../../api/services/ProcessUnitService';
-import { RecentRunsService } from '../../../api/services/RecentRunsService';
+import { ProcessUnitService, RecentRunsService } from '../../../api';
 import { AxesOverridesLocalStorageService } from '../axes-overrides-local-storage.service';
 import { ProcessPlotActions } from './process-plot.actions';
 import { ProcessPlotSelectors } from './process-plot.selectors';
@@ -16,7 +15,7 @@ export class ProcessPlotEffects {
     ofType(ProcessPlotActions.processPlotComponentInitializedForUnit),
     switchMap(({unitId}) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.getPlotConfiguration(unitId).pipe(
+      return this.processUnitService.getPlotConfiguration({unitId}).pipe(
         map(configuration => ProcessPlotActions.plotConfigurationFetched({configuration})));
     }),
   ));
@@ -25,7 +24,7 @@ export class ProcessPlotEffects {
     ofType(ProcessPlotActions.processPlotComponentInitializedForRecentRun),
     switchMap(({recentRunId}) => {
       if(recentRunId === undefined) return of();
-      return this.recentRunsService.getRecentRunPlotConfiguration(recentRunId).pipe(
+      return this.recentRunsService.getRecentRunPlotConfiguration({runId: recentRunId}).pipe(
         map(configuration => ProcessPlotActions.plotConfigurationFetched({configuration})));
     }),
   ));
@@ -34,7 +33,7 @@ export class ProcessPlotEffects {
     ofType(ProcessPlotActions.processPlotComponentInitializedForUnit),
     switchMap(({unitId}) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.getPlotLog(unitId).pipe(
+      return this.processUnitService.getPlotLog({unitId}).pipe(
         map(plotLog => ProcessPlotActions.plotLogFetched({plotLog})));
     }),
   ));
@@ -43,7 +42,7 @@ export class ProcessPlotEffects {
     ofType(ProcessPlotActions.processPlotComponentInitializedForRecentRun),
     switchMap(({recentRunId}) => {
       if(recentRunId === undefined) return of();
-      return this.recentRunsService.getRecentRunPlotLog(recentRunId).pipe(
+      return this.recentRunsService.getRecentRunPlotLog({runId: recentRunId}).pipe(
         map(plotLog => ProcessPlotActions.plotLogFetched({plotLog})));
     }),
   ));
