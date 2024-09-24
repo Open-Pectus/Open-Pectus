@@ -17,6 +17,11 @@ class Dto(BaseModel):
         smart_union = True
         orm_mode = True
 
+    # deliver undefined instead of null for None values. Adapted from https://github.com/fastapi/fastapi/issues/3314#issuecomment-962932368
+    def dict(self, *args, **kwargs) -> Dict[str, Any]:
+        kwargs.pop('exclude_none')
+        return super().dict(*args, exclude_none=True, **kwargs)
+
 
 class AuthConfig(Dto):
     use_auth: bool
@@ -28,8 +33,10 @@ class ServerErrorResponse(Dto):
     error: bool = True
     message: str
 
+
 class ServerSuccessResponse(Dto):
     message: str | None = None
+
 
 class ProcessUnitStateEnum(StrEnum):
     """ Represents the state of a process unit. """
@@ -176,6 +183,7 @@ class ProcessValue(Dto):
         pv = ProcessValue.create(tag)
         pv.commands = commands
         return pv
+
 
 class CommandSource(StrEnum):
     PROCESS_VALUE = auto()
