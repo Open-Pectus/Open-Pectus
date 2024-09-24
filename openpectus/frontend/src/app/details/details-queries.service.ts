@@ -3,8 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
 import { injectQuery, injectQueryClient } from '@tanstack/angular-query-experimental';
 import { lastValueFrom } from 'rxjs';
-import { ProcessUnitService } from '../api/services/ProcessUnitService';
-import { RecentRunsService } from '../api/services/RecentRunsService';
+import { ProcessUnitService, RecentRunsService } from '../api';
 import { PubSubService } from '../shared/pub-sub.service';
 import { UtilMethods } from '../shared/util-methods';
 import { DetailsSelectors } from './ngrx/details.selectors';
@@ -21,7 +20,7 @@ export class DetailsQueriesService {
     return injectQuery(() => ({
       refetchInterval: 1000,
       queryKey: ['processValues', engineId()],
-      queryFn: () => lastValueFrom(this.processUnitService.getProcessValues(engineId())),
+      queryFn: () => lastValueFrom(this.processUnitService.getProcessValues({engineId: engineId()})),
     }), injector);
   }
 
@@ -29,7 +28,7 @@ export class DetailsQueriesService {
     const engineId = UtilMethods.throwIfEmpty(toSignal(this.store.select(DetailsSelectors.processUnitId)));
     return injectQuery(() => ({
       queryKey: ['processDiagram', engineId()],
-      queryFn: () => lastValueFrom(this.processUnitService.getProcessDiagram(engineId())),
+      queryFn: () => lastValueFrom(this.processUnitService.getProcessDiagram({unitId: engineId()})),
     }));
   }
 
@@ -37,7 +36,7 @@ export class DetailsQueriesService {
     const engineId = UtilMethods.throwIfEmpty(toSignal(this.store.select(DetailsSelectors.processUnitId)));
     return injectQuery(() => ({
       queryKey: ['commandExamples', engineId()],
-      queryFn: () => lastValueFrom(this.processUnitService.getCommandExamples(engineId())),
+      queryFn: () => lastValueFrom(this.processUnitService.getCommandExamples({unitId: engineId()})),
     }));
   }
 
@@ -53,7 +52,7 @@ export class DetailsQueriesService {
 
     return injectQuery(() => ({
       queryKey: [controlStateKey, engineId()],
-      queryFn: () => lastValueFrom(this.processUnitService.getControlState(engineId())),
+      queryFn: () => lastValueFrom(this.processUnitService.getControlState({unitId: engineId()})),
     }));
   }
 
@@ -61,7 +60,7 @@ export class DetailsQueriesService {
     const recentRunId = UtilMethods.throwIfEmpty(toSignal(this.store.select(DetailsSelectors.recentRunId)));
     return injectQuery(() => ({
       queryKey: ['recentRuns', recentRunId()],
-      queryFn: () => lastValueFrom(this.recentRunsService.getRecentRun(recentRunId())),
+      queryFn: () => lastValueFrom(this.recentRunsService.getRecentRun({runId: recentRunId()})),
     }));
   }
 }

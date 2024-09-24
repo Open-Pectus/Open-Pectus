@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, effect, Injector, input, OnDestroy,
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { CreateQueryResult } from '@tanstack/angular-query-experimental';
-import { ProcessValue } from '../../api/models/ProcessValue';
+import { ProcessValue } from '../../api';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { DetailsQueriesService } from '../details-queries.service';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
