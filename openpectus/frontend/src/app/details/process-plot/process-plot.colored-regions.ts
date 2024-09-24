@@ -27,7 +27,7 @@ export class ProcessPlotColoredRegions {
           .attr('x', d => this.xScale(d.start))
           .attr('y', subPlotTop)
           .attr('width', d => this.xScale(d.end) - this.xScale(d.start))
-          .attr('height', subPlotBottom - subPlotTop)
+          .attr('height', Math.max(subPlotBottom - subPlotTop, 0))
           .attr('fill', d => d.color);
       });
 

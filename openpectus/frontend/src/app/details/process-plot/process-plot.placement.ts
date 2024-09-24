@@ -93,7 +93,7 @@ export class ProcessPlotPlacement {
                                        axisXTransform: number) {
     const isLeftAxis = axisIndex === 0;
     const axisWidth = subPlotG.selectChild<SVGGElement>(`.y-axis-${axisIndex}`).node()?.getBoundingClientRect().width ?? 0;
-    const axisHeight = topBottom.bottom - topBottom.top;
+    const axisHeight = Math.max(topBottom.bottom - topBottom.top, 0);
     const labelWidth = subPlotG.selectChild<SVGGElement>(`.y-axis-label-${axisIndex}`).node()?.getBoundingClientRect().height ?? 0;
     const labelRotation = isLeftAxis ? -90 : 90;
     const labelXTransform = axisXTransform + (isLeftAxis ? -axisWidth - this.axisLabelMargin : axisWidth + this.axisLabelMargin);
@@ -144,9 +144,9 @@ export class ProcessPlotPlacement {
       rect
         .attr('x', leftRight.left)
         .attr('y', topBottom.top)
-        // Math.abs() avoids errors with negative values while container is collapsing
-        .attr('height', Math.abs(topBottom.bottom - topBottom.top))
-        .attr('width', Math.abs(leftRight.right - leftRight.left));
+        // Math.max() avoids errors with negative values while container is collapsing
+        .attr('height', Math.max(topBottom.bottom - topBottom.top, 0))
+        .attr('width', Math.max(leftRight.right - leftRight.left, 0));
     });
   }
 
