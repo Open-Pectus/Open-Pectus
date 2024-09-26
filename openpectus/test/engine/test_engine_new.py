@@ -198,8 +198,6 @@ Restart
 
             instance.run_until_event("start")
             instance.run_until_instruction("Watch")
-            
-            
 
             print(instance.get_runtime_table("B"))
 
@@ -256,7 +254,6 @@ Mark: B
 
             time.sleep(1)
             self.assertAlmostEqual(run_time.as_float(), 60, delta=3)
-            
 
     def test_speed_timer(self):
         pcode = """

@@ -87,22 +87,27 @@ class EngineTestInstance(TagLifetime):
     # def destroy(self):
     #     pass
 
-    # def halt(self):
-    #     """ Halt engine temporarily by stopping the tick timer. This also stops Clock time. """
-    #     # TODO stop Clock time ...
-    #     self.timer.pause()
+    def halt(self):
+        """ Halt engine temporarily by stopping the tick timer. This also stops Clock time. """
+        logger.debug("Halt")
+        self.timing.timer.pause()
 
-    # def unhalt(self):
-    #     """ Resume halted engine. """
-    #     self.timer.resume()
+    def resume(self):
+        """ Resume halted engine. """
+        logger.debug("Resume from halt")
+        self.timing.timer.resume()
 
     def run_until_condition(self, condition: RunCondition, max_ticks=30) -> int:
         """ Continue program until condition occurs. Return the number of ticks spent.
 
         Raises TimeoutError if the condition is not met before max_ticks is reached.
         """
+        self.resume()
+
         if condition():
+            self.halt()
             return 0
+
         ticks = 0
         max_ticks_scaled = max_ticks * self.timing.speed
         #self.unhalt()
@@ -124,6 +129,8 @@ class EngineTestInstance(TagLifetime):
 
                 # TODO this is not great - possibly use an observer approach instead
             engine_tick = self.engine._tick_number
+
+        self.halt()
         return ticks
 
     def run_until_instruction(
@@ -325,7 +332,7 @@ def print_runlog(e: Engine, description=""):
 #    print("-----|-------|-------|----------------------|-------------------")
 
 def print_runtime_records(e: Engine, description: str = ""):
-    table = e.interpreter.runtimeinfo.get_as_table()
+    table = e.interpreter.runtimeinfo.get_as_table(description)
     print(table)
 
 

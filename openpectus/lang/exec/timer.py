@@ -64,6 +64,13 @@ class EngineTimer():
     def stop(self):
         pass
 
+    def pause(self):
+        pass
+
+    def resume(self):
+        pass
+
+
 class OneThreadTimer(EngineTimer):
     """ Single threaded (1 extra thread) timer.
 
@@ -149,6 +156,13 @@ class OneThreadTimer(EngineTimer):
         self.running = False
         # self.thread.join()
 
+    # this timer cannot be halted
+    def pause(self):
+        raise NotImplementedError()
+
+    def resume(self):
+        raise NotImplementedError()
+
 
 class TestTimerClock(EngineTimer, Clock):
     """ Combined timer and clock that enables precise time and speed control for testing. """
@@ -172,6 +186,7 @@ class TestTimerClock(EngineTimer, Clock):
         self.last_tick_time = 0.0
         self.last_tick_time_normal = 0.0
         self.running = False
+        self.paused = False
 
     def set_tick_fn(self, tick_fn: TickConsumer):
         self.tick = tick_fn
@@ -191,6 +206,7 @@ class TestTimerClock(EngineTimer, Clock):
         self.last_tick_time = 0
         self.last_tick_time_normal = 0
         self.running = True
+        self.paused = False
         self.thread = threading.Thread(
             target=self.ticker,
             name=self.__class__.__name__,
@@ -209,7 +225,7 @@ class TestTimerClock(EngineTimer, Clock):
             self.last_tick_time_normal = self.start_time
             self.tick_number = 0
 
-        while self.running:
+        while self.running and not self.paused:
 
             # calculate the exact normal time. Should result in a milisond-rounded time. We should be called very close
             # to this time
@@ -244,6 +260,13 @@ class TestTimerClock(EngineTimer, Clock):
 
     def stop(self):
         self.running = False
+
+    def pause(self):
+        self.paused = True
+        self.tick_number = 0
+
+    def resume(self):
+        self.paused = False
 
     # -- Clock impl ---
 
