@@ -57,7 +57,8 @@ jobs:
           # run unittest via junitxml that outputs test reports in junit xml format jest-compatible?
           #python -m junitxml.main -o test/test-reports/junit.xml
       - name: Test Report
-        uses: dorny/test-reporter@v1
+        #uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@v1.7.0
         if: success() || failure()    # run this step even if previous step failed
         with:
           name: Tests Report
