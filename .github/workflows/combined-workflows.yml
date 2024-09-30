@@ -60,7 +60,8 @@ jobs:
         with:
           name: Tests Report
           path: openpectus/test/test-reports/*.xml
-          reporter: jest-junit        # Format of test results, jest is same as junit xml
+          #reporter: jest-junit        # Format of test results, jest is same as junit xml
+          reporter: java-junit          
 
   build_frontend:
     runs-on: ubuntu-latest
