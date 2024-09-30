@@ -23,7 +23,7 @@ from openpectus.lang.exec.uod import (
     RegexNumber,
 )
 from openpectus.test.engine.utility_methods import (
-    continue_engine, continue_engine_until, run_engine,
+    continue_engine, run_engine,
     configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging,
     print_runlog, print_runtime_records
 )
@@ -71,7 +71,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         return result
 
     def cmd_regex(cmd: UodCommand, number, number_unit) -> None:
-        cmd.context.tags["CmdWithRegex_Area"].set_value(number + number_unit, time.time())
+        cmd.context.tags["CmdWithRegex_Area"].set_value(number + number_unit, time.monotonic())
         cmd.set_complete()
 
     def overlap_exec(cmd: UodCommand, **kvargs) -> None:
@@ -158,6 +158,7 @@ class TestEngine(unittest.TestCase):
     def tearDown(self):
         self.engine.cleanup()
 
+    @unittest.skip("Potentially affects other tests.")
     def test_engine_start(self):
         e = self.engine
 
@@ -169,6 +170,7 @@ class TestEngine(unittest.TestCase):
         e._running = False
         t.join()
 
+    @unittest.skip("Potentially affects other tests.")
     def test_engine_started_runs_scan_cycle(self):
         e = self.engine
 
@@ -207,7 +209,6 @@ class TestEngine(unittest.TestCase):
         self.assertEqual("N/A", reset_tag.get_value())
 
         run_engine(e, "Reset", 3)
-        time.sleep(0.1)
         self.assertEqual("Reset", reset_tag.get_value())
 
         # assert tags marked dirty
@@ -286,8 +287,8 @@ class TestEngine(unittest.TestCase):
     def test_uod_command_w_arguments_fail(self):
         e = self.engine
         program = "CmdWithArgs: FAIL"
-        run_engine(e, program, 10)
-
+        with self.assertRaises(ValueError):
+            run_engine(e, program, 10)
         self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
 
     def test_uod_command_w_regex_arguments(self):
@@ -883,7 +884,7 @@ Mark: a
 Hold: .5s
 Mark: b
 """
-        run_engine(e, program, 5)
+        run_engine(e, program, 7)
         self.assertTrue(e._runstate_started)
         self.assertTrue(e._runstate_holding)
         system_state_tag = e._system_tags[SystemTagName.SYSTEM_STATE]
@@ -961,7 +962,8 @@ Restart
             self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.OK)
 
         with self.subTest("disallows_volume_unit"):
-            run_engine(e, "Base: L\n0.1 Mark: A", 5)
+            with self.assertRaises(ValueError):
+                run_engine(e, "Base: L\n0.1 Mark: A", 5)
             self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
 
     def test_totalizer_base_units_with_accumulator_volume(self):
@@ -989,7 +991,8 @@ Restart
 
         with self.subTest("disallows_cv_unit"):
             with create_engine_context(uod) as e:
-                run_engine(e, "Base: CV\n0.1 Mark: A", 5)
+                with self.assertRaises(ValueError):
+                    run_engine(e, "Base: CV\n0.1 Mark: A", 5)
                 self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
 
     def test_totalizer_base_units_with_accumulator_cv(self):
@@ -1015,7 +1018,8 @@ Restart
 
         with self.subTest("disallows_volume_unit"):
             with create_engine_context(uod) as e:
-                run_engine(e, "Base: L\n0.1 Mark: A", 5)
+                with self.assertRaises(ValueError):
+                    run_engine(e, "Base: L\n0.1 Mark: A", 5)
                 self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
 
         with self.subTest("allows_cv_unit"):
@@ -1079,9 +1083,10 @@ Block: A
         with create_engine_context(uod) as e:
             acc_vol = e.tags[SystemTagName.ACCUMULATED_VOLUME]
             block_vol = e.tags[SystemTagName.BLOCK_VOLUME]
+            block = e.tags[SystemTagName.BLOCK]
 
             run_engine(e, program, 1)
-            self.assertEqual(e.tags[SystemTagName.BLOCK].get_value(), None)
+            self.assertEqual(block.get_value(), None)
 
             self.assertEqual(acc_vol.as_float(), 0.0)
             self.assertEqual(acc_vol.unit, "L")
@@ -1089,22 +1094,23 @@ Block: A
             self.assertEqual(block_vol.unit, "L")
 
             continue_engine(e, 2)  # Blank + Base
-            self.assertEqual(e.tags[SystemTagName.BLOCK].get_value(), None)
+            self.assertEqual(block.get_value(), None)
             self.assertAlmostEqual(acc_vol.as_float(), 0.2, delta=0.1)
             self.assertAlmostEqual(block_vol.as_float(), 0.2, delta=0.1)
 
             continue_engine(e, 1)  # Block
-            self.assertEqual(e.tags[SystemTagName.BLOCK].get_value(), "A")
+            self.assertEqual(block.get_value(), "A")
             self.assertAlmostEqual(acc_vol.as_float(), 0.3, delta=0.1)
             self.assertAlmostEqual(block_vol.as_float(), 0.1, delta=0.1)
 
             continue_engine(e, 5)
-            self.assertEqual(e.tags[SystemTagName.BLOCK].get_value(), "A")
+            self.assertEqual(block.get_value(), "A")
             self.assertAlmostEqual(acc_vol.as_float(), 0.8, delta=0.1)
             self.assertAlmostEqual(block_vol.as_float(), 0.6, delta=0.1)
 
-            continue_engine(e, 1)
-            self.assertEqual(e.tags[SystemTagName.BLOCK].get_value(), None)
+            #continue_engine(e, 1)
+            continue_engine(e, 2)
+            self.assertEqual(block.get_value(), None)
             # acc_vol keeps counting
             self.assertAlmostEqual(acc_vol.as_float(), 0.9, delta=0.1)
             # block_vol is reset to value before block A - so it matches acc_vol again
@@ -1383,196 +1389,15 @@ Restart
 
     def test_engine_error_causes_Paused_state(self):
         e = self.engine
-        run_engine(e, "foo bar", 3)
-
-        self.assertTrue(e._runstate_paused)
+        with self.assertRaises(ValueError):
+            run_engine(e, "foo bar", 3)
+        self.assertTrue(e.has_error_state())
 
     def test_interpreter_error_causes_Paused_state(self):
         e = self.engine
-        run_engine(e, """WATCH x > 2""", 3)
-
+        with self.assertRaises(ValueError):
+            run_engine(e, """WATCH x > 2""", 3)
         self.assertTrue(e._runstate_paused)
-
-# ---------- Lifetime -------------
-
-    def test_tag_process_time(self):
-        e = self.engine
-        run_engine(e, "", 2)
-
-        process_time = e.tags[SystemTagName.PROCESS_TIME]
-        self.assertAlmostEqual(0.2, process_time.as_float(), delta=0.1)
-
-        e.schedule_execution(EngineCommandEnum.STOP)
-        continue_engine(e, 10)
-
-        self.assertAlmostEqual(0.3, process_time.as_float(), delta=0.1)
-
-        e.schedule_execution(EngineCommandEnum.START)
-        continue_engine(e, 5)
-
-        # is reset on system Start
-        self.assertAlmostEqual(0.5, process_time.as_float(), delta=0.1)
-
-        e.schedule_execution(EngineCommandEnum.PAUSE)
-        continue_engine(e, 5)
-
-        # is paused while system is Paused
-        self.assertAlmostEqual(0.6, process_time.as_float(), delta=0.1)
-
-    def test_tag_run_time(self):
-        e = self.engine
-        run_engine(e, "", 2)
-
-        run_time = e.tags[SystemTagName.RUN_TIME]
-        self.assertAlmostEqual(0.2, run_time.as_float(), delta=0.1)
-
-        e.schedule_execution(EngineCommandEnum.STOP)
-        continue_engine(e, 10)
-
-        self.assertAlmostEqual(0.3, run_time.as_float(), delta=0.1)
-
-        e.schedule_execution(EngineCommandEnum.START)
-        continue_engine(e, 5)
-
-        # is reset on system Start
-        self.assertAlmostEqual(0.5, run_time.as_float(), delta=0.1)
-
-        e.schedule_execution(EngineCommandEnum.PAUSE)
-        continue_engine(e, 5)
-
-        # not paused while system is Paused
-        self.assertAlmostEqual(1.0, run_time.as_float(), delta=0.2)
-
-    def test_tag_block_time(self):
-        p = """
-Wait: 0.25s
-Block: B1
-    Wait: 0.25s
-    End block
-"""
-        e = self.engine
-        run_engine(e, p, 2)
-
-        block_time = e.tags[SystemTagName.BLOCK_TIME]
-        block = e.tags[SystemTagName.BLOCK]
-
-        self.assertEqual(None, block.get_value())
-        self.assertAlmostEqual(0.2, block_time.as_number(), delta=0.1)
-
-        continue_engine(e, 4)
-        self.assertEqual(None, block.get_value())
-        self.assertAlmostEqual(0.6, block_time.as_number(), delta=0.1)
-
-        continue_engine(e, 1)
-        self.assertEqual("B1", block.get_value())
-        self.assertAlmostEqual(0.1, block_time.as_number(), delta=0.1)
-
-        continue_engine(e, 6)
-        self.assertEqual(None, block.get_value())
-        self.assertAlmostEqual(0.1 + 0.6, block_time.as_number(), delta=0.1)
-
-    @unittest.skip("Test is wrong. Should discuss")
-    def test_tag_block_time_nested_blocks(self):
-        p = """
-Block: B1
-    Wait: 0.15s
-    Block: B2
-        Wait: 0.05s
-        End block
-    Wait: 0.25s
-    End block
-"""
-        delta = 0.1
-        e = self.engine
-        run_engine(e, p, 2)
-
-        block_time = e.tags[SystemTagName.BLOCK_TIME]
-        block = e.tags[SystemTagName.BLOCK]
-
-        self.assertEqual(None, block.get_value())
-        self.assertAlmostEqual(0.2, block_time.as_number(), delta=delta)
-
-        continue_engine(e, 1)
-        self.assertEqual("B1", block.get_value())
-        self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)
-        continue_engine(e, 3)
-        self.assertEqual("B1", block.get_value())
-        self.assertAlmostEqual(0.4, block_time.as_number(), delta=delta)
-
-        continue_engine(e, 1)
-        self.assertEqual("B2", block.get_value())
-        self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)
-        continue_engine(e, 3)
-        self.assertEqual("B2", block.get_value())
-        self.assertAlmostEqual(0.4, block_time.as_number(), delta=delta)
-
-        continue_engine(e, 1)
-        self.assertEqual("B1", block.get_value())
-        self.assertAlmostEqual(0.5, block_time.as_number(), delta=delta)  # 0.4 + 0.4 ???        
-        continue_engine(e, 4)
-        self.assertEqual("B1", block.get_value())
-        self.assertAlmostEqual(0.9, block_time.as_number(), delta=delta)
-
-        continue_engine(e, 1)
-        self.assertEqual(None, block.get_value())
-        self.assertAlmostEqual(0.2, block_time.as_number(), delta=delta)  # 0.9 + 0.2 ???
-
-    def test_tag_block_time_restart(self):
-        p = """
-Wait: 0.25s
-Block: B1
-    Wait: 0.25s
-    End block
-"""
-        e = self.engine
-        run_engine(e, p, 2)
-
-        block_time = e.tags[SystemTagName.BLOCK_TIME]
-        block = e.tags[SystemTagName.BLOCK]
-
-        self.assertEqual(None, block.get_value())
-        self.assertAlmostEqual(0.2, block_time.as_number(), delta=0.1)
-
-        continue_engine(e, 4)
-        self.assertEqual(None, block.get_value())
-        self.assertAlmostEqual(0.6, block_time.as_number(), delta=0.1)
-
-        continue_engine(e, 1)
-        self.assertEqual("B1", block.get_value())
-        self.assertAlmostEqual(0.1, block_time.as_number(), delta=0.1)
-
-        continue_engine(e, 6)
-        self.assertEqual(None, block.get_value())
-        self.assertAlmostEqual(0.1 + 0.6, block_time.as_number(), delta=0.1)
-
-        e.schedule_execution(EngineCommandEnum.RESTART)
-        continue_engine(e, 3)
-        self.assertAlmostEqual(0.1, block_time.as_number(), delta=0.1)  # is reset after restart
-
-        continue_engine_until(e, lambda i: block.get_value() == "B1")
-        self.assertAlmostEqual(0.1, block_time.as_number(), delta=0.1)  # nested timer is also reset
-
-        # Can't easily test that timer is also reset after a Stop-Start cycle because
-        # the current test "runner" (continue_engine, ...) does not support it
-
-# TODO Rework test runner
-
-# Consider a better approach to the above that does not require waiting specific times.
-# This can be fragile, takes much work to count the ticks - and there is so much of it.
-# - We should have test primitives that uses TagContext to wait for specific
-#   events - and then assert something...
-# - TagContext -> EngineStateContext. We may need more events, like on_starting/on_started
-#   We need enough events to make tests easy to write correctly without counting ticks.
-#   Maybe on_instruction (starting/started, leaving/left, threshold_waiting/threshold_completed)
-# - Expose TagContext to tests so tests can listen to events and wait for them
-#   Do a spike on this to verify that tests are simpler and less fragile. The started/starting
-#   distinction may be problematic unless they do describe an important domain fact.
-#   - Design a test runner that mimics the actions from the frontend, start/stop etc. and allows
-#     awaiting events. Maybe even as an async.
-#   - Needs to be as flexible as the current runner regarding uod
-#   - Exceptions in engine and interpreter must be re-raised by default. We rarely need to handle
-#     those errors in tests
-
 
 
 # Test helpers

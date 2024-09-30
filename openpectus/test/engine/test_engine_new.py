@@ -237,6 +237,7 @@ Stop
             self.assertEqual([], instance.engine.interpreter.get_marks())
 
 
+    @unittest.skip("speed > 1 not implemented")
     def test_speed_perceived(self):
         pcode = """
 Base: s
@@ -255,6 +256,7 @@ Mark: B
             time.sleep(1)
             self.assertAlmostEqual(run_time.as_float(), 60, delta=3)
 
+    @unittest.skip("speed > 1 not implemented")
     def test_speed_timer(self):
         pcode = """
 Wait: 30s

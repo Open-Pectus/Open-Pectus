@@ -4,9 +4,10 @@ import time
 from typing import Callable, Generator, Literal
 from openpectus.engine.models import EngineCommandEnum
 
+from openpectus.lang.exec.clock import WallClock
 from openpectus.lang.exec.runlog import RuntimeRecordStateEnum
 from openpectus.lang.exec.tag_lifetime import BlockInfo, TagContext, TagLifetime
-from openpectus.lang.exec.timer import TestTimerClock
+from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 import openpectus.protocol.models as Mdl
 from openpectus.engine.engine import Engine, EngineTiming
@@ -75,44 +76,22 @@ class EngineTestInstance(TagLifetime):
     def marks(self) -> list[str]:
         return self.engine.interpreter.get_marks()
 
-    # def stop(self):
-    #     pass
-
-    # def pause(self):
-    #     pass
-
-    # def unpause(self):
-    #     pass
-
-    # def destroy(self):
-    #     pass
-
-    def halt(self):
-        """ Halt engine temporarily by stopping the tick timer. This also stops Clock time. """
-        logger.debug("Halt")
-        self.timing.timer.pause()
-
-    def resume(self):
-        """ Resume halted engine. """
-        logger.debug("Resume from halt")
-        self.timing.timer.resume()
 
     def run_until_condition(self, condition: RunCondition, max_ticks=30) -> int:
         """ Continue program until condition occurs. Return the number of ticks spent.
 
         Raises TimeoutError if the condition is not met before max_ticks is reached.
         """
-        self.resume()
-
         if condition():
-            self.halt()
             return 0
 
         ticks = 0
         max_ticks_scaled = max_ticks * self.timing.speed
-        #self.unhalt()
-        engine_tick = self.engine._tick_number
+        last_tick_time = 0.0
+
         while not condition():
+            tick_time = time.time()
+
             ticks += 1
             if ticks > max_ticks_scaled:
                 if max_ticks == max_ticks_scaled:
@@ -122,15 +101,22 @@ class EngineTestInstance(TagLifetime):
                         f"Condition did not occur within {max_ticks_scaled} ticks, " +
                         "(scaled from {max_ticks} using speed {self.speed})"
                     )
+            increment = self.timing.interval
+            if last_tick_time > 0.0:
+                increment = tick_time - last_tick_time
+                self.engine.tick(tick_time, increment)
 
-            while self.engine._tick_number == engine_tick:
-                time.sleep(self.timing.interval * 0.3)  # this low seems to make test runs consistent
-                #time.sleep(self.timing.interval * 0.1)  # this low seems to make test runs consistent
+            last_tick_time = tick_time
+            elapsed = time.time() - last_tick_time
+            deadline = self.timing.interval - elapsed
+            if deadline > 0.0:
+                time.sleep(deadline)
+            else:
+                logger.warning(f"Sleep deadline for tick was negative: {deadline}")
 
-                # TODO this is not great - possibly use an observer approach instead
-            engine_tick = self.engine._tick_number
+            if self.engine.has_error_state():
+                raise ValueError("Engine failed with an error")
 
-        self.halt()
         return ticks
 
     def run_until_instruction(
@@ -198,6 +184,20 @@ class EngineTestInstance(TagLifetime):
                 return False
         return self.run_until_condition(cond, max_ticks=max_ticks)
 
+    def run_ticks(self, ticks: int) -> None:
+        """ Continue program execution until te specified number of ticks. """
+
+        logger.debug(f"Start waiting for {ticks} ticks")
+        max_ticks = ticks + 1
+        try:
+            _ = self.run_until_condition(lambda: False, max_ticks)
+        except TimeoutError:
+            logger.debug(f"Done waiting for {ticks} ticks")
+            return
+
+        raise ValueError("Could not wait??")
+
+
     def get_runtime_table(self, description: str = "") -> str:
         """ Return a text view of the runtime table contents. """
         return self.engine.runtimeinfo.get_as_table(description)
@@ -242,8 +242,7 @@ class EngineTestRunner:
 
     @contextmanager
     def run(self) -> Generator[EngineTestInstance, None, None]:
-        timer = TestTimerClock(self.interval, self.speed)        
-        timing = EngineTiming(timer, timer, self.interval, self.speed)
+        timing = EngineTiming(WallClock(), NullTimer(), self.interval, self.speed)
         uod = self.uod_factory()
         engine = Engine(uod, timing)
         instance = EngineTestInstance(engine, self.pcode, timing)
@@ -252,73 +251,81 @@ class EngineTestRunner:
         except Exception:
             raise
         finally:
-            timer.stop()
             engine.cleanup()
-            del timer
             del instance
 
 
-def run_engine(engine: Engine, pcode: str, max_ticks: int = -1):
+def run_engine(engine: Engine, pcode: str, max_ticks: int = -1) -> int:
     print("Interpretation started")
-    ticks = 0
-    max_ticks = max_ticks
-
     engine._running = True
     engine.set_method(Mdl.Method.from_pcode(pcode=pcode))
     engine.schedule_execution(EngineCommandEnum.START)
 
-    while engine.is_running():
-        ticks += 1
-        if max_ticks != -1 and ticks > max_ticks:
+    ticks = 1
+    #ticks = 0
+    last_tick_time = 0.0
+    interval = 0.1
+
+    while True:
+        tick_time = time.time()
+
+        if ticks > max_ticks:
             print(f"Stopping because max_ticks {max_ticks} was reached")
-            return
+            return ticks
 
-        tick_time = time.time()
-        time.sleep(0.1)
-        engine.tick(tick_time, 0.1)
+        increment = 0.0
+        if last_tick_time > 0.0:
+            increment = tick_time - last_tick_time
 
-def continue_engine(engine: Engine, max_ticks: int = -1):
-    # This function (as well as run_engine) differs from just calling engine.tick() in that
-    # it passes the time before calling tick(). Some functionality depends on this, such as
-    # thresholds.
+        # execute tick even with 0 increment
+        engine.tick(tick_time, increment)
 
-    # TODO consider adding a SystemClock abstraction to avoid the need for waiting
-    # in tests
-    print("Interpretation continuing")
-    ticks = 0
-    max_ticks = max_ticks
+        last_tick_time = tick_time
+        elapsed = time.time() - last_tick_time
+        deadline = interval - elapsed
+        if deadline > 0.0:
+            time.sleep(deadline)
+        else:
+            logger.warning(f"Sleep deadline for tick was negative: {deadline}")
 
-    engine._running = True
+        if engine.has_error_state():
+            raise ValueError("Engine failed with an error")
 
-    while engine.is_running():
         ticks += 1
-        if max_ticks != -1 and ticks > max_ticks:
-            print(f"Stopping because max_ticks {max_ticks} was reached")
-            return
 
-        tick_time = time.time()
-        time.sleep(0.1)
-        engine.tick(tick_time, 0.1)
-
-def continue_engine_until(engine: Engine, condition: Callable[[int], bool], fail_ticks=30) -> int:
+def continue_engine(engine: Engine, max_ticks: int = -1) -> int:
     print("Interpretation continuing")
-    tick = 0
-    engine._running = True
+    ticks = 1
+    #ticks = 0
+    last_tick_time = 0.0
+    interval = 0.1
 
-    while engine.is_running():
-        if condition(tick):
-            print(f"Stopping at tick {tick} because condition was True")
-            return tick
-        if tick >= fail_ticks:
-            print("Failing because condition did not occur before max_ticks was reached")
-            raise TimeoutError("Condition did not occur before max_ticks was reached")
-
+    while True:
         tick_time = time.time()
-        time.sleep(0.1)
-        engine.tick(tick_time, 0.1)
-        tick += 1
 
-    raise RuntimeError("Engine stopped for no good reason")
+        if ticks > max_ticks:
+            print(f"Stopping because max_ticks {max_ticks} was reached")
+            return ticks
+
+        increment = 0
+        if last_tick_time > 0.0:
+            increment = tick_time - last_tick_time
+
+        # execute tick even with 0 increment
+        engine.tick(tick_time, increment)
+
+        last_tick_time = tick_time
+        elapsed = time.time() - last_tick_time
+        deadline = interval - elapsed
+        if deadline > 0.0:
+            time.sleep(deadline)
+        else:
+            logger.warning(f"Sleep deadline for tick was negative: {deadline}")
+
+        if engine.has_error_state():
+            raise ValueError("Engine failed with an error")
+
+        ticks += 1
 
 def print_runlog(e: Engine, description=""):
     runlog = e.interpreter.runtimeinfo.get_runlog()
