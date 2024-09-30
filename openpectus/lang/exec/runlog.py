@@ -96,8 +96,12 @@ class RuntimeInfo():
                 for i, state in enumerate(r.states):
                     if i > 0:
                         prev_state = r.states[i-1]
-                        assert prev_state.state_tick <= state.state_tick
-                        assert prev_state.state_time <= state.state_time
+                        try:
+                            assert prev_state.state_tick <= state.state_tick
+                            assert prev_state.state_time <= state.state_time
+                        except Exception:
+                            logger.error(f"Error processing runlog states for record: {r}", exc_info=True)
+                            raise
 
             started_state_indices = [i for i, st in enumerate(r.states)
                                      if st.state_name == RuntimeRecordStateEnum.Started]

@@ -361,6 +361,8 @@ class Engine(InterpreterContext):
         # Block Time    - 0 at Block start, global but value refers to active block
         if block_name not in self.block_times.keys():
             self.block_times[block_name] = 0.0
+        # TODO should probably increment all parent block timers as well.
+        # In that case factor this out into BlockTag class that hold timer tags for each block
         self.block_times[block_name] += increment_time
         self._system_tags[SystemTagName.BLOCK_TIME].set_value(self.block_times[block_name], self._tick_time)
 
