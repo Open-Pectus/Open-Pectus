@@ -59,7 +59,7 @@ jobs:
         if: success() || failure()    # run this step even if previous step failed
         with:
           name: Tests Report
-          path: test/test-reports/*.xml
+          path: TEST-*.xml
           reporter: jest-junit        # Format of test results, jest is same as junit xml
 
   build_frontend:
