@@ -54,7 +54,8 @@ jobs:
           cd openpectus
           # run unittest via xmlrunner that outputs test reports in junit xml format
           #python -m xmlrunner discover -t . -o test/test-reports/
-          python -m junitxml.main -o test/test-reports
+          # run unittest via junitxml that outputs test reports in junit xml format jest-compatible?
+          python -m junitxml.main -o test/test-reports/junit.xml
       - name: Test Report
         uses: dorny/test-reporter@v1
         if: success() || failure()    # run this step even if previous step failed
