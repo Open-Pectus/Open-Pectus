@@ -1,10 +1,5 @@
 import { createAction, props } from '@ngrx/store';
-import { CommandExample } from '../../api/models/CommandExample';
-import { ControlState } from '../../api/models/ControlState';
-import { ExecutableCommand } from '../../api/models/ExecutableCommand';
-import { ProcessDiagram } from '../../api/models/ProcessDiagram';
-import { ProcessValue } from '../../api/models/ProcessValue';
-import { RecentRun } from '../../api/models/RecentRun';
+import { CommandExample, ControlState, ExecutableCommand, ProcessDiagram, ProcessValue, RecentRun } from '../../api';
 
 const source = '[Details] ';
 

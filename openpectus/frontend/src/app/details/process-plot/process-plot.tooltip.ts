@@ -1,9 +1,7 @@
 import { Store } from '@ngrx/store';
 import { bisector, pointer, ScaleLinear, select } from 'd3';
 import { firstValueFrom, identity } from 'rxjs';
-import { PlotConfiguration } from '../../api/models/PlotConfiguration';
-import { PlotLogEntry } from '../../api/models/PlotLogEntry';
-import { PlotLogEntryValue } from '../../api/models/PlotLogEntryValue';
+import { PlotConfiguration, PlotLogEntry, PlotLogEntryValue } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 import { UtilMethods } from '../../shared/util-methods';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';

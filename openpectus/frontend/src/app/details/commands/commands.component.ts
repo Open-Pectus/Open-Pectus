@@ -2,8 +2,7 @@ import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
-import { CommandExample } from '../../api/models/CommandExample';
-import { CommandSource } from '../../api/models/CommandSource';
+import { CommandExample } from '../../api';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { DetailsActions } from '../ngrx/details.actions';
 import { DetailsSelectors } from '../ngrx/details.selectors';
@@ -55,7 +54,7 @@ export class CommandsComponent implements OnInit {
     this.store.dispatch(DetailsActions.commandsComponentExecuteClicked({
       command: {
         command: commandToExecute,
-        source: CommandSource.MANUALLY_ENTERED,
+        source: 'manually_entered',
       },
     }));
   }

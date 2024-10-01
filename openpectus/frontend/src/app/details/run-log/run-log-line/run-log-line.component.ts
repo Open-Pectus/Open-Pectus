@@ -3,7 +3,7 @@ import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, E
 import { LetDirective } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { map } from 'rxjs';
-import { RunLogLine } from '../../../api/models/RunLogLine';
+import { RunLogLine } from '../../../api';
 import { RunLogActions } from '../ngrx/run-log.actions';
 import { RunLogSelectors } from '../ngrx/run-log.selectors';
 import { AdditionalValueType, RunLogAdditionalValuesComponent } from '../run-log-additional-values.component';

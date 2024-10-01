@@ -1,7 +1,7 @@
 import { NgFor, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { PushPipe } from '@ngrx/component';
-import { CommandExample } from '../../api/models/CommandExample';
+import { CommandExample } from '../../api';
 
 @Component({
   selector: 'app-command-examples-list',

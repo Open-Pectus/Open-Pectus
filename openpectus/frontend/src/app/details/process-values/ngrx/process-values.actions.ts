@@ -1,5 +1,5 @@
 import { createAction, props } from '@ngrx/store';
-import { ProcessValueCommand } from '../../../api/models/ProcessValueCommand';
+import { ProcessValueCommand } from '../../../api';
 
 const source = '[Process Values] ';
 
