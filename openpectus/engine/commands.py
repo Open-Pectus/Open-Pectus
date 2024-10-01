@@ -32,7 +32,7 @@ class EngineCommand():
         return self._exec_started
 
     def get_iteration_count(self) -> int:
-        """ Returns number of iterations executed. """
+        """ Returns number of iterations executed. The first iteration is number 0. """
         return self._exec_iterations
 
     def is_execution_complete(self) -> bool:

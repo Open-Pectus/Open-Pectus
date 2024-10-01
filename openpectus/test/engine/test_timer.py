@@ -1,27 +1,15 @@
 import time
 import unittest
 
-from openpectus.lang.exec.timer import ZeroThreadTimer, OneThreadTimer
+from openpectus.lang.exec.timer import OneThreadTimer
 
 
 @unittest.skip("Slow")
 class TimerTest(unittest.TestCase):
-    def test_zero_thread_timer(self):
-        def tick() -> bool:
-            print('tick: {:.4f}'.format(time.time()))
-            time.sleep(0.3)  # simulate work
-            if time.time() > start_time + 10:
-                return False
-            return True
 
-        start_time = time.time()
-        timer = ZeroThreadTimer(1.0, tick)
-        timer.start()
-        print('timer.start() returned')
-
-    def test_one_thead_timer(self):
-        def tick():
-            print('tick: {:.4f}'.format(time.time()))
+    def test_one_thread_timer(self):
+        def tick(tick_time: float, increment_time: float):
+            print('tick: {:.4f}'.format(tick_time))
             time.sleep(0.3)  # simulate work
 
         timer = OneThreadTimer(1.0, tick)
@@ -32,26 +20,41 @@ class TimerTest(unittest.TestCase):
         timer.stop()
         print('timer.stopped')
 
-    def test_one_thead_timer_can_restart(self):
-        def tick():
-            print('tick: {:.4f}'.format(time.time()), flush=True)
-            time.sleep(0.8 * period)  # simulate work
+    def test_one_thread_timer_drift(self):
+        def tick(tick_time: float, increment_time: float):
+            print("tick_time", tick_time)
+            time.sleep(0.07)  # simulate safe work amount
+            #time.sleep(0.09)  # simulate unsafe work amount - will print warnings
 
-        period = 0.3
-        timer = OneThreadTimer(period, tick)
+        interval = .1
+        timer = OneThreadTimer(interval, tick)
         timer.start()
         print('timer.start() returned')
 
-        time.sleep(5 * period + .1)
+        time.sleep(3)
+        timer.stop()
+        print('timer.stopped')
+
+    def test_one_thread_timer_can_restart(self):
+        def tick(tick_time: float, increment_time: float):
+            print("tick_time", tick_time)
+            time.sleep(0.8 * interval)  # simulate work
+
+        interval = 0.3
+        timer = OneThreadTimer(interval, tick)
+        timer.start()
+        print('timer.start() returned')
+
+        time.sleep(5 * interval + .1)
         timer.stop()
         print('timer stopped')
 
-        time.sleep(3 * period + .1)
+        time.sleep(3 * interval + .1)
 
         timer.start()
         print('timer restarted')
 
-        time.sleep(5 * period + .1)
+        time.sleep(5 * interval + .1)
         timer.stop()
         print('timer stopped again')
 

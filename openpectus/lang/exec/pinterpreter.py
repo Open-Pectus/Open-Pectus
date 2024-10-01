@@ -6,6 +6,7 @@ from enum import Enum
 from typing import Generator, Iterable
 from uuid import UUID
 
+from openpectus.lang.exec.tag_lifetime import TagContext
 import openpectus.lang.exec.units as units
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.commands import InterpreterCommandEnum
@@ -101,7 +102,7 @@ class CallStack:
     def iterate_from_top(self) -> Iterable[ActivationRecord]:
         for ar in reversed(self._records):
             yield ar
-            
+
     def push(self, ar: ActivationRecord):
         self._records.append(ar)
 
@@ -138,16 +139,11 @@ class InterpreterContext():
         raise NotImplementedError()
 
     @property
+    def lifetime(self) -> TagContext:
+        raise NotImplementedError()
+
+    @property
     def base_unit_provider(self) -> BaseUnitProvider:
-        raise NotImplementedError()
-
-    def block_started(self, name: str):
-        """ Invoked when a block is started. Not invoked for the main block"""
-        raise NotImplementedError()
-
-    def block_ended(self, name: str, new_name: str):
-        """ Invoked when block is completed. If back in the main block,
-        new_name is the empty string. """
         raise NotImplementedError()
 
 
@@ -365,7 +361,7 @@ class PInterpreter(PNodeVisitor):
     # Visitor Impl
 
     @override
-    def visit(self, node):
+    def visit(self, node: PNode):
         if not self.running:
             return
 
@@ -411,6 +407,7 @@ class PInterpreter(PNodeVisitor):
         ar = ActivationRecord(node, self._tick_time)
         self.stack.push(ar)
         yield from self._visit_children(node.children)
+        self.context.lifetime.emit_on_method_end()
         self.stack.pop()
 
     def visit_PBlank(self, node: PBlank):
@@ -430,11 +427,13 @@ class PInterpreter(PNodeVisitor):
         record.add_state_started(
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
+
+        # we want this in but it breaks a lot of tests. we want to be able to manage that first
+        # yield
+
         record.add_state_completed(
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
-
-        yield  # comment if we dont want mark to always consume a tick
 
     def visit_PBlock(self, node: PBlock):
         record = self.runtimeinfo.get_last_node_record(node)
@@ -442,7 +441,7 @@ class PInterpreter(PNodeVisitor):
         ar = ActivationRecord(node, self._tick_time)
         self.stack.push(ar)
         self.context.tags[SystemTagName.BLOCK].set_value(node.name, self._tick_number)
-        self.context.block_started(node.name)
+        self.context.lifetime.emit_on_block_start(node.name, self._tick_number)
         logger.debug(f"Block Tag set to {node.name}")
 
         yield  # comment if we dont want block to always consume a tick
@@ -475,12 +474,12 @@ class PInterpreter(PNodeVisitor):
             if ar.artype == ARType.BLOCK:
                 assert isinstance(ar.owner, PBlock)
                 self.context.tags[SystemTagName.BLOCK].set_value(ar.owner.name, self._tick_number)
-                self.context.block_ended(node.name, ar.owner.name)
+                self.context.lifetime.emit_on_block_end(node.name, ar.owner.name, self._tick_number)
                 logger.debug(f"Block Tag popped to {ar.owner.name}")
                 block_restored = True
         if not block_restored:
             self.context.tags[SystemTagName.BLOCK].set_value(None, self._tick_number)
-            self.context.block_ended(node.name, "")
+            self.context.lifetime.emit_on_block_end(node.name, "", self._tick_number)
             logger.debug(f"Block Tag cleared from {node.name}")
 
 
@@ -524,12 +523,15 @@ class PInterpreter(PNodeVisitor):
             self.context.tags[SystemTagName.BASE].set_value(node.args, self._tick_time)
 
         elif node.name == InterpreterCommandEnum.INCREMENT_RUN_COUNTER:
-            rc_value = self.context.tags[SystemTagName.RUN_COUNTER].as_number() + 1
-            self.context.tags[SystemTagName.RUN_COUNTER].set_value(rc_value, self._tick_time)
+            run_counter = self.context.tags[SystemTagName.RUN_COUNTER]            
+            rc_value = run_counter.as_number() + 1
+            logger.debug(f"Run Counter incremented from {rc_value - 1} to {rc_value}")
+            run_counter.set_value(rc_value, self._tick_time)
 
         elif node.name == InterpreterCommandEnum.RUN_COUNTER:
             try:
                 new_value = int(node.args)
+                logger.debug(f"Run Counter set to {new_value}")
                 self.context.tags[SystemTagName.RUN_COUNTER].set_value(new_value, self._tick_time)
             except ValueError:
                 raise NodeInterpretationError(node, f"Invalid argument '{node.args}'. Argument must be an integer")

@@ -1,6 +1,6 @@
+from __future__ import annotations
 import itertools
 import logging
-import time
 import uuid
 from queue import Empty, Queue
 from typing import Iterable, List, Literal, Set
@@ -15,6 +15,7 @@ from openpectus.engine.hardware import HardwareLayerException, RegisterDirection
 from openpectus.engine.method_model import MethodModel
 from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum, SystemTagName
 from openpectus.lang.exec.base_unit import BaseUnitProvider
+from openpectus.lang.exec.clock import Clock, WallClock
 from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.errors import (
     EngineError, EngineNotInitializedError, InterpretationError, InterpretationInternalError
@@ -42,6 +43,33 @@ from openpectus.engine.archiver import ArchiverTag
 logger = logging.getLogger(__name__)
 frontend_logger = logging.getLogger(__name__ + ".frontend")
 
+class EngineTiming():
+    """ Represents timing information used by engine and any related components. """
+    def __init__(self, clock: Clock, timer: EngineTimer, interval: float, speed: float) -> None:
+        self._clock = clock
+        self._timer = timer
+        self._interval = interval
+        self._speed = speed
+
+    @staticmethod
+    def default() -> EngineTiming:
+        return EngineTiming(WallClock(), OneThreadTimer(0.1, None), 0.1, 1.0)
+
+    @property
+    def clock(self) -> Clock:
+        return self._clock
+
+    @property
+    def timer(self) -> EngineTimer:
+        return self._timer
+
+    @property
+    def interval(self) -> float:
+        return self._interval
+
+    @property
+    def speed(self) -> float:
+        return self._speed
 
 class Engine(InterpreterContext):
     """ Main engine class. Handles
@@ -51,12 +79,22 @@ class Engine(InterpreterContext):
     - accepts commands from cmd_queue (from interpreter and from aggregator)
     """
 
-    def __init__(self, uod: UnitOperationDefinitionBase, tick_interval=0.1, enable_archiver=False) -> None:
+    def __init__(
+            self,
+            uod: UnitOperationDefinitionBase,
+            timing: EngineTiming = EngineTiming.default(),
+            enable_archiver=False) -> None:
         self.uod = uod
         self._running: bool = False
         """ Indicates whether the scan cycle loop is running, set to False to shut down"""
 
         register_commands(self)
+
+        self._clock: Clock = timing.clock
+        """ The time source """
+
+        self._tick_timer: EngineTimer = timing.timer
+        """ Timer that invokes tick() """        
 
         self._tick_time: float = 0.0
         """ The time of the last tick """
@@ -84,7 +122,6 @@ class Engine(InterpreterContext):
 
         self._uod_listener = ChangeListener()
         self._system_listener = ChangeListener()
-        self._tick_timer: EngineTimer = OneThreadTimer(tick_interval, self.tick)
 
         self._runstate_started: bool = False
         """ Indicates the current Start/Stop state"""
@@ -107,9 +144,6 @@ class Engine(InterpreterContext):
 
         self._tags: TagCollection | None = None
         self._tag_context: TagContext | None = None
-
-        self.block_popped: str | None = None
-        self.block_pushed: str | None = None
 
         self._interpreter: PInterpreter = PInterpreter(PProgram(), self)
         """ The interpreter executing the current program. """
@@ -138,16 +172,14 @@ class Engine(InterpreterContext):
         return self._tags
 
     @property
+    def lifetime(self) -> TagContext:
+        if self._tag_context is None:
+            raise EngineNotInitializedError("TagContext not set")
+        return self._tag_context
+
+    @property
     def base_unit_provider(self) -> BaseUnitProvider:
         return self.uod.base_unit_provider
-
-    def block_started(self, name: str):
-        self.block_pushed = name
-        self.block_popped = None
-
-    def block_ended(self, name: str, new_name: str):
-        self.block_pushed = new_name
-        self.block_popped = name
 
     @property
     def interpreter(self) -> PInterpreter:
@@ -182,15 +214,16 @@ class Engine(InterpreterContext):
         self._system_tags.add_listener(self._system_listener)
         self._tags = self._system_tags.merge_with(self.uod.tags)
         self._tag_context = TagContext(self.tags)
+        self._tick_timer.set_tick_fn(self.tick)
 
-    def run(self):
+    def run(self, skip_timer_start=False):
         self._configure()
-        self._run()
+        self._run(skip_timer_start)
 
     def is_running(self) -> bool:
         return self._running
 
-    def _run(self):
+    def _run(self, skip_timer_start=True):
         """ Starts the scan cycle """
 
         assert self.uod is not None
@@ -198,7 +231,8 @@ class Engine(InterpreterContext):
         assert self.uod.hwl.is_connected, "Hardware is not connected. Engine cannot start"
 
         self._running = True
-        self._tick_timer.start()
+        if not skip_timer_start:
+            self._tick_timer.start()
 
         self.tag_context.emit_on_engine_configured()
 
@@ -217,16 +251,14 @@ class Engine(InterpreterContext):
         self._tick_timer.stop()
         self.cleanup()
 
-    def tick(self):
+    def tick(self, tick_time: float, increment_time: float):
         """ Performs a scan cycle tick. """
         logger.debug(f"Tick {self._tick_number + 1}")
 
         if not self._running:
             self._tick_timer.stop()
-            # TODO shutdown
 
-        last_tick_time = self._tick_time
-        self._tick_time = time.time()
+        self._tick_time = tick_time
         self._tick_number += 1
 
         # Perform certain actions in first tick
@@ -234,7 +266,7 @@ class Engine(InterpreterContext):
             # System tags are initialized before first tick, without a tick time, and some are never updated, so
             # provide first tick time as a "default".
             for tag in self._system_tags.tags.values():
-                tag.tick_time = self._tick_time
+                tag.tick_time = tick_time
 
         self.uod.hwl.tick()
 
@@ -249,7 +281,7 @@ class Engine(InterpreterContext):
                 not self._runstate_stopping:
             try:
                 # run one tick of interpretation, i.e. one instruction
-                self._interpreter.tick(self._tick_time, self._tick_number)
+                self._interpreter.tick(tick_time, self._tick_number)
             except InterpretationInternalError:
                 logger.fatal("A serious internal interpreter error occured. The method should be stopped. If it is resumed, \
                              additional errors may occur.", exc_info=True)
@@ -271,7 +303,7 @@ class Engine(InterpreterContext):
 
         # update calculated tags
         if self._runstate_started:
-            self.update_calculated_tags(last_tick_time)
+            self.update_calculated_tags(tick_time, increment_time)
 
         # execute queued commands, go to error_state on error
         self.execute_commands()
@@ -302,47 +334,40 @@ class Engine(InterpreterContext):
                 tag_value = r.options["to_tag"](tag_value)
             tag.set_value(tag_value, self._tick_time)
 
-    def update_calculated_tags(self, last_tick_time: float):
+    def update_calculated_tags(self, tick_time: float, increment_time: float):
         sys_state = self._system_tags[SystemTagName.SYSTEM_STATE]
-        time_increment = self._tick_time - last_tick_time if last_tick_time > 0.0 else 0.0
-        logger.debug(f"{time_increment = }")
+        logger.debug(f"{increment_time = }")
 
         # Clock         - seconds since epoch
         clock = self._system_tags.get(SystemTagName.CLOCK)
-        clock.set_value(time.time(), self._tick_time)
+        clock.set_value(tick_time, tick_time)
 
         # Process Time  - 0 at start, increments when System State is Run
         process_time = self._system_tags[SystemTagName.PROCESS_TIME]
         process_time_value = process_time.as_number()
         if sys_state.get_value() == SystemStateEnum.Running:
-            process_time.set_value(process_time_value + time_increment, self._tick_time)
+            process_time.set_value(process_time_value + increment_time, tick_time)
 
         # Run Time      - 0 at start, increments when System State is not Stopped
         run_time = self._system_tags[SystemTagName.RUN_TIME]
         run_time_value = run_time.as_number()
         if sys_state.get_value() not in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
-            run_time.set_value(run_time_value + time_increment, self._tick_time)
+            run_time.set_value(run_time_value + increment_time, tick_time)
 
         # Block name + signal block changes to tag_context
         block_name = self._system_tags[SystemTagName.BLOCK].get_value() or ""
         assert isinstance(block_name, str)
-        if self.block_pushed is not None and self.block_popped is not None:
-            block_name, old_block_name = self.block_pushed, self.block_popped
-            self.block_popped, self.block_pushed = None, None
-            self.tag_context.emit_on_block_end(old_block_name, block_name, self._tick_number)
-        elif self.block_pushed is not None:
-            block_name = self.block_pushed
-            self.block_pushed = None
-            self.tag_context.emit_on_block_start(block_name, self._tick_number)
 
         # Block Time    - 0 at Block start, global but value refers to active block
         if block_name not in self.block_times.keys():
             self.block_times[block_name] = 0.0
-        self.block_times[block_name] += time_increment
+        # TODO should probably increment all parent block timers as well.
+        # In that case factor this out into BlockTag class that hold timer tags for each block
+        self.block_times[block_name] += increment_time
         self._system_tags[SystemTagName.BLOCK_TIME].set_value(self.block_times[block_name], self._tick_time)
 
         # Execute the tick lifetime hook on tags
-        self.tag_context.emit_on_tick(self._tick_time)
+        self.tag_context.emit_on_tick(tick_time, increment_time)
 
     def execute_commands(self):
         done = False
@@ -708,7 +733,10 @@ class Engine(InterpreterContext):
 
     # code manipulation api
     def set_method(self, method: Mdl.Method):
-        """ Set new method. This will replace the current method and invoke the on_method_init callback. """
+        """ Set new method. This will replace the current method and invoke the on_method_init callback.
+
+        On error, sets error_state and re-raises the error.
+        """
         try:
             self._method.set_method(method)
             logger.info(f"New method set with {len(method.lines)} lines")

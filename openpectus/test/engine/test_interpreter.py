@@ -3,11 +3,13 @@ import time
 import unittest
 
 import pint
-from openpectus.engine.engine import Engine
+from openpectus.engine.engine import Engine, EngineTiming
 from openpectus.engine.models import EngineCommandEnum
 from openpectus.lang.exec.analyzer import ConditionEnrichAnalyzer
+from openpectus.lang.exec.clock import WallClock
 from openpectus.lang.exec.pinterpreter import PInterpreter
 from openpectus.lang.exec.tags import Tag, SystemTagName
+from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
 from openpectus.lang.grammar.pprogramformatter import print_parsed_program as print_program
 from openpectus.lang.model.pprogram import PCondition, PNode, PProgram, PWatch
@@ -54,7 +56,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
 def create_engine(uod: UnitOperationDefinitionBase | None = None) -> Engine:
     if uod is None:
         uod = create_test_uod()
-    e = Engine(uod)
+    e = Engine(uod, EngineTiming(WallClock(), NullTimer(), 0.1, 1.0))
     e._configure()
     return e
 

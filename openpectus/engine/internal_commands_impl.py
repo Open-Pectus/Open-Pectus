@@ -68,8 +68,12 @@ class PauseEngineCommand(InternalEngineCommand):
 
     def init_args(self, kvargs: dict[str, Any]):
         if "time" in kvargs.keys() and "unit" in kvargs.keys():
-            time = float(kvargs.pop("time"))
-            unit = kvargs.pop("unit")
+            time = float(kvargs.get("time", None))
+            if time is None:
+                raise ValueError("Invalid Pause arguments. Time is not valid")
+            unit = kvargs.get("unit", None)
+            if unit is None:
+                raise ValueError("Invalid Pause arguments. Unit is not valid")
             self.duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
         elif "time" in kvargs.keys() or "unit" in kvargs.keys():
             raise ValueError("Invalid Pause arguments. Specify either no duration arguments or both time and unit")
@@ -129,8 +133,12 @@ class HoldEngineCommand(InternalEngineCommand):
 
     def init_args(self, kvargs: dict[str, Any]):
         if "time" in kvargs.keys() and "unit" in kvargs.keys():
-            time = float(kvargs.pop("time"))
-            unit = kvargs.pop("unit")
+            time = float(kvargs.get("time", None))
+            if time is None:
+                raise ValueError("Invalid Hold arguments. Time is not valid")
+            unit = kvargs.get("unit", None)
+            if unit is None:
+                raise ValueError("Invalid Hold arguments. Unit is not valid")
             self.duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
         elif "time" in kvargs.keys() or "unit" in kvargs.keys():
             raise ValueError("Invalid Hold arguments. Specify either no duration arguments or both time and unit")
@@ -208,9 +216,16 @@ class WaitEngineCommand(InternalEngineCommand):
         self.engine = engine
 
     def init_args(self, kvargs: dict[str, Any]):
-        time = float(kvargs.pop("time"))
-        unit = kvargs.pop("unit")
-        self.duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
+        if "time" in kvargs.keys() and "unit" in kvargs.keys():
+            time = float(kvargs.get("time", None))
+            if time is None:
+                raise ValueError("Invalid Wait arguments. Time is not valid")
+            unit = kvargs.get("unit", None)
+            if unit is None:
+                raise ValueError("Invalid Wait arguments. Unit is not valid")
+            self.duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
+        elif "time" in kvargs.keys() or "unit" in kvargs.keys():
+            raise ValueError("Invalid Wait arguments. Specify either no duration arguments or both time and unit")
 
     def _run(self):
         self.engine._runstate_waiting = True
@@ -265,7 +280,6 @@ class RestartEngineCommand(InternalEngineCommand):
             # potentially a lot more engine state to reset
             e._runstate_started = True
             e._runstate_started_time = time.time()
-            e._tick_number = 0
             e._runstate_paused = False
             e._runstate_holding = False
             e._system_tags[SystemTagName.BLOCK_TIME].set_value(0.0, e._tick_time)
