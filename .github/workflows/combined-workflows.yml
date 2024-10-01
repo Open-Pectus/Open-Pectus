@@ -63,35 +63,9 @@ jobs:
         with:
           name: Tests Report jest
           #path: openpectus/test/test-reports/*.xml
-          path: openpectus/test/jest.xml
+          path: openpectus/test/*.xml
           reporter: jest-junit        # Format of test results, jest is same as junit xml
-      - name: Test Report
-        #uses: dorny/test-reporter@v1
-        uses: dorny/test-reporter@v1.9.1
-        if: success() || failure()    # run this step even if previous step failed
-        with:
-          name: Tests Report jest2
-          #path: openpectus/test/test-reports/*.xml
-          path: openpectus/test/jest2.xml
-          reporter: jest-junit        # Format of test results, jest is same as junit xml
-      - name: Test Report junit1
-        #uses: dorny/test-reporter@v1
-        uses: dorny/test-reporter@v1.9.1
-        if: success() || failure()    # run this step even if previous step failed
-        with:
-          name: Tests Report java
-          #path: openpectus/test/test-reports/*.xml
-          path: openpectus/test/junit.xml
-          reporter: java-junit
-      - name: Test Report junit2
-        #uses: dorny/test-reporter@v1
-        uses: dorny/test-reporter@v1.9.1
-        if: success() || failure()    # run this step even if previous step failed
-        with:
-          name: Tests Report java
-          #path: openpectus/test/test-reports/*.xml
-          path: openpectus/test/junit2.xml
-          reporter: java-junit
+
   build_frontend:
     runs-on: ubuntu-latest
     steps:
