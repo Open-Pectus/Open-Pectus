@@ -1,3 +1,4 @@
+from __future__ import annotations
 from contextlib import contextmanager
 import logging
 import time
@@ -49,6 +50,30 @@ FindInstructionState = Literal[
 """ Defines the awaitable instruction states of the test engine runner """
 
 
+class EngineTestRunner:
+    """ Expose an interface of Engine similar to what is available in the frontend to tests. """
+    def __init__(self, uod_factory: UodFactory, pcode: str = "", interval: float = 0.1, speed: float = 1.0) -> None:
+        self.uod_factory = uod_factory
+        self.pcode = pcode
+        self.interval = interval
+        self.speed = speed
+        logger.debug(f"Created engine test runner, speed: {self.speed:.2f}, interval: {(self.interval*1000):.2f}ms")
+
+    @contextmanager
+    def run(self) -> Generator[EngineTestInstance, None, None]:
+        timing = EngineTiming(WallClock(), NullTimer(), self.interval, self.speed)
+        uod = self.uod_factory()
+        engine = Engine(uod, timing)
+        instance = EngineTestInstance(engine, self.pcode, timing)
+        try:
+            yield instance
+        except Exception:
+            raise
+        finally:
+            engine.cleanup()
+            del instance
+
+
 class EngineTestInstance(TagLifetime):
     def __init__(self, engine: Engine, pcode: str, timing: EngineTiming) -> None:
         self.engine = engine
@@ -61,21 +86,17 @@ class EngineTestInstance(TagLifetime):
         self.engine.tag_context.add_listener(self)  # register as listener for lifetime events, so they can be awaited
         self._last_event: EventName | None = None
 
-
-
     def set_method(self, pcode: str):
         method = Mdl.Method.from_pcode(pcode)
         self.engine.set_method(method)
 
     def start(self):
-        #self.engine._running = True
         self.engine.schedule_execution(EngineCommandEnum.START)
         self.timing.timer.start()
 
     @property
     def marks(self) -> list[str]:
         return self.engine.interpreter.get_marks()
-
 
     def run_until_condition(self, condition: RunCondition, max_ticks=30) -> int:
         """ Continue program until condition occurs. Return the number of ticks spent.
@@ -204,7 +225,6 @@ class EngineTestInstance(TagLifetime):
 
     # --- TagLifetime impl ----
 
-
     def on_engine_configured(self, context: TagContext):
         self._last_event = None
 
@@ -231,29 +251,6 @@ class EngineTestInstance(TagLifetime):
 
     # --- TagLifetime end ----
 
-class EngineTestRunner:
-    """ Expose an interface of Engine similar to what is available in the frontend to tests. """
-    def __init__(self, uod_factory: UodFactory, pcode: str = "", interval: float = 0.1, speed: float = 1.0) -> None:
-        self.uod_factory = uod_factory
-        self.pcode = pcode
-        self.interval = interval
-        self.speed = speed
-        logger.debug(f"Created engine test runner, speed: {self.speed:.2f}, interval: {(self.interval*1000):.2f}ms")
-
-    @contextmanager
-    def run(self) -> Generator[EngineTestInstance, None, None]:
-        timing = EngineTiming(WallClock(), NullTimer(), self.interval, self.speed)
-        uod = self.uod_factory()
-        engine = Engine(uod, timing)
-        instance = EngineTestInstance(engine, self.pcode, timing)
-        try:
-            yield instance
-        except Exception:
-            raise
-        finally:
-            engine.cleanup()
-            del instance
-
 
 # globals for run_engine and continue_enging
 last_tick_time = 0.0
@@ -268,7 +265,6 @@ def run_engine(engine: Engine, pcode: str, max_ticks: int = -1) -> int:
     engine.schedule_execution(EngineCommandEnum.START)
 
     ticks = 1
-    #ticks = 0    
     last_tick_time = 0.0
 
     while True:
@@ -298,11 +294,11 @@ def run_engine(engine: Engine, pcode: str, max_ticks: int = -1) -> int:
 
         ticks += 1
 
+
 def continue_engine(engine: Engine, max_ticks: int = -1) -> int:
     global last_tick_time, interval
     print("Interpretation continuing")
     ticks = 1
-    #ticks = 0
 
     while True:
         tick_time = time.time()
@@ -331,16 +327,15 @@ def continue_engine(engine: Engine, max_ticks: int = -1) -> int:
 
         ticks += 1
 
+
 def print_runlog(e: Engine, description=""):
     runlog = e.interpreter.runtimeinfo.get_runlog()
     print(f"Runlog {runlog.id} records: ", description)
-    #    print("line | start | end   | name                 | states")
-    #    print("-----|-------|-------|----------------------|-------------------")
     for item in runlog.items:
         name = f"{str(item.name):<20}"
         prog = f"{item.progress:d2}" if item.progress else ""
         print(f"{name}   {item.state:<15}    {prog}")
-#    print("-----|-------|-------|----------------------|-------------------")
+
 
 def print_runtime_records(e: Engine, description: str = ""):
     table = e.interpreter.runtimeinfo.get_as_table(description)
