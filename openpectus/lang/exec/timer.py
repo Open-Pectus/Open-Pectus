@@ -1,10 +1,7 @@
 
-import math
 import threading
 import time
 from typing import Callable
-
-from openpectus.lang.exec.clock import Clock
 
 
 TickConsumer = Callable[[float, float], None]
@@ -17,35 +14,6 @@ Will be called on all ticks, even tick 0 where `increment_time` is zero.
 On pause/resume, will also be called on the first tick after resume where `increment_time` is also zero.
 """
 
-
-class ZeroThreadTimer:
-    """Single threaded (no extra thread) timer using generator.
-
-    Because there is no extra thread, the tick provided must signal
-    when to stop using its return value. """
-    def __init__(self, period_s: float, tick: Callable[[], bool]):
-        self.running = True
-        self.period_s = period_s
-        self.tick = tick
-
-    def start(self):
-        self.start_time = time.time()
-        self.do_every()
-
-    def do_every(self):
-        def g_tick():
-            t = time.time()
-            while True:
-                t += self.period_s
-                yield max(t - time.time(), 0)
-
-        g = g_tick()
-
-        while self.running:
-            time.sleep(next(g))
-            self.running = self.tick()
-
-
 class EngineTimer():
 
     def set_tick_fn(self, tick_fn: TickConsumer):
@@ -56,6 +24,10 @@ class EngineTimer():
 
     def stop(self):
         pass
+
+
+class NullTimer(EngineTimer):
+    pass
 
 
 class OneThreadTimer(EngineTimer):
@@ -113,8 +85,3 @@ class OneThreadTimer(EngineTimer):
 
     def stop(self):
         self.running = False
-        # self.thread.join()
-
-
-class NullTimer(EngineTimer):
-    pass

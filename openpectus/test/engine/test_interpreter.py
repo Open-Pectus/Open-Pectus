@@ -372,7 +372,7 @@ Block: A
 Mark: A3
 """
         engine = self.engine
-        run_engine(engine, program, 6)
+        run_engine(engine, program, 5)
 
         self.assertEqual(["A1", "A2"], engine.interpreter.get_marks())
 
@@ -613,7 +613,7 @@ Mark: b"""
         continue_engine(engine, 4)
         self.assertEqual(["a"], i.get_marks())
 
-        continue_engine(engine, 3)
+        continue_engine(engine, 2)
 
         self.assertEqual(["a", "b"], i.get_marks())
 

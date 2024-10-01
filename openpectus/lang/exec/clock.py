@@ -9,4 +9,4 @@ class Clock:
 
 class WallClock(Clock):
     def get_time(self) -> float:
-        return time.monotonic()
+        return time.time()

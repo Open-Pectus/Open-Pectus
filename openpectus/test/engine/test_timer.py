@@ -1,25 +1,13 @@
 import time
 import unittest
 
-from openpectus.lang.exec.timer import ZeroThreadTimer, OneThreadTimer
+from openpectus.lang.exec.timer import OneThreadTimer
 
 
 @unittest.skip("Slow")
 class TimerTest(unittest.TestCase):
-    def test_zero_thread_timer(self):
-        def tick() -> bool:
-            print('tick: {:.4f}'.format(time.time()))
-            time.sleep(0.3)  # simulate work
-            if time.time() > start_time + 10:
-                return False
-            return True
 
-        start_time = time.time()
-        timer = ZeroThreadTimer(1.0, tick)
-        timer.start()
-        print('timer.start() returned')
-
-    def test_one_thead_timer(self):
+    def test_one_thread_timer(self):
         def tick(tick_time: float, increment_time: float):
             print('tick: {:.4f}'.format(tick_time))
             time.sleep(0.3)  # simulate work
@@ -47,7 +35,7 @@ class TimerTest(unittest.TestCase):
         timer.stop()
         print('timer.stopped')
 
-    def test_one_thead_timer_can_restart(self):
+    def test_one_thread_timer_can_restart(self):
         def tick(tick_time: float, increment_time: float):
             print("tick_time", tick_time)
             time.sleep(0.8 * interval)  # simulate work
