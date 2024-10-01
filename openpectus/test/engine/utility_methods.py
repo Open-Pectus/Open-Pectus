@@ -255,16 +255,21 @@ class EngineTestRunner:
             del instance
 
 
+# globals for run_engine and continue_enging
+last_tick_time = 0.0
+interval = 0.1
+
+
 def run_engine(engine: Engine, pcode: str, max_ticks: int = -1) -> int:
+    global last_tick_time, interval
     print("Interpretation started")
     engine._running = True
     engine.set_method(Mdl.Method.from_pcode(pcode=pcode))
     engine.schedule_execution(EngineCommandEnum.START)
 
     ticks = 1
-    #ticks = 0
+    #ticks = 0    
     last_tick_time = 0.0
-    interval = 0.1
 
     while True:
         tick_time = time.time()
@@ -294,11 +299,10 @@ def run_engine(engine: Engine, pcode: str, max_ticks: int = -1) -> int:
         ticks += 1
 
 def continue_engine(engine: Engine, max_ticks: int = -1) -> int:
+    global last_tick_time, interval
     print("Interpretation continuing")
     ticks = 1
     #ticks = 0
-    last_tick_time = 0.0
-    interval = 0.1
 
     while True:
         tick_time = time.time()

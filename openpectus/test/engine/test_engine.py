@@ -1077,8 +1077,8 @@ Base: s
         program = """
 Base: s
 Block: A
-    0.5 End block
-0.5 Mark: A
+    0.45 End block
+0.45 Mark: A
         """
         with create_engine_context(uod) as e:
             acc_vol = e.tags[SystemTagName.ACCUMULATED_VOLUME]
@@ -1108,8 +1108,7 @@ Block: A
             self.assertAlmostEqual(acc_vol.as_float(), 0.8, delta=0.1)
             self.assertAlmostEqual(block_vol.as_float(), 0.6, delta=0.1)
 
-            #continue_engine(e, 1)
-            continue_engine(e, 2)
+            continue_engine(e, 1)
             self.assertEqual(block.get_value(), None)
             # acc_vol keeps counting
             self.assertAlmostEqual(acc_vol.as_float(), 0.9, delta=0.1)
@@ -1246,14 +1245,15 @@ Watch: Accumulated CV > 0.5 CV
         program = """
 Base: s
 Block: A
-    0.5 End block
-0.5 Mark: A
+    0.45 End block
+0.45 Mark: A
         """
         with create_engine_context(uod) as e:
             cv = e.tags["CV"]
             cv.set_value(2.0, 0)
             acc_cv = e.tags[SystemTagName.ACCUMULATED_CV]
             block_cv = e.tags[SystemTagName.BLOCK_CV]
+            block = e.tags[SystemTagName.BLOCK]
             run_engine(e, program, 1)
 
             self.assertEqual(acc_cv.as_float(), 0.0)
@@ -1262,22 +1262,22 @@ Block: A
             self.assertEqual(block_cv.unit, "CV")
 
             continue_engine(e, 2)  # Blank + Base
-            self.assertEqual(e.tags[SystemTagName.BLOCK].get_value(), None)
+            self.assertEqual(block.get_value(), None)
             self.assertAlmostEqual(acc_cv.as_float(), 0.2/2, delta=0.1)
             self.assertAlmostEqual(block_cv.as_float(), 0.2/2, delta=0.1)
 
             continue_engine(e, 1)  # Block
-            self.assertEqual(e.tags[SystemTagName.BLOCK].get_value(), "A")
+            self.assertEqual(block.get_value(), "A")
             self.assertAlmostEqual(acc_cv.as_float(), 0.3/2, delta=0.1)
             self.assertAlmostEqual(block_cv.as_float(), 0.1/2, delta=0.1)
 
             continue_engine(e, 5)
-            self.assertEqual(e.tags[SystemTagName.BLOCK].get_value(), "A")
+            self.assertEqual(block.get_value(), "A")
             self.assertAlmostEqual(acc_cv.as_float(), 0.8/2, delta=0.1)
             self.assertAlmostEqual(block_cv.as_float(), 0.6/2, delta=0.1)
 
             continue_engine(e, 1)
-            self.assertEqual(e.tags[SystemTagName.BLOCK].get_value(), None)
+            self.assertEqual(block.get_value(), None)
             # acc_vol keeps counting
             self.assertAlmostEqual(acc_cv.as_float(), 0.9/2, delta=0.1)
             # block_vol is reset to value before block A - so it matches acc_vol again
