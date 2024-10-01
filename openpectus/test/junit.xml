@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.100" timestamp="2024-10-01T08:38:11.350697+02:00" hostname="MIAWLT-1645-MPO"><testcase classname="test_sample" name="test_answer" time="0.001"><failure message="assert 4 == 5&#10; +  where 4 = func(3)">def test_answer():
-&gt;       assert func(3) == 5
-E       assert 4 == 5
-E        +  where 4 = func(3)
-
-test_sample.py:6: AssertionError</failure></testcase></testsuite></testsuites>
