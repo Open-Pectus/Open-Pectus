@@ -796,7 +796,24 @@ python -m xmlrunner discover -t . -o test/test-reports/
 ```
 which generates the xml files in the test-reports directory.
 
-To be shown as part of a Github build, the output must be published as a build artefact.
+Bugger - the xml output cannot be read by https://github.com/marketplace/actions/test-reporter which fails with 
+Error: TypeError: Cannot read properties of undefined (reading 'testsuite')
+
+Trying https://pypi.org/project/junitxml/ instead:
+```
+python -m junitxml.main
+```
+Also fails:
+Creating test report Tests Report
+  Processing test results for check run Tests Report
+  Error: Processing test results from openpectus/test/test-reports/junit.xml failed
+Error: TypeError: Cannot read properties of undefined (reading 'testsuite')
+
+Trying https://github.com/kyrus/python-junit-xml instead. It has a testsuites top element that may be what we need
+pip install junit-xml - but you have to use your own runner...
+
+
+To be shown as part of a Github build, the output must (?) be published as a build artefact.
 
 It can then be shown in various ways, e.g
 - https://github.com/marketplace/actions/publish-test-results
@@ -807,5 +824,11 @@ https://docs.github.com/en/actions/use-cases-and-examples/building-and-testing/b
 
 We need to figure out how to consume a test report in a Github action
 There are a few options for this:
-- https://github.com/marketplace/actions/test-reporter (looks like the simplest option)
+- https://github.com/marketplace/actions/test-reporter (looks like the simplest option,
+   in fact, this seems to not need a (seperate) artefact upload step)
+- https://github.com/marketplace/actions/junit-report-action also seem simple
+- and not require upload
 - https://github.com/marketplace/actions/publish-test-results
+
+No combination works - or the errors reported are not the real cause. We give up for now. Another attempt should start out with https://github.com/marketplace/actions/publish-test-results and a sample report,
+possibly one from https://github.com/dorny/test-reporter/tree/main/__tests__

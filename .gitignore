@@ -138,4 +138,3 @@ conda/*
 **/pint-cache/*
 *.db
 openpectus/engine/data/*.txt
-openpectus/test/test-reports/*.xml
