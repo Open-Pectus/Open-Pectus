@@ -287,6 +287,15 @@ class pcodeListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by pcodeParser#identifier_ext.
+    def enterIdentifier_ext(self, ctx:pcodeParser.Identifier_extContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#identifier_ext.
+    def exitIdentifier_ext(self, ctx:pcodeParser.Identifier_extContext):
+        pass
+
+
     # Enter a parse tree produced by pcodeParser#error.
     def enterError(self, ctx:pcodeParser.ErrorContext):
         pass

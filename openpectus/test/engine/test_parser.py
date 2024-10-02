@@ -176,6 +176,43 @@ Watch: A > 2 mL
         test("min")
         test("mL")
 
+    def test_identifier_ext(self):
+        def test(tag: str):
+            with self.subTest(tag):
+                p = parse(tag)
+                c = p.parser.identifier_ext()  # type: ignore
+                self.assertIsNotNone(c)
+                p.printSyntaxTree(c)
+                self.assertIsInstance(c, pcodeParser.Identifier_extContext)
+                self.assertContextHasNoChildError(c)
+                self.assertEqual(tag, c.getText())
+        test("X2")
+        test("XY2")
+        test("x2")
+        test("foo")
+        test("foo bar")
+
+        test("KaZ")
+        test("e 2")
+        test("e")
+        test("X")
+        test("xY")
+        test("Xy")
+
+        # these are also valid identifiers even though they are also units
+        test("s")
+        test("L")
+        test("min")
+        test("mL")
+
+        # stuff that is not an identifier
+        test("87")
+        test("_")
+        test(" 87: _")
+        test("s+")
+        test("B %")
+        test("5%: test")
+
     def test_condition_tag_ws(self):
         p = parse("Block Time > 0.2 min")
         c = p.parser.condition()  # type: ignore

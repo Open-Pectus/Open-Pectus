@@ -293,7 +293,6 @@ Block: Equilibration
         # print_program(program)
 
         # check wiki for updated expressions
-
         instructions = program.get_instructions()
         self.assertIsInstance(instructions[0], PBlock)
         for i in [1, 2, 3, 4, 5, 6, 7]:
@@ -303,6 +302,16 @@ Block: Equilibration
         instr = instructions[8]
         self.assertIsInstance(instr, PEndBlock)
         self.assertFalse(instr.has_error())
+
+    def test_block_name_non_identifier(self):
+        p = build("Block: 87")
+        program = p.build_model()
+        # p.printSyntaxTree(p.tree)
+        # print_program(program)
+        block = program.get_instructions()[0]
+        assert isinstance(block, PBlock)
+        self.assertEqual(block.name, "87")
+        self.assertFalse(program.has_error(recursive=True))
 
     def test_end_blocks(self):
         p = build("End blocks")
@@ -316,8 +325,8 @@ Block: Equilibration
         # p.printSyntaxTree(p.tree)
         # print_program(program)
         mark = program.get_instructions()[0]
-        self.assertIsInstance(mark, PMark)
-        self.assertEqual(mark.name, "A")  # type: ignore
+        assert isinstance(mark, PMark)
+        self.assertEqual(mark.name, "A")
         self.assertFalse(program.has_error(recursive=True))
 
     def test_mark_comment(self):
@@ -329,6 +338,22 @@ Block: Equilibration
         self.assertIsInstance(mark, PMark)
         self.assertEqual(mark.comment, " foo")
         self.assertFalse(program.has_error(recursive=True))
+
+    def test_mark_name_non_identifier(self):
+        def test(code: str, name: str):
+            with self.subTest(code):
+                p = build(code)
+                program = p.build_model()
+                p.printSyntaxTree(p.tree)
+                print_program(program)
+                mark = program.get_instructions()[0]
+                assert isinstance(mark, PMark)
+                self.assertEqual(mark.name, name)
+                self.assertFalse(program.has_error(recursive=True))
+
+        test("Mark: 87", "87")
+        test("Mark: 5 seconds have passed", "5 seconds have passed")
+        test("Mark: B %", "B %")
 
     def test_blanks(self):
         p = build(
@@ -495,7 +520,10 @@ Watch
         )
         program = p.build_model()
 
-        # print_program(program, show_line_numbers=True, show_errors=True)
+        # condition is optional but must be valid when given, consider something like an error_condition to support more cases,
+        # e.g. 'Watch:' and 'Watch: foo ='
+
+        #print_program(program, show_line_numbers=True, show_errors=True)
 
         non_blanks = program.get_instructions()
         self.assertIsInstance(non_blanks[0], PWatch)

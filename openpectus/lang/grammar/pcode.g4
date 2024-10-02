@@ -30,7 +30,7 @@ instruction
 
 
 block           : time? BLOCK COLON WHITESPACE* block_name; // allow whitespace before colon?
-block_name      : identifier ; 
+block_name      : identifier_ext ; 
 end_block       : time? END_BLOCK ;
 end_blocks      : time? END_BLOCKS ;
 
@@ -51,7 +51,7 @@ wait            : time? WAIT COLON WHITESPACE* duration ;
 duration        : .*?  ~(NEWLINE | HASH | COLON);
 
 mark            : time? MARK COLON WHITESPACE* mark_name?;
-mark_name       : identifier ;
+mark_name       : identifier_ext ;
 
 time    : timeexp WHITESPACE+ ;
 timeexp : POSITIVE_FLOAT ;
@@ -66,8 +66,8 @@ command_name    : identifier ;
 command_args    : .*?  ~(NEWLINE | HASH);
 
 identifier      : IDENTIFIER ;
-error   : .*?  ~(NEWLINE | HASH);
-
+identifier_ext  : IDENTIFIER | .*?  ~(NEWLINE | HASH);
+error           : .*?  ~(NEWLINE | HASH);
 
 fragment LETTER     : [a-zA-Z] ;
 fragment DIGIT      : [0-9] ;
@@ -85,15 +85,6 @@ BLOCK   : 'Block' ;
 END_BLOCK       : 'End block' ;
 END_BLOCKS      : 'End blocks' ;
 INCREMENT_RC    : 'Increment run counter' ;
-
-/*
-Known units:
-L|min|h|CV|s|mL        
-CV|L|h|min|s|AU|L\/h|\%|bar|mS\/cm|g
-CV|L|h|min|s|AU|L\/h|\%|bar|mS\/cm|g|kg\/h
-h|min|s|L|CV|AU|L\/h|\%|bar|mS\/cm|g|kg\/h
-duration_unit: h|min|s|L|CV
- */
 
 IDENTIFIER : LETTER ( (LETTER | DIGIT | WHITESPACE | UNDERSCORE)* (LETTER | DIGIT | UNDERSCORE)+ )? ;
 

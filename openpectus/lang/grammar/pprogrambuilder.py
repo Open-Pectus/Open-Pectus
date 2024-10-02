@@ -151,7 +151,7 @@ class PProgramBuilder(pcodeListener):
     def exitInstruction(self, ctx: pcodeParser.InstructionContext):
         # attach any error to current instruction
         if self.instruction_error is not None:
-            if self.instruction is None:                
+            if self.instruction is None:
                 self.instruction = PErrorInstruction(self.scope, ctx.getText())
             elif isinstance(self.instruction, PBlank):
                 # skip indentation errors in blank lines
