@@ -139,6 +139,8 @@ class PProgramBuilder(pcodeListener):
                     if not self.expect_indent:
                         self.instruction_error = PError(
                             f"Bad indentation. Additional indentation unexpected. Expected {prev_indent} spaces of indentation")
+                        # clear the invalid extra indentation to avoid errors in following instructions
+                        self.instruction_start.indent = prev_indent
                     elif indent != prev_indent + INDENTATION_SPACES:
                         self.instruction_error = PError(
                             f"Bad indentation. Expected {prev_indent + INDENTATION_SPACES} spaces of indentation")

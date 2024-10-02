@@ -355,6 +355,19 @@ Block: Equilibration
         test("Mark: 5 seconds have passed", "5 seconds have passed")
         test("Mark: B %", "B %")
 
+    def test_indentation_error(self):
+        code = """
+    Mark: A
+Mark: B"""
+        # test that an indentation error (A) does not interfere with the scope
+        # of following instructions (B)
+        p = build(code)
+        program = p.build_model()
+        [a, b] = program.get_instructions()
+        # print_program(program, show_errors=True)
+        self.assertTrue(a.has_error())
+        self.assertFalse(b.has_error())
+
     def test_blanks(self):
         p = build(
             """
