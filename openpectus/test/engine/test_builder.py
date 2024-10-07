@@ -44,6 +44,10 @@ class BuilderTest(unittest.TestCase):
         out = PProgramFormatter().format(program)
         self.assertMultiLineEqual(expected, out)
 
+    def assertNodeHasType(self, node: PNode, expected_type: type):
+        if not isinstance(node, expected_type):
+            raise AssertionError(f"Invalid node type: {type(node).__name__}, expected: {expected_type.__name__}")
+
     def test_command(self):
         p = build("foo: bar=baz")
         program = p.build_model()
@@ -527,22 +531,56 @@ Incr counter: foo='bar',2
     def test_watch(self):
         p = build(
             """
-Watch
-    Mark: A
-        """
+Watch: Run counter > 0
+    Mark: A"""
         )
         program = p.build_model()
+        [watch, mark_a] = program.get_instructions(include_blanks=False)
+        self.assertNodeHasType(watch, PWatch)
+        self.assertNodeHasType(mark_a, PMark)
+        self.assertFalse(watch.has_error(recursive=True))
+        self.assertIsNone(watch._inst_error)
 
-        # condition is optional but must be valid when given, consider something like an error_condition to support more cases,
-        # e.g. 'Watch:' and 'Watch: foo ='
+    def test_watch_missing_condition(self):
+        p = build(
+            """
+Watch
+    Mark: A"""
+        )
+        program = p.build_model()
+        [watch, mark] = program.get_instructions(include_blanks=False)
 
-        #print_program(program, show_line_numbers=True, show_errors=True)
+        self.assertNodeHasType(watch, PWatch)
+        self.assertIsNone(watch._inst_error)
+        self.assertNodeHasType(mark, PMark)
+        self.assertTrue(watch.has_error())
 
-        non_blanks = program.get_instructions()
-        self.assertIsInstance(non_blanks[0], PWatch)
-        mark = non_blanks[0].get_child_nodes()[0]
-        self.assertIsInstance(mark, PMark)
-        self.assertFalse(program.has_error(recursive=True))
+    def test_watch_partial_condition(self):
+        p = build(
+            """
+Watch:
+    Mark: A"""
+        )
+        program = p.build_model()
+        [watch, mark] = program.get_instructions(include_blanks=False)
+        self.assertNodeHasType(watch, PWatch)
+        self.assertNodeHasType(mark, PMark)
+        self.assertIsNotNone(watch._inst_error)
+        self.assertTrue(watch.has_error())
+
+    def test_watch_partial_condition_w_comment(self):
+        p = build(
+            """
+Watch: # foo
+    Mark: A"""
+        )
+        program = p.build_model()
+        [watch, mark] = program.get_instructions(include_blanks=False)
+        self.assertNodeHasType(watch, PWatch)
+        self.assertEqual(watch.comment, " foo")
+        self.assertNodeHasType(mark, PMark)
+        self.assertIsNotNone(watch._inst_error)
+        self.assertTrue(watch.has_error())
 
     def test_watch_unit(self):
         p = build(

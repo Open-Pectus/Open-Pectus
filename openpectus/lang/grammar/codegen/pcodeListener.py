@@ -296,6 +296,15 @@ class pcodeListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by pcodeParser#inst_error.
+    def enterInst_error(self, ctx:pcodeParser.Inst_errorContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#inst_error.
+    def exitInst_error(self, ctx:pcodeParser.Inst_errorContext):
+        pass
+
+
     # Enter a parse tree produced by pcodeParser#error.
     def enterError(self, ctx:pcodeParser.ErrorContext):
         pass

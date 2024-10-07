@@ -13,6 +13,7 @@ def parse(s):
 
 
 def get_first_child(ctx: ParserRuleContext, type) -> ParserRuleContext | None:
+    """ Return the first child of the specified type (recursively) if one exists. Else return None"""
     if isinstance(ctx, type):
         return ctx
     if hasattr(ctx, "getChildren"):
@@ -112,6 +113,39 @@ Watch: A > 2 mL
         self.assertIsWatchWithCondition(watch, "A > 2 mL")  # type: ignore
         self.assertConditionValue(watch.condition(), "A", ">", "2 mL")  # type: ignore
 
+        mark = get_first_child(program, pcodeParser.MarkContext)
+        self.assertIsInstance(mark, pcodeParser.MarkContext)
+
+    def test_watch_w_inst_error_colon(self):
+        p = parse("""
+Watch:
+    Mark: A""")
+        program = p.parser.program()  # type: ignore
+        # p.printSyntaxTree(program)
+        watch = get_first_child(program, pcodeParser.WatchContext)
+        assert isinstance(watch, pcodeParser.WatchContext)
+        mark = get_first_child(program, pcodeParser.MarkContext)
+        self.assertIsInstance(mark, pcodeParser.MarkContext)
+
+    def test_watch_w_inst_error_colon_comment(self):
+        p = parse("""
+Watch: # foo
+    Mark: A""")
+        program = p.parser.program()  # type: ignore
+        # p.printSyntaxTree(program)
+        watch = get_first_child(program, pcodeParser.WatchContext)
+        assert isinstance(watch, pcodeParser.WatchContext)
+        mark = get_first_child(program, pcodeParser.MarkContext)
+        self.assertIsInstance(mark, pcodeParser.MarkContext)
+
+    def test_watch_w_inst_error_minimal(self):
+        p = parse("""
+Watch
+    Mark: A""")
+        program = p.parser.program()  # type: ignore
+        # p.printSyntaxTree(program)
+        watch = get_first_child(program, pcodeParser.WatchContext)
+        assert isinstance(watch, pcodeParser.WatchContext)
         mark = get_first_child(program, pcodeParser.MarkContext)
         self.assertIsInstance(mark, pcodeParser.MarkContext)
 

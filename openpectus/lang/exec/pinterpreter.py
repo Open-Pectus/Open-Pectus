@@ -229,7 +229,7 @@ class PInterpreter(PNodeVisitor):
                 if ar.complete:
                     self._unregister_interrupt(ar)
                     if isinstance(node, PAlarm):
-                        node.reset_state()
+                        node.reset_runtime_state()
                         ar = ActivationRecord(node)
                         self._register_interrupt(ar, self._create_interrupt_handler(node, ar))
             else:
@@ -281,7 +281,7 @@ class PInterpreter(PNodeVisitor):
 
     def stop(self):
         self.running = False
-        self._program.reset_state()
+        self._program.reset_runtime_state()
 
     def _is_awaiting_threshold(self, node: PNode):
         if isinstance(node, PInstruction) and node.time is not None:
