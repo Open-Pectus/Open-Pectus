@@ -34,22 +34,21 @@ import { ProcessPlotComponent } from './process-plot.component';
 export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
   unitId = input<string>();
   recentRunId = input<string>();
-
   protected isCollapsed = false;
   protected plotIsModified = this.store.select(ProcessPlotSelectors.plotIsModified);
-
   private processValuesQuery?: CreateQueryResult<ProcessValue[], Error>;
-  private storeFetchedProcessValues = effect(() => {
-    if(this.processValuesQuery === undefined) return;
-    const processValues = this.processValuesQuery.data();
-    if(processValues === undefined) return;
-    // setTimeout to break out of the reactive context, which for some reason causes some problems: TODO: figure out why
-    setTimeout(() => this.store.dispatch(ProcessPlotActions.processValuesFetched({processValues})));
-  });
 
   constructor(private store: Store,
               private detailsQueriesService: DetailsQueriesService,
-              private injector: Injector) {}
+              private injector: Injector) {
+    effect(() => {
+      if(this.processValuesQuery === undefined) return;
+      const processValues = this.processValuesQuery.data();
+      if(processValues === undefined) return;
+      // setTimeout to break out of the reactive context, which for some reason causes some problems: TODO: figure out why
+      setTimeout(() => this.store.dispatch(ProcessPlotActions.processValuesFetched({processValues})));
+    });
+  }
 
   ngOnInit() {
     const unitId = this.unitId();
