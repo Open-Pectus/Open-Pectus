@@ -1,9 +1,13 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { LetDirective } from '@ngrx/component';
 import { Store } from '@ngrx/store';
+import { injectQuery } from '@tanstack/angular-query-experimental';
+import { UtilMethods } from '../shared/util-methods';
 import { DetailsQueriesService } from './details-queries.service';
 import { DetailsActions } from './ngrx/details.actions';
+import { DetailsSelectors } from './ngrx/details.selectors';
 
 @Component({
   selector: 'app-recent-run-header',
@@ -30,7 +34,8 @@ import { DetailsActions } from './ngrx/details.actions';
   `,
 })
 export class RecentRunHeaderComponent {
-  protected recentRunQuery = this.detailsQueriesService.injectRecentRunQuery();
+  protected recentRunId = UtilMethods.throwIfEmpty(toSignal(this.store.select(DetailsSelectors.recentRunId)));
+  protected recentRunQuery = injectQuery(() => this.detailsQueriesService.recentRunQuery(this.recentRunId));
 
   constructor(private store: Store,
               private detailsQueriesService: DetailsQueriesService) {}

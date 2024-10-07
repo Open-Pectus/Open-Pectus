@@ -1,11 +1,15 @@
 import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
+import { injectQuery } from '@tanstack/angular-query-experimental';
 import { CommandExample } from '../../api';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
+import { UtilMethods } from '../../shared/util-methods';
 import { DetailsQueriesService } from '../details-queries.service';
 import { DetailsActions } from '../ngrx/details.actions';
+import { DetailsSelectors } from '../ngrx/details.selectors';
 import { CommandExamplesListComponent } from './command-examples-list.component';
 
 @Component({
@@ -41,8 +45,9 @@ import { CommandExamplesListComponent } from './command-examples-list.component'
 })
 export class CommandsComponent {
   protected collapsed = false;
-  protected commandExamples = this.detailsQueriesService.injectCommandExamplesQuery();
   protected chosenExample?: CommandExample;
+  private engineId = UtilMethods.throwIfEmpty(toSignal(this.store.select(DetailsSelectors.processUnitId)));
+  protected commandExamples = injectQuery(() => this.detailsQueriesService.commandExamplesQuery(this.engineId));
 
   constructor(private store: Store,
               private detailsQueriesService: DetailsQueriesService) {}

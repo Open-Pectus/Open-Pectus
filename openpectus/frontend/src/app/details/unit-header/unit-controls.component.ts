@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { LetDirective } from '@ngrx/component';
+import { injectQuery } from '@tanstack/angular-query-experimental';
 import { DetailsQueriesService } from '../details-queries.service';
 import { UnitControlButtonComponent } from './unit-control-button.component';
 
@@ -29,7 +30,9 @@ export class UnitControlsComponent {
   readonly startColor = '#047857';
   readonly pauseColor = '#ca8a04';
   readonly stopColor = '#b91c1c';
-  protected controlStateQuery = this.detailsQueriesService.injectControlStateQuery();
+  protected controlStateQuery = injectQuery(() => this.detailsQueriesService.controlStateQuery(this.engineId));
 
-  constructor(private detailsQueriesService: DetailsQueriesService) {}
+  constructor(private detailsQueriesService: DetailsQueriesService) {
+    this.detailsQueriesService.subscribeToControlStateUpdates(this.engineId);
+  }
 }

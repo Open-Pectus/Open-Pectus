@@ -1,10 +1,15 @@
 import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { DomSanitizer } from '@angular/platform-browser';
 import { PushPipe } from '@ngrx/component';
+import { Store } from '@ngrx/store';
+import { injectQuery } from '@tanstack/angular-query-experimental';
 import { CollapsibleElementComponent } from '../shared/collapsible-element.component';
 import { ProcessValuePipe } from '../shared/pipes/process-value.pipe';
+import { UtilMethods } from '../shared/util-methods';
 import { DetailsQueriesService } from './details-queries.service';
+import { DetailsSelectors } from './ngrx/details.selectors';
 
 @Component({
   selector: 'app-process-diagram',
@@ -29,9 +34,10 @@ import { DetailsQueriesService } from './details-queries.service';
   `,
 })
 export class ProcessDiagramComponent {
-  processDiagramQuery = this.detailsQueriesService.injectProcessDiagramQuery();
   protected collapsed = false;
-  private processValuesQuery = this.detailsQueriesService.injectProcessValuesQuery();
+  private engineId = UtilMethods.throwIfEmpty(toSignal(this.store.select(DetailsSelectors.processUnitId)));
+  processDiagramQuery = injectQuery(() => this.detailsQueriesService.processDiagramQuery(this.engineId));
+  private processValuesQuery = injectQuery(() => this.detailsQueriesService.processValuesQuery(this.engineId));
   diagramWithValues = computed(() => {
     return this.domSanitizer.bypassSecurityTrustHtml(
       this.processDiagramQuery.data()?.svg?.replaceAll(/{{(?<inCurlyBraces>[^}]+)}}/g,
@@ -53,7 +59,8 @@ export class ProcessDiagramComponent {
         }) ?? '');
   });
 
-  constructor(private domSanitizer: DomSanitizer,
+  constructor(private store: Store,
+              private domSanitizer: DomSanitizer,
               private processValuePipe: ProcessValuePipe,
               private detailsQueriesService: DetailsQueriesService) {}
 }

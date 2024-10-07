@@ -1,8 +1,8 @@
 import { NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, effect, Injector, input, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, Injector, input, OnDestroy, OnInit, signal } from '@angular/core';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
-import { CreateQueryResult } from '@tanstack/angular-query-experimental';
+import { CreateQueryResult, injectQuery } from '@tanstack/angular-query-experimental';
 import { ProcessValue } from '../../api';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { DetailsQueriesService } from '../details-queries.service';
@@ -55,7 +55,7 @@ export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
     const unitId = this.unitId();
     if(unitId !== undefined) {
       this.store.dispatch(ProcessPlotActions.processPlotComponentInitializedForUnit({unitId}));
-      this.processValuesQuery = this.detailsQueriesService.injectProcessValuesQuery(this.injector);
+      this.processValuesQuery = injectQuery(() => this.detailsQueriesService.processValuesQuery(signal(unitId)), this.injector);
     }
     const recentRunId = this.recentRunId();
     if(recentRunId !== undefined) {

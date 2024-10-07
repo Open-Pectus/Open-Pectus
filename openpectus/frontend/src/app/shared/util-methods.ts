@@ -39,8 +39,9 @@ export class UtilMethods {
 
   static throwIfEmpty<T>(signal: Signal<T | undefined | null>): Signal<T> {
     return computed(() => {
-      if(signal() === undefined || signal() === null) throw Error('A signal was unexpectedly null or undefined');
-      return signal()!;
+      const signalValue = signal()
+      if(signalValue === undefined || signalValue === null) throw Error('A signal was unexpectedly null or undefined');
+      return signalValue;
     });
   }
 }

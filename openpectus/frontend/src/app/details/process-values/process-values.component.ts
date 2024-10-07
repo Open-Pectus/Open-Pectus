@@ -1,7 +1,9 @@
 import { NgFor, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
+import { injectQuery } from '@tanstack/angular-query-experimental';
 import { ProcessValueCommand } from '../../api';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { ToggleButtonComponent } from '../../shared/toggle-button.component';
@@ -48,10 +50,11 @@ import { ProcessValuesCategorizedComponent } from './process-values-categorized.
 })
 export class ProcessValuesComponent implements OnInit, OnDestroy {
   protected allProcessValues = this.store.select(DetailsSelectors.allProcessValues);
-  protected processValues = this.detailsQueriesService.injectProcessValuesQuery();
   protected showCommands = false;
   protected pvAndPositionForPopover?: PvAndPosition;
   protected collapsed = false;
+  private engineId = UtilMethods.throwIfEmpty(toSignal(this.store.select(DetailsSelectors.processUnitId)));
+  protected processValues = injectQuery(() => this.detailsQueriesService.processValuesQuery(this.engineId));
 
   constructor(private store: Store,
               private detailsQueriesService: DetailsQueriesService) {}
