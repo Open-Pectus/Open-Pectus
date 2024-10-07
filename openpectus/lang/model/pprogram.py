@@ -58,6 +58,13 @@ class PNode():
         return None
 
     @property
+    def instruction_name(self) -> str | None:
+        """ Name to query for in tests. Return None to not support querying.
+
+        Should not include arguments because their formatting may not be predictable. """
+        return None
+
+    @property
     def depth(self):
         if self.parent is None:
             return 0
@@ -187,6 +194,10 @@ class PBlock(PInstruction):
     def runlog_name(self) -> str | None:
         return "Block: " + self.name
 
+    @property
+    def instruction_name(self) -> str | None:
+        return "Block"
+
 
 class PEndBlock(PInstruction):
     """ Represents an End block intruction. """
@@ -197,6 +208,10 @@ class PEndBlock(PInstruction):
     def runlog_name(self) -> str | None:
         return "End block"
 
+    @property
+    def instruction_name(self) -> str | None:
+        return "End block"
+
 
 class PEndBlocks(PInstruction):
     """ Represents an End blocks intruction. """
@@ -205,6 +220,10 @@ class PEndBlocks(PInstruction):
 
     @property
     def runlog_name(self) -> str | None:
+        return "End blocks"
+
+    @property
+    def instruction_name(self) -> str | None:
         return "End blocks"
 
 
@@ -227,6 +246,10 @@ class PWatch(PInstruction):
     @property
     def runlog_name(self) -> str | None:
         return "Watch: " + self.condition_str
+
+    @property
+    def instruction_name(self) -> str | None:
+        return "Watch"
 
     def reset_state(self):
         self.activated = False
@@ -253,6 +276,10 @@ class PAlarm(PInstruction):
     def runlog_name(self) -> str | None:
         return "Alarm: " + self.condition_str
 
+    @property
+    def instruction_name(self) -> str | None:
+        return "Alarm"
+
     def reset_state(self):
         self.activated = False
 
@@ -272,9 +299,12 @@ class PMark(PInstruction):
     def runlog_name(self) -> str | None:
         return "Mark: " + self.name
 
+    @property
+    def instruction_name(self) -> str | None:
+        return "Mark"
 
 class PCommand(PInstruction):
-    """ Represents a Command instruction. """
+    """ Represents a Command instruction (Start, Stop, Restart, ...). """
     def __init__(self, parent: PNode) -> None:
         super().__init__(parent)
 
@@ -288,6 +318,9 @@ class PCommand(PInstruction):
     def runlog_name(self) -> str | None:
         return self.name
 
+    @property
+    def instruction_name(self) -> str | None:
+        return self.name
 
 class PCommandWithDuration(PInstruction):
     """ Represents a Command instruction with a possible duration (Pause, Hold and Wait). """
@@ -305,6 +338,11 @@ class PCommandWithDuration(PInstruction):
 
     @property
     def runlog_name(self) -> str | None:
+        runlog_argument = "" if self.duration is None else ": " + self.duration.runlog_argument
+        return self.name + runlog_argument
+
+    @property
+    def instruction_name(self) -> str | None:
         return self.name
 
 
@@ -374,3 +412,15 @@ class PDuration:
 
     def __str__(self) -> str:
         return f"Duration {self.time} {self.unit}"
+
+    @property
+    def runlog_argument(self):
+        if self.error:
+            return "(error)"
+        else:
+            if self.time is None:
+                return ""
+            elif self.unit is None:
+                return f"{self.time}"
+            else:
+                return f"{self.time}{self.unit}"
