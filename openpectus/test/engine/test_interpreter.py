@@ -3,13 +3,16 @@ import time
 import unittest
 
 import pint
-from openpectus.engine.engine import Engine
+from openpectus.engine.engine import Engine, EngineTiming
 from openpectus.engine.models import EngineCommandEnum
+from openpectus.lang.exec.analyzer import ConditionEnrichAnalyzer
+from openpectus.lang.exec.clock import WallClock
 from openpectus.lang.exec.pinterpreter import PInterpreter
 from openpectus.lang.exec.tags import Tag, SystemTagName
+from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
 from openpectus.lang.grammar.pprogramformatter import print_parsed_program as print_program
-from openpectus.lang.model.pprogram import PProgram
+from openpectus.lang.model.pprogram import PCondition, PNode, PProgram, PWatch
 from openpectus.test.engine.utility_methods import (
     continue_engine, run_engine, build_program,
     configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging,
@@ -53,7 +56,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
 def create_engine(uod: UnitOperationDefinitionBase | None = None) -> Engine:
     if uod is None:
         uod = create_test_uod()
-    e = Engine(uod)
+    e = Engine(uod, EngineTiming(WallClock(), NullTimer(), 0.1, 1.0))
     e._configure()
     return e
 
@@ -172,6 +175,27 @@ Watch: counter > 0
         # even though it is not activated when first run. This represents the
         # interrupt nature of watches and alarms. So the behavior is not like this:
         # self.assertEqual(["a", "c", "d"], i.get_marks())
+
+
+# --- Conditions ---
+
+
+    def test_evaluate(self):
+        self.engine.interpreter.context.tags.add(Tag("X", value=9, unit="%"))
+
+        parent = PNode(None)
+        c = PWatch(parent)
+        c.condition = PCondition("X > 10%")
+        c.condition.lhs = "X"
+        c.condition.op = ">"
+        c.condition.rhs = "10%"
+        # TODO get rid of enrich analyzers - they are really just in the way
+        an = ConditionEnrichAnalyzer()
+        an.enrich_condition(c)
+        result = self.engine.interpreter._evaluate_condition(c)
+        self.assertEqual(result, False)
+
+
 
     def test_watch_nested(self):
         program = """

@@ -2,18 +2,10 @@ from __future__ import annotations
 
 from enum import StrEnum, auto
 import time
-from typing import Any, Iterable, Set
-
-import pint
-from pint import UnitRegistry, Quantity
-from pint.facets.plain import PlainQuantity
+from typing import Any, Callable, Iterable, Set
 
 from openpectus.lang.exec.tag_lifetime import TagLifetime
-
-ureg = UnitRegistry(cache_folder="./pint-cache")
-Q_ = Quantity
-
-QuantityType = pint.Quantity | PlainQuantity[Any]
+from openpectus.lang.exec.units import is_supported_unit
 
 
 # Represents tag API towards interpreter
@@ -44,57 +36,11 @@ class SystemTagName(StrEnum):
         return value in SystemTagName.__members__.values()
 
 
-# Define the dimensions and units we want to use and the conversions we want to provide.
-# Pint has way too many built in to be usable for this and this is simpler than customizing it
-TAG_UNITS = {
-    'length': ['m', 'cm'],
-    '[mass]': ['kg', 'g'],
-    '[time]': ['s', 'min', 'h', 'ms'],
-    'flow': ['L/h', 'L/min', 'L/d'],  # Pint parses L/m as liter/meter
-    'volume': ['L', 'mL'],
-}
-
-TAG_UNIT_DIMS = {
-    'liter / hour': 'flow'
-}
-
-# These units are not stored as a tag unit but as a tag value in the Base tag,
-# so they need special treatment.
-# Note that this list is a total static list. The actual valid units depend on the
-# totalizers that are defined in the uod.
-BASE_VALID_UNITS = ['L', 'h', 'min', 's', 'mL', 'CV', 'g', 'kg']
-
-
-def _get_compatible_unit_names(tag: Tag):
-    # TODO define the difference between None and [""]
-    if tag.unit is None:
-        return [""]
-
-    pu = tag.get_pint_unit()
-    if pu is None:
-        return [""]
-    elif pu.dimensionless:
-        return [""]
-    else:
-        dims = pu.dimensionality
-        if len(dims) == 1:
-            unit_names = TAG_UNITS.get(str(dims))
-            if unit_names is None:
-                raise NotImplementedError(f"Unit {pu} with dimensionality {dims} has no defined compatible units")
-            else:
-                return unit_names
-        else:
-            dim_name = TAG_UNIT_DIMS.get(str(pu))
-            if dim_name is None:
-                raise NotImplementedError(f"Unit {pu} has no defined compatible units")
-            unit_names = TAG_UNITS.get(dim_name)
-            if unit_names is None:
-                raise NotImplementedError(f"Unit {pu} has no defined compatible units for dimension {dim_name}")
-            return unit_names
-
-
 TagValueType = int | float | str | None
 """ Represents the types of tag values """
+
+TagFormatFunction = Callable[[Any], str]
+""" Represents a function that is used to format tag values for display """
 
 
 class ChangeListener():
@@ -174,12 +120,16 @@ class Tag(ChangeSubject, TagLifetime):
             unit: str | None = None,
             direction: TagDirection = TagDirection.NA,
             safe_value: TagValueType | Unset = Unset(),
+            format_fn: TagFormatFunction | None = None
             ) -> None:
 
         super().__init__()
 
-        if unit is not None and not isinstance(unit, str):
-            raise ValueError("unit must be None or a string")
+        if unit is not None:
+            if not isinstance(unit, str):
+                raise ValueError("unit must be None or a string")
+            elif not is_supported_unit(unit):
+                raise ValueError(f"Invalid unit '{unit}'")
 
         self.name: str = name
         self.tick_time = tick_time or time.time()
@@ -188,10 +138,12 @@ class Tag(ChangeSubject, TagLifetime):
         self.choices: list[str] | None = None
         self.direction: TagDirection = direction
         self.safe_value: TagValueType | Unset = safe_value
+        self.format_fn = format_fn
 
     def as_readonly(self) -> TagValue:
         """ Convert the value to a readonly and immutable TagValue instance """
-        return TagValue(self.name, self.tick_time, self.value, self.unit, self.direction)
+        value_formatted = None if self.format_fn is None else self.format_fn(self.get_value())
+        return TagValue(self.name, self.tick_time, self.value, value_formatted, self.unit, self.direction)
 
     def set_value(self, val: TagValueType, tick_time: float) -> None:
         if val != self.value:
@@ -202,17 +154,6 @@ class Tag(ChangeSubject, TagLifetime):
     def get_value(self):
         return self.value
 
-    def get_pint_unit(self) -> pint.Unit | None:
-        if self.unit is None:
-            return None
-        return pint.Unit(self.unit)
-
-    def get_compatible_units(self):
-        return _get_compatible_unit_names(self)
-
-    def as_quantity(self) -> pint.Quantity:
-        return pint.Quantity(self.value, self.unit)  # type: ignore
-
     def as_number(self) -> int | float:
         if not isinstance(self.value, (int, float)):
             raise ValueError(f"Value is not numerical: '{self.value}' has type '{type(self. value).__name__}'")
@@ -222,10 +163,6 @@ class Tag(ChangeSubject, TagLifetime):
         if not isinstance(self.value, (float)):
             raise ValueError(f"Value is not a float: '{self.value}' has type '{type(self. value).__name__}'")
         return self.value
-
-    def set_quantity(self, q: QuantityType, tick_time: float):
-        self.unit = None if q.dimensionless else str(q.units)
-        self.set_value(q.magnitude, tick_time)
 
     def archive(self) -> str | None:
         """ The value to write to archive or None to skip that tag from archival """
@@ -321,7 +258,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
             (SystemTagName.BLOCK, None, None),
             (SystemTagName.BLOCK_TIME, 0.0, "s"),
             (SystemTagName.PROCESS_TIME, 0.0, "s"),
-            (SystemTagName.RUN_TIME, 0.0, "second"),
+            (SystemTagName.RUN_TIME, 0.0, "s"),
             (SystemTagName.CLOCK, 0.0, "s"),
             (SystemTagName.SYSTEM_STATE, "Stopped", None),
             (SystemTagName.METHOD_STATUS, "OK", None),
@@ -339,8 +276,9 @@ class TagValue():
     def __init__(
             self,
             name: str,
-            tick_time: float | None = None,
+            tick_time: float = 0.0,
             value: TagValueType = None,
+            value_formatted: str | None = None,
             unit: str | None = None,
             direction: TagDirection = TagDirection.UNSPECIFIED,
     ):
@@ -350,6 +288,7 @@ class TagValue():
         self.name = name
         self.tick_time = tick_time
         self.value = value
+        self.value_formatted = value_formatted
         self.unit = unit
         self.direction = direction
 

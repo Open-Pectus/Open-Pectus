@@ -1,11 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { CommandExample } from '../../api/models/CommandExample';
-import { ControlState } from '../../api/models/ControlState';
-import { ErrorLog } from '../../api/models/ErrorLog';
-import { ProcessDiagram } from '../../api/models/ProcessDiagram';
-import { ProcessValue } from '../../api/models/ProcessValue';
-import { RecentRun } from '../../api/models/RecentRun';
+import { CommandExample, ControlState, ErrorLog, ProcessDiagram, ProcessValue, RecentRun } from '../../api';
 import { DetailsActions } from './details.actions';
 
 export interface DetailsState {

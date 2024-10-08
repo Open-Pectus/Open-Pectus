@@ -29,6 +29,7 @@ class PGrammar:
         program = listener.get_program()
         if not skip_enrich_analyzers:
             EnrichAnalyzer().analyze(program)
+        program.collect_errors()
         return program
 
     @property

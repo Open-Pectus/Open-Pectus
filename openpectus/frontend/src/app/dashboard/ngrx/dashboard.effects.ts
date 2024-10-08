@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { map, switchMap } from 'rxjs';
-import { RecentRunsService } from '../../api/services/RecentRunsService';
+import { RecentRunsService } from '../../api';
 import { DashboardActions } from './dashboard.actions';
 
 @Injectable()

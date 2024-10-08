@@ -1,6 +1,5 @@
 import { ScaleLinear } from 'd3';
-import { PlotConfiguration } from '../../api/models/PlotConfiguration';
-import { PlotLog } from '../../api/models/PlotLog';
+import { PlotConfiguration, PlotLog } from '../../api';
 import { Annotation, D3Selection } from './process-plot.types';
 
 export class ProcessPlotAnnotations {

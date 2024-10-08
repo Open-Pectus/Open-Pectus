@@ -85,13 +85,17 @@ def create_commands(tag: Mdl.TagValue, reading: Mdl.ReadingInfo) -> list[Dto.Pro
             )
 
             if is_string:
-                assert isinstance(tag.value, str)
+                assert isinstance(tag.value, str), \
+                    f"Error in uod. Cannot set command value type to 'str' when current tag value is '{tag.value}' " + \
+                    f"of type '{type(tag.value)}'"
                 command.value = Dto.ProcessValueCommandFreeTextValue(
                     value=tag.value,
                     value_type=Dto.ProcessValueType.STRING
                 )
             elif is_float:
-                assert isinstance(tag.value, float)
+                assert isinstance(tag.value, float), \
+                    f"Error in uod. Cannot set command value type to 'float' when current tag value is '{tag.value}' " + \
+                    f"of type '{type(tag.value)}'"
                 command.value = Dto.ProcessValueCommandNumberValue(
                     value=tag.value,
                     value_type=Dto.ProcessValueType.FLOAT,
@@ -99,7 +103,9 @@ def create_commands(tag: Mdl.TagValue, reading: Mdl.ReadingInfo) -> list[Dto.Pro
                     valid_value_units=reading.valid_value_units
                 )
             elif is_int:
-                assert isinstance(tag.value, int)
+                assert isinstance(tag.value, int), \
+                    f"Error in uod. Cannot set command value type to 'int' when current tag value is '{tag.value}' " + \
+                    f"of type '{type(tag.value)}'"
                 command.value = Dto.ProcessValueCommandNumberValue(
                     value=tag.value,
                     value_type=Dto.ProcessValueType.INT,
@@ -107,7 +113,7 @@ def create_commands(tag: Mdl.TagValue, reading: Mdl.ReadingInfo) -> list[Dto.Pro
                     valid_value_units=reading.valid_value_units
                 )
             else:
-                raise ValueError("Internal error. Failed to determine entry_data_type")
+                raise ValueError(f"Internal error. Failed to determine entry_data_type for tag '{tag.name}'")
 
         elif reading.discriminator == "reading_with_choice":
             current_value = str(tag.value)

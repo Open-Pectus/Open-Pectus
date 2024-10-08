@@ -1,7 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { Method } from '../../../api/models/Method';
-import { MethodState } from '../../../api/models/MethodState';
+import { Method, MethodState } from '../../../api';
 import { UtilMethods } from '../../../shared/util-methods';
 import { MethodEditorActions } from './method-editor.actions';
 

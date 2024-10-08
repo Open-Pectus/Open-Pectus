@@ -1,6 +1,7 @@
 import logging
 from typing import Protocol
 
+import openpectus.sentry as sentry
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.messages as M
 from openpectus.engine.engine import Engine
@@ -27,16 +28,21 @@ class EngineMessageHandlers():
         logger.info("Incomming set_method command from aggregator")
         try:
             self.engine.set_method(msg.method)
+            sentry.engine_method_set(msg.method.as_pcode())
             return AM.SuccessMessage()
         except Exception as ex:
-            logger.error("Error setting method: {ex}")
+            logger.error("Failed to set method")
             return AM.ErrorMessage(message="Failed to set method", exception_message=str(ex))
 
     async def handle_invokeCommandMsg(self, msg: AM.AggregatorMessage) -> M.MessageBase:
         assert isinstance(msg, AM.InvokeCommandMsg)
         logger.info(f"Incomming command from aggregator: {msg.name}")
-        self.engine.schedule_execution_user(name=msg.name, args=msg.arguments)
-        return AM.SuccessMessage()
+        try:
+            self.engine.schedule_execution_user(name=msg.name, args=msg.arguments)
+            return AM.SuccessMessage()
+        except Exception:
+            logger.error(f"The command '{msg.name}' could not be scheduled")
+            return AM.ErrorMessage(message=f"The command '{msg.name}' could not be scheduled")
 
     async def handle_injectCodeMsg(self, msg: AM.AggregatorMessage) -> M.MessageBase:
         assert isinstance(msg, AM.InjectCodeMsg)
@@ -44,6 +50,6 @@ class EngineMessageHandlers():
         try:
             self.engine.inject_code(msg.pcode)
             return AM.SuccessMessage()
-        except Exception as ex:
-            logger.error(f"Error injecting code: {ex}")
+        except Exception:
+            logger.error("Code injection failed")
             return AM.ErrorMessage(message="The code could not be injected")

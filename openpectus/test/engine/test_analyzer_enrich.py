@@ -159,6 +159,11 @@ class DurationEnrichAnalyzerTest(unittest.TestCase):
 
         analyzer.visit(program)
 
-        self.assertEqual(pause.duration.time, 3.14)
+        # Note: Changed in #437. Cannot see how duration could ever be valid without a unit
+        # self.assertEqual(pause.duration.time, 3.14)
+        # self.assertEqual(pause.duration.unit, None)
+        # self.assertEqual(pause.duration.error, False)
+        self.assertEqual(pause.duration.duration_str, "3.14")
+        self.assertEqual(pause.duration.time, None)
         self.assertEqual(pause.duration.unit, None)
-        self.assertEqual(pause.duration.error, False)
+        self.assertEqual(pause.duration.error, True)

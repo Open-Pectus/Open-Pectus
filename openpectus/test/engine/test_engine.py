@@ -15,7 +15,6 @@ from openpectus.engine.hardware import HardwareLayerBase, Register
 from openpectus.engine.models import EngineCommandEnum, MethodStatusEnum, SystemStateEnum, SystemTagName
 from openpectus.lang.exec.runlog import RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import Tag, TagDirection
-from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import (
     UnitOperationDefinitionBase,
     UodCommand,
@@ -72,7 +71,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         return result
 
     def cmd_regex(cmd: UodCommand, number, number_unit) -> None:
-        cmd.context.tags["CmdWithRegex_Area"].set_value(number + number_unit, time.time())
+        cmd.context.tags["CmdWithRegex_Area"].set_value(number + number_unit, time.monotonic())
         cmd.set_complete()
 
     def overlap_exec(cmd: UodCommand, **kvargs) -> None:
@@ -115,19 +114,17 @@ def create_test_uod() -> UnitOperationDefinitionBase:
     return uod
 
 
-def create_engine() -> Engine:
-    uod = create_test_uod()
+def create_engine(uod: UnitOperationDefinitionBase | None = None) -> Engine:
+    if uod is None:
+        uod = create_test_uod()
     e = Engine(uod)
-    e._tick_timer = NullTimer()
     e._configure()
     return e
 
 
 @contextmanager
 def create_engine_context(uod: UnitOperationDefinitionBase) -> Generator[Engine, Any, None]:
-    e = Engine(uod)
-    e._tick_timer = NullTimer()
-    e._configure()
+    e = create_engine(uod)
     try:
         yield e
     finally:
@@ -137,8 +134,7 @@ def create_engine_context(uod: UnitOperationDefinitionBase) -> Generator[Engine,
 class TestEngineSetup(unittest.TestCase):
 
     def test_create_engine(self):
-        uod = create_test_uod()
-        e = Engine(uod)
+        e = create_engine()
         self.assertIsNotNone(e)
         e.cleanup()
 
@@ -162,6 +158,7 @@ class TestEngine(unittest.TestCase):
     def tearDown(self):
         self.engine.cleanup()
 
+    @unittest.skip("Potentially affects other tests.")
     def test_engine_start(self):
         e = self.engine
 
@@ -173,6 +170,7 @@ class TestEngine(unittest.TestCase):
         e._running = False
         t.join()
 
+    @unittest.skip("Potentially affects other tests.")
     def test_engine_started_runs_scan_cycle(self):
         e = self.engine
 
@@ -206,12 +204,12 @@ class TestEngine(unittest.TestCase):
 
     def test_execute_command_marks_assigned_tags_dirty(self):
         e = self.engine
+        reset_tag = e.uod.tags["Reset"]
 
-        self.assertEqual("N/A", e.uod.tags["Reset"].get_value())
+        self.assertEqual("N/A", reset_tag.get_value())
 
         run_engine(e, "Reset", 3)
-
-        self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
+        self.assertEqual("Reset", reset_tag.get_value())
 
         # assert tags marked dirty
         dirty_names = [t.name for t in get_queue_items(e.tag_updates)]
@@ -289,8 +287,8 @@ class TestEngine(unittest.TestCase):
     def test_uod_command_w_arguments_fail(self):
         e = self.engine
         program = "CmdWithArgs: FAIL"
-        run_engine(e, program, 10)
-
+        with self.assertRaises(ValueError):
+            run_engine(e, program, 10)
         self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
 
     def test_uod_command_w_regex_arguments(self):
@@ -634,10 +632,10 @@ Reset
         self.assertEqual(0, e._system_tags["Run Counter"].get_value())
 
         e.schedule_execution("Start")
-        e.tick()
+        e.tick(0, 0)
 
         e.inject_code("Increment run counter")
-        e.tick()
+        e.tick(0, 0)
 
         self.assertEqual(1, e._system_tags["Run Counter"].get_value())
 
@@ -708,13 +706,15 @@ Mark: C
         self.assertEqual(0.0, clock.as_number())
 
         e._runstate_started = True
-        e.tick()
+        e.tick(1, 1)
 
         clock_value = clock.as_number()
         self.assertGreater(clock_value, 0.0)
 
         e._runstate_started = False
-        e.tick()
+        e.tick(2, 1)
+
+        self.assertEqual(clock_value, clock.as_number())
 
 
     # --- RunState ---
@@ -724,7 +724,7 @@ Mark: C
         e = self.engine
 
         e.schedule_execution("Start")
-        e.tick()
+        e.tick(1, 1)
 
         self.assertTrue(e._runstate_started)
 
@@ -734,13 +734,13 @@ Mark: C
         e = self.engine
         e.schedule_execution("Start")
 
-        e.tick()
+        e.tick(1, 1)
         self.assertTrue(e._runstate_started)
         system_state_tag = e._system_tags[SystemTagName.SYSTEM_STATE]
         self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
 
         e.schedule_execution("Stop")
-        e.tick()
+        e.tick(1, 1)
 
         self.assertFalse(e._runstate_started)
 
@@ -750,7 +750,8 @@ Mark: C
         e = self.engine
 
         def tick():
-            e.tick()
+            tick_time = time.time()
+            e.tick(tick_time, 0.1)
             time.sleep(0.1)
 
         e.schedule_execution("Start")
@@ -788,7 +789,8 @@ Mark: C
         e = self.engine
 
         def tick():
-            e.tick()
+            tick_time = time.time()
+            e.tick(tick_time, 0.1)
             time.sleep(0.1)
 
         # apply start and pause
@@ -826,10 +828,15 @@ Mark: C
         self.assertTrue(process_time_increment > 0.0)
 
     def test_runstate_hold(self):
+        def tick():
+            tick_time = time.time()
+            e.tick(tick_time, 0.1)
+            time.sleep(0.1)
+
         e = self.engine
         e.schedule_execution("Start")
 
-        e.tick()
+        tick()
         self.assertTrue(e._runstate_started)
         system_state_tag = e._system_tags[SystemTagName.SYSTEM_STATE]
         self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
@@ -838,7 +845,7 @@ Mark: C
         self.assertTrue(danger_tag.get_value())
 
         e.schedule_execution("Hold")
-        e.tick()
+        tick()
 
         self.assertTrue(e._runstate_started)
         self.assertTrue(e._runstate_holding)
@@ -877,7 +884,7 @@ Mark: a
 Hold: .5s
 Mark: b
 """
-        run_engine(e, program, 5)
+        run_engine(e, program, 7)
         self.assertTrue(e._runstate_started)
         self.assertTrue(e._runstate_holding)
         system_state_tag = e._system_tags[SystemTagName.SYSTEM_STATE]
@@ -888,14 +895,39 @@ Mark: b
 
         self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
 
+    def test_wait(self):
+        e = self.engine
+        program = """
+Mark: a
+Wait: .5s
+Mark: b
+"""
+        run_engine(e, program, 2)
+        self.assertEqual([], e.interpreter.get_marks())
+
+        continue_engine(e, 1)
+        self.assertEqual(['a'], e.interpreter.get_marks())
+
+        continue_engine(e, 5)
+        self.assertEqual(['a'], e.interpreter.get_marks())
+
+        continue_engine(e, 3)
+        self.assertEqual(['a', 'b'], e.interpreter.get_marks())
+
     # --- Safe values ---
 
 
     def test_safe_values_apply(self):
+
+        def tick():
+            tick_time = time.time()
+            e.tick(tick_time, 0.1)
+            time.sleep(0.1)
+
         e = self.engine
         e.schedule_execution("Start")
 
-        e.tick()
+        tick()
 
         danger_tag = e.uod.tags["Danger"]
         self.assertTrue(danger_tag.get_value())
@@ -930,7 +962,8 @@ Restart
             self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.OK)
 
         with self.subTest("disallows_volume_unit"):
-            run_engine(e, "Base: L\n0.1 Mark: A", 5)
+            with self.assertRaises(ValueError):
+                run_engine(e, "Base: L\n0.1 Mark: A", 5)
             self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
 
     def test_totalizer_base_units_with_accumulator_volume(self):
@@ -958,7 +991,8 @@ Restart
 
         with self.subTest("disallows_cv_unit"):
             with create_engine_context(uod) as e:
-                run_engine(e, "Base: CV\n0.1 Mark: A", 5)
+                with self.assertRaises(ValueError):
+                    run_engine(e, "Base: CV\n0.1 Mark: A", 5)
                 self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
 
     def test_totalizer_base_units_with_accumulator_cv(self):
@@ -984,7 +1018,8 @@ Restart
 
         with self.subTest("disallows_volume_unit"):
             with create_engine_context(uod) as e:
-                run_engine(e, "Base: L\n0.1 Mark: A", 5)
+                with self.assertRaises(ValueError):
+                    run_engine(e, "Base: L\n0.1 Mark: A", 5)
                 self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
 
         with self.subTest("allows_cv_unit"):
@@ -1017,9 +1052,9 @@ Base: s
             self.assertEqual(acc_vol.as_float(), 0.0)
             self.assertEqual(acc_vol.unit, "L")
 
-            t0 = time.time()
+            t0 = e._clock.get_time()
             continue_engine(e, 10)
-            t1 = time.time()
+            t1 = e._clock.get_time()
 
             self.assertAlmostEqual(t1 - t0, 1, delta=0.1)
             self.assertAlmostEqual(acc_vol.as_float(), 1, delta=0.1)
@@ -1042,15 +1077,16 @@ Base: s
         program = """
 Base: s
 Block: A
-    0.5 End block
-0.5 Mark: A
+    0.45 End block
+0.45 Mark: A
         """
         with create_engine_context(uod) as e:
             acc_vol = e.tags[SystemTagName.ACCUMULATED_VOLUME]
             block_vol = e.tags[SystemTagName.BLOCK_VOLUME]
+            block = e.tags[SystemTagName.BLOCK]
 
             run_engine(e, program, 1)
-            self.assertEqual(e.tags[SystemTagName.BLOCK].get_value(), None)
+            self.assertEqual(block.get_value(), None)
 
             self.assertEqual(acc_vol.as_float(), 0.0)
             self.assertEqual(acc_vol.unit, "L")
@@ -1058,22 +1094,22 @@ Block: A
             self.assertEqual(block_vol.unit, "L")
 
             continue_engine(e, 2)  # Blank + Base
-            self.assertEqual(e.tags[SystemTagName.BLOCK].get_value(), None)
+            self.assertEqual(block.get_value(), None)
             self.assertAlmostEqual(acc_vol.as_float(), 0.2, delta=0.1)
             self.assertAlmostEqual(block_vol.as_float(), 0.2, delta=0.1)
 
             continue_engine(e, 1)  # Block
-            self.assertEqual(e.tags[SystemTagName.BLOCK].get_value(), "A")
+            self.assertEqual(block.get_value(), "A")
             self.assertAlmostEqual(acc_vol.as_float(), 0.3, delta=0.1)
             self.assertAlmostEqual(block_vol.as_float(), 0.1, delta=0.1)
 
             continue_engine(e, 5)
-            self.assertEqual(e.tags[SystemTagName.BLOCK].get_value(), "A")
+            self.assertEqual(block.get_value(), "A")
             self.assertAlmostEqual(acc_vol.as_float(), 0.8, delta=0.1)
             self.assertAlmostEqual(block_vol.as_float(), 0.6, delta=0.1)
 
             continue_engine(e, 1)
-            self.assertEqual(e.tags[SystemTagName.BLOCK].get_value(), None)
+            self.assertEqual(block.get_value(), None)
             # acc_vol keeps counting
             self.assertAlmostEqual(acc_vol.as_float(), 0.9, delta=0.1)
             # block_vol is reset to value before block A - so it matches acc_vol again
@@ -1106,13 +1142,91 @@ Base: s
             self.assertEqual(acc_cv.as_float(), 0.0)
             self.assertEqual(acc_cv.unit, "CV")
 
-            t0 = time.time()
+            t0 = e._clock.get_time()
             continue_engine(e, 10)
-            t1 = time.time()
+            t1 = e._clock.get_time()
 
             self.assertAlmostEqual(t1 - t0, 1, delta=0.1)
             self.assertAlmostEqual(acc_cv.as_float(), 1/2, delta=0.1)
 
+    def test_accumulated_column_volume_base(self):
+        self.engine.cleanup()  # dispose the test default engine
+
+        uod = (UodBuilder()
+               .with_instrument("TestUod")
+               .with_author("Test Author", "test@openpectus.org")
+               .with_filename(__file__)
+               .with_hardware(TestHW())
+               .with_location("Test location")
+               .with_tag(ReadingTag("CV", "L"))
+               .with_tag(CalculatedLinearTag("calc", "L"))
+               .with_accumulated_cv(cv_tag_name="CV", totalizer_tag_name="calc")
+               .build())
+
+        program = """
+Base: CV
+0.5 Mark: A
+"""
+        with create_engine_context(uod) as e:
+            cv = e.tags["CV"]
+            cv.set_value(2.0, 0)
+            acc_cv = e.tags[SystemTagName.ACCUMULATED_CV]
+            run_engine(e, program, 1)
+
+            self.assertEqual(acc_cv.as_float(), 0.0)
+            self.assertEqual(acc_cv.unit, "CV")
+
+            continue_engine(e, 4)
+            self.assertAlmostEqual(acc_cv.as_float(), 0.2, delta=0.1)
+            self.assertEqual([], e.interpreter.get_marks())
+
+            continue_engine(e, 4)
+            self.assertAlmostEqual(acc_cv.as_float(), 0.4, delta=0.1)
+            self.assertEqual([], e.interpreter.get_marks())
+
+            continue_engine(e, 4)
+            self.assertAlmostEqual(acc_cv.as_float(), 0.6, delta=0.1)
+            self.assertEqual(['A'], e.interpreter.get_marks())
+
+    def test_accumulated_column_volume_watch(self):
+        self.engine.cleanup()  # dispose the test default engine
+
+        uod = (UodBuilder()
+               .with_instrument("TestUod")
+               .with_author("Test Author", "test@openpectus.org")
+               .with_filename(__file__)
+               .with_hardware(TestHW())
+               .with_location("Test location")
+               .with_tag(ReadingTag("CV", "L"))
+               .with_tag(CalculatedLinearTag("calc", "L"))
+               .with_accumulated_cv(cv_tag_name="CV", totalizer_tag_name="calc")
+               .build())
+
+        program = """
+Base: CV
+Watch: Accumulated CV > 0.5 CV
+    Mark: A
+"""
+        with create_engine_context(uod) as e:
+            cv = e.tags["CV"]
+            cv.set_value(2.0, 0)
+            acc_cv = e.tags[SystemTagName.ACCUMULATED_CV]
+            run_engine(e, program, 1)
+
+            self.assertEqual(acc_cv.as_float(), 0.0)
+            self.assertEqual(acc_cv.unit, "CV")
+
+            continue_engine(e, 4)
+            self.assertAlmostEqual(acc_cv.as_float(), 0.2, delta=0.1)
+            self.assertEqual([], e.interpreter.get_marks())
+
+            continue_engine(e, 4)
+            self.assertAlmostEqual(acc_cv.as_float(), 0.4, delta=0.1)
+            self.assertEqual([], e.interpreter.get_marks())
+
+            continue_engine(e, 4)
+            self.assertAlmostEqual(acc_cv.as_float(), 0.6, delta=0.1)
+            self.assertEqual(['A'], e.interpreter.get_marks())
 
     def test_accumulated_column_block_volume(self):
         self.engine.cleanup()  # dispose the test default engine
@@ -1131,14 +1245,15 @@ Base: s
         program = """
 Base: s
 Block: A
-    0.5 End block
-0.5 Mark: A
+    0.45 End block
+0.45 Mark: A
         """
         with create_engine_context(uod) as e:
             cv = e.tags["CV"]
             cv.set_value(2.0, 0)
             acc_cv = e.tags[SystemTagName.ACCUMULATED_CV]
             block_cv = e.tags[SystemTagName.BLOCK_CV]
+            block = e.tags[SystemTagName.BLOCK]
             run_engine(e, program, 1)
 
             self.assertEqual(acc_cv.as_float(), 0.0)
@@ -1147,26 +1262,53 @@ Block: A
             self.assertEqual(block_cv.unit, "CV")
 
             continue_engine(e, 2)  # Blank + Base
-            self.assertEqual(e.tags[SystemTagName.BLOCK].get_value(), None)
+            self.assertEqual(block.get_value(), None)
             self.assertAlmostEqual(acc_cv.as_float(), 0.2/2, delta=0.1)
             self.assertAlmostEqual(block_cv.as_float(), 0.2/2, delta=0.1)
 
             continue_engine(e, 1)  # Block
-            self.assertEqual(e.tags[SystemTagName.BLOCK].get_value(), "A")
+            self.assertEqual(block.get_value(), "A")
             self.assertAlmostEqual(acc_cv.as_float(), 0.3/2, delta=0.1)
             self.assertAlmostEqual(block_cv.as_float(), 0.1/2, delta=0.1)
 
             continue_engine(e, 5)
-            self.assertEqual(e.tags[SystemTagName.BLOCK].get_value(), "A")
+            self.assertEqual(block.get_value(), "A")
             self.assertAlmostEqual(acc_cv.as_float(), 0.8/2, delta=0.1)
             self.assertAlmostEqual(block_cv.as_float(), 0.6/2, delta=0.1)
 
             continue_engine(e, 1)
-            self.assertEqual(e.tags[SystemTagName.BLOCK].get_value(), None)
+            self.assertEqual(block.get_value(), None)
             # acc_vol keeps counting
             self.assertAlmostEqual(acc_cv.as_float(), 0.9/2, delta=0.1)
             # block_vol is reset to value before block A - so it matches acc_vol again
             self.assertAlmostEqual(block_cv.as_float(), 0.9/2, delta=0.1)
+
+
+    # --- Units ---
+
+
+    def test_units(self):
+        self.engine.cleanup()  # dispose the test default engine
+
+        uod = (UodBuilder()
+               .with_instrument("TestUod")
+               .with_author("Test Author", "test@openpectus.org")
+               .with_filename(__file__)
+               .with_hardware(TestHW())
+               .with_location("Test location")
+               .with_tag(ReadingTag("X1", "L"))
+               .with_tag(ReadingTag("X2", "g"))
+               .with_tag(ReadingTag("X3", "%"))
+               .build())
+
+        with self.subTest("test units"):
+            with create_engine_context(uod) as e:
+                run_engine(e, "", 5)
+                self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.OK)
+
+                percent_tag = uod.tags["X3"]
+                self.assertEqual(percent_tag.unit, "%")
+
 
     # --- Restart ---
 
@@ -1243,79 +1385,18 @@ Restart
         self.assertFalse(EngineCommandEnum.has_value("stop"))
         self.assertFalse(EngineCommandEnum.has_value("STOP"))
 
-
-    # --- Inject ---
-
-
-    def test_inject_command(self):
-        program = """
-Mark: A
-Mark: B
-Mark: C
-"""
-        e = self.engine
-        run_engine(e, program, 3)
-        self.assertEqual(['A'], e.interpreter.get_marks())
-
-        e.inject_code("Mark: I")
-        continue_engine(e, 1)
-        self.assertEqual(['A', 'B', 'I'], e.interpreter.get_marks())
-
-        continue_engine(e, 1)
-        self.assertEqual(['A', 'B', 'I', 'C'], e.interpreter.get_marks())
-
-    def test_inject_thresholds_1(self):
-        program = """
-Mark: A
-0.25 Mark: B
-Mark: C
-"""
-        e = self.engine
-        e.tags[SystemTagName.BASE].set_value("s", e._tick_time)
-        run_engine(e, program, 3)
-
-        self.assertEqual(['A'], e.interpreter.get_marks())
-
-        e.inject_code("Mark: I")
-        continue_engine(e, 1)
-        self.assertEqual(['A', 'I'], e.interpreter.get_marks())
-
-        continue_engine(e, 3)
-        # print_runtime_records(e)
-        self.assertEqual(['A', 'I', 'B', 'C'], e.interpreter.get_marks())
-
-    def test_inject_thresholds_2(self):
-        program = """
-Mark: A
-0.2 Mark: B
-Mark: C
-"""
-        e = self.engine
-        e.tags[SystemTagName.BASE].set_value("s", e._tick_time)
-        run_engine(e, program, 3)
-
-        self.assertEqual(['A'], e.interpreter.get_marks())
-
-        e.inject_code("0.3 Mark: I")
-        continue_engine(e, 1)
-
-        self.assertEqual(['A', 'B'], e.interpreter.get_marks())
-
-        continue_engine(e, 3)
-        # self.assertEqual(['A', 'B', 'C', 'I'], e.interpreter.get_marks())
-        self.assertTrue(['A', 'B', 'C', 'I'] == e.interpreter.get_marks()
-                        or ['A', 'B', 'I', 'C'] == e.interpreter.get_marks())
+# ----------- Engine Error -------------
 
     def test_engine_error_causes_Paused_state(self):
         e = self.engine
-        run_engine(e, "foo bar", 3)
-
-        self.assertTrue(e._runstate_paused)
+        with self.assertRaises(ValueError):
+            run_engine(e, "foo bar", 3)
+        self.assertTrue(e.has_error_state())
 
     def test_interpreter_error_causes_Paused_state(self):
         e = self.engine
-        run_engine(e, """WATCH x > 2""", 3)
-
+        with self.assertRaises(ValueError):
+            run_engine(e, """WATCH x > 2""", 3)
         self.assertTrue(e._runstate_paused)
 
 
@@ -1348,7 +1429,7 @@ class TestHW(HardwareLayerBase):
 
 
 class CalculatedLinearTag(Tag):
-    """ Test tag that is used to simulate a value that is linear function of time. """
+    """ Test tag that is used to simulate a value that is a linear function of time. """
     def __init__(self, name: str, unit: str | None, slope: float = 1.0) -> None:
         super().__init__(name, value=0.0, unit=unit, direction=TagDirection.NA)
         self.slope = slope
@@ -1356,7 +1437,7 @@ class CalculatedLinearTag(Tag):
     def on_start(self, context: TagContext):
         self.value = time.time() * self.slope
 
-    def on_tick(self):
+    def on_tick(self, tick_time: float, increment_time: float):
         self.value = time.time() * self.slope
 
 

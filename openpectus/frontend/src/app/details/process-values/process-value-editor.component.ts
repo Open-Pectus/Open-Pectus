@@ -1,7 +1,5 @@
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
-import { ProcessValueCommand } from '../../api/models/ProcessValueCommand';
-import { ProcessValueCommandChoiceValue } from '../../api/models/ProcessValueCommandChoiceValue';
-import { ProcessValueCommandFreeTextValue } from '../../api/models/ProcessValueCommandFreeTextValue';
+import { ProcessValueCommand } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 
 export interface ValueAndUnit {
@@ -45,7 +43,7 @@ export class ProcessValueEditorComponent {
   }
 
   onFocusInput() {
-    if(this.command?.value?.value_type === ProcessValueCommandFreeTextValue.value_type.STRING) return this.inputElement?.nativeElement.select();
+    if(this.command?.value?.value_type === 'string') return this.inputElement?.nativeElement.select();
     const formattedValue = this.processValuePipe.transform(this.command?.value);
     const valueLength = formattedValue?.indexOf(' ');
     if(valueLength !== undefined) this.inputElement?.nativeElement.setSelectionRange(0, valueLength);
@@ -60,9 +58,9 @@ export class ProcessValueEditorComponent {
         const [_, value, unit] = matchArray;
         return {value, unit};
       }
-      case ProcessValueCommandFreeTextValue.value_type.STRING:
+      case 'string':
         return {value: asString};
-      case ProcessValueCommandChoiceValue.value_type.CHOICE:
+      case 'choice':
         return {value: asString}; // TODO: probably not right
       case undefined:
         return undefined;

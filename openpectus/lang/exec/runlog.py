@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import logging
 from enum import StrEnum, auto
 from typing import Dict, List, Optional
@@ -95,8 +96,12 @@ class RuntimeInfo():
                 for i, state in enumerate(r.states):
                     if i > 0:
                         prev_state = r.states[i-1]
-                        assert prev_state.state_tick <= state.state_tick
-                        assert prev_state.state_time <= state.state_time
+                        try:
+                            assert prev_state.state_tick <= state.state_tick
+                            assert prev_state.state_time <= state.state_time
+                        except Exception:
+                            logger.error(f"Error processing runlog states for record: {r}", exc_info=True)
+                            raise
 
             started_state_indices = [i for i, st in enumerate(r.states)
                                      if st.state_name == RuntimeRecordStateEnum.Started]
@@ -206,6 +211,64 @@ class RuntimeInfo():
         self._add_record(record, exec_id=exec_id)
         return record
 
+    def find_instruction(
+            self,
+            instruction_name: str,
+            start_index: int,
+            instruction_state: RuntimeRecordStateEnum | None
+            ) -> int | None:
+        """ Find the first record with the given instruction name and state starting from start_index (incl).
+
+        Return the index of the found record or None if record is not found.
+
+        Use get_record_by_index to obtain the record of the index.
+        """
+        if start_index < 0:
+            raise ValueError(f"start_index {start_index} is invalid")
+
+        # create a copy to avoid race conditions cause by timer tick
+        records_copy = self.records.copy()
+        size = len(records_copy)
+        if start_index > size - 1:
+            return None
+
+        for i in range(start_index, size):
+            r = records_copy[i]
+            if r.node.instruction_name == instruction_name:
+                # logger.debug(f"Find record result: {i}, {instruction_name=}, {start_index=}")
+                # logger.debug(self.get_as_table())
+                if instruction_state is None:
+                    return i
+                elif r.has_state(instruction_state):
+                    return i
+
+    def get_record_by_index(self, index: int) -> RuntimeRecord | None:
+        if index < 0:
+            raise ValueError(f"index {index} is invalid")
+        records = self.records.copy()
+        if index > len(records) - 1:
+            return None
+        else:
+            return copy.copy(records[index])
+
+    def get_as_table(self, description: str = "") -> str:
+        records = self.records.copy()
+        lines = [f"Runtime records: {description}"]
+        lines.append("line | start | end   | name                 | instruction name     | states")
+        lines.append("-----|-------|-------|----------------------|----------------------|-------------------")
+        for r in records:
+            name = f"{str(r.name):<20}" if r.name is not None else f"{str(r.node):<20}"
+            inst_name = f"{str(r.node.instruction_name):<20}" \
+                if r.node.instruction_name is not None else "   -                  "
+            line = f"{int(r.node.line):4d}" if r.node.line is not None else "   -"
+            states = ", ".join([f"{st.state_name}: {st.state_tick}" for st in r.states])
+            end = f"{r.visit_end_tick:5d}" if r.visit_end_tick != -1 else "    -"
+            lines.append(f"{line}   {r.visit_start_tick:5d}   {end}   {name}   {inst_name}   {states}")
+        lines.append("-----|-------|-------|----------------------|----------------------|-------------------")
+        return "\n".join(lines)
+
+    def print_as_table(self, description: str = ""):
+        print(self.get_as_table(description))
 
 class RuntimeRecord():
     def __init__(self, node: PNode, exec_id: UUID) -> None:

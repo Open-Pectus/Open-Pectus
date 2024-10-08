@@ -1,7 +1,5 @@
 import { line, ScaleLinear } from 'd3';
-import { PlotAxis } from '../../api/models/PlotAxis';
-import { PlotConfiguration } from '../../api/models/PlotConfiguration';
-import { PlotLog } from '../../api/models/PlotLog';
+import { PlotAxis, PlotConfiguration, PlotLog } from '../../api';
 import { UtilMethods } from '../../shared/util-methods';
 import { ProcessPlotDashArrays } from './process-plot.dash-arrays';
 import { D3Selection } from './process-plot.types';

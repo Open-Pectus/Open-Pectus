@@ -3,14 +3,15 @@ from __future__ import annotations
 from inspect import _ParameterKind, Parameter
 import logging
 import re
-from typing import Any, Callable, Literal, overload
+from typing import Any, Callable, Literal
 
 from openpectus.engine.commands import ContextEngineCommand, CommandArgs
 from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.errors import UodValidationError
 from openpectus.lang.exec.readings import Reading, ReadingCollection, ReadingWithChoice, ReadingWithEntry
-from openpectus.lang.exec.tags import TAG_UNITS, SystemTagName, Tag, TagCollection
+from openpectus.lang.exec.tags import SystemTagName, Tag, TagCollection
+from openpectus.lang.exec.units import get_volume_units
 from openpectus.lang.exec.tags_impl import AccumulatorBlockTag, AccumulatedColumnVolume, AccumulatorTag
 from openpectus.protocol.models import EntryDataType, PlotConfiguration
 
@@ -67,11 +68,14 @@ class UnitOperationDefinitionBase:
 
     def validate_configuration(self):
         """ Validates these areas:
-        - Each Reading match a defined tag
+        - Each Reading matches a defined tag
         - Each Command is verified
             - Must have an exec function with an appropriate signature
             - If the command uses a regular expression as parser function, it is verified that
               the exec function arguments match the regular expression.
+        - Each process value is verified
+            - Checks that entry process values have matching tag value type and 
+              process value entry_data_type.
         """
         fatal = False
 
@@ -87,6 +91,8 @@ class UnitOperationDefinitionBase:
         if self.hwl is None:
             log_fatal("Hardware Layer is not configured")
 
+        self.validate_read_registers()
+
         if self.system_tags is None:
             log_fatal("System tags have not been set")
         else:
@@ -95,7 +101,8 @@ class UnitOperationDefinitionBase:
                 try:
                     r.match_with_tags(tags)
                 except UodValidationError as vex:
-                    logging.error(vex.args[0])
+                    #logging.error(vex.args[0])
+                    log_fatal(str(vex))
 
                 # now that tag validation was completed, the command list can be built
                 r.build_commands_list()
@@ -198,6 +205,14 @@ either a 'value' argument or a '**kvargs' argument""")
                 if param_count == 2 and last_param.kind != _ParameterKind.VAR_KEYWORD:
                     raise UodValidationError(f"""Command '{key}' has an error.
 The execution function is missing named arguments or a '**kvargs' argument""")
+
+    def validate_read_registers(self):
+        """ Verify that all read registers have a matching tag. """
+        read_registers = [r for r in self.hwl.registers.values() if RegisterDirection.Read in r.direction]
+        for r in read_registers:
+            if not self.tags.has(r.name):
+                raise UodValidationError(
+                    f"Register '{r.name}' has read direction but no matching tag")
 
     def has_command_name(self, name: str) -> bool:
         """ Check whether the command name is defined in the Uod """
@@ -540,7 +555,7 @@ class UodBuilder():
         if not self.tags.has(totalizer_tag_name):
             raise ValueError(f"The specified totalizer tag name '{totalizer_tag_name}' was not found")
         totalizer = self.tags[totalizer_tag_name]
-        volume_units = TAG_UNITS["volume"]
+        volume_units = get_volume_units()
         if totalizer.unit not in volume_units:
             raise ValueError(f"The totalizer tag '{totalizer_tag_name}' must have a volume unit")
         self._with_tag(AccumulatorTag(name=SystemTagName.ACCUMULATED_VOLUME, totalizer=totalizer))
@@ -679,8 +694,8 @@ class UodBuilder():
             tag_name: str
                 The tag to display
             entry_data_type: "str" | "int" | "float" | "auto", optional, default="auto"
-                The data type to display in the UI. Default is "auto" which uses the type of the tag's value.
-                The "auto" value requires that the tag has a default value with the correct type.
+                The data type to display and validate in the UI. Default is "auto" which uses the type of the tag's
+                value. The "auto" value requires that the tag has a default value with the correct type.
             execute_command_name: str: optional
                 The command to execute to 'set the process value'. In principle, this can be any pcode command that takes a
                 single argument as given by the user. However, the intension is that the command 'sets the process value',

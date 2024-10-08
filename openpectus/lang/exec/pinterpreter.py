@@ -6,14 +6,16 @@ from enum import Enum
 from typing import Generator, Iterable
 from uuid import UUID
 
-import pint
+from openpectus.lang.exec.tag_lifetime import TagContext
+import openpectus.lang.exec.units as units
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.commands import InterpreterCommandEnum
-from openpectus.lang.exec.errors import InterpretationError, InterpretationInternalError, NodeInterpretationError
+from openpectus.lang.exec.errors import (
+    EngineError, InterpretationError, InterpretationInternalError, NodeInterpretationError
+)
 from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import (
-    TagCollection,
-    SystemTagName,
+    TagCollection, SystemTagName,
 )
 from openpectus.lang.model.pprogram import (
     PCommandWithDuration,
@@ -100,7 +102,7 @@ class CallStack:
     def iterate_from_top(self) -> Iterable[ActivationRecord]:
         for ar in reversed(self._records):
             yield ar
-            
+
     def push(self, ar: ActivationRecord):
         self._records.append(ar)
 
@@ -137,16 +139,11 @@ class InterpreterContext():
         raise NotImplementedError()
 
     @property
+    def lifetime(self) -> TagContext:
+        raise NotImplementedError()
+
+    @property
     def base_unit_provider(self) -> BaseUnitProvider:
-        raise NotImplementedError()
-
-    def block_started(self, name: str):
-        """ Invoked when a block is started. Not invoked for the main block"""
-        raise NotImplementedError()
-
-    def block_ended(self, name: str, new_name: str):
-        """ Invoked when block is completed. If back in the main block,
-        new_name is the empty string. """
         raise NotImplementedError()
 
 
@@ -232,7 +229,7 @@ class PInterpreter(PNodeVisitor):
                 if ar.complete:
                     self._unregister_interrupt(ar)
                     if isinstance(node, PAlarm):
-                        node.reset_state()
+                        node.reset_runtime_state()
                         ar = ActivationRecord(node)
                         self._register_interrupt(ar, self._create_interrupt_handler(node, ar))
             else:
@@ -258,7 +255,11 @@ class PInterpreter(PNodeVisitor):
             next(self.process_instr)
         except StopIteration:
             pass
+        except AssertionError as ae:
+            raise InterpretationError(message=str(ae), exception=ae)
         except (InterpretationInternalError, InterpretationError):
+            raise
+        except EngineError:  # a method call on context failed - engine will know what to do
             raise
         except Exception as ex:
             logger.error("Unhandled interpretation error", exc_info=True)
@@ -269,15 +270,18 @@ class PInterpreter(PNodeVisitor):
             work_done = self._run_interrupt_handlers()
             if not work_done:
                 pass
-        except InterpretationError as ex:
-            raise InterpretationError("Interpreter error in interrupt handler") from ex
+        except AssertionError as ae:
+            raise InterpretationError(message=str(ae), exception=ae)
+        except (InterpretationInternalError, InterpretationError):
+            logger.error("Interpreter error in interrupt handler", exc_info=True)
+            raise
         except Exception as ex:
             logger.error("Unhandled interpretation error in interrupt handler", exc_info=True)
-            raise InterpretationError("Interpreter error in interrupt handler") from ex
+            raise InterpretationError("Interpreter error") from ex
 
     def stop(self):
         self.running = False
-        self._program.reset_state()
+        self._program.reset_runtime_state()
 
     def _is_awaiting_threshold(self, node: PNode):
         if isinstance(node, PInstruction) and node.time is not None:
@@ -299,24 +303,32 @@ class PInterpreter(PNodeVisitor):
 
             value_tag, block_value_tag = self.context.tags[value_tag], self.context.tags[block_value_tag]
             is_in_block = self.context.tags[SystemTagName.BLOCK].get_value() not in [None, ""]
-            try:
-                threshold = pint.Quantity(node.time, base_unit)
-                value = block_value_tag.as_quantity() if is_in_block else value_tag.as_quantity()
-            except pint.UndefinedUnitError:  # e.g. CV is not a known pint unit
-                threshold = node.time
-                value = block_value_tag.as_float() if is_in_block else value_tag.as_float()
+
+            threshold_value = str(node.time)
+            threshold_unit = base_unit
+
+            time_value = str(block_value_tag.get_value() if is_in_block else value_tag.get_value())
+            time_unit = block_value_tag.unit if is_in_block else value_tag.unit
 
             try:
-                if value < threshold:
+                # calculate result of 'value < threshold'
+                result = units.compare_values(
+                    '<', time_value, time_unit,
+                    threshold_value, threshold_unit)
+                if result:
                     logger.debug(
-                        f"Node {node} is awaiting threshold: {threshold}, current: {value}, base unit: '{base_unit}'")
+                        f"Node {node} is awaiting threshold: {threshold_value}, " +
+                        f"current: {time_value}, base unit: '{base_unit}'")
                     return True
 
                 logger.debug(
-                    f"Node {node} is done awaiting threshold {threshold}, current: {value}, base unit: '{base_unit}'")
+                    f"Node {node} is done awaiting threshold {threshold_value}, " +
+                    f"current: {time_value}, base unit: '{base_unit}'")
             except Exception as ex:
-                raise NodeInterpretationError(node, f"Threshold comparison error. Failed to compare \
-                                              value '{value}' to threshold '{threshold}'") from ex
+                raise NodeInterpretationError(
+                    node,
+                    "Threshold comparison error. Failed to compare " +
+                    f"value '{time_value}' to threshold '{threshold_value}'") from ex
         return False
 
     def _evaluate_condition(self, condition_node: PWatch | PAlarm) -> bool:
@@ -327,38 +339,16 @@ class PInterpreter(PNodeVisitor):
         assert c.tag_value, "Error in condition value"
         assert self.context.tags.has(c.tag_name), f"Unknown tag '{c.tag_name}' in condition '{c.condition_str}'"
         tag = self.context.tags.get(c.tag_name)
-        tag_value = tag.as_quantity()
-        # TODO if not unit specified, pick base unit
-        expected_value = pint.Quantity(c.tag_value_numeric, c.tag_unit)
-        if not tag_value.is_compatible_with(expected_value):
-            raise ValueError(f"Incompatible units for values {tag_value} vs {expected_value}")
+        tag_value, tag_unit = str(tag.get_value()), tag.unit
+        # TODO: Possible enhancement: if no unit specified, pick base unit?
+        expected_value, expected_unit = c.tag_value, c.tag_unit
 
-        result = None
-        try:
-            match c.op:
-                case '<':
-                    result = tag_value < expected_value
-                case '<=':
-                    result = tag_value <= expected_value
-                case '=' | '==':
-                    result = tag_value == expected_value
-                case '>':
-                    result = tag_value > expected_value
-                case '>=':
-                    result = tag_value >= expected_value
-                case '!=':
-                    result = tag_value != expected_value
-                case _:
-                    pass
-        except TypeError:
-            msg = "Conversion error for values {!r} and {!r}".format(tag_value, expected_value)
-            logger.error(msg, exc_info=True)
-            raise ValueError("Conversion error")
-
-        if result is None:
-            raise ValueError(f"Unsupported operation: '{c.op}'")
-
-        return result  # type: ignore
+        return units.compare_values(
+            c.op,
+            tag_value,
+            tag_unit,
+            expected_value,
+            expected_unit)
 
     def _visit_children(self, children: list[PNode] | None):
         ar = self.stack.peek()
@@ -371,7 +361,7 @@ class PInterpreter(PNodeVisitor):
     # Visitor Impl
 
     @override
-    def visit(self, node):
+    def visit(self, node: PNode):
         if not self.running:
             return
 
@@ -417,6 +407,7 @@ class PInterpreter(PNodeVisitor):
         ar = ActivationRecord(node, self._tick_time)
         self.stack.push(ar)
         yield from self._visit_children(node.children)
+        self.context.lifetime.emit_on_method_end()
         self.stack.pop()
 
     def visit_PBlank(self, node: PBlank):
@@ -436,11 +427,13 @@ class PInterpreter(PNodeVisitor):
         record.add_state_started(
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
+
+        # we want this in but it breaks a lot of tests. we want to be able to manage that first
+        # yield
+
         record.add_state_completed(
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
-
-        yield  # comment if we dont want mark to always consume a tick
 
     def visit_PBlock(self, node: PBlock):
         record = self.runtimeinfo.get_last_node_record(node)
@@ -448,7 +441,7 @@ class PInterpreter(PNodeVisitor):
         ar = ActivationRecord(node, self._tick_time)
         self.stack.push(ar)
         self.context.tags[SystemTagName.BLOCK].set_value(node.name, self._tick_number)
-        self.context.block_started(node.name)
+        self.context.lifetime.emit_on_block_start(node.name, self._tick_number)
         logger.debug(f"Block Tag set to {node.name}")
 
         yield  # comment if we dont want block to always consume a tick
@@ -481,12 +474,12 @@ class PInterpreter(PNodeVisitor):
             if ar.artype == ARType.BLOCK:
                 assert isinstance(ar.owner, PBlock)
                 self.context.tags[SystemTagName.BLOCK].set_value(ar.owner.name, self._tick_number)
-                self.context.block_ended(node.name, ar.owner.name)
+                self.context.lifetime.emit_on_block_end(node.name, ar.owner.name, self._tick_number)
                 logger.debug(f"Block Tag popped to {ar.owner.name}")
                 block_restored = True
         if not block_restored:
             self.context.tags[SystemTagName.BLOCK].set_value(None, self._tick_number)
-            self.context.block_ended(node.name, "")
+            self.context.lifetime.emit_on_block_end(node.name, "", self._tick_number)
             logger.debug(f"Block Tag cleared from {node.name}")
 
 
@@ -530,12 +523,15 @@ class PInterpreter(PNodeVisitor):
             self.context.tags[SystemTagName.BASE].set_value(node.args, self._tick_time)
 
         elif node.name == InterpreterCommandEnum.INCREMENT_RUN_COUNTER:
-            rc_value = self.context.tags[SystemTagName.RUN_COUNTER].as_number() + 1
-            self.context.tags[SystemTagName.RUN_COUNTER].set_value(rc_value, self._tick_time)
+            run_counter = self.context.tags[SystemTagName.RUN_COUNTER]            
+            rc_value = run_counter.as_number() + 1
+            logger.debug(f"Run Counter incremented from {rc_value - 1} to {rc_value}")
+            run_counter.set_value(rc_value, self._tick_time)
 
         elif node.name == InterpreterCommandEnum.RUN_COUNTER:
             try:
                 new_value = int(node.args)
+                logger.debug(f"Run Counter set to {new_value}")
                 self.context.tags[SystemTagName.RUN_COUNTER].set_value(new_value, self._tick_time)
             except ValueError:
                 raise NodeInterpretationError(node, f"Invalid argument '{node.args}'. Argument must be an integer")
@@ -568,7 +564,11 @@ class PInterpreter(PNodeVisitor):
                 record.add_state_failed(
                     self._tick_time, self._tick_number,
                     self.context.tags.as_readonly())
-                raise NodeInterpretationError(node, "Failed to pass command to engine") from ex
+
+                if isinstance(ex, EngineError):
+                    raise
+                else:
+                    raise NodeInterpretationError(node, "Failed to pass command to engine") from ex
 
         yield
 
@@ -577,7 +577,7 @@ class PInterpreter(PNodeVisitor):
 
         if node.duration is not None and node.duration.error:
             record.add_state_failed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
-            raise NodeInterpretationError(node, "Parse error. Command duration duration not valid") from None
+            raise NodeInterpretationError(node, "Parse error. Command duration not valid") from None
         try:
             logger.debug(f"Executing command '{str(node)}' via engine")
             if node.duration is None:
@@ -628,6 +628,8 @@ class PInterpreter(PNodeVisitor):
                 while not ar.complete and self.running:
                     try:
                         condition_result = self._evaluate_condition(node)
+                    except AssertionError:
+                        raise
                     except Exception as ex:
                         raise NodeInterpretationError(node, "Error evaluating condition: " + str(ex))
                     logger.debug(f"{str(node)} condition evaluated: {condition_result}")

@@ -9,7 +9,7 @@ from openpectus.engine.engine import Engine
 from openpectus.lang.exec.runlog import RunLogItem
 from openpectus.lang.exec.tags import SystemTagName, TagValue
 from openpectus.lang.exec.uod import logger as uod_logger
-from openpectus.engine.engine import logger as engine_logger
+from openpectus.engine.engine import frontend_logger as engine_logger
 from openpectus.engine.archiver import logger as archiver_logger
 
 logger = logging.getLogger(__name__)
@@ -26,6 +26,18 @@ archiver_logger.addHandler(logging_handler)
 MAX_SIZE_TagsUpdatedMsg = 100
 """ The maximum number of tags to include in a single TagsUpdatedMsg message """
 
+def to_model_tag(tag: TagValue) -> Mdl.TagValue:
+    if tag.tick_time == 0.0:
+        logger.warning(f"Tick time was 0 for tag {tag.name}")
+        tag.tick_time = time.time()
+    return Mdl.TagValue(
+        name=tag.name,
+        tick_time=tag.tick_time,
+        value=tag.value,
+        value_formatted=tag.value_formatted,
+        value_unit=tag.unit,
+        direction=tag.direction
+    )
 
 class EngineMessageBuilder():
     """ Collects data from engine and constructs engine messages """
@@ -63,17 +75,12 @@ class EngineMessageBuilder():
     def collect_tag_updates(self, snapshot=False) -> list[Mdl.TagValue]:
         if snapshot:
             self.engine.notify_all_tags()
-        tags = {}  # using dict to de-duplicate
+        tags: dict[str, Mdl.TagValue] = {}  # using dict to de-duplicate
         try:
             for _ in range(MAX_SIZE_TagsUpdatedMsg):
-                tag = self.engine.tag_updates.get_nowait()
-                assert tag.tick_time is not None, f'tick_time is None for tag {tag.name}'
-                tags[tag.name] = Mdl.TagValue(
-                    name=tag.name,
-                    tick_time=tag.tick_time,
-                    value=tag.get_value(),
-                    value_unit=tag.unit,
-                    direction=tag.direction)
+                tag_org = self.engine.tag_updates.get_nowait()
+                tag = tag_org.as_readonly()
+                tags[tag.name] = to_model_tag(tag)
                 self.engine.tag_updates.task_done()
         except Empty:
             pass
@@ -96,10 +103,6 @@ class EngineMessageBuilder():
         def filter_value(tag_value: TagValue) -> bool:
             return tag_value.name in tag_names
 
-        def to_value(t: TagValue) -> Mdl.TagValue:
-            assert t.tick_time is not None
-            return Mdl.TagValue(name=t.name, value=t.value, value_unit=t.unit, tick_time=t.tick_time, direction=t.direction)
-
         def to_line(item: RunLogItem) -> Mdl.RunLogLine:
             msg = Mdl.RunLogLine(
                 id=item.id,
@@ -107,8 +110,8 @@ class EngineMessageBuilder():
                 start=item.start,
                 end=item.end,
                 progress=item.progress,
-                start_values=[to_value(t) for t in filter(filter_value, item.start_values)],
-                end_values=[to_value(t) for t in filter(filter_value, item.end_values)]
+                start_values=[to_model_tag(t) for t in filter(filter_value, item.start_values)],
+                end_values=[to_model_tag(t) for t in filter(filter_value, item.end_values)]
             )
             return msg
 

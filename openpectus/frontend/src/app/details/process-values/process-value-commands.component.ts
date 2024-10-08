@@ -12,9 +12,7 @@ import {
   ViewChildren,
 } from '@angular/core';
 import { produce } from 'immer';
-import { ProcessValueCommand } from '../../api/models/ProcessValueCommand';
-import { ProcessValueCommandChoiceValue } from '../../api/models/ProcessValueCommandChoiceValue';
-import { ProcessValueType } from '../../api/models/ProcessValueType';
+import { ProcessValueCommand } from '../../api';
 import { ProcessValueCommandButtonComponent } from './process-value-command-button.component';
 import { ProcessValueCommandChoiceComponent } from './process-value-command-choice.component';
 import { ProcessValueEditorComponent, ValueAndUnit } from './process-value-editor.component';
@@ -72,20 +70,22 @@ export class ProcessValueCommandsComponent implements AfterViewInit {
     if(valueAndUnit === undefined) return this.shouldClose.emit(command);
     const editedCommand = produce(command, draft => {
       if(draft.value === undefined) return;
-      draft.value.value = valueAndUnit.value;
-      if(draft.value.value_type === ProcessValueType.INT || draft.value.value_type === ProcessValueType.FLOAT) {
+      if(draft.value.value_type === 'int' || draft.value.value_type === 'float') {
+        draft.value.value = parseFloat(valueAndUnit.value.replace(',', '.'));
         draft.value.value_unit = valueAndUnit.unit;
+      } else {
+        draft.value.value = valueAndUnit.value;
       }
     });
     this.shouldClose.emit(editedCommand);
   }
 
   shouldUseEditor(command: ProcessValueCommand) {
-    return command.value?.value_type !== undefined && command.value?.value_type !== ProcessValueCommandChoiceValue.value_type.CHOICE;
+    return command.value?.value_type !== undefined && command.value?.value_type !== 'choice';
   }
 
   shouldUseChoice(command: ProcessValueCommand) {
-    return command.value?.value_type === ProcessValueCommandChoiceValue.value_type.CHOICE;
+    return command.value?.value_type === 'choice';
   }
 
   shouldUseButton(command: ProcessValueCommand) {

@@ -2,68 +2,77 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 import logging
-
-if TYPE_CHECKING:  # Only imports the below statements during type checking
-    from openpectus.lang.exec.tags import TagCollection
+from typing import Iterable
 
 
 logger = logging.getLogger(__name__)
 
 
 class TagContext():
-    def __init__(self, tags: TagCollection) -> None:
-        self.tags: TagCollection = tags
+    """ Abstraction around a TagCollection that enables emitting the TagLifetime events
+    to the wrapped tags. """
+    def __init__(self, elements: Iterable[TagLifetime]) -> None:
+        self.elements: list[TagLifetime] = list(elements)
+
+    def add_listener(self, element: TagLifetime):
+        self.elements.append(element)
 
     def emit_on_engine_configured(self):
-        for tag in self.tags:
+        for element in self.elements:
             try:
-                tag.on_engine_configured(self)
+                element.on_engine_configured(self)
             except Exception:
-                logger.error(f"on_engine_configured failed for tag '{tag.name}'", exc_info=True)
+                logger.error(f"on_engine_configured failed for element '{str(element)}'", exc_info=True)
 
     def emit_on_start(self):
-        for tag in self.tags:
+        for element in self.elements:
             try:
-                tag.on_start(self)
+                element.on_start(self)
             except Exception:
-                logger.error(f"on_engine_start failed for tag '{tag.name}'", exc_info=True)
+                logger.error(f"on_engine_start failed for element '{str(element)}'", exc_info=True)
 
-    def emit_on_tick(self):
-        for tag in self.tags:
+    def emit_on_tick(self, tick_time: float, increment_time: float):
+        for element in self.elements:
             try:
-                tag.on_tick()
+                element.on_tick(tick_time, increment_time)
             except Exception:
-                logger.error(f"on_tick failed for tag '{tag.name}'", exc_info=True)
+                logger.error(f"on_tick failed for element '{str(element)}'", exc_info=True)
 
     def emit_on_block_start(self, block_name: str, tick: int):
-        for tag in self.tags:
+        for element in self.elements:
             try:
-                tag.on_block_start(BlockInfo(block_name, tick))
+                element.on_block_start(BlockInfo(block_name, tick))
             except Exception:
-                logger.error(f"on_block_start failed for tag '{tag.name}'", exc_info=True)
+                logger.error(f"on_block_start failed for element '{str(element)}'", exc_info=True)
 
     def emit_on_block_end(self, block_name: str, new_block_name: str, tick: int):
-        for tag in self.tags:
+        for element in self.elements:
             try:
-                tag.on_block_end(BlockInfo(block_name, tick), BlockInfo(new_block_name, tick))
+                element.on_block_end(BlockInfo(block_name, tick), BlockInfo(new_block_name, tick))
             except Exception:
-                logger.error(f"on_block_end failed for tag '{tag.name}'", exc_info=True)
+                logger.error(f"on_block_end failed for element '{str(element)}'", exc_info=True)
+
+    def emit_on_method_end(self):
+        for element in self.elements:
+            try:
+                element.on_method_end()
+            except Exception:
+                logger.error(f"on_method_end failed for element '{str(element)}'", exc_info=True)
 
     def emit_on_stop(self):
-        for tag in self.tags:
+        for element in self.elements:
             try:
-                tag.on_stop()
+                element.on_stop()
             except Exception:
-                logger.error(f"on_stop failed for tag '{tag.name}'", exc_info=True)
+                logger.error(f"on_stop failed for element '{str(element)}'", exc_info=True)
 
     def emit_on_engine_shutdown(self):
-        for tag in self.tags:
+        for element in self.elements:
             try:
-                tag.on_engine_shutdown()
+                element.on_engine_shutdown()
             except Exception:
-                logger.error(f"on_engine_shutdown failed for tag '{tag.name}'", exc_info=True)
+                logger.error(f"on_engine_shutdown failed for element '{str(element)}'", exc_info=True)
 
 
 class TagLifetime():
@@ -91,11 +100,15 @@ class TagLifetime():
         in the same engine tick. """
         pass
 
-    def on_tick(self):
+    def on_tick(self, tick_time: float, increment_time: float):
         """ Is invoked on each tick.
 
         Intended for NA (calculated/derived) tags to calculate the
         value for the tick and apply it to the value property. """
+        pass
+
+    def on_method_end(self):
+        """ Is invoked when method interpretation is complete. """
         pass
 
     def on_stop(self):

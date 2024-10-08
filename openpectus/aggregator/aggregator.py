@@ -30,6 +30,7 @@ class FromEngine:
 
     def engine_connected(self, engine_id: str):
         logger.debug("engine_connected")
+        asyncio.create_task(self.publisher.publish_control_state_changed(engine_id))
 
     def engine_disconnected(self, engine_id: str):
         logger.debug("engine_disconnected")

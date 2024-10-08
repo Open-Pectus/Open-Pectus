@@ -35,6 +35,11 @@ class PNode():
         self.errors: List[PError] | None = None
         """ Errors encountered during parsing. """
 
+        self._inst_error: PInstError | None = None
+        """ Partial parse error. Is set by parser. Must be processed into one or more elements in self.errors
+        for general consumption
+         """
+
         if self.parent is not None and self.parent.children is not None:
             self.parent.children.append(self)
 
@@ -55,6 +60,13 @@ class PNode():
     @property
     def runlog_name(self) -> str | None:
         """ Name to show in runlog. Return None to skip in runlog. """
+        return None
+
+    @property
+    def instruction_name(self) -> str | None:
+        """ Name to query for in tests. Return None to not support querying.
+
+        Should not include arguments because their formatting may not be predictable. """
         return None
 
     @property
@@ -107,6 +119,13 @@ class PNode():
                     return True
             return False
 
+    def collect_errors(self):
+        """ Populate the errors collection from node state that indicates parse errors. """
+        if self._inst_error is not None:
+            self.add_error("Syntax error")
+        for child in self.get_child_nodes(recursive=True):
+            child.collect_errors()
+
     def iterate(self, fn: Callable[[PNode], None]):
         fn(self)
         if self.children is not None:
@@ -119,8 +138,9 @@ class PNode():
             if parent == ancestor_candidate:
                 return True
             parent = parent.parent
+        return False
 
-    def reset_state(self):
+    def reset_runtime_state(self):
         """ Override to clear node runtime state. """
         pass
 
@@ -146,11 +166,11 @@ class PProgram(PNode):
     def get_condition_nodes(self) -> List[PAlarm | PWatch]:
         return [c for c in self.get_instructions() if isinstance(c, PAlarm) or isinstance(c, PWatch)]
 
-    def reset_state(self):
+    def reset_runtime_state(self):
         """ Reset all runtime state from the program """
         def reset(node: PNode):
             if node != self:
-                node.reset_state()
+                node.reset_runtime_state()
         self.iterate(reset)
 
 
@@ -187,6 +207,10 @@ class PBlock(PInstruction):
     def runlog_name(self) -> str | None:
         return "Block: " + self.name
 
+    @property
+    def instruction_name(self) -> str | None:
+        return "Block"
+
 
 class PEndBlock(PInstruction):
     """ Represents an End block intruction. """
@@ -197,6 +221,10 @@ class PEndBlock(PInstruction):
     def runlog_name(self) -> str | None:
         return "End block"
 
+    @property
+    def instruction_name(self) -> str | None:
+        return "End block"
+
 
 class PEndBlocks(PInstruction):
     """ Represents an End blocks intruction. """
@@ -205,6 +233,10 @@ class PEndBlocks(PInstruction):
 
     @property
     def runlog_name(self) -> str | None:
+        return "End blocks"
+
+    @property
+    def instruction_name(self) -> str | None:
         return "End blocks"
 
 
@@ -228,7 +260,16 @@ class PWatch(PInstruction):
     def runlog_name(self) -> str | None:
         return "Watch: " + self.condition_str
 
-    def reset_state(self):
+    @property
+    def instruction_name(self) -> str | None:
+        return "Watch"
+
+    def collect_errors(self):
+        super().collect_errors()
+        if self.condition is None:
+            self.add_error(PError("Missing condition"))
+
+    def reset_runtime_state(self):
         self.activated = False
 
 
@@ -253,7 +294,16 @@ class PAlarm(PInstruction):
     def runlog_name(self) -> str | None:
         return "Alarm: " + self.condition_str
 
-    def reset_state(self):
+    @property
+    def instruction_name(self) -> str | None:
+        return "Alarm"
+
+    def collect_errors(self):
+        super().collect_errors()
+        if self.condition is None:
+            self.add_error(PError("Missing condition"))
+
+    def reset_runtime_state(self):
         self.activated = False
 
 
@@ -272,9 +322,12 @@ class PMark(PInstruction):
     def runlog_name(self) -> str | None:
         return "Mark: " + self.name
 
+    @property
+    def instruction_name(self) -> str | None:
+        return "Mark"
 
 class PCommand(PInstruction):
-    """ Represents a Command instruction. """
+    """ Represents a Command instruction (Start, Stop, Restart, ...). """
     def __init__(self, parent: PNode) -> None:
         super().__init__(parent)
 
@@ -288,6 +341,9 @@ class PCommand(PInstruction):
     def runlog_name(self) -> str | None:
         return self.name
 
+    @property
+    def instruction_name(self) -> str | None:
+        return self.name
 
 class PCommandWithDuration(PInstruction):
     """ Represents a Command instruction with a possible duration (Pause, Hold and Wait). """
@@ -305,7 +361,24 @@ class PCommandWithDuration(PInstruction):
 
     @property
     def runlog_name(self) -> str | None:
+        runlog_argument = "" if self.duration is None else ": " + self.duration.runlog_argument
+        return self.name + runlog_argument
+
+    @property
+    def instruction_name(self) -> str | None:
         return self.name
+
+    def collect_errors(self):
+        super().collect_errors()
+        if self.name == "Pause":
+            if self.duration is not None and self.duration.error:
+                self.add_error(PError("Invalid Pause arguments. Specify either no duration arguments or both time and unit"))
+        elif self.name == "Hold":
+            if self.duration is not None and self.duration.error:
+                self.add_error(PError("Invalid Hold arguments. Specify either no duration arguments or both time and unit"))
+        elif self.name == "Wait":
+            if self.duration is None or self.duration.error:
+                self.add_error(PError("Wait requires a time and unit"))
 
 
 class PBlank(PInstruction):
@@ -321,7 +394,7 @@ class PComment(PInstruction):
 
 
 class PErrorInstruction(PInstruction):
-    """ Represents a non-parsable instruction pcode line """
+    """ Represents a non-parsable instruction pcode line. """
     def __init__(self, parent: PNode, code: str) -> None:
         super().__init__(parent)
         self.children = []
@@ -336,6 +409,13 @@ class PErrorInstruction(PInstruction):
         return super().__str__() + ": Code: " + self.code
 
 
+class PInstError:
+    """ Represents the error part of a parsed instruction. This differs from PErrorInstruction by being
+    partly parsed. This allows better language assistance than PErrorInstruction. """
+    def __init__(self, message: str | None = None) -> None:
+        self.message: str | None = message
+
+
 # --- Non-nodes ---
 
 class PError:
@@ -345,7 +425,10 @@ class PError:
 
 
 class PCondition:
-    """ Represents a condition expression for Alarm and Watch instructions. """
+    """ Represents a condition expression for Alarm and Watch instructions.
+
+    The condition is resolved by ConditionEnrichAnalyzer.
+    """
     def __init__(self, condition_str: str) -> None:
         self.condition_str = condition_str
         """ Original condition string expression """
@@ -356,21 +439,39 @@ class PCondition:
         self.rhs = ""
         """ Unresolved condition right-hand-side expression """
 
+        # Note: error is True by default and only modified by the analyzer
         self.error : bool = True
         self.tag_name: str | None = None
         self.tag_value: str | None = None
         self.tag_unit: str | None = None
         self.tag_value_numeric: int | float | None = None
 
+
 class PDuration:
-    """ Represents a duration for PCommandWithDuration (Pause, Hold and Wait) instructions. """
+    """ Represents a duration for PCommandWithDuration (Pause, Hold and Wait) instructions.
+
+    The duration string is resolved by DurationEnrichAnalyzer.
+    """
 
     def __init__(self, duration_str: str) -> None:
         self.duration_str: str = duration_str
 
+        # Note: error is True by default and only modified by the analyzer
         self.error : bool = True
         self.time: float | None = None
         self.unit: str | None = None
 
     def __str__(self) -> str:
         return f"Duration {self.time} {self.unit}"
+
+    @property
+    def runlog_argument(self):
+        if self.error:
+            return "(error)"
+        else:
+            if self.time is None:
+                return ""
+            elif self.unit is None:
+                return f"{self.time}"
+            else:
+                return f"{self.time}{self.unit}"

@@ -188,7 +188,6 @@ class OPCUA_Hardware(HardwareLayerBase):
             opcua_node = self._register_to_node(r)
             return opcua_node.read_value()
         except ConnectionError:
-            logger.error("Not connected", exc_info=True)
             raise HardwareLayerException(f"Not connected to {self.host}")
         except asyncua.sync.ThreadLoopNotRunning:
             logger.error("Thread loop not running", exc_info=True)
@@ -205,7 +204,6 @@ class OPCUA_Hardware(HardwareLayerBase):
                 nodes = self._registers_to_nodes(register_batch)
                 values += self._client.read_values(nodes)
         except ConnectionError:
-            logger.error("Not connected", exc_info=True)
             raise HardwareLayerException(f"Not connected to {self.host}")
         except asyncua.sync.ThreadLoopNotRunning:
             logger.error("Thread loop not running", exc_info=True)
@@ -272,7 +270,6 @@ class OPCUA_Hardware(HardwareLayerBase):
             data_value = asyncua.ua.DataValue(value)
             opcua_node.write_attribute(asyncua.ua.AttributeIds.Value, data_value)
         except ConnectionError:
-            logger.error("Not connected", exc_info=True)
             raise HardwareLayerException(f"Not connected to {self.host}")
         except asyncua.sync.ThreadLoopNotRunning:
             logger.error("Thread loop not running", exc_info=True)
@@ -303,7 +300,6 @@ class OPCUA_Hardware(HardwareLayerBase):
                                                        batched(data_values, self._max_nodes_per_write)):
                 write_attributes(node_id_batch, data_value_batch, asyncua.ua.AttributeIds.Value)
         except ConnectionError:
-            logger.error("Not connected", exc_info=True)
             raise HardwareLayerException(f"Not connected to {self.host}")
         except asyncua.sync.ThreadLoopNotRunning:
             logger.error("Thread loop not running", exc_info=True)
@@ -313,7 +309,14 @@ class OPCUA_Hardware(HardwareLayerBase):
         """ Connect to OPC-UA server. """
         logger.info(f"Attempting to connect to {self.host}")
         if self._client:
-            self._client.disconnect()
+            # catching these exceptions make reconnect able to just try
+            # again which seems to work
+            try:
+                self._client.disconnect()
+            except asyncua.sync.ThreadLoopNotRunning:
+                pass
+            except RuntimeError:
+                pass
             # Remove potential stale references to nodes on re-connect
             self._register_to_node.cache_clear()
             del self._client

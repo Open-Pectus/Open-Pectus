@@ -28,7 +28,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
         await dispatcher.on_client_disconnect(channel)
 
     def createPublisherMock(self):
-        return Mock(publish_process_units_changed=AsyncMock())
+        return Mock(publish_process_units_changed=AsyncMock(),publish_control_state_changed=AsyncMock())
 
     async def test_register_engine(self):
         dispatcher = AggregatorDispatcher()
@@ -74,7 +74,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_register_engine_different_name(self):
         dispatcher = AggregatorDispatcher()
-        aggregator = Aggregator(dispatcher, Mock())
+        aggregator = Aggregator(dispatcher, self.createPublisherMock())
         messageHandlers = AggregatorMessageHandlers(aggregator)
         register_engine_msg = EM.RegisterEngineMsg(
             computer_name='computer-name',
@@ -125,7 +125,7 @@ class AggregatorEventsTest(unittest.IsolatedAsyncioTestCase):
                                       uod_name="", uod_author_name="", uod_author_email="", uod_filename="", location="")
 
     def createTag(self, name: str, tick: float, value: str):
-        return TagValue(name=name, tick_time=tick, value=value, value_unit=None)
+        return TagValue(name=name, tick_time=tick, value=value, value_formatted=None, value_unit=None)
 
     def store_tag_values(self, engine_id: str, run_id: str, tags: list[TagValue]):
         self.stored_tags.extend(tags)

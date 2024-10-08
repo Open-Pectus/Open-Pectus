@@ -17,6 +17,11 @@ class Dto(BaseModel):
         smart_union = True
         orm_mode = True
 
+    # deliver undefined instead of null for None values. Adapted from https://github.com/fastapi/fastapi/issues/3314#issuecomment-962932368
+    def dict(self, *args, **kwargs):
+        kwargs.pop('exclude_none', None)
+        return super().dict(*args, exclude_none=True, **kwargs)
+
 
 class AuthConfig(Dto):
     use_auth: bool
@@ -28,8 +33,10 @@ class ServerErrorResponse(Dto):
     error: bool = True
     message: str
 
+
 class ServerSuccessResponse(Dto):
     message: str | None = None
+
 
 class ProcessUnitStateEnum(StrEnum):
     """ Represents the state of a process unit. """
@@ -151,6 +158,7 @@ class ProcessValue(Dto):
     """ Represents a process value. """
     name: str
     value: ProcessValueValueType
+    value_formatted: str | None
     value_unit: str | None
     """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
     value_type: ProcessValueType
@@ -163,6 +171,7 @@ class ProcessValue(Dto):
         return ProcessValue(
             name=tag.name,
             value=tag.value,
+            value_formatted=tag.value_formatted,
             value_type=get_ProcessValueType_from_value(tag.value),
             value_unit=tag.value_unit,
             commands=[],
@@ -170,15 +179,10 @@ class ProcessValue(Dto):
         )
 
     @staticmethod
-    def create_w_commands(tag: Mdl.TagValue, commands) -> ProcessValue:
-        return ProcessValue(
-            name=tag.name,
-            value=tag.value,
-            value_type=get_ProcessValueType_from_value(tag.value),
-            value_unit=tag.value_unit,
-            commands=commands,
-            direction=tag.direction
-        )
+    def create_w_commands(tag: Mdl.TagValue, commands: list[ProcessValueCommand]) -> ProcessValue:
+        pv = ProcessValue.create(tag)
+        pv.commands = commands
+        return pv
 
 
 class CommandSource(StrEnum):

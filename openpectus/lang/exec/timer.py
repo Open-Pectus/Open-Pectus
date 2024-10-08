@@ -1,43 +1,33 @@
 
 import threading
 import time
-from typing import Any, Callable
+from typing import Callable
 
 
-class ZeroThreadTimer:
-    """Single threaded (no extra thread) timer using generator.
+TickConsumer = Callable[[float, float], None]
+""" Tick function. It is called by the timer on each tick with arguments:
+- tick_time: float          Time of the tick in seconds
+- increment_time: float     Time since last tick_time
 
-    Because there is no extra thread, the tick provided must signal
-    when to stop using its return value. """
-    def __init__(self, period_s: float, tick: Callable[[], bool]):
-        self.running = True
-        self.period_s = period_s
-        self.tick = tick
+Will be called on all ticks, even tick 0 where `increment_time` is zero.
 
-    def start(self):
-        self.start_time = time.time()
-        self.do_every()
-
-    def do_every(self):
-        def g_tick():
-            t = time.time()
-            while True:
-                t += self.period_s
-                yield max(t - time.time(), 0)
-
-        g = g_tick()
-
-        while self.running:
-            time.sleep(next(g))
-            self.running = self.tick()
-
+On pause/resume, will also be called on the first tick after resume where `increment_time` is also zero.
+"""
 
 class EngineTimer():
+
+    def set_tick_fn(self, tick_fn: TickConsumer):
+        pass
+
     def start(self):
         pass
 
     def stop(self):
         pass
+
+
+class NullTimer(EngineTimer):
+    pass
 
 
 class OneThreadTimer(EngineTimer):
@@ -45,32 +35,53 @@ class OneThreadTimer(EngineTimer):
 
     This allows controlled multithreading.
     """
-    def __init__(self, period_s: float, tick: Callable[[], Any]) -> None:
-        self.period_s = period_s
+    def __init__(self, interval: float, tick: TickConsumer | None = None) -> None:
+        """ Initialize a new timer.
+
+        Parameters:
+        - interval: float   Interval in seconds between ticks
+        - tick: function    The tick function to call when interval has passed
+        """
+        self.interval = interval
         self.tick = tick
-        self.running = False
+        self.running = False            # flag to allow shut down by exiting the ticker loop method
+
+    def set_tick_fn(self, tick_fn: TickConsumer):
+        self.tick = tick_fn
 
     def start(self):
+        """ Start timer """
+        if self.tick is None:
+            raise ValueError("Timer cannot start when no tick_fn has been set")
         self.running = True
         self.thread = threading.Thread(
             target=self.ticker,
-            name="OneThreadTimer",
+            name=self.__class__.__name__,
             daemon=True)
         self.thread.start()
 
     def ticker(self):
-        deadline = time.monotonic()
+        assert self.tick is not None, "No tick function has been set"
+
+        tick_number = 0
+        last_tick_time_mon = 0.0
+        increment = 0.0
+
         while self.running:
-            deadline += self.period_s
-            self.tick()
-            delay = deadline - time.monotonic()
-            if delay > 0 and self.running:
-                time.sleep(delay)
+            tick_time = time.time()
+            tick_time_mon = time.monotonic()
+            if tick_number > 0:
+                increment = tick_time_mon - last_tick_time_mon
+
+            self.tick(tick_time, increment)
+
+            tick_number += 1
+            last_tick_time_mon = tick_time_mon
+            tick_time_mon = time.monotonic()
+            elapsed = tick_time_mon - last_tick_time_mon
+            deadline = self.interval - elapsed
+            if deadline > 0.0:
+                time.sleep(deadline)
 
     def stop(self):
         self.running = False
-        # self.thread.join()
-
-
-class NullTimer(EngineTimer):
-    pass
