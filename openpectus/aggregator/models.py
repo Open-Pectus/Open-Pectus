@@ -28,7 +28,10 @@ SystemStateEnum = Mdl.SystemStateEnum
 TagDirection = Mdl.TagDirection
 
 
-class AggregatedErrorLogEntry(Mdl.ErrorLogEntry):
+class AggregatedErrorLogEntry(BaseModel):
+    message: str
+    created_time: float
+    severity: int
     duplication_count: int = 0
 
     @staticmethod
