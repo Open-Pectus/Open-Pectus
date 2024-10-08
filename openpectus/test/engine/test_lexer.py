@@ -75,6 +75,13 @@ class LexerTest(unittest.TestCase):
         code = "Hold: 2.0 min"
         self.assertEqual(['Hold', ':', ' ', '2.0', ' ', 'min'], get_token_texts(code))
 
+    def test_mark_name_percent(self):
+        code = "Mark: 2%"
+        self.assertEqual(['Mark', ':', ' ', '2', '%'], get_token_texts(code))
+
+        code = "Mark: B %"
+        self.assertEqual(['Mark', ':', ' ', 'B', ' ', '%'], get_token_texts(code))
+
 
 if __name__ == "__main__":
     unittest.main()

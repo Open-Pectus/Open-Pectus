@@ -24,7 +24,7 @@ from openpectus.lang.exec.tags import TagCollection
 from openpectus.lang.exec.units import are_comparable
 from openpectus.lang.exec.commands import CommandCollection
 from openpectus.lang.exec.pinterpreter import PNodeVisitor
-from openpectus.lang import float_re, unit_re, identifier_re
+from openpectus.lang import float_re, unit_re
 
 
 logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
@@ -164,17 +164,19 @@ class DurationEnrichAnalyzer(AnalyzerVisitorBase):
         d = node.duration
 
         re_time_unit = '^' + '(?P<float>' + float_re + ')' + '\\s*' + '(?P<unit>' + unit_re + ')' + '$'
-        re_time = '^' + '(?P<float>' + float_re + ')' + '\\s*$'
+        # re_time = '^' + '(?P<float>' + float_re + ')' + '\\s*$'
         match = re.search(re_time_unit, d.duration_str)
         if match:
             d.time = float(match.group('float'))
             d.unit = match.group('unit')
             d.error = False
-        else:
-            match = re.search(re_time, d.duration_str)
-            if match:
-                d.time = float(match.group('float'))
-                d.error = False
+        # Removed in #437 although there was a test specifically for this.
+        # Cannot think of a situation where as duration would be valid without a unit.
+        # else:
+        #     match = re.search(re_time, d.duration_str)
+        #     if match:
+        #         d.time = float(match.group('float'))
+        #         d.error = False
 
 
 class EnrichAnalyzer():
