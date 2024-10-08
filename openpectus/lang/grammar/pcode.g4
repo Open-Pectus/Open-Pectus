@@ -42,9 +42,9 @@ condition_rhs   : .*?  ~(NEWLINE | HASH | COMPARE_OP | COLON);
 increment_rc    : time? INCREMENT_RC ;
 restart         : time? RESTART ;
 stop            : time? STOP ;
-pause           : time? PAUSE (COLON WHITESPACE* duration)? ;
-hold            : time? HOLD (COLON WHITESPACE* duration)? ;
-wait            : time? WAIT COLON WHITESPACE* duration ;
+pause           : time? PAUSE ( (COLON WHITESPACE* duration)? | inst_error);
+hold            : time? HOLD  ( (COLON WHITESPACE* duration)? | inst_error) ;
+wait            : time? WAIT  ( (COLON WHITESPACE* duration)? | inst_error) ;
 duration        : .*?  ~(NEWLINE | HASH | COLON);
 
 mark            : time? MARK COLON WHITESPACE* mark_name?;

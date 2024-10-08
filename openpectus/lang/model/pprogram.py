@@ -368,6 +368,18 @@ class PCommandWithDuration(PInstruction):
     def instruction_name(self) -> str | None:
         return self.name
 
+    def collect_errors(self):
+        super().collect_errors()
+        if self.name == "Pause":
+            if self.duration is not None and self.duration.error:
+                self.add_error(PError("Invalid Pause arguments. Specify either no duration arguments or both time and unit"))
+        elif self.name == "Hold":
+            if self.duration is not None and self.duration.error:
+                self.add_error(PError("Invalid Hold arguments. Specify either no duration arguments or both time and unit"))
+        elif self.name == "Wait":
+            if self.duration is None or self.duration.error:
+                self.add_error(PError("Wait requires a time and unit"))
+
 
 class PBlank(PInstruction):
     """ Represents an all-whitespace pcode line. """
@@ -427,6 +439,7 @@ class PCondition:
         self.rhs = ""
         """ Unresolved condition right-hand-side expression """
 
+        # Note: error is True by default and only modified by the analyzer
         self.error : bool = True
         self.tag_name: str | None = None
         self.tag_value: str | None = None
@@ -435,11 +448,15 @@ class PCondition:
 
 
 class PDuration:
-    """ Represents a duration for PCommandWithDuration (Pause, Hold and Wait) instructions. """
+    """ Represents a duration for PCommandWithDuration (Pause, Hold and Wait) instructions.
+
+    The duration string is resolved by DurationEnrichAnalyzer.
+    """
 
     def __init__(self, duration_str: str) -> None:
         self.duration_str: str = duration_str
 
+        # Note: error is True by default and only modified by the analyzer
         self.error : bool = True
         self.time: float | None = None
         self.unit: str | None = None

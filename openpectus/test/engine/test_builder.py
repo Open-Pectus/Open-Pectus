@@ -922,20 +922,36 @@ Stop
         self.assertEqual(hold.duration.time, 27.35)
         self.assertEqual(hold.duration.unit, "s")
 
-    def test_wait_must_have_duration(self):
-        p = build("Wait")
+    def test_hold_w_arg_error(self):
+        p = build("Hold: 27.35")
         program = p.build_model()
         p.printSyntaxTree(p.tree)
 
-        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        self.assertTrue(program.has_error(recursive=True))
+
+        [hold] = program.get_instructions(include_blanks=True)
+
+        self.assertIsInstance(hold, PCommandWithDuration)
+        assert isinstance(hold,  PCommandWithDuration)
+        self.assertEqual(hold.name, "Hold")
+        assert isinstance(hold.duration,  PDuration)
+        self.assertTrue(hold.duration.error)
+        self.assertEqual(hold.duration.time, None)
+        self.assertEqual(hold.duration.unit, None)
+
+    def test_wait_must_have_duration(self):
+        p = build("Wait")
+        program = p.build_model()
+        # p.printSyntaxTree(p.tree)
+        # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
         self.assertTrue(program.has_error(recursive=True))
 
     def test_wait_w_arg(self):
         p = build("Wait:2h")
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
-
-        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        # p.printSyntaxTree(p.tree)
+        # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
         self.assertFalse(program.has_error(recursive=True))
 
         [wait] = program.get_instructions(include_blanks=True)

@@ -85,16 +85,6 @@ class PProgramBuilder(pcodeListener):
     def get_program(self) -> PProgram:
         return self.program
 
-    # def get_first_child(self, ctx: ParserRuleContext, ctx_type: type) -> ParserRuleContext | None:
-    #     if ctx is None:
-    #         return None
-    #     if isinstance(ctx, ctx_type):
-    #         return ctx
-    #     if hasattr(ctx, "getChildren"):
-    #         for child in ctx.getChildren():
-    #             result = self.get_first_child(child, ctx_type)
-    #             if result is not None:
-    #                 return result
 
     def enterProgram(self, ctx: pcodeParser.ProgramContext):
         # set program as scope

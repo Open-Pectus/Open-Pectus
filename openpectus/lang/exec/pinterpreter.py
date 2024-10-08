@@ -577,7 +577,7 @@ class PInterpreter(PNodeVisitor):
 
         if node.duration is not None and node.duration.error:
             record.add_state_failed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
-            raise NodeInterpretationError(node, "Parse error. Command duration duration not valid") from None
+            raise NodeInterpretationError(node, "Parse error. Command duration not valid") from None
         try:
             logger.debug(f"Executing command '{str(node)}' via engine")
             if node.duration is None:
