@@ -375,7 +375,7 @@ class AggregatedErrorLogEntry(Dto):
     message: str
     created_time: datetime
     severity: ErrorLogSeverity
-    duplication_count: int = 0
+    occurrences: int = 1
 
     @staticmethod
     def from_model(model: Mdl.AggregatedErrorLogEntry) -> AggregatedErrorLogEntry:
@@ -383,7 +383,7 @@ class AggregatedErrorLogEntry(Dto):
             message=model.message,
             created_time=datetime.fromtimestamp(model.created_time),
             severity=ErrorLogSeverity.Error if model.severity == logging.ERROR else ErrorLogSeverity.Warning,
-            duplication_count=model.duplication_count
+            occurrences=model.occurrences
         )
 
 class AggregatedErrorLog(Dto):

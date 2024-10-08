@@ -8,7 +8,7 @@ export type AggregatedErrorLogEntry = {
     message: string;
     created_time: string;
     severity: ErrorLogSeverity;
-    duplication_count?: number;
+    occurrences?: number;
 };
 
 export type AuthConfig = {

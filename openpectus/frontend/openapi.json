@@ -1210,10 +1210,10 @@
           "severity": {
             "$ref": "#/components/schemas/ErrorLogSeverity"
           },
-          "duplication_count": {
+          "occurrences": {
             "type": "integer",
-            "title": "Duplication Count",
-            "default": 0
+            "title": "Occurrences",
+            "default": 1
           }
         },
         "type": "object",

@@ -20,7 +20,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # The only difference between ErrorLog and AggregatedErrorLog is the addition of the field
-    # duplication_count which has a default value of 0. It appears to work without changes.
+    # occurrences which has a default value of 1. It appears to work without changes.
     pass
 
 

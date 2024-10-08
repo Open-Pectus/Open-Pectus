@@ -32,7 +32,7 @@ class AggregatedErrorLogEntry(BaseModel):
     message: str
     created_time: float
     severity: int
-    duplication_count: int = 0
+    occurrences: int = 1
 
     @staticmethod
     def from_entry(entry: ErrorLogEntry):
@@ -40,7 +40,7 @@ class AggregatedErrorLogEntry(BaseModel):
             message=entry.message,
             created_time=entry.created_time,
             severity=entry.severity,
-            duplication_count=0
+            occurrences=1
         )
 
 
@@ -59,7 +59,7 @@ class AggregatedErrorLog(BaseModel):
             if latest is not None and entry.message == latest.message and entry.severity == latest.severity:
                 if latest.created_time < entry.created_time:
                     latest.created_time = entry.created_time
-                    latest.duplication_count += 1
+                    latest.occurrences += 1
                 elif latest.created_time == entry.created_time:
                     logger.warning(f"Duplicate log entry with same created_time: {entry.message}")
                 else:

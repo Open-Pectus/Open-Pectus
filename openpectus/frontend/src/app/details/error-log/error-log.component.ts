@@ -17,12 +17,27 @@ import { ErrorLogSelectors } from './ngrx/error-log.selectors';
     <app-collapsible-element [name]="'Error Log'" [heightResizable]="true" [contentHeight]="200" [codiconName]="'codicon-warning'"
                              (collapseStateChanged)="collapsed = $event" *ngrxLet="errorLog as errorLog">
       @if (!collapsed) {
-        <div content class="p-1 h-full">
-          <p [class.text-yellow-500]="entry.severity === 'warning'"
-             [class.text-red-500]="entry.severity === 'error'"
-             *ngFor="let entry of errorLog.entries">
-            {{ entry.created_time | date:dateFormat }}: [{{ entry.severity }}] {{ entry.message }}
-          </p>
+        <div content class="py-0.5 pr-0.5 h-full grid grid-cols-[auto_1fr] auto-rows-min items-center">
+          @for(entry of errorLog.entries; track $index) {
+            @if(entry.occurrences !== undefined && entry.occurrences > 1) {
+              <div class="h-5 w-5 mx-1.5 text-xs rounded-full text-white flex justify-center items-center select-none"
+                   [class.bg-yellow-600]="entry.severity === 'warning'"
+                   [class.bg-red-600]="entry.severity === 'error'">
+                {{entry.occurrences > 99 ? '99+' : entry.occurrences}}
+              </div>
+            } @else {
+              <span></span>
+            }
+            <p class="pl-0.5"
+               [class.text-yellow-800]="entry.severity === 'warning'"
+               [class.text-red-800]="entry.severity === 'error'"
+               [class.bg-yellow-100]="entry.severity === 'warning'"
+               [class.bg-red-100]="entry.severity === 'error'">
+              {{ entry.created_time | date:dateFormat }}
+              [<i>{{entry.severity === 'warning' ? 'warn' : entry.severity}}</i>] 
+              {{ entry.message }}
+            </p>
+          }
         </div>
       }
     </app-collapsible-element>
