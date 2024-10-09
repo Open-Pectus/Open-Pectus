@@ -158,7 +158,7 @@ class FromEngine:
             # Run stopped
             logger.info(f"Run was stopped. Saving Recent Run. Engine: {engine_data.engine_id}")
             recent_run_repo.store_recent_run(engine_data)
-            engine_data.run_data.error_log = Mdl.ErrorLog.empty()
+            engine_data.run_data.error_log = Mdl.AggregatedErrorLog.empty()
             asyncio.create_task(self.publisher.publish_error_log_changed(engine_data.engine_id))
         elif run_id_tag.value is not None and engine_data.run_id is not None:
             # Ongoing run. run_id was only detected as changed because of complete tags set,
@@ -233,7 +233,7 @@ class FromEngine:
     def error_log_changed(self, engine_id: str, error_log: Mdl.ErrorLog):
         try:
             engine_data = self._engine_data_map[engine_id]
-            engine_data.run_data.error_log.entries.extend(error_log.entries)
+            engine_data.run_data.error_log.aggregate_with(error_log)            
             asyncio.create_task(self.publisher.publish_error_log_changed(engine_id))
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set error log.')

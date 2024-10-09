@@ -1,6 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { CommandExample, ControlState, ErrorLog, ProcessDiagram, ProcessValue, RecentRun } from '../../api';
+import { AggregatedErrorLog, CommandExample, ControlState, ProcessDiagram, ProcessValue, RecentRun } from '../../api';
 import { DetailsActions } from './details.actions';
 
 export interface DetailsState {
@@ -11,7 +11,7 @@ export interface DetailsState {
   controlState: ControlState;
   recentRun?: RecentRun;
   shouldPoll: boolean;
-  errorLog: ErrorLog;
+  errorLog: AggregatedErrorLog;
 }
 
 const initialState: DetailsState = {

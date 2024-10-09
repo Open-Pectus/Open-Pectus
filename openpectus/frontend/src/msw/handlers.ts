@@ -3,10 +3,10 @@
 import { format, getSeconds, sub } from 'date-fns';
 import { delay, http, HttpResponse, PathParams } from 'msw';
 import {
+  AggregatedErrorLog,
   AuthConfig,
   CommandExample,
   ControlState,
-  ErrorLog,
   ExecutableCommand,
   MethodAndState,
   PlotConfiguration,
@@ -749,6 +749,31 @@ export const handlers = [
     return HttpResponse.json<ControlState>(controlState);
   }),
 
+  http.get('/api/process_unit/:unitId/error_log', () => {
+    return HttpResponse.json<AggregatedErrorLog>({
+      entries: [
+        {
+          created_time: sub(new Date(), {minutes: 5, seconds: Math.random() * 50}).toISOString(),
+          severity: 'warning',
+          message: 'Just a warning',
+          occurrences: 2
+        },
+        {
+          created_time: sub(new Date(), {minutes: 5, seconds: Math.random() * 50}).toISOString(),
+          severity: 'warning',
+          message: 'Just another warning',
+          occurrences: 1
+        },
+        {
+          created_time: sub(new Date(), {seconds: Math.random() * 50}).toISOString(),
+          severity: 'error',
+          message: 'Oh no! An error!',
+          occurrences: 100
+        },
+      ],
+    });
+  }),
+
 
   /***************
    * RECENT RUNS *
@@ -878,8 +903,8 @@ export const handlers = [
     });
   }),
 
-  http.get('/api/recent_runs/:id/error_log', async () => {
-    return HttpResponse.json<ErrorLog>({
+  http.get('/api/recent_runs/:id/error_log', () => {
+    return HttpResponse.json<AggregatedErrorLog>({
       entries: [
         {
           created_time: sub(new Date(), {minutes: 5, seconds: Math.random() * 500}).toISOString(),
