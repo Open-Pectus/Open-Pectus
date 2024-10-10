@@ -29,6 +29,8 @@ Notes:
   - [6.3. Code generation from API spec](#63-code-generation-from-api-spec)
 - [7. Protocols](#7-protocols)
   - [7.1. Frontend - Aggregator](#71-frontend---aggregator)
+    - [7.1.1 Rest](#711-rest)
+    - [7.1.2 Websocket](#712-websocket)
   - [7.2. Engine - Aggregator](#72-engine---aggregator)
   - [7.3 Aggregator states per engine](#73-aggregator-states-per-engine)
 - [8. Deployment](#8-deployment)
@@ -326,6 +328,13 @@ To ensure that step 2 is not forgotten, the aggregator test suite contains a tes
 This chapter documents the Open Pectus Rest and Websocket protocols.
 
 ## 7.1. Frontend - Aggregator
+
+The frontend-aggregator protocol is primarily REST-based, but includes push messages via Websocket.
+
+### 7.1.1 Rest
+
+The REST protocol contains these interactions:
+
 ```mermaid
 sequenceDiagram
     participant F as Frontend
@@ -348,15 +357,15 @@ sequenceDiagram
     F ->> A: GET process_unit/{id}/plot_configuration
     A -->> F: 
 
-    loop polling now, websocket in future
+    loop Initial data and on push message METHOD
     F ->> A: GET process_unit/{id}/method
     A -->> F: 
     end
-    loop polling now, websocket in future
+    loop Initial data and on push message RUN_LOG
     F ->> A: GET process_unit/{id}/run_log
     A -->> F: 
     end
-    loop polling now, maybe websocket in future
+    loop polling
     F ->> A: GET process_unit/{id}/process_values
     A -->> F: 
     end
@@ -380,25 +389,50 @@ sequenceDiagram
     end
 ```
 
+### 7.1.2 Websocket
+
+The Websocket interactions are all push messages that instruct the frontend to
+request updates of a certain kind.
+
+The available messages are: 
+```RUN_LOG, METHOD, CONTROL_STATE, ERROR_LOG, PROCESS_UNITS```. The frontend knows
+the relevant REST endpoints that correspond to each type of message.
+
+```mermaid
+sequenceDiagram
+    participant F as Frontend
+    participant A as Aggregator
+    Note right of A: Web Socket
+    A ->> F: publish(message)
+    F -->> A: 
+```
+
 ## 7.2. Engine - Aggregator
+
+This diagram gives provides an overview of the Engine-Aggregator protocol. This is the main protocol
+in openpectus that ensures that aggregator is kept updated on engines (process units) and their states.
+It also allows users of the frontend to control connected engines.
+
+Note: This diagram shows a simplified overview. The actual protocol is more elaborate due to its built-in error
+recovery. This allows it to support temporarily disconnected engines as well as updating and/or restarting 
+Agregator during active runs. This is documented in the Error Recovery documentation:
+[ERROR_RECOVERY.md]((ERROR_RECOVERY).md)
 
 ```mermaid
 sequenceDiagram
     participant A as Aggregator
     participant E as Engine
-%%note left of E: Registration
+
     Note right of E: Web Socket
     E ->> A: connect
     A -->> E: 
     E ->> A: RegisterEngineMsg
     A -->> E: [engine_id]
-    Note over A,E: A knows E is running
+%%    Note over A,E: A knows E is running
     E ->> A: UodInfoMsg
     E ->> A: TagsUpdatedMsg
-    Note over A,E: A knows the process values of E
+%%    Note over A,E: A knows the process values of E
 
-
-%%note left of E: Engine running
 
     loop Every second
     E ->> A: TagsUpdatedMsg
@@ -414,10 +448,7 @@ sequenceDiagram
     A ->> E: InvokeCommandMsg
     E -->> A: 
     end
-
 ```
-
-## 7.3 Aggregator states per engine
 ```mermaid
 stateDiagram-v2
     Engine_Unknown --> Engine_Registered: [engine registers]
