@@ -1,3 +1,4 @@
+from __future__ import annotations
 import logging
 from datetime import datetime
 from enum import StrEnum, auto
@@ -25,6 +26,47 @@ ErrorLogEntry = Mdl.ErrorLogEntry
 ErrorLog = Mdl.ErrorLog
 SystemStateEnum = Mdl.SystemStateEnum
 TagDirection = Mdl.TagDirection
+
+
+class AggregatedErrorLogEntry(BaseModel):
+    message: str
+    created_time: float
+    severity: int
+    occurrences: int = 1
+
+    @staticmethod
+    def from_entry(entry: ErrorLogEntry):
+        return AggregatedErrorLogEntry(
+            message=entry.message,
+            created_time=entry.created_time,
+            severity=entry.severity,
+            occurrences=1
+        )
+
+
+class AggregatedErrorLog(BaseModel):
+    entries: list[AggregatedErrorLogEntry]
+
+    @staticmethod
+    def empty() -> AggregatedErrorLog:
+        return AggregatedErrorLog(entries=[])
+
+    def aggregate_with(self, error_log: ErrorLog):
+        """ Append the given log entries to the current log entries while deduplicating and aggregating entries. """
+        latest = self.entries[-1] if len(self.entries) > 0 else None
+        for entry in error_log.entries:
+            assert entry is not None, "log entry should not be None"
+            if latest is not None and entry.message == latest.message and entry.severity == latest.severity:
+                if latest.created_time < entry.created_time:
+                    latest.created_time = entry.created_time
+                    latest.occurrences += 1
+                elif latest.created_time == entry.created_time:
+                    logger.warning(f"Duplicate log entry with same created_time: {entry.message}")
+                else:
+                    logger.warning(f"Duplicate log entry with earlier created_time: {entry.message}")
+            else:
+                latest = AggregatedErrorLogEntry.from_entry(entry)
+                self.entries.append(latest)
 
 
 class ChannelStatusEnum(StrEnum):
@@ -81,12 +123,13 @@ class RunData(BaseModel):
     """ The time assigned to the last persisted set of values """
     latest_tag_time: float | None = None
     """ The time of the latest tag update, persisted or not """
-    error_log: ErrorLog = ErrorLog.empty()
+    error_log: AggregatedErrorLog = AggregatedErrorLog.empty()
     interrupted_by_error: bool = False
 
     def __str__(self) -> str:
         return f"RunData(run_started:{self.run_started}, method_state:{self.method_state}, " + \
                f"interrupted_by_error:{self.interrupted_by_error})"
+
 
 class EngineData(BaseModel):
     engine_id: str

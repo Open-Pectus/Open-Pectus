@@ -275,7 +275,7 @@ export class ProcessUnitService {
      * Get Error Log
      * @param data The data for the request.
      * @param data.unitId
-     * @returns ErrorLog Successful Response
+     * @returns AggregatedErrorLog Successful Response
      * @throws ApiError
      */
     public getErrorLog(data: GetErrorLogData): Observable<GetErrorLogResponse> {
@@ -491,7 +491,7 @@ export class RecentRunsService {
      * Get Recent Run Error Log
      * @param data The data for the request.
      * @param data.runId
-     * @returns ErrorLog Successful Response
+     * @returns AggregatedErrorLog Successful Response
      * @throws ApiError
      */
     public getRecentRunErrorLog(data: GetRecentRunErrorLogData): Observable<GetRecentRunErrorLogResponse> {

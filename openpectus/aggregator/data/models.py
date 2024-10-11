@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import StrEnum, auto
 from typing import Dict
 
-from openpectus.aggregator.models import Method, MethodState, PlotConfiguration, RunLog, ErrorLog
+from openpectus.aggregator.models import Method, MethodState, PlotConfiguration, RunLog, AggregatedErrorLog
 from sqlalchemy import JSON, ForeignKey, MetaData
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, attribute_keyed_dict
 
@@ -82,7 +82,7 @@ class RecentRunRunLog(DBModel):
 class RecentRunErrorLog(DBModel):
     __tablename__ = "RecentRunErrorLogs"
     run_id: Mapped[str] = mapped_column()
-    error_log: Mapped[ErrorLog] = mapped_column(type_=JSON)
+    error_log: Mapped[AggregatedErrorLog] = mapped_column(type_=JSON)
 
 
 class RecentRunPlotConfiguration(DBModel):
