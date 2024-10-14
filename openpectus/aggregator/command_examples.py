@@ -90,12 +90,11 @@ Block: Layer 1
         End blocks
 # We have escaped both blocks.
 """),
-#     CommandExample(name="Error", example="""
-# # Make a statement to the log file.
-# # Does not output into the Runlog.
+    CommandExample(name="Error", example="""
+# Make a statement to the log file.
 
-# Error: Hello.
-# """),
+Error: Hello.
+"""),
     CommandExample(name="Hold", example="""
 # Hold current output values but do not
 # progress with respect to time.
@@ -119,12 +118,11 @@ Increment run counter
 
 Restart
 """),
-#     CommandExample(name="Info", example="""
-# # Make a statement to the log file.
-# # Does not output into the Runlog.
+    CommandExample(name="Info", example="""
+# Make a statement to the log file.
 
-# Info: Hello.
-# """),
+Info: Hello.
+"""),
     CommandExample(name="Mark", example="""
 # Make a note in the data file at the current point in time.
 
@@ -181,12 +179,11 @@ Outlet: VA38
 Wait: 1 min
 Outlet: VA37
 """),
-#     CommandExample(name="Warning", example="""
-# # Make a statement to the log file.
-# # Does not output into the Runlog.
+    CommandExample(name="Warning", example="""
+# Make a statement to the log file.
 
-# Warning: Hello.
-# """),
+Warning: Hello.
+"""),
     CommandExample(name="Watch", example="""
 # Watch is a block that executes when a condition is satisfied.
 

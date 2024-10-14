@@ -14,6 +14,9 @@ class EngineCommandEnum(StrEnum):
     UNHOLD = "Unhold"
     WAIT = "Wait"
     RESTART = "Restart"
+    INFO = "Info"
+    WARNING = "Warning"
+    ERROR = "Error"
 
     @staticmethod
     def has_value(value: str):

@@ -218,7 +218,7 @@ Mark: C
 
         with runner.run() as instance:
             instance.start()
-            self.assertEqual([], instance.engine.interpreter.get_marks())
+            self.assertEqual([], instance.marks)
             instance.run_until_event("method_end")
             self.assertEqual(['A', 'B', 'C'], instance.engine.interpreter.get_marks())
 
@@ -234,7 +234,7 @@ Stop
         with runner.run() as instance:
             instance.start()
             instance.run_until_event("stop")
-            self.assertEqual([], instance.engine.interpreter.get_marks())
+            self.assertEqual([], instance.marks)
 
 
     @unittest.skip("speed > 1 not implemented")
@@ -348,3 +348,15 @@ Mark: C
 
             instance.run_until_event("method_end")
             self.assertTrue(['A', 'B', 'C', 'I'] == instance.marks or ['A', 'B', 'I', 'C'] == instance.marks)
+
+    def test_info_warning_error(self):
+        pcode = """
+Info: foo
+Warning: bar
+Error: baz
+Stop
+"""
+        runner = EngineTestRunner(create_test_uod, pcode=pcode)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_event("stop")

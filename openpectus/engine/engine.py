@@ -253,7 +253,7 @@ class Engine(InterpreterContext):
 
     def tick(self, tick_time: float, increment_time: float):
         """ Performs a scan cycle tick. """
-        logger.debug(f"Tick {self._tick_number + 1}")
+        # logger.debug(f"Tick {self._tick_number + 1}")
 
         if not self._running:
             self._tick_timer.stop()
@@ -452,13 +452,14 @@ class Engine(InterpreterContext):
         # no engine command is running - start one
         try:
             command = create_internal_command(cmd_request.name)
-            if cmd_request.kvargs is not None:
+            args = cmd_request.get_args()
+            if args is not None:
                 try:
-                    command.init_args(cmd_request.kvargs)
-                    logger.debug(f"Initialized command {cmd_request.name} with arguments {cmd_request.kvargs}")
+                    command.init_args(args)
+                    logger.debug(f"Initialized command {cmd_request.name} with arguments {args}")
                 except Exception:
                     raise EngineError(
-                        f"Failed to initialize arguments '{cmd_request.kvargs}' for command '{cmd_request.name}'",
+                        f"Failed to initialize arguments '{args}' for command '{cmd_request.name}'",
                         "same"
                     )
 

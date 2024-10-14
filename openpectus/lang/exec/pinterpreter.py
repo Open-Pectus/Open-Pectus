@@ -523,7 +523,7 @@ class PInterpreter(PNodeVisitor):
             self.context.tags[SystemTagName.BASE].set_value(node.args, self._tick_time)
 
         elif node.name == InterpreterCommandEnum.INCREMENT_RUN_COUNTER:
-            run_counter = self.context.tags[SystemTagName.RUN_COUNTER]            
+            run_counter = self.context.tags[SystemTagName.RUN_COUNTER]
             rc_value = run_counter.as_number() + 1
             logger.debug(f"Run Counter incremented from {rc_value - 1} to {rc_value}")
             run_counter.set_value(rc_value, self._tick_time)
@@ -555,7 +555,7 @@ class PInterpreter(PNodeVisitor):
             # We do, however, provide the execution id to the context
             # so that it can update the runtime record appropriately.
             try:
-                logger.debug(f"Executing command '{str(node)}' via engine")
+                logger.debug(f"Executing command '{str(node)}' with args '{node.args}' via engine")
                 self.context.schedule_execution(
                     name=node.name,
                     exec_id=record.exec_id,
