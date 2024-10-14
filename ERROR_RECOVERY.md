@@ -87,14 +87,10 @@ during a run and then comes back up later, both Aggregator and Engine should be 
 
 
 ## 3.2 Engine
-Error handling is added to engine_dispatcher which can detect connection errors and sample and batch up messages. When connection is reestablished,
-data can be sent. Engine does not know or need to know about errors.
+Error handling is implemented which can detect connection errors and sample and batch up data messages. When connection is reestablished, data can be sent.
 
-It is implemented as a decorator around EngineDispatcher and is transparent towards Engine and EngineReporter (clients of EngineDispatcher).
-The low level connection handling in EngineDispatcher is autonomous and self-healing. EngineReporter is responsible for collecting the relevant
-data from engine and sending it to aggregator using EngineDispatcher. When EngineDispatcher discovers that the connection is down, EngineReported
-keeps collecting data and sending it as normal. It is only the decorator buffers up the data (sampled per 5 seconds by default) and sends it once
-the connection is restored.
+It is implemented in the EngineRunner class which uses EngineDispatcher to implement
+an autonomous and self-healing connection (at least when the connection is recovered in reasonable time).
 
 To make the dispatchers testable, base classes are introduced that contain non-network details. These are subclassed in production versions
 using rest/websockets and in test versions using direct connection.

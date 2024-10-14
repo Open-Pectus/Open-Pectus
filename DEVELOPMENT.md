@@ -32,7 +32,9 @@ Notes:
     - [7.1.1 Rest](#711-rest)
     - [7.1.2 Websocket](#712-websocket)
   - [7.2. Engine - Aggregator](#72-engine---aggregator)
-  - [7.3 Aggregator states per engine](#73-aggregator-states-per-engine)
+  - [7.3 State diagrams](#73-state-diagrams)
+    - [7.3.1 Engine states](#731-engine-states)
+    - [7.3.2 Aggregator states](#732-aggregator-states)
 - [8. Deployment](#8-deployment)
   - [8.1 Deployment diagram](#81-deployment-diagram)
 - [9. Unit Operation Definition](#9-unit-operation-definition)
@@ -449,27 +451,70 @@ sequenceDiagram
     E -->> A: 
     end
 ```
+
+## 7.3 State diagrams
+
+This chapter documents the important states and state changes in openpectus.
+
+Note on transition naming:
+- Lower case transitions (e.g. "register ok") denote some action in the system.
+- Capitalized transitions (e.g. "Start") denote a specific command being executed.
+
+### 7.3.1 Engine states
+
+When an engine is started, it automatically connects to the hardware specified in its UOD and to
+the Aggregator url specified as command line argument. It cannot function properly if either
+of these connections are unavailable on startup (though the error recovery features will
+continously attempt to recover).
+
+Once both connections are in place, the engine is in state `Connected`. This means that:
+- Engine is ready to receive commands or run a method.
+- The scan cycle loop is started so tag values are continuously read from hardware
+- Engine is displayed in the frontend dashboard as a process unit with status `Ready` 
+- Engine details can be viewed in frontend details, including real-time updated values of its configured
+tags.
+
+This state is also referred to as *Steady State* (as opposed to states such as *starting/initializing/connecting/reconnecting*).
+
+Avoid using the term `Running` the describe Engine state because is ambiguous. It might mean that engine is *Connected*/in *Steady State*, or it could mean that a method is running. The term `Connected` is used here and in the diagrams to referes to Engine in Steady State.
+
+<!-- Notes:
+- The `run_id` system tag is created by the `Start` command and cleared by the `Stop` command. -->
+
+
+```mermaid
+stateDiagram-v2    
+    [*] --> Connected: Connected to hardware and Aggregator
+        note right of Connected: aka Steady State, Stopped
+    Connected --> Method_Running: Start
+    Method_Running --> Method_Error: Method instruction fail
+    Method_Error --> Method_Running: Ackknowledge and Retry
+    Method_Error --> Connected: Stop
+    Method_Running --> Connected: Stop
+    Method_Running --> Method_Complete
+    Method_Complete --> Connected
+```
+
+
+### 7.3.2 Aggregator states
+The aggregator manages a number of Engines and tracks the state of each one.
+
+Notes:
+- Persistance of run state is based changes on the `run_id` system tag. If no longer set, save as recent run. 
+
+
 ```mermaid
 stateDiagram-v2
     Engine_Unknown --> Engine_Registered: [engine registers]
     Engine_Registered --> Engine_Connected: [ws connect]
     Engine_Connected --> Engine_Registered: [ws disconnect, other]
     Engine_Connected --> Engine_Unknown: [ws disconnect, aggregator refuse]
-
-    Engine_Connected --> Engine_Running: [Start Method]
-    Engine_Running --> ??: [error executing method]
-    Engine_Running --> Engine_Complete: [Stop Method]
-    Engine_Running --> ???: [method execution complete]
+    Engine_Connected --> Engine_Running: [Start]
+    Engine_Running --> Engine_Complete: [Stop]
     Engine_Running --> Received_EngineData: [Engine sends data]
     note right of Received_EngineData: Create and persist BatchJobProcessValueData
-    Received_EngineData --> Engine_Running: [auto]
-    Engine_Complete --> Engine_Connected: [auto]
-    note right of Engine_Complete: Create and persist BatchJobData
-
+    Received_EngineData --> Engine_Running: [auto]    
 ```
-
-Note: ?? define behavior, maybe raise error popup in client
-
 
 # 8. Deployment
 
