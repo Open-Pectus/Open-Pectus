@@ -15,12 +15,14 @@ export class VariableRowSpanDirective implements AfterViewInit, OnDestroy {
   constructor(private ref: ElementRef<HTMLElement>) {}
 
   @HostBinding('style.grid-row') get rowSpan() {
-    const span = Math.ceil((this.collapsedElementHeight + this.contentHeight) / (this.collapsedElementHeight + this.rowGap));
+    const myHeight = this.collapsedElementHeight + this.contentHeight;
+    const heightPerRow = this.rowGap;
+    const span = Math.ceil(myHeight / heightPerRow);
     return `span ${span} / span ${span}`;
   }
 
   ngAfterViewInit() {
-    const contentElement = this.ref.nativeElement.querySelector('[content]');
+    const contentElement = this.ref.nativeElement.querySelector('.overflow-hidden');
     if(contentElement === null) return;
     this.observer.observe(contentElement);
   }
