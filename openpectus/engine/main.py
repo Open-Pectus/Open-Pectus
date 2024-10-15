@@ -2,6 +2,7 @@ import asyncio
 import logging
 from argparse import ArgumentParser, BooleanOptionalAction
 import importlib
+from logging.handlers import RotatingFileHandler
 from os import path
 import pathlib
 from typing import Literal
@@ -21,22 +22,19 @@ log_setup_colorlog()
 
 StateKind = Literal["Started", "Connected", "Disconnected", "Reconnecting", "Reconnected"]
 
-file_handler = logging.FileHandler(filename=path.join(pathlib.Path(__file__).parent.resolve(), 'openpectus-engine.log'))
+file_log_path = path.join(pathlib.Path(__file__).parent.resolve(), 'openpectus-engine.log')
+file_handler = RotatingFileHandler(file_log_path, maxBytes=2*1024*1024, backupCount=5)
 file_handler.setLevel(logging.INFO)
 file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s]: %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
+logging.root.addHandler(file_handler)
 
 logger = logging.getLogger("openpectus.engine.engine")
 logger.setLevel(logging.INFO)
-logger.addHandler(file_handler)
 
 logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.INFO)
-logging.getLogger("openpectus.lang.exec.pinterpreter").addHandler(file_handler)
 logging.getLogger("openpectus.protocol.engine_dispatcher").setLevel(logging.DEBUG)
-logging.getLogger("openpectus.protocol.engine_dispatcher").addHandler(file_handler)
 logging.getLogger("openpectus.engine.engine_runner").setLevel(logging.INFO)
-logging.getLogger("openpectus.engine.engine_runner").addHandler(file_handler)
 logging.getLogger("openpectus.engine.internal_commands_impl").setLevel(logging.INFO)
-logging.getLogger("openpectus.engine.internal_commands_impl").addHandler(file_handler)
 logging.getLogger("asyncua.client").setLevel(logging.WARNING)
 
 

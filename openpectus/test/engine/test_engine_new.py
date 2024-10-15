@@ -359,4 +359,4 @@ Stop
         runner = EngineTestRunner(create_test_uod, pcode=pcode)
         with runner.run() as instance:
             instance.start()
-            instance.run_until_event("stop")
+            instance.run_until_event("stop") # will raise on engine error
