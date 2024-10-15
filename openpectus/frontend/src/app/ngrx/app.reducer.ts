@@ -1,6 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { ProcessUnit } from '../api';
+import { BuildInfo, ProcessUnit } from '../api';
 import { AppActions } from './app.actions';
 
 export const appFeatureKey = 'app';
@@ -9,6 +9,7 @@ export interface AppState {
   processUnits: ProcessUnit[];
   authIsEnabled?: boolean;
   webSocketIsDisconnected: boolean;
+  buildInfo?: BuildInfo;
 }
 
 const initialState: AppState = {
@@ -29,5 +30,8 @@ export const appReducer = createReducer(initialState,
   on(AppActions.websocketReconnected, (state) => produce(state, draft => {
     draft.webSocketIsDisconnected = false;
   })),
+  on(AppActions.buildInfoLoaded, (state, {buildInfo}) => produce(state, draft => {
+    draft.buildInfo = buildInfo;
+  }))
 );
 

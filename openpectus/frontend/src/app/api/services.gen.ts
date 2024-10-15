@@ -5,7 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { GetUnitData, GetUnitResponse, GetUnitsResponse, GetProcessValuesData, GetProcessValuesResponse, GetAllProcessValuesData, GetAllProcessValuesResponse, ExecuteCommandData, ExecuteCommandResponse, GetProcessDiagramData, GetProcessDiagramResponse, GetCommandExamplesData, GetCommandExamplesResponse, GetRunLogData, GetRunLogResponse, GetMethodAndStateData, GetMethodAndStateResponse, SaveMethodData, SaveMethodResponse, GetPlotConfigurationData, GetPlotConfigurationResponse, GetPlotLogData, GetPlotLogResponse, GetControlStateData, GetControlStateResponse, GetErrorLogData, GetErrorLogResponse, ForceRunLogLineData, ForceRunLogLineResponse, CancelRunLogLineData, CancelRunLogLineResponse, ExposeSystemStateEnumResponse, GetRecentRunsResponse, GetRecentRunData, GetRecentRunResponse, GetRecentRunMethodAndStateData, GetRecentRunMethodAndStateResponse, GetRecentRunRunLogData, GetRecentRunRunLogResponse, GetRecentRunPlotConfigurationData, GetRecentRunPlotConfigurationResponse, GetRecentRunPlotLogData, GetRecentRunPlotLogResponse, GetRecentRunCsvJsonData, GetRecentRunCsvJsonResponse, GetRecentRunErrorLogData, GetRecentRunErrorLogResponse, GetRecentRunCsvFileData, GetRecentRunCsvFileResponse, GetConfigResponse, PostResponse, ExposePubsubTopicsData, ExposePubsubTopicsResponse, TriggerPublishMswResponse } from './types.gen';
+import type { GetUnitData, GetUnitResponse, GetUnitsResponse, GetProcessValuesData, GetProcessValuesResponse, GetAllProcessValuesData, GetAllProcessValuesResponse, ExecuteCommandData, ExecuteCommandResponse, GetProcessDiagramData, GetProcessDiagramResponse, GetCommandExamplesData, GetCommandExamplesResponse, GetRunLogData, GetRunLogResponse, GetMethodAndStateData, GetMethodAndStateResponse, SaveMethodData, SaveMethodResponse, GetPlotConfigurationData, GetPlotConfigurationResponse, GetPlotLogData, GetPlotLogResponse, GetControlStateData, GetControlStateResponse, GetErrorLogData, GetErrorLogResponse, ForceRunLogLineData, ForceRunLogLineResponse, CancelRunLogLineData, CancelRunLogLineResponse, ExposeSystemStateEnumResponse, GetRecentRunsResponse, GetRecentRunData, GetRecentRunResponse, GetRecentRunMethodAndStateData, GetRecentRunMethodAndStateResponse, GetRecentRunRunLogData, GetRecentRunRunLogResponse, GetRecentRunPlotConfigurationData, GetRecentRunPlotConfigurationResponse, GetRecentRunPlotLogData, GetRecentRunPlotLogResponse, GetRecentRunCsvJsonData, GetRecentRunCsvJsonResponse, GetRecentRunErrorLogData, GetRecentRunErrorLogResponse, GetRecentRunCsvFileData, GetRecentRunCsvFileResponse, GetConfigResponse, PostResponse, ExposePubsubTopicsData, ExposePubsubTopicsResponse, TriggerPublishMswResponse, GetVersionResponse, GetBuildNumberResponse, GetBuildInfoResponse } from './types.gen';
 
 @Injectable({
     providedIn: 'root'
@@ -606,6 +606,50 @@ export class FrontendPubsubService {
         return __request(OpenAPI, this.http, {
             method: 'POST',
             url: '/api/trigger-publish-msw'
+        });
+    }
+    
+}
+
+@Injectable({
+    providedIn: 'root'
+})
+export class VersionService {
+    constructor(public readonly http: HttpClient) { }
+    
+    /**
+     * Get Version
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public getVersion(): Observable<GetVersionResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/version'
+        });
+    }
+    
+    /**
+     * Get Build Number
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public getBuildNumber(): Observable<GetBuildNumberResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/build_number'
+        });
+    }
+    
+    /**
+     * Get Build Info
+     * @returns BuildInfo Successful Response
+     * @throws ApiError
+     */
+    public getBuildInfo(): Observable<GetBuildInfoResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/build_info'
         });
     }
     

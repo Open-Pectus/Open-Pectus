@@ -1176,6 +1176,65 @@
           }
         }
       }
+    },
+    "/version": {
+      "get": {
+        "tags": [
+          "version"
+        ],
+        "summary": "Get Version",
+        "operationId": "get_version",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/build_number": {
+      "get": {
+        "tags": [
+          "version"
+        ],
+        "summary": "Get Build Number",
+        "operationId": "get_build_number",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/build_info": {
+      "get": {
+        "tags": [
+          "version"
+        ],
+        "summary": "Get Build Info",
+        "operationId": "get_build_info",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildInfo"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1244,6 +1303,24 @@
           "use_auth"
         ],
         "title": "AuthConfig"
+      },
+      "BuildInfo": {
+        "properties": {
+          "build_number": {
+            "type": "string",
+            "title": "Build Number"
+          },
+          "git_sha": {
+            "type": "string",
+            "title": "Git Sha"
+          }
+        },
+        "type": "object",
+        "required": [
+          "build_number",
+          "git_sha"
+        ],
+        "title": "BuildInfo"
       },
       "CommandExample": {
         "properties": {
