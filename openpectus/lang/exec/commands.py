@@ -47,7 +47,13 @@ class CommandRequest():
             return CommandRequest(name=name, source="@interpreter", exec_id=exec_id, kvargs=kvargs)
 
     def __str__(self) -> str:
-        return f"EngineCommand {self.name} | args: {str(self.kvargs)}"
+        return f"EngineCommand {self.name} | kvargs: {str(self.kvargs)} | unparsed_args: {self.unparsed_args}"
+
+    def get_args(self) -> dict[str, Any]:
+        if self.kvargs is None or (self.kvargs == {} and self.unparsed_args is not None):
+            return {"unparsed_args": self.unparsed_args}
+        else:
+            return self.kvargs
 
 
 # Represents command API towards interpreter

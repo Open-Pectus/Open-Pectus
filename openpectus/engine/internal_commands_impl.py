@@ -156,6 +156,7 @@ class HoldEngineCommand(InternalEngineCommand):
             logger.debug("Resuming using Unhold")
             UnholdEngineCommand(self.engine)._run()
 
+
 class UnholdEngineCommand(InternalEngineCommand):
     def __init__(self, engine: Engine) -> None:
         super().__init__(EngineCommandEnum.UNHOLD)
@@ -290,3 +291,30 @@ class RestartEngineCommand(InternalEngineCommand):
             e._set_run_id("new")
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
             logger.info("Restarting engine complete")
+
+
+class InfoEngineCommand(InternalEngineCommand):
+    def __init__(self, engine: Engine) -> None:
+        super().__init__(EngineCommandEnum.INFO)
+
+    def _run(self):
+        msg = self.kvargs.get("unparsed_args")
+        logger.info(f"Info: {msg}")
+
+
+class WarningEngineCommand(InternalEngineCommand):
+    def __init__(self, engine: Engine) -> None:
+        super().__init__(EngineCommandEnum.WARNING)
+
+    def _run(self):
+        msg = self.kvargs.get("unparsed_args")
+        logger.warning(f"Warning: {msg}")
+
+
+class ErrorEngineCommand(InternalEngineCommand):
+    def __init__(self, engine: Engine) -> None:
+        super().__init__(EngineCommandEnum.ERROR)
+
+    def _run(self):
+        msg = self.kvargs.get("unparsed_args")
+        logger.error(f"Error: {msg}")

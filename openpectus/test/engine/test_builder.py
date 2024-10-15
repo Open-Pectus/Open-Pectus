@@ -963,6 +963,23 @@ Stop
         self.assertEqual(wait.duration.time, 2.0)
         self.assertEqual(wait.duration.unit, "h")
 
+    def test_info_warning_error(self):
+        p = build("""
+Info:foo
+Warning: bar
+Error: baz
+""")
+        program = p.build_model()
+        self.assertFalse(program.has_error(recursive=True))
+        [info, warning, error] = program.get_instructions()
+        assert isinstance(info, PCommand)
+        self.assertEqual(info.args, "foo")
+        assert isinstance(warning, PCommand)
+        self.assertEqual(warning.args, "bar")
+        assert isinstance(error, PCommand)
+        self.assertEqual(error.args, "baz")
+
+
     @unittest.skip("Need a better error concept for this to make sense")
     def test_program_errors(self):
         p = build(

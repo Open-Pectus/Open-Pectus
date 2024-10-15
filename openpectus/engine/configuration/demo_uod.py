@@ -48,16 +48,6 @@ def create() -> UnitOperationDefinitionBase:
         cmd.set_complete()
 
     def get_plot_configuration() -> PlotConfiguration:
-        logger.warn('1FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
-        logger.warn('2FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
-        logger.warn('3FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
-        logger.warn('4FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
-        logger.warn('5FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
-        logger.warn('6FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
-        logger.warn('7FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
-        logger.warn('8FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
-        logger.warn('9FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
-        logger.warn('10FOR TESTING PURPOSES: getting plot configuration') # TODO: delete this when we have actual uod warnings and errors to test with
         return PlotConfiguration(
             color_regions=[
                 PlotColorRegion(
