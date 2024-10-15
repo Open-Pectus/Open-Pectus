@@ -100,7 +100,7 @@ export class ProcessPlotZoomAndPan {
   private getDblClick() {
     return (_: MouseEvent) => {
       this.svg.on('mousemove mouseup', null);
-      this.store.dispatch(ProcessPlotActions.processPlotZoomReset());
+      this.store.dispatch(ProcessPlotActions.processPlotDoubleClicked());
     };
   }
 

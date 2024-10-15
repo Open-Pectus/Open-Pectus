@@ -14,6 +14,7 @@ export class ProcessPlotActions {
   static processPlotZoomed = createAction(source + 'Process Plot Zoomed',
     props<{ subPlotIndex: number, newXDomain: AxisLimits, newYDomains: AxisLimits[] }>());
   static processPlotZoomReset = createAction(source + 'Process Plot Zoom Reset');
+  static processPlotDoubleClicked = createAction(source + 'Process Plot Double Clicked');
   static processPlotElementsPlaced = createAction(source + 'Process Plot Elements Placed');
   static processPlotResized = createAction(source + 'Process Plot Resized');
   static newAnnotatedValueAppeared = createAction(source + 'New Annotated Value appeared');
@@ -28,7 +29,7 @@ export class ProcessPlotActions {
     props<{ yAxesLimitsOverride: YAxesLimitsOverride }>());
   static xAxisProcessValueNameRestoredFromLocalStorage = createAction(source + 'X Axes Process Value Name Restored From LocalStorage',
     props<{ xAxisProcessValueName: string }>());
-  static processPlotReset = createAction(source + 'Process Plot Reset');
+  static processPlotAxesReset = createAction(source + 'Process Plot Axes Reset');
   static xAxisClicked = createAction(source + 'X Axis Clicked', props<{ data: XAxisOverrideDialogData }>());
   static xOverrideDialogClosed = createAction(source + 'X Axis Override Dialog Closed');
   static xOverrideDialogSaveClicked = createAction(source + 'X Axis Override Dialog Save Clicked', props<{ processValueName: string }>());

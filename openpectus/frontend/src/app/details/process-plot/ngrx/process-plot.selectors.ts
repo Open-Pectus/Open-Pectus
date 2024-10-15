@@ -16,9 +16,9 @@ export class ProcessPlotSelectors {
   });
   static anySubplotZoomed = createSelector(this.zoomedSubplotIndices, zoomedSubplotIndices => zoomedSubplotIndices.length !== 0);
   static xAxisProcessValueOverride = createSelector(this.selectFeature, state => state.xAxisProcessValueOverride);
-  static plotIsModified = createSelector(this.anySubplotZoomed, this.yAxesLimitsOverride, this.xAxisProcessValueOverride,
-    (isZoomed, yAxisOverrides, xAxisOverride) => {
-      return isZoomed || yAxisOverrides !== undefined || xAxisOverride !== undefined;
+  static axesAreOverridden = createSelector(this.yAxesLimitsOverride, this.xAxisProcessValueOverride,
+    (yAxisOverrides, xAxisOverride) => {
+      return yAxisOverrides !== undefined || xAxisOverride !== undefined;
     });
   static xAxisOverrideDialogData = createSelector(this.selectFeature, state => state.xAxisOverrideDialogData);
   static xAxisProcessValueCandidates = createSelector(this.plotConfiguration,
