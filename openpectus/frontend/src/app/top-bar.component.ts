@@ -15,7 +15,7 @@ import { AppSelectors } from './ngrx/app.selectors';
     <div class="w-full grid grid-cols-[auto_1fr_auto] items-center px-4 bg-slate-600 text-white relative">
       <div class="flex items-center">
         <app-msw-enablement></app-msw-enablement>
-        <span class="ml-2 text-xs text-slate-400" *ngrxLet="buildInfo as buildInfo">#{{buildInfo?.build_number}}-{{buildInfo?.git_sha}} </span>
+        <span class="ml-2 text-xs text-slate-400" *ngrxLet="buildInfo as buildInfo">#{{buildInfo?.build_number}}-{{buildInfo?.git_sha?.substring(0,7)}} </span>
       </div>
       <button class="text-3xl font-bold mx-4 my-2.5" (click)="navigateToRoot()">Open Pectus</button>
       <ng-container *ngrxLet="oidcSecurityService.userData$ as userData">
