@@ -1,3 +1,4 @@
+import logging
 import math
 from typing import List
 
@@ -9,6 +10,7 @@ from openpectus.lang.grammar.codegen.pcodeListener import pcodeListener
 from openpectus.lang.model.pprogram import (
     PCommandWithDuration,
     PDuration,
+    PInstError,
     PNode,
     PProgram,
     PInstruction,
@@ -27,6 +29,8 @@ from openpectus.lang.model.pprogram import (
 )
 
 INDENTATION_SPACES = 4
+
+logger = logging.getLogger(__name__)
 
 
 class PProgramBuilder(pcodeListener):
@@ -81,16 +85,6 @@ class PProgramBuilder(pcodeListener):
     def get_program(self) -> PProgram:
         return self.program
 
-    # def get_first_child(self, ctx: ParserRuleContext, ctx_type: type) -> ParserRuleContext | None:
-    #     if ctx is None:
-    #         return None
-    #     if isinstance(ctx, ctx_type):
-    #         return ctx
-    #     if hasattr(ctx, "getChildren"):
-    #         for child in ctx.getChildren():
-    #             result = self.get_first_child(child, ctx_type)
-    #             if result is not None:
-    #                 return result
 
     def enterProgram(self, ctx: pcodeParser.ProgramContext):
         # set program as scope
@@ -99,7 +93,6 @@ class PProgramBuilder(pcodeListener):
         self.stack.append(self.program)
 
     def enterInstruction(self, ctx: pcodeParser.InstructionContext):
-
         instruction_text = ctx.getText()
         instruction_text = "" if instruction_text is None else instruction_text.strip()
 
@@ -138,7 +131,10 @@ class PProgramBuilder(pcodeListener):
                 elif indent > prev_indent:
                     if not self.expect_indent:
                         self.instruction_error = PError(
-                            f"Bad indentation. Additional indentation unexpected. Expected {prev_indent} spaces of indentation")
+                            f"Bad indentation. Additional indentation unexpected. Expected {prev_indent} " +
+                            " spaces of indentation")
+                        # clear the invalid extra indentation to avoid errors in following instructions
+                        self.instruction_start.indent = prev_indent
                     elif indent != prev_indent + INDENTATION_SPACES:
                         self.instruction_error = PError(
                             f"Bad indentation. Expected {prev_indent + INDENTATION_SPACES} spaces of indentation")
@@ -151,7 +147,7 @@ class PProgramBuilder(pcodeListener):
     def exitInstruction(self, ctx: pcodeParser.InstructionContext):
         # attach any error to current instruction
         if self.instruction_error is not None:
-            if self.instruction is None:                
+            if self.instruction is None:
                 self.instruction = PErrorInstruction(self.scope, ctx.getText())
             elif isinstance(self.instruction, PBlank):
                 # skip indentation errors in blank lines
@@ -280,6 +276,12 @@ class PProgramBuilder(pcodeListener):
 
     def enterBlank(self, ctx: pcodeParser.BlankContext):
         self.instruction = PBlank(self.scope)
+
+    def enterInst_error(self, ctx: pcodeParser.Inst_errorContext):
+        if self.instruction is not None:
+            self.instruction._inst_error = PInstError(ctx.getText())
+        else:
+            logger.warning("In enterInst_error, instruction was none. This should not happen")
 
     def enterError(self, ctx: pcodeParser.ErrorContext):
         pass

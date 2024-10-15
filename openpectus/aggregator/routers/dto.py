@@ -371,23 +371,24 @@ class ErrorLogSeverity(StrEnum):
     Error = auto()
 
 
-class ErrorLogEntry(Dto):
+class AggregatedErrorLogEntry(Dto):
     message: str
     created_time: datetime
     severity: ErrorLogSeverity
+    occurrences: int = 1
 
     @staticmethod
-    def from_model(model: Mdl.ErrorLogEntry) -> ErrorLogEntry:
-        return ErrorLogEntry(
+    def from_model(model: Mdl.AggregatedErrorLogEntry) -> AggregatedErrorLogEntry:
+        return AggregatedErrorLogEntry(
             message=model.message,
             created_time=datetime.fromtimestamp(model.created_time),
-            severity=ErrorLogSeverity.Error if model.severity == logging.ERROR else ErrorLogSeverity.Warning
+            severity=ErrorLogSeverity.Error if model.severity == logging.ERROR else ErrorLogSeverity.Warning,
+            occurrences=model.occurrences
         )
 
-
-class ErrorLog(Dto):
-    entries: list[ErrorLogEntry]
+class AggregatedErrorLog(Dto):
+    entries: list[AggregatedErrorLogEntry]
 
     @staticmethod
-    def from_model(model: Mdl.ErrorLog) -> ErrorLog:
-        return ErrorLog(entries=[ErrorLogEntry.from_model(entry) for entry in model.entries])
+    def from_model(model: Mdl.AggregatedErrorLog) -> AggregatedErrorLog:
+        return AggregatedErrorLog(entries=[AggregatedErrorLogEntry.from_model(entry) for entry in model.entries])

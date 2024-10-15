@@ -1,11 +1,11 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { ErrorLog } from '../../api';
+import { AggregatedErrorLog } from '../../api';
 import { DetailsActions } from './details.actions';
 
 export interface DetailsState {
   allProcessValues: boolean;
-  errorLog: ErrorLog;
+  errorLog: AggregatedErrorLog;
 }
 
 const initialState: DetailsState = {

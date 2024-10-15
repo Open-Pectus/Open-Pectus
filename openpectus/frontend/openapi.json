@@ -586,7 +586,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorLog"
+                  "$ref": "#/components/schemas/AggregatedErrorLog"
                 }
               }
             }
@@ -1024,7 +1024,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorLog"
+                  "$ref": "#/components/schemas/AggregatedErrorLog"
                 }
               }
             }
@@ -1180,6 +1180,50 @@
   },
   "components": {
     "schemas": {
+      "AggregatedErrorLog": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/AggregatedErrorLogEntry"
+            },
+            "type": "array",
+            "title": "Entries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entries"
+        ],
+        "title": "AggregatedErrorLog"
+      },
+      "AggregatedErrorLogEntry": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "created_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created Time"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/ErrorLogSeverity"
+          },
+          "occurrences": {
+            "type": "integer",
+            "title": "Occurrences",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "created_time",
+          "severity"
+        ],
+        "title": "AggregatedErrorLogEntry"
+      },
       "AuthConfig": {
         "properties": {
           "use_auth": {
@@ -1268,45 +1312,6 @@
           "state"
         ],
         "title": "Error"
-      },
-      "ErrorLog": {
-        "properties": {
-          "entries": {
-            "items": {
-              "$ref": "#/components/schemas/ErrorLogEntry"
-            },
-            "type": "array",
-            "title": "Entries"
-          }
-        },
-        "type": "object",
-        "required": [
-          "entries"
-        ],
-        "title": "ErrorLog"
-      },
-      "ErrorLogEntry": {
-        "properties": {
-          "message": {
-            "type": "string",
-            "title": "Message"
-          },
-          "created_time": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created Time"
-          },
-          "severity": {
-            "$ref": "#/components/schemas/ErrorLogSeverity"
-          }
-        },
-        "type": "object",
-        "required": [
-          "message",
-          "created_time",
-          "severity"
-        ],
-        "title": "ErrorLogEntry"
       },
       "ErrorLogSeverity": {
         "type": "string",

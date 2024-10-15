@@ -224,8 +224,8 @@ class WaitEngineCommand(InternalEngineCommand):
             if unit is None:
                 raise ValueError("Invalid Wait arguments. Unit is not valid")
             self.duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
-        elif "time" in kvargs.keys() or "unit" in kvargs.keys():
-            raise ValueError("Invalid Wait arguments. Specify either no duration arguments or both time and unit")
+        else:
+            raise ValueError("Invalid Wait arguments. A duration is required")
 
     def _run(self):
         self.engine._runstate_waiting = True

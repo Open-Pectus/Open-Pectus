@@ -229,7 +229,7 @@ class PInterpreter(PNodeVisitor):
                 if ar.complete:
                     self._unregister_interrupt(ar)
                     if isinstance(node, PAlarm):
-                        node.reset_state()
+                        node.reset_runtime_state()
                         ar = ActivationRecord(node)
                         self._register_interrupt(ar, self._create_interrupt_handler(node, ar))
             else:
@@ -281,7 +281,7 @@ class PInterpreter(PNodeVisitor):
 
     def stop(self):
         self.running = False
-        self._program.reset_state()
+        self._program.reset_runtime_state()
 
     def _is_awaiting_threshold(self, node: PNode):
         if isinstance(node, PInstruction) and node.time is not None:
@@ -577,7 +577,7 @@ class PInterpreter(PNodeVisitor):
 
         if node.duration is not None and node.duration.error:
             record.add_state_failed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
-            raise NodeInterpretationError(node, "Parse error. Command duration duration not valid") from None
+            raise NodeInterpretationError(node, "Parse error. Command duration not valid") from None
         try:
             logger.debug(f"Executing command '{str(node)}' via engine")
             if node.duration is None:

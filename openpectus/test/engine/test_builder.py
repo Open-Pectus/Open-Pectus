@@ -44,6 +44,10 @@ class BuilderTest(unittest.TestCase):
         out = PProgramFormatter().format(program)
         self.assertMultiLineEqual(expected, out)
 
+    def assertNodeHasType(self, node: PNode, expected_type: type):
+        if not isinstance(node, expected_type):
+            raise AssertionError(f"Invalid node type: {type(node).__name__}, expected: {expected_type.__name__}")
+
     def test_command(self):
         p = build("foo: bar=baz")
         program = p.build_model()
@@ -293,7 +297,6 @@ Block: Equilibration
         # print_program(program)
 
         # check wiki for updated expressions
-
         instructions = program.get_instructions()
         self.assertIsInstance(instructions[0], PBlock)
         for i in [1, 2, 3, 4, 5, 6, 7]:
@@ -303,6 +306,16 @@ Block: Equilibration
         instr = instructions[8]
         self.assertIsInstance(instr, PEndBlock)
         self.assertFalse(instr.has_error())
+
+    def test_block_name_non_identifier(self):
+        p = build("Block: 87")
+        program = p.build_model()
+        # p.printSyntaxTree(p.tree)
+        # print_program(program)
+        block = program.get_instructions()[0]
+        assert isinstance(block, PBlock)
+        self.assertEqual(block.name, "87")
+        self.assertFalse(program.has_error(recursive=True))
 
     def test_end_blocks(self):
         p = build("End blocks")
@@ -316,8 +329,8 @@ Block: Equilibration
         # p.printSyntaxTree(p.tree)
         # print_program(program)
         mark = program.get_instructions()[0]
-        self.assertIsInstance(mark, PMark)
-        self.assertEqual(mark.name, "A")  # type: ignore
+        assert isinstance(mark, PMark)
+        self.assertEqual(mark.name, "A")
         self.assertFalse(program.has_error(recursive=True))
 
     def test_mark_comment(self):
@@ -329,6 +342,35 @@ Block: Equilibration
         self.assertIsInstance(mark, PMark)
         self.assertEqual(mark.comment, " foo")
         self.assertFalse(program.has_error(recursive=True))
+
+    def test_mark_name_non_identifier(self):
+        def test(code: str, name: str):
+            with self.subTest(code):
+                p = build(code)
+                program = p.build_model()
+                p.printSyntaxTree(p.tree)
+                print_program(program)
+                mark = program.get_instructions()[0]
+                assert isinstance(mark, PMark)
+                self.assertEqual(mark.name, name)
+                self.assertFalse(program.has_error(recursive=True))
+
+        test("Mark: 87", "87")
+        test("Mark: 5 seconds have passed", "5 seconds have passed")
+        test("Mark: B %", "B %")
+
+    def test_indentation_error(self):
+        code = """
+    Mark: A
+Mark: B"""
+        # test that an indentation error (A) does not interfere with the scope
+        # of following instructions (B)
+        p = build(code)
+        program = p.build_model()
+        [a, b] = program.get_instructions()
+        # print_program(program, show_errors=True)
+        self.assertTrue(a.has_error())
+        self.assertFalse(b.has_error())
 
     def test_blanks(self):
         p = build(
@@ -489,19 +531,56 @@ Incr counter: foo='bar',2
     def test_watch(self):
         p = build(
             """
-Watch
-    Mark: A
-        """
+Watch: Run counter > 0
+    Mark: A"""
         )
         program = p.build_model()
+        [watch, mark_a] = program.get_instructions(include_blanks=False)
+        self.assertNodeHasType(watch, PWatch)
+        self.assertNodeHasType(mark_a, PMark)
+        self.assertFalse(watch.has_error(recursive=True))
+        self.assertIsNone(watch._inst_error)
 
-        # print_program(program, show_line_numbers=True, show_errors=True)
+    def test_watch_missing_condition(self):
+        p = build(
+            """
+Watch
+    Mark: A"""
+        )
+        program = p.build_model()
+        [watch, mark] = program.get_instructions(include_blanks=False)
 
-        non_blanks = program.get_instructions()
-        self.assertIsInstance(non_blanks[0], PWatch)
-        mark = non_blanks[0].get_child_nodes()[0]
-        self.assertIsInstance(mark, PMark)
-        self.assertFalse(program.has_error(recursive=True))
+        self.assertNodeHasType(watch, PWatch)
+        self.assertIsNone(watch._inst_error)
+        self.assertNodeHasType(mark, PMark)
+        self.assertTrue(watch.has_error())
+
+    def test_watch_partial_condition(self):
+        p = build(
+            """
+Watch:
+    Mark: A"""
+        )
+        program = p.build_model()
+        [watch, mark] = program.get_instructions(include_blanks=False)
+        self.assertNodeHasType(watch, PWatch)
+        self.assertNodeHasType(mark, PMark)
+        self.assertIsNotNone(watch._inst_error)
+        self.assertTrue(watch.has_error())
+
+    def test_watch_partial_condition_w_comment(self):
+        p = build(
+            """
+Watch: # foo
+    Mark: A"""
+        )
+        program = p.build_model()
+        [watch, mark] = program.get_instructions(include_blanks=False)
+        self.assertNodeHasType(watch, PWatch)
+        self.assertEqual(watch.comment, " foo")
+        self.assertNodeHasType(mark, PMark)
+        self.assertIsNotNone(watch._inst_error)
+        self.assertTrue(watch.has_error())
 
     def test_watch_unit(self):
         p = build(
@@ -843,20 +922,36 @@ Stop
         self.assertEqual(hold.duration.time, 27.35)
         self.assertEqual(hold.duration.unit, "s")
 
-    def test_wait_must_have_duration(self):
-        p = build("Wait")
+    def test_hold_w_arg_error(self):
+        p = build("Hold: 27.35")
         program = p.build_model()
         p.printSyntaxTree(p.tree)
 
-        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        self.assertTrue(program.has_error(recursive=True))
+
+        [hold] = program.get_instructions(include_blanks=True)
+
+        self.assertIsInstance(hold, PCommandWithDuration)
+        assert isinstance(hold,  PCommandWithDuration)
+        self.assertEqual(hold.name, "Hold")
+        assert isinstance(hold.duration,  PDuration)
+        self.assertTrue(hold.duration.error)
+        self.assertEqual(hold.duration.time, None)
+        self.assertEqual(hold.duration.unit, None)
+
+    def test_wait_must_have_duration(self):
+        p = build("Wait")
+        program = p.build_model()
+        # p.printSyntaxTree(p.tree)
+        # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
         self.assertTrue(program.has_error(recursive=True))
 
     def test_wait_w_arg(self):
         p = build("Wait:2h")
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
-
-        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        # p.printSyntaxTree(p.tree)
+        # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
         self.assertFalse(program.has_error(recursive=True))
 
         [wait] = program.get_instructions(include_blanks=True)

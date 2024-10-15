@@ -1,10 +1,10 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { ErrorLog } from '../../../api';
+import { AggregatedErrorLog } from '../../../api';
 import { ErrorLogActions } from './error-log.actions';
 
 export interface ErrorLogState {
-  errorLog: ErrorLog;
+  errorLog: AggregatedErrorLog;
 }
 
 const initialState: ErrorLogState = {

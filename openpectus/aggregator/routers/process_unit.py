@@ -229,13 +229,13 @@ def get_control_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggre
 
 
 @router.get('/process_unit/{unit_id}/error_log')
-def get_error_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.ErrorLog:
+def get_error_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.AggregatedErrorLog:
     engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None:
         logger.warning("No client data - thus no error log")
-        return Dto.ErrorLog(entries=[])
+        return Dto.AggregatedErrorLog(entries=[])
 
-    return Dto.ErrorLog.from_model(engine_data.run_data.error_log)
+    return Dto.AggregatedErrorLog.from_model(engine_data.run_data.error_log)
 
 
 @router.post('/process_unit/{unit_id}/run_log/force_line/{line_id}')
