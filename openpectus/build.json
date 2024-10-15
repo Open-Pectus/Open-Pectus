@@ -1,4 +1,5 @@
 {
     "_": "This file is updated by the build server to contain the build number",
-    "build_number": "development"
+    "build_number": "dev",
+    "git_sha": "dev"
 }

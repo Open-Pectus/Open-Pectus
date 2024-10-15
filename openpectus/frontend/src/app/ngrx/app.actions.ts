@@ -1,5 +1,5 @@
 import { createAction, props } from '@ngrx/store';
-import { ProcessUnit } from '../api';
+import { BuildInfo, ProcessUnit } from '../api';
 
 const source = '[App] ';
 
@@ -10,4 +10,5 @@ export class AppActions {
   static processUnitsUpdatedOnBackend = createAction(source + 'Process Units Updated On Backend');
   static websocketDisconnected = createAction(source + 'Websocket Disconnected');
   static websocketReconnected = createAction(source + 'Websocket Reconnected');
+  static buildInfoLoaded = createAction(source + 'Build Info Loaded', props<{buildInfo: BuildInfo}>());
 }

@@ -392,3 +392,8 @@ class AggregatedErrorLog(Dto):
     @staticmethod
     def from_model(model: Mdl.AggregatedErrorLog) -> AggregatedErrorLog:
         return AggregatedErrorLog(entries=[AggregatedErrorLogEntry.from_model(entry) for entry in model.entries])
+
+
+class BuildInfo(Dto):
+    build_number: str
+    git_sha: str
