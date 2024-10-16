@@ -15,7 +15,7 @@ export class VariableRowSpanDirective implements AfterViewInit, OnDestroy {
   constructor(private ref: ElementRef<HTMLElement>) {}
 
   @HostBinding('style.grid-row') get rowSpan() {
-    const myHeight = this.collapsedElementHeight + this.contentHeight;
+    const myHeight = this.collapsedElementHeight + this.contentHeight + this.rowGap;
     const heightPerRow = this.rowGap;
     const span = Math.ceil(myHeight / heightPerRow);
     return `span ${span} / span ${span}`;
