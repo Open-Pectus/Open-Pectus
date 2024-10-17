@@ -34,13 +34,17 @@ import { VariableRowSpanDirective } from './variable-row-span.directive';
   ],
   template: `
     @if ((processUnit | ngrxPush)?.state?.state !== 'not_online') {
-      <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:py-6 gap-6 lg:gap-8" *ngrxLet="unitId as unitId">
+      <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:pt-6 pb-8 gap-6 lg:gap-8" *ngrxLet="unitId as unitId">
         <app-unit-header class="mx-2 my-3 lg:m-0"></app-unit-header>
         <app-process-values></app-process-values>
+      </div>
+      <div class="grid auto-rows-[1px] grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 gap-x-6 lg:gap-x-8" *ngrxLet="unitId as unitId">
         <app-method-editor [unitId]="unitId" appVariableRowSpan></app-method-editor>
         <app-commands appVariableRowSpan></app-commands>
         <app-run-log [unitId]="unitId" appVariableRowSpan></app-run-log>
         <app-process-diagram appVariableRowSpan></app-process-diagram>
+      </div>
+      <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:pb-6 gap-6 lg:gap-8" *ngrxLet="unitId as unitId">
         <app-process-plot-container class="2xl:col-span-2" [unitId]="unitId"></app-process-plot-container>
         <app-error-log [unitId]="unitId" class="2xl:col-span-2"></app-error-log>
       </div>

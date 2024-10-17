@@ -6,7 +6,7 @@ import { AfterViewInit, Directive, ElementRef, HostBinding, OnDestroy } from '@a
 })
 export class VariableRowSpanDirective implements AfterViewInit, OnDestroy {
   collapsedElementHeight = 54;
-  rowGap = 32;
+  rowHeight = 1;
   private contentHeight = 0;
   private observer = new ResizeObserver((entries: ResizeObserverEntry[], _: ResizeObserver) => {
     this.contentHeight = entries.at(0)?.contentRect?.height ?? 0;
@@ -15,9 +15,8 @@ export class VariableRowSpanDirective implements AfterViewInit, OnDestroy {
   constructor(private ref: ElementRef<HTMLElement>) {}
 
   @HostBinding('style.grid-row') get rowSpan() {
-    const myHeight = this.collapsedElementHeight + this.contentHeight + this.rowGap;
-    const heightPerRow = this.rowGap;
-    const span = Math.ceil(myHeight / heightPerRow);
+    const myHeight = this.collapsedElementHeight + this.contentHeight;
+    const span = Math.ceil(myHeight / this.rowHeight) + 32;
     return `span ${span} / span ${span}`;
   }
 
