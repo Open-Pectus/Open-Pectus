@@ -1,9 +1,8 @@
 import { NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, effect, Injector, input, OnDestroy, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, input, OnDestroy, OnInit } from '@angular/core';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
-import { CreateQueryResult, injectQuery } from '@tanstack/angular-query-experimental';
-import { ProcessValue } from '../../api';
+import { injectQuery } from '@tanstack/angular-query-experimental';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { DetailsQueriesService } from '../details-queries.service';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
@@ -41,13 +40,11 @@ export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
   protected isCollapsed = false;
   protected isZoomed = this.store.select(ProcessPlotSelectors.anySubplotZoomed);
   protected axesAreOverridden = this.store.select(ProcessPlotSelectors.axesAreOverridden);
-  private processValuesQuery?: CreateQueryResult<ProcessValue[], Error>;
+  private processValuesQuery = injectQuery(() => this.detailsQueriesService.processValuesQuery(this.unitId));
 
   constructor(private store: Store,
-              private detailsQueriesService: DetailsQueriesService,
-              private injector: Injector) {
+              private detailsQueriesService: DetailsQueriesService) {
     effect(() => {
-      if(this.processValuesQuery === undefined) return;
       const processValues = this.processValuesQuery.data();
       if(processValues === undefined) return;
       // setTimeout to break out of the reactive context, which for some reason causes some problems: TODO: figure out why
@@ -59,7 +56,6 @@ export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
     const unitId = this.unitId();
     if(unitId !== undefined) {
       this.store.dispatch(ProcessPlotActions.processPlotComponentInitializedForUnit({unitId}));
-      this.processValuesQuery = injectQuery(() => this.detailsQueriesService.processValuesQuery(signal(unitId)), this.injector);
     }
     const recentRunId = this.recentRunId();
     if(recentRunId !== undefined) {
@@ -76,6 +72,6 @@ export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
   }
 
   onResetZoom() {
-    this.store.dispatch(ProcessPlotActions.processPlotZoomReset())
+    this.store.dispatch(ProcessPlotActions.processPlotZoomReset());
   }
 }

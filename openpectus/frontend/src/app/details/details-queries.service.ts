@@ -1,5 +1,5 @@
 import { effect, Injectable, Signal } from '@angular/core';
-import { injectQueryClient, queryOptions } from '@tanstack/angular-query-experimental';
+import { injectQueryClient, queryOptions, skipToken } from '@tanstack/angular-query-experimental';
 import { lastValueFrom } from 'rxjs';
 import { ProcessUnitService, RecentRunsService } from '../api';
 import { PubSubService } from '../shared/pub-sub.service';
@@ -11,11 +11,13 @@ export class DetailsQueriesService {
               private pubSubService: PubSubService,
               private recentRunsService: RecentRunsService) {}
 
-  processValuesQuery(engineId: Signal<string>) {
+  processValuesQuery(engineId: Signal<string | undefined>) {
+    const engineIdValue = engineId();
     return queryOptions({
       refetchInterval: 1000,
-      queryKey: ['processValues', engineId()],
-      queryFn: () => lastValueFrom(this.processUnitService.getProcessValues({engineId: engineId()})),
+      queryKey: ['processValues', engineIdValue],
+      queryFn: engineIdValue === undefined ? skipToken : () => lastValueFrom(
+        this.processUnitService.getProcessValues({engineId: engineIdValue})),
     });
   }
 
@@ -39,6 +41,7 @@ export class DetailsQueriesService {
       queryFn: () => lastValueFrom(this.processUnitService.getControlState({unitId: engineId()})),
     });
   }
+
   subscribeToControlStateUpdates(engineId: Signal<string>) {
     const queryClient = injectQueryClient();
     effect((onCleanup) => {
