@@ -23,9 +23,13 @@ import { ProcessPlotComponent } from './process-plot.component';
   template: `
     <app-collapsible-element [name]="'Process Plot'" [heightResizable]="true" [contentHeight]="670" [contentOverflow]="true"
                              (collapseStateChanged)="isCollapsed = $event" [codiconName]="'codicon-graph-line'">
-      <button *ngIf="plotIsModified | ngrxPush" buttons (click)="onReset()"
-              class="bg-red-300 text-black rounded pl-2.5 pr-3 py-1 flex items-center">
-        <span class="codicon codicon-discard mr-1.5"></span> Reset view
+      <button *ngIf="isZoomed | ngrxPush" buttons (click)="onResetZoom()"
+              class="bg-stone-50 text-black border border-1 border-gray-400 rounded pl-2.5 pr-3 py-0.5 flex items-center">
+        <span class="codicon codicon-zoom-out mr-1.5"></span> Reset zoom
+      </button>
+      <button *ngIf="axesAreOverridden | ngrxPush" buttons (click)="onResetAxes()"
+              class="bg-stone-50 text-black border border-1 border-gray-400 rounded pl-2.5 pr-3 py-0.5 flex items-center">
+        <span class="codicon codicon-discard mr-1.5"></span> Reset axes
       </button>
       <app-process-plot content class="block w-full h-full relative" *ngIf="!isCollapsed"></app-process-plot>
     </app-collapsible-element>
@@ -35,7 +39,8 @@ export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
   unitId = input<string>();
   recentRunId = input<string>();
   protected isCollapsed = false;
-  protected plotIsModified = this.store.select(ProcessPlotSelectors.plotIsModified);
+  protected isZoomed = this.store.select(ProcessPlotSelectors.anySubplotZoomed);
+  protected axesAreOverridden = this.store.select(ProcessPlotSelectors.axesAreOverridden);
   private processValuesQuery?: CreateQueryResult<ProcessValue[], Error>;
 
   constructor(private store: Store,
@@ -66,7 +71,11 @@ export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
     this.store.dispatch(ProcessPlotActions.processPlotComponentDestroyed());
   }
 
-  onReset() {
-    this.store.dispatch(ProcessPlotActions.processPlotReset());
+  onResetAxes() {
+    this.store.dispatch(ProcessPlotActions.processPlotAxesReset());
+  }
+
+  onResetZoom() {
+    this.store.dispatch(ProcessPlotActions.processPlotZoomReset())
   }
 }

@@ -17,6 +17,11 @@ export type AuthConfig = {
     client_id?: string;
 };
 
+export type BuildInfo = {
+    build_number: string;
+    git_sha: string;
+};
+
 export type CommandExample = {
     name: string;
     example: string;
@@ -436,3 +441,9 @@ export type ExposePubsubTopicsData = {
 export type ExposePubsubTopicsResponse = (unknown);
 
 export type TriggerPublishMswResponse = (unknown);
+
+export type GetVersionResponse = (unknown);
+
+export type GetBuildNumberResponse = (unknown);
+
+export type GetBuildInfoResponse = (BuildInfo);

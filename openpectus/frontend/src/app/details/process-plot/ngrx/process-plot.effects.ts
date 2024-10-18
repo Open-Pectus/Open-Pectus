@@ -48,7 +48,7 @@ export class ProcessPlotEffects {
   ));
 
   saveYAxesLimitOverrideInLocalStorage = createEffect(() => this.actions.pipe(
-    ofType(ProcessPlotActions.yOverrideDialogSaveClicked, ProcessPlotActions.processPlotReset),
+    ofType(ProcessPlotActions.yOverrideDialogSaveClicked, ProcessPlotActions.processPlotAxesReset),
     concatLatestFrom(() => this.store.select(ProcessPlotSelectors.yAxesLimitsOverride)),
     switchMap(([_, yOverrideLimits]) => {
       this.axesOverridesLocalStorageService.storeYAxesLimitsOverride(yOverrideLimits);
@@ -66,7 +66,7 @@ export class ProcessPlotEffects {
   ));
 
   saveXAxisProcessValueNameInLocalStorage = createEffect(() => this.actions.pipe(
-    ofType(ProcessPlotActions.xOverrideDialogSaveClicked, ProcessPlotActions.processPlotReset),
+    ofType(ProcessPlotActions.xOverrideDialogSaveClicked, ProcessPlotActions.processPlotAxesReset),
     concatLatestFrom(() => this.store.select(ProcessPlotSelectors.xAxisProcessValueOverride)),
     switchMap(([_, xAxisProcessValueName]) => {
       this.axesOverridesLocalStorageService.storeXAxisProcessValueName(xAxisProcessValueName);

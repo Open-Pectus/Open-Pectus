@@ -6,4 +6,5 @@ export class AppSelectors {
   static processUnits = createSelector(this.selectFeature, state => state.processUnits);
   static authIsEnabled = createSelector(this.selectFeature, state => state.authIsEnabled);
   static webSocketIsDisconnected = createSelector(this.selectFeature, state => state.webSocketIsDisconnected);
+  static buildInfo = createSelector(this.selectFeature, state => state.buildInfo);
 }
