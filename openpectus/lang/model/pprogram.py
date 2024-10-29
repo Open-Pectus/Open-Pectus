@@ -177,9 +177,13 @@ class PNode():
             parent = parent.parent
         return False
 
-    def reset_runtime_state(self):
+    def reset_runtime_state(self, recursive: bool = False):
         """ Override to clear node runtime state. """
-        pass
+        if recursive:
+            def reset(node: PNode):
+                if node != self:
+                    node.reset_runtime_state(False)
+            self.iterate(reset)
 
 
 class PProgram(PNode):
@@ -202,13 +206,6 @@ class PProgram(PNode):
 
     def get_condition_nodes(self) -> List[PAlarm | PWatch]:
         return [c for c in self.get_instructions() if isinstance(c, PAlarm) or isinstance(c, PWatch)]
-
-    def reset_runtime_state(self):
-        """ Reset all runtime state from the program """
-        def reset(node: PNode):
-            if node != self:
-                node.reset_runtime_state()
-        self.iterate(reset)
 
 
 class PInjectedNode(PNode):
@@ -315,10 +312,11 @@ class PWatch(PInstruction):
         if self.condition is None:
             self.add_error(PError("Missing condition"))
 
-    def reset_runtime_state(self):
+    def reset_runtime_state(self, recursive: bool = False):
         self.activated = False
         self._cancelled = False
         self._forced = False
+        super().reset_runtime_state(recursive=recursive)
 
 
 class PAlarm(PInstruction):
@@ -360,10 +358,11 @@ class PAlarm(PInstruction):
         if self.condition is None:
             self.add_error(PError("Missing condition"))
 
-    def reset_runtime_state(self):
+    def reset_runtime_state(self, recursive: bool = False):
         self.activated = False
         self._cancelled = False
         self._forced = False
+        super().reset_runtime_state(recursive=recursive)
 
 
 class PMark(PInstruction):

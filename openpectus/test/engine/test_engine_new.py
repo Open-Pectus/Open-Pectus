@@ -208,6 +208,28 @@ Restart
 
             print(instance.get_runtime_table("C"))
 
+    def test_mark_in_alarm_body_runs_in_each_alarm_instance(self):
+        code = """
+Alarm: Block Time > 0s
+    Mark: A
+    Wait: 0.5s
+"""
+        runner = EngineTestRunner(create_test_uod, code)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_instruction("Alarm", "started")
+
+            # print(instance.get_runtime_table("start"))
+
+            instance.run_until_instruction("Mark", "completed")
+            self.assertEqual(['A'], instance.marks)
+
+            instance.run_ticks(9)
+
+            # print(instance.get_runtime_table("awaiting 2nd alarm"))
+
+            self.assertEqual(['A', 'A'], instance.marks)
+
     def test_watch_in_alarm_body_runs_in_each_alarm_instance(self):
         code = """
 Alarm: Block Time > 0s
@@ -241,7 +263,6 @@ Alarm: Block Time > 0s
             # instance.run_until_instruction("Alarm", "started")
 
             self.assertEqual(['A', 'A'], instance.marks)
-            
 
 
     def test_run_until_method_end(self):
