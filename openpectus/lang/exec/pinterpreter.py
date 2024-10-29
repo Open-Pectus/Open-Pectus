@@ -196,6 +196,8 @@ class PInterpreter(PNodeVisitor):
         tree = self._program
         if tree is None:
             return None
+        tree.reset_runtime_state(recursive=True)
+        logger.info("Reset runtime state")
         yield from self.visit(tree)
 
 
@@ -284,7 +286,7 @@ class PInterpreter(PNodeVisitor):
         self._program.reset_runtime_state(recursive=True)
 
     def _is_awaiting_threshold(self, node: PNode):
-        if isinstance(node, PInstruction) and node.time is not None:
+        if isinstance(node, PInstruction) and node.time is not None and not node.forced:
             base_unit = self.context.tags.get(SystemTagName.BASE).get_value()
             assert isinstance(base_unit, str), \
                 f"Base tag value must contain the base unit as a string. But its current value is '{base_unit}'"

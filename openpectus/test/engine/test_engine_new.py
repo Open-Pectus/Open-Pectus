@@ -249,7 +249,7 @@ Alarm: Block Time > 0s
 
             print(instance.get_runtime_table("mark"))
 
-            instance.index_step_back(2)  # Wait occurs before Mark - it should not, should it?!!!
+            instance.index_step_back(2)  # Wait occurs before Mark
             instance.run_until_instruction("Wait", "completed")
 
             instance.run_ticks(7)

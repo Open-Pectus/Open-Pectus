@@ -25,7 +25,8 @@ class TestRunlog(unittest.TestCase):
         for item in runlog.items:
             if item.name == name:
                 return
-        self.fail(f"Runlog has no item named '{name}'")
+        item_names = [item.name for item in runlog.items]
+        self.fail(f"Runlog has no item named '{name}'. It has these names:  {','.join(item_names)}")
 
     def assert_Runlog_HasItem_Started(self, name: str):
         runlog = self.engine.runtimeinfo.get_runlog()
@@ -341,6 +342,50 @@ Alarm: Block Time > 0s
         continue_engine(e, 10)  # not sure how long to wait - but surely this is enough
         self.assert_Runlog_HasItem_Completed(alarm_item_name, 2)  # verify we waited long enough
         self.assertEqual(['A', 'A'], e.interpreter.get_marks())
+
+    def test_runlog_force_Mark_w_threshold_is_forcible(self):
+        e = self.engine
+        program = """
+2 Mark: A
+"""
+        run_engine(e, program, 4)
+
+        mark_name = "Mark: A"
+        self.assert_Runlog_HasItem(mark_name)
+        runlog = e.runtimeinfo.get_runlog()
+        item = next(item for item in runlog.items if item.name == mark_name)
+        assert item is not None
+        exec_id = UUID(item.id)
+
+        self.assertEqual(item.forcible, True)
+        self.assertEqual(item.forced, False)
+
+        e.force_instruction(exec_id)
+        continue_engine(e, 1)
+
+        # get updated runlog
+        runlog = e.runtimeinfo.get_runlog()
+        item = next(item for item in runlog.items if item.name == mark_name)
+        assert item is not None
+
+        self.assertEqual(item.forcible, False)
+        self.assertEqual(item.forced, True)
+
+    def test_runlog_force_Mark_without_threshold_is_not_forcible(self):
+        e = self.engine
+        program = """
+Mark: A
+"""
+        run_engine(e, program, 4)
+
+        mark_name = "Mark: A"
+        self.assert_Runlog_HasItem(mark_name)
+        runlog = e.runtimeinfo.get_runlog()
+        item = next(item for item in runlog.items if item.name == mark_name)
+        assert item is not None
+
+        self.assertEqual(item.forcible, False)
+        self.assertEqual(item.forced, False)
 
 
     def test_runlog_aggregator_eq(self):

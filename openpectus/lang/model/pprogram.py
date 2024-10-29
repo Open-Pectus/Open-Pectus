@@ -224,6 +224,15 @@ class PInstruction(PNode):
         """ The delay threshold specified for the instruction measured in the Base unit. """
 
         self.comment: str = ''
+        self._forcible = True
+
+    @property
+    def forcible(self) -> bool:
+        return super().forcible and self.time is not None
+
+    def reset_runtime_state(self, recursive: bool = False):
+        self._forced = False
+        super().reset_runtime_state(recursive=recursive)
 
 
 class PBlock(PInstruction):

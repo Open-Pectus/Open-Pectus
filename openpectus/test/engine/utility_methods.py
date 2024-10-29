@@ -142,10 +142,10 @@ class EngineTestInstance(TagLifetime):
 
     def run_until_instruction(
             self,
-            instruction_name:
-            InstructionName,
+            instruction_name: InstructionName,
             state: FindInstructionState = "any",
             max_ticks=30,
+            increment_index=True
             ) -> int:
         """ Continue program execution and wait until the given instruction is run.
 
@@ -156,6 +156,11 @@ class EngineTestInstance(TagLifetime):
         Return the number of ticks spent.
 
         Raises TimeoutError if the instruction is not found before max_ticks is reached.
+
+        Use `increment_index` to control searching within states of the same instruction as last search. The default 
+        value of True skips to the next instruction which is normally what you want. If set to False, search also 
+        includes the record of the previous match. This is useful if searching for different states for the same 
+        record, such as "started" and "completed". See also `index_step_back()`.
         """
 
         # convert the easy-to-use literal into one of the enum states that find_instruction needs
@@ -177,15 +182,28 @@ class EngineTestInstance(TagLifetime):
             else:
                 # store position so we only search from there next time
                 # print(f"Found {instruction_name} at index {index}")
-                self._search_index = index + 1
+                self._search_index = index + 1 if increment_index else index
                 if instruction_name == "Restart":  # except if restarting in which case we start over
                     self._search_index = 0
                 return True
 
-        logger.debug(f"Start waiting for instruction {instruction_name}")
+        logger.debug(f"Start waiting for instruction {instruction_name}, state: {state}")
         ticks = self.run_until_condition(cond, max_ticks=max_ticks)
-        logger.debug(f"Done waiting for instruction {instruction_name}")
+        logger.debug(f"Done waiting for instruction {instruction_name}, state: {state}")
         return ticks
+
+    def index_step_back(self, steps=1):
+        # Not a good abstraction. Specifically not for alarms
+        # the best way would be to maintain a index for each runtime record
+        # os use tick as index, then search all records from there. That eliminates 
+        # the use of an index alltogether - but does slow it down, though, as it
+        # has to search all records on every query. 
+        if steps < 1:
+            raise ValueError("Steps must be positive")
+        if self._search_index - steps < 0:
+            self._search_index = 0
+        else:
+            self._search_index = self._search_index - steps
 
     def _clear_last_event(self):
         self._last_event = None
@@ -333,7 +351,7 @@ def print_runlog(e: Engine, description=""):
     print(f"Runlog {runlog.id} records: ", description)
     for item in runlog.items:
         name = f"{str(item.name):<20}"
-        prog = f"{item.progress:d2}" if item.progress else ""
+        prog = f"{item.progress:.2f}" if item.progress else ""
         print(f"{name}   {item.state:<15}    {prog}")
 
 
