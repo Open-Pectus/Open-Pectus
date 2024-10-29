@@ -6,7 +6,7 @@ import time
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.models as Mdl
 from openpectus.engine.engine import Engine
-from openpectus.lang.exec.runlog import RunLogItem
+from openpectus.lang.exec.runlog import RunLogItem, RunLogItemState
 from openpectus.lang.exec.tags import SystemTagName, TagValue
 from openpectus.lang.exec.uod import logger as uod_logger
 from openpectus.engine.engine import frontend_logger as engine_logger
@@ -19,7 +19,7 @@ frontend_logging_queue: SimpleQueue[logging.LogRecord] = SimpleQueue()
 frontend_logging_handler = QueueHandler(frontend_logging_queue)
 frontend_logging_handler.setLevel(logging.WARN)
 
-# add frontend error logging for selected loggers
+# add frontend error logging for selected loggers (this gives import cycle warning - could we reverse this instead?)
 uod_logger.addHandler(frontend_logging_handler)
 engine_logger.addHandler(frontend_logging_handler)
 archiver_logger.addHandler(frontend_logging_handler)
@@ -113,7 +113,11 @@ class EngineMessageBuilder():
                 end=item.end,
                 progress=item.progress,
                 start_values=[to_model_tag(t) for t in filter(filter_value, item.start_values)],
-                end_values=[to_model_tag(t) for t in filter(filter_value, item.end_values)]
+                end_values=[to_model_tag(t) for t in filter(filter_value, item.end_values)],
+                forcible=item.forcible,
+                cancellable=item.cancellable,
+                forced=item.forced,
+                cancelled=item.cancelled
             )
             return msg
 

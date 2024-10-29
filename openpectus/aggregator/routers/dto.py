@@ -227,13 +227,13 @@ class RunLogLine(Dto):
             ),
             start=datetime.fromtimestamp(model.start),
             end=None if model.end is None else datetime.fromtimestamp(model.end),
-            progress=None,
+            progress=model.progress,
             start_values=list(map(ProcessValue.create, model.start_values)),
             end_values=list(map(ProcessValue.create, model.end_values)),
-            forcible=None,  # TODO map forcible,forced,cancellable and cancelled
-            forced=None,
-            cancellable=None,
-            cancelled=None
+            forcible=model.forcible,
+            forced=model.forced,
+            cancellable=model.cancellable,
+            cancelled=model.cancelled
         )
 
 

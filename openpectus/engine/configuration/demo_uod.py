@@ -14,16 +14,21 @@ from openpectus.engine.uod_builder_api import (
 
 def create() -> UnitOperationDefinitionBase:
     builder = UodBuilder()
-    logger = builder.get_logger()
+    # use this logger to send warnings/errors to the frontend error log
+    # logger = builder.get_logger()
 
     def reset(cmd: UodCommand, **kvargs) -> None:
         count = cmd.get_iteration_count()
+        max_ticks = 100
         if count == 0:
             cmd.context.tags.get("Reset").set_value("Reset", time())
             cmd.context.hwl.reset_FT01()  # type: ignore
-        elif count == 4:
+        elif count > max_ticks:
             cmd.context.tags.get("Reset").set_value("N/A", time())
             cmd.set_complete()
+        else:
+            progress = count/max_ticks
+            cmd.set_progress(progress)
 
     def test_cmd(cmd: UodCommand, value):
         print("test_cmd executing with arg: " + value)

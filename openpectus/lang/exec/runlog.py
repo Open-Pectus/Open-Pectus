@@ -434,6 +434,10 @@ class RunLogItem():
         self.progress: float | None = None
         self.start_values: TagValueCollection = TagValueCollection.empty()
         self.end_values: TagValueCollection = TagValueCollection.empty()
+        self.forcible: bool = False
+        self.forced: bool = False
+        self.cancellable: bool = False
+        self.cancelled: bool = False
 
 
 class RunLogItemState(StrEnum):

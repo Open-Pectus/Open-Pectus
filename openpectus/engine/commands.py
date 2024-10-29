@@ -53,6 +53,9 @@ class EngineCommand():
     def set_progress(self, progress: bool | float):
         self._progress = progress
 
+    def get_progress(self) -> bool | float:
+        return self._progress
+
     def set_complete(self):
         self._exec_complete = True
 
