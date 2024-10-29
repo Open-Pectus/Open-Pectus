@@ -261,6 +261,36 @@ class FromFrontend:
 
         return True
 
+    async def request_cancel(self, engine_id, line_id: str) -> bool:
+        engine_data = self._engine_data_map.get(engine_id)
+        if engine_data is None:
+            logger.warning(f"Cannot request cancel, engine {engine_id} not found")
+            return False
+        try:
+            response = await self.dispatcher.rpc_call(engine_id, message=AM.CancelMsg(exec_id=line_id))            
+            if isinstance(response, M.ErrorMessage):
+                logger.error(f"Cancel request failed. Engine response: {response.message}")
+                return False
+        except Exception:
+            logger.error("Cancel request failed with exception", exc_info=True)
+            return False
+        return True
+
+    async def request_force(self, engine_id, line_id: str) -> bool:
+        engine_data = self._engine_data_map.get(engine_id)
+        if engine_data is None:
+            logger.warning(f"Cannot request force, engine {engine_id} not found")
+            return False
+        try:
+            response = await self.dispatcher.rpc_call(engine_id, message=AM.ForceMsg(exec_id=line_id))
+            if isinstance(response, M.ErrorMessage):
+                logger.error(f"Force request failed. Engine response: {response.message}")
+                return False
+        except Exception:
+            logger.error("Force request failed with exception", exc_info=True)
+            return False
+        return True
+
 
 class Aggregator:
     def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher) -> None:

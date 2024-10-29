@@ -114,7 +114,8 @@ class AggregatorDispatcher():
         return engine_id in self._engine_id_channel_map.keys()
 
     async def rpc_call(self, engine_id: str, message: M.MessageBase) -> M.MessageBase:
-        logger.info(f"Trying to invoke rpc, engine: {engine_id}, msg-type: {type(message).__name__}")
+        logger.info(f"Invoke rpc, engine: {engine_id}, msg-type: {type(message).__name__}")
+        logger.debug(f"{message}")
         if engine_id not in self._engine_id_channel_map.keys():
             logger.error(f"Cannot invoke rpc call to unknown engine: {engine_id}")
             raise ProtocolException("Unknown engine: " + engine_id)

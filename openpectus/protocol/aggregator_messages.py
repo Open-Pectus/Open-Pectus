@@ -36,3 +36,13 @@ class InjectCodeMsg(AggregatorMessage):
 class MethodMsg(AggregatorMessage):
     """ Request from user to set a new method to be executed by engine. """
     method: Mdl.Method
+
+
+class CancelMsg(AggregatorMessage):
+    """ Request from user to cancel an instruction. """
+    exec_id: str
+
+
+class ForceMsg(AggregatorMessage):
+    """ Request from user to force an instruction to start. """
+    exec_id: str
