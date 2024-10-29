@@ -37,7 +37,8 @@ const reducer = createReducer(initialState,
       };
     })),
   on(ProcessPlotActions.processPlotZoomReset,
-    ProcessPlotActions.processPlotReset,
+    ProcessPlotActions.processPlotDoubleClicked,
+    ProcessPlotActions.processPlotAxesReset,
     (state) => produce(state, draft => {
       draft.zoomAndPanDomainOverrides = undefined;
     })),
@@ -49,7 +50,8 @@ const reducer = createReducer(initialState,
     ProcessPlotActions.newAnnotatedValueAppeared,
     ProcessPlotActions.processPlotInitialized,
     ProcessPlotActions.processPlotZoomReset,
-    ProcessPlotActions.processPlotReset,
+    ProcessPlotActions.processPlotDoubleClicked,
+    ProcessPlotActions.processPlotAxesReset,
     ProcessPlotActions.plotLogFetched,
     state => produce(state, draft => {
       draft.markedDirty = true;
@@ -87,7 +89,7 @@ const reducer = createReducer(initialState,
   on(ProcessPlotActions.xAxisProcessValueNameRestoredFromLocalStorage, (state, {xAxisProcessValueName}) => produce(state, draft => {
     draft.xAxisProcessValueOverride = xAxisProcessValueName;
   })),
-  on(ProcessPlotActions.processPlotReset, state => produce(state, draft => {
+  on(ProcessPlotActions.processPlotAxesReset, state => produce(state, draft => {
     draft.yAxesLimitsOverride = undefined;
     draft.xAxisProcessValueOverride = undefined;
   })),

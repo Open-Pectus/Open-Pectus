@@ -26,13 +26,14 @@ async function enableMocking() {
   if(!MswEnablement.isEnabled) return;
   const worker = setupWorker(...handlers);
   return worker.start({
+    quiet: true,
     onUnhandledRequest: (request: Request) => {
       const url = new URL(request.url);
       const pathname = url.pathname;
       if(pathname.startsWith('/assets')
          || pathname.startsWith('/node_modules')
          || pathname.startsWith('/src')
-         || pathname.startsWith('/api/trigger-pubsub')
+         || pathname.startsWith('/api/trigger-publish-msw')
          || pathname.endsWith('.ico')
          || pathname.endsWith('.js')
          || pathname.endsWith('.json')
