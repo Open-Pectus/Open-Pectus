@@ -438,6 +438,7 @@ class Engine(InterpreterContext):
                 pass
 
         # an existing, long running engine_command is running. other commands must wait
+        # Note: we need a priority mechanism - even Stop is waiting here
         command = get_running_internal_command()
         if command is not None:
             if cmd_request.name == command.name:
