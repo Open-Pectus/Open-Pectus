@@ -52,11 +52,15 @@ def get_queue_items(q) -> list[Tag]:
 def create_test_uod() -> UnitOperationDefinitionBase:
     def reset(cmd: UodCommand, **kvargs) -> None:
         count = cmd.get_iteration_count()
+        max_ticks = 5
         if count == 0:
             cmd.context.tags.get("Reset").set_value("Reset", time.time())
-        elif count == 4:
+        elif count > max_ticks:
             cmd.context.tags.get("Reset").set_value("N/A", time.time())
             cmd.set_complete()
+        else:
+            progress = count/max_ticks
+            cmd.set_progress(progress)
 
     def cmd_with_args(cmd: UodCommand, **kvargs) -> None:
         print("arguments: " + str(kvargs))
@@ -480,8 +484,8 @@ class TestEngine(unittest.TestCase):
         run_engine(e, "Reset", 2)
         self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
 
-        # Reset takes 3 ticks to revert
-        continue_engine(e, 3)
+        # Reset takes 5 ticks to revert
+        continue_engine(e, 5)
         self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
 
         continue_engine(e, 1)
@@ -516,7 +520,7 @@ Reset
         self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Cancelled))
         self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Completed))
 
-        continue_engine(e, 3)
+        continue_engine(e, 5)
         print_runtime_records(e)
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.Completed))
 

@@ -61,6 +61,10 @@ class RunLogLine(ProtocolModel):
     progress: float | None  # between 0 and 1
     start_values: list[TagValue]
     end_values: list[TagValue]
+    forcible: bool | None
+    cancellable: bool | None
+    forced: bool | None
+    cancelled: bool | None
 
 
 class RunLog(ProtocolModel):

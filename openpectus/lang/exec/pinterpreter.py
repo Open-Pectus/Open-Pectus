@@ -196,6 +196,8 @@ class PInterpreter(PNodeVisitor):
         tree = self._program
         if tree is None:
             return None
+        tree.reset_runtime_state(recursive=True)
+        logger.info("Reset runtime state")
         yield from self.visit(tree)
 
 
@@ -229,7 +231,7 @@ class PInterpreter(PNodeVisitor):
                 if ar.complete:
                     self._unregister_interrupt(ar)
                     if isinstance(node, PAlarm):
-                        node.reset_runtime_state()
+                        node.reset_runtime_state(recursive=True)
                         ar = ActivationRecord(node)
                         self._register_interrupt(ar, self._create_interrupt_handler(node, ar))
             else:
@@ -281,10 +283,10 @@ class PInterpreter(PNodeVisitor):
 
     def stop(self):
         self.running = False
-        self._program.reset_runtime_state()
+        self._program.reset_runtime_state(recursive=True)
 
     def _is_awaiting_threshold(self, node: PNode):
-        if isinstance(node, PInstruction) and node.time is not None:
+        if isinstance(node, PInstruction) and node.time is not None and not node.forced:
             base_unit = self.context.tags.get(SystemTagName.BASE).get_value()
             assert isinstance(base_unit, str), \
                 f"Base tag value must contain the base unit as a string. But its current value is '{base_unit}'"
@@ -626,13 +628,25 @@ class PInterpreter(PNodeVisitor):
                     self.context.tags.as_readonly())
 
                 while not ar.complete and self.running:
-                    try:
-                        condition_result = self._evaluate_condition(node)
-                    except AssertionError:
-                        raise
-                    except Exception as ex:
-                        raise NodeInterpretationError(node, "Error evaluating condition: " + str(ex))
-                    logger.debug(f"{str(node)} condition evaluated: {condition_result}")
+                    condition_result = False
+                    if node.cancelled:
+                        record.add_state_cancelled(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+                        logger.info(f"Instruction {node} cancelled")
+                        ar.complete = True
+                        return
+                    elif node.forced:
+                        record.add_state_forced(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+                        logger.info(f"Instruction {node} forced")
+                        condition_result = True
+                    else:
+                        try:
+                            condition_result = self._evaluate_condition(node)
+                        except AssertionError:
+                            raise
+                        except Exception as ex:
+                            raise NodeInterpretationError(node, "Error evaluating condition: " + str(ex))
+                        logger.debug(f"{str(node)} condition evaluated: {condition_result}")
+
                     if condition_result:
                         node.activated = True
                         logger.debug(f"{str(node)} executing")

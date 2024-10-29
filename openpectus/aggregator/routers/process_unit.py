@@ -239,13 +239,18 @@ def get_error_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregato
 
 
 @router.post('/process_unit/{unit_id}/run_log/force_line/{line_id}')
-def force_run_log_line(unit_id: str, line_id: str):
-    pass
+async def force_run_log_line(unit_id: str, line_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)):
+    if not await agg.from_frontend.request_force(engine_id=unit_id, line_id=line_id):
+        return Dto.ServerErrorResponse(message="Force request failed")
+    return Dto.ServerSuccessResponse(message="Force successfully requested")
 
 
 @router.post('/process_unit/{unit_id}/run_log/cancel_line/{line_id}')
-def cancel_run_log_line(unit_id: str, line_id: str):
-    pass
+async def cancel_run_log_line(unit_id: str, line_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)):
+    if not await agg.from_frontend.request_cancel(engine_id=unit_id, line_id=line_id):
+        return Dto.ServerErrorResponse(message="Cancel request failed")
+    return Dto.ServerSuccessResponse(message="Cancel successfully requested")
+
 
 
 @router.get('/process_units/system_state_enum')
