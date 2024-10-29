@@ -40,6 +40,15 @@ class PNode():
         for general consumption
          """
 
+        self._cancellable: bool = False
+        """ Whether node is statically cancellable, i.e. supports the cancel operation at all. """
+
+        self._cancelled: bool = False
+        self._forcible: bool = False
+        """ Whether node is statically forcible, i.e. supports the force operation at all. """
+
+        self._forced: bool = False
+
         if self.parent is not None and self.parent.children is not None:
             self.parent.children.append(self)
 
@@ -74,6 +83,34 @@ class PNode():
         if self.parent is None:
             return 0
         return self.parent.depth + 1
+
+    @property
+    def cancellable(self) -> bool:
+        """ Whether the node is cancellable in its current state. Virtual property. """
+        return self._cancellable and not self._cancelled and not self._forced
+
+    @property
+    def cancelled(self) -> bool:
+        """ Whether the node has been cancelled. Virtual property. """
+        return self._cancelled
+
+    def cancel(self):
+        if self.cancellable:
+            self._cancelled = True
+
+    @property
+    def forcible(self) -> bool:
+        """ Whether the node is forcible in its current state. Virtual property. """
+        return self._forcible and not self._forced and not self._cancelled
+
+    @property
+    def forced(self) -> bool:
+        """ Whether the node has been forced. Virtual property. """
+        return self._forced
+
+    def force(self):
+        if self.forcible:
+            self._forced = True
 
     def __str__(self) -> str:
         return type(self).__name__
@@ -249,6 +286,15 @@ class PWatch(PInstruction):
         self.condition: PCondition | None = None
         self.activated: bool = False
 
+    # override cancellable and forcible to be disabled once activated
+    @property
+    def cancellable(self) -> bool:
+        return not self.cancelled and not self.forced and not self.activated
+
+    @property
+    def forcible(self) -> bool:
+        return not self.cancelled and not self.forced and not self.activated
+
     @property
     def condition_str(self) -> str:
         return self.condition.condition_str if self.condition is not None else ""
@@ -271,6 +317,8 @@ class PWatch(PInstruction):
 
     def reset_runtime_state(self):
         self.activated = False
+        self._cancelled = False
+        self._forced = False
 
 
 class PAlarm(PInstruction):
@@ -281,6 +329,15 @@ class PAlarm(PInstruction):
         self.children = []
         self.condition: PCondition | None = None
         self.activated: bool = False
+
+    # override cancellable and forcible to be disabled once activated
+    @property
+    def cancellable(self) -> bool:
+        return not self.cancelled and not self.activated
+
+    @property
+    def forcible(self) -> bool:
+        return not self.forced and not self.activated
 
     @property
     def condition_str(self) -> str:
@@ -305,6 +362,8 @@ class PAlarm(PInstruction):
 
     def reset_runtime_state(self):
         self.activated = False
+        self._cancelled = False
+        self._forced = False
 
 
 class PMark(PInstruction):
@@ -327,7 +386,11 @@ class PMark(PInstruction):
         return "Mark"
 
 class PCommand(PInstruction):
-    """ Represents a Command instruction (Start, Stop, Restart, ...). """
+    """ Represents a Command instruction (Start, Stop, Restart, ...) as well as uod commands.
+
+    Note: The cancellable property is not set for uod commands because the node does not know
+    about the command. Runlog must set this property.
+    """
     def __init__(self, parent: PNode) -> None:
         super().__init__(parent)
 
@@ -336,6 +399,10 @@ class PCommand(PInstruction):
 
     def __str__(self) -> str:
         return super().__str__() + ": " + self.name
+
+    def cancel(self):
+        # skip the cancellable check here as noted above
+        self._cancelled = True
 
     @property
     def runlog_name(self) -> str | None:

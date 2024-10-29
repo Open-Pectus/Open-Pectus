@@ -626,13 +626,25 @@ class PInterpreter(PNodeVisitor):
                     self.context.tags.as_readonly())
 
                 while not ar.complete and self.running:
-                    try:
-                        condition_result = self._evaluate_condition(node)
-                    except AssertionError:
-                        raise
-                    except Exception as ex:
-                        raise NodeInterpretationError(node, "Error evaluating condition: " + str(ex))
-                    logger.debug(f"{str(node)} condition evaluated: {condition_result}")
+                    condition_result = False
+                    if node.cancelled:
+                        record.add_state_cancelled(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+                        logger.info(f"Instruction {node} cancelled")
+                        ar.complete = True
+                        return
+                    elif node.forced:
+                        record.add_state_forced(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+                        logger.info(f"Instruction {node} forced")
+                        condition_result = True
+                    else:
+                        try:
+                            condition_result = self._evaluate_condition(node)
+                        except AssertionError:
+                            raise
+                        except Exception as ex:
+                            raise NodeInterpretationError(node, "Error evaluating condition: " + str(ex))
+                        logger.debug(f"{str(node)} condition evaluated: {condition_result}")
+
                     if condition_result:
                         node.activated = True
                         logger.debug(f"{str(node)} executing")
