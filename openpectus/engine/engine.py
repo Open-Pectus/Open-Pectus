@@ -21,7 +21,7 @@ from openpectus.lang.exec.errors import (
     EngineError, EngineNotInitializedError, InterpretationError, InterpretationInternalError
 )
 from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext
-from openpectus.lang.exec.runlog import RuntimeInfo, RunLog, RuntimeRecord
+from openpectus.lang.exec.runlog import RuntimeInfo, RunLog, RuntimeRecord, RuntimeRecordStateEnum
 from openpectus.lang.exec.tag_lifetime import TagContext
 from openpectus.lang.exec.tags import (
     Tag,
@@ -34,7 +34,7 @@ from openpectus.lang.exec.tags import (
 )
 from openpectus.lang.exec.tags_impl import MarkTag
 from openpectus.lang.exec.timer import EngineTimer, OneThreadTimer
-from openpectus.lang.exec.uod import UnitOperationDefinitionBase
+from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand
 from openpectus.lang.grammar.pgrammar import PGrammar
 from openpectus.lang.model.pprogram import PProgram
 import openpectus.protocol.models as Mdl
@@ -158,6 +158,8 @@ class Engine(InterpreterContext):
 
         self._method: MethodModel = MethodModel(on_method_init, on_method_error)
         """ The model handling changes to program/method code """
+
+        self._cancel_command_exec_ids: list[UUID] = []
 
     def _iter_all_tags(self) -> Iterable[Tag]:
         return itertools.chain(self._system_tags, self.uod.tags)
@@ -489,12 +491,16 @@ class Engine(InterpreterContext):
 
     def _cancel_uod_commands(self):
         logger.debug("Cancelling uod commands")
+        cmds_to_cancel: list[UodCommand] = []
         for name, command in self.uod.command_instances.items():
             if command.is_cancelled() or command.is_execution_complete() or command.is_finalized():
                 logger.debug(f"Skipping command '{name}' that is no longer running")
             else:
-                logger.debug(f"Cancelling command '{name}'")
-                command.cancel()
+                cmds_to_cancel.append(command)
+
+        # remove outside the loop because cancel modifies the collection
+        for command in cmds_to_cancel:
+            command.cancel()
 
     def _execute_uod_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
         cmd_name = cmd_request.name
@@ -507,9 +513,25 @@ class Engine(InterpreterContext):
                 "same")
 
         record = self.interpreter.runtimeinfo.get_exec_record(cmd_request.exec_id)
+        cancel_this = False
+
+        # cancel any pending cancels (per user request)
+        for c in self.cmd_executing:
+            if c.command_exec_id in self._cancel_command_exec_ids:
+                cmd_record = self.runtimeinfo.get_uod_command_and_record(c.command_exec_id)
+                assert cmd_record is not None, "No record with exec id " + str(c.exec_id)
+                command, c_record = cmd_record
+                command.cancel()
+                cmds_done.add(c)
+                c_record.add_command_state_cancelled(
+                    c.command_exec_id, self._tick_time, self._tick_number, self.tags_as_readonly())
+                logger.info(f"Running command {c.name} cancelled per user request")
+                if cmd_request.command_exec_id in self._cancel_command_exec_ids:
+                    cancel_this = True
+                self._cancel_command_exec_ids.remove(c.command_exec_id)
 
         # cancel any existing instance with same name
-        for c in self.cmd_executing:
+        for c in [_c for _c in self.cmd_executing if _c not in cmds_done]:
             if c.name == cmd_name and not c == cmd_request:
                 cmds_done.add(c)
                 assert c.command_exec_id is not None, f"command_exec_id should be set for command '{cmd_name}'"
@@ -523,7 +545,7 @@ class Engine(InterpreterContext):
                 logger.debug(f"Running command {c.name} cancelled because another was started")
 
         # cancel any overlapping instance
-        for c in self.cmd_executing:
+        for c in [_c for _c in self.cmd_executing if _c not in cmds_done]:
             if not c == cmd_request:
                 for overlap_list in self.uod.overlapping_command_names_lists:
                     if c.name in overlap_list and cmd_name in overlap_list:
@@ -540,6 +562,10 @@ class Engine(InterpreterContext):
                             f"Running command {c.name} cancelled because overlapping command " +
                             f"'{cmd_name}' was started")
                         break
+
+        if cancel_this:
+            # don't start command again that was just cancelled
+            return
 
         # create or get command instance
         if not self.uod.has_command_instance(cmd_name):
@@ -745,6 +771,33 @@ class Engine(InterpreterContext):
             logger.error("Failed to set method", exc_info=True)
             self.set_error_state()
             raise
+
+    def cancel_instruction(self, exec_id: UUID):
+        record: RuntimeRecord | None = None
+        try:
+            # try exec_id as a record exec_id
+            record = self.runtimeinfo.get_exec_record(exec_id=exec_id)
+            logger.info(f"Cancelling instruction {exec_id=}")
+            record.node.cancel()
+        except ValueError:
+            # try exec_id as a command_exec_id
+            result = self.runtimeinfo.get_uod_command_and_record(command_exec_id=exec_id)
+            if result is not None:
+                _, record = result
+                logger.info(f"Schedule cancellation of uod command {exec_id=}")
+                self._cancel_command_exec_ids.append(exec_id)
+                record.node.cancel()  # also need to mark the node as cancelled to update the runlog
+
+        if record is None:
+            logger.error(f"Cannot cancel instruction {exec_id=}, no runtime record exec_id or command_exec_id found")
+
+    def force_instruction(self, exec_id: UUID):
+        record = self.runtimeinfo.get_exec_record(exec_id=exec_id)
+        if record is None:
+            logger.error(f"Cannot force instruction {exec_id=}, no runtime record found")
+        else:
+            logger.info(f"Forcing instruction {exec_id=}")
+            record.node.force()
 
     def calculate_method_state(self) -> Mdl.MethodState:
         return self._method.calculate_method_state(self.interpreter.runtimeinfo)

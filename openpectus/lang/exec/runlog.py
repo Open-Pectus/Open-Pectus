@@ -142,7 +142,7 @@ class RuntimeInfo():
                 if not is_conclusive_state and item is not None:
                     item.cancellable = r.node.cancellable
                     item.forcible = r.node.forcible
-                    if command is not None:
+                    if command is not None:  # is uod command
                         item.cancellable = True  # PCommand.cancellable does not support uod commands
                         self._update_item_progress(item, command)
 

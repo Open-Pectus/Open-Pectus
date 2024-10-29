@@ -110,13 +110,15 @@ class TestEngineNew(unittest.TestCase):
     def test_wait(self):
         code = """
 Wait: 1s
-Mark: A
 """
         runner = EngineTestRunner(create_test_uod, code)
         with runner.run() as instance:
             instance.start()
-            ticks = instance.run_until_instruction("Mark")
-            self.assertAlmostEqual(1+10+1+1, ticks, delta=2)
+
+            t = instance.run_until_instruction("Wait", "started", increment_index=False)
+            self.assertEqual(4, t)
+            ticks = instance.run_until_instruction("Wait", "completed")
+            self.assertAlmostEqual(10, ticks, delta=2)
 
     def test_run_until_instruction(self):
         code = """
@@ -205,6 +207,41 @@ Restart
                 instance.run_until_instruction("Restart")
 
             print(instance.get_runtime_table("C"))
+
+    def test_watch_in_alarm_body_runs_in_each_alarm_instance(self):
+        code = """
+Alarm: Block Time > 0s
+    Watch: Block Time > 0.5s
+        Mark: A
+    Wait: 0.5s
+"""
+        runner = EngineTestRunner(create_test_uod, code)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_instruction("Alarm", "started")
+
+            print(instance.get_runtime_table("start"))
+
+            instance.run_until_instruction("Mark", "completed")
+            self.assertEqual(['A'], instance.marks)
+
+            print(instance.get_runtime_table("mark"))
+
+            instance.index_step_back(2)  # Wait occurs before Mark - it should not, should it?!!!
+            instance.run_until_instruction("Wait", "completed")
+
+            instance.run_ticks(7)
+            print(instance.get_runtime_table("awaiting 2nd alarm"))
+
+            # This does not work because the alarm node is way up in the record list.
+            # we would need aonther way to wait for alarm, including a new find_instruction
+            # variant that locates the alarm record at indexes the states in there instead
+            # of the normal one that indexes full records.
+            # the same goes for any other node inside the alarm body
+            # instance.run_until_instruction("Alarm", "started")
+
+            self.assertEqual(['A', 'A'], instance.marks)
+            
 
 
     def test_run_until_method_end(self):
