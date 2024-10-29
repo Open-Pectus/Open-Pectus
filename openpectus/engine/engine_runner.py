@@ -361,13 +361,20 @@ class EngineRunner():
             await self._post_async(self._message_builder.create_tag_updates_snapshot_msg())
             await asyncio.sleep(1)
             while True:
-                for msg in [
-                    self._message_builder.create_control_state_msg(),
-                    self._message_builder.create_method_state_msg(),
-                    self._message_builder.create_error_log_msg(),
-                    self._message_builder.create_runlog_msg(),
-                    self._message_builder.create_tag_updates_msg(),
-                ]:
+                messages = []
+                try:
+                    messages = [
+                        self._message_builder.create_control_state_msg(),
+                        self._message_builder.create_method_state_msg(),
+                        self._message_builder.create_error_log_msg(),
+                        self._message_builder.create_runlog_msg(),
+                        self._message_builder.create_tag_updates_msg(),
+                    ]
+                except Exception:
+                    logger.error("Exception occurred building messages", exc_info=True)
+                    await asyncio.sleep(1)
+
+                for msg in messages:
                     if msg is not None:
                         await self._post_async(msg)
                 await asyncio.sleep(1)
