@@ -47,7 +47,7 @@ def get_args():
     parser = ArgumentParser("Start Pectus Engine")
     parser.add_argument("-ahn", "--aggregator_hostname", required=False, default=default_host,
                         help="Aggregator websocket host name. Default is 127.0.0.1")
-    parser.add_argument("-ap", "--aggregator_port", required=False, default=default_port,
+    parser.add_argument("-ap", "--aggregator_port", required=False, default=None,
                         help=f"Aggregator websocket port number. Default is {default_port} or {default_port_secure} " +
                         "if using --secure")
     parser.add_argument("-s", "--secure", action=BooleanOptionalAction,
@@ -91,9 +91,11 @@ async def main_async(args):
 
     engine = Engine(uod, enable_archiver=True)
 
-    # select port based on --secure, but only if --aggregator_port has the default value
-    port = default_port_secure if args.secure and args.aggregator_port == default_port \
-        else args.aggregator_port
+    # if --aggregator_port is specified, use it, else select a default port based on --secure
+    if args.aggregator_port is not None:
+        port = args.aggregator_port
+    else:
+        port = default_port_secure if args.secure else default_port
 
     dispatcher = EngineDispatcher(f"{args.aggregator_hostname}:{port}", args.secure, uod.options)
 
