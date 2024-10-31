@@ -247,7 +247,7 @@ class EngineTestDispatcher(EngineDispatcher):
             'uod_filename': 'my_uod_filename',
             'location': 'my_location'
         }
-        super().__init__(aggregator_host="", uod_options=uod_options)
+        super().__init__(aggregator_host="", secure=False, uod_options=uod_options)
         self.event_loop = event_loop
         self.aggregatorDispatcher: AggregatorTestDispatcher
         self.network_failing = False

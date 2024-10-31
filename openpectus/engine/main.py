@@ -38,12 +38,20 @@ logging.getLogger("openpectus.engine.internal_commands_impl").setLevel(logging.I
 logging.getLogger("asyncua.client").setLevel(logging.WARNING)
 
 
+default_host = "127.0.0.1"
+default_port = "9800"
+default_port_secure = "443"
+
+
 def get_args():
     parser = ArgumentParser("Start Pectus Engine")
-    parser.add_argument("-ahn", "--aggregator_hostname", required=False, default="127.0.0.1",
+    parser.add_argument("-ahn", "--aggregator_hostname", required=False, default=default_host,
                         help="Aggregator websocket host name. Default is 127.0.0.1")
-    parser.add_argument("-ap", "--aggregator_port", required=False, default="9800",
-                        help="Aggregator websocket port number. Default is 9800")
+    parser.add_argument("-ap", "--aggregator_port", required=False, default=None,
+                        help=f"Aggregator websocket port number. Default is {default_port} or {default_port_secure} " +
+                        "if using --secure")
+    parser.add_argument("-s", "--secure", action=BooleanOptionalAction,
+                        help="Access aggregator using https/wss rather than http/ws")
     parser.add_argument("-uod", "--uod", required=False, default="demo_uod", help="The UOD to use")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-validate", "--validate", action=BooleanOptionalAction,
@@ -82,7 +90,14 @@ async def main_async(args):
         return
 
     engine = Engine(uod, enable_archiver=True)
-    dispatcher = EngineDispatcher(f"{args.aggregator_hostname}:{args.aggregator_port}", uod.options)
+
+    # if --aggregator_port is specified, use it, else select a default port based on --secure
+    if args.aggregator_port is not None:
+        port = args.aggregator_port
+    else:
+        port = default_port_secure if args.secure else default_port
+
+    dispatcher = EngineDispatcher(f"{args.aggregator_hostname}:{port}", args.secure, uod.options)
 
     if not run_validations(uod):
         exit(1)

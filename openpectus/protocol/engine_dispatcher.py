@@ -49,7 +49,7 @@ class EngineDispatcher():
             # Note: Must be declared async to be usable by RPC
             return self.engine_id
 
-    def __init__(self, aggregator_host: str, uod_options: dict[str, str]) -> None:
+    def __init__(self, aggregator_host: str, secure: bool, uod_options: dict[str, str]) -> None:
         super().__init__()
         self._aggregator_host = aggregator_host
         self._uod_name = uod_options.pop("uod_name")
@@ -62,30 +62,33 @@ class EngineDispatcher():
         self._engine_id = None
         self._sequence_number = 1
 
-        # TODO consider https/wss
-        self._post_url = f"http://{aggregator_host}{AGGREGATOR_REST_PATH}"
+        http_scheme = "https" if secure else "http"
+        ws_scheme = "wss" if secure else "ws"
+        self._post_url = f"{http_scheme}://{aggregator_host}{AGGREGATOR_REST_PATH}"
+        self._health_url = f"{http_scheme}://{self._aggregator_host}{AGGREGATOR_HEALTH_PATH}"
+        self._rpc_url = f"{ws_scheme}://{self._aggregator_host}{AGGREGATOR_RPC_WS_PATH}"
+        logger.info(f"Connecting to aggregator using urls:\n{self._post_url}\n{self._rpc_url}")
 
     def check_aggregator_alive(self) -> bool:
-        aggregator_health_url = f"http://{self._aggregator_host}{AGGREGATOR_HEALTH_PATH}"
         try:
-            resp = httpx.get(aggregator_health_url)
+            resp = httpx.get(self._health_url)
         except httpx.ConnectError as ex:
-            logger.error(f"Connection to Aggregator health end point {aggregator_health_url} failed.")
+            logger.error(f"Connection to Aggregator health end point {self._health_url} failed.")
             logger.info("Connection to Aggregator health end point failed.")
-            logger.info(f"Status url: {aggregator_health_url}")
+            logger.info(f"Status url: {self._health_url}")
             logger.info(f"Error: {ex}")
             return False
 
         if resp.is_error:
             logger.error(
-                f"Aggregator health end point {aggregator_health_url} returned an unsuccessful result: {resp.status_code}.",
+                f"Aggregator health end point {self._health_url} returned an unsuccessful result: {resp.status_code}.",
                 exc_info=True)
             logger.info("Aggregator health end point returned an unsuccessful result.")
-            logger.info(f"Status url: {aggregator_health_url}")
+            logger.info(f"Status url: {self._health_url}")
             logger.info(f"HTTP status code returned: {resp.status_code}")
             return False
 
-        logger.debug(f"Aggregator health url {aggregator_health_url} responded succesfully")
+        logger.debug(f"Aggregator health url {self._health_url} responded succesfully")
         return True
 
     async def connect_async(self):
@@ -95,7 +98,6 @@ class EngineDispatcher():
                 logger.error("Failed to register because Aggregator refused the registration.")
                 raise ProtocolNetworkException("Registration failed")
 
-        rpc_url = f"ws://{self._aggregator_host}{AGGREGATOR_RPC_WS_PATH}"
         rpc_methods = EngineDispatcher.EngineRpcMethods(self, self._engine_id)
 
         def logerror(retry_state: tenacity.RetryCallState):
@@ -109,9 +111,9 @@ class EngineDispatcher():
             'reraise': True,
             "retry_error_callback": logerror
         }
-        self._rpc_client = WebSocketRpcClient(uri=rpc_url, methods=rpc_methods, retry_config=retry_config,
-                                              on_disconnect=[self.on_disconnect]
-                                              )
+        self._rpc_client = WebSocketRpcClient(
+            uri=self._rpc_url, methods=rpc_methods, retry_config=retry_config, on_disconnect=[self.on_disconnect]
+        )
         try:
             await self._rpc_client.__aenter__()
         except Exception:
