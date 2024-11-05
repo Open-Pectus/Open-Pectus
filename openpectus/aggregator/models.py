@@ -51,6 +51,9 @@ class AggregatedErrorLog(BaseModel):
     def empty() -> AggregatedErrorLog:
         return AggregatedErrorLog(entries=[])
 
+    def clear(self):
+        self.entries.clear()
+
     def aggregate_with(self, error_log: ErrorLog):
         """ Append the given log entries to the current log entries while deduplicating and aggregating entries. """
         latest = self.entries[-1] if len(self.entries) > 0 else None
@@ -116,18 +119,23 @@ class TagsInfo(BaseModel):
 
 
 class RunData(BaseModel):
-    run_started: datetime | None = None
-    method_state: MethodState = MethodState.empty()
-    runlog: RunLog = RunLog(lines=[])
+    """ Represents data that strictly belongs in a specific run. """
+    run_id: str
+    run_started: datetime
+    runlog: RunLog = RunLog.empty()
     latest_persisted_tick_time: float | None = None
     """ The time assigned to the last persisted set of values """
     latest_tag_time: float | None = None
     """ The time of the latest tag update, persisted or not """
-    error_log: AggregatedErrorLog = AggregatedErrorLog.empty()
+
     interrupted_by_error: bool = False
 
+    @staticmethod
+    def empty(run_id: str, run_started: datetime) -> RunData:
+        return RunData(run_id=run_id, run_started=run_started)
+
     def __str__(self) -> str:
-        return f"RunData(run_started:{self.run_started}, method_state:{self.method_state}, " + \
+        return f"RunData({self.run_id=}, {self.run_started=}, " + \
                f"interrupted_by_error:{self.interrupted_by_error})"
 
 
@@ -145,22 +153,39 @@ class EngineData(BaseModel):
     tags_info: TagsInfo = TagsInfo(map={})
     control_state: ControlState = ControlState(is_running=False, is_holding=False, is_paused=False)
     method: Method = Method.empty()
-    run_data: RunData = RunData()
+    run_data: RunData | None = None
     plot_configuration: PlotConfiguration = PlotConfiguration.empty()
+    error_log: AggregatedErrorLog = AggregatedErrorLog.empty()
+    method_state: MethodState = MethodState.empty()
+
+    def has_run(self) -> bool:
+        if self.run_data is None:
+            return False
+        else:
+            # TODO would like to inform type checker that self.run_data is now not None
+            # not sure this can be done. Which sucks because all call sites will have to
+            # do the assert.
+            # assert self.run_data is not None
+            # self.run_data = typing.cast(RunData, self.run_data)
+            # typing.assert_type(self.run_data, RunData)
+            return True
+
+    def has_this_run(self, run_id: str) -> bool:
+        return self.run_data is not None and self.run_data.run_id == run_id
+
+    def reset_run(self):
+        self.run_data = None
+        self.control_state = ControlState(is_running=False, is_holding=False, is_paused=False)
+        self.error_log.clear()
+        self.method_state = MethodState.empty()
 
     @property
     def runtime(self):
         return self.tags_info.get(Mdl.SystemTagName.RUN_TIME)
 
     @property
-    def run_id(self):
-        run_id_tag = self.tags_info.get(Mdl.SystemTagName.RUN_ID)
-        return str(run_id_tag.value) if run_id_tag is not None and run_id_tag.value is not None else None
-
-    @property
     def system_state(self):
         return self.tags_info.get(Mdl.SystemTagName.SYSTEM_STATE)
 
     def __str__(self) -> str:
-        return f"EngineData(engine_id:{self.engine_id}, run_id:{self.run_id}," +\
-               f" control_state':{self.control_state})"
+        return f"EngineData(engine_id:{self.engine_id}, control_state':{self.control_state})"

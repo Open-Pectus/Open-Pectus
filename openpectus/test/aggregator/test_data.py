@@ -359,5 +359,39 @@ class RepositoryTest(unittest.TestCase):
             self.assertEqual(dto.process_value_names_to_annotate, plot_configuration.process_value_names_to_annotate)
 
 
+    def test_can_insert_runlog(self):
+        init_db()
+
+        entity = DMdl.RecentRunRunLog()
+        entity.run_id = "my_run_id"
+        entity.run_log = Mdl.RunLog(lines=[
+            Mdl.RunLogLine(
+                id="id", command_name="c", start=1, end=None, progress=0.3, start_values=[], end_values=[],
+                forcible=False, forced=False, cancellable=False, cancelled=False
+            )
+        ])
+        entity_id = 0
+
+        with database.create_scope():
+            session = database.scoped_session()
+            session.add(entity)
+            session.commit()
+            entity_id = entity.id
+
+        self.assertEqual(entity_id, 1)
+
+        with database.create_scope():
+            session = database.scoped_session()
+            repo = RecentRunRepository(session)
+
+            created_entity = repo.get_run_log_by_run_id(entity.run_id)
+            assert created_entity is not None
+            created_entity = Mdl.RunLog.validate(created_entity)
+            self.assertIsInstance(created_entity, Mdl.RunLog)
+            self.assertEqual(1, len(created_entity.lines))
+            self.assertEqual("c", created_entity.lines[0].command_name)
+            self.assertEqual(0.3, created_entity.lines[0].progress)
+   
+
 if __name__ == "__main__":
     unittest.main()

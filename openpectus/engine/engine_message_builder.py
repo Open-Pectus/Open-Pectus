@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import logging
 from logging.handlers import QueueHandler
 from queue import Empty, SimpleQueue
@@ -97,7 +98,7 @@ class EngineMessageBuilder():
         if len(tags) > 0:
             return EM.TagsUpdatedMsg(tags=tags)
 
-    def create_runlog_msg(self) -> EM.RunLogMsg:
+    def create_runlog_msg(self, run_id: str) -> EM.RunLogMsg:
         tag_names: list[str] = []
         for reading in self.engine.uod.readings:
             tag_names.append(reading.tag_name)
@@ -124,6 +125,7 @@ class EngineMessageBuilder():
         runlog = self.engine.runtimeinfo.get_runlog()
         return EM.RunLogMsg(
             id=runlog.id,
+            run_id=run_id,
             runlog=Mdl.RunLog(lines=list(map(to_line, runlog.items)))
         )
 
@@ -148,3 +150,10 @@ class EngineMessageBuilder():
     def create_method_state_msg(self) -> EM.MethodStateMsg:
         state = self.engine.calculate_method_state()
         return EM.MethodStateMsg(method_state=state)
+
+    def create_run_started_msg(self, run_id: str) -> EM.RunStartedMsg:
+        return EM.RunStartedMsg(run_id=run_id, run_started=datetime.now(timezone.utc))
+
+    def create_run_stopped_msg(self, run_id: str) -> EM.RunStoppedMsg:
+        runlog_msg = self.create_runlog_msg(run_id)
+        return EM.RunStoppedMsg(run_id=run_id, runlog=runlog_msg.runlog)

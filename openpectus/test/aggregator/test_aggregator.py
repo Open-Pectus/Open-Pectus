@@ -1,8 +1,9 @@
+from datetime import datetime, timezone
 import unittest
 from unittest.mock import Mock, AsyncMock
 
 from openpectus.aggregator.data import database
-from openpectus.aggregator.models import EngineData, TagValue
+import openpectus.aggregator.models as Mdl
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 from fastapi_websocket_rpc.schemas import RpcResponse
@@ -28,7 +29,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
         await dispatcher.on_client_disconnect(channel)
 
     def createPublisherMock(self):
-        return Mock(publish_process_units_changed=AsyncMock(),publish_control_state_changed=AsyncMock())
+        return Mock(publish_process_units_changed=AsyncMock(), publish_control_state_changed=AsyncMock())
 
     async def test_register_engine(self):
         dispatcher = AggregatorDispatcher()
@@ -93,7 +94,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
             location="test-loc",
             engine_version='0.0.1')
         engine_id1 = aggregator.create_engine_id(register_engine_msg)
-        engine_id2 = aggregator.create_engine_id(register_engine_msg_different_computer)
+        _ = aggregator.create_engine_id(register_engine_msg_different_computer)
 
         # registering engine 1 while not registered before should succceed
         resultMessage = await messageHandlers.handle_RegisterEngineMsg(register_engine_msg)
@@ -120,17 +121,19 @@ class AggregatorEventsTest(unittest.IsolatedAsyncioTestCase):
         super().__init__(methodName)
         self.stored_tags = []
         self.plot_log_repo = Mock(store_tag_values=self.store_tag_values)
-        self.aggregator = Aggregator(Mock(), Mock())
-        self.engine_data = EngineData(engine_id="test_engine", computer_name="", engine_version="", hardware_str="",
-                                      uod_name="", uod_author_name="", uod_author_email="", uod_filename="", location="")
+        publisherMock = Mock(publish_process_units_changed=AsyncMock(), publish_control_state_changed=AsyncMock())
+        self.aggregator = Aggregator(Mock(), publisherMock)
+        self.engine_data = Mdl.EngineData(
+            engine_id="test_engine", computer_name="", engine_version="", hardware_str="",
+            uod_name="", uod_author_name="", uod_author_email="", uod_filename="", location="")
 
     def createTag(self, name: str, tick: float, value: str):
-        return TagValue(name=name, tick_time=tick, value=value, value_formatted=None, value_unit=None)
+        return Mdl.TagValue(name=name, tick_time=tick, value=value, value_formatted=None, value_unit=None)
 
-    def store_tag_values(self, engine_id: str, run_id: str, tags: list[TagValue]):
+    def store_tag_values(self, engine_id: str, run_id: str, tags: list[Mdl.TagValue]):
         self.stored_tags.extend(tags)
 
-    def process_tags(self, tags: list[TagValue]):
+    def process_tags(self, tags: list[Mdl.TagValue]):
         for tag in tags:
             self.engine_data.tags_info.upsert(tag)
 
@@ -144,19 +147,25 @@ class AggregatorEventsTest(unittest.IsolatedAsyncioTestCase):
         ]
         self.process_tags(tags)
 
+        # create run_data to simulate a started run
+        self.engine_data.run_data = Mdl.RunData.empty(run_id="run1", run_started=datetime.now(timezone.utc))
+
         self.aggregator.from_engine._persist_tag_values(self.engine_data, self.plot_log_repo)
 
         self.assertEqual(tags, self.stored_tags)
 
     async def test_persist_tag_values_can_update_tag_with_newer_after_threshold(self):
         run_id = self.createTag(SystemTagName.RUN_ID.value, 1, "run1")
-
         tags = [
             run_id,
             self.createTag("a", 1, "v1"),
             self.createTag("b", 1, "v1"),
         ]
         self.process_tags(tags)
+
+        # create run_data to simulate a started run
+        self.engine_data.run_data = Mdl.RunData.empty(run_id="run1", run_started=datetime.now(timezone.utc))
+
         self.aggregator.from_engine._persist_tag_values(self.engine_data, self.plot_log_repo)
         self.stored_tags.clear()
 
@@ -187,6 +196,8 @@ class AggregatorEventsTest(unittest.IsolatedAsyncioTestCase):
         ]
         self.process_tags(tags)
 
+        # create run_data to simulate a started run
+        self.engine_data.run_data = Mdl.RunData.empty(run_id="run1", run_started=datetime.now(timezone.utc))
         self.aggregator.from_engine._persist_tag_values(self.engine_data, self.plot_log_repo)
         self.stored_tags.clear()
         self.assertEqual(2, self.engine_data.run_data.latest_persisted_tick_time)

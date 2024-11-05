@@ -69,7 +69,7 @@ class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
         uod = create_test_uod()
         engine = Engine(uod)
         engineDispatcher = EngineTestDispatcher(loop)
-        engineRunner = EngineRunner(engineDispatcher, EngineMessageBuilder(engine))
+        engineRunner = EngineRunner(engineDispatcher, EngineMessageBuilder(engine), engine.tag_context)
         engineMessageHandlers = EngineMessageHandlers(engine, engineDispatcher)
 
         aggregatorDispatcher = AggregatorTestDispatcher()
@@ -150,7 +150,8 @@ class ProtocolIntegrationTest(ProtocolIntegrationTestCase):
         engine_data = self.ctx.aggregator.get_registered_engine_data(self.ctx.engineDispatcher._engine_id)
         assert engine_data is not None
         self.assertEqual(len(engine_data.tags_info.map), len(self.ctx.engine.tags))
-        self.assertEqual(engine_data.system_state.value, SystemStateEnum.Stopped)  # type: ignore
+        assert engine_data.system_state is not None
+        self.assertEqual(engine_data.system_state.value, SystemStateEnum.Stopped)
 
     async def test_can_detect_network_down_and_buffer_up_messages(self):
         assert self.ctx is not None

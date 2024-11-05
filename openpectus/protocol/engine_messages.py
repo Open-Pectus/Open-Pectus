@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Sequence
 
 import openpectus.protocol.messages as Msg
@@ -76,6 +77,7 @@ class TagsBufferedMsg(EngineMessage):
 
 class RunLogMsg(EngineMessage):
     id: str
+    run_id: str
     runlog: Mdl.RunLog
 
 
@@ -93,6 +95,16 @@ class MethodStateMsg(EngineMessage):
 
 class ControlStateMsg(EngineMessage):
     control_state: Mdl.ControlState
+
+
+class RunStartedMsg(EngineMessage):
+    run_id: str
+    run_started: datetime
+
+
+class RunStoppedMsg(EngineMessage):
+    run_id: str
+    runlog: Mdl.RunLog
 
 
 def print_sequence_range(messages: Sequence[EngineMessage]) -> str:

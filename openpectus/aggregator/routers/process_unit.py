@@ -17,15 +17,13 @@ router = APIRouter(tags=["process_unit"])
 
 
 def map_pu(engine_data: Mdl.EngineData) -> Dto.ProcessUnit:
-    # TODO define source of all fields
-
     state = Dto.ProcessUnitState.Ready(state=Dto.ProcessUnitStateEnum.READY)
     if engine_data.system_state is not None and engine_data.system_state.value == Mdl.SystemStateEnum.Running:
         state = Dto.ProcessUnitState.InProgress(
             state=Dto.ProcessUnitStateEnum.IN_PROGRESS,
             progress_pct=0  # TODO: how do we know the progress_pct?
         )
-    elif engine_data.run_data.interrupted_by_error:
+    elif engine_data.run_data is not None and engine_data.run_data.interrupted_by_error:
         state = Dto.ProcessUnitState.Error(
             state=Dto.ProcessUnitStateEnum.ERROR
         )
@@ -156,8 +154,10 @@ def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)
     if engine_data is None:
         logger.warning("No engine data - thus no runlog")
         return Dto.RunLog.empty()
+    elif engine_data.run_data is None:
+        logger.warning("No engine run_data - thus no runlog")
+        return Dto.RunLog.empty()
 
-    logger.info(f"Got runlog with {len(engine_data.run_data.runlog.lines)} lines")
     return Dto.RunLog(
         lines=list(map(Dto.RunLogLine.from_model, engine_data.run_data.runlog.lines))
     )
@@ -178,7 +178,7 @@ def get_method_and_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_ag
                                   injected_line_ids=[_id for _id in method_state.injected_line_ids])
         )
 
-    return from_models(engine_data.method, engine_data.run_data.method_state)
+    return from_models(engine_data.method, engine_data.method_state)
 
 
 @router.post('/process_unit/{unit_id}/method')
@@ -204,9 +204,9 @@ def get_plot_configuration(unit_id: str, agg: Aggregator = Depends(agg_deps.get_
 def get_plot_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.PlotLog:
     plot_log_repo = PlotLogRepository(database.scoped_session())
     engine_data = agg.get_registered_engine_data(unit_id)
-    if engine_data is None or engine_data.run_id is None:
+    if engine_data is None or engine_data.run_data is None:
         return Dto.PlotLog(entries={})
-    plot_log_model = plot_log_repo.get_plot_log(engine_data.run_id)
+    plot_log_model = plot_log_repo.get_plot_log(engine_data.run_data.run_id)
     if plot_log_model is None:
         return Dto.PlotLog(entries={})
     return Dto.PlotLog.validate(plot_log_model)  # assumes Dto.PlotLog and Mdl.PlotLog are identical, change this when they diverge
@@ -234,8 +234,7 @@ def get_error_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregato
     if engine_data is None:
         logger.warning("No client data - thus no error log")
         return Dto.AggregatedErrorLog(entries=[])
-
-    return Dto.AggregatedErrorLog.from_model(engine_data.run_data.error_log)
+    return Dto.AggregatedErrorLog.from_model(engine_data.error_log)
 
 
 @router.post('/process_unit/{unit_id}/run_log/force_line/{line_id}')

@@ -21,6 +21,8 @@ class AggregatorMessageHandlers:
         aggregator.dispatcher.set_post_handler(EM.ControlStateMsg, self.handle_ControlStateMsg)
         aggregator.dispatcher.set_post_handler(EM.MethodStateMsg, self.handle_MethodStateMsg)
         aggregator.dispatcher.set_post_handler(EM.ErrorLogMsg, self.handle_ErrorLogMsg)
+        aggregator.dispatcher.set_post_handler(EM.RunStartedMsg, self.handle_RunStartedMsg)
+        aggregator.dispatcher.set_post_handler(EM.RunStoppedMsg, self.handle_RunStoppedMsg)
 
     async def handle_RegisterEngineMsg(self, register_engine_msg: EM.RegisterEngineMsg) -> AM.RegisterEngineReplyMsg:
         """ Registers engine """
@@ -96,7 +98,7 @@ class AggregatorMessageHandlers:
             return validation_errors
 
         logger.debug(f"Got run log from client: {str(msg)}")
-        self.aggregator.from_engine.runlog_changed(msg.engine_id, msg.runlog)
+        self.aggregator.from_engine.runlog_changed(msg.engine_id, msg.run_id, msg.runlog)
         return AM.SuccessMessage()
 
     async def handle_ControlStateMsg(self, msg: EM.ControlStateMsg) -> AM.SuccessMessage | AM.ErrorMessage:
@@ -124,4 +126,18 @@ class AggregatorMessageHandlers:
 
         logger.debug(f'error log message from engine: {msg.log}')
         self.aggregator.from_engine.error_log_changed(msg.engine_id, msg.log)
+        return AM.SuccessMessage()
+
+    async def handle_RunStartedMsg(self, msg: EM.RunStartedMsg):
+        validation_errors = self.validate_msg(msg)
+        if validation_errors is not None:
+            return validation_errors
+        self.aggregator.from_engine.run_started(msg)
+        return AM.SuccessMessage()
+
+    async def handle_RunStoppedMsg(self, msg: EM.RunStoppedMsg):
+        validation_errors = self.validate_msg(msg)
+        if validation_errors is not None:
+            return validation_errors
+        self.aggregator.from_engine.run_stopped(msg)
         return AM.SuccessMessage()

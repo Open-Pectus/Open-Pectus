@@ -3,6 +3,9 @@ from datetime import UTC, datetime, timedelta, timezone
 from socket import gethostname
 from typing import List, Iterable, Sequence
 
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
 from openpectus import __version__
 from openpectus.aggregator.data.models import (
     RecentEngine,
@@ -13,10 +16,8 @@ from openpectus.aggregator.data.models import (
     PlotLog, PlotLogEntry
 )
 from openpectus.aggregator.models import TagValue, ReadingInfo, EngineData
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from openpectus.protocol.models import SystemTagName
+
 
 logger = logging.getLogger(__name__)
 
@@ -106,13 +107,13 @@ class PlotLogRepository(RepositoryBase):
 
 class RecentRunRepository(RepositoryBase):
     def store_recent_run(self, engine_data: EngineData):
-        if engine_data.run_id is None:
-            raise ValueError('missing run_id when trying to store recent run')
-        if engine_data.run_data.run_started is None:
-            raise ValueError('missing run_started when trying to store recent run')
+        if not engine_data.has_run():
+            raise ValueError('missing run_data when trying to store recent run')
+        assert engine_data.run_data is not None
+        run_id = engine_data.run_data.run_id
         recent_run = RecentRun()
         recent_run.engine_id = engine_data.engine_id
-        recent_run.run_id = engine_data.run_id
+        recent_run.run_id = run_id
         recent_run.engine_computer_name = engine_data.computer_name
         recent_run.engine_version = engine_data.engine_version
         recent_run.engine_hardware_str = engine_data.hardware_str
@@ -127,21 +128,21 @@ class RecentRunRepository(RepositoryBase):
         # recent_run.contributers = engine_data.
 
         method_and_state = RecentRunMethodAndState()
-        method_and_state.run_id = engine_data.run_id
+        method_and_state.run_id = run_id
         method_and_state.method = engine_data.method
-        method_and_state.state = engine_data.run_data.method_state
+        method_and_state.state = engine_data.method_state
 
         plot_configuration = RecentRunPlotConfiguration()
-        plot_configuration.run_id = engine_data.run_id
+        plot_configuration.run_id = run_id
         plot_configuration.plot_configuration = engine_data.plot_configuration
 
         run_log = RecentRunRunLog()
-        run_log.run_id = engine_data.run_id
+        run_log.run_id = run_id
         run_log.run_log = engine_data.run_data.runlog
 
         error_log = RecentRunErrorLog()
-        error_log.run_id = engine_data.run_id
-        error_log.error_log = engine_data.run_data.error_log
+        error_log.run_id = run_id
+        error_log.error_log = engine_data.error_log
 
         self.db_session.add(recent_run)
         self.db_session.add(method_and_state)
@@ -197,8 +198,13 @@ class RecentEngineRepository(RepositoryBase):
         else:
             recent_engine = existing
         recent_engine.engine_id = engine_data.engine_id
-        recent_engine.run_id = engine_data.run_id
-        recent_engine.run_started = engine_data.run_data.run_started
+        if engine_data.has_run():
+            assert engine_data.run_data is not None
+            recent_engine.run_id = engine_data.run_data.run_id
+            recent_engine.run_started = engine_data.run_data.run_started
+        else:
+            recent_engine.run_id = None
+            recent_engine.run_started = None
         recent_engine.run_stopped = None
         recent_engine.name = f"{engine_data.computer_name} ({engine_data.uod_name})"
         recent_engine.location = engine_data.location
