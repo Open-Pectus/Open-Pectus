@@ -14,6 +14,13 @@ class ReadingTag(Tag):
     def __init__(self, name: str, unit: str | None = None) -> None:
         super().__init__(name, value=0.0, unit=unit, direction=TagDirection.INPUT)
 
+    def set_value(self, val, *args, **kwargs):
+        try:
+            float(val)
+        except:
+            raise ValueError(f'ReadingTag "{self.name}" cannot be set to "{val}" because it cannot be coerced to float type.')
+        super().set_value(val, *args, **kwargs)
+
 
 class SelectTag(Tag):
     """ Represents a tag with choice values. """
@@ -21,8 +28,12 @@ class SelectTag(Tag):
                  choices: list[str], direction: TagDirection = TagDirection.NA) -> None:
         super().__init__(name=name, value=value, unit=unit, direction=direction)
         if choices is None or len(choices) == 0:
-            raise ValueError("choices must be non-empty")
+            raise ValueError(f'SelectTag "{self.name}" has no choices. Choices must be non-empty.')
         self.choices = choices
+
+    def set_value(self, val, *args, **kwargs):
+        assert val in self.choices, f'SelectTag "{self.name}" cannot be set to "{val}" because it is not among the valid options: "{self.choices}".'
+        super().set_value(val, *args, **kwargs)
 
 
 class MarkTag(Tag):
