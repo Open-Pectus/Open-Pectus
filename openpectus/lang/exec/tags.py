@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from enum import StrEnum, auto
 import time
-from typing import Any, Callable, Iterable, Set
+from typing import Any, Callable, Iterable, Set, Optional
 
 from openpectus.lang.exec.tag_lifetime import TagLifetime
-from openpectus.lang.exec.units import is_supported_unit
+from openpectus.lang.exec.units import is_supported_unit, ureg
 
 
 # Represents tag API towards interpreter
@@ -145,7 +145,9 @@ class Tag(ChangeSubject, TagLifetime):
         value_formatted = None if self.format_fn is None else self.format_fn(self.get_value())
         return TagValue(self.name, self.tick_time, self.value, value_formatted, self.unit, self.direction)
 
-    def set_value(self, val: TagValueType, tick_time: float) -> None:
+    def set_value(self, val: TagValueType, tick_time: float, unit: Optional[str] = None) -> None:
+        if unit:
+            val = ureg.Quantity(val, unit).to(self.unit).magnitude
         if val != self.value:
             self.value = val
             self.tick_time = tick_time
