@@ -1,7 +1,7 @@
 """
 Defines the standard imports for uod modules.
 """
-from openpectus.engine.hardware import HardwareLayerBase, Register
+from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
 from openpectus.lang.exec.uod import (
     UnitOperationDefinitionBase, UodCommand, UodBuilder,
     RegexNumber, RegexText, RegexCategorical,
