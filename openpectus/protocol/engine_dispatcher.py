@@ -9,10 +9,9 @@ import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 from openpectus.protocol.exceptions import ProtocolNetworkException
 import openpectus.protocol.messages as M
-import requests
 from fastapi_websocket_rpc import RpcMethodsBase, WebSocketRpcClient
 import tenacity
-from openpectus import __version__
+from openpectus import __version__, __name__
 from openpectus.protocol.dispatch_interface import AGGREGATOR_REST_PATH, AGGREGATOR_RPC_WS_PATH, AGGREGATOR_HEALTH_PATH
 from openpectus.protocol.serialization import serialize, deserialize
 
@@ -21,6 +20,7 @@ logger = logging.getLogger(__name__)
 EngineMessageHandler = Callable[[AM.AggregatorMessage], Awaitable[M.MessageBase]]
 """ Handler in engine that handles aggregator messages of a given type """
 
+engine_headers = {"User-Agent": f"{__name__}/{__version__}"}
 
 class EngineDispatcher():
     """
@@ -71,7 +71,7 @@ class EngineDispatcher():
 
     def check_aggregator_alive(self) -> bool:
         try:
-            resp = httpx.get(self._health_url)
+            resp = httpx.get(self._health_url, headers=engine_headers)
         except httpx.ConnectError as ex:
             logger.error(f"Connection to Aggregator health end point {self._health_url} failed.")
             logger.info("Connection to Aggregator health end point failed.")
@@ -152,7 +152,7 @@ class EngineDispatcher():
             return M.ErrorMessage(message="Post failed")
 
         try:
-            response = requests.post(url=self._post_url, json=message_json)
+            response = httpx.post(url=self._post_url, json=message_json, headers=engine_headers)
             # logger.debug(f"Sent message: {message.ident}")
         except Exception as ex:
             logger.debug(f"Message not sent: {message.ident}")
