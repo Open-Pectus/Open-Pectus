@@ -15,10 +15,11 @@ class ReadingTag(Tag):
         super().__init__(name, value=0.0, unit=unit, direction=TagDirection.INPUT)
 
     def set_value(self, val, *args, **kwargs):
-        try:
-            float(val)
-        except:
-            raise ValueError(f'ReadingTag "{self.name}" cannot be set to "{val}" because it cannot be coerced to float type.')
+        if val is not None:
+            try:
+                float(val)
+            except:
+                raise ValueError(f'ReadingTag "{self.name}" cannot be set to "{val}" because it cannot be coerced to float type.')
         super().set_value(val, *args, **kwargs)
 
 
