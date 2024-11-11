@@ -650,7 +650,7 @@ class Engine(InterpreterContext):
 
         # TODO we should probably only consider uod tags here. would system tags ever have a safe value?
         for t in self._iter_all_tags():
-            if t.direction == TagDirection.OUTPUT:
+            if t.direction == TagDirection.Output:
                 safe_value = t.safe_value
                 if not isinstance(safe_value, Unset):
                     current_values.append(t.as_readonly())

@@ -88,13 +88,13 @@ class TagDirection(StrEnum):
     Direction of the tag is in relation to the physical IO. Sensors are regarded as inputs and
     actuators as outputs. Derived values are regarded as NA.
     """
-    INPUT = auto()
+    Input = auto()
     """ Tag is read from hardware, e.g. a sensor """
-    OUTPUT = auto()
+    Output = auto()
     """ Tag is written to hardware, e.g. an actuator """
     NA = auto()
     """ Tag is calculated/derived and neither read from or written to hw. """
-    UNSPECIFIED = auto()
+    Unspecified = auto()
 
 
 class Unset():
@@ -280,7 +280,7 @@ class TagValue():
             value: TagValueType = None,
             value_formatted: str | None = None,
             unit: str | None = None,
-            direction: TagDirection = TagDirection.UNSPECIFIED,
+            direction: TagDirection = TagDirection.Unspecified,
     ):
         if name is None or name.strip() == '':
             raise ValueError("name is None or empty")
