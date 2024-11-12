@@ -78,7 +78,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         # Readings
         .with_tag(ReadingTag("FT01", "L/h"))
         .with_tag(SelectTag("Reset", value="N/A", unit=None, choices=["Reset", "N/A"]))
-        .with_tag(Tag("Danger", value=True, unit=None, direction=TagDirection.OUTPUT, safe_value=False))
+        .with_tag(Tag("Danger", value=True, unit=None, direction=TagDirection.Output, safe_value=False))
         .with_command(name="Reset", exec_fn=reset)
         .with_command(name="CmdWithArgs", exec_fn=cmd_with_args, arg_parse_fn=cmd_arg_parse)
         .with_command(name="overlap1", exec_fn=overlap_exec)
