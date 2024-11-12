@@ -11,7 +11,7 @@ from openpectus.lang.exec.units import (
 
 class TestUnits(unittest.TestCase):
     def test_is_supported_unit(self):
-        def test_unit(unit: str | None, expect_supported, quantity_name: str = ""):
+        def test_unit(unit: str | None, expect_supported: bool, quantity_name: str = ""):
             if unit is not None:
                 test_name = unit if quantity_name == "" else quantity_name + ": " + unit
                 with self.subTest(test_name):
@@ -61,6 +61,7 @@ class TestUnits(unittest.TestCase):
             value_b: str, unit_b: str | None,
             expected_result: bool | None = None,
             expected_value_error_msg: str | None = None):
+
         s = str(expected_result) if expected_result is not None else expected_value_error_msg or "error"
         sua, sub = unit_a or "", unit_b or ""
         with self.subTest(value_a + sua + " " + operator + " " + value_b + sub + ", " + s):
@@ -173,16 +174,17 @@ class TestUnits(unittest.TestCase):
         self.comp("<=", "60", "s", "1", "min", True)
         self.comp(">", "70", "s", "1", "min", True)
 
-        self.comp("=", "1", "m2", "10", "dm2", True)
-        self.comp("=", "1", "m2", "100", "cm2", True)
+        self.comp("=", "1", "m2", "100", "dm2", True)
+        self.comp("=", "1", "m2", "10000", "cm2", True)
+        self.comp("=", "1", "dm2", "100", "cm2", True)
 
-        # self.comp("=", "0", "degC", "32", "degF", True)  # is this a rounding bug?! - they should be equal
+        self.comp("=", "0", "degC", "32", "degF", True)
         self.comp(">", "1", "degC", "32", "degF", True)
         self.comp(">=", "1", "degC", "32", "degF", True)
         self.comp(">", "0", "degC", "33", "degF", False)
         self.comp(">=", "0", "degC", "33", "degF", False)
 
-        # self.comp("=", "0", "degC", "273.15", "degF", True)  # is this a rounding bug?! - they should be equal
+        self.comp("=", "0", "degC", "273.15", "K", True)
         self.comp(">", "1", "degC", "274", "K", True)
         self.comp(">=", "1", "°C", "274", "K", True)
         self.comp(">", "0", "degC", "274", "K", False)
@@ -197,6 +199,7 @@ class TestUnits(unittest.TestCase):
         self.comp("=", "9", "%", "9", "vol%", True)
         self.comp("=", "9", "%", "9", "wt%", True)
         self.comp("=", "1000", "mAU", "1", "AU", True)
+        self.comp("=", "1000", "milliAU", "1", "AU", True)
 
     def test_compare_multidimensional_pint_units(self):
         # pint treats 'L/d' as 'liter / day' which must be mapped back

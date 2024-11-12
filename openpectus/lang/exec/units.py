@@ -6,32 +6,35 @@ from pint import UnitRegistry, Quantity
 
 
 ureg = UnitRegistry(cache_folder="./pint-cache")
-Q_ = Quantity
 ureg.define("m2 = m**2")
+ureg.define("dm2 = dm**2")
+ureg.define("cm2 = cm**2")
 ureg.define("LMH = mm/h")
 ureg.define("wt = 1")
 ureg.define("vol = 1")
 ureg.define("AU = [absorbance]")
+Q_ = Quantity
+
 logger = logging.getLogger(__name__)
 
 # https://en.wikipedia.org/wiki/International_System_of_Units
 # defines all the units we accept, each with their quantity name (similar to pint dimensionality).
 QUANTITY_UNIT_MAP = {
-    'time': ['s', 'min', 'h', 'ms'],            # SI quantities
+    'time': ['s', 'min', 'h', 'ms'],                # SI quantities
     'length': ['m', 'cm'],
     'area': ['m**2', 'm2', 'dm2', 'cm2'],
     'mass': ['kg', 'g'],
     'density': ['kg/L', 'g/L'],
     'temperature': ['degC', 'degF', 'K', '°C', '°F'],
     'amount_of_substance': ['mol'],
-    'volume': ['L', 'mL'],                       # Derived quantities
+    'volume': ['L', 'mL'],                          # Derived quantities
     'flow': ['L/h', 'L/min', 'L/d'],
     'frequency': ['Hz', 'kHz'],
-    'pressure': ['Pa', 'bar', 'pascal'],         # Note: pint prefers pascal over Pa so we define both.
+    'pressure': ['Pa', 'bar', 'pascal'],            # Note: pint prefers pascal over Pa so we define both.
     'mass flow rate': ['kg/h', 'g/s', 'g/min', 'g/h'],
     'electrical conductance': ['mS/cm'],
-    'percentage': ['%', 'vol%', 'wt%', 'mol%'],  # Custom quantity but supported by pint
-    'column volume': ['CV'],                     # Custom quantity
+    'percentage': ['%', 'vol%', 'wt%', 'mol%'],     # Custom quantity but supported by pint
+    'column volume': ['CV'],                        # Custom quantity
     'absorbance': ['AU', 'mAU', 'milliAU'],
     'permeability': ['LMH/bar', 'L/m2/h/bar', 'L/h/m2/bar'],
     'flux': ['LMH', 'L/m2/h', 'L/h/m2'],
@@ -58,6 +61,9 @@ QUANTITY_PINT_MAP: dict[str, str] = {
     'absorbance': '[absorbance]',
 }
 """ Map quantity names to pint dimensions or None if not a pint dimension. """
+
+FLOAT_COMPARE_DELTA = 0.01
+""" The precision to use when comparing float values for equality. """
 
 # build list of all supported units
 _supported_units: list[None | str] = [None]
@@ -204,9 +210,13 @@ def compare_values(op: str, value_a: str, unit_a: str | None, value_b: str, unit
             case '<=':
                 result = quantity_a <= quantity_b  # type: ignore
             case '=' | '==':
-                # Equality comparison is sensitive to float limitations.
-                # For instance, 0.9982*1000 is not equal to 998.2.
-                result = quantity_a == quantity_b
+                if isinstance(quantity_a, Quantity) and isinstance(quantity_b, Quantity):
+                    diff = quantity_a - quantity_b
+                    result = abs(diff.magnitude) < FLOAT_COMPARE_DELTA
+                elif isinstance(quantity_a, float) and isinstance(quantity_b, float):
+                    result = abs(quantity_a - quantity_b) < FLOAT_COMPARE_DELTA
+                else:
+                    result = quantity_a == quantity_b
             case '>':
                 result = quantity_a > quantity_b  # type: ignore
             case '>=':
