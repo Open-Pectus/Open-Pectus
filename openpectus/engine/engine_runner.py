@@ -3,9 +3,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
+import time
 from typing import Awaitable, Callable, Literal
 
 from openpectus.engine.engine_message_builder import EngineMessageBuilder
+from openpectus.lang.exec.tag_lifetime import TagContext, TagLifetime
 from openpectus.protocol.engine_dispatcher import EngineDispatcher
 import openpectus.protocol.engine_messages as EM
 from openpectus.protocol.exceptions import ProtocolException, ProtocolNetworkException
@@ -46,17 +48,43 @@ class AsyncTimer:
         self._running = False
         self._task.cancel()
 
+
+class Lifetime(TagLifetime):
+    """ Watches engine state changes and makes them available to EngineRunner. """
+    def __init__(self, on_start, on_stop) -> None:
+        super().__init__()
+        self.on_start_cb = on_start
+        self.on_stop_cb = on_stop
+        self.run_id: str | None = None
+
+    @property
+    def has_active_run(self) -> bool:
+        return self.run_id is not None
+
+    def on_start(self, context: TagContext, run_id: str):
+        # Note: callback is invoked after setting run_id
+        self.run_id = run_id
+        self.on_start_cb()
+
+    def on_stop(self):
+        # Note: callback is invoked before clearing run_id
+        self.on_stop_cb()
+        self.run_id = None
+
+
 class EngineRunner():
     """
-    Decorator that handles and masks connection errors that may occur in the Aggregator-Engine Protocol.
+    Handles engine message sending and and masks connection errors that may occur in the Aggregator-Engine Protocol.
     """
 
-    def __init__(self, dispatcher: EngineDispatcher, message_builder: EngineMessageBuilder) -> None:
+    def __init__(self, dispatcher: EngineDispatcher, message_builder: EngineMessageBuilder,
+                 event_context: TagContext) -> None:
         super().__init__()
         self._dispatcher = dispatcher
         self._message_builder = message_builder
         self._state: RecoverState = "Started"
         self._message_buffer: list[EM.EngineMessage] = []
+        self._priority_msg: EM.EngineMessage | None = None
         self._lock = asyncio.Lock()
         self._reconnect_msg : EM.ReconnectedMsg | None = None
         self._state_task: asyncio.Task[None] | None = None
@@ -67,9 +95,42 @@ class EngineRunner():
         self.failed_callback: AsyncConnectionCallback | None = None
         self.catchingup_callback: AsyncConnectionCallback | None = None
         self.reconnecting_callback: AsyncConnectionCallback | None = None
-        self.reconnected_callback: AsyncConnectionCallback | None = None        
+        self.reconnected_callback: AsyncConnectionCallback | None = None
         self.state_changing_callback: StateChangingCallback | None = None
         self.first_steady_state_callback: AsyncConnectionCallback | None = None
+
+        # listen to engine events because we need to adapt the messages to send
+        # to current engine state
+        self.lifetime = Lifetime(self._on_run_start, self._on_run_stop)
+        event_context.add_listener(self.lifetime)
+
+    def _set_priority_msg(self, msg: EM.EngineMessage):
+        if self._priority_msg is not None:
+            logger.warning(f"Setting prio msg {msg.ident} when another {self._priority_msg.ident} was already set")
+        self._priority_msg = msg
+
+    def _clear_priority_msg(self):
+        self._priority_msg = None
+
+    def _on_run_start(self):
+        if self.state == "Connected" or self.state == "Reconnected":
+            assert self.lifetime.run_id is not None
+            msg = self._message_builder.create_run_started_msg(self.lifetime.run_id, time.time())
+            # We cant send immidiately because we're invoked fron a sync event. Instead we schedule sending
+            # as a priority message
+            self._set_priority_msg(msg)
+        else:
+            raise Exception("Cannot send RunStartedMsg when not connected")
+
+    def _on_run_stop(self):
+        if self.lifetime.run_id is None:
+            logger.error("Cannot send RunStoppedMsg when no run_id has been set")
+            return
+        if self.state == "Connected" or self.state == "Reconnected":
+            msg = self._message_builder.create_run_stopped_msg(self.lifetime.run_id)
+            self._set_priority_msg(msg)
+        else:
+            raise Exception("Cannot send RunStartedMsg when not connected")
 
     @property
     def state(self) -> RecoverState:
@@ -145,6 +206,14 @@ class EngineRunner():
 
         elif self.state in states_to_post:
             try:
+                if self._priority_msg is not None:
+                    await self._dispatcher.post_async(self._priority_msg)
+                    logger.debug(f"Sent priority message: {self._priority_msg.ident}")
+                    self._clear_priority_msg()
+            except Exception:
+                logger.error(f"Failed to send prio msg: {self._priority_msg}", exc_info=True)
+                # TODO what to do here?
+            try:
                 return await self._dispatcher.post_async(message)
             except ProtocolNetworkException:
                 await self._set_state("Failed")
@@ -160,9 +229,11 @@ class EngineRunner():
             if isinstance(message, EM.RegisterEngineMsg):
                 raise
             else:
-                self._buffer_message(message)
-                return M.ErrorMessage(message="Failed to send message, was added to buffer")
-
+                if self.lifetime.has_active_run:  # Not sure is this check belongs here or to just not create this message
+                    self._buffer_message(message)
+                    return M.ErrorMessage(message="Failed to send message, was added to buffer")
+                else:
+                    logger.debug("No active run, skip message")
         else:
             err_msg = f"Invalid operation 'post_async' for state: {self.state}"
             logger.error(err_msg)
@@ -314,11 +385,17 @@ class EngineRunner():
         if self._reconnect_msg is None:
             self._reconnect_msg = self._message_builder.build_reconnected_message()
 
+        if not self.lifetime.has_active_run:
+            # TODO verify this. Do we really need reconnect_msg in this case?
+            # need to specify the purpose of reconnect_msg in aggregator terms
+            logger.debug("Failed while no run is active. Skip starting the buffering task")
+            return
+
         async def buffer_messages():
             logger.info("Started buffer_messages loop")
             while True:
                 for msg in [
-                    self._message_builder.create_tag_updates_msg(),                    
+                    self._message_builder.create_tag_updates_msg(),
                     self._message_builder.create_method_state_msg(),
                     self._message_builder.create_error_log_msg(),
                 ]:
@@ -361,26 +438,34 @@ class EngineRunner():
             await self._post_async(self._message_builder.create_tag_updates_snapshot_msg())
             await asyncio.sleep(1)
             while True:
-                messages = []
+                messages: list[EM.EngineMessage | None] = []
                 try:
-                    messages = [
-                        self._message_builder.create_control_state_msg(),
-                        self._message_builder.create_method_state_msg(),
-                        self._message_builder.create_error_log_msg(),
-                        self._message_builder.create_runlog_msg(),
-                        self._message_builder.create_tag_updates_msg(),
-                    ]
+                    if self.lifetime.run_id is None:
+                        # when no run is active, we don't need to send much
+                        # TODO: consider the first invocation after state change though - will control_state be sent then?
+                        messages.append(self._message_builder.create_tag_updates_msg())
+                    else:
+                        messages.append(self._message_builder.create_control_state_msg())
+                        messages.append(self._message_builder.create_method_state_msg())
+                        messages.append(self._message_builder.create_error_log_msg())                        
+                        messages.append(self._message_builder.create_runlog_msg(self.lifetime.run_id))
+                        messages.append(self._message_builder.create_tag_updates_msg())
                 except Exception:
                     logger.error("Exception occurred building messages", exc_info=True)
                     await asyncio.sleep(1)
 
-                for msg in messages:
-                    if msg is not None:
-                        await self._post_async(msg)
+                try:
+                    for msg in messages:
+                        if msg is not None:
+                            await self._post_async(msg)
+                            logger.debug(f"Sent message: {msg.ident}")
+                except Exception:
+                    logger.error("Exception occurred sending messages", exc_info=True)
+
                 await asyncio.sleep(1)
 
         # need to run long running job in spawn task
         self._state_task = asyncio.create_task(send_messages(), name="send_messages")
 
     def __str__(self) -> str:
-        return f"EngineDispatcherErrorRecoveryDecorator(state: {self.state})"
+        return f"EngineRunner(state: {self.state}, run_id: {self.lifetime.run_id})"

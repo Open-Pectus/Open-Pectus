@@ -43,7 +43,6 @@ class StartEngineCommand(InternalEngineCommand):
             e._runstate_started_time = time.time()
             e._runstate_paused = False
             e._runstate_holding = False
-            e._set_run_id("new")
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
             e._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.OK, e._tick_time)
             e._system_tags[SystemTagName.RUN_TIME].set_value(0.0, e._tick_time)
@@ -53,7 +52,8 @@ class StartEngineCommand(InternalEngineCommand):
             e._system_tags[SystemTagName.BLOCK_TIME].set_value(0.0, e._tick_time)
             e.block_times.clear()  # kinda hackish, tag should be self-contained
 
-            e.tag_context.emit_on_start()
+            run_id = e.create_run_id()
+            e.tag_context.emit_on_start(run_id=run_id)  # causes RunStartedMsg to be sent by engine_runner
 
 
 class PauseEngineCommand(InternalEngineCommand):
@@ -203,8 +203,10 @@ class StopEngineCommand(InternalEngineCommand):
             e.tag_context.emit_on_stop()
 
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Stopped, e._tick_time)
-            e._set_run_id("empty")
+            e.clear_run_id()
             e._stop_interpreter()
+
+            # send RunStoppedMsg
 
 
 class WaitEngineCommand(InternalEngineCommand):
@@ -230,8 +232,13 @@ class WaitEngineCommand(InternalEngineCommand):
 
     def _run(self):
         self.engine._runstate_waiting = True
+        start = self.engine._tick_time
+        duration = self.duration_end_time - start
 
         while self.engine._tick_time < self.duration_end_time:
+            if duration > 0:
+                progress = (self.engine._tick_time - start) / duration
+                self.set_progress(progress)
             yield
 
         self.engine._runstate_waiting = False
@@ -271,7 +278,7 @@ class RestartEngineCommand(InternalEngineCommand):
 
             e.tag_context.emit_on_stop()
 
-            e._set_run_id("empty")
+            e.clear_run_id()
             e._stop_interpreter()
             logger.info("Restarting engine - engine stopped")
 
@@ -285,11 +292,10 @@ class RestartEngineCommand(InternalEngineCommand):
             e._runstate_holding = False
             e._system_tags[SystemTagName.BLOCK_TIME].set_value(0.0, e._tick_time)
             e.block_times.clear()  # kinda hackish, tag should be self-contained
-
-            e.tag_context.emit_on_start()
-
-            e._set_run_id("new")
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
+
+            run_id = e.create_run_id()
+            e.tag_context.emit_on_start(run_id=run_id)  # causes RunStartedMsg to be sent by engine_runner
             logger.info("Restarting engine complete")
 
 

@@ -29,12 +29,16 @@ file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s]: %(mess
 logging.root.addHandler(file_handler)
 
 logger = logging.getLogger("openpectus.engine.engine")
-logger.setLevel(logging.INFO)
+#logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.INFO)
 logging.getLogger("openpectus.protocol.engine_dispatcher").setLevel(logging.DEBUG)
-logging.getLogger("openpectus.engine.engine_runner").setLevel(logging.INFO)
-logging.getLogger("openpectus.engine.internal_commands_impl").setLevel(logging.INFO)
+#logging.getLogger("openpectus.engine.engine_runner").setLevel(logging.INFO)
+logging.getLogger("openpectus.engine.engine_runner").setLevel(logging.DEBUG)
+#logging.getLogger("openpectus.engine.internal_commands_impl").setLevel(logging.INFO)
+logging.getLogger("openpectus.engine.internal_commands_impl").setLevel(logging.DEBUG)
+logging.getLogger("openpectus.lang.exec.tag_lifetime").setLevel(logging.DEBUG)
 logging.getLogger("asyncua.client").setLevel(logging.WARNING)
 
 
@@ -110,7 +114,7 @@ async def main_async(args):
 
     message_builder = EngineMessageBuilder(engine)
     # create runner that orchestrates the error recovery mechanism
-    runner = EngineRunner(dispatcher, message_builder)
+    runner = EngineRunner(dispatcher, message_builder, engine.tag_context)
     _ = EngineMessageHandlers(engine, dispatcher)
 
     # TODO Possibly check dispatcher.check_aggregator_alive() and exit early
@@ -246,13 +250,13 @@ def main():
         loop.run_until_complete(main_async(args))
         logger.info("Main loop completed")
     except KeyboardInterrupt:
-        logger.info("User requested engine to stop")
+        logger.info("User requested engine shutdown")
         loop.run_until_complete(close_async())
     except Exception:
-        logger.error("Unhandled exception in main. Stopping.", exc_info=True)
+        logger.error("Unhandled exception in main. Exiting.", exc_info=True)
         loop.run_until_complete(close_async())
 
-    logger.info("Engine stopped")
+    logger.info("Engine exited")
 
 
 if __name__ == "__main__":

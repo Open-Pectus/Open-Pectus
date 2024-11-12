@@ -97,12 +97,14 @@ using rest/websockets and in test versions using direct connection.
 
 ## 3.3 Aggregator
 To make Aggregator rescilient towards connection errors, litte is needed. When an engine is disconnected, the websocket on_disconnect callback
-fires and the data for en engine is removed. Additionally, the engine data is saved as a RecentEngine.
+fires and the engine_data for the engine is removed from memory. Additionally, the engine data is saved as a RecentEngine.
 
 TODO figure out if we have enough data saved and whether we need to do more on engine connect.
 
 ## 3.4 Diagram
 ### 3.4.1 Connect sequence
+
+TODO: Consider refactoring EngineRunner using a state pattern
 
 <!-- Mermaid syntax: https://emersonbottero.github.io/mermaid-docs/syntax/sequenceDiagram.html -->
 

@@ -3,7 +3,7 @@ import itertools
 import logging
 import uuid
 from queue import Empty, Queue
-from typing import Iterable, List, Literal, Set
+from typing import Iterable, List, Set
 from uuid import UUID
 from openpectus.engine.internal_commands import (
     create_internal_command,
@@ -21,7 +21,7 @@ from openpectus.lang.exec.errors import (
     EngineError, EngineNotInitializedError, InterpretationError, InterpretationInternalError
 )
 from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext
-from openpectus.lang.exec.runlog import RuntimeInfo, RunLog, RuntimeRecord, RuntimeRecordStateEnum
+from openpectus.lang.exec.runlog import RuntimeInfo, RunLog, RuntimeRecord
 from openpectus.lang.exec.tag_lifetime import TagContext
 from openpectus.lang.exec.tags import (
     Tag,
@@ -161,6 +161,8 @@ class Engine(InterpreterContext):
 
         self._cancel_command_exec_ids: list[UUID] = []
 
+        self._configure()
+
     def _iter_all_tags(self) -> Iterable[Tag]:
         return itertools.chain(self._system_tags, self.uod.tags)
 
@@ -169,14 +171,12 @@ class Engine(InterpreterContext):
 
     @property
     def tags(self) -> TagCollection:
-        if self._tags is None:
-            raise EngineNotInitializedError("Tags not set")
+        assert self._tags is not None
         return self._tags
 
     @property
     def lifetime(self) -> TagContext:
-        if self._tag_context is None:
-            raise EngineNotInitializedError("TagContext not set")
+        assert self._tag_context is not None
         return self._tag_context
 
     @property
@@ -191,8 +191,7 @@ class Engine(InterpreterContext):
 
     @property
     def tag_context(self) -> TagContext:
-        if self._tag_context is None:
-            raise EngineNotInitializedError("Tag context not set")
+        assert self._tag_context is not None
         return self._tag_context
 
     @property
@@ -204,8 +203,7 @@ class Engine(InterpreterContext):
         return self._method
 
     def cleanup(self):
-        if self._tag_context is not None:
-            self.tag_context.emit_on_engine_shutdown()
+        self.tag_context.emit_on_engine_shutdown()
         dispose_command_map()
 
     def get_runlog(self) -> RunLog:
@@ -219,7 +217,7 @@ class Engine(InterpreterContext):
         self._tick_timer.set_tick_fn(self.tick)
 
     def run(self, skip_timer_start=False):
-        self._configure()
+        #self._configure()
         self._run(skip_timer_start)
 
     def is_running(self) -> bool:
@@ -472,6 +470,7 @@ class Engine(InterpreterContext):
                 f"Unknown command '{cmd_request.name}'")
 
         record.add_state_started(self._tick_time, self._tick_number, self.tags_as_readonly())
+        record.add_state_internal_engine_command_set(command, self._tick_time, self._tick_number, self.tags_as_readonly())
         command.tick()
         if command.has_failed():
             record.add_state_failed(self._tick_time, self._tick_number, self.tags_as_readonly())
@@ -480,11 +479,19 @@ class Engine(InterpreterContext):
             record.add_state_completed(self._tick_time, self._tick_number, self.tags_as_readonly())
             cmds_done.add(cmd_request)
 
-    def _set_run_id(self, op: Literal["new", "empty"]):
-        if op == "new":
-            self._system_tags[SystemTagName.RUN_ID].set_value(str(uuid.uuid4()), self._tick_time)
-        elif op == "empty":
-            self._system_tags[SystemTagName.RUN_ID].set_value(None, self._tick_time)
+    def create_run_id(self) -> str:
+        """ Create new run_id, set the Run Id system tag to it and return it. Raises if the Run Id tag was already set"""
+        run_id_tag = self._system_tags[SystemTagName.RUN_ID]
+        current_value = run_id_tag.get_value()
+        if current_value is not None:
+            raise EngineError(f"Cannot set new run_id, the Run Id tag was already set to value {str(current_value)}")
+        run_id = str(uuid.uuid4())
+        run_id_tag.set_value(run_id, self._tick_time)
+        return run_id
+
+    def clear_run_id(self):
+        run_id_tag = self._system_tags[SystemTagName.RUN_ID]
+        run_id_tag.set_value(None, self._tick_time)
 
     def _stop_interpreter(self):
         self._interpreter.stop()
