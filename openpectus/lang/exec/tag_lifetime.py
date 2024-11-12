@@ -25,10 +25,11 @@ class TagContext():
             except Exception:
                 logger.error(f"on_engine_configured failed for element '{str(element)}'", exc_info=True)
 
-    def emit_on_start(self):
+    def emit_on_start(self, run_id: str):
+        logger.debug("Emitting event 'on_start'")
         for element in self.elements:
             try:
-                element.on_start(self)
+                element.on_start(self, run_id)
             except Exception:
                 logger.error(f"on_engine_start failed for element '{str(element)}'", exc_info=True)
 
@@ -61,6 +62,7 @@ class TagContext():
                 logger.error(f"on_method_end failed for element '{str(element)}'", exc_info=True)
 
     def emit_on_stop(self):
+        logger.debug("Emitting event 'on_stop'")
         for element in self.elements:
             try:
                 element.on_stop()
@@ -85,7 +87,7 @@ class TagLifetime():
         the connection to hardware has been established. """
         pass
 
-    def on_start(self, context: TagContext):
+    def on_start(self, context: TagContext, run_id: str):
         """ Is invoked by the Start command when method is started. """
         pass
 

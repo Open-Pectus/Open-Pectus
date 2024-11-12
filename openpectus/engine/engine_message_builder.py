@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 import logging
 from logging.handlers import QueueHandler
 from queue import Empty, SimpleQueue
@@ -151,8 +150,8 @@ class EngineMessageBuilder():
         state = self.engine.calculate_method_state()
         return EM.MethodStateMsg(method_state=state)
 
-    def create_run_started_msg(self, run_id: str) -> EM.RunStartedMsg:
-        return EM.RunStartedMsg(run_id=run_id, run_started=datetime.now(timezone.utc))
+    def create_run_started_msg(self, run_id: str, tick_time: float) -> EM.RunStartedMsg:
+        return EM.RunStartedMsg(run_id=run_id, run_started_tick=tick_time)
 
     def create_run_stopped_msg(self, run_id: str) -> EM.RunStoppedMsg:
         runlog_msg = self.create_runlog_msg(run_id)

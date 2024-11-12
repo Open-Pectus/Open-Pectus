@@ -283,6 +283,7 @@ class PInterpreter(PNodeVisitor):
 
     def stop(self):
         self.running = False
+        # Wonder what this does?!? Should no longer be necessary
         self._program.reset_runtime_state(recursive=True)
 
     def _is_awaiting_threshold(self, node: PNode):

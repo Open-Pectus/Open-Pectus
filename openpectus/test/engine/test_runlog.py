@@ -80,7 +80,7 @@ class TestRunlog(unittest.TestCase):
         self.assert_Runtime_HasRecord_Started("Reset")
         self.assert_Runtime_HasRecord_Completed("Reset")
 
-    def test_start_complete_InstructionUodCommand(self):
+    def test_start_complete_Instruction(self):
         e = self.engine
 
         run_engine(e, "Mark: A", 3)
@@ -101,6 +101,34 @@ class TestRunlog(unittest.TestCase):
         self.assert_Runtime_HasRecord_Started(cmd)
         self.assert_Runtime_HasRecord_Completed(cmd)
 
+        self.assert_Runlog_HasItem_Completed(cmd)
+
+    def test_wait_progress_EngineInternalCommand(self):
+        e = self.engine
+
+        cmd = "Wait: 0.5s"
+        item_name = cmd
+
+        run_engine(e, cmd, 5)
+        print_runtime_records(e)
+
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runlog_HasItem(item_name)
+
+        runlog = e.runtimeinfo.get_runlog()
+        item = next((i for i in runlog.items if i.name == item_name), None)
+        assert item is not None and item.progress is not None
+        # after 5-2 = 3 ticks we're 0.6 percent done
+        self.assertAlmostEqual(item.progress, 0.6, delta=0.05)
+
+        continue_engine(e, 1)
+        runlog = e.runtimeinfo.get_runlog()
+        item = next((i for i in runlog.items if i.name == item_name), None)        
+        assert item is not None and item.progress is not None
+        # after 1 more tick we're 0.8 percent done
+        self.assertAlmostEqual(item.progress, 0.8, delta=0.05)
+
+        continue_engine(e, 2)
         self.assert_Runlog_HasItem_Completed(cmd)
 
     def test_Watch(self):

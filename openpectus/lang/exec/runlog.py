@@ -138,6 +138,10 @@ class RuntimeInfo():
                                  f"record state command_exec_id {state.command_exec_id}")
                     item.id = str(state.command_exec_id)
                     command = state.command
+                elif state.state_name == RuntimeRecordStateEnum.InternalEngineCommandSet:
+                    assert item is not None
+                    item.id = str(state.command_exec_id)
+                    command = state.command
 
                 if not is_conclusive_state and item is not None:
                     item.cancellable = r.node.cancellable
@@ -420,6 +424,15 @@ class RuntimeRecord():
         state.command_exec_id = uuid4()
         return state.command_exec_id
 
+    def add_state_internal_engine_command_set(
+            self, command: EngineCommand,
+            time: float, tick: int,
+            state_values: TagValueCollection | None) -> UUID:
+        state = self.add_state(RuntimeRecordStateEnum.InternalEngineCommandSet, time, tick, state_values)
+        state.command = command
+        state.command_exec_id = uuid4()
+        return state.command_exec_id
+
     def add_command_state_cancelled(
             self, command_exec_id: UUID,
             time: float, tick: int, end_values: TagValueCollection):
@@ -470,6 +483,8 @@ class RuntimeRecordStateEnum(StrEnum):
     """ Instruction node was visited"""
     UodCommandSet = auto()
     """ Uod command was set """
+    InternalEngineCommandSet = auto()
+    """ Internal engine command was set """
     AwaitingThreshold = auto()
     """ Waiting for threshold """
     AwaitingCondition = auto()

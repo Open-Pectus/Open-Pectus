@@ -107,6 +107,7 @@ class PlotLogRepository(RepositoryBase):
 
 class RecentRunRepository(RepositoryBase):
     def store_recent_run(self, engine_data: EngineData):
+        """ Store a recent run. Requires that engine_data contain run_data. """
         if not engine_data.has_run():
             raise ValueError('missing run_data when trying to store recent run')
         assert engine_data.run_data is not None

@@ -99,7 +99,7 @@ class ControlStateMsg(EngineMessage):
 
 class RunStartedMsg(EngineMessage):
     run_id: str
-    run_started: datetime
+    run_started_tick: float
 
 
 class RunStoppedMsg(EngineMessage):

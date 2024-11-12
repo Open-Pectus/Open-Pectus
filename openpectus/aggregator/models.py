@@ -160,21 +160,27 @@ class EngineData(BaseModel):
     method_state: MethodState = MethodState.empty()
 
     def has_run(self) -> bool:
+        """ Determine whether run_data is available, that is, whether a run is active. """
         if self.run_data is None:
             return False
         else:
             # TODO would like to inform type checker that self.run_data is now not None
             # not sure this can be done. Which sucks because all call sites will have to
-            # do the assert.
-            # assert self.run_data is not None
+            # do the assert: 'assert engine_data.run_data is not None'
             # self.run_data = typing.cast(RunData, self.run_data)
             # typing.assert_type(self.run_data, RunData)
+            # This can probably only be done by introducing another property whose type is RunData
+            # and throws if run_data is None.
+            # Wrapping the value in a custom Nullable like in dotnet is an option, but not very pythonic.
             return True
 
     def has_this_run(self, run_id: str) -> bool:
+        """ Whether run_data is available and belonging to the given run_id. """
         return self.run_data is not None and self.run_data.run_id == run_id
 
     def reset_run(self):
+        """ Clear all data associated with a run, control_state, error_log, method state (not method content) and run_data, 
+        including run log and run_id. Call when run is complete to get ready for a new run. """
         self.run_data = None
         self.control_state = ControlState(is_running=False, is_holding=False, is_paused=False)
         self.error_log.clear()
