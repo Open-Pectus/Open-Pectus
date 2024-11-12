@@ -5,11 +5,11 @@ import socket
 from typing import Callable, Any, Awaitable
 
 import httpx
+import json
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 from openpectus.protocol.exceptions import ProtocolNetworkException
 import openpectus.protocol.messages as M
-import requests
 from fastapi_websocket_rpc import RpcMethodsBase, WebSocketRpcClient
 import tenacity
 from openpectus import __version__
@@ -92,14 +92,6 @@ class EngineDispatcher():
         return True
 
     async def connect_async(self):
-        if self._engine_id is None:
-            self._engine_id = await self._register_for_engine_id_async()
-            if self._engine_id is None:
-                logger.error("Failed to register because Aggregator refused the registration.")
-                raise ProtocolNetworkException("Registration failed")
-
-        rpc_methods = EngineDispatcher.EngineRpcMethods(self, self._engine_id)
-
         def logerror(retry_state: tenacity.RetryCallState):
             if retry_state and retry_state.outcome:
                 ex = retry_state.outcome.exception()
@@ -111,6 +103,7 @@ class EngineDispatcher():
             'reraise': True,
             "retry_error_callback": logerror
         }
+        rpc_methods = EngineDispatcher.EngineRpcMethods(self, self._engine_id)
         self._rpc_client = WebSocketRpcClient(
             uri=self._rpc_url, methods=rpc_methods, retry_config=retry_config, on_disconnect=[self.on_disconnect]
         )
@@ -118,6 +111,14 @@ class EngineDispatcher():
             await self._rpc_client.__aenter__()
         except Exception:
             raise ProtocolNetworkException("Error creating websocket connection")
+
+        if self._engine_id is None:
+            self._engine_id = await self._register_for_engine_id_async()
+            if self._engine_id is None:
+                logger.error("Failed to register because Aggregator refused the registration.")
+                raise ProtocolNetworkException("Registration failed")
+
+
         logger.info("Websocket connected")
 
     async def on_disconnect(self, channel):
@@ -137,8 +138,8 @@ class EngineDispatcher():
 
     async def post_async(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
         """ Send message via HTTP POST. """
-        if (not isinstance(message, EM.RegisterEngineMsg)):  # Special case for registering
-            if (self._engine_id is None):
+        if not isinstance(message, EM.RegisterEngineMsg):  # Special case for registering
+            if self._engine_id is None:
                 logger.error("Engine did not have engine_id yet")
                 return M.ErrorMessage(message="Engine did not have engine_id yet")
             message.engine_id = self._engine_id
@@ -151,26 +152,14 @@ class EngineDispatcher():
             logger.error("Message serialization failed", exc_info=True)
             return M.ErrorMessage(message="Post failed")
 
+        message = json.dumps(message_json)
+        result = await self._rpc_client.other.dispatch_message_async(message=message)
         try:
-            response = requests.post(url=self._post_url, json=message_json)
-            # logger.debug(f"Sent message: {message.ident}")
-        except Exception as ex:
-            logger.debug(f"Message not sent: {message.ident}")
-            raise ProtocolNetworkException("Post failed with exception") from ex
-
-        if response.status_code == 200:
-            response_json = response.json()
-            try:
-                value = deserialize(response_json)
-                return value
-            except Exception:
-                logger.error("Message deserialization failed", exc_info=True)
-                return M.ErrorMessage(message="Post succeeded but result deserialization failed")
-        else:
-            message_type = type(message)
-            logger.error(f"Non-success http status code: {response.status_code} for input message type: {message_type}")
-            raise ProtocolNetworkException(f"Post failed with non-success http status code: {response.status_code}" +
-                                           " for input message type: {message_type}")
+            value = deserialize(json.loads(result.result))
+            return value
+        except Exception:
+            logger.error("Message deserialization failed", exc_info=True)
+            return M.ErrorMessage(message="WebSocket request succeeded but result deserialization failed")
 
     def set_rpc_handler(self, message_type: type[AM.AggregatorMessage], handler: EngineMessageHandler):
         """ Register handler for given message_type. """

@@ -1,17 +1,19 @@
 import asyncio
 import logging
+import json
 from typing import Callable, Awaitable, Any
 
-from fastapi import APIRouter, FastAPI, Request
-from fastapi_websocket_rpc import RpcChannel, WebsocketRPCEndpoint
+from fastapi import APIRouter
+from fastapi_websocket_rpc import RpcMethodsBase, RpcChannel, WebsocketRPCEndpoint
 from fastapi_websocket_rpc.schemas import RpcResponse
 
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
-from openpectus.protocol.dispatch_interface import AGGREGATOR_RPC_WS_PATH, AGGREGATOR_REST_PATH, EngineMessageType
+from openpectus.protocol.dispatch_interface import AGGREGATOR_RPC_WS_PATH, EngineMessageType
 from openpectus.protocol.exceptions import ProtocolException
 from openpectus.protocol.serialization import deserialize, serialize
+from openpectus.aggregator.data import database
 
 
 logger = logging.getLogger(__name__)
@@ -46,11 +48,30 @@ class AggregatorDispatcher():
         # WebsockeRPCEndpoint has wrong types for its on_connect and on_disconnect.
         # It should be List[Callable[[RpcChannel], Awaitable[Any]]] instead of List[Coroutine]
         # See https://github.com/permitio/fastapi_websocket_rpc/issues/30
-        self.endpoint = WebsocketRPCEndpoint(
-            on_connect=[self.on_client_connect],  # type: ignore
-            on_disconnect=[self.on_client_disconnect])  # type: ignore
+
+        class AggregatorRpcMethods(RpcMethodsBase):
+            def __init__(self, dispatcher: AggregatorDispatcher):
+                super().__init__()
+                self.disp = dispatcher
+
+            async def dispatch_message_async(self, message: str):
+                message = json.loads(message)
+                """ Dispath message to registered handler. """
+                try:
+                    message = deserialize(message)
+                    assert isinstance(message, M.MessageBase)
+                except Exception:
+                    logger.error("Dispatch failed. Message deserialization failed.", exc_info=True)
+                    return
+                with database.create_scope():
+                    result = await self.disp.dispatch_post(message)
+                result = serialize(result)
+                return json.dumps(result)
+
+        self.endpoint = WebsocketRPCEndpoint(AggregatorRpcMethods(self),
+                                             on_connect=[self.on_client_connect],  # type: ignore
+                                             on_disconnect=[self.on_client_disconnect])  # type: ignore
         self.endpoint.register_route(self.router, path=AGGREGATOR_RPC_WS_PATH)
-        self._register_post_route(self.router)
 
     async def _on_delayed_client_connect(self, channel: RpcChannel):
         """ We 'delay' our on_connect callback because the WebsocketRPCEndpoint calls on_connect callbacks before it starts
@@ -130,31 +151,6 @@ class AggregatorDispatcher():
             logger.error("Error during rpc call", exc_info=True)
             await channel.close()
             raise ProtocolException("Error in rpc call")
-
-    def _register_post_route(self, router: APIRouter | FastAPI):
-        @router.post(AGGREGATOR_REST_PATH)
-        async def post(request: Request):
-            request_json = await request.json()
-            try:
-                message = deserialize(request_json)
-            except Exception:
-                logger.error(f"Message deserialization failed, json:\n{request_json}\n", exc_info=True)
-                raise ProtocolException("Deserialization error")
-
-            if not isinstance(message, EM.RegisterEngineMsg) and not isinstance(message, EM.EngineMessage):
-                raise ValueError(f"Invalid type of message sent from Engine: {type(message).__name__}")
-            response_message = await self.dispatch_post(message)
-            if response_message is None:
-                logger.error(f"Invalid response (None) returned from handler for message type {type(message).__name__}")
-                response_message = M.ProtocolErrorMessage(protocol_msg="Invalid response from handler")
-
-            try:
-                message_json = serialize(response_message)
-            except Exception:
-                logger.error(f"Message serialization failed, message type: {type(response_message).__name__}")
-                raise ProtocolException("Serialization error")
-
-            return message_json
 
     async def dispatch_post(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
         """ Dispatch incoming message to registered handler. """
