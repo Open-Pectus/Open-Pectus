@@ -12,7 +12,7 @@ from openpectus.protocol.exceptions import ProtocolNetworkException
 import openpectus.protocol.messages as M
 from fastapi_websocket_rpc import RpcMethodsBase, WebSocketRpcClient
 import tenacity
-from openpectus import __version__
+from openpectus import __version__, __name__
 from openpectus.protocol.dispatch_interface import AGGREGATOR_REST_PATH, AGGREGATOR_RPC_WS_PATH, AGGREGATOR_HEALTH_PATH
 from openpectus.protocol.serialization import serialize, deserialize
 
@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 EngineMessageHandler = Callable[[AM.AggregatorMessage], Awaitable[M.MessageBase]]
 """ Handler in engine that handles aggregator messages of a given type """
 
+engine_headers = {"User-Agent": f"{__name__}/{__version__}"}
 
 class EngineDispatcher():
     """
@@ -71,7 +72,7 @@ class EngineDispatcher():
 
     def check_aggregator_alive(self) -> bool:
         try:
-            resp = httpx.get(self._health_url)
+            resp = httpx.get(self._health_url, headers=engine_headers)
         except httpx.ConnectError as ex:
             logger.error(f"Connection to Aggregator health end point {self._health_url} failed.")
             logger.info("Connection to Aggregator health end point failed.")
@@ -148,18 +149,44 @@ class EngineDispatcher():
 
         try:
             message_json = serialize(message)
+            _message = json.dumps(message_json)
         except Exception:
             logger.error("Message serialization failed", exc_info=True)
-            return M.ErrorMessage(message="Post failed")
+            return M.ErrorMessage(message="Message serialization failed")
 
-        message = json.dumps(message_json)
-        result = await self._rpc_client.other.dispatch_message_async(message=message)
+        try:
+            result = await self._rpc_client.other.dispatch_message_async(message=_message)
+        except Exception as ex:
+            logger.debug(f"Message not sent: {message.ident}")
+            raise ProtocolNetworkException("Websocket rpc call failed with exception") from ex
+
         try:
             value = deserialize(json.loads(result.result))
             return value
         except Exception:
             logger.error("Message deserialization failed", exc_info=True)
             return M.ErrorMessage(message="WebSocket request succeeded but result deserialization failed")
+# =======
+#             response = httpx.post(url=self._post_url, json=message_json, headers=engine_headers)
+#             # logger.debug(f"Sent message: {message.ident}")
+#         except Exception as ex:
+#             logger.debug(f"Message not sent: {message.ident}")
+#             raise ProtocolNetworkException("Post failed with exception") from ex
+
+#         if response.status_code == 200:
+#             response_json = response.json()
+#             try:
+#                 value = deserialize(response_json)
+#                 return value
+#             except Exception:
+#                 logger.error("Message deserialization failed", exc_info=True)
+#                 return M.ErrorMessage(message="Post succeeded but result deserialization failed")
+#         else:
+#             message_type = type(message)
+#             logger.error(f"Non-success http status code: {response.status_code} for input message type: {message_type}")
+#             raise ProtocolNetworkException(f"Post failed with non-success http status code: {response.status_code}" +
+#                                            " for input message type: {message_type}")
+# >>>>>>> main
 
     def set_rpc_handler(self, message_type: type[AM.AggregatorMessage], handler: EngineMessageHandler):
         """ Register handler for given message_type. """

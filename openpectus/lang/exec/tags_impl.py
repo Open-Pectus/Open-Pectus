@@ -12,7 +12,7 @@ MARK_SEPARATOR = "; "
 class ReadingTag(Tag):
     """ Represents a common reading, i.e. a input tag with float values. """
     def __init__(self, name: str, unit: str | None = None) -> None:
-        super().__init__(name, value=0.0, unit=unit, direction=TagDirection.INPUT)
+        super().__init__(name, value=0.0, unit=unit, direction=TagDirection.Input)
 
 
 class SelectTag(Tag):
