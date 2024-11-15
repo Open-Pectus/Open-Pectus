@@ -27,10 +27,11 @@ class FromEngine:
     def register_engine_data(self, engine_data: EngineData):
         logger.debug(f"Data for engine {engine_data.engine_id} registered")
         self._engine_data_map[engine_data.engine_id] = engine_data
+        asyncio.create_task(self.publisher.publish_process_units_changed())
+        asyncio.create_task(self.publisher.publish_control_state_changed(engine_data.engine_id))
 
     def engine_connected(self, engine_id: str):
         logger.debug("engine_connected")
-        asyncio.create_task(self.publisher.publish_control_state_changed(engine_id))
 
     def engine_disconnected(self, engine_id: str):
         logger.debug("engine_disconnected")

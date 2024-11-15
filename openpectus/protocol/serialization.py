@@ -1,6 +1,9 @@
 
+import json
 from types import NoneType
 from typing import Any
+
+from fastapi_websocket_rpc.simplewebsocket import SimpleWebSocket, JsonSerializingWebSocket
 
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
@@ -38,3 +41,22 @@ def deserialize(json_dict: dict[str, Any]) -> M.MessageBase:
         return msg
     except Exception as ex:
         raise ProtocolDeserializationException(f"Deserialization protocol error: {ex}")
+
+# TODO Before we can use this, we need to consider all the clients, engine, aggregator, frontend.
+# We may not want to affect them all
+class CustomJsonSerializingWebSocket(JsonSerializingWebSocket):
+    """ Overrides JsonSerializingWebSocket to provide our custom serialization. """
+    def __init__(self, websocket: SimpleWebSocket):
+        self._websocket = websocket
+
+    def _serialize(self, msg):
+        assert isinstance(msg, M.MessageBase), \
+            f"Message of type {type(msg).__name__} does not support openpectus serialization." + \
+            "The message must be of type MessageBase or one of its subclasses. "
+        msg_json = serialize(msg)
+        return json.dumps(msg_json)
+
+    def _deserialize(self, buffer):
+        msg_json = json.loads(buffer)
+        msg = deserialize(msg_json)
+        return msg

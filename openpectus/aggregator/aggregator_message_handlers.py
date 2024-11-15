@@ -14,13 +14,13 @@ class AggregatorMessageHandlers:
         aggregator.dispatcher.set_register_handler(self.handle_RegisterEngineMsg)
         aggregator.dispatcher.set_disconnect_handler(self.handle_EngineDisconnected)
         aggregator.dispatcher.set_connect_handler(self.handle_EngineConnected)
-        aggregator.dispatcher.set_post_handler(EM.ReconnectedMsg, self.handle_ReconnectedMsg)
-        aggregator.dispatcher.set_post_handler(EM.UodInfoMsg, self.handle_UodInfoMsg)
-        aggregator.dispatcher.set_post_handler(EM.TagsUpdatedMsg, self.handle_TagsUpdatedMsg)
-        aggregator.dispatcher.set_post_handler(EM.RunLogMsg, self.handle_RunLogMsg)
-        aggregator.dispatcher.set_post_handler(EM.ControlStateMsg, self.handle_ControlStateMsg)
-        aggregator.dispatcher.set_post_handler(EM.MethodStateMsg, self.handle_MethodStateMsg)
-        aggregator.dispatcher.set_post_handler(EM.ErrorLogMsg, self.handle_ErrorLogMsg)
+        aggregator.dispatcher.set_message_handler(EM.ReconnectedMsg, self.handle_ReconnectedMsg)
+        aggregator.dispatcher.set_message_handler(EM.UodInfoMsg, self.handle_UodInfoMsg)
+        aggregator.dispatcher.set_message_handler(EM.TagsUpdatedMsg, self.handle_TagsUpdatedMsg)
+        aggregator.dispatcher.set_message_handler(EM.RunLogMsg, self.handle_RunLogMsg)
+        aggregator.dispatcher.set_message_handler(EM.ControlStateMsg, self.handle_ControlStateMsg)
+        aggregator.dispatcher.set_message_handler(EM.MethodStateMsg, self.handle_MethodStateMsg)
+        aggregator.dispatcher.set_message_handler(EM.ErrorLogMsg, self.handle_ErrorLogMsg)
 
     async def handle_RegisterEngineMsg(self, register_engine_msg: EM.RegisterEngineMsg) -> AM.RegisterEngineReplyMsg:
         """ Registers engine """
