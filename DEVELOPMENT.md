@@ -428,13 +428,11 @@ sequenceDiagram
     Note right of E: Web Socket
     E ->> A: connect
     A -->> E: 
-    E ->> A: RegisterEngineMsg
-    A -->> E: [engine_id]
-%%    Note over A,E: A knows E is running
-    E ->> A: UodInfoMsg
-    E ->> A: TagsUpdatedMsg
-%%    Note over A,E: A knows the process values of E
 
+    E ->> A: UodInfoMsg
+    A -->> E: 
+    E ->> A: TagsUpdatedMsg
+    A -->> E: 
 
     loop Every second
     E ->> A: TagsUpdatedMsg

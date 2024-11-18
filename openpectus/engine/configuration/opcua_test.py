@@ -2,7 +2,7 @@
 from time import time
 from openpectus.engine.uod_builder_api import (
     RegexNumber, UnitOperationDefinitionBase, UodCommand, UodBuilder,
-    tags,
+    tags, RegisterDirection,
     PlotConfiguration, SubPlot, PlotAxis, PlotColorRegion
 )
 
@@ -63,12 +63,12 @@ def create() -> UnitOperationDefinitionBase:
         .with_filename(__file__)
         .with_hardware_opcua(host="opc.tcp://127.0.0.1:48400")
         .with_location("Test location")
-        .with_hardware_register("RESET", "Both", path='Objects/2:System/2:RESET')
-        .with_hardware_register("VA01", "Read", path='Objects/2:System/2:VA01')
-        .with_hardware_register("VA02", "Read", path='Objects/2:System/2:VA02')
-        .with_hardware_register("TT01", "Read", path='Objects/2:System/2:TT01')
-        .with_hardware_register("FT01", "Read", path='Objects/2:System/2:FT01')
-        .with_hardware_register("PU01", "Read", path='Objects/2:System/2:PU01')
+        .with_hardware_register("RESET", RegisterDirection.Both, path='Objects/2:System/2:RESET')
+        .with_hardware_register("VA01", RegisterDirection.Read, path='Objects/2:System/2:VA01')
+        .with_hardware_register("VA02", RegisterDirection.Read, path='Objects/2:System/2:VA02')
+        .with_hardware_register("TT01", RegisterDirection.Read, path='Objects/2:System/2:TT01')
+        .with_hardware_register("FT01", RegisterDirection.Read, path='Objects/2:System/2:FT01')
+        .with_hardware_register("PU01", RegisterDirection.Read, path='Objects/2:System/2:PU01')
 
         .with_tag(tags.ReadingTag(name="RESET"))
         .with_tag(tags.ReadingTag(name="VA01"))

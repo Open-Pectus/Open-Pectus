@@ -111,6 +111,15 @@ class PintTest(unittest.TestCase):
         exp_dimensionality = "[current] ** 2 * [time] ** 3 / [length] ** 3 / [mass]"
         self.assertEqual(exp_dimensionality, str(val.dimensionality))
 
+    def test_area(self):
+        val_m2 = Q_(1, "m**2")
+        unit_cm2 = Unit("cm**2")
+        val_cm2 = val_m2.to(unit_cm2)
+        self.assertAlmostEqual(10000, val_cm2.magnitude, delta=0.001)
+        unit_dm2 = Unit("dm**2")
+        val_dm2 = val_m2.to(unit_dm2)
+        self.assertAlmostEqual(100, val_dm2.magnitude, delta=0.001)
+
     def test_formatting(self):
         weight = 2 * ureg.kg
         s = 'The magnitude is {0.magnitude} with units {0.units}'.format(weight)

@@ -18,9 +18,6 @@ from openpectus.protocol.models import EntryDataType, PlotConfiguration
 logger = logging.getLogger(__name__)
 
 
-RegisterDirectionArgument = Literal["Read", "Write", "Both"]
-
-
 class UnitOperationDefinitionBase:
     """ Represets the Unit Operation Definition interface used by the OpenPectus engine.
     """
@@ -506,7 +503,7 @@ class UodBuilder():
         self.location = location
         return self
 
-    def with_hardware_register(self, name: str, direction: RegisterDirectionArgument = "Read", **options) -> UodBuilder:
+    def with_hardware_register(self, name: str, direction: RegisterDirection = RegisterDirection.Read, **options) -> UodBuilder:
         """ Define a hardware register.
 
         Parameters:
@@ -521,16 +518,8 @@ class UodBuilder():
                 Two special options are callbacks named 'to_tag' and 'from_tag'. If specified, these callbacks
                 convert between hardware values and tag values.
         """
-        if direction == "Read":
-            _direction = RegisterDirection.Read
-        elif direction == "Write":
-            _direction = RegisterDirection.Write
-        else:
-            _direction = RegisterDirection.Both
-        register = Register(name, _direction, **options)
-        return self._with_hardware_register(register)
-
-    def _with_hardware_register(self, register: Register) -> UodBuilder:
+        register = Register(name, direction, **options)
+        
         if self.hwl is None:
             raise ValueError("HardwareLayber must be defined before defining a register")
         if register.name is None or register.name == "":
