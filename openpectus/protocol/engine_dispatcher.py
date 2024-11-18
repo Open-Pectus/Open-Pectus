@@ -121,7 +121,11 @@ class EngineDispatcher():
 
         rpc_methods = EngineDispatcher.EngineRpcMethods(self, self._engine_id)
         self._rpc_client = WebSocketRpcClient(
-            uri=self._rpc_url, methods=rpc_methods, retry_config=retry_config, on_disconnect=[self.on_disconnect]
+            uri=self._rpc_url,
+            methods=rpc_methods,
+            retry_config=retry_config,
+            on_disconnect=[self.on_disconnect],
+            user_agent_header=engine_headers
         )
         try:
             await self._rpc_client.__aenter__()
