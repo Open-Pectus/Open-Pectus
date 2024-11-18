@@ -114,7 +114,7 @@ class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
             location="test_location",
             engine_version="1")
 
-        register_response = await self.ctx.engineDispatcher.post_async(register_message)
+        register_response = await self.ctx.engineDispatcher.send_registration_msg_async(register_message)
         assert isinstance(register_response, AM.RegisterEngineReplyMsg)
         self.assertTrue(register_response.success)
         engine_id = register_response.engine_id
@@ -224,14 +224,9 @@ class AggregatorTestDispatcher(AggregatorDispatcher):
         assert isinstance(response, M.MessageBase)
         return response
 
-    async def dispatch_post(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
-        response = await super().dispatch_post(message)
-        if isinstance(message, EM.RegisterEngineMsg):
-            if isinstance(response, AM.RegisterEngineReplyMsg) and response.success:
-                assert isinstance(response.engine_id, str)
-                assert response.engine_id != ""
-                self.connected_engines.add(response.engine_id)
-        elif isinstance(response, M.ProtocolErrorMessage):
+    async def dispatch_message(self, message: EM.EngineMessage) -> M.MessageBase:
+        response = await super().dispatch_message(message)                
+        if isinstance(response, M.ProtocolErrorMessage):
             raise ValueError("Dispatch failed with protocol error: " + str(response.protocol_msg))
         return response
 
@@ -260,17 +255,25 @@ class EngineTestDispatcher(EngineDispatcher):
                 logger.error("Failed to register. Aggregator refused registration.")
                 raise ValueError("Failed to register. Aggregator refused registration.")
 
-    async def post_async(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
+    async def send_registration_msg_async(self, message: EM.RegisterEngineMsg) -> M.MessageBase:
+        assert self.aggregatorDispatcher is not None
+        assert self.aggregatorDispatcher._register_handler is not None
+        result = await self.aggregatorDispatcher._register_handler(message)
+        assert isinstance(result, AM.RegisterEngineReplyMsg)
+        assert result.engine_id is not None
+        self.aggregatorDispatcher.connected_engines.add(result.engine_id)
+        self._engine_id = result.engine_id
+        return result
+
+    async def send_async(self, message: EM.EngineMessage) -> M.MessageBase:
         # fill in message.engine_id
-        if (not isinstance(message, EM.RegisterEngineMsg)):  # Special case for registering
-            if (self._engine_id is None):
-                logger.error("Engine did not have engine_id yet")
-                return M.ErrorMessage(message="Engine did not have engine_id yet")
-            message.engine_id = self._engine_id
+        if (self._engine_id is None):
+            raise Exception("_engine_id should have been set")
+        message.engine_id = self._engine_id
         if self.network_failing:
             raise ProtocolNetworkException
         # post message directly to aggregatorDispatcher
-        response = await self.aggregatorDispatcher.dispatch_post(message)
+        response = await self.aggregatorDispatcher.dispatch_message(message)
         if isinstance(response, AM.RegisterEngineReplyMsg) and response.success:
             self._engine_id = response.engine_id
         return response

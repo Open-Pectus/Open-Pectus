@@ -1,15 +1,17 @@
 import asyncio
+import json
 import logging
 from typing import Callable, Awaitable, Any
 
 from fastapi import APIRouter, FastAPI, Request
-from fastapi_websocket_rpc import RpcChannel, WebsocketRPCEndpoint
+from fastapi_websocket_rpc import RpcMethodsBase, RpcChannel, WebsocketRPCEndpoint
 from fastapi_websocket_rpc.schemas import RpcResponse
 
+from openpectus.aggregator.data import database
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
-from openpectus.protocol.dispatch_interface import AGGREGATOR_RPC_WS_PATH, AGGREGATOR_REST_PATH, EngineMessageType
+from openpectus.protocol.dispatch_interface import AGGREGATOR_REST_PATH, AGGREGATOR_RPC_WS_PATH, EngineMessageType
 from openpectus.protocol.exceptions import ProtocolException
 from openpectus.protocol.serialization import deserialize, serialize
 
@@ -29,6 +31,8 @@ EngineDisconnectHandler = Callable[[str], Awaitable[None]]
 AggregatorMessageHandler = Callable[[Any], Awaitable[M.MessageBase]]
 """ Handler in aggregator that handles engine messages of a given type """
 
+WEBSOCKET_RPC_TIMEOUT_SECS: float | None = 2.0
+
 
 class AggregatorDispatcher():
     """
@@ -46,11 +50,62 @@ class AggregatorDispatcher():
         # WebsockeRPCEndpoint has wrong types for its on_connect and on_disconnect.
         # It should be List[Callable[[RpcChannel], Awaitable[Any]]] instead of List[Coroutine]
         # See https://github.com/permitio/fastapi_websocket_rpc/issues/30
-        self.endpoint = WebsocketRPCEndpoint(
-            on_connect=[self.on_client_connect],  # type: ignore
-            on_disconnect=[self.on_client_disconnect])  # type: ignore
-        self.endpoint.register_route(self.router, path=AGGREGATOR_RPC_WS_PATH)
+
+        class AggregatorRpcMethods(RpcMethodsBase):
+            def __init__(self, dispatcher: AggregatorDispatcher):
+                super().__init__()
+                self.disp = dispatcher
+
+            # Why does this work with return type?? In engine_dispatcher
+            # it fails if we do this. At least we know how to fix it, should it should fail.
+            async def dispatch_message_async(self, message_json: dict[str, Any]) -> str:
+                """ Handle RCP call from engine. Dispatch message to registered handler. """
+                try:
+                    message = deserialize(message_json)
+                    assert isinstance(message, EM.EngineMessage)  # only allow EngineMessage, Register is via rest
+                except Exception:
+                    logger.error("Dispatch failed. Message deserialization failed.", exc_info=True)
+                    return json.dumps(serialize(M.ProtocolErrorMessage(protocol_msg="Message deserialization failed")))
+
+                result = await self.disp.dispatch_message(message)
+                return json.dumps(serialize(result))
+
+        self.endpoint = WebsocketRPCEndpoint(AggregatorRpcMethods(self),
+                                             on_connect=[self.on_client_connect],  # type: ignore
+                                             on_disconnect=[self.on_client_disconnect])  # type: ignore
+        self.endpoint.register_route(self.router, path=AGGREGATOR_RPC_WS_PATH)        
         self._register_post_route(self.router)
+
+    def _register_post_route(self, router: APIRouter | FastAPI):
+        """
+        Set up post route to handle RegisterEngineMsg which must be handled before websocket can be established
+        """
+        @router.post(AGGREGATOR_REST_PATH)
+        async def post(request: Request):
+            request_json = await request.json()
+            try:
+                message = deserialize(request_json)
+                assert isinstance(message, EM.RegisterEngineMsg), "type must be RegisterEngineMsg"
+            except Exception:
+                logger.error(f"Message deserialization failed, json:\n{request_json}\n", exc_info=True)
+                raise ProtocolException("Deserialization error")
+
+            if self._register_handler is None:
+                logger.error("Missing handler for registering engine")
+                return M.ProtocolErrorMessage(protocol_msg="Missing handler for registering engine")
+
+            response_message = await self._register_handler(message)
+            if response_message is None:
+                logger.error(f"Invalid response (None) returned from handler for message type {type(message).__name__}")
+                response_message = M.ProtocolErrorMessage(protocol_msg="Invalid response from handler")
+
+            try:
+                message_json = serialize(response_message)
+            except Exception:
+                logger.error(f"Message serialization failed, message type: {type(response_message).__name__}")
+                raise ProtocolException("Serialization error")
+
+            return message_json
 
     async def _on_delayed_client_connect(self, channel: RpcChannel):
         """ We 'delay' our on_connect callback because the WebsocketRPCEndpoint calls on_connect callbacks before it starts
@@ -89,8 +144,8 @@ class AggregatorDispatcher():
             except Exception:
                 logger.warning("Failed to invoke channel.close()", exc_info=True)
 
-
     async def on_client_connect(self, channel: RpcChannel):
+        channel.default_response_timeout = WEBSOCKET_RPC_TIMEOUT_SECS
         asyncio.create_task(self._on_delayed_client_connect(channel))
 
     async def on_client_disconnect(self, channel: RpcChannel):
@@ -118,55 +173,38 @@ class AggregatorDispatcher():
         logger.debug(f"{message}")
         if engine_id not in self._engine_id_channel_map.keys():
             logger.error(f"Cannot invoke rpc call to unknown engine: {engine_id}")
-            raise ProtocolException("Unknown engine: " + engine_id)
+            return M.ErrorMessage(message=f"Cannot invoke rpc call to unknown engine: {engine_id}")
 
         channel = self._engine_id_channel_map[engine_id]
-        message_json = serialize(message)
+
+        try:
+            message_json = serialize(message)
+        except Exception:
+            msg = f"Failed to seralize message: {type(message).__name__}"
+            logger.error(msg, exc_info=True)
+            return M.ErrorMessage(message=msg)
 
         try:
             response = await channel.other.dispatch_message_async(message_json=message_json)
-            return response
+            assert isinstance(response, RpcResponse)
+            assert isinstance(response.result, str)
         except Exception:
             logger.error("Error during rpc call", exc_info=True)
             await channel.close()
+            # this causes connection to fail and then reconnect
             raise ProtocolException("Error in rpc call")
 
-    def _register_post_route(self, router: APIRouter | FastAPI):
-        @router.post(AGGREGATOR_REST_PATH)
-        async def post(request: Request):
-            request_json = await request.json()
-            try:
-                message = deserialize(request_json)
-            except Exception:
-                logger.error(f"Message deserialization failed, json:\n{request_json}\n", exc_info=True)
-                raise ProtocolException("Deserialization error")
+        try:
+            result_json = json.loads(response.result)
+            result_message = deserialize(result_json)
+            return result_message
+        except Exception:
+            logger.error("Failed to deserialize rpc result", exc_info=True)
+            return M.ErrorMessage(message="Failed to deserialize rpc result")
 
-            if not isinstance(message, EM.RegisterEngineMsg) and not isinstance(message, EM.EngineMessage):
-                raise ValueError(f"Invalid type of message sent from Engine: {type(message).__name__}")
-            response_message = await self.dispatch_post(message)
-            if response_message is None:
-                logger.error(f"Invalid response (None) returned from handler for message type {type(message).__name__}")
-                response_message = M.ProtocolErrorMessage(protocol_msg="Invalid response from handler")
-
-            try:
-                message_json = serialize(response_message)
-            except Exception:
-                logger.error(f"Message serialization failed, message type: {type(response_message).__name__}")
-                raise ProtocolException("Serialization error")
-
-            return message_json
-
-    async def dispatch_post(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
+    async def dispatch_message(self, message: EM.EngineMessage) -> M.MessageBase:
         """ Dispatch incoming message to registered handler. """
         logger.debug(f"Incoming message: {message.ident}")
-        if isinstance(message, EM.RegisterEngineMsg):
-            if self._register_handler is None:
-                return M.ProtocolErrorMessage(protocol_msg="Missing handler for registering engine")
-            response = await self._register_handler(message)
-            assert isinstance(response, AM.RegisterEngineReplyMsg)
-            assert isinstance(response.engine_id, str)
-            assert response.engine_id != ""
-            return response
 
         if message.engine_id == '':
             logger.warning("Failed to handle engine message as its engine_id was the empty string")
@@ -184,7 +222,7 @@ class AggregatorDispatcher():
             logger.warning(f"Dispatch failed for message type: {message_type}. No handler registered.")
             return M.ProtocolErrorMessage(protocol_msg="Dispatch failed. No handler registered.")
 
-    def set_post_handler(self, message_type: type[EngineMessageType], handler: AggregatorMessageHandler):
+    def set_message_handler(self, message_type: type[EngineMessageType], handler: AggregatorMessageHandler):
         """ Set handler for message_type. """
         if message_type in self._handlers.keys():
             logger.error(f"Handler for message type {message_type} is already set.")
