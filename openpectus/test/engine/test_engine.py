@@ -11,7 +11,7 @@ from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 import openpectus.protocol.models as Mdl
 import pint
 from openpectus.engine.engine import Engine
-from openpectus.engine.hardware import HardwareLayerBase, Register
+from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
 from openpectus.engine.models import EngineCommandEnum, MethodStatusEnum, SystemStateEnum, SystemTagName
 from openpectus.lang.exec.runlog import RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import Tag, TagDirection
@@ -90,10 +90,10 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_filename(__file__)
         .with_hardware(TestHW())
         .with_location("Test location")
-        .with_hardware_register("FT01", "Both", path="Objects;2:System;2:FT01")
+        .with_hardware_register("FT01", RegisterDirection.Both, path="Objects;2:System;2:FT01")
         .with_hardware_register(
             "Reset",
-            "Both",
+            RegisterDirection.Both,
             path="Objects;2:System;2:RESET",
             from_tag=lambda x: 1 if x == "Reset" else 0,
             to_tag=lambda x: "Reset" if x == 1 else "N/A",

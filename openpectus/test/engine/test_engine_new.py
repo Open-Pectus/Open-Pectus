@@ -3,6 +3,7 @@ import time
 import unittest
 from typing import Any
 from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
+from openpectus.engine.hardware import RegisterDirection
 
 import pint
 from openpectus.lang.exec.tags import SystemTagName, Tag, TagDirection
@@ -66,10 +67,10 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_filename(__file__)
         .with_hardware_none()
         .with_location("Test location")
-        .with_hardware_register("FT01", "Both", path="Objects;2:System;2:FT01")
+        .with_hardware_register("FT01", RegisterDirection.Both, path="Objects;2:System;2:FT01")
         .with_hardware_register(
             "Reset",
-            "Both",
+            RegisterDirection.Both,
             path="Objects;2:System;2:RESET",
             from_tag=lambda x: 1 if x == "Reset" else 0,
             to_tag=lambda x: "Reset" if x == 1 else "N/A",
