@@ -37,27 +37,21 @@ class EngineDispatcher():
             self.engine_id = engine_id
 
         # Note: this method cannot have a return type specified - this causes a RPC Reader task failed
-        # which seems like a bug in pydantic - possibly fixed in pydantic 2
-        # Possibly depends on the message format  and may be fixed using our new json serializer
-        # It should return a serialized M.MessageBase message as type dict[str, Any]. (until the new serializer...)
-        async def dispatch_message_async(self, message_json: dict[str, Any]):  # -> str:   # -> dict[str, Any]:
+        # which seems like a bug in pydantic
+        # It should return a serialized M.MessageBase message as type str
+        async def dispatch_message_async(self, message_json: dict[str, Any]):  # -> str:
             """ Handle RPC call from aggregator. Dispatch message to registered handler. """
-            try:                
+            try:
                 message = deserialize(message_json)
                 assert isinstance(message, M.MessageBase)
             except Exception:
                 msg = "Dispatch failed. Message deserialization failed."
                 logger.error(msg, exc_info=True)
-                return serialize(M.ErrorMessage(message=msg))
-
-            # TODO: Why does this require serialization??
-            # In aggregator dispatcher we do not need to serialize?!?
-            # When this is understood, we can bring in CustomJsonSerializingWebSocket
+                return json.dumps(serialize(M.ErrorMessage(message=msg)))
 
             result = await self.disp.dispatch_message_async(message)
-            logger.debug(f"Return type of dispatched message {type(message).__name__} was: {type(result).__name__}")
-            result_json = serialize(result)
-            return json.dumps(result_json)
+            logger.debug(f"Return type of dispatched message {type(message).__name__} was: {type(result).__name__}")            
+            return json.dumps(serialize(result))
 
         async def get_engine_id_async(self):
             # Note: Must be declared async to be usable by RPC
@@ -200,13 +194,21 @@ class EngineDispatcher():
         try:
             response = await self._rpc_client.other.dispatch_message_async(message_json=message_json)
             assert isinstance(response, RpcResponse)
-        except Exception as ex:
-            logger.debug(f"Message not sent: {message.ident}")
-            raise ProtocolNetworkException("Websocket rpc call failed with exception") from ex
+        except Exception:
+            logger.error(f"Error sending message: {message.ident}", exc_info=True)
+            return M.ErrorMessage(message=f"Error sending message: {message.ident}")
 
-        # TODO same serialization issue as above
-        value = response.result
-        return value
+        value_str = response.result
+        try:
+            assert isinstance(value_str, str)
+            value = deserialize(json.loads(value_str))
+            assert isinstance(value, M.MessageBase), f"Expected type M.MessageBase, not {type(value).__name__}"
+            return value
+        except Exception:
+            err = f"Error deserializing response for message: {message.ident}"
+            logger.error(err, exc_info=True)
+            return M.ErrorMessage(message=err)
+
 
     def set_rpc_handler(self, message_type: type[AM.AggregatorMessage], handler: EngineMessageHandler):
         """ Register handler for given message_type. """

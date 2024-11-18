@@ -111,38 +111,39 @@ class FromEngine:
             logger.error(f'No engine registered under id {engine_id} when trying to set uod info.')
 
     def tag_values_changed(self, engine_id: str, changed_tag_values: list[Mdl.TagValue]):
-        plot_log_repo = PlotLogRepository(database.scoped_session())
-        recent_run_repo = RecentRunRepository(database.scoped_session())
+        with database.create_scope():
+            plot_log_repo = PlotLogRepository(database.scoped_session())
+            recent_run_repo = RecentRunRepository(database.scoped_session())
 
-        engine_data = self._engine_data_map.get(engine_id)
-        if engine_data is None:
-            logger.error(f'No engine registered under id {engine_id} when trying to upsert tag values.')
-            return
+            engine_data = self._engine_data_map.get(engine_id)
+            if engine_data is None:
+                logger.error(f'No engine registered under id {engine_id} when trying to upsert tag values.')
+                return
 
-        for changed_tag_value in changed_tag_values:
-            if changed_tag_value.name == SystemTagName.METHOD_STATUS.value:
-                if changed_tag_value.value == MethodStatusEnum.ERROR:
-                    engine_data.run_data.interrupted_by_error = True
-                else:
-                    engine_data.run_data.interrupted_by_error = False
+            for changed_tag_value in changed_tag_values:
+                if changed_tag_value.name == SystemTagName.METHOD_STATUS.value:
+                    if changed_tag_value.value == MethodStatusEnum.ERROR:
+                        engine_data.run_data.interrupted_by_error = True
+                    else:
+                        engine_data.run_data.interrupted_by_error = False
 
-            if changed_tag_value.name == SystemTagName.RUN_ID.value:
-                self._run_id_changed(plot_log_repo, recent_run_repo, engine_data, changed_tag_value)
+                if changed_tag_value.name == SystemTagName.RUN_ID.value:
+                    self._run_id_changed(plot_log_repo, recent_run_repo, engine_data, changed_tag_value)
 
-            was_inserted = engine_data.tags_info.upsert(changed_tag_value)
+                was_inserted = engine_data.tags_info.upsert(changed_tag_value)
 
-            if changed_tag_value.name in [
-                SystemTagName.METHOD_STATUS.value,
-                SystemTagName.SYSTEM_STATE.value,
-                SystemTagName.RUN_ID.value,
-            ]:
-                asyncio.create_task(self.publisher.publish_process_units_changed())
+                if changed_tag_value.name in [
+                    SystemTagName.METHOD_STATUS.value,
+                    SystemTagName.SYSTEM_STATE.value,
+                    SystemTagName.RUN_ID.value,
+                ]:
+                    asyncio.create_task(self.publisher.publish_process_units_changed())
 
-            # if a tag doesn't appear with value until after start and run_id, we need to store the info here
-            if was_inserted and engine_data.run_id is not None:
-                plot_log_repo.store_new_tag_info(engine_data.engine_id, engine_data.run_id, changed_tag_value)
+                # if a tag doesn't appear with value until after start and run_id, we need to store the info here
+                if was_inserted and engine_data.run_id is not None:
+                    plot_log_repo.store_new_tag_info(engine_data.engine_id, engine_data.run_id, changed_tag_value)
 
-        self._persist_tag_values(engine_data, plot_log_repo)
+            self._persist_tag_values(engine_data, plot_log_repo)
 
     def _run_id_changed(
             self,

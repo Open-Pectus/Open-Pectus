@@ -13,7 +13,7 @@ import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
 from openpectus.protocol.dispatch_interface import AGGREGATOR_REST_PATH, AGGREGATOR_RPC_WS_PATH, EngineMessageType
 from openpectus.protocol.exceptions import ProtocolException
-from openpectus.protocol.serialization import CustomJsonSerializingWebSocket, deserialize, serialize
+from openpectus.protocol.serialization import deserialize, serialize
 
 
 logger = logging.getLogger(__name__)
@@ -56,25 +56,22 @@ class AggregatorDispatcher():
                 super().__init__()
                 self.disp = dispatcher
 
-            async def dispatch_message_async(self, message_json: dict[str, Any]) -> M.MessageBase:
+            # Why does this work without serialization and with return type?? In engine_dispatcher
+            # it fails if we do this. At least we know how to fix it if it should fail.
+            async def dispatch_message_async(self, message_json: dict[str, Any]) -> str:
                 """ Handle RCP call from engine. Dispatch message to registered handler. """
+                logger.warning(f"dispatch_message_async, incoming type: {type(message_json).__name__}")
                 try:
                     message = deserialize(message_json)
-                    assert isinstance(message, EM.EngineMessage) # only allow EngineMessage, Register is via rest
+                    assert isinstance(message, EM.EngineMessage)  # only allow EngineMessage, Register is via rest
                 except Exception:
                     logger.error("Dispatch failed. Message deserialization failed.", exc_info=True)
-                    return M.ProtocolErrorMessage(protocol_msg="Message deserialization failed")
+                    return json.dumps(serialize(M.ProtocolErrorMessage(protocol_msg="Message deserialization failed")))
 
-                # TODO the message handlers should probably create their own scopes,
-                # it is not really a dispatch responsibility
-                with database.create_scope():
-                    result = await self.disp.dispatch_message(message)
-                # TODO: Why does this work without serialization??
-                # In engine dispatcher we need to serialize?!?
-                return result
+                result = await self.disp.dispatch_message(message)
+                return json.dumps(serialize(result))
 
         self.endpoint = WebsocketRPCEndpoint(AggregatorRpcMethods(self),
-                                             #serializing_socket_cls=CustomJsonSerializingWebSocket,
                                              on_connect=[self.on_client_connect],  # type: ignore
                                              on_disconnect=[self.on_client_disconnect])  # type: ignore
         self.endpoint.register_route(self.router, path=AGGREGATOR_RPC_WS_PATH)        
@@ -192,14 +189,10 @@ class AggregatorDispatcher():
             response = await channel.other.dispatch_message_async(message_json=message_json)
             assert isinstance(response, RpcResponse)
             assert isinstance(response.result, str)
-            # logger.info(f"Rpc call successful, response result type: {type(response.result).__name__}")
-            # logger.info(f"Rpc call successful, response result_type: {response.result_type}")
-            # logger.info(f"Rpc call successful, response result value: {response.result}")
         except Exception:
             logger.error("Error during rpc call", exc_info=True)
-            # TODO can we recover if we dont close here? then that might be better
-            # otherwise we need to test that error recovery starts to reconnect
             await channel.close()
+            # this causes connection to fail and then reconnect
             raise ProtocolException("Error in rpc call")
 
         try:

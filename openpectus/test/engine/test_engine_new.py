@@ -339,7 +339,7 @@ Mark: B
     # longer test runs. The key is that single ticks drown in long waiting times and becomes
     # irrelevant, just as they are in practice.
 
- # --- Inject ---
+# --- Inject ---
 
 
     def test_inject_command(self):
