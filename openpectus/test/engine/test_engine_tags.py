@@ -56,7 +56,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         return result
 
     def cmd_regex(cmd: UodCommand, number: str, number_unit: str) -> None:
-        cmd.context.tags["CmdWithRegex_Flowrate"].set_value(float(number), time.time(), unit=number_unit)
+        cmd.context.tags["CmdWithRegex_Flowrate"].set_value_and_unit(float(number), number_unit, time.time())
         cmd.set_complete()
 
     def overlap_exec(cmd: UodCommand, **kvargs) -> None:
@@ -333,16 +333,16 @@ CmdWithRegexArgs: 2 L/s
         with runner.run() as instance:
             e = instance.engine
             instance.start()
-            flowrate = e.tags["CmdWithRegex_Flowrate"] # [L/h]
+            flowrate = e.tags["CmdWithRegex_Flowrate"]  # [L/h]
 
             instance.run_ticks(1)
             self.assertEqual(0.0, flowrate.get_value())
             instance.run_ticks(2)
-            self.assertEqual(2.0, flowrate.get_value()) # 2 L/h is 2 L/h
+            self.assertEqual(2.0, flowrate.get_value())  # 2 L/h is 2 L/h
             instance.run_ticks(1)
-            self.assertEqual(120.0, flowrate.get_value()) # 2 L/min is 120 L/h
+            self.assertEqual(120.0, flowrate.get_value())  # 2 L/min is 120 L/h
             instance.run_ticks(1)
-            self.assertEqual(7200.0, flowrate.get_value()) # 2 L/s is 7200 L/h
+            self.assertEqual(7200.0, flowrate.get_value())  # 2 L/s is 7200 L/h
 
 
 

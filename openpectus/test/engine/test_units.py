@@ -1,6 +1,7 @@
 import unittest
 
 from openpectus.lang.exec.units import (
+    convert_value_to_unit,
     is_supported_unit,
     get_supported_units,
     get_compatible_unit_names,
@@ -240,3 +241,12 @@ class TestUnits(unittest.TestCase):
             compare_values("=", "9", "mol%", "9", "wt%")
         with self.assertRaises(ValueError):
             compare_values("=", "9", "mol%", "9", "vol%")
+
+    def test_convert_value_to_unit(self):
+        self.assertAlmostEqual(0.05, convert_value_to_unit(5, "cm", "m"))
+        self.assertAlmostEqual(50, convert_value_to_unit(5, "m", "dm"))
+        self.assertAlmostEqual(1.0, convert_value_to_unit(60, "L/h", "L/min"))
+
+    def test_convert_value_to_unit_raises_on_incompatible_units(self):
+        with self.assertRaises(ValueError):
+            convert_value_to_unit(5, "m", "L")
