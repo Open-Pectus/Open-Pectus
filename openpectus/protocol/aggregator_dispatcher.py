@@ -56,11 +56,10 @@ class AggregatorDispatcher():
                 super().__init__()
                 self.disp = dispatcher
 
-            # Why does this work without serialization and with return type?? In engine_dispatcher
-            # it fails if we do this. At least we know how to fix it if it should fail.
+            # Why does this work with return type?? In engine_dispatcher
+            # it fails if we do this. At least we know how to fix it, should it should fail.
             async def dispatch_message_async(self, message_json: dict[str, Any]) -> str:
                 """ Handle RCP call from engine. Dispatch message to registered handler. """
-                logger.warning(f"dispatch_message_async, incoming type: {type(message_json).__name__}")
                 try:
                     message = deserialize(message_json)
                     assert isinstance(message, EM.EngineMessage)  # only allow EngineMessage, Register is via rest
