@@ -5,6 +5,7 @@ import unittest
 from typing import Any
 from openpectus.engine.models import EngineCommandEnum
 from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag, format_time_as_clock
+from openpectus.engine.hardware import RegisterDirection
 
 import pint
 from openpectus.lang.exec.tags import SystemTagName, Tag, TagDirection
@@ -70,10 +71,10 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_filename(__file__)
         .with_hardware_none()
         .with_location("Test location")
-        .with_hardware_register("FT01", "Both", path="Objects;2:System;2:FT01")
+        .with_hardware_register("FT01", RegisterDirection.Both, path="Objects;2:System;2:FT01")
         .with_hardware_register(
             "Reset",
-            "Both",
+            RegisterDirection.Both,
             path="Objects;2:System;2:RESET",
             from_tag=lambda x: 1 if x == "Reset" else 0,
             to_tag=lambda x: "Reset" if x == 1 else "N/A",
@@ -81,7 +82,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         # Readings
         .with_tag(ReadingTag("FT01", "L/h"))
         .with_tag(SelectTag("Reset", value="N/A", unit=None, choices=["Reset", "N/A"]))
-        .with_tag(Tag("Danger", value=True, unit=None, direction=TagDirection.OUTPUT, safe_value=False))
+        .with_tag(Tag("Danger", value=True, unit=None, direction=TagDirection.Output, safe_value=False))
         .with_command(name="Reset", exec_fn=reset)
         .with_command(name="CmdWithArgs", exec_fn=cmd_with_args, arg_parse_fn=cmd_arg_parse)
         .with_command(name="overlap1", exec_fn=overlap_exec)

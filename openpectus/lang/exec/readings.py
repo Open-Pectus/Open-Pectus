@@ -26,8 +26,6 @@ class Reading():
     execute_command_name is the name of the command to execute when the command is posted from the
     frontend. It defaults to tag_name which is usually fine. It can be set to something else if so
     desired.
-
-    Question - is execute_command_name ever used in this class? Seems it is only used by ReadingWithEntry
     """
 
     def __init__(self, tag_name: str) -> None:
@@ -53,7 +51,7 @@ class Reading():
     def build_commands_list(self):
         """ Override to specify the commands available in the UI for this process value.
 
-        Is invoked during validataion after match_with_tags so `tag` and `valid_value_units` have been set.
+        Is invoked during validation after match_with_tags so `tag` and `valid_value_units` have been set.
         """
         pass
 

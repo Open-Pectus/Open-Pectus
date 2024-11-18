@@ -51,6 +51,8 @@ class EngineRunner():
     Decorator that handles and masks connection errors that may occur in the Aggregator-Engine Protocol.
     """
 
+    # TODO: Remove raising ProtocolException where they are not caught which is most of them
+
     def __init__(self, dispatcher: EngineDispatcher, message_builder: EngineMessageBuilder) -> None:
         super().__init__()
         self._dispatcher = dispatcher
@@ -136,7 +138,7 @@ class EngineRunner():
             self._timer.stop()
             await self._disconnect_async(set_state_disconnected=False)
 
-    async def _post_async(self, message: EM.EngineMessage | EM.RegisterEngineMsg) -> M.MessageBase:
+    async def _post_async(self, message: EM.EngineMessage) -> M.MessageBase:
         states_to_post: list[RecoverState] = ["Connected", "Reconnected", "CatchingUp"]
         states_to_buffer: list[RecoverState] = ["Failed", "Disconnected", "Reconnecting"]
 
@@ -145,23 +147,16 @@ class EngineRunner():
 
         elif self.state in states_to_post:
             try:
-                return await self._dispatcher.post_async(message)
+                return await self._dispatcher.send_async(message)
             except ProtocolNetworkException:
                 await self._set_state("Failed")
                 logger.warning(f"Failed to send message {message.ident}, adding to buffer")
-                if isinstance(message, EM.RegisterEngineMsg):
-                    err_msg = f"Invalid message RegisterEngineMsg in state: {self.state}"
-                    raise ProtocolException(err_msg)
-                else:
-                    self._buffer_message(message)
-                    return M.ErrorMessage(message="Failed to send message, was added to buffer")
-
-        elif self.state in states_to_buffer:
-            if isinstance(message, EM.RegisterEngineMsg):
-                raise
-            else:
                 self._buffer_message(message)
                 return M.ErrorMessage(message="Failed to send message, was added to buffer")
+
+        elif self.state in states_to_buffer:
+            self._buffer_message(message)
+            return M.ErrorMessage(message="Failed to send message, was added to buffer")
 
         else:
             err_msg = f"Invalid operation 'post_async' for state: {self.state}"
@@ -205,7 +200,7 @@ class EngineRunner():
             else:
                 try:
                     logger.debug("Sending reconnect msg")
-                    await self._dispatcher.post_async(self._reconnect_msg)
+                    await self._dispatcher.send_async(self._reconnect_msg)
                     logger.debug("Reconnect msg sent")
                     self._reconnect_msg = None
                 except ProtocolNetworkException:

@@ -144,14 +144,14 @@ sequenceDiagram
   Note over E, A: Steady-State sequence
   activate E
   loop every 0.5 second
-      E ->> A: control messages (post)
+      E ->> A: control messages (websocket)
   end
   loop every second
-      E ->> A: data messages (post)
+      E ->> A: data messages (websocket)
   end
 
   alt user command
-    A ->> E: command
+    A ->> E: command (websocket)
     activate A
     E -->> A: response
     deactivate A

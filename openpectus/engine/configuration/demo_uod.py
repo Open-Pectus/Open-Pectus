@@ -8,7 +8,7 @@ from openpectus.engine.uod_builder_api import (
     tags,
     PlotConfiguration, SubPlot, PlotAxis, PlotColorRegion,
     RegexNumber,
-    HardwareLayerBase, Register,  # special import required by custom hardware, DemoHardware
+    HardwareLayerBase, Register, RegisterDirection  # special import required by custom hardware, DemoHardware
 )
 
 
@@ -86,11 +86,11 @@ def create() -> UnitOperationDefinitionBase:
         .with_filename(__file__)
         .with_hardware(DemoHardware())
         .with_location("Demo location")
-        .with_hardware_register("FT01", "Read", path='Objects;2:System;2:FT01')
-        .with_hardware_register("FT02", "Read", path='Objects;2:System;2:FT02')
-        .with_hardware_register("Category", "Read", path='Objects;2:System;2:Category')
-        .with_hardware_register("Time", "Read")
-        .with_hardware_register("Reset", "Both", path='Objects;2:System;2:RESET',
+        .with_hardware_register("FT01", RegisterDirection.Read, path='Objects;2:System;2:FT01')
+        .with_hardware_register("FT02", RegisterDirection.Read, path='Objects;2:System;2:FT02')
+        .with_hardware_register("Category", RegisterDirection.Read, path='Objects;2:System;2:Category')
+        .with_hardware_register("Time", RegisterDirection.Read)
+        .with_hardware_register("Reset", RegisterDirection.Both, path='Objects;2:System;2:RESET',
                                 from_tag=lambda x: 1 if x == 'Reset' else 0,
                                 to_tag=lambda x: "Reset" if x == 1 else "N/A")
         .with_tag(tags.ReadingTag("FT01", "L/h"))

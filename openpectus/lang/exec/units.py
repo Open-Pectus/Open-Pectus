@@ -6,33 +6,47 @@ from pint import UnitRegistry, Quantity
 
 
 ureg = UnitRegistry(cache_folder="./pint-cache")
+ureg.define("m2 = m**2")
+ureg.define("dm2 = dm**2")
+ureg.define("cm2 = cm**2")
+ureg.define("LMH = mm/h")
+ureg.define("wt = 1")
+ureg.define("vol = 1")
+ureg.define("AU = [absorbance]")
 Q_ = Quantity
+
 logger = logging.getLogger(__name__)
 
 # https://en.wikipedia.org/wiki/International_System_of_Units
 # defines all the units we accept, each with their quantity name (similar to pint dimensionality).
 QUANTITY_UNIT_MAP = {
-    'time': ['s', 'min', 'h', 'ms'],            # SI quantities
+    'time': ['s', 'min', 'h', 'ms'],                # SI quantities
     'length': ['m', 'cm'],
+    'area': ['m**2', 'm2', 'dm2', 'cm2'],
     'mass': ['kg', 'g'],
-    'temperature': ['degC', 'degF', 'degK'],
+    'density': ['kg/L', 'g/L'],
+    'temperature': ['degC', 'degF', 'K', '°C', '°F'],
     'amount_of_substance': ['mol'],
-    'volume': ['L', 'mL'],                      # Derived quantities
+    'volume': ['L', 'mL'],                          # Derived quantities
     'flow': ['L/h', 'L/min', 'L/d'],
     'frequency': ['Hz', 'kHz'],
-    'pressure': ['Pa', 'bar', 'pascal'],        # Note: pint prefers pascal over Pa so we define both.
+    'pressure': ['Pa', 'bar', 'pascal'],            # Note: pint prefers pascal over Pa so we define both.
     'mass flow rate': ['kg/h', 'g/s', 'g/min', 'g/h'],
     'electrical conductance': ['mS/cm'],
-    'percentage': ['%'],                        # Custom quantity but supported by pint
-    'column volume': ['CV'],                    # Custom quantity
-    'absorbance': ['AU'],
+    'percentage': ['%', 'vol%', 'wt%', 'mol%'],     # Custom quantity but supported by pint
+    'column volume': ['CV'],                        # Custom quantity
+    'absorbance': ['AU', 'mAU', 'milliAU'],
+    'permeability': ['LMH/bar', 'L/m2/h/bar', 'L/h/m2/bar'],
+    'flux': ['LMH', 'L/m2/h', 'L/h/m2'],
 }
 """ Map quantity names to unit names. """
 
 QUANTITY_PINT_MAP: dict[str, str] = {
     'time': '[time]',
     'length': '[length]',
+    'area': '[length] ** 2',
     'mass': '[mass]',
+    'density': '[mass] / [length] ** 3',
     'flow': '[length] ** 3 / [time]',
     'volume': '[length] ** 3',
     'frequency': '1 / [time]',
@@ -41,9 +55,15 @@ QUANTITY_PINT_MAP: dict[str, str] = {
     'pressure': '[mass] / [length] / [time] ** 2',
     'mass flow rate': '[mass] / [time]',
     'electrical conductance': '[current] ** 2 * [time] ** 3 / [length] ** 3 / [mass]',
-    'percentage': 'percentage',
+    'percentage': '[percentage]',
+    'flux': '[length] / [time]',
+    'permeability': '[length] ** 2 * [time] / [mass]',
+    'absorbance': '[absorbance]',
 }
 """ Map quantity names to pint dimensions or None if not a pint dimension. """
+
+FLOAT_COMPARE_DELTA = 0.01
+""" The precision to use when comparing float values for equality. """
 
 # build list of all supported units
 _supported_units: list[None | str] = [None]
@@ -54,7 +74,7 @@ for v in QUANTITY_UNIT_MAP.values():
 # so they need special treatment.
 # Note that this list is a total static list. The actual valid units depend on the
 # totalizers that are defined in the uod.
-BASE_VALID_UNITS = ['L', 'h', 'min', 's', 'mL', 'CV', 'g', 'kg']
+BASE_VALID_UNITS = ['L', 'h', 'min', 's', 'mL', 'CV', 'DV', 'g', 'kg']
 
 
 def get_supported_units() -> list[str | None]:
@@ -97,7 +117,7 @@ def get_compatible_unit_names(unit: str | None) -> list[str]:
     if pu is None:
         return [""]
     elif unit == "%":
-        return ['%']
+        return ['%', 'vol%', 'wt%', 'mol%']
     elif pu.dimensionless:
         return [""]
     else:
@@ -155,8 +175,8 @@ def compare_values(op: str, value_a: str, unit_a: str | None, value_b: str, unit
             raise ValueError("Cannot compare values, first value is missing or not numeric")
         if fval_b is None:
             raise ValueError("Cannot compare values, second value is missing or not numeric")
-        quantity_a = value_a if unit_a is None else pint.Quantity(fval_a, unit_a)
-        quantity_b = value_b if unit_b is None else pint.Quantity(fval_b, unit_b)
+        quantity_a = value_a if unit_a is None else ureg.Quantity(fval_a, unit_a)
+        quantity_b = value_b if unit_b is None else ureg.Quantity(fval_b, unit_b)
     else:
         assert unit_a == unit_b, f"Units should be the same but are not, '{unit_a}' vs '{unit_b}'"
         quantity_a = value_a
@@ -190,7 +210,13 @@ def compare_values(op: str, value_a: str, unit_a: str | None, value_b: str, unit
             case '<=':
                 result = quantity_a <= quantity_b  # type: ignore
             case '=' | '==':
-                result = quantity_a == quantity_b
+                if isinstance(quantity_a, Quantity) and isinstance(quantity_b, Quantity):
+                    diff = quantity_a - quantity_b
+                    result = abs(diff.magnitude) < FLOAT_COMPARE_DELTA
+                elif isinstance(quantity_a, float) and isinstance(quantity_b, float):
+                    result = abs(quantity_a - quantity_b) < FLOAT_COMPARE_DELTA
+                else:
+                    result = quantity_a == quantity_b
             case '>':
                 result = quantity_a > quantity_b  # type: ignore
             case '>=':
@@ -226,7 +252,7 @@ def _get_pint_unit(unit: str | None) -> pint.Unit | None:
     if unit is None:
         return None
     try:
-        return pint.Unit(unit)
+        return ureg.Unit(unit)
     except Exception:
         logger.error(f"Could not get pint unit for unit '{unit}'")
         raise

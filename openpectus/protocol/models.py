@@ -50,7 +50,7 @@ class TagValue(ProtocolModel):
     value: TagValueType = None
     value_unit: str | None
     value_formatted: str | None
-    direction: TagDirection = TagDirection.UNSPECIFIED
+    direction: TagDirection = TagDirection.Unspecified
 
 
 class RunLogLine(ProtocolModel):
