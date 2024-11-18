@@ -86,6 +86,17 @@ def is_supported_unit(unit: str) -> bool:
 def get_volume_units():
     return QUANTITY_UNIT_MAP['volume']
 
+def convert_value_to_unit(value: float | int, source_unit: str, target_unit: str) -> float:
+    """ Convert a value with a unit to the value in another unit.
+
+    Raises ValueError if the units are not compatible.
+    """
+    try:
+        val = ureg.Quantity(value, source_unit).to(target_unit).magnitude
+        return val
+    except pint.DimensionalityError:
+        raise ValueError(f"Cannot convert between units '{source_unit}' and '{target_unit}'")
+
 def get_unit_quantity_name(unit: str) -> str:
     """ For a supported unit that is not None, return its quantity name. Raises ValueError if the unit is not supported. """
     for key in QUANTITY_UNIT_MAP.keys():
