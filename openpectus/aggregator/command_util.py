@@ -135,3 +135,50 @@ def create_commands(tag: Mdl.TagValue, reading: Mdl.ReadingInfo) -> list[Dto.Pro
         commands.append(command)
 
     return commands
+
+
+def create_command_examples(tag: Mdl.TagValue, reading: Mdl.ReadingInfo) -> list[Dto.CommandExample]:
+    # TODO We probably need a headline and spacer elements
+    commands: list[Dto.CommandExample] = []
+    for cmd in reading.commands:
+        if reading.discriminator == "reading_with_entry":
+            argument_type = "unknown"
+            if reading.entry_data_type == "auto":
+                if isinstance(tag.value, float):
+                    argument_type = "float"
+                elif isinstance(tag.value, int):
+                    argument_type = "int"
+                elif isinstance(tag.value, str):
+                    argument_type = "string"
+            elif reading.entry_data_type == "float":
+                argument_type = "float"
+            elif reading.entry_data_type == "int":
+                argument_type = "float"
+            elif reading.entry_data_type == "str":
+                argument_type = "string"
+
+            argument_unit = "" if tag.value_unit is None else tag.value_unit
+            example = f"""Example:
+
+    {cmd.command}: <argument> {argument_unit}
+
+<argument> is a {argument_type} type.
+"""
+            command = Dto.CommandExample(
+                name=cmd.name,
+                example=example
+            )
+        elif reading.discriminator == "reading_with_choice":
+            example = "Examples:\n"
+            for choice in cmd.choice_names:
+                example += f"\n    {cmd.name}: {choice}"
+
+            command = Dto.CommandExample(
+                name=cmd.name,
+                example=example
+            )
+        else:
+            continue
+
+        commands.append(command)
+    return commands
