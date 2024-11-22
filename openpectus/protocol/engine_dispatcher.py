@@ -52,7 +52,7 @@ class EngineDispatcher():
                 return json.dumps(serialize(M.ErrorMessage(message=msg)))
 
             result = await self.disp.dispatch_message_async(message)
-            logger.debug(f"Return type of dispatched message {type(message).__name__} was: {type(result).__name__}")            
+            logger.debug(f"Return type of dispatched message {type(message).__name__} was: {type(result).__name__}")
             return json.dumps(serialize(result))
 
         async def get_engine_id_async(self):
@@ -162,8 +162,8 @@ class EngineDispatcher():
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(url=self._post_url, json=message_json, headers=engine_headers)
-        except Exception:
-            logger.error("Post failed")  #, exc_info=True)
+        except Exception as ex:
+            logger.error(f"Post failed with  exception type {type(ex).__name__}")  # skip details,  exc_info=True)
             raise ProtocolNetworkException("Post failed with exception")
 
         if response.status_code == 200:
