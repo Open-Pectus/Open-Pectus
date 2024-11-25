@@ -28,9 +28,9 @@ export class AppEffects {
   ));
 
   fetchUserPictureWhenAuthenticated = createEffect(() => this.actions.pipe(
-    ofType(AppActions.userDataLoaded),
-    switchMap(({userData}) => {
-      return this.httpClient.get(userData.picture, {responseType: 'blob'});
+    ofType(AppActions.userAuthenticated),
+    switchMap(() => {
+      return this.httpClient.get('https://graph.microsoft.com/beta/me/photos/48x48/$value', {responseType: 'blob'});
     }),
     map(blob => AppActions.userPictureLoaded({userPicture: URL.createObjectURL(blob)})),
   ));
