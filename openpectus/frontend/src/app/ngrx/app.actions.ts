@@ -1,5 +1,6 @@
 import { createAction, props } from '@ngrx/store';
 import { BuildInfo, ProcessUnit } from '../api';
+import { UserData } from './app.reducer';
 
 const source = '[App] ';
 
@@ -10,5 +11,8 @@ export class AppActions {
   static processUnitsUpdatedOnBackend = createAction(source + 'Process Units Updated On Backend');
   static websocketDisconnected = createAction(source + 'Websocket Disconnected');
   static websocketReconnected = createAction(source + 'Websocket Reconnected');
-  static buildInfoLoaded = createAction(source + 'Build Info Loaded', props<{buildInfo: BuildInfo}>());
+  static buildInfoLoaded = createAction(source + 'Build Info Loaded', props<{ buildInfo: BuildInfo }>());
+  static userAuthenticated = createAction(source + 'User Authenticated');
+  static userDataLoaded = createAction(source + 'User Data Loaded', props<{ userData: UserData }>());
+  static userPictureLoaded = createAction(source + 'User Picture Loaded', props<{ userPicture: string }>());
 }

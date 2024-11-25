@@ -5,11 +5,22 @@ import { AppActions } from './app.actions';
 
 export const appFeatureKey = 'app';
 
+export interface UserData {
+  sub: string;
+  name: string;
+  family_name: string;
+  given_name: string;
+  picture: string;
+  email: string;
+}
+
 export interface AppState {
   processUnits: ProcessUnit[];
   authIsEnabled?: boolean;
   webSocketIsDisconnected: boolean;
   buildInfo?: BuildInfo;
+  userData?: UserData;
+  userPicture?: string;
 }
 
 const initialState: AppState = {
@@ -32,6 +43,12 @@ export const appReducer = createReducer(initialState,
   })),
   on(AppActions.buildInfoLoaded, (state, {buildInfo}) => produce(state, draft => {
     draft.buildInfo = buildInfo;
-  }))
+  })),
+  on(AppActions.userDataLoaded, (state, {userData}) => produce(state, draft => {
+    draft.userData = userData;
+  })),
+  on(AppActions.userPictureLoaded, (state, {userPicture}) => produce(state, draft => {
+    draft.userPicture = userPicture;
+  })),
 );
 
