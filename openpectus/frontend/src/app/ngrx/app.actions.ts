@@ -12,7 +12,7 @@ export class AppActions {
   static websocketDisconnected = createAction(source + 'Websocket Disconnected');
   static websocketReconnected = createAction(source + 'Websocket Reconnected');
   static buildInfoLoaded = createAction(source + 'Build Info Loaded', props<{ buildInfo: BuildInfo }>());
-  static userAuthenticated = createAction(source + 'User Authenticated');
+  static finishedAuthentication = createAction(source + 'Finished Authentication', props<{ isAuthenticated: boolean }>());
   static userDataLoaded = createAction(source + 'User Data Loaded', props<{ userData: UserData }>());
   static userPictureLoaded = createAction(source + 'User Picture Loaded', props<{ userPicture: string }>());
 }
