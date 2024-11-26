@@ -34,7 +34,7 @@ def get_config() -> AuthConfig:
 
 jwks_client = jwt.PyJWKClient(jwks_url)
 
-def user_roles(x_identity: Annotated[str, Header()]):
+def user_roles(x_identity: Annotated[str, Header()] = ''):
     if(not use_auth): return None
     try:
         token: dict[str, str | list[str]] = jwt.decode(

@@ -54,6 +54,18 @@
         ],
         "summary": "Get Units",
         "operationId": "get_units",
+        "parameters": [
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -65,6 +77,16 @@
                   },
                   "type": "array",
                   "title": "Response Get Units"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }

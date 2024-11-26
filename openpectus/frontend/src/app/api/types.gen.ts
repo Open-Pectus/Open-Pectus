@@ -288,6 +288,10 @@ export type GetUnitData = {
 
 export type GetUnitResponse = (ProcessUnit);
 
+export type GetUnitsData = {
+    xIdentity?: string;
+};
+
 export type GetUnitsResponse = (Array<ProcessUnit>);
 
 export type GetProcessValuesData = {
