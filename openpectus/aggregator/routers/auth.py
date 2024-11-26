@@ -37,7 +37,7 @@ jwks_client = jwt.PyJWKClient(jwks_url)
 def user_roles(x_identity: Annotated[str, Header()]):
     if(not use_auth): return None
     try:
-        token: dict = jwt.decode(
+        token: dict[str, str | list[str]] = jwt.decode(
             x_identity,
             jwks_client.get_signing_key_from_jwt(x_identity).key,
             algorithms=["RS256"],
