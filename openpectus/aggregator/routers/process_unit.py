@@ -1,7 +1,7 @@
 import logging
 from typing import List, Annotated
 
-from openpectus.aggregator.routers.auth import access_token
+from openpectus.aggregator.routers.auth import user_roles
 from openpectus.aggregator import command_util
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
@@ -53,8 +53,8 @@ def get_unit(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -
 
 
 @router.get("/process_units")
-def get_units(access_token: Annotated[dict[str, str], Security(access_token)], agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[Dto.ProcessUnit]:
-    logger.debug(access_token)
+def get_units(user_roles: Annotated[list[str], Security(user_roles)], agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[Dto.ProcessUnit]:
+    print(user_roles[0])
     units: List[Dto.ProcessUnit] = []
     for engine_data in agg.get_all_registered_engine_data():
         unit = map_pu(engine_data)

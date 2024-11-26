@@ -3,6 +3,7 @@ import jwt
 
 from typing import Annotated
 from fastapi import APIRouter, security, Security, HTTPException, status
+from fastapi.params import Header
 from openpectus.aggregator.routers.dto import AuthConfig
 
 router = APIRouter(tags=['auth'])
@@ -13,8 +14,8 @@ use_auth = os.getenv('ENABLE_AZURE_AUTHENTICATION', default='').lower() == 'true
 tenant_id = os.getenv('AZURE_DIRECTORY_TENANT_ID', default=None)
 authority_url = f'https://login.microsoftonline.com/{tenant_id}/v2.0' if tenant_id else None
 client_id = os.getenv('AZURE_APPLICATION_CLIENT_ID', default=None)
-token_url = f'https://login.microsoftonline.com/{tenant_id}/oauth2/token'
-authorization_url = f'https://login.microsoftonline.com/{tenant_id}/oauth2/authorize'
+# token_url = f'https://login.microsoftonline.com/{tenant_id}/oauth2/token'
+# authorization_url = f'https://login.microsoftonline.com/{tenant_id}/oauth2/authorize'
 jwks_url = 'https://login.microsoftonline.com/common/discovery/keys'
 
 
@@ -26,27 +27,28 @@ def get_config() -> AuthConfig:
         client_id=client_id
     )
 
-oauth2_scheme = security.OAuth2AuthorizationCodeBearer(
-    authorizationUrl=authorization_url,
-    tokenUrl=token_url,
-)
+# oauth2_scheme = security.OAuth2AuthorizationCodeBearer(
+#     authorizationUrl=authorization_url,
+#     tokenUrl=token_url,
+# )
+
 jwks_client = jwt.PyJWKClient(jwks_url)
 
-def access_token(token_str: Annotated[str, Security(oauth2_scheme)]):
+def user_roles(x_identity: Annotated[str, Header()]):
     if(not use_auth): return None
     try:
-        token = jwt.decode(
-            token_str,
-            jwks_client.get_signing_key_from_jwt(token_str).key,
+        token: dict = jwt.decode(
+            x_identity,
+            jwks_client.get_signing_key_from_jwt(x_identity).key,
             algorithms=["RS256"],
-            audience=['00000003-0000-0000-c000-000000000000'] # Microsoft Graph https://learn.microsoft.com/en-us/troubleshoot/entra/entra-id/governance/verify-first-party-apps-sign-in#application-ids-of-commonly-used-microsoft-applications
+            audience=client_id,
+            issuer=authority_url
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
+            detail="Could not validate id token in X-Identity header",
             headers={"WWW-Authenticate": "Bearer"},
         ) from e
 
-
-    return token
+    return token.get('roles') or []
