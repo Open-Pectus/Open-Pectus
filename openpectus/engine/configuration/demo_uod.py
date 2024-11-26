@@ -18,10 +18,10 @@ def create() -> UnitOperationDefinitionBase:
     # logger = builder.get_logger()
 
     # this signature is usable for the default argument parser
-    #def reset(cmd: UodCommand, **kvargs) -> None:
+    #def reset(cmd: UodCommand, **kvargs):
 
     # this signature is valid for arg_parse_fn=None
-    def reset(cmd: UodCommand) -> None:
+    def reset(cmd: UodCommand):
         """ # Resets the demo unit
         Reset
         """
@@ -37,9 +37,9 @@ def create() -> UnitOperationDefinitionBase:
             progress = count/max_ticks
             cmd.set_progress(progress)
 
-    def test_cmd(cmd: UodCommand, value):
+    def test_int(cmd: UodCommand, value):
         """# Runs test command
-        TestCmd: 5
+        TestInt: 5
         """
         print("test_cmd executing with arg: " + value)
         fval = as_float(value)
@@ -117,7 +117,7 @@ def create() -> UnitOperationDefinitionBase:
         .with_tag(tags.Tag("CmdWithRegexArgs", value=34.87, unit="dm2"))
         .with_tag(tags.Tag("TestPercentage", value=34.87, unit="%"))
         .with_command(name="Reset", exec_fn=reset, arg_parse_fn=None)
-        .with_command(name="TestInt", exec_fn=test_cmd)
+        .with_command(name="TestInt", exec_fn=test_int)
         .with_process_value(tag_name="Run Time")
         .with_process_value(tag_name="FT01")
         .with_process_value_entry(tag_name="TestInt")

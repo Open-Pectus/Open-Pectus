@@ -497,6 +497,9 @@ class RunLog():
         self.id: str = ""
         self.items: List[RunLogItem] = []
 
+    def size(self) -> int:
+        return len(self.items)
+
 
 class RunLogItem():
     def __init__(self) -> None:

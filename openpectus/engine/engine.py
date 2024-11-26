@@ -601,6 +601,7 @@ class Engine(InterpreterContext):
 
         if parsed_args is None:
             logger.error(f"Invalid argument string: '{cmd_request.unparsed_args}' for command '{cmd_name}'")
+            cmds_done.add(cmd_request)
             raise ValueError(f"Invalid arguments for command '{cmd_name}'")
 
         # execute command state flow
