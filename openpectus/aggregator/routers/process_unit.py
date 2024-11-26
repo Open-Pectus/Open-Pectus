@@ -93,7 +93,7 @@ def get_process_values(
         tag_value = tags_info.get(reading.tag_name)
         if tag_value is not None:
             try:
-                cmds = command_util.create_commands(tag_value, reading)
+                cmds = command_util.create_reading_commands(tag_value, reading)
                 process_values.append(Dto.ProcessValue.create_w_commands(tag_value, cmds))
             except Exception as ex:
                 logger.error(f"Error creating commands for process value '{reading.tag_name}': {ex}")
