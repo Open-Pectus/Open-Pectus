@@ -55,6 +55,8 @@ def _parse_advanced_command(cmd: Dto.ExecutableCommand, readings: list[Mdl.Readi
 
 
 def create_commands(tag: Mdl.TagValue, reading: Mdl.ReadingInfo) -> list[Dto.ProcessValueCommand]:
+    # Note: This uses the value to determine the data type in case reading.entry_data_type is auto.
+    # On the caller side, this is not great as it is called very early and no value may be available yet...
     commands: list[Dto.ProcessValueCommand] = []
     for cmd in reading.commands:
         if reading.discriminator == "reading_with_entry":
@@ -137,48 +139,20 @@ def create_commands(tag: Mdl.TagValue, reading: Mdl.ReadingInfo) -> list[Dto.Pro
     return commands
 
 
-def create_command_examples(tag: Mdl.TagValue, reading: Mdl.ReadingInfo) -> list[Dto.CommandExample]:
+def create_command_examples(commands: list[Mdl.CommandInfo]) -> list[Dto.CommandExample]:
     # TODO We probably need a headline and spacer elements
-    commands: list[Dto.CommandExample] = []
-    for cmd in reading.commands:
-        if reading.discriminator == "reading_with_entry":
-            argument_type = "unknown"
-            if reading.entry_data_type == "auto":
-                if isinstance(tag.value, float):
-                    argument_type = "float"
-                elif isinstance(tag.value, int):
-                    argument_type = "int"
-                elif isinstance(tag.value, str):
-                    argument_type = "string"
-            elif reading.entry_data_type == "float":
-                argument_type = "float"
-            elif reading.entry_data_type == "int":
-                argument_type = "float"
-            elif reading.entry_data_type == "str":
-                argument_type = "string"
 
-            argument_unit = "" if tag.value_unit is None else tag.value_unit
-            example = f"""Example:
-
-    {cmd.command}: <argument> {argument_unit}
-
-<argument> is a {argument_type} type.
-"""
-            command = Dto.CommandExample(
-                name=cmd.name,
-                example=example
-            )
-        elif reading.discriminator == "reading_with_choice":
-            example = "Examples:\n"
-            for choice in cmd.choice_names:
-                example += f"\n    {cmd.name}: {choice}"
-
-            command = Dto.CommandExample(
-                name=cmd.name,
-                example=example
-            )
+    def create_example(command: Mdl.CommandInfo) -> Dto.CommandExample:
+        example = ""
+        if command.docstring:
+            example += command.docstring
         else:
-            continue
+            example += "No command information available"
 
-        commands.append(command)
-    return commands
+        return Dto.CommandExample(name=command.name, example=example)
+
+    examples: list[Dto.CommandExample] = []
+    for cmd in commands:
+        examples.append(create_example(cmd))
+
+    return examples

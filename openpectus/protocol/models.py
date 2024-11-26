@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Literal
 
 import openpectus.engine.models as EM
 from pydantic import BaseModel
@@ -20,6 +21,7 @@ class ProtocolModel(BaseModel):
 
 
 class ReadingCommand(ProtocolModel):
+    """ Represents a entry command for a reading. """
     command_id: str
     name: str
     command: str
@@ -39,6 +41,12 @@ class ReadingInfo(ProtocolModel):
             if c.command_id == command_id:
                 return True
         return False
+
+
+class CommandInfo(ProtocolModel):
+    """ Represents a uod command that may or may not be a reading entry command. """
+    name: str
+    docstring: str | None
 
 
 TagValueType = float | int | str | None

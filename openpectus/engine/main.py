@@ -76,6 +76,9 @@ def run_validations(uod: UnitOperationDefinitionBase) -> bool:
         uod.hwl.connect()
         uod.hwl.validate_online()
         logger.info("Hardware validation successful")
+
+        logger.info("Building uod commands")
+        uod.build_commands()
         return True
     except Exception:
         logger.error("An hardware related error occurred. Engine cannot start.")

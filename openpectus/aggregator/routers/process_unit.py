@@ -149,15 +149,9 @@ def get_process_diagram(unit_id: str) -> Dto.ProcessDiagram:
 def get_command_examples(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> list[Dto.CommandExample]:
     commands: list[Dto.CommandExample] = []
     engine_data = agg.get_registered_engine_data(unit_id)
-    commands.append(Dto.CommandExample(name="--- UOD Commands ---", example=""))
     if engine_data is not None:
-        tags_info = engine_data.tags_info.map
-        for reading in engine_data.readings:
-            tag_value = tags_info.get(reading.tag_name)
-            if tag_value is not None:
-                cmds = command_util.create_command_examples(tag_value, reading)
-                commands.extend(cmds)
-
+        commands.append(Dto.CommandExample(name="--- UOD Commands ---", example=""))
+        commands.extend(command_util.create_command_examples(engine_data.commands))
     commands.append(Dto.CommandExample(name="--- Example Commands ---", example=""))
     commands.extend(examples)
     return commands

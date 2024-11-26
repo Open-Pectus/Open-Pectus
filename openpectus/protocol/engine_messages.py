@@ -46,7 +46,8 @@ class RegisterEngineMsg(Msg.MessageBase):
 
 
 class UodInfoMsg(EngineMessage):
-    readings: List[Mdl.ReadingInfo]
+    readings: list[Mdl.ReadingInfo]
+    commands: list[Mdl.CommandInfo]
     plot_configuration: Mdl.PlotConfiguration
     hardware_str: str
 
@@ -58,10 +59,6 @@ class ReconnectedMsg(EngineMessage):
     tags: List[Mdl.TagValue] = []
     method: Mdl.Method
     sequence_number = -3
-
-
-# class SyncTagsMsg(EngineMessage):
-#     tags: List[Mdl.TagValue] = []
 
 
 class TagsUpdatedMsg(EngineMessage):

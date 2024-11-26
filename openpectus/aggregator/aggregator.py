@@ -96,15 +96,20 @@ class FromEngine:
 
     def run_started(self):  # to replace run_id_changed guessing
         raise NotImplementedError()
-    
+
     def run_stopped(self):
         raise NotImplementedError()
-    
 
-    def uod_info_changed(self, engine_id: str, readings: list[Mdl.ReadingInfo], plot_configuration: Mdl.PlotConfiguration,
-                         hardware_str: str):
+    def uod_info_changed(
+            self,
+            engine_id: str,
+            readings: list[Mdl.ReadingInfo],
+            commands: list[Mdl.CommandInfo],
+            plot_configuration: Mdl.PlotConfiguration,
+            hardware_str: str):
         try:
             self._engine_data_map[engine_id].readings = readings
+            self._engine_data_map[engine_id].commands = commands
             self._engine_data_map[engine_id].plot_configuration = plot_configuration
             self._engine_data_map[engine_id].hardware_str = hardware_str
         except KeyError:
