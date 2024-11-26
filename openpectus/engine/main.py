@@ -12,11 +12,14 @@ from openpectus import log_setup_colorlog, sentry, __version__, build_number
 from openpectus.engine.engine import Engine
 from openpectus.engine.engine_message_handlers import EngineMessageHandlers
 from openpectus.engine.engine_message_builder import EngineMessageBuilder
+from openpectus.engine.hardware import NullHardware
 from openpectus.engine.hardware_recovery import ErrorRecoveryConfig, ErrorRecoveryDecorator
 from openpectus.lang.exec.tags import SystemTagName, TagCollection
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 from openpectus.protocol.engine_dispatcher import EngineDispatcher
 from openpectus.engine.engine_runner import EngineRunner
+
+from openpectus.test.engine.utility_methods import EngineTestRunner
 
 log_setup_colorlog()
 
@@ -197,9 +200,37 @@ def validate_and_exit(uod_name: str):
     except Exception:
         logger.error("Online validation failed", exc_info=True)
 
+    run_example_commands(uod)
+
     logger.info("Validation complete. Exiting.")
     exit(0)
 
+def run_example_commands(uod: UnitOperationDefinitionBase):
+    uod.build_commands()
+    logger.info("Validating UOD command examples")
+    uod.hwl = NullHardware()
+
+    failed_cmds: list[str] = []
+    for desc in uod.command_descriptions.values():
+        logger.info(f"Executing example commands for command '{desc.name}'")
+        lines = desc.get_docstring_pcode_lines()
+        pcode = "\n".join(lines)
+        try:
+            runner = EngineTestRunner(uod_factory=lambda: uod, pcode=pcode)
+            with runner.run() as instance:
+                instance.start()
+                # wait 10 minutes, that oughta be enought for everybody
+                instance.run_until_event("method_end", max_ticks=10*60)
+                logger.debug(instance.get_runtime_table())
+                logger.debug(f"Command '{desc.name}' executed successfully")
+        except Exception as ex:
+            logger.error(f"Command '{desc.name}' failed: {str(ex)}")
+            failed_cmds.append(desc.name)
+
+    if len(failed_cmds) > 0:
+        logger.error(f"Example commands failed: {','.join(failed_cmds)}")
+    else:
+        logger.info("All example commands executed succesfully")
 
 def show_register_details_and_exit(uod_name: str):
     logger.info("Engine started in register details mode")

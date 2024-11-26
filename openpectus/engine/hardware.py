@@ -179,6 +179,7 @@ class HardwareLayerBase():
                 print("")
         print("----------")
 
+
 class NullHardware(HardwareLayerBase):
     """ Represents no hardware. Used by tests. """
     def __init__(self) -> None:
@@ -190,3 +191,13 @@ class NullHardware(HardwareLayerBase):
 
     def write(self, value: Any, r: Register):
         pass
+
+    # override calls we don't know to not fail
+    def __getattribute__(self, name: str) -> Any:
+        def null_call():
+            pass
+
+        if not name.startswith("_") and not hasattr(super(), name):
+            # print("name", name)
+            return null_call
+        return super().__getattribute__(name)
