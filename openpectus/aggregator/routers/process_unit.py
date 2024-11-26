@@ -54,7 +54,7 @@ def get_unit(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -
 
 @router.get("/process_units")
 def get_units(user_roles: Annotated[list[str], Security(user_roles)], agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[Dto.ProcessUnit]:
-    print(user_roles[0])
+    print(user_roles)
     units: List[Dto.ProcessUnit] = []
     for engine_data in agg.get_all_registered_engine_data():
         unit = map_pu(engine_data)

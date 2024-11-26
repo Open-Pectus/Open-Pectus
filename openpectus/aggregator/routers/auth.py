@@ -1,8 +1,8 @@
 import os
-import jwt
-
 from typing import Annotated
-from fastapi import APIRouter, security, Security, HTTPException, status
+
+import jwt
+from fastapi import APIRouter, HTTPException, status
 from fastapi.params import Header
 from openpectus.aggregator.routers.dto import AuthConfig
 
