@@ -9,21 +9,22 @@ import { AppActions } from '../ngrx/app.actions';
 import { AuthCallbackComponent } from './auth-callback.component';
 
 export const httpLoaderFactory = (authService: AuthService, store: Store) => {
-  const config = authService.getConfig().pipe<OpenIdConfiguration>(map((customConfig: AuthConfig) => {
+  const config = authService.getConfig().pipe<OpenIdConfiguration>(
+    map((customConfig: AuthConfig) => {
       store.dispatch(AppActions.authEnablementFetched({authIsEnabled: customConfig.use_auth}));
       if(!customConfig.use_auth) {
         return {
           authority: window.location.origin,
           clientId: 'DUMMY',
           redirectUrl: `${window.location.origin}/${authCallbackUrlPart}`,
-        };
+        } satisfies OpenIdConfiguration;
       }
       return {
         authority: customConfig.authority_url,
         clientId: customConfig.client_id,
         authWellknownEndpointUrl: 'https://login.microsoftonline.com/common/v2.0',
         redirectUrl: `${window.location.origin}/${authCallbackUrlPart}`,
-        scope: 'openid profile offline_access', // 'openid profile offline_access ' + your scopes
+        scope: 'openid profile offline_access ProfilePhoto.Read.All', // 'openid profile offline_access ' + your scopes
         responseType: 'code',
         silentRenew: true,
         useRefreshToken: true,
@@ -36,8 +37,8 @@ export const httpLoaderFactory = (authService: AuthService, store: Store) => {
         //   prompt: 'select_account', // login, consent
         // },
         logLevel: LogLevel.None,
-        secureRoutes: [`/api/`],
-      };
+        secureRoutes: [`/api/`, `https://graph.microsoft.com/`],
+      } satisfies OpenIdConfiguration;
     }),
   );
 
