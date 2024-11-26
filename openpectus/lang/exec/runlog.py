@@ -233,11 +233,10 @@ class RuntimeInfo():
             item.progress = None
         # logger.info(f"Updating progress to {item.progress}")
 
-    def get_exec_record(self, exec_id: UUID) -> RuntimeRecord:
+    def get_exec_record(self, exec_id: UUID) -> RuntimeRecord | None:
         index = self._record_index.get(exec_id)
         if index is not None:
             return self._records[index]
-        raise ValueError(f"exec_id {exec_id} has no record")
 
     def get_uod_command_and_record(self, command_exec_id: UUID) -> tuple[EngineCommand, RuntimeRecord] | None:
         for record in reversed(self.records):
