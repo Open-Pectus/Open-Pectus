@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { LetDirective, PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
-import { OidcSecurityService } from 'angular-auth-oidc-client';
 import { MswEnablementComponent } from './msw-enablement.component';
 import { AppSelectors } from './ngrx/app.selectors';
 
@@ -20,27 +19,30 @@ import { AppSelectors } from './ngrx/app.selectors';
         </span>
       </div>
       <button class="text-3xl font-bold mx-4 my-2.5" (click)="navigateToRoot()">Open Pectus</button>
-      <ng-container *ngrxLet="oidcSecurityService.userData$ as userData">
-        <div class="flex gap-3 items-center flex-1 justify-end">
-          <p>{{ getInitials(userData.userData) ?? 'Anon' }}</p>
+      <div class="flex gap-3 items-center flex-1 justify-end">
+        <p>{{ formatInitials(userData | ngrxPush) ?? 'Anon' }}</p>
+        @if ((userPicture | ngrxPush) === undefined) {
           <div class="codicon codicon-account !text-3xl"></div>
-        </div>
-      </ng-container>
+        } @else {
+          <img alt="User Picture" [attr.src]="userPicture | ngrxPush" width="32" height="32" class="rounded-full">
+        }
+      </div>
     </div>
   `,
 })
 export class TopBarComponent {
   buildInfo = this.store.select(AppSelectors.buildInfo);
+  userData = this.store.select(AppSelectors.userData);
+  userPicture = this.store.select(AppSelectors.userPicture);
 
   constructor(private store: Store,
-              private router: Router,
-              protected oidcSecurityService: OidcSecurityService) {}
+              private router: Router) {}
 
   navigateToRoot() {
     this.router.navigate(['/']).then();
   }
 
-  getInitials(userData: { email: string } | null) {
+  formatInitials(userData?: { email: string }) {
     return userData?.email?.split('@')?.[0]?.toUpperCase();
   }
 }

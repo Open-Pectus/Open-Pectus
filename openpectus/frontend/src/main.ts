@@ -57,8 +57,8 @@ enableMocking().then(() => bootstrapApplication(AppComponent, {
       runtimeChecks: {
         strictStateImmutability: true,
         strictActionImmutability: true,
-        strictStateSerializability: true,
-        strictActionSerializability: true,
+        // strictStateSerializability: true,
+        // strictActionSerializability: true,
         // strictActionWithinNgZone: true,
         strictActionTypeUniqueness: true,
       },
