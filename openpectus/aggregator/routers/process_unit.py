@@ -4,14 +4,13 @@ from typing import List
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
 import openpectus.aggregator.routers.dto as Dto
-from openpectus.aggregator.routers.auth import has_access
 from fastapi import APIRouter, Depends, Response, HTTPException
 from openpectus.aggregator import command_util
 from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.command_examples import examples
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import PlotLogRepository, RecentEngineRepository
-from openpectus.aggregator.routers.auth import UserRolesValue
+from openpectus.aggregator.routers.auth import has_access, UserRolesValue
 from starlette.status import HTTP_403_FORBIDDEN, HTTP_404_NOT_FOUND
 
 logger = logging.getLogger(__name__)
