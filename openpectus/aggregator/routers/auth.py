@@ -15,6 +15,7 @@ router = APIRouter(tags=['auth'])
 use_auth = os.getenv('ENABLE_AZURE_AUTHENTICATION', default='').lower() == 'true'
 tenant_id = os.getenv('AZURE_DIRECTORY_TENANT_ID', default=None)
 authority_url = f'https://login.microsoftonline.com/{tenant_id}/v2.0' if tenant_id else None
+well_known_url = f'{authority_url}/.well-known/openid-configuration' if authority_url else None
 client_id = os.getenv('AZURE_APPLICATION_CLIENT_ID', default=None)
 # token_url = f'https://login.microsoftonline.com/{tenant_id}/oauth2/token'
 # authorization_url = f'https://login.microsoftonline.com/{tenant_id}/oauth2/authorize'
@@ -26,7 +27,8 @@ def get_config() -> AuthConfig:
     return AuthConfig(
         use_auth=use_auth,
         authority_url=authority_url,
-        client_id=client_id
+        client_id=client_id,
+        well_known_url=well_known_url
     )
 
 # oauth2_scheme = security.OAuth2AuthorizationCodeBearer(

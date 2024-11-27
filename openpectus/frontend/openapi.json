@@ -1592,6 +1592,10 @@
           "client_id": {
             "type": "string",
             "title": "Client Id"
+          },
+          "well_known_url": {
+            "type": "string",
+            "title": "Well Known Url"
           }
         },
         "type": "object",

@@ -23,7 +23,7 @@ export const httpLoaderFactory = (authService: AuthService, store: Store) => {
       return {
         authority: customConfig.authority_url,
         clientId: customConfig.client_id,
-        authWellknownEndpointUrl: 'https://login.microsoftonline.com/common/v2.0',
+        authWellknownEndpointUrl: customConfig.well_known_url,
         redirectUrl: `${window.location.origin}/${authCallbackUrlPart}`,
         scope: 'openid profile offline_access User.Read', // 'openid profile offline_access ' + your scopes
         responseType: 'code',
