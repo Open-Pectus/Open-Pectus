@@ -442,7 +442,7 @@ class UodBuilder():
         self.filename: str = ""
         self.location: str = ""
         self.plot_configuration: PlotConfiguration = PlotConfiguration.empty()
-        self.required_roles: set[str] = []
+        self.required_roles: set[str] = set()
         self.base_unit_provider: BaseUnitProvider = BaseUnitProvider()
         self.base_unit_provider.set("s", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
         self.base_unit_provider.set("min", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
