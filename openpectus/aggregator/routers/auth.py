@@ -2,6 +2,8 @@ import os
 from typing import Annotated
 
 import jwt
+from openpectus.aggregator.data.models import RecentEngine, RecentRun
+from openpectus.aggregator.models import EngineData
 from fastapi import APIRouter, HTTPException, status
 from fastapi.params import Header, Security
 from openpectus.aggregator.routers.dto import AuthConfig
@@ -34,8 +36,8 @@ def get_config() -> AuthConfig:
 
 jwks_client = jwt.PyJWKClient(jwks_url)
 
-def user_roles(x_identity: Annotated[str, Header()] = ''):
-    if(not use_auth): return None
+def user_roles(x_identity: Annotated[str, Header()] = '') -> set[str]:
+    if(not use_auth): return set()
     try:
         token: dict[str, str | list[str]] = jwt.decode(
             x_identity,
@@ -51,7 +53,11 @@ def user_roles(x_identity: Annotated[str, Header()] = ''):
             headers={"WWW-Authenticate": "Bearer"},
         ) from e
 
-    return token.get('roles') or []
+    return set(token.get('roles') or [])
 
 UserRolesDependency = Security(user_roles)
-UserRolesValue = Annotated[list[str], UserRolesDependency]
+UserRolesValue = Annotated[set[str], UserRolesDependency]
+
+def has_access(engine_or_run: EngineData | RecentEngine | RecentRun, user_roles: set[str]):
+    required_roles = set(engine_or_run.required_roles)
+    return len(required_roles) == 0 or len(required_roles & user_roles) > 0

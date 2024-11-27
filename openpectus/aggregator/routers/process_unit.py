@@ -4,13 +4,14 @@ from typing import List
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
 import openpectus.aggregator.routers.dto as Dto
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Response, HTTPException
 from openpectus.aggregator import command_util
 from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.command_examples import examples
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import PlotLogRepository, RecentEngineRepository
-from openpectus.aggregator.routers.auth import UserRolesValue
+from openpectus.aggregator.routers.auth import has_access, UserRolesValue
+from starlette.status import HTTP_403_FORBIDDEN, HTTP_404_NOT_FOUND
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])
@@ -44,24 +45,26 @@ def map_pu(engine_data: Mdl.EngineData) -> Dto.ProcessUnit:
 
 
 @router.get("/process_unit/{unit_id}")
-def get_unit(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.ProcessUnit | None:
-    ci = agg.get_registered_engine_data(unit_id)
-    if ci is None:
-        return None
-    return map_pu(engine_data=ci)
+def get_unit(user_roles: UserRolesValue, unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.ProcessUnit | None:
+    engine_data = agg.get_registered_engine_data(unit_id)
+    if engine_data is None: raise HTTPException(status_code=HTTP_404_NOT_FOUND)
+    if(not has_access(engine_data, user_roles)):
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN)
+    return map_pu(engine_data=engine_data)
 
 
 @router.get("/process_units")
 def get_units(user_roles: UserRolesValue, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[Dto.ProcessUnit]:
-    print(user_roles)
     units: List[Dto.ProcessUnit] = []
     for engine_data in agg.get_all_registered_engine_data():
+        if(not has_access(engine_data, user_roles)): continue
         unit = map_pu(engine_data)
         units.append(unit)
     # append recent engines from the database
     repo = RecentEngineRepository(database.scoped_session())
     recent_engines = repo.get_recent_engines()
     for recent_engine in recent_engines:
+        if(not has_access(recent_engine, user_roles)): continue
         if recent_engine.engine_id not in [u.id for u in units]:
             unit = Dto.ProcessUnit(
                 id=recent_engine.engine_id or "(error)",
@@ -80,14 +83,17 @@ def get_units(user_roles: UserRolesValue, agg: Aggregator = Depends(agg_deps.get
 
 @router.get("/process_unit/{engine_id}/process_values")
 def get_process_values(
+        user_roles: UserRolesValue,
         engine_id: str,
         response: Response,
         agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[Dto.ProcessValue]:
     response.headers["Cache-Control"] = "no-store"
 
     engine_data = agg.get_registered_engine_data(engine_id)
-    if engine_data is None:
-        return []
+    if engine_data is None: raise HTTPException(status_code=HTTP_404_NOT_FOUND)
+    if(not has_access(engine_data, user_roles)):
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN)
+
     tags_info = engine_data.tags_info.map
     process_values: List[Dto.ProcessValue] = []
     for reading in engine_data.readings:
@@ -103,14 +109,18 @@ def get_process_values(
 
 @router.get('/process_unit/{engine_id}/all_process_values')
 def get_all_process_values(
+        user_roles: UserRolesValue,
         engine_id: str,
         response: Response,
         agg: Aggregator = Depends(agg_deps.get_aggregator)
         ) -> List[Dto.ProcessValue]:
     response.headers["Cache-Control"] = "no-store"
     engine_data = agg.get_registered_engine_data(engine_id)
-    if engine_data is None:
-        return []
+
+    if engine_data is None: raise HTTPException(status_code=HTTP_404_NOT_FOUND)
+    if(not has_access(engine_data, user_roles)):
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN)
+
     tags_info = engine_data.tags_info.map
     process_values: List[Dto.ProcessValue] = []
     for tag_value in tags_info.values():
@@ -119,14 +129,19 @@ def get_all_process_values(
 
 
 @router.post("/process_unit/{unit_id}/execute_command")
-async def execute_command(unit_id: str, command: Dto.ExecutableCommand, agg: Aggregator = Depends(agg_deps.get_aggregator)):
+async def execute_command(
+        user_roles: UserRolesValue,
+        unit_id: str,
+        command: Dto.ExecutableCommand,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)):
     if __debug__:
         print("ExecutableCommand", command)
-
     engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None:
         logger.error(f"No registered engine with engine_id '{unit_id}'")
-        return Dto.ServerErrorResponse(message=f"No registered engine with engine_id '{unit_id}'")
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND)
+    if(not has_access(engine_data, user_roles)):
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN)
     try:
         msg = command_util.parse_as_message(command, engine_data.readings)
     except Exception:
@@ -142,22 +157,35 @@ async def execute_command(unit_id: str, command: Dto.ExecutableCommand, agg: Agg
 
 
 @router.get("/process_unit/{unit_id}/process_diagram")
-def get_process_diagram(unit_id: str) -> Dto.ProcessDiagram:
+def get_process_diagram(
+        user_roles: UserRolesValue,
+        unit_id: str,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.ProcessDiagram | None:
+    engine_data = agg.get_registered_engine_data(unit_id)
+    if engine_data is None: raise HTTPException(status_code=HTTP_404_NOT_FOUND)
+    if(not has_access(engine_data, user_roles)):
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN)
     return Dto.ProcessDiagram(svg="")
 
 
 @router.get('/process_unit/{unit_id}/command_examples')
-def get_command_examples(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> list[Dto.CommandExample]:
+def get_command_examples(
+        user_roles: UserRolesValue,
+        unit_id: str,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> list[Dto.CommandExample]:
     commands: list[Dto.CommandExample] = []
     engine_data = agg.get_registered_engine_data(unit_id)
     commands.append(Dto.CommandExample(name="--- UOD Commands ---", example=""))
-    if engine_data is not None:
-        tags_info = engine_data.tags_info.map
-        for reading in engine_data.readings:
-            tag_value = tags_info.get(reading.tag_name)
-            if tag_value is not None:
-                cmds = command_util.create_command_examples(tag_value, reading)
-                commands.extend(cmds)
+    if engine_data is None: raise HTTPException(status_code=HTTP_404_NOT_FOUND)
+    if(not has_access(engine_data, user_roles)):
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN)
+
+    tags_info = engine_data.tags_info.map
+    for reading in engine_data.readings:
+        tag_value = tags_info.get(reading.tag_name)
+        if tag_value is not None:
+            cmds = command_util.create_command_examples(tag_value, reading)
+            commands.extend(cmds)
 
     commands.append(Dto.CommandExample(name="--- Example Commands ---", example=""))
     commands.extend(examples)
@@ -165,11 +193,16 @@ def get_command_examples(unit_id: str, agg: Aggregator = Depends(agg_deps.get_ag
 
 
 @router.get('/process_unit/{unit_id}/run_log')
-def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.RunLog:
+def get_run_log(
+        user_roles: UserRolesValue,
+        unit_id: str,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.RunLog:
     engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None:
         logger.warning("No engine data - thus no runlog")
-        return Dto.RunLog.empty()
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND)
+    if(not has_access(engine_data, user_roles)):
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN)
 
     logger.info(f"Got runlog with {len(engine_data.run_data.runlog.lines)} lines")
     return Dto.RunLog(
@@ -178,11 +211,17 @@ def get_run_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)
 
 
 @router.get('/process_unit/{unit_id}/method-and-state')
-def get_method_and_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.MethodAndState:
+def get_method_and_state(
+        user_roles: UserRolesValue,
+        unit_id: str,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.MethodAndState:
     engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None:
         logger.warning("No engine data - thus no method")
-        return Dto.MethodAndState.empty()
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND)
+
+    if(not has_access(engine_data, user_roles)):
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN)
 
     def from_models(method: Mdl.Method, method_state: Mdl.MethodState) -> Dto.MethodAndState:
         return Dto.MethodAndState(
@@ -196,7 +235,16 @@ def get_method_and_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_ag
 
 
 @router.post('/process_unit/{unit_id}/method')
-async def save_method(unit_id: str, method_dto: Dto.Method, agg: Aggregator = Depends(agg_deps.get_aggregator)):
+async def save_method(
+        user_roles: UserRolesValue,
+        unit_id: str,
+        method_dto: Dto.Method,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)):
+    engine_data = agg.get_registered_engine_data(unit_id)
+    if engine_data is None: raise HTTPException(status_code=HTTP_404_NOT_FOUND)
+    if(not has_access(engine_data, user_roles)):
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN)
+
     method_mdl = Mdl.Method(lines=[Mdl.MethodLine(id=line.id, content=line.content) for line in method_dto.lines])
 
     if not await agg.from_frontend.method_saved(engine_id=unit_id, method=method_mdl):
@@ -204,21 +252,33 @@ async def save_method(unit_id: str, method_dto: Dto.Method, agg: Aggregator = De
 
 
 @router.get('/process_unit/{unit_id}/plot_configuration')
-def get_plot_configuration(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.PlotConfiguration:
+def get_plot_configuration(
+        user_roles: UserRolesValue,
+        unit_id: str,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.PlotConfiguration:
     engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None:
         logger.warning("No engine data - thus no plot configuration")
-        return Dto.PlotConfiguration.empty()
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND)
+    if(not has_access(engine_data, user_roles)):
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN)
 
     return Dto.PlotConfiguration.validate(
         engine_data.plot_configuration)  # assumes Dto.PlotConfiguration and Mdl.PlotConfiguration are identical, change this when they diverge
 
 
 @router.get('/process_unit/{unit_id}/plot_log')
-def get_plot_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.PlotLog:
+def get_plot_log(
+        user_roles: UserRolesValue,
+        unit_id: str,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.PlotLog:
     plot_log_repo = PlotLogRepository(database.scoped_session())
     engine_data = agg.get_registered_engine_data(unit_id)
-    if engine_data is None or engine_data.run_id is None:
+    if engine_data is None:
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND)
+    if(not has_access(engine_data, user_roles)):
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN)
+    if engine_data.run_id is None:
         return Dto.PlotLog(entries={})
     plot_log_model = plot_log_repo.get_plot_log(engine_data.run_id)
     if plot_log_model is None:
@@ -227,7 +287,10 @@ def get_plot_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator
 
 
 @router.get('/process_unit/{unit_id}/control_state')
-def get_control_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.ControlState:
+def get_control_state(
+        user_roles: UserRolesValue,
+        unit_id: str,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.ControlState:
     def from_message(state: Mdl.ControlState) -> Dto.ControlState:
         return Dto.ControlState(
             is_running=state.is_running,
@@ -237,30 +300,55 @@ def get_control_state(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggre
     engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None:
         logger.warning("No client data - thus no control state")
-        return Dto.ControlState.default()
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND)
+    if(not has_access(engine_data, user_roles)):
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN)
 
     return from_message(engine_data.control_state)
 
 
 @router.get('/process_unit/{unit_id}/error_log')
-def get_error_log(unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.AggregatedErrorLog:
+def get_error_log(
+        user_roles: UserRolesValue,
+        unit_id: str,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.AggregatedErrorLog:
     engine_data = agg.get_registered_engine_data(unit_id)
     if engine_data is None:
         logger.warning("No client data - thus no error log")
-        return Dto.AggregatedErrorLog(entries=[])
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND)
+    if(not has_access(engine_data, user_roles)):
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN)
 
     return Dto.AggregatedErrorLog.from_model(engine_data.run_data.error_log)
 
 
 @router.post('/process_unit/{unit_id}/run_log/force_line/{line_id}')
-async def force_run_log_line(unit_id: str, line_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)):
+async def force_run_log_line(
+        user_roles: UserRolesValue,
+        unit_id: str,
+        line_id: str,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)):
+    engine_data = agg.get_registered_engine_data(unit_id)
+    if engine_data is None:
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND)
+    if(not has_access(engine_data, user_roles)):
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN)
     if not await agg.from_frontend.request_force(engine_id=unit_id, line_id=line_id):
         return Dto.ServerErrorResponse(message="Force request failed")
     return Dto.ServerSuccessResponse(message="Force successfully requested")
 
 
 @router.post('/process_unit/{unit_id}/run_log/cancel_line/{line_id}')
-async def cancel_run_log_line(unit_id: str, line_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)):
+async def cancel_run_log_line(
+        user_roles: UserRolesValue,
+        unit_id: str,
+        line_id: str,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)):
+    engine_data = agg.get_registered_engine_data(unit_id)
+    if engine_data is None:
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND)
+    if(not has_access(engine_data, user_roles)):
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN)
     if not await agg.from_frontend.request_cancel(engine_id=unit_id, line_id=line_id):
         return Dto.ServerErrorResponse(message="Cancel request failed")
     return Dto.ServerSuccessResponse(message="Cancel successfully requested")

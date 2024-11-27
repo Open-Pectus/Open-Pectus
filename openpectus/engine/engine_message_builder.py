@@ -72,7 +72,8 @@ class EngineMessageBuilder():
         return EM.UodInfoMsg(
             readings=readings,
             plot_configuration=self.engine.uod.plot_configuration,
-            hardware_str=str(self.engine.uod.hwl))
+            hardware_str=str(self.engine.uod.hwl),
+            required_roles=self.engine.uod.required_roles)
 
     def collect_tag_updates(self, snapshot=False) -> list[Mdl.TagValue]:
         if snapshot:

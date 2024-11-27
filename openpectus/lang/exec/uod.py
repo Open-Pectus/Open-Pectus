@@ -33,6 +33,7 @@ class UnitOperationDefinitionBase:
                  command_factories: dict[str, UodCommandBuilder],
                  overlapping_command_names_lists: list[list[str]],
                  plot_configuration: PlotConfiguration,
+                 required_roles: set[str],
                  base_unit_provider: BaseUnitProvider
                  ) -> None:
         self.instrument = instrument_name
@@ -48,6 +49,7 @@ class UnitOperationDefinitionBase:
         self.command_instances: dict[str, UodCommand] = {}
         self.overlapping_command_names_lists: list[list[str]] = overlapping_command_names_lists
         self.plot_configuration = plot_configuration
+        self.required_roles = required_roles
         self.base_unit_provider: BaseUnitProvider = base_unit_provider
 
     def __str__(self) -> str:
@@ -71,7 +73,7 @@ class UnitOperationDefinitionBase:
             - If the command uses a regular expression as parser function, it is verified that
               the exec function arguments match the regular expression.
         - Each process value is verified
-            - Checks that entry process values have matching tag value type and 
+            - Checks that entry process values have matching tag value type and
               process value entry_data_type.
         """
         fatal = False
@@ -439,7 +441,8 @@ class UodBuilder():
         self.author_email: str = ""
         self.filename: str = ""
         self.location: str = ""
-        self.plot_configuration: PlotConfiguration | None = None
+        self.plot_configuration: PlotConfiguration = PlotConfiguration.empty()
+        self.required_roles: set[str] = set()
         self.base_unit_provider: BaseUnitProvider = BaseUnitProvider()
         self.base_unit_provider.set("s", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
         self.base_unit_provider.set("min", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
@@ -519,7 +522,7 @@ class UodBuilder():
                 convert between hardware values and tag values.
         """
         register = Register(name, direction, **options)
-        
+
         if self.hwl is None:
             raise ValueError("HardwareLayber must be defined before defining a register")
         if register.name is None or register.name == "":
@@ -732,6 +735,10 @@ class UodBuilder():
         self.plot_configuration = plot_configuration
         return self
 
+    def with_required_roles(self, required_roles: set[str]) -> UodBuilder:
+        self.required_roles = required_roles
+        return self
+
     def build(self) -> UnitOperationDefinitionBase:
         self.validate()
 
@@ -746,7 +753,8 @@ class UodBuilder():
             self.readings,
             self.commands,
             self.overlapping_command_names_lists,
-            self.plot_configuration or PlotConfiguration.empty(),
+            self.plot_configuration,
+            self.required_roles,
             self.base_unit_provider
         )
 

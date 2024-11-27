@@ -124,6 +124,7 @@ class RecentRunRepository(RepositoryBase):
         recent_run.uod_filename = engine_data.uod_filename
         recent_run.started_date = engine_data.run_data.run_started
         recent_run.completed_date = datetime.now(timezone.utc)
+        recent_run.required_roles = engine_data.required_roles
         # recent_run.contributers = engine_data.
 
         method_and_state = RecentRunMethodAndState()
@@ -203,6 +204,7 @@ class RecentEngineRepository(RepositoryBase):
         recent_engine.name = f"{engine_data.computer_name} ({engine_data.uod_name})"
         recent_engine.location = engine_data.location
         recent_engine.last_update = datetime.now(UTC)
+        recent_engine.required_roles = engine_data.required_roles
         system_tag = engine_data.tags_info.get(SystemTagName.SYSTEM_STATE)
         recent_engine.system_state = str(system_tag.value) if system_tag is not None else ""
         self.db_session.add(recent_engine)

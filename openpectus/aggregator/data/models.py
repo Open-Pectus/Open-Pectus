@@ -21,19 +21,6 @@ class DBModel(DeclarativeBase):
     })
 
 
-class ProcessUnit(DBModel):
-    """Represents a live process unit (engine). """
-
-    __tablename__ = "ProcessUnits"
-
-    engine_id: Mapped[str] = mapped_column()
-    state: Mapped[str] = mapped_column()
-    location: Mapped[str] = mapped_column()
-    runtime_msec: Mapped[int] = mapped_column()
-    current_user_role: Mapped[str] = mapped_column()
-    # contributors: Mapped[list[str]] = mapped_column(type_=JSON, default=[])
-
-
 class RecentEngine(DBModel):
     __tablename__ = "RecentEngines"
 
@@ -45,6 +32,7 @@ class RecentEngine(DBModel):
     system_state: Mapped[str] = mapped_column()
     location: Mapped[str] = mapped_column()
     last_update: Mapped[datetime] = mapped_column()
+    required_roles: Mapped[set[str]] = mapped_column(type_=JSON, default=[])
 
 
 class RecentRun(DBModel):
@@ -64,6 +52,7 @@ class RecentRun(DBModel):
     started_date: Mapped[datetime] = mapped_column()
     completed_date: Mapped[datetime] = mapped_column()
     contributors: Mapped[list[str]] = mapped_column(type_=JSON, default=[])
+    required_roles: Mapped[set[str]] = mapped_column(type_=JSON, default=[])
 
 
 class RecentRunMethodAndState(DBModel):
