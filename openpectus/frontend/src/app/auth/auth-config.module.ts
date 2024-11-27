@@ -1,4 +1,4 @@
-import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptors, withInterceptorsFromDi } from '@angular/common/http';
 import { NgModule } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { AuthInterceptor, AuthModule, LogLevel, OpenIdConfiguration, StsConfigHttpLoader, StsConfigLoader } from 'angular-auth-oidc-client';
@@ -7,6 +7,7 @@ import { AuthConfig, AuthService } from '../api';
 import { authCallbackUrlPart } from '../app.routes';
 import { AppActions } from '../ngrx/app.actions';
 import { AuthCallbackComponent } from './auth-callback.component';
+import { identityInterceptor } from './identity.interceptor';
 
 export const httpLoaderFactory = (authService: AuthService, store: Store) => {
   const config = authService.getConfig().pipe<OpenIdConfiguration>(
@@ -24,7 +25,7 @@ export const httpLoaderFactory = (authService: AuthService, store: Store) => {
         clientId: customConfig.client_id,
         authWellknownEndpointUrl: 'https://login.microsoftonline.com/common/v2.0',
         redirectUrl: `${window.location.origin}/${authCallbackUrlPart}`,
-        scope: 'openid profile offline_access ProfilePhoto.Read.All', // 'openid profile offline_access ' + your scopes
+        scope: 'openid profile offline_access', // 'openid profile offline_access ' + your scopes
         responseType: 'code',
         silentRenew: true,
         useRefreshToken: true,
@@ -59,7 +60,7 @@ export const httpLoaderFactory = (authService: AuthService, store: Store) => {
   ],
   providers: [
     {provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true},
-    provideHttpClient(withInterceptorsFromDi()),
+    provideHttpClient(withInterceptorsFromDi(), withInterceptors([identityInterceptor])),
   ],
   exports: [
     AuthModule,

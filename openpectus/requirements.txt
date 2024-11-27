@@ -18,6 +18,7 @@ labjack-ljm==1.23.0
 pyright==1.1.381
 alembic==1.13.1
 sentry-sdk==2.1.1
+PyJWT==2.10.0
 # simulation server
 #opcua
 #numpy
