@@ -11,8 +11,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  # SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/main' }}
-  SHOULD_PUBLISH_IMAGE: ${{ true }}
+  SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/main' }}
   NODE_VERSION: 20.15
 
 jobs:

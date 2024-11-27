@@ -9,7 +9,7 @@ export const identityInterceptor: HttpInterceptorFn = (req, next) => {
 
   if(!oidcSecurityService.authenticated().isAuthenticated) return next(req);
   if(!secureRoutes.some(secureRoute => req.url.startsWith(secureRoute))) return next(req);
-  
+
   return oidcSecurityService.getIdToken().pipe(mergeMap(idToken => {
     const newReq = req.clone({
       headers: req.headers.append('X-Identity', idToken),

@@ -3,7 +3,7 @@ from typing import Annotated
 
 import jwt
 from fastapi import APIRouter, HTTPException, status
-from fastapi.params import Header
+from fastapi.params import Header, Security
 from openpectus.aggregator.routers.dto import AuthConfig
 
 router = APIRouter(tags=['auth'])
@@ -52,3 +52,6 @@ def user_roles(x_identity: Annotated[str, Header()] = ''):
         ) from e
 
     return token.get('roles') or []
+
+UserRolesDependency = Security(user_roles)
+UserRolesValue = Annotated[list[str], UserRolesDependency]
