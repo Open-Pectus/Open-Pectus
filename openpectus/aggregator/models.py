@@ -147,6 +147,7 @@ class EngineData(BaseModel):
     method: Method = Method.empty()
     run_data: RunData = RunData()
     plot_configuration: PlotConfiguration = PlotConfiguration.empty()
+    required_roles: set[str] = set()
 
     @property
     def runtime(self):

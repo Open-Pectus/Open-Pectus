@@ -78,7 +78,7 @@ class AggregatorMessageHandlers:
             return validation_errors
 
         logger.debug(f"Got UodInfo from client: {str(msg)}")
-        self.aggregator.from_engine.uod_info_changed(msg.engine_id, msg.readings, msg.plot_configuration, msg.hardware_str)
+        self.aggregator.from_engine.uod_info_changed(msg.engine_id, msg.readings, msg.plot_configuration, msg.hardware_str, msg.required_roles)
         return AM.SuccessMessage()
 
     async def handle_TagsUpdatedMsg(self, msg: EM.TagsUpdatedMsg) -> AM.SuccessMessage | AM.ErrorMessage:
