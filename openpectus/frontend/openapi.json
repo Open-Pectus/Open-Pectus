@@ -21,6 +21,16 @@
             },
             "name": "unit_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {
@@ -110,6 +120,16 @@
             },
             "name": "engine_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {
@@ -156,6 +176,16 @@
             },
             "name": "engine_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {
@@ -202,6 +232,16 @@
             },
             "name": "unit_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "requestBody": {
@@ -252,6 +292,16 @@
             },
             "name": "unit_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {
@@ -294,6 +344,16 @@
             },
             "name": "unit_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {
@@ -340,6 +400,16 @@
             },
             "name": "unit_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {
@@ -382,6 +452,16 @@
             },
             "name": "unit_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {
@@ -424,6 +504,16 @@
             },
             "name": "unit_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "requestBody": {
@@ -474,6 +564,16 @@
             },
             "name": "unit_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {
@@ -516,6 +616,16 @@
             },
             "name": "unit_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {
@@ -558,6 +668,16 @@
             },
             "name": "unit_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {
@@ -600,6 +720,16 @@
             },
             "name": "unit_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {
@@ -651,6 +781,16 @@
             },
             "name": "line_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {
@@ -700,6 +840,16 @@
             },
             "name": "line_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {
@@ -731,6 +881,18 @@
         ],
         "summary": "Expose System State Enum",
         "operationId": "expose_system_state_enum",
+        "parameters": [
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -738,6 +900,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SystemStateEnum"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -752,6 +924,18 @@
         ],
         "summary": "Get Recent Runs",
         "operationId": "get_recent_runs",
+        "parameters": [
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -763,6 +947,16 @@
                   },
                   "type": "array",
                   "title": "Response Get Recent Runs"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -786,6 +980,16 @@
             },
             "name": "run_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {
@@ -828,6 +1032,16 @@
             },
             "name": "run_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {
@@ -870,6 +1084,16 @@
             },
             "name": "run_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {
@@ -912,6 +1136,16 @@
             },
             "name": "run_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {
@@ -954,6 +1188,16 @@
             },
             "name": "run_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {
@@ -996,6 +1240,16 @@
             },
             "name": "run_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1038,6 +1292,16 @@
             },
             "name": "run_id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1080,6 +1344,16 @@
             },
             "name": "id",
             "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Identity",
+              "default": ""
+            },
+            "name": "x-identity",
+            "in": "header"
           }
         ],
         "responses": {

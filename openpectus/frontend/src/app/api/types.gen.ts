@@ -284,6 +284,7 @@ export type ValidationError = {
 
 export type GetUnitData = {
     unitId: string;
+    xIdentity?: string;
 };
 
 export type GetUnitResponse = (ProcessUnit);
@@ -296,12 +297,14 @@ export type GetUnitsResponse = (Array<ProcessUnit>);
 
 export type GetProcessValuesData = {
     engineId: string;
+    xIdentity?: string;
 };
 
 export type GetProcessValuesResponse = (Array<ProcessValue>);
 
 export type GetAllProcessValuesData = {
     engineId: string;
+    xIdentity?: string;
 };
 
 export type GetAllProcessValuesResponse = (Array<ProcessValue>);
@@ -309,30 +312,35 @@ export type GetAllProcessValuesResponse = (Array<ProcessValue>);
 export type ExecuteCommandData = {
     requestBody: ExecutableCommand;
     unitId: string;
+    xIdentity?: string;
 };
 
 export type ExecuteCommandResponse = (unknown);
 
 export type GetProcessDiagramData = {
     unitId: string;
+    xIdentity?: string;
 };
 
 export type GetProcessDiagramResponse = (ProcessDiagram);
 
 export type GetCommandExamplesData = {
     unitId: string;
+    xIdentity?: string;
 };
 
 export type GetCommandExamplesResponse = (Array<CommandExample>);
 
 export type GetRunLogData = {
     unitId: string;
+    xIdentity?: string;
 };
 
 export type GetRunLogResponse = (RunLog);
 
 export type GetMethodAndStateData = {
     unitId: string;
+    xIdentity?: string;
 };
 
 export type GetMethodAndStateResponse = (MethodAndState);
@@ -340,30 +348,35 @@ export type GetMethodAndStateResponse = (MethodAndState);
 export type SaveMethodData = {
     requestBody: Method;
     unitId: string;
+    xIdentity?: string;
 };
 
 export type SaveMethodResponse = (unknown);
 
 export type GetPlotConfigurationData = {
     unitId: string;
+    xIdentity?: string;
 };
 
 export type GetPlotConfigurationResponse = (PlotConfiguration);
 
 export type GetPlotLogData = {
     unitId: string;
+    xIdentity?: string;
 };
 
 export type GetPlotLogResponse = (PlotLog);
 
 export type GetControlStateData = {
     unitId: string;
+    xIdentity?: string;
 };
 
 export type GetControlStateResponse = (ControlState);
 
 export type GetErrorLogData = {
     unitId: string;
+    xIdentity?: string;
 };
 
 export type GetErrorLogResponse = (AggregatedErrorLog);
@@ -371,6 +384,7 @@ export type GetErrorLogResponse = (AggregatedErrorLog);
 export type ForceRunLogLineData = {
     lineId: string;
     unitId: string;
+    xIdentity?: string;
 };
 
 export type ForceRunLogLineResponse = (unknown);
@@ -378,58 +392,75 @@ export type ForceRunLogLineResponse = (unknown);
 export type CancelRunLogLineData = {
     lineId: string;
     unitId: string;
+    xIdentity?: string;
 };
 
 export type CancelRunLogLineResponse = (unknown);
 
+export type ExposeSystemStateEnumData = {
+    xIdentity?: string;
+};
+
 export type ExposeSystemStateEnumResponse = (SystemStateEnum);
+
+export type GetRecentRunsData = {
+    xIdentity?: string;
+};
 
 export type GetRecentRunsResponse = (Array<RecentRun>);
 
 export type GetRecentRunData = {
     runId: string;
+    xIdentity?: string;
 };
 
 export type GetRecentRunResponse = (RecentRun);
 
 export type GetRecentRunMethodAndStateData = {
     runId: string;
+    xIdentity?: string;
 };
 
 export type GetRecentRunMethodAndStateResponse = (MethodAndState);
 
 export type GetRecentRunRunLogData = {
     runId: string;
+    xIdentity?: string;
 };
 
 export type GetRecentRunRunLogResponse = (RunLog);
 
 export type GetRecentRunPlotConfigurationData = {
     runId: string;
+    xIdentity?: string;
 };
 
 export type GetRecentRunPlotConfigurationResponse = (PlotConfiguration);
 
 export type GetRecentRunPlotLogData = {
     runId: string;
+    xIdentity?: string;
 };
 
 export type GetRecentRunPlotLogResponse = (PlotLog);
 
 export type GetRecentRunCsvJsonData = {
     runId: string;
+    xIdentity?: string;
 };
 
 export type GetRecentRunCsvJsonResponse = (RecentRunCsv);
 
 export type GetRecentRunErrorLogData = {
     runId: string;
+    xIdentity?: string;
 };
 
 export type GetRecentRunErrorLogResponse = (AggregatedErrorLog);
 
 export type GetRecentRunCsvFileData = {
     id: string;
+    xIdentity?: string;
 };
 
 export type GetRecentRunCsvFileResponse = (unknown);
