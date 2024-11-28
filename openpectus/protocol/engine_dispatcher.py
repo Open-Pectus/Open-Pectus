@@ -3,16 +3,18 @@ from __future__ import annotations
 import logging
 import socket
 from typing import Callable, Any, Awaitable
-
-import httpx
 import json
+
+from fastapi_websocket_rpc import RpcMethodsBase, WebSocketRpcClient
+from fastapi_websocket_rpc.rpc_methods import RpcResponse
+from websockets.exceptions import ConnectionClosedError
+import httpx
+import tenacity
+
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 from openpectus.protocol.exceptions import ProtocolException, ProtocolNetworkException
 import openpectus.protocol.messages as M
-from fastapi_websocket_rpc import RpcMethodsBase, WebSocketRpcClient
-from fastapi_websocket_rpc.rpc_methods import RpcResponse
-import tenacity
 from openpectus import __version__, __name__
 from openpectus.protocol.dispatch_interface import AGGREGATOR_REST_PATH, AGGREGATOR_RPC_WS_PATH, AGGREGATOR_HEALTH_PATH
 from openpectus.protocol.serialization import serialize, deserialize
@@ -27,7 +29,7 @@ engine_headers = {"User-Agent": f"{__name__}/{__version__}"}
 class EngineDispatcher():
     """
     Engine dispatcher for the Aggregator-Engine Protocol.
-    Allows sending messages via HTTP POST and receiving messages via JSON-RPC.
+    Allows sending messages via HTTP POST and JSON-RPC.
     """
 
     class EngineRpcMethods(RpcMethodsBase):
@@ -50,7 +52,7 @@ class EngineDispatcher():
                 return json.dumps(serialize(M.ErrorMessage(message=msg)))
 
             result = await self.disp.dispatch_message_async(message)
-            logger.debug(f"Return type of dispatched message {type(message).__name__} was: {type(result).__name__}")            
+            logger.debug(f"Return type of dispatched message {type(message).__name__} was: {type(result).__name__}")
             return json.dumps(serialize(result))
 
         async def get_engine_id_async(self):
@@ -160,8 +162,8 @@ class EngineDispatcher():
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(url=self._post_url, json=message_json, headers=engine_headers)
-        except Exception:
-            logger.error("Post failed", exc_info=True)
+        except Exception as ex:
+            logger.error(f"Post failed with  exception type {type(ex).__name__}")  # skip details,  exc_info=True)
             raise ProtocolNetworkException("Post failed with exception")
 
         if response.status_code == 200:
@@ -198,9 +200,11 @@ class EngineDispatcher():
         try:
             response = await self._rpc_client.other.dispatch_message_async(message_json=message_json)
             assert isinstance(response, RpcResponse)
+        except ConnectionClosedError:
+            raise ProtocolNetworkException("Connection closed")
         except Exception:
-            logger.error(f"Error sending message: {message.ident}", exc_info=True)
-            return M.ErrorMessage(message=f"Error sending message: {message.ident}")
+            logger.error(f"Unkown error sending message: {message.ident}", exc_info=True)
+            return M.ErrorMessage(message=f"Unkown error sending message: {message.ident}")
 
         value_str = response.result
         try:

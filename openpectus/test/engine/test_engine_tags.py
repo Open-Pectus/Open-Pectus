@@ -55,8 +55,8 @@ def create_test_uod() -> UnitOperationDefinitionBase:
             result[f"item{i}"] = item.strip()
         return result
 
-    def cmd_regex(cmd: UodCommand, number, number_unit) -> None:
-        cmd.context.tags["CmdWithRegex_Area"].set_value(number + number_unit, time.time())
+    def cmd_regex(cmd: UodCommand, number: str, number_unit: str) -> None:
+        cmd.context.tags["CmdWithRegex_Flowrate"].set_value_and_unit(float(number), number_unit, time.time())
         cmd.set_complete()
 
     def overlap_exec(cmd: UodCommand, **kvargs) -> None:
@@ -88,10 +88,10 @@ def create_test_uod() -> UnitOperationDefinitionBase:
         .with_command(name="overlap1", exec_fn=overlap_exec)
         .with_command(name="overlap2", exec_fn=overlap_exec)
         .with_command_overlap(['overlap1', 'overlap2'])
-        .with_tag(Tag("CmdWithRegex_Area", value=""))
+        .with_tag(ReadingTag("CmdWithRegex_Flowrate", "L/h"))
         .with_command_regex_arguments(
             name="CmdWithRegexArgs",
-            arg_parse_regex=RegexNumber(units=['m2']),
+            arg_parse_regex=RegexNumber(units=['L/h', 'L/min', 'L/s']),
             exec_fn=cmd_regex)
     )
     uod = builder.build()
@@ -100,8 +100,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:
 
 
 class TestEngineTags(unittest.TestCase):
-# ---------- Lifetime -------------
-
+    # ---------- Lifetime -------------
     def test_tag_process_time(self):
         runner = EngineTestRunner(create_test_uod)
         with runner.run() as instance:
@@ -323,6 +322,27 @@ Block: B1
 
             instance.run_until_event("block_start")
             self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)  # nested timer is also reset
+
+    def test_tag_unit_conversion_handled_by_pint(self):
+        p = """
+CmdWithRegexArgs: 2 L/h
+CmdWithRegexArgs: 2 L/min
+CmdWithRegexArgs: 2 L/s
+"""
+        runner = EngineTestRunner(create_test_uod, p)
+        with runner.run() as instance:
+            e = instance.engine
+            instance.start()
+            flowrate = e.tags["CmdWithRegex_Flowrate"]  # [L/h]
+
+            instance.run_ticks(1)
+            self.assertEqual(0.0, flowrate.get_value())
+            instance.run_ticks(2)
+            self.assertEqual(2.0, flowrate.get_value())  # 2 L/h is 2 L/h
+            instance.run_ticks(1)
+            self.assertEqual(120.0, flowrate.get_value())  # 2 L/min is 120 L/h
+            instance.run_ticks(1)
+            self.assertEqual(7200.0, flowrate.get_value())  # 2 L/s is 7200 L/h
 
 
 

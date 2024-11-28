@@ -54,84 +54,75 @@ def _parse_advanced_command(cmd: Dto.ExecutableCommand, readings: list[Mdl.Readi
     raise ValueError(f"Command not supported: '{cmd}'")
 
 
-def create_commands(tag: Mdl.TagValue, reading: Mdl.ReadingInfo) -> list[Dto.ProcessValueCommand]:
+def create_reading_commands(tag: Mdl.TagValue, reading: Mdl.ReadingInfo) -> list[Dto.ProcessValueCommand]:
     commands: list[Dto.ProcessValueCommand] = []
-    for cmd in reading.commands:
+    for reading_cmd in reading.commands:
         if reading.discriminator == "reading_with_entry":
-            is_string = is_int = is_float = False
-            assert reading.entry_data_type is not None
-            if reading.entry_data_type == "auto":
-                is_string = isinstance(tag.value, str)
-                is_int = isinstance(tag.value, int)
-                is_float = isinstance(tag.value, float)
-                if not (is_string | is_int | is_float):
-                    raise ValueError(
-                        f"Error in uod. Failed to build commands for ReadingWithEntry, tag: '{tag.name}'." +
-                        "Entry_data_type=auto cannot be used because the tag's current value has en incorrect type.")
-            elif reading.entry_data_type == "float":
-                is_float = True
-            elif reading.entry_data_type == "int":
-                is_int = True
-            elif reading.entry_data_type == "str":
-                is_string = True
-
-            cmd = reading.commands[0]
             command = Dto.ProcessValueCommand(
-                command_id=cmd.command_id,
-                name=cmd.name,
-                command=cmd.command,
+                command_id=reading_cmd.command_id,
+                name=reading_cmd.name,
+                command=reading_cmd.command,
                 disabled=None,
                 value=None
             )
-
-            if is_string:
-                assert isinstance(tag.value, str), \
-                    f"Error in uod. Cannot set command value type to 'str' when current tag value is '{tag.value}' " + \
-                    f"of type '{type(tag.value)}'"
+            if reading.entry_data_type is None or reading.entry_data_type == "auto":
+                raise ValueError(
+                    f"Error in uod. Failed to build commands for ReadingWithEntry, tag: '{reading.tag_name}'." +
+                    f"entry_data_type is {reading.entry_data_type}. Expected str/int/float")
+            elif reading.entry_data_type == "str":
                 command.value = Dto.ProcessValueCommandFreeTextValue(
-                    value=tag.value,
+                    value="",
                     value_type=Dto.ProcessValueType.STRING
                 )
-            elif is_float:
-                assert isinstance(tag.value, float), \
-                    f"Error in uod. Cannot set command value type to 'float' when current tag value is '{tag.value}' " + \
-                    f"of type '{type(tag.value)}'"
+            elif reading.entry_data_type == "float":
                 command.value = Dto.ProcessValueCommandNumberValue(
-                    value=tag.value,
+                    value=tag.value if isinstance(tag.value, (float, int)) else 0,
                     value_type=Dto.ProcessValueType.FLOAT,
                     value_unit=tag.value_unit,
                     valid_value_units=reading.valid_value_units
                 )
-            elif is_int:
-                assert isinstance(tag.value, int), \
-                    f"Error in uod. Cannot set command value type to 'int' when current tag value is '{tag.value}' " + \
-                    f"of type '{type(tag.value)}'"
+            elif reading.entry_data_type == "int":
                 command.value = Dto.ProcessValueCommandNumberValue(
-                    value=tag.value,
+                    value=int(tag.value) if isinstance(tag.value, (float, int)) else 0,
                     value_type=Dto.ProcessValueType.INT,
                     value_unit=tag.value_unit,
                     valid_value_units=reading.valid_value_units
                 )
-            else:
-                raise ValueError(f"Internal error. Failed to determine entry_data_type for tag '{tag.name}'")
+            commands.append(command)
 
         elif reading.discriminator == "reading_with_choice":
+            if reading_cmd.choice_names is None or len(reading_cmd.choice_names) == 0:
+                raise ValueError(
+                    f"Error in uod. Failed to build commands for ReadingWithChoice, tag: '{reading.tag_name}'. " +
+                    "Reading choice_names is empty")
             current_value = str(tag.value)
             command = Dto.ProcessValueCommand(
-                command_id=cmd.command_id,
-                name=cmd.name,
-                command=cmd.command,
+                command_id=reading_cmd.command_id,
+                name=reading_cmd.name,
+                command=reading_cmd.command,
                 disabled=None,
                 value=Dto.ProcessValueCommandChoiceValue(
                     value=current_value,
                     value_type=Dto.ProcessValueType.CHOICE,
-                    options=[choice for choice in cmd.choice_names]
+                    options=[choice for choice in reading_cmd.choice_names]
                 )
             )
+            commands.append(command)
 
         else:
-            raise NotImplementedError("Reading discriminator not implemented: " + reading.discriminator)
-
-        commands.append(command)
+            raise ValueError(
+                f"Error in uod. Failed to build commands for reading, tag: '{reading.tag_name}'. " +
+                f"Unknown discriminator: {reading.discriminator}")
 
     return commands
+
+
+def create_command_examples(commands: list[Mdl.CommandInfo]) -> list[Dto.CommandExample]:
+    # TODO We probably need a headline and spacer elements
+    examples: list[Dto.CommandExample] = []
+    for cmd in commands:
+        example = "No command information available"
+        if cmd.docstring is not None and cmd.docstring != "":
+            example = cmd.docstring
+        examples.append(Dto.CommandExample(name=cmd.name, example=example))
+    return examples

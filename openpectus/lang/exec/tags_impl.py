@@ -41,7 +41,7 @@ class MarkTag(Tag):
     def __init__(self) -> None:
         super().__init__(name="Mark")
 
-    def set_value(self, val: int | float | str | None, tick_time: float) -> None:
+    def set_value(self, val: int | float | str | None, tick_time: float, *args, **kwargs) -> None:
         """ Append value to existing value """
         assert isinstance(val, str), f"The Mark tag value must be a str, not a {type(val).__name__}"
         value = str(self.get_value() or "")
@@ -49,7 +49,7 @@ class MarkTag(Tag):
             value = str(val)
         else:
             value += MARK_SEPARATOR + str(val)
-        super().set_value(value, tick_time)
+        super().set_value(value, tick_time, *args, **kwargs)
 
     def archive(self) -> str | None:
         """ Reset value and return it """

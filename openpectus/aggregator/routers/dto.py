@@ -27,6 +27,7 @@ class AuthConfig(Dto):
     use_auth: bool
     authority_url: str | None
     client_id: str | None
+    well_known_url: str | None
 
 
 class ServerErrorResponse(Dto):

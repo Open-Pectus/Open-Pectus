@@ -432,10 +432,8 @@ class Engine(InterpreterContext):
         # get the runtime record to use for tracking if possible
         record = RuntimeRecord.null_record()
         if cmd_request.exec_id is not None:  # happens for all commands not originating from interpreter
-            try:
-                record = self.interpreter.runtimeinfo.get_exec_record(cmd_request.exec_id)
-            except ValueError:  # happens during restart
-                pass
+            # during restart, record is None - should ont occur otherwise
+            record = self.interpreter.runtimeinfo.get_exec_record(cmd_request.exec_id)
 
         # an existing, long running engine_command is running. other commands must wait
         # Note: we need a priority mechanism - even Stop is waiting here
@@ -445,11 +443,17 @@ class Engine(InterpreterContext):
                 if not command.is_finalized():
                     command.tick()
                 if command.has_failed():
-                    record.add_state_failed(self._tick_time, self._tick_number, self.tags_as_readonly())
                     cmds_done.add(cmd_request)
+                    if record is not None:
+                        record.add_state_failed(self._tick_time, self._tick_number, self.tags_as_readonly())
+                    else:
+                        logger.error(f"Failed to record failed state for command {cmd_request}")
                 elif command.is_finalized():
-                    record.add_state_completed(self._tick_time, self._tick_number, self.tags_as_readonly())
                     cmds_done.add(cmd_request)
+                    if record is not None:
+                        record.add_state_completed(self._tick_time, self._tick_number, self.tags_as_readonly())
+                    else:
+                        logger.error(f"Failed to record completed state for command {cmd_request}")
             return
 
         # no engine command is running - start one
@@ -471,14 +475,17 @@ class Engine(InterpreterContext):
                 f"Unknown internal engine command '{cmd_request.name}'",
                 f"Unknown command '{cmd_request.name}'")
 
-        record.add_state_started(self._tick_time, self._tick_number, self.tags_as_readonly())
-        command.tick()
-        if command.has_failed():
-            record.add_state_failed(self._tick_time, self._tick_number, self.tags_as_readonly())
-            cmds_done.add(cmd_request)
-        elif command.is_finalized():
-            record.add_state_completed(self._tick_time, self._tick_number, self.tags_as_readonly())
-            cmds_done.add(cmd_request)
+        if record is not None:
+            record.add_state_started(self._tick_time, self._tick_number, self.tags_as_readonly())
+            command.tick()
+            if command.has_failed():
+                record.add_state_failed(self._tick_time, self._tick_number, self.tags_as_readonly())
+                cmds_done.add(cmd_request)
+            elif command.is_finalized():
+                record.add_state_completed(self._tick_time, self._tick_number, self.tags_as_readonly())
+                cmds_done.add(cmd_request)
+        else:
+            logger.error(f"Runtime record is None for command {cmd_request}, this should not occur")            
 
     def _set_run_id(self, op: Literal["new", "empty"]):
         if op == "new":
@@ -513,23 +520,26 @@ class Engine(InterpreterContext):
                 f"The hardware is disconnected. The command '{cmd_name}' was not allowed to start.",
                 "same")
 
-        record = self.interpreter.runtimeinfo.get_exec_record(cmd_request.exec_id)
         cancel_this = False
 
         # cancel any pending cancels (per user request)
         for c in self.cmd_executing:
             if c.command_exec_id in self._cancel_command_exec_ids:
-                cmd_record = self.runtimeinfo.get_uod_command_and_record(c.command_exec_id)
-                assert cmd_record is not None, "No record with exec id " + str(c.exec_id)
-                command, c_record = cmd_record
-                command.cancel()
                 cmds_done.add(c)
-                c_record.add_command_state_cancelled(
-                    c.command_exec_id, self._tick_time, self._tick_number, self.tags_as_readonly())
-                logger.info(f"Running command {c.name} cancelled per user request")
-                if cmd_request.command_exec_id in self._cancel_command_exec_ids:
-                    cancel_this = True
                 self._cancel_command_exec_ids.remove(c.command_exec_id)
+                cmd_record = self.runtimeinfo.get_uod_command_and_record(c.command_exec_id)
+                if cmd_record is not None:
+                    command, c_record = cmd_record
+                    command.cancel()
+                    c_record.add_command_state_cancelled(
+                        c.command_exec_id, self._tick_time, self._tick_number, self.tags_as_readonly())
+                    logger.info(f"Running command {c.name} cancelled per user request")
+                else:
+                    logger.error(f"Cannot cancel command {c}. No runtime record found with {c.exec_id=}" +
+                                 f" and {c.command_exec_id=}")
+        if cmd_request.command_exec_id in self._cancel_command_exec_ids:
+            self._cancel_command_exec_ids.remove(cmd_request.command_exec_id)
+            cancel_this = True
 
         # cancel any existing instance with same name
         for c in [_c for _c in self.cmd_executing if _c not in cmds_done]:
@@ -568,6 +578,11 @@ class Engine(InterpreterContext):
             # don't start command again that was just cancelled
             return
 
+        record = self.interpreter.runtimeinfo.get_exec_record(cmd_request.exec_id)
+        if record is None:
+            logger.error(f"Failed to get record for command {cmd_request}")
+            return
+
         # create or get command instance
         if not self.uod.has_command_instance(cmd_name):
             uod_command = self.uod.create_command(cmd_name)
@@ -586,6 +601,7 @@ class Engine(InterpreterContext):
 
         if parsed_args is None:
             logger.error(f"Invalid argument string: '{cmd_request.unparsed_args}' for command '{cmd_name}'")
+            cmds_done.add(cmd_request)
             raise ValueError(f"Invalid arguments for command '{cmd_name}'")
 
         # execute command state flow
@@ -774,13 +790,12 @@ class Engine(InterpreterContext):
             raise
 
     def cancel_instruction(self, exec_id: UUID):
-        record: RuntimeRecord | None = None
-        try:
-            # try exec_id as a record exec_id
-            record = self.runtimeinfo.get_exec_record(exec_id=exec_id)
+        # try exec_id as a record exec_id
+        record = self.runtimeinfo.get_exec_record(exec_id=exec_id)
+        if record is not None:
             logger.info(f"Cancelling instruction {exec_id=}")
             record.node.cancel()
-        except ValueError:
+        else:
             # try exec_id as a command_exec_id
             result = self.runtimeinfo.get_uod_command_and_record(command_exec_id=exec_id)
             if result is not None:

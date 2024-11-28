@@ -13,12 +13,20 @@ class TestRegexs_named_groups(unittest.TestCase):
     def test_named_groups_RegexNumberWithUnit(self):
         parser = RegexNamedArgumentParser(RegexNumber(units=None))
         self.assertEqual(['number'], parser.get_named_groups())
+        parser = RegexNamedArgumentParser(RegexNumber(units=["kg"]))
+        self.assertEqual(["number", "number_unit"], parser.get_named_groups())
+
+    def test_get_units_RegexNumberWithUnit(self):
+        # single unit
         parser = RegexNamedArgumentParser(RegexNumber(units=['kg']))
-        self.assertEqual(['number', 'number_unit'], parser.get_named_groups())
+        self.assertEqual(['kg'], parser.get_units())
+        # multiple units
+        parser = RegexNamedArgumentParser(RegexNumber(units=["kg", "g", "m2"]))
+        self.assertEqual(["kg", "g", "m2"], parser.get_units())
 
     def test_named_groups_RegexText(self):
         parser = RegexNamedArgumentParser(RegexText())
-        self.assertEqual(['text'], parser.get_named_groups())
+        self.assertEqual(["text"], parser.get_named_groups())
 
     def test_named_groups_RegexCategorical(self):
         # exclusive
