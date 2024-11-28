@@ -36,6 +36,7 @@ class UnitOperationDefinitionBase:
                  command_descriptions: dict[str, UodCommandDescription],
                  overlapping_command_names_lists: list[list[str]],
                  plot_configuration: PlotConfiguration,
+                 required_roles: set[str],
                  base_unit_provider: BaseUnitProvider
                  ) -> None:
         self.instrument = instrument_name
@@ -52,6 +53,7 @@ class UnitOperationDefinitionBase:
         self.command_instances: dict[str, UodCommand] = {}
         self.overlapping_command_names_lists: list[list[str]] = overlapping_command_names_lists
         self.plot_configuration = plot_configuration
+        self.required_roles = required_roles
         self.base_unit_provider: BaseUnitProvider = base_unit_provider
 
     def __str__(self) -> str:
@@ -490,7 +492,8 @@ class UodBuilder():
         self.author_email: str = ""
         self.filename: str = ""
         self.location: str = ""
-        self.plot_configuration: PlotConfiguration | None = None
+        self.plot_configuration: PlotConfiguration = PlotConfiguration.empty()
+        self.required_roles: set[str] = set()
         self.base_unit_provider: BaseUnitProvider = BaseUnitProvider()
         self.base_unit_provider.set("s", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
         self.base_unit_provider.set("min", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
@@ -787,6 +790,10 @@ class UodBuilder():
         self.plot_configuration = plot_configuration
         return self
 
+    def with_required_roles(self, required_roles: set[str]) -> UodBuilder:
+        self.required_roles = required_roles
+        return self
+
     def build(self) -> UnitOperationDefinitionBase:
         self.validate()
 
@@ -802,7 +809,8 @@ class UodBuilder():
             self.command_factories,
             self.command_descriptions,
             self.overlapping_command_names_lists,
-            self.plot_configuration or PlotConfiguration.empty(),
+            self.plot_configuration,
+            self.required_roles,
             self.base_unit_provider
         )
 

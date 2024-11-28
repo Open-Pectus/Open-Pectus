@@ -64,7 +64,7 @@ class FromEngine:
 
 
         # apply the state from msg to the current state
-        engine_data.method = msg.method        
+        engine_data.method = msg.method
         run_id_tag = next((tag for tag in msg.tags if tag.name == SystemTagName.RUN_ID), None)
         # verify consistent message
         if msg.run_id is None:
@@ -106,12 +106,14 @@ class FromEngine:
             readings: list[Mdl.ReadingInfo],
             commands: list[Mdl.CommandInfo],
             plot_configuration: Mdl.PlotConfiguration,
-            hardware_str: str):
+            hardware_str: str,
+            required_roles: set[str]):
         try:
             self._engine_data_map[engine_id].readings = readings
             self._engine_data_map[engine_id].commands = commands
             self._engine_data_map[engine_id].plot_configuration = plot_configuration
             self._engine_data_map[engine_id].hardware_str = hardware_str
+            self._engine_data_map[engine_id].required_roles = required_roles
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set uod info.')
 
@@ -240,7 +242,7 @@ class FromEngine:
     def error_log_changed(self, engine_id: str, error_log: Mdl.ErrorLog):
         try:
             engine_data = self._engine_data_map[engine_id]
-            engine_data.run_data.error_log.aggregate_with(error_log)            
+            engine_data.run_data.error_log.aggregate_with(error_log)
             asyncio.create_task(self.publisher.publish_error_log_changed(engine_id))
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set error log.')
@@ -274,7 +276,7 @@ class FromFrontend:
             logger.warning(f"Cannot request cancel, engine {engine_id} not found")
             return False
         try:
-            response = await self.dispatcher.rpc_call(engine_id, message=AM.CancelMsg(exec_id=line_id))            
+            response = await self.dispatcher.rpc_call(engine_id, message=AM.CancelMsg(exec_id=line_id))
             if isinstance(response, M.ErrorMessage):
                 logger.error(f"Cancel request failed. Engine response: {response.message}")
                 return False

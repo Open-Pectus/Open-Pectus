@@ -3,6 +3,7 @@ import os
 from typing import List
 
 import uvicorn
+from openpectus.aggregator.routers.auth import UserRolesDependency
 from alembic.config import Config
 from fastapi import FastAPI, APIRouter
 from fastapi.routing import APIRoute
@@ -44,8 +45,8 @@ class AggregatorServer:
         self.fastapi = FastAPI(title=self.title,
                                generate_unique_id_function=custom_generate_unique_id,
                                on_shutdown=[self.on_shutdown])
-        self.fastapi.include_router(process_unit.router, prefix=api_prefix)
-        self.fastapi.include_router(recent_runs.router, prefix=api_prefix)
+        self.fastapi.include_router(process_unit.router, prefix=api_prefix, dependencies=[UserRolesDependency])
+        self.fastapi.include_router(recent_runs.router, prefix=api_prefix, dependencies=[UserRolesDependency])
         self.fastapi.include_router(auth.router, prefix='/auth')
         for route in additional_routers:
             self.fastapi.include_router(route)

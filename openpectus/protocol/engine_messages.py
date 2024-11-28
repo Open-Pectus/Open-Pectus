@@ -50,6 +50,7 @@ class UodInfoMsg(EngineMessage):
     commands: list[Mdl.CommandInfo]
     plot_configuration: Mdl.PlotConfiguration
     hardware_str: str
+    required_roles: set[str]
 
 
 class ReconnectedMsg(EngineMessage):

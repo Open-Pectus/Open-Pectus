@@ -5,7 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { GetUnitData, GetUnitResponse, GetUnitsResponse, GetProcessValuesData, GetProcessValuesResponse, GetAllProcessValuesData, GetAllProcessValuesResponse, ExecuteCommandData, ExecuteCommandResponse, GetProcessDiagramData, GetProcessDiagramResponse, GetCommandExamplesData, GetCommandExamplesResponse, GetRunLogData, GetRunLogResponse, GetMethodAndStateData, GetMethodAndStateResponse, SaveMethodData, SaveMethodResponse, GetPlotConfigurationData, GetPlotConfigurationResponse, GetPlotLogData, GetPlotLogResponse, GetControlStateData, GetControlStateResponse, GetErrorLogData, GetErrorLogResponse, ForceRunLogLineData, ForceRunLogLineResponse, CancelRunLogLineData, CancelRunLogLineResponse, ExposeSystemStateEnumResponse, GetRecentRunsResponse, GetRecentRunData, GetRecentRunResponse, GetRecentRunMethodAndStateData, GetRecentRunMethodAndStateResponse, GetRecentRunRunLogData, GetRecentRunRunLogResponse, GetRecentRunPlotConfigurationData, GetRecentRunPlotConfigurationResponse, GetRecentRunPlotLogData, GetRecentRunPlotLogResponse, GetRecentRunCsvJsonData, GetRecentRunCsvJsonResponse, GetRecentRunErrorLogData, GetRecentRunErrorLogResponse, GetRecentRunCsvFileData, GetRecentRunCsvFileResponse, GetConfigResponse, PostResponse, ExposePubsubTopicsData, ExposePubsubTopicsResponse, TriggerPublishMswResponse, GetVersionResponse, GetBuildNumberResponse, GetBuildInfoResponse } from './types.gen';
+import type { GetUnitData, GetUnitResponse, GetUnitsData, GetUnitsResponse, GetProcessValuesData, GetProcessValuesResponse, GetAllProcessValuesData, GetAllProcessValuesResponse, ExecuteCommandData, ExecuteCommandResponse, GetProcessDiagramData, GetProcessDiagramResponse, GetCommandExamplesData, GetCommandExamplesResponse, GetRunLogData, GetRunLogResponse, GetMethodAndStateData, GetMethodAndStateResponse, SaveMethodData, SaveMethodResponse, GetPlotConfigurationData, GetPlotConfigurationResponse, GetPlotLogData, GetPlotLogResponse, GetControlStateData, GetControlStateResponse, GetErrorLogData, GetErrorLogResponse, ForceRunLogLineData, ForceRunLogLineResponse, CancelRunLogLineData, CancelRunLogLineResponse, ExposeSystemStateEnumData, ExposeSystemStateEnumResponse, GetRecentRunsData, GetRecentRunsResponse, GetRecentRunData, GetRecentRunResponse, GetRecentRunMethodAndStateData, GetRecentRunMethodAndStateResponse, GetRecentRunRunLogData, GetRecentRunRunLogResponse, GetRecentRunPlotConfigurationData, GetRecentRunPlotConfigurationResponse, GetRecentRunPlotLogData, GetRecentRunPlotLogResponse, GetRecentRunCsvJsonData, GetRecentRunCsvJsonResponse, GetRecentRunErrorLogData, GetRecentRunErrorLogResponse, GetRecentRunCsvFileData, GetRecentRunCsvFileResponse, GetConfigResponse, PostResponse, ExposePubsubTopicsData, ExposePubsubTopicsResponse, TriggerPublishMswResponse, GetVersionResponse, GetBuildNumberResponse, GetBuildInfoResponse } from './types.gen';
 
 @Injectable({
     providedIn: 'root'
@@ -17,6 +17,7 @@ export class ProcessUnitService {
      * Get Unit
      * @param data The data for the request.
      * @param data.unitId
+     * @param data.xIdentity
      * @returns ProcessUnit Successful Response
      * @throws ApiError
      */
@@ -27,6 +28,9 @@ export class ProcessUnitService {
             path: {
                 unit_id: data.unitId
             },
+            headers: {
+                'x-identity': data.xIdentity
+            },
             errors: {
                 422: 'Validation Error'
             }
@@ -35,13 +39,21 @@ export class ProcessUnitService {
     
     /**
      * Get Units
+     * @param data The data for the request.
+     * @param data.xIdentity
      * @returns ProcessUnit Successful Response
      * @throws ApiError
      */
-    public getUnits(): Observable<GetUnitsResponse> {
+    public getUnits(data: GetUnitsData = {}): Observable<GetUnitsResponse> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/process_units'
+            url: '/api/process_units',
+            headers: {
+                'x-identity': data.xIdentity
+            },
+            errors: {
+                422: 'Validation Error'
+            }
         });
     }
     
@@ -49,6 +61,7 @@ export class ProcessUnitService {
      * Get Process Values
      * @param data The data for the request.
      * @param data.engineId
+     * @param data.xIdentity
      * @returns ProcessValue Successful Response
      * @throws ApiError
      */
@@ -58,6 +71,9 @@ export class ProcessUnitService {
             url: '/api/process_unit/{engine_id}/process_values',
             path: {
                 engine_id: data.engineId
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             errors: {
                 422: 'Validation Error'
@@ -69,6 +85,7 @@ export class ProcessUnitService {
      * Get All Process Values
      * @param data The data for the request.
      * @param data.engineId
+     * @param data.xIdentity
      * @returns ProcessValue Successful Response
      * @throws ApiError
      */
@@ -78,6 +95,9 @@ export class ProcessUnitService {
             url: '/api/process_unit/{engine_id}/all_process_values',
             path: {
                 engine_id: data.engineId
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             errors: {
                 422: 'Validation Error'
@@ -90,6 +110,7 @@ export class ProcessUnitService {
      * @param data The data for the request.
      * @param data.unitId
      * @param data.requestBody
+     * @param data.xIdentity
      * @returns unknown Successful Response
      * @throws ApiError
      */
@@ -99,6 +120,9 @@ export class ProcessUnitService {
             url: '/api/process_unit/{unit_id}/execute_command',
             path: {
                 unit_id: data.unitId
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             body: data.requestBody,
             mediaType: 'application/json',
@@ -112,6 +136,7 @@ export class ProcessUnitService {
      * Get Process Diagram
      * @param data The data for the request.
      * @param data.unitId
+     * @param data.xIdentity
      * @returns ProcessDiagram Successful Response
      * @throws ApiError
      */
@@ -121,6 +146,9 @@ export class ProcessUnitService {
             url: '/api/process_unit/{unit_id}/process_diagram',
             path: {
                 unit_id: data.unitId
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             errors: {
                 422: 'Validation Error'
@@ -132,6 +160,7 @@ export class ProcessUnitService {
      * Get Command Examples
      * @param data The data for the request.
      * @param data.unitId
+     * @param data.xIdentity
      * @returns CommandExample Successful Response
      * @throws ApiError
      */
@@ -141,6 +170,9 @@ export class ProcessUnitService {
             url: '/api/process_unit/{unit_id}/command_examples',
             path: {
                 unit_id: data.unitId
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             errors: {
                 422: 'Validation Error'
@@ -152,6 +184,7 @@ export class ProcessUnitService {
      * Get Run Log
      * @param data The data for the request.
      * @param data.unitId
+     * @param data.xIdentity
      * @returns RunLog Successful Response
      * @throws ApiError
      */
@@ -161,6 +194,9 @@ export class ProcessUnitService {
             url: '/api/process_unit/{unit_id}/run_log',
             path: {
                 unit_id: data.unitId
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             errors: {
                 422: 'Validation Error'
@@ -172,6 +208,7 @@ export class ProcessUnitService {
      * Get Method And State
      * @param data The data for the request.
      * @param data.unitId
+     * @param data.xIdentity
      * @returns MethodAndState Successful Response
      * @throws ApiError
      */
@@ -181,6 +218,9 @@ export class ProcessUnitService {
             url: '/api/process_unit/{unit_id}/method-and-state',
             path: {
                 unit_id: data.unitId
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             errors: {
                 422: 'Validation Error'
@@ -193,6 +233,7 @@ export class ProcessUnitService {
      * @param data The data for the request.
      * @param data.unitId
      * @param data.requestBody
+     * @param data.xIdentity
      * @returns unknown Successful Response
      * @throws ApiError
      */
@@ -202,6 +243,9 @@ export class ProcessUnitService {
             url: '/api/process_unit/{unit_id}/method',
             path: {
                 unit_id: data.unitId
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             body: data.requestBody,
             mediaType: 'application/json',
@@ -215,6 +259,7 @@ export class ProcessUnitService {
      * Get Plot Configuration
      * @param data The data for the request.
      * @param data.unitId
+     * @param data.xIdentity
      * @returns PlotConfiguration Successful Response
      * @throws ApiError
      */
@@ -224,6 +269,9 @@ export class ProcessUnitService {
             url: '/api/process_unit/{unit_id}/plot_configuration',
             path: {
                 unit_id: data.unitId
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             errors: {
                 422: 'Validation Error'
@@ -235,6 +283,7 @@ export class ProcessUnitService {
      * Get Plot Log
      * @param data The data for the request.
      * @param data.unitId
+     * @param data.xIdentity
      * @returns PlotLog Successful Response
      * @throws ApiError
      */
@@ -244,6 +293,9 @@ export class ProcessUnitService {
             url: '/api/process_unit/{unit_id}/plot_log',
             path: {
                 unit_id: data.unitId
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             errors: {
                 422: 'Validation Error'
@@ -255,6 +307,7 @@ export class ProcessUnitService {
      * Get Control State
      * @param data The data for the request.
      * @param data.unitId
+     * @param data.xIdentity
      * @returns ControlState Successful Response
      * @throws ApiError
      */
@@ -264,6 +317,9 @@ export class ProcessUnitService {
             url: '/api/process_unit/{unit_id}/control_state',
             path: {
                 unit_id: data.unitId
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             errors: {
                 422: 'Validation Error'
@@ -275,6 +331,7 @@ export class ProcessUnitService {
      * Get Error Log
      * @param data The data for the request.
      * @param data.unitId
+     * @param data.xIdentity
      * @returns AggregatedErrorLog Successful Response
      * @throws ApiError
      */
@@ -284,6 +341,9 @@ export class ProcessUnitService {
             url: '/api/process_unit/{unit_id}/error_log',
             path: {
                 unit_id: data.unitId
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             errors: {
                 422: 'Validation Error'
@@ -296,6 +356,7 @@ export class ProcessUnitService {
      * @param data The data for the request.
      * @param data.unitId
      * @param data.lineId
+     * @param data.xIdentity
      * @returns unknown Successful Response
      * @throws ApiError
      */
@@ -306,6 +367,9 @@ export class ProcessUnitService {
             path: {
                 unit_id: data.unitId,
                 line_id: data.lineId
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             errors: {
                 422: 'Validation Error'
@@ -318,6 +382,7 @@ export class ProcessUnitService {
      * @param data The data for the request.
      * @param data.unitId
      * @param data.lineId
+     * @param data.xIdentity
      * @returns unknown Successful Response
      * @throws ApiError
      */
@@ -329,6 +394,9 @@ export class ProcessUnitService {
                 unit_id: data.unitId,
                 line_id: data.lineId
             },
+            headers: {
+                'x-identity': data.xIdentity
+            },
             errors: {
                 422: 'Validation Error'
             }
@@ -337,13 +405,21 @@ export class ProcessUnitService {
     
     /**
      * Expose System State Enum
+     * @param data The data for the request.
+     * @param data.xIdentity
      * @returns SystemStateEnum Successful Response
      * @throws ApiError
      */
-    public exposeSystemStateEnum(): Observable<ExposeSystemStateEnumResponse> {
+    public exposeSystemStateEnum(data: ExposeSystemStateEnumData = {}): Observable<ExposeSystemStateEnumResponse> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/process_units/system_state_enum'
+            url: '/api/process_units/system_state_enum',
+            headers: {
+                'x-identity': data.xIdentity
+            },
+            errors: {
+                422: 'Validation Error'
+            }
         });
     }
     
@@ -357,13 +433,21 @@ export class RecentRunsService {
     
     /**
      * Get Recent Runs
+     * @param data The data for the request.
+     * @param data.xIdentity
      * @returns RecentRun Successful Response
      * @throws ApiError
      */
-    public getRecentRuns(): Observable<GetRecentRunsResponse> {
+    public getRecentRuns(data: GetRecentRunsData = {}): Observable<GetRecentRunsResponse> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/recent_runs/'
+            url: '/api/recent_runs/',
+            headers: {
+                'x-identity': data.xIdentity
+            },
+            errors: {
+                422: 'Validation Error'
+            }
         });
     }
     
@@ -371,6 +455,7 @@ export class RecentRunsService {
      * Get Recent Run
      * @param data The data for the request.
      * @param data.runId
+     * @param data.xIdentity
      * @returns RecentRun Successful Response
      * @throws ApiError
      */
@@ -380,6 +465,9 @@ export class RecentRunsService {
             url: '/api/recent_runs/{run_id}',
             path: {
                 run_id: data.runId
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             errors: {
                 422: 'Validation Error'
@@ -391,6 +479,7 @@ export class RecentRunsService {
      * Get Recent Run Method And State
      * @param data The data for the request.
      * @param data.runId
+     * @param data.xIdentity
      * @returns MethodAndState Successful Response
      * @throws ApiError
      */
@@ -400,6 +489,9 @@ export class RecentRunsService {
             url: '/api/recent_runs/{run_id}/method-and-state',
             path: {
                 run_id: data.runId
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             errors: {
                 422: 'Validation Error'
@@ -411,6 +503,7 @@ export class RecentRunsService {
      * Get Recent Run Run Log
      * @param data The data for the request.
      * @param data.runId
+     * @param data.xIdentity
      * @returns RunLog Successful Response
      * @throws ApiError
      */
@@ -420,6 +513,9 @@ export class RecentRunsService {
             url: '/api/recent_runs/{run_id}/run_log',
             path: {
                 run_id: data.runId
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             errors: {
                 422: 'Validation Error'
@@ -431,6 +527,7 @@ export class RecentRunsService {
      * Get Recent Run Plot Configuration
      * @param data The data for the request.
      * @param data.runId
+     * @param data.xIdentity
      * @returns PlotConfiguration Successful Response
      * @throws ApiError
      */
@@ -440,6 +537,9 @@ export class RecentRunsService {
             url: '/api/recent_runs/{run_id}/plot_configuration',
             path: {
                 run_id: data.runId
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             errors: {
                 422: 'Validation Error'
@@ -451,6 +551,7 @@ export class RecentRunsService {
      * Get Recent Run Plot Log
      * @param data The data for the request.
      * @param data.runId
+     * @param data.xIdentity
      * @returns PlotLog Successful Response
      * @throws ApiError
      */
@@ -460,6 +561,9 @@ export class RecentRunsService {
             url: '/api/recent_runs/{run_id}/plot_log',
             path: {
                 run_id: data.runId
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             errors: {
                 422: 'Validation Error'
@@ -471,6 +575,7 @@ export class RecentRunsService {
      * Get Recent Run Csv Json
      * @param data The data for the request.
      * @param data.runId
+     * @param data.xIdentity
      * @returns RecentRunCsv Successful Response
      * @throws ApiError
      */
@@ -480,6 +585,9 @@ export class RecentRunsService {
             url: '/api/recent_runs/{run_id}/csv_json',
             path: {
                 run_id: data.runId
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             errors: {
                 422: 'Validation Error'
@@ -491,6 +599,7 @@ export class RecentRunsService {
      * Get Recent Run Error Log
      * @param data The data for the request.
      * @param data.runId
+     * @param data.xIdentity
      * @returns AggregatedErrorLog Successful Response
      * @throws ApiError
      */
@@ -500,6 +609,9 @@ export class RecentRunsService {
             url: '/api/recent_runs/{run_id}/error_log',
             path: {
                 run_id: data.runId
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             errors: {
                 422: 'Validation Error'
@@ -511,6 +623,7 @@ export class RecentRunsService {
      * Get Recent Run Csv File
      * @param data The data for the request.
      * @param data.id
+     * @param data.xIdentity
      * @returns unknown Successful Response
      * @throws ApiError
      */
@@ -520,6 +633,9 @@ export class RecentRunsService {
             url: '/api/recent_runs/{id}/csv_file',
             path: {
                 id: data.id
+            },
+            headers: {
+                'x-identity': data.xIdentity
             },
             errors: {
                 422: 'Validation Error'
