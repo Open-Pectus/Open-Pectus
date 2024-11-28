@@ -1,5 +1,6 @@
 from typing import Iterable
 import uuid
+from inspect import cleandoc
 
 from openpectus.engine.models import EntryDataType
 from openpectus.lang.exec.tags import Tag, TagCollection
@@ -212,15 +213,7 @@ class UodCommandDescription:
         )
 
     def set_docstring(self, docstring: str | None):
-        if docstring is not None:
-            lines = []
-            for line in docstring.splitlines():
-                lines.append(line.strip())
-            self.docstring = "\n".join(lines)
+        self.docstring = cleandoc(docstring) if docstring is not None else ""
 
-    def get_docstring_pcode_lines(self) -> list[str]:
-        codelines = []
-        for line in self.docstring.splitlines():
-            if line != "" and not line.startswith("#"):
-                codelines.append(line)
-        return codelines
+    def get_docstring_pcode(self) -> str:
+        return self.docstring

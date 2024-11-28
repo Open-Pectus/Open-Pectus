@@ -55,7 +55,7 @@ def create() -> UnitOperationDefinitionBase:
         """
         # optional arg is ok when regex's named groups do not include it
         print(f"cmd_regex executing with number: {number} and number_unit: {number_unit}")
-        assert number_unit is not None        
+        assert number_unit is not None
         cmd.context.tags.get("CmdWithRegexArgs").set_value_and_unit(float(number), number_unit, time())
         cmd.set_complete()
 
