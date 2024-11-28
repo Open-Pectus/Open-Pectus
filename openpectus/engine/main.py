@@ -35,7 +35,7 @@ logger = logging.getLogger("openpectus.engine.engine")
 logger.setLevel(logging.INFO)
 
 logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.INFO)
-logging.getLogger("openpectus.protocol.engine_dispatcher").setLevel(logging.DEBUG)
+logging.getLogger("openpectus.protocol.engine_dispatcher").setLevel(logging.INFO)
 logging.getLogger("openpectus.engine.engine_runner").setLevel(logging.INFO)
 logging.getLogger("openpectus.engine.internal_commands_impl").setLevel(logging.INFO)
 logging.getLogger("asyncua.client").setLevel(logging.WARNING)

@@ -194,12 +194,12 @@ class FromEngine:
             tag_values_to_persist = [tag_value.copy() for tag_value in engine_data.tags_info.map.values()
                                      if latest_persisted_tick_time is None
                                      or tag_value.tick_time > latest_persisted_tick_time]
-            """ 
-            We manipulate the tick_time of the tagValues we persist. But it's not changing it to something that didn't 
-            exist in the engine, because we change the tick_time to a tick_time that comes from an actual later reading 
-            where those tagValues we manipulate was read and simply had not changed value since the value we have been 
+            """
+            We manipulate the tick_time of the tagValues we persist. But it's not changing it to something that didn't
+            exist in the engine, because we change the tick_time to a tick_time that comes from an actual later reading
+            where those tagValues we manipulate was read and simply had not changed value since the value we have been
             reported.
-            It's difficult to explain, but after this manipulation, the tagValues will still match an actual tagValue 
+            It's difficult to explain, but after this manipulation, the tagValues will still match an actual tagValue
             read in the engine, just not one reported.
             We do this because it solves a lot of issues when we later try to match values based on the tick_time.
             """

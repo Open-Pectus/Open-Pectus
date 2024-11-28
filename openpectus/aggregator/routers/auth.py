@@ -36,10 +36,12 @@ def get_config() -> AuthConfig:
 #     tokenUrl=token_url,
 # )
 
+
 jwks_client = jwt.PyJWKClient(jwks_url)
 
 def user_roles(x_identity: Annotated[str, Header()] = '') -> set[str]:
-    if(not use_auth): return set()
+    if not use_auth:
+        return set()
     try:
         token: dict[str, str | list[str]] = jwt.decode(
             x_identity,
@@ -57,8 +59,12 @@ def user_roles(x_identity: Annotated[str, Header()] = '') -> set[str]:
 
     return set(token.get('roles') or [])
 
+
 UserRolesDependency = Security(user_roles)
+
+
 UserRolesValue = Annotated[set[str], UserRolesDependency]
+
 
 def has_access(engine_or_run: EngineData | RecentEngine | RecentRun, user_roles: set[str]):
     required_roles = set(engine_or_run.required_roles)
