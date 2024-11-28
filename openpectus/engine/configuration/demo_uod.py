@@ -109,7 +109,7 @@ def create() -> UnitOperationDefinitionBase:
                                 to_tag=lambda x: "Reset" if x == 1 else "N/A")
         .with_tag(tags.ReadingTag("FT01", "L/h"))
         .with_tag(tags.ReadingTag("FT02", "L/h"))
-        .with_tag(tags.ReadingTag("Category"))
+        .with_tag(tags.SelectTag("Category", "Rising", unit=None, choices=["Rising", "Falling"]))
         .with_tag(tags.ReadingTag("Time", unit=None))
         .with_tag(tags.Tag("TestInt", value="42"))
         .with_tag(tags.Tag("TestFloat", value=9.87, unit="kg"))
