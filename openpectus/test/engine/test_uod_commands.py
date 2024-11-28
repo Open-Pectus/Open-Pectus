@@ -79,5 +79,7 @@ Area: 5 cm2
         uod.build_commands()
 
         cmd = uod.command_descriptions["Area"]
-        # Note removal of white space
-        self.assertEqual(["Area: 5 cm2"], cmd.get_docstring_pcode_lines())
+        # remove comments
+        pcode_lines = cmd.get_docstring_pcode().splitlines()
+        pcode = "\n".join((line for line in pcode_lines if not line.startswith("#")))
+        self.assertEqual("Area: 5 cm2", pcode)
