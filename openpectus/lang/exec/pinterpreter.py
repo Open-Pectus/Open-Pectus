@@ -165,7 +165,7 @@ class PInterpreter(PNodeVisitor):
         self.process_instr: GenerationType = None
 
         self.runtimeinfo: RuntimeInfo = RuntimeInfo()
-        logger.info("Interpreter initialized")
+        logger.debug("Interpreter initialized")
 
     def get_marks(self) -> list[str]:
         records: list[tuple[str, int]] = []

@@ -1,0 +1,43 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "OpenPectus Engine (debug)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/openpectus/engine/main.py",
+            "console": "integratedTerminal",
+            "args": [],
+        },
+        {
+            "name": "OpenPectus Aggregator (debug)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/openpectus/aggregator/main.py",
+            "console": "integratedTerminal",
+            "args": ["-fdd", "./openpectus/frontend/dist"],
+            "env": {
+                // "AZURE_DIRECTORY_TENANT_ID": "fdfed7bd-9f6a-44a1-b694-6e39c468c150",
+                // "AZURE_APPLICATION_CLIENT_ID": "fc7355bb-a6be-493f-90a1-cf57063f7948",
+                // "ENABLE_AZURE_AUTHENTICATION": "true",
+            },
+            // "serverReadyAction":{
+            //     "uriFormat": "http://127.0.0.1:%s",
+            //     "action": "openExternally",
+            //     "pattern": "Serving frontend at http://127.0.0.1:([0-9]+)",
+            //     "killOnServerStop": false
+            // }
+        },        
+    ],
+    "compounds": [
+        {
+            "name": "Openpectus Aggregator, Engine and Frontend",
+            "configurations": ["OpenPectus Aggregator (debug)", "OpenPectus Engine (debug)"],
+            "stopAll": true,
+        }
+    ]
+}

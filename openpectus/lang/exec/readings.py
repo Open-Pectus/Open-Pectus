@@ -51,9 +51,28 @@ class Reading():
     def build_commands_list(self):
         """ Override to specify the commands available in the UI for this process value.
 
-        Is invoked during validation after match_with_tags so `tag` and `valid_value_units` have been set.
+        Is invoked after validation and match_with_tags so `tag` and `valid_value_units` have been set.
         """
         pass
+
+    def resolve_entry_type(self):
+        """ If entry_data_type is 'auto', resolve its type using the tag's current value.
+
+        If resolved, mutate reading to use the resolved type as entry_data_type.
+        """
+        if self.entry_data_type == "auto":  # try to resolve the "auto" entry type
+            assert self.tag is not None
+            value = self.tag.get_value()
+            if value is None:
+                # Cannot resolve auto type when the tag has no value.
+                raise ValueError(f"Cannot resolve entry type 'auto' for tag '{self.tag_name}' because the tag " +
+                                 "value is None. Avoid this by setting a tag default value.")
+            elif isinstance(value, str):
+                self.entry_data_type = "str"
+            elif isinstance(value, float):
+                self.entry_data_type = "float"
+            elif isinstance(value, int):
+                self.entry_data_type = "int"
 
     def as_reading_info(self) -> Mdl.ReadingInfo:
         return Mdl.ReadingInfo(
@@ -173,3 +192,35 @@ class ReadingCollection(Iterable[Reading]):
 
     def __len__(self) -> int:
         return len(self.readings)
+
+
+class UodCommandDescription:
+    """ Describes a command and its usage. """
+    def __init__(self, name: str) -> None:
+        self.name: str = name
+        """ Name of the command as used in pcode. """
+        self.docstring: str = ""
+        """ Description of the command's purpose, provided by uod author as docstring
+        on the exec function. """
+        self.argument_valid_units: list[str] = []
+        """ Valid argument units if applicable. """
+
+    def as_command_info(self) -> Mdl.CommandInfo:
+        return Mdl.CommandInfo(
+            name=self.name,
+            docstring=self.docstring,
+        )
+
+    def set_docstring(self, docstring: str | None):
+        if docstring is not None:
+            lines = []
+            for line in docstring.splitlines():
+                lines.append(line.strip())
+            self.docstring = "\n".join(lines)
+
+    def get_docstring_pcode_lines(self) -> list[str]:
+        codelines = []
+        for line in self.docstring.splitlines():
+            if line != "" and not line.startswith("#"):
+                codelines.append(line)
+        return codelines

@@ -207,6 +207,8 @@ class RecentEngineRepository(RepositoryBase):
         recent_engine.required_roles = engine_data.required_roles
         system_tag = engine_data.tags_info.get(SystemTagName.SYSTEM_STATE)
         recent_engine.system_state = str(system_tag.value) if system_tag is not None else ""
+        if system_tag is None:
+            logger.warning("The SYSTEM_STATE tag value was not available when saving recent_engine")
         self.db_session.add(recent_engine)
         self.db_session.commit()
 

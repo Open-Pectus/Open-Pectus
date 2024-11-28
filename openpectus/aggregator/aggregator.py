@@ -100,11 +100,17 @@ class FromEngine:
     def run_stopped(self):
         raise NotImplementedError()
 
-
-    def uod_info_changed(self, engine_id: str, readings: list[Mdl.ReadingInfo], plot_configuration: Mdl.PlotConfiguration,
-                         hardware_str: str, required_roles: set[str]):
+    def uod_info_changed(
+            self,
+            engine_id: str,
+            readings: list[Mdl.ReadingInfo],
+            commands: list[Mdl.CommandInfo],
+            plot_configuration: Mdl.PlotConfiguration,
+            hardware_str: str,
+            required_roles: set[str]):
         try:
             self._engine_data_map[engine_id].readings = readings
+            self._engine_data_map[engine_id].commands = commands
             self._engine_data_map[engine_id].plot_configuration = plot_configuration
             self._engine_data_map[engine_id].hardware_str = hardware_str
             self._engine_data_map[engine_id].required_roles = required_roles
@@ -188,12 +194,12 @@ class FromEngine:
             tag_values_to_persist = [tag_value.copy() for tag_value in engine_data.tags_info.map.values()
                                      if latest_persisted_tick_time is None
                                      or tag_value.tick_time > latest_persisted_tick_time]
-            """ 
-            We manipulate the tick_time of the tagValues we persist. But it's not changing it to something that didn't 
-            exist in the engine, because we change the tick_time to a tick_time that comes from an actual later reading 
-            where those tagValues we manipulate was read and simply had not changed value since the value we have been 
+            """
+            We manipulate the tick_time of the tagValues we persist. But it's not changing it to something that didn't
+            exist in the engine, because we change the tick_time to a tick_time that comes from an actual later reading
+            where those tagValues we manipulate was read and simply had not changed value since the value we have been
             reported.
-            It's difficult to explain, but after this manipulation, the tagValues will still match an actual tagValue 
+            It's difficult to explain, but after this manipulation, the tagValues will still match an actual tagValue
             read in the engine, just not one reported.
             We do this because it solves a lot of issues when we later try to match values based on the tick_time.
             """

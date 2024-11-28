@@ -9,9 +9,11 @@ from openpectus.engine.commands import ContextEngineCommand, CommandArgs
 from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.errors import UodValidationError
-from openpectus.lang.exec.readings import Reading, ReadingCollection, ReadingWithChoice, ReadingWithEntry
+from openpectus.lang.exec.readings import (
+    Reading, ReadingCollection, ReadingWithChoice, ReadingWithEntry, UodCommandDescription
+)
 from openpectus.lang.exec.tags import SystemTagName, Tag, TagCollection
-from openpectus.lang.exec.units import get_volume_units
+from openpectus.lang.exec.units import get_compatible_unit_names, get_volume_units
 from openpectus.lang.exec.tags_impl import AccumulatorBlockTag, AccumulatedColumnVolume, AccumulatorTag
 from openpectus.protocol.models import EntryDataType, PlotConfiguration
 
@@ -31,6 +33,7 @@ class UnitOperationDefinitionBase:
                  tags: TagCollection,
                  readings: ReadingCollection,
                  command_factories: dict[str, UodCommandBuilder],
+                 command_descriptions: dict[str, UodCommandDescription],
                  overlapping_command_names_lists: list[list[str]],
                  plot_configuration: PlotConfiguration,
                  required_roles: set[str],
@@ -46,6 +49,7 @@ class UnitOperationDefinitionBase:
         self.system_tags: TagCollection | None = None
         self.readings = readings
         self.command_factories = command_factories
+        self.command_descriptions = command_descriptions
         self.command_instances: dict[str, UodCommand] = {}
         self.overlapping_command_names_lists: list[list[str]] = overlapping_command_names_lists
         self.plot_configuration = plot_configuration
@@ -65,10 +69,55 @@ class UnitOperationDefinitionBase:
             'location': self.location
         }
 
+    def build_commands(self):
+        """ Complete configuration of a validated uod. This builds the commands.
+        """
+        for r in self.readings:
+            r.build_commands_list()
+
+        # build command descriptions/examples documentation
+        for cmd_name, cmd_builder in self.command_factories.items():
+            valid_units: list[str] = []
+            # argument_type: Literal["float", "unknown", "none"] = "unknown"
+
+            # Determine whether command is used for reading entry. If so, we can use the related tag's unit
+            # as source for valid_units
+            cmd_reading = next((r for r in self.readings if cmd_name in [c.name for c in r.commands]), None)
+            if cmd_reading is not None:  # command is paired with this reading
+                tag = cmd_reading.tag
+                assert tag is not None
+                if tag.unit is not None:
+                    valid_units = get_compatible_unit_names(tag.unit)
+
+            # use the configured argument parser to determine argument and units
+            regex_parser = RegexNamedArgumentParser.get_instance(cmd_builder.arg_parse_fn)
+            if regex_parser is not None:
+                named_groups = sorted(regex_parser.get_named_groups())
+                # if "number" in named_groups:  # always True for this regex
+                #     argument_type = "float"
+                if "number_unit" in named_groups:
+                    valid_units = regex_parser.get_units()
+
+                    if cmd_reading is not None:
+                        # propagate regex unit constraints back to reading's valid entry units
+                        logger.debug(f"Applying regex unit constraints, {cmd_reading.valid_value_units} -> {valid_units} " +
+                                     f"command {cmd_name}")
+                        cmd_reading.valid_value_units = valid_units
+            elif cmd_builder.arg_parse_fn is None:
+                # no argument parser, this means no argument and units at all
+                # argument_type = "none"
+                valid_units = []
+
+            desc = UodCommandDescription(name=cmd_name)
+            desc.argument_valid_units = valid_units
+            desc.set_docstring(cmd_builder.exec_fn.__doc__)           
+
+            self.command_descriptions[cmd_name] = desc
+
     def validate_configuration(self):
         """ Validates these areas:
         - Each Reading matches a defined tag
-        - Each Command is verified
+        - Each Reading Command is verified
             - Must have an exec function with an appropriate signature
             - If the command uses a regular expression as parser function, it is verified that
               the exec function arguments match the regular expression.
@@ -100,11 +149,12 @@ class UnitOperationDefinitionBase:
                 try:
                     r.match_with_tags(tags)
                 except UodValidationError as vex:
-                    #logging.error(vex.args[0])
                     log_fatal(str(vex))
 
-                # now that tag validation was completed, the command list can be built
-                r.build_commands_list()
+                try:
+                    r.resolve_entry_type()
+                except ValueError as ex:
+                    log_fatal(str(ex))
         try:
             self.validate_command_signatures()
         except UodValidationError as vex:
@@ -131,7 +181,7 @@ class UnitOperationDefinitionBase:
             regex_parser = RegexNamedArgumentParser.get_instance(builder.arg_parse_fn)
             if regex_parser is not None:
                 # The command is using RegexNamedArgumentParser as argument parser. In this case we can validate the exec
-                # function thoroughly by checking that its parameters matches the named groups in the regular expression.
+                # function thoroughly by checking that its argument names match the named groups in the regular expression.
 
                 # Given a regex with named groups ['foo', 'bar'], the expected signature is:
                 #   def some_name(cmd: UodCommand, foo, bar) or
@@ -141,7 +191,7 @@ class UnitOperationDefinitionBase:
                 # Like this:
                 #   some_name(cmd: UodCommand, foo, whynot=None, nevertheless=True, bar) or
                 #   some_name(cmd: UodCommand, foo, whynot=None, **myargs)
-                # which are also  both valid.
+                # which are also both valid.
                 try:
                     named_groups = sorted(regex_parser.get_named_groups())
                 except Exception as ex:
@@ -172,7 +222,7 @@ class UnitOperationDefinitionBase:
                     parameter_unmatched = True
 
                 if len(named_groups_unmatched) > 0 or parameter_unmatched:
-                    # Parameter not accounted for. This means we cant provide a value for it when invoking exec_fn
+                    # Parameter not accounted for. This means we can't provide a value for it when invoking exec_fn
                     # so we fail the validation
                     raise UodValidationError(f"""Command '{key}' has an error.
 The parameters for the execution function do not match those defined in the regular expression
@@ -434,7 +484,8 @@ class UodBuilder():
         self.instrument: str = ""
         self.hwl: HardwareLayerBase | None = None
         self.tags = TagCollection()
-        self.commands: dict[str, UodCommandBuilder] = {}
+        self.command_factories: dict[str, UodCommandBuilder] = {}
+        self.command_descriptions: dict[str, UodCommandDescription] = {}
         self.overlapping_command_names_lists: list[list[str]] = []
         self.readings = ReadingCollection()
         self.author_name: str = ""
@@ -506,7 +557,8 @@ class UodBuilder():
         self.location = location
         return self
 
-    def with_hardware_register(self, name: str, direction: RegisterDirection = RegisterDirection.Read, **options) -> UodBuilder:
+    def with_hardware_register(self, name: str, direction: RegisterDirection = RegisterDirection.Read, **options)\
+            -> UodBuilder:
         """ Define a hardware register.
 
         Parameters:
@@ -522,7 +574,6 @@ class UodBuilder():
                 convert between hardware values and tag values.
         """
         register = Register(name, direction, **options)
-
         if self.hwl is None:
             raise ValueError("HardwareLayber must be defined before defining a register")
         if register.name is None or register.name == "":
@@ -611,8 +662,12 @@ class UodBuilder():
             arg_parse_fn, optional:
                 An optional function that is used to parse the command argument in pcode to
                 **kvargs that are given as named arguments to the exec function.
-                The default parsing function passes the pcode argument verbatim with the argument
-                name 'value'. If no parse function is set, no arguments are passed to exec.
+                A number of cases are possible:
+                The default parsing function (`arg_parse_fn="default"`) passes the argument from the pcode line
+                verbatim to the exec function using the argument name 'value'.
+                If no parse function is set (`arg_parse_fn=None`), no arguments are passed to the exec function.
+                To use a regular expression as argument parser, use the method `with_command_regex_arguments()`
+                instead.
         """
         cb = UodCommandBuilder().with_name(name).with_exec_fn(exec_fn)
         if init_fn is not None:
@@ -623,9 +678,9 @@ class UodBuilder():
             cb.with_arg_parse_fn(defaultArgumentParser)
         elif arg_parse_fn is not None:
             cb.with_arg_parse_fn(arg_parse_fn)
-        if cb.name in self.commands.keys():
+        if cb.name in self.command_factories.keys():
             raise ValueError(f"Duplicate command name: {cb.name}")
-        self.commands[cb.name] = cb
+        self.command_factories[cb.name] = cb
         return self
 
     def with_command_regex_arguments(
@@ -659,7 +714,7 @@ class UodBuilder():
             cb.with_init_fn(init_fn)
         if finalize_fn is not None:
             cb.with_finalize_fn(finalize_fn)
-        self.commands[cb.name] = cb
+        self.command_factories[cb.name] = cb
         return self
 
     def with_command_overlap(self, command_names: list[str]) -> UodBuilder:
@@ -751,7 +806,8 @@ class UodBuilder():
             self.location,
             self.tags,
             self.readings,
-            self.commands,
+            self.command_factories,
+            self.command_descriptions,
             self.overlapping_command_names_lists,
             self.plot_configuration,
             self.required_roles,
@@ -791,10 +847,19 @@ class RegexNamedArgumentParser():
     def get_named_groups(self) -> list[str]:
         # ex: r"(?P<value>[0-9]+[.][0-9]*?|[.][0-9]+|[0-9]+) ?(?P<unit>m2)"
         # ex2: ' ?(?P<number_unit>kg)'
+        # eg3: '^\\s*(?P<number>-?[0-9]+[.][0-9]*?|-?[.][0-9]+|-?[0-9]+)\\s* ?(?P<number_unit>kg|g)\\s*$'
         result = []
         p = re.compile(r"\<(?P<name>([a-zA-Z]|_)+)\>")
         for match in p.finditer(self.regex):
             result.append(match.group("name"))
+        return result
+
+    def get_units(self) -> list[str]:
+        if "number_unit" not in self.get_named_groups():
+            return []
+        start = self.regex.index("<number_unit>") + len("<number_unit>")
+        end = self.regex.index(")", start)
+        result = self.regex[start: end].split("|")
         return result
 
     @staticmethod
@@ -810,7 +875,7 @@ class RegexNamedArgumentParser():
 # Common regular expressions for use with RegexNamedArgumentParser
 
 def RegexNumber(units: list[str] | None, non_negative: bool = False) -> str:
-    """ Parses a number with optional unit to arguments `number` and optionally `number_unit`.
+    """ Create a regex that parses a number with optional unit to arguments `number` and optionally `number_unit`.
 
     `number_unit` is only provided if one or more units are given.
     """
@@ -821,7 +886,7 @@ def RegexNumber(units: list[str] | None, non_negative: bool = False) -> str:
 
 
 def RegexCategorical(exclusive_options: list[str] | None = None, additive_options: list[str] | None = None) -> str:
-    """ Parses categorical text into an argument named `option`.
+    """ Create a regex that parses categorical text into an argument named `option`.
 
     Examples - exclusive::
 

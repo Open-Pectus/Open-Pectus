@@ -17,7 +17,14 @@ def create() -> UnitOperationDefinitionBase:
     # use this logger to send warnings/errors to the frontend error log
     # logger = builder.get_logger()
 
-    def reset(cmd: UodCommand, **kvargs) -> None:
+    # this signature is usable for the default argument parser
+    #def reset(cmd: UodCommand, **kvargs):
+
+    # this signature is valid for arg_parse_fn=None
+    def reset(cmd: UodCommand):
+        """ # Resets the demo unit
+        Reset
+        """
         count = cmd.get_iteration_count()
         max_ticks = 100
         if count == 0:
@@ -30,19 +37,26 @@ def create() -> UnitOperationDefinitionBase:
             progress = count/max_ticks
             cmd.set_progress(progress)
 
-    def test_cmd(cmd: UodCommand, value):
+    def test_int(cmd: UodCommand, value):
+        """# Runs test command
+        TestInt: 5
+        """
         print("test_cmd executing with arg: " + value)
         fval = as_float(value)
         if fval is None:
             # raising ValueError will display the error to the user
-            raise ValueError("value must be a number")
-        cmd.context.tags.get("TestInt").set_value(value, time())
+            raise ValueError(f"value '{value}' is not a number")
+        cmd.context.tags.get("TestInt").set_value(fval, time())
         cmd.set_complete()
 
-    def cmd_regex(cmd: UodCommand, number, number_unit=None):
+    def cmd_regex(cmd: UodCommand, number: str, number_unit: str | None = None):
+        """# Set the CmdWithRegexArgs tag value
+        CmdWithRegexArgs: 5 dm2
+        """
         # optional arg is ok when regex's named groups do not include it
-        print("cmd_regex executing with number: " + str(number))
-        print("and number_unit: " + str(number_unit))
+        print(f"cmd_regex executing with number: {number} and number_unit: {number_unit}")
+        assert number_unit is not None        
+        cmd.context.tags.get("CmdWithRegexArgs").set_value_and_unit(float(number), number_unit, time())
         cmd.set_complete()
 
     def test_percentage(cmd: UodCommand, number, number_unit):
@@ -101,9 +115,10 @@ def create() -> UnitOperationDefinitionBase:
         .with_tag(tags.Tag("TestFloat", value=9.87, unit="kg"))
         .with_tag(tags.Tag("TestString", value="test"))
         .with_tag(tags.SelectTag("Reset", value="N/A", unit=None, choices=['Reset', "N/A"]))
+        .with_tag(tags.Tag("CmdWithRegexArgs", value=34.87, unit="dm2"))
         .with_tag(tags.Tag("TestPercentage", value=34.87, unit="%"))
-        .with_command(name="Reset", exec_fn=reset)
-        .with_command(name="TestInt", exec_fn=test_cmd)
+        .with_command(name="Reset", exec_fn=reset, arg_parse_fn=None)
+        .with_command(name="TestInt", exec_fn=test_int)
         .with_process_value(tag_name="Run Time")
         .with_process_value(tag_name="FT01")
         .with_process_value_entry(tag_name="TestInt")
@@ -114,10 +129,11 @@ def create() -> UnitOperationDefinitionBase:
         .with_process_value(tag_name="Time")
         .with_process_value_choice(tag_name="Reset", command_options={'Reset': 'Reset'})
         .with_process_value(tag_name="System State")
+        .with_process_value(tag_name="CmdWithRegexArgs")
         .with_process_value(tag_name="TestPercentage")
         .with_command_regex_arguments(
             name="CmdWithRegexArgs",
-            arg_parse_regex=RegexNumber(units=None),
+            arg_parse_regex=RegexNumber(units=['m2', 'dm2']),
             exec_fn=cmd_regex)
         .with_command_regex_arguments(
             name="TestPercentage",

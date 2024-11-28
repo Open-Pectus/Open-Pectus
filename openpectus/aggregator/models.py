@@ -17,6 +17,7 @@ MethodLine = Mdl.MethodLine
 MethodState = Mdl.MethodState
 ReadingCommand = Mdl.ReadingCommand
 ReadingInfo = Mdl.ReadingInfo
+CommandInfo = Mdl.CommandInfo
 TagValue = Mdl.TagValue
 PlotColorRegion = Mdl.PlotColorRegion
 PlotAxis = Mdl.PlotAxis
@@ -142,7 +143,11 @@ class EngineData(BaseModel):
     uod_filename: str
     location: str
     readings: list[Mdl.ReadingInfo] = []
+    """ Contains the definition of the engine's process values. """
+    commands: list[Mdl.CommandInfo] = []
+    """ Contains the uod commands that are not related to a process value. """
     tags_info: TagsInfo = TagsInfo(map={})
+    """ Contains the most current tag values. """
     control_state: ControlState = ControlState(is_running=False, is_holding=False, is_paused=False)
     method: Method = Method.empty()
     run_data: RunData = RunData()
