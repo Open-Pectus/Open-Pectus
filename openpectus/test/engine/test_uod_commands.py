@@ -57,8 +57,7 @@ class TestCommandDescriptions(unittest.TestCase):
         # Note removal of white space
         self.assertEqual(
 """# Runs the Area command
-Area: 5 cm2
-""",
+Area: 5 cm2""",
             cmd.docstring
         )
 
