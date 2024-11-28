@@ -18,8 +18,9 @@ class ReadingTag(Tag):
         if val is not None:
             try:
                 float(val)
-            except:
-                raise ValueError(f'ReadingTag "{self.name}" cannot be set to "{val}" because it cannot be coerced to float type.')
+            except Exception:
+                raise ValueError(
+                    f'ReadingTag "{self.name}" cannot be set to "{val}" because it cannot be coerced to float type.')
         super().set_value(val, *args, **kwargs)
 
 
@@ -33,7 +34,8 @@ class SelectTag(Tag):
         self.choices = choices
 
     def set_value(self, val, *args, **kwargs):
-        assert val in self.choices, f'SelectTag "{self.name}" cannot be set to "{val}" because it is not among the valid options: "{self.choices}".'
+        assert val in self.choices, \
+            f'SelectTag "{self.name}" cannot be set to "{val}" because it is not among the valid options: "{self.choices}".'
         super().set_value(val, *args, **kwargs)
 
 
