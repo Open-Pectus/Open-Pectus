@@ -409,6 +409,7 @@ class PInterpreter(PNodeVisitor):
         ar = ActivationRecord(node, self._tick_time)
         self.stack.push(ar)
         yield from self._visit_children(node.children)
+        # TODO consider awaiting uod command completion before emit_on_method_end
         self.context.lifetime.emit_on_method_end()
         self.stack.pop()
 

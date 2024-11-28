@@ -212,9 +212,11 @@ def run_example_commands(uod: UnitOperationDefinitionBase):
 
     failed_cmds: list[str] = []
     for desc in uod.command_descriptions.values():
-        logger.info(f"Executing example commands for command '{desc.name}'")
-        lines = desc.get_docstring_pcode_lines()
-        pcode = "\n".join(lines)
+        logger.info(f"Executing example commands for uod command '{desc.name}'")
+        pcode = desc.get_docstring_pcode()
+        if pcode.strip() == "":
+            logger.warning(f"Command '{desc.name} has no pcode example")
+            continue
         try:
             runner = EngineTestRunner(uod_factory=lambda: uod, pcode=pcode)
             with runner.run() as instance:
