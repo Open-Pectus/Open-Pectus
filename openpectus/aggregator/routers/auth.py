@@ -39,6 +39,13 @@ def get_config() -> AuthConfig:
 
 jwks_client = jwt.PyJWKClient(jwks_url)
 
+def user_name(x_identity: Annotated[str, Header()] = '') -> str:
+    if not use_auth:
+        return "dev"
+
+    return "foo"
+
+
 def user_roles(x_identity: Annotated[str, Header()] = '') -> set[str]:
     if not use_auth:
         return set()
@@ -61,9 +68,9 @@ def user_roles(x_identity: Annotated[str, Header()] = '') -> set[str]:
 
 
 UserRolesDependency = Security(user_roles)
-
-
 UserRolesValue = Annotated[set[str], UserRolesDependency]
+UserNameDependency = Security(user_name)
+UserNameValue = Annotated[str, UserNameDependency]
 
 
 def has_access(engine_or_run: EngineData | RecentEngine | RecentRun, user_roles: set[str]):

@@ -124,8 +124,11 @@ class RecentRunRepository(RepositoryBase):
         recent_run.uod_filename = engine_data.uod_filename
         recent_run.started_date = engine_data.run_data.run_started
         recent_run.completed_date = datetime.now(timezone.utc)
+        if recent_run.contributors is None:
+            recent_run.contributors = set()
+        for user_name in engine_data.contributors:  # add contributers from this 'session'
+            recent_run.contributors.add(user_name)
         recent_run.required_roles = engine_data.required_roles
-        # recent_run.contributers = engine_data.
 
         method_and_state = RecentRunMethodAndState()
         method_and_state.run_id = engine_data.run_id

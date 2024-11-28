@@ -51,7 +51,7 @@ class RecentRun(DBModel):
     uod_author_email: Mapped[str] = mapped_column()
     started_date: Mapped[datetime] = mapped_column()
     completed_date: Mapped[datetime] = mapped_column()
-    contributors: Mapped[list[str]] = mapped_column(type_=JSON, default=[])
+    contributors: Mapped[set[str]] = mapped_column(type_=JSON, default=[])
     required_roles: Mapped[set[str]] = mapped_column(type_=JSON, default=[])
 
 

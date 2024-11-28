@@ -21,9 +21,9 @@
             "console": "integratedTerminal",
             "args": ["-fdd", "./openpectus/frontend/dist"],
             "env": {
-                // "AZURE_DIRECTORY_TENANT_ID": "fdfed7bd-9f6a-44a1-b694-6e39c468c150",
-                // "AZURE_APPLICATION_CLIENT_ID": "fc7355bb-a6be-493f-90a1-cf57063f7948",
-                // "ENABLE_AZURE_AUTHENTICATION": "true",
+                "AZURE_DIRECTORY_TENANT_ID": "fdfed7bd-9f6a-44a1-b694-6e39c468c150",
+                "AZURE_APPLICATION_CLIENT_ID": "fc7355bb-a6be-493f-90a1-cf57063f7948",
+                "ENABLE_AZURE_AUTHENTICATION": "false",
             },
             // "serverReadyAction":{
             //     "uriFormat": "http://127.0.0.1:%s",

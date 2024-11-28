@@ -10,7 +10,7 @@ from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.command_examples import examples
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import PlotLogRepository, RecentEngineRepository
-from openpectus.aggregator.routers.auth import has_access, UserRolesValue
+from openpectus.aggregator.routers.auth import has_access, UserRolesValue, UserNameValue
 from starlette.status import HTTP_403_FORBIDDEN, HTTP_404_NOT_FOUND
 
 logger = logging.getLogger(__name__)
@@ -130,6 +130,7 @@ def get_all_process_values(
 
 @router.post("/process_unit/{unit_id}/execute_command")
 async def execute_command(
+        user_name: UserNameValue,
         user_roles: UserRolesValue,
         unit_id: str,
         command: Dto.ExecutableCommand,
@@ -148,6 +149,10 @@ async def execute_command(
     except Exception:
         logger.error(f"Rpc call to engine_id '{unit_id}' failed", exc_info=True)
         return Dto.ServerErrorResponse(message="Failed to send message")
+
+    # for now, all users issuing a command become contributors. may nee to filter that somehow
+    # and when wo we clear the contributors?
+    engine_data.contributors.add(user_name)
     return Dto.ServerSuccessResponse()
 
 
@@ -204,6 +209,7 @@ def get_method_and_state(
 
 @router.post('/process_unit/{unit_id}/method')
 async def save_method(
+        user_name: UserNameValue,
         user_roles: UserRolesValue,
         unit_id: str,
         method_dto: Dto.Method,
@@ -211,7 +217,7 @@ async def save_method(
     _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
     method_mdl = Mdl.Method(lines=[Mdl.MethodLine(id=line.id, content=line.content) for line in method_dto.lines])
 
-    if not await agg.from_frontend.method_saved(engine_id=unit_id, method=method_mdl):
+    if not await agg.from_frontend.method_saved(engine_id=unit_id, method=method_mdl, user_name=user_name):
         return Dto.ServerErrorResponse(message="Failed to set method")
 
 
@@ -266,24 +272,26 @@ def get_error_log(
 
 @router.post('/process_unit/{unit_id}/run_log/force_line/{line_id}')
 async def force_run_log_line(
+        user_name: UserNameValue,
         user_roles: UserRolesValue,
         unit_id: str,
         line_id: str,
         agg: Aggregator = Depends(agg_deps.get_aggregator)):
     _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
-    if not await agg.from_frontend.request_force(engine_id=unit_id, line_id=line_id):
+    if not await agg.from_frontend.request_force(engine_id=unit_id, line_id=line_id, user_name=user_name):
         return Dto.ServerErrorResponse(message="Force request failed")
     return Dto.ServerSuccessResponse(message="Force successfully requested")
 
 
 @router.post('/process_unit/{unit_id}/run_log/cancel_line/{line_id}')
 async def cancel_run_log_line(
+        user_name: UserNameValue,
         user_roles: UserRolesValue,
         unit_id: str,
         line_id: str,
         agg: Aggregator = Depends(agg_deps.get_aggregator)):
     _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
-    if not await agg.from_frontend.request_cancel(engine_id=unit_id, line_id=line_id):
+    if not await agg.from_frontend.request_cancel(engine_id=unit_id, line_id=line_id, user_name=user_name):
         return Dto.ServerErrorResponse(message="Cancel request failed")
     return Dto.ServerSuccessResponse(message="Cancel successfully requested")
 
