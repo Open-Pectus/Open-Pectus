@@ -1,7 +1,7 @@
 import logging
 from datetime import UTC, datetime, timedelta, timezone
 from socket import gethostname
-from typing import List, Iterable, Sequence
+from typing import Iterable, Sequence
 
 from openpectus import __version__
 from openpectus.aggregator.data.models import (
@@ -84,7 +84,7 @@ class PlotLogRepository(RepositoryBase):
             .where(PlotLog.run_id == run_id)
         ).all()
 
-    def store_tag_values(self, engine_id: str, run_id: str, tags: List[TagValue]):
+    def store_tag_values(self, engine_id: str, run_id: str, tags: list[TagValue]):
         plot_log_entries = self.get_plot_log_entries(engine_id, run_id)
 
         def map_tag_to_entry_value(tag: TagValue):
