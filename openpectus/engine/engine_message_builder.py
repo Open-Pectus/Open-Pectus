@@ -71,7 +71,8 @@ class EngineMessageBuilder():
             commands=[command.as_command_info() for command in self.engine.uod.command_descriptions.values()],
             plot_configuration=self.engine.uod.plot_configuration,
             hardware_str=str(self.engine.uod.hwl),
-            required_roles=self.engine.uod.required_roles)
+            required_roles=self.engine.uod.required_roles,
+            data_log_interval_seconds=self.engine.uod.data_log_interval_seconds)
 
     def collect_tag_updates(self, snapshot=False) -> list[Mdl.TagValue]:
         if snapshot:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 import logging
+import math
 from datetime import datetime
 from enum import StrEnum, auto
 
@@ -153,6 +154,7 @@ class EngineData(BaseModel):
     run_data: RunData = RunData()
     plot_configuration: PlotConfiguration = PlotConfiguration.empty()
     required_roles: set[str] = set()
+    data_log_interval_seconds: float = math.inf
 
     @property
     def runtime(self):

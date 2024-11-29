@@ -37,6 +37,7 @@ class UnitOperationDefinitionBase:
                  overlapping_command_names_lists: list[list[str]],
                  plot_configuration: PlotConfiguration,
                  required_roles: set[str],
+                 data_log_interval_seconds: float,
                  base_unit_provider: BaseUnitProvider
                  ) -> None:
         self.instrument = instrument_name
@@ -54,6 +55,7 @@ class UnitOperationDefinitionBase:
         self.overlapping_command_names_lists: list[list[str]] = overlapping_command_names_lists
         self.plot_configuration = plot_configuration
         self.required_roles = required_roles
+        self.data_log_interval_seconds = data_log_interval_seconds
         self.base_unit_provider: BaseUnitProvider = base_unit_provider
 
     def __str__(self) -> str:
@@ -110,7 +112,7 @@ class UnitOperationDefinitionBase:
 
             desc = UodCommandDescription(name=cmd_name)
             desc.argument_valid_units = valid_units
-            desc.set_docstring(cmd_builder.exec_fn.__doc__)           
+            desc.set_docstring(cmd_builder.exec_fn.__doc__)
 
             self.command_descriptions[cmd_name] = desc
 
@@ -494,6 +496,7 @@ class UodBuilder():
         self.location: str = ""
         self.plot_configuration: PlotConfiguration = PlotConfiguration.empty()
         self.required_roles: set[str] = set()
+        self.data_log_interval_seconds = 5
         self.base_unit_provider: BaseUnitProvider = BaseUnitProvider()
         self.base_unit_provider.set("s", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
         self.base_unit_provider.set("min", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
@@ -794,6 +797,10 @@ class UodBuilder():
         self.required_roles = required_roles
         return self
 
+    def with_data_log_interval_seconds(self, data_log_interval_seconds: float) -> UodBuilder:
+        self.data_log_interval_seconds = data_log_interval_seconds
+        return self
+
     def build(self) -> UnitOperationDefinitionBase:
         self.validate()
 
@@ -811,6 +818,7 @@ class UodBuilder():
             self.overlapping_command_names_lists,
             self.plot_configuration,
             self.required_roles,
+            self.data_log_interval_seconds,
             self.base_unit_provider
         )
 
