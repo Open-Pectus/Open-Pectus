@@ -25,7 +25,6 @@ export class AppComponent implements OnInit {
     this.oidcSecurityService.checkAuth().subscribe(
       (loginResponse) => {
         this.store.dispatch(AppActions.finishedAuthentication({isAuthenticated: loginResponse.isAuthenticated}));
-        console.log('callback authenticated', loginResponse);
       },
     );
 
