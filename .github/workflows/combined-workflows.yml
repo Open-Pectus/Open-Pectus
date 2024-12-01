@@ -107,6 +107,12 @@ jobs:
         # build openpectus-x.y.z.tar.gz using version number defined in source (__version__ in __init__.py)
         run: |
           python -m build --sdist -o openpectus/dist
+      - name: Archive production bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openpectus-dist-pypi
+          path: |
+            openpectus/dist
       - name: Rename package to remove version number (openpectus.tar.gz)
         # rename package file openpectus-x.y.z.tar.gz to openpectus.tar.gz for a Dockerfile independent of version
         run: |
@@ -133,16 +139,7 @@ jobs:
       - name: Download openpectus-dist artifact
         uses: actions/download-artifact@v4
         with:
-          name: openpectus-dist
-      - name: List directory
-        run: |
-          ls
-      - name: List directory
-        run: |
-          ls openpectus
-      - name: List directory
-        run: |
-          ls openpectus/dist
+          name: openpectus-dist-pypi
       - name: Publish package distributions to PyPI
         if: ${{ env.SHOULD_NOT_PUBLISH_IMAGE }}
         uses: pypa/gh-action-pypi-publish@release/v1
