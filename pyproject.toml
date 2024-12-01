@@ -26,6 +26,8 @@ pectus-engine = "openpectus.engine.main:main"
 [tool.flit.external-data]
 directory = "openpectus/aggregator/frontend-dist/"
 
+[tool.setuptools.dynamic]
+dependencies = {file = ["openpectus/requirements.txt"]}
 
 [tool.pyright]
 include = ["openpectus"]
