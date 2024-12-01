@@ -134,11 +134,21 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: openpectus-dist
+      - name: List directory
+        run: |
+          ls
+      - name: List directory
+        run: |
+          ls openpectus
+      - name: List directory
+        run: |
+          ls openpectus/dist
       - name: Publish package distributions to PyPI
         if: ${{ env.SHOULD_NOT_PUBLISH_IMAGE }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+          packages-dir: openpectus/dist/
           verbose: true
       - name: Publish package distributions to PyPI
         if: ${{ env.SHOULD_PUBLISH_IMAGE }}
