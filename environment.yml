@@ -2,9 +2,6 @@ name: pectus
 dependencies:
   - python=3.11
   - pip
-  
-  - pip:
-    - -r openpectus/requirements.txt
 
 # Manage conda environment
 # Usually updating works:
