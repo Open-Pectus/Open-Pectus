@@ -93,6 +93,7 @@ class EngineMessageBuilder():
 
     def create_tag_updates_msg(self) -> EM.TagsUpdatedMsg | None:
         tags = self.collect_tag_updates()
+        # print("tags with updates", str([t.name for t in tags]))
         if len(tags) > 0:
             return EM.TagsUpdatedMsg(tags=tags)
 
