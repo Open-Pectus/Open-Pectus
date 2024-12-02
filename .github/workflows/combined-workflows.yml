@@ -140,7 +140,7 @@ jobs:
         with:
           name: openpectus-dist-pypi
           path: dist
-      - name: Publish package distributions to PyPI
+      - name: Publish package distributions to PyPI Test
         if: ${{ env.SHOULD_NOT_PUBLISH_IMAGE }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
@@ -148,8 +148,6 @@ jobs:
       - name: Publish package distributions to PyPI
         if: ${{ env.SHOULD_PUBLISH_IMAGE }}
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          verbose: true
 
   publish_docker_image:
     needs: [package_dist]
