@@ -136,7 +136,11 @@ class EngineTestInstance(TagLifetime):
                 logger.warning(f"Sleep deadline for tick was negative: {deadline}")
 
             if self.engine.has_error_state():
-                raise ValueError("Engine failed with an error")
+                ex = self.engine.get_error_state_exception()
+                if ex is None:
+                    raise ValueError("Engine failed with an unspecified error")
+                else:
+                    raise ValueError(f"Engine failed with exception: {ex}")
 
         return ticks
 
@@ -308,7 +312,11 @@ def run_engine(engine: Engine, pcode: str, max_ticks: int = -1) -> int:
             logger.warning(f"Sleep deadline for tick was negative: {deadline}")
 
         if engine.has_error_state():
-            raise ValueError("Engine failed with an error")
+            ex = engine.get_error_state_exception()
+            if ex is None:
+                raise ValueError("Engine failed with an unspecified error")
+            else:
+                raise ValueError(f"Engine failed with exception: {ex}")
 
         ticks += 1
 
@@ -341,7 +349,11 @@ def continue_engine(engine: Engine, max_ticks: int = -1) -> int:
             logger.warning(f"Sleep deadline for tick was negative: {deadline}")
 
         if engine.has_error_state():
-            raise ValueError("Engine failed with an error")
+            ex = engine.get_error_state_exception()
+            if ex is None:
+                raise ValueError("Engine failed with an unspecified error")
+            else:
+                raise ValueError(f"Engine failed with exception: {ex}")
 
         ticks += 1
 

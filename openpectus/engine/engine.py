@@ -139,6 +139,9 @@ class Engine(InterpreterContext):
         self._prev_state: TagValueCollection | None = None
         """ The state prior to applying safe state """
 
+        self._last_error : Exception | None = None
+        """ Cause of error_state"""
+
         self.block_times: dict[str, float] = {}
         """ holds time spent in each block"""
 
@@ -284,24 +287,24 @@ class Engine(InterpreterContext):
             try:
                 # run one tick of interpretation, i.e. one instruction
                 self._interpreter.tick(tick_time, self._tick_number)
-            except InterpretationInternalError:
+            except InterpretationInternalError as ex:
                 logger.fatal("A serious internal interpreter error occured. The method should be stopped. If it is resumed, \
                              additional errors may occur.", exc_info=True)
-                self.set_error_state()
+                self.set_error_state(ex)
             except EngineError as eex:
                 logger.error(eex.message)
                 if eex.user_message is not None:
                     frontend_logger.error(eex.user_message)
-                self.set_error_state()
+                self.set_error_state(eex)
             except InterpretationError as ie:
                 logger.error("Interpretation error", exc_info=True)
                 if ie.user_message is not None:
                     frontend_logger.error(ie.user_message)
-                self.set_error_state()
-            except Exception:
+                self.set_error_state(ie)
+            except Exception as ex:
                 logger.error("Unhandled interpretation error", exc_info=True)
                 frontend_logger.error("Method error")
-                self.set_error_state()
+                self.set_error_state(ex)
 
         # update calculated tags
         if self._runstate_started:
@@ -323,10 +326,10 @@ class Engine(InterpreterContext):
             # possibly add guard for ConnectionState=Disconnected to avoid read errors
             # flooding the log
             register_values = self.uod.hwl.read_batch(read_registers)
-        except HardwareLayerException:
+        except HardwareLayerException as ex:
             if not self.has_error_state():
                 logger.error("Hardware read_batch error", exc_info=True)
-                self.set_error_state()
+                self.set_error_state(ex)
             return
 
         for i, r in enumerate(read_registers):
@@ -398,11 +401,11 @@ class Engine(InterpreterContext):
         except ValueError as ve:
             logger.error(f"Error executing command: '{latest_cmd}'. Command failed with error: {ve}", exc_info=True)
             frontend_logger.error(f"Command '{latest_cmd}' failed: {ve}")
-            self.set_error_state()
-        except Exception:
+            self.set_error_state(ve)
+        except Exception as ex:
             logger.error(f"Error executing command: '{latest_cmd}'", exc_info=True)
             frontend_logger.error(f"Error executing command: '{latest_cmd}'")
-            self.set_error_state()
+            self.set_error_state(ex)
         finally:
             for c_done in cmds_done:
                 self.cmd_executing.remove(c_done)
@@ -701,15 +704,19 @@ class Engine(InterpreterContext):
             self.tag_updates.put(tag)
         self._uod_listener.clear_changes()
 
-    def set_error_state(self):
+    def set_error_state(self, exception: Exception):
         logger.info("Engine Paused because of error")
         self._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.ERROR, self._tick_time)
         self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Paused, self._tick_time)
+        self._last_error = exception
         self._runstate_paused = True
 
     def has_error_state(self) -> bool:
         method_status = self._system_tags[SystemTagName.METHOD_STATUS]
         return method_status.get_value() == MethodStatusEnum.ERROR
+
+    def get_error_state_exception(self) -> Exception | None:
+        return self._last_error
 
     #TODO remove
     def parse_pcode(self, pcode: str) -> PProgram:
@@ -731,10 +738,10 @@ class Engine(InterpreterContext):
             # possibly add guard for ConnectionState=Disconnected to avoid write errors
             # flooding the log
             hwl.write_batch(register_values, registers)
-        except HardwareLayerException:
+        except HardwareLayerException as ex:
             if not self.has_error_state():
                 logger.error("Hardware write_batch error", exc_info=True)
-                self.set_error_state()
+                self.set_error_state(ex)
 
     def schedule_execution(self, name: str, exec_id: UUID | None = None, **kvargs):
         """ Execute named command from interpreter """
@@ -772,7 +779,7 @@ class Engine(InterpreterContext):
             logger.info("Injected code successful")
         except Exception as ex:
             logger.info("Injected code parse error: " + str(ex))
-            self.set_error_state()  # ?
+            self.set_error_state(ex)
             raise
 
     # code manipulation api
@@ -784,9 +791,9 @@ class Engine(InterpreterContext):
         try:
             self._method.set_method(method)
             logger.info(f"New method set with {len(method.lines)} lines")
-        except Exception:
+        except Exception as ex:
             logger.error("Failed to set method", exc_info=True)
-            self.set_error_state()
+            self.set_error_state(ex)
             raise
 
     def cancel_instruction(self, exec_id: UUID):

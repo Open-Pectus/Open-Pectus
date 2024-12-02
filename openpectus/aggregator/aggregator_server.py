@@ -1,6 +1,5 @@
 import logging
 import os
-from typing import List
 
 import uvicorn
 from openpectus.aggregator.routers.auth import UserRolesDependency
@@ -36,7 +35,7 @@ class AggregatorServer:
         self.setup_fastapi([self.dispatcher.router, self.publisher.router, version.router])
         self.init_db()
 
-    def setup_fastapi(self, additional_routers: List[APIRouter] = []):
+    def setup_fastapi(self, additional_routers: list[APIRouter] = []):
         api_prefix = "/api"
 
         def custom_generate_unique_id(route: APIRoute):

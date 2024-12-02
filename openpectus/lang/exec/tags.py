@@ -43,6 +43,13 @@ TagFormatFunction = Callable[[Any], str]
 """ Represents a function that is used to format tag values for display """
 
 
+def format_time_as_clock(value: float) -> str:
+    import datetime
+    date = datetime.datetime.fromtimestamp(value, datetime.UTC)
+    tm = date.time()
+    return f"{tm.hour:02}:{tm.minute:02}:{tm.second:02}"
+
+
 class ChangeListener():
     """ Collects named changes. Used by engine to track tag changes """
 
@@ -125,6 +132,10 @@ class Tag(ChangeSubject, TagLifetime):
 
         super().__init__()
 
+        assert name is not None
+        assert name != ""
+        assert isinstance(name, str)  # this includes StrEnum which is useful
+
         if unit is not None:
             if not isinstance(unit, str):
                 raise ValueError("unit must be None or a string")
@@ -165,12 +176,14 @@ class Tag(ChangeSubject, TagLifetime):
 
     def as_number(self) -> int | float:
         if not isinstance(self.value, (int, float)):
-            raise ValueError(f"Value is not numerical: '{self.value}' has type '{type(self. value).__name__}'")
+            raise ValueError(
+                f"Value is not numerical: '{self.value}' has type '{type(self. value).__name__}' tag: '{self.name}'")
         return self.value
 
     def as_float(self) -> float:
         if not isinstance(self.value, (float)):
-            raise ValueError(f"Value is not a float: '{self.value}' has type '{type(self. value).__name__}'")
+            raise ValueError(
+                f"Value is not a float: '{self.value}' has type '{type(self. value).__name__}' tag: '{self.name}'")
         return self.value
 
     def archive(self) -> str | None:
@@ -185,10 +198,12 @@ class Tag(ChangeSubject, TagLifetime):
 
 class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
     """ Represents a  name/tag dictionary. """
-
-    def __init__(self) -> None:
+    def __init__(self, tags: Iterable[Tag] | None = None) -> None:
         super().__init__()
         self.tags: dict[str, Tag] = {}
+        if tags is not None:
+            for tag in tags:
+                self.add(tag, exist_ok=False)
 
     def as_readonly(self) -> TagValueCollection:
         return TagValueCollection([t.as_readonly() for t in self.tags.values()])
@@ -260,23 +275,19 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
 
     @staticmethod
     def create_system_tags() -> TagCollection:
-        tags = TagCollection()
-        defaults = [
-            (SystemTagName.BASE, "min", None),  # TODO this should not be wrapped in pint quantity
-            (SystemTagName.RUN_COUNTER, 0, None),
-            (SystemTagName.BLOCK, None, None),
-            (SystemTagName.BLOCK_TIME, 0.0, "s"),
-            (SystemTagName.PROCESS_TIME, 0.0, "s"),
-            (SystemTagName.RUN_TIME, 0.0, "s"),
-            (SystemTagName.CLOCK, 0.0, "s"),
-            (SystemTagName.SYSTEM_STATE, "Stopped", None),
-            (SystemTagName.METHOD_STATUS, "OK", None),
-            (SystemTagName.CONNECTION_STATUS, "Disconnected", None),
-            (SystemTagName.RUN_ID, None, None)
-        ]
-        for name, value, unit in defaults:
-            tag = Tag(name, value=value, unit=unit, direction=TagDirection.NA)
-            tags.add(tag)
+        tags = TagCollection([
+            Tag(SystemTagName.BASE, value="min"),  # note special value "min" and no unit
+            Tag(SystemTagName.RUN_COUNTER, value=0),
+            Tag(SystemTagName.BLOCK, value=None),
+            Tag(SystemTagName.BLOCK_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
+            Tag(SystemTagName.PROCESS_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
+            Tag(SystemTagName.RUN_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
+            Tag(SystemTagName.CLOCK, value=0.0, unit="s", format_fn=format_time_as_clock),
+            Tag(SystemTagName.SYSTEM_STATE, value="Stopped"),
+            Tag(SystemTagName.METHOD_STATUS, value="OK"),
+            Tag(SystemTagName.CONNECTION_STATUS, value="Disconnected"),
+            Tag(SystemTagName.RUN_ID, value=None),
+        ])
         return tags
 
 
