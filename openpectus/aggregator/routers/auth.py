@@ -1,5 +1,5 @@
 import os
-from typing import Annotated
+from typing import Annotated, Any
 
 import jwt
 from openpectus.aggregator.data.models import RecentEngine, RecentRun
@@ -21,6 +21,11 @@ client_id = os.getenv('AZURE_APPLICATION_CLIENT_ID', default=None)
 # authorization_url = f'https://login.microsoftonline.com/{tenant_id}/oauth2/authorize'
 jwks_url = 'https://login.microsoftonline.com/common/discovery/keys'
 
+if use_auth:
+    print("Authentication enabled")
+else:
+    print("Authentication disabled")
+
 
 @router.get('/config')
 def get_config() -> AuthConfig:
@@ -39,31 +44,40 @@ def get_config() -> AuthConfig:
 
 jwks_client = jwt.PyJWKClient(jwks_url)
 
-def user_name(x_identity: Annotated[str, Header()] = '') -> str:
-    if not use_auth:
-        return "dev"
-
-    return "foo"
-
-
-def user_roles(x_identity: Annotated[str, Header()] = '') -> set[str]:
-    if not use_auth:
-        return set()
+def decode_token_or_fail(x_identity) -> dict[str, Any]:
     try:
         token: dict[str, str | list[str]] = jwt.decode(
-            x_identity,
-            jwks_client.get_signing_key_from_jwt(x_identity).key,
-            algorithms=["RS256"],
-            audience=client_id,
-            issuer=authority_url
-        )
+                x_identity,
+                jwks_client.get_signing_key_from_jwt(x_identity).key,
+                algorithms=["RS256"],
+                audience=client_id,
+                issuer=authority_url
+            )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate id token in X-Identity header",
             headers={"WWW-Authenticate": "Bearer"},
         ) from e
+    return token
 
+
+def user_name(x_identity: Annotated[str, Header()] = '') -> str:
+    if not use_auth:
+        return "Anon"
+
+    token = decode_token_or_fail(x_identity)
+    preferred_username = token.get("preferred_username")  # email address, field 'name' has full name
+    if preferred_username is not None and "@" in preferred_username:
+        preferred_username = preferred_username[0: preferred_username.index("@")]
+    return str(preferred_username)
+
+
+def user_roles(x_identity: Annotated[str, Header()] = '') -> set[str]:
+    if not use_auth:
+        return set()
+
+    token = decode_token_or_fail(x_identity)
     return set(token.get('roles') or [])
 
 
