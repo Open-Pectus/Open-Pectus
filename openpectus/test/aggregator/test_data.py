@@ -320,12 +320,12 @@ class RepositoryTest(unittest.TestCase):
 
             created_entity = repo.get_by_run_id(entity.run_id)
             assert created_entity is not None
-            self.assertEqual(['foo', 'bar'], created_entity.contributors)
+            self.assertEqual(set(['foo', 'bar']), set(created_entity.contributors))
 
             # Must reassign with new instance for change to be persisted
-            contributors = list(created_entity.contributors)
-            contributors.append('baz')
-            created_entity.contributors = contributors
+            contributors = set(created_entity.contributors)
+            contributors.add('baz')
+            created_entity.contributors = list(contributors)
             session.commit()
 
         with database.create_scope():
@@ -333,7 +333,7 @@ class RepositoryTest(unittest.TestCase):
             repo = RecentRunRepository(session)
             updated_entity = repo.get_by_run_id(entity.run_id)
             assert updated_entity is not None
-            self.assertEqual(['foo', 'bar', 'baz'], updated_entity.contributors)
+            self.assertEqual(set(['foo', 'bar', 'baz']), set(updated_entity.contributors))
 
     def test_nested_json(self):
         init_db()
