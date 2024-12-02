@@ -6,8 +6,7 @@ WORKDIR /usr/src/app
 
 COPY requirements.txt ./
 COPY dist ./dist/
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install dist/openpectus.tar.gz
+RUN pip install --no-cache-dir dist/openpectus.tar.gz
 
 ENV AGGREGATOR_PORT=8300
 
