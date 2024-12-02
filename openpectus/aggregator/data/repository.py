@@ -124,7 +124,7 @@ class RecentRunRepository(RepositoryBase):
         recent_run.uod_filename = engine_data.uod_filename
         recent_run.started_date = engine_data.run_data.run_started
         recent_run.completed_date = datetime.now(timezone.utc)
-        current_contributors = set(recent_run.contributors)
+        current_contributors = set(recent_run.contributors or [])
         for user_name in engine_data.contributors:  # append contributers from this 'session'
             current_contributors.add(user_name)
         recent_run.contributors = list(current_contributors)  # must assign new instance in json field
