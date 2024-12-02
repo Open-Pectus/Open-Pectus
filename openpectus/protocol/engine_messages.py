@@ -1,4 +1,4 @@
-from typing import List, Sequence
+from typing import Sequence
 
 import openpectus.protocol.messages as Msg
 import openpectus.protocol.models as Mdl
@@ -57,18 +57,18 @@ class ReconnectedMsg(EngineMessage):
     run_id: str | None
     created_tick: float
     run_started_tick: float | None
-    tags: List[Mdl.TagValue] = []
+    tags: list[Mdl.TagValue] = []
     method: Mdl.Method
     sequence_number = -3
 
 
 class TagsUpdatedMsg(EngineMessage):
-    tags: List[Mdl.TagValue] = []
+    tags: list[Mdl.TagValue] = []
 
 # TODO: One possible way to supprt buffered messages. This would make it easier to persist
 # the values for plot_log but maybe harder to insert in the realtime plot
 class TagsBufferedMsg(EngineMessage):
-    tags: List[Mdl.TagValue] = []
+    tags: list[Mdl.TagValue] = []
     tick_time: float
 
 

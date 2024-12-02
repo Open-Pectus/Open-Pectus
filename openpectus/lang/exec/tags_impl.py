@@ -1,6 +1,6 @@
 import time
 
-from openpectus.lang.exec.tags import Tag, TagDirection
+from openpectus.lang.exec.tags import Tag, TagDirection, TagFormatFunction
 from openpectus.lang.exec.tag_lifetime import BlockInfo, TagContext
 
 # Make sure the mark separator does not conflict with ArchiverTag delimiter.
@@ -11,8 +11,8 @@ MARK_SEPARATOR = "; "
 
 class ReadingTag(Tag):
     """ Represents a common reading, i.e. a input tag with float values. """
-    def __init__(self, name: str, unit: str | None = None) -> None:
-        super().__init__(name, value=0.0, unit=unit, direction=TagDirection.Input)
+    def __init__(self, name: str, unit: str | None = None, format_fn: TagFormatFunction | None = None) -> None:
+        super().__init__(name, value=0.0, unit=unit, direction=TagDirection.Input, format_fn=format_fn)
 
     def set_value(self, val, *args, **kwargs):
         if val is not None:
@@ -150,10 +150,3 @@ class AccumulatedColumnVolume(Tag):
             self.value = None
         else:
             self.value = (v-self.v0) / cv
-
-
-def format_time_as_clock(value: float) -> str:
-    import datetime
-    date = datetime.datetime.fromtimestamp(value, datetime.UTC)
-    tm = date.time()
-    return f"{tm.hour:02}:{tm.minute:02}:{tm.second:02}"

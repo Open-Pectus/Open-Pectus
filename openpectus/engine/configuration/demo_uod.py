@@ -10,6 +10,7 @@ from openpectus.engine.uod_builder_api import (
     RegexNumber,
     HardwareLayerBase, Register, RegisterDirection  # special import required by custom hardware, DemoHardware
 )
+from openpectus.lang.exec.tags import format_time_as_clock
 
 
 def create() -> UnitOperationDefinitionBase:
@@ -110,7 +111,7 @@ def create() -> UnitOperationDefinitionBase:
         .with_tag(tags.ReadingTag("FT01", "L/h"))
         .with_tag(tags.ReadingTag("FT02", "L/h"))
         .with_tag(tags.SelectTag("Category", "Rising", unit=None, choices=["Rising", "Falling"]))
-        .with_tag(tags.ReadingTag("Time", unit=None))
+        .with_tag(tags.ReadingTag("Time", unit="s", format_fn=format_time_as_clock))
         .with_tag(tags.Tag("TestInt", value="42"))
         .with_tag(tags.Tag("TestFloat", value=9.87, unit="kg"))
         .with_tag(tags.Tag("TestString", value="test"))

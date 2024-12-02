@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
@@ -61,8 +60,8 @@ def get_unit(user_roles: UserRolesValue, unit_id: str, agg: Aggregator = Depends
 
 
 @router.get("/process_units")
-def get_units(user_roles: UserRolesValue, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[Dto.ProcessUnit]:
-    units: List[Dto.ProcessUnit] = []
+def get_units(user_roles: UserRolesValue, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> list[Dto.ProcessUnit]:
+    units: list[Dto.ProcessUnit] = []
     all_engine_data = agg.get_all_registered_engine_data()
     for engine_data in all_engine_data:
         if not has_access(engine_data, user_roles):
@@ -96,12 +95,12 @@ def get_process_values(
         user_roles: UserRolesValue,
         engine_id: str,
         response: Response,
-        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> List[Dto.ProcessValue]:
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> list[Dto.ProcessValue]:
     response.headers["Cache-Control"] = "no-store"
 
     engine_data = get_registered_engine_data_or_fail(engine_id, user_roles, agg)
     tags_info = engine_data.tags_info.map
-    process_values: List[Dto.ProcessValue] = []
+    process_values: list[Dto.ProcessValue] = []
     for reading in engine_data.readings:
         tag_value = tags_info.get(reading.tag_name)
         if tag_value is not None:
@@ -119,11 +118,11 @@ def get_all_process_values(
         engine_id: str,
         response: Response,
         agg: Aggregator = Depends(agg_deps.get_aggregator)
-        ) -> List[Dto.ProcessValue]:
+        ) -> list[Dto.ProcessValue]:
     response.headers["Cache-Control"] = "no-store"
     engine_data = get_registered_engine_data_or_fail(engine_id, user_roles, agg)
     tags_info = engine_data.tags_info.map
-    process_values: List[Dto.ProcessValue] = []
+    process_values: list[Dto.ProcessValue] = []
     for tag_value in tags_info.values():
         process_values.append(Dto.ProcessValue.create(tag_value))
     return process_values
