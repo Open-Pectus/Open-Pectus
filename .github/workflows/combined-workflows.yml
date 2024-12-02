@@ -123,7 +123,6 @@ jobs:
             openpectus/Dockerfile
 
   pypi_publish_test:
-    if: ${{ env.SHOULD_NOT_PUBLISH_IMAGE }}
     needs: [package_dist]
     name: Upload release to PyPI Test
     runs-on: ubuntu-latest
@@ -139,12 +138,12 @@ jobs:
           name: openpectus-dist-pypi
           path: dist
       - name: Publish package distributions to PyPI Test
+        if: env.SHOULD_NOT_PUBLISH_IMAGE
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
 
   pypi_publish_release:
-    if: ${{ env.SHOULD_PUBLISH_IMAGE }}
     needs: [package_dist]
     name: Upload release to PyPI
     runs-on: ubuntu-latest
@@ -160,6 +159,7 @@ jobs:
           name: openpectus-dist-pypi
           path: dist
       - name: Publish package distributions to PyPI
+        if: env.SHOULD_PUBLISH_IMAGE
         uses: pypa/gh-action-pypi-publish@release/v1
 
   publish_docker_image:
