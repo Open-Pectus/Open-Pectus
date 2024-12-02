@@ -132,11 +132,9 @@ class Tag(ChangeSubject, TagLifetime):
 
         super().__init__()
 
-        if __debug__:
-            assert name is not None
-            assert name != ""
-            assert isinstance(name, str)
-            assert type(name).__name__ == "str"
+        assert name is not None
+        assert name != ""
+        assert isinstance(name, str)  # this includes StrEnum which is useful
 
         if unit is not None:
             if not isinstance(unit, str):
@@ -278,17 +276,17 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
     @staticmethod
     def create_system_tags() -> TagCollection:
         tags = TagCollection([
-            Tag(SystemTagName.BASE.value, value="min"),  # note special value "min" and no unit
-            Tag(SystemTagName.RUN_COUNTER.value, value=0),
-            Tag(SystemTagName.BLOCK.value, value=None),
-            Tag(SystemTagName.BLOCK_TIME.value, value=0.0, unit="s", format_fn=format_time_as_clock),
-            Tag(SystemTagName.PROCESS_TIME.value, value=0.0, unit="s", format_fn=format_time_as_clock),
-            Tag(SystemTagName.RUN_TIME.value, value=0.0, unit="s", format_fn=format_time_as_clock),
-            Tag(SystemTagName.CLOCK.value, value=0.0, unit="s", format_fn=format_time_as_clock),
-            Tag(SystemTagName.SYSTEM_STATE.value, value="Stopped"),
-            Tag(SystemTagName.METHOD_STATUS.value, value="OK"),
-            Tag(SystemTagName.CONNECTION_STATUS.value, value="Disconnected"),
-            Tag(SystemTagName.RUN_ID.value, value=None),
+            Tag(SystemTagName.BASE, value="min"),  # note special value "min" and no unit
+            Tag(SystemTagName.RUN_COUNTER, value=0),
+            Tag(SystemTagName.BLOCK, value=None),
+            Tag(SystemTagName.BLOCK_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
+            Tag(SystemTagName.PROCESS_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
+            Tag(SystemTagName.RUN_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
+            Tag(SystemTagName.CLOCK, value=0.0, unit="s", format_fn=format_time_as_clock),
+            Tag(SystemTagName.SYSTEM_STATE, value="Stopped"),
+            Tag(SystemTagName.METHOD_STATUS, value="OK"),
+            Tag(SystemTagName.CONNECTION_STATUS, value="Disconnected"),
+            Tag(SystemTagName.RUN_ID, value=None),
         ])
         return tags
 
