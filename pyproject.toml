@@ -27,7 +27,7 @@ pectus-engine = "openpectus.engine.main:main"
 directory = "openpectus/aggregator/frontend-dist/"
 
 [tool.setuptools.dynamic]
-dependencies = {file = ["openpectus/requirements.txt"]}
+dependencies = {file = ["requirements.txt"]}
 
 [tool.pyright]
 include = ["openpectus"]
