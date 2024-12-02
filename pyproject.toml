@@ -13,9 +13,6 @@ dependencies = [
     "pint==0.22",
     "typing_extensions==4.8.0",
     "pydantic==1.10.13",
-    "flake8==6.1.0",   # dev
-    "black==23.3.0",   # dev
-    "build==0.10.0",   # dev
     "fastapi==0.103.2",
     "uvicorn[standard]==0.23.2",
     "httpx==0.25.0",
@@ -29,6 +26,13 @@ dependencies = [
     "alembic==1.13.1",
     "sentry-sdk==2.1.1",
     "PyJWT==2.10.0",
+]
+
+[project.optional-dependencies]
+development = [
+    "flake8==6.1.0",   # dev
+    "black==23.3.0",   # dev
+    "build==0.10.0",   # dev
 ]
 
 [tool.flit.sdist]

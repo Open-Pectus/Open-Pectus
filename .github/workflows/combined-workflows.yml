@@ -30,7 +30,7 @@ jobs:
           python -m pip install --upgrade pip
       - name: Install OpenPectus (as editable)
         run: |
-          pip install -e .
+          pip install -e '.[development]'
       - name: Lint with flake8
         run: |
           # use configuration from ./.flake8
@@ -124,7 +124,7 @@ jobs:
 
   pypi_publish:
     needs: [package_dist]
-    name: Upload release to PyPI Test
+    name: Upload release to PyPI
     runs-on: ubuntu-latest
     environment:
       name: pypi
