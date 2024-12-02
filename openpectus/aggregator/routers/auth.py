@@ -67,10 +67,10 @@ def user_name(x_identity: Annotated[str, Header()] = '') -> str:
         return "Anon"
 
     token = decode_token_or_fail(x_identity)
-    preferred_username = token.get("preferred_username")  # email address, field 'name' has full name
-    if preferred_username is not None and "@" in preferred_username:
+    preferred_username = token.get("preferred_username", "")  # email address, field 'name' has full name
+    if "@" in preferred_username:
         preferred_username = preferred_username[0: preferred_username.index("@")]
-    return str(preferred_username)
+    return str(preferred_username).upper()
 
 
 def user_roles(x_identity: Annotated[str, Header()] = '') -> set[str]:
