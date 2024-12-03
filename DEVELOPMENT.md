@@ -96,7 +96,7 @@ conda activate ./conda
 
 Install open pectus in the environment:
 ```shell
-pip install -e .
+pip install -e '.[development]'
 ```
 
 Set the SENTRY_DSN environment variable (optional):
