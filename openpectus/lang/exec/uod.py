@@ -78,23 +78,25 @@ class UnitOperationDefinitionBase:
         # build command descriptions/examples documentation
         for cmd_name, cmd_builder in self.command_factories.items():
             valid_units: list[str] = []
-            # argument_type: Literal["float", "unknown", "none"] = "unknown"
+            argument_type: Literal["float", "unknown", "none"] = "unknown"
 
             # Determine whether command is used for reading entry. If so, we can use the related tag's unit
-            # as source for valid_units
+            # as source of valid_units
             cmd_reading = next((r for r in self.readings if cmd_name in [c.name for c in r.commands]), None)
             if cmd_reading is not None:  # command is paired with this reading
                 tag = cmd_reading.tag
                 assert tag is not None
                 if tag.unit is not None:
                     valid_units = get_compatible_unit_names(tag.unit)
+                    if isinstance(tag.value, float):
+                        argument_type = "float"
 
             # use the configured argument parser to determine argument and units
             regex_parser = RegexNamedArgumentParser.get_instance(cmd_builder.arg_parse_fn)
             if regex_parser is not None:
                 named_groups = sorted(regex_parser.get_named_groups())
-                # if "number" in named_groups:  # always True for this regex
-                #     argument_type = "float"
+                if "number" in named_groups:  # always True for this regex
+                    argument_type = "float"
                 if "number_unit" in named_groups:
                     valid_units = regex_parser.get_units()
 
@@ -109,6 +111,7 @@ class UnitOperationDefinitionBase:
                 valid_units = []
 
             desc = UodCommandDescription(name=cmd_name)
+            desc.argument_type = argument_type
             desc.argument_valid_units = valid_units
             desc.set_docstring(cmd_builder.exec_fn.__doc__)           
 
@@ -155,6 +158,14 @@ class UnitOperationDefinitionBase:
                     r.resolve_entry_type()
                 except ValueError as ex:
                     log_fatal(str(ex))
+
+            # temporary check until we can support multiple readings per tag
+            tags_with_reading = []
+            for r in self.readings:
+                if r.tag_name in tags_with_reading:
+                    log_fatal(f"Tag '{r.tag_name}' is used by multiple readings. This is not currently supported.")
+                else:
+                    tags_with_reading.append(r.tag_name)
         try:
             self.validate_command_signatures()
         except UodValidationError as vex:

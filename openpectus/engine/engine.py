@@ -790,7 +790,7 @@ class Engine(InterpreterContext):
         """
         try:
             self._method.set_method(method)
-            logger.info(f"New method set with {len(method.lines)} lines")
+            logger.debug(f"New method set with {len(method.lines)} lines")
         except Exception as ex:
             logger.error("Failed to set method", exc_info=True)
             self.set_error_state(ex)
