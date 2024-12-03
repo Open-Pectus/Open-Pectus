@@ -185,6 +185,8 @@ def validate_and_exit(uod_name: str):
         logger.error("Offline validation failed", exc_info=True)
         exit(1)
 
+    run_example_commands(uod)
+
     logger.info("Running online hardware validation")
     try:
         logger.info("Connecting to hardware")
@@ -199,8 +201,6 @@ def validate_and_exit(uod_name: str):
         logger.info("Online validation successful")
     except Exception:
         logger.error("Online validation failed", exc_info=True)
-
-    run_example_commands(uod)
 
     logger.info("Validation complete. Exiting.")
     exit(0)
@@ -221,13 +221,26 @@ def run_example_commands(uod: UnitOperationDefinitionBase):
             runner = EngineTestRunner(uod_factory=lambda: uod, pcode=pcode)
             with runner.run() as instance:
                 instance.start()
-                # wait 10 minutes, that oughta be enought for everybody
+                # wait up to 1 minute, that oughta be enought for everybody
                 instance.run_until_event("method_end", max_ticks=10*60)
                 logger.debug(instance.get_runtime_table())
-                logger.debug(f"Command '{desc.name}' executed successfully")
+                logger.debug(f"Command '{pcode}' executed successfully")
         except Exception as ex:
-            logger.error(f"Command '{desc.name}' failed: {str(ex)}")
+            logger.error(f"Command '{pcode}' failed: {str(ex)}")
             failed_cmds.append(desc.name)
+
+        examples = desc.generate_pcode_examples()
+        for example in examples:
+            try:
+                runner = EngineTestRunner(uod_factory=lambda: uod, pcode=example)
+                with runner.run() as instance:
+                    instance.start()
+                    instance.run_until_event("method_end", max_ticks=10*60)
+                    logger.debug(instance.get_runtime_table())
+                    logger.debug(f"Command '{desc.name}' executed successfully")
+            except Exception as ex:
+                logger.error(f"Command '{example}' failed: {str(ex)}")
+                failed_cmds.append(example)
 
     if len(failed_cmds) > 0:
         logger.error(f"Example commands failed: {','.join(failed_cmds)}")
