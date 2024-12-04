@@ -123,7 +123,8 @@ class AggregatorEventsTest(unittest.IsolatedAsyncioTestCase):
         self.plot_log_repo = Mock(store_tag_values=self.store_tag_values)
         self.aggregator = Aggregator(Mock(), Mock())
         self.engine_data = EngineData(engine_id="test_engine", computer_name="", engine_version="", hardware_str="",
-                                      uod_name="", uod_author_name="", uod_author_email="", uod_filename="", location="")
+                                      uod_name="", uod_author_name="", uod_author_email="", uod_filename="", location="",
+                                      data_log_interval_seconds=5)
 
     def createTag(self, name: str, tick: float, value: str):
         return TagValue(name=name, tick_time=tick, value=value, value_formatted=None, value_unit=None)

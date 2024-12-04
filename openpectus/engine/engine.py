@@ -94,7 +94,7 @@ class Engine(InterpreterContext):
         """ The time source """
 
         self._tick_timer: EngineTimer = timing.timer
-        """ Timer that invokes tick() """        
+        """ Timer that invokes tick() """
 
         self._tick_time: float = 0.0
         """ The time of the last tick """
@@ -108,7 +108,7 @@ class Engine(InterpreterContext):
         # tag_lifetime.on_stop event is emitted just before resetting the interpreter and runlog (and
         # not after).
         if enable_archiver:
-            archiver = ArchiverTag(lambda : self.runtimeinfo.get_runlog())
+            archiver = ArchiverTag(lambda : self.runtimeinfo.get_runlog(), self.uod.data_log_interval_seconds)
             self._system_tags.add(archiver)
 
         self.uod.system_tags = self._system_tags
@@ -488,7 +488,7 @@ class Engine(InterpreterContext):
                 record.add_state_completed(self._tick_time, self._tick_number, self.tags_as_readonly())
                 cmds_done.add(cmd_request)
         else:
-            logger.error(f"Runtime record is None for command {cmd_request}, this should not occur")            
+            logger.error(f"Runtime record is None for command {cmd_request}, this should not occur")
 
     def _set_run_id(self, op: Literal["new", "empty"]):
         if op == "new":

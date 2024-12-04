@@ -3,7 +3,6 @@ import logging
 from datetime import datetime, timezone
 
 import openpectus.aggregator.models as Mdl
-from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
@@ -11,12 +10,12 @@ from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRepository, RecentEngineRepository
 from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.aggregator.models import EngineData
+from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.protocol.models import SystemTagName, MethodStatusEnum
 
 logger = logging.getLogger(__name__)
 
 EngineDataMap = dict[str, EngineData]
-persistance_threshold_seconds = 5
 
 
 class FromEngine:
@@ -62,7 +61,6 @@ class FromEngine:
         # ft02_time = datetime.fromtimestamp(ft02.tick_time).strftime("%H:%M:%S")
         # logger.debug(f"ReconnectedMsg ft02_time: {ft02_time})")
 
-
         # apply the state from msg to the current state
         engine_data.method = msg.method
         run_id_tag = next((tag for tag in msg.tags if tag.name == SystemTagName.RUN_ID), None)
@@ -107,13 +105,15 @@ class FromEngine:
             commands: list[Mdl.CommandInfo],
             plot_configuration: Mdl.PlotConfiguration,
             hardware_str: str,
-            required_roles: set[str]):
+            required_roles: set[str],
+            data_log_interval_seconds: float):
         try:
             self._engine_data_map[engine_id].readings = readings
             self._engine_data_map[engine_id].commands = commands
             self._engine_data_map[engine_id].plot_configuration = plot_configuration
             self._engine_data_map[engine_id].hardware_str = hardware_str
             self._engine_data_map[engine_id].required_roles = required_roles
+            self._engine_data_map[engine_id].data_log_interval_seconds = data_log_interval_seconds
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set uod info.')
 
@@ -186,10 +186,8 @@ class FromEngine:
         latest_persisted_tick_time = engine_data.run_data.latest_persisted_tick_time
         tag_values = engine_data.tags_info.map.values()
         latest_tag_tick_time = max([tag.tick_time for tag in tag_values]) if len(tag_values) > 0 else 0
-        time_threshold_exceeded = latest_persisted_tick_time is None \
-            or latest_tag_tick_time - latest_persisted_tick_time > persistance_threshold_seconds
-        # time_threshold_exceeded = latest_persisted_tick_time is None \
-        #     or time.time() - latest_persisted_tick_time > persistance_threshold_seconds
+        time_threshold_exceeded = latest_persisted_tick_time is None or latest_tag_tick_time - latest_persisted_tick_time > engine_data.data_log_interval_seconds
+
         if engine_data.run_id is not None and time_threshold_exceeded:
             tag_values_to_persist = [tag_value.copy() for tag_value in engine_data.tags_info.map.values()
                                      if latest_persisted_tick_time is None
