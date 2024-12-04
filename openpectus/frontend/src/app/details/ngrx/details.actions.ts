@@ -7,7 +7,8 @@ export class DetailsActions {
   static unitDetailsInitialized = createAction(source + 'Unit Details Initialized', props<{ unitId: string }>());
   static unitDetailsDestroyed = createAction(source + 'Unit Details Destroyed');
   static processValuesFetched = createAction(source + 'Process Values Fetched', props<{ processValues: ProcessValue[] }>());
-  static processValuesFailedToLoad = createAction(source + 'Process Values Failed to load');
+  static processValuesFailedToLoad = createAction(source + 'Process Values Failed to load',
+    props<{ error: { status: number, body: { detail: { missing_roles: string[] } } } }>());
   static processUnitCommandButtonClicked = createAction(source + 'Process Unit Command Button Clicked',
     props<{ command: string }>());
   static processDiagramInitialized = createAction(source + 'Process Diagram Initialized');

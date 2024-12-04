@@ -33,7 +33,15 @@ import { VariableRowSpanDirective } from './variable-row-span.directive';
     VariableRowSpanDirective,
   ],
   template: `
-    @if ((processUnit | ngrxPush)?.state?.state !== 'not_online') {
+    @if ((missingRoles | ngrxPush) !== undefined) {
+      <span class="absolute-center lg:text-xl font-bold whitespace-nowrap">
+        You are missing one of these roles: {{ missingRoles | ngrxPush }}
+      </span>
+    } @else if ((processUnit | ngrxPush)?.state?.state === 'not_online') {
+      <span class="absolute-center lg:text-xl font-bold whitespace-nowrap">
+        Process Unit "{{ (processUnit | ngrxPush)?.name }}" is offline!
+      </span>
+    } @else {
       <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:pt-6 pb-8 gap-6 lg:gap-8" *ngrxLet="unitId as unitId">
         <app-unit-header class="mx-2 my-3 lg:m-0"></app-unit-header>
         <app-process-values></app-process-values>
@@ -48,16 +56,13 @@ import { VariableRowSpanDirective } from './variable-row-span.directive';
         <app-process-plot-container class="2xl:col-span-2" [unitId]="unitId"></app-process-plot-container>
         <app-error-log [unitId]="unitId" class="2xl:col-span-2"></app-error-log>
       </div>
-    } @else {
-      <span class="absolute-center lg:text-xl font-bold whitespace-nowrap">
-        Process Unit "{{ (processUnit | ngrxPush)?.name }}" is offline!
-      </span>
     }
   `,
 })
 export class UnitDetailsComponent implements OnInit, OnDestroy {
   protected readonly unitId = this.store.select(DetailsSelectors.processUnitId);
   protected readonly processUnit = this.store.select(DetailsSelectors.processUnit);
+  protected readonly missingRoles = this.store.select(DetailsSelectors.missingRoles);
 
   constructor(private store: Store) {}
 

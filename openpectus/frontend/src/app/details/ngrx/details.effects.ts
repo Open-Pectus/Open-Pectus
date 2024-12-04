@@ -18,14 +18,14 @@ export class DetailsEffects {
     switchMap(({unitId}) => {
       return this.processUnitService.getProcessValues({engineId: unitId}).pipe(
         map(processValues => DetailsActions.processValuesFetched({processValues})),
-        catchError(() => of(DetailsActions.processValuesFailedToLoad())),
+        catchError(error => of(DetailsActions.processValuesFailedToLoad({error}))),
       );
     }),
   ));
 
   // TODO: When we introduce websocket pubsub, figure out if it makes sense to push process_value changes through it, or polling is fine.
   continuouslyPollProcessValues = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.processValuesFetched, DetailsActions.processValuesFailedToLoad),
+    ofType(DetailsActions.processValuesFetched),
     delay(1000),
     concatLatestFrom(() => [
       this.store.select(DetailsSelectors.processUnitId),
@@ -40,7 +40,7 @@ export class DetailsEffects {
                       : this.processUnitService.getProcessValues({engineId: unitId});
       return request.pipe(
         map(processValues => DetailsActions.processValuesFetched({processValues})),
-        catchError(() => of(DetailsActions.processValuesFailedToLoad())),
+        catchError(error => of(DetailsActions.processValuesFailedToLoad({error}))),
       );
     }),
   ));

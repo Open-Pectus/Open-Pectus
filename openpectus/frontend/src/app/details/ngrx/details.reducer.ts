@@ -12,6 +12,7 @@ export interface DetailsState {
   recentRun?: RecentRun;
   shouldPoll: boolean;
   errorLog: AggregatedErrorLog;
+  missingRoles?: string[];
 }
 
 const initialState: DetailsState = {
@@ -37,6 +38,10 @@ const reducer = createReducer(initialState,
   })),
   on(DetailsActions.processValuesFetched, (state, {processValues}) => produce(state, draft => {
     draft.processValues = processValues;
+    draft.missingRoles = undefined;
+  })),
+  on(DetailsActions.processValuesFailedToLoad, (state, {error}) => produce(state, draft => {
+    if(error.status === 403) draft.missingRoles = error.body.detail.missing_roles;
   })),
   on(DetailsActions.processDiagramFetched, (state, {processDiagram}) => produce(state, draft => {
     draft.processDiagram = processDiagram;
