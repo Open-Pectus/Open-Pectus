@@ -622,7 +622,7 @@ export class RecentRunsService {
     /**
      * Get Recent Run Csv File
      * @param data The data for the request.
-     * @param data.id
+     * @param data.runId
      * @param data.xIdentity
      * @returns unknown Successful Response
      * @throws ApiError
@@ -630,9 +630,9 @@ export class RecentRunsService {
     public getRecentRunCsvFile(data: GetRecentRunCsvFileData): Observable<GetRecentRunCsvFileResponse> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/api/recent_runs/{id}/csv_file',
+            url: '/api/recent_runs/{run_id}/csv_file',
             path: {
-                id: data.id
+                run_id: data.runId
             },
             headers: {
                 'x-identity': data.xIdentity
