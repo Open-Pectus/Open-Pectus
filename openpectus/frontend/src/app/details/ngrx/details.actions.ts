@@ -1,12 +1,8 @@
 import { createAction, props } from '@ngrx/store';
-import { CommandExample, ControlState, ExecutableCommand, ProcessDiagram, ProcessValue, RecentRun } from '../../api';
+import { ApiError, CommandExample, ControlState, ExecutableCommand, ProcessDiagram, ProcessValue, RecentRun } from '../../api';
 
 const source = '[Details] ';
 
-export interface ApiError {
-  status: number,
-  body: { detail: { missing_roles?: string[] } };
-}
 
 export class DetailsActions {
   static unitDetailsInitialized = createAction(source + 'Unit Details Initialized', props<{ unitId: string }>());
