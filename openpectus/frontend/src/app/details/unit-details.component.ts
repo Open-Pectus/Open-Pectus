@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { CommandsComponent } from './commands/commands.component';
 import { ErrorLogComponent } from './error-log/error-log.component';
 import { MethodEditorComponent } from './method-editor/method-editor.component';
+import { MissingRolesComponent } from './missing-roles.component';
 import { DetailsActions } from './ngrx/details.actions';
 import { DetailsSelectors } from './ngrx/details.selectors';
 import { ProcessDiagramComponent } from './process-diagram.component';
@@ -31,38 +32,36 @@ import { VariableRowSpanDirective } from './variable-row-span.directive';
     ErrorLogComponent,
     PushPipe,
     VariableRowSpanDirective,
+    MissingRolesComponent,
   ],
   template: `
-    @if ((missingRoles | ngrxPush) !== undefined) {
-      <span class="absolute-center lg:text-xl font-bold whitespace-nowrap">
-        You are missing one of these roles: {{ missingRoles | ngrxPush }}
-      </span>
-    } @else if ((processUnit | ngrxPush)?.state?.state === 'not_online') {
-      <span class="absolute-center lg:text-xl font-bold whitespace-nowrap">
-        Process Unit "{{ (processUnit | ngrxPush)?.name }}" is offline!
-      </span>
-    } @else {
-      <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:pt-6 pb-8 gap-6 lg:gap-8" *ngrxLet="unitId as unitId">
-        <app-unit-header class="mx-2 my-3 lg:m-0"></app-unit-header>
-        <app-process-values></app-process-values>
-      </div>
-      <div class="grid auto-rows-[1px] grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 gap-x-6 lg:gap-x-8" *ngrxLet="unitId as unitId">
-        <app-method-editor [unitId]="unitId" appVariableRowSpan></app-method-editor>
-        <app-commands appVariableRowSpan></app-commands>
-        <app-run-log [unitId]="unitId" appVariableRowSpan></app-run-log>
-        <app-process-diagram appVariableRowSpan></app-process-diagram>
-      </div>
-      <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:pb-6 gap-6 lg:gap-8" *ngrxLet="unitId as unitId">
-        <app-process-plot-container class="2xl:col-span-2" [unitId]="unitId"></app-process-plot-container>
-        <app-error-log [unitId]="unitId" class="2xl:col-span-2"></app-error-log>
-      </div>
-    }
+    <app-missing-roles>
+      @if ((processUnit | ngrxPush)?.state?.state === 'not_online') {
+        <span class="absolute-center lg:text-xl font-bold whitespace-nowrap">
+          Process Unit "{{ (processUnit | ngrxPush)?.name }}" is offline!
+        </span>
+      } @else {
+        <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:pt-6 pb-8 gap-6 lg:gap-8" *ngrxLet="unitId as unitId">
+          <app-unit-header class="mx-2 my-3 lg:m-0"></app-unit-header>
+          <app-process-values></app-process-values>
+        </div>
+        <div class="grid auto-rows-[1px] grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 gap-x-6 lg:gap-x-8" *ngrxLet="unitId as unitId">
+          <app-method-editor [unitId]="unitId" appVariableRowSpan></app-method-editor>
+          <app-commands appVariableRowSpan></app-commands>
+          <app-run-log [unitId]="unitId" appVariableRowSpan></app-run-log>
+          <app-process-diagram appVariableRowSpan></app-process-diagram>
+        </div>
+        <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:pb-6 gap-6 lg:gap-8" *ngrxLet="unitId as unitId">
+          <app-process-plot-container class="2xl:col-span-2" [unitId]="unitId"></app-process-plot-container>
+          <app-error-log [unitId]="unitId" class="2xl:col-span-2"></app-error-log>
+        </div>
+      }
+    </app-missing-roles>
   `,
 })
 export class UnitDetailsComponent implements OnInit, OnDestroy {
   protected readonly unitId = this.store.select(DetailsSelectors.processUnitId);
   protected readonly processUnit = this.store.select(DetailsSelectors.processUnit);
-  protected readonly missingRoles = this.store.select(DetailsSelectors.missingRoles);
 
   constructor(private store: Store) {}
 
