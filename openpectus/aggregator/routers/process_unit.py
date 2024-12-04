@@ -48,7 +48,7 @@ def get_registered_engine_data_or_fail(engine_id: str, user_roles: UserRolesValu
     if engine_data is None:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND)
     if not has_access(engine_data, user_roles):
-        raise HTTPException(status_code=HTTP_403_FORBIDDEN)
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail={'missing_roles': list(engine_data.required_roles)})
     return engine_data
 
 

@@ -151,6 +151,7 @@ def create() -> UnitOperationDefinitionBase:
             arg_parse_regex=RegexNumber(units=['%']),
             exec_fn=test_percentage)
         .with_process_value_entry(tag_name="TestPercentage")
+        .with_required_roles(set(["TestRole"]))
 
         .with_plot_configuration(get_plot_configuration())
         .build()
