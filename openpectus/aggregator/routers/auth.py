@@ -86,8 +86,6 @@ UserRolesValue = Annotated[set[str], UserRolesDependency]
 UserNameDependency = Security(user_name)
 UserNameValue = Annotated[str, UserNameDependency]
 
-# def get_required_roles(engine_or_run: EngineData | RecentEngine | RecentRun) -> set[str]:
-#     return set(engine_or_run.required_roles)
 
 def has_access(engine_or_run: EngineData | RecentEngine | RecentRun, user_roles: set[str]):
     required_roles = set(engine_or_run.required_roles)
