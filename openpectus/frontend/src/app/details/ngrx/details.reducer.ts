@@ -54,6 +54,10 @@ const reducer = createReducer(initialState,
   })),
   on(DetailsActions.recentRunFetched, (state, {recentRun}) => produce(state, draft => {
     draft.recentRun = recentRun;
+    draft.missingRoles = undefined;
+  })),
+  on(DetailsActions.recentRunFailedToLoad, (state, {error}) => produce(state, draft => {
+    if(error.status === 403) draft.missingRoles = error.body.detail.missing_roles;
   })),
   on(DetailsActions.toggleAllProcessValues, (state, {allProcessValues}) => produce(state, draft => {
     draft.allProcessValues = allProcessValues;

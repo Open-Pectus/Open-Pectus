@@ -122,6 +122,7 @@ export class DetailsEffects {
       if(recentRunId === undefined) return of();
       return this.recentRunsService.getRecentRun({runId: recentRunId}).pipe(
         map(recentRun => DetailsActions.recentRunFetched({recentRun})),
+        catchError(error => of(DetailsActions.recentRunFailedToLoad({error}))),
       );
     }),
   ));
