@@ -1,6 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { AggregatedErrorLog, CommandExample, ControlState, ProcessDiagram, ProcessValue, RecentRun } from '../../api';
+import { AggregatedErrorLog, ApiError, CommandExample, ControlState, ProcessDiagram, ProcessValue, RecentRun } from '../../api';
 import { DetailsActions } from './details.actions';
 
 export interface DetailsState {
@@ -12,6 +12,7 @@ export interface DetailsState {
   recentRun?: RecentRun;
   shouldPoll: boolean;
   errorLog: AggregatedErrorLog;
+  missingRoles?: string[];
 }
 
 const initialState: DetailsState = {
@@ -27,6 +28,16 @@ const initialState: DetailsState = {
   },
 };
 
+export interface MissingRoleApiError extends ApiError {
+  body: { detail: { missing_roles?: string[] } };
+}
+
+const isMissingRoleError = (error: ApiError): error is MissingRoleApiError => {
+  return error.status === 403
+         && typeof error.body === 'object'
+         && Array.isArray((error as MissingRoleApiError).body?.detail?.missing_roles);
+};
+
 const reducer = createReducer(initialState,
   on(DetailsActions.unitDetailsInitialized, state => produce(state, draft => {
     draft.shouldPoll = true;
@@ -37,6 +48,10 @@ const reducer = createReducer(initialState,
   })),
   on(DetailsActions.processValuesFetched, (state, {processValues}) => produce(state, draft => {
     draft.processValues = processValues;
+    draft.missingRoles = undefined;
+  })),
+  on(DetailsActions.processValuesFailedToLoad, (state, {error}) => produce(state, draft => {
+    if(isMissingRoleError(error)) draft.missingRoles = error.body.detail.missing_roles;
   })),
   on(DetailsActions.processDiagramFetched, (state, {processDiagram}) => produce(state, draft => {
     draft.processDiagram = processDiagram;
@@ -49,6 +64,10 @@ const reducer = createReducer(initialState,
   })),
   on(DetailsActions.recentRunFetched, (state, {recentRun}) => produce(state, draft => {
     draft.recentRun = recentRun;
+    draft.missingRoles = undefined;
+  })),
+  on(DetailsActions.recentRunFailedToLoad, (state, {error}) => produce(state, draft => {
+    if(isMissingRoleError(error)) draft.missingRoles = error.body.detail.missing_roles;
   })),
   on(DetailsActions.toggleAllProcessValues, (state, {allProcessValues}) => produce(state, draft => {
     draft.allProcessValues = allProcessValues;

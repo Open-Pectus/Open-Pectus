@@ -460,7 +460,7 @@ export type GetRecentRunErrorLogData = {
 export type GetRecentRunErrorLogResponse = (AggregatedErrorLog);
 
 export type GetRecentRunCsvFileData = {
-    id: string;
+    runId: string;
     xIdentity?: string;
 };
 
