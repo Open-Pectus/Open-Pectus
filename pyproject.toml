@@ -39,7 +39,6 @@ development = [
 include = ["openpectus"]
 exclude = [
     "openpectus/frontend*",
-    "openpectus/test*",
     "openpectus/engine/p1*",
     "openpectus/.flake8*",
     "openpectus/.idea*",
