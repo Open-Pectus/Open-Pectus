@@ -1,7 +1,7 @@
 import logging
 from datetime import UTC, datetime, timedelta, timezone
 from socket import gethostname
-from typing import List, Iterable, Sequence
+from typing import Iterable, Sequence
 
 from openpectus import __version__
 from openpectus.aggregator.data.models import (
@@ -84,7 +84,7 @@ class PlotLogRepository(RepositoryBase):
             .where(PlotLog.run_id == run_id)
         ).all()
 
-    def store_tag_values(self, engine_id: str, run_id: str, tags: List[TagValue]):
+    def store_tag_values(self, engine_id: str, run_id: str, tags: list[TagValue]):
         plot_log_entries = self.get_plot_log_entries(engine_id, run_id)
 
         def map_tag_to_entry_value(tag: TagValue):
@@ -124,8 +124,11 @@ class RecentRunRepository(RepositoryBase):
         recent_run.uod_filename = engine_data.uod_filename
         recent_run.started_date = engine_data.run_data.run_started
         recent_run.completed_date = datetime.now(timezone.utc)
-        recent_run.required_roles = engine_data.required_roles
-        # recent_run.contributers = engine_data.
+        current_contributors = set(recent_run.contributors or [])
+        for user_name in engine_data.contributors:  # append contributers from this 'session'
+            current_contributors.add(user_name)
+        recent_run.contributors = list(current_contributors)  # must assign new instance in json field
+        recent_run.required_roles = list(engine_data.required_roles)
 
         method_and_state = RecentRunMethodAndState()
         method_and_state.run_id = engine_data.run_id

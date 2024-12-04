@@ -313,7 +313,7 @@ class EngineRunner():
             logger.info("Started buffer_messages loop")
             while True:
                 for msg in [
-                    self._message_builder.create_tag_updates_msg(),                    
+                    self._message_builder.create_tag_updates_msg(),
                     self._message_builder.create_method_state_msg(),
                     self._message_builder.create_error_log_msg(),
                 ]:

@@ -78,7 +78,25 @@ Area: 5 cm2""",
         uod.build_commands()
 
         cmd = uod.command_descriptions["Area"]
+        pcode = cmd.get_docstring_pcode()
+        self.assertEqual("# Runs the Area command\nArea: 5 cm2", pcode)
+
+    def test_generate_example_pcode(self):
+        def exec_Area(cmd: UodCommand, number, number_unit):
+            pass
+
+        uod = (create_minimal_builder()
+               .with_tag(ReadingTag("Area", unit="cm2"))
+               .with_command_regex_arguments("Area", RegexNumber(units=["cm2", "dm2"]), exec_Area)
+               ).build()
+
+        uod.system_tags = TagCollection.create_system_tags()
+        uod.validate_configuration()
+        uod.build_commands()
+
+        cmd = uod.command_descriptions["Area"]
         # remove comments
-        pcode_lines = cmd.get_docstring_pcode().splitlines()
-        pcode = "\n".join((line for line in pcode_lines if not line.startswith("#")))
-        self.assertEqual("Area: 5 cm2", pcode)
+        pcode_examples = cmd.generate_pcode_examples()
+        self.assertEqual(2, len(pcode_examples))
+        self.assertEqual("Area: 0.5 cm2", pcode_examples[0])
+        self.assertEqual("Area: 0.5 dm2", pcode_examples[1])

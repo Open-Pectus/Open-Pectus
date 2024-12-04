@@ -10,6 +10,7 @@ from openpectus.engine.uod_builder_api import (
     RegexNumber,
     HardwareLayerBase, Register, RegisterDirection  # special import required by custom hardware, DemoHardware
 )
+from openpectus.lang.exec.tags import format_time_as_clock
 
 
 def create() -> UnitOperationDefinitionBase:
@@ -66,6 +67,15 @@ def create() -> UnitOperationDefinitionBase:
         cmd.context.tags.get("TestPercentage").set_value(number, time())
         cmd.set_complete()
 
+    def set_category(cmd: UodCommand, value: str):
+        """# Set the category tag.
+
+        # This is just an example and it doesn't do anything because the
+        # tag is controlled and constantly updated by the demo hardware.
+        Category: Falling"""
+        cmd.context.tags["Category"].set_value(value, time())
+        cmd.set_complete()
+
     def get_plot_configuration() -> PlotConfiguration:
         return PlotConfiguration(
             color_regions=[
@@ -110,7 +120,7 @@ def create() -> UnitOperationDefinitionBase:
         .with_tag(tags.ReadingTag("FT01", "L/h"))
         .with_tag(tags.ReadingTag("FT02", "L/h"))
         .with_tag(tags.SelectTag("Category", "Rising", unit=None, choices=["Rising", "Falling"]))
-        .with_tag(tags.ReadingTag("Time", unit=None))
+        .with_tag(tags.ReadingTag("Time", unit="s", format_fn=format_time_as_clock))
         .with_tag(tags.Tag("TestInt", value="42"))
         .with_tag(tags.Tag("TestFloat", value=9.87, unit="kg"))
         .with_tag(tags.Tag("TestString", value="test"))
@@ -119,18 +129,19 @@ def create() -> UnitOperationDefinitionBase:
         .with_tag(tags.Tag("TestPercentage", value=34.87, unit="%"))
         .with_command(name="Reset", exec_fn=reset, arg_parse_fn=None)
         .with_command(name="TestInt", exec_fn=test_int)
+        .with_command(name="Category", exec_fn=set_category)
         .with_process_value(tag_name="Run Time")
         .with_process_value(tag_name="FT01")
         .with_process_value_entry(tag_name="TestInt")
         .with_process_value_entry(tag_name="TestFloat", execute_command_name="TestInt")
         .with_process_value_choice(tag_name="TestString", command_options={'A': 'Mark: A', 'B': 'Mark: B'})
+        .with_process_value_choice(tag_name="Category",
+                                   command_options={"Rising": "Category: Rising", "Falling": "Category: Falling"})
         .with_process_value(tag_name="FT02")
-        .with_process_value(tag_name="Category")
         .with_process_value(tag_name="Time")
         .with_process_value_choice(tag_name="Reset", command_options={'Reset': 'Reset'})
         .with_process_value(tag_name="System State")
         .with_process_value(tag_name="CmdWithRegexArgs")
-        .with_process_value(tag_name="TestPercentage")
         .with_command_regex_arguments(
             name="CmdWithRegexArgs",
             arg_parse_regex=RegexNumber(units=['m2', 'dm2']),

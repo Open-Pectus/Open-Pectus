@@ -251,7 +251,7 @@ class FromFrontend:
         self._engine_data_map = engine_data_map
         self.dispatcher = dispatcher
 
-    async def method_saved(self, engine_id: str, method: Mdl.Method) -> bool:
+    async def method_saved(self, engine_id: str, method: Mdl.Method, user_name: str) -> bool:
         try:
             response = await self.dispatcher.rpc_call(engine_id, message=AM.MethodMsg(method=method))
             if isinstance(response, M.ErrorMessage):
@@ -265,10 +265,10 @@ class FromFrontend:
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is not None:
             engine_data.method = method
-
+            engine_data.contributors.add(user_name)
         return True
 
-    async def request_cancel(self, engine_id, line_id: str) -> bool:
+    async def request_cancel(self, engine_id, line_id: str, user_name: str) -> bool:
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is None:
             logger.warning(f"Cannot request cancel, engine {engine_id} not found")
@@ -281,9 +281,10 @@ class FromFrontend:
         except Exception:
             logger.error("Cancel request failed with exception", exc_info=True)
             return False
+        engine_data.contributors.add(user_name)
         return True
 
-    async def request_force(self, engine_id, line_id: str) -> bool:
+    async def request_force(self, engine_id, line_id: str, user_name: str) -> bool:
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is None:
             logger.warning(f"Cannot request force, engine {engine_id} not found")
@@ -296,6 +297,7 @@ class FromFrontend:
         except Exception:
             logger.error("Force request failed with exception", exc_info=True)
             return False
+        engine_data.contributors.add(user_name)
         return True
 
 

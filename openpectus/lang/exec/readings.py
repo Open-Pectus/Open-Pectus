@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, Literal
 import uuid
 from inspect import cleandoc
 
@@ -180,19 +180,16 @@ class ReadingWithChoice(Reading):
 class ReadingCollection(Iterable[Reading]):
     def __init__(self) -> None:
         super().__init__()
-        self.readings: dict[str, Reading] = {}
+        self._readings: list[Reading] = []
 
     def add(self, reading: Reading):
-        self.readings[reading.tag_name] = reading
+        self._readings.append(reading)
 
     def __iter__(self):
-        yield from self.readings.values()
-
-    def __getitem__(self, tag_name: str) -> Reading:
-        return self.readings[tag_name]
+        yield from self._readings
 
     def __len__(self) -> int:
-        return len(self.readings)
+        return len(self._readings)
 
 
 class UodCommandDescription:
@@ -203,6 +200,8 @@ class UodCommandDescription:
         self.docstring: str = ""
         """ Description of the command's purpose, provided by uod author as docstring
         on the exec function. """
+        self.argument_type: Literal["float", "unknown", "none"] = "unknown"
+        """ the type of the argument in case the commands takes a single argument """
         self.argument_valid_units: list[str] = []
         """ Valid argument units if applicable. """
 
@@ -217,3 +216,18 @@ class UodCommandDescription:
 
     def get_docstring_pcode(self) -> str:
         return self.docstring
+
+    def generate_pcode_examples(self) -> list[str]:
+        """ For commands with regex arg parser, generate pcode examples to test the command
+        using combinations of argument values and units.
+        """
+        examples: list[str] = []
+        if self.argument_type == "float":
+            args = [0.5, 10, 32.6]
+            if len(self.argument_valid_units) == 0:
+                for arg in args:
+                    examples.append(f"{self.name}: {arg}")
+            else:
+                for unit in self.argument_valid_units:
+                    examples.append(f"{self.name}: {args[0]} {unit}")
+        return examples

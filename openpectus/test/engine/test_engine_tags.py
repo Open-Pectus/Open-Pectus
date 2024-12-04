@@ -4,11 +4,11 @@ import time
 import unittest
 from typing import Any
 from openpectus.engine.models import EngineCommandEnum
-from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag, format_time_as_clock
+from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 from openpectus.engine.hardware import RegisterDirection
 
 import pint
-from openpectus.lang.exec.tags import SystemTagName, Tag, TagDirection
+from openpectus.lang.exec.tags import SystemTagName, Tag, TagDirection, format_time_as_clock
 from openpectus.lang.exec.uod import (
     UnitOperationDefinitionBase,
     UodCommand,
