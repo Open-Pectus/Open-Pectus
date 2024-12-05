@@ -94,6 +94,16 @@ class ControlStateMsg(EngineMessage):
     control_state: Mdl.ControlState
 
 
+class RunStartedMsg(EngineMessage):
+    run_id: str
+    started_tick: float
+
+
+class RunStoppedMsg(EngineMessage):
+    run_id: str
+    runlog: Mdl.RunLog
+
+
 def print_sequence_range(messages: Sequence[EngineMessage]) -> str:
     """ print message sequence numbers in concise format"""
     if len(messages) == 0:
