@@ -24,10 +24,34 @@ class FromEngine:
         self.publisher = publisher
 
     def register_engine_data(self, engine_data: EngineData):
-        logger.debug(f"Data for engine {engine_data.engine_id} registered")
-        self._engine_data_map[engine_data.engine_id] = engine_data
+        engine_id = engine_data.engine_id
+        logger.debug(f"Data for engine {engine_id} registered")
+        self._engine_data_map[engine_id] = engine_data
+
+        self._try_restore_reconnected_engine_data(engine_data)
+
         asyncio.create_task(self.publisher.publish_process_units_changed())
         asyncio.create_task(self.publisher.publish_control_state_changed(engine_data.engine_id))
+
+    def _try_restore_reconnected_engine_data(self, engine_data: EngineData):
+        engine_id = engine_data.engine_id
+        logger.debug(f"Trying to restore engine data for recent engine: {engine_id}")
+        repo = RecentEngineRepository(database.scoped_session())
+        recent_engine = repo.get_recent_engine_by_engine_id(engine_id)
+        if recent_engine is not None:  # reconnecting an existing engine
+            if recent_engine.run_id is not None:  # that was in an active run when disconnected
+                run_id = recent_engine.run_id
+                logger.debug(f"Applying run_data {run_id=} from recent_engine")
+                if recent_engine.run_started is None:
+                    logger.warning("Recent engine had a run without run_started value. Using now as run_started")
+                    run_started = datetime.now(timezone.utc)
+                else:
+                    run_started = recent_engine.run_started
+                engine_data.run_data = Mdl.RunData.empty(run_id=run_id, run_started=run_started)
+            else:
+                logger.debug("Recent engine data has no active run")
+        else:
+            logger.debug("No recent engine data found")
 
     def engine_connected(self, engine_id: str):
         logger.debug("engine_connected")
@@ -46,6 +70,7 @@ class FromEngine:
             logger.warning("No data to save for engine " + engine_id)
 
     def engine_reconnected(self, msg: EM.ReconnectedMsg):
+        raise NotImplementedError("TODO review this. Some may got to _try_restore_reconnected_engine_data")
         logger.info(f"Engine_reconnected. Processing ReconnectedMsg {msg.ident}")
         engine_id = msg.engine_id
         engine_data = self._engine_data_map.get(engine_id)
@@ -92,11 +117,75 @@ class FromEngine:
         self.tag_values_changed(engine_id, msg.tags)
         logger.info(f"Done processing ReconnectedMsg {msg.ident}")
 
-    def run_started(self):  # to replace run_id_changed guessing
-        raise NotImplementedError()
+    def run_started(self, msg: EM.RunStartedMsg):
+        engine_id = msg.engine_id
+        engine_data = self._engine_data_map.get(engine_id)
+        if engine_data is None:
+            logger.error("No engine data available on run_started for engine " + engine_id)
+            return
+        if engine_data.run_data is None:
+            engine_data.reset_run()
+            engine_data.run_data = Mdl.RunData.empty(
+                run_id=msg.run_id,
+                run_started=datetime.fromtimestamp(msg.started_tick, timezone.utc)
+            )
+        elif engine_data.run_data.run_id == msg.run_id:
+            # be idempotent and just accept this duplicate message
+            logger.warning("Event run_started occurred with same id as the current run. Ignoring")
+        else:
+            _run_id = engine_data.run_data.run_id
+            logger.error(f"Current run_id {_run_id} does not match RunStartedMsg run_id {msg.run_id}")
+            recent_run_repo = RecentRunRepository(database.scoped_session())
+            try:
+                recent_run_repo.store_recent_run(engine_data)
+                logger.info(f"Stopping existing run and store it as recent run {_run_id=}")
+            except Exception:
+                logger.error(f"Failed to persist recent run {_run_id=}")
 
-    def run_stopped(self):
-        raise NotImplementedError()
+        plot_log_repo = PlotLogRepository(database.scoped_session())
+        plot_log_repo.create_plot_log(engine_data, msg.run_id)
+
+        asyncio.create_task(self.publisher.publish_control_state_changed(engine_id))
+        logger.info(f"Run {msg.run_id} started")
+
+    def run_stopped(self, msg: EM.RunStoppedMsg):
+        engine_id = msg.engine_id
+        engine_data = self._engine_data_map.get(engine_id)
+        if engine_data is None:
+            logger.error("No engine data available on run_stopped for engine " + engine_id)
+            return
+        if engine_data.run_data is None:
+            logger.warning("No engine run_data available on run_stopped for engine " + engine_id)
+            return
+
+        recent_run_repo = RecentRunRepository(database.scoped_session())
+        _run_id = engine_data.run_data.run_id
+        if _run_id != msg.run_id:
+            logger.error(
+                "Run_id mismatch in run_stopped. " +
+                f"engine {engine_id}, run_data run_id: {engine_data.run_data.run_id}, message run_id: {_run_id}")
+            logger.warning(f"Saving existing run {_run_id}. No data is available for the other run")
+            try:
+                recent_run_repo.store_recent_run(engine_data)
+                logger.info(f"Stored recent run {_run_id=}")
+            except Exception:
+                logger.error(f"Failed to persist recent run {_run_id=}")
+            engine_data.reset_run()
+        else:
+            engine_data.run_data.runlog = msg.runlog
+            try:
+                recent_run_repo.store_recent_run(engine_data)
+                logger.info(f"Stored recent run {_run_id=}")
+            except Exception:
+                logger.error(f"Failed to persist recent run {_run_id=}")
+
+        # clear current run_data
+        engine_data.reset_run()
+        asyncio.create_task(self.publisher.publish_control_state_changed(engine_id))
+        asyncio.create_task(self.publisher.publish_method_state_changed(engine_id))
+        asyncio.create_task(self.publisher.publish_run_log_changed(engine_id))
+        logger.info(f"Run {msg.run_id} stopped")
+
 
     def uod_info_changed(
             self,
@@ -120,7 +209,6 @@ class FromEngine:
     def tag_values_changed(self, engine_id: str, changed_tag_values: list[Mdl.TagValue]):
         with database.create_scope():
             plot_log_repo = PlotLogRepository(database.scoped_session())
-            recent_run_repo = RecentRunRepository(database.scoped_session())
 
             engine_data = self._engine_data_map.get(engine_id)
             if engine_data is None:
@@ -128,14 +216,11 @@ class FromEngine:
                 return
 
             for changed_tag_value in changed_tag_values:
-                if changed_tag_value.name == SystemTagName.METHOD_STATUS.value:
+                if changed_tag_value.name == SystemTagName.METHOD_STATUS.value and engine_data.run_data is not None:
                     if changed_tag_value.value == MethodStatusEnum.ERROR:
                         engine_data.run_data.interrupted_by_error = True
                     else:
                         engine_data.run_data.interrupted_by_error = False
-
-                if changed_tag_value.name == SystemTagName.RUN_ID.value:
-                    self._run_id_changed(plot_log_repo, recent_run_repo, engine_data, changed_tag_value)
 
                 was_inserted = engine_data.tags_info.upsert(changed_tag_value)
 
@@ -147,18 +232,19 @@ class FromEngine:
                     asyncio.create_task(self.publisher.publish_process_units_changed())
 
                 # if a tag doesn't appear with value until after start and run_id, we need to store the info here
-                if was_inserted and engine_data.run_id is not None:
-                    plot_log_repo.store_new_tag_info(engine_data.engine_id, engine_data.run_id, changed_tag_value)
+                if was_inserted and engine_data.run_data is not None:
+                    plot_log_repo.store_new_tag_info(engine_data.engine_id, engine_data.run_data.run_id, changed_tag_value)
 
             self._persist_tag_values(engine_data, plot_log_repo)
 
-    def _run_id_changed(
+    def __run_id_changed(
             self,
             plot_log_repo: PlotLogRepository,
             recent_run_repo: RecentRunRepository,
             engine_data: EngineData,
             run_id_tag: Mdl.TagValue):
         """ Handles persistance related to start and end of a run """
+        raise NotImplementedError("not needed anymore")
 
         logger.info(f"RunId changed from {engine_data.run_id} to {run_id_tag.value}, Engine: {engine_data.engine_id}")
         if run_id_tag.value is None and engine_data.run_id is None:
@@ -183,12 +269,16 @@ class FromEngine:
             plot_log_repo.create_plot_log(engine_data, str(run_id_tag.value))
 
     def _persist_tag_values(self, engine_data: EngineData, plot_log_repo: PlotLogRepository):
+        if not engine_data.has_run():
+            return
+        assert engine_data.run_data is not None  # would be nice to have this given by the has_run() result
+
         latest_persisted_tick_time = engine_data.run_data.latest_persisted_tick_time
         tag_values = engine_data.tags_info.map.values()
         latest_tag_tick_time = max([tag.tick_time for tag in tag_values]) if len(tag_values) > 0 else 0
         time_threshold_exceeded = latest_persisted_tick_time is None or latest_tag_tick_time - latest_persisted_tick_time > engine_data.data_log_interval_seconds
 
-        if engine_data.run_id is not None and time_threshold_exceeded:
+        if engine_data.run_data.run_id is not None and time_threshold_exceeded:
             tag_values_to_persist = [tag_value.copy() for tag_value in engine_data.tags_info.map.values()
                                      if latest_persisted_tick_time is None
                                      or tag_value.tick_time > latest_persisted_tick_time]
@@ -206,44 +296,53 @@ class FromEngine:
                 tag_value_to_persist.tick_time = highest_tick_time_to_persist
 
             # Note: to store tag values, the run_id is needed
-            plot_log_repo.store_tag_values(engine_data.engine_id, engine_data.run_id, tag_values_to_persist)
+            plot_log_repo.store_tag_values(engine_data.engine_id, engine_data.run_data.run_id, tag_values_to_persist)
             engine_data.run_data.latest_persisted_tick_time = highest_tick_time_to_persist
             engine_data.run_data.latest_tag_time = highest_tick_time_to_persist
 
-    def runlog_changed(self, engine_id: str, runlog: Mdl.RunLog):
-        try:
-            engine_data = self._engine_data_map[engine_id]
-            if engine_data.run_data.runlog != runlog:
-                engine_data.run_data.runlog = runlog
-                asyncio.create_task(self.publisher.publish_run_log_changed(engine_id))
-        except KeyError:
+    def runlog_changed(self, engine_id: str, run_id: str, runlog: Mdl.RunLog):
+        engine_data = self._engine_data_map.get(engine_id)
+        if engine_data is None:
             logger.error(f'No engine registered under id {engine_id} when trying to set run log.')
+            return
+        if engine_data.run_data is None:
+            logger.error(f"No run_data available for engine {engine_id}, can't set runlog")
+            return
+        if engine_data.run_data.run_id is None or engine_data.run_data.run_id != run_id:
+            logger.error(
+                "Run_id mismatch in runlog_changed. " +
+                f"engine {engine_id}, run_data run_id: {engine_data.run_data.run_id}, message run_id: {run_id}")
+            return
+
+        if engine_data.run_data.runlog != runlog:
+            engine_data.run_data.runlog = runlog
+            asyncio.create_task(self.publisher.publish_run_log_changed(engine_id))
 
     def control_state_changed(self, engine_id: str, control_state: Mdl.ControlState):
-        try:
-            engine_data = self._engine_data_map[engine_id]
-            if engine_data.control_state != control_state:
-                engine_data.control_state = control_state
-                asyncio.create_task(self.publisher.publish_control_state_changed(engine_id))
-        except KeyError:
+        engine_data = self._engine_data_map.get(engine_id)
+        if engine_data is None:
             logger.error(f'No engine registered under id {engine_id} when trying to set control state.')
+            return
+        if engine_data.control_state != control_state:
+            engine_data.control_state = control_state
+            asyncio.create_task(self.publisher.publish_control_state_changed(engine_id))
 
     def method_state_changed(self, engine_id: str, method_state: Mdl.MethodState):
-        try:
-            engine_data = self._engine_data_map[engine_id]
-            if engine_data.run_data.method_state != method_state:
-                engine_data.run_data.method_state = method_state
-                asyncio.create_task(self.publisher.publish_method_state_changed(engine_id))
-        except KeyError:
-            logger.error(f'No engine registered under id {engine_id} when trying to set control state.')
+        engine_data = self._engine_data_map.get(engine_id)
+        if engine_data is None:
+            logger.error(f'No engine registered under id {engine_id} when trying to set method state.')
+            return
+        if engine_data.method_state != method_state:
+            engine_data.method_state = method_state
+            asyncio.create_task(self.publisher.publish_method_state_changed(engine_id))
 
     def error_log_changed(self, engine_id: str, error_log: Mdl.ErrorLog):
-        try:
-            engine_data = self._engine_data_map[engine_id]
-            engine_data.run_data.error_log.aggregate_with(error_log)
-            asyncio.create_task(self.publisher.publish_error_log_changed(engine_id))
-        except KeyError:
+        engine_data = self._engine_data_map.get(engine_id)
+        if engine_data is None:
             logger.error(f'No engine registered under id {engine_id} when trying to set error log.')
+            return
+        engine_data.error_log.aggregate_with(error_log)            
+        asyncio.create_task(self.publisher.publish_error_log_changed(engine_id))
 
 
 class FromFrontend:

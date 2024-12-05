@@ -75,6 +75,7 @@ class TagsBufferedMsg(EngineMessage):
 
 class RunLogMsg(EngineMessage):
     id: str
+    run_id: str
     runlog: Mdl.RunLog
 
 

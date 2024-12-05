@@ -78,6 +78,10 @@ class RunLogLine(ProtocolModel):
 class RunLog(ProtocolModel):
     lines: list[RunLogLine]
 
+    @staticmethod
+    def empty() -> RunLog:
+        return RunLog(lines=[])
+
 
 class MethodLine(ProtocolModel):
     id: str
