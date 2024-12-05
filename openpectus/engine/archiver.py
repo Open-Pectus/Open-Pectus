@@ -38,7 +38,7 @@ def get_free_space_mb(dirname):
             ctypes.pointer(free_bytes))
         return free_bytes.value / 1024 / 1024
     else:
-        st = os.statvfs(dirname)  # pyright: ignore [reportAttributeAccessIssue]
+        st = os.statvfs(dirname)
         return st.f_bavail * st.f_frsize / 1024 / 1024
 
 

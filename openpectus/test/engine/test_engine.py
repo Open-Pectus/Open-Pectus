@@ -122,7 +122,6 @@ def create_engine(uod: UnitOperationDefinitionBase | None = None) -> Engine:
     if uod is None:
         uod = create_test_uod()
     e = Engine(uod)
-    e._configure()
     return e
 
 
@@ -145,7 +144,6 @@ class TestEngineSetup(unittest.TestCase):
     def test_configure_uod(self):
         uod = create_test_uod()
         e = Engine(uod)
-        e._configure()
 
         self.assertTrue(len(uod.command_factories) > 0)
         self.assertTrue(len(uod.instrument) > 0)
