@@ -51,6 +51,7 @@ class UodInfoMsg(EngineMessage):
     plot_configuration: Mdl.PlotConfiguration
     hardware_str: str
     required_roles: set[str]
+    data_log_interval_seconds: float
 
 
 class ReconnectedMsg(EngineMessage):

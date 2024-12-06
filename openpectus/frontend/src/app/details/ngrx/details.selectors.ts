@@ -18,4 +18,5 @@ export class DetailsSelectors {
     (processUnits, unitId) => {
       return processUnits.find(processUnit => processUnit.id.toString() === unitId);
     });
+  static missingRoles = createSelector(this.selectFeature, state => state.missingRoles);
 }

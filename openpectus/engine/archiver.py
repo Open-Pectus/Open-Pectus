@@ -16,8 +16,6 @@ logger = logging.getLogger(__name__)
 LOW_DISKSPACE_MB = 50
 VERY_LOW_DISKSPACE_MB = 5
 
-THRESHOLD_SECONDS = 5
-
 # file open defaults
 encoding = 'utf-8'
 
@@ -40,7 +38,7 @@ def get_free_space_mb(dirname):
             ctypes.pointer(free_bytes))
         return free_bytes.value / 1024 / 1024
     else:
-        st = os.statvfs(dirname)
+        st = os.statvfs(dirname)  # pyright: ignore [reportAttributeAccessIssue]
         return st.f_bavail * st.f_frsize / 1024 / 1024
 
 
@@ -48,12 +46,13 @@ RunlogAccessor = Callable[[], RunLog]
 
 
 class ArchiverTag(Tag):
-    def __init__(self, runlog_accessor: RunlogAccessor) -> None:
+    def __init__(self, runlog_accessor: RunlogAccessor, data_log_interval_seconds: float) -> None:
         super().__init__("Archive filename")
         self.runlog_accessor = runlog_accessor
         path = os.path.dirname(os.path.realpath(__file__))
         self.data_path = os.path.join(path, "data")
         self.last_save_tick: float = 0.0
+        self.data_log_interval_seconds = data_log_interval_seconds
         self.tags = TagCollection()
         self.file_path: str | None = None
         self.file_ready = False
@@ -137,7 +136,7 @@ class ArchiverTag(Tag):
 
     def on_tick(self, tick_time: float, increment_time: float):
         now = time.time()
-        is_row_due = self.last_save_tick == 0 or self.last_save_tick + THRESHOLD_SECONDS < now
+        is_row_due = self.last_save_tick == 0 or self.last_save_tick + self.data_log_interval_seconds < now
         if is_row_due:
             self.write_tags_row()
             self.last_save_tick = now
