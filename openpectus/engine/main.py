@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from argparse import ArgumentParser, BooleanOptionalAction
-import importlib
+import importlib.util
 from logging.handlers import RotatingFileHandler
 from os import path
 import pathlib
@@ -148,7 +148,9 @@ def create_uod(uod_filepath: str) -> UnitOperationDefinitionBase:
 
     try:
         spec = importlib.util.spec_from_file_location('uod', uod_filepath)
+        assert spec is not None
         uod_module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
         spec.loader.exec_module(uod_module)
         logger.info(f"Imported uod from path '{uod_module.__file__}'")
     except Exception as ex:
