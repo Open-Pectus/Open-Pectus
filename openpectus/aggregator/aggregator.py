@@ -36,8 +36,9 @@ class FromEngine:
     def _try_restore_reconnected_engine_data(self, engine_data: EngineData):
         engine_id = engine_data.engine_id
         logger.debug(f"Trying to restore engine data for recent engine: {engine_id}")
-        repo = RecentEngineRepository(database.scoped_session())
-        recent_engine = repo.get_recent_engine_by_engine_id(engine_id)
+        with database.create_scope():
+            repo = RecentEngineRepository(database.scoped_session())
+            recent_engine = repo.get_recent_engine_by_engine_id(engine_id)
         if recent_engine is not None:  # reconnecting an existing engine
             if recent_engine.run_id is not None:  # that was in an active run when disconnected
                 run_id = recent_engine.run_id
@@ -120,30 +121,31 @@ class FromEngine:
     def run_started(self, msg: EM.RunStartedMsg):
         engine_id = msg.engine_id
         engine_data = self._engine_data_map.get(engine_id)
-        if engine_data is None:
-            logger.error("No engine data available on run_started for engine " + engine_id)
-            return
-        if engine_data.run_data is None:
-            engine_data.reset_run()
-            engine_data.run_data = Mdl.RunData.empty(
-                run_id=msg.run_id,
-                run_started=datetime.fromtimestamp(msg.started_tick, timezone.utc)
-            )
-        elif engine_data.run_data.run_id == msg.run_id:
-            # be idempotent and just accept this duplicate message
-            logger.warning("Event run_started occurred with same id as the current run. Ignoring")
-        else:
-            _run_id = engine_data.run_data.run_id
-            logger.error(f"Current run_id {_run_id} does not match RunStartedMsg run_id {msg.run_id}")
-            recent_run_repo = RecentRunRepository(database.scoped_session())
-            try:
-                recent_run_repo.store_recent_run(engine_data)
-                logger.info(f"Stopping existing run and store it as recent run {_run_id=}")
-            except Exception:
-                logger.error(f"Failed to persist recent run {_run_id=}")
+        with database.create_scope():
+            if engine_data is None:
+                logger.error("No engine data available on run_started for engine " + engine_id)
+                return
+            if engine_data.run_data is None:
+                engine_data.reset_run()
+                engine_data.run_data = Mdl.RunData.empty(
+                    run_id=msg.run_id,
+                    run_started=datetime.fromtimestamp(msg.started_tick, timezone.utc)
+                )
+            elif engine_data.run_data.run_id == msg.run_id:
+                # be idempotent and just accept this duplicate message
+                logger.warning("Event run_started occurred with same id as the current run. Ignoring")
+            else:
+                _run_id = engine_data.run_data.run_id
+                logger.error(f"Current run_id {_run_id} does not match RunStartedMsg run_id {msg.run_id}")
+                recent_run_repo = RecentRunRepository(database.scoped_session())
+                try:
+                    recent_run_repo.store_recent_run(engine_data)
+                    logger.info(f"Stopping existing run and store it as recent run {_run_id=}")
+                except Exception:
+                    logger.error(f"Failed to persist recent run {_run_id=}", exc_info=True)
 
-        plot_log_repo = PlotLogRepository(database.scoped_session())
-        plot_log_repo.create_plot_log(engine_data, msg.run_id)
+            plot_log_repo = PlotLogRepository(database.scoped_session())
+            plot_log_repo.create_plot_log(engine_data, msg.run_id)
 
         asyncio.create_task(self.publisher.publish_control_state_changed(engine_id))
         logger.info(f"Run {msg.run_id} started")
@@ -158,26 +160,27 @@ class FromEngine:
             logger.warning("No engine run_data available on run_stopped for engine " + engine_id)
             return
 
-        recent_run_repo = RecentRunRepository(database.scoped_session())
-        _run_id = engine_data.run_data.run_id
-        if _run_id != msg.run_id:
-            logger.error(
-                "Run_id mismatch in run_stopped. " +
-                f"engine {engine_id}, run_data run_id: {engine_data.run_data.run_id}, message run_id: {_run_id}")
-            logger.warning(f"Saving existing run {_run_id}. No data is available for the other run")
-            try:
-                recent_run_repo.store_recent_run(engine_data)
-                logger.info(f"Stored recent run {_run_id=}")
-            except Exception:
-                logger.error(f"Failed to persist recent run {_run_id=}")
-            engine_data.reset_run()
-        else:
-            engine_data.run_data.runlog = msg.runlog
-            try:
-                recent_run_repo.store_recent_run(engine_data)
-                logger.info(f"Stored recent run {_run_id=}")
-            except Exception:
-                logger.error(f"Failed to persist recent run {_run_id=}")
+        with database.create_scope():
+            recent_run_repo = RecentRunRepository(database.scoped_session())
+            _run_id = engine_data.run_data.run_id
+            if _run_id != msg.run_id:
+                logger.error(
+                    "Run_id mismatch in run_stopped. " +
+                    f"engine {engine_id}, run_data run_id: {engine_data.run_data.run_id}, message run_id: {_run_id}")
+                logger.warning(f"Saving existing run {_run_id}. No data is available for the other run")
+                try:
+                    recent_run_repo.store_recent_run(engine_data)
+                    logger.info(f"Stored recent run {_run_id=}")
+                except Exception:
+                    logger.error(f"Failed to persist recent run {_run_id=}")
+                engine_data.reset_run()
+            else:
+                engine_data.run_data.runlog = msg.runlog
+                try:
+                    recent_run_repo.store_recent_run(engine_data)
+                    logger.info(f"Stored recent run {_run_id=}")
+                except Exception:
+                    logger.error(f"Failed to persist recent run {_run_id=}")
 
         # clear current run_data
         engine_data.reset_run()
