@@ -8,7 +8,6 @@ import csv
 from typing import Callable
 
 from openpectus.lang.exec.runlog import RunLog
-from openpectus.lang.exec.tag_lifetime import TagContext
 from openpectus.lang.exec.tags import Tag, TagCollection
 
 logger = logging.getLogger(__name__)
@@ -46,9 +45,10 @@ RunlogAccessor = Callable[[], RunLog]
 
 
 class ArchiverTag(Tag):
-    def __init__(self, runlog_accessor: RunlogAccessor, data_log_interval_seconds: float) -> None:
+    def __init__(self, runlog_accessor: RunlogAccessor, tags: TagCollection, data_log_interval_seconds: float) -> None:
         super().__init__("Archive filename")
         self.runlog_accessor = runlog_accessor
+        self.tags = tags
         path = os.path.dirname(os.path.realpath(__file__))
         self.data_path = os.path.join(path, "data")
         self.last_save_tick: float = 0.0
@@ -121,8 +121,7 @@ class ArchiverTag(Tag):
                 end = datetime.fromtimestamp(x.end, UTC) if x.end is not None else ""
                 writer.writerow([x.name, start, end])
 
-    def on_start(self, context: TagContext, run_id: str):
-        self.tags = [elm for elm in context.elements if isinstance(elm, Tag)]
+    def on_start(self, run_id: str):
         tick_time = time.time()
         date_part = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         filename = "archiver-" + date_part + ".txt"

@@ -53,7 +53,7 @@ class StartEngineCommand(InternalEngineCommand):
             e._system_tags[SystemTagName.BLOCK_TIME].set_value(0.0, e._tick_time)
             e.block_times.clear()  # kinda hackish, tag should be self-contained
 
-            e.tag_context.emit_on_start(run_id)
+            e.emitter.emit_on_start(run_id)
 
 
 class PauseEngineCommand(InternalEngineCommand):
@@ -200,7 +200,7 @@ class StopEngineCommand(InternalEngineCommand):
             e._runstate_stopping = False
             e._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.OK, e._tick_time)
 
-            e.tag_context.emit_on_stop()
+            e.emitter.emit_on_stop()
 
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Stopped, e._tick_time)
             e.clear_run_id()
@@ -269,7 +269,7 @@ class RestartEngineCommand(InternalEngineCommand):
             e._runstate_stopping = False
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Stopped, e._tick_time)
 
-            e.tag_context.emit_on_stop()
+            e.emitter.emit_on_stop()
 
             e.clear_run_id()
             e._stop_interpreter()
@@ -287,7 +287,7 @@ class RestartEngineCommand(InternalEngineCommand):
             e.block_times.clear()  # kinda hackish, tag should be self-contained
 
             run_id = e.set_run_id()
-            e.tag_context.emit_on_start(run_id)
+            e.emitter.emit_on_start(run_id)
 
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
             logger.info("Restarting engine complete")

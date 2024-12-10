@@ -4,7 +4,7 @@ from enum import StrEnum, auto
 import time
 from typing import Any, Callable, Iterable, Set
 
-from openpectus.lang.exec.tag_lifetime import TagLifetime
+from openpectus.lang.exec.events import EventListener
 from openpectus.lang.exec.units import convert_value_to_unit, is_supported_unit
 
 
@@ -112,7 +112,7 @@ class Unset():
     pass
 
 
-class Tag(ChangeSubject, TagLifetime):
+class Tag(ChangeSubject, EventListener):
     """ Base class for tags. Most tags do not need their own class but can just use this class.
 
     Supports change tracking which is used by engine to detect changes between reads of hardware values.

@@ -3,7 +3,7 @@ import itertools
 import logging
 import uuid
 from queue import Empty, Queue
-from typing import Iterable, List, Literal, Set
+from typing import Iterable, List, Set
 from uuid import UUID
 from openpectus.engine.internal_commands import (
     create_internal_command,
@@ -22,7 +22,7 @@ from openpectus.lang.exec.errors import (
 )
 from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext
 from openpectus.lang.exec.runlog import RuntimeInfo, RunLog, RuntimeRecord
-from openpectus.lang.exec.tag_lifetime import TagContext
+from openpectus.lang.exec.events import EventEmitter
 from openpectus.lang.exec.tags import (
     Tag,
     TagCollection,
@@ -108,7 +108,7 @@ class Engine(InterpreterContext):
         # tag_lifetime.on_stop event is emitted just before resetting the interpreter and runlog (and
         # not after).
         if enable_archiver:
-            archiver = ArchiverTag(lambda : self.runtimeinfo.get_runlog(), self.uod.data_log_interval_seconds)
+            archiver = ArchiverTag(lambda : self.runtimeinfo.get_runlog(), self.tags, self.uod.data_log_interval_seconds)
             self._system_tags.add(archiver)
 
         self.uod.system_tags = self._system_tags
@@ -165,7 +165,7 @@ class Engine(InterpreterContext):
         self.uod.tags.add_listener(self._uod_listener)
         self._system_tags.add_listener(self._system_listener)
         self._tags = self._system_tags.merge_with(self.uod.tags)
-        self._tag_context = TagContext(self._tags)
+        self._emitter = EventEmitter(self._tags)
         self._tick_timer.set_tick_fn(self.tick)
 
 
@@ -180,8 +180,8 @@ class Engine(InterpreterContext):
         return self._tags
 
     @property
-    def lifetime(self) -> TagContext:
-        return self.tag_context
+    def emitter(self) -> EventEmitter:
+        return self._emitter
 
     @property
     def base_unit_provider(self) -> BaseUnitProvider:
@@ -193,9 +193,6 @@ class Engine(InterpreterContext):
         return self._interpreter
 
     @property
-    def tag_context(self) -> TagContext:
-        return self._tag_context
-    @property
     def runtimeinfo(self) -> RuntimeInfo:
         return self.interpreter.runtimeinfo
 
@@ -204,7 +201,7 @@ class Engine(InterpreterContext):
         return self._method
 
     def cleanup(self):
-        self.tag_context.emit_on_engine_shutdown()
+        self.emitter.emit_on_engine_shutdown()
         dispose_command_map()
 
     def get_runlog(self) -> RunLog:
@@ -227,7 +224,7 @@ class Engine(InterpreterContext):
         if not skip_timer_start:
             self._tick_timer.start()
 
-        self.tag_context.emit_on_engine_configured()
+        self.emitter.emit_on_engine_configured()
 
         # On engine start, write safe output values to hardware to bring hw to a known state
         self._apply_safe_state()
@@ -360,7 +357,7 @@ class Engine(InterpreterContext):
         self._system_tags[SystemTagName.BLOCK_TIME].set_value(self.block_times[block_name], self._tick_time)
 
         # Execute the tick lifetime hook on tags
-        self.tag_context.emit_on_tick(tick_time, increment_time)
+        self.emitter.emit_on_tick(tick_time, increment_time)
 
     def execute_commands(self):
         done = False

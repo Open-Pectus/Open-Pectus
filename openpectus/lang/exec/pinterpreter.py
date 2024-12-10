@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Generator, Iterable
 from uuid import UUID
 
-from openpectus.lang.exec.tag_lifetime import TagContext
+from openpectus.lang.exec.events import EventEmitter
 import openpectus.lang.exec.units as units
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.commands import InterpreterCommandEnum
@@ -139,7 +139,7 @@ class InterpreterContext():
         raise NotImplementedError()
 
     @property
-    def lifetime(self) -> TagContext:
+    def emitter(self) -> EventEmitter:
         raise NotImplementedError()
 
     @property
@@ -410,7 +410,7 @@ class PInterpreter(PNodeVisitor):
         self.stack.push(ar)
         yield from self._visit_children(node.children)
         # TODO consider awaiting uod command completion before emit_on_method_end
-        self.context.lifetime.emit_on_method_end()
+        self.context.emitter.emit_on_method_end()
         self.stack.pop()
 
     def visit_PBlank(self, node: PBlank):
@@ -444,7 +444,7 @@ class PInterpreter(PNodeVisitor):
         ar = ActivationRecord(node, self._tick_time)
         self.stack.push(ar)
         self.context.tags[SystemTagName.BLOCK].set_value(node.name, self._tick_number)
-        self.context.lifetime.emit_on_block_start(node.name, self._tick_number)
+        self.context.emitter.emit_on_block_start(node.name, self._tick_number)
         logger.debug(f"Block Tag set to {node.name}")
 
         yield  # comment if we dont want block to always consume a tick
@@ -477,12 +477,12 @@ class PInterpreter(PNodeVisitor):
             if ar.artype == ARType.BLOCK:
                 assert isinstance(ar.owner, PBlock)
                 self.context.tags[SystemTagName.BLOCK].set_value(ar.owner.name, self._tick_number)
-                self.context.lifetime.emit_on_block_end(node.name, ar.owner.name, self._tick_number)
+                self.context.emitter.emit_on_block_end(node.name, ar.owner.name, self._tick_number)
                 logger.debug(f"Block Tag popped to {ar.owner.name}")
                 block_restored = True
         if not block_restored:
             self.context.tags[SystemTagName.BLOCK].set_value(None, self._tick_number)
-            self.context.lifetime.emit_on_block_end(node.name, "", self._tick_number)
+            self.context.emitter.emit_on_block_end(node.name, "", self._tick_number)
             logger.debug(f"Block Tag cleared from {node.name}")
 
 
