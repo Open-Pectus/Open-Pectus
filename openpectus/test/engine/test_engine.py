@@ -1436,7 +1436,7 @@ class CalculatedLinearTag(Tag):
         super().__init__(name, value=0.0, unit=unit, direction=TagDirection.NA)
         self.slope = slope
 
-    def on_start(self, context: TagContext):
+    def on_start(self, context: TagContext, run_id: str):
         self.value = time.time() * self.slope
 
     def on_tick(self, tick_time: float, increment_time: float):

@@ -250,7 +250,7 @@ class EngineTestInstance(TagLifetime):
     def on_engine_configured(self, context: TagContext):
         self._last_event = None
 
-    def on_start(self, context: TagContext):
+    def on_start(self, context: TagContext, run_id: str):
         self._last_event = "start"
 
     def on_block_start(self, block_info: BlockInfo):

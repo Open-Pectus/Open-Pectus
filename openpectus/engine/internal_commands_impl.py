@@ -43,7 +43,7 @@ class StartEngineCommand(InternalEngineCommand):
             e._runstate_started_time = time.time()
             e._runstate_paused = False
             e._runstate_holding = False
-            e._set_run_id("new")
+            run_id = e.set_run_id()
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
             e._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.OK, e._tick_time)
             e._system_tags[SystemTagName.RUN_TIME].set_value(0.0, e._tick_time)
@@ -53,7 +53,7 @@ class StartEngineCommand(InternalEngineCommand):
             e._system_tags[SystemTagName.BLOCK_TIME].set_value(0.0, e._tick_time)
             e.block_times.clear()  # kinda hackish, tag should be self-contained
 
-            e.tag_context.emit_on_start()
+            e.tag_context.emit_on_start(run_id)
 
 
 class PauseEngineCommand(InternalEngineCommand):
@@ -203,7 +203,7 @@ class StopEngineCommand(InternalEngineCommand):
             e.tag_context.emit_on_stop()
 
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Stopped, e._tick_time)
-            e._set_run_id("empty")
+            e.clear_run_id()
             e._stop_interpreter()
 
 
@@ -271,7 +271,7 @@ class RestartEngineCommand(InternalEngineCommand):
 
             e.tag_context.emit_on_stop()
 
-            e._set_run_id("empty")
+            e.clear_run_id()
             e._stop_interpreter()
             logger.info("Restarting engine - engine stopped")
 
@@ -286,9 +286,9 @@ class RestartEngineCommand(InternalEngineCommand):
             e._system_tags[SystemTagName.BLOCK_TIME].set_value(0.0, e._tick_time)
             e.block_times.clear()  # kinda hackish, tag should be self-contained
 
-            e.tag_context.emit_on_start()
+            run_id = e.set_run_id()
+            e.tag_context.emit_on_start(run_id)
 
-            e._set_run_id("new")
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
             logger.info("Restarting engine complete")
 

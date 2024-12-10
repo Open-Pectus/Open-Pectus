@@ -125,6 +125,7 @@ class EngineMessageBuilder():
         runlog = self.engine.runtimeinfo.get_runlog()
         return EM.RunLogMsg(
             id=runlog.id,
+            run_id="TODO", # TODO take this as method argument
             runlog=Mdl.RunLog(lines=list(map(to_line, runlog.items)))
         )
 

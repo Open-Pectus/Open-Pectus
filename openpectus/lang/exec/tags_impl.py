@@ -75,7 +75,7 @@ class AccumulatorTag(Tag):
         self.value = 0.0
         assert self.v0 is not None
 
-    def on_start(self, context: TagContext):
+    def on_start(self, context: TagContext, run_id: str):
         self.reset()
 
     def on_tick(self, tick_time: float, increment_time: float):
@@ -100,9 +100,9 @@ class AccumulatorBlockTag(Tag):
         self.value = 0.0
         self.unit = self.totalizer.unit
 
-    def on_start(self, context: TagContext):
+    def on_start(self, context: TagContext, run_id: str):
         self.context = context
-        self.cur_accumulator.on_start(context)
+        self.cur_accumulator.on_start(context, run_id)
 
     def on_tick(self, tick_time: float, increment_time: float):
         # tick all accumulators in scope to update block values
@@ -118,7 +118,8 @@ class AccumulatorBlockTag(Tag):
         self.accumulator_stack.append(self.cur_accumulator)
 
         assert self.context is not None
-        self.cur_accumulator.on_start(self.context)
+        assert self.run_id is not None
+        self.cur_accumulator.on_start(self.context, self.run_id)
 
     def on_block_end(self, block_info: BlockInfo, new_block_info: BlockInfo | None):
         if len(self.accumulator_stack) == 0:
@@ -140,7 +141,7 @@ class AccumulatedColumnVolume(Tag):
         self.value = 0.0
         assert self.v0 is not None
 
-    def on_start(self, context: TagContext):
+    def on_start(self, context: TagContext, run_id: str):
         self.reset()
 
     def on_tick(self, tick_time: float, increment_time: float):

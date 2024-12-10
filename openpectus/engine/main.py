@@ -235,6 +235,7 @@ def run_example_commands(uod: UnitOperationDefinitionBase):
                 runner = EngineTestRunner(uod_factory=lambda: uod, pcode=example)
                 with runner.run() as instance:
                     instance.start()
+                    # wait up to 1 minute, that oughta be enought for everybody
                     instance.run_until_event("method_end", max_ticks=10*60)
                     logger.debug(instance.get_runtime_table())
                     logger.debug(f"Command '{desc.name}' executed successfully")

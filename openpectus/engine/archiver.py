@@ -121,7 +121,7 @@ class ArchiverTag(Tag):
                 end = datetime.fromtimestamp(x.end, UTC) if x.end is not None else ""
                 writer.writerow([x.name, start, end])
 
-    def on_start(self, context: TagContext):
+    def on_start(self, context: TagContext, run_id: str):
         self.tags = [elm for elm in context.elements if isinstance(elm, Tag)]
         tick_time = time.time()
         date_part = datetime.now().strftime("%Y-%m-%d_%H%M%S")

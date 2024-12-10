@@ -478,11 +478,14 @@ class Engine(InterpreterContext):
         else:
             logger.error(f"Runtime record is None for command {cmd_request}, this should not occur")
 
-    def _set_run_id(self, op: Literal["new", "empty"]):
-        if op == "new":
-            self._system_tags[SystemTagName.RUN_ID].set_value(str(uuid.uuid4()), self._tick_time)
-        elif op == "empty":
-            self._system_tags[SystemTagName.RUN_ID].set_value(None, self._tick_time)
+    def set_run_id(self) -> str:
+        """ Creates a new run_id, sets the Run Id tag to it and returns it. """
+        run_id = str(uuid.uuid4())
+        self._system_tags[SystemTagName.RUN_ID].set_value(run_id, self._tick_time)
+        return run_id
+
+    def clear_run_id(self):
+        self._system_tags[SystemTagName.RUN_ID].set_value(None, self._tick_time)
 
     def _stop_interpreter(self):
         self._interpreter.stop()

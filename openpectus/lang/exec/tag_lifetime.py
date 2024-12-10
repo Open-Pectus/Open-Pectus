@@ -25,10 +25,10 @@ class TagContext():
             except Exception:
                 logger.error(f"on_engine_configured failed for element '{str(element)}'", exc_info=True)
 
-    def emit_on_start(self):
+    def emit_on_start(self, run_id: str):
         for element in self.elements:
             try:
-                element.on_start(self)
+                element.on_start(self, run_id)
             except Exception:
                 logger.error(f"on_engine_start failed for element '{str(element)}'", exc_info=True)
 
@@ -79,15 +79,17 @@ class TagLifetime():
     """ Defines the lifetime events that are available for tag implementations.
         The events are emitted by the Engine to both system and uod tags.
     """
+    def __init__(self) -> None:
+        self.run_id: str | None = None
 
     def on_engine_configured(self, context: TagContext):
         """ Invoked once on engine startup, after configuration and after
         the connection to hardware has been established. """
         pass
 
-    def on_start(self, context: TagContext):
+    def on_start(self, context: TagContext, run_id: str):
         """ Is invoked by the Start command when method is started. """
-        pass
+        self.run_id = run_id
 
     def on_block_start(self, block_info: BlockInfo):
         """ Invoked just after a new block is started, before on_tick,
@@ -109,15 +111,15 @@ class TagLifetime():
 
     def on_method_end(self):
         """ Is invoked when method interpretation is complete. """
-        pass
+        self.run_id = None
 
     def on_stop(self):
         """ Is invoked by the Stop command when method is stopped. """
-        pass
+        self.run_id = None
 
     def on_engine_shutdown(self):
         """ Invoked once when engine shuts down"""
-        pass
+        self.run_id = None
 
 
 @dataclass(frozen=True)
