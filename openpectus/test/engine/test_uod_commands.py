@@ -100,3 +100,22 @@ Area: 5 cm2""",
         self.assertEqual(2, len(pcode_examples))
         self.assertEqual("Area: 0.5 cm2", pcode_examples[0])
         self.assertEqual("Area: 0.5 dm2", pcode_examples[1])
+
+    def test_generate_example_pcode_w_unit(self):
+        def exec_Vel(cmd: UodCommand, number, number_unit):
+            pass
+
+        uod = (create_minimal_builder()
+               .with_tag(ReadingTag("Flow", unit="L/min"))
+               .with_command_regex_arguments("Flow", RegexNumber(units=["L/h", "L/min"]), exec_Vel)
+               ).build()
+
+        uod.system_tags = TagCollection.create_system_tags()
+        uod.validate_configuration()
+        uod.build_commands()
+
+        cmd = uod.command_descriptions["Flow"]
+        pcode_examples = cmd.generate_pcode_examples()
+        self.assertEqual(2, len(pcode_examples))
+        self.assertEqual("Flow: 0.5 L/h", pcode_examples[0])
+        self.assertEqual("Flow: 0.5 L/min", pcode_examples[1])
