@@ -878,7 +878,8 @@ class RegexNamedArgumentParser():
             return []
         start = self.regex.index("<number_unit>") + len("<number_unit>")
         end = self.regex.index(")", start)
-        result = self.regex[start: end].split("|")
+        # Undo escaping of slash that might have been performed
+        result = [unit.replace(r'\/', '/') for unit in self.regex[start: end].split("|")]
         return result
 
     @staticmethod
