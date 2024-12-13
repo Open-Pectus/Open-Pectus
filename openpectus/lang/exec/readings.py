@@ -1,6 +1,7 @@
 from typing import Iterable, Literal
 import uuid
 from inspect import cleandoc
+from itertools import combinations
 
 from openpectus.engine.models import EntryDataType
 from openpectus.lang.exec.tags import Tag, TagCollection
@@ -204,6 +205,10 @@ class UodCommandDescription:
         """ the type of the argument in case the commands takes a single argument """
         self.argument_valid_units: list[str] = []
         """ Valid argument units if applicable. """
+        self.argument_exclusive_options: list[str] = []
+        """ Exclusive options if applicable. """
+        self.argument_additive_options: list[str] = []
+        """ Additive options if applicable. """
 
     def as_command_info(self) -> Mdl.CommandInfo:
         return Mdl.CommandInfo(
@@ -230,4 +235,14 @@ class UodCommandDescription:
             else:
                 for unit in self.argument_valid_units:
                     examples.append(f"{self.name}: {args[0]} {unit}")
+        else:
+            # Create examples for all exclusive options
+            for arg in self.argument_exclusive_options:
+                examples.append(f"{self.name}: {arg}")
+            # Create examples of all combinations of all possible lengths of additive options
+            if len(self.argument_additive_options):
+                for r in range(1, len(self.argument_additive_options)+1):
+                    for args in combinations(self.argument_additive_options, r):
+                        arg = "+".join(args)
+                        examples.append(f"{self.name}: {arg}")
         return examples

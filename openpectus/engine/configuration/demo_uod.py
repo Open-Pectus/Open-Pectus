@@ -7,7 +7,7 @@ from openpectus.engine.uod_builder_api import (
     as_float,
     tags,
     PlotConfiguration, SubPlot, PlotAxis, PlotColorRegion,
-    RegexNumber,
+    RegexNumber, RegexCategorical,
     HardwareLayerBase, Register, RegisterDirection  # special import required by custom hardware, DemoHardware
 )
 from openpectus.lang.exec.tags import format_time_as_clock
@@ -58,6 +58,14 @@ def create() -> UnitOperationDefinitionBase:
         print(f"cmd_regex executing with number: {number} and number_unit: {number_unit}")
         assert number_unit is not None
         cmd.context.tags.get("CmdWithRegexArgs").set_value_and_unit(float(number), number_unit, time())
+        cmd.set_complete()
+
+    def cmd_regex_categorical(cmd: UodCommand, option: str):
+        """# Set the TestCategorical tag value
+        TestCategorical: A
+        """
+        print(f"cmd_regex_categorical executing with option: {option}")
+        cmd.context.tags.get("TestCategorical").set_value(option, time())
         cmd.set_complete()
 
     def test_percentage(cmd: UodCommand, number, number_unit):
@@ -124,6 +132,7 @@ def create() -> UnitOperationDefinitionBase:
         .with_tag(tags.Tag("TestInt", value="42"))
         .with_tag(tags.Tag("TestFloat", value=9.87, unit="kg"))
         .with_tag(tags.Tag("TestString", value="test"))
+        .with_tag(tags.Tag("TestCategorical", value=""))
         .with_tag(tags.SelectTag("Reset", value="N/A", unit=None, choices=['Reset', "N/A"]))
         .with_tag(tags.Tag("CmdWithRegexArgs", value=34.87, unit="dm2"))
         .with_tag(tags.Tag("TestPercentage", value=34.87, unit="%"))
@@ -150,6 +159,11 @@ def create() -> UnitOperationDefinitionBase:
             name="TestPercentage",
             arg_parse_regex=RegexNumber(units=['%']),
             exec_fn=test_percentage)
+        .with_command_regex_arguments(
+            name="TestCategorical",
+            arg_parse_regex=RegexCategorical(exclusive_options=["A", "B"],
+                                             additive_options=["1", "2", "3"]),
+            exec_fn=cmd_regex_categorical)
         .with_process_value_entry(tag_name="TestPercentage")
 
         .with_plot_configuration(get_plot_configuration())
