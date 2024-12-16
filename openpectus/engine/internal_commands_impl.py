@@ -57,7 +57,7 @@ class StartEngineCommand(InternalEngineCommand):
 
 
 class PauseEngineCommand(InternalEngineCommand):
-    """ Pause execution of commands and time. Put output tag into safe state.
+    """ Pause execution of commands and time. Put output tags into safe state.
 
     See also Hold and Wait.
     """
