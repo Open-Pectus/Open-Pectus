@@ -108,7 +108,10 @@ class Engine(InterpreterContext):
         # tag_lifetime.on_stop event is emitted just before resetting the interpreter and runlog (and
         # not after).
         if enable_archiver:
-            archiver = ArchiverTag(lambda : self.runtimeinfo.get_runlog(), self.tags, self.uod.data_log_interval_seconds)
+            archiver = ArchiverTag(
+                lambda : self.runtimeinfo.get_runlog(),
+                lambda : self.tags,
+                self.uod.data_log_interval_seconds)
             self._system_tags.add(archiver)
 
         self.uod.system_tags = self._system_tags

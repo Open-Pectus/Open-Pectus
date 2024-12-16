@@ -79,7 +79,7 @@ class AccumulatorTag(Tag):
         self.reset()
 
     def on_tick(self, tick_time: float, increment_time: float):
-        assert self.v0 is not None
+        assert self.v0 is not None, f"Error in aggregator tag '{self.name}', v0 was not set."
         self.value = self.totalizer.as_float() - self.v0
 
 
@@ -115,7 +115,7 @@ class AccumulatorBlockTag(Tag):
         self.cur_accumulator = AccumulatorTag(self.cur_block.key, self.totalizer)
         self.accumulator_stack.append(self.cur_accumulator)
 
-        assert self.run_id is not None
+        assert self.run_id is not None, f"Error in AccumulatorBlockTag tag '{self.name}', run_id not set in on_block_start."
         self.cur_accumulator.on_start(self.run_id)
 
     def on_block_end(self, block_info: BlockInfo, new_block_info: BlockInfo | None):

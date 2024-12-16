@@ -54,15 +54,6 @@ class UodInfoMsg(EngineMessage):
     data_log_interval_seconds: float
 
 
-class ReconnectedMsg(EngineMessage):
-    run_id: str | None
-    created_tick: float
-    run_started_tick: float | None
-    tags: list[Mdl.TagValue] = []
-    method: Mdl.Method
-    sequence_number = -3
-
-
 class TagsUpdatedMsg(EngineMessage):
     tags: list[Mdl.TagValue] = []
 

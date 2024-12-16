@@ -50,9 +50,9 @@ class FromEngine:
                     run_started = recent_engine.run_started
                 engine_data.run_data = Mdl.RunData.empty(run_id=run_id, run_started=run_started)
             else:
-                logger.debug("Recent engine data has no active run")
+                logger.info("Recent engine data has no active run")
         else:
-            logger.debug("No recent engine data found")
+            logger.info("No recent engine data found")
 
     def engine_connected(self, engine_id: str):
         logger.debug("engine_connected")
@@ -70,54 +70,6 @@ class FromEngine:
         else:
             logger.warning("No data to save for engine " + engine_id)
 
-    def engine_reconnected(self, msg: EM.ReconnectedMsg):
-        raise NotImplementedError("TODO review this. Some may got to _try_restore_reconnected_engine_data")
-        logger.info(f"Engine_reconnected. Processing ReconnectedMsg {msg.ident}")
-        engine_id = msg.engine_id
-        engine_data = self._engine_data_map.get(engine_id)
-        if engine_data is None:
-            logger.error("No engine data available on reconnect for engine " + engine_id)
-            return
-
-        # Use this to debug reconnect msg timestamps/older tags
-        # created_time = datetime.fromtimestamp(msg.created_tick).strftime("%H:%M:%S")
-        # logger.debug(f"ReconnectedMsg created_tick_time: {created_time})")
-
-        # ft02 = next((tag for tag in msg.tags if tag.name == "FT02"))
-        # ft02_time = datetime.fromtimestamp(ft02.tick_time).strftime("%H:%M:%S")
-        # logger.debug(f"ReconnectedMsg ft02_time: {ft02_time})")
-
-        # apply the state from msg to the current state
-        engine_data.method = msg.method
-        run_id_tag = next((tag for tag in msg.tags if tag.name == SystemTagName.RUN_ID), None)
-        # verify consistent message
-        if msg.run_id is None:
-            if run_id_tag is not None and run_id_tag.value is not None:
-                logger.error(f"Mismatch in ReconnectedMsg, tag run_id {run_id_tag.value}, msg run_id {msg.run_id}")
-                return
-        else:
-            if run_id_tag is None or run_id_tag.value is None:
-                logger.error(f"Mismatch in ReconnectedMsg, tag run_id {None}, msg run_id {msg.run_id}")
-                return
-            engine_data.run_data.run_started = datetime.fromtimestamp(msg.run_started_tick) \
-                if msg.run_started_tick is not None else None
-            engine_data.tags_info.upsert(run_id_tag)  # sets engine_data.run_id
-
-        # handle possible change to recent engine
-        with database.create_scope():
-            repo = RecentEngineRepository(database.scoped_session())
-            recent_engine = repo.get_recent_engine_by_engine_id(engine_id)
-            if recent_engine is None:
-                logger.info(f"Reconnected engine {engine_id} has no recent engine data")
-            else:
-                if recent_engine.run_id != msg.run_id and recent_engine.run_id is not None:
-                    logger.info("Marking recent engine stopped ")
-                    repo.mark_recent_engine_stopped(engine_data)
-
-        # process tag values normally
-        self.tag_values_changed(engine_id, msg.tags)
-        logger.info(f"Done processing ReconnectedMsg {msg.ident}")
-
     def run_started(self, msg: EM.RunStartedMsg):
         engine_id = msg.engine_id
         engine_data = self._engine_data_map.get(engine_id)
@@ -125,7 +77,7 @@ class FromEngine:
             if engine_data is None:
                 logger.error("No engine data available on run_started for engine " + engine_id)
                 return
-            if engine_data.run_data is None:
+            if not engine_data.has_run():
                 engine_data.reset_run()
                 engine_data.run_data = Mdl.RunData.empty(
                     run_id=msg.run_id,
@@ -156,7 +108,7 @@ class FromEngine:
         if engine_data is None:
             logger.error("No engine data available on run_stopped for engine " + engine_id)
             return
-        if engine_data.run_data is None:
+        if not engine_data.has_run():
             logger.warning("No engine run_data available on run_stopped for engine " + engine_id)
             return
 
@@ -219,7 +171,7 @@ class FromEngine:
                 return
 
             for changed_tag_value in changed_tag_values:
-                if changed_tag_value.name == SystemTagName.METHOD_STATUS.value and engine_data.run_data is not None:
+                if changed_tag_value.name == SystemTagName.METHOD_STATUS.value and engine_data.has_run():
                     if changed_tag_value.value == MethodStatusEnum.ERROR:
                         engine_data.run_data.interrupted_by_error = True
                     else:
@@ -235,7 +187,7 @@ class FromEngine:
                     asyncio.create_task(self.publisher.publish_process_units_changed())
 
                 # if a tag doesn't appear with value until after start and run_id, we need to store the info here
-                if was_inserted and engine_data.run_data is not None:
+                if was_inserted and engine_data.has_run():
                     plot_log_repo.store_new_tag_info(engine_data.engine_id, engine_data.run_data.run_id, changed_tag_value)
 
             self._persist_tag_values(engine_data, plot_log_repo)
@@ -279,7 +231,8 @@ class FromEngine:
         latest_persisted_tick_time = engine_data.run_data.latest_persisted_tick_time
         tag_values = engine_data.tags_info.map.values()
         latest_tag_tick_time = max([tag.tick_time for tag in tag_values]) if len(tag_values) > 0 else 0
-        time_threshold_exceeded = latest_persisted_tick_time is None or latest_tag_tick_time - latest_persisted_tick_time > engine_data.data_log_interval_seconds
+        time_threshold_exceeded = latest_persisted_tick_time is None\
+            or latest_tag_tick_time - latest_persisted_tick_time > engine_data.data_log_interval_seconds
 
         if engine_data.run_data.run_id is not None and time_threshold_exceeded:
             tag_values_to_persist = [tag_value.copy() for tag_value in engine_data.tags_info.map.values()
@@ -308,7 +261,7 @@ class FromEngine:
         if engine_data is None:
             logger.error(f'No engine registered under id {engine_id} when trying to set run log.')
             return
-        if engine_data.run_data is None:
+        if not engine_data.has_run():
             logger.error(f"No run_data available for engine {engine_id}, can't set runlog")
             return
         if engine_data.run_data.run_id is None or engine_data.run_data.run_id != run_id:
@@ -344,7 +297,7 @@ class FromEngine:
         if engine_data is None:
             logger.error(f'No engine registered under id {engine_id} when trying to set error log.')
             return
-        engine_data.error_log.aggregate_with(error_log)            
+        engine_data.error_log.aggregate_with(error_log)
         asyncio.create_task(self.publisher.publish_error_log_changed(engine_id))
 
 

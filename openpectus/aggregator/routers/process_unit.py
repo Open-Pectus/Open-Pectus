@@ -23,7 +23,7 @@ def map_pu(engine_data: Mdl.EngineData) -> Dto.ProcessUnit:
             state=Dto.ProcessUnitStateEnum.IN_PROGRESS,
             progress_pct=0  # TODO: how do we know the progress_pct?
         )
-    elif engine_data.run_data is not None and engine_data.run_data.interrupted_by_error:
+    elif engine_data.has_run() and engine_data.run_data.interrupted_by_error:
         state = Dto.ProcessUnitState.Error(
             state=Dto.ProcessUnitStateEnum.ERROR
         )
@@ -182,7 +182,7 @@ def get_run_log(
         unit_id: str,
         agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.RunLog:
     engine_data = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
-    if engine_data.run_data is None:
+    if not engine_data.has_run():
         return Dto.RunLog.empty()
     else:
         return Dto.RunLog(
@@ -240,7 +240,7 @@ def get_plot_log(
         agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.PlotLog:
     plot_log_repo = PlotLogRepository(database.scoped_session())
     engine_data = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
-    if engine_data is None or engine_data.run_data is None:
+    if engine_data is None or not engine_data.has_run():
         return Dto.PlotLog(entries={})
     plot_log_model = plot_log_repo.get_plot_log(engine_data.run_data.run_id)
     if plot_log_model is None:

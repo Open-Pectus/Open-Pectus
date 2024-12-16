@@ -5,7 +5,6 @@ from dataclasses import dataclass
 import logging
 from typing import Iterable
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -19,9 +18,18 @@ class EventListener:
         the connection to hardware has been established. """
         pass
 
+    def _on_before_start(self, run_id: str):
+        """ Is run by emitter to avoid having all subclasses call super().on_start(). """
+        # An alternative approach would be to force subclasses to call super().on_start() using a meta class.
+        # This is not supported by pyright though, so it would be a custom check at runtime, e.g.
+        # https://stackoverflow.com/questions/67661091/how-can-i-make-it-a-requirement-to-call-super-from-within-an-abstract-method-o
+        # or
+        # https://stackoverflow.com/questions/66581157/how-to-enforce-mandatory-parent-method-call-when-calling-child-method
+        self.run_id = run_id
+
     def on_start(self, run_id: str):
         """ Is invoked by the Start command when method is started. """
-        self.run_id = run_id
+        pass
 
     def on_block_start(self, block_info: BlockInfo):
         """ Invoked just after a new block is started, before on_tick,
@@ -43,7 +51,7 @@ class EventListener:
 
     def on_method_end(self):
         """ Is invoked when method interpretation is complete. """
-        self.run_id = None
+        pass
 
     def on_stop(self):
         """ Is invoked by the Stop command when method is stopped. """
@@ -73,6 +81,11 @@ class EventEmitter:
                 logger.error(f"on_engine_configured failed for element '{str(element)}'", exc_info=True)
 
     def emit_on_start(self, run_id: str):
+        for element in self._listeners:
+            try:
+                element._on_before_start(run_id)
+            except Exception:
+                logger.error(f"on_before_start failed for element '{str(element)}'", exc_info=True)
         for element in self._listeners:
             try:
                 element.on_start(run_id)

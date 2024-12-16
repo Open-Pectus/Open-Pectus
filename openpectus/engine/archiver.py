@@ -42,18 +42,22 @@ def get_free_space_mb(dirname):
 
 
 RunlogAccessor = Callable[[], RunLog]
+TagsAccessor = Callable[[], TagCollection]
 
 
 class ArchiverTag(Tag):
-    def __init__(self, runlog_accessor: RunlogAccessor, tags: TagCollection, data_log_interval_seconds: float) -> None:
+    def __init__(self,
+                 runlog_accessor: RunlogAccessor,
+                 tags_accessor: TagsAccessor,
+                 data_log_interval_seconds: float) -> None:
         super().__init__("Archive filename")
         self.runlog_accessor = runlog_accessor
-        self.tags = tags
+        self.tags_accessor = tags_accessor
+        self.tags: TagCollection | None = None
         path = os.path.dirname(os.path.realpath(__file__))
         self.data_path = os.path.join(path, "data")
         self.last_save_tick: float = 0.0
         self.data_log_interval_seconds = data_log_interval_seconds
-        self.tags = TagCollection()
         self.file_path: str | None = None
         self.file_ready = False
 
@@ -78,6 +82,7 @@ class ArchiverTag(Tag):
     def prepare_tags_file(self):
         """ Create file and write header row"""
         assert self.file_path is not None
+        assert self.tags is not None
         with open(self.file_path, 'xt', newline='', encoding=encoding) as f:
             writer = csv.writer(f, delimiter=delimiter, quoting=quoting, escapechar=escapechar)
             tag_values = [tag.archive() for tag in self.tags]
@@ -90,6 +95,7 @@ class ArchiverTag(Tag):
         self.file_ready = True
 
     def write_tags_row(self):
+        assert self.tags is not None
         if self.file_ready:
             assert self.file_path is not None
             with open(self.file_path, 'at', newline='', encoding=encoding) as f:
@@ -122,6 +128,7 @@ class ArchiverTag(Tag):
                 writer.writerow([x.name, start, end])
 
     def on_start(self, run_id: str):
+        self.tags = self.tags_accessor()
         tick_time = time.time()
         date_part = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         filename = "archiver-" + date_part + ".txt"

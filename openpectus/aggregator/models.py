@@ -123,6 +123,7 @@ class TagsInfo(BaseModel):
 
 class RunData(BaseModel):
     """ Represents data that strictly belongs in a specific run. """
+
     run_id: str
     run_started: datetime
     runlog: RunLog = RunLog.empty()
@@ -141,31 +142,39 @@ class RunData(BaseModel):
         return RunData(run_id=run_id, run_started=run_started)
 
 
-class EngineData(BaseModel):
-    engine_id: str
-    computer_name: str
-    engine_version: str
-    hardware_str: str = "N/A"
-    uod_name: str
-    uod_author_name: str
-    uod_author_email: str
-    uod_filename: str
-    location: str
-    readings: list[Mdl.ReadingInfo] = []
-    """ Contains the definition of the engine's process values. """
-    commands: list[Mdl.CommandInfo] = []
-    """ Contains the uod commands that are not related to a process value. """
-    tags_info: TagsInfo = TagsInfo(map={})
-    """ Contains the most current tag values. """
-    control_state: ControlState = ControlState(is_running=False, is_holding=False, is_paused=False)
-    method: Method = Method.empty()
-    _run_data: RunData | None = None
-    error_log: AggregatedErrorLog = AggregatedErrorLog.empty()
-    method_state: MethodState = MethodState.empty()
-    plot_configuration: PlotConfiguration = PlotConfiguration.empty()
-    contributors: set[str] = set()
-    required_roles: set[str] = set()
-    data_log_interval_seconds: float = math.inf
+class EngineData():
+    """ Data stored by aggregator for each connected engine. """
+
+    # Note: Not a BaseModel subclass since it doesn't need to be and BaseModel apparently
+    # has a bug concerning the way we use _run_data, run_data and has_run().
+
+    def __init__(self, engine_id: str, computer_name: str, engine_version: str, uod_name: str, uod_author_name: str,
+                 uod_author_email: str, uod_filename: str, location: str,
+                 hardware_str: str = "N/A", data_log_interval_seconds: float = math.inf) -> None:
+        self.engine_id: str = engine_id
+        self.computer_name: str = computer_name
+        self.engine_version: str = engine_version
+        self.uod_name: str = uod_name
+        self.uod_author_name: str = uod_author_name
+        self.uod_author_email: str = uod_author_email
+        self.uod_filename: str = uod_filename
+        self.location: str = location
+        self.readings: list[Mdl.ReadingInfo] = []
+        """ Contains the definition of the engine's process values. """
+        self.commands: list[Mdl.CommandInfo] = []
+        """ Contains the uod commands that are not related to a process value. """
+        self.tags_info: TagsInfo = TagsInfo(map={})
+        """ Contains the most current tag values. """
+        self.control_state: ControlState = ControlState(is_running=False, is_holding=False, is_paused=False)
+        self.method: Method = Method.empty()
+        self._run_data: RunData | None = None
+        self.error_log: AggregatedErrorLog = AggregatedErrorLog.empty()
+        self.method_state: MethodState = MethodState.empty()
+        self.plot_configuration: PlotConfiguration = PlotConfiguration.empty()
+        self.contributors: set[str] = set()
+        self.required_roles: set[str] = set()
+        self.hardware_str: str = hardware_str
+        self.data_log_interval_seconds: float = data_log_interval_seconds
 
     @property
     def run_data(self) -> RunData:
@@ -189,12 +198,8 @@ class EngineData(BaseModel):
         """ Determine whether run_data is available, that is, whether a run is active. """
         return self._run_data is not None
 
-    def has_this_run(self, run_id: str) -> bool:
-        """ Whether run_data is available and belonging to the given run_id. """
-        return self.run_data is not None and self.run_data.run_id == run_id
-
     def reset_run(self):
-        """ Clear all data associated with a run, control_state, error_log, method state (not method content) and run_data, 
+        """ Clear all data associated with a run, control_state, error_log, method state (not method content) and run_data,
         including run log and run_id. Call when run is complete to get ready for a new run. """
         self._run_data = None
         self.control_state = ControlState(is_running=False, is_holding=False, is_paused=False)
