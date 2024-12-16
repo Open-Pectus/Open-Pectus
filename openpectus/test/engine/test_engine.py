@@ -5,7 +5,6 @@ import time
 import unittest
 from typing import Any, Generator
 from openpectus.lang.exec.errors import UodValidationError
-from openpectus.lang.exec.tag_lifetime import TagContext
 from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 
 import openpectus.protocol.models as Mdl
@@ -122,7 +121,6 @@ def create_engine(uod: UnitOperationDefinitionBase | None = None) -> Engine:
     if uod is None:
         uod = create_test_uod()
     e = Engine(uod)
-    e._configure()
     return e
 
 
@@ -145,7 +143,6 @@ class TestEngineSetup(unittest.TestCase):
     def test_configure_uod(self):
         uod = create_test_uod()
         e = Engine(uod)
-        e._configure()
 
         self.assertTrue(len(uod.command_factories) > 0)
         self.assertTrue(len(uod.instrument) > 0)
@@ -1438,7 +1435,7 @@ class CalculatedLinearTag(Tag):
         super().__init__(name, value=0.0, unit=unit, direction=TagDirection.NA)
         self.slope = slope
 
-    def on_start(self, context: TagContext):
+    def on_start(self, run_id: str):
         self.value = time.time() * self.slope
 
     def on_tick(self, tick_time: float, increment_time: float):

@@ -68,8 +68,8 @@ class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
 
         uod = create_test_uod()
         engine = Engine(uod)
-        engineDispatcher = EngineTestDispatcher(loop)
-        engineRunner = EngineRunner(engineDispatcher, EngineMessageBuilder(engine))
+        engineDispatcher = EngineTestDispatcher()
+        engineRunner = EngineRunner(engineDispatcher, EngineMessageBuilder(engine), engine.emitter, loop)
         engineMessageHandlers = EngineMessageHandlers(engine, engineDispatcher)
 
         aggregatorDispatcher = AggregatorTestDispatcher()
@@ -234,7 +234,7 @@ class AggregatorTestDispatcher(AggregatorDispatcher):
         return engine_id in self.connected_engines
 
 class EngineTestDispatcher(EngineDispatcher):
-    def __init__(self, event_loop: asyncio.AbstractEventLoop) -> None:
+    def __init__(self) -> None:
         uod_options = {
             'uod_name': 'my_uod_name',
             'uod_author_name': 'my_uod_author_name',
@@ -243,7 +243,6 @@ class EngineTestDispatcher(EngineDispatcher):
             'location': 'my_location'
         }
         super().__init__(aggregator_host="", secure=False, uod_options=uod_options)
-        self.event_loop = event_loop
         self.aggregatorDispatcher: AggregatorTestDispatcher
         self.network_failing = False
 
