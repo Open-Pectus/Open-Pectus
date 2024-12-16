@@ -19,7 +19,7 @@ def create() -> UnitOperationDefinitionBase:
     # logger = builder.get_logger()
 
     # this signature is usable for the default argument parser
-    #def reset(cmd: UodCommand, **kvargs):
+    # def reset(cmd: UodCommand, **kvargs):
 
     # this signature is valid for arg_parse_fn=None
     def reset(cmd: UodCommand):
