@@ -205,6 +205,7 @@ class EngineData():
         self.control_state = ControlState(is_running=False, is_holding=False, is_paused=False)
         self.error_log.clear()
         self.method_state = MethodState.empty()
+        self.contributors = set()
 
     def __str__(self) -> str:
         return f"EngineData(engine_id:{self.engine_id}, control_state':{self.control_state})"

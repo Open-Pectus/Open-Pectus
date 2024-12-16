@@ -49,6 +49,7 @@ class FromEngine:
                 else:
                     run_started = recent_engine.run_started
                 engine_data.run_data = Mdl.RunData.empty(run_id=run_id, run_started=run_started)
+                engine_data.contributors = set(recent_engine.contributors)
             else:
                 logger.info("Recent engine data has no active run")
         else:
