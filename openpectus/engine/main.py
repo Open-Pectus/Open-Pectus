@@ -55,7 +55,8 @@ def get_args():
                         "if using --secure")
     parser.add_argument("-s", "--secure", action=BooleanOptionalAction,
                         help="Access aggregator using https/wss rather than http/ws")
-    parser.add_argument("-uod", "--uod", required=False, default="demo_uod.py", help="Filename of the UOD")
+    parser.add_argument("-uod", "--uod", required=False, default="openpectus/engine/configuration/demo_uod.py",
+                        help="Filename of the UOD")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-validate", "--validate", action=BooleanOptionalAction,
                        help="Run Uod validation and exit. Cannot be used with -rd")
