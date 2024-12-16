@@ -14,13 +14,14 @@ class AggregatorMessageHandlers:
         aggregator.dispatcher.set_register_handler(self.handle_RegisterEngineMsg)
         aggregator.dispatcher.set_disconnect_handler(self.handle_EngineDisconnected)
         aggregator.dispatcher.set_connect_handler(self.handle_EngineConnected)
-        aggregator.dispatcher.set_message_handler(EM.ReconnectedMsg, self.handle_ReconnectedMsg)
         aggregator.dispatcher.set_message_handler(EM.UodInfoMsg, self.handle_UodInfoMsg)
         aggregator.dispatcher.set_message_handler(EM.TagsUpdatedMsg, self.handle_TagsUpdatedMsg)
         aggregator.dispatcher.set_message_handler(EM.RunLogMsg, self.handle_RunLogMsg)
         aggregator.dispatcher.set_message_handler(EM.ControlStateMsg, self.handle_ControlStateMsg)
         aggregator.dispatcher.set_message_handler(EM.MethodStateMsg, self.handle_MethodStateMsg)
         aggregator.dispatcher.set_message_handler(EM.ErrorLogMsg, self.handle_ErrorLogMsg)
+        aggregator.dispatcher.set_message_handler(EM.RunStartedMsg, self.handle_RunStartedMsg)
+        aggregator.dispatcher.set_message_handler(EM.RunStoppedMsg, self.handle_RunStoppedMsg)
 
     async def handle_RegisterEngineMsg(self, register_engine_msg: EM.RegisterEngineMsg) -> AM.RegisterEngineReplyMsg:
         """ Registers engine """
@@ -56,16 +57,6 @@ class AggregatorMessageHandlers:
         logger.info(f"Registration of engine {engine_id} successful")
         return AM.RegisterEngineReplyMsg(success=True, engine_id=engine_id)
 
-    async def handle_EngineConnected(self, engine_id: str):
-        self.aggregator.from_engine.engine_connected(engine_id)
-
-    async def handle_EngineDisconnected(self, engine_id: str):
-        self.aggregator.from_engine.engine_disconnected(engine_id)
-
-    async def handle_ReconnectedMsg(self, msg: EM.ReconnectedMsg):
-        self.aggregator.from_engine.engine_reconnected(msg)
-        return AM.SuccessMessage()
-
     def validate_msg(self, msg: EM.EngineMessage):
         if not self.aggregator.has_registered_engine_id(msg.engine_id):
             return AM.ErrorMessage(message=f'No engine registered under id {msg.engine_id}')
@@ -85,6 +76,12 @@ class AggregatorMessageHandlers:
             msg.data_log_interval_seconds)
         return AM.SuccessMessage()
 
+    async def handle_EngineConnected(self, engine_id: str):
+        self.aggregator.from_engine.engine_connected(engine_id)
+
+    async def handle_EngineDisconnected(self, engine_id: str):
+        self.aggregator.from_engine.engine_disconnected(engine_id)
+
     async def handle_TagsUpdatedMsg(self, msg: EM.TagsUpdatedMsg) -> AM.SuccessMessage | AM.ErrorMessage:
         validation_errors = self.validate_msg(msg)
         if validation_errors is not None:
@@ -100,7 +97,7 @@ class AggregatorMessageHandlers:
             return validation_errors
 
         logger.debug(f"Got run log from client: {str(msg)}")
-        self.aggregator.from_engine.runlog_changed(msg.engine_id, msg.runlog)
+        self.aggregator.from_engine.runlog_changed(msg.engine_id, msg.run_id, msg.runlog)
         return AM.SuccessMessage()
 
     async def handle_ControlStateMsg(self, msg: EM.ControlStateMsg) -> AM.SuccessMessage | AM.ErrorMessage:
@@ -128,4 +125,20 @@ class AggregatorMessageHandlers:
 
         logger.debug(f'error log message from engine: {msg.log}')
         self.aggregator.from_engine.error_log_changed(msg.engine_id, msg.log)
+        return AM.SuccessMessage()
+
+    async def handle_RunStartedMsg(self, msg: EM.RunStartedMsg):
+        validation_errors = self.validate_msg(msg)
+        if validation_errors is not None:
+            return validation_errors
+
+        self.aggregator.from_engine.run_started(msg)
+        return AM.SuccessMessage()
+
+    async def handle_RunStoppedMsg(self, msg: EM.RunStoppedMsg):
+        validation_errors = self.validate_msg(msg)
+        if validation_errors is not None:
+            return validation_errors
+
+        self.aggregator.from_engine.run_stopped(msg)
         return AM.SuccessMessage()

@@ -46,25 +46,6 @@ class EngineMessageBuilder():
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
 
-    def build_reconnected_message(self) -> EM.ReconnectedMsg:
-        """ Build the reconnect message to be sent just after reconnect """
-        logger.info("Build message ReconnectedMsg")
-        tags = self.collect_tag_updates(snapshot=True)
-        run_id_tag = next((tag for tag in tags if tag.name == SystemTagName.RUN_ID), None)
-        run_id = str(run_id_tag.value) if run_id_tag is not None and run_id_tag.value is not None else None
-        # TODO collect run_started from somewhere
-        # either add an event in engine containing this value - then take it from there
-        # or - remove it from the message and have aggregator read it from recent engine
-        logger.debug(f"Collected {len(tags)} reconnect tags")
-
-        return EM.ReconnectedMsg(
-            run_id=run_id,
-            created_tick=time.time(),
-            run_started_tick=time.time(),
-            tags=tags,
-            method=Mdl.Method(lines=self.engine.method.get_code_lines())
-        )
-
     def create_uod_info(self) -> EM.UodInfoMsg:
         return EM.UodInfoMsg(
             readings=[reading.as_reading_info() for reading in self.engine.uod.readings],
@@ -98,7 +79,14 @@ class EngineMessageBuilder():
         if len(tags) > 0:
             return EM.TagsUpdatedMsg(tags=tags)
 
-    def create_runlog_msg(self) -> EM.RunLogMsg:
+    def create_run_started_msg(self, run_id: str, tick_time: float) -> EM.RunStartedMsg:
+        return EM.RunStartedMsg(run_id=run_id, started_tick=tick_time)
+
+    def create_run_stopped_msg(self, run_id: str) -> EM.RunStoppedMsg:
+        runlog_msg = self.create_runlog_msg(run_id)
+        return EM.RunStoppedMsg(run_id=run_id, runlog=runlog_msg.runlog)
+
+    def create_runlog_msg(self, run_id: str) -> EM.RunLogMsg:
         tag_names: list[str] = []
         for reading in self.engine.uod.readings:
             tag_names.append(reading.tag_name)
@@ -125,6 +113,7 @@ class EngineMessageBuilder():
         runlog = self.engine.runtimeinfo.get_runlog()
         return EM.RunLogMsg(
             id=runlog.id,
+            run_id=run_id,
             runlog=Mdl.RunLog(lines=list(map(to_line, runlog.items)))
         )
 

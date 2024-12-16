@@ -53,6 +53,9 @@ class AggregatedErrorLog(BaseModel):
     def empty() -> AggregatedErrorLog:
         return AggregatedErrorLog(entries=[])
 
+    def clear(self):
+        self.entries.clear()
+
     def aggregate_with(self, error_log: ErrorLog):
         """ Append the given log entries to the current log entries while deduplicating and aggregating entries. """
         latest = self.entries[-1] if len(self.entries) > 0 else None
@@ -101,7 +104,8 @@ class TagsInfo(BaseModel):
                 if current.tick_time > tag_value.tick_time:
                     cur_time = datetime.fromtimestamp(current.tick_time).strftime("%H:%M:%S")
                     new_time = datetime.fromtimestamp(tag_value.tick_time).strftime("%H:%M:%S")
-                    logger.warning(f"Tag '{tag_value.name}' was updated with an earlier time {new_time} than the current time {cur_time}.")
+                    logger.warning(f"Tag '{tag_value.name}' was updated with an earlier time " +
+                                   f"{new_time} than the current time {cur_time}.")
             current.value = tag_value.value
             current.value_formatted = tag_value.value_formatted
             current.tick_time = tag_value.tick_time
@@ -118,58 +122,89 @@ class TagsInfo(BaseModel):
 
 
 class RunData(BaseModel):
-    run_started: datetime | None = None
-    method_state: MethodState = MethodState.empty()
-    runlog: RunLog = RunLog(lines=[])
+    """ Represents data that strictly belongs in a specific run. """
+
+    run_id: str
+    run_started: datetime
+    runlog: RunLog = RunLog.empty()
     latest_persisted_tick_time: float | None = None
     """ The time assigned to the last persisted set of values """
     latest_tag_time: float | None = None
     """ The time of the latest tag update, persisted or not """
-    error_log: AggregatedErrorLog = AggregatedErrorLog.empty()
     interrupted_by_error: bool = False
 
     def __str__(self) -> str:
-        return f"RunData(run_started:{self.run_started}, method_state:{self.method_state}, " + \
+        return f"RunData({self.run_id=}, {self.run_started=}, " + \
                f"interrupted_by_error:{self.interrupted_by_error})"
 
+    @staticmethod
+    def empty(run_id: str, run_started: datetime) -> RunData:
+        return RunData(run_id=run_id, run_started=run_started)
 
-class EngineData(BaseModel):
-    engine_id: str
-    computer_name: str
-    engine_version: str
-    hardware_str: str = "N/A"
-    uod_name: str
-    uod_author_name: str
-    uod_author_email: str
-    uod_filename: str
-    location: str
-    readings: list[Mdl.ReadingInfo] = []
-    """ Contains the definition of the engine's process values. """
-    commands: list[Mdl.CommandInfo] = []
-    """ Contains the uod commands that are not related to a process value. """
-    tags_info: TagsInfo = TagsInfo(map={})
-    """ Contains the most current tag values. """
-    control_state: ControlState = ControlState(is_running=False, is_holding=False, is_paused=False)
-    method: Method = Method.empty()
-    run_data: RunData = RunData()
-    plot_configuration: PlotConfiguration = PlotConfiguration.empty()
-    contributors: set[str] = set()
-    required_roles: set[str] = set()
-    data_log_interval_seconds: float = math.inf
+
+class EngineData():
+    """ Data stored by aggregator for each connected engine. """
+
+    # Note: Not a BaseModel subclass since it doesn't need to be and BaseModel apparently
+    # has a bug concerning the way we use _run_data, run_data and has_run().
+
+    def __init__(self, engine_id: str, computer_name: str, engine_version: str, uod_name: str, uod_author_name: str,
+                 uod_author_email: str, uod_filename: str, location: str,
+                 hardware_str: str = "N/A", data_log_interval_seconds: float = math.inf) -> None:
+        self.engine_id: str = engine_id
+        self.computer_name: str = computer_name
+        self.engine_version: str = engine_version
+        self.uod_name: str = uod_name
+        self.uod_author_name: str = uod_author_name
+        self.uod_author_email: str = uod_author_email
+        self.uod_filename: str = uod_filename
+        self.location: str = location
+        self.readings: list[Mdl.ReadingInfo] = []
+        """ Contains the definition of the engine's process values. """
+        self.commands: list[Mdl.CommandInfo] = []
+        """ Contains the uod commands that are not related to a process value. """
+        self.tags_info: TagsInfo = TagsInfo(map={})
+        """ Contains the most current tag values. """
+        self.control_state: ControlState = ControlState(is_running=False, is_holding=False, is_paused=False)
+        self.method: Method = Method.empty()
+        self._run_data: RunData | None = None
+        self.error_log: AggregatedErrorLog = AggregatedErrorLog.empty()
+        self.method_state: MethodState = MethodState.empty()
+        self.plot_configuration: PlotConfiguration = PlotConfiguration.empty()
+        self.contributors: set[str] = set()
+        self.required_roles: set[str] = set()
+        self.hardware_str: str = hardware_str
+        self.data_log_interval_seconds: float = data_log_interval_seconds
+
+    @property
+    def run_data(self) -> RunData:
+        if self._run_data is None:
+            raise ValueError("Run data is not set. Guard access with call to has_run()")
+        return self._run_data
+
+    @run_data.setter
+    def run_data(self, value: RunData):
+        self._run_data = value
 
     @property
     def runtime(self):
         return self.tags_info.get(Mdl.SystemTagName.RUN_TIME)
 
     @property
-    def run_id(self):
-        run_id_tag = self.tags_info.get(Mdl.SystemTagName.RUN_ID)
-        return str(run_id_tag.value) if run_id_tag is not None and run_id_tag.value is not None else None
-
-    @property
     def system_state(self):
         return self.tags_info.get(Mdl.SystemTagName.SYSTEM_STATE)
 
+    def has_run(self) -> bool:
+        """ Determine whether run_data is available, that is, whether a run is active. """
+        return self._run_data is not None
+
+    def reset_run(self):
+        """ Clear all data associated with a run, control_state, error_log, method state (not method content) and run_data,
+        including run log and run_id. Call when run is complete to get ready for a new run. """
+        self._run_data = None
+        self.control_state = ControlState(is_running=False, is_holding=False, is_paused=False)
+        self.error_log.clear()
+        self.method_state = MethodState.empty()
+
     def __str__(self) -> str:
-        return f"EngineData(engine_id:{self.engine_id}, run_id:{self.run_id}," +\
-               f" control_state':{self.control_state})"
+        return f"EngineData(engine_id:{self.engine_id}, control_state':{self.control_state})"

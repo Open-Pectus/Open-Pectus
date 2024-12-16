@@ -87,7 +87,7 @@ def run_validations(uod: UnitOperationDefinitionBase) -> bool:
         logger.error("An hardware related error occurred. Engine cannot start.")
         return False
 
-async def main_async(args):
+async def main_async(args, loop: asyncio.AbstractEventLoop):
     global engine, runner
     try:
         uod = create_uod(args.uod)
@@ -116,7 +116,7 @@ async def main_async(args):
 
     message_builder = EngineMessageBuilder(engine)
     # create runner that orchestrates the error recovery mechanism
-    runner = EngineRunner(dispatcher, message_builder)
+    runner = EngineRunner(dispatcher, message_builder, engine.emitter, loop)
     _ = EngineMessageHandlers(engine, dispatcher)
 
     # TODO Possibly check dispatcher.check_aggregator_alive() and exit early
@@ -235,6 +235,7 @@ def run_example_commands(uod: UnitOperationDefinitionBase):
                 runner = EngineTestRunner(uod_factory=lambda: uod, pcode=example)
                 with runner.run() as instance:
                     instance.start()
+                    # wait up to 1 minute, that oughta be enought for everybody
                     instance.run_until_event("method_end", max_ticks=10*60)
                     logger.debug(instance.get_runtime_table())
                     logger.debug(f"Command '{desc.name}' executed successfully")
@@ -292,7 +293,7 @@ def main():
     # https://stackoverflow.com/questions/54525836/where-do-i-catch-the-keyboardinterrupt-exception-in-this-async-setup#54528397
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(main_async(args))
+        loop.run_until_complete(main_async(args, loop))
         logger.info("Main loop completed")
     except KeyboardInterrupt:
         logger.info("User requested engine to stop")
