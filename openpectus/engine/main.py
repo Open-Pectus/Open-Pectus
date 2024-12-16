@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from argparse import ArgumentParser, BooleanOptionalAction
-import importlib
+import importlib.util
 from logging.handlers import RotatingFileHandler
 from os import path
 import pathlib
@@ -55,7 +55,8 @@ def get_args():
                         "if using --secure")
     parser.add_argument("-s", "--secure", action=BooleanOptionalAction,
                         help="Access aggregator using https/wss rather than http/ws")
-    parser.add_argument("-uod", "--uod", required=False, default="demo_uod", help="The UOD to use")
+    parser.add_argument("-uod", "--uod", required=False, default="openpectus/engine/configuration/demo_uod.py",
+                        help="Filename of the UOD")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-validate", "--validate", action=BooleanOptionalAction,
                        help="Run Uod validation and exit. Cannot be used with -rd")
@@ -142,17 +143,19 @@ async def close_async():
     logger.debug("Engine components stopped. Exiting")
 
 
-def create_uod(uod_name: str) -> UnitOperationDefinitionBase:
-    if uod_name is None or uod_name == "" or not isinstance(uod_name, str):
+def create_uod(uod_filepath: str) -> UnitOperationDefinitionBase:
+    if uod_filepath is None or uod_filepath == "" or not isinstance(uod_filepath, str):
         raise ValueError("Uod is not specified")
 
-    uod_module_package = "openpectus.engine.configuration." + uod_name
-
     try:
-        uod_module = importlib.import_module(uod_module_package)
-        logger.info(f"Imported uod '{uod_name}' from path '{uod_module.__file__}'")
+        spec = importlib.util.spec_from_file_location('uod', uod_filepath)
+        assert spec is not None
+        uod_module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(uod_module)
+        logger.info(f"Imported uod from path '{uod_module.__file__}'")
     except Exception as ex:
-        raise Exception("Failed to import uod module " + uod_module_package) from ex
+        raise Exception(f"Failed to import uod module from path {uod_filepath}") from ex
 
     try:
         uod = uod_module.create()
