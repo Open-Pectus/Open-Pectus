@@ -57,7 +57,6 @@ def create_engine(uod: UnitOperationDefinitionBase | None = None) -> Engine:
     if uod is None:
         uod = create_test_uod()
     e = Engine(uod, EngineTiming(WallClock(), NullTimer(), 0.1, 1.0))
-    e._configure()
     return e
 
 

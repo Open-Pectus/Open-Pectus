@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from argparse import ArgumentParser, BooleanOptionalAction
-import importlib
+import importlib.util
 from logging.handlers import RotatingFileHandler
 from os import path
 import pathlib
@@ -55,7 +55,8 @@ def get_args():
                         "if using --secure")
     parser.add_argument("-s", "--secure", action=BooleanOptionalAction,
                         help="Access aggregator using https/wss rather than http/ws")
-    parser.add_argument("-uod", "--uod", required=False, default="demo_uod", help="The UOD to use")
+    parser.add_argument("-uod", "--uod", required=False, default="openpectus/engine/configuration/demo_uod.py",
+                        help="Filename of the UOD")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-validate", "--validate", action=BooleanOptionalAction,
                        help="Run Uod validation and exit. Cannot be used with -rd")
@@ -87,7 +88,7 @@ def run_validations(uod: UnitOperationDefinitionBase) -> bool:
         logger.error("An hardware related error occurred. Engine cannot start.")
         return False
 
-async def main_async(args):
+async def main_async(args, loop: asyncio.AbstractEventLoop):
     global engine, runner
     try:
         uod = create_uod(args.uod)
@@ -116,7 +117,7 @@ async def main_async(args):
 
     message_builder = EngineMessageBuilder(engine)
     # create runner that orchestrates the error recovery mechanism
-    runner = EngineRunner(dispatcher, message_builder)
+    runner = EngineRunner(dispatcher, message_builder, engine.emitter, loop)
     _ = EngineMessageHandlers(engine, dispatcher)
 
     # TODO Possibly check dispatcher.check_aggregator_alive() and exit early
@@ -142,17 +143,19 @@ async def close_async():
     logger.debug("Engine components stopped. Exiting")
 
 
-def create_uod(uod_name: str) -> UnitOperationDefinitionBase:
-    if uod_name is None or uod_name == "" or not isinstance(uod_name, str):
+def create_uod(uod_filepath: str) -> UnitOperationDefinitionBase:
+    if uod_filepath is None or uod_filepath == "" or not isinstance(uod_filepath, str):
         raise ValueError("Uod is not specified")
 
-    uod_module_package = "openpectus.engine.configuration." + uod_name
-
     try:
-        uod_module = importlib.import_module(uod_module_package)
-        logger.info(f"Imported uod '{uod_name}' from path '{uod_module.__file__}'")
+        spec = importlib.util.spec_from_file_location('uod', uod_filepath)
+        assert spec is not None
+        uod_module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(uod_module)
+        logger.info(f"Imported uod from path '{uod_module.__file__}'")
     except Exception as ex:
-        raise Exception("Failed to import uod module " + uod_module_package) from ex
+        raise Exception(f"Failed to import uod module from path {uod_filepath}") from ex
 
     try:
         uod = uod_module.create()
@@ -235,6 +238,7 @@ def run_example_commands(uod: UnitOperationDefinitionBase):
                 runner = EngineTestRunner(uod_factory=lambda: uod, pcode=example)
                 with runner.run() as instance:
                     instance.start()
+                    # wait up to 1 minute, that oughta be enought for everybody
                     instance.run_until_event("method_end", max_ticks=10*60)
                     logger.debug(instance.get_runtime_table())
                     logger.debug(f"Command '{desc.name}' executed successfully")
@@ -292,7 +296,7 @@ def main():
     # https://stackoverflow.com/questions/54525836/where-do-i-catch-the-keyboardinterrupt-exception-in-this-async-setup#54528397
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(main_async(args))
+        loop.run_until_complete(main_async(args, loop))
         logger.info("Main loop completed")
     except KeyboardInterrupt:
         logger.info("User requested engine to stop")

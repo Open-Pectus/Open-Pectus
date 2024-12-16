@@ -80,6 +80,8 @@ class UnitOperationDefinitionBase:
         # build command descriptions/examples documentation
         for cmd_name, cmd_builder in self.command_factories.items():
             valid_units: list[str] = []
+            exclusive_options: list[str] = []
+            additive_options: list[str] = []
             argument_type: Literal["float", "unknown", "none"] = "unknown"
 
             # Determine whether command is used for reading entry. If so, we can use the related tag's unit
@@ -107,6 +109,9 @@ class UnitOperationDefinitionBase:
                         logger.debug(f"Applying regex unit constraints, {cmd_reading.valid_value_units} -> {valid_units} " +
                                      f"command {cmd_name}")
                         cmd_reading.valid_value_units = valid_units
+                if "option" in named_groups:
+                    exclusive_options = regex_parser.get_exclusive_options()
+                    additive_options = regex_parser.get_additive_options()
             elif cmd_builder.arg_parse_fn is None:
                 # no argument parser, this means no argument and units at all
                 # argument_type = "none"
@@ -115,6 +120,8 @@ class UnitOperationDefinitionBase:
             desc = UodCommandDescription(name=cmd_name)
             desc.argument_type = argument_type
             desc.argument_valid_units = valid_units
+            desc.argument_exclusive_options = exclusive_options
+            desc.argument_additive_options = additive_options
             desc.set_docstring(cmd_builder.exec_fn.__doc__)
 
             self.command_descriptions[cmd_name] = desc
@@ -880,6 +887,22 @@ class RegexNamedArgumentParser():
         end = self.regex.index(")", start)
         # Undo escaping of slash that might have been performed
         result = [unit.replace(r'\/', '/') for unit in self.regex[start: end].split("|")]
+        return result
+
+    def get_exclusive_options(self) -> list[str]:
+        if "option" not in self.get_named_groups():
+            return []
+        start = self.regex.index("<option>") + len("<option>(")
+        end = self.regex.index("|(")
+        result = self.regex[start: end].split("|")
+        return result
+
+    def get_additive_options(self) -> list[str]:
+        if "option" not in self.get_named_groups():
+            return []
+        start = self.regex.index("|(") + len("|(")
+        end = self.regex.index("|\+)+))\s*")
+        result = self.regex[start: end].split("|")
         return result
 
     @staticmethod

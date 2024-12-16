@@ -54,15 +54,6 @@ class UodInfoMsg(EngineMessage):
     data_log_interval_seconds: float
 
 
-class ReconnectedMsg(EngineMessage):
-    run_id: str | None
-    created_tick: float
-    run_started_tick: float | None
-    tags: list[Mdl.TagValue] = []
-    method: Mdl.Method
-    sequence_number = -3
-
-
 class TagsUpdatedMsg(EngineMessage):
     tags: list[Mdl.TagValue] = []
 
@@ -75,6 +66,7 @@ class TagsBufferedMsg(EngineMessage):
 
 class RunLogMsg(EngineMessage):
     id: str
+    run_id: str
     runlog: Mdl.RunLog
 
 
@@ -92,6 +84,16 @@ class MethodStateMsg(EngineMessage):
 
 class ControlStateMsg(EngineMessage):
     control_state: Mdl.ControlState
+
+
+class RunStartedMsg(EngineMessage):
+    run_id: str
+    started_tick: float
+
+
+class RunStoppedMsg(EngineMessage):
+    run_id: str
+    runlog: Mdl.RunLog
 
 
 def print_sequence_range(messages: Sequence[EngineMessage]) -> str:

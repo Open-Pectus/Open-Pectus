@@ -7,7 +7,7 @@ from openpectus.engine.models import EngineCommandEnum
 
 from openpectus.lang.exec.clock import WallClock
 from openpectus.lang.exec.runlog import RuntimeRecordStateEnum
-from openpectus.lang.exec.tag_lifetime import BlockInfo, TagContext, TagLifetime
+from openpectus.lang.exec.events import BlockInfo, EventListener
 from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 import openpectus.protocol.models as Mdl
@@ -74,7 +74,7 @@ class EngineTestRunner:
             del instance
 
 
-class EngineTestInstance(TagLifetime):
+class EngineTestInstance(EventListener):
     def __init__(self, engine: Engine, pcode: str, timing: EngineTiming) -> None:
         self.engine = engine
         self.timing = timing
@@ -83,7 +83,7 @@ class EngineTestInstance(TagLifetime):
         self.set_method(pcode)
 
         self._search_index = 0
-        self.engine.tag_context.add_listener(self)  # register as listener for lifetime events, so they can be awaited
+        self.engine.emitter.add_listener(self)  # register as listener for lifetime events, so they can be awaited
         self._last_event: EventName | None = None
 
     def set_method(self, pcode: str):
@@ -245,12 +245,12 @@ class EngineTestInstance(TagLifetime):
         """ Return a text view of the runtime table contents. """
         return self.engine.runtimeinfo.get_as_table(description)
 
-    # --- TagLifetime impl ----
+    # --- EventListener impl ----
 
-    def on_engine_configured(self, context: TagContext):
+    def on_engine_configured(self):
         self._last_event = None
 
-    def on_start(self, context: TagContext):
+    def on_start(self, run_id: str):
         self._last_event = "start"
 
     def on_block_start(self, block_info: BlockInfo):

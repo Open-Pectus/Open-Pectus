@@ -1,7 +1,7 @@
 import time
 
 from openpectus.lang.exec.tags import Tag, TagDirection, TagFormatFunction
-from openpectus.lang.exec.tag_lifetime import BlockInfo, TagContext
+from openpectus.lang.exec.events import BlockInfo
 
 # Make sure the mark separator does not conflict with ArchiverTag delimiter.
 # This wold make the archiver unable to write its archive file.
@@ -75,11 +75,11 @@ class AccumulatorTag(Tag):
         self.value = 0.0
         assert self.v0 is not None
 
-    def on_start(self, context: TagContext):
+    def on_start(self, run_id: str):
         self.reset()
 
     def on_tick(self, tick_time: float, increment_time: float):
-        assert self.v0 is not None
+        assert self.v0 is not None, f"Error in aggregator tag '{self.name}', v0 was not set."
         self.value = self.totalizer.as_float() - self.v0
 
 
@@ -95,14 +95,12 @@ class AccumulatorBlockTag(Tag):
         self.accumulator_stack.append(AccumulatorTag(self.root_block.key, self.totalizer))
         self.cur_block = self.root_block
         self.cur_accumulator = self.accumulator_stack[0]
-        self.context: TagContext | None = None
 
         self.value = 0.0
         self.unit = self.totalizer.unit
 
-    def on_start(self, context: TagContext):
-        self.context = context
-        self.cur_accumulator.on_start(context)
+    def on_start(self, run_id: str):
+        self.cur_accumulator.on_start(run_id)
 
     def on_tick(self, tick_time: float, increment_time: float):
         # tick all accumulators in scope to update block values
@@ -117,8 +115,8 @@ class AccumulatorBlockTag(Tag):
         self.cur_accumulator = AccumulatorTag(self.cur_block.key, self.totalizer)
         self.accumulator_stack.append(self.cur_accumulator)
 
-        assert self.context is not None
-        self.cur_accumulator.on_start(self.context)
+        assert self.run_id is not None, f"Error in AccumulatorBlockTag tag '{self.name}', run_id not set in on_block_start."
+        self.cur_accumulator.on_start(self.run_id)
 
     def on_block_end(self, block_info: BlockInfo, new_block_info: BlockInfo | None):
         if len(self.accumulator_stack) == 0:
@@ -140,7 +138,7 @@ class AccumulatedColumnVolume(Tag):
         self.value = 0.0
         assert self.v0 is not None
 
-    def on_start(self, context: TagContext):
+    def on_start(self, run_id: str):
         self.reset()
 
     def on_tick(self, tick_time: float, increment_time: float):
