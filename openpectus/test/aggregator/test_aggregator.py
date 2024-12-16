@@ -14,11 +14,6 @@ import openpectus.aggregator.data.models as DMdl
 from openpectus.protocol.models import SystemTagName
 
 
-# setup in-memory database
-database.configure_db("sqlite:///:memory:")
-DMdl.DBModel.metadata.create_all(database._engine)  # type: ignore
-
-
 class AggregatorTest(unittest.IsolatedAsyncioTestCase):
     def __init__(self, methodName: str = "runTest") -> None:
         super().__init__(methodName)
@@ -43,6 +38,10 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_register_engine(self):
+        # setup in-memory database
+        database.configure_db("sqlite:///:memory:")
+        DMdl.DBModel.metadata.create_all(database._engine)  # type: ignore
+
         dispatcher = AggregatorDispatcher()
         aggregator = Aggregator(dispatcher, self.createPublisherMock())
         _ = AggregatorMessageHandlers(aggregator)
@@ -86,6 +85,10 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(resultMessage.success, True)
 
     async def test_register_engine_different_name(self):
+        # setup in-memory database
+        database.configure_db("sqlite:///:memory:")
+        DMdl.DBModel.metadata.create_all(database._engine)  # type: ignore
+
         dispatcher = AggregatorDispatcher()
         aggregator = Aggregator(dispatcher, self.createPublisherMock())
         messageHandlers = AggregatorMessageHandlers(aggregator)
