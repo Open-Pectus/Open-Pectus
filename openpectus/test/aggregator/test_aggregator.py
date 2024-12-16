@@ -13,13 +13,15 @@ from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 import openpectus.aggregator.data.models as DMdl
 from openpectus.protocol.models import SystemTagName
 
+
+# setup in-memory database
+database.configure_db("sqlite:///:memory:")
+DMdl.DBModel.metadata.create_all(database._engine)  # type: ignore
+
+
 class AggregatorTest(unittest.IsolatedAsyncioTestCase):
     def __init__(self, methodName: str = "runTest") -> None:
         super().__init__(methodName)
-
-        # setup in-memory database
-        database.configure_db("sqlite:///:memory:")
-        DMdl.DBModel.metadata.create_all(database._engine)  # type: ignore
 
     async def create_channel_mock(self, engine_id: str | None):
         response = RpcResponse[str | None](result=engine_id, result_type=None)
