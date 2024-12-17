@@ -32,6 +32,7 @@ class RecentEngine(DBModel):
     system_state: Mapped[str] = mapped_column()
     location: Mapped[str] = mapped_column()
     last_update: Mapped[datetime] = mapped_column()
+    contributors: Mapped[list[str]] = mapped_column(type_=JSON, default=[])
     required_roles: Mapped[set[str]] = mapped_column(type_=JSON, default=[])
 
 

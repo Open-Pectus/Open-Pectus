@@ -206,6 +206,10 @@ class RecentEngineRepository(RepositoryBase):
             assert engine_data.run_data is not None
             recent_engine.run_id = engine_data.run_data.run_id
             recent_engine.run_started = engine_data.run_data.run_started
+            contributors = set(recent_engine.contributors)
+            for c in engine_data.contributors:
+                contributors.add(c)
+            recent_engine.contributors = list(contributors)
         else:
             recent_engine.run_id = None
             recent_engine.run_started = None
@@ -219,16 +223,4 @@ class RecentEngineRepository(RepositoryBase):
         if system_tag is None:
             logger.warning("The SYSTEM_STATE tag value was not available when saving recent_engine")
         self.db_session.add(recent_engine)
-        self.db_session.commit()
-
-    def mark_recent_engine_stopped(self, engine_data: EngineData):
-        if engine_data.engine_id == "":
-            raise ValueError("Missing/empty engine_id when trying to store recent_engine")
-        existing = self.get_recent_engine_by_engine_id(engine_data.engine_id)
-        if existing is None:
-            raise ValueError("Missing RecentEngine when trying to mark recent_engine stopped" +
-                             f"Engine: {engine_data.engine_id}")
-        existing.run_stopped = datetime.now(UTC)
-        existing.last_update = datetime.now(UTC)
-        self.db_session.add(existing)
         self.db_session.commit()

@@ -49,6 +49,7 @@ class FromEngine:
                 else:
                     run_started = recent_engine.run_started
                 engine_data.run_data = Mdl.RunData.empty(run_id=run_id, run_started=run_started)
+                engine_data.contributors = set(recent_engine.contributors)
             else:
                 logger.info("Recent engine data has no active run")
         else:
@@ -128,6 +129,7 @@ class FromEngine:
                 engine_data.reset_run()
             else:
                 engine_data.run_data.runlog = msg.runlog
+                engine_data.method = msg.method
                 try:
                     recent_run_repo.store_recent_run(engine_data)
                     logger.info(f"Stored recent run {_run_id=}")
