@@ -259,7 +259,7 @@ class RuntimeInfo():
             raise ValueError("Node has no records")
         return record
 
-    def get_node_records(self, node: PNode) -> List[RuntimeRecord]:
+    def get_node_records(self, node: PNode) -> list[RuntimeRecord]:
         return [r for r in self._records if r.node.id == node.id]
 
     def _add_record(self, record: RuntimeRecord, exec_id: UUID):
@@ -351,7 +351,7 @@ class RuntimeRecord():
         self.visit_end_time: float = -1.0
         self.visit_end_tick: int = -1
 
-        self.states: List[RuntimeRecordState] = []
+        self.states: list[RuntimeRecordState] = []
         self.start_values: TagValueCollection | None = None
         self.end_values: TagValueCollection | None = None
 
@@ -498,7 +498,7 @@ class RuntimeRecordStateEnum(StrEnum):
 class RunLog():
     def __init__(self) -> None:
         self.id: str = ""
-        self.items: List[RunLogItem] = []
+        self.items: list[RunLogItem] = []
 
     def size(self) -> int:
         return len(self.items)
