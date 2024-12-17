@@ -94,6 +94,7 @@ class RunStartedMsg(EngineMessage):
 class RunStoppedMsg(EngineMessage):
     run_id: str
     runlog: Mdl.RunLog
+    method: Mdl.Method
 
 
 def print_sequence_range(messages: Sequence[EngineMessage]) -> str:

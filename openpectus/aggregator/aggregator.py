@@ -129,6 +129,7 @@ class FromEngine:
                 engine_data.reset_run()
             else:
                 engine_data.run_data.runlog = msg.runlog
+                engine_data.method = msg.method
                 try:
                     recent_run_repo.store_recent_run(engine_data)
                     logger.info(f"Stored recent run {_run_id=}")

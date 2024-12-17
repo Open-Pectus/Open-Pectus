@@ -3,12 +3,14 @@ from __future__ import annotations
 import copy
 import logging
 from enum import StrEnum, auto
-from typing import Dict, List, Optional
+from typing import Dict
 from uuid import UUID, uuid4
 
 from openpectus.engine.commands import EngineCommand
 from openpectus.lang.exec.tags import TagValueCollection
-from openpectus.lang.model.pprogram import PAlarm, PBlank, PComment, PInjectedNode, PNode, PProgram, PErrorInstruction, PWatch
+from openpectus.lang.model.pprogram import (
+    PAlarm, PBlank, PComment, PInjectedNode, PNode, PProgram, PErrorInstruction, PWatch
+)
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +85,8 @@ class RuntimeInfo():
             node_name = str(r.node) if r.node is not None else "node is None"
             logger.error(f"Runtime record has empty name. node: {node_name}. Fix this error or add a rule exception.")
             return []
+        if r.name == "Stop":
+            return []
 
         items: list[RunLogItem] = []
 
@@ -93,10 +97,9 @@ class RuntimeInfo():
         split_states = self._split_states(r, include_prestart_states=False)
         # iterate the invocations
         for invocation_inx, invocation_states in enumerate(split_states):
-            is_before_first_invocation = False
-            has_more_invocations = invocation_inx < len(split_states) - 1
+            # is_before_first_invocation = False
+            # has_more_invocations = invocation_inx < len(split_states) - 1
             item: RunLogItem | None = None
-            
             command: EngineCommand | None = None
             # iterate the states of the invocation
             for inx, state in enumerate(invocation_states):
@@ -104,7 +107,7 @@ class RuntimeInfo():
                 has_more_states = inx < len(invocation_states) - 1
                 is_conclusive_state = state.state_name in [
                     RuntimeRecordStateEnum.Completed, RuntimeRecordStateEnum.Failed, RuntimeRecordStateEnum.Cancelled
-                ]                
+                ]
 
                 if is_start_state:
                     item = RunLogItem()
