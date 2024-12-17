@@ -716,8 +716,10 @@ class Engine(InterpreterContext):
         return p.build_model()
 
     def write_process_image(self):
-        hwl = self.uod.hwl
+        if not self._runstate_started:
+            return
 
+        hwl = self.uod.hwl
         register_values = []
         registers = [r for r in hwl.registers.values() if RegisterDirection.Write in r.direction]
         for r in registers:

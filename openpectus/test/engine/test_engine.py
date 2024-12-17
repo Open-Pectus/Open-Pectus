@@ -246,6 +246,9 @@ class TestEngine(unittest.TestCase):
     def test_write_process_values_writes_data_to_registers(self):
         e = self.engine
 
+        run_engine(e, "", 1)
+        time.sleep(0.1)
+
         # set hw values
         hwl: TestHW = e.uod.hwl  # type: ignore
         self.assertIsInstance(hwl, TestHW)
