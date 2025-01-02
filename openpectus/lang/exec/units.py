@@ -6,7 +6,7 @@ import pint
 from pint import UnitRegistry, Quantity
 
 
-ureg = UnitRegistry(cache_folder="./pint-cache", non_int_type=decimal.Decimal)
+ureg = UnitRegistry(cache_folder="./pint-cache", non_int_type=decimal.Decimal)  # type: ignore
 ureg.define("m2 = m**2")
 ureg.define("dm2 = dm**2")
 ureg.define("cm2 = cm**2")
