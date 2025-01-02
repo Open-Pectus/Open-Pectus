@@ -32,10 +32,13 @@ def to_model_tag(tag: TagValue) -> Mdl.TagValue:
     if tag.tick_time == 0.0:
         logger.warning(f"Tick time was 0 for tag {tag.name}")
         tag.tick_time = time.time()
+    tag_value = tag.value
+    if isinstance(tag_value, decimal.Decimal):
+        tag_value = float(tag_value)
     return Mdl.TagValue(
         name=tag.name,
         tick_time=tag.tick_time,
-        value=tag.value,
+        value=tag_value,
         value_formatted=tag.value_formatted,
         value_unit=tag.unit,
         direction=tag.direction
