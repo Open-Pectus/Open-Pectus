@@ -1,5 +1,6 @@
 import re
 import unittest
+import decimal
 
 from openpectus.lang.exec.uod import RegexNamedArgumentParser
 from openpectus.engine.uod_builder_api import (
@@ -227,7 +228,11 @@ class TestConversions(unittest.TestCase):
         def test_value(value: str, expected_result: float | None):
             with self.subTest(value):
                 result = as_decimal(value)
-                self.assertEqual(result, expected_result)
+                if expected_result is None:
+                    self.assertEqual(result, expected_result)
+                else:
+                    self.assertEqual(float(result), expected_result)
+                
 
         test_value("0",  0)
         test_value("0.002",  0.002)
