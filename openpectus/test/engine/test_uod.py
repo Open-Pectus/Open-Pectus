@@ -4,7 +4,7 @@ import unittest
 from openpectus.lang.exec.uod import RegexNamedArgumentParser
 from openpectus.engine.uod_builder_api import (
     RegexCategorical, RegexNumber, RegexText,
-    as_float, as_int
+    as_decimal, as_int
 )
 
 
@@ -223,10 +223,10 @@ class TestRegexs(unittest.TestCase):
 
 class TestConversions(unittest.TestCase):
 
-    def test_as_float(self):
+    def test_as_decimal(self):
         def test_value(value: str, expected_result: float | None):
             with self.subTest(value):
-                result = as_float(value)
+                result = as_decimal(value)
                 self.assertEqual(result, expected_result)
 
         test_value("0",  0)
