@@ -2,6 +2,7 @@ import logging
 from logging.handlers import QueueHandler
 from queue import Empty, SimpleQueue
 import time
+import decimal
 
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.models as Mdl
