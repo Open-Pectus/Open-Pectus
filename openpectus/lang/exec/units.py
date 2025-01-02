@@ -245,10 +245,11 @@ def as_decimal(value: str) -> decimal.Decimal | None:
 
 def as_int(value: str) -> int | None:
     """ Parse string value as int and return it. If the value is not an int, return None. """
-    fval = as_float(value)
-    if fval is not None:
-        if fval.is_integer():
-            return int(fval)
+    dval = as_decimal(value)
+    if dval is not None:
+        numerator, denominator = dval.as_integer_ratio()
+        if denominator == 1:
+            return int(dval)
     return None
 
 def _get_pint_unit(unit: str | None) -> pint.Unit | None:
