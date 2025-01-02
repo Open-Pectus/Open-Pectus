@@ -9,7 +9,7 @@ from openpectus.lang.exec.uod import (
 from openpectus.protocol.models import PlotConfiguration, SubPlot, PlotAxis, PlotColorRegion
 import openpectus.lang.exec.tags_impl as tags
 import openpectus.lang.exec.units as units
-from openpectus.lang.exec.units import as_float, as_int
+from openpectus.lang.exec.units import as_decimal, as_int
 
 __all__ = [
     'HardwareLayerBase', 'Register',

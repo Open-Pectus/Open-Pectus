@@ -4,7 +4,7 @@ from typing import Any
 
 from openpectus.engine.uod_builder_api import (
     UnitOperationDefinitionBase, UodBuilder, UodCommand,
-    as_float,
+    as_decimal,
     tags,
     PlotConfiguration, SubPlot, PlotAxis, PlotColorRegion,
     RegexNumber, RegexCategorical,
@@ -43,11 +43,11 @@ def create() -> UnitOperationDefinitionBase:
         TestInt: 5
         """
         print("test_cmd executing with arg: " + value)
-        fval = as_float(value)
+        dval = as_decimal(value)
         if fval is None:
             # raising ValueError will display the error to the user
             raise ValueError(f"value '{value}' is not a number")
-        cmd.context.tags.get("TestInt").set_value(fval, time())
+        cmd.context.tags.get("TestInt").set_value(dval, time())
         cmd.set_complete()
 
     def cmd_regex(cmd: UodCommand, number: str, number_unit: str | None = None):
@@ -57,7 +57,7 @@ def create() -> UnitOperationDefinitionBase:
         # optional arg is ok when regex's named groups do not include it
         print(f"cmd_regex executing with number: {number} and number_unit: {number_unit}")
         assert number_unit is not None
-        cmd.context.tags.get("CmdWithRegexArgs").set_value_and_unit(float(number), number_unit, time())
+        cmd.context.tags.get("CmdWithRegexArgs").set_value_and_unit(as_decimal(number), number_unit, time())
         cmd.set_complete()
 
     def cmd_regex_categorical(cmd: UodCommand, option: str):
@@ -70,8 +70,8 @@ def create() -> UnitOperationDefinitionBase:
 
     def test_percentage(cmd: UodCommand, number, number_unit):
         # Note: When using RegexNumber, the number argument is still a
-        # string but it will always support conversion to float
-        number = float(number)
+        # string but it will always support conversion to float or decimal
+        number = as_decimal(number)
         cmd.context.tags.get("TestPercentage").set_value(number, time())
         cmd.set_complete()
 
@@ -116,6 +116,7 @@ def create() -> UnitOperationDefinitionBase:
         .with_instrument("DemoUod")
         .with_author("Demo Author", "demo@openpectus.org")
         .with_filename(__file__)
+        .with_required_roles(['RoleTest'])
         .with_hardware(DemoHardware())
         .with_location("Demo location")
         .with_hardware_register("FT01", RegisterDirection.Read, path='Objects;2:System;2:FT01')
