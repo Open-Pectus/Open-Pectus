@@ -44,7 +44,7 @@ def create() -> UnitOperationDefinitionBase:
         """
         print("test_cmd executing with arg: " + value)
         dval = as_decimal(value)
-        if fval is None:
+        if dval is None:
             # raising ValueError will display the error to the user
             raise ValueError(f"value '{value}' is not a number")
         cmd.context.tags.get("TestInt").set_value(dval, time())

@@ -16,5 +16,5 @@ __all__ = [
     'UnitOperationDefinitionBase', 'UodCommand', 'UodBuilder',
     'RegexNumber', 'RegexText', 'RegexCategorical',
     'PlotConfiguration', 'SubPlot', 'PlotAxis', 'PlotColorRegion',
-    "tags", "units", "as_float", "as_int"
+    "tags", "units", "as_decimal", "as_int"
 ]
