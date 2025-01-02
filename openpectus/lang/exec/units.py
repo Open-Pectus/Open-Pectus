@@ -1,11 +1,12 @@
 from __future__ import annotations
 import logging
+import decimal
 
 import pint
 from pint import UnitRegistry, Quantity
 
 
-ureg = UnitRegistry(cache_folder="./pint-cache")
+ureg = UnitRegistry(cache_folder="./pint-cache", non_int_type=decimal.Decimal)
 ureg.define("m2 = m**2")
 ureg.define("dm2 = dm**2")
 ureg.define("cm2 = cm**2")
@@ -62,9 +63,6 @@ QUANTITY_PINT_MAP: dict[str, str] = {
 }
 """ Map quantity names to pint dimensions or None if not a pint dimension. """
 
-FLOAT_COMPARE_DELTA = 0.01
-""" The precision to use when comparing float values for equality. """
-
 # build list of all supported units
 _supported_units: list[None | str] = [None]
 for v in QUANTITY_UNIT_MAP.values():
@@ -86,14 +84,14 @@ def is_supported_unit(unit: str) -> bool:
 def get_volume_units():
     return QUANTITY_UNIT_MAP['volume']
 
-def convert_value_to_unit(value: float | int, source_unit: str, target_unit: str) -> float:
+def convert_value_to_unit(value: decimal.Decimal | float | int, source_unit: str, target_unit: str) -> float:
     """ Convert a value with a unit to the value in another unit.
 
     Raises ValueError if the units are not compatible.
     """
     try:
         val = ureg.Quantity(value, source_unit).to(target_unit).magnitude
-        return val
+        return float(val)
     except pint.DimensionalityError:
         raise ValueError(f"Cannot convert between units '{source_unit}' and '{target_unit}'")
 
@@ -181,7 +179,7 @@ def compare_values(op: str, value_a: str, unit_a: str | None, value_b: str, unit
 
     is_pint_units = is_pint()
     if is_pint_units:
-        fval_a, fval_b = as_float(value_a), as_float(value_b)
+        fval_a, fval_b = as_decimal(value_a), as_decimal(value_b)
         if fval_a is None:
             raise ValueError("Cannot compare values, first value is missing or not numeric")
         if fval_b is None:
@@ -201,7 +199,7 @@ def compare_values(op: str, value_a: str, unit_a: str | None, value_b: str, unit
         if op in ['<', '<=', '>', '>=']:  # these operators only make sence for numeric values
             assert isinstance(quantity_a, str), f"quantity_a '{quantity_a}' should be a str here"
             assert isinstance(quantity_b, str), f"quantity_b '{quantity_b}' should be a str here"
-            quantity_a, quantity_b = as_float(quantity_a), as_float(quantity_b)
+            quantity_a, quantity_b = as_decimal(quantity_a), as_decimal(quantity_b)
             if quantity_a is None:
                 raise ValueError("Cannot compare values, first value is missing or not numeric")
             if quantity_b is None:
@@ -210,7 +208,7 @@ def compare_values(op: str, value_a: str, unit_a: str | None, value_b: str, unit
             # if both are numerical, perform a numerical comparison
             assert isinstance(quantity_a, str), f"quantity_a '{quantity_a}' should be a str here"
             assert isinstance(quantity_b, str), f"quantity_b '{quantity_b}' should be a str here"
-            quantity_a_f, quantity_b_f = as_float(quantity_a), as_float(quantity_b)
+            quantity_a_f, quantity_b_f = as_decimal(quantity_a), as_decimal(quantity_b)
             if quantity_a_f is not None and quantity_b_f is not None:
                 quantity_a, quantity_b = quantity_a_f, quantity_b_f
 
@@ -221,13 +219,7 @@ def compare_values(op: str, value_a: str, unit_a: str | None, value_b: str, unit
             case '<=':
                 result = quantity_a <= quantity_b  # type: ignore
             case '=' | '==':
-                if isinstance(quantity_a, Quantity) and isinstance(quantity_b, Quantity):
-                    diff = quantity_a - quantity_b
-                    result = abs(diff.magnitude) < FLOAT_COMPARE_DELTA
-                elif isinstance(quantity_a, float) and isinstance(quantity_b, float):
-                    result = abs(quantity_a - quantity_b) < FLOAT_COMPARE_DELTA
-                else:
-                    result = quantity_a == quantity_b
+                result = quantity_a == quantity_b
             case '>':
                 result = quantity_a > quantity_b  # type: ignore
             case '>=':
@@ -244,10 +236,10 @@ def compare_values(op: str, value_a: str, unit_a: str | None, value_b: str, unit
     assert isinstance(result, bool), f"Comparison result was not type bool but {type(result)}"
     return result
 
-def as_float(value: str) -> float | None:
+def as_decimal(value: str) -> decimal.Decimal | None:
     """ Parse string value as a float and return it. If the value is not a number, return None. """
     try:
-        return float(value)
+        return decimal.Decimal(value)
     except Exception:
         return None
 
