@@ -228,7 +228,7 @@ class TestConversions(unittest.TestCase):
         def test_value(value: str, expected_result: float | None):
             with self.subTest(value):
                 result = as_decimal(value)
-                if expected_result is None:
+                if result is None:
                     self.assertEqual(result, expected_result)
                 else:
                     self.assertEqual(float(result), expected_result)
