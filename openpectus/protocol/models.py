@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from typing import Literal
+import decimal
 
 import openpectus.engine.models as EM
 from pydantic import BaseModel
@@ -49,7 +50,7 @@ class CommandInfo(ProtocolModel):
     docstring: str | None
 
 
-TagValueType = float | int | str | None
+TagValueType = decimal.Decimal | float | int | str | None
 
 
 class TagValue(ProtocolModel):
