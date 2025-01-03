@@ -14,8 +14,7 @@ SystemStateEnum = Mdl.SystemStateEnum
 
 class Dto(BaseModel):
     class Config:
-        smart_union = True
-        orm_mode = True
+        from_attributes = True
 
     # deliver undefined instead of null for None values. Adapted from:
     # https://github.com/fastapi/fastapi/issues/3314#issuecomment-962932368
