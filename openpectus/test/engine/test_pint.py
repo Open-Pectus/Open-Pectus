@@ -12,7 +12,8 @@ U_ = Unit
 class PintTest(unittest.TestCase):
 
     def test_basics_quantity(self):
-        distance = 24.0 * ureg.meter
+        distance: Quantity = 24.0 * ureg.meter
+        assert isinstance(distance, Quantity)
         self.assertIsInstance(distance, Quantity)
         self.assertEqual("24.0 meter", str(distance))
 
@@ -25,15 +26,18 @@ class PintTest(unittest.TestCase):
         self.assertEqual("[length]", distance.dimensionality)
         self.assertFalse(distance.dimensionless)
 
-        velocity = 7 * ureg.meter / 1 * ureg.second
+        velocity: Quantity = 7 * ureg.meter / 1 * ureg.second
+        assert isinstance(velocity, Quantity)
         self.assertIsInstance(velocity.dimensionality, UnitsContainer)
         self.assertEqual("[length] * [time]", velocity.dimensionality)
 
-        weight = 2 * ureg.kg
+        weight: Quantity = 2 * ureg.kg
+        assert isinstance(weight, Quantity)
         self.assertEqual("kilogram", str(weight.units))
         self.assertEqual("[mass]", weight.dimensionality)
 
-        volume = 3 * ureg.liter  # hmm, no sign of 'volume' anywhere in the api
+        volume: Quantity = 3 * ureg.liter  # hmm, no sign of 'volume' anywhere in the api
+        assert isinstance(volume, Quantity)
         self.assertEqual("liter", str(volume.units))
         self.assertEqual("[length] * [length] * [length]", volume.dimensionality)
 
@@ -131,11 +135,13 @@ class PintTest(unittest.TestCase):
 
     def test_conversion(self):
         distance_km = 3.2 * ureg.kilometers
+        assert isinstance(distance_km, Quantity)
         distance_m = distance_km.to(ureg.meter)
         self.assertEqual(3200, distance_m.magnitude)
 
     def test_conversion_invalid(self):
         distance_km = 3.2 * ureg.kilometers
+        assert isinstance(distance_km, Quantity)
         with self.assertRaises(DimensionalityError) as err:
             _ = distance_km.to(ureg.second)
         self.assertEqual("Cannot convert from 'kilometer' ([length]) to 'second' ([time])", str(err.exception))
@@ -143,7 +149,7 @@ class PintTest(unittest.TestCase):
     def test_compatibility_quantity(self):
         dist = Q_("310m")
         weight = Q_("3kg")
-        temp = Q_(3, ureg.degC)  # type: ignore
+        temp = Q_(3, ureg.degC)
         time = Q_("5 sec")
 
         # NOTE: don't use ureg.is_compatible_with:
@@ -186,7 +192,7 @@ class PintTest(unittest.TestCase):
         # this works. but beware of deltas. temperature calculus is tricky
         # alternatively, use ureg = UnitRegistry(autoconvert_offset_to_baseunit = True)
         # to perform automatic conversions
-        temperature = Q_(25.4, ureg.degC)  # type: ignore
+        temperature = Q_(25.4, ureg.degC)
         self.assertEqual("25.4 degree_Celsius", str(temperature))
 
     def test_higher_dimensionality(self):

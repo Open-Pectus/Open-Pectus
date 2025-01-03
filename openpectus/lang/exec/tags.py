@@ -3,6 +3,7 @@ from __future__ import annotations
 from enum import StrEnum, auto
 import time
 from typing import Any, Callable, Iterable, Set
+import decimal
 
 from openpectus.lang.exec.events import EventListener
 from openpectus.lang.exec.units import convert_value_to_unit, is_supported_unit
@@ -36,7 +37,7 @@ class SystemTagName(StrEnum):
         return value in SystemTagName.__members__.values()
 
 
-TagValueType = int | float | str | None
+TagValueType = decimal.Decimal | int | float | str | None
 """ Represents the types of tag values """
 
 TagFormatFunction = Callable[[Any], str]

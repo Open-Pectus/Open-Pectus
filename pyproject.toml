@@ -10,7 +10,7 @@ readme = "README.md"
 
 dependencies = [
     "antlr4-python3-runtime==4.13.1",
-    "pint==0.22",
+    "pint==0.24.4",
     "typing_extensions==4.8.0",
     "pydantic==1.10.13",
     "fastapi==0.103.2",
