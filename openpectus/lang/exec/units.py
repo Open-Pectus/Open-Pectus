@@ -33,7 +33,7 @@ QUANTITY_UNIT_MAP = {
     'frequency': ['Hz', 'kHz'],
     'pressure': ['Pa', 'bar', 'pascal'],            # Note: pint prefers pascal over Pa so we define both.
     'mass flow rate': ['kg/h', 'g/s', 'g/min', 'g/h'],
-    'electrical conductance': ['mS/cm'],
+    'conductivity': ['mS/cm', 'µS/cm'],
     'percentage': ['%', 'vol%', 'wt%', 'mol%'],     # Custom quantity but supported by pint
     'column volume': ['CV'],                        # Custom quantity
     'absorbance': ['AU', 'mAU', 'milliAU'],
@@ -55,7 +55,7 @@ QUANTITY_PINT_MAP: dict[str, str] = {
     'amount_of_substance': '[substance]',
     'pressure': '[mass] / [length] / [time] ** 2',
     'mass flow rate': '[mass] / [time]',
-    'electrical conductance': '[current] ** 2 * [time] ** 3 / [length] ** 3 / [mass]',
+    'conductivity': '[current] ** 2 * [time] ** 3 / [mass] / [length] ** 3',
     'percentage': '[percentage]',
     'flux': '[length] / [time]',
     'permeability': '[length] ** 2 * [time] / [mass]',
@@ -219,6 +219,8 @@ def compare_values(op: str, value_a: str, unit_a: str | None, value_b: str, unit
             case '<=':
                 result = quantity_a <= quantity_b  # type: ignore
             case '=' | '==':
+                if is_pint_units:
+                    quantity_b = quantity_b.to(quantity_a.units)
                 result = quantity_a == quantity_b
             case '>':
                 result = quantity_a > quantity_b  # type: ignore

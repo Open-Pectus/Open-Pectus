@@ -201,6 +201,8 @@ class TestUnits(unittest.TestCase):
         self.comp("=", "9", "%", "9", "wt%", True)
         self.comp("=", "1000", "mAU", "1", "AU", True)
         self.comp("=", "1000", "milliAU", "1", "AU", True)
+        self.comp("=", "1", "mS/cm", "1000", "µS/cm", True)
+        self.comp("=", "500", "µS/cm", "0.5", "mS/cm", True)
 
     def test_compare_multidimensional_pint_units(self):
         # pint treats 'L/d' as 'liter / day' which must be mapped back
