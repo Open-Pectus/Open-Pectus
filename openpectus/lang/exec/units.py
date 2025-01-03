@@ -220,6 +220,8 @@ def compare_values(op: str, value_a: str, unit_a: str | None, value_b: str, unit
                 result = quantity_a <= quantity_b  # type: ignore
             case '=' | '==':
                 if is_pint_units:
+                    assert isinstance(quantity_a, Q_)
+                    assert isinstance(quantity_b, Q_)
                     quantity_b = quantity_b.to(quantity_a.units)
                 result = quantity_a == quantity_b
             case '>':
