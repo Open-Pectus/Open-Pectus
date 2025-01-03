@@ -164,10 +164,8 @@ class Tag(ChangeSubject, EventListener):
 
     def set_value_and_unit(self, val: TagValueType, unit: str, tick_time: float) -> None:
         """ Set a new value by converting the provided value and unit into the the unit of the tag. """
-        if not isinstance(val, (int, float, decimal.Decimal)):
+        if not isinstance(val, (int, float,)):
             raise ValueError(f"Cannot set unit for a non-numeric value {val} of type {type(val).__name__}")
-        if isinstance(val, (int, float)):
-            val = decimal.Decimal(val)
         if self.unit is None:
             raise ValueError("Cannot change unit on a tag with no unit")
         val = convert_value_to_unit(val, unit, self.unit)
@@ -176,17 +174,17 @@ class Tag(ChangeSubject, EventListener):
     def get_value(self):
         return self.value
 
-    def as_number(self) -> int | float | decimal.Decimal:
-        if not isinstance(self.value, (int, float, decimal.Decimal)):
+    def as_number(self) -> int | float:
+        if not isinstance(self.value, (int, float)):
             raise ValueError(
                 f"Value is not numerical: '{self.value}' has type '{type(self. value).__name__}' tag: '{self.name}'")
         return self.value
 
     def as_float(self) -> float:
-        if not isinstance(self.value, (float, decimal.Decimal)):
+        if not isinstance(self.value, (float,)):
             raise ValueError(
                 f"Value is not a float: '{self.value}' has type '{type(self. value).__name__}' tag: '{self.name}'")
-        return float(self.value)
+        return self.value
 
     def archive(self) -> str | None:
         """ The value to write to archive or None to skip that tag from archival """
