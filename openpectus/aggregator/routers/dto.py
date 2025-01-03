@@ -20,7 +20,7 @@ class Dto(BaseModel):
     # https://github.com/fastapi/fastapi/issues/3314#issuecomment-962932368
     def dict(self, *args, **kwargs):
         kwargs.pop('exclude_none', None)
-        return super().dict(*args, exclude_none=True, **kwargs)
+        return super().model_dump(*args, exclude_none=True, **kwargs)
 
 
 class AuthConfig(Dto):
