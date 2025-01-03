@@ -91,7 +91,7 @@ class RuntimeInfo():
         items: list[RunLogItem] = []
 
         # Usually there is only a single start/complete state pair which is what is needed for a runlog item.
-        # But, alas, alarms can be invoked any number of times for which all state information is placed in 
+        # But, alas, alarms can be invoked any number of times for which all state information is placed in
         # the same runtime record. Therefore we need to expand these states into seperate run log items.
         # And because any node can be in a PAlarm body, this extends to all other nodes as well.
         split_states = self._split_states(r, include_prestart_states=False)

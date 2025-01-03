@@ -225,7 +225,7 @@ class AggregatorTestDispatcher(AggregatorDispatcher):
         return response
 
     async def dispatch_message(self, message: EM.EngineMessage) -> M.MessageBase:
-        response = await super().dispatch_message(message)                
+        response = await super().dispatch_message(message)
         if isinstance(response, M.ProtocolErrorMessage):
             raise ValueError("Dispatch failed with protocol error: " + str(response.protocol_msg))
         return response

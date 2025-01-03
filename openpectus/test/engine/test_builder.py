@@ -771,7 +771,7 @@ Watch A > 0     # missing colon
     def test_command_comment(self):
         p = build(
             """
-mycommand: a  # foo  
+mycommand: a  # foo
         """
         )
 
@@ -984,9 +984,9 @@ Error: baz
     def test_program_errors(self):
         p = build(
             """
-Mark:  a  
+Mark:  a
 Mark  b  # comment
-Watch: counter >  
+Watch: counter >
     Mark: c
 Bad command
 :
