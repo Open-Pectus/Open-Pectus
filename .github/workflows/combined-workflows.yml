@@ -197,7 +197,8 @@ jobs:
     steps:
       # https://docs.digitalocean.com/reference/api/api-reference/#operation/apps_create_deployment
       - name: Trigger deployment in Digital Ocean after push to Github container registry
-        run: curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer ${{ secrets.DIGITALOCEAN_TOKEN }}" "https://api.digitalocean.com/v2/apps/${{ secrets.DIGITALOCEAN_APP_ID }}/deployments"
+        run: |
+          curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer ${{ secrets.DIGITALOCEAN_TOKEN }}" "https://api.digitalocean.com/v2/apps/${{ secrets.DIGITALOCEAN_APP_ID }}/deployments"
       - name: 'Login via Azure CLI'
         uses: azure/login@v1
         with:
