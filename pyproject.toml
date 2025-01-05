@@ -41,6 +41,7 @@ exclude = [
     "openpectus/engine/p1*",
     "openpectus/.flake8*",
     "openpectus/.idea*",
+    "openpectus/dist",
     "openpectus/Dockerfile",
     "openpectus/docker-compose.yml"
 ]
