@@ -7,6 +7,7 @@ name = "openpectus"
 authors = [{name = "Eskild Schroll-Fleischer", email = "eyfl@novonordisk.com"}, {name = "Morten Passow Odgaard", email = "mpo@mjolner.dk"}, {name = "Jan H. Knudsen", email = "jhk@mjolner.dk"}]
 dynamic = ["version", "description"]
 readme = "README.md"
+requires-python = ">= 3.11"
 
 dependencies = [
     "antlr4-python3-runtime==4.13.1",
@@ -29,9 +30,9 @@ dependencies = [
 
 [project.optional-dependencies]
 development = [
-    "flake8==7.1.1",   # dev
-    "black==24.10.0",   # dev
-    "build==1.2.2.post1",   # dev
+    "flake8==7.1.1",
+    "black==24.10.0",
+    "build==1.2.2.post1",
 ]
 
 [tool.flit.sdist]
