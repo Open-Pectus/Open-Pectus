@@ -15,21 +15,23 @@ env:
   NODE_VERSION: 20.15
 
 jobs:
-
   test_backend:
-    runs-on: ubuntu-latest
+    name: Unittest ${{ matrix.os }} - Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, windows-latest]
+        python-version: ["3.12"]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
+        run: python -m pip install --upgrade pip
       - name: Install OpenPectus (as editable)
-        run: |
-          pip install -e '.[development]'
+        run: pip install -e '.[development]'
       - name: Lint with flake8
         run: |
           # use configuration from ./.flake8
@@ -46,15 +48,15 @@ jobs:
             echo "::warning::Flake8 Lint Warning"
           fi
       - name: Type check with pyright
-        run: |
-          pyright
+        run: pyright
       - name: Test with unittest
         run: |
           cd openpectus
           python -m unittest
 
   build_frontend:
-    runs-on: ubuntu-latest
+    name: Build frontend
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: Use Node.js ${{ env.NODE_VERSION }}
@@ -76,7 +78,8 @@ jobs:
           path: "openpectus/frontend/dist"
 
   package_dist:
-    runs-on: ubuntu-latest
+    name: Build and Package
+    runs-on: ubuntu-22.04
     needs: [build_frontend, test_backend]
     steps:
       - uses: actions/checkout@v4
@@ -85,8 +88,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install openpectus python dependencies
-        run: |
-          python -m pip install --upgrade pip build
+        run: python -m pip install --upgrade pip build
       - name: Download frontend dist into aggregator
         uses: actions/download-artifact@v4
         with:
@@ -100,20 +102,18 @@ jobs:
         run: |
           echo "{\"build_number\": \"$build_number\", \"git_sha\": \"$git_sha\"}" > openpectus/build.json
           echo "Build number: $build_number"
-      - name: Build OpenPectus with frontend dist (package openpectus-x.y.z.tar.gz)
+      - name: Build Open Pectus with frontend dist (package openpectus-x.y.z.tar.gz)
         # build openpectus-x.y.z.tar.gz using version number defined in source (__version__ in __init__.py)
-        run: |
-          python -m build --sdist -o openpectus/dist
-      - name: Archive production bundle artifact
+        run: python -m build --sdist -o openpectus/dist
+      - name: Archive Open Pectus with frontend dist (version no.)
         uses: actions/upload-artifact@v4
         with:
           name: openpectus-dist-pypi
           path: openpectus/dist/*.tar.gz
       - name: Rename package to remove version number (openpectus.tar.gz)
         # rename package file openpectus-x.y.z.tar.gz to openpectus.tar.gz for a Dockerfile independent of version
-        run: |
-          mv openpectus/dist/openpectus-*.tar.gz openpectus/dist/openpectus.tar.gz
-      - name: Archive production bundle artifact
+        run: mv openpectus/dist/openpectus-*.tar.gz openpectus/dist/openpectus.tar.gz
+      - name: Archive Open Pectus with frontend dist for Docker
         uses: actions/upload-artifact@v4
         with:
           name: openpectus-dist
@@ -146,6 +146,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
 
   publish_docker_image:
+    name: Publish Docker image
     needs: [package_dist]
     runs-on: ubuntu-latest
     permissions:
@@ -185,18 +186,18 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           context: .
           file: ./Dockerfile
-      # https://docs.digitalocean.com/reference/api/api-reference/#operation/apps_create_deployment
-      - name: Trigger deployment in Digital Ocean after push to Github container registry
-        run: |
-          curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer ${{ secrets.DIGITALOCEAN_TOKEN }}" "https://api.digitalocean.com/v2/apps/${{ secrets.DIGITALOCEAN_APP_ID }}/deployments"
 
   deploy_image:
+    name: Deploy Docker image on Azure and Digital Ocean
     needs: [publish_docker_image]
     runs-on: ubuntu-latest
     permissions:
       packages: write
       contents: read
     steps:
+      # https://docs.digitalocean.com/reference/api/api-reference/#operation/apps_create_deployment
+      - name: Trigger deployment in Digital Ocean after push to Github container registry
+        run: curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer ${{ secrets.DIGITALOCEAN_TOKEN }}" "https://api.digitalocean.com/v2/apps/${{ secrets.DIGITALOCEAN_APP_ID }}/deployments"
       - name: 'Login via Azure CLI'
         uses: azure/login@v1
         with:
