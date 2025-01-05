@@ -41,6 +41,7 @@ jobs:
           # exit-zero treats all errors as warnings.
           #flake8 . --count --exit-zero --statistics
       - name: Lint with flake8 (warnings)
+        if: runner.os == 'Linux'
         run: |
           # use configuration from ./.flake8
           cd openpectus
