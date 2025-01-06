@@ -7,16 +7,15 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
 import { UnitControlsComponent } from './unit-controls.component';
 
 @Component({
-  selector: 'app-unit-header',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [
-    LetDirective,
-    UnitControlsComponent,
-    TitleCasePipe,
-    PushPipe,
-  ],
-  template: `
+    selector: 'app-unit-header',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [
+        LetDirective,
+        UnitControlsComponent,
+        TitleCasePipe,
+        PushPipe,
+    ],
+    template: `
     <ng-container *ngrxLet="processUnit as processUnit">
       <div class="mb-2 -mt-2 text-xs flex gap-4">
         <span>Your role: <b>{{ processUnit?.current_user_role | titlecase }}</b></span>
@@ -33,7 +32,7 @@ import { UnitControlsComponent } from './unit-controls.component';
         }
       </div>
     </ng-container>
-  `,
+  `
 })
 export class UnitHeaderComponent {
   protected processUnit = this.store.select(DetailsSelectors.processUnit);

@@ -12,7 +12,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/main' }}
-  NODE_VERSION: 20.15
+  NODE_VERSION: 22.11 # 22.12 has incompatibilities https://github.com/nodejs/node/issues/56155 https://github.com/tailwindlabs/tailwindcss/pull/15421 due to https://nodejs.org/en/blog/release/v22.12.0#requireesm-is-now-enabled-by-default
 
 jobs:
 

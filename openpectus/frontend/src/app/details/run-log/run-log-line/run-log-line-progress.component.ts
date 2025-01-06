@@ -2,11 +2,10 @@ import { DecimalPipe, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 
 @Component({
-  selector: 'app-run-log-line-progress',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [NgIf, DecimalPipe],
-  template: `
+    selector: 'app-run-log-line-progress',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [NgIf, DecimalPipe],
+    template: `
     <div class="border-gray-400 bg-white border rounded-md overflow-hidden w-28 h-full flex items-center relative">
       <div class="bg-sky-600 saturate-50 h-full overflow-visible flex items-center"
            [style.width.%]="value * 100" *ngIf="value !== undefined">
@@ -18,7 +17,7 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
             [class.text-white]="value >= .5" [class.text-black]="value < .5"
             *ngIf="value !== undefined">{{ value * 100 | number:'1.1-1' }} %</span>
     </div>
-  `,
+  `
 })
 export class RunLogLineProgressComponent {
   @Input() value?: number;

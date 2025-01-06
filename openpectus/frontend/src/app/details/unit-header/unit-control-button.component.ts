@@ -4,11 +4,10 @@ import { Store } from '@ngrx/store';
 import { DetailsActions } from '../ngrx/details.actions';
 
 @Component({
-  selector: 'app-unit-control-button',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [NgClass, TitleCasePipe],
-  template: `
+    selector: 'app-unit-control-button',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [NgClass, TitleCasePipe],
+    template: `
     <button class="py-2 pr-5 pl-3.5 rounded-lg text-white bg-sky-700 flex items-center gap-2 tracking-wider"
             (click)="executeCommand()"
             [disabled]="disabled || (toggled && unCommand === undefined)"
@@ -18,7 +17,7 @@ import { DetailsActions } from '../ngrx/details.actions';
             [style.box-shadow]="toggled ? null : disabled ? '2.5px 3px #cbd5e1' : '2.5px 3px #075985'">
       <span class="codicon" [ngClass]="'codicon-'+iconName"></span>{{ command | titlecase }}
     </button>
-  `,
+  `
 })
 export class UnitControlButtonComponent {
   @Input() command?: string;

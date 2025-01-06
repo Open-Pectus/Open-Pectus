@@ -10,11 +10,10 @@ import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
 import { AxisLimits } from './process-plot.types';
 
 @Component({
-  selector: 'app-y-axis-override-dialog',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [LetDirective, NgIf],
-  template: `
+    selector: 'app-y-axis-override-dialog',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [LetDirective, NgIf],
+    template: `
     <ng-container *ngrxLet="data; let data">
       <ng-container *ngIf="data !== undefined">
         <div class="fixed left-0 top-0 right-0 bottom-0" (click)="onClose()"></div>
@@ -42,7 +41,7 @@ import { AxisLimits } from './process-plot.types';
         </div>
       </ng-container>
     </ng-container>
-  `,
+  `
 })
 export class YAxisOverrideDialogComponent {
   @Input() margin?: string;

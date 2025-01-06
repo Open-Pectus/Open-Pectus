@@ -30,7 +30,6 @@ const lineIdClassNamePrefix = 'line-id-';
 @Component({
   selector: 'app-monaco-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
   styleUrls: ['monaco-editor.component.scss'],
   template: `
     <div #editor class="w-full h-full"></div>

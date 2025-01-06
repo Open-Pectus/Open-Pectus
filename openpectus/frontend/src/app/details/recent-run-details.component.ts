@@ -12,19 +12,18 @@ import { RecentRunHeaderComponent } from './recent-run-header.component';
 import { RunLogComponent } from './run-log/run-log.component';
 
 @Component({
-  selector: 'app-recent-run-details',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [
-    LetDirective,
-    RecentRunHeaderComponent,
-    ProcessPlotContainerComponent,
-    MethodEditorComponent,
-    RunLogComponent,
-    ErrorLogComponent,
-    MissingRolesComponent,
-  ],
-  template: `
+    selector: 'app-recent-run-details',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [
+        LetDirective,
+        RecentRunHeaderComponent,
+        ProcessPlotContainerComponent,
+        MethodEditorComponent,
+        RunLogComponent,
+        ErrorLogComponent,
+        MissingRolesComponent,
+    ],
+    template: `
     <app-missing-roles>
       <div class="flex justify-center">
         <div class="grid grid-cols-1 2xl:grid-cols-2 w-full lg:px-6 lg:py-6 gap-4 lg:gap-6" *ngrxLet="recentRunId as recentRunId">
@@ -36,7 +35,7 @@ import { RunLogComponent } from './run-log/run-log.component';
         </div>
       </div>
     </app-missing-roles>
-  `,
+  `
 })
 export class RecentRunDetailsComponent implements OnInit, OnDestroy {
   protected recentRunId = this.store.select(selectRouteParam(DetailsRoutingUrlParts.recentRunIdParamName));
