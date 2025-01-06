@@ -253,6 +253,7 @@ Watch: Block Time > .3s
         self.assert_Runlog_HasItem_Started("Reset")
 
         runlog = e.runtimeinfo.get_runlog()
+        self.assertEqual(1, len([i for i in runlog.items if i.name == "Reset"]))
         item = next((i for i in runlog.items if i.name == "Reset"), None)
         assert isinstance(item, RunLogItem)
         exec_id = item.id
@@ -280,6 +281,9 @@ Watch: Block Time > .3s
         print_runtime_records(e, "post-cancel")
         self.assertEqual(item.cancelled, True)
         self.assertEqual(item.cancellable, False)
+
+        # assert we only have one item
+        self.assertEqual(1, len([i for i in runlog.items if i.name == "Reset"]))
 
     def test_runlog_force_alarm(self):
         e = self.engine
