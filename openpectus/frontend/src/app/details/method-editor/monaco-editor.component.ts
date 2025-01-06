@@ -1,5 +1,6 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, OnDestroy, ViewChild } from '@angular/core';
 import '@codingame/monaco-vscode-json-default-extension';
+import getConfigurationServiceOverride from '@codingame/monaco-vscode-configuration-service-override';
 import getLanguagesServiceOverride from '@codingame/monaco-vscode-languages-service-override';
 import getModelServiceOverride from '@codingame/monaco-vscode-model-service-override';
 import getTextmateServiceOverride from '@codingame/monaco-vscode-textmate-service-override';
@@ -78,11 +79,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
         },
       },
       // create a language client connection from the JSON RPC connection on demand
-      connectionProvider: {
-        get: () => {
-          return Promise.resolve(transports);
-        },
-      },
+      messageTransports: transports,
     });
   }
 
@@ -95,16 +92,14 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     const alreadyInitialized = await firstValueFrom(this.monacoServicesInitialized);
     if(alreadyInitialized) return;
     await initServices({
-      serviceConfig: {
-        userServices: {
-          ...getThemeServiceOverride(),
-          ...getTextmateServiceOverride(),
-          ...getModelServiceOverride(),
-          ...getLanguagesServiceOverride(),
-        },
-        debugLogging: false,
+      serviceOverrides: {
+        ...getThemeServiceOverride(),
+        ...getTextmateServiceOverride(),
+        ...getModelServiceOverride(),
+        ...getLanguagesServiceOverride(),
+        ...getConfigurationServiceOverride(),
       },
-    });
+    }, {});
   }
 
   private registerLanguages() {

@@ -98,6 +98,8 @@ class ProcessUnit(Dto):
     location: str | None
     runtime_msec: int | None
     current_user_role: UserRole
+    uod_author_name: str | None = None
+    uod_author_email: str | None = None
     # users: list[User] ?
 
 

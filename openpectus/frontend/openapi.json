@@ -2179,6 +2179,14 @@
           },
           "current_user_role": {
             "$ref": "#/components/schemas/UserRole"
+          },
+          "uod_author_name": {
+            "type": "string",
+            "title": "Uod Author Name"
+          },
+          "uod_author_email": {
+            "type": "string",
+            "title": "Uod Author Email"
           }
         },
         "type": "object",
