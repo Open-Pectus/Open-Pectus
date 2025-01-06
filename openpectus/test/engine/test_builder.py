@@ -986,7 +986,7 @@ Error: baz
             """
 Mark:  a
 Mark  b  # comment
-Watch: counter >
+Watch: counter >  
     Mark: c
 Bad command
 :
