@@ -17,6 +17,7 @@ import { DetailsSelectors } from './ngrx/details.selectors';
           <span>Started at: <b class="whitespace-nowrap">{{ recentRun?.started_date | date }}</b></span>
           <span>Finished at: <b class="whitespace-nowrap">{{ recentRun?.completed_date | date }}</b></span>
           <span>Contributions by: <b>{{ recentRun?.contributors?.join(', ') }}</b></span>
+          <span>Uod author: <b>{{ recentRun?.uod_author_name }} <{{ recentRun?.uod_author_email }}></b></span>
         </div>
         <h1 class="text-4xl lg:text-5xl font-bold">{{ recentRun?.engine_id }}</h1>
 

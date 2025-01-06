@@ -150,6 +150,8 @@ export type ProcessUnit = {
     location?: string;
     runtime_msec?: number;
     current_user_role: UserRole;
+    uod_author_name?: string;
+    uod_author_email?: string;
 };
 
 /**
