@@ -161,8 +161,8 @@ class Engine(InterpreterContext):
 
         self._method: MethodModel = MethodModel(on_method_init, on_method_error)
         """ The model handling changes to program/method code """
-
-        self._cancel_command_exec_ids: list[UUID] = []
+        
+        self._cancel_command_exec_ids: set[UUID] = set()
 
         # initialize state
         self.uod.tags.add_listener(self._uod_listener)
@@ -521,6 +521,8 @@ class Engine(InterpreterContext):
             if c.command_exec_id in self._cancel_command_exec_ids:
                 cmds_done.add(c)
                 self._cancel_command_exec_ids.remove(c.command_exec_id)
+                if cmd_request.name == c.name:
+                    cancel_this = True
                 cmd_record = self.runtimeinfo.get_uod_command_and_record(c.command_exec_id)
                 if cmd_record is not None:
                     command, c_record = cmd_record
@@ -531,9 +533,6 @@ class Engine(InterpreterContext):
                 else:
                     logger.error(f"Cannot cancel command {c}. No runtime record found with {c.exec_id=}" +
                                  f" and {c.command_exec_id=}")
-        if cmd_request.command_exec_id in self._cancel_command_exec_ids:
-            self._cancel_command_exec_ids.remove(cmd_request.command_exec_id)
-            cancel_this = True
 
         # cancel any existing instance with same name
         for c in [_c for _c in self.cmd_executing if _c not in cmds_done]:
@@ -801,7 +800,7 @@ class Engine(InterpreterContext):
             if result is not None:
                 _, record = result
                 logger.info(f"Schedule cancellation of uod command {exec_id=}")
-                self._cancel_command_exec_ids.append(exec_id)
+                self._cancel_command_exec_ids.add(exec_id)
                 record.node.cancel()  # also need to mark the node as cancelled to update the runlog
 
         if record is None:
