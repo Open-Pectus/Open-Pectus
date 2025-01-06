@@ -5,7 +5,6 @@ import uuid
 from queue import Empty, Queue
 from typing import Iterable, List, Set
 from uuid import UUID
-from openpectus.engine.command_manager import CommandManager
 from openpectus.engine.internal_commands import (
     create_internal_command,
     get_running_internal_command,
@@ -163,7 +162,7 @@ class Engine(InterpreterContext):
         self._method: MethodModel = MethodModel(on_method_init, on_method_error)
         """ The model handling changes to program/method code """
 
-        self._cancel_command_exec_ids: set[UUID] = set()
+        self._cancel_command_exec_ids: list[UUID] = []
 
         # initialize state
         self.uod.tags.add_listener(self._uod_listener)
@@ -171,7 +170,6 @@ class Engine(InterpreterContext):
         self._tags = self._system_tags.merge_with(self.uod.tags)
         self._emitter = EventEmitter(self._tags)
         self._tick_timer.set_tick_fn(self.tick)
-        self._command_manager = CommandManager(lambda: self.runtimeinfo, lambda: self.tags, self.uod)
 
 
     def _iter_all_tags(self) -> Iterable[Tag]:
@@ -387,10 +385,7 @@ class Engine(InterpreterContext):
                     # Note: Executing one command may cause other commands to be cancelled (by identical or overlapping
                     # commands) Rather than modify self.cmd_executing (while iterating over it), cancelled/completed
                     # commands are added to the cmds_done set.
-                    
-                    #self._execute_command(c, cmds_done)
-                    self._command_manager.execute_command(
-                        c, cmds_done, self.cmd_executing, self._cancel_command_exec_ids, self._tick_time, self._tick_number, self._runstate_started)
+                    self._execute_command(c, cmds_done)
         except ValueError as ve:
             logger.error(f"Error executing command: '{latest_cmd}'. Command failed with error: {ve}", exc_info=True)
             frontend_logger.error(f"Command '{latest_cmd}' failed: {ve}")
@@ -403,7 +398,6 @@ class Engine(InterpreterContext):
             for c_done in cmds_done:
                 self.cmd_executing.remove(c_done)
 
-    #TODO remove
     def _execute_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
         # execute an internal engine command or a uod command
 
@@ -419,7 +413,6 @@ class Engine(InterpreterContext):
         else:
             self._execute_uod_command(cmd_request, cmds_done)
 
-    #TODO remove
     def _execute_internal_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
 
         if not self._runstate_started and cmd_request.name not in [EngineCommandEnum.START, EngineCommandEnum.RESTART]:
@@ -430,7 +423,7 @@ class Engine(InterpreterContext):
         # get the runtime record to use for tracking if possible
         record = RuntimeRecord.null_record()
         if cmd_request.exec_id is not None:  # happens for all commands not originating from interpreter
-            # during restart, record is None - should not occur otherwise
+            # during restart, record is None - should ont occur otherwise
             record = self.interpreter.runtimeinfo.get_exec_record(cmd_request.exec_id)
 
         # an existing, long running engine_command is running. other commands must wait
@@ -511,7 +504,6 @@ class Engine(InterpreterContext):
         for command in cmds_to_cancel:
             command.cancel()
 
-    #TODO remove
     def _execute_uod_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
         cmd_name = cmd_request.name
         assert self.uod.has_command_name(cmd_name), f"Expected Uod to have command named '{cmd_name}'"
@@ -809,7 +801,7 @@ class Engine(InterpreterContext):
             if result is not None:
                 _, record = result
                 logger.info(f"Schedule cancellation of uod command {exec_id=}")
-                self._cancel_command_exec_ids.add(exec_id)
+                self._cancel_command_exec_ids.append(exec_id)
                 record.node.cancel()  # also need to mark the node as cancelled to update the runlog
 
         if record is None:
