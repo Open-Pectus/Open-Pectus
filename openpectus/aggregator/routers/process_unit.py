@@ -37,6 +37,8 @@ def map_pu(engine_data: Mdl.EngineData) -> Dto.ProcessUnit:
             engine_data.runtime is not None and isinstance(engine_data.runtime.value, int)
         ) else 0,
         current_user_role=Dto.UserRole.ADMIN,
+        uod_author_name=engine_data.uod_author_name,
+        uod_author_email=engine_data.uod_author_email
     )
     return unit
 
