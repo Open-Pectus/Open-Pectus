@@ -1,7 +1,7 @@
 
 from time import time
 from openpectus.engine.uod_builder_api import (
-    RegexNumber, UnitOperationDefinitionBase, UodCommand, UodBuilder,
+    UnitOperationDefinitionBase, UodCommand, UodBuilder,
     tags, RegisterDirection,
     PlotConfiguration, SubPlot, PlotAxis, PlotColorRegion
 )
@@ -9,7 +9,6 @@ from openpectus.engine.uod_builder_api import (
 
 def create() -> UnitOperationDefinitionBase:
     builder = UodBuilder()
-    logger = builder.get_logger()
 
     def get_plot_configuration() -> PlotConfiguration:
         return PlotConfiguration(
@@ -47,11 +46,11 @@ def create() -> UnitOperationDefinitionBase:
         #     yield
 
         cmd.set_complete()
-        
+
         # TODO consider reset behavior:
         # Server reads the RESET register and executes its reset if non-zero and immideately sets the register value
         # bath to zero. This does not really match any of our register directions.
-        
+
         # This does work but causes an extra reset from server
         # if cmd.get_iteration_count() > 0:
         #     cmd.set_complete()

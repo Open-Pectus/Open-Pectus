@@ -490,7 +490,7 @@ Watch
                 c = parse(code).parser.command()  # type: ignore
                 self.assertIsNotNone(c)
                 self.assertIsInstance(c, pcodeParser.CommandContext)
-                #self.assertContextHasNoChildError(c)
+                # self.assertContextHasNoChildError(c)
 
         test("foo")
         test(" foo")

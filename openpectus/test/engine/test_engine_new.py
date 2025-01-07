@@ -139,7 +139,7 @@ Mark: B
 
             instance.run_until_instruction("Pause")
 
-            #self.assertAlmostEqual(1.1, run_time.as_float(), delta=0.1)
+            # self.assertAlmostEqual(1.1, run_time.as_float(), delta=0.1)
             instance.run_until_instruction("Mark")
 
             with self.assertRaises(TimeoutError):
@@ -197,7 +197,7 @@ Restart
 
             instance.run_until_instruction("Restart")
             # Increment run counter should have incremented it - wtf?
-            #self.assertEqual(2, run_counter.as_number())
+            # self.assertEqual(2, run_counter.as_number())
 
             instance.run_until_event("start")
             instance.run_until_instruction("Watch")
@@ -418,4 +418,4 @@ Stop
         runner = EngineTestRunner(create_test_uod, pcode=pcode)
         with runner.run() as instance:
             instance.start()
-            instance.run_until_event("stop") # will raise on engine error
+            instance.run_until_event("stop")  # will raise on engine error

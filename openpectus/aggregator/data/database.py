@@ -1,14 +1,11 @@
 import json
-import os
 from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Any
 
-from alembic import command
-from alembic.config import Config
-from pydantic.json import pydantic_encoder
+from pydantic_core import to_jsonable_python
 from sqlalchemy import create_engine, Engine
-from sqlalchemy.orm import registry, Session, sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.types import ASGIApp
@@ -62,7 +59,7 @@ def configure_db(database_url: str):
 
 
 def json_serialize(instance) -> str:
-    return json.dumps(instance, default=pydantic_encoder)
+    return json.dumps(instance, default=to_jsonable_python)
 
 
 def json_deserialize(instance) -> dict[str, Any]:

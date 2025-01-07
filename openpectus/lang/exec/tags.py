@@ -164,7 +164,7 @@ class Tag(ChangeSubject, EventListener):
 
     def set_value_and_unit(self, val: TagValueType, unit: str, tick_time: float) -> None:
         """ Set a new value by converting the provided value and unit into the the unit of the tag. """
-        if not isinstance(val, (int, float)):
+        if not isinstance(val, (int, float,)):
             raise ValueError(f"Cannot set unit for a non-numeric value {val} of type {type(val).__name__}")
         if self.unit is None:
             raise ValueError("Cannot change unit on a tag with no unit")
@@ -181,7 +181,7 @@ class Tag(ChangeSubject, EventListener):
         return self.value
 
     def as_float(self) -> float:
-        if not isinstance(self.value, (float)):
+        if not isinstance(self.value, (float,)):
             raise ValueError(
                 f"Value is not a float: '{self.value}' has type '{type(self. value).__name__}' tag: '{self.name}'")
         return self.value

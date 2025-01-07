@@ -984,7 +984,7 @@ Error: baz
     def test_program_errors(self):
         p = build(
             """
-Mark:  a  
+Mark:  a
 Mark  b  # comment
 Watch: counter >  
     Mark: c

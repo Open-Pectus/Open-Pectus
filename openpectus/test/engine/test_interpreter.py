@@ -16,7 +16,7 @@ from openpectus.lang.model.pprogram import PCondition, PNode, PProgram, PWatch
 from openpectus.test.engine.utility_methods import (
     continue_engine, run_engine, build_program,
     configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging,
-    print_runlog, print_runtime_records
+    print_runlog
 )
 
 

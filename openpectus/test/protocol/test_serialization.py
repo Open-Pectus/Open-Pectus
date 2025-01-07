@@ -51,7 +51,11 @@ class SerializationTest(unittest.TestCase):
         self.assertEqual(am_method.method, reg_d.method)
 
     def test_serialization_TagsUpdatedMsg(self):
-        tu = EM.TagsUpdatedMsg(tags=[Mdl.TagValue(name="foo", tick_time=0, value="bar", value_formatted=None, value_unit="m")])
+        tu = EM.TagsUpdatedMsg(tags=[Mdl.TagValue(name="foo",
+                                                  tick_time=0,
+                                                  value="bar",
+                                                  value_formatted=None,
+                                                  value_unit="m")])
         tu_s = serialize(tu)
         self.assertIsNotNone(tu_s)
 

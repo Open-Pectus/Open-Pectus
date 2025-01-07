@@ -19,7 +19,7 @@ def get_recent_run_or_fail(user_roles: UserRolesValue, run_id: str) -> Db.Recent
     recent_run = repo.get_by_run_id(run_id)
     if recent_run is None:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail='Recent Run not found')
-    if(not has_access(recent_run, user_roles)):
+    if (not has_access(recent_run, user_roles)):
         raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail={'missing_roles': recent_run.required_roles})
     return recent_run
 

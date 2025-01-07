@@ -329,7 +329,7 @@ class Engine(InterpreterContext):
 
     def update_calculated_tags(self, tick_time: float, increment_time: float):
         sys_state = self._system_tags[SystemTagName.SYSTEM_STATE]
-        logger.debug(f"{increment_time = }")
+        logger.debug(f"{increment_time=}")
 
         # Clock         - seconds since epoch
         clock = self._system_tags.get(SystemTagName.CLOCK)
@@ -709,7 +709,7 @@ class Engine(InterpreterContext):
     def get_error_state_exception(self) -> Exception | None:
         return self._last_error
 
-    #TODO remove
+    # TODO remove
     def parse_pcode(self, pcode: str) -> PProgram:
         p = PGrammar()
         p.parse(pcode)

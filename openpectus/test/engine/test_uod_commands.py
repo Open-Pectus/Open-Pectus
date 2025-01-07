@@ -56,8 +56,7 @@ class TestCommandDescriptions(unittest.TestCase):
         cmd = uod.command_descriptions["Area"]
         # Note removal of white space
         self.assertEqual(
-"""# Runs the Area command
-Area: 5 cm2""",
+            """# Runs the Area command\nArea: 5 cm2""",
             cmd.docstring
         )
 

@@ -1,4 +1,3 @@
-import asyncio
 from enum import StrEnum, auto
 
 from fastapi.routing import APIRouter

@@ -24,7 +24,7 @@ class PNode():
         """ Set to true for the root node. False for all other nodes in a tree. """
 
         self.indent: int | None = None
-        """ The indentation for the line, expressed in number of spaces. A multiple of 
+        """ The indentation for the line, expressed in number of spaces. A multiple of
         pprogrambuilder.INDENTATION_SPACES. """
 
         self.line: int | None = None

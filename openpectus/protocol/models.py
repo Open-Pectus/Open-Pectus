@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Literal
 
 import openpectus.engine.models as EM
 from pydantic import BaseModel
@@ -16,8 +15,7 @@ EntryDataType = EM.EntryDataType
 
 class ProtocolModel(BaseModel):
     class Config:
-        smart_union = True
-        orm_mode = True
+        from_attributes = True
 
 
 class ReadingCommand(ProtocolModel):

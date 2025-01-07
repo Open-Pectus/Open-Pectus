@@ -8,6 +8,7 @@ exclude =
     .git,
     __pycache__,
     frontend,
+    aggregator/data/alembic/versions,
     lang/grammar/codegen,
     docs/source/conf.py,
     build,
