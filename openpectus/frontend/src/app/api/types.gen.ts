@@ -285,6 +285,18 @@ export type ValidationError = {
     type: string;
 };
 
+export type PostResponse = (unknown);
+
+export type GetConfigResponse = (AuthConfig);
+
+export type ExposePubsubTopicsData = {
+    topic: PubSubTopic;
+};
+
+export type ExposePubsubTopicsResponse = (unknown);
+
+export type TriggerPublishMswResponse = (unknown);
+
 export type GetUnitData = {
     unitId: string;
     xIdentity?: string;
@@ -467,18 +479,6 @@ export type GetRecentRunCsvFileData = {
 };
 
 export type GetRecentRunCsvFileResponse = (unknown);
-
-export type GetConfigResponse = (AuthConfig);
-
-export type PostResponse = (unknown);
-
-export type ExposePubsubTopicsData = {
-    topic: PubSubTopic;
-};
-
-export type ExposePubsubTopicsResponse = (unknown);
-
-export type TriggerPublishMswResponse = (unknown);
 
 export type GetVersionResponse = (unknown);
 
