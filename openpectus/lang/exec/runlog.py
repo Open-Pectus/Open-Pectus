@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 
 from openpectus.engine.commands import EngineCommand
 from openpectus.lang.exec.tags import TagValueCollection
+from openpectus.lang.exec.uod import UodCommand
 from openpectus.lang.model.pprogram import (
     PAlarm, PBlank, PComment, PInjectedNode, PNode, PProgram, PErrorInstruction, PWatch
 )
@@ -141,12 +142,19 @@ class RuntimeInfo():
                                  f"record state command_exec_id {state.command_exec_id}")
                     item.id = str(state.command_exec_id)
                     command = state.command
+                elif state.state_name == RuntimeRecordStateEnum.InternalEngineCommandSet:
+                    assert item is not None
+                    logger.debug(f"Updating internal engine item id from record id {item.id} to" +
+                                 f"record state command_exec_id {state.command_exec_id}")
+                    item.id = str(state.command_exec_id)
+                    command = state.command
 
                 if not is_conclusive_state and item is not None:
                     item.cancellable = r.node.cancellable
                     item.forcible = r.node.forcible
-                    if command is not None:  # is uod command
-                        item.cancellable = True  # PCommand.cancellable does not support uod commands
+                    if command is not None:
+                        if isinstance(command, UodCommand):
+                            item.cancellable = True  # PCommand.cancellable does not support uod commands
                         self._update_item_progress(item, command)
 
                 if is_conclusive_state:
@@ -237,11 +245,13 @@ class RuntimeInfo():
         # logger.info(f"Updating progress to {item.progress}")
 
     def get_exec_record(self, exec_id: UUID) -> RuntimeRecord | None:
+        """ Return record for the given exec_id or None if not found. """
         index = self._record_index.get(exec_id)
         if index is not None:
             return self._records[index]
 
-    def get_uod_command_and_record(self, command_exec_id: UUID) -> tuple[EngineCommand, RuntimeRecord] | None:
+    def get_command_and_record(self, command_exec_id: UUID) -> tuple[EngineCommand, RuntimeRecord] | None:
+        """ Return (command, record) pair for the given command_exec_id or None if (both) not found. """
         for record in reversed(self.records):
             for state in record.states:
                 if state.command_exec_id is not None and state.command_exec_id == command_exec_id:
@@ -422,6 +432,15 @@ class RuntimeRecord():
         state.command_exec_id = uuid4()
         return state.command_exec_id
 
+    def add_state_internal_engine_command_set(
+            self, command: EngineCommand,
+            time: float, tick: int,
+            state_values: TagValueCollection | None) -> UUID:
+        state = self.add_state(RuntimeRecordStateEnum.InternalEngineCommandSet, time, tick, state_values)
+        state.command = command
+        state.command_exec_id = uuid4()
+        return state.command_exec_id
+
     def add_command_state_cancelled(
             self, command_exec_id: UUID,
             time: float, tick: int, end_values: TagValueCollection):
@@ -472,6 +491,8 @@ class RuntimeRecordStateEnum(StrEnum):
     """ Instruction node was visited"""
     UodCommandSet = auto()
     """ Uod command was set """
+    InternalEngineCommandSet = auto()
+    """ Internal engine command was set """
     AwaitingThreshold = auto()
     """ Waiting for threshold """
     AwaitingCondition = auto()

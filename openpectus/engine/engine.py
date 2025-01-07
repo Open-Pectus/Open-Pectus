@@ -468,6 +468,7 @@ class Engine(InterpreterContext):
 
         if record is not None:
             record.add_state_started(self._tick_time, self._tick_number, self.tags_as_readonly())
+            record.add_state_internal_engine_command_set(command, self._tick_time, self._tick_number, self.tags_as_readonly())
             command.tick()
             if command.has_failed():
                 record.add_state_failed(self._tick_time, self._tick_number, self.tags_as_readonly())
@@ -523,7 +524,7 @@ class Engine(InterpreterContext):
                 self._cancel_command_exec_ids.remove(c.command_exec_id)
                 if cmd_request.name == c.name:
                     cancel_this = True
-                cmd_record = self.runtimeinfo.get_uod_command_and_record(c.command_exec_id)
+                cmd_record = self.runtimeinfo.get_command_and_record(c.command_exec_id)
                 if cmd_record is not None:
                     command, c_record = cmd_record
                     command.cancel()
@@ -539,7 +540,7 @@ class Engine(InterpreterContext):
             if c.name == cmd_name and not c == cmd_request:
                 cmds_done.add(c)
                 assert c.command_exec_id is not None, f"command_exec_id should be set for command '{cmd_name}'"
-                cmd_record = self.runtimeinfo.get_uod_command_and_record(c.command_exec_id)
+                cmd_record = self.runtimeinfo.get_command_and_record(c.command_exec_id)
                 assert cmd_record is not None
                 command, c_record = cmd_record
                 command.cancel()
@@ -555,7 +556,7 @@ class Engine(InterpreterContext):
                     if c.name in overlap_list and cmd_name in overlap_list:
                         cmds_done.add(c)
                         assert c.command_exec_id is not None, f"command_exec_id should be set for command '{c.name}'"
-                        cmd_record = self.runtimeinfo.get_uod_command_and_record(c.command_exec_id)
+                        cmd_record = self.runtimeinfo.get_command_and_record(c.command_exec_id)
                         assert cmd_record is not None
                         command, c_record = cmd_record
                         command.cancel()
@@ -641,7 +642,7 @@ class Engine(InterpreterContext):
                 cmd_request.command_exec_id,
                 self._tick_time, self._tick_number,
                 self.tags_as_readonly())
-            cmd_record = self.runtimeinfo.get_uod_command_and_record(cmd_request.command_exec_id)
+            cmd_record = self.runtimeinfo.get_command_and_record(cmd_request.command_exec_id)
             if cmd_record is not None:
                 assert cmd_record[1].exec_id == record.exec_id
                 command = cmd_record[0]
@@ -796,7 +797,7 @@ class Engine(InterpreterContext):
             record.node.cancel()
         else:
             # try exec_id as a command_exec_id
-            result = self.runtimeinfo.get_uod_command_and_record(command_exec_id=exec_id)
+            result = self.runtimeinfo.get_command_and_record(command_exec_id=exec_id)
             if result is not None:
                 _, record = result
                 logger.info(f"Schedule cancellation of uod command {exec_id=}")
@@ -808,11 +809,20 @@ class Engine(InterpreterContext):
 
     def force_instruction(self, exec_id: UUID):
         record = self.runtimeinfo.get_exec_record(exec_id=exec_id)
+        if record is not None:
+            logger.info(f"Forcing instruction with exec_id {exec_id=}")
+            record.node.force()
+        else:
+            result = self.runtimeinfo.get_command_and_record(command_exec_id=exec_id)
+            if result is not None:
+                command, record = result
+                logger.info(f"Forcing instruction with command_exec_id {exec_id=}")
+                command.force()
+                record.node.force()  # also need to mark the node as cancelled to update the runlog
+
         if record is None:
             logger.error(f"Cannot force instruction {exec_id=}, no runtime record found")
-        else:
-            logger.info(f"Forcing instruction {exec_id=}")
-            record.node.force()
+
 
     def calculate_method_state(self) -> Mdl.MethodState:
         return self._method.calculate_method_state(self.interpreter.runtimeinfo)

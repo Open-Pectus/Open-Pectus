@@ -381,6 +381,7 @@ class PMark(PInstruction):
 
         self.children = []
         self.name: str = ''
+        self._forcible = False
 
     def __str__(self) -> str:
         return super().__str__() + ": " + self.name
@@ -429,6 +430,16 @@ class PCommandWithDuration(PInstruction):
         """ Command name """
         self.duration: PDuration | None = None
         """ Unresolved duration expression """
+
+    @property
+    def cancellable(self) -> bool:
+        return False
+
+    @property
+    def forcible(self) -> bool:
+        if self.name == "Wait" and not self._forced:
+            return True
+        return False
 
     def __str__(self) -> str:
         duration = "" if self.duration is None else ", duration: " + str(self.duration)
