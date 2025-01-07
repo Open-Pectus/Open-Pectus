@@ -1,11 +1,14 @@
-import { defineConfig } from '@hey-api/openapi-ts';
+import { defaultPlugins, defineConfig } from '@hey-api/openapi-ts';
 
 export default defineConfig({
   input: './openapi.json',
   output: './src/app/api',
   client: 'legacy/angular',
-  services: {
-    asClass: true,
-  },
-  schemas: false,
+  plugins: [
+    ...defaultPlugins,
+    {
+      asClass: true,
+      name: '@hey-api/sdk',
+    },
+  ],
 });
