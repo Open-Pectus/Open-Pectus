@@ -7,11 +7,10 @@ import { DetailsActions } from './ngrx/details.actions';
 import { DetailsSelectors } from './ngrx/details.selectors';
 
 @Component({
-  selector: 'app-recent-run-header',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [LetDirective, DatePipe],
-  template: `
+    selector: 'app-recent-run-header',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [LetDirective, DatePipe],
+    template: `
     <ng-container *ngrxLet="recentRun as recentRun">
       <div class="text-slate-700 mb-1 relative">
         <div class="text-xs flex gap-4 mb-2">
@@ -29,7 +28,7 @@ import { DetailsSelectors } from './ngrx/details.selectors';
         </button>
       </div>
     </ng-container>
-  `,
+  `
 })
 export class RecentRunHeaderComponent {
   protected recentRun = this.store.select(DetailsSelectors.recentRun);

@@ -8,11 +8,10 @@ export interface ValueAndUnit {
 }
 
 @Component({
-  selector: 'app-process-value-editor',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [ProcessValuePipe],
-  template: `
+    selector: 'app-process-value-editor',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [ProcessValuePipe],
+    template: `
     <div class="flex">
       <input #inputElement class="p-1 pl-2 outline-none border-l border-y border-gray-300 rounded-l-md w-32" type="text"
              [class.bg-red-500]="!isValid"
@@ -25,7 +24,7 @@ export interface ValueAndUnit {
         {{ command?.name }}
       </button>
     </div>
-  `,
+  `
 })
 export class ProcessValueEditorComponent {
   @Input() command?: ProcessValueCommand;

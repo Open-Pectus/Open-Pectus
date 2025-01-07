@@ -9,11 +9,10 @@ import { ErrorLogActions } from './ngrx/error-log.actions';
 import { ErrorLogSelectors } from './ngrx/error-log.selectors';
 
 @Component({
-  selector: 'app-error-log',
-  standalone: true,
-  imports: [CommonModule, CollapsibleElementComponent, LetDirective],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'app-error-log',
+    imports: [CommonModule, CollapsibleElementComponent, LetDirective],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <app-collapsible-element [name]="'Error Log'" [heightResizable]="true" [contentHeight]="200" [codiconName]="'codicon-warning'"
                              (collapseStateChanged)="collapsed = $event" *ngrxLet="errorLog as errorLog">
       @if (!collapsed) {
@@ -41,7 +40,7 @@ import { ErrorLogSelectors } from './ngrx/error-log.selectors';
         </div>
       }
     </app-collapsible-element>
-  `,
+  `
 })
 export class ErrorLogComponent implements OnInit, OnDestroy {
   @Input() unitId?: string;

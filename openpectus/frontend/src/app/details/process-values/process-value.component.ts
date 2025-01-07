@@ -9,11 +9,10 @@ export interface PvAndPosition {
 }
 
 @Component({
-  selector: 'app-process-value',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [NgIf, ProcessValuePipe],
-  template: `
+    selector: 'app-process-value',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [NgIf, ProcessValuePipe],
+    template: `
     <div class="flex flex-col bg-sky-200 p-0.5 items-center gap-1 rounded select-none border border-sky-300"
          [class.cursor-pointer]="hasCommands(processValue)" (click)="onClick()">
       <div class="mx-1 font-semibold">{{ processValue?.name }}</div>
@@ -26,7 +25,7 @@ export interface PvAndPosition {
         </div>
       </div>
     </div>
-  `,
+  `
 })
 export class ProcessValueComponent {
   @Input() processValue?: ProcessValue;
