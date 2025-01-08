@@ -5,15 +5,24 @@ import unittest
 from openpectus.engine.main import validate_and_exit
 
 
+def listloggers():
+    rootlogger = logging.getLogger()
+    print(rootlogger)
+    for h in rootlogger.handlers:
+        print('     %s' % h)
+
+    for nm, lgr in logging.Logger.manager.loggerDict.items():
+        print('+ [%-20s] %s ' % (nm, lgr))
+        if not isinstance(lgr, logging.PlaceHolder):
+            for h in lgr.handlers:
+                print('     %s' % h)
+
+
 class TestValidateDemoUOD(unittest.TestCase):
     def test_validate(self):
         # Remove potential side effects on logging from other tests
         # Source: https://gist.github.com/andreasWallner/c7e677eaade39b49a70b
-        logging.getLogger().setLevel(logging.INFO)
-        formatter = logging.Formatter("%(levelname)s:%(name)s:%(message)s")
-        for handler in logging.handlers:
-            handler.setFormatter(formatter)
-            handler.setLevel(logging.INFO)
+        listloggers()
         # Construct path to file relative to test_validate_demo_uod.py
         uod_file_path = os.path.join(
             os.path.dirname(  # openpectus
