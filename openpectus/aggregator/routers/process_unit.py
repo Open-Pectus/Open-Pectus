@@ -168,7 +168,7 @@ async def execute_command(
 def get_process_diagram(
         user_roles: UserRolesValue,
         unit_id: str,
-        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.ProcessDiagram | None:
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.ProcessDiagram:
     return Dto.ProcessDiagram(svg="")
 
 

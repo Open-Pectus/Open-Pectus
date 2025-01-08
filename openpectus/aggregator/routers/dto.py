@@ -8,6 +8,7 @@ from typing import Literal
 import openpectus.aggregator.data.models as data_models
 import openpectus.aggregator.models as Mdl
 from pydantic import BaseModel
+from pydantic.json_schema import SkipJsonSchema
 
 SystemStateEnum = Mdl.SystemStateEnum
 
@@ -16,17 +17,19 @@ class Dto(BaseModel):
     class Config:
         from_attributes = True
 
-    # deliver undefined instead of null for None values. Adapted from https://github.com/fastapi/fastapi/issues/3314#issuecomment-962932368
-    def dict(self, *args, **kwargs):
+
+    # deliver undefined instead of null for None values. Adapted from:
+    # https://github.com/fastapi/fastapi/issues/3314#issuecomment-962932368
+    def model_dump(self, *args, **kwargs):
         kwargs.pop('exclude_none', None)
         return super().model_dump(*args, exclude_none=True, **kwargs)
 
 
 class AuthConfig(Dto):
     use_auth: bool
-    authority_url: str | None
-    client_id: str | None
-    well_known_url: str | None
+    authority_url: str | SkipJsonSchema[None] = None
+    client_id: str | SkipJsonSchema[None] = None
+    well_known_url: str | SkipJsonSchema[None] = None
 
 
 class ServerErrorResponse(Dto):
@@ -35,7 +38,7 @@ class ServerErrorResponse(Dto):
 
 
 class ServerSuccessResponse(Dto):
-    message: str | None = None
+    message: str | SkipJsonSchema[None] = None
 
 
 class ProcessUnitStateEnum(StrEnum):
@@ -94,11 +97,11 @@ class ProcessUnit(Dto):
     id: str
     name: str
     state: ProcessUnitState.Ready | ProcessUnitState.Error | ProcessUnitState.InProgress | ProcessUnitState.NotOnline
-    location: str | None
-    runtime_msec: int | None
+    location: str | SkipJsonSchema[None] = None
+    runtime_msec: int | SkipJsonSchema[None] = None
     current_user_role: UserRole
-    uod_author_name: str | None = None
-    uod_author_email: str | None = None
+    uod_author_name: str | SkipJsonSchema[None] = None
+    uod_author_email: str | SkipJsonSchema[None] = None
     # users: list[User] ?
 
 
@@ -112,9 +115,9 @@ class ProcessValueType(StrEnum):
 
 class ProcessValueCommandNumberValue(Dto):
     value: float | int
-    value_unit: str | None
+    value_unit: str | SkipJsonSchema[None] = None
     """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
-    valid_value_units: list[str] | None
+    valid_value_units: list[str] | SkipJsonSchema[None] = None
     """ For values with a unit, provides the list valid alternative units """
     value_type: Literal[ProcessValueType.INT] | Literal[ProcessValueType.FLOAT]
     """ Specifies the type of allowed values. """
@@ -132,15 +135,15 @@ class ProcessValueCommandChoiceValue(Dto):
 
 
 class ProcessValueCommand(Dto):
-    command_id: str | None
+    command_id: str | SkipJsonSchema[None] = None
     name: str
     command: str
-    disabled: bool | None
+    disabled: bool | SkipJsonSchema[None] = None
     """ Indicates whether the command button should be disabled. """
-    value: ProcessValueCommandNumberValue | ProcessValueCommandFreeTextValue | ProcessValueCommandChoiceValue | None
+    value: ProcessValueCommandNumberValue | ProcessValueCommandFreeTextValue | ProcessValueCommandChoiceValue | SkipJsonSchema[None] = None
 
 
-ProcessValueValueType = float | int | str | None
+ProcessValueValueType = float | int | str | SkipJsonSchema[None]
 
 
 def get_ProcessValueType_from_value(value: ProcessValueValueType) -> ProcessValueType:
@@ -159,13 +162,13 @@ def get_ProcessValueType_from_value(value: ProcessValueValueType) -> ProcessValu
 class ProcessValue(Dto):
     """ Represents a process value. """
     name: str
-    value: ProcessValueValueType
-    value_formatted: str | None
-    value_unit: str | None
+    value: ProcessValueValueType = None
+    value_formatted: str | SkipJsonSchema[None] = None
+    value_unit: str | SkipJsonSchema[None] = None
     """ The unit string to display with the value, if any, e.g. 's', 'L/s' or '°C' """
     value_type: ProcessValueType
     """ Specifies the type of allowed values. """
-    commands: list[ProcessValueCommand] | None
+    commands: list[ProcessValueCommand] | SkipJsonSchema[None] = None
     direction: Mdl.TagDirection
 
     @staticmethod
@@ -196,25 +199,25 @@ class CommandSource(StrEnum):
 
 
 class ExecutableCommand(Dto):
-    command_id: str | None
+    command_id: str | SkipJsonSchema[None] = None
     command: str  # full command string, e.g. "start" or "foo: bar"
     source: CommandSource
-    name: str | None
-    value: ProcessValueCommandNumberValue | ProcessValueCommandFreeTextValue | ProcessValueCommandChoiceValue | None
+    name: str | SkipJsonSchema[None] = None
+    value: ProcessValueCommandNumberValue | ProcessValueCommandFreeTextValue | ProcessValueCommandChoiceValue | SkipJsonSchema[None] = None
 
 
 class RunLogLine(Dto):
     id: str
     command: ExecutableCommand
     start: datetime
-    end: datetime | None
-    progress: float | None  # between 0 and 1
+    end: datetime | SkipJsonSchema[None] = None
+    progress: float | SkipJsonSchema[None] = None  # between 0 and 1
     start_values: list[ProcessValue]
     end_values: list[ProcessValue]
-    forcible: bool | None
-    cancellable: bool | None
-    forced: bool | None
-    cancelled: bool | None
+    forcible: bool | SkipJsonSchema[None] = None
+    cancellable: bool | SkipJsonSchema[None] = None
+    forced: bool | SkipJsonSchema[None] = None
+    cancelled: bool | SkipJsonSchema[None] = None
 
     @staticmethod
     def from_model(model: Mdl.RunLogLine) -> RunLogLine:
@@ -312,7 +315,7 @@ class PlotConfiguration(Dto):
 # Properties on an object can be optional, so we use that via this wrapping class to express None values in the PlotLogEntry.values list.
 # Feel free to refactor to remove this class if it becomes possible to express the above without it.
 class PlotLogEntryValue(Dto):
-    value: ProcessValueValueType
+    value: ProcessValueValueType | SkipJsonSchema[None] = None
     tick_time: float
 
     @classmethod
@@ -330,7 +333,7 @@ class PlotLogEntryValue(Dto):
 class PlotLogEntry(Dto):
     name: str
     values: list[PlotLogEntryValue]
-    value_unit: str | None
+    value_unit: str | SkipJsonSchema[None] = None
     value_type: ProcessValueType
 
 
@@ -340,7 +343,7 @@ class PlotLog(Dto):
 
 class RecentRun(Dto):
     """ Represents a historical run of a process unit. """
-    id: str
+    id: int
     engine_id: str
     run_id: str
     started_date: datetime

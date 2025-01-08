@@ -19,7 +19,7 @@ dependencies = [
     "fastapi_websocket_rpc==0.1.27",
     "fastapi_websocket_pubsub==0.3.9",
     "colorlog==6.9.0",
-    "sqlalchemy==2.0.36",   
+    "sqlalchemy==2.0.36",
     "asyncua==1.1.5",
     "labjack-ljm==1.23.0",
     "pyright==1.1.391",
@@ -83,5 +83,5 @@ reportMatchNotExhaustive = true
 #reportImplicitOverride = true # TODO consider enabling this
 reportShadowedImports = true
 
-pythonVersion = "3.11"
+pythonVersion = "3.13"
 pythonPlatform = "Linux"
