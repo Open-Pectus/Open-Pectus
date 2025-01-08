@@ -237,12 +237,18 @@ class UodCommandDescription:
                     examples.append(f"{self.name}: {args[0]} {unit}")
         else:
             # Create examples for all exclusive options
+            # If there are no exclusive options then the list is ['']
+            # which we do not want to test.
             for arg in self.argument_exclusive_options:
-                examples.append(f"{self.name}: {arg}")
+                if arg:
+                    examples.append(f"{self.name}: {arg}")
             # Create examples of all combinations of all possible lengths of additive options
+            # If there are no additive options then the list is ['']
+            # which we do not want to test.
             if len(self.argument_additive_options):
                 for r in range(1, len(self.argument_additive_options)+1):
                     for args in combinations(self.argument_additive_options, r):
                         arg = "+".join(args)
-                        examples.append(f"{self.name}: {arg}")
+                        if arg:
+                            examples.append(f"{self.name}: {arg}")
         return examples
