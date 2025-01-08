@@ -20,6 +20,7 @@ def listloggers():
 
 class TestValidateDemoUOD(unittest.TestCase):
     def test_validate(self):
+        logging.getLogger().setLevel(logging.INFO)
         # Remove potential side effects on logging from other tests
         # Source: https://gist.github.com/andreasWallner/c7e677eaade39b49a70b
         listloggers()
