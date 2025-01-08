@@ -8,7 +8,16 @@ from openpectus.engine.main import validate_and_exit
 class TestValidateDemoUOD(unittest.TestCase):
     def test_validate(self):
         # Remove potential side effects on logging from other tests
-        logging.basicConfig(level=logging.INFO, force=True)
+        # Source: https://til.tafkas.net/posts/-resetting-python-logging-before-running-tests/
+        loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
+        loggers.append(logging.getLogger())
+        for logger in loggers:
+            handlers = logger.handlers[:]
+            for handler in handlers:
+                logger.removeHandler(handler)
+                handler.close()
+            logger.setLevel(logging.NOTSET)
+            logger.propagate = True
         # Construct path to file relative to test_validate_demo_uod.py
         uod_file_path = os.path.join(
             os.path.dirname(  # openpectus
