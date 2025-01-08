@@ -20,7 +20,7 @@ class TestValidateDemoUOD(unittest.TestCase):
             'configuration',  # openpectus/engine/configuration
             'demo_uod.py',  # openpectus/engine/configuration/demo_uod.py
         )
-        with self.assertLogs("openpectus", level=logging.INFO) as log:
+        with self.assertLogs(level=logging.INFO) as log:
             # validate_and_exit calls "exit(0)". Catch this to avoid
             # terminating the unittest.
             try:
