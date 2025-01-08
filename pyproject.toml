@@ -4,7 +4,11 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "openpectus"
-authors = [{name = "Eskild Schroll-Fleischer", email = "eyfl@novonordisk.com"}, {name = "Morten Passow Odgaard", email = "mpo@mjolner.dk"}, {name = "Jan H. Knudsen", email = "jhk@mjolner.dk"}]
+authors = [
+  {name = "Eskild Schroll-Fleischer", email = "eyfl@novonordisk.com"},
+  {name = "Morten Passow Odgaard", email = "mpo@mjolner.dk"},
+  {name = "Jan H. Knudsen", email = "jhk@mjolner.dk"},
+]
 dynamic = ["version", "description"]
 readme = "README.md"
 
@@ -28,12 +32,38 @@ dependencies = [
     "PyJWT==2.10.0",
 ]
 
+keywords = ["process control", "process control system", "P code", "P-code", "chemical engineering", "SCADA", "PCS"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Manufacturing",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Natural Language :: English",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python",
+  "Programming Language :: JavaScript",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Chemistry",
+  "Topic :: System",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+
 [project.optional-dependencies]
 development = [
     "flake8==6.1.0",   # dev
     "black==23.3.0",   # dev
     "build==0.10.0",   # dev
 ]
+
+[project.urls]
+Documentation = "https://docs.openpectus.org/"
+Repository = "https://github.com/Open-Pectus/Open-Pectus.git"
+GitHub = "https://github.com/Open-Pectus/Open-Pectus"
+Issues = "https://github.com/Open-Pectus/Open-Pectus/issues"
 
 [tool.flit.sdist]
 include = ["openpectus"]

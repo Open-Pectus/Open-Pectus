@@ -305,14 +305,13 @@ class RepositoryTest(unittest.TestCase):
         entity.aggregator_computer_name = 'aggregator computer name'
 
         entity_id = 0
-
         with database.create_scope():
             session = database.scoped_session()
             session.add(entity)
             session.commit()
             entity_id = entity.id
 
-        self.assertEqual(1, entity.id)
+        self.assertEqual(entity_id, 1)
 
         with database.create_scope():
             session = database.scoped_session()

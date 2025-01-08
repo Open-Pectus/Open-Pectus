@@ -5,7 +5,7 @@ from openpectus.lang.exec.events import BlockInfo
 
 # Make sure the mark separator does not conflict with ArchiverTag delimiter.
 # This wold make the archiver unable to write its archive file.
-#MARK_SEPARATOR = ", "
+# MARK_SEPARATOR = ", "
 MARK_SEPARATOR = "; "
 
 
