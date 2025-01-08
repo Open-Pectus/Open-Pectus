@@ -9,9 +9,11 @@ class TestValidateDemoUOD(unittest.TestCase):
     def test_validate(self):
         # Remove potential side effects on logging from other tests
         # Source: https://gist.github.com/andreasWallner/c7e677eaade39b49a70b
-        while logging.root.handlers:
-            logging.root.removeHandler(logging.root.handlers[-1])
-        logging.basicConfig(format='%(levelname)s:%(name)s:%(message)s', level=logging.DEBUG)
+        logging.getLogger().setLevel(logging.INFO)
+        formatter = logging.Formatter("%(levelname)s:%(name)s:%(message)s")
+        for handler in logging.handlers:
+            handler.setFormatter(formatter)
+            handler.setLevel(logging.INFO)
         # Construct path to file relative to test_validate_demo_uod.py
         uod_file_path = os.path.join(
             os.path.dirname(  # openpectus
@@ -23,7 +25,7 @@ class TestValidateDemoUOD(unittest.TestCase):
             'configuration',  # openpectus/engine/configuration
             'demo_uod.py',  # openpectus/engine/configuration/demo_uod.py
         )
-        with self.assertLogs(level=logging.INFO) as log:
+        with self.assertLogs("openpectus", level=logging.INFO) as log:
             # validate_and_exit calls "exit(0)". Catch this to avoid
             # terminating the unittest.
             try:
