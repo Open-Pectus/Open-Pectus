@@ -54,6 +54,12 @@ jobs:
         run: |
           cd openpectus
           python -m unittest
+  
+  validate_uods:
+    name: Validate UODs in Closed-Pectus repository
+    needs: [test_backend]
+    runs-on: ubuntu-latest
+    steps:
       - name: Trigger validation of UODs in Closed-Pectus repository
         run: |
           curl -L \
