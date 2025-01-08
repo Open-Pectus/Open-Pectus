@@ -14,12 +14,14 @@ def listloggers():
     for nm, lgr in logging.Logger.manager.loggerDict.items():
         print('+ [%-20s] %s ' % (nm, lgr))
         if not isinstance(lgr, logging.PlaceHolder):
+            lgr.propagate = True
             for h in lgr.handlers:
                 print('     %s' % h)
 
 
 class TestValidateDemoUOD(unittest.TestCase):
     def test_validate(self):
+        logging.getLogger().setLevel(logging.INFO)
         # Remove potential side effects on logging from other tests
         # Source: https://gist.github.com/andreasWallner/c7e677eaade39b49a70b
         listloggers()
