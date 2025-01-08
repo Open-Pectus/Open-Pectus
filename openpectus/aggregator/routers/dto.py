@@ -17,7 +17,6 @@ class Dto(BaseModel):
     class Config:
         from_attributes = True
 
-
     # deliver undefined instead of null for None values. Adapted from:
     # https://github.com/fastapi/fastapi/issues/3314#issuecomment-962932368
     def model_dump(self, *args, **kwargs):

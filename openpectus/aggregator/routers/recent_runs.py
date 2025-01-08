@@ -24,19 +24,19 @@ def get_recent_run_or_fail(user_roles: UserRolesValue, run_id: str) -> Db.Recent
     return recent_run
 
 
-@router.get("/")
+@router.get("/", response_model_exclude_none=True)
 def get_recent_runs(user_roles: UserRolesValue) -> List[Dto.RecentRun]:
     repo = RecentRunRepository(database.scoped_session())
     return list(map(Dto.RecentRun.validate, filter(lambda rr: has_access(rr, user_roles), repo.get_all())))
 
 
-@router.get("/{run_id}")
+@router.get("/{run_id}", response_model_exclude_none=True)
 def get_recent_run(user_roles: UserRolesValue, run_id: str) -> Dto.RecentRun:
     recent_run = get_recent_run_or_fail(user_roles, run_id)
     return Dto.RecentRun.validate(recent_run)
 
 
-@router.get('/{run_id}/method-and-state')
+@router.get('/{run_id}/method-and-state', response_model_exclude_none=True)
 def get_recent_run_method_and_state(user_roles: UserRolesValue, run_id: str) -> Dto.MethodAndState:
     get_recent_run_or_fail(user_roles, run_id)
     repo = RecentRunRepository(database.scoped_session())
@@ -46,7 +46,7 @@ def get_recent_run_method_and_state(user_roles: UserRolesValue, run_id: str) -> 
     return Dto.MethodAndState.validate(method_and_state)
 
 
-@router.get('/{run_id}/run_log')
+@router.get('/{run_id}/run_log', response_model_exclude_none=True)
 def get_recent_run_run_log(user_roles: UserRolesValue, run_id: str) -> Dto.RunLog:
     repo = RecentRunRepository(database.scoped_session())
     get_recent_run_or_fail(user_roles, run_id)
@@ -57,7 +57,7 @@ def get_recent_run_run_log(user_roles: UserRolesValue, run_id: str) -> Dto.RunLo
     return Dto.RunLog(lines=list(map(Dto.RunLogLine.from_model, run_log_mdl.lines)))
 
 
-@router.get('/{run_id}/plot_configuration')
+@router.get('/{run_id}/plot_configuration', response_model_exclude_none=True)
 def get_recent_run_plot_configuration(user_roles: UserRolesValue, run_id: str) -> Dto.PlotConfiguration:
     repo = RecentRunRepository(database.scoped_session())
     get_recent_run_or_fail(user_roles, run_id)
@@ -67,7 +67,7 @@ def get_recent_run_plot_configuration(user_roles: UserRolesValue, run_id: str) -
     return Dto.PlotConfiguration.validate(plot_configuration)
 
 
-@router.get('/{run_id}/plot_log')
+@router.get('/{run_id}/plot_log', response_model_exclude_none=True)
 def get_recent_run_plot_log(user_roles: UserRolesValue, run_id: str) -> Dto.PlotLog:
     get_recent_run_or_fail(user_roles, run_id)
     plot_repo = PlotLogRepository(database.scoped_session())
@@ -77,7 +77,7 @@ def get_recent_run_plot_log(user_roles: UserRolesValue, run_id: str) -> Dto.Plot
     return Dto.PlotLog.validate(plot_log_model)
 
 
-@router.get('/{run_id}/csv_json')
+@router.get('/{run_id}/csv_json', response_model_exclude_none=True)
 def get_recent_run_csv_json(user_roles: UserRolesValue, run_id: str) -> Dto.RecentRunCsv:
     recent_run = get_recent_run_or_fail(user_roles, run_id)
 
@@ -91,7 +91,7 @@ def get_recent_run_csv_json(user_roles: UserRolesValue, run_id: str) -> Dto.Rece
     return Dto.RecentRunCsv(filename=f'RecentRun-{run_id}.csv', csv_content=csv_string.getvalue())
 
 
-@router.get('/{run_id}/error_log')
+@router.get('/{run_id}/error_log', response_model_exclude_none=True)
 def get_recent_run_error_log(user_roles: UserRolesValue, run_id: str) -> Dto.AggregatedErrorLog:
     get_recent_run_or_fail(user_roles, run_id)
     repo = RecentRunRepository(database.scoped_session())
@@ -101,7 +101,7 @@ def get_recent_run_error_log(user_roles: UserRolesValue, run_id: str) -> Dto.Agg
     return Dto.AggregatedErrorLog.from_model(Mdl.AggregatedErrorLog.validate(error_log))
 
 
-@router.get('/{run_id}/csv_file', response_class=StreamingResponse)
+@router.get('/{run_id}/csv_file', response_class=StreamingResponse, response_model_exclude_none=True)
 def get_recent_run_csv_file(user_roles: UserRolesValue, run_id: str) -> StreamingResponse:
     get_recent_run_or_fail(user_roles, run_id)
     file_content = 'some;CSV;here\nand;more;here'

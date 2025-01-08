@@ -73,14 +73,14 @@ class AggregatorDispatcher():
         self.endpoint = WebsocketRPCEndpoint(AggregatorRpcMethods(self),
                                              on_connect=[self.on_client_connect],  # type: ignore
                                              on_disconnect=[self.on_client_disconnect])  # type: ignore
-        self.endpoint.register_route(self.router, path=AGGREGATOR_RPC_WS_PATH)        
+        self.endpoint.register_route(self.router, path=AGGREGATOR_RPC_WS_PATH)
         self._register_post_route(self.router)
 
     def _register_post_route(self, router: APIRouter | FastAPI):
         """
         Set up post route to handle RegisterEngineMsg which must be handled before websocket can be established
         """
-        @router.post(AGGREGATOR_REST_PATH)
+        @router.post(AGGREGATOR_REST_PATH, response_model_exclude_none=True)
         async def post(request: Request):
             request_json = await request.json()
             try:
