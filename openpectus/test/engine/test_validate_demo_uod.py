@@ -7,6 +7,8 @@ from openpectus.engine.main import validate_and_exit
 
 class TestValidateDemoUOD(unittest.TestCase):
     def test_validate(self):
+        # Remove potential side effects on logging from other tests
+        logging.basicConfig(level=logging.INFO, force=True)
         # Construct path to file relative to test_validate_demo_uod.py
         uod_file_path = os.path.join(
             os.path.dirname(  # openpectus
