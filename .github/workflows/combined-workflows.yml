@@ -12,6 +12,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/main' }}
+  IS_PR: ${{ ! github.ref == 'refs/heads/main' }}
   NODE_VERSION: 22.11 # 22.12 has incompatibilities https://github.com/nodejs/node/issues/56155 https://github.com/tailwindlabs/tailwindcss/pull/15421 due to https://nodejs.org/en/blog/release/v22.12.0#requireesm-is-now-enabled-by-default
 
 jobs:
@@ -22,9 +23,7 @@ jobs:
       - name: Dump GitHub context
         env:
           GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: |
-          echo "$GITHUB_CONTEXT"
-          echo "$SHOULD_PUBLISH_IMAGE"
+        run: echo "$GITHUB_CONTEXT"
       - name: Dump job context
         env:
           JOB_CONTEXT: ${{ toJson(job) }}
@@ -54,6 +53,12 @@ jobs:
           echo "The GitHub Actor's username is: $GITHUB_ACTOR"
           echo "GitHub SHA: $GITHUB_SHA"
 
+  pr:
+    if: ${{ $IS_PR }}
+    run: echo Is pull request
+  notpr:
+    if: ${{ ! $IS_PR }}
+    run: echo Is not pull request
 
   test_backend:
     name: Unittest ${{ matrix.os }} - Python ${{ matrix.python-version }}
