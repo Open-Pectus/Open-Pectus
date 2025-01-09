@@ -329,7 +329,7 @@ class Engine(InterpreterContext):
 
     def update_calculated_tags(self, tick_time: float, increment_time: float):
         sys_state = self._system_tags[SystemTagName.SYSTEM_STATE]
-        logger.debug(f"{increment_time=}")
+        logger.debug(f"{increment_time = }")
 
         # Clock         - seconds since epoch
         clock = self._system_tags.get(SystemTagName.CLOCK)
