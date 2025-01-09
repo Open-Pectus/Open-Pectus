@@ -17,9 +17,7 @@ env:
 jobs:
 
   test_backend:
-    # seems name is used as status - need to figure out how to rename or status check will fail
-    #name: Unittest ${{ matrix.os }} - Python ${{ matrix.python-version }}
-    name: test_backend
+    name: Unittest ${{ matrix.os }} - Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -74,9 +72,7 @@ jobs:
             -d '{"event_type":"dispatch-event"}'
 
   build_frontend:
-    # seems name is used as status - need to figure out how to rename or status check will fail
-    #name: Build frontend
-    name: build_frontend
+    name: Build frontend
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -99,9 +95,7 @@ jobs:
           path: "openpectus/frontend/dist"
 
   package_dist:
-    # seems name is used as status - need to figure out how to rename or status check will fail
-    #name: Build and Package
-    name: package_dist
+    name: Build and Package
     runs-on: ubuntu-22.04
     needs: [build_frontend, test_backend]
     steps:
