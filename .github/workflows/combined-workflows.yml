@@ -56,14 +56,15 @@ jobs:
 
   pr:
     runs-on: ubuntu-latest
-    if: ${{ env.IS_PR }}
+    if: ${{ ! env.SHOULD_PUBLISH_IMAGE }}
+#    if: ${{ env.IS_PR }}
     steps:
       - name: PR info
         run: echo Is pull request
 
   notpr:
     runs-on: ubuntu-latest
-    if: ${{ ! env.IS_PR }}
+    if: ${{ env.SHOULD_PUBLISH_IMAGE }}
     steps:
       - name: PR info
         run: echo Is not pull request
