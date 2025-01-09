@@ -167,11 +167,17 @@ jobs:
     name: Publish Docker image
     needs: [package_dist]
     runs-on: ubuntu-latest
-    if: ${{ vars.SHOULD_PUBLISH_IMAGE }}
+#    if: ${{ env.SHOULD_PUBLISH_IMAGE }}
     permissions:
       packages: write
       contents: read
     steps:
+      - name: Debug env
+        run: env
+      - name: Debug env.SHOULD_PUBLISH_IMAGE
+        run: echo ${{ env.SHOULD_PUBLISH_IMAGE }}
+      - name: Debug vars.SHOULD_PUBLISH_IMAGE
+        run: echo ${{ vars.SHOULD_PUBLISH_IMAGE }}
       - name: Download openpectus-dist artifact
         uses: actions/download-artifact@v4
         with:
