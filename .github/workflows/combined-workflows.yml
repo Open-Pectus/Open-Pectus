@@ -16,6 +16,35 @@ env:
 
 jobs:
 
+  jobA:
+    name: job A (how to skip step)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Step A1
+        run: echo A1
+      - name: Step A2
+        if: ${{ env.SHOULD_PUBLISH_IMAGE == 'true' }}
+        run: echo A2
+      - name: Step A3
+        if: ${{ ! env.SHOULD_PUBLISH_IMAGE == 'true' }}
+        run: echo A3
+
+  jobB1:
+    name: job B1 (how to skip whole job)
+    runs-on: ubuntu-latest
+    if: ${{ vars.SHOULD_PUBLISH_IMAGE == 'true' }}
+    steps:
+      - name: Step B11
+        run: echo B11
+
+  jobB2:
+    name: job B2 (how to not skip whole job)
+    runs-on: ubuntu-latest
+    if: ${{ ! vars.SHOULD_PUBLISH_IMAGE == 'true' }}
+    steps:
+      - name: Step B21
+        run: echo B21
+
   test_backend:
     name: Unittest ${{ matrix.os }} - Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
