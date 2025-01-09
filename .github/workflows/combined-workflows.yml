@@ -26,7 +26,7 @@ jobs:
         if: ${{ env.SHOULD_PUBLISH_IMAGE == 'true' }}
         run: echo A2
       - name: Step A3
-        if: ${{ ! env.SHOULD_PUBLISH_IMAGE == 'true' }}
+        if: ${{ env.SHOULD_PUBLISH_IMAGE == 'false' }}
         run: echo A3
 
   jobB1:
@@ -40,7 +40,7 @@ jobs:
   jobB2:
     name: job B2 (how to not skip whole job)
     runs-on: ubuntu-latest
-    if: ${{ ! vars.SHOULD_PUBLISH_IMAGE == 'true' }}
+    if: ${{ vars.SHOULD_PUBLISH_IMAGE == 'false' }}
     steps:
       - name: Step B21
         run: echo B21
