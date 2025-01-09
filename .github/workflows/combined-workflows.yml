@@ -57,13 +57,15 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ $IS_PR }}
     steps:
-      run: echo Is pull request
+      - name: PR info
+        run: echo Is pull request
 
   notpr:
     runs-on: ubuntu-latest
     if: ${{ ! $IS_PR }}
     steps:
-      run: echo Is not pull request
+      - name: PR info
+        run: echo Is not pull request
 
   test_backend:
     name: Unittest ${{ matrix.os }} - Python ${{ matrix.python-version }}
