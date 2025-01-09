@@ -61,10 +61,10 @@ jobs:
   validate_uods:
     name: Validate UODs in Closed-Pectus repository
     needs: [test_backend]
-    runs-on: ubuntu-latest
-    if: ${{ vars.SHOULD_PUBLISH_IMAGE }}
+    runs-on: ubuntu-latest    
     steps:
       - name: Trigger validation of UODs in Closed-Pectus repository
+        if: env.SHOULD_PUBLISH_IMAGE == 'true'
         run: |
           curl -L \
             -X POST \
@@ -144,8 +144,7 @@ jobs:
   pypi_publish:
     needs: [package_dist]
     name: Upload release to PyPI
-    runs-on: ubuntu-latest
-    if: ${{ vars.SHOULD_PUBLISH_IMAGE }}
+    runs-on: ubuntu-latest    
     environment:
       name: pypi
       url: https://pypi.org/p/open-pectus
@@ -153,52 +152,56 @@ jobs:
       id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
       - name: Download openpectus-dist-pypi artifact
+        if: env.SHOULD_PUBLISH_IMAGE == 'true'
         uses: actions/download-artifact@v4
         with:
           name: openpectus-dist-pypi
           path: dist
 #      - name: Publish package distributions to PyPI Test
-#        if: github.ref != 'refs/heads/main'
 #        uses: pypa/gh-action-pypi-publish@release/v1
 #        with:
 #          repository-url: https://test.pypi.org/legacy/
       - name: Publish package distributions to PyPI
-        if: github.ref == 'refs/heads/main'
+        if: env.SHOULD_PUBLISH_IMAGE == 'true'
         uses: pypa/gh-action-pypi-publish@release/v1
 
   publish_docker_image:
     name: Publish Docker image
     needs: [package_dist]
-    runs-on: ubuntu-latest
-    if: ${{ vars.SHOULD_PUBLISH_IMAGE }}
+    runs-on: ubuntu-latest    
     permissions:
       packages: write
       contents: read
     steps:
       - name: Download openpectus-dist artifact
+        if: env.SHOULD_PUBLISH_IMAGE == 'true'
         uses: actions/download-artifact@v4
         with:
           name: openpectus-dist
       - name: Extract metadata (tags, labels) for Docker
         id: meta
+        if: env.SHOULD_PUBLISH_IMAGE == 'true'
         uses: docker/metadata-action@v5
         with:
           images: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
             ${{ secrets.ACR_ENDPOINT }}/open-pectus
       - name: Log in to GitHub container registry
+        if: env.SHOULD_PUBLISH_IMAGE == 'true'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Log in to Azure container registry
+        if: env.SHOULD_PUBLISH_IMAGE == 'true'
         uses: docker/login-action@v3
         with:
           registry: ${{ secrets.ACR_ENDPOINT }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
       - name: Build and push container image to registries
+        if: env.SHOULD_PUBLISH_IMAGE == 'true'
         uses: docker/build-push-action@v5
         with:
           push: 'true'
@@ -210,21 +213,23 @@ jobs:
   deploy_image:
     name: Deploy Docker image on Azure and Digital Ocean
     needs: [publish_docker_image]
-    runs-on: ubuntu-latest
-    if: ${{ vars.SHOULD_PUBLISH_IMAGE }}
+    runs-on: ubuntu-latest    
     permissions:
       packages: write
       contents: read
     steps:
       # https://docs.digitalocean.com/reference/api/api-reference/#operation/apps_create_deployment
       - name: Trigger deployment in Digital Ocean after push to Github container registry
+        if: env.SHOULD_PUBLISH_IMAGE == 'true'
         run: |
           curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer ${{ secrets.DIGITALOCEAN_TOKEN }}" "https://api.digitalocean.com/v2/apps/${{ secrets.DIGITALOCEAN_APP_ID }}/deployments"
       - name: 'Login via Azure CLI'
+        if: env.SHOULD_PUBLISH_IMAGE == 'true'
         uses: azure/login@v1
         with:
           creds: ${{ secrets.ACR_DEPLOY_CREDENTIALS }}
       - name: Deploy to Azure Container Instances
+        if: env.SHOULD_PUBLISH_IMAGE == 'true'
         uses: azure/aci-deploy@v1
         with:
           dns-name-label: open-pectus-github
