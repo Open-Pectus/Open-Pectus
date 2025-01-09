@@ -155,9 +155,11 @@ class TestCompositeHardware(unittest.TestCase):
             ("CONNECT", "Test_Hardware(1)"),
             ("CONNECT", "Test_Hardware(2)"),
             ("READ", "Test_Hardware(2)",
-                "[Register(name=Reg 2_1,direction=RegisterDirection.Both), Register(name=Reg 2_0,direction=RegisterDirection.Both)]"),
+                "[Register(name=Reg 2_1,direction=RegisterDirection.Both), " +
+                "Register(name=Reg 2_0,direction=RegisterDirection.Both)]"),
             ("READ", "Test_Hardware(0)",
-                "[Register(name=Reg 0_0,direction=RegisterDirection.Both), Register(name=Reg 0_1,direction=RegisterDirection.Both)]"),
+                "[Register(name=Reg 0_0,direction=RegisterDirection.Both), " +
+                "Register(name=Reg 0_1,direction=RegisterDirection.Both)]"),
             ("READ", "Test_Hardware(1)",
                 "[Register(name=Reg 1_1,direction=RegisterDirection.Both)]"),
             ("DISCONNECT", "Test_Hardware(0)"),
@@ -185,9 +187,11 @@ class TestCompositeHardware(unittest.TestCase):
             ("CONNECT", "Test_Hardware(1)"),
             ("CONNECT", "Test_Hardware(2)"),
             ("WRITE", "Test_Hardware(2)",
-                "[Register(name=Reg 2_1,direction=RegisterDirection.Both), Register(name=Reg 2_0,direction=RegisterDirection.Both)]", "[1, 4]"),
+                "[Register(name=Reg 2_1,direction=RegisterDirection.Both), " +
+                "Register(name=Reg 2_0,direction=RegisterDirection.Both)]", "[1, 4]"),
             ("WRITE", "Test_Hardware(0)",
-                "[Register(name=Reg 0_0,direction=RegisterDirection.Both), Register(name=Reg 0_1,direction=RegisterDirection.Both)]", "[2, 3]"),
+                "[Register(name=Reg 0_0,direction=RegisterDirection.Both), " +
+                "Register(name=Reg 0_1,direction=RegisterDirection.Both)]", "[2, 3]"),
             ("WRITE", "Test_Hardware(1)",
                 "[Register(name=Reg 1_1,direction=RegisterDirection.Both)]", "[5]"),
             ("DISCONNECT", "Test_Hardware(0)"),
