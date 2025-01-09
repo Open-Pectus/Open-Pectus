@@ -21,5 +21,5 @@ per-file-ignores =
     engine/p1/*.py: E231, E265, E261, E301, E302, E305, E501, W291, W292, W293
     # the comments should be removed as the commands are implemented
     aggregator/command_examples.py: E122
-    
-
+    # bad format is part of test input
+    test/engine/test_builder.py: W291
