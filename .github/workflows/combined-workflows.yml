@@ -24,6 +24,8 @@ jobs:
         os: [ubuntu-22.04, windows-latest]
         python-version: ["3.11"]
     steps:
+      - name: Debug env
+        run: env    
       - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
