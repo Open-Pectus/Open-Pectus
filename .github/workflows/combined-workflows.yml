@@ -12,6 +12,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/main' }}  
+  SHOULD_NOT_PUBLISH_IMAGE: ${{ github.ref != 'refs/heads/main' }}  
   NODE_VERSION: 22.11 # 22.12 has incompatibilities https://github.com/nodejs/node/issues/56155 https://github.com/tailwindlabs/tailwindcss/pull/15421 due to https://nodejs.org/en/blog/release/v22.12.0#requireesm-is-now-enabled-by-default
 
 jobs:
@@ -44,6 +45,22 @@ jobs:
     steps:
       - name: Step B21
         run: echo B21
+
+  jobC1:
+    name: job C1 (how to not skip whole job)
+    runs-on: ubuntu-latest
+    if: ${{ vars.SHOULD_NOT_PUBLISH_IMAGE }}
+    steps:
+      - name: Step C1
+        run: echo C1
+
+  jobC2:
+    name: job C2 (how to not skip whole job)
+    runs-on: ubuntu-latest
+    if: ${{ !vars.SHOULD_NOT_PUBLISH_IMAGE }}
+    steps:
+      - name: Step C2
+        run: echo C2
 
   test_backend:
     name: Unittest ${{ matrix.os }} - Python ${{ matrix.python-version }}
