@@ -54,11 +54,16 @@ jobs:
           echo "GitHub SHA: $GITHUB_SHA"
 
   pr:
+    runs-on: ubuntu-latest
     if: ${{ $IS_PR }}
-    run: echo Is pull request
+    steps:
+      run: echo Is pull request
+
   notpr:
+    runs-on: ubuntu-latest
     if: ${{ ! $IS_PR }}
-    run: echo Is not pull request
+    steps:
+      run: echo Is not pull request
 
   test_backend:
     name: Unittest ${{ matrix.os }} - Python ${{ matrix.python-version }}
