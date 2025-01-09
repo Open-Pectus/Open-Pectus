@@ -17,51 +17,6 @@ env:
 
 jobs:
 
-  jobA:
-    name: job A (how to skip step)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Step A1
-        run: echo A1
-      - name: Step A2
-        if: env.SHOULD_PUBLISH_IMAGE == 'true'
-        run: echo A2
-      - name: Step A3
-        if: env.SHOULD_PUBLISH_IMAGE == 'false'
-        run: echo A3
-
-  jobB1:
-    name: job B1 (how to skip whole job)
-    runs-on: ubuntu-latest
-    if: ${{ vars.SHOULD_PUBLISH_IMAGE }}
-    steps:
-      - name: Step B11
-        run: echo B11
-
-  jobB2:
-    name: job B2 (how to not skip whole job)
-    runs-on: ubuntu-latest
-    if: ${{ !vars.SHOULD_PUBLISH_IMAGE }}
-    steps:
-      - name: Step B21
-        run: echo B21
-
-  jobC1:
-    name: job C1 (how to not skip whole job)
-    runs-on: ubuntu-latest
-    if: ${{ vars.SHOULD_NOT_PUBLISH_IMAGE }}
-    steps:
-      - name: Step C1
-        run: echo C1
-
-  jobC2:
-    name: job C2 (how to not skip whole job)
-    runs-on: ubuntu-latest
-    if: ${{ !vars.SHOULD_NOT_PUBLISH_IMAGE }}
-    steps:
-      - name: Step C2
-        run: echo C2
-
   test_backend:
     name: Unittest ${{ matrix.os }} - Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
@@ -218,12 +173,6 @@ jobs:
       packages: write
       contents: read
     steps:
-      - name: Debug env
-        run: env
-      - name: Debug env.SHOULD_PUBLISH_IMAGE
-        run: echo ${{ env.SHOULD_PUBLISH_IMAGE }}
-      - name: Debug vars.SHOULD_PUBLISH_IMAGE
-        run: echo ${{ vars.SHOULD_PUBLISH_IMAGE }}
       - name: Download openpectus-dist artifact
         uses: actions/download-artifact@v4
         with:
