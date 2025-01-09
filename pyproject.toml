@@ -54,9 +54,9 @@ classifiers = [
 
 [project.optional-dependencies]
 development = [
-    "flake8==6.1.0",   # dev
-    "black==23.3.0",   # dev
-    "build==0.10.0",   # dev
+    "flake8==6.1.0",
+    "black==23.3.0",
+    "build==0.10.0",
 ]
 
 [project.urls]
