@@ -32,7 +32,7 @@ jobs:
   jobB1:
     name: job B1 (how to skip whole job)
     runs-on: ubuntu-latest
-    if: vars.SHOULD_PUBLISH_IMAGE == 'true'
+    if: ${{ vars.SHOULD_PUBLISH_IMAGE }}
     steps:
       - name: Step B11
         run: echo B11
@@ -40,7 +40,7 @@ jobs:
   jobB2:
     name: job B2 (how to not skip whole job)
     runs-on: ubuntu-latest
-    if: vars.SHOULD_PUBLISH_IMAGE == 'false'
+    if: ${{ !vars.SHOULD_PUBLISH_IMAGE }}
     steps:
       - name: Step B21
         run: echo B21
