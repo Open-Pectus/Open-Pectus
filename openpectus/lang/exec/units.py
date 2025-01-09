@@ -6,6 +6,7 @@ from pint import UnitRegistry, Quantity
 
 
 ureg = UnitRegistry(cache_folder="./pint-cache")
+ureg.define("m3 = m**3")
 ureg.define("m2 = m**2")
 ureg.define("dm2 = dm**2")
 ureg.define("cm2 = cm**2")
