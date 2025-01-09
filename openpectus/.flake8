@@ -4,6 +4,7 @@ extend-ignore =
     E302,
     E303
 
+# paths are relative to the openpectus/ dir
 exclude = 
     .git,
     __pycache__,
@@ -18,3 +19,7 @@ max-complexity = 10
 max-line-length = 125
 per-file-ignores =
     engine/p1/*.py: E231, E265, E261, E301, E302, E305, E501, W291, W292, W293
+    # the comments should be removed as the commands are implemented
+    aggregator/command_examples.py: E122
+    
+

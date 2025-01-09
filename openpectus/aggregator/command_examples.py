@@ -52,6 +52,8 @@ Base: min # Measure time in minutes
 # Example 3:
 Base: s # Measure time in seconds
 """),
+#     CommandExample(name="Batch", example="""
+# """),
     CommandExample(name="Block", example="""
 # Example 1:
 Block: Elution
@@ -148,20 +150,20 @@ Restart
 # Example 1
 Run counter: 3
 """),
-    #     CommandExample(name="Simulate", example="""
-    # # Simulate a value of a measured tag.
+#     CommandExample(name="Simulate", example="""
+# # Simulate a value of a measured tag.
 
-    # # Example 1
-    # Simulate: UV01 Absorbance = 1 AU
-    # """),
-    #     CommandExample(name="Simulate off", example="""
-    # # Stop simulation of measured tag.
+# # Example 1
+# Simulate: UV01 Absorbance = 1 AU
+# """),
+#     CommandExample(name="Simulate off", example="""
+# # Stop simulation of measured tag.
 
-    # # Example 1
-    # Simulate: UV01 Absorbance = 1 AU
-    # Wait: 5s
-    # Simulate off: UV01 Absorbance
-    # """),
+# # Example 1
+# Simulate: UV01 Absorbance = 1 AU
+# Wait: 5s
+# Simulate off: UV01 Absorbance
+# """),
     CommandExample(name="Stop", example="""
 # Stop execution.
 
