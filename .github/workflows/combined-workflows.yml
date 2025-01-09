@@ -55,14 +55,14 @@ jobs:
 
   pr:
     runs-on: ubuntu-latest
-    if: ${{ $IS_PR }}
+    if: ${{ IS_PR }}
     steps:
       - name: PR info
         run: echo Is pull request
 
   notpr:
     runs-on: ubuntu-latest
-    if: ${{ ! $IS_PR }}
+    if: ${{ ! IS_PR }}
     steps:
       - name: PR info
         run: echo Is not pull request
