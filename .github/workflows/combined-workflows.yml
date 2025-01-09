@@ -195,6 +195,7 @@ jobs:
     needs: [package_dist]
     name: Upload release to PyPI
     runs-on: ubuntu-latest
+    if: ${{ vars.SHOULD_PUBLISH_IMAGE }}
     environment:
       name: pypi
       url: https://pypi.org/p/open-pectus
@@ -219,6 +220,7 @@ jobs:
     name: Publish Docker image
     needs: [package_dist]
     runs-on: ubuntu-latest
+    if: ${{ vars.SHOULD_PUBLISH_IMAGE }}
     permissions:
       packages: write
       contents: read
@@ -261,6 +263,7 @@ jobs:
     name: Deploy Docker image on Azure and Digital Ocean
     needs: [publish_docker_image]
     runs-on: ubuntu-latest
+    if: ${{ vars.SHOULD_PUBLISH_IMAGE }}
     permissions:
       packages: write
       contents: read
