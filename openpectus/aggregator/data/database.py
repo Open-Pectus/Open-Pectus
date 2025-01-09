@@ -1,14 +1,11 @@
 import json
-import os
 from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Any
 
-from alembic import command
-from alembic.config import Config
 from pydantic.json import pydantic_encoder
 from sqlalchemy import create_engine, Engine
-from sqlalchemy.orm import registry, Session, sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.types import ASGIApp

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Literal
 
 import openpectus.engine.models as EM
 from pydantic import BaseModel

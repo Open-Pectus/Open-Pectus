@@ -125,7 +125,7 @@ def get_all_process_values(
     process_values: list[Dto.ProcessValue] = []
     for tag_value in tags_info.values():
         matching_reading = next((r for r in engine_data.readings if r.tag_name == tag_value.name), None)
-        if(matching_reading is not None):
+        if matching_reading is not None:
             try:
                 cmds = command_util.create_reading_commands(tag_value, matching_reading)
                 process_values.append(Dto.ProcessValue.create_w_commands(tag_value, cmds))
