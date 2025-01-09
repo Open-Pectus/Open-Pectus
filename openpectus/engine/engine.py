@@ -709,7 +709,7 @@ class Engine(InterpreterContext):
     def get_error_state_exception(self) -> Exception | None:
         return self._last_error
 
-    #TODO remove
+    # TODO remove
     def parse_pcode(self, pcode: str) -> PProgram:
         p = PGrammar()
         p.parse(pcode)
