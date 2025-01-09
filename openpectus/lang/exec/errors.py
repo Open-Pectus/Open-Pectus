@@ -35,7 +35,11 @@ class UodValidationError(Exception):
 
 class InterpretationError(Exception):
     """ Raised by interpreter when a general error occurs """
-    def __init__(self, message: str, user_message: str | Literal["same"] | None = "same", exception: Exception | None = None, *args: object) -> None:
+    def __init__(self,
+                 message: str,
+                 user_message: str | Literal["same"] | None = "same",
+                 exception: Exception | None = None, *args: object
+                 ) -> None:
         self.message: str = message
         if user_message == "same":
             self.user_message = message

@@ -66,7 +66,8 @@ class OPCUA_Hardware(HardwareLayerBase):
         self._max_nodes_per_read: int = 1000
         self._max_nodes_per_write: int = 1000
 
-    def _browse_opcua_name_space_depth_first_until_path_is_valid(self, path: str) -> tuple[str, list[asyncua.ua.uatypes.QualifiedName]]:
+    def _browse_opcua_name_space_depth_first_until_path_is_valid(
+            self, path: str) -> tuple[str, list[asyncua.ua.uatypes.QualifiedName]]:
         """ Given a path to a node that does not exist, find the closest
         parent that does.
 
