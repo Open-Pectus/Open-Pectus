@@ -5,11 +5,10 @@ import { ToggleButtonComponent } from '../../shared/toggle-button.component';
 import { RunLogActions } from './ngrx/run-log.actions';
 
 @Component({
-  selector: 'app-run-log-filters',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [NgIf, ToggleButtonComponent],
-  template: `
+    selector: 'app-run-log-filters',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [NgIf, ToggleButtonComponent],
+    template: `
     <div class="flex gap-3 items-center flex-wrap justify-end">
       <label class="relative">
         <input type="text" placeholder="Filter Run Log" size="20"
@@ -20,7 +19,7 @@ import { RunLogActions } from './ngrx/run-log.actions';
       </label>
       <app-toggle-button [label]="'In progress only'" (changed)="onlyRunningChanged($event)"></app-toggle-button>
     </div>
-  `,
+  `
 })
 export class RunLogFiltersComponent {
   @Input() showRunningFilter = true;

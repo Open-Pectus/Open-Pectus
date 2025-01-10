@@ -8,16 +8,15 @@ import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
 import { ProcessPlotComponent } from './process-plot.component';
 
 @Component({
-  selector: 'app-process-plot-container',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [
-    CollapsibleElementComponent,
-    NgIf,
-    ProcessPlotComponent,
-    PushPipe,
-  ],
-  template: `
+    selector: 'app-process-plot-container',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [
+        CollapsibleElementComponent,
+        NgIf,
+        ProcessPlotComponent,
+        PushPipe,
+    ],
+    template: `
     <app-collapsible-element [name]="'Process Plot'" [heightResizable]="true" [contentHeight]="670" [contentOverflow]="true"
                              (collapseStateChanged)="isCollapsed = $event" [codiconName]="'codicon-graph-line'">
       <button *ngIf="isZoomed | ngrxPush" buttons (click)="onResetZoom()"
@@ -30,7 +29,7 @@ import { ProcessPlotComponent } from './process-plot.component';
       </button>
       <app-process-plot content class="block w-full h-full relative" *ngIf="!isCollapsed"></app-process-plot>
     </app-collapsible-element>
-  `,
+  `
 })
 export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
   @Input() unitId?: string;

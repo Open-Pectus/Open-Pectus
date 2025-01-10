@@ -8,11 +8,10 @@ import { ProcessValueComponent, PvAndPosition } from './process-value.component'
 import { TagDirectionPipe } from './tag-direction.pipe';
 
 @Component({
-  selector: 'app-process-values-categorized',
-  standalone: true,
-  imports: [CommonModule, ProcessValueComponent, PushPipe, TagDirectionPipe],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'app-process-values-categorized',
+    imports: [CommonModule, ProcessValueComponent, PushPipe, TagDirectionPipe],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     @if (allProcessValues | ngrxPush) {
       <div class="flex flex-col gap-4 -mt-1">
         @for (direction of tagDirections; track direction) {
@@ -39,7 +38,7 @@ import { TagDirectionPipe } from './tag-direction.pipe';
         }
       </div>
     }
-  `,
+  `
 })
 export class ProcessValuesCategorizedComponent {
   processValues = input<ProcessValue[]>();

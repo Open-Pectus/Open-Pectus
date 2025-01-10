@@ -37,6 +37,8 @@ def map_pu(engine_data: Mdl.EngineData) -> Dto.ProcessUnit:
             engine_data.runtime is not None and isinstance(engine_data.runtime.value, int)
         ) else 0,
         current_user_role=Dto.UserRole.ADMIN,
+        uod_author_name=engine_data.uod_author_name,
+        uod_author_email=engine_data.uod_author_email
     )
     return unit
 
@@ -122,7 +124,15 @@ def get_all_process_values(
     tags_info = engine_data.tags_info.map
     process_values: list[Dto.ProcessValue] = []
     for tag_value in tags_info.values():
-        process_values.append(Dto.ProcessValue.create(tag_value))
+        matching_reading = next((r for r in engine_data.readings if r.tag_name == tag_value.name), None)
+        if matching_reading is not None:
+            try:
+                cmds = command_util.create_reading_commands(tag_value, matching_reading)
+                process_values.append(Dto.ProcessValue.create_w_commands(tag_value, cmds))
+            except Exception as ex:
+                logger.error(f"Error creating commands for process value '{matching_reading.tag_name}': {ex}")
+        else:
+            process_values.append(Dto.ProcessValue.create(tag_value))
     return process_values
 
 

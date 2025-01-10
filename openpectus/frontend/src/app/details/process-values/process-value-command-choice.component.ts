@@ -3,11 +3,10 @@ import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Ou
 import { ProcessValueCommand } from '../../api';
 
 @Component({
-  selector: 'app-process-value-command-choice',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [NgFor],
-  template: `
+    selector: 'app-process-value-command-choice',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [NgFor],
+    template: `
     <div class="flex items-center">
       <p class="mr-2">{{ command?.name }}: </p>
       <button #button *ngFor="let option of options" [attr.disabled]="command?.disabled" [class.!bg-gray-400]="command?.disabled"
@@ -15,7 +14,7 @@ import { ProcessValueCommand } from '../../api';
               (click)="$event.stopPropagation(); choiceMade.emit(option)" (blur)="buttonBlur.emit($event)">{{ option }}
       </button>
     </div>
-  `,
+  `
 })
 export class ProcessValueCommandChoiceComponent {
   @Input() command?: ProcessValueCommand;

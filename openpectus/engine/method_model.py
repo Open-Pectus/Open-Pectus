@@ -45,7 +45,7 @@ class MethodModel():
             logger.error(f"Parse error, pcode:\n{self._pcode}", exc_info=True)
             if self._method_error_callback is not None:
                 self._method_error_callback(ex)
-            
+
             # TODO: Figure out whether we need to raise here - how is error callback used
             raise
 

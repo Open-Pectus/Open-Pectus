@@ -12,19 +12,18 @@ import { RunLogLineForceButtonComponent } from './run-log-line-force-button.comp
 import { RunLogLineProgressComponent } from './run-log-line-progress.component';
 
 @Component({
-  selector: 'app-run-log-line',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [
-    LetDirective,
-    NgIf,
-    RunLogLineProgressComponent,
-    RunLogLineForceButtonComponent,
-    RunLogLineCancelButtonComponent,
-    RunLogAdditionalValuesComponent,
-    DatePipe,
-  ],
-  template: `
+    selector: 'app-run-log-line',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [
+        LetDirective,
+        NgIf,
+        RunLogLineProgressComponent,
+        RunLogLineForceButtonComponent,
+        RunLogLineCancelButtonComponent,
+        RunLogAdditionalValuesComponent,
+        DatePipe,
+    ],
+    template: `
     <div [class.bg-slate-50]="rowIndex % 2 === 0"
          [class.bg-slate-100]="rowIndex % 2 === 1"
          [class.!bg-yellow-100]="runLogLine?.forced"
@@ -59,7 +58,7 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
         </div>
       </div>
     </div>
-  `,
+  `
 })
 export class RunLogLineComponent implements AfterViewInit {
   @Input() runLogLine?: RunLogLine;

@@ -1,4 +1,4 @@
-import { NgFor, NgIf } from '@angular/common';
+import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
@@ -10,18 +10,15 @@ import { DetailsActions } from '../ngrx/details.actions';
 import { DetailsSelectors } from '../ngrx/details.selectors';
 import { ProcessValuesActions } from './ngrx/process-values.actions';
 import { ProcessValueCommandsComponent } from './process-value-commands.component';
-import { ProcessValueComponent, PvAndPosition } from './process-value.component';
+import { PvAndPosition } from './process-value.component';
 import { ProcessValuesCategorizedComponent } from './process-values-categorized.component';
 
 @Component({
   selector: 'app-process-values',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
   imports: [
     CollapsibleElementComponent,
     NgIf,
-    NgFor,
-    ProcessValueComponent,
     ProcessValueCommandsComponent,
     PushPipe,
     ToggleButtonComponent,

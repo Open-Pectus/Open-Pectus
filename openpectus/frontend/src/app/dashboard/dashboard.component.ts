@@ -5,11 +5,10 @@ import { DashboardProcessUnitsComponent } from './process-units/dashboard-proces
 import { RecentRunsComponent } from './recent-runs/recent-runs.component';
 
 @Component({
-  selector: 'app-dashboard',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [DashboardProcessUnitsComponent, RecentRunsComponent],
-  template: `
+    selector: 'app-dashboard',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [DashboardProcessUnitsComponent, RecentRunsComponent],
+    template: `
     <div class="flex justify-center">
       <div class="flex flex-col max-w-5xl mx-4 lg:mx-8">
         <div class="text-xl font-semibold my-6 text-gray-500">Process Units:</div>
@@ -22,7 +21,7 @@ import { RecentRunsComponent } from './recent-runs/recent-runs.component';
         <app-recent-runs></app-recent-runs>
       </div>
     </div>
-  `,
+  `
 })
 export class DashboardComponent {
   constructor(private store: Store) {}

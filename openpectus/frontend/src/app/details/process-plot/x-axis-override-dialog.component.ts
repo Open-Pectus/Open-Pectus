@@ -6,16 +6,15 @@ import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
 
 @Component({
-  selector: 'app-x-axis-override-dialog',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [
-    LetDirective,
-    NgIf,
-    NgFor,
-    PushPipe,
-  ],
-  template: `
+    selector: 'app-x-axis-override-dialog',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [
+        LetDirective,
+        NgIf,
+        NgFor,
+        PushPipe,
+    ],
+    template: `
     <ng-container *ngrxLet="data; let data">
       <ng-container *ngIf="data !== undefined">
         <div class="fixed left-0 top-0 right-0 bottom-0" (click)="onClose()">&nbsp;</div>
@@ -38,7 +37,7 @@ import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
         </div>
       </ng-container>
     </ng-container>
-  `,
+  `
 })
 export class XAxisOverrideDialogComponent {
   @Input() margin?: string;

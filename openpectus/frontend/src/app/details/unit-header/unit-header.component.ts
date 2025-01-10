@@ -1,4 +1,4 @@
-import { NgIf, TitleCasePipe } from '@angular/common';
+import { TitleCasePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { LetDirective, PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
@@ -7,22 +7,21 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
 import { UnitControlsComponent } from './unit-controls.component';
 
 @Component({
-  selector: 'app-unit-header',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [
-    NgIf,
-    LetDirective,
-    UnitControlsComponent,
-    TitleCasePipe,
-    PushPipe,
-  ],
-  template: `
+    selector: 'app-unit-header',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [
+        LetDirective,
+        UnitControlsComponent,
+        TitleCasePipe,
+        PushPipe,
+    ],
+    template: `
     <ng-container *ngrxLet="processUnit as processUnit">
-      <div class="text-slate-700 mb-4 -mt-2">
-        <span class="text-xs mb-2">User role: <b>{{ processUnit?.current_user_role | titlecase }}</b></span>
-        <h1 class="text-4xl lg:text-5xl font-bold">{{ processUnit?.name }}</h1>
+      <div class="mb-2 -mt-2 text-xs flex gap-4">
+        <span>Your role: <b>{{ processUnit?.current_user_role | titlecase }}</b></span>
+        <span>Uod author: <b>{{ processUnit?.uod_author_name }} <{{ processUnit?.uod_author_email }}></b></span>
       </div>
+      <h1 class="text-4xl lg:text-5xl font-bold text-slate-700 mb-4">{{ processUnit?.name }}</h1>
       <app-unit-controls></app-unit-controls>
       <div class="text-rose-800 mt-2 font-bold">
         @if (processUnit?.state?.state === 'error') {
@@ -33,7 +32,7 @@ import { UnitControlsComponent } from './unit-controls.component';
         }
       </div>
     </ng-container>
-  `,
+  `
 })
 export class UnitHeaderComponent {
   protected processUnit = this.store.select(DetailsSelectors.processUnit);
