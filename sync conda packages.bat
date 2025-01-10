@@ -1,1 +1,0 @@
-conda env update -p=./conda --file=environment.yml --prune
