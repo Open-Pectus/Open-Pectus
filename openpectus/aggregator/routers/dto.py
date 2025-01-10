@@ -351,7 +351,6 @@ class PlotLog(Dto):
 
 class RecentRun(Dto):
     """ Represents a historical run of a process unit. """
-    id: int
     engine_id: str
     run_id: str
     started_date: datetime

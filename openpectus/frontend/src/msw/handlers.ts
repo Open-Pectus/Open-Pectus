@@ -422,7 +422,6 @@ export const handlers = [
 
     return HttpResponse.json<RecentRun[]>([
       {
-        id: '1',
         engine_id: '1',
         run_id: crypto.randomUUID(),
         started_date: getStartedDate(),
@@ -438,7 +437,6 @@ export const handlers = [
         uod_filename: 'some_uod_file',
       },
       {
-        id: '2',
         engine_id: '2',
         run_id: crypto.randomUUID(),
         started_date: getStartedDate(),
@@ -454,7 +452,6 @@ export const handlers = [
         uod_filename: 'some_uod_file',
       },
       {
-        id: '3',
         engine_id: '3',
         run_id: crypto.randomUUID(),
         started_date: getStartedDate(),
@@ -470,7 +467,6 @@ export const handlers = [
         uod_filename: 'some_uod_file',
       },
       {
-        id: '4',
         engine_id: '4',
         run_id: crypto.randomUUID(),
         started_date: getStartedDate(),
@@ -922,7 +918,6 @@ export const handlers = [
 
   http.get('/api/recent_runs/:id', ({params}) => {
     return HttpResponse.json<RecentRun>({
-      id: params['id']!.toString(),
       started_date: sub(new Date(), {hours: 3, minutes: 22, seconds: 11}).toISOString(),
       completed_date: sub(new Date(), {hours: 1}).toISOString(),
       contributors: ['Morten', 'Eskild'],

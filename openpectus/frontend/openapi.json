@@ -2341,10 +2341,6 @@
       },
       "RecentRun": {
         "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
           "engine_id": {
             "type": "string",
             "title": "Engine Id"
@@ -2406,7 +2402,6 @@
         },
         "type": "object",
         "required": [
-          "id",
           "engine_id",
           "run_id",
           "started_date",
