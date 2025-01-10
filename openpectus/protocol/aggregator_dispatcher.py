@@ -7,7 +7,6 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi_websocket_rpc import RpcMethodsBase, RpcChannel, WebsocketRPCEndpoint
 from fastapi_websocket_rpc.schemas import RpcResponse
 
-from openpectus.aggregator.data import database
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M

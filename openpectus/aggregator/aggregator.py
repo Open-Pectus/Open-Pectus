@@ -94,6 +94,7 @@ class FromEngine:
                 try:
                     recent_run_repo.store_recent_run(engine_data)
                     logger.info(f"Stopping existing run and store it as recent run {_run_id=}")
+                    engine_data.reset_run()
                 except Exception:
                     logger.error(f"Failed to persist recent run {_run_id=}", exc_info=True)
 

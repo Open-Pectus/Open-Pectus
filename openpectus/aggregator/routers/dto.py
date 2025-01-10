@@ -283,7 +283,9 @@ class MethodAndState(Dto):
 
 class PlotColorRegion(Dto):
     process_value_name: str
-    value_color_map: dict[str | int | float, str]  # color string compatible with css e.g.: '#aa33bb', 'rgb(0,0,0)', 'rgba(0,0,0,0)', 'red'
+    # Color string compatible with css e.g.:
+    # '#aa33bb', 'rgb(0,0,0)', 'rgba(0,0,0,0)', 'red'
+    value_color_map: dict[str | int | float, str]
 
 
 class PlotAxis(Dto):
@@ -307,12 +309,19 @@ class PlotConfiguration(Dto):
 
     @staticmethod
     def empty() -> PlotConfiguration:
-        return PlotConfiguration(process_value_names_to_annotate=[], color_regions=[], sub_plots=[], x_axis_process_value_names=[])
+        return PlotConfiguration(process_value_names_to_annotate=[],
+                                 color_regions=[],
+                                 sub_plots=[],
+                                 x_axis_process_value_names=[])
 
 
-# This class exists only to workaround the issue that OpenApi spec (or Pydantic) cannot express that elements in a list can be None/null/undefined.
-# Properties on an object can be optional, so we use that via this wrapping class to express None values in the PlotLogEntry.values list.
-# Feel free to refactor to remove this class if it becomes possible to express the above without it.
+# This class exists only to workaround the issue that OpenApi spec
+# (or Pydantic) cannot express that elements in a list can be
+# None/null/undefined.
+# Properties on an object can be optional, so we use that via this
+# wrapping class to express None values in the PlotLogEntry.values list.
+# Feel free to refactor to remove this class if it becomes possible to
+# express the above without it.
 class PlotLogEntryValue(Dto):
     value: ProcessValueValueType | SkipJsonSchema[None] = None
     tick_time: float

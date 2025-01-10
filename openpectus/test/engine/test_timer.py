@@ -24,7 +24,7 @@ class TimerTest(unittest.TestCase):
         def tick(tick_time: float, increment_time: float):
             print("tick_time", tick_time)
             time.sleep(0.07)  # simulate safe work amount
-            #time.sleep(0.09)  # simulate unsafe work amount - will print warnings
+            # time.sleep(0.09)  # simulate unsafe work amount - will print warnings
 
         interval = .1
         timer = OneThreadTimer(interval, tick)

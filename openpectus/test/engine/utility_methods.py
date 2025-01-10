@@ -161,9 +161,9 @@ class EngineTestInstance(EventListener):
 
         Raises TimeoutError if the instruction is not found before max_ticks is reached.
 
-        Use `increment_index` to control searching within states of the same instruction as last search. The default 
-        value of True skips to the next instruction which is normally what you want. If set to False, search also 
-        includes the record of the previous match. This is useful if searching for different states for the same 
+        Use `increment_index` to control searching within states of the same instruction as last search. The default
+        value of True skips to the next instruction which is normally what you want. If set to False, search also
+        includes the record of the previous match. This is useful if searching for different states for the same
         record, such as "started" and "completed". See also `index_step_back()`.
         """
 
@@ -199,9 +199,9 @@ class EngineTestInstance(EventListener):
     def index_step_back(self, steps=1):
         # Not a good abstraction. Specifically not for alarms
         # the best way would be to maintain a index for each runtime record
-        # os use tick as index, then search all records from there. That eliminates 
+        # os use tick as index, then search all records from there. That eliminates
         # the use of an index alltogether - but does slow it down, though, as it
-        # has to search all records on every query. 
+        # has to search all records on every query.
         if steps < 1:
             raise ValueError("Steps must be positive")
         if self._search_index - steps < 0:
