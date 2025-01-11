@@ -19,7 +19,7 @@ logger = logging.getLogger("openpectus.aggregator.aggregator")
 logger.setLevel(logging.INFO)
 logging.getLogger("openpectus.protocol.aggregator_dispatcher").setLevel(logging.INFO)
 
-def get_args():
+def get_arg_parser():
     parser = ArgumentParser("Start Aggregator server")
     parser.add_argument("-host", "--host", required=False, default=AggregatorServer.default_host,
                         help="Host address to bind frontend and web socket to")
@@ -30,11 +30,11 @@ def get_args():
     parser.add_argument("-sev", "--sentry_event_level", required=False,
                         default=sentry.EVENT_LEVEL_DEFAULT, choices=sentry.EVENT_LEVEL_NAMES,
                         help=f"Minimum log level to send as sentry events. Default is '{sentry.EVENT_LEVEL_DEFAULT}'")
-    return parser.parse_args()
+    return parser
 
 
 def main():
-    args = get_args()
+    args = get_arg_parser().parse_args()
     title = "OpenPectus Aggregator"
     print(f"*** {title} v. {__version__}, build: {build_number} ***")
     sentry.init_aggregator(args.sentry_event_level)
