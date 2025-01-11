@@ -16,9 +16,8 @@ from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 
 
 class AggregatorServer:
-    default_title = "Pectus Aggregator"
+    default_title = "Open Pectus Aggregator"
     default_frontend_dist_dir = os.path.join(os.path.dirname(__file__), "frontend-dist")
-    # default_frontend_dist_dir = ".\\openpectus\\frontend\\dist"
     default_host = "127.0.0.1"
     default_port = 9800
     default_db_filename = "open_pectus_aggregator.sqlite3"
@@ -31,6 +30,8 @@ class AggregatorServer:
         self.port = port
         self.frontend_dist_dir = frontend_dist_dir
         self.db_path = db_path
+        if not os.path.exists(frontend_dist_dir):
+            raise FileNotFoundError("{frontend_dist_dir} not found.")
         self.dispatcher = AggregatorDispatcher()
         self.publisher = FrontendPublisher()
         self.aggregator = _create_aggregator(self.dispatcher, self.publisher)
@@ -52,11 +53,9 @@ class AggregatorServer:
                                on_shutdown=[self.on_shutdown])
         self.fastapi.include_router(process_unit.router, prefix=api_prefix, dependencies=[UserRolesDependency])
         self.fastapi.include_router(recent_runs.router, prefix=api_prefix, dependencies=[UserRolesDependency])
-        self.fastapi.include_router(auth.router, prefix='/auth')
+        self.fastapi.include_router(auth.router, prefix="/auth")
         for route in additional_routers:
             self.fastapi.include_router(route)
-        if not os.path.exists(self.frontend_dist_dir):
-            raise FileNotFoundError("frontend_dist_dir not found: " + self.frontend_dist_dir)
         self.fastapi.mount("/", SinglePageApplication(directory=self.frontend_dist_dir))
 
     def init_db(self):
