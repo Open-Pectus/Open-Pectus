@@ -60,7 +60,6 @@ class AggregatorServer:
         self.fastapi.add_middleware(database.DBSessionMiddleware)
 
     def start(self):
-        print(f"Serving frontend at http://{self.host}:{self.port}")
         uvicorn.run(self.fastapi, host=self.host, port=self.port, log_level=logging.WARNING)
 
     async def on_shutdown(self):

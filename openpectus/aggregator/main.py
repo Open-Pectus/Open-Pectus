@@ -36,9 +36,18 @@ def get_args():
 
 
 def main():
+    title = "Open Pectus Aggregator"
     args = get_args()
-    title = "OpenPectus Aggregator"
-    print(f"*** {title} v. {__version__}, build: {build_number} ***")
+    logger.info(f"Starting {title} v. {__version__}, build: {build_number}")
+    logger.info(f"Serving frontend at http://{args.host}:{args.port}")
+    if os.getenv("SENTRY_DSN"):
+        logger.info(f"Sentry is active with DSN={os.getenv('SENTRY_DSN')}")
+    else:
+        logger.info("Sentry is not active.")
+    if os.getenv("ENABLE_AZURE_AUTHENTICATION", default="").lower() == "true":
+        logger.info(f"Authentication is active.")
+    else:
+        logger.info("Authentication is not active.")
     sentry.init_aggregator(args.sentry_event_level)
     alembic_ini_file_path = os.path.join(os.path.dirname(__file__), "alembic.ini")
     alembic_config = Config(alembic_ini_file_path)
