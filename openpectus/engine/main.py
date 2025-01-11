@@ -25,11 +25,14 @@ log_setup_colorlog()
 
 StateKind = Literal["Started", "Connected", "Disconnected", "Reconnecting", "Reconnected"]
 
-file_log_path = path.join(pathlib.Path(__file__).parent.resolve(), 'openpectus-engine.log')
-file_handler = RotatingFileHandler(file_log_path, maxBytes=2*1024*1024, backupCount=5)
-file_handler.setLevel(logging.INFO)
-file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s]: %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
-logging.root.addHandler(file_handler)
+# Sphinx fails auto generating docs because __file__ is not defined
+# when it runs the code.
+if locals().get("__file__", None):
+    file_log_path = path.join(pathlib.Path(__file__).parent.resolve(), 'openpectus-engine.log')
+    file_handler = RotatingFileHandler(file_log_path, maxBytes=2*1024*1024, backupCount=5)
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s]: %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
+    logging.root.addHandler(file_handler)
 
 logger = logging.getLogger("openpectus.engine.engine")
 logger.setLevel(logging.INFO)
