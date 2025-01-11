@@ -5,6 +5,7 @@ import uvicorn
 from openpectus.aggregator.routers.auth import UserRolesDependency
 from fastapi import FastAPI, APIRouter
 from fastapi.routing import APIRoute
+from openpectus import __version__
 from openpectus.aggregator.aggregator_message_handlers import AggregatorMessageHandlers
 from openpectus.aggregator.data import database
 from openpectus.aggregator.deps import _create_aggregator
@@ -44,6 +45,9 @@ class AggregatorServer:
             return f"{route.name}"
 
         self.fastapi = FastAPI(title=self.title,
+                               version=__version__,
+                               contact=dict(name="Open Pectus",
+                                            url="https://github.com/Open-Pectus/Open-Pectus"),
                                generate_unique_id_function=custom_generate_unique_id,
                                on_shutdown=[self.on_shutdown])
         self.fastapi.include_router(process_unit.router, prefix=api_prefix, dependencies=[UserRolesDependency])
