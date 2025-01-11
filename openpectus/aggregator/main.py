@@ -29,7 +29,9 @@ def get_args():
                         help="Frontend distribution directory. Defaults to " + AggregatorServer.default_frontend_dist_dir)
     parser.add_argument("-sev", "--sentry_event_level", required=False,
                         default=sentry.EVENT_LEVEL_DEFAULT, choices=sentry.EVENT_LEVEL_NAMES,
-                        help=f"Minimum log level to send as sentry events. Default is '{sentry.EVENT_LEVEL_DEFAULT}'")
+                        help=f"Minimum log level to send as sentry events. Default: '{sentry.EVENT_LEVEL_DEFAULT}'")
+    parser.add_argument("-db", "--database", required=False, default=AggregatorServer.default_db_path,
+                        help=f"Path to Sqlite3 database. Default: ./{AggregatorServer.default_db_filename}")
     return parser.parse_args()
 
 
@@ -39,8 +41,10 @@ def main():
     print(f"*** {title} v. {__version__}, build: {build_number} ***")
     sentry.init_aggregator(args.sentry_event_level)
     alembic_ini_file_path = os.path.join(os.path.dirname(__file__), "alembic.ini")
-    command.upgrade(Config(alembic_ini_file_path), 'head')
-    AggregatorServer(title, args.host, args.port, args.frontend_dist_dir).start()
+    alembic_config = Config(alembic_ini_file_path)
+    alembic_config.set_main_option("sqlalchemy.url", f"sqlite:///{args.database}")
+    command.upgrade(alembic_config, "head")
+    AggregatorServer(title, args.host, args.port, args.frontend_dist_dir, args.database).start()
 
 
 if __name__ == "__main__":

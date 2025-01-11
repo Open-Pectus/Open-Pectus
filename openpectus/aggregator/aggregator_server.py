@@ -3,7 +3,6 @@ import os
 
 import uvicorn
 from openpectus.aggregator.routers.auth import UserRolesDependency
-from alembic.config import Config
 from fastapi import FastAPI, APIRouter
 from fastapi.routing import APIRoute
 from openpectus.aggregator.aggregator_message_handlers import AggregatorMessageHandlers
@@ -21,13 +20,16 @@ class AggregatorServer:
     # default_frontend_dist_dir = ".\\openpectus\\frontend\\dist"
     default_host = "127.0.0.1"
     default_port = 9800
+    default_db_filename = "open_pectus_aggregator.sqlite3"
+    default_db_path = os.path.join(os.getcwd(), default_db_filename)
 
     def __init__(self, title: str = default_title, host: str = default_host, port: int = default_port,
-                 frontend_dist_dir: str = default_frontend_dist_dir):
+                 frontend_dist_dir: str = default_frontend_dist_dir, db_path: str = default_db_path):
         self.title = title
         self.host = host
         self.port = port
         self.frontend_dist_dir = frontend_dist_dir
+        self.db_path = db_path
         self.dispatcher = AggregatorDispatcher()
         self.publisher = FrontendPublisher()
         self.aggregator = _create_aggregator(self.dispatcher, self.publisher)
@@ -54,11 +56,7 @@ class AggregatorServer:
         self.fastapi.mount("/", SinglePageApplication(directory=self.frontend_dist_dir))
 
     def init_db(self):
-        alembic_ini_file_path = os.path.join(os.path.dirname(__file__), "alembic.ini")
-        sqlalchemy_url = Config(alembic_ini_file_path).get_main_option('sqlalchemy.url')
-        if sqlalchemy_url is None:
-            raise ValueError('sqlalchemy.url not set in alembic.ini file')
-        database.configure_db(sqlalchemy_url)
+        database.configure_db(f"sqlite:///{self.db_path}")
         self.fastapi.add_middleware(database.DBSessionMiddleware)
 
     def start(self):
