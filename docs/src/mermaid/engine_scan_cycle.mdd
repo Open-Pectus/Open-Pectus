@@ -1,0 +1,12 @@
+flowchart TD
+    A[Pectus Engine started]
+    --> B[Scan initiated]
+    --> C[Read Process Image I/O]
+    --> D{Started?}
+    -->|True| F[Execute instructions and progress method]
+    --> G[Write Process Image I/O]
+    --> H[Scan finished]
+    --> I[Pectus Engine stopped]
+    D -->|False| G
+    H --> B
+    style F fill:#fae8dc
