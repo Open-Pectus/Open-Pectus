@@ -20,7 +20,7 @@ encoding = 'utf-8'
 
 # csv option defaults
 delimiter = ','     # used in old system
-#delimiter = ';'    # makes Excel 365 understand it out of the box
+# delimiter = ';'    # makes Excel 365 understand it out of the box
 quoting = csv.QUOTE_NONE
 escapechar = None
 # Note:  The MarkTag value may include a separator char/string. Make sure that does not conflict with the options here.

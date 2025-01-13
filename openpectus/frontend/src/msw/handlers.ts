@@ -756,19 +756,19 @@ export const handlers = [
           created_time: sub(new Date(), {minutes: 5, seconds: Math.random() * 50}).toISOString(),
           severity: 'warning',
           message: 'Just a warning',
-          occurrences: 2
+          occurrences: 2,
         },
         {
           created_time: sub(new Date(), {minutes: 5, seconds: Math.random() * 50}).toISOString(),
           severity: 'warning',
           message: 'Just another warning',
-          occurrences: 1
+          occurrences: 1,
         },
         {
           created_time: sub(new Date(), {seconds: Math.random() * 50}).toISOString(),
           severity: 'error',
           message: 'Oh no! An error!',
-          occurrences: 100
+          occurrences: 100,
         },
       ],
     });
@@ -922,7 +922,7 @@ export const handlers = [
 
   http.get('/api/recent_runs/:id', ({params}) => {
     return HttpResponse.json<RecentRun>({
-      id: params['id'].toString(),
+      id: params['id']!.toString(),
       started_date: sub(new Date(), {hours: 3, minutes: 22, seconds: 11}).toISOString(),
       completed_date: sub(new Date(), {hours: 1}).toISOString(),
       contributors: ['Morten', 'Eskild'],

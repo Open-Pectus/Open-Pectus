@@ -4,7 +4,6 @@ import { UtilMethods } from '../../shared/util-methods';
 
 @Pipe({
   name: 'tagDirection',
-  standalone: true,
 })
 export class TagDirectionPipe implements PipeTransform {
 

@@ -217,6 +217,7 @@ class WaitEngineCommand(InternalEngineCommand):
     def __init__(self, engine: Engine) -> None:
         super().__init__(EngineCommandEnum.WAIT)
         self.engine = engine
+        self.forced = False
 
     def init_args(self, kvargs: dict[str, Any]):
         if "time" in kvargs.keys() and "unit" in kvargs.keys():
@@ -232,12 +233,17 @@ class WaitEngineCommand(InternalEngineCommand):
 
     def _run(self):
         self.engine._runstate_waiting = True
-
-        while self.engine._tick_time < self.duration_end_time:
+        start = self.engine._tick_time
+        duration = self.duration_end_time - start
+        while self.engine._tick_time < self.duration_end_time and not self.forced:
+            if duration > 0:
+                progress = (self.engine._tick_time - start) / duration
+                self.set_progress(progress)
             yield
-
         self.engine._runstate_waiting = False
 
+    def force(self):
+        self.forced = True
 
 class RestartEngineCommand(InternalEngineCommand):
     def __init__(self, engine: Engine) -> None:

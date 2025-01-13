@@ -7,14 +7,13 @@ import { AppActions } from './ngrx/app.actions';
 import { TopBarComponent } from './top-bar.component';
 
 @Component({
-  selector: 'app-root',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [TopBarComponent, RouterOutlet],
-  template: `
+    selector: 'app-root',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [TopBarComponent, RouterOutlet],
+    template: `
     <app-top-bar></app-top-bar>
     <router-outlet></router-outlet>
-  `,
+  `
 })
 export class AppComponent implements OnInit {
   constructor(private store: Store,

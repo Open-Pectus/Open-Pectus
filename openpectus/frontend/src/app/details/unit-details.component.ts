@@ -16,25 +16,24 @@ import { UnitHeaderComponent } from './unit-header/unit-header.component';
 import { VariableRowSpanDirective } from './variable-row-span.directive';
 
 @Component({
-  selector: 'app-unit-details',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [
-    LetDirective,
-    UnitHeaderComponent,
-    ProcessValuesComponent,
-    MethodEditorComponent,
-    CommandsComponent,
-    RunLogComponent,
-    ProcessDiagramComponent,
-    ProcessPlotContainerComponent,
-    ErrorLogComponent,
-    ErrorLogComponent,
-    PushPipe,
-    VariableRowSpanDirective,
-    MissingRolesComponent,
-  ],
-  template: `
+    selector: 'app-unit-details',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [
+        LetDirective,
+        UnitHeaderComponent,
+        ProcessValuesComponent,
+        MethodEditorComponent,
+        CommandsComponent,
+        RunLogComponent,
+        ProcessDiagramComponent,
+        ProcessPlotContainerComponent,
+        ErrorLogComponent,
+        ErrorLogComponent,
+        PushPipe,
+        VariableRowSpanDirective,
+        MissingRolesComponent,
+    ],
+    template: `
     <app-missing-roles>
       @if ((processUnit | ngrxPush)?.state?.state === 'not_online') {
         <span class="absolute-center lg:text-xl font-bold whitespace-nowrap">
@@ -57,7 +56,7 @@ import { VariableRowSpanDirective } from './variable-row-span.directive';
         </div>
       }
     </app-missing-roles>
-  `,
+  `
 })
 export class UnitDetailsComponent implements OnInit, OnDestroy {
   protected readonly unitId = this.store.select(DetailsSelectors.processUnitId);

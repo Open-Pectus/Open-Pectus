@@ -16,8 +16,9 @@ import openpectus.protocol.engine_messages as EM
 from openpectus.protocol.exceptions import ProtocolException, ProtocolNetworkException
 import openpectus.protocol.messages as M
 from openpectus import __version__, __name__
-from openpectus.protocol.dispatch_interface import AGGREGATOR_REST_PATH, AGGREGATOR_RPC_WS_PATH, AGGREGATOR_HEALTH_PATH
+from openpectus.protocol.dispatch_interface import AGGREGATOR_REST_PATH, AGGREGATOR_RPC_WS_PATH, AGGREGATOR_HEALTH_PATH, AGGREGATOR_AUTH_CONFIG_PATH
 from openpectus.protocol.serialization import serialize, deserialize
+from openpectus.aggregator.routers.dto import AuthConfig
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +78,7 @@ class EngineDispatcher():
         self._post_url = f"{http_scheme}://{aggregator_host}{AGGREGATOR_REST_PATH}"
         self._health_url = f"{http_scheme}://{self._aggregator_host}{AGGREGATOR_HEALTH_PATH}"
         self._rpc_url = f"{ws_scheme}://{self._aggregator_host}{AGGREGATOR_RPC_WS_PATH}"
+        self._auth_config_url = f"{http_scheme}://{self._aggregator_host}{AGGREGATOR_AUTH_CONFIG_PATH}"
         logger.info(f"Connecting to aggregator using urls:\n{self._post_url}\n{self._rpc_url}")
 
     def check_aggregator_alive(self) -> bool:
@@ -100,6 +102,11 @@ class EngineDispatcher():
 
         logger.debug(f"Aggregator health url {self._health_url} responded succesfully")
         return True
+
+    def is_aggregator_authentication_enabled(self) -> bool:
+        response = httpx.get(self._auth_config_url, headers=engine_headers)
+        auth_config = AuthConfig(**response.json())
+        return auth_config.use_auth
 
     async def connect_async(self):
         def logerror(retry_state: tenacity.RetryCallState):

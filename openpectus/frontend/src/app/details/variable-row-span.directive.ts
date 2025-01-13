@@ -2,7 +2,6 @@ import { AfterViewInit, ChangeDetectorRef, Directive, ElementRef, HostBinding, O
 
 @Directive({
   selector: '[appVariableRowSpan]',
-  standalone: true,
 })
 export class VariableRowSpanDirective implements AfterViewInit, OnDestroy {
   private rowSpan = 0;

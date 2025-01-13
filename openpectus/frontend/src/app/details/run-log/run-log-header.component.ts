@@ -3,7 +3,6 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from 
 @Component({
   selector: 'app-run-log-header',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
   template: `
     <div class="grid bg-slate-100 text-gray-900 items-center gap-2 px-3 py-2" [style.grid]="gridFormat">
       <b>Start</b>

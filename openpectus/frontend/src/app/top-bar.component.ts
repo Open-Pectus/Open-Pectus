@@ -6,11 +6,10 @@ import { MswEnablementComponent } from './msw-enablement.component';
 import { AppSelectors } from './ngrx/app.selectors';
 
 @Component({
-  selector: 'app-top-bar',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [MswEnablementComponent, LetDirective, PushPipe],
-  template: `
+    selector: 'app-top-bar',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [MswEnablementComponent, LetDirective, PushPipe],
+    template: `
     <div class="w-full grid grid-cols-3 items-center px-4 bg-slate-600 text-white relative">
       <div class="flex items-center">
         <app-msw-enablement></app-msw-enablement>
@@ -28,7 +27,7 @@ import { AppSelectors } from './ngrx/app.selectors';
         }
       </div>
     </div>
-  `,
+  `
 })
 export class TopBarComponent {
   buildInfo = this.store.select(AppSelectors.buildInfo);

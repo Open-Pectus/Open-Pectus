@@ -192,7 +192,7 @@ Block: B1
             self.assertEqual(None, block.get_value())
             self.assertAlmostEqual(0.1 + 0.6, block_time.as_number(), delta=delta)
 
-    #@unittest.skip("Test is likely wrong. Should discuss nested block times")
+    # @unittest.skip("Test is likely wrong. Should discuss nested block times")
     def test_tag_block_time_nested_blocks(self):
         p = """
 Block: B1
@@ -235,8 +235,8 @@ Block: B1
             # continue_engine(e, 1)
             self.assertEqual("B1", block.get_value())
             # TODO currently does not increment block B1 timer while B2 is active
-            self.assertAlmostEqual(0.5, block_time.as_number(), delta=delta)  # 0.4 + 0.4 ???        
-            #self.assertAlmostEqual(0.5 + 0.4, block_time.as_number(), delta=delta)  # 0.4 + 0.4 ???        
+            self.assertAlmostEqual(0.5, block_time.as_number(), delta=delta)  # 0.4 + 0.4 ???
+            # self.assertAlmostEqual(0.5 + 0.4, block_time.as_number(), delta=delta)  # 0.4 + 0.4 ???
             # continue_engine(e, 4)
             # self.assertEqual("B1", block.get_value())
             # self.assertAlmostEqual(0.9, block_time.as_number(), delta=delta)
@@ -279,7 +279,7 @@ Block: B1
             instance.run_ticks(3)
             self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)  # is reset after restart
 
-            #instance.run_until_condition(lambda: block.get_value() == "B1")
+            # instance.run_until_condition(lambda: block.get_value() == "B1")
             instance.run_until_event("block_start")
             self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)  # nested timer is also reset
 

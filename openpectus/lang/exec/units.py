@@ -1,11 +1,13 @@
 from __future__ import annotations
+import os
 import logging
 
 import pint
 from pint import UnitRegistry, Quantity
 
-
-ureg = UnitRegistry(cache_folder="./pint-cache")
+cache_folder = os.path.join(os.path.dirname(__file__), "pint-cache")
+ureg = UnitRegistry(cache_folder=cache_folder)
+ureg.define("m3 = m**3")
 ureg.define("m2 = m**2")
 ureg.define("dm2 = dm**2")
 ureg.define("cm2 = cm**2")

@@ -7,7 +7,6 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi_websocket_rpc import RpcMethodsBase, RpcChannel, WebsocketRPCEndpoint
 from fastapi_websocket_rpc.schemas import RpcResponse
 
-from openpectus.aggregator.data import database
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
@@ -73,7 +72,7 @@ class AggregatorDispatcher():
         self.endpoint = WebsocketRPCEndpoint(AggregatorRpcMethods(self),
                                              on_connect=[self.on_client_connect],  # type: ignore
                                              on_disconnect=[self.on_client_disconnect])  # type: ignore
-        self.endpoint.register_route(self.router, path=AGGREGATOR_RPC_WS_PATH)        
+        self.endpoint.register_route(self.router, path=AGGREGATOR_RPC_WS_PATH)
         self._register_post_route(self.router)
 
     def _register_post_route(self, router: APIRouter | FastAPI):

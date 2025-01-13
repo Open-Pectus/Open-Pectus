@@ -2,7 +2,6 @@ import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
   name: 'formatDurationMsec',
-  standalone: true,
 })
 export class FormatDurationMsecPipe implements PipeTransform {
   transform(value: number | undefined): string {

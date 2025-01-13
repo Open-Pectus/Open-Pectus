@@ -150,6 +150,8 @@ export type ProcessUnit = {
     location?: string;
     runtime_msec?: number;
     current_user_role: UserRole;
+    uod_author_name?: string;
+    uod_author_email?: string;
 };
 
 /**
@@ -282,6 +284,18 @@ export type ValidationError = {
     msg: string;
     type: string;
 };
+
+export type PostResponse = (unknown);
+
+export type GetConfigResponse = (AuthConfig);
+
+export type ExposePubsubTopicsData = {
+    topic: PubSubTopic;
+};
+
+export type ExposePubsubTopicsResponse = (unknown);
+
+export type TriggerPublishMswResponse = (unknown);
 
 export type GetUnitData = {
     unitId: string;
@@ -465,18 +479,6 @@ export type GetRecentRunCsvFileData = {
 };
 
 export type GetRecentRunCsvFileResponse = (unknown);
-
-export type GetConfigResponse = (AuthConfig);
-
-export type PostResponse = (unknown);
-
-export type ExposePubsubTopicsData = {
-    topic: PubSubTopic;
-};
-
-export type ExposePubsubTopicsResponse = (unknown);
-
-export type TriggerPublishMswResponse = (unknown);
 
 export type GetVersionResponse = (unknown);
 
