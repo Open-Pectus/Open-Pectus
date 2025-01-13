@@ -5,7 +5,7 @@ import importlib.util
 from logging.handlers import RotatingFileHandler
 from os import path
 import pathlib
-from typing import Literal, Tuple
+from typing import Literal
 from itertools import chain
 
 
@@ -219,8 +219,7 @@ def run_example_commands(uod: UnitOperationDefinitionBase):
     logger.info("Validating UOD command examples")
     uod.hwl = NullHardware()
 
-    def run_example_with_description(arg: Tuple[str, str]):
-        description, example = arg
+    def run_example_with_description(description: str, example: str) -> list[str]:
         failed_cmds: list[str] = []
         try:
             runner = EngineTestRunner(uod_factory=lambda: uod, pcode=example)
@@ -237,12 +236,12 @@ def run_example_commands(uod: UnitOperationDefinitionBase):
 
     logger.info("Executing example commands")
     failed_cmds: list[str] = list(
-        chain.from_iterable(
-            map(
-                run_example_with_description,
-                uod.generate_pcode_examples()
-            )
+      chain.from_iterable(
+        map(
+            lambda t: run_example_with_description(t[0], t[1]),
+            uod.generate_pcode_examples()
         )
+      )
     )
 
     if len(failed_cmds) > 0:
