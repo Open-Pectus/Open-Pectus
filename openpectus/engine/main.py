@@ -298,7 +298,8 @@ def main():
     # Handling KeyboardInterrupt seems to fix the halt that sometimes otherwise occurs. But we still get the error:
     # "sys:1: RuntimeWarning: coroutine 'EngineDispatcher.disconnect_async' was never awaited"
     # https://stackoverflow.com/questions/54525836/where-do-i-catch-the-keyboardinterrupt-exception-in-this-async-setup#54528397
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
         loop.run_until_complete(main_async(args, loop))
         logger.info("Main loop completed")
