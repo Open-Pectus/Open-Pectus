@@ -15,8 +15,10 @@ import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 from openpectus.protocol.exceptions import ProtocolException, ProtocolNetworkException
 import openpectus.protocol.messages as M
-from openpectus import __version__, __name__
-from openpectus.protocol.dispatch_interface import AGGREGATOR_REST_PATH, AGGREGATOR_RPC_WS_PATH, AGGREGATOR_HEALTH_PATH, AGGREGATOR_AUTH_CONFIG_PATH
+from openpectus import __version__, __name__ as client_name
+from openpectus.protocol.dispatch_interface import (
+    AGGREGATOR_REST_PATH, AGGREGATOR_RPC_WS_PATH, AGGREGATOR_HEALTH_PATH, AGGREGATOR_AUTH_CONFIG_PATH
+)
 from openpectus.protocol.serialization import serialize, deserialize
 from openpectus.aggregator.routers.dto import AuthConfig
 
@@ -25,7 +27,7 @@ logger = logging.getLogger(__name__)
 EngineMessageHandler = Callable[[AM.AggregatorMessage], Awaitable[M.MessageBase]]
 """ Handler in engine that handles aggregator messages of a given type """
 
-engine_headers = {"User-Agent": f"{__name__}/{__version__}"}
+engine_headers = {"User-Agent": f"{client_name}/{__version__}"}
 
 class EngineDispatcher():
     """
@@ -207,6 +209,7 @@ class EngineDispatcher():
         try:
             response = await self._rpc_client.other.dispatch_message_async(message_json=message_json)
             assert isinstance(response, RpcResponse)
+            logger.debug(f"Sent message: {message.ident}")
         except ConnectionClosedError:
             raise ProtocolNetworkException("Connection closed")
         except Exception:
