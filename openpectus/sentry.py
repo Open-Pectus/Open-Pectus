@@ -85,10 +85,6 @@ def init_engine(event_level_name: str):
 
     - Attaches tag component='engine' to all events
     """
-    if os.getenv('SENTRY_DSN'):
-        print("Sentry is active")
-    else:
-        print("Sentry is not active")
 
     event_level_int = _get_event_level_from_name(event_level_name)
 
