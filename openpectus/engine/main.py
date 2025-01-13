@@ -107,6 +107,10 @@ async def main_async(args, loop: asyncio.AbstractEventLoop):
 
     dispatcher = EngineDispatcher(f"{args.aggregator_hostname}:{port}", args.secure, uod.options)
 
+    if len(uod.required_roles) > 0 and not dispatcher.is_aggregator_authentication_enabled():
+        logger.warning('"with_required_roles" specified in "demo_uod.py" but aggregator does ' +
+                       'not support authentication. Engine will not be visible in the frontend.')
+
     if not run_validations(uod):
         exit(1)
 
