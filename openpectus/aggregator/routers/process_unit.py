@@ -238,7 +238,7 @@ def get_plot_configuration(
         unit_id: str,
         agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.PlotConfiguration:
     engine_data = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
-    return Dto.PlotConfiguration.validate(
+    return Dto.PlotConfiguration.model_validate(
         # assumes Dto.PlotConfiguration and Mdl.PlotConfiguration are identical, change this when they diverge
         engine_data.plot_configuration)
 
@@ -256,7 +256,7 @@ def get_plot_log(
     if plot_log_model is None:
         return Dto.PlotLog(entries={})
     # assumes Dto.PlotLog and Mdl.PlotLog are identical, change this when they diverge
-    return Dto.PlotLog.validate(plot_log_model)
+    return Dto.PlotLog.model_validate(plot_log_model)
 
 
 @router.get('/process_unit/{unit_id}/control_state', response_model_exclude_none=True)

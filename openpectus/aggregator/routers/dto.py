@@ -5,7 +5,6 @@ from datetime import datetime
 from enum import StrEnum, auto
 from typing import Literal
 
-import openpectus.aggregator.data.models as data_models
 import openpectus.aggregator.models as Mdl
 from pydantic import BaseModel
 from pydantic.json_schema import SkipJsonSchema
@@ -315,27 +314,16 @@ class PlotConfiguration(Dto):
                                  x_axis_process_value_names=[])
 
 
-# This class exists only to workaround the issue that OpenApi spec
+# This class originally existed only to workaround the issue that OpenApi spec
 # (or Pydantic) cannot express that elements in a list can be
 # None/null/undefined.
 # Properties on an object can be optional, so we use that via this
 # wrapping class to express None values in the PlotLogEntry.values list.
 # Feel free to refactor to remove this class if it becomes possible to
-# express the above without it.
+# express the above without it, and there is no other need for this class.
 class PlotLogEntryValue(Dto):
     value: ProcessValueValueType | SkipJsonSchema[None] = None
     tick_time: float
-
-    @classmethod
-    def from_orm(cls, obj: data_models.PlotLogEntryValue) -> PlotLogEntryValue:
-        mapped = super().from_orm(obj)
-        if obj.value_int is not None:
-            mapped.value = obj.value_int
-        if obj.value_float is not None:
-            mapped.value = obj.value_float
-        if obj.value_str is not None:
-            mapped.value = obj.value_str
-        return mapped
 
 
 class PlotLogEntry(Dto):

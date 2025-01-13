@@ -27,13 +27,13 @@ def get_recent_run_or_fail(user_roles: UserRolesValue, run_id: str) -> Db.Recent
 @router.get("/", response_model_exclude_none=True)
 def get_recent_runs(user_roles: UserRolesValue) -> List[Dto.RecentRun]:
     repo = RecentRunRepository(database.scoped_session())
-    return list(map(Dto.RecentRun.validate, filter(lambda rr: has_access(rr, user_roles), repo.get_all())))
+    return list(map(Dto.RecentRun.model_validate, filter(lambda rr: has_access(rr, user_roles), repo.get_all())))
 
 
 @router.get("/{run_id}", response_model_exclude_none=True)
 def get_recent_run(user_roles: UserRolesValue, run_id: str) -> Dto.RecentRun:
     recent_run = get_recent_run_or_fail(user_roles, run_id)
-    return Dto.RecentRun.validate(recent_run)
+    return Dto.RecentRun.model_validate(recent_run)
 
 
 @router.get('/{run_id}/method-and-state', response_model_exclude_none=True)
@@ -43,7 +43,7 @@ def get_recent_run_method_and_state(user_roles: UserRolesValue, run_id: str) -> 
     method_and_state = repo.get_method_and_state_by_run_id(run_id)
     if method_and_state is None:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail='Method and state not found')
-    return Dto.MethodAndState.validate(method_and_state)
+    return Dto.MethodAndState.model_validate(method_and_state)
 
 
 @router.get('/{run_id}/run_log', response_model_exclude_none=True)
@@ -53,7 +53,7 @@ def get_recent_run_run_log(user_roles: UserRolesValue, run_id: str) -> Dto.RunLo
     run_log_db = repo.get_run_log_by_run_id(run_id)
     if run_log_db is None:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail='Run Log not found')
-    run_log_mdl = Mdl.RunLog.validate(run_log_db)
+    run_log_mdl = Mdl.RunLog.model_validate(run_log_db)
     return Dto.RunLog(lines=list(map(Dto.RunLogLine.from_model, run_log_mdl.lines)))
 
 
@@ -64,7 +64,7 @@ def get_recent_run_plot_configuration(user_roles: UserRolesValue, run_id: str) -
     plot_configuration = repo.get_plot_configuration_by_run_id(run_id)
     if plot_configuration is None:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail='Plot Configuration not found')
-    return Dto.PlotConfiguration.validate(plot_configuration)
+    return Dto.PlotConfiguration.model_validate(plot_configuration)
 
 
 @router.get('/{run_id}/plot_log', response_model_exclude_none=True)
@@ -74,7 +74,7 @@ def get_recent_run_plot_log(user_roles: UserRolesValue, run_id: str) -> Dto.Plot
     plot_log_model = plot_repo.get_plot_log(run_id)
     if plot_log_model is None:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail='Plot Log not found')
-    return Dto.PlotLog.validate(plot_log_model)
+    return Dto.PlotLog.model_validate(plot_log_model)
 
 
 @router.get('/{run_id}/csv_json', response_model_exclude_none=True)
@@ -86,8 +86,8 @@ def get_recent_run_csv_json(user_roles: UserRolesValue, run_id: str) -> Dto.Rece
     if plot_log_model is None:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail='Plot Log not found')
 
-    plot_log = Dto.PlotLog.validate(plot_log_model)
-    csv_string = generate_csv_string(plot_log, Dto.RecentRun.validate(recent_run))
+    plot_log = Dto.PlotLog.model_validate(plot_log_model)
+    csv_string = generate_csv_string(plot_log, Dto.RecentRun.model_validate(recent_run))
     return Dto.RecentRunCsv(filename=f'RecentRun-{run_id}.csv', csv_content=csv_string.getvalue())
 
 
@@ -98,7 +98,7 @@ def get_recent_run_error_log(user_roles: UserRolesValue, run_id: str) -> Dto.Agg
     error_log = repo.get_error_log_by_run_id(run_id)
     if error_log is None:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail='Error Log not found')
-    return Dto.AggregatedErrorLog.from_model(Mdl.AggregatedErrorLog.validate(error_log))
+    return Dto.AggregatedErrorLog.from_model(Mdl.AggregatedErrorLog.model_validate(error_log))
 
 
 @router.get('/{run_id}/csv_file', response_class=StreamingResponse, response_model_exclude_none=True)
