@@ -1,8 +1,7 @@
 import os
 
 from sphinx.highlighting import lexers
-from pygments.lexer import RegexLexer, bygroups
-from pygments import token
+from docs.pcode_lexer import PcodeLexer
 
 # Configuration file for the Sphinx documentation builder.
 #
@@ -53,42 +52,5 @@ templates_path = ["_templates"]
 exclude_patterns = ["html", "Thumbs.db", ".DS_Store"]
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["src/static"]
-html_css_files = ['custom.css']
-
-__all__ = ["pcodeLexer"]
-
-
-class pcodeLexer(RegexLexer):
-    name = "p-code"
-    aliases = ["pcode"]
-    filenames = ["*.pcode"]
-
-    tokens = dict(root=[
-        (
-            # Indent
-            r"((?: {4})*)" +  # Matches multiples of 4 white space
-            # Possible syntax error
-            r"( )*" +
-            # Threshold
-            r"((?:\d*(?:\.\d*)?) )?" +  # Matches a positive decimal number
-            # Command
-            r"([^:#\n]+)" +  # Matches string not comment
-            # Command argument
-            r"(: (?:[^#\n]+))?" +  # Matches string not comment including :
-            # Comment
-            r"(\s*#\s*(?:.*$))?" +  # Matches string startin with #
-            r"(\n)?",  # Next line in method
-            bygroups(
-                token.Whitespace,
-                token.Error,
-                token.String,
-                token.Keyword,
-                token.Name,
-                token.Comment,
-                token.Text
-            )
-        ),
-    ])
-
-
-lexers["pcode"] = pcodeLexer(startinline=True)
+html_css_files = ['pcode.css']
+lexers["pcode"] = PcodeLexer(startinline=True)
