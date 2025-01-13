@@ -55,7 +55,7 @@ class TagValue(ProtocolModel):
     tick_time: float
     value: TagValueType = None
     value_unit: str | None
-    value_formatted: str | None
+    value_formatted: str | None = None
     direction: TagDirection = TagDirection.Unspecified
 
 
@@ -67,10 +67,10 @@ class RunLogLine(ProtocolModel):
     progress: float | None  # between 0 and 1
     start_values: list[TagValue]
     end_values: list[TagValue]
-    forcible: bool | None
-    cancellable: bool | None
-    forced: bool | None
-    cancelled: bool | None
+    forcible: bool | None = None
+    cancellable: bool | None = None
+    forced: bool | None = None
+    cancelled: bool | None = None
 
 
 class RunLog(ProtocolModel):
