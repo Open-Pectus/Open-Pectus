@@ -149,12 +149,10 @@ def get_ProcessValueType_from_value(value: ProcessValueValueType) -> ProcessValu
         return ProcessValueType.NONE
     if isinstance(value, str):
         return ProcessValueType.STRING
-    elif isinstance(value, int):
+    if isinstance(value, int):
         return ProcessValueType.INT
-    elif isinstance(value, float):
+    if isinstance(value, float):
         return ProcessValueType.FLOAT
-    else:
-        raise ValueError("Invalid value type: " + type(value).__name__)
 
 
 class ProcessValue(Dto):
@@ -322,7 +320,7 @@ class PlotConfiguration(Dto):
 # Feel free to refactor to remove this class if it becomes possible to
 # express the above without it, and there is no other need for this class.
 class PlotLogEntryValue(Dto):
-    value: ProcessValueValueType | SkipJsonSchema[None] = None
+    value: ProcessValueValueType = None
     tick_time: float
 
 
