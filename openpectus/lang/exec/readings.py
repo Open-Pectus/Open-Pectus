@@ -91,6 +91,9 @@ class Reading():
             ) for c in self.commands]
         )
 
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}({self.tag_name=})"
+
 class ReadingWithEntry(Reading):
     def __init__(
             self,
@@ -246,3 +249,6 @@ class UodCommandDescription:
                         arg = "+".join(args)
                         examples.append(f"{self.name}: {arg}")
         return examples
+
+    def __str__(self):
+        return f"{self.__class__.__name__}({self.name=})"

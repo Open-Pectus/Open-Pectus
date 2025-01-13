@@ -6,6 +6,7 @@ from logging.handlers import RotatingFileHandler
 from os import path
 import pathlib
 from typing import Literal
+from itertools import chain
 
 
 from openpectus import log_setup_colorlog, sentry, __version__, build_number
@@ -212,43 +213,36 @@ def validate_and_exit(uod_name: str):
     logger.info("Validation complete. Exiting.")
     exit(0)
 
+
 def run_example_commands(uod: UnitOperationDefinitionBase):
     uod.build_commands()
     logger.info("Validating UOD command examples")
     uod.hwl = NullHardware()
 
-    failed_cmds: list[str] = []
-    for desc in uod.command_descriptions.values():
-        logger.info(f"Executing example commands for uod command '{desc.name}'")
-        pcode = desc.get_docstring_pcode()
-        if pcode.strip() == "":
-            logger.warning(f"Command '{desc.name} has no pcode example")
-            continue
+    def run_example_with_description(description: str, example: str) -> list[str]:
+        failed_cmds: list[str] = []
         try:
-            runner = EngineTestRunner(uod_factory=lambda: uod, pcode=pcode)
+            runner = EngineTestRunner(uod_factory=lambda: uod, pcode=example)
             with runner.run() as instance:
                 instance.start()
-                # wait up to 1 minute, that oughta be enought for everybody
+                # wait up to 1 minute, that ought to be enought for everybody
                 instance.run_until_event("method_end", max_ticks=10*60)
                 logger.debug(instance.get_runtime_table())
-                logger.debug(f"Command '{pcode}' executed successfully")
+                logger.debug(f"{description} executed successfully")
         except Exception as ex:
-            logger.error(f"Command '{pcode}' failed: {str(ex)}")
-            failed_cmds.append(desc.name)
+            logger.error(f"{description} '{example}' failed: {str(ex)}")
+            failed_cmds.append(example)
+        return failed_cmds
 
-        examples = desc.generate_pcode_examples()
-        for example in examples:
-            try:
-                runner = EngineTestRunner(uod_factory=lambda: uod, pcode=example)
-                with runner.run() as instance:
-                    instance.start()
-                    # wait up to 1 minute, that oughta be enought for everybody
-                    instance.run_until_event("method_end", max_ticks=10*60)
-                    logger.debug(instance.get_runtime_table())
-                    logger.debug(f"Command '{desc.name}' executed successfully")
-            except Exception as ex:
-                logger.error(f"Command '{example}' failed: {str(ex)}")
-                failed_cmds.append(example)
+    logger.info("Executing example commands")
+    failed_cmds: list[str] = list(
+      chain.from_iterable(
+        map(
+            lambda t: run_example_with_description(t[0], t[1]),
+            uod.generate_pcode_examples()
+        )
+      )
+    )
 
     if len(failed_cmds) > 0:
         logger.error(f"Example commands failed: {','.join(failed_cmds)}")
