@@ -916,7 +916,7 @@ export const handlers = [
     });
   }),
 
-  http.get('/api/recent_runs/:id', ({params}) => {
+  http.get('/api/recent_runs/:id', () => {
     return HttpResponse.json<RecentRun>({
       started_date: sub(new Date(), {hours: 3, minutes: 22, seconds: 11}).toISOString(),
       completed_date: sub(new Date(), {hours: 1}).toISOString(),
