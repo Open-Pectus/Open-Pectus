@@ -1,10 +1,8 @@
-
 from types import NoneType
 from typing import Any
 
-from pydantic import BaseModel
-
 import openpectus.aggregator.routers.dto as namespace
+from pydantic import BaseModel
 
 namespace_name = namespace.__name__
 namespace_types = dir(namespace)
@@ -12,7 +10,7 @@ namespace_types = dir(namespace)
 
 def serialize(msg: BaseModel) -> dict[str, Any]:
     """ Serialize a dto message in a round-trippable fashion. """
-    json_dict = msg.dict()
+    json_dict = msg.model_dump()
     t = type(msg)
     qualified_type_name = t.__qualname__
     assert t.__module__ == namespace_name, \
