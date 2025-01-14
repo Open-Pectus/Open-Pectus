@@ -68,6 +68,15 @@ const reducer = createReducer(initialState,
     draft.isDirty = true;
     draft.method.lines = lines;
   })),
+  on(MethodEditorActions.saveButtonClicked, (state) => produce(state, draft => {
+    const lastLine = state.method.lines.at(-1);
+    if(lastLine?.content.trim() !== '') {
+      draft.method.lines.push({
+        id: crypto.randomUUID(),
+        content: '',
+      });
+    }
+  })),
 );
 
 export const methodEditorSlice = {name: 'methodEditor', reducer};
