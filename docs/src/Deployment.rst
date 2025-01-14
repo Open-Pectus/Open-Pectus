@@ -162,7 +162,7 @@ Commands to pull latest image and run it are given below. The :console:`docker r
 
 * :console:`--name openpectus-prd`, allows reference to the the container by name :console:`openpectus-prd` in other Docker commands.
 * :console:`-h AZR-PECTUS-PRD`, sets the hostname. The aggregator host name appears in the :ref:`csv_file_format` metadata.
-* :console:`-v /home/azureuser/data_prd:/usr/src/app/data`, mounts the directory containing the database to :console:`/home/azureuser/data_prd` on the host. This is necessary in order to persist the database across different versions of the Docker image.
+* :console:`-v /home/azureuser/data_prd:/data`, mounts the directory containing the database to :console:`/home/azureuser/data_prd` on the host. This is necessary in order to persist the database across different versions of the Docker image.
 * :console:`-e AZURE_APPLICATION_CLIENT_ID='...'`, :console:`-e AZURE_DIRECTORY_TENANT_ID='...'` and :console:`-e ENABLE_AZURE_AUTHENTICATION='true'` configure the :ref:`user_authorization` integration.
 * :console:`-p 0.0.0.0:8300:8300/tcp`, maps port :console:`8300` of the container to the host.
 * :console:`6aa`, specifies which image to run. This value is unique for each version of the image.
@@ -176,7 +176,7 @@ Commands to pull latest image and run it are given below. The :console:`docker r
    # In this example the image id started with "6aa"
    docker run --name openpectus-prd \
    -h AZR-PECTUS-PRD \
-   -v /home/azureuser/data_prd:/usr/src/app/data
+   -v /home/azureuser/data_prd:/data
    -e AZURE_APPLICATION_CLIENT_ID='...' \
    -e AZURE_DIRECTORY_TENANT_ID='...' \
    -e ENABLE_AZURE_AUTHENTICATION='true' \
