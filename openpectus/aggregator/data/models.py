@@ -88,6 +88,14 @@ class PlotLogEntryValue(DBModel):
     value_str: Mapped[str | None] = mapped_column()
     value_float: Mapped[float | None] = mapped_column()
     value_int: Mapped[int | None] = mapped_column()
+    @property
+    def value(self):
+        if self.value_int is not None:
+            return self.value_int
+        if self.value_float is not None:
+            return self.value_float
+        if self.value_str is not None:
+            return self.value_str
 
 
 ProcessValueValueType = str | float | int | None

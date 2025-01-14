@@ -56,7 +56,7 @@ QUANTITY_PINT_MAP: dict[str, str] = {
     'amount_of_substance': '[substance]',
     'pressure': '[mass] / [length] / [time] ** 2',
     'mass flow rate': '[mass] / [time]',
-    'electrical conductance': '[current] ** 2 * [time] ** 3 / [length] ** 3 / [mass]',
+    'electrical conductance': '[current] ** 2 * [time] ** 3 / [mass] / [length] ** 3',
     'percentage': '[percentage]',
     'flux': '[length] / [time]',
     'permeability': '[length] ** 2 * [time] / [mass]',

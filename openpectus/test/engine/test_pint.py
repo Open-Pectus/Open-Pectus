@@ -111,7 +111,7 @@ class PintTest(unittest.TestCase):
 
     def test_absorbance(self):
         val = Q_(1, "mS/cm")
-        exp_dimensionality = "[current] ** 2 * [time] ** 3 / [length] ** 3 / [mass]"
+        exp_dimensionality = "[current] ** 2 * [time] ** 3 / [mass] / [length] ** 3"
         self.assertEqual(exp_dimensionality, str(val.dimensionality))
 
     def test_area(self):

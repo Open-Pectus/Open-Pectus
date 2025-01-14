@@ -43,10 +43,10 @@ export class RpcChannel {
     this.socket.send(JSON.stringify(resultMsg));
   }
 
-  private calculateResultType(result: unknown): string | undefined {
+  private calculateResultType(result: unknown): string | null {
     switch(typeof result) {
       case 'undefined':
-        return undefined;
+        return null;
       case 'boolean':
         return 'bool';
       case 'bigint':
