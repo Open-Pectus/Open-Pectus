@@ -122,6 +122,8 @@ jobs:
         run: |
           echo "{\"build_number\": \"$build_number\", \"git_sha\": \"$git_sha\"}" > openpectus/build.json
           echo "Build number: $build_number"
+      - name: Patch revision in __version__ to $github.run_number 
+        run: sed "s/.dev/$github.run_number/" -i openpectus/__init__.py
       - name: Build Open Pectus with frontend dist (package openpectus-x.y.z.tar.gz)
         # build openpectus-x.y.z.tar.gz using version number defined in source (__version__ in __init__.py)
         run: python -m build --sdist -o openpectus/dist
