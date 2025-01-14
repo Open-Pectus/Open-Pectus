@@ -6,7 +6,7 @@ export interface RpcRequest {
 
 export interface RpcResponse<T> {
   result: T,
-  result_type?: string,
+  result_type: string | null,
   call_id: string,
 }
 

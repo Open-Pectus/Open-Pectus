@@ -79,7 +79,7 @@ class AggregatorDispatcher():
         """
         Set up post route to handle RegisterEngineMsg which must be handled before websocket can be established
         """
-        @router.post(AGGREGATOR_REST_PATH)
+        @router.post(AGGREGATOR_REST_PATH, response_model_exclude_none=True)
         async def post(request: Request):
             request_json = await request.json()
             try:

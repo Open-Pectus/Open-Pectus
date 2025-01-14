@@ -18,23 +18,23 @@
         "operationId": "get_unit",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -70,14 +70,14 @@
         "operationId": "get_units",
         "parameters": [
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -86,10 +86,10 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/ProcessUnit"
                   },
-                  "type": "array",
                   "title": "Response Get Units"
                 }
               }
@@ -117,23 +117,23 @@
         "operationId": "get_process_values",
         "parameters": [
           {
+            "name": "engine_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Engine Id"
-            },
-            "name": "engine_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -142,10 +142,10 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/ProcessValue"
                   },
-                  "type": "array",
                   "title": "Response Get Process Values"
                 }
               }
@@ -173,23 +173,23 @@
         "operationId": "get_all_process_values",
         "parameters": [
           {
+            "name": "engine_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Engine Id"
-            },
-            "name": "engine_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -198,10 +198,10 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/ProcessValue"
                   },
-                  "type": "array",
                   "title": "Response Get All Process Values"
                 }
               }
@@ -229,34 +229,34 @@
         "operationId": "execute_command",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ExecutableCommand"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -289,23 +289,23 @@
         "operationId": "get_process_diagram",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -341,23 +341,23 @@
         "operationId": "get_command_examples",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -366,10 +366,10 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/CommandExample"
                   },
-                  "type": "array",
                   "title": "Response Get Command Examples"
                 }
               }
@@ -397,23 +397,23 @@
         "operationId": "get_run_log",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -449,23 +449,23 @@
         "operationId": "get_method_and_state",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -501,34 +501,34 @@
         "operationId": "save_method",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/Method"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -561,23 +561,23 @@
         "operationId": "get_plot_configuration",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -613,23 +613,23 @@
         "operationId": "get_plot_log",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -665,23 +665,23 @@
         "operationId": "get_control_state",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -717,23 +717,23 @@
         "operationId": "get_error_log",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -769,32 +769,32 @@
         "operationId": "force_run_log_line",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           },
           {
+            "name": "line_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Line Id"
-            },
-            "name": "line_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -828,32 +828,32 @@
         "operationId": "cancel_run_log_line",
         "parameters": [
           {
+            "name": "unit_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Unit Id"
-            },
-            "name": "unit_id",
-            "in": "path"
+            }
           },
           {
+            "name": "line_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Line Id"
-            },
-            "name": "line_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -887,14 +887,14 @@
         "operationId": "expose_system_state_enum",
         "parameters": [
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -930,14 +930,14 @@
         "operationId": "get_recent_runs",
         "parameters": [
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -946,10 +946,10 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/RecentRun"
                   },
-                  "type": "array",
                   "title": "Response Get Recent Runs"
                 }
               }
@@ -977,23 +977,23 @@
         "operationId": "get_recent_run",
         "parameters": [
           {
+            "name": "run_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Run Id"
-            },
-            "name": "run_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -1029,23 +1029,23 @@
         "operationId": "get_recent_run_method_and_state",
         "parameters": [
           {
+            "name": "run_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Run Id"
-            },
-            "name": "run_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -1081,23 +1081,23 @@
         "operationId": "get_recent_run_run_log",
         "parameters": [
           {
+            "name": "run_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Run Id"
-            },
-            "name": "run_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -1133,23 +1133,23 @@
         "operationId": "get_recent_run_plot_configuration",
         "parameters": [
           {
+            "name": "run_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Run Id"
-            },
-            "name": "run_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -1185,23 +1185,23 @@
         "operationId": "get_recent_run_plot_log",
         "parameters": [
           {
+            "name": "run_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Run Id"
-            },
-            "name": "run_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -1237,23 +1237,23 @@
         "operationId": "get_recent_run_csv_json",
         "parameters": [
           {
+            "name": "run_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Run Id"
-            },
-            "name": "run_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -1289,23 +1289,23 @@
         "operationId": "get_recent_run_error_log",
         "parameters": [
           {
+            "name": "run_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Run Id"
-            },
-            "name": "run_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -1341,23 +1341,23 @@
         "operationId": "get_recent_run_csv_file",
         "parameters": [
           {
+            "name": "run_id",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Run Id"
-            },
-            "name": "run_id",
-            "in": "path"
+            }
           },
           {
+            "name": "x-identity",
+            "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Identity",
-              "default": ""
-            },
-            "name": "x-identity",
-            "in": "header"
+              "default": "",
+              "title": "X-Identity"
+            }
           }
         ],
         "responses": {
@@ -1427,12 +1427,12 @@
         "operationId": "expose_pubsub_topics",
         "parameters": [
           {
+            "name": "topic",
+            "in": "query",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PubSubTopic"
-            },
-            "name": "topic",
-            "in": "query"
+            }
           }
         ],
         "responses": {
@@ -1652,8 +1652,7 @@
           "unit_button",
           "method"
         ],
-        "title": "CommandSource",
-        "description": "An enumeration."
+        "title": "CommandSource"
       },
       "ControlState": {
         "properties": {
@@ -1682,9 +1681,7 @@
         "properties": {
           "state": {
             "type": "string",
-            "enum": [
-              "error"
-            ],
+            "const": "error",
             "title": "State"
           }
         },
@@ -1700,8 +1697,7 @@
           "warning",
           "error"
         ],
-        "title": "ErrorLogSeverity",
-        "description": "An enumeration."
+        "title": "ErrorLogSeverity"
       },
       "ExecutableCommand": {
         "properties": {
@@ -1759,9 +1755,7 @@
         "properties": {
           "state": {
             "type": "string",
-            "enum": [
-              "in_progress"
-            ],
+            "const": "in_progress",
             "title": "State"
           },
           "progress_pct": {
@@ -1862,9 +1856,7 @@
         "properties": {
           "state": {
             "type": "string",
-            "enum": [
-              "not_online"
-            ],
+            "const": "not_online",
             "title": "State"
           },
           "last_seen_date": {
@@ -2232,9 +2224,7 @@
           },
           "value_type": {
             "type": "string",
-            "enum": [
-              "choice"
-            ],
+            "const": "choice",
             "title": "Value Type"
           },
           "options": {
@@ -2261,9 +2251,7 @@
           },
           "value_type": {
             "type": "string",
-            "enum": [
-              "string"
-            ],
+            "const": "string",
             "title": "Value Type"
           }
         },
@@ -2302,15 +2290,11 @@
             "anyOf": [
               {
                 "type": "string",
-                "enum": [
-                  "int"
-                ]
+                "const": "int"
               },
               {
                 "type": "string",
-                "enum": [
-                  "float"
-                ]
+                "const": "float"
               }
             ],
             "title": "Value Type"
@@ -2332,8 +2316,7 @@
           "choice",
           "none"
         ],
-        "title": "ProcessValueType",
-        "description": "An enumeration."
+        "title": "ProcessValueType"
       },
       "PubSubTopic": {
         "type": "string",
@@ -2344,16 +2327,13 @@
           "error_log",
           "process_units"
         ],
-        "title": "PubSubTopic",
-        "description": "An enumeration."
+        "title": "PubSubTopic"
       },
       "Ready": {
         "properties": {
           "state": {
             "type": "string",
-            "enum": [
-              "ready"
-            ],
+            "const": "ready",
             "title": "State"
           }
         },
@@ -2365,10 +2345,6 @@
       },
       "RecentRun": {
         "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
           "engine_id": {
             "type": "string",
             "title": "Engine Id"
@@ -2430,7 +2406,6 @@
         },
         "type": "object",
         "required": [
-          "id",
           "engine_id",
           "run_id",
           "started_date",
@@ -2583,8 +2558,7 @@
           "Stopped",
           "Restarting"
         ],
-        "title": "SystemStateEnum",
-        "description": "An enumeration."
+        "title": "SystemStateEnum"
       },
       "TagDirection": {
         "type": "string",
@@ -2603,8 +2577,7 @@
           "viewer",
           "admin"
         ],
-        "title": "UserRole",
-        "description": "An enumeration."
+        "title": "UserRole"
       },
       "ValidationError": {
         "properties": {

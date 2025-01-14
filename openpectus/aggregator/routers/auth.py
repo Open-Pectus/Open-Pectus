@@ -22,7 +22,7 @@ client_id = os.getenv('AZURE_APPLICATION_CLIENT_ID', default=None)
 jwks_url = 'https://login.microsoftonline.com/common/discovery/keys'
 
 
-@router.get('/config')
+@router.get('/config', response_model_exclude_none=True)
 def get_config() -> AuthConfig:
     return AuthConfig(
         use_auth=use_auth,

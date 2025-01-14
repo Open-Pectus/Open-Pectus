@@ -24,6 +24,7 @@ export class PubSubClient {
   private readonly rpcClientMethods = {
     notify: (subscription: RpcSubscription, data: unknown) => {
       this.getCallbacks(subscription.topic).forEach(callback => callback({data, topic: subscription.topic}));
+      return null;
     },
   };
   private rpcClient = this.createRpcClient();

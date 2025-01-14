@@ -11,6 +11,7 @@
       <env name="ENABLE_AZURE_AUTHENTICATION" value="true" />
     </envs>
     <option name="SDK_HOME" value="" />
+    <option name="SDK_NAME" value="Python 3.13 (openpectus)" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/.." />
     <option name="IS_MODULE_SDK" value="true" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
