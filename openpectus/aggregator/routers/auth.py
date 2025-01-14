@@ -27,7 +27,7 @@ else:
     print("Authentication disabled")
 
 
-@router.get('/config')
+@router.get('/config', response_model_exclude_none=True)
 def get_config() -> AuthConfig:
     return AuthConfig(
         use_auth=use_auth,
