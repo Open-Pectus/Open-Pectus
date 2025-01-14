@@ -3,7 +3,7 @@ from __future__ import annotations
 from inspect import _ParameterKind, Parameter
 import logging
 import re
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Literal, Generator, Tuple
 
 from openpectus.engine.commands import ContextEngineCommand, CommandArgs
 from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
@@ -333,6 +333,30 @@ The execution function is missing named arguments or a '**kvargs' argument""")
 
     def validate_command_name(self, command_name: str) -> bool:
         return command_name in self.get_command_names()
+
+    def generate_pcode_examples(self) -> list[Tuple[str, str]]:
+        """ Generate example code as tuples of (description, example_pcode). """
+        examples: list[Tuple[str, str]] = []
+        for description in self.command_descriptions.values():
+            # Generate example from command docstring
+            docstring_pcode_example = description.get_docstring_pcode()
+            if not docstring_pcode_example.strip():
+                logger.warning(f"{description} has no pcode example")
+            else:
+                examples.append((str(description), docstring_pcode_example))
+
+            # Generate examples from arg_parse_regex if RegexCategorical
+            # or RegexNumber.
+            for regex_example in description.generate_pcode_examples():
+                examples.append((str(description), regex_example))
+
+        # Generate examples from readings with command_options
+        for reading in self.readings:
+            if reading.command_options:
+                for command_option in reading.command_options.values():
+                    examples.append((str(reading), command_option))
+
+        return examples
 
 
 INIT_FN = Callable[[], None]
