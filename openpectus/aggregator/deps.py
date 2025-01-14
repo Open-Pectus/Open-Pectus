@@ -17,5 +17,5 @@ def _create_aggregator(dispatcher: AggregatorDispatcher, publisher: FrontendPubl
         return _server
     else:
         _server = Aggregator(dispatcher, publisher)
-        print("GLOBAL: Creating aggregator server")
+        # print("GLOBAL: Creating aggregator server")
         return _server
