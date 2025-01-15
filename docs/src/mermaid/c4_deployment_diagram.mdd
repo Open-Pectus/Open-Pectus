@@ -1,0 +1,25 @@
+C4Deployment
+
+Deployment_Node(userpc, "User pc", "Web Browser"){
+    Container(spa, "OpenPectus Frontend", "Single Page Application,  JavaScript and Angular", "Allows access to Open Pectus via a web browser.")
+}
+
+Deployment_Node(azureContainer, "Azure private cloud", "Docker"){
+    Container(aggregator, "Open Pectus Aggregator", "Python, FastAPI")
+}
+
+Deployment_Node(enginePc, "Lab pc", "Laboratory pc connected to equipment"){
+    Container(engine, "Open Pectus Engine", "Python")
+}
+
+Rel(spa, aggregator, "Loads data", "json/HTTPS")    
+Rel(aggregator, spa, "Notifications", "json/WSS")    
+
+Rel(engine, aggregator, "Sends data", "json/HTTPS")
+Rel(aggregator, engine, "Sends commands", "json/WSS")
+
+UpdateRelStyle(spa, aggregator, $textColor="white", $offsetY="-40", $offsetX="-50")
+UpdateRelStyle(aggregator, spa, $textColor="white", $offsetY="20", $offsetX="-50")
+
+UpdateRelStyle(engine, aggregator, $textColor="white", $offsetY="-35", $offsetX="-110")
+UpdateRelStyle(aggregator, engine, $textColor="white", $offsetY="50")

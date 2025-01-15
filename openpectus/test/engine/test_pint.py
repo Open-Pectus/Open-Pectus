@@ -148,7 +148,7 @@ class PintTest(unittest.TestCase):
     def test_compatibility_quantity(self):
         dist = Q_("310m")
         weight = Q_("3kg")
-        temp = Q_(3, ureg.degC)  # type: ignore
+        temp = Q_(3, ureg.degC)
         time = Q_("5 sec")
 
         # NOTE: don't use ureg.is_compatible_with:
@@ -191,7 +191,7 @@ class PintTest(unittest.TestCase):
         # this works. but beware of deltas. temperature calculus is tricky
         # alternatively, use ureg = UnitRegistry(autoconvert_offset_to_baseunit = True)
         # to perform automatic conversions
-        temperature = Q_(25.4, ureg.degC)  # type: ignore
+        temperature = Q_(25.4, ureg.degC)
         self.assertEqual("25.4 degree_Celsius", str(temperature))
 
     def test_higher_dimensionality(self):

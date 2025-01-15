@@ -401,7 +401,7 @@ Mark: A
 
         continue_engine(e, 1)
         runlog = e.runtimeinfo.get_runlog()
-        item = next((i for i in runlog.items if i.name == item_name), None)        
+        item = next((i for i in runlog.items if i.name == item_name), None)
         assert item is not None and item.progress is not None
         # after 1 more tick we're 0.8 percent done
         self.assertAlmostEqual(item.progress, 0.8, delta=0.05)

@@ -19,7 +19,7 @@ logger = logging.getLogger("openpectus.aggregator.aggregator")
 logger.setLevel(logging.INFO)
 logging.getLogger("openpectus.protocol.aggregator_dispatcher").setLevel(logging.INFO)
 
-def get_args():
+def get_arg_parser():
     parser = ArgumentParser("Start Aggregator server")
     parser.add_argument("-host", "--host", required=False, default=AggregatorServer.default_host,
                         help=f"Host address to bind frontend and WebSocket to. Default: {AggregatorServer.default_host}")
@@ -32,12 +32,12 @@ def get_args():
                         help=f"Minimum log level to send as sentry events. Default: '{sentry.EVENT_LEVEL_DEFAULT}'")
     parser.add_argument("-db", "--database", required=False, default=AggregatorServer.default_db_path,
                         help=f"Path to Sqlite3 database. Default: ./{AggregatorServer.default_db_filename}")
-    return parser.parse_args()
+    return parser
 
 
 def main():
+    args = get_arg_parser().parse_args()
     title = "Open Pectus Aggregator"
-    args = get_args()
     logger.info(f"Starting {title} v. {__version__}, build: {build_number}")
     logger.info(f"Serving frontend at http://{args.host}:{args.port}")
     if os.getenv("SENTRY_DSN"):
@@ -45,7 +45,7 @@ def main():
     else:
         logger.info("Sentry is not active.")
     if os.getenv("ENABLE_AZURE_AUTHENTICATION", default="").lower() == "true":
-        logger.info(f"Authentication is active.")
+        logger.info("Authentication is active.")
     else:
         logger.info("Authentication is not active.")
     sentry.init_aggregator(args.sentry_event_level)
