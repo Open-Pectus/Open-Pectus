@@ -140,3 +140,4 @@ conda/*
 openpectus/engine/data/*.txt
 openpectus/engine/*.log.*
 openpectus/.idea/pyright.xml
+open_pectus_aggregator.sqlite3
