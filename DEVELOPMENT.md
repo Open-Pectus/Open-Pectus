@@ -86,7 +86,7 @@ All the following commands can only be run from within the (mini)conda prompt, a
 
 Create a new conda environment and install all dependencies:
 ```shell
-conda env create -p=./conda --file=environment.yml
+conda env create --prefix=./conda --file=environment.yml
 ```
 
 Activate the created pectus conda environment:

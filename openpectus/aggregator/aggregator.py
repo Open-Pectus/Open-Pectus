@@ -94,6 +94,7 @@ class FromEngine:
                 try:
                     recent_run_repo.store_recent_run(engine_data)
                     logger.info(f"Stopping existing run and store it as recent run {_run_id=}")
+                    engine_data.reset_run()
                 except Exception:
                     logger.error(f"Failed to persist recent run {_run_id=}", exc_info=True)
 
@@ -237,7 +238,7 @@ class FromEngine:
             or latest_tag_tick_time - latest_persisted_tick_time > engine_data.data_log_interval_seconds
 
         if engine_data.run_data.run_id is not None and time_threshold_exceeded:
-            tag_values_to_persist = [tag_value.copy() for tag_value in engine_data.tags_info.map.values()
+            tag_values_to_persist = [tag_value.model_copy() for tag_value in engine_data.tags_info.map.values()
                                      if latest_persisted_tick_time is None
                                      or tag_value.tick_time > latest_persisted_tick_time]
             """
