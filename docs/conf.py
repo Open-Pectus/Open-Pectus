@@ -1,7 +1,7 @@
 import os
 
 from sphinx.highlighting import lexers
-from docs.pcode_lexer import PcodeLexer
+from pcode_lexer import PcodeLexer
 
 # Configuration file for the Sphinx documentation builder.
 #
