@@ -3,8 +3,8 @@ from typing import Any
 
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
-from openpectus.protocol.exceptions import ProtocolDeserializationException
 import openpectus.protocol.messages as M
+from openpectus.protocol.exceptions import ProtocolDeserializationException
 
 _message_namespaces = [AM, EM, M]
 _message_namespace_names = [ns.__name__ for ns in _message_namespaces]
@@ -12,7 +12,7 @@ _message_namespace_names = [ns.__name__ for ns in _message_namespaces]
 
 def serialize(msg: M.MessageBase) -> dict[str, Any]:
     """ Serialize a protocol message in a round-trippable fashion. """
-    json_dict = msg.dict()
+    json_dict = msg.model_dump()
     json_dict["_type"] = type(msg).__qualname__
     json_dict["_ns"] = msg.__module__
     return json_dict

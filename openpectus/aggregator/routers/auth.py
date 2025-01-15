@@ -25,11 +25,8 @@ jwks_url_access_token = f"https://login.microsoftonline.com/{tenant_id}/discover
 access_token_issuer = f"https://sts.windows.net/{tenant_id}/" if tenant_id else ""
 
 if use_auth:
-    print("Authentication enabled")
     assert tenant_id is not None, "Assign Tenant ID to environment variable AZURE_DIRECTORY_TENANT_ID"
     assert client_id is not None, "Assign Client ID to environment variable AZURE_APPLICATION_CLIENT_ID"
-else:
-    print("Authentication disabled")
 
 @router.get("/config")
 def get_config() -> AuthConfig:

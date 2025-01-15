@@ -9,6 +9,7 @@ import openpectus.protocol.messages as M
 AGGREGATOR_RPC_WS_PATH = "/engine-rpc"
 AGGREGATOR_REST_PATH = "/engine-rest"
 AGGREGATOR_HEALTH_PATH = "/health"
+AGGREGATOR_AUTH_CONFIG_PATH = "/auth/config"
 MessageHandler = Callable[[Any], Awaitable[M.MessageBase]]
 
 AnyMessageType = TypeVar("AnyMessageType", bound=M.MessageBase)
