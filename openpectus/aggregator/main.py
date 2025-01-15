@@ -29,9 +29,9 @@ def get_arg_parser():
                         help=f"Frontend distribution directory. Default: {AggregatorServer.default_frontend_dist_dir}")
     parser.add_argument("-sev", "--sentry_event_level", required=False,
                         default=sentry.EVENT_LEVEL_DEFAULT, choices=sentry.EVENT_LEVEL_NAMES,
+                        help=f"Minimum log level to send as sentry events. Default: '{sentry.EVENT_LEVEL_DEFAULT}'")
     parser.add_argument("-db", "--database", required=False, default=AggregatorServer.default_db_path,
                         help=f"Path to Sqlite3 database. Default: ./{AggregatorServer.default_db_filename}")
-                        help=f"Minimum log level to send as sentry events. Default: '{sentry.EVENT_LEVEL_DEFAULT}'")
     return parser
 
 
@@ -45,9 +45,9 @@ def main():
     else:
         logger.info("Sentry is not active.")
     if os.getenv("ENABLE_AZURE_AUTHENTICATION", default="").lower() == "true":
-        logger.info(f"Authentication is active.")
-        logger.info("Authentication is not active.")
+        logger.info("Authentication is active.")
     else:
+        logger.info("Authentication is not active.")
     sentry.init_aggregator(args.sentry_event_level)
     alembic_ini_file_path = os.path.join(os.path.dirname(__file__), "alembic.ini")
     alembic_config = Config(alembic_ini_file_path)
