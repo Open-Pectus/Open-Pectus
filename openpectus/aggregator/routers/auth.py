@@ -98,10 +98,11 @@ def user_roles(x_identity: Annotated[str, Header()] = "") -> set[str]:
         return set()
 
     token = decode_token_or_fail(x_identity)
-    # Return default role "Daemon" for authenticated applications
+    roles = set(token.get("roles") or [])
+    # Add default role "Daemon" for authenticated applications
     if token.get("idtyp", "") == "app":
-        return set(["Daemon"])
-    return set(token.get("roles") or [])
+        roles |= set(["Daemon"])
+    return roles
 
 
 UserRolesDependency = Security(user_roles)
