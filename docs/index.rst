@@ -23,3 +23,4 @@ Links
 
 * Source code: https://github.com/Open-Pectus/Open-Pectus/
 * Python Packaging Index: https://pypi.org/project/openpectus/
+* Readthedocs project: https://app.readthedocs.org/projects/open-pectus/
