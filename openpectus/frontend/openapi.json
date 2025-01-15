@@ -1,8 +1,12 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Pectus Aggregator",
-    "version": "0.1.0"
+    "title": "Open Pectus Aggregator",
+    "contact": {
+      "name": "Open Pectus",
+      "url": "https://github.com/Open-Pectus/Open-Pectus"
+    },
+    "version": "0.1.dev"
   },
   "paths": {
     "/api/process_unit/{unit_id}": {

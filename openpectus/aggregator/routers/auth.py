@@ -21,11 +21,6 @@ client_id = os.getenv('AZURE_APPLICATION_CLIENT_ID', default=None)
 # authorization_url = f'https://login.microsoftonline.com/{tenant_id}/oauth2/authorize'
 jwks_url = 'https://login.microsoftonline.com/common/discovery/keys'
 
-if use_auth:
-    print("Authentication enabled")
-else:
-    print("Authentication disabled")
-
 
 @router.get('/config', response_model_exclude_none=True)
 def get_config() -> AuthConfig:
