@@ -3,7 +3,7 @@ from __future__ import annotations
 from inspect import _ParameterKind, Parameter
 import logging
 import re
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Literal, Generator, Tuple
 
 from openpectus.engine.commands import ContextEngineCommand, CommandArgs
 from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
@@ -332,6 +332,30 @@ The execution function is missing named arguments or a '**kvargs' argument""")
 
     def validate_command_name(self, command_name: str) -> bool:
         return command_name in self.get_command_names()
+
+    def generate_pcode_examples(self) -> list[Tuple[str, str]]:
+        """ Generate example code as tuples of (description, example_pcode). """
+        examples: list[Tuple[str, str]] = []
+        for description in self.command_descriptions.values():
+            # Generate example from command docstring
+            docstring_pcode_example = description.get_docstring_pcode()
+            if not docstring_pcode_example.strip():
+                logger.warning(f"{description} has no pcode example")
+            else:
+                examples.append((str(description), docstring_pcode_example))
+
+            # Generate examples from arg_parse_regex if RegexCategorical
+            # or RegexNumber.
+            for regex_example in description.generate_pcode_examples():
+                examples.append((str(description), regex_example))
+
+        # Generate examples from readings with command_options
+        for reading in self.readings:
+            if reading.command_options:
+                for command_option in reading.command_options.values():
+                    examples.append((str(reading), command_option))
+
+        return examples
 
 
 INIT_FN = Callable[[], None]
@@ -860,6 +884,18 @@ def defaultArgumentParser(args: str) -> CommandArgs:
     return {'value': args}
 
 
+def unescape(re_escaped_string: str) -> str:
+    """
+    re.escape is used to escape options supplied to
+    RegexCategorical. This function can reverses operation.
+    
+    assert unescape(re.escape('A B')) == 'A B'
+    assert unescape(re.escape('A/B')) == 'A/B'
+    """
+    # Source: https://stackoverflow.com/questions/43662474/reversing-pythons-re-escape
+    return re.sub(r'\\(.)', r'\1', re_escaped_string)
+
+
 class RegexNamedArgumentParser():
     def __init__(self, regex: str) -> None:
         self.regex = regex
@@ -885,8 +921,7 @@ class RegexNamedArgumentParser():
             return []
         start = self.regex.index("<number_unit>") + len("<number_unit>")
         end = self.regex.index(")", start)
-        # Undo escaping of slash that might have been performed
-        result = [unit.replace(r'\/', '/') for unit in self.regex[start: end].split("|")]
+        result = unescape(self.regex[start: end]).split("|")
         return result
 
     def get_exclusive_options(self) -> list[str]:
@@ -894,7 +929,8 @@ class RegexNamedArgumentParser():
             return []
         start = self.regex.index("<option>") + len("<option>(")
         end = self.regex.index("|(")
-        result = self.regex[start: end].split("|")
+        option_string = self.regex[start: end]
+        result = unescape(self.regex[start: end]).split("|")
         return result
 
     def get_additive_options(self) -> list[str]:
@@ -902,7 +938,7 @@ class RegexNamedArgumentParser():
             return []
         start = self.regex.index("|(") + len("|(")
         end = self.regex.index("|\\+)+))\\s*")
-        result = self.regex[start: end].split("|")
+        result = unescape(self.regex[start: end]).split("|")
         return result
 
     @staticmethod

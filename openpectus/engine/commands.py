@@ -59,6 +59,9 @@ class EngineCommand():
     def set_complete(self):
         self._exec_complete = True
 
+    def force(self):
+        pass
+
 
 TContext = TypeVar('TContext')
 

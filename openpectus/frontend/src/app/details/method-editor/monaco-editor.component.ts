@@ -154,14 +154,10 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
           const decorations = model.getLineDecorations(index + 1);
           const idDecoration = decorations.find(decoration => decoration.options.className?.startsWith(lineIdClassNamePrefix));
           const id = idDecoration?.options.className?.substring(lineIdClassNamePrefix.length);
-          const isExecuted = decorations.find(decoration => decoration.options.className === executedLineClassName) !== undefined;
-          const isInjected = decorations.find(decoration => decoration.options.className === injectedLineClassName) !== undefined;
           return {
             id: id ?? crypto.randomUUID(),
             content: lineContent,
-            is_executed: isExecuted,
-            is_injected: isInjected,
-          };
+          } satisfies MethodLine;
         });
         this.storeModelChangedFromHere = true;
         this.store.dispatch(MethodEditorActions.linesChanged({lines}));

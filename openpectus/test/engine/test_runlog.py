@@ -253,6 +253,7 @@ Watch: Block Time > .3s
         self.assert_Runlog_HasItem_Started("Reset")
 
         runlog = e.runtimeinfo.get_runlog()
+        self.assertEqual(1, len([i for i in runlog.items if i.name == "Reset"]))
         item = next((i for i in runlog.items if i.name == "Reset"), None)
         assert isinstance(item, RunLogItem)
         exec_id = item.id
@@ -280,6 +281,9 @@ Watch: Block Time > .3s
         print_runtime_records(e, "post-cancel")
         self.assertEqual(item.cancelled, True)
         self.assertEqual(item.cancellable, False)
+
+        # assert we only have one item
+        self.assertEqual(1, len([i for i in runlog.items if i.name == "Reset"]))
 
     def test_runlog_force_alarm(self):
         e = self.engine
@@ -343,7 +347,7 @@ Alarm: Block Time > 0s
         self.assert_Runlog_HasItem_Completed(alarm_item_name, 2)  # verify we waited long enough
         self.assertEqual(['A', 'A'], e.interpreter.get_marks())
 
-    def test_runlog_force_Mark_w_threshold_is_forcible(self):
+    def test_runlog_force_Mark_w_threshold_is_not_forcible(self):
         e = self.engine
         program = """
 2 Mark: A
@@ -355,21 +359,9 @@ Alarm: Block Time > 0s
         runlog = e.runtimeinfo.get_runlog()
         item = next(item for item in runlog.items if item.name == mark_name)
         assert item is not None
-        exec_id = UUID(item.id)
-
-        self.assertEqual(item.forcible, True)
-        self.assertEqual(item.forced, False)
-
-        e.force_instruction(exec_id)
-        continue_engine(e, 1)
-
-        # get updated runlog
-        runlog = e.runtimeinfo.get_runlog()
-        item = next(item for item in runlog.items if item.name == mark_name)
-        assert item is not None
 
         self.assertEqual(item.forcible, False)
-        self.assertEqual(item.forced, True)
+        self.assertEqual(item.forced, False)
 
     def test_runlog_force_Mark_without_threshold_is_not_forcible(self):
         e = self.engine
@@ -387,6 +379,64 @@ Mark: A
         self.assertEqual(item.forcible, False)
         self.assertEqual(item.forced, False)
 
+    def test_wait_progress_EngineInternalCommand(self):
+        e = self.engine
+
+        cmd = "Wait: 0.5s"
+        item_name = cmd
+
+        run_engine(e, cmd, 5)
+        print_runtime_records(e)
+
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runlog_HasItem(item_name)
+
+        runlog = e.runtimeinfo.get_runlog()
+        item = next((i for i in runlog.items if i.name == item_name), None)
+        assert item is not None and item.progress is not None
+        # after 5-2 = 3 ticks we're 0.6 percent done
+        self.assertAlmostEqual(item.progress, 0.6, delta=0.05)
+        self.assertEqual(item.forcible, True)
+        self.assertEqual(item.cancellable, False)
+
+        continue_engine(e, 1)
+        runlog = e.runtimeinfo.get_runlog()
+        item = next((i for i in runlog.items if i.name == item_name), None)        
+        assert item is not None and item.progress is not None
+        # after 1 more tick we're 0.8 percent done
+        self.assertAlmostEqual(item.progress, 0.8, delta=0.05)
+
+        continue_engine(e, 2)
+        self.assert_Runlog_HasItem_Completed(cmd)
+
+
+    def test_runlog_Wait_is_forcible(self):
+        e = self.engine
+        program = """
+Wait: 0.5s
+"""
+        run_engine(e, program, 4)
+
+        cmd_name = "Wait: 0.5s"
+        self.assert_Runlog_HasItem(cmd_name)
+        runlog = e.runtimeinfo.get_runlog()
+        item = next(item for item in runlog.items if item.name == cmd_name)
+        assert item is not None
+        exec_id = UUID(item.id)
+
+        self.assertEqual(item.forcible, True)
+        self.assertEqual(item.forced, False)
+
+        e.force_instruction(exec_id)
+        continue_engine(e, 1)
+
+        # get updated runlog
+        runlog = e.runtimeinfo.get_runlog()
+        item = next(item for item in runlog.items if item.name == cmd_name)
+        assert item is not None
+
+        self.assertEqual(item.forcible, False)
+        self.assertEqual(item.forced, True)
 
     def test_runlog_aggregator_eq(self):
         l1 = RunLogLine(id="id", command_name="c", start=1, end=None, progress=None,
