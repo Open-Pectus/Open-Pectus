@@ -86,12 +86,19 @@ def pylsp_document_did_save(config, workspace, document):
 
 
 @hookimpl
-def pylsp_lint(config: Config, workspace: Workspace, document: Document, is_saved: bool) -> list[dict[str, Any]]:
+def pylsp_lint(config: Config, workspace: Workspace, document: Document, is_saved: bool) -> list[demo.DiagnosticsItem]:
     logger.debug("pylsp_lint")
     logger.debug(f"document: {as_json(document)}")
+    logger.debug("Document source:'\n" + document.source + "\n'")
 
-    diagnostics = demo.lint_example(document)
-    return diagnostics
+
+    try:
+        diagnostics = demo.lint_example(document)
+        logger.debug(f"Lint ok, items: {len(diagnostics)}")
+        return diagnostics
+    except Exception:
+        logger.error("Lint error", exc_info=True)
+        return []
 
 
 # @hookimpl

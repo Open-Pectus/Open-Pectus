@@ -80,23 +80,23 @@ class Command:
 
 
 class CommandCollection():
-    """ Represents a case insensitive name/command dictionary. """
+    """ Represents a name/command dictionary. """
 
     def __init__(self) -> None:
         self.commands: Dict[str, Command] = {}
 
     @property
     def names(self) -> List[str]:
-        """ Return the tag names in upper case. """
+        """ Return the tag names """
         return list(self.commands.keys())
 
     def __getitem__(self, tag_name: str):
-        return self.commands[tag_name.upper()]
+        return self.commands[tag_name]
 
     def get(self, cmd_name: str) -> Command:
         if cmd_name is None or cmd_name.strip() == '':
             raise ValueError("cmd_name is None or empty")
-        if not cmd_name.upper() in self.commands.keys():
+        if not cmd_name in self.commands.keys():
             raise ValueError(f"Command name {cmd_name} not found")
         return self[cmd_name]
 
@@ -109,7 +109,7 @@ class CommandCollection():
         if cmd.name in self.commands.keys() and not exist_ok:
             raise ValueError(f"A command named {cmd.name} already exists")
 
-        self.commands[cmd.name.upper()] = cmd
+        self.commands[cmd.name] = cmd
 
     def with_cmd(self, cmd: Command):
         self.add(cmd)
@@ -118,7 +118,7 @@ class CommandCollection():
     def has(self, cmd_name: str) -> bool:
         if cmd_name is None or cmd_name.strip() == '':
             raise ValueError("cmd_name is None or empty")
-        return cmd_name.upper() in self.commands.keys()
+        return cmd_name in self.commands.keys()
 
     def clone(self) -> CommandCollection:
         """ Returns a deep clone of the collection. """

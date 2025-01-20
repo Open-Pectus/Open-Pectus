@@ -38,6 +38,10 @@ class AnalyzerItemType(Enum):
     WARNING = 'WARNING',
     ERROR = 'ERROR'
 
+class AnalyzerItemRange:
+    def __init__(self, line: int, character: int) -> None:
+        self.line = line
+        self.character = character
 
 class AnalyzerItem():
     def __init__(self,
@@ -52,6 +56,13 @@ class AnalyzerItem():
         self.description: str = description
         self.type: AnalyzerItemType = type
         self.node: PNode | None = node
+        self.range_start: AnalyzerItemRange = AnalyzerItemRange(0, 0)
+        self.range_end: AnalyzerItemRange = AnalyzerItemRange(0, 0)
+
+        if node is not None:
+            # TODO we need to expose more precise source information about the node
+            self.range_start = AnalyzerItemRange(node.line or 0, node.indent or 0)
+            self.range_end = AnalyzerItemRange(self.range_start.line, 100)
 
 
 class AnalyzerVisitorBase(PNodeVisitor):
