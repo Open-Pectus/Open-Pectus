@@ -161,7 +161,7 @@ class Engine(InterpreterContext):
 
         self._method: MethodModel = MethodModel(on_method_init, on_method_error)
         """ The model handling changes to program/method code """
-        
+
         self._cancel_command_exec_ids: set[UUID] = set()
 
         # initialize state
@@ -329,7 +329,7 @@ class Engine(InterpreterContext):
 
     def update_calculated_tags(self, tick_time: float, increment_time: float):
         sys_state = self._system_tags[SystemTagName.SYSTEM_STATE]
-        logger.debug(f"{increment_time = }")
+        logger.debug(f"{increment_time=}")
 
         # Clock         - seconds since epoch
         clock = self._system_tags.get(SystemTagName.CLOCK)
@@ -468,7 +468,8 @@ class Engine(InterpreterContext):
 
         if record is not None:
             record.add_state_started(self._tick_time, self._tick_number, self.tags_as_readonly())
-            record.add_state_internal_engine_command_set(command, self._tick_time, self._tick_number, self.tags_as_readonly())
+            record.add_state_internal_engine_command_set(command, self._tick_time,
+                                                         self._tick_number, self.tags_as_readonly())
             command.tick()
             if command.has_failed():
                 record.add_state_failed(self._tick_time, self._tick_number, self.tags_as_readonly())

@@ -1,0 +1,6 @@
+sequenceDiagram
+    participant F as Frontend
+    participant A as Aggregator
+    Note right of A: WebSocket
+    A ->> F: publish(message)
+    F -->> A: -

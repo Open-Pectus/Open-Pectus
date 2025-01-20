@@ -26,11 +26,14 @@ log_setup_colorlog()
 
 StateKind = Literal["Started", "Connected", "Disconnected", "Reconnecting", "Reconnected"]
 
-file_log_path = path.join(pathlib.Path(__file__).parent.resolve(), 'openpectus-engine.log')
-file_handler = RotatingFileHandler(file_log_path, maxBytes=2*1024*1024, backupCount=5)
-file_handler.setLevel(logging.INFO)
-file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s]: %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
-logging.root.addHandler(file_handler)
+# Sphinx fails auto generating docs because __file__ is not defined
+# when it runs the code.
+if locals().get("__file__", None):
+    file_log_path = path.join(pathlib.Path(__file__).parent.resolve(), 'openpectus-engine.log')
+    file_handler = RotatingFileHandler(file_log_path, maxBytes=2*1024*1024, backupCount=5)
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s]: %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
+    logging.root.addHandler(file_handler)
 
 logger = logging.getLogger("openpectus.engine.engine")
 logger.setLevel(logging.INFO)
@@ -47,7 +50,7 @@ default_port = "9800"
 default_port_secure = "443"
 
 
-def get_args():
+def get_arg_parser():
     parser = ArgumentParser("Start Pectus Engine")
     parser.add_argument("-ahn", "--aggregator_hostname", required=False, default=default_host,
                         help="Aggregator websocket host name. Default is 127.0.0.1")
@@ -66,7 +69,7 @@ def get_args():
     parser.add_argument("-sev", "--sentry_event_level", required=False,
                         default=sentry.EVENT_LEVEL_DEFAULT, choices=sentry.EVENT_LEVEL_NAMES,
                         help=f"Minimum log level to send as sentry events. Default is '{sentry.EVENT_LEVEL_DEFAULT}'")
-    return parser.parse_args()
+    return parser
 
 
 engine: Engine | None = None
@@ -280,7 +283,7 @@ def show_register_details_and_exit(uod_name: str):
 
 def main():
     print(f"OpenPectus Engine v. {__version__}, build: {build_number}")
-    args = get_args()
+    args = get_arg_parser().parse_args()
     sentry.init_engine(args.sentry_event_level)
     if args.validate:
         validate_and_exit(args.uod)
