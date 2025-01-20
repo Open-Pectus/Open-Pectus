@@ -6,7 +6,7 @@
     "configurations": [
 
         {
-            "name": "OpenPectus Engine (debug)",
+            "name": "Open Pectus Engine (debug)",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/openpectus/engine/main.py",
@@ -14,7 +14,7 @@
             "args": [],
         },
         {
-            "name": "OpenPectus Aggregator (debug)",
+            "name": "Open Pectus Aggregator (debug)",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/openpectus/aggregator/main.py",
@@ -32,12 +32,20 @@
             //     "pattern": "Serving frontend at http://127.0.0.1:([0-9]+)",
             //     "killOnServerStop": false
             // }
-        },        
+        },
+        {
+            "name": "Open Pectus LSP server (debug)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/openpectus/lsp/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
     ],
     "compounds": [
         {
             "name": "Openpectus Aggregator, Engine and Frontend",
-            "configurations": ["OpenPectus Aggregator (debug)", "OpenPectus Engine (debug)"],
+            "configurations": ["Open Pectus Aggregator (debug)", "Open Pectus Engine (debug)"],
             "stopAll": true,
         }
     ]

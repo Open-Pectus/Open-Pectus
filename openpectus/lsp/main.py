@@ -1,5 +1,25 @@
 from argparse import ArgumentParser
+import logging
+import logging.config
+import os
+import pathlib
+from logging.handlers import RotatingFileHandler
 from pylsp.python_lsp import start_ws_lang_server, PythonLSPServer
+
+# command line to start pyslp server from Open-Pectus directory
+# pylsp --ws -vv --log-file openpectus/lsp/pylsp-openpectus.log
+
+# setup LSP loggers
+logging.basicConfig(format='%(name)s :: %(levelname)-8s :: %(message)s', level=logging.WARNING)
+#logging.basicConfig(format='%(name)s :: %(levelname)-8s :: %(message)s', level=logging.DEBUG)
+
+file_log_path = os.path.join(pathlib.Path(__file__).parent.resolve(), 'pylsp-openpectus.log')
+file_handler = RotatingFileHandler(file_log_path, maxBytes=2*1024*1024, backupCount=5)
+file_handler.setLevel(logging.DEBUG)
+file_handler.setFormatter(logging.Formatter('%(asctime)s %(name)s [%(levelname)s]: %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
+logging.root.addHandler(file_handler)
+
+logging.getLogger("openpectus.lsp.pylsp_plugin").setLevel(logging.DEBUG)
 
 
 def get_args():
