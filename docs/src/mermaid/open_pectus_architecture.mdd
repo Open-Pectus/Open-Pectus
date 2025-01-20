@@ -1,0 +1,21 @@
+graph LR
+    X[End user 1]--> A
+    X --> |WebSockets| B
+    Y[End user 2]--> A
+    Y --> |WebSockets| B
+    Z[End user 3]--> A
+    Z --> |WebSockets| B
+    subgraph vm[<b>Virtual machine</b>]
+        A[Web frontend] 
+        B[Aggregator]
+    end
+    subgraph uo3[<b>Computer at site B</b>]
+        B <--> |WebSockets Engine API| E[Engine i]
+        E <--> |OPC-UA| H[Unit Operation i]
+    end
+    subgraph uo1[<b>Computer at site A</b>]
+        B <-->|WebSockets Engine API| C[Engine 1]
+        C <--> |OPC-UA| F[Unit Operation 1]
+        B <-->|WebSockets Engine API| D[Engine 2]
+        D <--> |OPC-UA| G[Unit Operation 2]
+    end

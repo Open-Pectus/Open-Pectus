@@ -138,7 +138,10 @@ class ProcessValueCommand(Dto):
     command: str
     disabled: bool | SkipJsonSchema[None] = None
     """ Indicates whether the command button should be disabled. """
-    value: ProcessValueCommandNumberValue | ProcessValueCommandFreeTextValue | ProcessValueCommandChoiceValue | SkipJsonSchema[None] = None
+    value: (ProcessValueCommandNumberValue |
+            ProcessValueCommandFreeTextValue |
+            ProcessValueCommandChoiceValue |
+            SkipJsonSchema[None]) = None
 
 
 ProcessValueValueType = float | int | str | SkipJsonSchema[None]
@@ -199,7 +202,10 @@ class ExecutableCommand(Dto):
     command: str  # full command string, e.g. "start" or "foo: bar"
     source: CommandSource
     name: str | SkipJsonSchema[None] = None
-    value: ProcessValueCommandNumberValue | ProcessValueCommandFreeTextValue | ProcessValueCommandChoiceValue | SkipJsonSchema[None] = None
+    value: (ProcessValueCommandNumberValue |
+            ProcessValueCommandFreeTextValue |
+            ProcessValueCommandChoiceValue |
+            SkipJsonSchema[None]) = None
 
 
 class RunLogLine(Dto):

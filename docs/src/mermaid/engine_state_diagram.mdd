@@ -1,0 +1,10 @@
+   stateDiagram-v2    
+      [*] --> Connected: Connected to hardware and Aggregator
+         note right of Connected: aka Steady State, Stopped
+        Connected --> Method_Running: Start
+      Method_Running --> Method_Error: Method instruction fail
+      Method_Error --> Method_Running: Acknowledge and Retry
+      Method_Error --> Connected: Stop
+      Method_Running --> Connected: Stop
+      Method_Running --> Method_Complete
+      Method_Complete --> Connected

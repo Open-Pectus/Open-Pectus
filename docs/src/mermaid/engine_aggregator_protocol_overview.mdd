@@ -1,0 +1,27 @@
+sequenceDiagram
+    participant A as Aggregator
+    participant E as Engine
+
+    Note right of E: Web Socket
+    E ->> A: connect
+    A -->> E: 
+
+    E ->> A: UodInfoMsg
+    A -->> E: 
+    E ->> A: TagsUpdatedMsg
+    A -->> E: 
+
+    loop Every second
+    E ->> A: TagsUpdatedMsg
+    A -->> E: 
+    end
+
+    alt User: Run command
+    A ->> E: InvokeCommandMsg
+    E -->> A: 
+    end
+
+    alt User: Change run state
+    A ->> E: InvokeCommandMsg
+    E -->> A: 
+    end
