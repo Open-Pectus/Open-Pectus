@@ -8,6 +8,7 @@ import pathlib
 from typing import Literal
 from itertools import chain
 
+import multiprocess
 
 from openpectus import log_setup_colorlog, sentry, __version__, build_number
 from openpectus.engine.engine import Engine
@@ -238,14 +239,15 @@ def run_example_commands(uod: UnitOperationDefinitionBase):
         return failed_cmds
 
     logger.info("Executing example commands")
-    failed_cmds: list[str] = list(
-      chain.from_iterable(
-        map(
-            lambda t: run_example_with_description(t[0], t[1]),
-            uod.generate_pcode_examples()
+    with multiprocess.Pool() as pool:  # type: ignore
+        failed_cmds: list[str] = list(
+          chain.from_iterable(
+            pool.map(
+                lambda t: run_example_with_description(t[0], t[1]),
+                uod.generate_pcode_examples()
+            )
+          )
         )
-      )
-    )
 
     if len(failed_cmds) > 0:
         logger.error(f"Example commands failed: {','.join(failed_cmds)}")
