@@ -62,10 +62,19 @@ All the following commands can only be run from within the conda prompt, and fro
 #. Create a new conda environment and install all dependencies:
 
    :console:`conda env create --name openpectus --file=environment.yml`
+   
+   *or*
+   
+   :console:`conda env create --prefix=./conda --file=environment.yml`
+   
 
-#. Activate the created pectus conda environment:
+#. Activate the created Open Pectus conda environment:
 
    :console:`conda activate openpectus`
+   
+   *or*
+   
+   :console:`conda activate ./conda`
 
 #. Install open pectus in the environment:
 
@@ -83,11 +92,19 @@ Documentation Setup
 -------------------
 #. Create a new conda environment and install all dependencies:
 
-   :console:`conda env create --name openpectusdocs --file=environment.yml`
+   :console:`conda env create --name openpectus --file=environment.yml`
+   
+   *or*
+   
+   :console:`conda env create --prefix=./conda --file=environment.yml`
 
-#. Activate the created pectus conda environment:
+#. Activate the created Open Pectus conda environment:
 
-   :console:`conda activate openpectusdocs`
+   :console:`conda activate openpectus`
+   
+   *or*
+   
+   :console:`conda activate ./conda`
 
 #. Install open pectus in the environment:
 
@@ -96,6 +113,10 @@ Documentation Setup
 #. Change directory to the docs directory
 
    :console:`cd docs`
+
+#. Generate :console:`openapi.yml` specification
+
+   :console:`python generate_openapi_yml.py`
 
 #. (Optional) Spell check
 
@@ -287,8 +308,10 @@ Version Numbering
 Open Pectus adopts the major-minor-patch version number format.
 A new package is published to Pypi on each push to :console:`main` with the least significant version digit being the Github Actions run number.
 The least significant digit is :console:`dev` in the source code to distinguish from releases.
-If relevant, the major and minor digits must be updated manually in the following files:
+If relevant, the major and minor digits must be updated manually in the following file:
 
 * :console:`openpectus/__init__.py`
-* :console:`openpectus/frontend/src/app/api/core/OpenAPI.ts`
-* :console:`openpectus/frontend/openapi.json`
+
+Run the following file afterwards to update the version number in the OpenAPI specification:
+
+* :console:`python openpectus/aggregator/generate_openapi_spec_and_typescript_interfaces.py`

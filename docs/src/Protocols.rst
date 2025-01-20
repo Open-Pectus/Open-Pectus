@@ -48,7 +48,7 @@ This protocol ensures that the aggregator is kept updated on engines (process un
 It also allows users of the frontend to control connected engines.
 
 .. note::
-   This diagram shows a simplified overview. The actual protocol is more elaborate due to its built-in error recovery. This allows it to support temporarily disconnected engines as well as updating and/or restarting the aggregator during active runs. This is documented in the Error Recovery documentation: ERROR_RECOVERY.md
+   This diagram shows a simplified overview. The actual protocol is more elaborate due to its built-in error recovery. This allows it to support temporarily disconnected engines as well as updating and/or restarting the aggregator during active runs. This is documented in :ref:`error_recovery`.
 
 .. mermaid:: mermaid/engine_aggregator_protocol_overview.mdd
    :caption: Engine/Aggregator protocol overview.

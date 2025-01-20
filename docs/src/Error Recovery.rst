@@ -2,7 +2,9 @@
    :language: console
 .. role:: python(code)
    :language: python
-   
+
+.. _error_recovery:
+
 Error Recovery
 ==============
 This chapter describes how hardware connection errors are handled and detailed design of the implementation.
@@ -29,7 +31,7 @@ In state :console:`Error`, reconnect attempts continue but errors are no longer 
 The consequence of no longer masking errors, is that the Engine will enter the `paused on error` state where the user can decide whether to continue or not.
 
 .. note::
-   It is unlikely but possible that errors occur so soon after successful connection that no value is yet available as last-known-good. In this case, a read returns a None value is returned and the error is logged.
+   It is unlikely but possible that errors occur so soon after successful connection that no value is yet available as last-known-good. In this case, a read returns a None value and the error is logged.
 
 
 Implementation
