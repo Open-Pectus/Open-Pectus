@@ -1,4 +1,6 @@
 import os
+import sys
+sys.path.append(os.path.dirname(__file__))
 
 from sphinx.highlighting import lexers
 from pcode_lexer import PcodeLexer
