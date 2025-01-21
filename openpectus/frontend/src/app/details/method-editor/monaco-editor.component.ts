@@ -10,9 +10,12 @@ import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { editor as MonacoEditor, KeyCode, languages, Range, Uri } from 'monaco-editor';
 import { buildWorkerDefinition } from 'monaco-editor-workers';
+import { useWorkerFactory } from 'monaco-editor-wrapper/workerFactory';
 import { MonacoLanguageClient } from 'monaco-languageclient';
+import { ConsoleLogger, Logger } from 'monaco-languageclient/tools';
 import { initServices } from 'monaco-languageclient/vscode/services';
 import { combineLatest, filter, firstValueFrom, Observable, Subject, take, takeUntil } from 'rxjs';
+import { LogLevel } from 'vscode';
 import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient/lib/common/client';
 import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
 import { MethodLine } from '../../api';
@@ -54,11 +57,27 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   constructor(private store: Store) {}
 
+  configureMonacoWorkers(logger?: Logger) {
+    useWorkerFactory({
+      workerOverrides: {
+        ignoreMapping: true,
+        workerLoaders: {
+          TextEditorWorker: () => new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), {type: 'module'}),
+          TextMateWorker: () => new Worker(new URL('@codingame/monaco-vscode-textmate-service-override/worker', import.meta.url),
+            {type: 'module'}),
+        },
+      },
+      logger,
+    });
+  };
+
   async ngAfterViewInit() {
-    await this.initServices();
+    const logger = new ConsoleLogger(LogLevel.Debug);
+    await this.initServices(this.editorElement.nativeElement, logger);
     this.registerLanguages();
+    this.configureMonacoWorkers(logger);
     this.editor = await this.setupEditor();
-    // this.setupWebSocket(`ws://localhost:30000/sampleServer`);
+    this.setupWebSocket(`ws://localhost:30000/sampleServer`);
 
     this.editorSizeChange?.pipe(takeUntil(this.componentDestroyed)).subscribe(() => this.editor?.layout());
     window.onresize = () => this.editor?.layout();
@@ -87,7 +106,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     this.store.dispatch(MethodEditorActions.monacoEditorComponentDestroyed());
   }
 
-  private async initServices() {
+  private async initServices(htmlContainer: HTMLElement, logger: Logger) {
     const alreadyInitialized = await firstValueFrom(this.monacoServicesInitialized);
     if(alreadyInitialized) return;
     await initServices({
@@ -98,7 +117,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
         ...getLanguagesServiceOverride(),
         ...getConfigurationServiceOverride(),
       },
-    }, {});
+    }, {htmlContainer, logger});
   }
 
   private registerLanguages() {
