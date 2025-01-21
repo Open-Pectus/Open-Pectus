@@ -9,11 +9,11 @@ import getThemeServiceOverride from '@codingame/monaco-vscode-theme-service-over
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { editor as MonacoEditor, KeyCode, languages, Range, Uri } from 'monaco-editor';
-import { buildWorkerDefinition } from 'monaco-editor-workers';
-import { useWorkerFactory } from 'monaco-editor-wrapper/workerFactory';
+// import { useWorkerFactory } from 'monaco-editor-wrapper/workerFactory';
+// import { buildWorkerDefinition } from 'monaco-editor-workers';
 import { MonacoLanguageClient } from 'monaco-languageclient';
 import { ConsoleLogger, Logger } from 'monaco-languageclient/tools';
-import { initServices } from 'monaco-languageclient/vscode/services';
+import { initEnhancedMonacoEnvironment, initServices } from 'monaco-languageclient/vscode/services';
 import { combineLatest, filter, firstValueFrom, Observable, Subject, take, takeUntil } from 'rxjs';
 import { LogLevel } from 'vscode';
 import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient/lib/common/client';
@@ -23,7 +23,7 @@ import { UtilMethods } from '../../shared/util-methods';
 import { MethodEditorActions } from './ngrx/method-editor.actions';
 import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
 
-buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.origin, false);
+// buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.origin, false);
 
 const startedLineClassName = 'started-line';
 const executedLineClassName = 'executed-line';
@@ -57,22 +57,39 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   constructor(private store: Store) {}
 
+  // adapted from https://github.com/TypeFox/monaco-languageclient/blob/main/packages/wrapper/src/workerFactory.ts
+  // because using it directly causes compile errors for tsWorker, for some reason
   configureMonacoWorkers(logger?: Logger) {
-    useWorkerFactory({
-      workerOverrides: {
-        ignoreMapping: true,
-        workerLoaders: {
-          TextEditorWorker: () => new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), {type: 'module'}),
-          TextMateWorker: () => new Worker(new URL('@codingame/monaco-vscode-textmate-service-override/worker', import.meta.url),
-            {type: 'module'}),
-        },
-      },
-      logger,
-    });
+    const envEnhanced = initEnhancedMonacoEnvironment();
+    envEnhanced.getWorker = (moduleId: string, label: string) => {
+      switch(label) {
+        case 'TextEditorWorker':
+          return new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), {type: 'module'});
+        case 'TextMateWorker':
+          return new Worker(new URL('@codingame/monaco-vscode-textmate-service-override/worker', import.meta.url), {type: 'module'});
+        default:
+          throw new Error(`Unimplemented worker ${label} (${moduleId})`);
+      }
+      // if(label === 'TextEditorWorker') return new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), {type: 'module'});
+      // if(label === 'TextMateWorker') return new Worker(new URL('@codingame/monaco-vscode-textmate-service-override/worker', import.meta.url), {type: 'module'});
+    };
+
+    // useWorkerFactory({
+    //   workerOverrides: {
+    //     ignoreMapping: true,
+    //     workerLoaders: {
+    //       TextEditorWorker: () => new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), {type: 'module'}),
+    //       TextMateWorker: () => new Worker(new URL('@codingame/monaco-vscode-textmate-service-override/worker', import.meta.url),
+    //         {type: 'module'}),
+    //       // tsWorker: () => new Worker(new URL('monaco-editor/esm/vs/language/typescript/ts.worker.js', import.meta.url), {type: 'module'}),
+    //     },
+    //   },
+    //   logger,
+    // });
   };
 
   async ngAfterViewInit() {
-    const logger = new ConsoleLogger(LogLevel.Debug);
+    const logger = new ConsoleLogger(LogLevel.Warning);
     await this.initServices(this.editorElement.nativeElement, logger);
     this.registerLanguages();
     this.configureMonacoWorkers(logger);
@@ -116,6 +133,11 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
         ...getModelServiceOverride(),
         ...getLanguagesServiceOverride(),
         ...getConfigurationServiceOverride(),
+      },
+      userConfiguration: {
+        json: JSON.stringify({
+          'editor.experimental.asyncTokenization': true,
+        }),
       },
     }, {htmlContainer, logger});
   }
