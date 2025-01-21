@@ -9,9 +9,10 @@ import getThemeServiceOverride from '@codingame/monaco-vscode-theme-service-over
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { editor as MonacoEditor, KeyCode, languages, Range, Uri } from 'monaco-editor';
-import { buildWorkerDefinition } from 'monaco-editor-workers';
 import { MonacoEditorLanguageClientWrapper, WrapperConfig } from 'monaco-editor-wrapper';
+import { useWorkerFactory } from 'monaco-editor-wrapper/workerFactory';
 import { MonacoLanguageClient } from 'monaco-languageclient';
+import { Logger } from 'monaco-languageclient/tools';
 import { initServices } from 'monaco-languageclient/vscode/services';
 import { combineLatest, filter, firstValueFrom, Observable, Subject, take, takeUntil } from 'rxjs';
 import { LogLevel } from 'vscode';
@@ -57,8 +58,23 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   constructor(private store: Store) {}
 
+  configureMonacoWorkers(logger?: Logger) {
+    useWorkerFactory({
+      workerOverrides: {
+        ignoreMapping: true,
+        workerLoaders: {
+          TextEditorWorker: () => new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), {type: 'module'}),
+          TextMateWorker: () => new Worker(new URL('@codingame/monaco-vscode-textmate-service-override/worker', import.meta.url),
+            {type: 'module'}),
+        },
+      },
+      logger,
+    });
+  };
+
   async ngAfterViewInit() {
-    await this.wrapper.initAndStart(await this.buildWrapperUserConfig(this.editorElement.nativeElement));
+    const methodContent = await firstValueFrom(this.methodContent);
+    await this.wrapper.initAndStart(this.buildWrapperUserConfig(this.editorElement.nativeElement, methodContent));
     // @ts-expect-error their imports are fucked
     this.editor = this.wrapper.getEditor();
     this.setupEditor(this.editor);
@@ -72,8 +88,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     this.store.dispatch(MethodEditorActions.monacoEditorComponentInitialized());
   }
 
-  async buildWrapperUserConfig(htmlContainer?: HTMLElement): Promise<WrapperConfig> {
-    const methodContent = await firstValueFrom(this.methodContent);
+  buildWrapperUserConfig(htmlContainer: HTMLElement, text: string): WrapperConfig {
     return {
       $type: 'extended',
       htmlContainer,
@@ -86,6 +101,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
           // ...getLanguagesServiceOverride(),
           // ...getConfigurationServiceOverride(),
         },
+        enableExtHostWorker: true,
         userConfiguration: {
           json: JSON.stringify({
             fontSize: 18,
@@ -102,12 +118,12 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       editorAppConfig: {
         codeResources: {
           modified: {
-            text: methodContent,
+            text,
             fileExt: 'json',
           },
         },
-        // monacoWorkerFactory: configureMonacoWorkers,
-        monacoWorkerFactory: () => buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.origin, false),
+        monacoWorkerFactory: this.configureMonacoWorkers,
+        // monacoWorkerFactory: () => buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.origin, false),
       },
       languageClientConfigs: {
         json: {
