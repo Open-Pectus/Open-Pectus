@@ -10,9 +10,11 @@ import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { editor as MonacoEditor, KeyCode, languages, Range, Uri } from 'monaco-editor';
 import { buildWorkerDefinition } from 'monaco-editor-workers';
+import { MonacoEditorLanguageClientWrapper, WrapperConfig } from 'monaco-editor-wrapper';
 import { MonacoLanguageClient } from 'monaco-languageclient';
 import { initServices } from 'monaco-languageclient/vscode/services';
 import { combineLatest, filter, firstValueFrom, Observable, Subject, take, takeUntil } from 'rxjs';
+import { LogLevel } from 'vscode';
 import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient/lib/common/client';
 import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from 'vscode-ws-jsonrpc';
 import { MethodLine } from '../../api';
@@ -20,7 +22,7 @@ import { UtilMethods } from '../../shared/util-methods';
 import { MethodEditorActions } from './ngrx/method-editor.actions';
 import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
 
-buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.origin, false);
+// buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.origin, false);
 
 const startedLineClassName = 'started-line';
 const executedLineClassName = 'executed-line';
@@ -41,6 +43,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   @ViewChild('editor', {static: true}) editorElement!: ElementRef<HTMLDivElement>;
   private componentDestroyed = new Subject<void>();
   private editor?: MonacoEditor.IStandaloneCodeEditor;
+  private wrapper = new MonacoEditorLanguageClientWrapper();
   private readonly languageId = 'json';
   private methodContent = this.store.select(MethodEditorSelectors.methodContent);
   private monacoServicesInitialized = this.store.select(MethodEditorSelectors.monacoServicesInitialized);
@@ -55,15 +58,84 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   constructor(private store: Store) {}
 
   async ngAfterViewInit() {
-    await this.initServices();
-    this.registerLanguages();
-    this.editor = await this.setupEditor();
+    await this.wrapper.initAndStart(await this.buildWrapperUserConfig(this.editorElement.nativeElement));
+    // @ts-expect-error their imports are fucked
+    this.editor = this.wrapper.getEditor();
+    this.setupEditor(this.editor);
+    // await this.initServices();
+    // this.registerLanguages();
+    // this.editor = await this.setupEditor();
     // this.setupWebSocket(`ws://localhost:30000/sampleServer`);
 
     this.editorSizeChange?.pipe(takeUntil(this.componentDestroyed)).subscribe(() => this.editor?.layout());
     window.onresize = () => this.editor?.layout();
     this.store.dispatch(MethodEditorActions.monacoEditorComponentInitialized());
   }
+
+  async buildWrapperUserConfig(htmlContainer?: HTMLElement): Promise<WrapperConfig> {
+    const methodContent = await firstValueFrom(this.methodContent);
+    return {
+      $type: 'extended',
+      htmlContainer,
+      logLevel: LogLevel.Debug,
+      vscodeApiConfig: {
+        serviceOverrides: {
+          // ...getThemeServiceOverride(),
+          // ...getTextmateServiceOverride(),
+          // ...getModelServiceOverride(),
+          // ...getLanguagesServiceOverride(),
+          // ...getConfigurationServiceOverride(),
+        },
+        userConfiguration: {
+          json: JSON.stringify({
+            fontSize: 18,
+            glyphMargin: false,
+            fixedOverflowWidgets: true,
+            lineNumbersMinChars: UtilMethods.isMobile ? 1 : 3,
+            minimap: {
+              enabled: UtilMethods.isDesktop,
+            },
+            autoIndent: 'none',
+          }),
+        },
+      },
+      editorAppConfig: {
+        codeResources: {
+          modified: {
+            text: methodContent,
+            fileExt: 'json',
+          },
+        },
+        // monacoWorkerFactory: configureMonacoWorkers,
+        monacoWorkerFactory: () => buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.origin, false),
+      },
+      languageClientConfigs: {
+        json: {
+          clientOptions: {
+            documentSelector: ['json'],
+          },
+          connection: {
+            options: {
+              $type: 'WebSocketUrl',
+              url: 'ws://localhost:30000/sampleServer',
+              startOptions: {
+                onCall: () => {
+                  console.log('Connected to socket.');
+                },
+                reportStatus: true,
+              },
+              stopOptions: {
+                onCall: () => {
+                  console.log('Disconnected from socket.');
+                },
+                reportStatus: true,
+              },
+            },
+          },
+        },
+      },
+    } satisfies WrapperConfig;
+  };
 
   createLanguageClient(transports: MessageTransports): MonacoLanguageClient {
     return new MonacoLanguageClient({
@@ -84,6 +156,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy() {
     this.componentDestroyed.next();
+    void this.wrapper.dispose();
     this.store.dispatch(MethodEditorActions.monacoEditorComponentDestroyed());
   }
 
@@ -98,7 +171,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
         ...getLanguagesServiceOverride(),
         ...getConfigurationServiceOverride(),
       },
-    }, {});
+    }, {htmlContainer: this.editorElement.nativeElement});
   }
 
   private registerLanguages() {
@@ -110,14 +183,15 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  private async setupEditor() {
-    const editor = await this.constructEditor();
+  private setupEditor(editor?: MonacoEditor.IStandaloneCodeEditor) {
+    if(editor === undefined) return;
+    // const editor = await this.constructEditor();
     this.setupOnEditorChanged(editor);
     this.setupOnStoreModelChanged(editor);
     this.setupInjectedLines(editor);
     this.setupStartedAndExecutedLines(editor);
 
-    return editor;
+    // return editor;
   }
 
   private async constructEditor() {
