@@ -3,6 +3,7 @@ import logging
 import math
 from datetime import datetime
 from enum import StrEnum, auto
+from typing import Iterable
 
 import openpectus.protocol.models as Mdl
 from pydantic import BaseModel
@@ -120,6 +121,8 @@ class TagsInfo(BaseModel):
         max_tick_time = max(t.tick_time for t in self.map.values())
         return datetime.fromtimestamp(max_tick_time)
 
+    def values(self) -> Iterable[TagValue]:
+        return self.map.values()
 
 class RunData(BaseModel):
     """ Represents data that strictly belongs in a specific run. """

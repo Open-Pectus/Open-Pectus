@@ -395,3 +395,19 @@ class AggregatedErrorLog(Dto):
 class BuildInfo(Dto):
     build_number: str
     git_sha: str
+
+
+# Lsp models
+
+class TagDefinition(Dto):
+    name: str
+    unit: str | None = None
+    # possibly value_type:
+
+class CommandDefinition(Dto):
+    name: str
+    # argument_types: list[str] = []
+
+class UodDefinition(Dto):
+    name: str
+    filename: str

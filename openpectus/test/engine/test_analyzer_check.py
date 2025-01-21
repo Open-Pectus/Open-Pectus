@@ -8,7 +8,7 @@ from openpectus.lang.exec.analyzer import (
     CommandCheckAnalyzer,
 )
 from openpectus.lang.exec.commands import CommandCollection, Command
-from openpectus.lang.exec.tags import TagCollection, Tag
+from openpectus.lang.exec.tags import TagValueCollection, TagValue
 from openpectus.test.engine.utility_methods import build_program
 
 
@@ -33,6 +33,25 @@ Foo
         analyzer = CommandCheckAnalyzer(cmds)
         analyzer.visit(program)
         self.assertEqual(1, len(analyzer.items))
+        item = analyzer.items[0]
+        self.assertEqual(2, item.range_start.line)
+        self.assertEqual(0, item.range_start.character)
+        self.assertEqual(2, item.range_end.line)
+        self.assertEqual(3, item.range_end.character)
+
+    def test_command_undefined_w_arg(self):
+        program = build_program("""
+Foo: bar
+""")
+        cmds = CommandCollection()
+        analyzer = CommandCheckAnalyzer(cmds)
+        analyzer.visit(program)
+        self.assertEqual(1, len(analyzer.items))
+        item = analyzer.items[0]
+        self.assertEqual(2, item.range_start.line)
+        self.assertEqual(0, item.range_start.character)
+        self.assertEqual(2, item.range_end.line)
+        self.assertEqual(3, item.range_end.character)
 
     def test_command_arg_valid(self):
         program = build_program("""
@@ -44,17 +63,18 @@ Foo: bar
         self.assertEqual(0, len(analyzer.items))
 
     def test_command_arg_invalid(self):
-        def is_valid_cmd(cmd_name):
-            return cmd_name != 'bar'
-
         program = build_program("""
 Foo: bar
 """)
-        cmds = CommandCollection().with_cmd(Command("Foo", is_valid_cmd))
+        cmds = CommandCollection().with_cmd(Command("Foo", lambda s: False))
         analyzer = CommandCheckAnalyzer(cmds)
         analyzer.visit(program)
         self.assertEqual(1, len(analyzer.items))
-
+        item = analyzer.items[0]
+        self.assertEqual(2, item.range_start.line)
+        self.assertEqual(5, item.range_start.character)
+        self.assertEqual(2, item.range_end.line)
+        self.assertEqual(8, item.range_end.character)
 
 class ConditionCheckAnalyzerTest(unittest.TestCase):
     def test_tag_name_defined(self):
@@ -62,7 +82,7 @@ class ConditionCheckAnalyzerTest(unittest.TestCase):
 Watch: A > 2
     Mark: a
 """)
-        tags = TagCollection().with_tag(Tag("A"))
+        tags = TagValueCollection([TagValue("A")])
         analyzer = ConditionCheckAnalyzer(tags)
         analyzer.visit(program)
         self.assertEqual(0, len(analyzer.items))
@@ -72,18 +92,24 @@ Watch: A > 2
 Watch: A > 2
     Mark: a
 """)
-        tags = TagCollection()
+        tags = TagValueCollection([])
         analyzer = ConditionCheckAnalyzer(tags)
         analyzer.visit(program)
         self.assertEqual(1, len(analyzer.items))
-        self.assertEqual("UndefinedTag", analyzer.items[0].id)
+        item = analyzer.items[0]
+        self.assertEqual("UndefinedTag", item.id)
+        # this requires some extra data collected during program build
+        # self.assertEqual(2, item.range_start.line)
+        # self.assertEqual(7, item.range_start.character)
+        # self.assertEqual(2, item.range_end.line)
+        # self.assertEqual(8, item.range_end.character)
 
     def test_tag_unit_valid(self):
         program = build_program("""
 Watch: A > 2
     Mark: a
 """)
-        tags = TagCollection().with_tag(Tag("A"))
+        tags = TagValueCollection([TagValue("A")])
         analyzer = ConditionCheckAnalyzer(tags)
         analyzer.visit(program)
         self.assertEqual(0, len(analyzer.items))
@@ -93,7 +119,7 @@ Watch: A > 2
 Watch: A > 2 mL
     Mark: a
 """)
-        tags = TagCollection().with_tag(Tag("A"))
+        tags = TagValueCollection([TagValue("A")])
         analyzer = ConditionCheckAnalyzer(tags)
         analyzer.visit(program)
         self.assertEqual(1, len(analyzer.items))
@@ -104,7 +130,7 @@ Watch: A > 2 mL
 Watch: A > 2
     Mark: a
 """)
-        tags = TagCollection().with_tag(Tag("A", unit="mL"))
+        tags = TagValueCollection([TagValue("A", unit="mL")])
         analyzer = ConditionCheckAnalyzer(tags)
         analyzer.visit(program)
         self.assertEqual(1, len(analyzer.items))
@@ -115,7 +141,7 @@ Watch: A > 2
 Watch: A > 2 mL
     Mark: a
 """)
-        tags = TagCollection().with_tag(Tag("A", unit="s"))
+        tags = TagValueCollection([TagValue("A", unit="s")])
         analyzer = ConditionCheckAnalyzer(tags)
         analyzer.visit(program)
         self.assertEqual(1, len(analyzer.items))
@@ -126,7 +152,7 @@ Watch: A > 2 mL
 Watch: A > 2 L
     Mark: a
 """)
-        tags = TagCollection().with_tag(Tag("A", unit="L"))
+        tags = TagValueCollection([TagValue("A", unit="L")])
         analyzer = ConditionCheckAnalyzer(tags)
         analyzer.visit(program)
         self.assertEqual(0, len(analyzer.items))
@@ -136,7 +162,7 @@ Watch: A > 2 L
 Watch: A > 2 mL
     Mark: a
 """)
-        tags = TagCollection().with_tag(Tag("A", unit="L"))
+        tags = TagValueCollection([TagValue("A", unit="L")])
         analyzer = ConditionCheckAnalyzer(tags)
         analyzer.visit(program)
         self.assertEqual(0, len(analyzer.items))
@@ -147,7 +173,7 @@ Watch: A > 2 mL
 Watch: A > 2 CV
     Mark: a
 """)
-        tags = TagCollection().with_tag(Tag("A", unit="CV"))
+        tags = TagValueCollection([TagValue("A", unit="CV")])
         analyzer = ConditionCheckAnalyzer(tags)
         analyzer.visit(program)
         self.assertEqual(0, len(analyzer.items))
@@ -234,7 +260,7 @@ Mark: a
 Mark: b
 Mark: c
 """)
-        analyzer = SemanticCheckAnalyzer(TagCollection(), CommandCollection())
+        analyzer = SemanticCheckAnalyzer(TagValueCollection([]), CommandCollection())
         analyzer.analyze(program)
         self.assertEqual(0, len(analyzer.errors))
 
@@ -246,7 +272,7 @@ Block: A
     Mark: b
 Mark: c
 """)
-        analyzer = SemanticCheckAnalyzer(TagCollection(), CommandCollection())
+        analyzer = SemanticCheckAnalyzer(TagValueCollection([]), CommandCollection())
         analyzer.analyze(program)
         xs = [e for e in analyzer.items if e.id == 'UnreachableCode']
         self.assertEqual(1, len(xs))

@@ -1,14 +1,21 @@
-
+import logging
 from typing import TypedDict
-from pylsp.workspace import Document
+import httpx
 
+from pylsp.workspace import Document
 from pylsp.lsp import DiagnosticSeverity
 
 from openpectus.lang.exec.analyzer import AnalyzerItem, AnalyzerItemType, SemanticCheckAnalyzer
 from openpectus.lang.exec.commands import Command, CommandCollection
-from openpectus.lang.exec.tags import TagCollection
+from openpectus.lang.exec.tags import TagValue, TagValueCollection, create_system_tags
+from openpectus.lang.exec.tags_impl import MarkTag
 from openpectus.test.engine.utility_methods import build_program
+import openpectus.aggregator.routers.dto as Dto
 
+
+logger = logging.getLogger(__name__)
+system_tags = create_system_tags()  # will not include the Mark tag ...
+system_tags.add(MarkTag())
 
 class PositionItem(TypedDict):
     line: int
@@ -51,30 +58,61 @@ def get_item_range(item: AnalyzerItem) -> RangeItem:
         ),
     )
 
+def fetch_tags_info(engine_id: str) -> list[Dto.TagDefinition]:
+    # http://localhost:9800/tags/MIAWLT-1645-MPO_DemoUod
+    response = httpx.get(f"http://localhost:9800/tags/{engine_id}")
+    result = response.json()
+    values: list[Dto.TagDefinition] = []
+    for t in result:
+        p = Dto.TagDefinition(**t)
+        values.append(p)
+    return values
+
+def fetch_commands_info(engine_id: str) -> list[Dto.CommandDefinition]:
+    response = httpx.get(f"http://localhost:9800/commands/{engine_id}")
+    result = response.json()
+    values: list[Dto.CommandDefinition] = []
+    for t in result:
+        p = Dto.CommandDefinition(**t)
+        values.append(p)
+    return values
+
+def fetch_uod_info(engine_id: str) -> list[Dto.CommandDefinition]:
+    response = httpx.get(f"http://localhost:9800/uod/{engine_id}")
+    result = response.json()
+    info = Dto.UodDefinition(**result)
+    
+    
+
 #def lint_example(document: Document, engine_id: str) -> list[DiagnosticsItem]:
 def lint_example(document: Document) -> list[DiagnosticsItem]:
     # parse document context as pcode and run semantic analysis on it
     diagnostics: list[DiagnosticsItem] = []
 
-    # uod_name = engine_id.split("_")[1]
-    # TODO to build TagCollection we should probably ask aggregator
-    # TODO We should probably have another representation than TagCollection more like TagValue's
-    tags = (
-        TagCollection()
-    )
+    engine_id = "MIAWLT-1645-MPO_DemoUod"
 
-    # TODO to build CommandCollection we need access to the uod commands somehow.
-    # thats not trivial
-    cmds = (
-        CommandCollection()
-        .with_cmd(Command("Stop"))
-        .with_cmd(Command("Base"))
-    )
+    values = fetch_tags_info(engine_id)
+    tags = [
+        TagValue(t.name, unit=t.unit)
+        for t in values
+    ]
 
-    analyzer = SemanticCheckAnalyzer(tags, cmds)
+    # add system tags
+    for t in system_tags:
+        tags.append(TagValue(name=t.name, unit=t.unit))
+
+    # maybe just access aggregator directly - should be doable
+
+    # TODO we also need to access system commands
+    cmd_values = fetch_commands_info(engine_id)
+    cmds = [Command(name=c.name) for c in cmd_values]
+
+    analyzer = SemanticCheckAnalyzer(TagValueCollection(tags), CommandCollection(cmds))
+    pcode = document.source
     try:
-        program = build_program(document.source)
+        program = build_program(pcode)
     except Exception as ex:
+        logger.error("Failed to build program: '{pcode}'", exc_info=True)
         diagnostics.append(
             DiagnosticsItem(
                 source="Open Pectus",

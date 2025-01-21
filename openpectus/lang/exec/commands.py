@@ -1,6 +1,6 @@
 from __future__ import annotations
 from enum import StrEnum
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, Iterable, List
 from uuid import UUID
 
 
@@ -82,8 +82,11 @@ class Command:
 class CommandCollection():
     """ Represents a name/command dictionary. """
 
-    def __init__(self) -> None:
+    def __init__(self, commands: Iterable[Command] | None = None) -> None:
         self.commands: Dict[str, Command] = {}
+        if commands is not None:
+            for cmd in commands:
+                self.add(cmd, False)
 
     @property
     def names(self) -> List[str]:

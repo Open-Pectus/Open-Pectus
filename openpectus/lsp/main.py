@@ -11,7 +11,6 @@ from pylsp.python_lsp import start_ws_lang_server, PythonLSPServer
 
 # setup LSP loggers
 logging.basicConfig(format='%(name)s :: %(levelname)-8s :: %(message)s', level=logging.WARNING)
-#logging.basicConfig(format='%(name)s :: %(levelname)-8s :: %(message)s', level=logging.DEBUG)
 
 file_log_path = os.path.join(pathlib.Path(__file__).parent.resolve(), 'pylsp-openpectus.log')
 file_handler = RotatingFileHandler(file_log_path, maxBytes=2*1024*1024, backupCount=5)

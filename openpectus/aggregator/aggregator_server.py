@@ -10,7 +10,7 @@ from openpectus.aggregator.aggregator_message_handlers import AggregatorMessageH
 from openpectus.aggregator.data import database
 from openpectus.aggregator.deps import _create_aggregator
 from openpectus.aggregator.frontend_publisher import FrontendPublisher
-from openpectus.aggregator.routers import process_unit, recent_runs, auth, version
+from openpectus.aggregator.routers import process_unit, recent_runs, auth, version, lsp
 from openpectus.aggregator.spa import SinglePageApplication
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 
@@ -36,7 +36,7 @@ class AggregatorServer:
         self.publisher = FrontendPublisher()
         self.aggregator = _create_aggregator(self.dispatcher, self.publisher)
         _ = AggregatorMessageHandlers(self.aggregator)
-        self.setup_fastapi([self.dispatcher.router, self.publisher.router, version.router])
+        self.setup_fastapi([self.dispatcher.router, self.publisher.router, version.router, lsp.router])
         self.init_db()
 
     def setup_fastapi(self, additional_routers: list[APIRouter] = []):
@@ -53,6 +53,7 @@ class AggregatorServer:
                                on_shutdown=[self.on_shutdown])
         self.fastapi.include_router(process_unit.router, prefix=api_prefix, dependencies=[UserRolesDependency])
         self.fastapi.include_router(recent_runs.router, prefix=api_prefix, dependencies=[UserRolesDependency])
+        #self.fastapi.include_router(lsp.router, prefix=api_prefix)
         self.fastapi.include_router(auth.router, prefix="/auth")
         for route in additional_routers:
             self.fastapi.include_router(route)
