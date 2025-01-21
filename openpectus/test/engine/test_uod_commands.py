@@ -1,10 +1,9 @@
 
 import unittest
 
-from openpectus.lang.exec.tags import Tag, TagCollection
+from openpectus.lang.exec.tags import Tag, create_system_tags
 from openpectus.lang.exec.tags_impl import ReadingTag
 from openpectus.lang.exec.uod import RegexNumber, RegexCategorical, UodBuilder, UodCommand
-
 
 def create_minimal_builder() -> UodBuilder:
     builder = (
@@ -29,7 +28,7 @@ class TestCommandDescriptions(unittest.TestCase):
                .with_command_regex_arguments("Area", RegexNumber(units=["cm2", "dm2"]), exec_Area)
                ).build()
 
-        uod.system_tags = TagCollection.create_system_tags()
+        uod.system_tags = create_system_tags()
         uod.validate_configuration()
         uod.build_commands()
 
@@ -49,7 +48,7 @@ class TestCommandDescriptions(unittest.TestCase):
                .with_command_regex_arguments("Area", RegexNumber(units=["cm2", "dm2"]), exec_Area)
                ).build()
 
-        uod.system_tags = TagCollection.create_system_tags()
+        uod.system_tags = create_system_tags()
         uod.validate_configuration()
         uod.build_commands()
 
@@ -72,7 +71,7 @@ class TestCommandDescriptions(unittest.TestCase):
                .with_command_regex_arguments("Area", RegexNumber(units=["cm2", "dm2"]), exec_Area)
                ).build()
 
-        uod.system_tags = TagCollection.create_system_tags()
+        uod.system_tags = create_system_tags()
         uod.validate_configuration()
         uod.build_commands()
 
@@ -89,7 +88,7 @@ class TestCommandDescriptions(unittest.TestCase):
                .with_command_regex_arguments("Area", RegexNumber(units=["cm2", "dm2"]), exec_Area)
                ).build()
 
-        uod.system_tags = TagCollection.create_system_tags()
+        uod.system_tags = create_system_tags()
         uod.validate_configuration()
         uod.build_commands()
 
@@ -109,7 +108,7 @@ class TestCommandDescriptions(unittest.TestCase):
                .with_command_regex_arguments("Flow", RegexNumber(units=["L/h", "L/min"]), exec_Vel)
                ).build()
 
-        uod.system_tags = TagCollection.create_system_tags()
+        uod.system_tags = create_system_tags()
         uod.validate_configuration()
         uod.build_commands()
 
@@ -132,7 +131,7 @@ class TestCommandDescriptions(unittest.TestCase):
                                              exec_Categorical)
                ).build()
 
-        uod.system_tags = TagCollection.create_system_tags()
+        uod.system_tags = create_system_tags()
         uod.validate_configuration()
         uod.build_commands()
 
@@ -153,7 +152,7 @@ class TestCommandDescriptions(unittest.TestCase):
                                              exec_Categorical)
                ).build()
 
-        uod.system_tags = TagCollection.create_system_tags()
+        uod.system_tags = create_system_tags()
         uod.validate_configuration()
         uod.build_commands()
 

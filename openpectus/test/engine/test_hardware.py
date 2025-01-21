@@ -16,7 +16,7 @@ from openpectus.engine.hardware_recovery import (
     ErrorRecoveryState,
 )
 from openpectus.engine.models import ConnectionStatusEnum
-from openpectus.lang.exec.tags import SystemTagName, TagCollection
+from openpectus.lang.exec.tags import SystemTagName, create_system_tags
 from openpectus.test.engine.test_engine import TestHW, create_test_uod
 
 
@@ -25,7 +25,6 @@ logging.basicConfig(format='%(asctime)-15s :: %(name)s :: %(levelname)-8s :: %(m
                     force=True)
 logger = logging.getLogger("openpectus.engine.hardware_error")
 logger.setLevel(logging.DEBUG)
-
 
 class TestHardwareLayer(unittest.TestCase):
     def test_can_read_register(self):
@@ -57,7 +56,8 @@ class TestHardwareErrorRecovery(unittest.TestCase):
     def create_hardwares(self) -> tuple[ErrorRecoveryDecorator, ErrorTestHardware]:
         hwl = ErrorTestHardware()
         error_config = ErrorRecoveryConfig()
-        connection_status_tag = TagCollection.create_system_tags()[SystemTagName.CONNECTION_STATUS]
+        system_tags = create_system_tags()
+        connection_status_tag = system_tags[SystemTagName.CONNECTION_STATUS]
         return ErrorRecoveryDecorator(hwl, error_config, connection_status_tag), hwl
 
     def test_initial_state_Disconnected(self):
@@ -78,7 +78,8 @@ class TestHardwareErrorRecovery(unittest.TestCase):
         hwl = ErrorTestHardware()
         hwl._is_connected = True
         error_config = ErrorRecoveryConfig()
-        connection_status_tag = TagCollection.create_system_tags()[SystemTagName.CONNECTION_STATUS]
+        system_tags = create_system_tags()
+        connection_status_tag = system_tags[SystemTagName.CONNECTION_STATUS]
         decorator = ErrorRecoveryDecorator(hwl, error_config, connection_status_tag)
 
         self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.OK)
