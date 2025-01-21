@@ -5,6 +5,8 @@ import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { editor as MonacoEditor, KeyCode, Range } from 'monaco-editor';
 import { MonacoEditorLanguageClientWrapper, WrapperConfig } from 'monaco-editor-wrapper';
+// import { useWorkerFactory } from 'monaco-editor-wrapper/workerFactory';
+import { Logger } from 'monaco-languageclient/tools';
 import { initEnhancedMonacoEnvironment } from 'monaco-languageclient/vscode/services';
 import { combineLatest, filter, firstValueFrom, Observable, Subject, takeUntil } from 'rxjs';
 import { LogLevel } from 'vscode';
@@ -46,7 +48,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   // adapted from https://github.com/TypeFox/monaco-languageclient/blob/main/packages/wrapper/src/workerFactory.ts
   // because using it directly causes compile errors for tsWorker, for some reason
-  configureMonacoWorkers() {
+  configureMonacoWorkers(logger?: Logger) {
     const envEnhanced = initEnhancedMonacoEnvironment();
     envEnhanced.getWorker = (moduleId: string, label: string) => {
       switch(label) {
@@ -58,12 +60,23 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
           throw new Error(`Unimplemented worker ${label} (${moduleId})`);
       }
     };
+    // useWorkerFactory({
+    //   workerOverrides: {
+    //     ignoreMapping: true,
+    //     workerLoaders: {
+    //       TextEditorWorker: () => new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), {type: 'module'}),
+    //       TextMateWorker: () => new Worker(new URL('@codingame/monaco-vscode-textmate-service-override/worker', import.meta.url),
+    //         {type: 'module'}),
+    //     },
+    //   },
+    //   logger,
+    // });
   };
 
   async ngAfterViewInit() {
     const methodContent = await firstValueFrom(this.methodContent);
     await this.wrapper.initAndStart(this.buildWrapperUserConfig(this.editorElement.nativeElement, methodContent));
-    // @ts-expect-error shit's stupid
+    // @ts-expect-error they seem to point to the same type, but from different packages
     this.editor = this.wrapper.getEditor();
     this.setupEditor(this.editor);
 
@@ -78,6 +91,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       htmlContainer,
       logLevel: LogLevel.Debug,
       vscodeApiConfig: {
+        // vscodeApiInitPerformExternally: true,
         // enableExtHostWorker: true,
         userConfiguration: {
           json: JSON.stringify({ // TODO: find documentation for this, and adapt the previous configuration to new
