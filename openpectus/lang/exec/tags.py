@@ -273,23 +273,6 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
             tags.add(tag)
         return tags
 
-    @staticmethod
-    def create_system_tags() -> TagCollection:
-        tags = TagCollection([
-            Tag(SystemTagName.BASE, value="min"),  # note special value "min" and no unit
-            Tag(SystemTagName.RUN_COUNTER, value=0),
-            Tag(SystemTagName.BLOCK, value=None),
-            Tag(SystemTagName.BLOCK_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
-            Tag(SystemTagName.PROCESS_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
-            Tag(SystemTagName.RUN_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
-            Tag(SystemTagName.CLOCK, value=0.0, unit="s", format_fn=format_time_as_clock),
-            Tag(SystemTagName.SYSTEM_STATE, value="Stopped"),
-            Tag(SystemTagName.METHOD_STATUS, value="OK"),
-            Tag(SystemTagName.CONNECTION_STATUS, value="Disconnected"),
-            Tag(SystemTagName.RUN_ID, value=None),
-        ])
-        return tags
-
 
 class TagValue():
     """ Read-only and immutable representation of a tag value. """
@@ -352,3 +335,20 @@ class TagValueCollection(Iterable[TagValue]):
 
     def to_list(self) -> list[TagValue]:
         return [v for v in self._tag_values.values()]
+
+
+
+def create_system_tags() -> "TagCollection":
+    return TagCollection([
+        Tag(SystemTagName.BASE, value="min"),  # note special value "min" and no unit
+        Tag(SystemTagName.RUN_COUNTER, value=0),
+        Tag(SystemTagName.BLOCK, value=None),
+        Tag(SystemTagName.BLOCK_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
+        Tag(SystemTagName.PROCESS_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
+        Tag(SystemTagName.RUN_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
+        Tag(SystemTagName.CLOCK, value=0.0, unit="s", format_fn=format_time_as_clock),
+        Tag(SystemTagName.SYSTEM_STATE, value="Stopped"),
+        Tag(SystemTagName.METHOD_STATUS, value="OK"),
+        Tag(SystemTagName.CONNECTION_STATUS, value="Disconnected"),
+        Tag(SystemTagName.RUN_ID, value=None),
+    ])

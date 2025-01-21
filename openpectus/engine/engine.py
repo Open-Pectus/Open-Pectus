@@ -31,6 +31,7 @@ from openpectus.lang.exec.tags import (
     TagValueCollection,
     ChangeListener,
     Unset,
+    create_system_tags
 )
 from openpectus.lang.exec.tags_impl import MarkTag
 from openpectus.lang.exec.timer import EngineTimer, OneThreadTimer
@@ -102,7 +103,7 @@ class Engine(InterpreterContext):
         """ Tick count since last START command. It is incremented at the start of each tick.
         First tick is effectively number 0. """
 
-        self._system_tags = TagCollection.create_system_tags()
+        self._system_tags = create_system_tags()
         self._system_tags.add(MarkTag())
         # Add archiver which is implemented as a tag. The lambda getting the runlog works because the
         # tag_lifetime.on_stop event is emitted just before resetting the interpreter and runlog (and
