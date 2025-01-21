@@ -1,6 +1,6 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, OnDestroy, ViewChild } from '@angular/core';
 import '@codingame/monaco-vscode-json-default-extension';
-import '@codingame/monaco-vscode-theme-defaults-default-extension';
+// import '@codingame/monaco-vscode-theme-defaults-default-extension';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { editor as MonacoEditor, KeyCode, Range } from 'monaco-editor';
