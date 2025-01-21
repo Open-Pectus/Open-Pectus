@@ -10,10 +10,9 @@ import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { editor as MonacoEditor, KeyCode, languages, Range, Uri } from 'monaco-editor';
 import { MonacoEditorLanguageClientWrapper, WrapperConfig } from 'monaco-editor-wrapper';
-import { useWorkerFactory } from 'monaco-editor-wrapper/workerFactory';
 import { MonacoLanguageClient } from 'monaco-languageclient';
 import { Logger } from 'monaco-languageclient/tools';
-import { initServices } from 'monaco-languageclient/vscode/services';
+import { initEnhancedMonacoEnvironment, initServices } from 'monaco-languageclient/vscode/services';
 import { combineLatest, filter, firstValueFrom, Observable, Subject, take, takeUntil } from 'rxjs';
 import { LogLevel } from 'vscode';
 import { CloseAction, ErrorAction, MessageTransports } from 'vscode-languageclient/lib/common/client';
@@ -58,24 +57,40 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   constructor(private store: Store) {}
 
+  // adapted from https://github.com/TypeFox/monaco-languageclient/blob/main/packages/wrapper/src/workerFactory.ts
+  // because using it directly causes compile errors for tsWorker, for some reason
   configureMonacoWorkers(logger?: Logger) {
-    useWorkerFactory({
-      workerOverrides: {
-        ignoreMapping: true,
-        workerLoaders: {
-          TextEditorWorker: () => new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), {type: 'module'}),
-          TextMateWorker: () => new Worker(new URL('@codingame/monaco-vscode-textmate-service-override/worker', import.meta.url),
-            {type: 'module'}),
-        },
-      },
-      logger,
-    });
+    const envEnhanced = initEnhancedMonacoEnvironment();
+    envEnhanced.getWorker = (moduleId: string, label: string) => {
+      switch(label) {
+        case 'TextEditorWorker':
+          return new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), {type: 'module'});
+        case 'TextMateWorker':
+          return new Worker(new URL('@codingame/monaco-vscode-textmate-service-override/worker', import.meta.url), {type: 'module'});
+        default:
+          throw new Error(`Unimplemented worker ${label} (${moduleId})`);
+      }
+      // if(label === 'TextEditorWorker') return new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), {type: 'module'});
+      // if(label === 'TextMateWorker') return new Worker(new URL('@codingame/monaco-vscode-textmate-service-override/worker', import.meta.url), {type: 'module'});
+    };
+
+    // useWorkerFactory({
+    //   workerOverrides: {
+    //     ignoreMapping: true,
+    //     workerLoaders: {
+    //       TextEditorWorker: () => new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), {type: 'module'}),
+    //       TextMateWorker: () => new Worker(new URL('@codingame/monaco-vscode-textmate-service-override/worker', import.meta.url),
+    //         {type: 'module'}),
+    //       // tsWorker: () => new Worker(new URL('monaco-editor/esm/vs/language/typescript/ts.worker.js', import.meta.url), {type: 'module'}),
+    //     },
+    //   },
+    //   logger,
+    // });
   };
 
   async ngAfterViewInit() {
     const methodContent = await firstValueFrom(this.methodContent);
     await this.wrapper.initAndStart(this.buildWrapperUserConfig(this.editorElement.nativeElement, methodContent));
-    // @ts-expect-error their imports are fucked
     this.editor = this.wrapper.getEditor();
     this.setupEditor(this.editor);
     // await this.initServices();
@@ -101,9 +116,9 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
           // ...getLanguagesServiceOverride(),
           // ...getConfigurationServiceOverride(),
         },
-        enableExtHostWorker: true,
+        // enableExtHostWorker: true,
         userConfiguration: {
-          json: JSON.stringify({
+          json: JSON.stringify({ // TODO: find documentation for this, and adapt the previous configuration to new
             fontSize: 18,
             glyphMargin: false,
             fixedOverflowWidgets: true,
@@ -112,6 +127,8 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
               enabled: UtilMethods.isDesktop,
             },
             autoIndent: 'none',
+            'editor.lightbulb.enabled': 'off',
+            'editor.experimental.asyncTokenization': true,
           }),
         },
       },
