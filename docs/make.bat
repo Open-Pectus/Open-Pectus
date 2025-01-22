@@ -8,7 +8,8 @@ if "%SPHINXBUILD%" == "" (
 	set SPHINXBUILD=sphinx-build
 )
 set SOURCEDIR=.
-set BUILDDIR=_build
+set BUILDDIR=.
+set CONFIG_DIR=.
 
 %SPHINXBUILD% >NUL 2>NUL
 if errorlevel 9009 (
@@ -25,7 +26,7 @@ if errorlevel 9009 (
 
 if "%1" == "" goto help
 
-%SPHINXBUILD% -M %1 %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O%
+%SPHINXBUILD% -M %1 %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O% -c %CONFIG_DIR% -j auto
 goto end
 
 :help

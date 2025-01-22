@@ -75,7 +75,7 @@ class PintTest(unittest.TestCase):
     def test_dimensionless_percentage(self):
         count = Q_(3, "%")
         self.assertTrue(count.dimensionless)
-        self.assertTrue(count.unitless)        
+        self.assertTrue(count.unitless)
         self.assertEqual("<Quantity(3, 'percent')>", "{!r}".format(count))
         self.assertEqual(count.units.__repr__(), "<Unit('percent')>")
 
@@ -112,7 +112,7 @@ class PintTest(unittest.TestCase):
 
     def test_absorbance(self):
         val = Q_(1, "mS/cm")
-        exp_dimensionality = "[current] ** 2 * [time] ** 3 / [length] ** 3 / [mass]"
+        exp_dimensionality = "[current] ** 2 * [time] ** 3 / [mass] / [length] ** 3"
         self.assertEqual(exp_dimensionality, str(val.dimensionality))
 
     def test_area(self):

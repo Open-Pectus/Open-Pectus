@@ -5,7 +5,89 @@ import { HttpClient } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { GetUnitData, GetUnitResponse, GetUnitsData, GetUnitsResponse, GetProcessValuesData, GetProcessValuesResponse, GetAllProcessValuesData, GetAllProcessValuesResponse, ExecuteCommandData, ExecuteCommandResponse, GetProcessDiagramData, GetProcessDiagramResponse, GetCommandExamplesData, GetCommandExamplesResponse, GetRunLogData, GetRunLogResponse, GetMethodAndStateData, GetMethodAndStateResponse, SaveMethodData, SaveMethodResponse, GetPlotConfigurationData, GetPlotConfigurationResponse, GetPlotLogData, GetPlotLogResponse, GetControlStateData, GetControlStateResponse, GetErrorLogData, GetErrorLogResponse, ForceRunLogLineData, ForceRunLogLineResponse, CancelRunLogLineData, CancelRunLogLineResponse, ExposeSystemStateEnumData, ExposeSystemStateEnumResponse, GetRecentRunsData, GetRecentRunsResponse, GetRecentRunData, GetRecentRunResponse, GetRecentRunMethodAndStateData, GetRecentRunMethodAndStateResponse, GetRecentRunRunLogData, GetRecentRunRunLogResponse, GetRecentRunPlotConfigurationData, GetRecentRunPlotConfigurationResponse, GetRecentRunPlotLogData, GetRecentRunPlotLogResponse, GetRecentRunCsvJsonData, GetRecentRunCsvJsonResponse, GetRecentRunErrorLogData, GetRecentRunErrorLogResponse, GetRecentRunCsvFileData, GetRecentRunCsvFileResponse, GetConfigResponse, PostResponse, ExposePubsubTopicsData, ExposePubsubTopicsResponse, TriggerPublishMswResponse, GetVersionResponse, GetBuildNumberResponse, GetBuildInfoResponse } from './types.gen';
+import type { PostResponse, GetConfigResponse, ExposePubsubTopicsData, ExposePubsubTopicsResponse, TriggerPublishMswResponse, GetUnitData, GetUnitResponse, GetUnitsData, GetUnitsResponse, GetProcessValuesData, GetProcessValuesResponse, GetAllProcessValuesData, GetAllProcessValuesResponse, ExecuteCommandData, ExecuteCommandResponse, GetProcessDiagramData, GetProcessDiagramResponse, GetCommandExamplesData, GetCommandExamplesResponse, GetRunLogData, GetRunLogResponse, GetMethodAndStateData, GetMethodAndStateResponse, SaveMethodData, SaveMethodResponse, GetPlotConfigurationData, GetPlotConfigurationResponse, GetPlotLogData, GetPlotLogResponse, GetControlStateData, GetControlStateResponse, GetErrorLogData, GetErrorLogResponse, ForceRunLogLineData, ForceRunLogLineResponse, CancelRunLogLineData, CancelRunLogLineResponse, ExposeSystemStateEnumData, ExposeSystemStateEnumResponse, GetRecentRunsData, GetRecentRunsResponse, GetRecentRunData, GetRecentRunResponse, GetRecentRunMethodAndStateData, GetRecentRunMethodAndStateResponse, GetRecentRunRunLogData, GetRecentRunRunLogResponse, GetRecentRunPlotConfigurationData, GetRecentRunPlotConfigurationResponse, GetRecentRunPlotLogData, GetRecentRunPlotLogResponse, GetRecentRunCsvJsonData, GetRecentRunCsvJsonResponse, GetRecentRunErrorLogData, GetRecentRunErrorLogResponse, GetRecentRunCsvFileData, GetRecentRunCsvFileResponse, GetVersionResponse, GetBuildNumberResponse, GetBuildInfoResponse } from './types.gen';
+
+@Injectable({
+    providedIn: 'root'
+})
+export class AggregatorService {
+    constructor(public readonly http: HttpClient) { }
+    
+    /**
+     * Post
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public post(): Observable<PostResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'POST',
+            url: '/engine-rest'
+        });
+    }
+    
+}
+
+@Injectable({
+    providedIn: 'root'
+})
+export class AuthService {
+    constructor(public readonly http: HttpClient) { }
+    
+    /**
+     * Get Config
+     * @returns AuthConfig Successful Response
+     * @throws ApiError
+     */
+    public getConfig(): Observable<GetConfigResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/auth/config'
+        });
+    }
+    
+}
+
+@Injectable({
+    providedIn: 'root'
+})
+export class FrontendPubsubService {
+    constructor(public readonly http: HttpClient) { }
+    
+    /**
+     * Expose Pubsub Topics
+     * This endpoint is just for exposing the topic enum to frontend via autogeneration
+     * @param data The data for the request.
+     * @param data.topic
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public exposePubsubTopics(data: ExposePubsubTopicsData): Observable<ExposePubsubTopicsResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'POST',
+            url: '/api/expose-pubsub-topics',
+            query: {
+                topic: data.topic
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Trigger Publish Msw
+     * Publish to all topics that start with 'MSW_'
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public triggerPublishMsw(): Observable<TriggerPublishMswResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'POST',
+            url: '/api/trigger-publish-msw'
+        });
+    }
+    
+}
 
 @Injectable({
     providedIn: 'root'
@@ -640,88 +722,6 @@ export class RecentRunsService {
             errors: {
                 422: 'Validation Error'
             }
-        });
-    }
-    
-}
-
-@Injectable({
-    providedIn: 'root'
-})
-export class AuthService {
-    constructor(public readonly http: HttpClient) { }
-    
-    /**
-     * Get Config
-     * @returns AuthConfig Successful Response
-     * @throws ApiError
-     */
-    public getConfig(): Observable<GetConfigResponse> {
-        return __request(OpenAPI, this.http, {
-            method: 'GET',
-            url: '/auth/config'
-        });
-    }
-    
-}
-
-@Injectable({
-    providedIn: 'root'
-})
-export class AggregatorService {
-    constructor(public readonly http: HttpClient) { }
-    
-    /**
-     * Post
-     * @returns unknown Successful Response
-     * @throws ApiError
-     */
-    public post(): Observable<PostResponse> {
-        return __request(OpenAPI, this.http, {
-            method: 'POST',
-            url: '/engine-rest'
-        });
-    }
-    
-}
-
-@Injectable({
-    providedIn: 'root'
-})
-export class FrontendPubsubService {
-    constructor(public readonly http: HttpClient) { }
-    
-    /**
-     * Expose Pubsub Topics
-     * This endpoint is just for exposing the topic enum to frontend via autogeneration
-     * @param data The data for the request.
-     * @param data.topic
-     * @returns unknown Successful Response
-     * @throws ApiError
-     */
-    public exposePubsubTopics(data: ExposePubsubTopicsData): Observable<ExposePubsubTopicsResponse> {
-        return __request(OpenAPI, this.http, {
-            method: 'POST',
-            url: '/api/expose-pubsub-topics',
-            query: {
-                topic: data.topic
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Trigger Publish Msw
-     * Publish to all topics that start with 'MSW_'
-     * @returns unknown Successful Response
-     * @throws ApiError
-     */
-    public triggerPublishMsw(): Observable<TriggerPublishMswResponse> {
-        return __request(OpenAPI, this.http, {
-            method: 'POST',
-            url: '/api/trigger-publish-msw'
         });
     }
     

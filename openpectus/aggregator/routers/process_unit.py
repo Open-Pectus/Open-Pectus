@@ -37,6 +37,8 @@ def map_pu(engine_data: Mdl.EngineData) -> Dto.ProcessUnit:
             engine_data.runtime is not None and isinstance(engine_data.runtime.value, int)
         ) else 0,
         current_user_role=Dto.UserRole.ADMIN,
+        uod_author_name=engine_data.uod_author_name,
+        uod_author_email=engine_data.uod_author_email
     )
     return unit
 
@@ -50,14 +52,14 @@ def get_registered_engine_data_or_fail(engine_id: str, user_roles: UserRolesValu
     return engine_data
 
 
-@router.get("/process_unit/{unit_id}")
+@router.get("/process_unit/{unit_id}", response_model_exclude_none=True)
 def get_unit(user_roles: UserRolesValue, unit_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)) \
         -> Dto.ProcessUnit:
     engine_data = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
     return map_pu(engine_data=engine_data)
 
 
-@router.get("/process_units")
+@router.get("/process_units", response_model_exclude_none=True)
 def get_units(user_roles: UserRolesValue, agg: Aggregator = Depends(agg_deps.get_aggregator)) -> list[Dto.ProcessUnit]:
     units: list[Dto.ProcessUnit] = []
     all_engine_data = agg.get_all_registered_engine_data()
@@ -88,7 +90,7 @@ def get_units(user_roles: UserRolesValue, agg: Aggregator = Depends(agg_deps.get
 
     return units
 
-@router.get("/process_unit/{engine_id}/process_values")
+@router.get("/process_unit/{engine_id}/process_values", response_model_exclude_none=True)
 def get_process_values(
         user_roles: UserRolesValue,
         engine_id: str,
@@ -110,7 +112,7 @@ def get_process_values(
     return process_values
 
 
-@router.get('/process_unit/{engine_id}/all_process_values')
+@router.get('/process_unit/{engine_id}/all_process_values', response_model_exclude_none=True)
 def get_all_process_values(
         user_roles: UserRolesValue,
         engine_id: str,
@@ -122,11 +124,19 @@ def get_all_process_values(
     tags_info = engine_data.tags_info.map
     process_values: list[Dto.ProcessValue] = []
     for tag_value in tags_info.values():
-        process_values.append(Dto.ProcessValue.create(tag_value))
+        matching_reading = next((r for r in engine_data.readings if r.tag_name == tag_value.name), None)
+        if matching_reading is not None:
+            try:
+                cmds = command_util.create_reading_commands(tag_value, matching_reading)
+                process_values.append(Dto.ProcessValue.create_w_commands(tag_value, cmds))
+            except Exception as ex:
+                logger.error(f"Error creating commands for process value '{matching_reading.tag_name}': {ex}")
+        else:
+            process_values.append(Dto.ProcessValue.create(tag_value))
     return process_values
 
 
-@router.post("/process_unit/{unit_id}/execute_command")
+@router.post("/process_unit/{unit_id}/execute_command", response_model_exclude_none=True)
 async def execute_command(
         user_name: UserNameValue,
         user_roles: UserRolesValue,
@@ -154,15 +164,15 @@ async def execute_command(
     return Dto.ServerSuccessResponse()
 
 
-@router.get("/process_unit/{unit_id}/process_diagram")
+@router.get("/process_unit/{unit_id}/process_diagram", response_model_exclude_none=True)
 def get_process_diagram(
         user_roles: UserRolesValue,
         unit_id: str,
-        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.ProcessDiagram | None:
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.ProcessDiagram:
     return Dto.ProcessDiagram(svg="")
 
 
-@router.get('/process_unit/{unit_id}/command_examples')
+@router.get('/process_unit/{unit_id}/command_examples', response_model_exclude_none=True)
 def get_command_examples(
         user_roles: UserRolesValue,
         unit_id: str,
@@ -176,7 +186,7 @@ def get_command_examples(
     return commands
 
 
-@router.get('/process_unit/{unit_id}/run_log')
+@router.get('/process_unit/{unit_id}/run_log', response_model_exclude_none=True)
 def get_run_log(
         user_roles: UserRolesValue,
         unit_id: str,
@@ -190,7 +200,7 @@ def get_run_log(
         )
 
 
-@router.get('/process_unit/{unit_id}/method-and-state')
+@router.get('/process_unit/{unit_id}/method-and-state', response_model_exclude_none=True)
 def get_method_and_state(
         user_roles: UserRolesValue,
         unit_id: str,
@@ -208,7 +218,7 @@ def get_method_and_state(
     return from_models(engine_data.method, engine_data.method_state)
 
 
-@router.post('/process_unit/{unit_id}/method')
+@router.post('/process_unit/{unit_id}/method', response_model_exclude_none=True)
 async def save_method(
         user_name: UserNameValue,
         user_roles: UserRolesValue,
@@ -222,18 +232,18 @@ async def save_method(
         return Dto.ServerErrorResponse(message="Failed to set method")
 
 
-@router.get('/process_unit/{unit_id}/plot_configuration')
+@router.get('/process_unit/{unit_id}/plot_configuration', response_model_exclude_none=True)
 def get_plot_configuration(
         user_roles: UserRolesValue,
         unit_id: str,
         agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.PlotConfiguration:
     engine_data = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
-    return Dto.PlotConfiguration.validate(
+    return Dto.PlotConfiguration.model_validate(
         # assumes Dto.PlotConfiguration and Mdl.PlotConfiguration are identical, change this when they diverge
         engine_data.plot_configuration)
 
 
-@router.get('/process_unit/{unit_id}/plot_log')
+@router.get('/process_unit/{unit_id}/plot_log', response_model_exclude_none=True)
 def get_plot_log(
         user_roles: UserRolesValue,
         unit_id: str,
@@ -246,10 +256,10 @@ def get_plot_log(
     if plot_log_model is None:
         return Dto.PlotLog(entries={})
     # assumes Dto.PlotLog and Mdl.PlotLog are identical, change this when they diverge
-    return Dto.PlotLog.validate(plot_log_model)
+    return Dto.PlotLog.model_validate(plot_log_model)
 
 
-@router.get('/process_unit/{unit_id}/control_state')
+@router.get('/process_unit/{unit_id}/control_state', response_model_exclude_none=True)
 def get_control_state(
         user_roles: UserRolesValue,
         unit_id: str,
@@ -264,7 +274,7 @@ def get_control_state(
     return from_message(engine_data.control_state)
 
 
-@router.get('/process_unit/{unit_id}/error_log')
+@router.get('/process_unit/{unit_id}/error_log', response_model_exclude_none=True)
 def get_error_log(
         user_roles: UserRolesValue,
         unit_id: str,
@@ -273,7 +283,7 @@ def get_error_log(
     return Dto.AggregatedErrorLog.from_model(engine_data.error_log)
 
 
-@router.post('/process_unit/{unit_id}/run_log/force_line/{line_id}')
+@router.post('/process_unit/{unit_id}/run_log/force_line/{line_id}', response_model_exclude_none=True)
 async def force_run_log_line(
         user_name: UserNameValue,
         user_roles: UserRolesValue,
@@ -286,7 +296,7 @@ async def force_run_log_line(
     return Dto.ServerSuccessResponse(message="Force successfully requested")
 
 
-@router.post('/process_unit/{unit_id}/run_log/cancel_line/{line_id}')
+@router.post('/process_unit/{unit_id}/run_log/cancel_line/{line_id}', response_model_exclude_none=True)
 async def cancel_run_log_line(
         user_name: UserNameValue,
         user_roles: UserRolesValue,
@@ -300,6 +310,6 @@ async def cancel_run_log_line(
 
 
 
-@router.get('/process_units/system_state_enum')
+@router.get('/process_units/system_state_enum', response_model_exclude_none=True)
 def expose_system_state_enum() -> Dto.SystemStateEnum:
     return Mdl.SystemStateEnum.Running

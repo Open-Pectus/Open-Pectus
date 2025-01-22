@@ -9,7 +9,7 @@ ErrorMessage = Msg.ErrorMessage
 
 
 class AggregatorMessage(Msg.MessageBase):
-    """ Marker class that indicates a protocol message sent by Aggregator to Engine. 
+    """ Marker class that indicates a protocol message sent by Aggregator to Engine.
 
     On the Engine side, they are handled by EngineMessageHandlers.
     """

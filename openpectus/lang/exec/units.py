@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 import logging
 import decimal
 
@@ -6,7 +7,9 @@ import pint
 from pint import UnitRegistry, Quantity
 
 
-ureg = UnitRegistry(cache_folder="./pint-cache", non_int_type=decimal.Decimal)  # type: ignore
+cache_folder = os.path.join(os.path.dirname(__file__), "pint-cache")
+ureg = UnitRegistry(cache_folder=cache_folder, non_int_type=decimal.Decimal)  # type: ignore
+ureg.define("m3 = m**3")
 ureg.define("m2 = m**2")
 ureg.define("dm2 = dm**2")
 ureg.define("cm2 = cm**2")
@@ -55,7 +58,7 @@ QUANTITY_PINT_MAP: dict[str, str] = {
     'amount_of_substance': '[substance]',
     'pressure': '[mass] / [length] / [time] ** 2',
     'mass flow rate': '[mass] / [time]',
-    'conductivity': '[current] ** 2 * [time] ** 3 / [mass] / [length] ** 3',
+    'electrical conductance': '[current] ** 2 * [time] ** 3 / [mass] / [length] ** 3',
     'percentage': '[percentage]',
     'flux': '[length] / [time]',
     'permeability': '[length] ** 2 * [time] / [mass]',

@@ -1,5 +1,6 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, OnDestroy, ViewChild } from '@angular/core';
 import '@codingame/monaco-vscode-json-default-extension';
+import getConfigurationServiceOverride from '@codingame/monaco-vscode-configuration-service-override';
 import getLanguagesServiceOverride from '@codingame/monaco-vscode-languages-service-override';
 import getModelServiceOverride from '@codingame/monaco-vscode-model-service-override';
 import getTextmateServiceOverride from '@codingame/monaco-vscode-textmate-service-override';
@@ -29,7 +30,6 @@ const lineIdClassNamePrefix = 'line-id-';
 @Component({
   selector: 'app-monaco-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
   styleUrls: ['monaco-editor.component.scss'],
   template: `
     <div #editor class="w-full h-full"></div>
@@ -78,11 +78,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
         },
       },
       // create a language client connection from the JSON RPC connection on demand
-      connectionProvider: {
-        get: () => {
-          return Promise.resolve(transports);
-        },
-      },
+      messageTransports: transports,
     });
   }
 
@@ -95,16 +91,14 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     const alreadyInitialized = await firstValueFrom(this.monacoServicesInitialized);
     if(alreadyInitialized) return;
     await initServices({
-      serviceConfig: {
-        userServices: {
-          ...getThemeServiceOverride(),
-          ...getTextmateServiceOverride(),
-          ...getModelServiceOverride(),
-          ...getLanguagesServiceOverride(),
-        },
-        debugLogging: false,
+      serviceOverrides: {
+        ...getThemeServiceOverride(),
+        ...getTextmateServiceOverride(),
+        ...getModelServiceOverride(),
+        ...getLanguagesServiceOverride(),
+        ...getConfigurationServiceOverride(),
       },
-    });
+    }, {});
   }
 
   private registerLanguages() {
@@ -160,14 +154,10 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
           const decorations = model.getLineDecorations(index + 1);
           const idDecoration = decorations.find(decoration => decoration.options.className?.startsWith(lineIdClassNamePrefix));
           const id = idDecoration?.options.className?.substring(lineIdClassNamePrefix.length);
-          const isExecuted = decorations.find(decoration => decoration.options.className === executedLineClassName) !== undefined;
-          const isInjected = decorations.find(decoration => decoration.options.className === injectedLineClassName) !== undefined;
           return {
             id: id ?? crypto.randomUUID(),
             content: lineContent,
-            is_executed: isExecuted,
-            is_injected: isInjected,
-          };
+          } satisfies MethodLine;
         });
         this.storeModelChangedFromHere = true;
         this.store.dispatch(MethodEditorActions.linesChanged({lines}));

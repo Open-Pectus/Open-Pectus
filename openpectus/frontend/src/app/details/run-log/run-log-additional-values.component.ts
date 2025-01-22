@@ -9,11 +9,10 @@ export enum AdditionalValueType {
 }
 
 @Component({
-  selector: 'app-run-log-additional-values',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [NgFor, ProcessValuePipe],
-  template: `
+    selector: 'app-run-log-additional-values',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [NgFor, ProcessValuePipe],
+    template: `
     <div #additionalValues class="flex flex-wrap px-3 pb-2.5 gap-2.5 justify-end items-start">
       <p class="text-sm">At {{ type }}:</p>
       <div *ngFor="let value of values; let valueIndex = index"
@@ -26,7 +25,7 @@ export enum AdditionalValueType {
         <p class="px-2 py-0.5 bg-white ">{{ value | processValue }}</p>
       </div>
     </div>
-  `,
+  `
 })
 export class RunLogAdditionalValuesComponent {
   @Input() type?: AdditionalValueType;

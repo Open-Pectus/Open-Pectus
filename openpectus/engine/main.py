@@ -6,7 +6,9 @@ from logging.handlers import RotatingFileHandler
 from os import path
 import pathlib
 from typing import Literal
+from itertools import chain
 
+import multiprocess
 
 from openpectus import log_setup_colorlog, sentry, __version__, build_number
 from openpectus.engine.engine import Engine
@@ -25,11 +27,14 @@ log_setup_colorlog()
 
 StateKind = Literal["Started", "Connected", "Disconnected", "Reconnecting", "Reconnected"]
 
-file_log_path = path.join(pathlib.Path(__file__).parent.resolve(), 'openpectus-engine.log')
-file_handler = RotatingFileHandler(file_log_path, maxBytes=2*1024*1024, backupCount=5)
-file_handler.setLevel(logging.INFO)
-file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s]: %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
-logging.root.addHandler(file_handler)
+# Sphinx fails auto generating docs because __file__ is not defined
+# when it runs the code.
+if locals().get("__file__", None):
+    file_log_path = path.join(pathlib.Path(__file__).parent.resolve(), 'openpectus-engine.log')
+    file_handler = RotatingFileHandler(file_log_path, maxBytes=2*1024*1024, backupCount=5)
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s]: %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
+    logging.root.addHandler(file_handler)
 
 logger = logging.getLogger("openpectus.engine.engine")
 logger.setLevel(logging.INFO)
@@ -46,7 +51,7 @@ default_port = "9800"
 default_port_secure = "443"
 
 
-def get_args():
+def get_arg_parser():
     parser = ArgumentParser("Start Pectus Engine")
     parser.add_argument("-ahn", "--aggregator_hostname", required=False, default=default_host,
                         help="Aggregator websocket host name. Default is 127.0.0.1")
@@ -65,7 +70,7 @@ def get_args():
     parser.add_argument("-sev", "--sentry_event_level", required=False,
                         default=sentry.EVENT_LEVEL_DEFAULT, choices=sentry.EVENT_LEVEL_NAMES,
                         help=f"Minimum log level to send as sentry events. Default is '{sentry.EVENT_LEVEL_DEFAULT}'")
-    return parser.parse_args()
+    return parser
 
 
 engine: Engine | None = None
@@ -105,6 +110,10 @@ async def main_async(args, loop: asyncio.AbstractEventLoop):
         port = default_port_secure if args.secure else default_port
 
     dispatcher = EngineDispatcher(f"{args.aggregator_hostname}:{port}", args.secure, uod.options)
+
+    if len(uod.required_roles) > 0 and not dispatcher.is_aggregator_authentication_enabled():
+        logger.warning('"with_required_roles" specified in "demo_uod.py" but aggregator does ' +
+                       'not support authentication. Engine will not be visible in the frontend.')
 
     if not run_validations(uod):
         exit(1)
@@ -208,43 +217,37 @@ def validate_and_exit(uod_name: str):
     logger.info("Validation complete. Exiting.")
     exit(0)
 
+
 def run_example_commands(uod: UnitOperationDefinitionBase):
     uod.build_commands()
     logger.info("Validating UOD command examples")
     uod.hwl = NullHardware()
 
-    failed_cmds: list[str] = []
-    for desc in uod.command_descriptions.values():
-        logger.info(f"Executing example commands for uod command '{desc.name}'")
-        pcode = desc.get_docstring_pcode()
-        if pcode.strip() == "":
-            logger.warning(f"Command '{desc.name} has no pcode example")
-            continue
+    def run_example_with_description(description: str, example: str) -> list[str]:
+        failed_cmds: list[str] = []
         try:
-            runner = EngineTestRunner(uod_factory=lambda: uod, pcode=pcode)
+            runner = EngineTestRunner(uod_factory=lambda: uod, pcode=example)
             with runner.run() as instance:
                 instance.start()
-                # wait up to 1 minute, that oughta be enought for everybody
+                # wait up to 1 minute, that ought to be enought for everybody
                 instance.run_until_event("method_end", max_ticks=10*60)
                 logger.debug(instance.get_runtime_table())
-                logger.debug(f"Command '{pcode}' executed successfully")
+                logger.debug(f"{description} executed successfully")
         except Exception as ex:
-            logger.error(f"Command '{pcode}' failed: {str(ex)}")
-            failed_cmds.append(desc.name)
+            logger.error(f"{description} '{example}' failed: {str(ex)}")
+            failed_cmds.append(example)
+        return failed_cmds
 
-        examples = desc.generate_pcode_examples()
-        for example in examples:
-            try:
-                runner = EngineTestRunner(uod_factory=lambda: uod, pcode=example)
-                with runner.run() as instance:
-                    instance.start()
-                    # wait up to 1 minute, that oughta be enought for everybody
-                    instance.run_until_event("method_end", max_ticks=10*60)
-                    logger.debug(instance.get_runtime_table())
-                    logger.debug(f"Command '{desc.name}' executed successfully")
-            except Exception as ex:
-                logger.error(f"Command '{example}' failed: {str(ex)}")
-                failed_cmds.append(example)
+    logger.info("Executing example commands")
+    with multiprocess.Pool() as pool:  # type: ignore
+        failed_cmds: list[str] = list(
+          chain.from_iterable(
+            pool.map(
+                lambda t: run_example_with_description(t[0], t[1]),
+                uod.generate_pcode_examples()
+            )
+          )
+        )
 
     if len(failed_cmds) > 0:
         logger.error(f"Example commands failed: {','.join(failed_cmds)}")
@@ -282,7 +285,7 @@ def show_register_details_and_exit(uod_name: str):
 
 def main():
     print(f"OpenPectus Engine v. {__version__}, build: {build_number}")
-    args = get_args()
+    args = get_arg_parser().parse_args()
     sentry.init_engine(args.sentry_event_level)
     if args.validate:
         validate_and_exit(args.uod)
@@ -294,7 +297,8 @@ def main():
     # Handling KeyboardInterrupt seems to fix the halt that sometimes otherwise occurs. But we still get the error:
     # "sys:1: RuntimeWarning: coroutine 'EngineDispatcher.disconnect_async' was never awaited"
     # https://stackoverflow.com/questions/54525836/where-do-i-catch-the-keyboardinterrupt-exception-in-this-async-setup#54528397
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
         loop.run_until_complete(main_async(args, loop))
         logger.info("Main loop completed")

@@ -28,9 +28,6 @@ export type CommandExample = {
     example: string;
 };
 
-/**
- * An enumeration.
- */
 export type CommandSource = 'process_value' | 'manually_entered' | 'unit_button' | 'method';
 
 export type ControlState = {
@@ -40,14 +37,9 @@ export type ControlState = {
 };
 
 export type Error = {
-    state: 'error';
+    state: "error";
 };
 
-export type state = 'error';
-
-/**
- * An enumeration.
- */
 export type ErrorLogSeverity = 'warning' | 'error';
 
 export type ExecutableCommand = {
@@ -63,11 +55,9 @@ export type HTTPValidationError = {
 };
 
 export type InProgress = {
-    state: 'in_progress';
+    state: "in_progress";
     progress_pct: number;
 };
-
-export type state2 = 'in_progress';
 
 export type Method = {
     lines: Array<MethodLine>;
@@ -90,11 +80,9 @@ export type MethodState = {
 };
 
 export type NotOnline = {
-    state: 'not_online';
+    state: "not_online";
     last_seen_date: string;
 };
-
-export type state3 = 'not_online';
 
 export type PlotAxis = {
     label: string;
@@ -150,6 +138,8 @@ export type ProcessUnit = {
     location?: string;
     runtime_msec?: number;
     current_user_role: UserRole;
+    uod_author_name?: string;
+    uod_author_email?: string;
 };
 
 /**
@@ -175,47 +165,34 @@ export type ProcessValueCommand = {
 
 export type ProcessValueCommandChoiceValue = {
     value: string;
-    value_type: 'choice';
+    value_type: "choice";
     options: Array<(string)>;
 };
 
-export type value_type = 'choice';
-
 export type ProcessValueCommandFreeTextValue = {
     value: string;
-    value_type: 'string';
+    value_type: "string";
 };
-
-export type value_type2 = 'string';
 
 export type ProcessValueCommandNumberValue = {
     value: (number);
     value_unit?: string;
     valid_value_units?: Array<(string)>;
-    value_type: ('int' | 'float');
+    value_type: ("int" | "float");
 };
 
-/**
- * An enumeration.
- */
 export type ProcessValueType = 'string' | 'float' | 'int' | 'choice' | 'none';
 
-/**
- * An enumeration.
- */
 export type PubSubTopic = 'run_log' | 'method' | 'control_state' | 'error_log' | 'process_units';
 
 export type Ready = {
-    state: 'ready';
+    state: "ready";
 };
-
-export type state4 = 'ready';
 
 /**
  * Represents a historical run of a process unit.
  */
 export type RecentRun = {
-    id: string;
     engine_id: string;
     run_id: string;
     started_date: string;
@@ -259,9 +236,6 @@ export type SubPlot = {
     ratio: (number);
 };
 
-/**
- * An enumeration.
- */
 export type SystemStateEnum = 'Running' | 'Paused' | 'Holding' | 'Waiting' | 'Stopped' | 'Restarting';
 
 /**
@@ -272,9 +246,6 @@ export type SystemStateEnum = 'Running' | 'Paused' | 'Holding' | 'Waiting' | 'St
  */
 export type TagDirection = 'input' | 'output' | 'na' | 'unspecified';
 
-/**
- * An enumeration.
- */
 export type UserRole = 'viewer' | 'admin';
 
 export type ValidationError = {
@@ -282,6 +253,18 @@ export type ValidationError = {
     msg: string;
     type: string;
 };
+
+export type PostResponse = (unknown);
+
+export type GetConfigResponse = (AuthConfig);
+
+export type ExposePubsubTopicsData = {
+    topic: PubSubTopic;
+};
+
+export type ExposePubsubTopicsResponse = (unknown);
+
+export type TriggerPublishMswResponse = (unknown);
 
 export type GetUnitData = {
     unitId: string;
@@ -465,18 +448,6 @@ export type GetRecentRunCsvFileData = {
 };
 
 export type GetRecentRunCsvFileResponse = (unknown);
-
-export type GetConfigResponse = (AuthConfig);
-
-export type PostResponse = (unknown);
-
-export type ExposePubsubTopicsData = {
-    topic: PubSubTopic;
-};
-
-export type ExposePubsubTopicsResponse = (unknown);
-
-export type TriggerPublishMswResponse = (unknown);
 
 export type GetVersionResponse = (unknown);
 

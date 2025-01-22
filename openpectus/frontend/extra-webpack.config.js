@@ -32,10 +32,17 @@ const config = {
   },
   resolve: {
     extensions: ['.ts', '.js', '.json', '.ttf'],
+    fallback: {vm: false, fs: false, module: false},
   },
   experiments: {
     topLevelAwait: true,
   },
+  ignoreWarnings: [
+    {
+      module: /node_modules\/vscode\/vscode\/src\/vs\/amdX\.js/,
+      message: /Critical dependency: the request of a dependency is an expression/,
+    },
+  ],
 };
 
 export default config;

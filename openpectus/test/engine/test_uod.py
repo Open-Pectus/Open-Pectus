@@ -241,7 +241,7 @@ class TestConversions(unittest.TestCase):
         test_value("0.0",  0.0)
         test_value("  3  ",  3.0)
 
-        test_value("",  None)        
+        test_value("",  None)
         test_value("3f",  None)
         test_value("f",  None)
 

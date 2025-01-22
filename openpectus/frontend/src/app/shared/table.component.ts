@@ -19,11 +19,10 @@ export interface DefaultTableSort<T> {
 }
 
 @Component({
-  selector: 'app-table',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [NgFor, NgIf],
-  template: `
+    selector: 'app-table',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [NgFor, NgIf],
+    template: `
     <div class="bg-stone-100 rounded-md shadow-lg overflow-hidden">
       <table class="w-full table-fixed border-collapse">
         <thead>
@@ -46,7 +45,7 @@ export interface DefaultTableSort<T> {
         </tbody>
       </table>
     </div>
-  `,
+  `
 })
 export class TableComponent<T> {
   @Input() columns?: TableColumn<T>[];

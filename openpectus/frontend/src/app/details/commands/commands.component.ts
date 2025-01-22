@@ -9,16 +9,15 @@ import { DetailsSelectors } from '../ngrx/details.selectors';
 import { CommandExamplesListComponent } from './command-examples-list.component';
 
 @Component({
-  selector: 'app-commands',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [
-    CollapsibleElementComponent,
-    NgIf,
-    CommandExamplesListComponent,
-    PushPipe,
-  ],
-  template: `
+    selector: 'app-commands',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [
+        CollapsibleElementComponent,
+        NgIf,
+        CommandExamplesListComponent,
+        PushPipe,
+    ],
+    template: `
     <app-collapsible-element [name]="'Commands'" [heightResizable]="true" [contentHeight]="400" (collapseStateChanged)="collapsed = $event"
                              [codiconName]="'codicon-terminal'">
       <div content class="flex h-full overflow-x-auto" *ngIf="!collapsed">
@@ -37,7 +36,7 @@ import { CommandExamplesListComponent } from './command-examples-list.component'
         </div>
       </div>
     </app-collapsible-element>
-  `,
+  `
 })
 export class CommandsComponent implements OnInit {
   protected collapsed = false;

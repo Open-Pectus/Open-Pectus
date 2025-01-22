@@ -5,13 +5,14 @@
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <envs>
+      <env name="PYTHONUNBUFFERED" value="1" />
       <env name="AZURE_APPLICATION_CLIENT_ID" value="fc7355bb-a6be-493f-90a1-cf57063f7948" />
       <env name="AZURE_DIRECTORY_TENANT_ID" value="2a41d3b1-09a3-406a-b705-d1c5a70cc21c" />
       <env name="ENABLE_AZURE_AUTHENTICATION" value="true" />
-      <env name="PYTHONUNBUFFERED" value="1" />
     </envs>
     <option name="SDK_HOME" value="" />
-    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/aggregator" />
+    <option name="SDK_NAME" value="Python 3.13 (openpectus)" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/.." />
     <option name="IS_MODULE_SDK" value="true" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />

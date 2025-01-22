@@ -8,7 +8,7 @@ import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.models as Mdl
 from openpectus.engine.engine import Engine
 from openpectus.lang.exec.runlog import RunLogItem
-from openpectus.lang.exec.tags import SystemTagName, TagValue
+from openpectus.lang.exec.tags import TagValue
 from openpectus.lang.exec.uod import logger as uod_logger
 from openpectus.engine.engine import frontend_logger as engine_logger
 from openpectus.engine.archiver import logger as archiver_logger

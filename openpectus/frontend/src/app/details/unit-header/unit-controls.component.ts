@@ -6,11 +6,10 @@ import { UnitControlButtonComponent } from './unit-control-button.component';
 
 
 @Component({
-  selector: 'app-unit-controls',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: true,
-  imports: [LetDirective, UnitControlButtonComponent],
-  template: `
+    selector: 'app-unit-controls',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [LetDirective, UnitControlButtonComponent],
+    template: `
     <div class="flex gap-3.5 flex-wrap" *ngrxLet="controlState as controlState">
       <app-unit-control-button [command]="'Start'" [iconName]="'play'" [toggledColor]="startColor"
                                [toggled]="controlState.is_running"></app-unit-control-button>
@@ -23,7 +22,7 @@ import { UnitControlButtonComponent } from './unit-control-button.component';
       <app-unit-control-button [command]="'Stop'" [iconName]="'chrome-close'" [toggledColor]="stopColor"
                                [toggled]="!controlState.is_running"></app-unit-control-button>
     </div>
-  `,
+  `
 })
 export class UnitControlsComponent {
   readonly startColor = '#047857';

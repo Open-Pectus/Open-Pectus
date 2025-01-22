@@ -305,14 +305,13 @@ class RepositoryTest(unittest.TestCase):
         entity.aggregator_computer_name = 'aggregator computer name'
 
         entity_id = 0
-
         with database.create_scope():
             session = database.scoped_session()
             session.add(entity)
             session.commit()
             entity_id = entity.id
 
-        self.assertEqual(1, entity.id)
+        self.assertEqual(entity_id, 1)
 
         with database.create_scope():
             session = database.scoped_session()
@@ -354,7 +353,7 @@ class RepositoryTest(unittest.TestCase):
 
             repo = RecentRunRepository(session)
             from_db = repo.get_plot_configuration_by_run_id(run_id)
-            dto: Dto.PlotConfiguration = Dto.PlotConfiguration.validate(from_db)
+            dto: Dto.PlotConfiguration = Dto.PlotConfiguration.model_validate(from_db)
             self.assertIsInstance(dto, Dto.PlotConfiguration)
             self.assertEqual(dto.process_value_names_to_annotate, plot_configuration.process_value_names_to_annotate)
 

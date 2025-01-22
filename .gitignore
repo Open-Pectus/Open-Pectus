@@ -139,3 +139,12 @@ conda/*
 *.db
 openpectus/engine/data/*.txt
 openpectus/engine/*.log.*
+openpectus/.idea/pyright.xml
+
+docs/src/openapi.yml
+docs/_autosummary/
+docs/autoapi/
+docs/doctrees/
+docs/spelling/
+docs/html/
+
