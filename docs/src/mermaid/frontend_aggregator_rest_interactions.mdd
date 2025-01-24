@@ -1,0 +1,51 @@
+sequenceDiagram
+    participant F as Frontend
+    participant A as Aggregator
+
+    Note right of A: REST
+
+    Note over F, A: Dashboard
+    F ->> A: GET process_units
+    A -->> F: 
+    F ->> A: GET recent_batch_jobs
+    A -->> F: 
+
+    Note over F, A: Unit Details
+
+    F ->> A: GET process_unit/{id}/command_examples
+    A -->> F: 
+    F ->> A: GET process_unit/{id}/process_diagram
+    A -->> F: 
+    F ->> A: GET process_unit/{id}/plot_configuration
+    A -->> F: 
+
+    loop Initial data and on push message METHOD
+    F ->> A: GET process_unit/{id}/method
+    A -->> F: 
+    end
+    loop Initial data and on push message RUN_LOG
+    F ->> A: GET process_unit/{id}/run_log
+    A -->> F: 
+    end
+    loop polling
+    F ->> A: GET process_unit/{id}/process_values
+    A -->> F: 
+    end
+
+    Note over F, A: Command window
+    alt Execute command
+    F ->> A: POST process_unit/{id}/execute_command
+    A -->> F: 
+    end
+
+    Note over F, A: Method Editor
+    alt Save method
+    F ->> A: POST process_unit/{id}/method
+    A -->> F: 
+    end
+
+    Note over F, A: Run controls
+    alt Start/Pause/Hold/Stop
+    F ->> A: POST process_unit/{id}/execute_command
+    A -->> F: 
+    end

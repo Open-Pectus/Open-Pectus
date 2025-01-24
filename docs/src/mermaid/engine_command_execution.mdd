@@ -1,0 +1,29 @@
+flowchart TD
+    %% Path when pause flag is set
+    A[Execute instructions and progress method]
+    --> B{Pause}
+    -->|True| D[Force pre-defined safe values on outputs]
+    --> E[Finished]
+
+    %% Path when hold flag is set
+    B
+    -->|False| G{Hold}
+    -->|True| V
+
+    %% Path when neither paused nor held
+    G
+    -->|False| tickinstr
+    subgraph tickinstr[ ]
+    R[Tick active block] -->|Instruction| U{Instruction type}
+    S[Tick active Watch blocks] -->|Instruction| U
+    T[Tick active Alarm blocks] -->|Instruction| U
+        U -->|Block| N[Assign active block]
+        U -->|End block| O[Set parent block active]
+        U -->|Watch interrupt| P[Activate watch block]
+        U -->|Alarm interrupt| Q[Activate alarm block]
+        U -->|Stop| Z[Assign false<br />to started flag]
+        U -->|Other| X[Append to active instructions]
+        Y[Injected instructions] --> X
+    end
+    tickinstr --> V[Execute active instructions] --> W[Remove completed instructions<br />from active instructions list] --> E
+    style A fill:#fae8dc

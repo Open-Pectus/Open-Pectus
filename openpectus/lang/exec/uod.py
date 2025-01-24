@@ -3,7 +3,7 @@ from __future__ import annotations
 from inspect import _ParameterKind, Parameter
 import logging
 import re
-from typing import Any, Callable, Literal, Generator, Tuple
+from typing import Any, Callable, Literal, Tuple
 
 from openpectus.engine.commands import ContextEngineCommand, CommandArgs
 from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
@@ -884,6 +884,18 @@ def defaultArgumentParser(args: str) -> CommandArgs:
     return {'value': args}
 
 
+def unescape(re_escaped_string: str) -> str:
+    """
+    re.escape is used to escape options supplied to
+    RegexCategorical. This function can reverses operation.
+    
+    assert unescape(re.escape('A B')) == 'A B'
+    assert unescape(re.escape('A/B')) == 'A/B'
+    """
+    # Source: https://stackoverflow.com/questions/43662474/reversing-pythons-re-escape
+    return re.sub(r'\\(.)', r'\1', re_escaped_string)
+
+
 class RegexNamedArgumentParser():
     def __init__(self, regex: str) -> None:
         self.regex = regex
@@ -909,8 +921,7 @@ class RegexNamedArgumentParser():
             return []
         start = self.regex.index("<number_unit>") + len("<number_unit>")
         end = self.regex.index(")", start)
-        # Undo escaping of slash that might have been performed
-        result = [unit.replace(r'\/', '/') for unit in self.regex[start: end].split("|")]
+        result = unescape(self.regex[start: end]).split("|")
         return result
 
     def get_exclusive_options(self) -> list[str]:
@@ -918,7 +929,8 @@ class RegexNamedArgumentParser():
             return []
         start = self.regex.index("<option>") + len("<option>(")
         end = self.regex.index("|(")
-        result = self.regex[start: end].split("|")
+        option_string = self.regex[start: end]
+        result = unescape(self.regex[start: end]).split("|")
         return result
 
     def get_additive_options(self) -> list[str]:
@@ -926,7 +938,7 @@ class RegexNamedArgumentParser():
             return []
         start = self.regex.index("|(") + len("|(")
         end = self.regex.index("|\\+)+))\\s*")
-        result = self.regex[start: end].split("|")
+        result = unescape(self.regex[start: end]).split("|")
         return result
 
     @staticmethod
