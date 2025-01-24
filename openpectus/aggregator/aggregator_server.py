@@ -24,7 +24,8 @@ class AggregatorServer:
     default_db_path = os.path.join(os.getcwd(), default_db_filename)
 
     def __init__(self, title: str = default_title, host: str = default_host, port: int = default_port,
-                 frontend_dist_dir: str = default_frontend_dist_dir, db_path: str = default_db_path):
+                 frontend_dist_dir: str = default_frontend_dist_dir, db_path: str = default_db_path,
+                 shutdown_cb=None):
         self.title = title
         self.host = host
         self.port = port
@@ -36,6 +37,7 @@ class AggregatorServer:
         self.publisher = FrontendPublisher()
         self.aggregator = _create_aggregator(self.dispatcher, self.publisher)
         _ = AggregatorMessageHandlers(self.aggregator)
+        self.shutdown_callback = shutdown_cb
         self.setup_fastapi([self.dispatcher.router, self.publisher.router, version.router, lsp.router])
         self.init_db()
 
@@ -68,3 +70,5 @@ class AggregatorServer:
 
     async def on_shutdown(self):
         await self.dispatcher.shutdown()
+        if self.shutdown_callback is not None:
+            self.shutdown_callback()

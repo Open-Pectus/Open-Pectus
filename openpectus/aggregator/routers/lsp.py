@@ -69,7 +69,7 @@ def get_uod_info(
         agg: Aggregator = Depends(agg_deps.get_aggregator)
         ) -> Dto.UodDefinition:
     response.headers["Cache-Control"] = "no-store"
-    engine_data = get_registered_engine_data_or_fail(engine_id, agg)    
+    engine_data = get_registered_engine_data_or_fail(engine_id, agg)
     return Dto.UodDefinition(
         name=engine_data.uod_name, filename=engine_data.uod_filename
     )

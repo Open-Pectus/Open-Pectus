@@ -19,7 +19,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/openpectus/aggregator/main.py",
             "console": "integratedTerminal",
-            "args": ["-fdd", "./openpectus/frontend/dist"],
+            "args": ["-fdd", "./openpectus/frontend/dist"], //, "-lsp"],
             "env": {
                 "AZURE_DIRECTORY_TENANT_ID": "2a41d3b1-09a3-406a-b705-d1c5a70cc21c",
                 "AZURE_APPLICATION_CLIENT_ID": "fc7355bb-a6be-493f-90a1-cf57063f7948",
@@ -38,6 +38,7 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/openpectus/lsp/main.py",
+            //"args": ["--watch_parent"],
             "console": "integratedTerminal",
             "justMyCode": false
         },
