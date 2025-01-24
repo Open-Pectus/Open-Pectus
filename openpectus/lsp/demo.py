@@ -5,6 +5,9 @@ import httpx
 from pylsp.workspace import Document
 from pylsp.lsp import DiagnosticSeverity
 
+from openpectus.engine.hardware import NullHardware
+from openpectus.engine.main import create_uod
+from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommandBuilder
 from openpectus.lang.exec.analyzer import AnalyzerItem, AnalyzerItemType, SemanticCheckAnalyzer
 from openpectus.lang.exec.commands import Command, CommandCollection
 from openpectus.lang.exec.tags import TagValue, TagValueCollection, create_system_tags
@@ -33,7 +36,6 @@ class DiagnosticsItem(TypedDict):
     severity: int
     """ One of DiagnosticSeverity """
 
-
 def get_item_severity(item: AnalyzerItem) -> int:
     if item.type == AnalyzerItemType.HINT:
         return DiagnosticSeverity.Hint
@@ -58,31 +60,33 @@ def get_item_range(item: AnalyzerItem) -> RangeItem:
         ),
     )
 
-def fetch_tags_info(engine_id: str) -> list[Dto.TagDefinition]:
-    # http://localhost:9800/tags/MIAWLT-1645-MPO_DemoUod
-    response = httpx.get(f"http://localhost:9800/tags/{engine_id}")
-    result = response.json()
-    values: list[Dto.TagDefinition] = []
-    for t in result:
-        p = Dto.TagDefinition(**t)
-        values.append(p)
-    return values
 
-def fetch_commands_info(engine_id: str) -> list[Dto.CommandDefinition]:
-    response = httpx.get(f"http://localhost:9800/commands/{engine_id}")
-    result = response.json()
-    values: list[Dto.CommandDefinition] = []
-    for t in result:
-        p = Dto.CommandDefinition(**t)
-        values.append(p)
-    return values
 
-def fetch_uod_info(engine_id: str) -> list[Dto.CommandDefinition]:
+def fetch_uod_info(engine_id: str) -> Dto.UodDefinition | None:
     response = httpx.get(f"http://localhost:9800/uod/{engine_id}")
-    result = response.json()
-    info = Dto.UodDefinition(**result)
-    
-    
+    if response.status_code == 200:
+        result = response.json()
+        return Dto.UodDefinition(**result)
+    else:
+        return None
+
+def create_local_uod(engine_id: str) -> UnitOperationDefinitionBase | None:
+    uod_info = fetch_uod_info(engine_id)
+    if uod_info is None:
+        logger.warning(f"Uod information for engine '{engine_id}' is not available. Engine may be down")
+        return None
+    logger.debug(f"Uod info: {str(uod_info)}")
+    uod = create_uod(uod_info.filename)
+    uod.system_tags = system_tags
+    uod.hwl = NullHardware()
+    uod.validate_configuration()
+    uod.build_commands()
+    return uod
+
+
+class CommandsValidator():
+    def __init__(self, builder: UodCommandBuilder) -> None:
+        pass
 
 #def lint_example(document: Document, engine_id: str) -> list[DiagnosticsItem]:
 def lint_example(document: Document) -> list[DiagnosticsItem]:
@@ -91,21 +95,40 @@ def lint_example(document: Document) -> list[DiagnosticsItem]:
 
     engine_id = "MIAWLT-1645-MPO_DemoUod"
 
-    values = fetch_tags_info(engine_id)
-    tags = [
-        TagValue(t.name, unit=t.unit)
-        for t in values
-    ]
 
     # add system tags
+    tags = []
     for t in system_tags:
         tags.append(TagValue(name=t.name, unit=t.unit))
 
-    # maybe just access aggregator directly - should be doable
-
     # TODO we also need to access system commands
-    cmd_values = fetch_commands_info(engine_id)
-    cmds = [Command(name=c.name) for c in cmd_values]
+
+    cmds = []
+
+    uod = create_local_uod(engine_id)
+    if uod is not None:
+        for key, builder in uod.command_factories.items():
+            logger.debug(f"Processing uod command '{key}'")
+
+            # build a validate function using the command's own arg_parse function
+            def outer(key, builder: UodCommandBuilder):
+                def validate(args: str) -> bool:
+                    logger.debug(f"Valudating args '{args}' for command key '{key}' and builder name {builder.name}")
+                    if builder.arg_parse_fn is None:
+                        # if no argument parser is defined, require that no argument was given
+                        if args == "":
+                            return True
+                        return False
+                    try:
+                        result = builder.arg_parse_fn(args)
+                        return result is not None
+                    except Exception:
+                        logger.warning("Exception during arg_parse_fn", exc_info=True)
+                        return False
+                return validate
+
+            cmd = Command(name=key, validatorFn=outer(key, builder))
+            cmds.append(cmd)
 
     analyzer = SemanticCheckAnalyzer(TagValueCollection(tags), CommandCollection(cmds))
     pcode = document.source
@@ -127,7 +150,10 @@ def lint_example(document: Document) -> list[DiagnosticsItem]:
         )
         return diagnostics
 
+    # run analyzer
     analyzer.analyze(program)
+
+    # map analyzer result to lsp diagnostics
     for item in analyzer.items:
         diagnostics.append(
             DiagnosticsItem(
