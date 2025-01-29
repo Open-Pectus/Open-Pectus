@@ -7,6 +7,7 @@ from os import path
 import pathlib
 from typing import Literal
 from itertools import chain
+import sys
 
 import multiprocess
 
@@ -116,7 +117,7 @@ async def main_async(args, loop: asyncio.AbstractEventLoop):
                        'not support authentication. Engine will not be visible in the frontend.')
 
     if not run_validations(uod):
-        exit(1)
+        sys.exit(1)
 
     sentry.set_engine_uod(uod)
 
@@ -182,7 +183,7 @@ def validate_and_exit(uod_name: str):
         logger.info(f"Uod '{uod_name}' created successfully")
     except Exception:
         logger.error(f"Validation failed. Failed to create uod '{uod_name}'", exc_info=True)
-        exit(1)
+        sys.exit(1)
 
     uod.system_tags = TagCollection.create_system_tags()
 
@@ -195,7 +196,7 @@ def validate_and_exit(uod_name: str):
         logger.info("Offline validation successful")
     except Exception:
         logger.error("Offline validation failed", exc_info=True)
-        exit(1)
+        sys.exit(1)
 
     run_example_commands(uod)
 
@@ -206,7 +207,7 @@ def validate_and_exit(uod_name: str):
         logger.info("Hardware connected")
     except Exception:
         logger.info("Hardware connection failed", exc_info=True)
-        exit(1)
+        sys.exit(1)
 
     try:
         uod.hwl.validate_online()
@@ -215,7 +216,7 @@ def validate_and_exit(uod_name: str):
         logger.error("Online validation failed", exc_info=True)
 
     logger.info("Validation complete. Exiting.")
-    exit(0)
+    sys.exit(0)
 
 
 def run_example_commands(uod: UnitOperationDefinitionBase):
@@ -262,7 +263,7 @@ def show_register_details_and_exit(uod_name: str):
         logger.info(f"Uod '{uod_name}' created successfully")
     except Exception:
         logger.error(f"Validation failed. Failed to create uod '{uod_name}'", exc_info=True)
-        exit(1)
+        sys.exit(1)
 
     uod.system_tags = TagCollection.create_system_tags()
 
@@ -272,15 +273,15 @@ def show_register_details_and_exit(uod_name: str):
         logger.info("Hardware connected")
     except Exception:
         logger.info("Hardware connection failed", exc_info=True)
-        exit(1)
+        sys.exit(1)
 
     try:
         uod.hwl.show_online_register_details()
     except Exception:
         logger.error("Error showing register details")
-        exit(1)
+        sys.exit(1)
 
-    exit(0)
+    sys.exit(0)
 
 
 def main():

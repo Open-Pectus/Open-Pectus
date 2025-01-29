@@ -4,6 +4,7 @@ from inspect import _ParameterKind, Parameter
 import logging
 import re
 from typing import Any, Callable, Literal, Tuple
+import sys
 
 from openpectus.engine.commands import ContextEngineCommand, CommandArgs
 from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
@@ -181,7 +182,7 @@ class UnitOperationDefinitionBase:
             log_fatal("Error in command definition. " + str(vex))
 
         if fatal:
-            exit(1)
+            sys.exit(1)
 
     def validate_command_signatures(self):
         """ Validate the signatures of command exec functions"""
