@@ -73,6 +73,22 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             https://api.github.com/repos/Open-Pectus/Closed-Pectus/dispatches \
             -d '{"event_type":"dispatch-event"}'
+  
+  build_engine_manager_gui:
+    name: Build Engine Manager Gui
+    needs: [test_backend]
+    runs-on: ubuntu-latest    
+    steps:
+      - name: Trigger build of Engine-Manager-GUI repository
+        if: env.SHOULD_PUBLISH_IMAGE == 'true'
+        run: |
+          curl -L \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.CLOSED_PECTUS_REPOSITORY_ACCESS_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/Open-Pectus/Engine-Manager-GUI/dispatches \
+            -d '{"event_type":"dispatch-event"}'
 
   build_frontend:
     name: Build frontend
