@@ -146,7 +146,7 @@ class EngineRunner(EventListener):
 
     async def _disconnect_async(self, set_state_disconnected=True):
         if self.state == "Stopped":
-            return
+            pass
         elif self.state == "Failed":
             pass
         else:
