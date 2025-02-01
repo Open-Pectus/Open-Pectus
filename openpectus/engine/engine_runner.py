@@ -34,18 +34,19 @@ class AsyncTimer:
         self._timeout = timeout
         self._callback = callback
         self._task = asyncio.ensure_future(self._job())
-        self._running = False
 
     async def _job(self):
-        while self._running:
-            await asyncio.sleep(self._timeout)
-            await self._callback()
+        try:
+            while True:
+                await asyncio.sleep(self._timeout)
+                await self._callback()
+        except asyncio.CancelledError:
+            pass
 
     def start(self):
-        self._running = True
+        pass
 
     def stop(self):
-        self._running = False
         self._task.cancel()
 
 class EngineRunner(EventListener):
@@ -163,8 +164,11 @@ class EngineRunner(EventListener):
 
     async def shutdown(self):
         async with self._lock:
+            if self._state_task:
+                self._state_task.cancel()
             await self._set_state("Stopped")
             self._timer.stop()
+            await self._timer._task
             await self._disconnect_async(set_state_disconnected=False)
 
     def post(self, message: EM.EngineMessage) -> M.MessageBase:
