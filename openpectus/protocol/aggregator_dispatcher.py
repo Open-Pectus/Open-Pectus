@@ -46,6 +46,7 @@ class AggregatorDispatcher():
         self._disconnect_handler: EngineDisconnectHandler | None = None
         self.router = APIRouter(tags=["aggregator"])
         self._engine_id_channel_map: dict[str, RpcChannel] = {}
+        self._on_client_connect_tasks = set()
         # WebsockeRPCEndpoint has wrong types for its on_connect and on_disconnect.
         # It should be List[Callable[[RpcChannel], Awaitable[Any]]] instead of List[Coroutine]
         # See https://github.com/permitio/fastapi_websocket_rpc/issues/30
@@ -145,7 +146,9 @@ class AggregatorDispatcher():
 
     async def on_client_connect(self, channel: RpcChannel):
         channel.default_response_timeout = WEBSOCKET_RPC_TIMEOUT_SECS
-        asyncio.create_task(self._on_delayed_client_connect(channel))
+        task = asyncio.create_task(self._on_delayed_client_connect(channel))
+        self._on_client_connect_tasks.add(task)
+        task.add_done_callback(self._on_client_connect_tasks.discard)
 
     async def on_client_disconnect(self, channel: RpcChannel):
         engine_id: str | None = None
