@@ -170,3 +170,23 @@ class ErrorLog(ProtocolModel):
     @staticmethod
     def empty() -> ErrorLog:
         return ErrorLog(entries=[])
+
+
+
+class TagDefinition(ProtocolModel):
+    name: str
+    unit: str | None = None
+
+class CommandDefinition(ProtocolModel):
+    name: str
+    """ Command name, eg. 'Wait' """
+    validator: str | None
+    """ Serialization of validator or None for no validation"""
+
+class UodDefinition(ProtocolModel):
+    commands: list[CommandDefinition]
+    """ Uod commands """
+    system_commands: list[CommandDefinition]
+    """ System commands """
+    tags: list[TagDefinition]
+    """ System and uod tags """

@@ -17,12 +17,13 @@ file_handler.setFormatter(logging.Formatter('%(asctime)s %(name)s [%(levelname)s
 logging.basicConfig(format='%(name)s :: %(levelname)-8s :: %(message)s', level=logging.WARNING, handlers=[file_handler])
 
 logging.getLogger("openpectus.lsp.pylsp_plugin").setLevel(logging.DEBUG)
-logging.getLogger("openpectus.lsp.demo").setLevel(logging.DEBUG)
+logging.getLogger("openpectus.lsp.lsp_analysis").setLevel(logging.DEBUG)
 
 
 def get_args():
     parser = ArgumentParser("Start standalone Open Pevtus LSP server")
     parser.add_argument("--port", type=int, default=2087, help="Bind to this port")
+    parser.add_argument("--console_log", action=BooleanOptionalAction, default=False, help="Log to console as well as file")
     parser.add_argument("--watch_parent", action=BooleanOptionalAction, default=False,
                         help="Watch parent process and terminate with it")
     return parser.parse_args()
@@ -32,4 +33,7 @@ if __name__ == "__main__":
     print("Starting LSP server")
     # start lsp server process such that plugins can be debugged
     args = get_args()
+    if args.console_log:
+        logging.root.addHandler(logging.StreamHandler())
+
     start_ws_lang_server(args.port, args.watch_parent, PythonLSPServer)

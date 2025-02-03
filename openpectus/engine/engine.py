@@ -9,7 +9,8 @@ from openpectus.engine.internal_commands import (
     create_internal_command,
     get_running_internal_command,
     dispose_command_map,
-    register_commands
+    register_commands,
+    get_command_definitions
 )
 from openpectus.engine.hardware import HardwareLayerException, RegisterDirection
 from openpectus.engine.method_model import MethodModel
@@ -828,3 +829,6 @@ class Engine(InterpreterContext):
 
     def calculate_method_state(self) -> Mdl.MethodState:
         return self._method.calculate_method_state(self.interpreter.runtimeinfo)
+
+    def get_command_definitions(self) -> list[Mdl.CommandDefinition]:
+        return get_command_definitions()

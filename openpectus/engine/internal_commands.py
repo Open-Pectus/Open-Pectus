@@ -4,12 +4,15 @@ import logging
 from typing import Any, Callable, Generator
 from openpectus.engine.commands import EngineCommand
 from openpectus.engine.models import EngineCommandEnum
+from openpectus.lang.exec.argument_specification import ArgSpec
+from openpectus.lang.exec.uod import RegexNamedArgumentParser
+from openpectus.protocol.models import CommandDefinition
 
 
 logger = logging.getLogger(__name__)
 
-
 _command_map: dict[str, Callable[[], InternalEngineCommand]] = {}
+_command_argspec: dict[str, ArgSpec] = {}
 _command_instances: dict[str, InternalEngineCommand] = {}
 
 
@@ -32,9 +35,11 @@ def register_commands(engine):
             if cls_name == f"{command_name}EngineCommand":
                 cls = getattr(command_impl_module, cls_name, None)
                 if cls is not None:
-                    # register via a function here to obtain the right closure
+                    # register constructor via a function here to obtain the right closure
                     register(command_name, cls)
                     registered_classes.append(cls_name)
+                    # register the argument specification
+                    _command_argspec[command_name] = cls.argument_validation_spec
     logger.debug(f"Registered internal engine commands: {', '.join(registered_classes)}")
 
 def get_running_internal_command() -> InternalEngineCommand | None:
@@ -63,8 +68,24 @@ def dispose_command_map():
     _command_map.clear()
     _command_instances.clear()
 
+def get_command_definitions() -> list[CommandDefinition]:
+    """ Create and return the list of LSP command definitions that specify how command arguments
+    should be parsed. """
+    if len(_command_map) == 0:
+        raise ValueError("Command map not initialized")
+    command_definitions = []
+    for name, spec in _command_argspec.items():
+        if isinstance(spec, ArgSpec):
+            parser = RegexNamedArgumentParser(regex=spec.regex)
+            command_definitions.append(CommandDefinition(name=name, validator=parser.serialize()))
+        else:
+            command_definitions.append(CommandDefinition(name=name, validator=None))
+    return command_definitions
+
 
 class InternalEngineCommand(EngineCommand):
+    argument_validation_spec: ArgSpec = ArgSpec.NoCheck()
+
     def __init__(self, name: str) -> None:
         super().__init__(name)
         self._failed = False

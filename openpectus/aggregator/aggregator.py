@@ -144,12 +144,12 @@ class FromEngine:
         asyncio.create_task(self.publisher.publish_run_log_changed(engine_id))
         logger.info(f"Run {msg.run_id} stopped")
 
-
     def uod_info_changed(
             self,
             engine_id: str,
             readings: list[Mdl.ReadingInfo],
             commands: list[Mdl.CommandInfo],
+            uod_definition: Mdl.UodDefinition,
             plot_configuration: Mdl.PlotConfiguration,
             hardware_str: str,
             required_roles: set[str],
@@ -157,6 +157,7 @@ class FromEngine:
         try:
             self._engine_data_map[engine_id].readings = readings
             self._engine_data_map[engine_id].commands = commands
+            self._engine_data_map[engine_id].uod_definition = uod_definition
             self._engine_data_map[engine_id].plot_configuration = plot_configuration
             self._engine_data_map[engine_id].hardware_str = hardware_str
             self._engine_data_map[engine_id].required_roles = required_roles

@@ -47,9 +47,14 @@ class EngineMessageBuilder():
         self.engine = engine
 
     def create_uod_info(self) -> EM.UodInfoMsg:
+
+        uod_definition = self.engine.uod.create_lsp_definition()
+        uod_definition.system_commands = self.engine.get_command_definitions()
+
         return EM.UodInfoMsg(
             readings=[reading.as_reading_info() for reading in self.engine.uod.readings],
             commands=[command.as_command_info() for command in self.engine.uod.command_descriptions.values()],
+            uod_definition=uod_definition,
             plot_configuration=self.engine.uod.plot_configuration,
             hardware_str=str(self.engine.uod.hwl),
             required_roles=self.engine.uod.required_roles,

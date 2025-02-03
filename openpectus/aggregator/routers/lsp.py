@@ -1,6 +1,5 @@
 import logging
 
-from openpectus.aggregator import command_util
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
 import openpectus.aggregator.routers.dto as Dto
@@ -20,10 +19,6 @@ def get_registered_engine_data_or_fail(engine_id: str, agg: Aggregator) -> Mdl.E
     return engine_data
 
 
-# changes to do
-# - maybe rename to something more generic
-# - return uod command validation as "command argument spec data" so lsp server can validate using this data rather than a local uod
-# - include "command argument spec data" for internal engine commands
 @router.get('/uod/{engine_id}', response_model_exclude_none=True)
 def get_uod_info(
         engine_id: str,
@@ -32,6 +27,7 @@ def get_uod_info(
         ) -> Dto.UodDefinition:
     response.headers["Cache-Control"] = "no-store"
     engine_data = get_registered_engine_data_or_fail(engine_id, agg)
-    return Dto.UodDefinition(
-        name=engine_data.uod_name, filename=engine_data.uod_filename
-    )
+    uod_definition = engine_data.uod_definition
+    if uod_definition is None:
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND)
+    return Dto.UodDefinition.from_model(uod_definition)

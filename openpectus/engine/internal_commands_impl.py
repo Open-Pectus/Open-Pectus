@@ -5,14 +5,19 @@ from typing import Any
 
 from openpectus.engine.internal_commands import InternalEngineCommand
 from openpectus.engine.models import EngineCommandEnum, MethodStatusEnum, SystemStateEnum
+from openpectus.lang.exec.argument_specification import command_argument_none, command_argument_regex
 from openpectus.lang.exec.tags import SystemTagName
 from openpectus.engine.engine import Engine
+from openpectus.lang.exec.uod import RegexNumber, RegexNumberOptional
+
 
 
 logger = logging.getLogger(__name__)
 
 
 CANCEL_TIMEOUT_TICKS = 10
+REGEX_DURATION = RegexNumber(units=['s', 'min', 'h'], non_negative=True)
+REGEX_DURATION_OPTIONAL = RegexNumberOptional(units=['s', 'min', 'h'], non_negative=True)
 
 # Note:
 # classes in this file are auto-registered as internal engine commands during engine initialization, by
@@ -30,6 +35,7 @@ def get_duration_end(tick_time: float, time: float, unit: str) -> float:
     return tick_time + seconds
 
 
+@command_argument_none()
 class StartEngineCommand(InternalEngineCommand):
     def __init__(self, engine: Engine) -> None:
         super().__init__(EngineCommandEnum.START)
@@ -58,6 +64,7 @@ class StartEngineCommand(InternalEngineCommand):
             e.emitter.emit_on_start(run_id)
 
 
+@command_argument_regex(REGEX_DURATION_OPTIONAL)
 class PauseEngineCommand(InternalEngineCommand):
     """ Pause execution of commands and time. Put output tags into safe state.
 
@@ -94,6 +101,7 @@ class PauseEngineCommand(InternalEngineCommand):
             UnpauseEngineCommand(self.engine)._run()
 
 
+@command_argument_none()
 class UnpauseEngineCommand(InternalEngineCommand):
     def __init__(self, engine: Engine) -> None:
         super().__init__(EngineCommandEnum.UNPAUSE)
@@ -123,6 +131,7 @@ class UnpauseEngineCommand(InternalEngineCommand):
         e._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.OK, e._tick_time)
 
 
+@command_argument_regex(REGEX_DURATION_OPTIONAL)
 class HoldEngineCommand(InternalEngineCommand):
     """ Hold execution of commands and time, keeping ouput tags in their current state.
 
@@ -159,6 +168,7 @@ class HoldEngineCommand(InternalEngineCommand):
             UnholdEngineCommand(self.engine)._run()
 
 
+@command_argument_none()
 class UnholdEngineCommand(InternalEngineCommand):
     def __init__(self, engine: Engine) -> None:
         super().__init__(EngineCommandEnum.UNHOLD)
@@ -171,6 +181,7 @@ class UnholdEngineCommand(InternalEngineCommand):
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
 
 
+@command_argument_none()
 class StopEngineCommand(InternalEngineCommand):
     def __init__(self, engine: Engine) -> None:
         super().__init__(EngineCommandEnum.STOP)
@@ -209,6 +220,7 @@ class StopEngineCommand(InternalEngineCommand):
             e._stop_interpreter()
 
 
+@command_argument_regex(REGEX_DURATION)
 class WaitEngineCommand(InternalEngineCommand):
     """ Pause execution of commands for the specified duration, keeping time running and output tags in their current state.
 
@@ -245,6 +257,8 @@ class WaitEngineCommand(InternalEngineCommand):
     def force(self):
         self.forced = True
 
+
+@command_argument_none()
 class RestartEngineCommand(InternalEngineCommand):
     def __init__(self, engine: Engine) -> None:
         super().__init__(EngineCommandEnum.RESTART)

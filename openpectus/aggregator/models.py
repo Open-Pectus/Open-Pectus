@@ -29,6 +29,7 @@ ErrorLogEntry = Mdl.ErrorLogEntry
 ErrorLog = Mdl.ErrorLog
 SystemStateEnum = Mdl.SystemStateEnum
 TagDirection = Mdl.TagDirection
+UodDefinition = Mdl.UodDefinition
 
 
 class AggregatedErrorLogEntry(BaseModel):
@@ -168,6 +169,7 @@ class EngineData():
         """ Contains the uod commands that are not related to a process value. """
         self.tags_info: TagsInfo = TagsInfo(map={})
         """ Contains the most current tag values. """
+        self.uod_definition: Mdl.UodDefinition | None = None
         self.control_state: ControlState = ControlState(is_running=False, is_holding=False, is_paused=False)
         self.method: Method = Method.empty()
         self._run_data: RunData | None = None

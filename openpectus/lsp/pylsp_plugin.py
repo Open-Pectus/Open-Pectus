@@ -8,7 +8,7 @@ from pylsp import hookimpl
 from pylsp.config.config import Config
 from pylsp.workspace import Document, Workspace
 
-from openpectus.lsp import demo
+from openpectus.lsp import lsp_analysis
 
 
 # logging must be setup already - either by lsp/main or by the pylsp command
@@ -30,12 +30,12 @@ def pylsp_settings(config: Config) -> dict[str, dict[str, dict[str, Any]]]:
     logger.info("pylsp_settings")
     # logger.info(f"config provided: {as_json(config)}")
     
-    logger.info("textDocument capabilities: " + as_json(config.capabilities["textDocument"]))
+    # logger.info("textDocument capabilities: " + as_json(config.capabilities["textDocument"]))
     # config.capabilities["textDocument"]["codeLens"] = None
     # config.capabilities["workspace"].pop("codeLens", None)
     # config.capabilities["textDocument"].pop("codeLens", None)
 
-    logger.info("textDocument capabilities modified: " + as_json(config.capabilities["textDocument"]))
+    # logger.info("textDocument capabilities modified: " + as_json(config.capabilities["textDocument"]))
 
     return {
         "plugins": {
@@ -57,11 +57,11 @@ def pylsp_settings(config: Config) -> dict[str, dict[str, dict[str, Any]]]:
         }
     }
 
-@hookimpl
-def pylsp_initialize(config: Config, workspace: Workspace):
-    logger.info("pylsp_initialize")
-    logger.debug("config: " + as_json(config))
-    logger.debug("workspace:" + as_json(workspace))
+# @hookimpl
+# async def pylsp_initialize(config: Config, workspace: Workspace):
+#     logger.info("pylsp_initialize")
+#     logger.debug("config: " + as_json(config))
+#     logger.debug("workspace:" + as_json(workspace))
 
 
 @hookimpl
@@ -77,23 +77,26 @@ def pylsp_document_did_open(config: Config, workspace: Workspace, document: Docu
     logger.info(f"document: {as_json(document)}")
 
 
-@hookimpl
-def pylsp_document_did_save(config, workspace, document):
-    logger.info("pylsp_document_did_save")
-    # logger.debug(f"config: {as_json(config)}")
-    # logger.debug(f"workspace: {as_json(workspace)}")
-    # logger.info(f"document: {as_json(document)}")
+# @hookimpl
+# def pylsp_document_did_save(config, workspace, document):
+#     logger.info("pylsp_document_did_save")
+#     # logger.debug(f"config: {as_json(config)}")
+#     # logger.debug(f"workspace: {as_json(workspace)}")
+#     # logger.info(f"document: {as_json(document)}")
 
 
 @hookimpl
-def pylsp_lint(config: Config, workspace: Workspace, document: Document, is_saved: bool) -> list[demo.DiagnosticsItem]:
+def pylsp_lint(config: Config, workspace: Workspace, document: Document, is_saved: bool) \
+        -> list[lsp_analysis.DiagnosticsItem]:
     logger.debug("pylsp_lint")
     logger.debug(f"document: {as_json(document)}")
     logger.debug("Document source:'\n" + document.source + "\n'")
-
-
+    # TODO get engine_id from document.uri, eg. document:
+    # {"uri": "file:///workspace/model53.json", "version": 104, "filename": "model53.json", "dot_path": "model53"}
+    engine_id = "MIAWLT-1645-MPO_DemoUod"
     try:
-        diagnostics = demo.lint_example(document)
+        diagnostics = lsp_analysis.lint(document, engine_id)
+        #diagnostics = []
         logger.debug(f"Lint ok, items: {len(diagnostics)}")
         return diagnostics
     except Exception:

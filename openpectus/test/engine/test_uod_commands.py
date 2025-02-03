@@ -168,3 +168,21 @@ class TestCommandDescriptions(unittest.TestCase):
         self.assertEqual("Categorical: 1+3", pcode_examples[6])
         self.assertEqual("Categorical: 2+3", pcode_examples[7])
         self.assertEqual("Categorical: 1+2+3", pcode_examples[8])
+
+    def test_create_lsp_definition_w_regex_command(self):
+        def exec_Vel(cmd: UodCommand, number, number_unit):
+            pass
+
+        uod = (create_minimal_builder()
+               .with_tag(ReadingTag("Flow", unit="L/min"))
+               .with_command_regex_arguments("Flow", RegexNumber(units=["L/h", "L/min"]), exec_Vel)
+               ).build()
+
+        uod.system_tags = create_system_tags()
+        uod.validate_configuration()
+        uod.build_commands()
+
+        lsp_def = uod.create_lsp_definition()
+        cmd_def = next((c for c in lsp_def.commands), None)
+        assert cmd_def is not None
+        self.assertEqual("Flow", cmd_def.name)

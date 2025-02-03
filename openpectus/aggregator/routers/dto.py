@@ -412,8 +412,19 @@ class TagDefinition(Dto):
 
 class CommandDefinition(Dto):
     name: str
-    # argument_types: list[str] = []
+    validator: str | None = None
 
 class UodDefinition(Dto):
-    name: str
-    filename: str
+    # name: str
+    # filename: str
+    commands: list[CommandDefinition]
+    system_commands: list[CommandDefinition]
+    tags: list[TagDefinition]
+
+    @staticmethod
+    def from_model(model: Mdl.UodDefinition) -> UodDefinition:
+        return UodDefinition(
+            commands=[CommandDefinition(name=c.name, validator=c.validator) for c in model.commands],
+            system_commands=[CommandDefinition(name=c.name, validator=c.validator) for c in model.system_commands],
+            tags=[TagDefinition(name=t.name, unit=t.unit) for t in model.tags]
+        )
