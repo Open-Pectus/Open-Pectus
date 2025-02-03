@@ -175,9 +175,9 @@ class EngineRunner(EventListener):
         states_to_post: list[RecoverState] = ["Connected", "Reconnected"]
         assert self.state in states_to_post, f"Invalid Post state for message: {message.ident}"
 
-        task = asyncio.create_task(self._dispatcher.send_async(message), name="engine.engine_runner.post")
+        task = asyncio.run_coroutine_threadsafe(self._dispatcher.send_async(message), self._loop)
         while not task.done():
-            time.sleep(0.2)
+            time.sleep(0.01)
         ex = task.exception()
         if ex is None:
             return M.SuccessMessage()
