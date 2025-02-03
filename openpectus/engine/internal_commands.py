@@ -60,7 +60,7 @@ class InternalCommands:
         if command_name in self._command_instances.keys():
             del self._command_instances[command_name]
         else:
-            logger.warning(f"No command '{command_name}' found to dispose. Actual commands: {str(_command_instances.keys())}")
+            logger.warning(f"No command '{command_name}' found to dispose. Actual commands: {str(self._command_instances.keys())}")
 
 
 class InternalEngineCommand(EngineCommand):
