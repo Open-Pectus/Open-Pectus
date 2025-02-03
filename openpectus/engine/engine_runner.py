@@ -23,7 +23,8 @@ RecoverState = Literal[
     "Connected",
     "Failed",
     "Disconnected", "Reconnecting", "CatchingUp", "Reconnected",
-    "Stopped"
+    "Stopped",
+    "ShutdownComplete"
 ]
 
 AsyncConnectionCallback = Callable[[], Awaitable[None]]
@@ -33,7 +34,7 @@ class AsyncTimer:
     def __init__(self, timeout, callback):
         self._timeout = timeout
         self._callback = callback
-        self._task = asyncio.ensure_future(self._job())
+        self._task = asyncio.create_task(self._job(), name="engine.engine_runner.AsyncTimer")
 
     async def _job(self):
         try:
@@ -41,7 +42,7 @@ class AsyncTimer:
                 await asyncio.sleep(self._timeout)
                 await self._callback()
         except asyncio.CancelledError:
-            pass
+            logger.debug("Cancelled AsyncTimer")
 
     def start(self):
         pass
@@ -112,8 +113,10 @@ class EngineRunner(EventListener):
     async def run(self):
         self._timer.start()
 
-        while self.state != "Stopped":
+        while self.state != "ShutdownComplete":
             await asyncio.sleep(0.2)
+        self._timer.stop()
+        await self._timer._task
 
     async def _connect_async(self):
         if self.state == "Stopped":
@@ -163,20 +166,16 @@ class EngineRunner(EventListener):
                 await self._set_state("Disconnected")
 
     async def shutdown(self):
-        async with self._lock:
-            if self._state_task:
-                self._state_task.cancel()
-            await self._set_state("Stopped")
-            self._timer.stop()
-            await self._timer._task
-            await self._disconnect_async(set_state_disconnected=False)
+        await self._set_state("Stopped")
+        await self._disconnect_async(set_state_disconnected=False)
+        await self._set_state("ShutdownComplete")
 
     def post(self, message: EM.EngineMessage) -> M.MessageBase:
         # send sync message using self._loop
         states_to_post: list[RecoverState] = ["Connected", "Reconnected"]
         assert self.state in states_to_post, f"Invalid Post state for message: {message.ident}"
 
-        task = self._loop.create_task(self._dispatcher.send_async(message))
+        task = asyncio.create_task(self._dispatcher.send_async(message), name="engine.engine_runner.post")
         while not task.done():
             time.sleep(0.2)
         ex = task.exception()
@@ -255,6 +254,7 @@ class EngineRunner(EventListener):
             else:
                 logger.debug("Cancelling state task " + self._state_task.get_name())
                 self._state_task.cancel()
+                await self._state_task  # Await cancellation
                 self._state_task = None
 
         if state == "Connected":
@@ -287,7 +287,6 @@ class EngineRunner(EventListener):
 
             for message in message_batch:
                 await self._post_async(message)
-                await asyncio.sleep(0.3)
             logger.debug("Done sending batch")
         else:
             logger.info("All caught up sending buffered messages")
@@ -320,18 +319,20 @@ class EngineRunner(EventListener):
 
         async def buffer_messages():
             logger.info("Started buffer_messages loop")
-            while True:
-                if self.state == "Stopped":
-                    return
-                for msg in [
-                    self._message_builder.create_tag_updates_msg(),
-                    self._message_builder.create_method_state_msg(),
-                    self._message_builder.create_error_log_msg(),
-                ]:
-                    if msg is not None:
-                        self._buffer_message(msg)
-                for _ in range(5):
-                    await asyncio.sleep(1)
+            try:
+                while True:
+                    if self.state == "Stopped":
+                        return
+                    for msg in [
+                        self._message_builder.create_tag_updates_msg(),
+                        self._message_builder.create_method_state_msg(),
+                        self._message_builder.create_error_log_msg(),
+                    ]:
+                        if msg is not None:
+                            self._buffer_message(msg)
+                    await asyncio.sleep(5)
+            except asyncio.CancelledError:
+                logger.debug("Cancelled _state_task")
 
         # need to run long running job in spawn task
         if self._state_task is None:
@@ -364,31 +365,33 @@ class EngineRunner(EventListener):
 
         async def send_messages():
             logger.info("Started steady-state sending loop")
-            await self._post_async(self._message_builder.create_uod_info())
-            await self._post_async(self._message_builder.create_tag_updates_snapshot_msg())
-            await asyncio.sleep(1)
-            while True:
-                messages = []
-                try:
-                    messages = [
-                        self._message_builder.create_control_state_msg(),
-                        self._message_builder.create_method_state_msg(),
-                        self._message_builder.create_error_log_msg(),
-                        self._message_builder.create_tag_updates_msg(),
-                    ]
-                    if self.run_id is not None:
-                        messages.append(self._message_builder.create_runlog_msg(self.run_id))
-                except Exception:
-                    logger.error("Exception occurred building messages", exc_info=True)
-                    await asyncio.sleep(1)
+            try:
+                await self._post_async(self._message_builder.create_uod_info())
+                await self._post_async(self._message_builder.create_tag_updates_snapshot_msg())
+                while True:
+                    messages = []
+                    try:
+                        messages = [
+                            self._message_builder.create_control_state_msg(),
+                            self._message_builder.create_method_state_msg(),
+                            self._message_builder.create_error_log_msg(),
+                            self._message_builder.create_tag_updates_msg(),
+                        ]
+                        if self.run_id is not None:
+                            messages.append(self._message_builder.create_runlog_msg(self.run_id))
+                    except Exception:
+                        logger.error("Exception occurred building messages", exc_info=True)
+    
+                    for msg in messages:
+                        if msg is not None:
+                            await self._post_async(msg)
+            except asyncio.CancelledError:
+                logger.info("Cancelled _state_task")
+            except Exception:
+                logger.error("Exception interrupted _state_task")
 
-                for msg in messages:
-                    if msg is not None:
-                        await self._post_async(msg)
-                await asyncio.sleep(0.3)
-
-        # need to run long running job in spawn task
-        self._state_task = asyncio.create_task(send_messages(), name="send_messages")
+        # Send message in concurrent task
+        self._state_task = asyncio.create_task(send_messages(), name="engine.engine_runner.on_steady_state.send_messages")
 
     def __str__(self) -> str:
         return f"EngineDispatcherErrorRecoveryDecorator(state: {self.state})"
