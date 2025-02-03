@@ -381,7 +381,7 @@ class EngineRunner(EventListener):
                             messages.append(self._message_builder.create_runlog_msg(self.run_id))
                     except Exception:
                         logger.error("Exception occurred building messages", exc_info=True)
-    
+
                     for msg in messages:
                         if msg is not None:
                             await self._post_async(msg)
