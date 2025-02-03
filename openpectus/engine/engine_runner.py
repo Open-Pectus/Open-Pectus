@@ -254,7 +254,10 @@ class EngineRunner(EventListener):
             else:
                 logger.debug("Cancelling state task " + self._state_task.get_name())
                 self._state_task.cancel()
-                await self._state_task  # Await cancellation
+                try:
+                    await self._state_task  # Await cancellation
+                except asyncio.CancelledError:
+                    pass
                 self._state_task = None
 
         if state == "Connected":
@@ -385,6 +388,7 @@ class EngineRunner(EventListener):
                     for msg in messages:
                         if msg is not None:
                             await self._post_async(msg)
+                    await asyncio.sleep(0.3)
             except asyncio.CancelledError:
                 logger.info("Cancelled _state_task")
             except Exception:
