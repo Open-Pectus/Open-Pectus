@@ -49,6 +49,19 @@ class ConsoleAppRunner():
 
 port = "8727"
 
+def get_demo_uod_path() -> str:
+    uod_file_path = os.path.join(
+        os.path.dirname(  # openpectus
+            os.path.dirname(  # openpectus/test
+                os.path.dirname(__file__)  # openpectus/test/engine
+            )
+        ),
+        'engine',  # openpectus/engine
+        'configuration',  # openpectus/engine/configuration
+        'demo_uod.py',  # openpectus/engine/configuration/demo_uod.py
+    )
+    return uod_file_path
+
 class TestStartupConnection(unittest.TestCase):
 
     def assertHasOutput(self, runner: ConsoleAppRunner, expected_text: str, timeout_secs=5):
@@ -67,7 +80,7 @@ class TestStartupConnection(unittest.TestCase):
 
     def test_engine_can_connect_to_running_aggregator(self):
         with ConsoleAppRunner("pectus-aggregator", ["--port", port]) as aggregator, \
-             ConsoleAppRunner("pectus-engine", ["--aggregator_port", port]) as engine:
+             ConsoleAppRunner("pectus-engine", ["--aggregator_port", port, "--uod", get_demo_uod_path()]) as engine:
 
             aggregator.start()
             self.assertHasOutput(aggregator, "Starting Open Pectus Aggregator")
@@ -82,7 +95,7 @@ class TestStartupConnection(unittest.TestCase):
 
     def test_engine_can_connect_to_aggregator_started_after_engine(self):
         with ConsoleAppRunner("pectus-aggregator", ["--port", port]) as aggregator, \
-             ConsoleAppRunner("pectus-engine", ["--aggregator_port", port]) as engine:
+             ConsoleAppRunner("pectus-engine", ["--aggregator_port", port, "--uod", get_demo_uod_path()]) as engine:
 
             engine.start()
             time.sleep(5)
