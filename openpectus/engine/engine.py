@@ -337,13 +337,13 @@ class Engine(InterpreterContext):
 
         # Process Time  - 0 at start, increments when System State is Run
         process_time = self._system_tags[SystemTagName.PROCESS_TIME]
-        process_time_value = process_time.as_number()
+        process_time_value = process_time.as_float()
         if sys_state.get_value() == SystemStateEnum.Running:
             process_time.set_value(process_time_value + increment_time, tick_time)
 
         # Run Time      - 0 at start, increments when System State is not Stopped
         run_time = self._system_tags[SystemTagName.RUN_TIME]
-        run_time_value = run_time.as_number()
+        run_time_value = run_time.as_float()
         if sys_state.get_value() not in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
             run_time.set_value(run_time_value + increment_time, tick_time)
 
