@@ -3,7 +3,7 @@ import logging
 import time
 from typing import Any
 
-from openpectus.engine.internal_commands import InternalEngineCommand
+from openpectus.engine.internal_commands import InternalCommands, InternalEngineCommand
 from openpectus.engine.models import EngineCommandEnum, MethodStatusEnum, SystemStateEnum
 from openpectus.lang.exec.tags import SystemTagName
 from openpectus.engine.engine import Engine
@@ -31,8 +31,8 @@ def get_duration_end(tick_time: float, time: float, unit: str) -> float:
 
 
 class StartEngineCommand(InternalEngineCommand):
-    def __init__(self, engine: Engine, *args) -> None:
-        super().__init__(EngineCommandEnum.START, *args)
+    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
+        super().__init__(EngineCommandEnum.START, internal_commands_obj)
         self.engine = engine
 
     def _run(self):
@@ -63,8 +63,8 @@ class PauseEngineCommand(InternalEngineCommand):
 
     See also Hold and Wait.
     """
-    def __init__(self, engine: Engine, *args) -> None:
-        super().__init__(EngineCommandEnum.PAUSE, *args)
+    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
+        super().__init__(EngineCommandEnum.PAUSE, internal_commands_obj)
         self.engine = engine
         self.duration_end_time : float | None = None
 
@@ -91,12 +91,12 @@ class PauseEngineCommand(InternalEngineCommand):
             while self.engine._tick_time < self.duration_end_time:
                 yield
             logger.debug("Resuming using Unpause")
-            UnpauseEngineCommand(self.engine)._run()
+            UnpauseEngineCommand(self.engine, self.internal_commands)._run()
 
 
 class UnpauseEngineCommand(InternalEngineCommand):
-    def __init__(self, engine: Engine, *args) -> None:
-        super().__init__(EngineCommandEnum.UNPAUSE, *args)
+    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
+        super().__init__(EngineCommandEnum.UNPAUSE, internal_commands_obj)
         self.engine = engine
 
     def _run(self):
@@ -128,8 +128,8 @@ class HoldEngineCommand(InternalEngineCommand):
 
     See also Pause and Wait.
     """
-    def __init__(self, engine: Engine, *args) -> None:
-        super().__init__(EngineCommandEnum.HOLD, *args)
+    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
+        super().__init__(EngineCommandEnum.HOLD, internal_commands_obj)
         self.engine = engine
         self.duration_end_time : float | None = None
 
@@ -156,12 +156,12 @@ class HoldEngineCommand(InternalEngineCommand):
             while self.engine._tick_time < self.duration_end_time:
                 yield
             logger.debug("Resuming using Unhold")
-            UnholdEngineCommand(self.engine)._run()
+            UnholdEngineCommand(self.engine, self.internal_commands)._run()
 
 
 class UnholdEngineCommand(InternalEngineCommand):
-    def __init__(self, engine: Engine, *args) -> None:
-        super().__init__(EngineCommandEnum.UNHOLD, *args)
+    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
+        super().__init__(EngineCommandEnum.UNHOLD, internal_commands_obj)
         self.engine = engine
 
     def _run(self):
@@ -172,8 +172,8 @@ class UnholdEngineCommand(InternalEngineCommand):
 
 
 class StopEngineCommand(InternalEngineCommand):
-    def __init__(self, engine: Engine, *args) -> None:
-        super().__init__(EngineCommandEnum.STOP, *args)
+    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
+        super().__init__(EngineCommandEnum.STOP, internal_commands_obj)
         self.engine = engine
 
     def _run(self):
@@ -214,8 +214,8 @@ class WaitEngineCommand(InternalEngineCommand):
 
     See also Pause and Hold.
     """
-    def __init__(self, engine: Engine, *args) -> None:
-        super().__init__(EngineCommandEnum.WAIT, *args)
+    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
+        super().__init__(EngineCommandEnum.WAIT, internal_commands_obj)
         self.engine = engine
         self.forced = False
 
@@ -246,8 +246,8 @@ class WaitEngineCommand(InternalEngineCommand):
         self.forced = True
 
 class RestartEngineCommand(InternalEngineCommand):
-    def __init__(self, engine: Engine, *args) -> None:
-        super().__init__(EngineCommandEnum.RESTART, *args)
+    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
+        super().__init__(EngineCommandEnum.RESTART, internal_commands_obj)
         self.engine = engine
 
     def _run(self):
@@ -302,8 +302,8 @@ class RestartEngineCommand(InternalEngineCommand):
 
 
 class InfoEngineCommand(InternalEngineCommand):
-    def __init__(self, engine: Engine, *args) -> None:
-        super().__init__(EngineCommandEnum.INFO, *args)
+    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
+        super().__init__(EngineCommandEnum.INFO, internal_commands_obj)
 
     def _run(self):
         msg = self.kvargs.get("unparsed_args")
@@ -311,8 +311,8 @@ class InfoEngineCommand(InternalEngineCommand):
 
 
 class WarningEngineCommand(InternalEngineCommand):
-    def __init__(self, engine: Engine, *args) -> None:
-        super().__init__(EngineCommandEnum.WARNING, *args)
+    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
+        super().__init__(EngineCommandEnum.WARNING, internal_commands_obj)
 
     def _run(self):
         msg = self.kvargs.get("unparsed_args")
@@ -320,8 +320,8 @@ class WarningEngineCommand(InternalEngineCommand):
 
 
 class ErrorEngineCommand(InternalEngineCommand):
-    def __init__(self, engine: Engine, *args) -> None:
-        super().__init__(EngineCommandEnum.ERROR, *args)
+    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
+        super().__init__(EngineCommandEnum.ERROR, internal_commands_obj)
 
     def _run(self):
         msg = self.kvargs.get("unparsed_args")

@@ -21,7 +21,6 @@ class InternalCommands:
                              "Engine was probably not cleaned up with .cleanup()")
 
         def register(command_name: str, cls):
-            print(command_name, cls, self)
             self._command_map[command_name] = lambda : cls(engine, self)
             logger.debug(f"Registered command '{command_name}' with factory '{str(cls)}'")
 
@@ -60,7 +59,8 @@ class InternalCommands:
         if command_name in self._command_instances.keys():
             del self._command_instances[command_name]
         else:
-            logger.warning(f"No command '{command_name}' found to dispose. Actual commands: {str(self._command_instances.keys())}")
+            logger.warning(f"No command '{command_name}' found to dispose. " +
+                           f"Actual commands: {str(self._command_instances.keys())}")
 
 
 class InternalEngineCommand(EngineCommand):
