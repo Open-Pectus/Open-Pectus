@@ -132,7 +132,7 @@ class AggregatorDispatcher():
                 await channel.close()
                 return
 
-            logger.info(f"Engine '{engine_id}' connected")
+            logger.info(f"Engine connected: '{engine_id}'")
             self._engine_id_channel_map[engine_id] = channel
 
             if self._connect_handler is not None:

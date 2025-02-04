@@ -97,14 +97,12 @@ class EngineRunner(EventListener):
         assert self.run_id is not None
         run_id = self.run_id
         super().on_stop()
-
-        if True or self.state == "Connected" or self.state == "Reconnected":
-            msg = self._message_builder.create_run_stopped_msg(run_id)
-            try:
-                self.post(msg)
-            except Exception:
-                logger.warning("Failed to send RunStoppedMsg, adding to buffer")
-                self._buffer_message(msg)
+        msg = self._message_builder.create_run_stopped_msg(run_id)
+        try:
+            self.post(msg)
+        except Exception:
+            logger.warning("Failed to send RunStoppedMsg, adding to buffer")
+            self._buffer_message(msg)
 
     @property
     def state(self) -> RecoverState:
@@ -398,4 +396,4 @@ class EngineRunner(EventListener):
         self._state_task = asyncio.create_task(send_messages(), name="engine.engine_runner.on_steady_state.send_messages")
 
     def __str__(self) -> str:
-        return f"EngineDispatcherErrorRecoveryDecorator(state: {self.state})"
+        return f"EngineRunner(state: {self.state})"
