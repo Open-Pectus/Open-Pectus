@@ -74,7 +74,7 @@ class InternalCommandsRegistry:
             del self._command_instances[command_name]
         else:
             logger.warning(f"No command '{command_name}' found to dispose. " +
-                           f"Actual commands: {str(self._command_instances.keys())}")
+                           f"Actual commands: {str(list(self._command_instances.keys()))}")
 
     def _finalize_instances(self):
         """ Finalize and dispose all command instances. """
@@ -113,10 +113,6 @@ class InternalEngineCommand(EngineCommand):
 
     def set_complete(self):
         super().set_complete()
-        # we don't need finalize for internal commands so we
-        # just automatically progress to its end state.
-        # This avoids wasting a tick for these commands and makes testing simpler
-        self.finalize()
 
     def finalize(self):
         super().finalize()
@@ -141,14 +137,14 @@ class InternalEngineCommand(EngineCommand):
 
             if self.run_result is None:
                 self.set_complete()
-                self._registry.dispose_command(self.name)
+                self.finalize()
             else:
                 try:
                     next(self.run_result)
                 except StopIteration:
                     self.set_complete()
-                    self._registry.dispose_command(self.name)
+                    self.finalize()
                 except Exception:
                     self.fail()
-                    self._registry.dispose_command(self.name)
+                    self.finalize()
                     logger.error(f"Command '{self.name}' failed", exc_info=True)

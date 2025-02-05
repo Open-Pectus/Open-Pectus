@@ -191,7 +191,7 @@ class StopEngineCommand(InternalEngineCommand):
             timeout_at_tick = e._tick_number + CANCEL_TIMEOUT_TICKS
             while e.uod.has_any_command_instances():
                 if e._tick_number > timeout_at_tick:
-                    logger.warning("Time out waiting for uod commands to cancel")
+                    logger.warning("Timeout waiting for uod commands to cancel")
                     break
                 yield
             e._finalize_uod_commands()
@@ -270,7 +270,7 @@ class RestartEngineCommand(InternalEngineCommand):
             timeout_at_tick = e._tick_number + CANCEL_TIMEOUT_TICKS
             while e.uod.has_any_command_instances():
                 if e._tick_number > timeout_at_tick:
-                    logger.warning("Time out waiting for uod commands to cancel")
+                    logger.warning("Timeout waiting for uod commands to cancel")
                     break
                 yield
             e._finalize_uod_commands()
