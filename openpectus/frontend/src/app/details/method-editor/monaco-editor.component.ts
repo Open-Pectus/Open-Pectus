@@ -1,13 +1,14 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, OnDestroy, ViewChild } from '@angular/core';
-import '@codingame/monaco-vscode-json-default-extension';
+// import '@codingame/monaco-vscode-json-default-extension';
 // import '@codingame/monaco-vscode-theme-defaults-default-extension';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { editor as MonacoEditor, KeyCode, Range } from 'monaco-editor';
 import { MonacoEditorLanguageClientWrapper, WrapperConfig } from 'monaco-editor-wrapper';
-// import { useWorkerFactory } from 'monaco-editor-wrapper/workerFactory';
 import { Logger } from 'monaco-languageclient/tools';
-import { initEnhancedMonacoEnvironment } from 'monaco-languageclient/vscode/services';
+// import { useWorkerFactory } from 'monaco-editor-wrapper/workerFactory';
+import { useWorkerFactory } from 'monaco-languageclient/workerFactory';
+// import { initEnhancedMonacoEnvironment } from 'monaco-languageclient/vscode/services';
 import { combineLatest, filter, firstValueFrom, Observable, Subject, takeUntil } from 'rxjs';
 import { LogLevel } from 'vscode';
 import { MethodLine } from '../../api';
@@ -49,28 +50,30 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   // adapted from https://github.com/TypeFox/monaco-languageclient/blob/main/packages/wrapper/src/workerFactory.ts
   // because using it directly causes compile errors for tsWorker, for some reason
   configureMonacoWorkers(logger?: Logger) {
-    const envEnhanced = initEnhancedMonacoEnvironment();
-    envEnhanced.getWorker = (moduleId: string, label: string) => {
-      switch(label) {
-        case 'TextEditorWorker':
-          return new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), {type: 'module'});
-        case 'TextMateWorker':
-          return new Worker(new URL('@codingame/monaco-vscode-textmate-service-override/worker', import.meta.url), {type: 'module'});
-        default:
-          throw new Error(`Unimplemented worker ${label} (${moduleId})`);
-      }
-    };
-    // useWorkerFactory({
-    //   workerOverrides: {
-    //     ignoreMapping: true,
-    //     workerLoaders: {
-    //       TextEditorWorker: () => new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), {type: 'module'}),
-    //       TextMateWorker: () => new Worker(new URL('@codingame/monaco-vscode-textmate-service-override/worker', import.meta.url),
-    //         {type: 'module'}),
-    //     },
-    //   },
-    //   logger,
-    // });
+    // const envEnhanced = initEnhancedMonacoEnvironment();
+    // envEnhanced.getWorker = (moduleId: string, label: string) => {
+    //   switch(label) {
+    //     case 'TextEditorWorker':
+    //       return new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), {type: 'module'});
+    //     case 'TextMateWorker':
+    //       return new Worker(new URL('@codingame/monaco-vscode-textmate-service-override/worker', import.meta.url), {type: 'module'});
+    //     default:
+    //       throw new Error(`Unimplemented worker ${label} (${moduleId})`);
+    //   }
+    // };
+    useWorkerFactory({
+      workerLoaders: {
+        'TextEditorWorker': () => new Worker(new URL('@codingame/monaco-vscode-editor-api/esm/vs/editor/editor.worker.js', import.meta.url),
+          {type: 'module'}),
+        'TextMateWorker': () => new Worker(new URL('@codingame/monaco-vscode-textmate-service-override/worker', import.meta.url),
+          {type: 'module'}),
+        OutputLinkDetectionWorker: undefined,
+        LanguageDetectionWorker: undefined,
+        NotebookEditorWorker: undefined,
+        LocalFileSearchWorker: undefined,
+      },
+      logger,
+    });
   };
 
   async ngAfterViewInit() {
