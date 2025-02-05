@@ -62,7 +62,7 @@ jobs:
         shell: bash
         run: |
           echo "REPORT_FILE=${REPORT_OUTPUT}" >> "$GITHUB_ENV"
-          pytest -n auto --md-report --md-report-flavor gfm --md-report-exclude-outcomes passed skipped xpassed --md-report-output "$REPORT_OUTPUT"
+          pytest -n auto --md-report --md-report-flavor gfm --md-report-exclude-outcomes passed skipped xpassed --md-report-output "$REPORT_OUTPUT" openpectus/test
       - name: Render the test report to the PR when tests fail
         uses: marocchino/sticky-pull-request-comment@v2
         if: failure()
