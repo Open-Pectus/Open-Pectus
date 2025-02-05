@@ -18,6 +18,8 @@ global_list = []
 
 
 class Test_Hardware(HardwareLayerBase):
+    __test__ = False
+
     """ Test hardware class which logs all interactions to a global list """
     def __init__(self, identity: int) -> None:
         super().__init__()
