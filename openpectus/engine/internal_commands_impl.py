@@ -3,7 +3,7 @@ import logging
 import time
 from typing import Any
 
-from openpectus.engine.internal_commands import InternalCommands, InternalEngineCommand
+from openpectus.engine.internal_commands import InternalCommandsRegistry, InternalEngineCommand
 from openpectus.engine.models import EngineCommandEnum, MethodStatusEnum, SystemStateEnum
 from openpectus.lang.exec.tags import SystemTagName
 from openpectus.engine.engine import Engine
@@ -14,9 +14,8 @@ logger = logging.getLogger(__name__)
 
 CANCEL_TIMEOUT_TICKS = 10
 
-# Note:
-# classes in this file are auto-registered as internal engine commands during engine initialization, by
-# openpectus.engine.internal_commands.register_commands()
+# Note: Classes in this module are auto-registered as internal engine commands by
+# InternalCommandsRegistry during engine initialization.
 
 def get_duration_end(tick_time: float, time: float, unit: str) -> float:
     if unit not in ['s', 'min', 'h']:
@@ -31,8 +30,8 @@ def get_duration_end(tick_time: float, time: float, unit: str) -> float:
 
 
 class StartEngineCommand(InternalEngineCommand):
-    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
-        super().__init__(EngineCommandEnum.START, internal_commands_obj)
+    def __init__(self, engine: Engine, registry: InternalCommandsRegistry) -> None:
+        super().__init__(EngineCommandEnum.START, registry)
         self.engine = engine
 
     def _run(self):
@@ -63,8 +62,8 @@ class PauseEngineCommand(InternalEngineCommand):
 
     See also Hold and Wait.
     """
-    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
-        super().__init__(EngineCommandEnum.PAUSE, internal_commands_obj)
+    def __init__(self, engine: Engine, registry: InternalCommandsRegistry) -> None:
+        super().__init__(EngineCommandEnum.PAUSE, registry)
         self.engine = engine
         self.duration_end_time : float | None = None
 
@@ -91,12 +90,12 @@ class PauseEngineCommand(InternalEngineCommand):
             while self.engine._tick_time < self.duration_end_time:
                 yield
             logger.debug("Resuming using Unpause")
-            UnpauseEngineCommand(self.engine, self.internal_commands)._run()
+            UnpauseEngineCommand(self.engine, self._registry)._run()
 
 
 class UnpauseEngineCommand(InternalEngineCommand):
-    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
-        super().__init__(EngineCommandEnum.UNPAUSE, internal_commands_obj)
+    def __init__(self, engine: Engine, registry: InternalCommandsRegistry) -> None:
+        super().__init__(EngineCommandEnum.UNPAUSE, registry)
         self.engine = engine
 
     def _run(self):
@@ -128,8 +127,8 @@ class HoldEngineCommand(InternalEngineCommand):
 
     See also Pause and Wait.
     """
-    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
-        super().__init__(EngineCommandEnum.HOLD, internal_commands_obj)
+    def __init__(self, engine: Engine, registry: InternalCommandsRegistry) -> None:
+        super().__init__(EngineCommandEnum.HOLD, registry)
         self.engine = engine
         self.duration_end_time : float | None = None
 
@@ -156,12 +155,12 @@ class HoldEngineCommand(InternalEngineCommand):
             while self.engine._tick_time < self.duration_end_time:
                 yield
             logger.debug("Resuming using Unhold")
-            UnholdEngineCommand(self.engine, self.internal_commands)._run()
+            UnholdEngineCommand(self.engine, self._registry)._run()
 
 
 class UnholdEngineCommand(InternalEngineCommand):
-    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
-        super().__init__(EngineCommandEnum.UNHOLD, internal_commands_obj)
+    def __init__(self, engine: Engine, registry: InternalCommandsRegistry) -> None:
+        super().__init__(EngineCommandEnum.UNHOLD, registry)
         self.engine = engine
 
     def _run(self):
@@ -172,8 +171,8 @@ class UnholdEngineCommand(InternalEngineCommand):
 
 
 class StopEngineCommand(InternalEngineCommand):
-    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
-        super().__init__(EngineCommandEnum.STOP, internal_commands_obj)
+    def __init__(self, engine: Engine, registry: InternalCommandsRegistry) -> None:
+        super().__init__(EngineCommandEnum.STOP, registry)
         self.engine = engine
 
     def _run(self):
@@ -214,8 +213,8 @@ class WaitEngineCommand(InternalEngineCommand):
 
     See also Pause and Hold.
     """
-    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
-        super().__init__(EngineCommandEnum.WAIT, internal_commands_obj)
+    def __init__(self, engine: Engine, registry: InternalCommandsRegistry) -> None:
+        super().__init__(EngineCommandEnum.WAIT, registry)
         self.engine = engine
         self.forced = False
 
@@ -246,8 +245,8 @@ class WaitEngineCommand(InternalEngineCommand):
         self.forced = True
 
 class RestartEngineCommand(InternalEngineCommand):
-    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
-        super().__init__(EngineCommandEnum.RESTART, internal_commands_obj)
+    def __init__(self, engine: Engine, registry: InternalCommandsRegistry) -> None:
+        super().__init__(EngineCommandEnum.RESTART, registry)
         self.engine = engine
 
     def _run(self):
@@ -302,8 +301,8 @@ class RestartEngineCommand(InternalEngineCommand):
 
 
 class InfoEngineCommand(InternalEngineCommand):
-    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
-        super().__init__(EngineCommandEnum.INFO, internal_commands_obj)
+    def __init__(self, engine: Engine, registry: InternalCommandsRegistry) -> None:
+        super().__init__(EngineCommandEnum.INFO, registry)
 
     def _run(self):
         msg = self.kvargs.get("unparsed_args")
@@ -311,8 +310,8 @@ class InfoEngineCommand(InternalEngineCommand):
 
 
 class WarningEngineCommand(InternalEngineCommand):
-    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
-        super().__init__(EngineCommandEnum.WARNING, internal_commands_obj)
+    def __init__(self, engine: Engine, registry: InternalCommandsRegistry) -> None:
+        super().__init__(EngineCommandEnum.WARNING, registry)
 
     def _run(self):
         msg = self.kvargs.get("unparsed_args")
@@ -320,8 +319,8 @@ class WarningEngineCommand(InternalEngineCommand):
 
 
 class ErrorEngineCommand(InternalEngineCommand):
-    def __init__(self, engine: Engine, internal_commands_obj: InternalCommands) -> None:
-        super().__init__(EngineCommandEnum.ERROR, internal_commands_obj)
+    def __init__(self, engine: Engine, registry: InternalCommandsRegistry) -> None:
+        super().__init__(EngineCommandEnum.ERROR, registry)
 
     def _run(self):
         msg = self.kvargs.get("unparsed_args")

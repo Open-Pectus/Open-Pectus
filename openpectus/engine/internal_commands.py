@@ -9,11 +9,28 @@ from openpectus.engine.models import EngineCommandEnum
 logger = logging.getLogger(__name__)
 
 
-class InternalCommands:
+class InternalCommandsRegistry:
     def __init__(self, engine):
+        self.engine = engine
         self._command_map: dict[str, Callable[[], InternalEngineCommand]] = {}
         self._command_instances: dict[str, InternalEngineCommand] = {}
-        self._register_commands(engine)
+
+    def __enter__(self):
+        self._register_commands(self.engine)
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        logger.debug("Disposing registry")
+        self._command_map.clear()
+        for cmd in self._command_instances.values():
+            try:
+                cmd.cancel()
+                cmd.finalize()
+            except Exception as ex:
+                logger.warning(f"Error during cancel/finalize while disposing command: {cmd.name}: {str(ex)}")
+            finally:
+                self.dispose_command(cmd)
+        self._command_instances.clear()
 
     def _register_commands(self, engine):
         if len(self._command_map) > 0:
@@ -64,9 +81,14 @@ class InternalCommands:
 
 
 class InternalEngineCommand(EngineCommand):
-    def __init__(self, name: str, internal_commands: InternalCommands) -> None:
+    """ Base class for internal engine commands.
+
+    Adds support for long-running commands via a _run() generator method. The tick() base class method
+    implements the state management of these commands.
+    """
+    def __init__(self, name: str, registry: InternalCommandsRegistry) -> None:
         super().__init__(name)
-        self.internal_commands = internal_commands
+        self._registry = registry
         self._failed = False
         self.has_run = False
         self.run_result: Generator[None, None, None] | None = None
@@ -106,20 +128,20 @@ class InternalEngineCommand(EngineCommand):
                     self.has_run = True
                 except Exception:
                     self.fail()
-                    self.internal_commands.dispose_command(self.name)
+                    self._registry.dispose_command(self.name)
                     logger.error(f"Command '{self.name}' failed", exc_info=True)
                     return
 
             if self.run_result is None:
                 self.set_complete()
-                self.internal_commands.dispose_command(self.name)
+                self._registry.dispose_command(self.name)
             else:
                 try:
                     next(self.run_result)
                 except StopIteration:
                     self.set_complete()
-                    self.internal_commands.dispose_command(self.name)
+                    self._registry.dispose_command(self.name)
                 except Exception:
                     self.fail()
                     logger.error(f"Command '{self.name}' failed", exc_info=True)
-                    self.internal_commands.dispose_command(self.name)
+                    self._registry.dispose_command(self.name)
