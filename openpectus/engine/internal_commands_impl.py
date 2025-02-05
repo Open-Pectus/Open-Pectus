@@ -263,13 +263,17 @@ class RestartEngineCommand(InternalEngineCommand):
         else:
             logger.info("Restarting engine")
             sys_state.set_value(SystemStateEnum.Restarting, e._tick_time)
+
             e._runstate_stopping = True
             e._cancel_uod_commands()
-
-            yield  # make sure this state always lasts at least one full tick
-
+            yield
+            timeout_at_tick = e._tick_number + CANCEL_TIMEOUT_TICKS
             while e.uod.has_any_command_instances():
+                if e._tick_number > timeout_at_tick:
+                    logger.warning("Time out waiting for uod commands to cancel")
+                    break
                 yield
+            e._finalize_uod_commands()
 
             logger.debug("Restarting engine - uod commands have completed execution")
             e._runstate_started = False
