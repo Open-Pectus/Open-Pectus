@@ -47,8 +47,6 @@ class ConsoleAppRunner():
             os.unlink(self.logfile_name)
 
 
-port = "8727"
-
 def get_demo_uod_path() -> str:
     uod_file_path = os.path.join(
         os.path.dirname(  # openpectus
@@ -79,6 +77,7 @@ class TestStartupConnection(unittest.TestCase):
                              f"Output is: {output}")
 
     def test_engine_can_connect_to_running_aggregator(self):
+        port = "8727"
         with ConsoleAppRunner("pectus-aggregator", ["--port", port]) as aggregator, \
              ConsoleAppRunner("pectus-engine", ["--aggregator_port", port, "--uod", get_demo_uod_path()]) as engine:
 
@@ -94,6 +93,7 @@ class TestStartupConnection(unittest.TestCase):
 
 
     def test_engine_can_connect_to_aggregator_started_after_engine(self):
+        port = "8728"
         with ConsoleAppRunner("pectus-aggregator", ["--port", port]) as aggregator, \
              ConsoleAppRunner("pectus-engine", ["--aggregator_port", port, "--uod", get_demo_uod_path()]) as engine:
 
