@@ -56,7 +56,7 @@ jobs:
       - name: Test with unittest
         run: |
           cd openpectus
-          python -m unittest
+          pytest -n auto
   
   validate_uods:
     name: Validate UODs in Closed-Pectus repository
