@@ -58,6 +58,8 @@ development = [
     "flake8==7.1.1",
     "black==24.10.0",
     "build==1.2.2.post1",
+    "pytest==8.3.4",
+    "pytest-xdist==3.6.1",
 ]
 docs = [
     "sphinx==8.1.3",
