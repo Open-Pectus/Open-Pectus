@@ -4,6 +4,8 @@ import logging
 import socket
 from typing import Callable, Any, Awaitable
 import json
+import ssl
+import platform
 
 from fastapi_websocket_rpc import RpcMethodsBase, WebSocketRpcClient
 from fastapi_websocket_rpc.rpc_methods import RpcResponse
@@ -28,6 +30,18 @@ EngineMessageHandler = Callable[[AM.AggregatorMessage], Awaitable[M.MessageBase]
 """ Handler in engine that handles aggregator messages of a given type """
 
 engine_headers = {"User-Agent": f"{client_name}/{__version__}"}
+
+if platform.system() == "Windows":
+    # Use system certificates on Windows instead
+    # of Anaconda provided certificates.
+    ssl_context = ssl.create_default_context()
+    ssl_context.load_default_certs()
+else:
+    # SSL library method load_default_certs only does
+    # something useful on Windows. On other systems
+    # the Anaconda certificate bundle will have to do.
+    ssl_context = httpx.create_ssl_context()
+
 
 class EngineDispatcher():
     """
@@ -77,6 +91,7 @@ class EngineDispatcher():
 
         http_scheme = "https" if secure else "http"
         ws_scheme = "wss" if secure else "ws"
+        self._ssl_context: ssl.SSLContext | bool = ssl_context if secure else False
         self._post_url = f"{http_scheme}://{aggregator_host}{AGGREGATOR_REST_PATH}"
         self._health_url = f"{http_scheme}://{self._aggregator_host}{AGGREGATOR_HEALTH_PATH}"
         self._rpc_url = f"{ws_scheme}://{self._aggregator_host}{AGGREGATOR_RPC_WS_PATH}"
@@ -85,7 +100,7 @@ class EngineDispatcher():
 
     def check_aggregator_alive(self) -> bool:
         try:
-            resp = httpx.get(self._health_url, headers=engine_headers)
+            resp = httpx.get(self._health_url, headers=engine_headers, verify=self._ssl_context)
         except httpx.ConnectError as ex:
             logger.error(f"Connection to Aggregator health end point {self._health_url} failed.")
             logger.info("Connection to Aggregator health end point failed.")
@@ -106,7 +121,7 @@ class EngineDispatcher():
         return True
 
     def is_aggregator_authentication_enabled(self) -> bool:
-        response = httpx.get(self._auth_config_url, headers=engine_headers)
+        response = httpx.get(self._auth_config_url, headers=engine_headers, verify=self._ssl_context)
         auth_config = AuthConfig(**response.json())
         return auth_config.use_auth
 
@@ -136,7 +151,8 @@ class EngineDispatcher():
             methods=rpc_methods,
             retry_config=retry_config,
             on_disconnect=[self.on_disconnect],
-            user_agent_header=engine_headers
+            user_agent_header=engine_headers,
+            ssl=self._ssl_context if self._ssl_context else None,
         )
         try:
             await self._rpc_client.__aenter__()
@@ -169,7 +185,7 @@ class EngineDispatcher():
             return M.ErrorMessage(message="Message serialization failed")
 
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(verify=self._ssl_context) as client:
                 response = await client.post(url=self._post_url, json=message_json, headers=engine_headers)
         except Exception as ex:
             logger.error(f"Post failed with  exception type {type(ex).__name__}")  # skip details,  exc_info=True)

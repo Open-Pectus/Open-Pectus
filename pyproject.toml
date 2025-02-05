@@ -30,6 +30,7 @@ dependencies = [
     "alembic==1.14.0",
     "sentry-sdk==2.19.2",
     "PyJWT==2.10.1",
+    "multiprocess==0.70.17",
 ]
 
 keywords = ["process control", "process control system", "P code", "P-code", "chemical engineering", "SCADA", "PCS"]

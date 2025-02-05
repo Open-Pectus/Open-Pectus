@@ -5,12 +5,7 @@ import uuid
 from queue import Empty, Queue
 from typing import Iterable, List, Set
 from uuid import UUID
-from openpectus.engine.internal_commands import (
-    create_internal_command,
-    get_running_internal_command,
-    dispose_command_map,
-    register_commands
-)
+from openpectus.engine.internal_commands import InternalCommandsRegistry
 from openpectus.engine.hardware import HardwareLayerException, RegisterDirection
 from openpectus.engine.method_model import MethodModel
 from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum, SystemTagName
@@ -88,7 +83,8 @@ class Engine(InterpreterContext):
         self._running: bool = False
         """ Indicates whether the scan cycle loop is running, set to False to shut down"""
 
-        register_commands(self)
+        self.registry = InternalCommandsRegistry(self).__enter__()
+        """ Manages internal engine commands """
 
         self._clock: Clock = timing.clock
         """ The time source """
@@ -205,7 +201,7 @@ class Engine(InterpreterContext):
 
     def cleanup(self):
         self.emitter.emit_on_engine_shutdown()
-        dispose_command_map()
+        self.registry.__exit__(None, None, None)
 
     def get_runlog(self) -> RunLog:
         return self.runtimeinfo.get_runlog()
@@ -428,7 +424,7 @@ class Engine(InterpreterContext):
 
         # an existing, long running engine_command is running. other commands must wait
         # Note: we need a priority mechanism - even Stop is waiting here
-        command = get_running_internal_command()
+        command = self.registry.get_running_internal_command()
         if command is not None:
             if cmd_request.name == command.name:
                 if not command.is_finalized():
@@ -449,7 +445,7 @@ class Engine(InterpreterContext):
 
         # no engine command is running - start one
         try:
-            command = create_internal_command(cmd_request.name)
+            command = self.registry.create_internal_command(cmd_request.name)
             args = cmd_request.get_args()
             if args is not None:
                 try:
