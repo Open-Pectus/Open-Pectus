@@ -38,6 +38,7 @@ logging.getLogger('openpectus.protocol.aggregator_dispatcher').setLevel(logging.
 
 
 class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
+    ctx: ProtocolIntegrationTestCase.Context | None = None
 
     @dataclass
     class Context:
@@ -50,10 +51,6 @@ class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
         aggregatorDispatcher: AggregatorTestDispatcher
         frontendPublisher: FrontendPublisher
         aggregator: Aggregator
-
-    def __init__(self, methodName: str = "runTest") -> None:
-        super().__init__(methodName)
-        self.ctx: ProtocolIntegrationTestCase.Context | None = None
 
     async def asyncSetUp(self) -> None:
         assert self.ctx is None
