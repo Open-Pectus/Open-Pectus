@@ -39,6 +39,7 @@ class EngineCommand():
         return self._exec_complete
 
     def finalize(self):
+        """ Overrides must call super().finalize() and must dispose the command. """
         self._finalized = True
 
     def is_finalized(self) -> bool:

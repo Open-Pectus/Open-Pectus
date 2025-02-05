@@ -745,9 +745,9 @@ Mark: C
 
         e.schedule_execution("Stop")
         e.tick(1, 1)
+        e.tick(1, 1)
 
         self.assertFalse(e._runstate_started)
-
         self.assertEqual(SystemStateEnum.Stopped, system_state_tag.get_value())
 
     def test_runstate_pause(self):

@@ -498,9 +498,20 @@ class Engine(InterpreterContext):
             else:
                 cmds_to_cancel.append(command)
 
-        # remove outside the loop because cancel modifies the collection
+        # call outside the loop because cancel modifies the collection
         for command in cmds_to_cancel:
             command.cancel()
+
+    def _finalize_uod_commands(self):
+        logger.debug("Cancelling uod commands")
+        cmds_to_finalize: list[UodCommand] = []
+        for command in self.uod.command_instances.values():
+            if not command.is_finalized():
+                cmds_to_finalize.append(command)
+
+        # call outside the loop because finalize modifies the collection
+        for command in cmds_to_finalize:
+            command.finalize()
 
     def _execute_uod_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
         cmd_name = cmd_request.name
@@ -525,6 +536,7 @@ class Engine(InterpreterContext):
                 if cmd_record is not None:
                     command, c_record = cmd_record
                     command.cancel()
+                    command.finalize()
                     c_record.add_command_state_cancelled(
                         c.command_exec_id, self._tick_time, self._tick_number, self.tags_as_readonly())
                     logger.info(f"Running command {c.name} cancelled per user request")
@@ -541,6 +553,7 @@ class Engine(InterpreterContext):
                 assert cmd_record is not None
                 command, c_record = cmd_record
                 command.cancel()
+                command.finalize()
                 c_record.add_command_state_cancelled(
                     c.command_exec_id, self._tick_time, self._tick_number,
                     self.tags_as_readonly())
@@ -557,6 +570,7 @@ class Engine(InterpreterContext):
                         assert cmd_record is not None
                         command, c_record = cmd_record
                         command.cancel()
+                        command.finalize()
                         c_record.add_command_state_cancelled(
                             c.command_exec_id, self._tick_time, self._tick_number,
                             self.tags_as_readonly())

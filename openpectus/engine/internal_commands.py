@@ -25,12 +25,9 @@ class InternalCommandsRegistry:
         for cmd in self._command_instances.values():
             try:
                 cmd.cancel()
-                cmd.finalize()
             except Exception as ex:
                 logger.warning(f"Error during cancel/finalize while disposing command: {cmd.name}: {str(ex)}")
-            finally:
-                self.dispose_command(cmd)
-        self._command_instances.clear()
+        self._finalize_instances()
 
     def _register_commands(self, engine):
         if len(self._command_map) > 0:
@@ -79,6 +76,12 @@ class InternalCommandsRegistry:
             logger.warning(f"No command '{command_name}' found to dispose. " +
                            f"Actual commands: {str(self._command_instances.keys())}")
 
+    def _finalize_instances(self):
+        """ Finalize and dispose all command instances. """
+        instances = list(self._command_instances.values())
+        for cmd in instances:
+            cmd.finalize()
+
 
 class InternalEngineCommand(EngineCommand):
     """ Base class for internal engine commands.
@@ -115,6 +118,10 @@ class InternalEngineCommand(EngineCommand):
         # This avoids wasting a tick for these commands and makes testing simpler
         self.finalize()
 
+    def finalize(self):
+        super().finalize()
+        self._registry.dispose_command(self.name)
+
     def tick(self) -> None:
         if self.is_finalized() or self.is_cancelled() or self.has_failed():
             # command should already be disposed and not end up here
@@ -143,5 +150,5 @@ class InternalEngineCommand(EngineCommand):
                     self._registry.dispose_command(self.name)
                 except Exception:
                     self.fail()
-                    logger.error(f"Command '{self.name}' failed", exc_info=True)
                     self._registry.dispose_command(self.name)
+                    logger.error(f"Command '{self.name}' failed", exc_info=True)
