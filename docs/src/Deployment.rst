@@ -38,8 +38,8 @@ Open Pectus Engine Manager can run multiple engines simultaneously in a convenie
 
    Screenshot of Open Pectus Engine Manager.
 
-Specify which aggregator to connect to in the `File&rarr;Aggregator Settings`.
-Add a UOD by right clicking on the list of engines and select `Load UOD` or select `File&rarr;Load UOD`.
+Specify which aggregator to connect to in the `File→Aggregator Settings`.
+Add a UOD by right clicking on the list of engines and select `Load UOD` or select `File→Load UOD`.
 To start an engine with a UOD or validate the UOD right click on the entry and select `Start` or `Validate`.
 A running engine can be stopped by right clicking and selecting `Stop`.
 
