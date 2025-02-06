@@ -30,9 +30,15 @@ class ConsoleAppRunner():
 
     @property
     def output(self) -> str:
-        with open(self.logfile_name, "r") as reader:
-            lines = reader.readlines()
-            return "\n".join(lines)
+        for i in range(5):
+            try:
+                with open(self.logfile_name, "r") as reader:
+                    return reader.read()
+            except PermissionError:
+                # This error occours when reading is performed while the file is being flushed to disk.
+                # Just try again later.
+                time.sleep(0.05)
+        raise Exception("Unable to read {self.logfile_name}.")
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.process:
