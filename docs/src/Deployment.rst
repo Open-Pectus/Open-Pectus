@@ -30,10 +30,13 @@ Open Pectus Engine Manager
 Open Pectus Engine Manager can run multiple engines simultaneously in a convenient graphical user interface, see :numref:`open_pectus_engine_manager_screenshot`.
 
 .. _open_pectus_engine_manager_screenshot:
-.. image:: https://github.com/Open-Pectus/Engine-Manager-GUI/raw/main/screenshot.png?raw=true
-   :width: 600 px
+.. figure:: static/open-pectus-engine-manager-screenshot.png
+   :class: no-scaled-link
    :align: center
+   :width: 600 px
    :alt: Screenshot of Open Pectus Engine Manager user interface.
+
+   Screenshot of Open Pectus Engine Manager.
 
 Specify which aggregator to connect to in the `File&rarr;Aggregator Settings`.
 Add a UOD by right clicking on the list of engines and select `Load UOD` or select `File&rarr;Load UOD`.
