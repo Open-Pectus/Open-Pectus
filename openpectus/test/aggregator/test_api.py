@@ -6,7 +6,7 @@ import unittest
 from openpectus.aggregator.aggregator_server import AggregatorServer
 from fastapi.testclient import TestClient
 
-project_path = os.path.join(os.path.dirname(__file__), "..", "..")
+project_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 fastapi = AggregatorServer().fastapi
 client = TestClient(fastapi)
 
