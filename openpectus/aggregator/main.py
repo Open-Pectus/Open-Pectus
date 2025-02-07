@@ -32,6 +32,8 @@ def get_arg_parser():
                         help=f"Minimum log level to send as sentry events. Default: '{sentry.EVENT_LEVEL_DEFAULT}'")
     parser.add_argument("-db", "--database", required=False, default=AggregatorServer.default_db_path,
                         help=f"Path to Sqlite3 database. Default: ./{AggregatorServer.default_db_filename}")
+    parser.add_argument("-secret", "--secret", required=False, default=AggregatorServer.default_secret,
+                        help="Engines must know this secret to connect to the aggregator")
     return parser
 
 
@@ -53,7 +55,7 @@ def main():
     alembic_config = Config(alembic_ini_file_path)
     alembic_config.set_main_option("sqlalchemy.url", f"sqlite:///{args.database}")
     command.upgrade(alembic_config, "head")
-    AggregatorServer(title, args.host, args.port, args.frontend_dist_dir, args.database).start()
+    AggregatorServer(title, args.host, args.port, args.frontend_dist_dir, args.database, args.secret).start()
 
 
 if __name__ == "__main__":

@@ -11,11 +11,11 @@ def get_aggregator() -> Aggregator:
     return _server
 
 
-def _create_aggregator(dispatcher: AggregatorDispatcher, publisher: FrontendPublisher) -> Aggregator:
+def _create_aggregator(dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, secret: str) -> Aggregator:
     global _server
     if _server is not None:
         return _server
     else:
-        _server = Aggregator(dispatcher, publisher)
+        _server = Aggregator(dispatcher, publisher, secret)
         # print("GLOBAL: Creating aggregator server")
         return _server

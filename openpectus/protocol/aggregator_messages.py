@@ -20,6 +20,7 @@ class RegisterEngineReplyMsg(AggregatorMessage):
     """ Reply to a RegisterEngineMsg from engine. """
     success: bool
     engine_id: str | None = None
+    secret_match: bool
 
 
 class InvokeCommandMsg(AggregatorMessage):
