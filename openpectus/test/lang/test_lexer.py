@@ -12,6 +12,9 @@ def get_token_texts(code):
 
 class LexerTest(unittest.TestCase):
     def assertPTokenCountGE(self, code: str, expected_min_count: int):
+
+        def print(s):
+            pass
         print(f"\nCode: '{code}'")
         print("Tokens:")
         p = PGrammar()

@@ -348,8 +348,8 @@ Block: Equilibration
             with self.subTest(code):
                 p = build(code)
                 program = p.build_model()
-                p.printSyntaxTree(p.tree)
-                print_program(program)
+                # p.printSyntaxTree(p.tree)
+                # print_program(program)
                 mark = program.get_instructions()[0]
                 assert isinstance(mark, PMark)
                 self.assertEqual(mark.name, name)
@@ -862,7 +862,7 @@ Stop
     def test_pause(self):
         p = build("Pause")
         program = p.build_model()
-        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
         self.assertFalse(program.has_error(recursive=True))
 
         [pause] = program.get_instructions(include_blanks=True)
@@ -875,9 +875,8 @@ Stop
     def test_pause_w_arg(self):
         p = build("Pause: 2 min")
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
-
-        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        # p.printSyntaxTree(p.tree)
+        # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
         self.assertFalse(program.has_error(recursive=True))
 
         [pause] = program.get_instructions(include_blanks=True)
@@ -893,9 +892,8 @@ Stop
     def test_hold(self):
         p = build("Hold")
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
-
-        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        # p.printSyntaxTree(p.tree)
+        # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
         self.assertFalse(program.has_error(recursive=True))
 
         [hold] = program.get_instructions(include_blanks=True)
@@ -908,9 +906,8 @@ Stop
     def test_hold_w_arg(self):
         p = build("Hold: 27.35 s")
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
-
-        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        # p.printSyntaxTree(p.tree)
+        # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
         self.assertFalse(program.has_error(recursive=True))
 
         [hold] = program.get_instructions(include_blanks=True)
@@ -925,8 +922,7 @@ Stop
     def test_hold_w_arg_error(self):
         p = build("Hold: 27.35")
         program = p.build_model()
-        p.printSyntaxTree(p.tree)
-
+        # p.printSyntaxTree(p.tree)
         # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
         self.assertTrue(program.has_error(recursive=True))
 
@@ -995,7 +991,7 @@ Bad command
 
         program = p.build_model()
 
-        print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
+        # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
         self.assertFalse(program.has_error(recursive=True))
         all = program.get_instructions(include_blanks=True)
 

@@ -23,6 +23,9 @@ jobs:
       matrix:
         os: [ubuntu-22.04, windows-latest]
         python-version: ["3.11"]
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: Debug env
         run: env    
@@ -53,10 +56,20 @@ jobs:
           fi
       - name: Type check with pyright
         run: pyright
-      - name: Test with unittest
+      - name: Run tests
+        env:
+          REPORT_OUTPUT: md_report.md
+        shell: bash
         run: |
-          cd openpectus
-          python -m unittest
+          echo "REPORT_FILE=${REPORT_OUTPUT}" >> "$GITHUB_ENV"
+          pytest -n auto --md-report --md-report-flavor gfm --md-report-exclude-outcomes passed skipped xpassed --md-report-output "$REPORT_OUTPUT" openpectus/test
+      - name: Render the test report to the PR when tests fail
+        uses: marocchino/sticky-pull-request-comment@v2
+        if: failure()
+        with:
+          header: test-report
+          recreate: true
+          path: ${{ env.REPORT_FILE }}
   
   validate_uods:
     name: Validate UODs in Closed-Pectus repository

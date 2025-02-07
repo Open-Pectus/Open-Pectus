@@ -1408,6 +1408,8 @@ Restart
 
 
 class TestHW(HardwareLayerBase):
+    __test__ = False
+
     def __init__(self) -> None:
         super().__init__()
         self.register_values = {}
