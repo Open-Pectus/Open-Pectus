@@ -6,15 +6,14 @@ from enum import StrEnum, auto
 from typing import Literal
 
 import openpectus.aggregator.models as Mdl
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from pydantic.json_schema import SkipJsonSchema
 
 SystemStateEnum = Mdl.SystemStateEnum
 
 
 class Dto(BaseModel):
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
     # deliver undefined instead of null for None values. Adapted from:
     # https://github.com/fastapi/fastapi/issues/3314#issuecomment-962932368
