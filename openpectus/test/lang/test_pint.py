@@ -53,10 +53,10 @@ class PintTest(unittest.TestCase):
         self.assertFalse(u.dimensionless)
         self.assertEqual("second", str(u))
         self.assertEqual("[time]", str(u.dimensionality))
-        print("{!r}".format(u))
+        # print("{!r}".format(u))
 
         q = 5 * u
-        print("{!r}".format(q))
+        # print("{!r}".format(q))
 
     def test_dimensionless(self):
         count = Q_(3)
@@ -178,7 +178,7 @@ class PintTest(unittest.TestCase):
 
     @unittest.skip("Not sure we need this. Requres the Babel lib")
     def test_locale(self):
-        print("locale:", ureg.fmt_locale)  # is None by default
+        # print("locale:", ureg.fmt_locale)  # is None by default
         # set_fmt_locale: None: (do not translate), 'sys' (detect the system locale) or a locale id string.
         ureg.set_fmt_locale('sys')
         distance = 24.0 * ureg.meter
@@ -235,6 +235,7 @@ class PintTest(unittest.TestCase):
         with self.assertRaises(UndefinedUnitError):
             _ = Q_("7.0 CV")
 
+    @unittest.skip(reason="Not a test. Merely documenttion of ureg.get_compatible_units")
     def test_list_compatible_units(self):
         a = Q_("10 cm")
         result = ureg.get_compatible_units(a.units)  # type: ignore

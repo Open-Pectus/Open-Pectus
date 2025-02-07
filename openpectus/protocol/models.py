@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 import openpectus.engine.models as EM
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 logger = logging.getLogger(__name__)
 
@@ -14,8 +14,7 @@ MethodStatusEnum = EM.MethodStatusEnum
 EntryDataType = EM.EntryDataType
 
 class ProtocolModel(BaseModel):
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 
 class ReadingCommand(ProtocolModel):
