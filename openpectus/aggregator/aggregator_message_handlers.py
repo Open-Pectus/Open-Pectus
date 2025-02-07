@@ -26,7 +26,7 @@ class AggregatorMessageHandlers:
     async def handle_RegisterEngineMsg(self, register_engine_msg: EM.RegisterEngineMsg) -> AM.RegisterEngineReplyMsg:
         """ Registers engine """
         if register_engine_msg.secret != self.aggregator.secret:
-            logger.error(
+            logger.info(
                 f'Engine registration message {register_engine_msg} received ' +
                 "but secret does not match aggregator secret"
             )
