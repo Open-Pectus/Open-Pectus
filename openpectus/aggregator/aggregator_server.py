@@ -1,5 +1,6 @@
 import logging
 import os
+import contextlib
 
 import uvicorn
 from openpectus.aggregator.routers.auth import UserRolesDependency
@@ -52,7 +53,7 @@ class AggregatorServer:
                                contact=dict(name="Open Pectus",
                                             url="https://github.com/Open-Pectus/Open-Pectus"),
                                generate_unique_id_function=custom_generate_unique_id,
-                               on_shutdown=[self.on_shutdown])
+                               lifespan=self.lifespan)
         self.fastapi.include_router(process_unit.router, prefix=api_prefix, dependencies=[UserRolesDependency])
         self.fastapi.include_router(recent_runs.router, prefix=api_prefix, dependencies=[UserRolesDependency])
         self.fastapi.include_router(auth.router, prefix="/auth")
@@ -67,5 +68,7 @@ class AggregatorServer:
     def start(self):
         uvicorn.run(self.fastapi, host=self.host, port=self.port, log_level=logging.WARNING)
 
-    async def on_shutdown(self):
+    @contextlib.asynccontextmanager
+    async def lifespan(self, app):
+        yield
         await self.dispatcher.shutdown()

@@ -131,7 +131,8 @@ class EngineTestInstance(EventListener):
             elapsed = time.time() - last_tick_time
             deadline = self.timing.interval - elapsed
             if deadline > 0.0:
-                time.sleep(deadline)
+                while last_tick_time+self.timing.interval-time.time() > 0:
+                    time.sleep(min(last_tick_time+self.timing.interval-time.time(), 0.01))
             else:
                 logger.warning(f"Sleep deadline for tick was negative: {deadline}")
 
@@ -313,7 +314,8 @@ def run_engine(engine: Engine, pcode: str, max_ticks: int = -1) -> int:
         elapsed = time.time() - last_tick_time
         deadline = interval - elapsed
         if deadline > 0.0:
-            time.sleep(deadline)
+            while last_tick_time+interval-time.time() > 0:
+                time.sleep(min(last_tick_time+interval-time.time(), 0.01))
         else:
             logger.warning(f"Sleep deadline for tick was negative: {deadline}")
 
@@ -350,7 +352,8 @@ def continue_engine(engine: Engine, max_ticks: int = -1) -> int:
         elapsed = time.time() - last_tick_time
         deadline = interval - elapsed
         if deadline > 0.0:
-            time.sleep(deadline)
+            while last_tick_time+interval-time.time() > 0:
+                time.sleep(min(last_tick_time+interval-time.time(), 0.01))
         else:
             logger.warning(f"Sleep deadline for tick was negative: {deadline}")
 
