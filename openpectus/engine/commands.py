@@ -18,6 +18,9 @@ class EngineCommand():
         self._progress: bool | float = False
         self._finalized: bool = False
 
+    def __str__(self):
+        return f'{self.__class__.__name__}(name="{self.name}")'
+
     def initialize(self):
         self._initialized = True
 

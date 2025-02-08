@@ -151,6 +151,9 @@ class Tag(ChangeSubject, EventListener):
         self.safe_value: TagValueType | Unset = safe_value
         self.format_fn = format_fn
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(name="{self.name}", value="{self.value}")'
+
     def as_readonly(self) -> TagValue:
         """ Convert the value to a readonly and immutable TagValue instance """
         value_formatted = None if self.format_fn is None else self.format_fn(self.get_value())
