@@ -5,6 +5,7 @@ import logging
 import re
 from typing import Any, Callable, Literal, Tuple
 import sys
+import time
 
 from openpectus.engine.commands import ContextEngineCommand, CommandArgs
 from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
@@ -391,6 +392,7 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
         self.exec_fn: EXEC_FN | None = None
         self.finalize_fn: FINAL_FN | None = None
         self.arg_parse_fn: PARSE_FN | None = None
+        self._performance_warned = False
 
     @staticmethod
     def builder() -> UodCommandBuilder:
@@ -406,14 +408,21 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
 
     def execute(self, args: CommandArgs) -> None:
         if self.exec_fn is None:
-            raise ValueError(f"Command '{self.name}' has no execution function defined")
+            raise ValueError(f"Command {self} has no execution function defined")
 
         if not isinstance(args, dict):
             raise TypeError(
-                f"Invalid arguments provided to command '{self.name}'. Must be a dictionary, not {type(args).__name__}")
+                f"Invalid arguments provided to command {self}. Must be a dictionary, not {type(args).__name__}")
 
         super().execute(args)
+        t0 = time.perf_counter()
         self.exec_fn(args)
+        t1 = time.perf_counter()
+        dt = t1-t0
+        if not self._performance_warned and dt > 0.1:
+            logger.warning(f"exec_fn {self.exec_fn} for {self} is slow. Execution time: {dt:0.1f} s. " +
+                           "This warning is only issued once.")
+            self._performance_warned = True
 
     def cancel(self):
         super().cancel()
@@ -888,7 +897,7 @@ def unescape(re_escaped_string: str) -> str:
     """
     re.escape is used to escape options supplied to
     RegexCategorical. This function can reverses operation.
-    
+
     assert unescape(re.escape('A B')) == 'A B'
     assert unescape(re.escape('A/B')) == 'A/B'
     """
