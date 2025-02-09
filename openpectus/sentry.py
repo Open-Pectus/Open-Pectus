@@ -113,6 +113,9 @@ def set_engine_uod(uod: UnitOperationDefinitionBase):
     """ Attaches tags uod_instrument and uod_location to events. """
     sentry_sdk.set_tag("uod_instrument", uod.instrument)
     sentry_sdk.set_tag("uod_location", uod.location)
+    sentry_sdk.set_tag("uod_author_name", uod.author_name)
+    sentry_sdk.set_tag("uod_author_email", uod.author_email)
+    sentry_sdk.set_tag("uod_filename", uod.filename)
 
 def engine_method_set(pcode: str):
     """ Attaches tag 'method' with pcode source to events """
