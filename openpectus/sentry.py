@@ -17,6 +17,7 @@ EVENT_LEVEL_DEFAULT: str = logging.getLevelName(logging.WARNING)
 EVENT_LEVEL_NAMES: list[str] = [logging.getLevelName(level) for level in _event_levels]
 
 SENTRY_DEBUG = False
+logger = logging.getLogger(__name__)
 
 
 def _get_event_level_from_name(event_level_name: str) -> int:
@@ -36,9 +37,9 @@ def init_aggregator(event_level_name: str):
     - Attaches component='aggregator' to all events
     """
     if os.getenv('SENTRY_DSN'):
-        print("Sentry is active")
+        logging.info("Sentry is active")
     else:
-        print("Sentry is not active")
+        logging.info("Sentry is not active")
 
     event_level_int = _get_event_level_from_name(event_level_name)
 
