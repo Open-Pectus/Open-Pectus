@@ -5,7 +5,7 @@ import time
 from typing import Any, Callable, Iterable, Set
 
 from openpectus.lang.exec.events import EventListener
-from openpectus.lang.exec.units import convert_value_to_unit, is_supported_unit
+from openpectus.lang.exec.units import convert_value_to_unit, is_supported_unit, add_unit
 
 
 # Represents tag API towards interpreter
