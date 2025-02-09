@@ -143,7 +143,9 @@ class UnitOperationDefinitionBase:
         def log_fatal(msg: str):
             nonlocal fatal
             if not fatal:
-                logger.fatal("An error occured while validating the Unit Operation Definition. Pectus Engine cannot start.")
+                logger.fatal("An error occured while validating the Unit Operation Definition. " +
+                             "Pectus Engine cannot start. " +
+                             "Apply -v flag to validate UOD with more verbose error descriptions.")
             fatal = True
             logger.fatal(msg)
 
