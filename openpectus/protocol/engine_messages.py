@@ -14,6 +14,9 @@ class EngineMessage(Msg.MessageBase):
     def ident(self) -> str:
         return f"seq: {self.sequence_number: >3}, type: {type(self).__name__}"
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(engine_id="{self.engine_id}", sequence_number={self.sequence_number})'
+
 
 class EngineControlMessage(EngineMessage):
     pass
@@ -53,9 +56,18 @@ class UodInfoMsg(EngineMessage):
     required_roles: set[str]
     data_log_interval_seconds: float
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(engine_id="{self.engine_id}", sequence_number={self.sequence_number}, ' +
+                f'readings={self.readings}, commands={self.commands}, hardware_str="{self.hardware_str}", ' +
+                f'required_roles={self.required_roles}, data_log_interval_seconds={self.data_log_interval_seconds})')
+
 
 class TagsUpdatedMsg(EngineMessage):
     tags: list[Mdl.TagValue] = []
+
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(engine_id="{self.engine_id}", sequence_number={self.sequence_number}, ' +
+                f'tags={self.tags})')
 
 # TODO: One possible way to supprt buffered messages. This would make it easier to persist
 # the values for plot_log but maybe harder to insert in the realtime plot
@@ -63,38 +75,70 @@ class TagsBufferedMsg(EngineMessage):
     tags: list[Mdl.TagValue] = []
     tick_time: float
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(engine_id="{self.engine_id}", sequence_number={self.sequence_number}, ' +
+                f'tags={self.tags}, tick_time={self.tick_time})')
+
 
 class RunLogMsg(EngineMessage):
     id: str
     run_id: str
     runlog: Mdl.RunLog
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(engine_id="{self.engine_id}", sequence_number={self.sequence_number}, ' +
+                f'id="{self.id}", run_id="{self.run_id}", runlog={self.runlog})')
+
 
 class ErrorLogMsg(EngineMessage):
     log: Mdl.ErrorLog
+
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(engine_id="{self.engine_id}", sequence_number={self.sequence_number}, ' +
+                f'log={self.log})')
 
 
 class MethodMsg(EngineMessage):
     method: Mdl.Method
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(engine_id="{self.engine_id}", sequence_number={self.sequence_number}, ' +
+                f'method={self.method})')
+
 
 class MethodStateMsg(EngineMessage):
     method_state: Mdl.MethodState
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(engine_id="{self.engine_id}", sequence_number={self.sequence_number}, ' +
+                f'method_state={self.method_state})')
+
 
 class ControlStateMsg(EngineMessage):
     control_state: Mdl.ControlState
+
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(engine_id="{self.engine_id}", sequence_number={self.sequence_number}, ' +
+                f'control_state={self.control_state})')
 
 
 class RunStartedMsg(EngineMessage):
     run_id: str
     started_tick: float
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(engine_id="{self.engine_id}", sequence_number={self.sequence_number}, ' +
+                f'run_id="{self.run_id}", started_tick={self.started_tick})')
+
 
 class RunStoppedMsg(EngineMessage):
     run_id: str
     runlog: Mdl.RunLog
     method: Mdl.Method
+
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(engine_id="{self.engine_id}", sequence_number={self.sequence_number}, ' +
+                f'run_id="{self.run_id}", runlog={self.runlog}, method={self.method})')
 
 
 def print_sequence_range(messages: Sequence[EngineMessage]) -> str:

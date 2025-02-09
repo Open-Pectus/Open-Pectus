@@ -9,7 +9,7 @@ from openpectus.lang.exec.units import get_compatible_unit_names
 from openpectus.lang.exec.errors import UodValidationError
 import openpectus.protocol.models as Mdl
 
-class ReadingCommand():
+class ReadingCommand:
     """ Defines commands that are available in the frontend for a given reading/process value. """
     def __init__(self, name: str, command: str) -> None:
         self.command_id: str = str(uuid.uuid4())
@@ -17,8 +17,16 @@ class ReadingCommand():
         self.command: str = command
         self.choice_names: list[str] = []
 
+    def __str__(self) -> str:
+        if len(self.choice_names):
+            return (f'{self.__class__.__name__}(command_id="{self.command_id}", name="{self.name}", ' +
+                    f'command="{self.command}", choice_names={self.choice_names})')
+        else:
+            return (f'{self.__class__.__name__}(command_id="{self.command_id}", name="{self.name}", ' +
+                    f'command="{self.command}")')
 
-class Reading():
+
+class Reading:
     """ Defines a reading that is displayed to the frontend user as a Process Value.
 
     It is typically defined by matching it with a tag to display that tag's value and with one or
@@ -40,6 +48,9 @@ class Reading():
         self.valid_value_units: list[str] | None = None
         self.entry_data_type: EntryDataType | None = None
         self.command_options: dict[str, str] | None = None
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(tag_name={self.tag_name})'
 
     def match_with_tags(self, tags: TagCollection):
         """ Match the reading with the provided tags. Raises UodValidationError or error. """
@@ -90,9 +101,6 @@ class Reading():
                 choice_names=c.choice_names,
             ) for c in self.commands]
         )
-
-    def __str__(self) -> str:
-        return f"{self.__class__.__name__}({self.tag_name=})"
 
 class ReadingWithEntry(Reading):
     def __init__(
@@ -213,6 +221,9 @@ class UodCommandDescription:
         self.argument_additive_options: list[str] = []
         """ Additive options if applicable. """
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(name="{self.name}")'
+
     def as_command_info(self) -> Mdl.CommandInfo:
         return Mdl.CommandInfo(
             name=self.name,
@@ -255,6 +266,3 @@ class UodCommandDescription:
                         if arg:
                             examples.append(f"{self.name}: {arg}")
         return examples
-
-    def __str__(self):
-        return f"{self.__class__.__name__}({self.name=})"

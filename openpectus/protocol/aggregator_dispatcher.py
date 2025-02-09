@@ -76,6 +76,10 @@ class AggregatorDispatcher():
         self.endpoint.register_route(self.router, path=AGGREGATOR_RPC_WS_PATH)
         self._register_post_route(self.router)
 
+    def __str__(self):
+        engines = [str(engine_id) for engine_id in self._engine_id_channel_map.keys()]
+        return f'{self.__class__.__name__}(connected_engines={engines})'
+
     def _register_post_route(self, router: APIRouter | FastAPI):
         """
         Set up post route to handle RegisterEngineMsg which must be handled before websocket can be established
