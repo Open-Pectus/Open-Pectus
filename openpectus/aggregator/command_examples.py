@@ -130,6 +130,12 @@ Info: Hello.
 Wait: 5 s
 Mark: 5 seconds have passed.
 """),
+    CommandExample(name="Batch", example="""
+# Note name of current batch
+
+# Example 1
+Batch: XYZ100301
+"""),
     CommandExample(name="Pause", example="""
 # Pause execution of commands
 # and time. Put outputs into safe state.

@@ -20,6 +20,7 @@ instruction
         | hold
         | wait
         | mark
+        | batch
         | command
         | comment
         | blank
@@ -49,6 +50,9 @@ duration        : .*?  ~(NEWLINE | HASH | COLON);
 
 mark            : time? MARK COLON WHITESPACE* mark_name?;
 mark_name       : identifier_ext ;
+
+batch            : time? BATCH COLON WHITESPACE* batch_name?;
+batch_name       : identifier_ext ;
 
 time            : timeexp WHITESPACE+ ;
 timeexp         : POSITIVE_FLOAT ;
@@ -80,6 +84,7 @@ HOLD            : 'Hold' ;
 WAIT            : 'Wait' ;
 RESTART         : 'Restart' ;
 MARK            : 'Mark' ;
+BATCH           : 'Batch' ;
 BLOCK           : 'Block' ;
 END_BLOCK       : 'End block' ;
 END_BLOCKS      : 'End blocks' ;

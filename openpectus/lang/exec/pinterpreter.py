@@ -33,6 +33,7 @@ from openpectus.lang.model.pprogram import (
     PAlarm,
     PCommand,
     PMark,
+    PBatch,
 )
 from typing_extensions import override
 
@@ -426,6 +427,28 @@ class PInterpreter(PNodeVisitor):
             mark_tag.set_value(node.name, self._tick_time)
         except ValueError:
             logger.error("Failed to get Mark tag")
+
+        record.add_state_started(
+            self._tick_time, self._tick_number,
+            self.context.tags.as_readonly())
+
+        # we want this in but it breaks a lot of tests. we want to be able to manage that first
+        # yield
+
+        record.add_state_completed(
+            self._tick_time, self._tick_number,
+            self.context.tags.as_readonly())
+
+    def visit_PBatch(self, node: PBatch):
+        record = self.runtimeinfo.get_last_node_record(node)
+
+        logger.info(f"Batch {str(node)}")
+
+        try:
+            batch_tag = self.context.tags.get("Batch Name")
+            batch_tag.set_value(node.name, self._tick_time)
+        except ValueError:
+            logger.error("Failed to get Batch Name tag")
 
         record.add_state_started(
             self._tick_time, self._tick_number,

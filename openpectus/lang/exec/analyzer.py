@@ -18,6 +18,7 @@ from openpectus.lang.model.pprogram import (
     PAlarm,
     PCommand,
     PMark,
+    PBatch,
 )
 
 from openpectus.lang.exec.tags import TagCollection
@@ -76,6 +77,9 @@ class AnalyzerVisitorBase(PNodeVisitor):
         pass
 
     def visit_PMark(self, node: PMark):
+        pass
+
+    def visit_PBatch(self, node: PMark):
         pass
 
     def visit_PBlock(self, node: PBlock):
