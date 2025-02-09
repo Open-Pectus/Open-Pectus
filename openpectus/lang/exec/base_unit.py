@@ -5,6 +5,9 @@ class BaseUnitProvider:
     def __init__(self) -> None:
         self.map: dict[str, tuple[str, str]] = {}
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(units={self.get_units()})'
+
     def has(self, unit: str) -> bool:
         return unit in self.map.keys()
 

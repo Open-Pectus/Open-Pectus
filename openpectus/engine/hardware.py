@@ -12,7 +12,7 @@ class RegisterDirection(Flag):
     Both = Read | Write
 
 
-class Register():
+class Register:
     """ Represents a hardware register or named value. """
     def __init__(self, name: str, direction: RegisterDirection, **options) -> None:
         self._name: str = name
@@ -32,8 +32,8 @@ class Register():
     def options(self) -> dict[str, Any]:
         return self._options
 
-    def __str__(self):
-        return f"Register(name={self.name},direction={self.direction})"
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(name="{self.name}", direction={self.direction})'
 
     def __repr__(self):
         return str(self)
@@ -46,11 +46,11 @@ class HardwareLayerException(Exception):
         self.message = message
         self.ex = ex
 
-    def __str__(self):
-        return self.message
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(message="{self.message}")'
 
 
-class HardwareLayerBase():
+class HardwareLayerBase:
     """ Base class for hardware layer implementations. """
     def __init__(self) -> None:
         self._registers: dict[str, Register] = {}
@@ -68,7 +68,7 @@ class HardwareLayerBase():
         pass
 
     def __str__(self) -> str:
-        return f"HardwareLayer(type={type(self).__name__},registers={','.join(self.registers)})"
+        return f'{self.__class__.__name__}(is_connected={self.is_connected})'
 
     @property
     def registers(self) -> dict[str, Register]:
@@ -185,6 +185,9 @@ class NullHardware(HardwareLayerBase):
     def __init__(self) -> None:
         super().__init__()
         self._is_connected = True
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}()'
 
     def read(self, r: Register) -> Any:
         return None

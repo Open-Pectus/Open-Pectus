@@ -36,6 +36,10 @@ class AggregatedErrorLogEntry(BaseModel):
     severity: int
     occurrences: int = 1
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(message="{self.message}", created_time={self.created_time}, ' +
+                f'severity={self.severity}, occurrences={self.occurrences})')
+
     @staticmethod
     def from_entry(entry: ErrorLogEntry):
         return AggregatedErrorLogEntry(
@@ -48,6 +52,10 @@ class AggregatedErrorLogEntry(BaseModel):
 
 class AggregatedErrorLog(BaseModel):
     entries: list[AggregatedErrorLogEntry]
+
+    def __str__(self) -> str:
+        entries = [str(entry) for entry in self.entries]
+        return f'{self.__class__.__name__}(entries={entries})'
 
     @staticmethod
     def empty() -> AggregatedErrorLog:
@@ -112,7 +120,8 @@ class TagsInfo(BaseModel):
             return False  # was updated
 
     def __str__(self) -> str:
-        return f"TagsInfo({','.join(self.map.keys())})"
+        tags = [str(tag) for tag in self.map.keys()]
+        return f"{self.__class__.__name__}(tags={tags})"
 
     def get_last_modified_time(self) -> datetime | None:
         if len(self.map.keys()) == 0:
@@ -134,15 +143,15 @@ class RunData(BaseModel):
     interrupted_by_error: bool = False
 
     def __str__(self) -> str:
-        return f"RunData({self.run_id=}, {self.run_started=}, " + \
-               f"interrupted_by_error:{self.interrupted_by_error})"
+        return (f'{self.__class__.__name__}(run_id="{self.run_id}", run_started={self.run_started}, ' +
+                f'interrupted_by_error={self.interrupted_by_error})')
 
     @staticmethod
     def empty(run_id: str, run_started: datetime) -> RunData:
         return RunData(run_id=run_id, run_started=run_started)
 
 
-class EngineData():
+class EngineData:
     """ Data stored by aggregator for each connected engine. """
 
     # Note: Not a BaseModel subclass since it doesn't need to be and BaseModel apparently
@@ -176,6 +185,9 @@ class EngineData():
         self.hardware_str: str = hardware_str
         self.data_log_interval_seconds: float = data_log_interval_seconds
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(engine_id="{self.engine_id}", control_state={self.control_state})'
+
     @property
     def run_data(self) -> RunData:
         if self._run_data is None:
@@ -206,6 +218,3 @@ class EngineData():
         self.error_log.clear()
         self.method_state = MethodState.empty()
         self.contributors = set()
-
-    def __str__(self) -> str:
-        return f"EngineData(engine_id:{self.engine_id}, control_state':{self.control_state})"

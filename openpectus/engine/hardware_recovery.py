@@ -29,7 +29,7 @@ class ErrorRecoveryState(Enum):
 
 
 @dataclass
-class ErrorRecoveryConfig():
+class ErrorRecoveryConfig:
     reconnect_timeout_seconds = 10
     """ Number of seconds in state Issue before changing to state Reconnect """
     error_timeout_seconds = 5*60*60
@@ -72,8 +72,10 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
     """
 
     def __str__(self) -> str:
-        return f"ErrorRecoveryDecorator(state={self.state},decorated={type(self.decorated).__name__})"
-
+        return (f'{self.__class__.__name__}(state={self.state}, ' +
+                f'last_success_read_write={self.last_success_read_write}, ' +
+                f'last_success_connect={self.last_success_connect}, ' +
+                f'last_state_reconnect_time={self.last_state_reconnect_time}, decorated={self.decorated})')
 
     def __init__(self, decorated: HardwareLayerBase, config: ErrorRecoveryConfig, connection_status_tag: Tag) -> None:
         super().__init__()

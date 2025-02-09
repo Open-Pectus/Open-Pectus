@@ -13,6 +13,9 @@ class EventListener:
     def __init__(self) -> None:
         self.run_id: str | None = None
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(run_id="{self.run_id}")'
+
     def on_engine_configured(self):
         """ Invoked once on engine startup, after configuration and after
         the connection to hardware has been established. """
@@ -69,6 +72,10 @@ class EventEmitter:
     """
     def __init__(self, listeners: Iterable[EventListener]) -> None:
         self._listeners: list[EventListener] = list(listeners)
+
+    def __str__(self) -> str:
+        listeners = [str(listener) for listener in self._listeners]
+        return f'{self.__class__.__name__}(_listeners={listeners})'
 
     def add_listener(self, listener: EventListener):
         self._listeners.append(listener)

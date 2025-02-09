@@ -9,7 +9,7 @@ class EngineNotInitializedError(Exception):
         super().__init__(*args)
 
     def __str__(self) -> str:
-        return self.message or type(self).__name__
+        return f'{self.__class__.__name__}(message="{self.message}")'
 
 
 class EngineError(Exception):
@@ -22,15 +22,17 @@ class EngineError(Exception):
         super().__init__(*args)
 
     def __str__(self) -> str:
-        return self.message or self.user_message or type(self).__name__
+        if self.user_message == self.message:
+            return f'{self.__class__.__name__}(message="{self.message}")'
+        else:
+            return f'{self.__class__.__name__}(message="{self.message}", user_message="{self.user_message}")'
 
 
 class UodValidationError(Exception):
     """ Raised when a UnitOperationDefinition definition/configuration error occurs. """
-    pass
 
     def __str__(self) -> str:
-        return type(self).__name__
+        return f'{self.__class__.__name__}()'
 
 
 class InterpretationError(Exception):
@@ -49,7 +51,11 @@ class InterpretationError(Exception):
         super().__init__(*args)
 
     def __str__(self) -> str:
-        return self.message or self.user_message or type(self).__name__
+        if self.user_message == self.message:
+            return f'{self.__class__.__name__}(message="{self.message}", exception={self.exception})'
+        else:
+            return (f'{self.__class__.__name__}(message="{self.message}", user_message="{self.user_message}", ' +
+                    f'exception={self.exception})')
 
 
 class NodeInterpretationError(InterpretationError):
@@ -64,9 +70,6 @@ class NodeInterpretationError(InterpretationError):
         base_message = f"An error occurred in instruction '{node.display_name}': {message}"
         super().__init__(base_message, user_message, exception, *args)
 
-    def __str__(self) -> str:
-        return self.message or self.user_message or type(self).__name__
-
 class InterpretationInternalError(InterpretationError):
     """ Raised by interpreter if an internal error occurs """
     def __init__(self, message: str, exception: Exception | None = None, *args: object) -> None:
@@ -74,6 +77,3 @@ class InterpretationInternalError(InterpretationError):
         self.exception = exception
         base_message = f"An internal error occurred. Interpretation cannot continue: {message}"
         super().__init__(base_message, "Internal error", exception, *args)
-
-    def __str__(self) -> str:
-        return self.message or self.user_message or type(self).__name__

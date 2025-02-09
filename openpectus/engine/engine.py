@@ -46,6 +46,10 @@ class EngineTiming():
         self._interval = interval
         self._speed = speed
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(_clock="{self._clock}", _timer={self._timer}, ' +
+                f'_interval={self._interval}, _speed={self._speed})')
+
     @staticmethod
     def default() -> EngineTiming:
         return EngineTiming(WallClock(), OneThreadTimer(0.1, None), 0.1, 1.0)
@@ -167,6 +171,9 @@ class Engine(InterpreterContext):
         self._emitter = EventEmitter(self._tags)
         self._tick_timer.set_tick_fn(self.tick)
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(uod={self.uod}, is_running={self.is_running}, ' +
+                f'has_error_state={self.has_error_state})')
 
     def _iter_all_tags(self) -> Iterable[Tag]:
         return itertools.chain(self._system_tags, self.uod.tags)

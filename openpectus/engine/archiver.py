@@ -67,6 +67,10 @@ class ArchiverTag(Tag):
 
         self.check_diskspace()
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(data_path="{self.data_path}", ' +
+                f'data_log_interval_seconds={self.data_log_interval_seconds}, last_save_tick={self.last_save_tick})')
+
     def archive(self) -> str | None:
         return None
 

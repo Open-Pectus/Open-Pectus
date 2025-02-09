@@ -114,6 +114,8 @@ def create_test_uod() -> UnitOperationDefinitionBase:
     )
     uod = builder.build()
     uod.hwl.connect()
+    print(uod)
+    print(uod.tags)
     return uod
 
 

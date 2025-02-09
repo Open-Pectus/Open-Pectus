@@ -16,7 +16,7 @@ from openpectus.lang.model.pprogram import (
 logger = logging.getLogger(__name__)
 
 
-class RuntimeInfo():
+class RuntimeInfo:
     """ Provides a log of the actions that take place during interpretation.
 
     It consists of a list of records. Each record has a name and a list of
@@ -44,6 +44,10 @@ class RuntimeInfo():
       particular command instance. This means that one record may hold states
       for different invocations (and instances) of the same command.
     """
+
+    def __str__(self) -> str:
+        records = [str(record) for record in self.records]
+        return f'{self.__class__.__name__}(records="{records}")'
 
     def __init__(self) -> None:
         self._records: list[RuntimeRecord] = []
@@ -351,7 +355,7 @@ class RuntimeInfo():
     def print_as_table(self, description: str = ""):
         print(self.get_as_table(description))
 
-class RuntimeRecord():
+class RuntimeRecord:
     def __init__(self, node: PNode, exec_id: UUID) -> None:
         self.exec_id: UUID = exec_id
         self.node = node
@@ -364,6 +368,9 @@ class RuntimeRecord():
         self.states: list[RuntimeRecordState] = []
         self.start_values: TagValueCollection | None = None
         self.end_values: TagValueCollection | None = None
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(name="{self.name}")'
 
     @staticmethod
     def null_record() -> RuntimeRecord:
@@ -466,7 +473,7 @@ class RuntimeRecord():
         state.command_exec_id = command_exec_id
 
 
-class RuntimeRecordState():
+class RuntimeRecordState:
     def __init__(
             self,
             state: RuntimeRecordStateEnum,
@@ -481,7 +488,7 @@ class RuntimeRecordState():
         self.command_exec_id: UUID | None = None
 
     def __str__(self) -> str:
-        return f"{self.state_name}"
+        return f'{self.__class__.__name__}(state_name="{self.state_name}")'
 
 
 class RuntimeRecordStateEnum(StrEnum):
@@ -516,16 +523,19 @@ class RuntimeRecordStateEnum(StrEnum):
         return hasattr(RuntimeRecordStateEnum, value)
 
 
-class RunLog():
+class RunLog:
     def __init__(self) -> None:
         self.id: str = ""
         self.items: list[RunLogItem] = []
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(id="{self.id}", items={self.items})'
 
     def size(self) -> int:
         return len(self.items)
 
 
-class RunLogItem():
+class RunLogItem:
     def __init__(self) -> None:
         self.id: str = ""
         """ Exec_id of the command """
@@ -540,6 +550,9 @@ class RunLogItem():
         self.forced: bool = False
         self.cancellable: bool = False
         self.cancelled: bool = False
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(name="{self.name}")'
 
 
 class RunLogItemState(StrEnum):

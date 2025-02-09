@@ -31,6 +31,9 @@ class FrontendPublisher:
         self.pubsub_endpoint = PubSubEndpoint(methods_class=FrontendPublisher.MethodsWithUnsubscribe)
         self.pubsub_endpoint.register_route(self.router, path="/frontend-pubsub")
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}()'
+
     async def publish_process_units_changed(self):
         await self.pubsub_endpoint.publish(PubSubTopic.PROCESS_UNITS)
 

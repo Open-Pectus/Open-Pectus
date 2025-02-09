@@ -1,4 +1,3 @@
-
 import threading
 import time
 from typing import Callable
@@ -14,7 +13,9 @@ Will be called on all ticks, even tick 0 where `increment_time` is zero.
 On pause/resume, will also be called on the first tick after resume where `increment_time` is also zero.
 """
 
-class EngineTimer():
+class EngineTimer:
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}()'
 
     def set_tick_fn(self, tick_fn: TickConsumer):
         pass
@@ -45,6 +46,9 @@ class OneThreadTimer(EngineTimer):
         self.interval = interval
         self.tick = tick
         self.running = False            # flag to allow shut down by exiting the ticker loop method
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(interval={self.interval}, running={self.running})'
 
     def set_tick_fn(self, tick_fn: TickConsumer):
         self.tick = tick_fn
