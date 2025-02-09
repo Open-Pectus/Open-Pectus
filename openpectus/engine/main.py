@@ -99,7 +99,7 @@ async def main_async(args, loop: asyncio.AbstractEventLoop):
     try:
         uod = create_uod(args.uod)
     except Exception as ex:
-        logger.error(f"Failed to create uod: {ex}")
+        logger.error(f"Failed to create uod: {ex}. Apply -v flag to validate UOD with more verbose error descriptions.")
         return
 
     engine = Engine(uod, enable_archiver=True)
