@@ -1,6 +1,7 @@
 from __future__ import annotations
 import os
 import logging
+import itertools
 
 import pint
 from pint import UnitRegistry, Quantity
@@ -21,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # https://en.wikipedia.org/wiki/International_System_of_Units
 # defines all the units we accept, each with their quantity name (similar to pint dimensionality).
-QUANTITY_UNIT_MAP = {
+QUANTITY_UNIT_MAP: dict[str, list[str]] = {
     'time': ['s', 'min', 'h', 'ms'],                # SI quantities
     'length': ['m', 'cm'],
     'area': ['m**2', 'm2', 'dm2', 'cm2'],
@@ -67,23 +68,39 @@ QUANTITY_PINT_MAP: dict[str, str] = {
 FLOAT_COMPARE_DELTA = 0.01
 """ The precision to use when comparing float values for equality. """
 
-# build list of all supported units
-_supported_units: list[None | str] = [None]
-for v in QUANTITY_UNIT_MAP.values():
-    _supported_units.extend(v)
-
 # These units are not stored as a tag unit but as a tag value in the Base tag,
 # so they need special treatment.
 # Note that this list is a total static list. The actual valid units depend on the
 # totalizers that are defined in the uod.
 BASE_VALID_UNITS = ['L', 'h', 'min', 's', 'mL', 'CV', 'DV', 'g', 'kg']
 
+def add_unit(quantity: str, unit: str, quantity_definition: None | str = None, base_unit: bool = False):
+    if is_supported_unit(unit) and (not base_unit or unit in BASE_VALID_UNITS):
+        quantity = get_unit_quantity_name(unit)
+        logger.warning(f'Unit "{unit}" is already supported with quantity "{quantity}"')
+        return
+    # Update QUANTITY_PINT_MAP and ureg
+    if quantity not in QUANTITY_PINT_MAP.keys():
+        quantity_definition = quantity_definition if quantity_definition else f"[{quantity}]"
+        if quantity_definition is None:
+            logger.info(f'Defining quantity "{quantity}" as its own kind, unrelated to other quantities.')
+        QUANTITY_PINT_MAP[quantity] = quantity_definition
+        ureg.define(f"{unit} = {quantity_definition}")
+    # Update QUANTITY_UNIT_MAP
+    if quantity in QUANTITY_UNIT_MAP.keys():
+        if unit not in QUANTITY_UNIT_MAP[quantity]:
+            QUANTITY_UNIT_MAP[quantity].append(unit)
+    else:
+        QUANTITY_UNIT_MAP[quantity] = [unit]
+    # Update BASE_VALID_UNITS
+    if base_unit and unit not in BASE_VALID_UNITS:
+        BASE_VALID_UNITS.append(unit)
 
 def get_supported_units() -> list[str | None]:
-    return list(_supported_units)
+    return [None] + list(itertools.chain(*QUANTITY_UNIT_MAP.values()))
 
 def is_supported_unit(unit: str) -> bool:
-    return unit in _supported_units
+    return unit in get_supported_units()
 
 def get_volume_units():
     return QUANTITY_UNIT_MAP['volume']
