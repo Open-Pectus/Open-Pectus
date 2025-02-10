@@ -22,7 +22,6 @@ async def on_delayed_client_connect(channel: RpcChannel):
     engine_id = await channel.other.get_engine_id_async()
     # self.assertEqual(engine_id, mock_engine_id)
     logger.info(engine_id)
-    print(engine_id, flush=True)
 
 
 async def on_client_connect(channel: RpcChannel):

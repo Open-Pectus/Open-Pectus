@@ -314,6 +314,7 @@ class TestHardwareErrorRecovery(unittest.TestCase):
         decorator.test_cmd()  # type: ignore
 
 class ErrorTestHardware(HardwareLayerBase):
+    __test__ = False
     """ A test hardware class that can fail its operations when so directed by the test"""
     def __init__(self) -> None:
         super().__init__()

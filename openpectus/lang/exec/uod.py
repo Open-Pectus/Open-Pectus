@@ -417,7 +417,6 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
 
     def cancel(self):
         super().cancel()
-        self.context.dispose_command(self)
 
     def finalize(self):
         super().finalize()

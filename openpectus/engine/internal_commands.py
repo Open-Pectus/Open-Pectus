@@ -25,12 +25,9 @@ class InternalCommandsRegistry:
         for cmd in self._command_instances.values():
             try:
                 cmd.cancel()
-                cmd.finalize()
             except Exception as ex:
                 logger.warning(f"Error during cancel/finalize while disposing command: {cmd.name}: {str(ex)}")
-            finally:
-                self.dispose_command(cmd)
-        self._command_instances.clear()
+        self._finalize_instances()
 
     def _register_commands(self, engine):
         if len(self._command_map) > 0:
@@ -77,7 +74,13 @@ class InternalCommandsRegistry:
             del self._command_instances[command_name]
         else:
             logger.warning(f"No command '{command_name}' found to dispose. " +
-                           f"Actual commands: {str(self._command_instances.keys())}")
+                           f"Actual commands: {str(list(self._command_instances.keys()))}")
+
+    def _finalize_instances(self):
+        """ Finalize and dispose all command instances. """
+        instances = list(self._command_instances.values())
+        for cmd in instances:
+            cmd.finalize()
 
 
 class InternalEngineCommand(EngineCommand):
@@ -110,10 +113,10 @@ class InternalEngineCommand(EngineCommand):
 
     def set_complete(self):
         super().set_complete()
-        # we don't need finalize for internal commands so we
-        # just automatically progress to its end state.
-        # This avoids wasting a tick for these commands and makes testing simpler
-        self.finalize()
+
+    def finalize(self):
+        super().finalize()
+        self._registry.dispose_command(self.name)
 
     def tick(self) -> None:
         if self.is_finalized() or self.is_cancelled() or self.has_failed():
@@ -134,14 +137,14 @@ class InternalEngineCommand(EngineCommand):
 
             if self.run_result is None:
                 self.set_complete()
-                self._registry.dispose_command(self.name)
+                self.finalize()
             else:
                 try:
                     next(self.run_result)
                 except StopIteration:
                     self.set_complete()
-                    self._registry.dispose_command(self.name)
+                    self.finalize()
                 except Exception:
                     self.fail()
+                    self.finalize()
                     logger.error(f"Command '{self.name}' failed", exc_info=True)
-                    self._registry.dispose_command(self.name)

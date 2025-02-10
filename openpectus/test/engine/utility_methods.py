@@ -131,7 +131,8 @@ class EngineTestInstance(EventListener):
             elapsed = time.time() - last_tick_time
             deadline = self.timing.interval - elapsed
             if deadline > 0.0:
-                time.sleep(deadline)
+                while last_tick_time+self.timing.interval-time.time() > 0:
+                    time.sleep(min(last_tick_time+self.timing.interval-time.time(), 0.01))
             else:
                 logger.warning(f"Sleep deadline for tick was negative: {deadline}")
 
@@ -192,7 +193,11 @@ class EngineTestInstance(EventListener):
                 return True
 
         logger.debug(f"Start waiting for instruction {instruction_name}, state: {state}")
-        ticks = self.run_until_condition(cond, max_ticks=max_ticks)
+        try:
+            ticks = self.run_until_condition(cond, max_ticks=max_ticks)
+        except TimeoutError:
+            raise TimeoutError(f"Timeout while waiting for instruction '{instruction_name}', state: {state}")
+
         logger.debug(f"Done waiting for instruction {instruction_name}, state: {state}")
         return ticks
 
@@ -225,7 +230,10 @@ class EngineTestInstance(EventListener):
                 return True
             else:
                 return False
-        return self.run_until_condition(cond, max_ticks=max_ticks)
+        try:
+            return self.run_until_condition(cond, max_ticks=max_ticks)
+        except TimeoutError:
+            raise TimeoutError(f"Timeout while waiting for event '{event_name}'")
 
     def run_ticks(self, ticks: int) -> None:
         """ Continue program execution until te specified number of ticks. """
@@ -239,7 +247,6 @@ class EngineTestInstance(EventListener):
             return
 
         raise ValueError("Could not wait??")
-
 
     def get_runtime_table(self, description: str = "") -> str:
         """ Return a text view of the runtime table contents. """
@@ -271,10 +278,10 @@ class EngineTestInstance(EventListener):
     def on_engine_shutdown(self):
         pass
 
-    # --- TagLifetime end ----
+    # --- EventListener end ----
 
 
-# globals for run_engine and continue_enging
+# globals for run_engine and continue_engine
 last_tick_time = 0.0
 interval = 0.1
 
@@ -307,7 +314,8 @@ def run_engine(engine: Engine, pcode: str, max_ticks: int = -1) -> int:
         elapsed = time.time() - last_tick_time
         deadline = interval - elapsed
         if deadline > 0.0:
-            time.sleep(deadline)
+            while last_tick_time+interval-time.time() > 0:
+                time.sleep(min(last_tick_time+interval-time.time(), 0.01))
         else:
             logger.warning(f"Sleep deadline for tick was negative: {deadline}")
 
@@ -344,7 +352,8 @@ def continue_engine(engine: Engine, max_ticks: int = -1) -> int:
         elapsed = time.time() - last_tick_time
         deadline = interval - elapsed
         if deadline > 0.0:
-            time.sleep(deadline)
+            while last_tick_time+interval-time.time() > 0:
+                time.sleep(min(last_tick_time+interval-time.time(), 0.01))
         else:
             logger.warning(f"Sleep deadline for tick was negative: {deadline}")
 
