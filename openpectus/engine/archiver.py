@@ -46,6 +46,19 @@ TagsAccessor = Callable[[], TagCollection]
 
 
 class ArchiverTag(Tag):
+    def __getstate__(self):
+        keys = [
+        'data_path',
+        'last_save_tick',
+        'data_log_interval_seconds',
+        'file_path',
+        'file_ready',
+        'value',
+        'name',
+        'tick_time',
+        ]
+        state = {key: getattr(self, key) for key in keys}
+        return state
     def __init__(self,
                  runlog_accessor: RunlogAccessor,
                  tags_accessor: TagsAccessor,

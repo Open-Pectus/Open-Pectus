@@ -31,6 +31,11 @@ class NullTimer(EngineTimer):
 
 
 class OneThreadTimer(EngineTimer):
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # Don't pickle baz
+        del state["thread"]
+        return state
     """ Single threaded (1 extra thread) timer.
 
     This allows controlled multithreading.

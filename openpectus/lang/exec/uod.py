@@ -24,6 +24,8 @@ logger = logging.getLogger(__name__)
 class UnitOperationDefinitionBase:
     """ Represets the Unit Operation Definition interface used by the OpenPectus engine.
     """
+    def __getstate__(self):
+        return dict(filename=self.filename, tags=self.tags, system_tags=self.system_tags)
     def __init__(self,
                  instrument_name: str,
                  hwl: HardwareLayerBase,

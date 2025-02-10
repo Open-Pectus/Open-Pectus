@@ -14,7 +14,13 @@ def parse_pcode(pcode: str) -> PProgram:
     return p.build_model()
 
 
-class MethodModel():
+class MethodModel:
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # Don't pickle baz
+        del state["_method_init_callback"]
+        del state["_method_error_callback"]
+        return state
     """ Manages the mutable method state and its changes.
 
     Method state is mutated by engine as the program runs, e.g. executed lines are updated

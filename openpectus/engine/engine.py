@@ -5,6 +5,8 @@ import uuid
 from queue import Empty, Queue
 from typing import Iterable, List, Set
 from uuid import UUID
+import importlib.util
+
 from openpectus.engine.internal_commands import InternalCommandsRegistry
 from openpectus.engine.hardware import HardwareLayerException, RegisterDirection
 from openpectus.engine.method_model import MethodModel
@@ -37,6 +39,22 @@ from openpectus.engine.archiver import ArchiverTag
 
 logger = logging.getLogger(__name__)
 frontend_logger = logging.getLogger(__name__ + ".frontend")
+
+class Queue(Queue):
+    def __getstate__(self):
+        items = []
+        while True:
+            try:
+                items.append(self.get_nowait())
+            except Empty:
+                break
+        for item in items:
+            self.put_nowait(item)
+        return dict(items=items)
+    def __setstate__(self, state):
+        super().__init__()
+        for item in state["items"]:
+            self.put_nowait(item)
 
 class EngineTiming():
     """ Represents timing information used by engine and any related components. """
@@ -73,6 +91,97 @@ class Engine(InterpreterContext):
     - signals state changes via tag_updates queue (to EngineReporter)
     - accepts commands from cmd_queue (from interpreter and from aggregator)
     """
+    
+    def __getstate__(self):
+        keys = [
+        "uod",
+        "_running",
+        "registry",
+        "_tick_time",
+        "_tick_number",
+        "_enable_archiver",
+        "cmd_queue",
+        "cmd_executing",
+        "tag_updates",
+        "_runstate_started",
+        "_runstate_started_time",
+        "_runstate_paused",
+        "_runstate_holding",
+        "_runstate_stopping",
+        "_runstate_waiting",
+        "_prev_state",
+        "_last_error",
+        "block_times",
+        #"_interpreter",
+        #"_emitter",
+        "_method",
+        "_cancel_command_exec_ids",
+        ]
+        state = {key: getattr(self, key) for key in keys}
+        return state
+    def __setstate__(self, state):
+        # Import UOD
+        loaded_uod: UnitOperationDefinitionBase = state.pop("uod")
+        spec = importlib.util.spec_from_file_location('uod', loaded_uod.filename)
+        assert spec is not None
+        uod_module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(uod_module)
+        uod = uod_module.create()
+        # Set tag values self.uod.tags
+        for tag in loaded_uod.tags:
+            uod.tags.get(tag.name).value = tag.value
+            uod.tags.get(tag.name).tick_time = tag.tick_time
+        
+        # Load potential running commands from the InternalCommandsRegistry
+        loaded_registry = state.pop("registry")
+        # Load potential _method
+        loaded__method = state.pop("_method")
+        
+        self.__init__(uod, enable_archiver=state.pop("_enable_archiver"))
+        for tag in loaded_uod.system_tags:
+            if not isinstance(tag, str):
+                uod.system_tags.get(tag.name).value = tag.value
+                uod.system_tags.get(tag.name).tick_time = tag.tick_time
+        self.__dict__.update(state)
+        
+        # Set tag values on self.tag_updates
+        tag_updates_tags = []
+        while True:
+            try:
+                tag_updates_tags.append(self.tag_updates.get_nowait())
+            except Empty:
+                break
+        for tag in tag_updates_tags:
+            if tag.name in self.uod.tags.names:
+                replacement_item = self.uod.tags.get(tag.name)
+                replacement_item.value = tag.value
+                replacement_item.tick_time = tag.tick_time
+                self.tag_updates.put_nowait(replacement_item)
+            elif tag.name in self.uod.system_tags.names:
+                replacement_item = self.uod.system_tags.get(tag.name)
+                replacement_item.value = tag.value
+                replacement_item.tick_time = tag.tick_time
+                self.tag_updates.put_nowait(replacement_item)
+            else:
+                print(f"Could not find {tag.name}")
+            
+
+        #
+        self.registry._command_instances = loaded_registry._command_instances
+        self._method.__dict__.update(loaded__method.__dict__)
+        
+        # Set up emitter tags, emit according to current state.
+        system_state = self.uod.system_tags.get(SystemTagName.SYSTEM_STATE).value
+        run_id = self.uod.system_tags.get(SystemTagName.RUN_ID).value
+        print(system_state, run_id)
+        #if system_state == "Running":
+        #    self.emitter.emit_on_start(run_id)
+        archiver = self.uod.system_tags.get("Archive filename")
+        #print(archiver)
+        archiver.__dict__.update(loaded_uod.system_tags.get("Archive filename").__dict__)
+        archiver.tags = archiver.tags_accessor()
+        #self.emitter.
 
     def __init__(
             self,
@@ -103,6 +212,7 @@ class Engine(InterpreterContext):
         # Add archiver which is implemented as a tag. The lambda getting the runlog works because the
         # tag_lifetime.on_stop event is emitted just before resetting the interpreter and runlog (and
         # not after).
+        self._enable_archiver = enable_archiver
         if enable_archiver:
             archiver = ArchiverTag(
                 lambda : self.runtimeinfo.get_runlog(),

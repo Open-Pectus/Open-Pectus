@@ -8,6 +8,8 @@ import pathlib
 from typing import Literal
 from itertools import chain
 import sys
+import os
+import pickle
 
 import multiprocess
 
@@ -96,13 +98,18 @@ def run_validations(uod: UnitOperationDefinitionBase) -> bool:
 
 async def main_async(args, loop: asyncio.AbstractEventLoop):
     global engine, runner
-    try:
-        uod = create_uod(args.uod)
-    except Exception as ex:
-        logger.error(f"Failed to create uod: {ex}")
-        return
 
-    engine = Engine(uod, enable_archiver=True)
+    if os.path.isfile("engine_state.pickle"):
+        with open("engine_state.pickle", "rb") as f:
+            engine = pickle.load(f)
+            uod = engine.uod
+    else:
+        try:
+            uod = create_uod(args.uod)
+        except Exception as ex:
+            logger.error(f"Failed to create uod: {ex}")
+            return
+        engine = Engine(uod, enable_archiver=True)
 
     # if --aggregator_port is specified, use it, else select a default port based on --secure
     if args.aggregator_port is not None:
@@ -128,6 +135,7 @@ async def main_async(args, loop: asyncio.AbstractEventLoop):
     message_builder = EngineMessageBuilder(engine)
     # create runner that orchestrates the error recovery mechanism
     runner = EngineRunner(dispatcher, message_builder, engine.emitter, loop)
+    runner.run_id = engine.uod.system_tags.get(SystemTagName.RUN_ID).value
     _ = EngineMessageHandlers(engine, dispatcher)
 
     # TODO Possibly check dispatcher.check_aggregator_alive() and exit early
@@ -304,6 +312,15 @@ def main():
         loop.run_until_complete(main_async(args, loop))
         logger.info("Main loop completed")
     except KeyboardInterrupt:
+        global engine
+        pickle.dumps(engine)
+        try:
+            pickle.dumps(engine)
+            with open('engine_state.pickle', "wb") as f:
+                pickle.dump(engine, f)
+                logger.info("Engine state saved to file.")
+        except:
+            pass
         logger.info("User requested engine to stop")
         loop.run_until_complete(close_async())
     except Exception:
