@@ -141,8 +141,8 @@ async def main_async(args, loop: asyncio.AbstractEventLoop):
     runner = EngineRunner(dispatcher, message_builder, engine.emitter, loop)
     assert engine.uod.system_tags is not None
     run_id = engine.uod.system_tags.get(SystemTagName.RUN_ID).value
-    assert isinstance(run_id, str)
-    runner.run_id = run_id
+    if isinstance(run_id, str):
+        runner.run_id = run_id
     _ = EngineMessageHandlers(engine, dispatcher)
 
     # TODO Possibly check dispatcher.check_aggregator_alive() and exit early
