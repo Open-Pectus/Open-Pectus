@@ -104,6 +104,7 @@ async def main_async(args, loop: asyncio.AbstractEventLoop):
     if args.resume_from_pickle and os.path.isfile("engine_state.pickle"):
         with open("engine_state.pickle", "rb") as f:
             engine = pickle.load(f)
+            assert isinstance(engine, Engine)
             uod = engine.uod
             logger.info("Loaded state from pickle")
     else:
@@ -138,7 +139,10 @@ async def main_async(args, loop: asyncio.AbstractEventLoop):
     message_builder = EngineMessageBuilder(engine)
     # create runner that orchestrates the error recovery mechanism
     runner = EngineRunner(dispatcher, message_builder, engine.emitter, loop)
-    runner.run_id = engine.uod.system_tags.get(SystemTagName.RUN_ID).value
+    assert engine.uod.system_tags is not None
+    run_id = engine.uod.system_tags.get(SystemTagName.RUN_ID).value
+    assert isinstance(run_id, str)
+    runner.run_id = run_id
     _ = EngineMessageHandlers(engine, dispatcher)
 
     # TODO Possibly check dispatcher.check_aggregator_alive() and exit early

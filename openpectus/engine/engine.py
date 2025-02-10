@@ -40,7 +40,7 @@ from openpectus.engine.archiver import ArchiverTag
 logger = logging.getLogger(__name__)
 frontend_logger = logging.getLogger(__name__ + ".frontend")
 
-class Queue(Queue):
+class PickelableQueue(Queue):  # type: ignore
     def __getstate__(self):
         items = []
         while True:
@@ -51,6 +51,7 @@ class Queue(Queue):
         for item in items:
             self.put_nowait(item)
         return dict(items=items)
+
     def __setstate__(self, state):
         super().__init__()
         for item in state["items"]:
@@ -146,6 +147,7 @@ class Engine(InterpreterContext):
         loaded__method = state.pop("_method")
         
         self.__init__(uod, enable_archiver=state.pop("_enable_archiver"))
+        assert loaded_uod.system_tags is not None
         for tag in loaded_uod.system_tags:
             if not isinstance(tag, str):
                 uod.system_tags.get(tag.name).value = tag.value
@@ -159,6 +161,7 @@ class Engine(InterpreterContext):
                 tag_updates_tags.append(self.tag_updates.get_nowait())
             except Empty:
                 break
+        assert self.uod.system_tags is not None
         for tag in tag_updates_tags:
             if tag.name in self.uod.tags.names:
                 replacement_item = self.uod.tags.get(tag.name)
@@ -182,9 +185,10 @@ class Engine(InterpreterContext):
         print(system_state, run_id)
         #if system_state == "Running":
         #    self.emitter.emit_on_start(run_id)
-        archiver = self.uod.system_tags.get("Archive filename")
+        archiver: Tag = self.uod.system_tags.get("Archive filename")
         #print(archiver)
         archiver.__dict__.update(loaded_uod.system_tags.get("Archive filename").__dict__)
+        assert isinstance(archiver, ArchiverTag)
         archiver.tags = archiver.tags_accessor()
         #self.emitter.
 
@@ -227,11 +231,11 @@ class Engine(InterpreterContext):
 
         self.uod.system_tags = self._system_tags
 
-        self.cmd_queue: Queue[CommandRequest] = Queue()
+        self.cmd_queue: Queue[CommandRequest] = PickelableQueue()
         """ Commands to execute, coming from interpreter and from aggregator """
         self.cmd_executing: List[CommandRequest] = []
         """ Uod commands currently being excuted """
-        self.tag_updates: Queue[Tag] = Queue()
+        self.tag_updates: Queue[Tag] = PickelableQueue()
         """ Tags updated in last tick """
 
         self._uod_listener = ChangeListener()
