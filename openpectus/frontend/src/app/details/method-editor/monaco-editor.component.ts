@@ -68,6 +68,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   constructor(private store: Store) {}
 
+  // adapted from https://github.com/TypeFox/monaco-languageclient/blob/70f92b740a06f56210f91464d694b5e5d4dc87db/packages/examples/src/common/client/utils.ts
   configureMonacoWorkers(logger?: Logger) {
     useWorkerFactory({
       workerLoaders: {
@@ -129,7 +130,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
         monacoWorkerFactory: this.configureMonacoWorkers,
       },
       languageClientConfigs: {
-        pcode: {
+        'pcode': {
           clientOptions: {
             documentSelector: ['pcode'],
           },
