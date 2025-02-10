@@ -1,7 +1,6 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, OnDestroy, ViewChild } from '@angular/core';
 // import '@codingame/monaco-vscode-json-default-extension';
 import '@codingame/monaco-vscode-theme-defaults-default-extension';
-import { IExtensionManifest, registerExtension } from '@codingame/monaco-vscode-api/extensions';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { editor as MonacoEditor, KeyCode, Range } from 'monaco-editor';
@@ -19,28 +18,6 @@ const startedLineClassName = 'started-line';
 const executedLineClassName = 'executed-line';
 const injectedLineClassName = 'injected-line';
 const lineIdClassNamePrefix = 'line-id-';
-
-// Extension registration adapted from @codingame/monaco-vscode-json-default-extension. Needed for LSP communication.
-const manifest = {
-  name: 'pcode',
-  version: '0.0.0',
-  publisher: 'openpectus',
-  engines: {vscode: '0.10.x'},
-  categories: ['Programming Languages'],
-  contributes: {
-    languages: [{
-      id: 'pcode',
-      aliases: ['PCODE', 'pcode'],
-      extensions: ['.pcode'],
-      mimetypes: ['application/pcode'],
-      // configuration: './language-configuration.json', // can be used to configure things like indentation and autoclosing brackets, see file in @codingame/monaco-vscode-json-default-extension
-    }],
-  },
-  main: undefined,
-} satisfies IExtensionManifest;
-
-registerExtension(manifest, undefined, {'system': true});
-
 
 @Component({
   selector: 'app-monaco-editor',
@@ -120,6 +97,24 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
           }),
         },
       },
+      extensions: [{
+        config: {
+          name: 'pcode',
+          version: '0.0.0',
+          publisher: 'openpectus',
+          engines: {vscode: '0.10.x'},
+          categories: ['Programming Languages'],
+          contributes: {
+            languages: [{
+              id: 'pcode',
+              aliases: ['PCODE', 'pcode'],
+              extensions: ['.pcode'],
+              mimetypes: ['application/pcode'],
+              // configuration: './language-configuration.json', // can be used to configure things like indentation and autoclosing brackets, see file in @codingame/monaco-vscode-json-default-extension
+            }],
+          },
+        },
+      }],
       editorAppConfig: {
         codeResources: {
           modified: {
