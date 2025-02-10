@@ -1,14 +1,13 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, OnDestroy, ViewChild } from '@angular/core';
 // import '@codingame/monaco-vscode-json-default-extension';
-// import '@codingame/monaco-vscode-theme-defaults-default-extension';
+import '@codingame/monaco-vscode-theme-defaults-default-extension';
+import { IExtensionManifest, registerExtension } from '@codingame/monaco-vscode-api/extensions';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { editor as MonacoEditor, KeyCode, Range } from 'monaco-editor';
 import { MonacoEditorLanguageClientWrapper, WrapperConfig } from 'monaco-editor-wrapper';
 import { Logger } from 'monaco-languageclient/tools';
-// import { useWorkerFactory } from 'monaco-editor-wrapper/workerFactory';
 import { useWorkerFactory } from 'monaco-languageclient/workerFactory';
-// import { initEnhancedMonacoEnvironment } from 'monaco-languageclient/vscode/services';
 import { combineLatest, filter, firstValueFrom, Observable, Subject, takeUntil } from 'rxjs';
 import { LogLevel } from 'vscode';
 import { MethodLine } from '../../api';
@@ -20,6 +19,28 @@ const startedLineClassName = 'started-line';
 const executedLineClassName = 'executed-line';
 const injectedLineClassName = 'injected-line';
 const lineIdClassNamePrefix = 'line-id-';
+
+// Extension registration adapted from @codingame/monaco-vscode-json-default-extension. Needed for LSP communication.
+const manifest = {
+  name: 'pcode',
+  version: '0.0.0',
+  publisher: 'openpectus',
+  engines: {vscode: '0.10.x'},
+  categories: ['Programming Languages'],
+  contributes: {
+    languages: [{
+      id: 'pcode',
+      aliases: ['PCODE', 'pcode'],
+      extensions: ['.pcode'],
+      mimetypes: ['application/pcode'],
+      // configuration: './language-configuration.json', // can be used to configure things like indentation and autoclosing brackets, see file in @codingame/monaco-vscode-json-default-extension
+    }],
+  },
+  main: undefined,
+} satisfies IExtensionManifest;
+
+registerExtension(manifest, undefined, {'system': true});
+
 
 @Component({
   selector: 'app-monaco-editor',
@@ -47,20 +68,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   constructor(private store: Store) {}
 
-  // adapted from https://github.com/TypeFox/monaco-languageclient/blob/main/packages/wrapper/src/workerFactory.ts
-  // because using it directly causes compile errors for tsWorker, for some reason
   configureMonacoWorkers(logger?: Logger) {
-    // const envEnhanced = initEnhancedMonacoEnvironment();
-    // envEnhanced.getWorker = (moduleId: string, label: string) => {
-    //   switch(label) {
-    //     case 'TextEditorWorker':
-    //       return new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url), {type: 'module'});
-    //     case 'TextMateWorker':
-    //       return new Worker(new URL('@codingame/monaco-vscode-textmate-service-override/worker', import.meta.url), {type: 'module'});
-    //     default:
-    //       throw new Error(`Unimplemented worker ${label} (${moduleId})`);
-    //   }
-    // };
     useWorkerFactory({
       workerLoaders: {
         'TextEditorWorker': () => new Worker(new URL('@codingame/monaco-vscode-editor-api/esm/vs/editor/editor.worker.js', import.meta.url),
@@ -115,15 +123,15 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
         codeResources: {
           modified: {
             text,
-            fileExt: 'json',
+            fileExt: 'pcode',
           },
         },
         monacoWorkerFactory: this.configureMonacoWorkers,
       },
       languageClientConfigs: {
-        json: {
+        pcode: {
           clientOptions: {
-            documentSelector: ['json'],
+            documentSelector: ['pcode'],
           },
           connection: {
             options: {
