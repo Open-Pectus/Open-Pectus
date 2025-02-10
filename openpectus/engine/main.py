@@ -8,6 +8,8 @@ import pathlib
 from typing import Literal
 from itertools import chain
 import sys
+import os
+import pickle
 
 import multiprocess
 
@@ -71,6 +73,8 @@ def get_arg_parser():
     parser.add_argument("-sev", "--sentry_event_level", required=False,
                         default=sentry.EVENT_LEVEL_DEFAULT, choices=sentry.EVENT_LEVEL_NAMES,
                         help=f"Minimum log level to send as sentry events. Default is '{sentry.EVENT_LEVEL_DEFAULT}'")
+    parser.add_argument("-r", "--resume_from_pickle", action=BooleanOptionalAction,
+                        help=f"Flag to disable resuming from pickle'")
     return parser
 
 
@@ -96,13 +100,20 @@ def run_validations(uod: UnitOperationDefinitionBase) -> bool:
 
 async def main_async(args, loop: asyncio.AbstractEventLoop):
     global engine, runner
-    try:
-        uod = create_uod(args.uod)
-    except Exception as ex:
-        logger.error(f"Failed to create uod: {ex}")
-        return
 
-    engine = Engine(uod, enable_archiver=True)
+    if args.resume_from_pickle and os.path.isfile("engine_state.pickle"):
+        with open("engine_state.pickle", "rb") as f:
+            engine = pickle.load(f)
+            assert isinstance(engine, Engine)
+            uod = engine.uod
+            logger.info("Loaded state from pickle")
+    else:
+        try:
+            uod = create_uod(args.uod)
+        except Exception as ex:
+            logger.error(f"Failed to create uod: {ex}")
+            return
+        engine = Engine(uod, enable_archiver=True)
 
     # if --aggregator_port is specified, use it, else select a default port based on --secure
     if args.aggregator_port is not None:
@@ -128,6 +139,10 @@ async def main_async(args, loop: asyncio.AbstractEventLoop):
     message_builder = EngineMessageBuilder(engine)
     # create runner that orchestrates the error recovery mechanism
     runner = EngineRunner(dispatcher, message_builder, engine.emitter, loop)
+    assert engine.uod.system_tags is not None
+    run_id = engine.uod.system_tags.get(SystemTagName.RUN_ID).value
+    if isinstance(run_id, str):
+        runner.run_id = run_id
     _ = EngineMessageHandlers(engine, dispatcher)
 
     # TODO Possibly check dispatcher.check_aggregator_alive() and exit early
@@ -304,6 +319,15 @@ def main():
         loop.run_until_complete(main_async(args, loop))
         logger.info("Main loop completed")
     except KeyboardInterrupt:
+        global engine
+        pickle.dumps(engine)
+        try:
+            pickle.dumps(engine)
+            with open('engine_state.pickle', "wb") as f:
+                pickle.dump(engine, f)
+                logger.info("Engine state saved to file.")
+        except:
+            pass
         logger.info("User requested engine to stop")
         loop.run_until_complete(close_async())
     except Exception:

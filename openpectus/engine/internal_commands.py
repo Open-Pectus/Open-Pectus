@@ -10,6 +10,12 @@ logger = logging.getLogger(__name__)
 
 
 class InternalCommandsRegistry:
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # Don't pickle baz
+        del state["_command_map"]
+        return state
+
     def __init__(self, engine):
         self.engine = engine
         self._command_map: dict[str, Callable[[], InternalEngineCommand]] = {}

@@ -119,6 +119,13 @@ class Tag(ChangeSubject, EventListener):
 
     Supports lifetime notification events that are automatically invoked by the engine.
     """
+    def __getstate__(self):
+        print('>', self.name)
+        return dict(
+            name = self.name,
+            tick_time = self.tick_time,
+            value = self.value,
+        )
     def __init__(
             self,
             name: str,
