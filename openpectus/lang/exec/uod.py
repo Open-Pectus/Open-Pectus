@@ -437,6 +437,8 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
 
 
 class UodCommandBuilder():
+    def __getstate__(self):
+        return dict()
     """ Used to builds command specifications and as factory to instantiate commands from the specifications. """
     def __init__(self) -> None:
         self.name = ""
@@ -490,38 +492,38 @@ class UodCommandBuilder():
         self.arg_parse_fn = arg_parse_fn
         return self
 
+    def _init_fn(self):
+        if self.init_fn is not None:
+            return self.init_fn(self.c)
+
+    def _execute(self, args: CommandArgs) -> None:
+        if self.exec_fn is not None:
+            try:
+                return self.exec_fn(self.c, **args)
+            except TypeError as te:
+                raise Exception(f"Execution function type error in uod command '{self.name}' with **args '{args}'")\
+                    from te
+
+    def _arg_parse(self, args: str) -> CommandArgs | None:
+        if self.arg_parse_fn is None:
+            return {}
+        return self.arg_parse_fn(args)
+
+    def _finalize(self) -> None:
+        if self.finalize_fn is not None:
+            return self.finalize_fn(self.c)
+
     def build(self, uod: UnitOperationDefinitionBase) -> UodCommand:
         """ Construct the command """
 
-        def arg_parse(args: str) -> CommandArgs | None:
-            if self.arg_parse_fn is None:
-                return {}
-            return self.arg_parse_fn(args)
-
-        def initialize() -> None:
-            if self.init_fn is not None:
-                return self.init_fn(c)
-
-        def execute(args: CommandArgs) -> None:
-            if self.exec_fn is not None:
-                try:
-                    return self.exec_fn(c, **args)
-                except TypeError as te:
-                    raise Exception(f"Execution function type error in uod command '{self.name}' with **args '{args}'")\
-                        from te
-
-        def finalize() -> None:
-            if self.finalize_fn is not None:
-                return self.finalize_fn(c)
-
         if self.name is None or self.name.strip() == '':
             raise ValueError("Name is not set")
-        c = UodCommand(uod, self.name)
-        c.init_fn = initialize
-        c.exec_fn = execute
-        c.finalize_fn = finalize
-        c.arg_parse_fn = arg_parse
-        return c
+        self.c = UodCommand(uod, self.name)
+        self.c.init_fn = self._init_fn
+        self.c.exec_fn = self._execute
+        self.c.finalize_fn = self._finalize
+        self.c.arg_parse_fn = self._arg_parse
+        return self.c
 
 
 class UodBuilder():
