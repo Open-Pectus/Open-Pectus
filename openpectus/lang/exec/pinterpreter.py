@@ -151,6 +151,28 @@ GenerationType = Generator[None, None, None] | None
 
 
 class PInterpreter(PNodeVisitor):
+    def __getstate__(self):
+        # print(list(self.__dict__.keys()))
+        keys = [
+            '_program',
+            'context',
+            'stack',
+            'interrupts',
+            'running',
+            'start_time',
+            '_tick_time',
+            '_tick_number',
+            #'process_instr',
+            'runtimeinfo'
+        ]
+        # process_instr contains a generator which cannot be pickled.
+        state = {key: getattr(self, key) for key in keys}
+        return state
+
+    def __setstate__(self, state):
+        self.__init__(state["_program"], state["context"])
+        self.__dict__.update(state)
+
     def __init__(self, program: PProgram, context: InterpreterContext) -> None:
         self._program = program
         self.context = context

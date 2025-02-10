@@ -91,18 +91,23 @@ class Engine(InterpreterContext):
     - signals state changes via tag_updates queue (to EngineReporter)
     - accepts commands from cmd_queue (from interpreter and from aggregator)
     """
-    
     def __getstate__(self):
+        from pprint import pprint
+        pprint(list(self.__dict__.keys()))
         keys = [
         "uod",
         "_running",
         "registry",
+        "_clock", #
         "_tick_time",
+        "_tick_timer", #
         "_tick_number",
         "_enable_archiver",
         "cmd_queue",
         "cmd_executing",
         "tag_updates",
+        #"_uod_listener", #
+        #"_system_listener", #
         "_runstate_started",
         "_runstate_started_time",
         "_runstate_paused",
@@ -112,14 +117,16 @@ class Engine(InterpreterContext):
         "_prev_state",
         "_last_error",
         "block_times",
-        #"_interpreter",
-        #"_emitter",
+        "_interpreter", #
         "_method",
         "_cancel_command_exec_ids",
+        #"_tags", #
+        #"_emitter", #
         ]
         state = {key: getattr(self, key) for key in keys}
         return state
     def __setstate__(self, state):
+        state.pop("_interpreter", None)
         # Import UOD
         loaded_uod: UnitOperationDefinitionBase = state.pop("uod")
         spec = importlib.util.spec_from_file_location('uod', loaded_uod.filename)
@@ -159,17 +166,15 @@ class Engine(InterpreterContext):
                 replacement_item.tick_time = tag.tick_time
                 self.tag_updates.put_nowait(replacement_item)
             elif tag.name in self.uod.system_tags.names:
+                print(tag.name,tag.value)
                 replacement_item = self.uod.system_tags.get(tag.name)
                 replacement_item.value = tag.value
                 replacement_item.tick_time = tag.tick_time
                 self.tag_updates.put_nowait(replacement_item)
-            else:
-                print(f"Could not find {tag.name}")
-            
 
         #
         self.registry._command_instances = loaded_registry._command_instances
-        self._method.__dict__.update(loaded__method.__dict__)
+        self.set_method(loaded__method._method)
         
         # Set up emitter tags, emit according to current state.
         system_state = self.uod.system_tags.get(SystemTagName.SYSTEM_STATE).value

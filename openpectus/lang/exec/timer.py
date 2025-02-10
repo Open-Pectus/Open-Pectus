@@ -33,9 +33,14 @@ class NullTimer(EngineTimer):
 class OneThreadTimer(EngineTimer):
     def __getstate__(self):
         state = self.__dict__.copy()
-        # Don't pickle baz
+        # Don't pickle thread
         del state["thread"]
         return state
+
+    def __setstate(self, state):
+        self.__dict__.update(state)
+        if self._thread_started:
+            self.start()
     """ Single threaded (1 extra thread) timer.
 
     This allows controlled multithreading.
@@ -50,6 +55,7 @@ class OneThreadTimer(EngineTimer):
         self.interval = interval
         self.tick = tick
         self.running = False            # flag to allow shut down by exiting the ticker loop method
+        self._thread_started = False
 
     def set_tick_fn(self, tick_fn: TickConsumer):
         self.tick = tick_fn
@@ -64,6 +70,7 @@ class OneThreadTimer(EngineTimer):
             name=self.__class__.__name__,
             daemon=True)
         self.thread.start()
+        self._thread_started = True
 
     def ticker(self):
         assert self.tick is not None, "No tick function has been set"
@@ -87,6 +94,7 @@ class OneThreadTimer(EngineTimer):
             deadline = self.interval - elapsed
             if deadline > 0.0:
                 time.sleep(deadline)
+        self._thread_started = False
 
     def stop(self):
         self.running = False

@@ -73,6 +73,8 @@ def get_arg_parser():
     parser.add_argument("-sev", "--sentry_event_level", required=False,
                         default=sentry.EVENT_LEVEL_DEFAULT, choices=sentry.EVENT_LEVEL_NAMES,
                         help=f"Minimum log level to send as sentry events. Default is '{sentry.EVENT_LEVEL_DEFAULT}'")
+    parser.add_argument("-r", "--resume_from_pickle", action=BooleanOptionalAction,
+                        help=f"Flag to disable resuming from pickle'")
     return parser
 
 
@@ -99,10 +101,11 @@ def run_validations(uod: UnitOperationDefinitionBase) -> bool:
 async def main_async(args, loop: asyncio.AbstractEventLoop):
     global engine, runner
 
-    if os.path.isfile("engine_state.pickle"):
+    if args.resume_from_pickle and os.path.isfile("engine_state.pickle"):
         with open("engine_state.pickle", "rb") as f:
             engine = pickle.load(f)
             uod = engine.uod
+            logger.info("Loaded state from pickle")
     else:
         try:
             uod = create_uod(args.uod)
