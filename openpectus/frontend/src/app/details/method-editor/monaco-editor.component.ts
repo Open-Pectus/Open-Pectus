@@ -83,15 +83,15 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
         // vscodeApiInitPerformExternally: true,
         // enableExtHostWorker: true,
         userConfiguration: {
-          json: JSON.stringify({ // TODO: find documentation for this, and adapt the previous configuration to new
-            fontSize: 18,
-            glyphMargin: false,
-            fixedOverflowWidgets: true,
-            lineNumbersMinChars: UtilMethods.isMobile ? 1 : 3,
-            minimap: {
+          json: JSON.stringify({
+            'editor.fontSize': 18,
+            'editor.glyphMargin': false,
+            'editor.fixedOverflowWidgets': true,
+            'editor.lineNumbersMinChars': UtilMethods.isMobile ? 1 : 3,
+            'editor.minimap': {
               enabled: UtilMethods.isDesktop,
             },
-            autoIndent: 'none',
+            'editor.autoIndent': 'none',
             'editor.lightbulb.enabled': 'off',
             'editor.experimental.asyncTokenization': true,
           }),
@@ -160,13 +160,10 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   private setupEditor(editor?: MonacoEditor.IStandaloneCodeEditor) {
     if(editor === undefined) return;
-    // const editor = await this.constructEditor();
     this.setupOnEditorChanged(editor);
     this.setupOnStoreModelChanged(editor);
     this.setupInjectedLines(editor);
     this.setupStartedAndExecutedLines(editor);
-
-    // return editor;
   }
 
   private setupOnEditorChanged(editor: MonacoEditor.IStandaloneCodeEditor) {
