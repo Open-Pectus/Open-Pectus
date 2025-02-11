@@ -1,9 +1,9 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, OnDestroy, ViewChild } from '@angular/core';
 // import '@codingame/monaco-vscode-json-default-extension';
 import '@codingame/monaco-vscode-theme-defaults-default-extension';
+import { editor as MonacoEditor, KeyCode, Range } from '@codingame/monaco-vscode-editor-api';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
-import { editor as MonacoEditor, KeyCode, Range } from 'monaco-editor';
 import { MonacoEditorLanguageClientWrapper, WrapperConfig } from 'monaco-editor-wrapper';
 import { Logger } from 'monaco-languageclient/tools';
 import { useWorkerFactory } from 'monaco-languageclient/workerFactory';
@@ -32,7 +32,6 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   @Input() readOnlyEditor = false;
   @ViewChild('editor', {static: true}) editorElement!: ElementRef<HTMLDivElement>;
   private componentDestroyed = new Subject<void>();
-  private editor?: MonacoEditor.IStandaloneCodeEditor;
   private wrapper = new MonacoEditorLanguageClientWrapper();
   private methodContent = this.store.select(MethodEditorSelectors.methodContent);
   private executedLineIds = this.store.select(MethodEditorSelectors.executedLineIds);
@@ -64,14 +63,12 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   async ngAfterViewInit() {
     const methodContent = await firstValueFrom(this.methodContent);
-    await this.wrapper.initAndStart(this.buildWrapperUserConfig(this.editorElement.nativeElement, methodContent));
-    // @ts-expect-error they seem to point to the same type, but from different packages
-    this.editor = this.wrapper.getEditor();
-    this.setupEditor(this.editor);
-
-    this.editorSizeChange?.pipe(takeUntil(this.componentDestroyed)).subscribe(() => this.editor?.layout());
-    window.onresize = () => this.editor?.layout();
-    this.store.dispatch(MethodEditorActions.monacoEditorComponentInitialized());
+    await this.wrapper.initAndStart(this.buildWrapperUserConfig(this.editorElement.nativeElement, methodContent))
+      // .finally() is used because the promise doesn't resolve if the lsp websocket connection fails. We still want the editor without lsp.
+      .finally(() => {
+        this.setupEditor(this.wrapper.getEditor());
+        this.store.dispatch(MethodEditorActions.monacoEditorComponentInitialized());
+      });
   }
 
   buildWrapperUserConfig(htmlContainer: HTMLElement, text: string): WrapperConfig {
@@ -164,6 +161,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     this.setupOnStoreModelChanged(editor);
     this.setupInjectedLines(editor);
     this.setupStartedAndExecutedLines(editor);
+    this.setupReactingToResize(editor);
   }
 
   private setupOnEditorChanged(editor: MonacoEditor.IStandaloneCodeEditor) {
@@ -343,5 +341,10 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
       const lineNumbers = decorations.getRanges().flatMap(range => UtilMethods.getNumberRange(range.startLineNumber, range.endLineNumber));
       editor.updateOptions({lineNumbers: this.getLineNumberFunction(lineNumbers)});
     });
+  }
+
+  private setupReactingToResize(editor: MonacoEditor.IStandaloneCodeEditor) {
+    this.editorSizeChange?.pipe(takeUntil(this.componentDestroyed)).subscribe(() => editor?.layout());
+    window.onresize = () => editor?.layout();
   }
 }
