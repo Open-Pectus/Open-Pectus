@@ -13,7 +13,9 @@ from openpectus.lang.model.pprogram import (
     PEndBlocks,
     PWatch,
     PAlarm,
+    PMacro,
     PMark,
+    PCallMacro,
     PCommand,
     PComment,
     PErrorInstruction,
@@ -91,6 +93,24 @@ class BuilderTest(unittest.TestCase):
         block: PBlock = program.get_instructions()[0]  # type: ignore
         self.assertIsNotNone(block)
         self.assertEqual("foo", block.name)
+        # print_program(program)
+
+    def test_macro(self):
+        p = build("Macro: foo")
+        program = p.build_model()
+        # p.printSyntaxTree(p.tree)
+        macro: PMacro = program.get_instructions()[0]  # type: ignore
+        self.assertIsNotNone(macro)
+        self.assertEqual("foo", macro.name)
+        # print_program(program)
+
+    def test_call_macro(self):
+        p = build("Call macro: foo")
+        program = p.build_model()
+        # p.printSyntaxTree(p.tree)
+        call_macro: PCallMacro = program.get_instructions()[0]  # type: ignore
+        self.assertIsNotNone(call_macro)
+        self.assertEqual("foo", call_macro.name)
         # print_program(program)
 
     def test_block_with_end_block(self):
@@ -389,6 +409,40 @@ Mark: A
         all = program.get_instructions(include_blanks=True)
         self.assertEqual(3, len(all))
         self.assertFalse(program.has_error(recursive=True))
+
+    def test_sequential_macros(self):
+        p = build(
+            """
+Macro: 1
+    Mark: A1 Start
+    Mark: B1 Start
+Macro: 2
+    Mark: A2 Start
+    Mark: B2 Start
+    Mark: C2 Start
+Call macro: 1
+        """
+        )
+        program = p.build_model()
+        # p.printSyntaxTree(p.tree)
+        # print_program(program)
+        self.assertFalse(program.has_error(recursive=True))
+        self.assertEqual(0, node_missing_start_position_count(program))
+
+        self.assertProgramMatches(
+            program,
+            """
+PProgram
+    PMacro
+        PMark
+        PMark
+    PMacro
+        PMark
+        PMark
+        PMark
+    PCallMacro
+        """,
+        )
 
     def test_sequential_blocks(self):
         p = build(

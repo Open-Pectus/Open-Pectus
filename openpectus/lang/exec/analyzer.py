@@ -16,8 +16,10 @@ from openpectus.lang.model.pprogram import (
     PEndBlocks,
     PWatch,
     PAlarm,
+    PMacro,
     PCommand,
     PMark,
+    PCallMacro,
 )
 
 from openpectus.lang.exec.tags import TagCollection
@@ -78,6 +80,9 @@ class AnalyzerVisitorBase(PNodeVisitor):
     def visit_PMark(self, node: PMark):
         pass
 
+    def visit_PCallMacro(self, node: PCallMacro):
+        pass
+
     def visit_PBlock(self, node: PBlock):
         self.visit_children(node.children)
 
@@ -91,6 +96,9 @@ class AnalyzerVisitorBase(PNodeVisitor):
         self.visit_children(node.children)
 
     def visit_PAlarm(self, node: PAlarm):
+        self.visit_children(node.children)
+
+    def visit_PMacro(self, node: PMacro):
         self.visit_children(node.children)
 
     def visit_PCommand(self, node: PCommand):

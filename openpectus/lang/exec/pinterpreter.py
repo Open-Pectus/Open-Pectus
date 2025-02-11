@@ -31,6 +31,8 @@ from openpectus.lang.model.pprogram import (
     PEndBlocks,
     PWatch,
     PAlarm,
+    PMacro,
+    PCallMacro,
     PCommand,
     PMark,
 )
@@ -39,6 +41,23 @@ from typing_extensions import override
 logger = logging.getLogger(__name__)
 
 term_uod = "Unit Operation Definition file."
+
+
+def macro_calling_macro(node: PMacro, macros: dict[str, PMacro], name: str | None = None) -> list[str]:
+    '''
+    Recurse through macro to produce a path of calls it makes to other macros.
+    This is used to identify if a macro will at some point call itself.
+    '''
+    name = name if name is not None else node.name
+    assert node.children is not None
+    for child in node.children:
+        if isinstance(child, PCallMacro):
+            if child.name == name:
+                return [child.name]
+            elif child.name in macros.keys():
+                return [child.name] + macro_calling_macro(macros[child.name], macros, name)
+    return []
+
 
 class PNodeVisitor:
     def visit(self, node):
@@ -55,6 +74,7 @@ class ARType(Enum):
     BLOCK = "BLOCK",
     WATCH = "WATCH",
     ALARM = "ALARM",
+    MACRO = "MACRO",
     INJECTED = "INJECTED",
 
 
@@ -82,6 +102,8 @@ class ActivationRecord:
             return ARType.WATCH
         elif isinstance(node, PAlarm):
             return ARType.ALARM
+        elif isinstance(node, PMacro):
+            return ARType.MACRO
         elif isinstance(node, PInjectedNode):
             return ARType.INJECTED
         else:
@@ -156,6 +178,7 @@ class PInterpreter(PNodeVisitor):
         self.context = context
         self.stack: CallStack = CallStack()
         self.interrupts: list[tuple[ActivationRecord, GenerationType]] = []
+        self.macros: dict[str, PMacro] = dict()
         self.running: bool = False
 
         self.start_time: float = 0
@@ -433,6 +456,68 @@ class PInterpreter(PNodeVisitor):
 
         # we want this in but it breaks a lot of tests. we want to be able to manage that first
         # yield
+
+        record.add_state_completed(
+            self._tick_time, self._tick_number,
+            self.context.tags.as_readonly())
+
+    def visit_PMacro(self, node: PMacro):
+        record = self.runtimeinfo.get_last_node_record(node)
+        record.add_state_started(
+            self._tick_time, self._tick_number,
+            self.context.tags.as_readonly())
+        logger.info(f"Defining macro {node}")
+
+        # Check if calling the macro will call the macro.
+        # This would incur a cascade of macros which
+        # is probably not intended.
+        # Make a temporary dict of macros to which
+        # this macro is added. This dict is only used
+        # to try to determine if the macro will at some
+        # point try to call itself.
+        temporary_macros = self.macros.copy()
+        temporary_macros[node.name] = node
+        cascade = macro_calling_macro(node, temporary_macros)
+        if cascade and node.name in cascade:
+            record.add_state_cancelled(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+            if len(cascade) == 1:
+                logger.warning(f'Macro "{node.name}" calls itself. This is not allowed.')
+                raise NodeInterpretationError(node, f'Macro "{node.name}" calls itself. ' +
+                                                    'Unfortunately, this is not allowed.')
+            else:
+                path = " which calls ".join(f'macro "{link}"' for link in cascade)
+                logger.warning(f'Macro "{node.name}" calls itself by calling {path}. This is not allowed.')
+                raise NodeInterpretationError(node, f'Macro "{node.name}" calls itself by calling {path}. ' +
+                                                    'Unfortunately, this is not allowed.')
+
+        if node.name in self.macros.keys():
+            logger.warning(f'Re-defining macro with name "{node.name}"')
+        self.macros[node.name] = node
+        record.add_state_completed(
+            self._tick_time, self._tick_number,
+            self.context.tags.as_readonly())
+
+    def visit_PCallMacro(self, node: PCallMacro):
+        record = self.runtimeinfo.get_last_node_record(node)
+        record.add_state_started(
+            self._tick_time, self._tick_number,
+            self.context.tags.as_readonly())
+
+        if node.name not in self.macros.keys():
+            logger.warning(f'No macro defined with name "{node.name}"')
+            available_macros = "None"
+            if len(self.macros.keys()):
+                available_macros = ", ".join(f'"{macro}"' for macro in self.macros.keys())
+            raise NodeInterpretationError(node, f'No macro defined with name "{node.name}". ' +
+                                                f'Available macros: {available_macros}.')
+            record.add_state_cancelled(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+            return
+
+        macro_node = self.macros[node.name]
+        ar = ActivationRecord(macro_node, self._tick_time)
+        self.stack.push(ar)
+        yield from self._visit_children(macro_node.children)
+        self.stack.pop()
 
         record.add_state_completed(
             self._tick_time, self._tick_number,

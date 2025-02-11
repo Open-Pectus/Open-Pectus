@@ -60,6 +60,14 @@ class ParserTest(unittest.TestCase):
         self.assertIsInstance(c, pcodeParser.ProgramContext)
         self.assertContextHasNoChildError(c)
 
+    def test_macro(self):
+        p = parse("Macro: foo")
+        c = p.parser.macro()  # type: ignore
+        self.assertIsNotNone(c)
+        # p.printSyntaxTree(c)
+        self.assertIsInstance(c, pcodeParser.MacroContext)
+        self.assertContextHasNoChildError(c)
+
     def test_end_block(self):
         p = parse("End block")
         c = p.parser.end_block()  # type: ignore
@@ -354,6 +362,18 @@ Watch
         self.assertIsAlarmWithCondition(c, "X > 10 mL")
         self.assertConditionValue(condition, "X", ">", "10 mL")
         self.assertContextHasNoChildError(c)
+
+    def test_macro_with_mark(self):
+        p = parse("""
+Macro: A
+    Mark: a
+""")
+        program = p.parser.program()  # type: ignore
+        macro = get_first_child(program, pcodeParser.MacroContext)
+        self.assertIsInstance(macro, pcodeParser.MacroContext)
+
+        mark = get_first_child(program, pcodeParser.MarkContext)
+        self.assertIsInstance(mark, pcodeParser.MarkContext)
 
     def test_increment_rc(self):
         p = parse("Increment run counter")
