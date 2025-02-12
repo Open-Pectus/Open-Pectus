@@ -2,6 +2,7 @@ from __future__ import annotations
 import os
 import logging
 import itertools
+from collections import defaultdict
 
 import pint
 from pint import UnitRegistry, Quantity
@@ -22,7 +23,8 @@ logger = logging.getLogger(__name__)
 
 # https://en.wikipedia.org/wiki/International_System_of_Units
 # defines all the units we accept, each with their quantity name (similar to pint dimensionality).
-QUANTITY_UNIT_MAP: dict[str, list[str]] = {
+QUANTITY_UNIT_MAP: dict[str, list[str]] = defaultdict(list)
+QUANTITY_UNIT_MAP.update({
     'time': ['s', 'min', 'h', 'ms'],                # SI quantities
     'length': ['m', 'cm'],
     'area': ['m**2', 'm2', 'dm2', 'cm2'],
@@ -41,7 +43,7 @@ QUANTITY_UNIT_MAP: dict[str, list[str]] = {
     'absorbance': ['AU', 'mAU', 'milliAU'],
     'permeability': ['LMH/bar', 'L/m2/h/bar', 'L/h/m2/bar'],
     'flux': ['LMH', 'L/m2/h', 'L/h/m2'],
-}
+})
 """ Map quantity names to unit names. """
 
 QUANTITY_PINT_MAP: dict[str, str] = {
@@ -74,27 +76,75 @@ FLOAT_COMPARE_DELTA = 0.01
 # totalizers that are defined in the uod.
 BASE_VALID_UNITS = ['L', 'h', 'min', 's', 'mL', 'CV', 'DV', 'g', 'kg']
 
-def add_unit(quantity: str, unit: str, quantity_definition: None | str = None, base_unit: bool = False):
-    if is_supported_unit(unit) and (not base_unit or unit in BASE_VALID_UNITS):
+def add_unit(unit: str,
+             unit_relation: None | str = None,
+             quantity_relation: None | dict[str, str] = None,
+             quantity: None | str = None):
+    """
+    Add a unit and possibly a quantity to the registry.
+    An example of a unit, quantity pair could be the quantity "length"
+    and the unit "cm".
+
+    Case 1: Unit defined in relation to an existing quantity and unit
+    Suppose the quantity "length" and unit "cm" are defined but the unit "mm"
+    is not defined. Add the unit and unit relation:
+    >> add_unit("mm", quantity="length" unit_relation="10 mm = 1 cm")
+
+    Case 2: Unit defined with quantity in relation to existing quantity
+    Consider a mass flux quantity defined as "flux = [mass]/[time]/[area]" and an
+    accompanying unit "kg/m2/h". Add the unit and quantity relationship:
+    >> add_unit("kg/m2/h", quantity_relation={"flux": "[mass]/[time]/[area]"})
+
+    Case 3: Unit defined without relation to any existing units or quantities
+    Pint does not support the quantity "absorbance" or the associated unit
+    "AU" out of the box and defines no useful quantities or units.
+    Add the unit and quantity:
+    >> add_unit("AU", quantity="absorbance")
+    """
+    # Check if unit is already supported.
+    if is_supported_unit(unit):
         quantity = get_unit_quantity_name(unit)
         logger.warning(f'Unit "{unit}" is already supported with quantity "{quantity}"')
         return
-    # Update QUANTITY_PINT_MAP and ureg
-    if quantity not in QUANTITY_PINT_MAP.keys():
-        quantity_definition = quantity_definition if quantity_definition else f"[{quantity}]"
-        if quantity_definition is None:
-            logger.info(f'Defining quantity "{quantity}" as its own kind, unrelated to other quantities.')
-        QUANTITY_PINT_MAP[quantity] = quantity_definition
-        ureg.define(f"{unit} = {quantity_definition}")
-    # Update QUANTITY_UNIT_MAP
-    if quantity in QUANTITY_UNIT_MAP.keys():
-        if unit not in QUANTITY_UNIT_MAP[quantity]:
+
+    # Unit defined in relation to an existing unit
+    if quantity and unit_relation:
+        assert quantity_relation is None, ("It is not possible to add a quantity relation when " +
+                                          "defining a new unit in relation to an existing unit.")
+        assert quantity in QUANTITY_PINT_MAP.keys(), f'Quantity "{quantity}" is not available.'
+        assert "=" in unit_relation, (f'Unit relation must define an equality, but "{unit_relation}" ' +
+                                     'contains no equals sign (=).')
+        if unit in QUANTITY_UNIT_MAP[quantity]:
+            logger.warning(f'Unit "{unit}" is already defined for quantity "{quantity}".')
+        else:
             QUANTITY_UNIT_MAP[quantity].append(unit)
-    else:
-        QUANTITY_UNIT_MAP[quantity] = [unit]
-    # Update BASE_VALID_UNITS
-    if base_unit and unit not in BASE_VALID_UNITS:
-        BASE_VALID_UNITS.append(unit)
+            logger.info(f'Adding definition to Unit Registry: "{unit_relation}"')
+            ureg.define(unit_relation)
+        return
+
+    # Unit defined with quantity in relation to existing quantity
+    if quantity_relation:
+        assert quantity is None
+        assert len(quantity_relation) == 1, "Please define one quantity relation at a time."
+        new_quantity = list(quantity_relation.keys())[0]
+        existing_quantity = list(quantity_relation.values())[0]
+        assert new_quantity not in QUANTITY_UNIT_MAP.keys(), f'Quantity "{new_quantity}" is already defined.'
+        assert new_quantity not in QUANTITY_PINT_MAP.keys(), f'Quantity "{new_quantity}" is already defined.'
+        QUANTITY_UNIT_MAP[new_quantity].append(unit)
+        QUANTITY_PINT_MAP[new_quantity] = existing_quantity
+        logger.info(f'Adding definition to Unit Registry: "[{new_quantity}] = {existing_quantity}"')
+        ureg.define(f'[{new_quantity}] = {existing_quantity}')
+        return
+
+    # Unit defined without relation to any existing units or quantities
+    if quantity:
+        assert unit_relation is None
+        assert quantity_relation is None
+        QUANTITY_UNIT_MAP[quantity].append(unit)
+        if quantity not in QUANTITY_PINT_MAP:
+            QUANTITY_PINT_MAP[quantity] = f'[{quantity}]'
+            ureg.define(f'{unit} = [{quantity}]')
+            logger.info(f'Adding definition to Unit Registry: "{unit} = [{quantity}]"')
 
 def get_supported_units() -> list[str | None]:
     return [None] + list(itertools.chain(*QUANTITY_UNIT_MAP.values()))

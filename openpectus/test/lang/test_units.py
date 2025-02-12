@@ -11,6 +11,9 @@ from openpectus.lang.exec.units import (
     add_unit,
  )
 
+logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
+logging.getLogger("openpectus.lang.exec.units").setLevel(logging.INFO)
+
 
 class TestUnits(unittest.TestCase):
     def test_is_supported_unit(self):
@@ -255,7 +258,12 @@ class TestUnits(unittest.TestCase):
 
     def test_add_unit(self):
         self.assertFalse(is_supported_unit("DV"))
-        add_unit("diavolume", "DV", base_unit=True)
+        add_unit("DV", quantity="diavolume")
         self.assertTrue(is_supported_unit("DV"))
         with self.assertLogs(logging.getLogger(), level=logging.WARNING):
-            add_unit("diavolume", "DV", base_unit=True)
+            add_unit("DV", quantity="diavolume")
+
+        add_unit("kg/m2/h", quantity_relation={"flux": "[mass] / [length] ** 2 / [time]"})
+
+        add_unit("mDV", quantity="diavolume")
+        self.comp("=", "1000", "mDV", "1", "DV", True)

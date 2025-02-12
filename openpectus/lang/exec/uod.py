@@ -851,9 +851,12 @@ class UodBuilder:
         self.data_log_interval_seconds = data_log_interval_seconds
         return self
 
-    def with_measurement_unit(self, quantity: str, unit: str, quantity_definition: None | str = None,
-                              base_unit: bool = False) -> UodBuilder:
-        add_unit(quantity=quantity, unit=unit, quantity_definition=quantity_definition, base_unit=base_unit)
+    def with_measurement_unit(self,
+                              unit: str,
+                              unit_relation: None | str = None,
+                              quantity_relation: None | dict[str, str] = None,
+                              quantity: None | str = None) -> UodBuilder:
+        add_unit(unit=unit, unit_relation=unit_relation, quantity_relation=quantity_relation, quantity=quantity)
         return self
 
     def build(self) -> UnitOperationDefinitionBase:
