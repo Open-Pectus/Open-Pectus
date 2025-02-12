@@ -60,7 +60,7 @@ class UnitOperationDefinitionBase:
         self.base_unit_provider: BaseUnitProvider = base_unit_provider
 
     def __str__(self) -> str:
-        return f"UnitOperationDefinition({self.instrument=},{self.location=},hwl={str(self.hwl)})"
+        return f'{self.__class__.__name__}(instrument={self.instrument}, location={self.location}, hwl={self.hwl})'
 
     @property
     def options(self) -> dict[str, str]:
@@ -436,7 +436,7 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
             return self.arg_parse_fn(args)
 
 
-class UodCommandBuilder():
+class UodCommandBuilder:
     """ Used to builds command specifications and as factory to instantiate commands from the specifications. """
     def __init__(self) -> None:
         self.name = ""
@@ -444,6 +444,9 @@ class UodCommandBuilder():
         self.exec_fn: Callable[..., None] | None = None
         self.finalize_fn: Callable[[UodCommand], None] | None = None
         self.arg_parse_fn: Callable[[str], CommandArgs | None] | None = None
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(name={self.name})'
 
     def with_name(self, name: str) -> UodCommandBuilder:
         """ Define the name of the command. Required. """
@@ -524,7 +527,7 @@ class UodCommandBuilder():
         return c
 
 
-class UodBuilder():
+class UodBuilder:
     """ Provides a builder api to define a Unit Operation Definition """
     def __init__(self) -> None:
         self.instrument: str = ""
@@ -545,6 +548,9 @@ class UodBuilder():
         self.base_unit_provider.set("s", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
         self.base_unit_provider.set("min", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
         self.base_unit_provider.set("h", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}()'
 
     def get_logger(self):
         return logging.getLogger(f'{__name__}.user_uod')
@@ -890,7 +896,7 @@ def unescape(re_escaped_string: str) -> str:
     """
     re.escape is used to escape options supplied to
     RegexCategorical. This function can reverses operation.
-    
+
     assert unescape(re.escape('A B')) == 'A B'
     assert unescape(re.escape('A/B')) == 'A/B'
     """
@@ -898,9 +904,12 @@ def unescape(re_escaped_string: str) -> str:
     return re.sub(r'\\(.)', r'\1', re_escaped_string)
 
 
-class RegexNamedArgumentParser():
+class RegexNamedArgumentParser:
     def __init__(self, regex: str) -> None:
         self.regex = regex
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(named_groups={self.get_named_groups()})'
 
     def parse(self, args: str) -> dict[str, Any] | None:
         match = re.search(self.regex, args)
@@ -931,7 +940,6 @@ class RegexNamedArgumentParser():
             return []
         start = self.regex.index("<option>") + len("<option>(")
         end = self.regex.index("|(")
-        option_string = self.regex[start: end]
         result = unescape(self.regex[start: end]).split("|")
         return result
 

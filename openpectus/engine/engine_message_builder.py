@@ -46,6 +46,9 @@ class EngineMessageBuilder():
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(engine={self.engine})'
+
     def create_uod_info(self) -> EM.UodInfoMsg:
         return EM.UodInfoMsg(
             readings=[reading.as_reading_info() for reading in self.engine.uod.readings],
