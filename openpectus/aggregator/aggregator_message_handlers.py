@@ -25,13 +25,19 @@ class AggregatorMessageHandlers:
 
     async def handle_RegisterEngineMsg(self, register_engine_msg: EM.RegisterEngineMsg) -> AM.RegisterEngineReplyMsg:
         """ Registers engine """
+        if register_engine_msg.secret != self.aggregator.secret:
+            logger.info(
+                f'Engine registration message {register_engine_msg} received ' +
+                "but secret does not match aggregator secret"
+            )
+            return AM.RegisterEngineReplyMsg(success=False, secret_match=False)
         engine_id = self.aggregator.create_engine_id(register_engine_msg)
         if self.aggregator.dispatcher.has_connected_engine_id(engine_id):
             logger.error(
                 f"""Registration failed for engine_id {engine_id}. An engine with that engine_id already
                 has a websocket connection. """
             )
-            return AM.RegisterEngineReplyMsg(success=False, engine_id=engine_id)
+            return AM.RegisterEngineReplyMsg(success=False, engine_id=engine_id, secret_match=True)
 
         # TODO consider how to handle registrations
         # - disconnect/reconnect should work
@@ -50,12 +56,12 @@ class AggregatorMessageHandlers:
                     uod_author_email=register_engine_msg.uod_author_email,
                     uod_filename=register_engine_msg.uod_filename,
                     location=register_engine_msg.location,
-                    engine_version=register_engine_msg.engine_version
+                    engine_version=register_engine_msg.engine_version,
                 )
             )
 
         logger.info(f"Registration of engine {engine_id} successful")
-        return AM.RegisterEngineReplyMsg(success=True, engine_id=engine_id)
+        return AM.RegisterEngineReplyMsg(success=True, engine_id=engine_id, secret_match=True)
 
     def validate_msg(self, msg: EM.EngineMessage):
         if not self.aggregator.has_registered_engine_id(msg.engine_id):
