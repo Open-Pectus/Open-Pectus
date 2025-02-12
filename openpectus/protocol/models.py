@@ -14,7 +14,10 @@ MethodStatusEnum = EM.MethodStatusEnum
 EntryDataType = EM.EntryDataType
 
 class ProtocolModel(BaseModel):
-    model_config = ConfigDict(from_attributes = True)
+    model_config = ConfigDict(from_attributes=True)
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}()'
 
 
 class ReadingCommand(ProtocolModel):
@@ -24,6 +27,14 @@ class ReadingCommand(ProtocolModel):
     command: str
     choice_names: list[str]
 
+    def __str__(self) -> str:
+        if len(self.choice_names):
+            return (f'{self.__class__.__name__}(command_id="{self.command_id}", name="{self.name}", ' +
+                    f'command="{self.command}", choice_names={self.choice_names})')
+        else:
+            return (f'{self.__class__.__name__}(command_id="{self.command_id}", name="{self.name}", ' +
+                    f'command="{self.command}")')
+
 
 class ReadingInfo(ProtocolModel):
     discriminator: str
@@ -32,6 +43,13 @@ class ReadingInfo(ProtocolModel):
     entry_data_type: EntryDataType | None
     commands: list[ReadingCommand]
     command_options: dict[str, str] | None
+
+    def __str__(self) -> str:
+        if len(self.commands):
+            return (f'{self.__class__.__name__}(tag_name="{self.tag_name}", valid_value_units={self.valid_value_units}, ' +
+                    f'commands={self.commands})')
+        else:
+            return f'{self.__class__.__name__}(tag_name="{self.tag_name}", valid_value_units={self.valid_value_units})'
 
     def has_command_id(self, command_id: str) -> bool:
         for c in self.commands:
@@ -45,6 +63,9 @@ class CommandInfo(ProtocolModel):
     name: str
     docstring: str | None
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(name="{self.name}", docstring="{self.docstring}")'
+
 
 TagValueType = float | int | str | None
 
@@ -56,6 +77,10 @@ class TagValue(ProtocolModel):
     value_unit: str | None
     value_formatted: str | None = None
     direction: TagDirection = TagDirection.Unspecified
+
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(name="{self.name}", value="{self.value}", value_unit="{self.value_unit}", ' +
+                f'direction={self.direction})')
 
 
 class RunLogLine(ProtocolModel):
@@ -71,9 +96,26 @@ class RunLogLine(ProtocolModel):
     forced: bool | None = None
     cancelled: bool | None = None
 
+    def __str__(self) -> str:
+        if self.cancelled:
+            return (f'{self.__class__.__name__}(id="{self.id}", command_name="{self.command_name}", ' +
+                    f'cancelled={self.cancelled})')
+        elif self.forced:
+            return (f'{self.__class__.__name__}(id="{self.id}", command_name="{self.command_name}", ' +
+                    f'forced={self.forced})')
+        elif self.progress is not None:
+            return (f'{self.__class__.__name__}(id="{self.id}", command_name="{self.command_name}", ' +
+                    f'progress={self.progress})')
+        else:
+            return f'{self.__class__.__name__}(id="{self.id}", command_name="{self.command_name}")'
+
 
 class RunLog(ProtocolModel):
     lines: list[RunLogLine]
+
+    def __str__(self) -> str:
+        lines = [str(line) for line in self.lines]
+        return f'{self.__class__.__name__}(lines={lines})'
 
     @staticmethod
     def empty() -> RunLog:
@@ -84,9 +126,16 @@ class MethodLine(ProtocolModel):
     id: str
     content: str
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(id="{self.id}", content="{self.content}")'
+
 
 class Method(ProtocolModel):
     lines: list[MethodLine]
+
+    def __str__(self) -> str:
+        lines = [str(line) for line in self.lines]
+        return f'{self.__class__.__name__}(lines={lines})'
 
     @staticmethod
     def empty() -> Method:
@@ -111,6 +160,10 @@ class MethodState(ProtocolModel):
     executed_line_ids: list[str]
     injected_line_ids: list[str]
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(started_line_ids={self.started_line_ids}, ' +
+                f'executed_line_ids={self.executed_line_ids}, injected_line_ids={self.injected_line_ids})')
+
     @staticmethod
     def empty() -> MethodState:
         return MethodState(started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
@@ -120,6 +173,10 @@ class ControlState(ProtocolModel):
     is_running: bool
     is_holding: bool
     is_paused: bool
+
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(is_running={self.is_running}, is_holding={self.is_holding}, ' +
+                f'is_paused={self.is_paused})')
 
 
 class PlotColorRegion(ProtocolModel):
@@ -162,9 +219,17 @@ class ErrorLogEntry(ProtocolModel):
     created_time: float
     severity: int
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(message="{self.message}", created_time={self.created_time}, ' +
+                f'severity={self.severity})')
+
 
 class ErrorLog(ProtocolModel):
     entries: list[ErrorLogEntry]
+
+    def __str__(self) -> str:
+        entries = [str(entry) for entry in self.entries]
+        return f'{self.__class__.__name__}(entries={entries})'
 
     @staticmethod
     def empty() -> ErrorLog:
