@@ -263,7 +263,7 @@ class TestUnits(unittest.TestCase):
         with self.assertLogs(logging.getLogger(), level=logging.WARNING):
             add_unit("DV", quantity="diavolume")
 
-        add_unit("kg/m2/h", quantity_relation={"flux": "[mass] / [length] ** 2 / [time]"})
+        add_unit("kg/m2/h", quantity_relation={"mass_flux": "[mass] / [length] ** 2 / [time]"})
 
         add_unit("mDV", quantity="diavolume")
         self.comp("=", "1000", "mDV", "1", "DV", True)
