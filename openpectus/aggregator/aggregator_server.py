@@ -42,6 +42,10 @@ class AggregatorServer:
         self.setup_fastapi([self.dispatcher.router, self.publisher.router, version.router])
         self.init_db()
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(host="{self.host}", port={self.port}, ' +
+                f'frontend_dist_dir="{self.frontend_dist_dir}", db_path="{self.db_path}")')
+
     def setup_fastapi(self, additional_routers: list[APIRouter] = []):
         api_prefix = "/api"
 

@@ -89,6 +89,9 @@ class Labjack_Hardware(HardwareLayerBase):
         self.serial_number: str = serial_number if serial_number else "ANY"
         self._handle = None
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(is_connected={self.is_connected}, serial_number="{self.serial_number}")'
+
     @functools.cached_property
     def port_directions(self):
         # Load ljm_constants.json
@@ -228,6 +231,3 @@ class Labjack_Hardware(HardwareLayerBase):
             ljm.close(self._handle)
             self._handle = None
         super().disconnect()
-
-    def __str__(self):
-        return f"Labjack_Hardware(serial_number={self.serial_number})"

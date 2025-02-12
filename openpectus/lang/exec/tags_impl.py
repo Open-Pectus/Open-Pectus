@@ -70,6 +70,9 @@ class AccumulatorTag(Tag):
         self.unit = self.totalizer.unit
         self.v0: float | None = None
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(name="{self.name}", value="{self.value}", v0={self.v0})'
+
     def reset(self):
         self.v0 = self.totalizer.as_float()
         self.value = 0.0

@@ -14,7 +14,7 @@ def parse_pcode(pcode: str) -> PProgram:
     return p.build_model()
 
 
-class MethodModel():
+class MethodModel:
     """ Manages the mutable method state and its changes.
 
     Method state is mutated by engine as the program runs, e.g. executed lines are updated
@@ -34,6 +34,9 @@ class MethodModel():
         self._map_node_id_to_line_num: dict[UUID, int] = {}
         self._method_init_callback: Callable[[], None] | None = on_method_init
         self._method_error_callback: Callable[[Exception], None] | None = on_method_error
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(program="{self.get_program()}")'
 
     def set_method(self, method: Mdl.Method):
         # initialize new method

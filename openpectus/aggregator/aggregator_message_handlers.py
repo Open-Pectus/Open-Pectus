@@ -23,6 +23,9 @@ class AggregatorMessageHandlers:
         aggregator.dispatcher.set_message_handler(EM.RunStartedMsg, self.handle_RunStartedMsg)
         aggregator.dispatcher.set_message_handler(EM.RunStoppedMsg, self.handle_RunStoppedMsg)
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(aggregator={self.aggregator})'
+
     async def handle_RegisterEngineMsg(self, register_engine_msg: EM.RegisterEngineMsg) -> AM.RegisterEngineReplyMsg:
         """ Registers engine """
         if register_engine_msg.secret != self.aggregator.secret:

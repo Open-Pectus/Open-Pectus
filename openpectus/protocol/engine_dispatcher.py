@@ -99,6 +99,10 @@ class EngineDispatcher():
         self._auth_config_url = f"{http_scheme}://{self._aggregator_host}{AGGREGATOR_AUTH_CONFIG_PATH}"
         logger.info(f"Connecting to aggregator using urls:\n{self._post_url}\n{self._rpc_url}")
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(_rpc_url="{self._rpc_url}", _engine_id="{self._engine_id}", ' +
+                f'_sequence_number={self._sequence_number})')
+
     def check_aggregator_alive(self) -> bool:
         try:
             resp = httpx.get(self._health_url, headers=engine_headers, verify=self._ssl_context)
