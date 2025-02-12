@@ -39,6 +39,7 @@ class RegisterEngineMsg(Msg.MessageBase):
     uod_filename: str
     location: str
     engine_version: str
+    secret: str = ""
     # uod file hash, file change date
 
     sequence_number: int = -2
@@ -46,6 +47,10 @@ class RegisterEngineMsg(Msg.MessageBase):
     @property
     def ident(self) -> str:
         return f"seq: {self.sequence_number: >3}, type: {type(self).__name__}"
+
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(computer_name="{self.computer_name}", ' +
+                f'uod_name="{self.uod_name}", location="{self.location}")')
 
 
 class UodInfoMsg(EngineMessage):

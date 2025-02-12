@@ -366,12 +366,13 @@ class FromFrontend:
 
 
 class Aggregator:
-    def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher) -> None:
+    def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, secret: str = "") -> None:
         self._engine_data_map: EngineDataMap = {}
         """ all client data except channels, indexed by engine_id """
         self.dispatcher = dispatcher
         self.from_frontend = FromFrontend(self._engine_data_map, dispatcher)
         self.from_engine = FromEngine(self._engine_data_map, publisher)
+        self.secret = secret
 
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(dispatcher={self.dispatcher}, ' +

@@ -20,6 +20,7 @@ class RegisterEngineReplyMsg(AggregatorMessage):
     """ Reply to a RegisterEngineMsg from engine. """
     success: bool
     engine_id: str | None = None
+    secret_match: bool
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(engine_id="{self.engine_id}", success={self.success})'
