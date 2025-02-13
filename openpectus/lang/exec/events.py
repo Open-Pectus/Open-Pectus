@@ -80,10 +80,11 @@ class PerformanceTimer(EventListener):
         self._event_name: str = ""
 
     def __enter__(self):
-        try:
-            # hack to get name of the calling method which is the event handler
-            self._event_name = sys._getframe().f_back.f_code.co_name
-        except Exception:
+        # hack to get name of the calling method which is the event handler
+        frame = sys._getframe().f_back
+        if frame is not None:
+            self._event_name = frame.f_code.co_name
+        else:
             self._event_name = "(unknown)"
         self._t0 = time.perf_counter()
 
