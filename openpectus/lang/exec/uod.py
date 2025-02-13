@@ -14,7 +14,7 @@ from openpectus.lang.exec.readings import (
     Reading, ReadingCollection, ReadingWithChoice, ReadingWithEntry, UodCommandDescription
 )
 from openpectus.lang.exec.tags import SystemTagName, Tag, TagCollection
-from openpectus.lang.exec.units import get_compatible_unit_names, get_volume_units
+from openpectus.lang.exec.units import get_compatible_unit_names, get_volume_units, add_unit
 from openpectus.lang.exec.tags_impl import AccumulatorBlockTag, AccumulatedColumnVolume, AccumulatorTag
 from openpectus.protocol.models import EntryDataType, PlotConfiguration
 
@@ -849,6 +849,14 @@ class UodBuilder:
 
     def with_data_log_interval_seconds(self, data_log_interval_seconds: float) -> UodBuilder:
         self.data_log_interval_seconds = data_log_interval_seconds
+        return self
+
+    def with_measurement_unit(self,
+                              unit: str,
+                              unit_relation: None | str = None,
+                              quantity_relation: None | dict[str, str] = None,
+                              quantity: None | str = None) -> UodBuilder:
+        add_unit(unit=unit, unit_relation=unit_relation, quantity_relation=quantity_relation, quantity=quantity)
         return self
 
     def build(self) -> UnitOperationDefinitionBase:
