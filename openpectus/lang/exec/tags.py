@@ -128,6 +128,8 @@ class Tag(ChangeSubject, EventListener):
     Supports change tracking which is used by engine to detect changes between reads of hardware values.
 
     Supports lifetime notification events that are automatically invoked by the engine.
+
+    Supports masking the actual value with a simulated value.
     """
     def __init__(
             self,
@@ -137,7 +139,8 @@ class Tag(ChangeSubject, EventListener):
             unit: str | None = None,
             direction: TagDirection = TagDirection.NA,
             safe_value: TagValueType | Unset = Unset(),
-            format_fn: TagFormatFunction | None = None
+            format_fn: TagFormatFunction | None = None,
+            allow_simulation: bool = False,
             ) -> None:
 
         super().__init__()
@@ -160,14 +163,22 @@ class Tag(ChangeSubject, EventListener):
         self.direction: TagDirection = direction
         self.safe_value: TagValueType | Unset = safe_value
         self.format_fn = format_fn
+        self.allow_simulation = allow_simulation
+        self.simulation_active = False
+        self.simulated_value = None
 
     def __str__(self) -> str:
-        return f'{self.__class__.__name__}(name="{self.name}", value="{self.value}")'
+        if self._simulation_active:
+            return f'{self.__class__.__name__}(name="{self.name}", value="{self.value}")'
+        else:
+            return (f'{self.__class__.__name__}(name="{self.name}", value="{self.value}", ' +
+                    f'simulated_value="{self.simulated_value}")')
 
     def as_readonly(self) -> TagValue:
         """ Convert the value to a readonly and immutable TagValue instance """
         value_formatted = None if self.format_fn is None else self.format_fn(self.get_value())
-        return TagValue(self.name, self.tick_time, self.value, value_formatted, self.unit, self.direction)
+        value = self.simulated_value if self.simulation_active else self.value
+        return TagValue(self.name, self.tick_time, value, value_formatted, self.unit, self.direction)
 
     def set_value(self, val: TagValueType, tick_time: float) -> None:
         if val != self.value:
@@ -184,29 +195,51 @@ class Tag(ChangeSubject, EventListener):
         val = convert_value_to_unit(val, unit, self.unit)
         self.set_value(val, tick_time)
 
+    def simulate_value_and_unit(self, val: TagValueType, unit: str, tick_time: float) -> None:
+        """ Set a simulated value by converting the provided value and unit into the the unit of the tag. """
+        if not self.allow_simulation:
+            raise ValueError(f'Cannot set simulated value for tag "{self.name}" because simulation has not been allowed.')
+        self._simulation_active = True
+        if not isinstance(val, (int, float,)):
+            raise ValueError(f"Cannot set unit for a non-numeric value {val} of type {type(val).__name__}")
+        if self.unit is None:
+            raise ValueError("Cannot change unit on a tag with no unit")
+        val = convert_value_to_unit(val, unit, self.unit)
+        if val != self.simulated_value:
+            self.simulated_value = val
+            self.tick_time = tick_time
+            self.notify_listeners(self.name)
+
+    def stop_simulation(self):
+        self.simulation_active = False
+        self.simulated_value = None
+
     def get_value(self):
-        return self.value
+        return self.simulated_value if self.simulation_active else self.value
 
     def as_number(self) -> int | float:
-        if not isinstance(self.value, (int, float)):
+        value = self.simulated_value if self.simulation_active else self.value
+        if not isinstance(value, (int, float)):
             raise ValueError(
-                f"Value is not numerical: '{self.value}' has type '{type(self. value).__name__}' tag: '{self.name}'")
-        return self.value
+                f"Value is not numerical: '{value}' has type '{type(value).__name__}' tag: '{self.name}'")
+        return value
 
     def as_float(self) -> float:
-        if not isinstance(self.value, (float,)):
+        value = self.simulated_value if self.simulation_active else self.value
+        if not isinstance(value, (float,)):
             raise ValueError(
-                f"Value is not a float: '{self.value}' has type '{type(self. value).__name__}' tag: '{self.name}'")
-        return self.value
+                f"Value is not a float: '{value}' has type '{type(value).__name__}' tag: '{self.name}'")
+        return value
 
     def archive(self) -> str | None:
         """ The value to write to archive or None to skip that tag from archival """
-        if self.value is None:
+        value = self.simulated_value if self.simulation_active else self.value
+        if value is None:
             return ""
-        elif isinstance(self.value, float):
+        elif isinstance(value, float):
             return f"{self.as_float():0.5f}"
         else:
-            return str(self.value)
+            return str(value)
 
 
 class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
