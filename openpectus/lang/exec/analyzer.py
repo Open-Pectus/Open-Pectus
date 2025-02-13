@@ -39,19 +39,21 @@ class AnalyzerItemType(Enum):
     ERROR = 'ERROR'
 
 
-class AnalyzerItem():
+class AnalyzerItem:
     def __init__(self,
                  id: str,
                  message: str,
                  node: PNode | None,
                  type: AnalyzerItemType,
                  description: str = "") -> None:
-
         self.id: str = id
         self.message: str = message
         self.description: str = description
         self.type: AnalyzerItemType = type
         self.node: PNode | None = node
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(id="{self.id}", message="{self.message}", type={self.type}, node={self.node})'
 
 
 class AnalyzerVisitorBase(PNodeVisitor):
@@ -60,6 +62,10 @@ class AnalyzerVisitorBase(PNodeVisitor):
     def __init__(self) -> None:
         super().__init__()
         self.items: List[AnalyzerItem] = []
+
+    def __str__(self) -> str:
+        items = [str(item) for item in self.items]
+        return f'{self.__class__.__name__}(items={items})'
 
     def add_item(self, item: AnalyzerItem):
         self.items.append(item)
@@ -179,7 +185,7 @@ class DurationEnrichAnalyzer(AnalyzerVisitorBase):
         #         d.error = False
 
 
-class EnrichAnalyzer():
+class EnrichAnalyzer:
     """ Facade that combines the enrich analyzers into a single analyzer. """
 
     def __init__(self) -> None:
@@ -188,6 +194,9 @@ class EnrichAnalyzer():
             ConditionEnrichAnalyzer(),
             DurationEnrichAnalyzer(),
         ]
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}()'
 
     def analyze(self, program: PProgram):
         for analyzer in self.analyzers:
@@ -235,6 +244,10 @@ class InfiniteBlockCheckAnalyzer(AnalyzerVisitorBase):
         super().__init__()
         self.has_global_end = False
         self.requires_global_end: List[PNode] = []
+
+    def __str__(self) -> str:
+        items = [str(item) for item in self.items]
+        return f'{self.__class__.__name__}(items={items}, has_global_end={self.has_global_end})'
 
     def check_global_end_block(self, node: PEndBlock | PEndBlocks):
         p = node.parent
@@ -284,6 +297,11 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
     def __init__(self, tags: TagCollection) -> None:
         super().__init__()
         self.tags = tags
+
+    def __str__(self) -> str:
+        items = [str(item) for item in self.items]
+        tags = [str(tag) for tag in self.tags]
+        return f'{self.__class__.__name__}(items={items}, tags={tags})'
 
     def visit_PWatch(self, node: PWatch):
         self.analyze_condition(node)
@@ -368,6 +386,10 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
         super().__init__()
         self.commands = commands
 
+    def __str__(self) -> str:
+        items = [str(item) for item in self.items]
+        return f'{self.__class__.__name__}(items={items}, commands={self.commands})'
+
     def visit_PCommand(self, node: PCommand):
         assert node.name is not None
         name = node.name
@@ -394,7 +416,7 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
             return
 
 
-class SemanticCheckAnalyzer():
+class SemanticCheckAnalyzer:
     """ Facade that combines the check analyzers into a single analyzer. """
 
     def __init__(self, tags: TagCollection, commands: CommandCollection) -> None:
@@ -406,6 +428,10 @@ class SemanticCheckAnalyzer():
             ConditionCheckAnalyzer(tags),
             CommandCheckAnalyzer(commands)
         ]
+
+    def __str__(self) -> str:
+        items = [str(item) for item in self.items]
+        return f'{self.__class__.__name__}(items={items})'
 
     def analyze(self, program: PProgram):
         for analyzer in self.analyzers:

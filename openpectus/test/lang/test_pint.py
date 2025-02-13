@@ -55,7 +55,7 @@ class PintTest(unittest.TestCase):
         self.assertEqual("[time]", str(u.dimensionality))
         # print("{!r}".format(u))
 
-        q = 5 * u
+        q = 5 * u  # noqa: F841
         # print("{!r}".format(q))
 
     def test_dimensionless(self):

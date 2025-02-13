@@ -23,6 +23,9 @@ class FromEngine:
         self._engine_data_map = engine_data_map
         self.publisher = publisher
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(engine_data_map={self._engine_data_map}, publisher={self.publisher})'
+
     def register_engine_data(self, engine_data: EngineData):
         engine_id = engine_data.engine_id
         logger.debug(f"Data for engine {engine_id} registered")
@@ -309,6 +312,9 @@ class FromFrontend:
         self._engine_data_map = engine_data_map
         self.dispatcher = dispatcher
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(engine_data_map={self._engine_data_map}, dispatcher={self.dispatcher})'
+
     async def method_saved(self, engine_id: str, method: Mdl.Method, user_name: str) -> bool:
         try:
             response = await self.dispatcher.rpc_call(engine_id, message=AM.MethodMsg(method=method))
@@ -360,12 +366,17 @@ class FromFrontend:
 
 
 class Aggregator:
-    def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher) -> None:
+    def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, secret: str = "") -> None:
         self._engine_data_map: EngineDataMap = {}
         """ all client data except channels, indexed by engine_id """
         self.dispatcher = dispatcher
         self.from_frontend = FromFrontend(self._engine_data_map, dispatcher)
         self.from_engine = FromEngine(self._engine_data_map, publisher)
+        self.secret = secret
+
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(dispatcher={self.dispatcher}, ' +
+                f'from_frontend={self.from_frontend}, from_engine={self.from_engine})')
 
     def create_engine_id(self, register_engine_msg: EM.RegisterEngineMsg):
         """ Defines the generation of the engine_id that is uniquely assigned to each engine.

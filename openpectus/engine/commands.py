@@ -18,8 +18,18 @@ class EngineCommand():
         self._progress: bool | float = False
         self._finalized: bool = False
 
-    def __str__(self):
-        return f'{self.__class__.__name__}(name="{self.name}")'
+    def __str__(self) -> str:
+        if self._cancelled:
+            return f'{self.__class__.__name__}(name="{self.name}", _cancelled={self._cancelled})'
+        elif self._exec_complete:
+            return f'{self.__class__.__name__}(name="{self.name}", _exec_complete="{self._exec_complete}")'
+        elif self._exec_started:
+            return (f'{self.__class__.__name__}(name="{self.name}", _exec_started="{self._exec_started}", ' +
+                    f'_exec_iterations="{self._exec_iterations}")')
+        elif self._initialized:
+            return f'{self.__class__.__name__}(name="{self.name}", _initialized="{self._initialized}")'
+        else:
+            return f'{self.__class__.__name__}(name="{self.name}")'
 
     def initialize(self):
         self._initialized = True

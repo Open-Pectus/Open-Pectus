@@ -66,6 +66,9 @@ class OPCUA_Hardware(HardwareLayerBase):
         self._max_nodes_per_read: int = 1000
         self._max_nodes_per_write: int = 1000
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(is_connected={self.is_connected}, host="{self.host}")'
+
     def _browse_opcua_name_space_depth_first_until_path_is_valid(
             self, path: str) -> tuple[str, list[asyncua.ua.uatypes.QualifiedName]]:
         """ Given a path to a node that does not exist, find the closest
@@ -337,6 +340,3 @@ class OPCUA_Hardware(HardwareLayerBase):
         if self._client:
             self._client.disconnect()
         super().disconnect()
-
-    def __str__(self):
-        return f"OPCUA_Hardware(host={self.host})"
