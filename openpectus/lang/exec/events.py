@@ -205,7 +205,7 @@ class EventEmitter:
             try:
                 listener.on_stop()
             except Exception:
-                logger.error(f"on_stop failed for listener '{str(listener)}'", exc_info=True)
+                logger.error(f"on_stop failed for listener '{listener}'", exc_info=True)
 
     def emit_on_engine_shutdown(self):
         for listener in self._listeners:
