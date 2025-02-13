@@ -67,11 +67,10 @@ class EventListener:
 
 class PerformanceTimer(EventListener):
     """ Monitors execution time of event handlers and warns if they're slow. """
-    t0: float
-    t1: float
 
     def __init__(self, listener: EventListener):
         from openpectus.lang.exec.tags import Tag  # Avoid circular import by importing here.
+        self._t0: float = 0.0
         self._warned = False
         self._listener = listener
         self._is_tag = isinstance(listener, Tag)
@@ -83,11 +82,11 @@ class PerformanceTimer(EventListener):
             self._event_name = sys._getframe().f_back.f_code.co_name
         except Exception:
             self._event_name = "(unknown)"
-        self.t0 = time.perf_counter()
+        self._t0 = time.perf_counter()
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.t1 = time.perf_counter()
-        dt = self.t1-self.t0
+        t1 = time.perf_counter()
+        dt = t1 - self._t0
         if self._is_tag and not self._warned and dt > 0.01:
             logger.warning(f"{self._listener} event handler '{self._event_name}' " +
                            f"is slow. Execution time: {dt:0.1f} s. This warning is only issued once.")
@@ -134,7 +133,7 @@ class PerformanceTimer(EventListener):
         self.run_id = None
 
     def __str__(self) -> str:
-        return f"PerformanceTimer(listener: {self._listener}, _warned: {self._warned}"
+        return f"PerformanceTimer(listener: {self._listener}, warned: {self._warned}, is_tag: {self._is_tag}"
 
 
 class EventEmitter:
