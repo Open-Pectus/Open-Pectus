@@ -158,6 +158,17 @@ Docker and Pypi builds are normally built via a `Github Actions workflow`_. To b
 .. note::
    To include the frontend in the build, copy the contents of :console:`openpectus/frontend/dist` to :console:`openpectus/aggregator/frontend-dist` before building.
 
+Generate Parser Code After Updating Grammar
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+If the grammar is changed then it is necessary to re-generate the parser code.
+To do this, install :console:`antlr4-tools` and generate:
+
+.. code-block:: console
+
+    pip install antlr4-tools
+    antlr4 -Dlanguage=Python3 openpectus/lang/grammar/pcode.g4 -o openpectus/lang/grammar/codegen
+
+
 Alembic Database Migrations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. _SQLAlchemy documentation: https://alembic.sqlalchemy.org/en/latest/autogenerate.html#what-does-autogenerate-detect-and-what-does-it-not-detect

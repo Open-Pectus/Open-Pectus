@@ -1,4 +1,8 @@
 import unittest
+import subprocess
+import os
+import hashlib
+import importlib.util
 
 from antlr4.tree.Tree import ErrorNode as antlrErrorNode
 
@@ -37,6 +41,50 @@ class ParserTest(unittest.TestCase):
                     antlrErrorNode,
                     f"Child of context '{ctx.getText()}' with type '{type(ctx).__name__}' was unexpectedly an ErrorNode")
                 self.assertContextHasNoChildError(child)
+
+    # Run this test if "antlr4-tools" has been installed.
+    @unittest.skipIf(importlib.util.find_spec('antlr4_tool_runner') is None, "ANTLR not available")
+    def test_generate_parser_and_compare_with_existing(self):
+        files = [
+            "pcodeLexer.py",
+            "pcodeListener.py",
+            "pcodeParser.py",
+        ]
+        grammar_file = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            "lang",
+            "grammar",
+            "pcode.g4",
+        )
+        existing_output_folder = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            "lang",
+            "grammar",
+            "codegen",
+        )
+        output_folder = os.path.dirname(__file__)
+        subprocess.run([
+            "antlr4",
+            "-Dlanguage=Python3",
+            grammar_file,
+            "-o",
+            output_folder,
+            "-v",
+            "4.13.2",
+        ])
+
+        def hash(filename):
+            with open(filename, 'rb', buffering=0) as f:
+                # The first line contains meta data in a comment.
+                # This should not be a part of the hash comparison.
+                comment = f.readline()
+                assert comment.startswith(b"#")
+                return hashlib.file_digest(f, 'sha256').hexdigest()
+
+        for file in files:
+            existing = hash(os.path.join(existing_output_folder, file))
+            generated = hash(os.path.join(output_folder, file))
+            self.assertEqual(existing, generated)
 
     def test_mark(self):
         p = parse("Mark:   a  ")
