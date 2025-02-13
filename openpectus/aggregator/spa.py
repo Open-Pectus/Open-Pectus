@@ -16,6 +16,9 @@ class SinglePageApplication(StaticFiles):
         # the base path is passed in
         super().__init__(directory=directory, packages=None, html=True, check_dir=True)
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(directory="{self.directory}", index="{self.index}")'
+
     def lookup_path(self, path: str) -> Tuple[str, os.stat_result]:
         """Returns the index file when no match is found.
 
