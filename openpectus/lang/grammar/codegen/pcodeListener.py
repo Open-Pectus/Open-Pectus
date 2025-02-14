@@ -224,6 +224,24 @@ class pcodeListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by pcodeParser#batch.
+    def enterBatch(self, ctx:pcodeParser.BatchContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#batch.
+    def exitBatch(self, ctx:pcodeParser.BatchContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#batch_name.
+    def enterBatch_name(self, ctx:pcodeParser.Batch_nameContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#batch_name.
+    def exitBatch_name(self, ctx:pcodeParser.Batch_nameContext):
+        pass
+
+
     # Enter a parse tree produced by pcodeParser#call_macro.
     def enterCall_macro(self, ctx:pcodeParser.Call_macroContext):
         pass

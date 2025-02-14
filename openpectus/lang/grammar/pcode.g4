@@ -22,6 +22,7 @@ instruction
         | hold
         | wait
         | mark
+        | batch
         | command
         | comment
         | blank
@@ -53,6 +54,9 @@ duration        : .*?  ~(NEWLINE | HASH | COLON);
 
 mark            : time? MARK COLON WHITESPACE* mark_name?;
 mark_name       : identifier_ext ;
+
+batch            : time? BATCH COLON WHITESPACE* batch_name?;
+batch_name       : identifier_ext ;
 
 call_macro      : time? CALL_MACRO COLON WHITESPACE* call_macro_name?;
 call_macro_name : identifier_ext ;
@@ -88,6 +92,7 @@ HOLD            : 'Hold' ;
 WAIT            : 'Wait' ;
 RESTART         : 'Restart' ;
 MARK            : 'Mark' ;
+BATCH           : 'Batch' ;
 CALL_MACRO      : 'Call macro' ;
 BLOCK           : 'Block' ;
 END_BLOCK       : 'End block' ;

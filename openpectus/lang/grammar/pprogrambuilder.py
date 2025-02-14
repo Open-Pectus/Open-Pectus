@@ -22,6 +22,7 @@ from openpectus.lang.model.pprogram import (
     PMacro,
     PCallMacro,
     PMark,
+    PBatch,
     PCommand,
     PError,
     PBlank,
@@ -263,6 +264,13 @@ class PProgramBuilder(pcodeListener):
 
     def enterMark_name(self, ctx: pcodeParser.Mark_nameContext):
         assert isinstance(self.instruction, PMark)
+        self.instruction.name = ctx.getText()
+
+    def enterBatch(self, ctx: pcodeParser.BatchContext):
+        self.instruction = PBatch(self.scope)
+
+    def enterBatch_name(self, ctx: pcodeParser.Batch_nameContext):
+        assert isinstance(self.instruction, PBatch)
         self.instruction.name = ctx.getText()
 
     def enterCall_macro(self, ctx: pcodeParser.Call_macroContext):

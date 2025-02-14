@@ -439,6 +439,28 @@ class PMark(PInstruction):
     def instruction_name(self) -> str | None:
         return "Mark"
 
+
+class PBatch(PInstruction):
+    """ Represents a Batch name instruction. """
+    def __init__(self, parent: PNode) -> None:
+        super().__init__(parent)
+
+        self.children = []
+        self.name: str = ''
+        self._forcible = False
+
+    def __str__(self) -> str:
+        return super().__str__() + ": " + self.name
+
+    @property
+    def runlog_name(self) -> str | None:
+        return "Batch: " + self.name
+
+    @property
+    def instruction_name(self) -> str | None:
+        return "Batch"
+
+
 class PCommand(PInstruction):
     """ Represents a Command instruction (Start, Stop, Restart, ...) as well as uod commands.
 
