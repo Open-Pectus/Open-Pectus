@@ -203,4 +203,14 @@ Watch: Run Counter > 3
 Wait: 5 s
 Restart
 """),
+    CommandExample(name="Macro", example="""
+# Create a macro for multiple commands
+
+# Example 1:
+Macro: A
+    Mark: 1
+    Mark: 2
+
+Call macro: A # Mark 1 and Mark 2 are executed.
+"""),
 ]

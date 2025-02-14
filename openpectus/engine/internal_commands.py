@@ -15,6 +15,10 @@ class InternalCommandsRegistry:
         self._command_map: dict[str, Callable[[], InternalEngineCommand]] = {}
         self._command_instances: dict[str, InternalEngineCommand] = {}
 
+    def __str__(self) -> str:
+        _command_instances = [str(command_instance) for command_instance in self._command_instances]
+        return f'{self.__class__.__name__}(engine={self.engine}, _command_instances={_command_instances})'
+
     def __enter__(self):
         self._register_commands(self.engine)
         return self
