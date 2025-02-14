@@ -375,7 +375,7 @@ class PAlarm(PInstruction):
 
 
 class PMacro(PInstruction):
-    """ Represents an Alarm instruction. """
+    """ Represents a Macro instruction. """
     def __init__(self, parent: PNode) -> None:
         super().__init__(parent)
 
@@ -398,7 +398,7 @@ class PMacro(PInstruction):
 
 
 class PCallMacro(PInstruction):
-    """ Represents an Mark instruction. """
+    """ Represents a Call macro instruction. """
     def __init__(self, parent: PNode) -> None:
         super().__init__(parent)
 

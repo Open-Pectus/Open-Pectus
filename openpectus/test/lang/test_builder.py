@@ -104,6 +104,22 @@ class BuilderTest(unittest.TestCase):
         self.assertEqual("foo", macro.name)
         # print_program(program)
 
+    @unittest.skip("Fix in #662")
+    def test_invalid_macro_with_mark(self):
+        p = build("""
+Macro:
+    Mark: a
+""")
+        program = p.build_model()
+        # p.printSyntaxTree(p.tree)
+        macro: PMacro = program.get_instructions()[0]  # type: ignore
+        self.assertIsNotNone(macro)
+        assert isinstance(macro, PMacro)
+        self.assertEqual("foo", macro.name)
+        mark = macro.children[0]  # type: ignore
+        assert isinstance(mark, PMark)
+        self.assertEqual("a", mark.name)
+
     def test_call_macro(self):
         p = build("Call macro: foo")
         program = p.build_model()

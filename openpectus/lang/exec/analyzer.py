@@ -402,6 +402,52 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
             return
 
 
+class MacroCheckAnalyzer(AnalyzerVisitorBase):
+    def __init__(self) -> None:
+        super().__init__()
+        self.macros: list[PMacro] = []
+        self.macro_calls: list[PCallMacro] = []
+
+    def visit_PCallMacro(self, node: PCallMacro):
+        if node.name is None or node.name.strip() == "":
+            self.add_item(AnalyzerItem(
+                "MacroCallNameInvalid",
+                "Invalid macro call",
+                node,
+                AnalyzerItemType.ERROR,
+                "Call macro must refer to a Macro definition"
+            ))
+        else:
+            self.macro_calls.append(node)
+        return super().visit_PCallMacro(node)
+
+    def visit_PMacro(self, node: PMacro):
+        if node.name is None or node.name.strip() == "":
+            self.add_item(AnalyzerItem(
+                "MacroNameInvalid",
+                "Invalid macro definition",
+                node,
+                AnalyzerItemType.ERROR,
+                "A Macro definition must include a name"
+            ))
+        else:
+            self.macros.append(node)
+        return super().visit_PMacro(node)
+
+    def visit_PProgram(self, node: PProgram):
+        super().visit_PProgram(node)
+
+        for call in self.macro_calls:
+            if call.name not in [m.name for m in self.macros]:
+                self.add_item(AnalyzerItem(
+                    "MacroCallInvalid",
+                    "Invalid macro call",
+                    call,
+                    AnalyzerItemType.ERROR,
+                    f"Cannot call macro {call.name} because it is not defined"
+                ))
+
+
 class SemanticCheckAnalyzer():
     """ Facade that combines the check analyzers into a single analyzer. """
 
@@ -412,7 +458,8 @@ class SemanticCheckAnalyzer():
             UnreachableCodeCheckAnalyzer(),
             InfiniteBlockCheckAnalyzer(),
             ConditionCheckAnalyzer(tags),
-            CommandCheckAnalyzer(commands)
+            CommandCheckAnalyzer(commands),
+            MacroCheckAnalyzer(),
         ]
 
     def analyze(self, program: PProgram):

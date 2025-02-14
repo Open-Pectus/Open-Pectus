@@ -375,6 +375,19 @@ Macro: A
         mark = get_first_child(program, pcodeParser.MarkContext)
         self.assertIsInstance(mark, pcodeParser.MarkContext)
 
+    @unittest.skip("Fix in #662")
+    def test_macro_invalid_with_mark(self):
+        p = parse("""
+Macro:
+    Mark: a
+""")
+        program = p.parser.program()  # type: ignore
+        macro = get_first_child(program, pcodeParser.MacroContext)
+        self.assertIsInstance(macro, pcodeParser.MacroContext)
+
+        mark = get_first_child(program, pcodeParser.MarkContext)
+        self.assertIsInstance(mark, pcodeParser.MarkContext)
+
     def test_increment_rc(self):
         p = parse("Increment run counter")
         c = p.parser.increment_rc()  # type: ignore
