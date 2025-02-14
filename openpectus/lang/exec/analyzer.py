@@ -448,7 +448,7 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                 ))
 
 
-class SemanticCheckAnalyzer():
+class SemanticCheckAnalyzer:
     """ Facade that combines the check analyzers into a single analyzer. """
 
     def __init__(self, tags: TagCollection, commands: CommandCollection) -> None:
