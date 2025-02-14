@@ -154,6 +154,59 @@ Alarm: Run Counter < 3
 
         # print_runtime_records(e)
 
+    def test_Macro_no_invocation(self):
+        e = self.engine
+
+        cmd = """
+Macro: A
+    Mark: b
+"""
+        run_engine(e, cmd, 5)
+        print(self.engine.runtimeinfo.records)
+        cmd = "Macro: A"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
+
+    def test_Macro_single_invocation(self):
+        e = self.engine
+
+        cmd = """
+Macro: A
+    Mark: b
+Call macro: A
+"""
+        run_engine(e, cmd, 6)
+        print(self.engine.runtimeinfo.records)
+        cmd = "Macro: A"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
+        cmd = "Mark: b"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
+
+    def test_Macro_multiple_invocations(self):
+        e = self.engine
+
+        cmd = """
+Macro: A
+    Mark: b
+Call macro: A
+Call macro: A
+Call macro: A
+"""
+        run_engine(e, cmd, 7)
+        cmd = "Macro: A"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
+        cmd = "Mark: b"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 3)
+
     def test_runlog_cancel_watch(self):
         e = self.engine
         program = """

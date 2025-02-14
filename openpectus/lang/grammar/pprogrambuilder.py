@@ -19,6 +19,8 @@ from openpectus.lang.model.pprogram import (
     PEndBlocks,
     PWatch,
     PAlarm,
+    PMacro,
+    PCallMacro,
     PMark,
     PCommand,
     PError,
@@ -214,6 +216,14 @@ class PProgramBuilder(pcodeListener):
         self.instruction = PAlarm(self.scope)
         self.push_scope(self.instruction, ctx)
 
+    def enterMacro(self, ctx: pcodeParser.MacroContext):
+        self.instruction = PMacro(self.scope)
+        self.push_scope(self.instruction, ctx)
+
+    def enterMacro_name(self, ctx: pcodeParser.Macro_nameContext):
+        if isinstance(self.scope, PMacro) and isinstance(self.instruction, PMacro):
+            self.scope.name = ctx.getText()
+
     def enterIncrement_rc(self, ctx: pcodeParser.Increment_rcContext):
         if self.instruction is None:
             self.instruction = PCommand(self.scope)
@@ -253,6 +263,13 @@ class PProgramBuilder(pcodeListener):
 
     def enterMark_name(self, ctx: pcodeParser.Mark_nameContext):
         assert isinstance(self.instruction, PMark)
+        self.instruction.name = ctx.getText()
+
+    def enterCall_macro(self, ctx: pcodeParser.Call_macroContext):
+        self.instruction = PCallMacro(self.scope)
+
+    def enterCall_macro_name(self, ctx: pcodeParser.Call_macro_nameContext):
+        assert isinstance(self.instruction, PCallMacro)
         self.instruction.name = ctx.getText()
 
     def enterTimeexp(self, ctx: pcodeParser.TimeexpContext):

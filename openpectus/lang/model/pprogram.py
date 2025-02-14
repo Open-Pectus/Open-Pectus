@@ -374,6 +374,51 @@ class PAlarm(PInstruction):
         super().reset_runtime_state(recursive=recursive)
 
 
+class PMacro(PInstruction):
+    """ Represents a Macro instruction. """
+    def __init__(self, parent: PNode) -> None:
+        super().__init__(parent)
+
+        self.children = []
+        self.name: str = ''
+        self.activated: bool = False
+        self._cancellable = False
+        self._forcible = False
+
+    def __str__(self) -> str:
+        return super().__str__() + ": " + self.name
+
+    @property
+    def runlog_name(self) -> str | None:
+        return "Macro: " + self.name
+
+    @property
+    def instruction_name(self) -> str | None:
+        return "Macro"
+
+
+class PCallMacro(PInstruction):
+    """ Represents a Call macro instruction. """
+    def __init__(self, parent: PNode) -> None:
+        super().__init__(parent)
+
+        self.children = []
+        self.name: str = ''
+        self._cancellable = False
+        self._forcible = False
+
+    def __str__(self) -> str:
+        return super().__str__() + ": " + self.name
+
+    @property
+    def runlog_name(self) -> str | None:
+        return "Call macro: " + self.name
+
+    @property
+    def instruction_name(self) -> str | None:
+        return "Call macro"
+
+
 class PMark(PInstruction):
     """ Represents an Mark instruction. """
     def __init__(self, parent: PNode) -> None:

@@ -1,6 +1,7 @@
 import unittest
 
 from openpectus.lang.exec.analyzer import (
+    MacroCheckAnalyzer,
     SemanticCheckAnalyzer,
     UnreachableCodeCheckAnalyzer,
     InfiniteBlockCheckAnalyzer,
@@ -250,3 +251,43 @@ Mark: c
         analyzer.analyze(program)
         xs = [e for e in analyzer.items if e.id == 'UnreachableCode']
         self.assertEqual(1, len(xs))
+
+class MacroCheckAnalyzerTest(unittest.TestCase):
+    def test_valid_macro(self):
+        program = build_program("""
+Macro: A
+    Mark: a
+""")
+        analyzer = MacroCheckAnalyzer()
+        analyzer.visit(program)
+        self.assertEqual(0, len(analyzer.items))
+
+    @unittest.skip("Fix in #662")
+    def test_invalid_macro(self):
+        program = build_program("""
+Macro:
+    Mark: a
+""")
+        analyzer = MacroCheckAnalyzer()
+        analyzer.visit(program)
+        self.assertEqual(1, len(analyzer.items))
+
+    def test_valid_macro_w_call(self):
+        program = build_program("""
+Macro: A
+    Mark: a
+Call macro: A
+""")
+        analyzer = MacroCheckAnalyzer()
+        analyzer.visit(program)
+        self.assertEqual(0, len(analyzer.items))
+
+    def test_invalid_call_macro_to_undefined_macro(self):
+        program = build_program("""
+Call macro: A
+""")
+        analyzer = MacroCheckAnalyzer()
+        analyzer.visit(program)
+        self.assertEqual(1, len(analyzer.items))
+
+    # Add checks for valid and invalid recursive Macro definitions/calls
