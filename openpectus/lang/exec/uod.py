@@ -5,6 +5,7 @@ import logging
 import re
 from typing import Any, Callable, Literal, Tuple
 import sys
+import time
 
 from openpectus.engine.commands import ContextEngineCommand, CommandArgs
 from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
@@ -14,7 +15,7 @@ from openpectus.lang.exec.readings import (
     Reading, ReadingCollection, ReadingWithChoice, ReadingWithEntry, UodCommandDescription
 )
 from openpectus.lang.exec.tags import SystemTagName, Tag, TagCollection
-from openpectus.lang.exec.units import get_compatible_unit_names, get_volume_units
+from openpectus.lang.exec.units import get_compatible_unit_names, get_volume_units, add_unit
 from openpectus.lang.exec.tags_impl import AccumulatorBlockTag, AccumulatedColumnVolume, AccumulatorTag
 from openpectus.protocol.models import EntryDataType, PlotConfiguration
 
@@ -60,7 +61,7 @@ class UnitOperationDefinitionBase:
         self.base_unit_provider: BaseUnitProvider = base_unit_provider
 
     def __str__(self) -> str:
-        return f"UnitOperationDefinition({self.instrument=},{self.location=},hwl={str(self.hwl)})"
+        return f'{self.__class__.__name__}(instrument={self.instrument}, location={self.location}, hwl={self.hwl})'
 
     @property
     def options(self) -> dict[str, str]:
@@ -143,7 +144,9 @@ class UnitOperationDefinitionBase:
         def log_fatal(msg: str):
             nonlocal fatal
             if not fatal:
-                logger.fatal("An error occured while validating the Unit Operation Definition. Pectus Engine cannot start.")
+                logger.fatal("An error occured while validating the Unit Operation Definition. " +
+                             "Pectus Engine cannot start. " +
+                             "Apply -v flag to validate UOD with more verbose error descriptions.")
             fatal = True
             logger.fatal(msg)
 
@@ -391,6 +394,7 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
         self.exec_fn: EXEC_FN | None = None
         self.finalize_fn: FINAL_FN | None = None
         self.arg_parse_fn: PARSE_FN | None = None
+        self._performance_warned = False
 
     @staticmethod
     def builder() -> UodCommandBuilder:
@@ -406,14 +410,21 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
 
     def execute(self, args: CommandArgs) -> None:
         if self.exec_fn is None:
-            raise ValueError(f"Command '{self.name}' has no execution function defined")
+            raise ValueError(f"Command {self} has no execution function defined")
 
         if not isinstance(args, dict):
             raise TypeError(
-                f"Invalid arguments provided to command '{self.name}'. Must be a dictionary, not {type(args).__name__}")
+                f"Invalid arguments provided to command {self}. Must be a dictionary, not {type(args).__name__}")
 
         super().execute(args)
+        t0 = time.perf_counter()
         self.exec_fn(args)
+        t1 = time.perf_counter()
+        dt = t1-t0
+        if not self._performance_warned and dt > 0.1:
+            logger.warning(f"exec_fn {self.exec_fn} for {self} is slow. Execution time: {dt:0.1f} s. " +
+                           "This warning is only issued once.")
+            self._performance_warned = True
 
     def cancel(self):
         super().cancel()
@@ -434,7 +445,7 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
             return self.arg_parse_fn(args)
 
 
-class UodCommandBuilder():
+class UodCommandBuilder:
     """ Used to builds command specifications and as factory to instantiate commands from the specifications. """
     def __init__(self) -> None:
         self.name = ""
@@ -442,6 +453,9 @@ class UodCommandBuilder():
         self.exec_fn: Callable[..., None] | None = None
         self.finalize_fn: Callable[[UodCommand], None] | None = None
         self.arg_parse_fn: Callable[[str], CommandArgs | None] | None = None
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(name={self.name})'
 
     def with_name(self, name: str) -> UodCommandBuilder:
         """ Define the name of the command. Required. """
@@ -522,7 +536,7 @@ class UodCommandBuilder():
         return c
 
 
-class UodBuilder():
+class UodBuilder:
     """ Provides a builder api to define a Unit Operation Definition """
     def __init__(self) -> None:
         self.instrument: str = ""
@@ -543,6 +557,9 @@ class UodBuilder():
         self.base_unit_provider.set("s", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
         self.base_unit_provider.set("min", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
         self.base_unit_provider.set("h", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}()'
 
     def get_logger(self):
         return logging.getLogger(f'{__name__}.user_uod')
@@ -843,6 +860,14 @@ class UodBuilder():
         self.data_log_interval_seconds = data_log_interval_seconds
         return self
 
+    def with_measurement_unit(self,
+                              unit: str,
+                              unit_relation: None | str = None,
+                              quantity_relation: None | dict[str, str] = None,
+                              quantity: None | str = None) -> UodBuilder:
+        add_unit(unit=unit, unit_relation=unit_relation, quantity_relation=quantity_relation, quantity=quantity)
+        return self
+
     def build(self) -> UnitOperationDefinitionBase:
         self.validate()
 
@@ -888,7 +913,7 @@ def unescape(re_escaped_string: str) -> str:
     """
     re.escape is used to escape options supplied to
     RegexCategorical. This function can reverses operation.
-    
+
     assert unescape(re.escape('A B')) == 'A B'
     assert unescape(re.escape('A/B')) == 'A/B'
     """
@@ -896,9 +921,12 @@ def unescape(re_escaped_string: str) -> str:
     return re.sub(r'\\(.)', r'\1', re_escaped_string)
 
 
-class RegexNamedArgumentParser():
+class RegexNamedArgumentParser:
     def __init__(self, regex: str) -> None:
         self.regex = regex
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(named_groups={self.get_named_groups()})'
 
     def parse(self, args: str) -> dict[str, Any] | None:
         match = re.search(self.regex, args)
@@ -929,7 +957,6 @@ class RegexNamedArgumentParser():
             return []
         start = self.regex.index("<option>") + len("<option>(")
         end = self.regex.index("|(")
-        option_string = self.regex[start: end]
         result = unescape(self.regex[start: end]).split("|")
         return result
 

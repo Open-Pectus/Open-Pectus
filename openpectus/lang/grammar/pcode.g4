@@ -13,6 +13,8 @@ instruction
         : block | end_block | end_blocks
         | watch
         | alarm
+        | macro
+        | call_macro
         | increment_rc
         | restart
         | stop
@@ -20,6 +22,7 @@ instruction
         | hold
         | wait
         | mark
+        | batch
         | command
         | comment
         | blank
@@ -33,6 +36,8 @@ end_blocks      : time? END_BLOCKS ;
 
 watch           : time? WATCH ( (COLON WHITESPACE* condition)? | inst_error );
 alarm           : time? ALARM ( (COLON WHITESPACE* condition)? | inst_error );
+macro           : time? MACRO ((COLON WHITESPACE* macro_name)? | inst_error );
+macro_name      : identifier_ext ; 
  
 condition       : condition_lhs WHITESPACE* compare_op WHITESPACE* condition_rhs ;
 compare_op      : COMPARE_OP ;
@@ -49,6 +54,12 @@ duration        : .*?  ~(NEWLINE | HASH | COLON);
 
 mark            : time? MARK COLON WHITESPACE* mark_name?;
 mark_name       : identifier_ext ;
+
+batch            : time? BATCH COLON WHITESPACE* batch_name?;
+batch_name       : identifier_ext ;
+
+call_macro      : time? CALL_MACRO COLON WHITESPACE* call_macro_name?;
+call_macro_name : identifier_ext ;
 
 time            : timeexp WHITESPACE+ ;
 timeexp         : POSITIVE_FLOAT ;
@@ -74,12 +85,15 @@ fragment DIGIT  : [0-9] ;
 
 WATCH           : 'Watch' ;
 ALARM           : 'Alarm' ;
+MACRO           : 'Macro' ;
 STOP            : 'Stop' ;
 PAUSE           : 'Pause' ;
 HOLD            : 'Hold' ;
 WAIT            : 'Wait' ;
 RESTART         : 'Restart' ;
 MARK            : 'Mark' ;
+BATCH           : 'Batch' ;
+CALL_MACRO      : 'Call macro' ;
 BLOCK           : 'Block' ;
 END_BLOCK       : 'End block' ;
 END_BLOCKS      : 'End blocks' ;

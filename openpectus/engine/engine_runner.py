@@ -36,6 +36,9 @@ class AsyncTimer:
         self._callback = callback
         self._task = asyncio.create_task(self._job(), name="engine.engine_runner.AsyncTimer")
 
+    def __str__(self):
+        return f'{self.__class__.__name__}(_task={self._task})'
+
     async def _job(self):
         try:
             while True:
@@ -82,6 +85,10 @@ class EngineRunner(EventListener):
         self.reconnected_callback: AsyncConnectionCallback | None = None
         self.state_changing_callback: StateChangingCallback | None = None
         self.first_steady_state_callback: AsyncConnectionCallback | None = None
+
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(dispatcher={self._dispatcher}, ' +
+                f'message_builder={self._message_builder}, loop={self._loop}, state="{self.state}")')
 
     def on_start(self, run_id: str):
         super().on_start(run_id)
@@ -394,6 +401,3 @@ class EngineRunner(EventListener):
 
         # Send message in concurrent task
         self._state_task = asyncio.create_task(send_messages(), name="engine.engine_runner.on_steady_state.send_messages")
-
-    def __str__(self) -> str:
-        return f"EngineRunner(state: {self.state})"

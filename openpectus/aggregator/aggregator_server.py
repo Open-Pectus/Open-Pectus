@@ -23,9 +23,11 @@ class AggregatorServer:
     default_port = 9800
     default_db_filename = "open_pectus_aggregator.sqlite3"
     default_db_path = os.path.join(os.getcwd(), default_db_filename)
+    default_secret = ""
 
     def __init__(self, title: str = default_title, host: str = default_host, port: int = default_port,
-                 frontend_dist_dir: str = default_frontend_dist_dir, db_path: str = default_db_path):
+                 frontend_dist_dir: str = default_frontend_dist_dir, db_path: str = default_db_path,
+                 secret: str = default_secret):
         self.title = title
         self.host = host
         self.port = port
@@ -35,10 +37,14 @@ class AggregatorServer:
             raise FileNotFoundError("{frontend_dist_dir} not found.")
         self.dispatcher = AggregatorDispatcher()
         self.publisher = FrontendPublisher()
-        self.aggregator = _create_aggregator(self.dispatcher, self.publisher)
+        self.aggregator = _create_aggregator(self.dispatcher, self.publisher, secret)
         _ = AggregatorMessageHandlers(self.aggregator)
         self.setup_fastapi([self.dispatcher.router, self.publisher.router, version.router])
         self.init_db()
+
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(host="{self.host}", port={self.port}, ' +
+                f'frontend_dist_dir="{self.frontend_dist_dir}", db_path="{self.db_path}")')
 
     def setup_fastapi(self, additional_routers: list[APIRouter] = []):
         api_prefix = "/api"

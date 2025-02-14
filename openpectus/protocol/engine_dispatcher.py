@@ -76,7 +76,7 @@ class EngineDispatcher():
             # Note: Must be declared async to be usable by RPC
             return self.engine_id
 
-    def __init__(self, aggregator_host: str, secure: bool, uod_options: dict[str, str]) -> None:
+    def __init__(self, aggregator_host: str, secure: bool, uod_options: dict[str, str], secret: str = "") -> None:
         super().__init__()
         self._aggregator_host = aggregator_host
         self._uod_name = uod_options.pop("uod_name")
@@ -88,6 +88,7 @@ class EngineDispatcher():
         self._handlers: dict[type, Callable[[Any], Awaitable[M.MessageBase]]] = {}
         self._engine_id = None
         self._sequence_number = 1
+        self._secret = secret
 
         http_scheme = "https" if secure else "http"
         ws_scheme = "wss" if secure else "ws"
@@ -97,6 +98,10 @@ class EngineDispatcher():
         self._rpc_url = f"{ws_scheme}://{self._aggregator_host}{AGGREGATOR_RPC_WS_PATH}"
         self._auth_config_url = f"{http_scheme}://{self._aggregator_host}{AGGREGATOR_AUTH_CONFIG_PATH}"
         logger.info(f"Connecting to aggregator using urls:\n{self._post_url}\n{self._rpc_url}")
+
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(_rpc_url="{self._rpc_url}", _engine_id="{self._engine_id}", ' +
+                f'_sequence_number={self._sequence_number})')
 
     def check_aggregator_alive(self) -> bool:
         try:
@@ -275,10 +280,13 @@ class EngineDispatcher():
             uod_author_email=self._uod_author_email,
             uod_filename=self._uod_filename,
             location=self._location,
-            engine_version=__version__)
+            engine_version=__version__,
+            secret=self._secret)
         register_response = await self.send_registration_msg_async(register_engine_msg)
         if not isinstance(register_response, AM.RegisterEngineReplyMsg) or not register_response.success:
             logger.warning("Aggregator refused registration")
+            if isinstance(register_response, AM.RegisterEngineReplyMsg) and not register_response.secret_match:
+                logger.error("Secret supplied by engine does not match aggregator secret")
             return None
         logger.debug(f"Aggregator accepted registration and issued engine_id: {register_response.engine_id}")
         return register_response.engine_id
