@@ -89,7 +89,6 @@ class ActivationRecord:
         self.complete: bool = False
         self.artype: ARType = self._get_artype(owner)
 
-
     def fill_start(self, start_time: float):
         self.start_time: float = start_time
 

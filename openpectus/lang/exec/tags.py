@@ -5,7 +5,7 @@ import time
 from typing import Any, Callable, Iterable, Set
 
 from openpectus.lang.exec.events import EventListener
-from openpectus.lang.exec.units import convert_value_to_unit, is_supported_unit
+from openpectus.lang.exec.units import convert_value_to_unit, is_supported_unit, add_unit
 
 
 # Represents tag API towards interpreter
@@ -50,11 +50,14 @@ def format_time_as_clock(value: float) -> str:
     return f"{tm.hour:02}:{tm.minute:02}:{tm.second:02}"
 
 
-class ChangeListener():
+class ChangeListener:
     """ Collects named changes. Used by engine to track tag changes """
 
     def __init__(self) -> None:
         self._changes: Set[str] = set()
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(_changes="{self._changes}")'
 
     def notify_change(self, elm: str):
         self._changes.add(elm)
@@ -67,13 +70,17 @@ class ChangeListener():
         return list(self._changes)
 
 
-class ChangeSubject():
+class ChangeSubject:
     """ Inherit to support change notification. Used by engine to track tag changes """
 
     def __init__(self) -> None:
         super().__init__()
 
         self._listeners: list[ChangeListener] = []
+
+    def __str__(self) -> str:
+        listeners = [str(listener) for listener in self._listeners]
+        return f'{self.__class__.__name__}(_listeners="{listeners}")'
 
     def add_listener(self, listener: ChangeListener):
         self._listeners.append(listener)
@@ -104,12 +111,15 @@ class TagDirection(StrEnum):
     Unspecified = auto()
 
 
-class Unset():
+class Unset:
     """ Used to specify that a value has not been set.
 
     Used for nullable values to distinguish between being set to None and not being set.
     """
     pass
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}()'
 
 
 class Tag(ChangeSubject, EventListener):
@@ -150,6 +160,9 @@ class Tag(ChangeSubject, EventListener):
         self.direction: TagDirection = direction
         self.safe_value: TagValueType | Unset = safe_value
         self.format_fn = format_fn
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(name="{self.name}", value="{self.value}")'
 
     def as_readonly(self) -> TagValue:
         """ Convert the value to a readonly and immutable TagValue instance """
@@ -204,6 +217,10 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
         if tags is not None:
             for tag in tags:
                 self.add(tag, exist_ok=False)
+
+    def __str__(self) -> str:
+        values = [str(value) for value in self.tags.values()]
+        return f'{self.__class__.__name__}(tags={values})'
 
     def as_readonly(self) -> TagValueCollection:
         return TagValueCollection([t.as_readonly() for t in self.tags.values()])
@@ -291,7 +308,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
         return tags
 
 
-class TagValue():
+class TagValue:
     """ Read-only and immutable representation of a tag value. """
     def __init__(
             self,
@@ -312,6 +329,9 @@ class TagValue():
         self.unit = unit
         self.direction = direction
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(name="{self.name}", value="{self.value}")'
+
 
 class TagValueCollection(Iterable[TagValue]):
     """ Represents a read-only and immutable dictionary of tag values. """
@@ -321,6 +341,10 @@ class TagValueCollection(Iterable[TagValue]):
         self._tag_values: dict[str, TagValue] = {}
         for v in values:
             self._add(v)
+
+    def __str__(self) -> str:
+        values = [str(value) for value in self._tag_values.values()]
+        return f'{self.__class__.__name__}(_tag_values={values})'
 
     @staticmethod
     def empty() -> TagValueCollection:
