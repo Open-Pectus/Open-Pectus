@@ -19,7 +19,7 @@ ureg.define("vol = 1")
 ureg.define("AU = [absorbance]")
 Q_ = Quantity
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("openpectus.lang.exec.units")
 
 # https://en.wikipedia.org/wiki/International_System_of_Units
 # defines all the units we accept, each with their quantity name (similar to pint dimensionality).

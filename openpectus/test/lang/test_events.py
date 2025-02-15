@@ -15,9 +15,7 @@ class TestEvents(unittest.TestCase):
         on_start_mock.assert_called()
 
     def test_emitter_warns_on_slow_Tag_handler(self):
-        # set up logger for test
-        logging.basicConfig()
-        logger = logging.getLogger("openpectus.lang.exec.events").setLevel(logging.INFO)
+        logger = "openpectus.lang.exec.events"
 
         def onstart_fast(_):
             pass
