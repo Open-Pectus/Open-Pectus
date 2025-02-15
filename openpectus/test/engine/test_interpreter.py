@@ -176,6 +176,148 @@ Watch: counter > 0
         # self.assertEqual(["a", "c", "d"], i.get_marks())
 
 
+    def test_macro(self):
+        program = """
+Mark: a
+Macro: A
+    Mark: b
+    Mark: c
+Macro: B
+    Mark: d
+    Mark: e
+"""
+        engine = self.engine
+        run_engine(engine, program, 5)
+        self.assertEqual(["a",], engine.interpreter.get_marks())
+
+
+    def test_macro_with_call(self):
+        program = """
+Mark: a
+Macro: A
+    Mark: b
+    Mark: c
+Macro: B
+    Mark: d
+    Mark: e
+Call macro: A
+"""
+        engine = self.engine
+        run_engine(engine, program, 10)
+        self.assertEqual(["a", "b", "c",], engine.interpreter.get_marks())
+
+
+    def test_macro_with_multiple_calls(self):
+        program = """
+Mark: a
+Macro: A
+    Mark: b
+    Mark: c
+Macro: B
+    Mark: d
+    Mark: e
+Call macro: A
+Call macro: A
+"""
+        engine = self.engine
+        run_engine(engine, program, 10)
+        self.assertEqual(["a", "b", "c", "b", "c",], engine.interpreter.get_marks())
+
+
+    def test_call_undefined_macro(self):
+        program = """
+Mark: a
+Macro: B
+    Mark: b
+Call macro: A
+"""
+        engine = self.engine
+
+        self.assertRaises(
+            ValueError,
+            lambda: run_engine(engine, program, 5)
+        )
+        self.assertEqual(["a",], engine.interpreter.get_marks())
+
+
+    def test_macro_with_nested_calls(self):
+        program = """
+Mark: a
+Macro: A
+    Mark: b
+    Mark: c
+Macro: B
+    Mark: d
+    Call macro: A
+Call macro: B
+"""
+        engine = self.engine
+        run_engine(engine, program, 10)
+        self.assertEqual(["a", "d", "b", "c",], engine.interpreter.get_marks())
+
+
+    def test_call_cascading_macro(self):
+        program = """
+Mark: a
+Macro: A
+    Mark: b
+    Mark: c
+    Call macro: A
+Call macro: A
+"""
+        engine = self.engine
+
+        self.assertRaises(
+            ValueError,
+            lambda: run_engine(engine, program, 10)
+        )
+        self.assertEqual(["a",], engine.interpreter.get_marks())
+
+
+    def test_call_indirect_cascading_macro(self):
+        program = """
+Mark: a
+Macro: A
+    Mark: b
+    Mark: c
+    Call macro: B
+Macro: B
+    Mark: d
+    Call macro: A
+Call macro: A
+"""
+        engine = self.engine
+
+        self.assertRaises(
+            ValueError,
+            lambda: run_engine(engine, program, 10)
+        )
+        self.assertEqual(["a",], engine.interpreter.get_marks())
+
+
+    def test_call_multiple_indirect_cascading_macro(self):
+        program = """
+Mark: a
+Macro: A
+    Mark: b
+    Mark: c
+    Call macro: B
+Macro: B
+    Mark: d
+    Call macro: C
+Macro: C
+    Mark: e
+    Call macro: A
+Call macro: A
+"""
+        engine = self.engine
+
+        self.assertRaises(
+            ValueError,
+            lambda: run_engine(engine, program, 10)
+        )
+        self.assertEqual(["a",], engine.interpreter.get_marks())
+
 # --- Conditions ---
 
 
