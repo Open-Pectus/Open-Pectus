@@ -7,8 +7,8 @@ from collections import defaultdict
 import pint
 from pint import UnitRegistry, Quantity
 
-cache_folder = os.path.join(os.path.dirname(__file__), "pint-cache")
-ureg = UnitRegistry(cache_folder=cache_folder)
+#cache_folder = os.path.join(os.path.dirname(__file__), "pint-cache")
+ureg = UnitRegistry()
 ureg.define("m3 = m**3")
 ureg.define("m2 = m**2")
 ureg.define("dm2 = dm**2")
