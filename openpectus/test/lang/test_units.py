@@ -1,6 +1,4 @@
 import logging
-logging.basicConfig()
-logger = logging.getLogger("openpectus.lang.exec.units").setLevel(logging.INFO)
 import unittest
 
 from openpectus.lang.exec.units import (
@@ -13,6 +11,20 @@ from openpectus.lang.exec.units import (
     add_unit,
  )
 
+
+def reset_logging():
+    loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
+    loggers.append(logging.getLogger())
+    for logger in loggers:
+        handlers = logger.handlers[:]
+        for handler in handlers:
+            logger.removeHandler(handler)
+            handler.close()
+        logger.setLevel(logging.NOTSET)
+        logger.propagate = True
+
+
+reset_logging()
 
 
 class TestUnits(unittest.TestCase):
