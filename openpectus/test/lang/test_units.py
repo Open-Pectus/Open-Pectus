@@ -1,5 +1,7 @@
-import unittest
 import logging
+logging.basicConfig()
+logger = logging.getLogger("openpectus.lang.exec.units").setLevel(logging.INFO)
+import unittest
 
 from openpectus.lang.exec.units import (
     convert_value_to_unit,
@@ -258,7 +260,7 @@ class TestUnits(unittest.TestCase):
         self.assertFalse(is_supported_unit("DV"))
         add_unit("DV", quantity="diavolume")
         self.assertTrue(is_supported_unit("DV"))
-        with self.assertLogs("openpectus.lang.exec.units", level=logging.WARNING):
+        with self.assertLogs(logger, level=logging.WARNING):
             add_unit("DV", quantity="diavolume")
 
         add_unit("kg/m2/h", quantity_relation={"mass_flux": "[mass] / [length] ** 2 / [time]"})
