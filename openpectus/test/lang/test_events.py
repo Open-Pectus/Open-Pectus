@@ -26,26 +26,26 @@ class TestEvents(unittest.TestCase):
             time.sleep(0.2)
 
         # no warning with fast handler on non-tag
-        with self.assertNoLogs(logger):
+        with self.assertNoLogs("openpectus.lang.exec.events"):
             listener = Mock(on_start=onstart_fast)
             emitter = EventEmitter([listener])
             emitter.emit_on_start("")
 
         # no warning with slow handler on non-tag
-        with self.assertNoLogs(logger, level=logging.WARNING):
+        with self.assertNoLogs("openpectus.lang.exec.events", level=logging.WARNING):
             listener = Mock(on_start=onstart_slow)
             emitter = EventEmitter([listener])
             emitter.emit_on_start("")
 
         # no warning with fast handler on tag
-        with self.assertNoLogs(logger):
+        with self.assertNoLogs("openpectus.lang.exec.events"):
             listener = Tag(name="Foo")
             setattr(listener, "on_start", onstart_fast)
             emitter = EventEmitter([listener])
             emitter.emit_on_start("")
 
         # warning with slow handler on tag
-        with self.assertLogs(logger, level=logging.WARNING):
+        with self.assertLogs("openpectus.lang.exec.events", level=logging.WARNING):
             listener = Tag(name="Foo")
             setattr(listener, "on_start", onstart_slow)
             emitter = EventEmitter([listener])
