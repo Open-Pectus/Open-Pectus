@@ -269,6 +269,7 @@ class TestUnits(unittest.TestCase):
             convert_value_to_unit(5, "m", "L")
 
     def test_add_unit(self):
+        print(logging.root.manager.loggerDict)
         self.assertFalse(is_supported_unit("DV"))
         add_unit("DV", quantity="diavolume")
         self.assertTrue(is_supported_unit("DV"))

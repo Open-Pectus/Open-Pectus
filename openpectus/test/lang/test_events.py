@@ -7,21 +7,6 @@ from openpectus.lang.exec.events import EventEmitter
 from openpectus.lang.exec.tags import Tag
 
 
-def reset_logging():
-    loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
-    loggers.append(logging.getLogger())
-    for logger in loggers:
-        handlers = logger.handlers[:]
-        for handler in handlers:
-            logger.removeHandler(handler)
-            handler.close()
-        logger.setLevel(logging.NOTSET)
-        logger.propagate = True
-
-
-reset_logging()
-
-
 class TestEvents(unittest.TestCase):
     def test_tag_receives_event(self):
         on_start_mock = Mock()
@@ -31,6 +16,7 @@ class TestEvents(unittest.TestCase):
         on_start_mock.assert_called()
 
     def test_emitter_warns_on_slow_Tag_handler(self):
+        print(logging.root.manager.loggerDict)
 
         def onstart_fast(_):
             pass
