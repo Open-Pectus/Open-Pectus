@@ -115,6 +115,7 @@ def add_unit(unit: str,
         assert "=" in unit_relation, (f'Unit relation must define an equality, but "{unit_relation}" ' +
                                      'contains no equals sign (=).')
         if unit in QUANTITY_UNIT_MAP[quantity]:
+            print('>', logger)
             logger.warning(f'Unit "{unit}" is already defined for quantity "{quantity}".')
         else:
             QUANTITY_UNIT_MAP[quantity].append(unit)
