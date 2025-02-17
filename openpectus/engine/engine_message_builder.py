@@ -46,6 +46,9 @@ class EngineMessageBuilder():
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(engine={self.engine})'
+
     def create_uod_info(self) -> EM.UodInfoMsg:
 
         uod_definition = self.engine.uod.create_lsp_definition()

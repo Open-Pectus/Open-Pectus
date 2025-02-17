@@ -5,13 +5,7 @@ import uuid
 from queue import Empty, Queue
 from typing import Iterable, List, Set
 from uuid import UUID
-from openpectus.engine.internal_commands import (
-    create_internal_command,
-    get_running_internal_command,
-    dispose_command_map,
-    register_commands,
-    get_command_definitions
-)
+from openpectus.engine.internal_commands import InternalCommandsRegistry, get_command_definitions
 from openpectus.engine.hardware import HardwareLayerException, RegisterDirection
 from openpectus.engine.method_model import MethodModel
 from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum, SystemTagName
@@ -53,6 +47,10 @@ class EngineTiming():
         self._interval = interval
         self._speed = speed
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(_clock="{self._clock}", _timer={self._timer}, ' +
+                f'_interval={self._interval}, _speed={self._speed})')
+
     @staticmethod
     def default() -> EngineTiming:
         return EngineTiming(WallClock(), OneThreadTimer(0.1, None), 0.1, 1.0)
@@ -90,7 +88,8 @@ class Engine(InterpreterContext):
         self._running: bool = False
         """ Indicates whether the scan cycle loop is running, set to False to shut down"""
 
-        register_commands(self)
+        self.registry = InternalCommandsRegistry(self).__enter__()
+        """ Manages internal engine commands """
 
         self._clock: Clock = timing.clock
         """ The time source """
@@ -173,6 +172,9 @@ class Engine(InterpreterContext):
         self._emitter = EventEmitter(self._tags)
         self._tick_timer.set_tick_fn(self.tick)
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(uod={self.uod}, is_running={self.is_running}, ' +
+                f'has_error_state={self.has_error_state})')
 
     def _iter_all_tags(self) -> Iterable[Tag]:
         return itertools.chain(self._system_tags, self.uod.tags)
@@ -207,7 +209,7 @@ class Engine(InterpreterContext):
 
     def cleanup(self):
         self.emitter.emit_on_engine_shutdown()
-        dispose_command_map()
+        self.registry.__exit__(None, None, None)
 
     def get_runlog(self) -> RunLog:
         return self.runtimeinfo.get_runlog()
@@ -430,7 +432,7 @@ class Engine(InterpreterContext):
 
         # an existing, long running engine_command is running. other commands must wait
         # Note: we need a priority mechanism - even Stop is waiting here
-        command = get_running_internal_command()
+        command = self.registry.get_running_internal_command()
         if command is not None:
             if cmd_request.name == command.name:
                 if not command.is_finalized():
@@ -451,7 +453,7 @@ class Engine(InterpreterContext):
 
         # no engine command is running - start one
         try:
-            command = create_internal_command(cmd_request.name)
+            command = self.registry.create_internal_command(cmd_request.name)
             args = cmd_request.get_args()
             if args is not None:
                 try:
@@ -504,9 +506,20 @@ class Engine(InterpreterContext):
             else:
                 cmds_to_cancel.append(command)
 
-        # remove outside the loop because cancel modifies the collection
+        # call outside the loop because cancel modifies the collection
         for command in cmds_to_cancel:
             command.cancel()
+
+    def _finalize_uod_commands(self):
+        logger.debug("Cancelling uod commands")
+        cmds_to_finalize: list[UodCommand] = []
+        for command in self.uod.command_instances.values():
+            if not command.is_finalized():
+                cmds_to_finalize.append(command)
+
+        # call outside the loop because finalize modifies the collection
+        for command in cmds_to_finalize:
+            command.finalize()
 
     def _execute_uod_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
         cmd_name = cmd_request.name
@@ -531,6 +544,7 @@ class Engine(InterpreterContext):
                 if cmd_record is not None:
                     command, c_record = cmd_record
                     command.cancel()
+                    command.finalize()
                     c_record.add_command_state_cancelled(
                         c.command_exec_id, self._tick_time, self._tick_number, self.tags_as_readonly())
                     logger.info(f"Running command {c.name} cancelled per user request")
@@ -547,6 +561,7 @@ class Engine(InterpreterContext):
                 assert cmd_record is not None
                 command, c_record = cmd_record
                 command.cancel()
+                command.finalize()
                 c_record.add_command_state_cancelled(
                     c.command_exec_id, self._tick_time, self._tick_number,
                     self.tags_as_readonly())
@@ -563,6 +578,7 @@ class Engine(InterpreterContext):
                         assert cmd_record is not None
                         command, c_record = cmd_record
                         command.cancel()
+                        command.finalize()
                         c_record.add_command_state_cancelled(
                             c.command_exec_id, self._tick_time, self._tick_number,
                             self.tags_as_readonly())

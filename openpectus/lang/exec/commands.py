@@ -19,17 +19,20 @@ class InterpreterCommandEnum(StrEnum):
 # Represents part of Engine API
 
 
-class CommandRequest():
+class CommandRequest:
     """ Represents a command request for engine to execute. """
-    def __init__(self, name: str, source: str, exec_id: UUID | None = None, kvargs: dict[str, Any] = {}) -> None:
+    def __init__(self, name: str, source: str, exec_id: UUID | None = None, kwargs: dict[str, Any] = {}) -> None:
         self.name: str = name
         self.unparsed_args: str | None = None
-        self.kvargs: dict[str, Any] | None = kvargs
+        self.kwargs: dict[str, Any] | None = kwargs
         self.exec_id: UUID | None = exec_id
         self.source: str = source
 
         # allows tracking individual commands
         self.command_exec_id: UUID | None = None
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(name="{self.name}", unparsed_args={self.unparsed_args}, source="{self.source}")'
 
     @staticmethod
     def from_user(name: str, unparsed_args: str | None = None) -> CommandRequest:
@@ -38,22 +41,19 @@ class CommandRequest():
         return cmd_req
 
     @staticmethod
-    def from_interpreter(name: str, exec_id: UUID | None, **kvargs) -> CommandRequest:
-        if "unparsed_args" in kvargs.keys():
+    def from_interpreter(name: str, exec_id: UUID | None, **kwargs) -> CommandRequest:
+        if "unparsed_args" in kwargs.keys():
             cmd_req = CommandRequest(name=name, source="@interpreter", exec_id=exec_id)
-            cmd_req.unparsed_args = kvargs["unparsed_args"]
+            cmd_req.unparsed_args = kwargs["unparsed_args"]
             return cmd_req
         else:
-            return CommandRequest(name=name, source="@interpreter", exec_id=exec_id, kvargs=kvargs)
-
-    def __str__(self) -> str:
-        return f"EngineCommand {self.name} | kvargs: {str(self.kvargs)} | unparsed_args: {self.unparsed_args}"
+            return CommandRequest(name=name, source="@interpreter", exec_id=exec_id, kwargs=kwargs)
 
     def get_args(self) -> dict[str, Any]:
-        if self.kvargs is None or (self.kvargs == {} and self.unparsed_args is not None):
+        if self.kwargs is None or (self.kwargs == {} and self.unparsed_args is not None):
             return {"unparsed_args": self.unparsed_args}
         else:
-            return self.kvargs
+            return self.kwargs
 
 
 # Represents command API towards interpreter
@@ -65,6 +65,9 @@ class Command:
     def __init__(self, name: str, validatorFn: Callable[[str], bool] | None = None) -> None:
         self.name: str = name
         self.validatorFn = validatorFn
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(name="{self.name}")'
 
     def is_complete(self) -> bool:
         return True
@@ -88,6 +91,10 @@ class CommandCollection():
             for cmd in commands:
                 self.add(cmd, False)
 
+    def __str__(self) -> str:
+        commands = [str(command) for command in self.commands]
+        return f'{self.__class__.__name__}(commands={commands})'
+
     @property
     def names(self) -> List[str]:
         """ Return the tag names """
@@ -99,7 +106,7 @@ class CommandCollection():
     def get(self, cmd_name: str) -> Command:
         if cmd_name is None or cmd_name.strip() == '':
             raise ValueError("cmd_name is None or empty")
-        if not cmd_name in self.commands.keys():
+        if cmd_name not in self.commands.keys():
             raise ValueError(f"Command name {cmd_name} not found")
         return self[cmd_name]
 

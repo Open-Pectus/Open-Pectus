@@ -16,8 +16,11 @@ from openpectus.lang.model.pprogram import (
     PEndBlocks,
     PWatch,
     PAlarm,
+    PMacro,
     PCommand,
     PMark,
+    PCallMacro,
+    PBatch,
 )
 
 from openpectus.lang.exec.tags import TagValueCollection
@@ -43,7 +46,7 @@ class AnalyzerItemRange:
         self.line = line
         self.character = character
 
-class AnalyzerItem():
+class AnalyzerItem:
     def __init__(self,
                  id: str,
                  message: str,
@@ -52,7 +55,6 @@ class AnalyzerItem():
                  description: str = "",
                  start: int | None = None,
                  length: int | None = None) -> None:
-
         self.id: str = id
         self.message: str = message
         self.description: str = description
@@ -73,6 +75,9 @@ class AnalyzerItem():
             self.range_end = AnalyzerItemRange(self.range_start.line, self.range_start.character + length)
 
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(id="{self.id}", message="{self.message}", type={self.type}, node={self.node})'
+
 
 class AnalyzerVisitorBase(PNodeVisitor):
     """ Override by specific feature analyzers. """
@@ -80,6 +85,10 @@ class AnalyzerVisitorBase(PNodeVisitor):
     def __init__(self) -> None:
         super().__init__()
         self.items: List[AnalyzerItem] = []
+
+    def __str__(self) -> str:
+        items = [str(item) for item in self.items]
+        return f'{self.__class__.__name__}(items={items})'
 
     def add_item(self, item: AnalyzerItem):
         self.items.append(item)
@@ -98,6 +107,12 @@ class AnalyzerVisitorBase(PNodeVisitor):
     def visit_PMark(self, node: PMark):
         pass
 
+    def visit_PBatch(self, node: PMark):
+        pass
+
+    def visit_PCallMacro(self, node: PCallMacro):
+        pass
+
     def visit_PBlock(self, node: PBlock):
         self.visit_children(node.children)
 
@@ -111,6 +126,9 @@ class AnalyzerVisitorBase(PNodeVisitor):
         self.visit_children(node.children)
 
     def visit_PAlarm(self, node: PAlarm):
+        self.visit_children(node.children)
+
+    def visit_PMacro(self, node: PMacro):
         self.visit_children(node.children)
 
     def visit_PCommand(self, node: PCommand):
@@ -199,7 +217,7 @@ class DurationEnrichAnalyzer(AnalyzerVisitorBase):
         #         d.error = False
 
 
-class EnrichAnalyzer():
+class EnrichAnalyzer:
     """ Facade that combines the enrich analyzers into a single analyzer. """
 
     def __init__(self) -> None:
@@ -208,6 +226,9 @@ class EnrichAnalyzer():
             ConditionEnrichAnalyzer(),
             DurationEnrichAnalyzer(),
         ]
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}()'
 
     def analyze(self, program: PProgram):
         for analyzer in self.analyzers:
@@ -255,6 +276,10 @@ class InfiniteBlockCheckAnalyzer(AnalyzerVisitorBase):
         super().__init__()
         self.has_global_end = False
         self.requires_global_end: List[PNode] = []
+
+    def __str__(self) -> str:
+        items = [str(item) for item in self.items]
+        return f'{self.__class__.__name__}(items={items}, has_global_end={self.has_global_end})'
 
     def check_global_end_block(self, node: PEndBlock | PEndBlocks):
         p = node.parent
@@ -304,6 +329,11 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
     def __init__(self, tags: TagValueCollection) -> None:
         super().__init__()
         self.tags = tags
+
+    def __str__(self) -> str:
+        items = [str(item) for item in self.items]
+        tags = [str(tag) for tag in self.tags]
+        return f'{self.__class__.__name__}(items={items}, tags={tags})'
 
     def visit_PWatch(self, node: PWatch):
         self.analyze_condition(node)
@@ -392,6 +422,10 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
         super().__init__()
         self.commands = commands
 
+    def __str__(self) -> str:
+        items = [str(item) for item in self.items]
+        return f'{self.__class__.__name__}(items={items}, commands={self.commands})'
+
     def visit_PCommand(self, node: PCommand):
         assert node.name is not None
         name = node.name
@@ -421,7 +455,53 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
             return
 
 
-class SemanticCheckAnalyzer():
+class MacroCheckAnalyzer(AnalyzerVisitorBase):
+    def __init__(self) -> None:
+        super().__init__()
+        self.macros: list[PMacro] = []
+        self.macro_calls: list[PCallMacro] = []
+
+    def visit_PCallMacro(self, node: PCallMacro):
+        if node.name is None or node.name.strip() == "":
+            self.add_item(AnalyzerItem(
+                "MacroCallNameInvalid",
+                "Invalid macro call",
+                node,
+                AnalyzerItemType.ERROR,
+                "Call macro must refer to a Macro definition"
+            ))
+        else:
+            self.macro_calls.append(node)
+        return super().visit_PCallMacro(node)
+
+    def visit_PMacro(self, node: PMacro):
+        if node.name is None or node.name.strip() == "":
+            self.add_item(AnalyzerItem(
+                "MacroNameInvalid",
+                "Invalid macro definition",
+                node,
+                AnalyzerItemType.ERROR,
+                "A Macro definition must include a name"
+            ))
+        else:
+            self.macros.append(node)
+        return super().visit_PMacro(node)
+
+    def visit_PProgram(self, node: PProgram):
+        super().visit_PProgram(node)
+
+        for call in self.macro_calls:
+            if call.name not in [m.name for m in self.macros]:
+                self.add_item(AnalyzerItem(
+                    "MacroCallInvalid",
+                    "Invalid macro call",
+                    call,
+                    AnalyzerItemType.ERROR,
+                    f"Cannot call macro {call.name} because it is not defined"
+                ))
+
+
+class SemanticCheckAnalyzer:
     """ Facade that combines the check analyzers into a single analyzer. """
 
     def __init__(self, tags: TagValueCollection, commands: CommandCollection) -> None:
@@ -431,8 +511,13 @@ class SemanticCheckAnalyzer():
             UnreachableCodeCheckAnalyzer(),
             InfiniteBlockCheckAnalyzer(),
             ConditionCheckAnalyzer(tags),
-            CommandCheckAnalyzer(commands)
+            CommandCheckAnalyzer(commands),
+            MacroCheckAnalyzer(),
         ]
+
+    def __str__(self) -> str:
+        items = [str(item) for item in self.items]
+        return f'{self.__class__.__name__}(items={items})'
 
     def analyze(self, program: PProgram):
         for analyzer in self.analyzers:
