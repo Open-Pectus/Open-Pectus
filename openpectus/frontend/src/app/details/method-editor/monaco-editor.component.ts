@@ -52,7 +52,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
           new URL('@codingame/monaco-vscode-editor-api/esm/vs/editor/editor.worker.js', import.meta.url), {type: 'module'},
         ),
         'TextMateWorker': () => new Worker(
-          new URL('@codingame/monaco-vscode-textmate-service-override/worker.js', import.meta.url), {type: 'module'},
+          new URL('@codingame/monaco-vscode-textmate-service-override/worker', import.meta.url), {type: 'module'},
         ),
         OutputLinkDetectionWorker: undefined,
         LanguageDetectionWorker: undefined,
@@ -65,12 +65,11 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   async ngAfterViewInit() {
     const methodContent = await firstValueFrom(this.methodContent);
-    await this.wrapper.initAndStart(this.buildWrapperUserConfig(this.editorElement.nativeElement, methodContent))
-      // .finally() is used because the promise doesn't resolve if the lsp websocket connection fails. We still want the editor without lsp.
-      .finally(() => {
-        this.setupEditor(this.wrapper.getEditor());
-        this.store.dispatch(MethodEditorActions.monacoEditorComponentInitialized());
-      });
+    await this.wrapper.initAndStart(this.buildWrapperUserConfig(this.editorElement.nativeElement, methodContent), false);
+    this.setupEditor(this.wrapper.getEditor());
+    this.wrapper.initLanguageClients();
+    await this.wrapper.startLanguageClients();
+    this.store.dispatch(MethodEditorActions.monacoEditorComponentInitialized());
   }
 
   buildWrapperUserConfig(htmlContainer: HTMLElement, text: string): WrapperConfig {
