@@ -63,6 +63,7 @@ jobs:
         run: |
           echo "REPORT_FILE=${REPORT_OUTPUT}" >> "$GITHUB_ENV"
           pytest -n auto --md-report --md-report-flavor gfm --md-report-exclude-outcomes passed skipped xpassed --md-report-output "$REPORT_OUTPUT" openpectus/test --ignore openpectus/test/engine/test_runlog.py --ignore openpectus/test/engine/test_interpreter.py
+          touch md_report-separate.md
           pytest -n auto --md-report --md-report-flavor gfm --md-report-exclude-outcomes passed skipped xpassed --md-report-output "md_report-separate.md" openpectus/test/engine/test_runlog.py openpectus/test/engine/test_interpreter.py
           cat md_report.md md_report-separate.md > md_report.md
       - name: Render the test report to the PR when tests fail
