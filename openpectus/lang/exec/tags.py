@@ -169,7 +169,7 @@ class Tag(ChangeSubject, EventListener):
         self.simulated_value = None
 
     def __str__(self) -> str:
-        if self._simulation_active:
+        if self.simulation_active:
             return f'{self.__class__.__name__}(name="{self.name}", value="{self.value}")'
         else:
             return (f'{self.__class__.__name__}(name="{self.name}", value="{self.value}", ' +
@@ -200,7 +200,7 @@ class Tag(ChangeSubject, EventListener):
         """ Set a simulated value by converting the provided value and unit into the the unit of the tag. """
         if not self.allow_simulation:
             raise ValueError(f'Cannot set simulated value for tag "{self.name}" because simulation has not been allowed.')
-        self._simulation_active = True
+        self.simulation_active = True
         if not isinstance(val, (int, float,)):
             raise ValueError(f"Cannot set unit for a non-numeric value {val} of type {type(val).__name__}")
         if self.unit is None:
