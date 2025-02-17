@@ -7,8 +7,8 @@ from collections import defaultdict
 import pint
 from pint import UnitRegistry, Quantity
 
-#cache_folder = os.path.join(os.path.dirname(__file__), "pint-cache")
-ureg = UnitRegistry()
+cache_folder = os.path.join(os.path.dirname(__file__), "pint-cache")
+ureg = UnitRegistry(cache_folder=cache_folder)
 ureg.define("m3 = m**3")
 ureg.define("m2 = m**2")
 ureg.define("dm2 = dm**2")
@@ -115,7 +115,6 @@ def add_unit(unit: str,
         assert "=" in unit_relation, (f'Unit relation must define an equality, but "{unit_relation}" ' +
                                      'contains no equals sign (=).')
         if unit in QUANTITY_UNIT_MAP[quantity]:
-            print('>', logger)
             logger.warning(f'Unit "{unit}" is already defined for quantity "{quantity}".')
         else:
             QUANTITY_UNIT_MAP[quantity].append(unit)

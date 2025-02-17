@@ -1,5 +1,5 @@
-import logging
 import unittest
+import logging
 
 from openpectus.lang.exec.units import (
     convert_value_to_unit,
@@ -11,20 +11,8 @@ from openpectus.lang.exec.units import (
     add_unit,
  )
 
-
-def reset_logging():
-    loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
-    loggers.append(logging.getLogger())
-    for logger in loggers:
-        handlers = logger.handlers[:]
-        for handler in handlers:
-            logger.removeHandler(handler)
-            handler.close()
-        logger.setLevel(logging.NOTSET)
-        logger.propagate = True
-
-
-reset_logging()
+logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
+logging.getLogger("openpectus.lang.exec.units").setLevel(logging.INFO)
 
 
 class TestUnits(unittest.TestCase):
@@ -269,11 +257,10 @@ class TestUnits(unittest.TestCase):
             convert_value_to_unit(5, "m", "L")
 
     def test_add_unit(self):
-        print(logging.root.manager.loggerDict)
         self.assertFalse(is_supported_unit("DV"))
         add_unit("DV", quantity="diavolume")
         self.assertTrue(is_supported_unit("DV"))
-        with self.assertLogs("openpectus.lang.exec.units", level=logging.WARNING):
+        with self.assertLogs(logging.getLogger(), level=logging.WARNING):
             add_unit("DV", quantity="diavolume")
 
         add_unit("kg/m2/h", quantity_relation={"mass_flux": "[mass] / [length] ** 2 / [time]"})
