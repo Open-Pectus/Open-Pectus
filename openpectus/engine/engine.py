@@ -5,7 +5,7 @@ import uuid
 from queue import Empty, Queue
 from typing import Iterable, List, Set
 from uuid import UUID
-from openpectus.engine.internal_commands import InternalCommandsRegistry, get_command_definitions
+from openpectus.engine.internal_commands import InternalCommandsRegistry
 from openpectus.engine.hardware import HardwareLayerException, RegisterDirection
 from openpectus.engine.method_model import MethodModel
 from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum, SystemTagName
@@ -847,4 +847,4 @@ class Engine(InterpreterContext):
         return self._method.calculate_method_state(self.interpreter.runtimeinfo)
 
     def get_command_definitions(self) -> list[Mdl.CommandDefinition]:
-        return get_command_definitions()
+        return self.registry.get_command_definitions()

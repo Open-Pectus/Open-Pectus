@@ -15,6 +15,7 @@ class InternalCommandsRegistry:
     def __init__(self, engine):
         self.engine = engine
         self._command_map: dict[str, Callable[[], InternalEngineCommand]] = {}
+        self._command_spec: dict[str, ArgSpec] = {}
         self._command_instances: dict[str, InternalEngineCommand] = {}
 
     def __str__(self) -> str:
@@ -54,9 +55,11 @@ class InternalCommandsRegistry:
                 if cls_name == f"{command_name}EngineCommand":
                     cls = getattr(command_impl_module, cls_name, None)
                     if cls is not None:
-                        # register via a function here to obtain the right closure
+                        # register constructor via a function here to obtain the right closure
                         register(command_name, cls)
                         registered_classes.append(cls_name)
+                        # register the argument specification
+                        self._command_spec[command_name] = cls.argument_validation_spec
         logger.debug(f"Registered internal engine commands: {', '.join(registered_classes)}")
 
     def get_running_internal_command(self) -> InternalEngineCommand | None:
@@ -88,6 +91,19 @@ class InternalCommandsRegistry:
         for cmd in instances:
             cmd.finalize()
 
+    def get_command_definitions(self) -> list[CommandDefinition]:
+        """ Create and return the list of LSP command definitions that specify how command arguments
+        should be parsed. """
+        if len(self._command_map) == 0:
+            raise ValueError("Command map not initialized")
+        command_definitions = []
+        for name, spec in self._command_spec.items():
+            if isinstance(spec, ArgSpec):
+                parser = RegexNamedArgumentParser(regex=spec.regex)
+                command_definitions.append(CommandDefinition(name=name, validator=parser.serialize()))
+            else:
+                command_definitions.append(CommandDefinition(name=name, validator=None))
+        return command_definitions
 
 class InternalEngineCommand(EngineCommand):
     """ Base class for internal engine commands.
@@ -95,6 +111,8 @@ class InternalEngineCommand(EngineCommand):
     Adds support for long-running commands via a _run() generator method. The tick() base class method
     implements the state management of these commands.
     """
+    argument_validation_spec: ArgSpec = ArgSpec.NoCheck()
+
     def __init__(self, name: str, registry: InternalCommandsRegistry) -> None:
         super().__init__(name)
         self._registry = registry

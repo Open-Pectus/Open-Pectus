@@ -75,7 +75,6 @@ class TestArgumentSpecification(unittest.TestCase):
         self.assertEqual(False, TestCommand.argument_validation_spec.validate("56,7"))
 
     def test_can_get_command_args_specs(self):
-        # use ? to access the command specs
         engine = Engine(create_minimal_builder().build())
 
         command_definitions = engine.get_command_definitions()
