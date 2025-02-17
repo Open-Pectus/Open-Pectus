@@ -71,6 +71,8 @@ def get_arg_parser():
     parser.add_argument("-sev", "--sentry_event_level", required=False,
                         default=sentry.EVENT_LEVEL_DEFAULT, choices=sentry.EVENT_LEVEL_NAMES,
                         help=f"Minimum log level to send as sentry events. Default is '{sentry.EVENT_LEVEL_DEFAULT}'")
+    parser.add_argument("-secret", "--secret", required=False, default="",
+                        help="Secret used to get access to aggregator")
     return parser
 
 
@@ -99,7 +101,7 @@ async def main_async(args, loop: asyncio.AbstractEventLoop):
     try:
         uod = create_uod(args.uod)
     except Exception as ex:
-        logger.error(f"Failed to create uod: {ex}")
+        logger.error(f"Failed to create uod: {ex}. Apply -v flag to validate UOD with more verbose error descriptions.")
         return
 
     engine = Engine(uod, enable_archiver=True)
@@ -110,7 +112,7 @@ async def main_async(args, loop: asyncio.AbstractEventLoop):
     else:
         port = default_port_secure if args.secure else default_port
 
-    dispatcher = EngineDispatcher(f"{args.aggregator_hostname}:{port}", args.secure, uod.options)
+    dispatcher = EngineDispatcher(f"{args.aggregator_hostname}:{port}", args.secure, uod.options, args.secret)
 
     if len(uod.required_roles) > 0 and not dispatcher.is_aggregator_authentication_enabled():
         logger.warning('"with_required_roles" specified in "demo_uod.py" but aggregator does ' +

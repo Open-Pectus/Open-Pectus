@@ -89,6 +89,24 @@ class pcodeListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by pcodeParser#macro.
+    def enterMacro(self, ctx:pcodeParser.MacroContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#macro.
+    def exitMacro(self, ctx:pcodeParser.MacroContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#macro_name.
+    def enterMacro_name(self, ctx:pcodeParser.Macro_nameContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#macro_name.
+    def exitMacro_name(self, ctx:pcodeParser.Macro_nameContext):
+        pass
+
+
     # Enter a parse tree produced by pcodeParser#condition.
     def enterCondition(self, ctx:pcodeParser.ConditionContext):
         pass
@@ -203,6 +221,42 @@ class pcodeListener(ParseTreeListener):
 
     # Exit a parse tree produced by pcodeParser#mark_name.
     def exitMark_name(self, ctx:pcodeParser.Mark_nameContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#batch.
+    def enterBatch(self, ctx:pcodeParser.BatchContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#batch.
+    def exitBatch(self, ctx:pcodeParser.BatchContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#batch_name.
+    def enterBatch_name(self, ctx:pcodeParser.Batch_nameContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#batch_name.
+    def exitBatch_name(self, ctx:pcodeParser.Batch_nameContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#call_macro.
+    def enterCall_macro(self, ctx:pcodeParser.Call_macroContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#call_macro.
+    def exitCall_macro(self, ctx:pcodeParser.Call_macroContext):
+        pass
+
+
+    # Enter a parse tree produced by pcodeParser#call_macro_name.
+    def enterCall_macro_name(self, ctx:pcodeParser.Call_macro_nameContext):
+        pass
+
+    # Exit a parse tree produced by pcodeParser#call_macro_name.
+    def exitCall_macro_name(self, ctx:pcodeParser.Call_macro_nameContext):
         pass
 
 

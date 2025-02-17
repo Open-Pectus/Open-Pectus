@@ -1,4 +1,5 @@
 import unittest
+import logging
 
 from openpectus.lang.exec.units import (
     convert_value_to_unit,
@@ -7,7 +8,11 @@ from openpectus.lang.exec.units import (
     get_compatible_unit_names,
     compare_values,
     QUANTITY_UNIT_MAP,
+    add_unit,
  )
+
+logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
+logging.getLogger("openpectus.lang.exec.units").setLevel(logging.INFO)
 
 
 class TestUnits(unittest.TestCase):
@@ -250,3 +255,15 @@ class TestUnits(unittest.TestCase):
     def test_convert_value_to_unit_raises_on_incompatible_units(self):
         with self.assertRaises(ValueError):
             convert_value_to_unit(5, "m", "L")
+
+    def test_add_unit(self):
+        self.assertFalse(is_supported_unit("DV"))
+        add_unit("DV", quantity="diavolume")
+        self.assertTrue(is_supported_unit("DV"))
+        with self.assertLogs(logging.getLogger(), level=logging.WARNING):
+            add_unit("DV", quantity="diavolume")
+
+        add_unit("kg/m2/h", quantity_relation={"mass_flux": "[mass] / [length] ** 2 / [time]"})
+
+        add_unit("mDV", quantity="diavolume")
+        self.comp("=", "1000", "mDV", "1", "DV", True)

@@ -21,7 +21,7 @@ class SerializationTest(unittest.TestCase):
             {'_type': 'RegisterEngineMsg', '_ns': 'openpectus.protocol.engine_messages',
              'computer_name': 'foo', 'engine_version': '0.0.1', 'uod_name': 'bar',
              'uod_author_name': 'author_name', 'uod_author_email': '', 'uod_filename': '',
-             'location': 'baz',
+             'location': 'baz', 'secret': '',
              'sequence_number': -2, 'version': 0},
             reg_s)
         self.assertIsNotNone(reg_s)

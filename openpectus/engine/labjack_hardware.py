@@ -89,6 +89,9 @@ class Labjack_Hardware(HardwareLayerBase):
         self.serial_number: str = serial_number if serial_number else "ANY"
         self._handle = None
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(is_connected={self.is_connected}, serial_number="{self.serial_number}")'
+
     @functools.cached_property
     def port_directions(self):
         # Load ljm_constants.json
@@ -197,8 +200,9 @@ class Labjack_Hardware(HardwareLayerBase):
             self._handle = ljm.openS("ANY",  # Device (T4, T7, T8)
                                      "ANY",  # Connection (USB, ETHERNET)
                                      self.serial_number)  # Identifier (Serial number)
-        except ljm.LJMError:
-            logger.info(f"Unable to connect to Labjack with serial number {self.serial_number}")
+        except ljm.LJMError as labjack_error:
+            logger.error(f"Unable to connect to Labjack with serial number {self.serial_number}")
+            logger.error(labjack_error)
             # Look for devices
             n, device_types, connection_types, serial_numbers, ip_addresses = ljm.listAllS("ANY", "ANY")
             if n > 0:
@@ -228,6 +232,3 @@ class Labjack_Hardware(HardwareLayerBase):
             ljm.close(self._handle)
             self._handle = None
         super().disconnect()
-
-    def __str__(self):
-        return f"Labjack_Hardware(serial_number={self.serial_number})"
