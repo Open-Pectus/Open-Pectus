@@ -22,6 +22,7 @@ class SystemTagName(StrEnum):
     METHOD_STATUS = "Method Status"
     CONNECTION_STATUS = "Connection Status"
     RUN_ID = "Run Id"
+    BATCH_NAME = "Batch Name"
 
     # these tags are only present if defined in uod.
     BLOCK_VOLUME = "Block Volume"
@@ -337,6 +338,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
             Tag(SystemTagName.METHOD_STATUS, value="OK"),
             Tag(SystemTagName.CONNECTION_STATUS, value="Disconnected"),
             Tag(SystemTagName.RUN_ID, value=None),
+            Tag(SystemTagName.BATCH_NAME, value=None),
         ])
         return tags
 

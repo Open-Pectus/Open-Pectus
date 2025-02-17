@@ -200,8 +200,9 @@ class Labjack_Hardware(HardwareLayerBase):
             self._handle = ljm.openS("ANY",  # Device (T4, T7, T8)
                                      "ANY",  # Connection (USB, ETHERNET)
                                      self.serial_number)  # Identifier (Serial number)
-        except ljm.LJMError:
-            logger.info(f"Unable to connect to Labjack with serial number {self.serial_number}")
+        except ljm.LJMError as labjack_error:
+            logger.error(f"Unable to connect to Labjack with serial number {self.serial_number}")
+            logger.error(labjack_error)
             # Look for devices
             n, device_types, connection_types, serial_numbers, ip_addresses = ljm.listAllS("ANY", "ANY")
             if n > 0:
