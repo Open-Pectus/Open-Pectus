@@ -56,6 +56,7 @@ class RegisterEngineMsg(Msg.MessageBase):
 class UodInfoMsg(EngineMessage):
     readings: list[Mdl.ReadingInfo]
     commands: list[Mdl.CommandInfo]
+    uod_definition: Mdl.UodDefinition
     plot_configuration: Mdl.PlotConfiguration
     hardware_str: str
     required_roles: set[str]

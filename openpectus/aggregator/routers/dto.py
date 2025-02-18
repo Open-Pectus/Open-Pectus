@@ -492,3 +492,30 @@ class BuildInfo(Dto):
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(build_number="{self.build_number}", git_sha="{self.git_sha}")'
+
+
+# Lsp models
+
+class TagDefinition(Dto):
+    name: str
+    unit: str | None = None
+    # possibly value_type:
+
+class CommandDefinition(Dto):
+    name: str
+    validator: str | None = None
+
+class UodDefinition(Dto):
+    # name: str
+    # filename: str
+    commands: list[CommandDefinition]
+    system_commands: list[CommandDefinition]
+    tags: list[TagDefinition]
+
+    @staticmethod
+    def from_model(model: Mdl.UodDefinition) -> UodDefinition:
+        return UodDefinition(
+            commands=[CommandDefinition(name=c.name, validator=c.validator) for c in model.commands],
+            system_commands=[CommandDefinition(name=c.name, validator=c.validator) for c in model.system_commands],
+            tags=[TagDefinition(name=t.name, unit=t.unit) for t in model.tags]
+        )

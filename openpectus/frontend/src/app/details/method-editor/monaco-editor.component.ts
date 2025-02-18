@@ -22,6 +22,7 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
 
 buildWorkerDefinition('./assets/monaco-editor-workers/workers', window.location.origin, false);
 
+const lspServerUrl = 'ws://localhost:2087/lsp'; // path doesn't matter, only schema and port
 const startedLineClassName = 'started-line';
 const executedLineClassName = 'executed-line';
 const injectedLineClassName = 'injected-line';
@@ -41,7 +42,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   @ViewChild('editor', {static: true}) editorElement!: ElementRef<HTMLDivElement>;
   private componentDestroyed = new Subject<void>();
   private editor?: MonacoEditor.IStandaloneCodeEditor;
-  private readonly languageId = 'json';
+  private readonly languageId = 'pcode';
   private methodContent = this.store.select(MethodEditorSelectors.methodContent);
   private monacoServicesInitialized = this.store.select(MethodEditorSelectors.monacoServicesInitialized);
   private executedLineIds = this.store.select(MethodEditorSelectors.executedLineIds);
@@ -58,7 +59,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     await this.initServices();
     this.registerLanguages();
     this.editor = await this.setupEditor();
-    // this.setupWebSocket(`ws://localhost:30000/sampleServer`);
+    this.setupWebSocket(lspServerUrl);
 
     this.editorSizeChange?.pipe(takeUntil(this.componentDestroyed)).subscribe(() => this.editor?.layout());
     window.onresize = () => this.editor?.layout();
@@ -67,7 +68,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   createLanguageClient(transports: MessageTransports): MonacoLanguageClient {
     return new MonacoLanguageClient({
-      name: 'Sample Language Client',
+      name: 'Open Pectus Pcode Language Client',
       clientOptions: {
         // use a language id as a document selector
         documentSelector: [this.languageId],
@@ -104,9 +105,9 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   private registerLanguages() {
     languages.register({
       id: this.languageId,
-      extensions: ['.json', '.jsonc'],
-      aliases: ['JSON', 'json'],
-      mimetypes: ['application/json'],
+      extensions: ['.pcode'],
+      aliases: ['pcode', 'pCode', 'PCODE'],
+      mimetypes: ['application/text'],
     });
   }
 
@@ -120,8 +121,9 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     return editor;
   }
 
-  private async constructEditor() {
-    const uri = Uri.parse('/tmp/model.json');
+  private async constructEditor() {    
+    const uri = Uri.parse('/tmp/model.pcode?engine_id=foo_bar');
+    //const uri = Uri.parse('inmemory://model.pcode?engine_id=foo_bar');
     const methodContent = await firstValueFrom(this.methodContent);
     const model = MonacoEditor.createModel(methodContent, this.languageId, uri);
     const editor = MonacoEditor.create(this.editorElement.nativeElement, {

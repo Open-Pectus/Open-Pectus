@@ -11,7 +11,7 @@ from openpectus.aggregator.aggregator_message_handlers import AggregatorMessageH
 from openpectus.aggregator.data import database
 from openpectus.aggregator.deps import _create_aggregator
 from openpectus.aggregator.frontend_publisher import FrontendPublisher
-from openpectus.aggregator.routers import process_unit, recent_runs, auth, version
+from openpectus.aggregator.routers import process_unit, recent_runs, auth, version, lsp
 from openpectus.aggregator.spa import SinglePageApplication
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 
@@ -26,8 +26,10 @@ class AggregatorServer:
     default_secret = ""
 
     def __init__(self, title: str = default_title, host: str = default_host, port: int = default_port,
-                 frontend_dist_dir: str = default_frontend_dist_dir, db_path: str = default_db_path,
-                 secret: str = default_secret):
+                 frontend_dist_dir: str = default_frontend_dist_dir,
+                 db_path: str = default_db_path,
+                 secret: str = default_secret,
+                 shutdown_cb=None):
         self.title = title
         self.host = host
         self.port = port
@@ -39,7 +41,8 @@ class AggregatorServer:
         self.publisher = FrontendPublisher()
         self.aggregator = _create_aggregator(self.dispatcher, self.publisher, secret)
         _ = AggregatorMessageHandlers(self.aggregator)
-        self.setup_fastapi([self.dispatcher.router, self.publisher.router, version.router])
+        self.shutdown_callback = shutdown_cb
+        self.setup_fastapi([self.dispatcher.router, self.publisher.router, version.router, lsp.router])
         self.init_db()
 
     def __str__(self) -> str:
@@ -60,6 +63,7 @@ class AggregatorServer:
                                lifespan=self.lifespan)
         self.fastapi.include_router(process_unit.router, prefix=api_prefix, dependencies=[UserRolesDependency])
         self.fastapi.include_router(recent_runs.router, prefix=api_prefix, dependencies=[UserRolesDependency])
+        #self.fastapi.include_router(lsp.router, prefix=api_prefix)
         self.fastapi.include_router(auth.router, prefix="/auth")
         for route in additional_routers:
             self.fastapi.include_router(route)
@@ -76,3 +80,5 @@ class AggregatorServer:
     async def lifespan(self, app):
         yield
         await self.dispatcher.shutdown()
+        if self.shutdown_callback is not None:
+            self.shutdown_callback()

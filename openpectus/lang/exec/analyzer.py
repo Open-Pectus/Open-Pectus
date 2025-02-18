@@ -23,7 +23,7 @@ from openpectus.lang.model.pprogram import (
     PBatch,
 )
 
-from openpectus.lang.exec.tags import TagCollection
+from openpectus.lang.exec.tags import TagValueCollection
 from openpectus.lang.exec.units import are_comparable
 from openpectus.lang.exec.commands import CommandCollection
 from openpectus.lang.exec.pinterpreter import PNodeVisitor
@@ -41,6 +41,10 @@ class AnalyzerItemType(Enum):
     WARNING = 'WARNING',
     ERROR = 'ERROR'
 
+class AnalyzerItemRange:
+    def __init__(self, line: int, character: int) -> None:
+        self.line = line
+        self.character = character
 
 class AnalyzerItem:
     def __init__(self,
@@ -48,12 +52,28 @@ class AnalyzerItem:
                  message: str,
                  node: PNode | None,
                  type: AnalyzerItemType,
-                 description: str = "") -> None:
+                 description: str = "",
+                 start: int | None = None,
+                 length: int | None = None) -> None:
         self.id: str = id
         self.message: str = message
         self.description: str = description
         self.type: AnalyzerItemType = type
         self.node: PNode | None = node
+        self.range_start: AnalyzerItemRange = AnalyzerItemRange(0, 0)
+        self.range_end: AnalyzerItemRange = AnalyzerItemRange(0, 0)
+
+        if node is not None:
+            # TODO we need to expose more precise source information about the node
+            self.range_start = AnalyzerItemRange(node.line or 0, node.indent or 0)
+            self.range_end = AnalyzerItemRange(self.range_start.line, 100)
+
+        if start is not None:
+            self.range_start.character = start
+
+        if length is not None:
+            self.range_end = AnalyzerItemRange(self.range_start.line, self.range_start.character + length)
+
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(id="{self.id}", message="{self.message}", type={self.type}, node={self.node})'
@@ -306,7 +326,7 @@ class InfiniteBlockCheckAnalyzer(AnalyzerVisitorBase):
 class ConditionCheckAnalyzer(AnalyzerVisitorBase):
     """ Analyser that checks whether conditions are present and refer to valid tag names """
 
-    def __init__(self, tags: TagCollection) -> None:
+    def __init__(self, tags: TagValueCollection) -> None:
         super().__init__()
         self.tags = tags
 
@@ -324,13 +344,17 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
         super().visit_PAlarm(node)
 
     def analyze_condition(self, node: PWatch | PAlarm):
+        # TODO to report error position we need some extra data collected during program build
+        # It is tricky because possible whitespace generates many posibilities for start positions
+        # of lhs, rhs and operator
+
         if node.condition is None:
             self.add_item(AnalyzerItem(
                 "ConditionMissing",
                 "Condition missing",
                 node,
                 AnalyzerItemType.ERROR,
-                "A condition is required"
+                "A condition is required",
             ))
             return
         condition = node.condition
@@ -352,7 +376,7 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 "Undefined tag",
                 node,
                 AnalyzerItemType.ERROR,
-                f"The tag name '{tag_name}' is not valid"
+                f"The tag name '{tag_name}' is not valid",
             ))
             return
 
@@ -412,7 +436,8 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
                 "Undefined command",
                 node,
                 AnalyzerItemType.ERROR,
-                f"The command name '{name}' is not valid"
+                f"The command name '{name}' is not valid",
+                length=len(name)
             ))
             return
 
@@ -423,7 +448,9 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
                 "Invalid command arguments",
                 node,
                 AnalyzerItemType.ERROR,
-                f"The command argument '{node.args}' is not valid"
+                f"The command argument '{node.args}' is not valid",
+                start=(node.indent or 0) + len(node.instruction_name or "") + len(": "),
+                length=len(node.args)
             ))
             return
 
@@ -477,7 +504,7 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
 class SemanticCheckAnalyzer:
     """ Facade that combines the check analyzers into a single analyzer. """
 
-    def __init__(self, tags: TagCollection, commands: CommandCollection) -> None:
+    def __init__(self, tags: TagValueCollection, commands: CommandCollection) -> None:
         super().__init__()
         self.items: List[AnalyzerItem] = []
         self.analyzers = [
