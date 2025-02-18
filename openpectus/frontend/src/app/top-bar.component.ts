@@ -6,13 +6,15 @@ import { MswEnablementComponent } from './msw-enablement.component';
 import { AppSelectors } from './ngrx/app.selectors';
 
 @Component({
-    selector: 'app-top-bar',
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [MswEnablementComponent, LetDirective, PushPipe],
-    template: `
+  selector: 'app-top-bar',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [MswEnablementComponent, LetDirective, PushPipe],
+  template: `
     <div class="w-full grid grid-cols-3 items-center px-4 bg-slate-600 text-white relative">
       <div class="flex items-center">
-        <app-msw-enablement></app-msw-enablement>
+        @if ((buildInfo | ngrxPush)?.build_number?.endsWith('dev')) {
+          <app-msw-enablement></app-msw-enablement>
+        }
         <span class="ml-2 text-xs text-slate-400" *ngrxLet="buildInfo as buildInfo">
           #{{ buildInfo?.build_number }}-{{ buildInfo?.git_sha?.substring(0, 7) }}
         </span>
@@ -27,7 +29,7 @@ import { AppSelectors } from './ngrx/app.selectors';
         }
       </div>
     </div>
-  `
+  `,
 })
 export class TopBarComponent {
   buildInfo = this.store.select(AppSelectors.buildInfo);
