@@ -133,7 +133,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
           connection: {
             options: {
               $type: 'WebSocketUrl',
-              url: 'ws://localhost:30000/sampleServer',
+              url: 'ws://localhost:2087/lsp',
               startOptions: {
                 onCall: () => {
                   console.log('Connected to socket.');
