@@ -80,7 +80,7 @@
               {
                 "glob": "editorWorker-es.js",
                 "input": "./node_modules/monaco-editor-wrapper/dist/workers",
-                "output": "/workers/"
+                "output": "/monaco-workers/"
               }
             ],
             "styles": [
