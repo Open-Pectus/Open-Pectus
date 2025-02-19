@@ -18,6 +18,7 @@ logging.basicConfig(format='%(name)s :: %(levelname)-8s :: %(message)s', level=l
 
 logging.getLogger("openpectus.lsp.pylsp_plugin").setLevel(logging.DEBUG)
 logging.getLogger("openpectus.lsp.lsp_analysis").setLevel(logging.DEBUG)
+logging.getLogger("pylsp").setLevel(logging.WARNING)
 
 
 def get_args():

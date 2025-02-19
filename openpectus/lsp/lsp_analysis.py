@@ -1,5 +1,5 @@
+from __future__ import annotations
 import logging
-from typing import TypedDict
 import httpx
 
 from pylsp.workspace import Document
@@ -8,57 +8,13 @@ from pylsp.lsp import DiagnosticSeverity
 from openpectus.lang.exec.uod import RegexNamedArgumentParser
 from openpectus.lang.exec.analyzer import AnalyzerItem, AnalyzerItemType, SemanticCheckAnalyzer
 from openpectus.lang.exec.commands import Command, CommandCollection
-from openpectus.lang.exec.tags import TagValue, TagValueCollection, create_system_tags
-from openpectus.lang.exec.tags_impl import MarkTag
+from openpectus.lang.exec.tags import TagValue, TagValueCollection
+from openpectus.lsp.model import DiagnosticsItem, DocumentSymbolItem, PositionItem, RangeItem, get_item_range, get_item_severity
 from openpectus.test.engine.utility_methods import build_program
 import openpectus.aggregator.routers.dto as Dto
 
 
 logger = logging.getLogger(__name__)
-system_tags = create_system_tags()  # will not include the Mark tag ...
-system_tags.add(MarkTag())
-
-class PositionItem(TypedDict):
-    line: int
-    character: int
-
-class RangeItem(TypedDict):
-    start: PositionItem
-    end: PositionItem
-
-class DiagnosticsItem(TypedDict):
-    source: str
-    range: RangeItem
-    code: str
-    message: str
-    severity: int
-    """ One of DiagnosticSeverity """
-
-
-def get_item_severity(item: AnalyzerItem) -> int:
-    if item.type == AnalyzerItemType.HINT:
-        return DiagnosticSeverity.Hint
-    elif item.type == AnalyzerItemType.INFO:
-        return DiagnosticSeverity.Information
-    elif item.type == AnalyzerItemType.WARNING:
-        return DiagnosticSeverity.Warning
-    elif item.type == AnalyzerItemType.ERROR:
-        return DiagnosticSeverity.Error
-    return DiagnosticSeverity.Error
-
-
-def get_item_range(item: AnalyzerItem) -> RangeItem:
-    # pslsp document is zero based, analyzer is 1-based
-    return RangeItem(
-        start=PositionItem(
-            line=item.range_start.line - 1,
-            character=item.range_start.character
-        ),
-        end=PositionItem(
-            line=item.range_end.line - 1,
-            character=item.range_end.character
-        ),
-    )
 
 
 def fetch_uod_info(engine_id: str) -> Dto.UodDefinition | None:
@@ -79,31 +35,29 @@ def fetch_uod_info(engine_id: str) -> Dto.UodDefinition | None:
 
 
 def build_tags(uod_def: Dto.UodDefinition) -> TagValueCollection:
-    tags = []
-    for t in system_tags:
-        tags.append(TagValue(name=t.name, unit=t.unit))
-    for t in uod_def.tags:
-        tags.append(TagValue(name=t.name, unit=t.unit))
-    return TagValueCollection(tags)
+    return TagValueCollection([TagValue(name=t.name, unit=t.unit) for t in uod_def.tags])
 
 
 def build_commands(uod_def: Dto.UodDefinition) -> CommandCollection:
     cmds = []
     for c_def in uod_def.commands + uod_def.system_commands:
-        parser = RegexNamedArgumentParser.deserialize(c_def.validator) if c_def.validator is not None else None
+        try:
+            parser = RegexNamedArgumentParser.deserialize(c_def.validator) if c_def.validator is not None else None
 
-        # build a validate function using the command's own validate function
-        def outer(key: str, parser: RegexNamedArgumentParser | None):
-            def validate(args: str) -> bool:
-                logger.debug(f"Validating args '{args}' for command key '{key}' and builder name {c_def.name}")
-                if parser is None:
-                    return True
-                else:
-                    return parser.validate(args)
-            return validate
+            # build a validate function using the command's own validate function
+            def outer(key: str, parser: RegexNamedArgumentParser | None):
+                def validate(args: str) -> bool:
+                    logger.debug(f"Validating args '{args}' for command key '{key}' and builder name {c_def.name}")
+                    if parser is None:
+                        return True
+                    else:
+                        return parser.validate(args)
+                return validate
 
-        cmd = Command(c_def.name, validatorFn=outer(c_def.name, parser))
-        cmds.append(cmd)
+            cmd = Command(c_def.name, validatorFn=outer(c_def.name, parser))
+            cmds.append(cmd)
+        except Exception:
+            logger.error(f"Failed to build command '{c_def.name}'", exc_info=True)
 
     return CommandCollection(cmds)
 
@@ -114,11 +68,15 @@ def lint(document: Document, engine_id: str) -> list[DiagnosticsItem]:
 
     uod_def = fetch_uod_info(engine_id)
     if uod_def is None:
+        logger.error(f"Failed to load uod definition (was none) for engine: {engine_id}")
         return []
 
-    logger.debug(f"{uod_def.commands=}")
-    logger.debug(f"{uod_def.system_commands=}")
-    logger.debug(f"{uod_def.tags=}")
+    # logger.debug(f"{uod_def.commands=}")
+    # logger.debug(f"{uod_def.system_commands=}")
+    # logger.debug(f"{uod_def.tags=}")
+    # logger.debug(f"commands: {len(uod_def.commands)}")
+    # logger.debug(f"system_commands: {len(uod_def.system_commands)}")
+    # logger.debug(f"tags: {len(uod_def.tags)}")
 
     cmds = build_commands(uod_def)
     tags = build_tags(uod_def)
@@ -178,8 +136,11 @@ def lint_example_typed(document: Document) -> list[DiagnosticsItem]:
     return diagnostics
 
 
-def find_first_word_position(document: Document, word: str):
+def symbols(document: Document, engine_id: str) -> list[DocumentSymbolItem]:
+    return []
 
+
+def find_first_word_position(document: Document, word: str):
     for i, line in enumerate(document.lines):
         if word in line:
             character = line.index(word)

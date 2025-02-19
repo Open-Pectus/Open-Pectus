@@ -25,7 +25,13 @@
    in diagnostics
 [] Improve lsp url: http://localhost:9800/uod/MIAWLT-1645-MPO_DemoUod
 
+An error causing the plugin to not load has been seen. The current theory is that there was an error in the conda/python environment.
+Using python 3.12 in a named (not prefixed) environment does work.
 
+document symbols - 
+
+## Nice to have
+[] Go to definition/declaration - only useful for Macro definitions
 
 ## Debugging client/server config
 - Debug without aggregator+engine
@@ -113,7 +119,7 @@ Calls, order not confirmed, expected to be anytime
   - create and return diagnostics, possibly cache result
   - canlled frequently, possibly on each keystroke during editing
 - pylsp_hover
-- 
+- pylsp_symbols
 
 Calls not  yet hooked up, order not confirmed, expected to be anytime
 - pylsp_folding_range
@@ -121,6 +127,7 @@ Calls not  yet hooked up, order not confirmed, expected to be anytime
 - pylsp_code_lens
   - should be disabled if possible. Code lens is actions for a code line, like "execute test". we have no need for this
     and it would be nice to avoid this frequent call
+- commands: for this, the 3 methods pylsp_code_actions, pylsp_commands and pylsp_execute_command work together. See code example below
 
 Calls not yet encountered
 - pylsp_document_did_save

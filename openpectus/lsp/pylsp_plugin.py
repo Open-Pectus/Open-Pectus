@@ -84,23 +84,42 @@ def pylsp_document_did_open(config: Config, workspace: Workspace, document: Docu
 #     # logger.debug(f"workspace: {as_json(workspace)}")
 #     # logger.info(f"document: {as_json(document)}")
 
+def get_engine_id(document: Document):
+    # TODO implement when frontend provides the value in document.uri, eg:
+    # {"uri": "file:///workspace/model53.json", "version": 104, "filename": "model53.json", "dot_path": "model53"}
+    engine_id = "MIAWLT-1645-MPO_DemoUod"
+    return engine_id
 
 @hookimpl
 def pylsp_lint(config: Config, workspace: Workspace, document: Document, is_saved: bool) \
         -> list[lsp_analysis.DiagnosticsItem]:
+    # return []  # lint disabled
     logger.debug("pylsp_lint")
     logger.debug(f"document: {as_json(document)}")
     logger.debug("Document source:'\n" + document.source + "\n'")
-    # TODO get engine_id from document.uri, eg. document:
-    # {"uri": "file:///workspace/model53.json", "version": 104, "filename": "model53.json", "dot_path": "model53"}
-    engine_id = "MIAWLT-1645-MPO_DemoUod"
+
+    engine_id = get_engine_id(document)
     try:
         diagnostics = lsp_analysis.lint(document, engine_id)
-        #diagnostics = []
         logger.debug(f"Lint ok, items: {len(diagnostics)}")
         return diagnostics
     except Exception:
         logger.error("Lint error", exc_info=True)
+        return []
+
+
+@hookimpl
+def pylsp_document_symbols(config, workspace, document) -> list[lsp_analysis.DocumentSymbolItem]:
+    logger.debug("pylsp_document_symbols")
+    return []  # symbols disabled
+
+    engine_id = get_engine_id(document)
+    try:
+        symbols = lsp_analysis.symbols(document, engine_id)
+        logger.debug(f"Symbols ok, items: {len(symbols)}")
+        return symbols
+    except Exception:
+        logger.error("Symbols error", exc_info=True)
         return []
 
 
