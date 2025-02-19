@@ -49,7 +49,10 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     useWorkerFactory({
       workerLoaders: {
         'TextEditorWorker': () => new Worker(
-          new URL('@codingame/monaco-vscode-editor-api/esm/vs/editor/editor.worker.js', import.meta.url), {type: 'module'},
+          '/assets/editorWorker-es.js', {type: 'module'},
+          // new URL('../../../assets/editorWorker-es.js', import.meta.url), {type: 'module'},
+          // new URL('monaco-editor-wrapper/workers/module/editor', import.meta.url), {type: 'module'},
+          // new URL('node_modules/monaco-editor-wrapper/dist/workers/editorWorker-es.js'), {type: 'module'},
         ),
         'TextMateWorker': () => new Worker(
           new URL('@codingame/monaco-vscode-textmate-service-override/worker', import.meta.url), {type: 'module'},
