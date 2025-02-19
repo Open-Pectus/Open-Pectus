@@ -6,4 +6,10 @@
   <component name="ProjectRootManager" version="2" languageLevel="JDK_20" project-jdk-name="Python 3.13 (openpectus)" project-jdk-type="Python SDK">
     <output url="file://$PROJECT_DIR$/out" />
   </component>
+  <component name="ViteConfiguration">
+    <option name="mode" value="DISABLED" />
+  </component>
+  <component name="WebPackConfiguration">
+    <option name="mode" value="DISABLED" />
+  </component>
 </project>

@@ -37,12 +37,6 @@ const config = {
   experiments: {
     topLevelAwait: true,
   },
-  ignoreWarnings: [
-    {
-      module: /node_modules\/vscode\/vscode\/src\/vs\/amdX\.js/,
-      message: /Critical dependency: the request of a dependency is an expression/,
-    },
-  ],
 };
 
 export default config;
