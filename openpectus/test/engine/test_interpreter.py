@@ -326,7 +326,7 @@ Call macro: A
 
         parent = PNode(None)
         c = PWatch(parent)
-        c.condition = PCondition("X > 10%")
+        c.condition = PCondition("X > 10%", 0, 7)
         c.condition.lhs = "X"
         c.condition.op = ">"
         c.condition.rhs = "10%"

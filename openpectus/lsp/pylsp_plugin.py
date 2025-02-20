@@ -11,9 +11,7 @@ from pylsp.workspace import Document, Workspace
 from openpectus.lsp import lsp_analysis
 
 
-# logging must be setup already - either by lsp/main or by the pylsp command
 logger = logging.getLogger(__name__)
-
 
 
 # hooks provided by pylsp: https://github.com/python-lsp/python-lsp-server/blob/develop/pylsp/hookspecs.py
@@ -29,7 +27,6 @@ def pylsp_settings(config: Config) -> dict[str, dict[str, dict[str, Any]]]:
     """Configuration options that can be set on the client."""
     logger.info("pylsp_settings")
     # logger.info(f"config provided: {as_json(config)}")
-    
     # logger.info("textDocument capabilities: " + as_json(config.capabilities["textDocument"]))
     # config.capabilities["textDocument"]["codeLens"] = None
     # config.capabilities["workspace"].pop("codeLens", None)
@@ -77,12 +74,12 @@ def pylsp_document_did_open(config: Config, workspace: Workspace, document: Docu
     logger.info(f"document: {as_json(document)}")
 
 
-# @hookimpl
-# def pylsp_document_did_save(config, workspace, document):
-#     logger.info("pylsp_document_did_save")
-#     # logger.debug(f"config: {as_json(config)}")
-#     # logger.debug(f"workspace: {as_json(workspace)}")
-#     # logger.info(f"document: {as_json(document)}")
+@hookimpl
+def pylsp_document_did_save(config, workspace, document):
+    logger.info("pylsp_document_did_save")
+    # logger.debug(f"config: {as_json(config)}")
+    # logger.debug(f"workspace: {as_json(workspace)}")
+    # logger.info(f"document: {as_json(document)}")
 
 def get_engine_id(document: Document):
     # TODO implement when frontend provides the value in document.uri, eg:
@@ -90,13 +87,11 @@ def get_engine_id(document: Document):
     engine_id = "MIAWLT-1645-MPO_DemoUod"
     return engine_id
 
-@hookimpl
-def pylsp_lint(config: Config, workspace: Workspace, document: Document, is_saved: bool) \
-        -> list[lsp_analysis.DiagnosticsItem]:
-    # return []  # lint disabled
+# @hookimpl
+def pylsp_lint(config: Config, workspace: Workspace, document: Document, is_saved: bool):
     logger.debug("pylsp_lint")
-    logger.debug(f"document: {as_json(document)}")
-    logger.debug("Document source:'\n" + document.source + "\n'")
+    # logger.debug(f"document: {as_json(document)}")
+    # logger.debug("Document source:'\n" + document.source + "\n'")
 
     engine_id = get_engine_id(document)
     try:
@@ -109,9 +104,8 @@ def pylsp_lint(config: Config, workspace: Workspace, document: Document, is_save
 
 
 @hookimpl
-def pylsp_document_symbols(config, workspace, document) -> list[lsp_analysis.DocumentSymbolItem]:
+def pylsp_document_symbols(config, workspace, document):
     logger.debug("pylsp_document_symbols")
-    return []  # symbols disabled
 
     engine_id = get_engine_id(document)
     try:
@@ -122,6 +116,19 @@ def pylsp_document_symbols(config, workspace, document) -> list[lsp_analysis.Doc
         logger.error("Symbols error", exc_info=True)
         return []
 
+# @hookimpl
+def pylsp_completions(config, workspace, document, position, ignored_names):
+    logger.debug("pylsp_completions")
+    # return None  # completions disabled
+
+    engine_id = get_engine_id(document)
+    try:
+        completions = lsp_analysis.completions(document, position, ignored_names, engine_id)
+        logger.debug(f"Completions ok, items: {len(completions)}")
+        return completions
+    except Exception:
+        logger.error("Completions error", exc_info=True)
+        return []
 
 # @hookimpl
 # def pylsp_hover(config: Config, workspace: Workspace, document: Document, position):

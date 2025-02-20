@@ -361,7 +361,7 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 AnalyzerItemType.ERROR,
                 "A condition is required",
                 start=len(node.instruction_name) + 1,
-                end=len(node.instruction_name) + 1000 # Valid way to express the whole line
+                end=len(node.instruction_name) + 1000  # Valid way to express the whole line
             ))
             return
         assert node.condition is not None
@@ -561,4 +561,4 @@ class SemanticCheckAnalyzer:
 
     @property
     def warnings(self) -> List[AnalyzerItem]:
-        return list([i for i in self.items if i.type == AnalyzerItemType.ERROR])
+        return list([i for i in self.items if i.type == AnalyzerItemType.WARNING])
