@@ -6,6 +6,7 @@ from openpectus.aggregator.aggregator_server import AggregatorServer
 
 frontend_path = os.path.join(
     os.path.dirname(os.path.dirname(__file__)),
+    "..",
     "frontend",
 )
 openapi_json_path = os.path.join(

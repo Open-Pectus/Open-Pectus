@@ -30,7 +30,7 @@
 ## Debugging client/server config
 - Debug without aggregator+engine
 ```
-cd openpectus/frontend
+cd frontend
 ng serve
 ```
 The open browser @ http://localhost:4200
@@ -66,7 +66,7 @@ Plugin dev 'docs' here: https://github.com/python-lsp/cookiecutter-pylsp-plugin
 ## Configure client
 Client configuration is performed in this file:
 ```
-openpectus/frontend/src/app/details/method-editor/monaco-editor.component.ts
+frontend/src/app/details/method-editor/monaco-editor.component.ts
 ```
 
 languageId = 'pcode'
