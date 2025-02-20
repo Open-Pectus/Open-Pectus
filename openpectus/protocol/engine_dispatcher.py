@@ -36,6 +36,9 @@ if platform.system() == "Windows":
     # of Anaconda provided certificates.
     ssl_context = ssl.create_default_context()
     ssl_context.load_default_certs()
+    # Disable strict mode for ZScaler to work with Python > 3.12
+    # See https://community.zscaler.com/s/question/0D54u0000AfJDtECQW/
+    ssl_context.verify_flags &= ~ssl.VERIFY_X509_STRICT
 else:
     # SSL library method load_default_certs only does
     # something useful on Windows. On other systems
