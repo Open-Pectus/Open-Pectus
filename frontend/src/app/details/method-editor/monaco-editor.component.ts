@@ -126,8 +126,8 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
               'indentationRules': {
                 // 'increaseIndentPattern': '({+(?=((\\\\.|[^"\\\\])*"(\\\\.|[^"\\\\])*")*[^"}]*)$)|(\\[+(?=((\\\\.|[^"\\\\])*"(\\\\.|[^"\\\\])*")*[^"\\]]*)$)',
                 // 'decreaseIndentPattern': '^\\s*[}\\]],?\\s*$',
-                'increaseIndentPattern': '^\\s*[Alarm|Block|Watch|Macro]',
-                'decreaseIndentPattern': '^[^\\s+]$',
+                'increaseIndentPattern': '^\\s*(Alarm|Block|Watch|Macro)$',
+                'decreaseIndentPattern': '^[^\\s]+$',
                 // 'unIndentedLinePattern': '^$',
               },
               // 'onEnterRules': [{
