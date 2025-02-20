@@ -120,10 +120,12 @@ Calls, order not confirmed, expected to be anytime
   - canlled frequently, possibly on each keystroke during editing
 - pylsp_hover
 - pylsp_symbols
-  - not getting useful results with this. First, returning DocumentSymbolItem fails on the client. Returning SymbolInformationItem
+  - not getting useful results with this. First, returning DocumentSymbol fails on the client. Returning SymbolInformationItem
     does not fail but also doesn't do anything (coloring and what have we). The failure for DocumentSymbolItem is the same
     as we get for SymbolInformationItem with a bad property name. Also, can't figure out which protocol version the client 
     is actually using.
+    Trying out DocumentSymbols again. Works if we only use the required properties name, kind, range, selectionRange. The
+    client call succeeds but nothing happens visually.
 
 - semantic tokens, may also provide color info - but I can't find a pslsp hook for this kind of request
   docs: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_semanticTokens
@@ -131,8 +133,10 @@ Calls, order not confirmed, expected to be anytime
 - pylsp_completions
   - This works well. Also consider pylsp_completion_item_resolve for more details to the suggestions
     https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_completion
-    
-    
+
+- Figure out how do disable textDocument/codeLens, textDocument/foldingRange and textDocument/documentHighlight.
+  There is a lot going on when typing. Many requests being sent and then cancelled from the client. So we don't want
+  unused requests in the mix.
 
 Calls not  yet hooked up, order not confirmed, expected to be anytime
 - pylsp_folding_range
@@ -145,7 +149,9 @@ Calls not  yet hooked up, order not confirmed, expected to be anytime
 Calls not yet encountered
 - pylsp_document_did_save
 
-
+Nice to have
+- hover - signature or tag description
+- autocomplete - first tag, then operator, then value, then maybe unit
 
 # Code Actions
 see example https://github.com/python-rope/pylsp-rope/blob/main/test/test_inline.py
