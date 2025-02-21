@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, OnDestroy, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, input, OnDestroy, ViewChild } from '@angular/core';
 // import '@codingame/monaco-vscode-json-default-extension';
 import '@codingame/monaco-vscode-theme-defaults-default-extension';
 import { editor as MonacoEditor, KeyCode, Range } from '@codingame/monaco-vscode-editor-api';
@@ -28,8 +28,9 @@ const lineIdClassNamePrefix = 'line-id-';
   `,
 })
 export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
-  @Input() editorSizeChange?: Observable<void>;
-  @Input() readOnlyEditor = false;
+  editorSizeChange = input<Observable<void>>();
+  readOnlyEditor = input(false);
+  unitId = input<string>();
   @ViewChild('editor', {static: true}) editorElement!: ElementRef<HTMLDivElement>;
   private componentDestroyed = new Subject<void>();
   private wrapper = new MonacoEditorLanguageClientWrapper();
@@ -65,8 +66,10 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     const methodContent = await firstValueFrom(this.methodContent);
     await this.wrapper.initAndStart(this.buildWrapperUserConfig(this.editorElement.nativeElement, methodContent), false);
     this.setupEditor(this.wrapper.getEditor());
-    this.wrapper.initLanguageClients();
-    await this.wrapper.startLanguageClients();
+    if(this.unitId() !== undefined) {
+      this.wrapper.initLanguageClients();
+      await this.wrapper.startLanguageClients();
+    }
     this.store.dispatch(MethodEditorActions.monacoEditorComponentInitialized());
   }
 
@@ -74,7 +77,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     return {
       $type: 'extended',
       htmlContainer,
-      logLevel: LogLevel.Debug,
+      logLevel: LogLevel.Warning,
       vscodeApiConfig: {
         // vscodeApiInitPerformExternally: true,
         // enableExtHostWorker: true,
@@ -152,23 +155,26 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
         'pcode': {
           clientOptions: {
             documentSelector: ['pcode'],
+            initializationOptions: {
+              engineId: this.unitId(),
+            },
           },
           connection: {
             options: {
               $type: 'WebSocketUrl',
-              url: 'ws://localhost:2087/lsp',
-              startOptions: {
-                onCall: () => {
-                  console.log('Connected to socket.');
-                },
-                reportStatus: true,
-              },
-              stopOptions: {
-                onCall: () => {
-                  console.log('Disconnected from socket.');
-                },
-                reportStatus: true,
-              },
+              url: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://localhost:2087/lsp`,
+              // startOptions: {
+              //   onCall: () => {
+              //     console.log('Connected to socket.');
+              //   },
+              //   reportStatus: false,
+              // },
+              // stopOptions: {
+              //   onCall: () => {
+              //     console.log('Disconnected from socket.');
+              //   },
+              //   reportStatus: false,
+              // },
             },
           },
         },
@@ -260,7 +266,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   private setupStartedAndExecutedLines(editor: MonacoEditor.IStandaloneCodeEditor) {
     const startedAndExecutedLinesDecorationCollection = this.setupDecoratingStartedAndExecutedLines(editor);
-    if(this.readOnlyEditor) {
+    if(this.readOnlyEditor()) {
       editor.updateOptions({readOnly: true, readOnlyMessage: {value: 'You cannot edit an already executed program.'}});
     } else {
       this.setupLockingStartedAndExecutedLines(editor, startedAndExecutedLinesDecorationCollection);
@@ -371,7 +377,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   private setupReactingToResize(editor: MonacoEditor.IStandaloneCodeEditor) {
-    this.editorSizeChange?.pipe(takeUntil(this.componentDestroyed)).subscribe(() => editor?.layout());
+    this.editorSizeChange()?.pipe(takeUntil(this.componentDestroyed)).subscribe(() => editor?.layout());
     window.onresize = () => editor?.layout();
   }
 }

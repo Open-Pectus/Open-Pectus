@@ -22,6 +22,7 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
       @if (!collapsed) {
         <app-monaco-editor class="block rounded-sm h-full" [editorSizeChange]="editorSizeChange"
                            content (keydown.control.s)="onCtrlS($event)"
+                           [unitId]="unitId()"
                            [readOnlyEditor]="recentRunId() !== undefined"></app-monaco-editor>
       }
       @if (!collapsed && (methodEditorIsDirty | ngrxPush)) {
