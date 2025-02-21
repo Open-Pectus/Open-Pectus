@@ -114,24 +114,8 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
           },
         },
         filesOrContents: new Map([
-          // adapted from language-configuration.json in @codingame/monaco-vscode-json-default-extension
-          ['./language-configuration.json', JSON.stringify({
-              comments: {lineComment: '#', blockComment: ['/*', '*/']},
-              // 'brackets': [['{', '}'], ['[', ']']],
-              // 'autoClosingPairs': [{'open': '{', 'close': '}', 'notIn': ['string']}, {
-              //   'open': '[',
-              //   'close': ']',
-              //   'notIn': ['string'],
-              // }, {'open': '(', 'close': ')', 'notIn': ['string']}, {'open': '\'', 'close': '\'', 'notIn': ['string']}, {
-              //   'open': '"',
-              //   'close': '"',
-              //   'notIn': ['string', 'comment'],
-              // }, {'open': '`', 'close': '`', 'notIn': ['string', 'comment']}],
-              // 'indentationRules': {
-              //   // 'increaseIndentPattern': '({+(?=((\\\\.|[^"\\\\])*"(\\\\.|[^"\\\\])*")*[^"}]*)$)|(\\[+(?=((\\\\.|[^"\\\\])*"(\\\\.|[^"\\\\])*")*[^"\\]]*)$)',
-              //   // 'decreaseIndentPattern': '^\\s*[}\\]],?\\s*$',
-              //   // 'unIndentedLinePattern': '^$',
-              // },
+          ['./language-configuration.json', JSON.stringify({ // adapted from language-configuration.json in @codingame/monaco-vscode-json-default-extension
+              comments: {lineComment: '#'},
               onEnterRules: [{
                 beforeText: {pattern: '^\\s*(Alarm|Block|Watch|Macro).*$'},
                 action: {indent: 'indent'},
