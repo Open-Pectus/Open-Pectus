@@ -92,6 +92,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
             },
             'editor.lightbulb.enabled': 'off',
             'editor.experimental.asyncTokenization': true,
+            'editor.foldingStrategy': 'indentation',
           }),
         },
       },
@@ -108,14 +109,14 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
               aliases: ['PCODE', 'pcode'],
               extensions: ['.pcode'],
               mimetypes: ['application/pcode'],
-              configuration: './language-configuration.json',  // './language-configuration.json', // can be used to configure things like indentation and autoclosing brackets, see file in @codingame/monaco-vscode-json-default-extension
+              configuration: './language-configuration.json',
             }],
           },
         },
         filesOrContents: new Map([
-          // adapted from @codingame/monaco-vscode-json-default-extension
+          // adapted from language-configuration.json in @codingame/monaco-vscode-json-default-extension
           ['./language-configuration.json', JSON.stringify({
-              'comments': {'lineComment': '//', 'blockComment': ['/*', '*/']},
+              comments: {lineComment: '#', blockComment: ['/*', '*/']},
               // 'brackets': [['{', '}'], ['[', ']']],
               // 'autoClosingPairs': [{'open': '{', 'close': '}', 'notIn': ['string']}, {
               //   'open': '[',
@@ -126,18 +127,21 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
               //   'close': '"',
               //   'notIn': ['string', 'comment'],
               // }, {'open': '`', 'close': '`', 'notIn': ['string', 'comment']}],
-              'indentationRules': {
-                // 'increaseIndentPattern': '({+(?=((\\\\.|[^"\\\\])*"(\\\\.|[^"\\\\])*")*[^"}]*)$)|(\\[+(?=((\\\\.|[^"\\\\])*"(\\\\.|[^"\\\\])*")*[^"\\]]*)$)',
-                // 'decreaseIndentPattern': '^\\s*[}\\]],?\\s*$',
-                'increaseIndentPattern': '^\\s*(Alarm|Block|Watch|Macro)$',
-                'decreaseIndentPattern': '^[^\\s]+$',
-                // 'unIndentedLinePattern': '^$',
-              },
-              // 'onEnterRules': [{
-              //   'beforeText': {'pattern': '//.*'},
-              //   'afterText': {'pattern': '^(?!\\s*$).+'},
-              //   'action': {'indent': 'none', 'appendText': '// '},
-              // }],
+              // 'indentationRules': {
+              //   // 'increaseIndentPattern': '({+(?=((\\\\.|[^"\\\\])*"(\\\\.|[^"\\\\])*")*[^"}]*)$)|(\\[+(?=((\\\\.|[^"\\\\])*"(\\\\.|[^"\\\\])*")*[^"\\]]*)$)',
+              //   // 'decreaseIndentPattern': '^\\s*[}\\]],?\\s*$',
+              //   // 'unIndentedLinePattern': '^$',
+              // },
+              onEnterRules: [{
+                beforeText: {pattern: '^\\s*(Alarm|Block|Watch|Macro).*$'},
+                action: {indent: 'indent'},
+              }, {
+                beforeText: {pattern: '^\\s*End block$'},
+                action: {indent: 'outdent'},
+              }, {
+                beforeText: {pattern: '^\\s*End blocks$'},
+                action: {indent: 'none', removeText: Number.MAX_VALUE},
+              }],
             },
           )],
         ]),
