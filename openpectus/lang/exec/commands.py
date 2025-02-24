@@ -137,6 +137,9 @@ class CommandCollection():
             cmds.add(cmd.clone())
         return cmds
 
+    def to_list(self):
+        return list(self.commands.values())
+
     def merge_with(self, other: CommandCollection) -> CommandCollection:
         """ Returns a new CommandCollection with the combined commands of both collections.
 

@@ -582,9 +582,12 @@ class PCondition:
 
     The condition is resolved by ConditionEnrichAnalyzer.
     """
-    def __init__(self, condition_str: str) -> None:
+    def __init__(self, condition_str: str, start_column: int, end_column: int) -> None:
         self.condition_str = condition_str
         """ Original condition string expression """
+        self.start_column = start_column
+        self.end_column = end_column
+
         self.op = ""
         """ Unresolved condition operator """
         self.lhs = ""
@@ -598,6 +601,13 @@ class PCondition:
         self.tag_value: str | None = None
         self.tag_unit: str | None = None
         self.tag_value_numeric: int | float | None = None
+
+        self.lhs_start: int = 0
+        self.lhs_end: int = 0
+        self.op_start: int = 0
+        self.op_end: int = 0
+        self.rhs_start: int = 0
+        self.rhs_end: int = 0
 
 
 class PDuration:

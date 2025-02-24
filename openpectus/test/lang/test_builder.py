@@ -606,10 +606,17 @@ Watch: Run counter > 0
         )
         program = p.build_model()
         [watch, mark_a] = program.get_instructions(include_blanks=False)
-        self.assertNodeHasType(watch, PWatch)
+        self.assertNodeHasType(watch, PWatch)        
         self.assertNodeHasType(mark_a, PMark)
         self.assertFalse(watch.has_error(recursive=True))
         self.assertIsNone(watch._inst_error)
+        assert isinstance(watch, PWatch)
+        assert watch.condition is not None
+        self.assertEqual(7, watch.condition.start_column)
+        self.assertEqual(21, watch.condition.end_column)        
+        self.assertEqual(22, len("Watch: Run counter > 0"))
+        # note that ranges do not include end_column, so we add 1
+        self.assertEqual("Run counter > 0", "Watch: Run counter > 0"[7: 21+1])
 
     def test_watch_missing_condition(self):
         p = build(
