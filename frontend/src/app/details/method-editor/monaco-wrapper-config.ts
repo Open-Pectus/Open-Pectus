@@ -84,7 +84,7 @@ export class MonacoWrapperConfig {
           connection: {
             options: {
               $type: 'WebSocketUrl',
-              url: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://localhost:2087/lsp`,
+              url: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:2087/lsp`,
               // startOptions: {
               //   onCall: () => {
               //     console.log('Connected to socket.');
