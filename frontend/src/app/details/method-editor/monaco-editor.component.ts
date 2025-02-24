@@ -93,6 +93,8 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
             'editor.lightbulb.enabled': 'off',
             'editor.experimental.asyncTokenization': true,
             'editor.foldingStrategy': 'indentation',
+            'editor.wordBasedSuggestions': 'off',
+            // "editor.quickSuggestions": false
           }),
         },
       },
