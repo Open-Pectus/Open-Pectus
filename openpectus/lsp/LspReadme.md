@@ -21,11 +21,50 @@
 [] Support closing document and releasing uod
 [x] Make lsp server start and stop with aggregator
 [x] logging does not work. logs in console but should log to file
-[] Add more source location fields during PProgram build to enable precise condition source locations
+[x] Add more source location fields during PProgram build to enable precise condition source locations
    in diagnostics
 [] Improve lsp url: http://localhost:9800/uod/MIAWLT-1645-MPO_DemoUod
+[] Add completion support for command thresholds 
+[] Settings/configuration in file
+  - hopefylly disable stuff without code
+[x] Implement simple symbols
+[] Implement advanced symbols
+  - Watch and Alarm should have a condition child symbol
+  - A condition symbol should have its 3/4 parts as child symbols: tag, operator, value, [unit]
+[] Autocomplete on Info, Warning and Error should only be enabled for the command, not for any arguments since that is the user message
+[] Performance tactics
+  - Improve parse performance
+    - Split document into multiple regions and parse each region independtly
+      - lint improvements - only a changed region must be re-parsed and linted
+        - requires handling regions
+        - requires joining lint results from regions
+      - symbol improvements - only a changed region must be re-parsed and have symbols extracted
+        - requires handling regions
+        - requires joining symbols results from regions
+      - handling regions
+        - must split at program level for regions to be independant
+    - Hand roll a simple custom parser for completions
+        - Must handle all cases we support
+          - threshold
+          - commands with conditions
+            - handle many steps of
+[] Hook into document updates
+  - Need to avoid re-parse on every keystroke and this may be the only way
+  - in order to do a full re-parse every once and a while and not parse (lint, symbols) on all changes
+  - it seems there is no direct hook for document changes which is probably because document changes are handled
+    internally in lsp server. But we might add a hook, by interception workspace.update_document/workspace.apply_edit.
 
+[] Update method on running interpretation
+  The above performance discussion should also consider udpating a running method. This is 
+  because that too involves a segment (partial) parse. This may even result in out-of-segment updates (macro) (?)
 
+An error causing the plugin to not load has been seen. The current theory is that there was an error in the conda/python environment.
+Using python 3.12 in a named (not prefixed) environment does work.
+
+document symbols - 
+
+## Nice to have
+[] Go to definition/declaration - only useful for Macro definitions
 
 ## Debugging client/server config
 - Debug without aggregator+engine
@@ -68,18 +107,7 @@ Client configuration is performed in this file:
 ```
 frontend/src/app/details/method-editor/monaco-editor.component.ts
 ```
-
 languageId = 'pcode'
-
-## TODO tasks
-- Define feature flag for frontend - do we have something already?
-  - involve jan
-  - it is really a kind of LspSettings{ enabled, uri(include port)}
-- Settings/configuration in file
-  - hopefylly disable stuff without code
-- Define some logging configurations
-  - A debug config that logs heavily. This includes stuff we probably don't need
-  - A customized log tailored ot only include our plugin
   
 ## Server lifetime
 These are the call hooks important for an lsp session.
@@ -113,7 +141,24 @@ Calls, order not confirmed, expected to be anytime
   - create and return diagnostics, possibly cache result
   - canlled frequently, possibly on each keystroke during editing
 - pylsp_hover
-- 
+- pylsp_symbols
+  - not getting useful results with this. First, returning DocumentSymbol fails on the client. Returning SymbolInformationItem
+    does not fail but also doesn't do anything (coloring and what have we). The failure for DocumentSymbolItem is the same
+    as we get for SymbolInformationItem with a bad property name. Also, can't figure out which protocol version the client 
+    is actually using.
+    Trying out DocumentSymbols again. Works if we only use the required properties name, kind, range, selectionRange. The
+    client call succeeds but nothing happens visually.
+
+- semantic tokens, may also provide color info - but I can't find a pslsp hook for this kind of request
+  docs: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_semanticTokens
+
+- pylsp_completions
+  - This works well. Also consider pylsp_completion_item_resolve for more details to the suggestions
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_completion
+
+- Figure out how do disable textDocument/codeLens, textDocument/foldingRange and textDocument/documentHighlight.
+  There is a lot going on when typing. Many requests being sent and then cancelled from the client. So we don't want
+  unused requests in the mix.
 
 Calls not  yet hooked up, order not confirmed, expected to be anytime
 - pylsp_folding_range
@@ -121,11 +166,14 @@ Calls not  yet hooked up, order not confirmed, expected to be anytime
 - pylsp_code_lens
   - should be disabled if possible. Code lens is actions for a code line, like "execute test". we have no need for this
     and it would be nice to avoid this frequent call
+- commands: for this, the 3 methods pylsp_code_actions, pylsp_commands and pylsp_execute_command work together. See code example below
 
 Calls not yet encountered
 - pylsp_document_did_save
 
-
+Nice to have
+- hover - signature or tag description
+- autocomplete - first tag, then operator, then value, then maybe unit
 
 # Code Actions
 see example https://github.com/python-rope/pylsp-rope/blob/main/test/test_inline.py
