@@ -22,7 +22,7 @@ logging.getLogger("pylsp").setLevel(logging.WARNING)
 
 
 def get_args():
-    parser = ArgumentParser("Start standalone Open Pevtus LSP server")
+    parser = ArgumentParser("Start standalone Open Pectus LSP server")
     parser.add_argument("--port", type=int, default=2087, help="Bind to this port")
     parser.add_argument("--console_log", action=BooleanOptionalAction, default=False, help="Log to console as well as file")
     parser.add_argument("--watch_parent", action=BooleanOptionalAction, default=False,

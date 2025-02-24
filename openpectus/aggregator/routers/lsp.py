@@ -1,33 +1,25 @@
 import logging
+from contextlib import asynccontextmanager
+from typing import AsyncIterator
 
-import openpectus.aggregator.deps as agg_deps
-import openpectus.aggregator.models as Mdl
-import openpectus.aggregator.routers.dto as Dto
-from fastapi import APIRouter, Depends, Response, HTTPException
-from openpectus.aggregator.aggregator import Aggregator
-from starlette.status import HTTP_404_NOT_FOUND
-
+from fastapi import APIRouter, FastAPI
+from fastapi_proxy_lib.core.websocket import ReverseWebSocketProxy
+from httpx import AsyncClient
+from starlette.websockets import WebSocket
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["lsp"], include_in_schema=False)
+proxy = ReverseWebSocketProxy(AsyncClient(), base_url="ws://localhost:2087/")
 
+@asynccontextmanager
+async def close_proxy_event(_: FastAPI) -> AsyncIterator[None]:
+    """Close proxy."""
+    yield
+    await proxy.aclose()
 
-def get_registered_engine_data_or_fail(engine_id: str, agg: Aggregator) -> Mdl.EngineData:
-    engine_data = agg.get_registered_engine_data(engine_id)
-    if engine_data is None:
-        raise HTTPException(status_code=HTTP_404_NOT_FOUND)
-    return engine_data
+router.lifespan_context(close_proxy_event)
 
-
-@router.get('/uod/{engine_id}', response_model_exclude_none=True)
-def get_uod_info(
-        engine_id: str,
-        response: Response,
-        agg: Aggregator = Depends(agg_deps.get_aggregator)
-        ) -> Dto.UodDefinition:
-    response.headers["Cache-Control"] = "no-store"
-    engine_data = get_registered_engine_data_or_fail(engine_id, agg)
-    uod_definition = engine_data.uod_definition
-    if uod_definition is None:
-        raise HTTPException(status_code=HTTP_404_NOT_FOUND)
-    return Dto.UodDefinition.from_model(uod_definition)
+@router.websocket("/lsp")
+async def _(websocket: WebSocket):
+    logger.info("fdas")
+    return await proxy.proxy(websocket=websocket, path="lsp")

@@ -63,7 +63,7 @@ class AggregatorServer:
                                lifespan=self.lifespan)
         self.fastapi.include_router(process_unit.router, prefix=api_prefix, dependencies=[UserRolesDependency])
         self.fastapi.include_router(recent_runs.router, prefix=api_prefix, dependencies=[UserRolesDependency])
-        #self.fastapi.include_router(lsp.router, prefix=api_prefix)
+        self.fastapi.include_router(lsp.router)
         self.fastapi.include_router(auth.router, prefix="/auth")
         for route in additional_routers:
             self.fastapi.include_router(route)
