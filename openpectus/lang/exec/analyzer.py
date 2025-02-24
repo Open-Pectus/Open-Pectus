@@ -23,7 +23,7 @@ from openpectus.lang.model.pprogram import (
     PBatch,
 )
 
-from openpectus.lang.exec.tags import TagCollection
+from openpectus.lang.exec.tags import TagValueCollection
 from openpectus.lang.exec.units import are_comparable
 from openpectus.lang.exec.commands import CommandCollection
 from openpectus.lang.exec.pinterpreter import PNodeVisitor
@@ -41,6 +41,10 @@ class AnalyzerItemType(Enum):
     WARNING = 'WARNING',
     ERROR = 'ERROR'
 
+class AnalyzerItemRange:
+    def __init__(self, line: int, character: int) -> None:
+        self.line = line
+        self.character = character
 
 class AnalyzerItem:
     def __init__(self,
@@ -48,12 +52,34 @@ class AnalyzerItem:
                  message: str,
                  node: PNode | None,
                  type: AnalyzerItemType,
-                 description: str = "") -> None:
+                 description: str = "",
+                 start: int | None = None,
+                 length: int | None = None,
+                 end: int | None = None) -> None:
         self.id: str = id
         self.message: str = message
         self.description: str = description
         self.type: AnalyzerItemType = type
         self.node: PNode | None = node
+        self.range_start: AnalyzerItemRange = AnalyzerItemRange(0, 0)
+        self.range_end: AnalyzerItemRange = AnalyzerItemRange(0, 0)
+
+        # use node for ranges by default
+        if node is not None:
+            self.range_start = AnalyzerItemRange(node.line or 0, node.indent or 0)
+            self.range_end = AnalyzerItemRange(self.range_start.line, 100)
+
+        # if start is given, modify default range start (keep line)
+        if start is not None:
+            self.range_start.character = start
+
+        if length is not None and end is not None:
+            raise ValueError("Specify either length or end, not both")
+        # if length or end is given, modify range end (keep line)
+        if length is not None:
+            self.range_end = AnalyzerItemRange(self.range_start.line, self.range_start.character + length)
+        if end is not None:
+            self.range_end = AnalyzerItemRange(self.range_start.line, end)
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(id="{self.id}", message="{self.message}", type={self.type}, node={self.node})'
@@ -306,7 +332,7 @@ class InfiniteBlockCheckAnalyzer(AnalyzerVisitorBase):
 class ConditionCheckAnalyzer(AnalyzerVisitorBase):
     """ Analyser that checks whether conditions are present and refer to valid tag names """
 
-    def __init__(self, tags: TagCollection) -> None:
+    def __init__(self, tags: TagValueCollection) -> None:
         super().__init__()
         self.tags = tags
 
@@ -324,15 +350,21 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
         super().visit_PAlarm(node)
 
     def analyze_condition(self, node: PWatch | PAlarm):
+        assert node.line is not None
+        assert node.instruction_name is not None
+
         if node.condition is None:
             self.add_item(AnalyzerItem(
                 "ConditionMissing",
                 "Condition missing",
                 node,
                 AnalyzerItemType.ERROR,
-                "A condition is required"
+                "A condition is required",
+                start=len(node.instruction_name) + 1,
+                end=len(node.instruction_name) + 1000  # Valid way to express the whole line
             ))
             return
+        assert node.condition is not None
         condition = node.condition
 
         tag_name = condition.tag_name
@@ -342,7 +374,9 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 "Missing tag",
                 node,
                 AnalyzerItemType.ERROR,
-                "A condition must start with a tag name"
+                "A condition must start with a tag name",
+                start=node.condition.start_column,
+                end=node.condition.start_column
             ))
             return
 
@@ -352,7 +386,9 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 "Undefined tag",
                 node,
                 AnalyzerItemType.ERROR,
-                f"The tag name '{tag_name}' is not valid"
+                f"The tag name '{tag_name}' is not valid",
+                start=node.condition.start_column,
+                length=len(node.condition.lhs)
             ))
             return
 
@@ -364,7 +400,9 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 "Unexpected tag unit",
                 node,
                 AnalyzerItemType.ERROR,
-                f"Unit '{condition.tag_unit}' was specified for a tag with no unit"
+                f"Unit '{condition.tag_unit}' was specified for a tag with no unit",
+                start=node.condition.rhs_start,
+                end=node.condition.rhs_end + 1
             ))
             return
 
@@ -374,19 +412,36 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 "Missing tag unit",
                 node,
                 AnalyzerItemType.ERROR,
-                "The tag requires that a unit is provided"
+                "The tag requires that a unit is provided",
+                start=node.condition.rhs_start,
+                end=node.condition.rhs_end + 1
             ))
             return
 
         if tag.unit is not None:
             assert condition.tag_unit is not None
-            if not are_comparable(tag.unit, condition.tag_unit):
+            try:
+                comparable = are_comparable(tag.unit, condition.tag_unit)
+            except ValueError as vex:
+                self.add_item(AnalyzerItem(
+                    "InvalidUnit",
+                    "Invalid unit",
+                    node,
+                    AnalyzerItemType.ERROR,
+                    str(vex),
+                    start=node.condition.rhs_start,
+                    end=node.condition.rhs_end + 1
+                ))
+                return
+            if not comparable:
                 self.add_item(AnalyzerItem(
                     "IncompatibleUnits",
                     "Incompatible units",
                     node,
                     AnalyzerItemType.ERROR,
-                    f"The tag unit '{tag.unit}' is not compatible with the provided unit '{condition.tag_unit}'"
+                    f"The tag unit '{tag.unit}' is not compatible with the provided unit '{condition.tag_unit}'",
+                    start=node.condition.rhs_start,
+                    end=node.condition.rhs_end + 1
                 ))
                 return
 
@@ -412,7 +467,8 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
                 "Undefined command",
                 node,
                 AnalyzerItemType.ERROR,
-                f"The command name '{name}' is not valid"
+                f"The command name '{name}' is not valid",
+                length=len(name)
             ))
             return
 
@@ -423,7 +479,9 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
                 "Invalid command arguments",
                 node,
                 AnalyzerItemType.ERROR,
-                f"The command argument '{node.args}' is not valid"
+                f"The command argument '{node.args}' is not valid",
+                start=(node.indent or 0) + len(node.instruction_name or "") + len(": "),
+                length=len(node.args)
             ))
             return
 
@@ -477,7 +535,7 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
 class SemanticCheckAnalyzer:
     """ Facade that combines the check analyzers into a single analyzer. """
 
-    def __init__(self, tags: TagCollection, commands: CommandCollection) -> None:
+    def __init__(self, tags: TagValueCollection, commands: CommandCollection) -> None:
         super().__init__()
         self.items: List[AnalyzerItem] = []
         self.analyzers = [
@@ -503,4 +561,4 @@ class SemanticCheckAnalyzer:
 
     @property
     def warnings(self) -> List[AnalyzerItem]:
-        return list([i for i in self.items if i.type == AnalyzerItemType.ERROR])
+        return list([i for i in self.items if i.type == AnalyzerItemType.WARNING])

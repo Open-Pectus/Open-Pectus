@@ -30,6 +30,7 @@ dependencies = [
     "alembic==1.14.0",
     "sentry-sdk==2.19.2",
     "PyJWT==2.10.1",
+    "python-lsp-server==1.12.0",
     "multiprocess==0.70.17",
 ]
 
@@ -94,6 +95,10 @@ exclude = [
 [project.scripts]
 pectus-aggregator = "openpectus.aggregator.main:main"
 pectus-engine = "openpectus.engine.main:main"
+
+# register our pylsp plugin so pyslp will load it
+[project.entry-points.pylsp]
+pylsp_openpectus = "openpectus.lsp.pylsp_plugin"
 
 [tool.flit.external-data]
 directory = "openpectus/aggregator/frontend-dist/"

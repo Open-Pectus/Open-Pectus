@@ -3,6 +3,7 @@ import math
 from typing import List
 
 from antlr4 import ParserRuleContext
+from antlr4.Token import CommonToken
 
 from openpectus.lang.grammar.codegen.pcodeParser import pcodeParser
 from openpectus.lang.grammar.codegen.pcodeListener import pcodeListener
@@ -199,19 +200,33 @@ class PProgramBuilder(pcodeListener):
 
     def enterCondition(self, ctx: pcodeParser.ConditionContext):
         assert isinstance(self.scope, PWatch | PAlarm)
-        self.scope.condition = PCondition(ctx.getText())
+        assert isinstance(ctx.start, CommonToken)
+        assert isinstance(ctx.stop, CommonToken)
+        self.scope.condition = PCondition(ctx.getText(), ctx.start.column, ctx.stop.column)
 
     def enterCompare_op(self, ctx: pcodeParser.Compare_opContext):
         if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
             self.scope.condition.op = ctx.getText()
+            assert isinstance(ctx.start, CommonToken)
+            assert isinstance(ctx.stop, CommonToken)
+            self.scope.condition.op_start = ctx.start.column
+            self.scope.condition.op_end = ctx.stop.column
 
     def enterCondition_lhs(self, ctx: pcodeParser.Condition_lhsContext):
         if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
             self.scope.condition.lhs = ctx.getText()
+            assert isinstance(ctx.start, CommonToken)
+            assert isinstance(ctx.stop, CommonToken)
+            self.scope.condition.lhs_start = ctx.start.column
+            self.scope.condition.lhs_end = ctx.stop.column
 
     def enterCondition_rhs(self, ctx: pcodeParser.Condition_rhsContext):
         if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
             self.scope.condition.rhs = ctx.getText()
+            assert isinstance(ctx.start, CommonToken)
+            assert isinstance(ctx.stop, CommonToken)
+            self.scope.condition.rhs_start = ctx.start.column
+            self.scope.condition.rhs_end = ctx.stop.column
 
     def enterAlarm(self, ctx: pcodeParser.AlarmContext):
         self.instruction = PAlarm(self.scope)

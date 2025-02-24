@@ -3,6 +3,7 @@ import logging
 import math
 from datetime import datetime
 from enum import StrEnum, auto
+from typing import Iterable
 
 import openpectus.protocol.models as Mdl
 from pydantic import BaseModel
@@ -28,6 +29,7 @@ ErrorLogEntry = Mdl.ErrorLogEntry
 ErrorLog = Mdl.ErrorLog
 SystemStateEnum = Mdl.SystemStateEnum
 TagDirection = Mdl.TagDirection
+UodDefinition = Mdl.UodDefinition
 
 
 class AggregatedErrorLogEntry(BaseModel):
@@ -129,6 +131,8 @@ class TagsInfo(BaseModel):
         max_tick_time = max(t.tick_time for t in self.map.values())
         return datetime.fromtimestamp(max_tick_time)
 
+    def values(self) -> Iterable[TagValue]:
+        return self.map.values()
 
 class RunData(BaseModel):
     """ Represents data that strictly belongs in a specific run. """
@@ -174,6 +178,7 @@ class EngineData:
         """ Contains the uod commands that are not related to a process value. """
         self.tags_info: TagsInfo = TagsInfo(map={})
         """ Contains the most current tag values. """
+        self.uod_definition: Mdl.UodDefinition | None = None
         self.control_state: ControlState = ControlState(is_running=False, is_holding=False, is_paused=False)
         self.method: Method = Method.empty()
         self._run_data: RunData | None = None

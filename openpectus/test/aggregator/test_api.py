@@ -25,7 +25,7 @@ class AggregatorOpenAPIApiTest(unittest.TestCase):
     def test_write_openapi_spec_to_file_and_compare_with_existing(self):
         response = client.get("/openapi.json")
         self.assertEqual(200, response.status_code)
-        openapi_file = os.path.join(project_path, "frontend", "openapi.json")
+        openapi_file = os.path.join(project_path, "..", "frontend", "openapi.json")
         current_md5, updated_md5 = "", ""
         with open(openapi_file, "rb") as f:
             current_md5 = hashlib.md5(f.read()).hexdigest()

@@ -22,14 +22,16 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
       @if (!collapsed) {
         <app-monaco-editor class="block rounded-sm h-full" [editorSizeChange]="editorSizeChange"
                            content (keydown.control.s)="onCtrlS($event)"
+                           [unitId]="unitId()"
                            [readOnlyEditor]="recentRunId() !== undefined"></app-monaco-editor>
-      } @if (!collapsed && (methodEditorIsDirty | ngrxPush)) {
-      <button (click)="onSaveButtonClicked()" content
-              class="bg-green-300 flex items-center text-black px-3 py-1.5 rounded-md absolute right-9 bottom-6 z-10">
-        <span class="codicon codicon-save !text-lg"></span>
-        <span class="ml-2">Save method</span>
-      </button>
-    }
+      }
+      @if (!collapsed && (methodEditorIsDirty | ngrxPush)) {
+        <button (click)="onSaveButtonClicked()" content
+                class="bg-green-300 flex items-center text-black px-3 py-1.5 rounded-md absolute right-9 bottom-6 z-10">
+          <span class="codicon codicon-save !text-lg"></span>
+          <span class="ml-2">Save method</span>
+        </button>
+      }
     </app-collapsible-element>
   `,
 })
