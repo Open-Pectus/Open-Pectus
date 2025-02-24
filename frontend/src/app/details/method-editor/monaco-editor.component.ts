@@ -90,9 +90,9 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
             'editor.minimap': {
               enabled: UtilMethods.isDesktop,
             },
-            'editor.autoIndent': 'none',
             'editor.lightbulb.enabled': 'off',
             'editor.experimental.asyncTokenization': true,
+            'editor.foldingStrategy': 'indentation',
           }),
         },
       },
@@ -109,10 +109,26 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
               aliases: ['PCODE', 'pcode'],
               extensions: ['.pcode'],
               mimetypes: ['application/pcode'],
-              // configuration: './language-configuration.json', // can be used to configure things like indentation and autoclosing brackets, see file in @codingame/monaco-vscode-json-default-extension
+              configuration: './language-configuration.json',
             }],
           },
         },
+        filesOrContents: new Map([
+          ['./language-configuration.json', JSON.stringify({ // adapted from language-configuration.json in @codingame/monaco-vscode-json-default-extension
+              comments: {lineComment: '#'},
+              onEnterRules: [{
+                beforeText: {pattern: '^\\s*(Alarm|Block|Watch|Macro).*$'},
+                action: {indent: 'indent'},
+              }, {
+                beforeText: {pattern: '^\\s*End block$'},
+                action: {indent: 'outdent'},
+              }, {
+                beforeText: {pattern: '^\\s*End blocks$'},
+                action: {indent: 'none', removeText: Number.MAX_VALUE},
+              }],
+            },
+          )],
+        ]),
       }],
       editorAppConfig: {
         codeResources: {
