@@ -5,14 +5,12 @@ import { UtilMethods } from '../../../shared/util-methods';
 import { MethodEditorActions } from './method-editor.actions';
 
 export interface MethodEditorState {
-  monacoServicesInitialized: boolean;
   isDirty: boolean;
   method: Method;
   methodState: MethodState;
 }
 
 const initialState: MethodEditorState = {
-  monacoServicesInitialized: false,
   isDirty: false,
   method: {lines: []},
   methodState: {
@@ -23,8 +21,8 @@ const initialState: MethodEditorState = {
 };
 
 const reducer = createReducer(initialState,
-  on(MethodEditorActions.methodEditorComponentDestroyed, (state) => {
-    return {...initialState, monacoServicesInitialized: state.monacoServicesInitialized};
+  on(MethodEditorActions.methodEditorComponentDestroyed, () => {
+    return {...initialState};
   }),
   on(MethodEditorActions.methodFetchedInitially, (state, {methodAndState}) => produce(state, draft => {
     draft.isDirty = false;
@@ -57,9 +55,6 @@ const reducer = createReducer(initialState,
         oldLine.content = newLine.content;
       }
     });
-  })),
-  on(MethodEditorActions.monacoEditorComponentInitialized, state => produce(state, draft => {
-    draft.monacoServicesInitialized = true;
   })),
   on(MethodEditorActions.modelSaved, state => produce(state, draft => {
     draft.isDirty = false;
