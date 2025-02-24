@@ -4,6 +4,11 @@
     "ws": true,
     "secure": false
   },
+  "/lsp": {
+    "target": "ws://127.0.0.1:9800",
+    "ws": true,
+    "secure": false
+  },
   "/api/": {
     "target": "http://127.0.0.1:9800",
     "secure": false
