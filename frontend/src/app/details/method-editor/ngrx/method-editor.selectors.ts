@@ -3,7 +3,6 @@ import { methodEditorSlice, MethodEditorState } from './method-editor.reducer';
 
 export class MethodEditorSelectors {
   static selectFeature = createFeatureSelector<MethodEditorState>(methodEditorSlice.name);
-  static monacoServicesInitialized = createSelector(this.selectFeature, state => state.monacoServicesInitialized);
   static isDirty = createSelector(this.selectFeature, state => state.isDirty);
   static method = createSelector(this.selectFeature, state => state.method);
   static methodState = createSelector(this.selectFeature, state => state.methodState);
