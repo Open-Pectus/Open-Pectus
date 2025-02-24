@@ -4,6 +4,7 @@ from typing import TypedDict
 from pylsp.lsp import DiagnosticSeverity, SymbolKind
 
 from openpectus.lang.exec.analyzer import AnalyzerItem, AnalyzerItemType
+from openpectus.lang.model.pprogram import PNode
 
 
 class Position(TypedDict):
@@ -41,14 +42,14 @@ class Diagnostics(TypedDict):
 class DocumentSymbol(TypedDict):
     """ Representation of https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#documentSymbol """
     name: str
-    detail: str | None
+    #detail: str | None
     kind: int
     """ One of SymbolKind """
     # tags: list[object] | None
     # deprecated: bool | None
     range: Range
     selectionRange: Range
-    children: list[DocumentSymbol] | None
+    children: list[DocumentSymbol]  # the spec defines this as optional but the client errors out if set to None
 
 
 class Location(TypedDict):
@@ -132,5 +133,21 @@ def get_item_range(item: AnalyzerItem) -> Range:
         end=Position(
             line=item.range_end.line - 1,
             character=item.range_end.character
+        ),
+    )
+
+def get_node_range(node: PNode) -> Range | None:
+    """ Represent item position range as lsp RangeItem """
+    if node.line is None or node.indent is None:
+        return None
+
+    return Range(
+        start=Position(
+            line=node.line - 1,
+            character=node.indent
+        ),
+        end=Position( # for now we just pick the rest of the line
+            line=node.line,
+            character=0
         ),
     )

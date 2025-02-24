@@ -21,9 +21,42 @@
 [] Support closing document and releasing uod
 [x] Make lsp server start and stop with aggregator
 [x] logging does not work. logs in console but should log to file
-[] Add more source location fields during PProgram build to enable precise condition source locations
+[x] Add more source location fields during PProgram build to enable precise condition source locations
    in diagnostics
 [] Improve lsp url: http://localhost:9800/uod/MIAWLT-1645-MPO_DemoUod
+[] Add completion support for command thresholds 
+[] Settings/configuration in file
+  - hopefylly disable stuff without code
+[x] Implement simple symbols
+[] Implement advanced symbols
+  - Watch and Alarm should have a condition child symbol
+  - A condition symbol should have its 3/4 parts as child symbols: tag, operator, value, [unit]
+[] Autocomplete on Info, Warning and Error should only be enabled for the command, not for any arguments since that is the user message
+[] Performance tactics
+  - Improve parse performance
+    - Split document into multiple regions and parse each region independtly
+      - lint improvements - only a changed region must be re-parsed and linted
+        - requires handling regions
+        - requires joining lint results from regions
+      - symbol improvements - only a changed region must be re-parsed and have symbols extracted
+        - requires handling regions
+        - requires joining symbols results from regions
+      - handling regions
+        - must split at program level for regions to be independant
+    - Hand roll a simple custom parser for completions
+        - Must handle all cases we support
+          - threshold
+          - commands with conditions
+            - handle many steps of
+[] Hook into document updates
+  - Need to avoid re-parse on every keystroke and this may be the only way
+  - in order to do a full re-parse every once and a while and not parse (lint, symbols) on all changes
+  - it seems there is no direct hook for document changes which is probably because document changes are handled
+    internally in lsp server. But we might add a hook, by interception workspace.update_document/workspace.apply_edit.
+
+[] Update method on running interpretation
+  The above performance discussion should also consider udpating a running method. This is 
+  because that too involves a segment (partial) parse. This may even result in out-of-segment updates (macro) (?)
 
 An error causing the plugin to not load has been seen. The current theory is that there was an error in the conda/python environment.
 Using python 3.12 in a named (not prefixed) environment does work.
@@ -74,18 +107,7 @@ Client configuration is performed in this file:
 ```
 frontend/src/app/details/method-editor/monaco-editor.component.ts
 ```
-
 languageId = 'pcode'
-
-## TODO tasks
-- Define feature flag for frontend - do we have something already?
-  - involve jan
-  - it is really a kind of LspSettings{ enabled, uri(include port)}
-- Settings/configuration in file
-  - hopefylly disable stuff without code
-- Define some logging configurations
-  - A debug config that logs heavily. This includes stuff we probably don't need
-  - A customized log tailored ot only include our plugin
   
 ## Server lifetime
 These are the call hooks important for an lsp session.
