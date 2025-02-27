@@ -55,7 +55,7 @@ def pylsp_settings(config: Config) -> dict[str, dict[str, dict[str, Any]]]:
     }
 
 # @hookimpl
-# async def pylsp_initialize(config: Config, workspace: Workspace):
+# def pylsp_initialize(config: Config, workspace: Workspace):
 #     logger.info("pylsp_initialize")
 #     logger.debug("config: " + as_json(config))
 #     logger.debug("workspace:" + as_json(workspace))
@@ -91,34 +91,34 @@ def get_engine_id(config: Config):
         engine_id = "MIAWLT-1645-MPO_DemoUod"
     return engine_id
 
-@hookimpl
-def pylsp_lint(config: Config, workspace: Workspace, document: Document, is_saved: bool):
-    logger.debug("pylsp_lint")
-    t1 = time.perf_counter()
-    engine_id = get_engine_id(config)
-    try:
-        diagnostics = lsp_analysis.lint(document, engine_id)
-        dt = time.perf_counter() - t1
-        logger.debug(f"Lint ok, items: {len(diagnostics)}, duration: {dt:0.2f}s")
-        return diagnostics
-    except Exception:
-        logger.error("Lint error", exc_info=True)
-        return []
+# @hookimpl
+# def pylsp_lint(config: Config, workspace: Workspace, document: Document, is_saved: bool):
+#     logger.debug("pylsp_lint")
+#     t1 = time.perf_counter()
+#     engine_id = get_engine_id(config)
+#     try:
+#         diagnostics = lsp_analysis.lint(document, engine_id)
+#         dt = time.perf_counter() - t1
+#         logger.debug(f"Lint ok, items: {len(diagnostics)}, duration: {dt:0.2f}s")
+#         return diagnostics
+#     except Exception:
+#         logger.error("Lint error", exc_info=True)
+#         return []
 
 
-@hookimpl
-def pylsp_document_symbols(config: Config, workspace: Workspace, document: Document):
-    logger.debug("pylsp_document_symbols")
-    t1 = time.perf_counter()
-    engine_id = get_engine_id(config)
-    try:
-        symbols = lsp_analysis.symbols(document, engine_id)
-        dt = time.perf_counter() - t1
-        logger.debug(f"Symbols ok, items: {len(symbols)}, duration: {dt:0.2f}s")
-        return symbols
-    except Exception:
-        logger.error("Symbols error", exc_info=True)
-        return []
+# @hookimpl
+# def pylsp_document_symbols(config: Config, workspace: Workspace, document: Document):
+#     logger.debug("pylsp_document_symbols")
+#     t1 = time.perf_counter()
+#     engine_id = get_engine_id(config)
+#     try:
+#         symbols = lsp_analysis.symbols(document, engine_id)
+#         dt = time.perf_counter() - t1
+#         logger.debug(f"Symbols ok, items: {len(symbols)}, duration: {dt:0.2f}s")
+#         return symbols
+#     except Exception:
+#         logger.error("Symbols error", exc_info=True)
+#         return []
 
 
 @hookimpl

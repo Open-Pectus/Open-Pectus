@@ -485,6 +485,44 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
             ))
             return
 
+    def visit_PCommandWithDuration(self, node: PCommandWithDuration):
+        assert node.name is not None
+        name = node.name
+
+        if not self.commands.has(name):
+            self.add_item(AnalyzerItem(
+                "UndefinedCommand",
+                "Undefined command",
+                node,
+                AnalyzerItemType.ERROR,
+                f"The command name '{name}' is not valid",
+                length=len(name)
+            ))
+            return
+
+        # command = self.commands.get(name)
+        # interesting case here - who should validate the args?
+        # the command def or the node? The command def must be able to do it
+        # because it needs to in lsp
+        # if we decide to parse in full depth we will have a result
+        # but what about an error message
+        # if not command.validate_args(node.args):
+        
+        # seems it was already run? probably by an enhance analyzer
+        # node.collect_errors()
+        if node.errors is not None:
+            for err in node.errors:
+                self.add_item(AnalyzerItem(
+                    "CommandArgsInvalid",
+                    "Invalid command arguments",
+                    node,
+                    AnalyzerItemType.ERROR,
+                    err.message or "",
+                    start=(node.indent or 0) + len(node.instruction_name or "") + len(": "),
+                    length=100  # TODO we should make the node length available 
+                ))
+            return
+
 
 class MacroCheckAnalyzer(AnalyzerVisitorBase):
     def __init__(self) -> None:

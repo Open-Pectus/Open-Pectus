@@ -3,21 +3,20 @@ import logging
 import time
 from typing import Any
 
-from openpectus.engine.internal_commands import InternalCommandsRegistry, InternalEngineCommand
+from openpectus.engine.internal_commands import (
+    REGEX_DURATION, REGEX_DURATION_OPTIONAL,
+    InternalCommandsRegistry, InternalEngineCommand
+)
 from openpectus.engine.models import EngineCommandEnum, MethodStatusEnum, SystemStateEnum
 from openpectus.lang.exec.argument_specification import command_argument_none, command_argument_regex
 from openpectus.lang.exec.tags import SystemTagName
 from openpectus.engine.engine import Engine
-from openpectus.lang.exec.uod import RegexNumber, RegexNumberOptional
-
 
 
 logger = logging.getLogger(__name__)
 
 
 CANCEL_TIMEOUT_TICKS = 10
-REGEX_DURATION = RegexNumber(units=['s', 'min', 'h'], non_negative=True)
-REGEX_DURATION_OPTIONAL = RegexNumberOptional(units=['s', 'min', 'h'], non_negative=True)
 
 # Note: Classes in this module are auto-registered as internal engine commands by
 # InternalCommandsRegistry during engine initialization.
