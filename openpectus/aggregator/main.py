@@ -60,9 +60,14 @@ def main():
 
     server = AggregatorServer(title, args.host, args.port, args.frontend_dist_dir, args.database, args.secret)
 
-    # start lsp server in seperate process
+    # Start lsp server in seperate process
+    # Note: only in dev - in test and prod, lsp server is started seperately
     if args.lsp:
-        lsp_mainpy_path = os.path.join(os.path.dirname(__file__), "..", "lsp", "main.py")
+        aggregator_url = f"http://{args.host}:{args.port}"
+        lsp_mainpy_path = os.path.join(
+            os.path.dirname(__file__), "..", "lsp", "main.py",
+            "aggregator_url", aggregator_url
+        )
         process = subprocess.Popen(["python", lsp_mainpy_path])  # --watch_parent"])
         server.shutdown_callback = lambda: process.kill()
 

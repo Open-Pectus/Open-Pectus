@@ -19,7 +19,7 @@ def get_registered_engine_data_or_fail(engine_id: str, agg: Aggregator) -> Mdl.E
     return engine_data
 
 
-@router.get('/uod/{engine_id}', response_model_exclude_none=True)
+@router.get('/lsp/uod/{engine_id}', response_model_exclude_none=True)
 def get_uod_info(
         engine_id: str,
         response: Response,

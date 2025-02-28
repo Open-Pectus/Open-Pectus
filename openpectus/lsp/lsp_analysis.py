@@ -6,6 +6,7 @@ import httpx
 
 from pylsp.workspace import Document
 from pylsp.lsp import DiagnosticSeverity, SymbolKind
+from pylsp._utils import throttle, debounce
 
 from openpectus.lang.exec.uod import RegexNamedArgumentParser
 from openpectus.lang.exec.analyzer import AnalyzerItem, SemanticCheckAnalyzer
@@ -25,14 +26,20 @@ logger = logging.getLogger(__name__)
 
 @functools.cache
 def fetch_uod_info(engine_id: str) -> Dto.UodDefinition | None:
+    from openpectus.lsp.config import aggregator_url
+    aggregator_endpoint_url = f"{aggregator_url}/lsp/uod/{engine_id}"
+    logger.info(f"Fetching uod definition, {aggregator_endpoint_url=}")
     t1 = time.perf_counter()
     try:
-        response = httpx.get(f"http://localhost:9800/uod/{engine_id}")
+        response = httpx.get(aggregator_endpoint_url)
         if response.status_code == 200:
             result = response.json()
             uod_def = Dto.UodDefinition(**result)
             dt = time.perf_counter() - t1
-            logger.debug(f"Fetched uod_info, duration: {dt:0.2f}s")
+            logger.info(f"Fetched uod_info, {engine_id=}, duration: {dt:0.2f}s")
+            logger.info(f"{uod_def.tags=}")
+            logger.info(f"{uod_def.system_commands=}")
+            logger.info(f"{uod_def.commands=}")
             return uod_def
     except Exception:
         logger.error("Exception fetching UodDefinition", exc_info=True)
@@ -83,6 +90,7 @@ class AnalysisInput:
         self.tags: TagValueCollection = tags
         self.engine_id: str = engine_id
 
+        # TODO describe which commands are included here
         self.command_completions = [c.name for c in self.commands.to_list()] + \
             ["Watch", "Alarm",
              "Block", "End block", "End blocks",
