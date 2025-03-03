@@ -52,7 +52,7 @@ export class MonacoWrapperConfig {
             }],
           },
         },
-        filesOrContents: new Map([
+        filesOrContents: new Map<string, string | URL>([
           ['./language-configuration.json', JSON.stringify({ // adapted from language-configuration.json in @codingame/monaco-vscode-json-default-extension
               comments: {lineComment: '#'},
               onEnterRules: [{
@@ -67,21 +67,7 @@ export class MonacoWrapperConfig {
               }],
             },
           )],
-          ['./pcode.tmLanguage.json', JSON.stringify({
-            name: 'PCode',
-            scopeName: 'source.pcode',
-            fileTypes: 'pcode',
-            patterns: [
-              {
-                name: 'keyword.control.pcode',
-                match: '\\b(Watch|Alarm|Block|Macro|End block|End blocks|Stop|Restart)\\b',
-              },
-              {
-                name: 'constant.language.pcode',
-                match: '\\b(?i:true|false)\\b',
-              },
-            ],
-          })],
+          ['./pcode.tmLanguage.json', new URL('/assets/syntaxes/pcode.tmLanguage.json', window.location.origin)],
         ]),
       }],
       editorAppConfig: {

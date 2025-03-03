@@ -1,0 +1,15 @@
+{
+  "name": "PCode",
+  "scopeName": "source.pcode",
+  "fileTypes": "pcode",
+  "patterns": [
+    {
+      "name": "keyword.control.pcode",
+      "match": "\\b(Watch|Alarm|Block|Macro|End block|End blocks|Stop|Restart)\\b"
+    },
+    {
+      "name": "constant.language.pcode",
+      "match": "\\b(?i:true|false)\\b"
+    }
+  ]
+}
