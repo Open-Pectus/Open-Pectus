@@ -67,7 +67,7 @@ export class MonacoWrapperConfig {
               }],
             },
           )],
-          ['./pcode.tmLanguage.json', new URL('/assets/syntaxes/pcode.tmLanguage.json', window.location.origin)],
+          ['./pcode.tmLanguage.json', new URL(`/uod/${unitId}/pcode.tmLanguage.json`, window.location.origin)],
         ]),
       }],
       editorAppConfig: {
