@@ -38,6 +38,11 @@ export class MonacoWrapperConfig {
           engines: {vscode: '0.10.x'},
           categories: ['Programming Languages'],
           contributes: {
+            grammars: [{
+              language: 'pcode',
+              scopeName: 'source.pcode',
+              path: './pcode.tmLanguage.json',
+            }],
             languages: [{
               id: 'pcode',
               aliases: ['PCODE', 'pcode'],
@@ -47,7 +52,7 @@ export class MonacoWrapperConfig {
             }],
           },
         },
-        filesOrContents: new Map([
+        filesOrContents: new Map<string, string | URL>([
           ['./language-configuration.json', JSON.stringify({ // adapted from language-configuration.json in @codingame/monaco-vscode-json-default-extension
               comments: {lineComment: '#'},
               onEnterRules: [{
@@ -62,6 +67,7 @@ export class MonacoWrapperConfig {
               }],
             },
           )],
+          ['./pcode.tmLanguage.json', new URL(`/uod/${unitId}/pcode.tmLanguage.json`, window.location.origin)],
         ]),
       }],
       editorAppConfig: {

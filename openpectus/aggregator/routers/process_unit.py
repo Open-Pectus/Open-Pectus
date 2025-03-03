@@ -34,7 +34,7 @@ def map_pu(engine_data: Mdl.EngineData) -> Dto.ProcessUnit:
         state=state,
         location=engine_data.location,
         runtime_msec=engine_data.runtime.value if (
-            engine_data.runtime is not None and isinstance(engine_data.runtime.value, int)
+                engine_data.runtime is not None and isinstance(engine_data.runtime.value, int)
         ) else 0,
         current_user_role=Dto.UserRole.ADMIN,
         uod_author_name=engine_data.uod_author_name,
@@ -90,6 +90,7 @@ def get_units(user_roles: UserRolesValue, agg: Aggregator = Depends(agg_deps.get
 
     return units
 
+
 @router.get("/process_unit/{engine_id}/process_values", response_model_exclude_none=True)
 def get_process_values(
         user_roles: UserRolesValue,
@@ -118,7 +119,7 @@ def get_all_process_values(
         engine_id: str,
         response: Response,
         agg: Aggregator = Depends(agg_deps.get_aggregator)
-        ) -> list[Dto.ProcessValue]:
+) -> list[Dto.ProcessValue]:
     response.headers["Cache-Control"] = "no-store"
     engine_data = get_registered_engine_data_or_fail(engine_id, user_roles, agg)
     tags_info = engine_data.tags_info.map
