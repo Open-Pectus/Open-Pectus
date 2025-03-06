@@ -31,3 +31,22 @@ def get_uod_info(
     if uod_definition is None:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND)
     return Dto.UodDefinition.from_model(uod_definition)
+
+
+@router.get('/uod/{engine_id}/pcode.tmLanguage.json', response_model_exclude_none=True)
+def get_pcode_tm_grammar(engine_id: str):
+    return {
+        "name": "PCode",
+        "scopeName": "source.pcode",
+        "fileTypes": "pcode",
+        "patterns": [
+            {
+                "name": "keyword.control.pcode",
+                "match": "\\b(Watch|Alarm|Block|Macro|End block|End blocks|Stop|Restart)\\b"
+            },
+            {
+                "name": "constant.language.pcode",
+                "match": "\\b(?i:true|false)\\b"
+            }
+        ]
+    }
