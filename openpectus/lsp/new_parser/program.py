@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Sequence, Type
+from typing import Sequence, Type, TypeVar
 
 from openpectus.lang.exec.argument_specification import ArgSpec
 
@@ -93,6 +93,9 @@ class Node:
         return self.__str__()
 
 
+TNode = TypeVar("TNode", bound=Node)
+
+
 class NodeWithChildren(Node):
     def __init__(self, position=Position.empty):
         super().__init__(position)
@@ -117,7 +120,9 @@ class NodeWithChildren(Node):
                 children.extend(child.get_child_nodes(recursive))
         return children
 
-    def get_first_child[T: Node](self, node_type: Type[T]) -> T | None:
+    # backport for python 3.11
+    def get_first_child(self, node_type: Type[TNode]) -> TNode | None:
+#    def get_first_child[T: Node](self, node_type: Type[T]) -> T | None:
         """ Return the first child node of the specified type, recursively, depth first"""
         for child in self._children:
             if isinstance(child, node_type):
