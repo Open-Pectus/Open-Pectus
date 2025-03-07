@@ -945,8 +945,9 @@ def unescape(re_escaped_string: str) -> str:
 
 
 class RegexNamedArgumentParser:
-    def __init__(self, regex: str) -> None:
+    def __init__(self, regex: str, name: str | None = None) -> None:
         self.regex = regex
+        self.name = name
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(named_groups={self.get_named_groups()})'
@@ -1011,16 +1012,16 @@ class RegexNamedArgumentParser:
         return f"RNAP-v1-{self.regex}"
 
     @staticmethod
-    def deserialize(serialized: str) -> RegexNamedArgumentParser | None:
+    def deserialize(serialized: str, name: str | None = None) -> RegexNamedArgumentParser | None:
         if serialized.startswith("RNAP-v1-"):
-            return RegexNamedArgumentParser(serialized[-8])
+            return RegexNamedArgumentParser(serialized[8:], name)
         return None
 
 
 
 # Common regular expressions for use with RegexNamedArgumentParser
 
-def RegexNumber(units: list[str] | None, non_negative: bool = False) -> str:
+def RegexNumber(units: list[str] | None, non_negative: bool = False, int_only: bool = False) -> str:
     """ Create a regex that parses a number with optional unit to arguments `number` and optionally `number_unit`.
 
     `number_unit` is only matched if one or more units are given.
@@ -1028,15 +1029,18 @@ def RegexNumber(units: list[str] | None, non_negative: bool = False) -> str:
     sign_part = "" if non_negative else "-?"
     unit_part = " ?(?P<number_unit>" + "|".join(re.escape(unit).replace(r"/", r"\/") for unit in units) + ")" \
         if units else ""
-    return rf"^\s*(?P<number>{sign_part}[0-9]+[.][0-9]*?|{sign_part}[.][0-9]+|{sign_part}[0-9]+)\s*{unit_part}\s*$"
+    if int_only:
+        return rf"^\s*(?P<number>{sign_part}[0-9]+?|{sign_part}[0-9]+)\s*{unit_part}\s*$"
+    else:
+        return rf"^\s*(?P<number>{sign_part}[0-9]+[.][0-9]*?|{sign_part}[.][0-9]+|{sign_part}[0-9]+)\s*{unit_part}\s*$"
 
 
-def RegexNumberOptional(units: list[str] | None, non_negative: bool = False) -> str:
+def RegexNumberOptional(units: list[str] | None, non_negative: bool = False, int_only: bool = False) -> str:
     """ Create a regex that parses an optional number with optional unit to arguments `number` and optionally `number_unit`.
 
     `number_unit` is only matched if one or more units are given.
     """
-    rn = RegexNumber(units=units, non_negative=non_negative)
+    rn = RegexNumber(units=units, non_negative=non_negative, int_only=int_only)
     return rf"({rn})|^\s*$"
 
 
@@ -1077,7 +1081,7 @@ def RegexCategorical(exclusive_options: list[str] | None = None, additive_option
     return rf"^(?P<option>({exclusive_option_part}|({additive_option_part}|\+)+))\s*$"
 
 
-def RegexText(allow_empty: bool = False):
+def RegexText(allow_empty: bool = False) -> str:
     """ Parses text into an argument named `text`."""
     allow_empty_part = "*" if allow_empty else "+"
     return rf"^(?P<text>.{allow_empty_part})$"

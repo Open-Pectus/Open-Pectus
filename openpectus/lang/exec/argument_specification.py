@@ -16,7 +16,7 @@ class ArgSpec():
 
     @staticmethod
     def NoArgs() -> ArgSpec:
-        """ Specify that no argument must be present """
+        """ Specify that no argument must be present, not even whitespace """
         return ArgSpec.NoArgsInstance
 
     @staticmethod

@@ -30,6 +30,7 @@ def create_position(pcode: str) -> Position:
 class TestLspAnalysis(unittest.TestCase):
 
     def get_completions(self, pcode: str, uod_info: UodDefinition | None = None) -> list[CompletionItem]:
+        lsp_analysis.create_analysis_input.cache_clear()
         position = create_position(pcode)
         document = create_document(pcode)
 
@@ -48,10 +49,10 @@ class TestLspAnalysis(unittest.TestCase):
         return [r["label"] for r in result]
 
     def test_completions_commands(self):
-        pcode = "in"  # typing 'Increment run counter'
+        pcode = "en"  # typing 'End block' or 'End blocks'
         result = self.get_completion_labels(pcode)
-        self.assertEqual(1, len(result))
-        self.assertEqual("Increment run counter", result[0])
+        self.assertEqual(2, len(result))
+        self.assertTrue(result[0].startswith("End blo"))
 
     def test_completions_tags(self):
         pcode = "Watch: "  # typing 'Watch: Foo' or 'Watch: bar'
@@ -89,3 +90,43 @@ Watch: Run Time > 5s
         result = self.get_completion_labels(pcode)
         self.assertEqual(1, len(result))
         self.assertEqual("Mark", result[0])
+
+    def test_build_commands(self):
+        # test that the command validators are built using the correct closure
+        # so that they in fact work
+
+        # Note: hardcoding the serialized values is not great but the commands have different sources
+        # and are serialized in different places os its hard to avoid.
+        system_commands = [
+            CommandDefinition(name='Base', validator='RNAP-v1-^\\s*(L|h|min|s|mL|CV|DV|g|kg)\\s*$'),
+            CommandDefinition(
+                name='Wait',
+                validator='RNAP-v1-^\\s*(?P<number>[0-9]+[.][0-9]*?|[.][0-9]+|[0-9]+)\\s* ?(?P<number_unit>s|min|h)\\s*$'),
+            CommandDefinition(name='Warning', validator='RNAP-v1-')
+        ]
+
+        uod_info = UodDefinition(
+            commands=[],
+            system_commands=system_commands,
+            tags=[])
+
+        cmds = lsp_analysis.build_commands(uod_info).to_list()
+
+        cmd = next((c for c in cmds if c.name == "Wait"))  # number w unit
+        assert cmd is not None
+
+        self.assertEqual(True, cmd.validate_args("5s"))
+        self.assertEqual(False, cmd.validate_args(""))
+
+        cmd = next((c for c in cmds if c.name == "Warning"))  # no-check
+        assert cmd is not None
+
+        self.assertEqual(True, cmd.validate_args("5s"))
+        self.assertEqual(True, cmd.validate_args(""))
+        self.assertEqual(True, cmd.validate_args(" "))
+
+        cmd = next((c for c in cmds if c.name == "Base"))  # one of the base unit values
+        assert cmd is not None
+
+        self.assertEqual(True, cmd.validate_args("s"))
+        self.assertEqual(False, cmd.validate_args("foo"))

@@ -5,9 +5,17 @@ from typing import Any, Callable, Generator
 from openpectus.engine.commands import EngineCommand
 from openpectus.engine.models import EngineCommandEnum
 from openpectus.lang.exec.argument_specification import ArgSpec
-from openpectus.lang.exec.uod import RegexNamedArgumentParser
+from openpectus.lang.exec.commands import InterpreterCommandEnum
+from openpectus.lang.exec.uod import (
+    RegexNamedArgumentParser, RegexNumber, RegexNumberOptional
+)
+from openpectus.lang.exec.units import BASE_VALID_UNITS
 from openpectus.protocol.models import CommandDefinition
 
+REGEX_DURATION = RegexNumber(units=['s', 'min', 'h'], non_negative=True)
+REGEX_DURATION_OPTIONAL = RegexNumberOptional(units=['s', 'min', 'h'], non_negative=True)
+REGEX_INT = RegexNumber(units=None, non_negative=True, int_only=True)
+REGEX_BASE_ARG = rf"^\s*({'|'.join(BASE_VALID_UNITS)})\s*$"
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +23,11 @@ class InternalCommandsRegistry:
     def __init__(self, engine):
         self.engine = engine
         self._command_map: dict[str, Callable[[], InternalEngineCommand]] = {}
-        self._command_spec: dict[str, ArgSpec] = {}
+        self._command_spec: dict[str, ArgSpec] = {
+            InterpreterCommandEnum.BASE: ArgSpec.Regex(REGEX_BASE_ARG),
+            InterpreterCommandEnum.INCREMENT_RUN_COUNTER: ArgSpec.NoArgs(),
+            InterpreterCommandEnum.RUN_COUNTER: ArgSpec.Regex(REGEX_INT)
+        }
         self._command_instances: dict[str, InternalEngineCommand] = {}
 
     def __str__(self) -> str:

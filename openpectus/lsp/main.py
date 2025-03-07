@@ -22,8 +22,10 @@ logging.getLogger("pylsp").setLevel(logging.WARNING)
 
 
 def get_args():
-    parser = ArgumentParser("Start standalone Open Pevtus LSP server")
+    parser = ArgumentParser("Start standalone Open Pectus LSP server")
     parser.add_argument("--port", type=int, default=2087, help="Bind to this port")
+    parser.add_argument("--aggregator_url", type=str, default="http://localhost:9800",
+                        help="Url to Aggregator service, e.g. 'https://openpectus.org:9800'")
     parser.add_argument("--console_log", action=BooleanOptionalAction, default=False, help="Log to console as well as file")
     parser.add_argument("--watch_parent", action=BooleanOptionalAction, default=False,
                         help="Watch parent process and terminate with it")
@@ -31,9 +33,12 @@ def get_args():
 
 
 if __name__ == "__main__":
+    #global aggregator_url
     print("Starting LSP server")
     # start lsp server process such that plugins can be debugged
     args = get_args()
+    import openpectus.lsp.config as config
+    config.aggregator_url = args.aggregator_url
     if args.console_log:
         logging.root.addHandler(logging.StreamHandler())
 

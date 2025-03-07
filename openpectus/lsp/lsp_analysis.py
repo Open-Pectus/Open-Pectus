@@ -6,6 +6,7 @@ import httpx
 
 from pylsp.workspace import Document
 from pylsp.lsp import DiagnosticSeverity, SymbolKind
+from pylsp._utils import throttle, debounce
 
 from openpectus.lang.exec.uod import RegexNamedArgumentParser
 from openpectus.lang.exec.analyzer import AnalyzerItem, SemanticCheckAnalyzer
@@ -13,7 +14,8 @@ from openpectus.lang.exec.commands import Command, CommandCollection
 from openpectus.lang.exec.tags import TagValue, TagValueCollection
 from openpectus.lang.model.pprogram import PBlank, PComment, PNode, PProgram
 from openpectus.lsp.model import (
-    CompletionItem, CompletionItemKind, Diagnostics, DocumentSymbol, Location, Position, Range, SymbolInformation,
+    CompletionItem, CompletionItemKind, Diagnostics,
+    DocumentSymbol, Position, Range,
     get_item_range, get_item_severity, get_node_range
 )
 from openpectus.test.engine.utility_methods import build_program
@@ -24,14 +26,20 @@ logger = logging.getLogger(__name__)
 
 @functools.cache
 def fetch_uod_info(engine_id: str) -> Dto.UodDefinition | None:
+    from openpectus.lsp.config import aggregator_url
+    aggregator_endpoint_url = f"{aggregator_url}/lsp/uod/{engine_id}"
+    logger.info(f"Fetching uod definition, {aggregator_endpoint_url=}")
     t1 = time.perf_counter()
     try:
-        response = httpx.get(f"http://localhost:9800/uod/{engine_id}")
+        response = httpx.get(aggregator_endpoint_url)
         if response.status_code == 200:
             result = response.json()
             uod_def = Dto.UodDefinition(**result)
             dt = time.perf_counter() - t1
-            logger.debug(f"Fetched uod_info, duration: {dt:0.2f}s")
+            logger.info(f"Fetched uod_info, {engine_id=}, duration: {dt:0.2f}s")
+            logger.info(f"{uod_def.tags=}")
+            logger.info(f"{uod_def.system_commands=}")
+            logger.info(f"{uod_def.commands=}")
             return uod_def
     except Exception:
         logger.error("Exception fetching UodDefinition", exc_info=True)
@@ -52,12 +60,16 @@ def build_commands(uod_def: Dto.UodDefinition) -> CommandCollection:
     cmds = []
     for c_def in uod_def.commands + uod_def.system_commands:
         try:
-            parser = RegexNamedArgumentParser.deserialize(c_def.validator) if c_def.validator is not None else None
+            parser = RegexNamedArgumentParser.deserialize(c_def.validator, c_def.name) \
+                if c_def.validator is not None else None
 
             # build a validate function using the command's own validate function
             def outer(key: str, parser: RegexNamedArgumentParser | None):
+                logger.debug(f"Building validator for '{key}': {parser.regex if parser else '(no parser)'}")
+
                 def validate(args: str) -> bool:
-                    #logger.debug(f"Validating args '{args}' for command key '{key}' and builder name {c_def.name}")
+                    # parser_name = parser.name if parser is not None else "(parser none)"
+                    # logger.debug(f"Validating args '{args}' for command key '{key}' and parser name {parser_name}")
                     if parser is None:
                         return True
                     else:
@@ -73,16 +85,15 @@ def build_commands(uod_def: Dto.UodDefinition) -> CommandCollection:
 
 
 class AnalysisInput:
-    def __init__(self, pcode: str, commands: CommandCollection, tags: TagValueCollection, engine_id: str):
-        self.pcode: str = pcode
+    def __init__(self, commands: CommandCollection, tags: TagValueCollection, engine_id: str):
         self.commands: CommandCollection = commands
         self.tags: TagValueCollection = tags
         self.engine_id: str = engine_id
 
+        # TODO describe which commands are included here
         self.command_completions = [c.name for c in self.commands.to_list()] + \
             ["Watch", "Alarm",
              "Block", "End block", "End blocks",
-             "Increment run counter",
              "Mark",
              "Macro", "Call macro",
              "Batch"]
@@ -95,13 +106,14 @@ class AnalysisInput:
         return [tag for tag in self.tag_completions if tag.lower().startswith(query.lower())]
 
 
-def create_analysis_input(document: Document, engine_id: str) -> AnalysisInput: 
+@functools.cache
+def create_analysis_input(engine_id: str) -> AnalysisInput:
     uod_def = fetch_uod_info(engine_id)
     if uod_def is None:
         logger.error(f"Failed to load uod definition (was none) for engine: {engine_id}")
         raise RuntimeError("Failed to fetch uod_info")
+    logger.info("Building validation commands+tags")
     return AnalysisInput(
-        pcode=document.source,
         commands=build_commands(uod_def),
         tags=build_tags(uod_def),
         engine_id=engine_id
@@ -115,24 +127,31 @@ class AnalysisResult:
         self.input = input
 
 
-def analyze(input: AnalysisInput) -> AnalysisResult:
+def analyze(input: AnalysisInput, document: Document) -> AnalysisResult:
     """ Parse document as pcode and run semantic analysis on it """
+    t1 = time.perf_counter()
+    logger.debug(f"Starting new analysis, ver: {document.version}")
+    pcode = document.source
     try:
-        program = build_program(input.pcode)
+        program = build_program(pcode)
     except Exception as ex:
         logger.error("Failed to build program: '{pcode}'", exc_info=True)
         raise ex
     analyzer = SemanticCheckAnalyzer(input.tags, input.commands)
     analyzer.analyze(program)
-    return AnalysisResult(program, analyzer.items, input)
+    result = AnalysisResult(program, analyzer.items, input)
+    dt = time.perf_counter() - t1
+    logger.debug(f"Analysis completed, ver: {document.version}, duration: {dt:0.2f}s")
+    return result
 
-
-def lint(document: Document, engine_id: str) -> list[Diagnostics]:    
+#@debounce(3, keyed_by="engine_id")
+#@throttle(3)
+def lint(document: Document, engine_id: str) -> list[Diagnostics]:
     diagnostics: list[Diagnostics] = []
-
+    logger.debug(f"lint called | {engine_id=} | {document.version=}")
     try:
-        analysis_input = create_analysis_input(document, engine_id)
-        analysis_result = analyze(analysis_input)
+        analysis_input = create_analysis_input(engine_id)
+        analysis_result = analyze(analysis_input, document)
     except Exception as ex:
         logger.error("Failed to build program: '{pcode}'", exc_info=True)
         diagnostics.append(
@@ -163,6 +182,14 @@ def lint(document: Document, engine_id: str) -> list[Diagnostics]:
                 severity=get_item_severity(item)
             )
         )
+
+    # log unspecific errors
+    analysis_result.program.collect_errors()
+    if analysis_result.program.errors and len(analysis_result.program.errors) > 0:
+        logger.error(f"Program errors: {len(analysis_result.program.errors)}")
+        for error in analysis_result.program.errors:
+            logger.error(error.message)
+
     return diagnostics
 
 def create_node_symbol(node: PNode) -> DocumentSymbol | None:
@@ -190,12 +217,12 @@ def create_node_symbol(node: PNode) -> DocumentSymbol | None:
     return symbol
 
 
-def symbols_slow(document: Document, engine_id: str) -> list[DocumentSymbol]:
+def symbols(document: Document, engine_id: str) -> list[DocumentSymbol]:
     result = []
 
     try:
-        analysis_input = create_analysis_input(document, engine_id)
-        analysis_result = analyze(analysis_input)
+        analysis_input = create_analysis_input(engine_id)
+        analysis_result = analyze(analysis_input, document)
         assert analysis_result is not None
     except Exception:
         logger.error("Failed to build program: '{pcode}'", exc_info=True)
@@ -210,7 +237,7 @@ def symbols_slow(document: Document, engine_id: str) -> list[DocumentSymbol]:
     return result
 
 
-def symbols(document: Document, engine_id: str) -> list[DocumentSymbol]:
+def symbols_test(document: Document, engine_id: str) -> list[DocumentSymbol]:
     """ Return a fixed set of symbols for testing. """
     mark = DocumentSymbol(
         name="Mark",
@@ -264,7 +291,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
     # Also consider the hook pylsp_completion_item_resolve. The spec has info about how this can be used to add 
     # more detail to the suggestions.
     try:
-        analysis_input = create_analysis_input(document, engine_id)
+        analysis_input = create_analysis_input(engine_id)
     except Exception:
         logger.error("Failed to build program: '{pcode}'", exc_info=True)
         return []

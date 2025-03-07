@@ -1018,7 +1018,22 @@ Stop
         program = p.build_model()
         # p.printSyntaxTree(p.tree)
         # print_program(program, show_blanks=True, show_errors=True, show_line_numbers=True)
-        self.assertTrue(program.has_error(recursive=True))
+        self.assertEqual(True, program.has_error(recursive=True))
+
+        p = build("Wait: foo")
+        program = p.build_model()
+        self.assertEqual(True, program.has_error(recursive=True))
+
+        # Not accepting '5x' and requires using units which is currently an analyzer phase
+        # concern. Analyzers are not applied at this point
+        p = build("Wait: 5x")
+        program = p.build_model()
+        self.assertEqual(False, program.has_error(recursive=True))
+
+        # and finally, a well formed Wait has no errors
+        p = build("Wait: 5s")
+        program = p.build_model()
+        self.assertEqual(False, program.has_error(recursive=True))
 
     def test_wait_w_arg(self):
         p = build("Wait:2h")
@@ -1035,6 +1050,7 @@ Stop
         assert isinstance(wait.duration,  PDuration)
         self.assertEqual(wait.duration.time, 2.0)
         self.assertEqual(wait.duration.unit, "h")
+        self.assertFalse(program.has_error(recursive=True))
 
     def test_info_warning_error(self):
         p = build("""

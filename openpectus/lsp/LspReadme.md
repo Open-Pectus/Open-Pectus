@@ -2,7 +2,35 @@
 
 
 # TODO
+[] Bugs
+  [x] 'Warning: foo' gives an argument error but is using NoCheck
+  [x] 'Wait: 5w' does not report error, should be required and only accept time
+    unit. caused by analyer not considering PCommandWithDuration 
+  [x] 'Increment run counter' gives error 'The command name 'Increment run counter' is not validOpen Pectus(Undefined command)'
+[] Fast-track usable LSP - only completions, these are fast regardless of source size and have no locking issues
+  [] Add completion support for command thresholds
+[] Fix fix aggregator host and port in fetch
+  semanticTokens ?
+    [] enable on client side and see if the calls are made, no, they are not
+    [] expose as server capability - now calls should be made
+    [] figure out how pyslp can respond to semanticTokens
+    [] build and return token response
+  textmate ?
+    [] jan will check if coloring works with a simple example
+    [] if result is positive
+       [] figure out what filename to use
+       [] create an endpoint that delivers a fixed example file
+       [] generate file from uod_definition
+
 [] Investigate random characters written to stdout, possibly breaking lsp server json output
+    - cause not known. Examples:
+    - response that was malformed: '}{"jsonrpc":"2.0","id":9,"result":[{"'
+      original response: '{"jsonrpc":"2.0","id":9,"result":[{"startLine":3,"endLine":4}]}'
+      original request: '{"jsonrpc":"2.0","id":9,"method":"textDocument/foldingRange","params":{"textDocument":{"uri":"file:///workspace/model21.pcode"}}}'
+    - response malformed: 'onrpc":"2.0","id":8,"re1sion":3}}{"jsonrpc":"2.0","id":6,"result'
+      original response: '{"jsonrpc":"2.0","id":8,"result":[]}'
+      original request: '{"jsonrpc":"2.0","id":8,"method":"textDocument/codeLens","params":{"textDocument":{"uri":"file:///workspace/model82.pcode"}}}' 
+    - so a fix may be to disable the 'textDocument/foldingRange' feature. should be doable server-side with enough digging
 [x] Create module for the lsp code that is used form plugin
 [x] Create new UodDescription that can be built and serialized from uod
     -x include uod tags and commands
@@ -24,7 +52,7 @@
 [x] Add more source location fields during PProgram build to enable precise condition source locations
    in diagnostics
 [] Improve lsp url: http://localhost:9800/uod/MIAWLT-1645-MPO_DemoUod
-[] Add completion support for command thresholds 
+
 [] Settings/configuration in file
   - hopefylly disable stuff without code
 [x] Implement simple symbols
