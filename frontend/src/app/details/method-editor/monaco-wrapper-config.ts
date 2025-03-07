@@ -23,7 +23,7 @@ export class MonacoWrapperConfig {
               enabled: UtilMethods.isDesktop,
             },
             'editor.lightbulb.enabled': 'off',
-            'editor.experimental.asyncTokenization': true,
+            'editor.experimental.asyncTokenization': false,
             'editor.foldingStrategy': 'indentation',
             'editor.wordBasedSuggestions': 'off',
             // "editor.quickSuggestions": false
