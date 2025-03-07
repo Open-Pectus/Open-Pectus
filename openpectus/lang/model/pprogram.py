@@ -482,7 +482,8 @@ class PCommand(PInstruction):
 
     @property
     def runlog_name(self) -> str | None:
-        return self.name
+        args = "" if self.args == "" else f": {self.args}"
+        return self.name + args
 
     @property
     def instruction_name(self) -> str | None:
