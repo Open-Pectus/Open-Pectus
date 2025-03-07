@@ -30,6 +30,7 @@ def create_position(pcode: str) -> Position:
 class TestLspAnalysis(unittest.TestCase):
 
     def get_completions(self, pcode: str, uod_info: UodDefinition | None = None) -> list[CompletionItem]:
+        lsp_analysis.create_analysis_input.cache_clear()
         position = create_position(pcode)
         document = create_document(pcode)
 
@@ -48,10 +49,10 @@ class TestLspAnalysis(unittest.TestCase):
         return [r["label"] for r in result]
 
     def test_completions_commands(self):
-        pcode = "in"  # typing 'Increment run counter'
+        pcode = "en"  # typing 'End block' or 'End blocks'
         result = self.get_completion_labels(pcode)
-        self.assertEqual(1, len(result))
-        self.assertEqual("Increment run counter", result[0])
+        self.assertEqual(2, len(result))
+        self.assertTrue(result[0].startswith("End blo"))
 
     def test_completions_tags(self):
         pcode = "Watch: "  # typing 'Watch: Foo' or 'Watch: bar'
