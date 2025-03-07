@@ -1,6 +1,6 @@
 
 import re
-from typing import Sequence, Type
+from typing import Sequence, Type, TypeVar
 import unittest
 
 from openpectus.lsp.new_parser.parser import PcodeParser, Grammar
@@ -68,9 +68,15 @@ class TestRegexes(unittest.TestCase):
         self.assertEqual("bar 27 :", m.groupdict()['argument'])
 
 
+# necessary to support python 3.11 in assert_line_parses_as_node_type below
+TNode = TypeVar("TNode", bound=p.Node)
+
+
 class TestParser(unittest.TestCase):
 
-    def assert_line_parses_as_node_type[T: p.Node](self, line: str, node_type: Type[T]) -> T:
+    # backport to support python 3.11
+    def assert_line_parses_as_node_type(self, line: str, node_type: Type[TNode]) -> TNode:
+    #def assert_line_parses_as_node_type[T: p.Node](self, line: str, node_type: Type[T]) -> T:
         parser = create_parser()
         lines = []
         node = parser.parseline(line, 0, lines)
