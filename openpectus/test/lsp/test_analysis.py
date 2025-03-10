@@ -37,7 +37,12 @@ class TestLspAnalysis(unittest.TestCase):
         if uod_info is None:
             uod_info = UodDefinition(
                 commands=[],
-                system_commands=[],
+                system_commands=[
+                    CommandDefinition(name="Mark"),
+                    CommandDefinition(name="Watch"),
+                    CommandDefinition(name="End block"),
+                    CommandDefinition(name="End blocks"),
+                ],
                 tags=[])
 
         setattr(lsp_analysis, "fetch_uod_info", lambda _: uod_info)
