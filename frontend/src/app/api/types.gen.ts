@@ -153,6 +153,7 @@ export type ProcessValue = {
     value_type: ProcessValueType;
     commands?: Array<ProcessValueCommand>;
     direction: TagDirection;
+    simulated?: boolean;
 };
 
 export type ProcessValueCommand = {

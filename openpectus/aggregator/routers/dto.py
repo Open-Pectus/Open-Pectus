@@ -204,10 +204,12 @@ class ProcessValue(Dto):
     """ Specifies the type of allowed values. """
     commands: list[ProcessValueCommand] | SkipJsonSchema[None] = None
     direction: Mdl.TagDirection
+    simulated: bool | SkipJsonSchema[None] = None
 
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(name="{self.name}", value="{self.value}", ' +
-                f'value_unit="{self.value_unit}", value_formatted="{self.value_formatted}")')
+                f'value_unit="{self.value_unit}", value_formatted="{self.value_formatted}"), ' +
+                f'simulated="{self.simulated}"')
 
     @staticmethod
     def create(tag: Mdl.TagValue) -> ProcessValue:
@@ -218,7 +220,8 @@ class ProcessValue(Dto):
             value_type=get_ProcessValueType_from_value(tag.value),
             value_unit=tag.value_unit,
             commands=[],
-            direction=tag.direction
+            direction=tag.direction,
+            simulated=tag.simulated
         )
 
     @staticmethod
