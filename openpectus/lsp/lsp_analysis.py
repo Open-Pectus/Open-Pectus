@@ -89,14 +89,7 @@ class AnalysisInput:
         self.commands: CommandCollection = commands
         self.tags: TagValueCollection = tags
         self.engine_id: str = engine_id
-
-        # TODO describe which commands are included here
-        self.command_completions = [c.name for c in self.commands.to_list()] + \
-            ["Watch", "Alarm",
-             "Block", "End block", "End blocks",
-             "Mark",
-             "Macro", "Call macro",
-             "Batch"]
+        self.command_completions = [c.name for c in self.commands.to_list()]
         self.tag_completions = [t.name for t in self.tags]
 
     def get_first_word_completions(self, query: str) -> list[str]:

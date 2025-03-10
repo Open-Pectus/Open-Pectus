@@ -26,8 +26,19 @@ class InternalCommandsRegistry:
         self._command_spec: dict[str, ArgSpec] = {
             InterpreterCommandEnum.BASE: ArgSpec.Regex(REGEX_BASE_ARG),
             InterpreterCommandEnum.INCREMENT_RUN_COUNTER: ArgSpec.NoArgs(),
-            InterpreterCommandEnum.RUN_COUNTER: ArgSpec.Regex(REGEX_INT)
+            InterpreterCommandEnum.RUN_COUNTER: ArgSpec.Regex(REGEX_INT),            
         }
+        # system cmds that are implemented in interpreter and have no command class
+        others = [
+            "Watch", "Alarm",
+            "Block", "End block", "End blocks",
+            "Mark",
+            "Macro", "Call macro",
+            "Batch",
+        ]
+        for other_cmd in others:
+            self._command_spec[other_cmd] = ArgSpec.NoCheck()
+    
         self._command_instances: dict[str, InternalEngineCommand] = {}
 
     def __str__(self) -> str:
