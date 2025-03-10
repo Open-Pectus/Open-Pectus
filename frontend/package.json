@@ -10,7 +10,8 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "generate": "openapi-ts",
-    "lint": "ng lint"
+    "lint": "ng lint",
+    "bundle editor worker": "webpack --config bundle-editor-worker.js",
   },
   "private": true,
   "dependencies": {
@@ -57,7 +58,8 @@
     "style-loader": "^4.0.0",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.6.3",
-    "typescript-eslint": "^8.19.0"
+    "typescript-eslint": "^8.19.0",
+    "webpack-cli": "^6.0.1"
   },
   "msw": {
     "workerDirectory": "src"
