@@ -160,6 +160,7 @@ const getProcessValues: () => ProcessValue[] = () => [
     value: 123 + Math.random() * 2,
     value_unit: 'L/h',
     direction: 'output',
+    simulated: true,
     commands: [
       {
         command: 'fdsafsa',
