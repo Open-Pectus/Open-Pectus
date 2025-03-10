@@ -76,12 +76,7 @@
                 "input": "./node_modules/monaco-editor/esm/vs/base/browser/ui/codicons/codicon",
                 "output": ""
               },
-              "src/mockServiceWorker.js",
-              {
-                "glob": "editorWorker-es.js",
-                "input": "./node_modules/monaco-editor-wrapper/dist/workers",
-                "output": "/monaco-workers/"
-              }
+              "src/mockServiceWorker.js"
             ],
             "styles": [
               "src/styles.scss",
