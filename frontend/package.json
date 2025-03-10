@@ -12,6 +12,7 @@
     "generate": "openapi-ts",
     "lint": "ng lint",
     "bundle editor worker": "webpack --config bundle-editor-worker.js",
+    "bundle textmate worker": "webpack --config bundle-textmate-worker.js"
   },
   "private": true,
   "dependencies": {
