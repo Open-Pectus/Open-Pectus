@@ -65,10 +65,12 @@ def main():
     if args.lsp:
         aggregator_url = f"http://{args.host}:{args.port}"
         lsp_mainpy_path = os.path.join(
-            os.path.dirname(__file__), "..", "lsp", "main.py",
-            "aggregator_url", aggregator_url
+            os.path.dirname(__file__), "..", "lsp", "main.py"            
         )
-        process = subprocess.Popen(["python", lsp_mainpy_path])  # --watch_parent"])
+        process = subprocess.Popen([
+            "python", lsp_mainpy_path,
+            "--aggregator_url", aggregator_url
+        ])
         server.shutdown_callback = lambda: process.kill()
 
     # seart aggregator server
