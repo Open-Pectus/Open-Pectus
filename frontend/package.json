@@ -11,8 +11,7 @@
     "watch": "ng build --watch --configuration development",
     "generate": "openapi-ts",
     "lint": "ng lint",
-    "bundle editor worker": "webpack --config bundle-editor-worker.js",
-    "bundle textmate worker": "webpack --config bundle-textmate-worker.js"
+    "bundle monaco workers": "webpack --config bundle-monaco-workers.js"
   },
   "private": true,
   "dependencies": {

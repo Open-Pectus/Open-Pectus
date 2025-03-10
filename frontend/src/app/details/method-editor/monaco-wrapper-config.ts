@@ -114,8 +114,8 @@ export class MonacoWrapperConfig {
   static configureMonacoWorkers(logger?: Logger) {
     useWorkerFactory({
       workerLoaders: {
-        'TextEditorWorker': () => new Worker('/assets/monaco-workers/editor.worker.js', {type: 'module'}),
-        'TextMateWorker': () => new Worker('/assets/monaco-workers/textmate.worker.js', {type: 'module'}),
+        'TextEditorWorker': () => new Worker('/assets/monaco-workers/editor.js', {type: 'module'}),
+        'TextMateWorker': () => new Worker('/assets/monaco-workers/textmate.js', {type: 'module'}),
         OutputLinkDetectionWorker: undefined,
         LanguageDetectionWorker: undefined,
         NotebookEditorWorker: undefined,
