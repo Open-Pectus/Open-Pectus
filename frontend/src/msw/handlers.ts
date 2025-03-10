@@ -40,6 +40,8 @@ const processUnits: ProcessUnit[] = [
       progress_pct: 30,
     },
     current_user_role: 'admin',
+    uod_author_name: 'admin',
+    uod_author_email: 'admin@example.com',
   },
   {
     name: 'Some other unit with a long title',
@@ -50,6 +52,8 @@ const processUnits: ProcessUnit[] = [
       state: 'ready',
     },
     current_user_role: 'admin',
+    uod_author_name: 'admin',
+    uod_author_email: 'admin@example.com',
   },
   {
     name: 'Some third unit',
@@ -61,6 +65,8 @@ const processUnits: ProcessUnit[] = [
       last_seen_date: new Date().toJSON(),
     },
     current_user_role: 'admin',
+    uod_author_name: 'admin',
+    uod_author_email: 'admin@example.com',
   },
   {
     name: 'A fourth for linebreak',
@@ -71,6 +77,8 @@ const processUnits: ProcessUnit[] = [
       state: 'error',
     },
     current_user_role: 'viewer',
+    uod_author_name: 'viewer',
+    uod_author_email: 'viewer@example.com',
   },
 ];
 
