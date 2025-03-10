@@ -23,7 +23,7 @@ export class MonacoWrapperConfig {
               enabled: UtilMethods.isDesktop,
             },
             'editor.lightbulb.enabled': 'off',
-            'editor.experimental.asyncTokenization': false,
+            'editor.experimental.asyncTokenization': true,
             'editor.foldingStrategy': 'indentation',
             'editor.wordBasedSuggestions': 'off',
             // "editor.quickSuggestions": false
@@ -114,10 +114,8 @@ export class MonacoWrapperConfig {
   static configureMonacoWorkers(logger?: Logger) {
     useWorkerFactory({
       workerLoaders: {
-        'TextEditorWorker': () => new Worker('/monaco-workers/editorWorker-es.js', {type: 'module'}),
-        'TextMateWorker': () => new Worker(
-          new URL('@codingame/monaco-vscode-textmate-service-override/worker', import.meta.url), {type: 'module'},
-        ),
+        'TextEditorWorker': () => new Worker('/assets/monaco-workers/editor.js', {type: 'module'}),
+        'TextMateWorker': () => new Worker('/assets/monaco-workers/textmate.js', {type: 'module'}),
         OutputLinkDetectionWorker: undefined,
         LanguageDetectionWorker: undefined,
         NotebookEditorWorker: undefined,
