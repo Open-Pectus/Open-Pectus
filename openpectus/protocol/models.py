@@ -77,10 +77,11 @@ class TagValue(ProtocolModel):
     value_unit: str | None
     value_formatted: str | None = None
     direction: TagDirection = TagDirection.Unspecified
+    simulated: bool | None = None
 
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(name="{self.name}", value="{self.value}", value_unit="{self.value_unit}", ' +
-                f'direction={self.direction})')
+                f'direction="{self.direction}"), simulated="{self.simulated}"')
 
 
 class RunLogLine(ProtocolModel):

@@ -138,7 +138,8 @@ class Tag(ChangeSubject, EventListener):
             unit: str | None = None,
             direction: TagDirection = TagDirection.NA,
             safe_value: TagValueType | Unset = Unset(),
-            format_fn: TagFormatFunction | None = None
+            format_fn: TagFormatFunction | None = None,
+            simulated: bool | None = None
             ) -> None:
 
         super().__init__()
@@ -161,6 +162,7 @@ class Tag(ChangeSubject, EventListener):
         self.direction: TagDirection = direction
         self.safe_value: TagValueType | Unset = safe_value
         self.format_fn = format_fn
+        self.simulated = simulated
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(name="{self.name}", value="{self.value}")'
@@ -168,7 +170,7 @@ class Tag(ChangeSubject, EventListener):
     def as_readonly(self) -> TagValue:
         """ Convert the value to a readonly and immutable TagValue instance """
         value_formatted = None if self.format_fn is None else self.format_fn(self.get_value())
-        return TagValue(self.name, self.tick_time, self.value, value_formatted, self.unit, self.direction)
+        return TagValue(self.name, self.tick_time, self.value, value_formatted, self.unit, self.direction, self.simulated)
 
     def set_value(self, val: TagValueType, tick_time: float) -> None:
         if val != self.value:
@@ -302,6 +304,7 @@ class TagValue:
             value_formatted: str | None = None,
             unit: str | None = None,
             direction: TagDirection = TagDirection.Unspecified,
+            simulated: bool | None = None
     ):
         if name is None or name.strip() == '':
             raise ValueError("name is None or empty")
@@ -312,6 +315,7 @@ class TagValue:
         self.value_formatted = value_formatted
         self.unit = unit
         self.direction = direction
+        self.simulated = simulated
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(name="{self.name}", value="{self.value}")'

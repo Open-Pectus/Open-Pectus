@@ -38,7 +38,8 @@ def to_model_tag(tag: TagValue) -> Mdl.TagValue:
         value=tag.value,
         value_formatted=tag.value_formatted,
         value_unit=tag.unit,
-        direction=tag.direction
+        direction=tag.direction,
+        simulated=tag.simulated
     )
 
 class EngineMessageBuilder():

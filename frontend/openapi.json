@@ -2165,6 +2165,10 @@
           },
           "direction": {
             "$ref": "#/components/schemas/TagDirection"
+          },
+          "simulated": {
+            "type": "boolean",
+            "title": "Simulated"
           }
         },
         "type": "object",
