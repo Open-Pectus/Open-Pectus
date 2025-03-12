@@ -61,6 +61,7 @@ export type InProgress = {
 
 export type Method = {
     lines: Array<MethodLine>;
+    version: number;
 };
 
 export type MethodAndState = {
@@ -77,6 +78,10 @@ export type MethodState = {
     started_line_ids: Array<(string)>;
     executed_line_ids: Array<(string)>;
     injected_line_ids: Array<(string)>;
+};
+
+export type MethodVersion = {
+    version: number;
 };
 
 export type NotOnline = {
@@ -336,7 +341,7 @@ export type SaveMethodData = {
     xIdentity?: string;
 };
 
-export type SaveMethodResponse = (unknown);
+export type SaveMethodResponse = (MethodVersion);
 
 export type GetPlotConfigurationData = {
     unitId: string;

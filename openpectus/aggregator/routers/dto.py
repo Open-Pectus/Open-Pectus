@@ -322,6 +322,7 @@ class MethodLine(Dto):
 
 class Method(Dto):
     lines: list[MethodLine]
+    version: int
 
     def __str__(self) -> str:
         lines = [str(line) for line in self.lines]
@@ -329,8 +330,10 @@ class Method(Dto):
 
     @staticmethod
     def empty() -> Method:
-        return Method(lines=[])
+        return Method(lines=[], version=0)
 
+class MethodVersion(Dto):
+    version: int
 
 class MethodState(Dto):
     started_line_ids: list[str]

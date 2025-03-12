@@ -21,7 +21,7 @@ export class MethodEditorEffects {
     switchMap(([_, unitId, method]) => {
       if(unitId === undefined) return of();
       return this.processUnitService.saveMethod({unitId, requestBody: method}).pipe(
-        map(() => MethodEditorActions.modelSaved()));
+        map(response => MethodEditorActions.modelSaved({newVersion: response.version})));
     }),
   ));
 

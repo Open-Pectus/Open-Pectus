@@ -316,7 +316,7 @@ export class ProcessUnitService {
      * @param data.unitId
      * @param data.requestBody
      * @param data.xIdentity
-     * @returns unknown Successful Response
+     * @returns MethodVersion Successful Response
      * @throws ApiError
      */
     public saveMethod(data: SaveMethodData): Observable<SaveMethodResponse> {

@@ -12,7 +12,7 @@ export interface MethodEditorState {
 
 const initialState: MethodEditorState = {
   isDirty: false,
-  method: {lines: []},
+  method: {lines: [], version: 0},
   methodState: {
     started_line_ids: [],
     executed_line_ids: [],
@@ -56,8 +56,9 @@ const reducer = createReducer(initialState,
       }
     });
   })),
-  on(MethodEditorActions.modelSaved, state => produce(state, draft => {
+  on(MethodEditorActions.modelSaved, (state, {newVersion}) => produce(state, draft => {
     draft.isDirty = false;
+    draft.method.version = newVersion;
   })),
   on(MethodEditorActions.linesChanged, (state, {lines}) => produce(state, draft => {
     draft.isDirty = true;

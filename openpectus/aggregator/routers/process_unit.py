@@ -210,7 +210,10 @@ def get_method_and_state(
 
     def from_models(method: Mdl.Method, method_state: Mdl.MethodState) -> Dto.MethodAndState:
         return Dto.MethodAndState(
-            method=Dto.Method(lines=[Dto.MethodLine(id=line.id, content=line.content) for line in method.lines]),
+            method=Dto.Method(
+                lines=[Dto.MethodLine(id=line.id, content=line.content) for line in method.lines],
+                version=method.version
+            ),
             state=Dto.MethodState(started_line_ids=[_id for _id in method_state.started_line_ids],
                                   executed_line_ids=[_id for _id in method_state.executed_line_ids],
                                   injected_line_ids=[_id for _id in method_state.injected_line_ids])
@@ -225,12 +228,14 @@ async def save_method(
         user_roles: UserRolesValue,
         unit_id: str,
         method_dto: Dto.Method,
-        agg: Aggregator = Depends(agg_deps.get_aggregator)):
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.MethodVersion:
     _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
-    method_mdl = Mdl.Method(lines=[Mdl.MethodLine(id=line.id, content=line.content) for line in method_dto.lines])
-
-    if not await agg.from_frontend.method_saved(engine_id=unit_id, method=method_mdl, user_name=user_name):
-        return Dto.ServerErrorResponse(message="Failed to set method")
+    method_mdl = Mdl.Method(
+        lines=[Mdl.MethodLine(id=line.id, content=line.content) for line in method_dto.lines],
+        version=method_dto.version
+    )
+    new_version = await agg.from_frontend.method_saved(engine_id=unit_id, method=method_mdl, user_name=user_name)
+    return Dto.MethodVersion(version=new_version)
 
 
 @router.get('/process_unit/{unit_id}/plot_configuration', response_model_exclude_none=True)
@@ -308,7 +313,6 @@ async def cancel_run_log_line(
     if not await agg.from_frontend.request_cancel(engine_id=unit_id, line_id=line_id, user_name=user_name):
         return Dto.ServerErrorResponse(message="Cancel request failed")
     return Dto.ServerSuccessResponse(message="Cancel successfully requested")
-
 
 
 @router.get('/process_units/system_state_enum', response_model_exclude_none=True)

@@ -14,6 +14,6 @@ export class MethodEditorActions {
   static linesChanged = createAction(source + 'Lines Changed', props<{ lines: MethodLine[] }>());
   static saveButtonClicked = createAction(source + 'Save Button Clicked');
   static saveKeyboardShortcutPressed = createAction(source + 'Save Keyboard Shortcut Pressed');
-  static modelSaved = createAction(source + 'Model Saved');
+  static modelSaved = createAction(source + 'Model Saved', props<{ newVersion: number }>());
   static methodUpdatedOnBackend = createAction(source + 'Method Updated On Backend', props<{ unitId: string }>());
 }

@@ -580,7 +580,7 @@ export const handlers = [
       {id: 'g', content: '}'},
     ];
     const result = HttpResponse.json<MethodAndState>({
-      method: {lines: lines},
+      method: {lines: lines, version: 3},
       state: {
         started_line_ids: startedLines.map(no => (no + 9).toString(36)),
         executed_line_ids: executedLines.map(no => (no + 9).toString(36)),
@@ -797,6 +797,7 @@ export const handlers = [
           {id: 'f', content: ' "another unrun": "line"'},
           {id: 'g', content: '}'},
         ],
+        version: 3,
       },
       state: {
         started_line_ids: ['d'],

@@ -2,9 +2,11 @@ import logging
 import os
 import contextlib
 
+from starlette.status import HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR
 import uvicorn
 from openpectus.aggregator.routers.auth import UserRolesDependency
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Request
+from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from openpectus import __version__
 from openpectus.aggregator.aggregator_message_handlers import AggregatorMessageHandlers
@@ -14,6 +16,7 @@ from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.aggregator.routers import process_unit, recent_runs, auth, version, lsp
 from openpectus.aggregator.spa import SinglePageApplication
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
+from openpectus.aggregator.exceptions import AggregatorCallerException, AggregatorInternalException, AggregatorInternalException
 
 
 class AggregatorServer:
@@ -68,6 +71,20 @@ class AggregatorServer:
         for route in additional_routers:
             self.fastapi.include_router(route)
         self.fastapi.mount("/", SinglePageApplication(directory=self.frontend_dist_dir))
+
+        @self.fastapi.exception_handler(AggregatorCallerException)
+        async def caller_exception_handler(_: Request, exc: AggregatorCallerException):
+            return JSONResponse(
+                status_code=HTTP_400_BAD_REQUEST,
+                content={"message": exc.message},
+            )
+
+        @self.fastapi.exception_handler(AggregatorInternalException)
+        async def internal_exception_handler(_: Request, exc: AggregatorInternalException):
+            return JSONResponse(
+                status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+                content={"message": exc.message},
+            )
 
     def init_db(self):
         database.configure_db(f"sqlite:///{self.db_path}")
