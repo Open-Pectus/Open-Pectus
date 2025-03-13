@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 RunLogLine = Mdl.RunLogLine
 RunLog = Mdl.RunLog
 ControlState = Mdl.ControlState
-Method = Mdl.Method
 MethodLine = Mdl.MethodLine
 MethodState = Mdl.MethodState
 ReadingCommand = Mdl.ReadingCommand
@@ -30,6 +29,13 @@ ErrorLog = Mdl.ErrorLog
 SystemStateEnum = Mdl.SystemStateEnum
 TagDirection = Mdl.TagDirection
 UodDefinition = Mdl.UodDefinition
+
+class Method(Mdl.Method):
+    version: int
+
+    @staticmethod
+    def empty() -> Method:
+        return Method(lines=Mdl.Method.empty().lines, version=0)
 
 
 class AggregatedErrorLogEntry(BaseModel):

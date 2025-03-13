@@ -33,6 +33,7 @@ class ErrorMessage(MessageBase):
     """ Returned whenever an error occurs"""
     message: str | None = None
     exception_message: str | None = None
+    caller_error: bool = False
 
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(version="{self.version}", message="{self.message}", ' +

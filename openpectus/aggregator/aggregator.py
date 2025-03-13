@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import logging
 from datetime import datetime, timezone
 
@@ -12,6 +13,7 @@ from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.aggregator.models import EngineData
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.protocol.models import SystemTagName, MethodStatusEnum
+from openpectus.aggregator.exceptions import AggregatorCallerException, AggregatorInternalException
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +135,7 @@ class FromEngine:
                 engine_data.reset_run()
             else:
                 engine_data.run_data.runlog = msg.runlog
-                engine_data.method = msg.method
+                engine_data.method_state = msg.method_state
                 try:
                     recent_run_repo.store_recent_run(engine_data)
                     logger.info(f"Stored recent run {_run_id=}")
@@ -309,29 +311,40 @@ class FromEngine:
 
 
 class FromFrontend:
-    def __init__(self, engine_data_map: EngineDataMap, dispatcher: AggregatorDispatcher):
+    def __init__(self, engine_data_map: EngineDataMap, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher):
         self._engine_data_map = engine_data_map
         self.dispatcher = dispatcher
+        self.publisher = publisher
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(engine_data_map={self._engine_data_map}, dispatcher={self.dispatcher})'
 
-    async def method_saved(self, engine_id: str, method: Mdl.Method, user_name: str) -> bool:
+    async def method_saved(self, engine_id: str, method: Mdl.Method, user_name: str) -> int:
+        existing_version = self._engine_data_map[engine_id].method.version
+        version_to_overwrite = method.version
+        if existing_version != version_to_overwrite:
+            raise AggregatorCallerException(f"Method version mismatch: trying to overwrite version {version_to_overwrite} when existing version is {existing_version}")
+        # Take shallow copy and increment version
+        new_method = copy.copy(method)
+        new_method.version += 1
+
         try:
-            response = await self.dispatcher.rpc_call(engine_id, message=AM.MethodMsg(method=method))
+            response = await self.dispatcher.rpc_call(engine_id, message=AM.MethodMsg(method=new_method))
             if isinstance(response, M.ErrorMessage):
                 logger.error(f"Failed to set method. Engine response: {response.message}")
-                return False
-        except Exception:
+                if response.caller_error: raise AggregatorCallerException(response.message)
+                else: raise AggregatorInternalException(response.message)
+        except Exception as e:
             logger.error("Failed to set method", exc_info=True)
-            return False
+            raise e
 
         # update local method state
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is not None:
-            engine_data.method = method
+            engine_data.method = new_method
             engine_data.contributors.add(user_name)
-        return True
+            # asyncio.create_task(self.publisher.publish_method_changed(engine_id))
+        return new_method.version
 
     async def request_cancel(self, engine_id, line_id: str, user_name: str) -> bool:
         engine_data = self._engine_data_map.get(engine_id)
@@ -371,7 +384,7 @@ class Aggregator:
         self._engine_data_map: EngineDataMap = {}
         """ all client data except channels, indexed by engine_id """
         self.dispatcher = dispatcher
-        self.from_frontend = FromFrontend(self._engine_data_map, dispatcher)
+        self.from_frontend = FromFrontend(self._engine_data_map, dispatcher, publisher)
         self.from_engine = FromEngine(self._engine_data_map, publisher)
         self.secret = secret
 

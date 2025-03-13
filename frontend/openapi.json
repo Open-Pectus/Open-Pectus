@@ -535,7 +535,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MethodVersion"
+                }
               }
             }
           },
@@ -1778,11 +1780,16 @@
             },
             "type": "array",
             "title": "Lines"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
           }
         },
         "type": "object",
         "required": [
-          "lines"
+          "lines",
+          "version"
         ],
         "title": "Method"
       },
@@ -1851,6 +1858,19 @@
           "injected_line_ids"
         ],
         "title": "MethodState"
+      },
+      "MethodVersion": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "MethodVersion"
       },
       "NotOnline": {
         "properties": {
