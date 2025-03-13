@@ -1,6 +1,6 @@
 import unittest
 
-import openpectus.aggregator.models as Mdl
+import openpectus.protocol.models as Mdl
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 from openpectus.protocol.serialization import serialize, deserialize
@@ -43,7 +43,7 @@ class SerializationTest(unittest.TestCase):
         self.assertEqual(reg.uod_name, reg_d.uod_name)
 
     def test_round_trip_AM_MethodMsg(self):
-        am_method = AM.MethodMsg(method=Mdl.Method(lines=[Mdl.MethodLine(id='87', content='Foo')], version=1))
+        am_method = AM.MethodMsg(method=Mdl.Method(lines=[Mdl.MethodLine(id='87', content='Foo')]))
         reg_s = serialize(am_method)
         reg_d = deserialize(reg_s)
         self.assertIsNotNone(reg_d)
