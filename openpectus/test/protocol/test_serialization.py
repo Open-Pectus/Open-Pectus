@@ -43,7 +43,7 @@ class SerializationTest(unittest.TestCase):
         self.assertEqual(reg.uod_name, reg_d.uod_name)
 
     def test_round_trip_AM_MethodMsg(self):
-        am_method = AM.MethodMsg(method=Mdl.Method(lines=[Mdl.MethodLine(id='87', content='Foo')]))
+        am_method = AM.MethodMsg(method=Mdl.Method(lines=[Mdl.MethodLine(id='87', content='Foo')], version=1))
         reg_s = serialize(am_method)
         reg_d = deserialize(reg_s)
         self.assertIsNotNone(reg_d)
