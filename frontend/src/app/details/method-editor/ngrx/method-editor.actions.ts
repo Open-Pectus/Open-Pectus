@@ -19,4 +19,5 @@ export class MethodEditorActions {
   static modelSaved = createAction(source + 'Model Saved', props<{ newVersion: number }>());
   static methodUpdatedOnBackend = createAction(source + 'Method Updated On Backend', props<{ unitId: string }>());
   static methodStateUpdatedOnBackend = createAction(source + 'Method State Updated On Backend', props<{ unitId: string }>());
+  static methodRefreshRequested = createAction(source + 'Method Refresh Requested', props<{ unitId: string }>());
 }

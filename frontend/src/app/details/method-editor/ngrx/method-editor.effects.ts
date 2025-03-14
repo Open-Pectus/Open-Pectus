@@ -81,6 +81,15 @@ export class MethodEditorEffects {
     }),
   ));
 
+  fetchMethodRefreshRequest = createEffect(() => this.actions.pipe(
+    ofType(MethodEditorActions.methodRefreshRequested),
+    mergeMap(({unitId}) => {
+      return this.processUnitService.getMethod({unitId}).pipe(
+        map(method => MethodEditorActions.methodFetchedDueToUpdate({method})),
+      );
+    }),
+  ));
+
   constructor(private actions: Actions, private store: Store,
               private processUnitService: ProcessUnitService,
               private recentRunsService: RecentRunsService,

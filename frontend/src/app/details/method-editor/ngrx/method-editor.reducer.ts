@@ -82,6 +82,11 @@ const reducer = createReducer(initialState,
       });
     }
   })),
+  on(MethodEditorActions.methodRefreshRequested, state => produce(state, draft => {
+    draft.method = initialState.method;
+    draft.isDirty = false;
+    draft.versionMismatch = false;
+  })),
 );
 
 export const methodEditorSlice = {name: 'methodEditor', reducer};

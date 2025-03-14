@@ -24,8 +24,11 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
 
       @if (!collapsed) {
         <div class="h-full flex flex-col" content>
-          <div class="w-full bg-red-200 px-2 py-1.5 text-xs text-center" *ngIf="versionMismatch | ngrxPush">
-            Method has been updated by {{ (method | ngrxPush)?.last_author }}. You cannot save your changes without refreshing the page first.
+          <div class="w-full bg-yellow-100 px-2 py-1.5 text-xs text-end border-b border-stone-100" *ngIf="versionMismatch | ngrxPush">
+            {{ (method | ngrxPush)?.last_author }} has updated the method. You cannot save without refreshing first.
+            <button class="bg-white rounded border-stone-300 border px-2 py-1 ml-2" (click)="forceRefreshMethod()">
+              Discard my changes and refresh
+            </button>
           </div>
           <app-monaco-editor class="block rounded-sm flex-1" [editorSizeChange]="editorSizeChange"
                              (keydown.control.s)="onCtrlS($event)"
@@ -81,5 +84,11 @@ export class MethodEditorComponent implements OnInit, OnDestroy {
     event.preventDefault();
     event.stopPropagation();
     this.store.dispatch(MethodEditorActions.saveKeyboardShortcutPressed());
+  }
+
+  forceRefreshMethod() {
+    const unitId = this.unitId();
+    if(unitId === undefined) return;
+    this.store.dispatch(MethodEditorActions.methodRefreshRequested({unitId}));
   }
 }
