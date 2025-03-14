@@ -10,7 +10,11 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
       const endpoint = error.url?.split('/').at(-1);
       toastr.error(error.error.message, `HTTP Error "${error.statusText}" on endpoint "${endpoint}"`, {
         timeOut: 1000 * 30,
-        extendedTimeOut: 1000 * 60 * 60,
+        extendedTimeOut: 1000 * 60 * 2,
+        progressBar: true,
+        progressAnimation: 'increasing',
+        tapToDismiss: false,
+        closeButton: true,
       });
     },
   }));
