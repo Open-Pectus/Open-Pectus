@@ -80,7 +80,8 @@
             ],
             "styles": [
               "src/styles.scss",
-              "node_modules/@vscode/codicons/dist/codicon.css"
+              "node_modules/@vscode/codicons/dist/codicon.css",
+              "node_modules/ngx-toastr/toastr.css"
             ],
             "scripts": []
           },
