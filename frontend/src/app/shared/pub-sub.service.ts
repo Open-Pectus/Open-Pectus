@@ -13,8 +13,9 @@ export class PubSubService {
     control_state: 'control_state',
     error_log: 'error_log',
     method: 'method',
+    method_state: 'method_state',
     run_log: 'run_log',
-  }
+  };
   private client = new PubSubRxjsClient({
     uri: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/frontend-pubsub`,
     imitatePublishOnReconnect: true,
@@ -34,6 +35,10 @@ export class PubSubService {
 
   subscribeMethod(unitId: string) {
     return this.client.forTopic(`${unitId}/${this.pubSubTopics.method}`);
+  }
+
+  subscribeMethodState(unitId: string) {
+    return this.client.forTopic(`${unitId}/${this.pubSubTopics.method_state}`);
   }
 
   subscribeControlState(unitId: string) {

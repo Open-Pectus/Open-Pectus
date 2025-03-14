@@ -6,12 +6,14 @@ import { MethodEditorActions } from './method-editor.actions';
 
 export interface MethodEditorState {
   isDirty: boolean;
+  versionMismatch: boolean;
   method: Method;
   methodState: MethodState;
 }
 
 const initialState: MethodEditorState = {
   isDirty: false,
+  versionMismatch: false,
   method: {lines: [], version: 0},
   methodState: {
     started_line_ids: [],
@@ -29,7 +31,14 @@ const reducer = createReducer(initialState,
     draft.method = methodAndState.method;
     draft.methodState = methodAndState.state;
   })),
-  on(MethodEditorActions.methodFetchedDueToUpdate, (state, {methodAndState}) => produce(state, draft => {
+  on(MethodEditorActions.methodFetchedDueToUpdate, (state, {method}) => produce(state, draft => {
+    if(state.isDirty) {
+      draft.versionMismatch = true;
+    } else {
+      draft.method = method;
+    }
+  })),
+  on(MethodEditorActions.methodStateFetchedDueToUpdate, (state, {methodAndState}) => produce(state, draft => {
     if(!UtilMethods.arrayEquals(draft.methodState.executed_line_ids, methodAndState.state.executed_line_ids)) {
       draft.methodState.executed_line_ids = methodAndState.state.executed_line_ids;
     }

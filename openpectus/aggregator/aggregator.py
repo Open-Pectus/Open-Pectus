@@ -343,7 +343,7 @@ class FromFrontend:
         if engine_data is not None:
             engine_data.method = new_method
             engine_data.contributors.add(user_name)
-            # asyncio.create_task(self.publisher.publish_method_changed(engine_id))
+            asyncio.create_task(self.publisher.publish_method_changed(engine_id))
         return new_method.version
 
     async def request_cancel(self, engine_id, line_id: str, user_name: str) -> bool:

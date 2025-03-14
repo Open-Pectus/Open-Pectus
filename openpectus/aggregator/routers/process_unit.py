@@ -207,19 +207,16 @@ def get_method_and_state(
         unit_id: str,
         agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.MethodAndState:
     engine_data = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
+    return Dto.MethodAndState.from_models(engine_data.method, engine_data.method_state)
 
-    def from_models(method: Mdl.Method, method_state: Mdl.MethodState) -> Dto.MethodAndState:
-        return Dto.MethodAndState(
-            method=Dto.Method(
-                lines=[Dto.MethodLine(id=line.id, content=line.content) for line in method.lines],
-                version=method.version
-            ),
-            state=Dto.MethodState(started_line_ids=[_id for _id in method_state.started_line_ids],
-                                  executed_line_ids=[_id for _id in method_state.executed_line_ids],
-                                  injected_line_ids=[_id for _id in method_state.injected_line_ids])
-        )
 
-    return from_models(engine_data.method, engine_data.method_state)
+@router.get('/process_unit/{unit_id}/method', response_model_exclude_none=True)
+def get_method(
+        user_roles: UserRolesValue,
+        unit_id: str,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.Method:
+    engine_data = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
+    return Dto.Method.from_model(engine_data.method)
 
 
 @router.post('/process_unit/{unit_id}/method', response_model_exclude_none=True)

@@ -1,3 +1,4 @@
+import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input, OnDestroy, OnInit } from '@angular/core';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
@@ -14,16 +15,23 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
     CollapsibleElementComponent,
     MonacoEditorComponent,
     PushPipe,
+    NgIf,
+
   ],
   template: `
     <app-collapsible-element [name]="'Method Editor'" [heightResizable]="true" (contentHeightChanged)="onContentHeightChanged()"
                              [contentHeight]="400" (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-list-flat'">
 
       @if (!collapsed) {
-        <app-monaco-editor class="block rounded-sm h-full" [editorSizeChange]="editorSizeChange"
-                           content (keydown.control.s)="onCtrlS($event)"
-                           [unitId]="unitId()"
-                           [readOnlyEditor]="recentRunId() !== undefined"></app-monaco-editor>
+        <div class="h-full flex flex-col" content>
+          <div class="w-full bg-red-200 px-2 py-1.5 text-xs text-center" *ngIf="versionMismatch | ngrxPush">
+            Method has been updated. You cannot save your changes without refreshing the page first.
+          </div>
+          <app-monaco-editor class="block rounded-sm flex-1" [editorSizeChange]="editorSizeChange"
+                             (keydown.control.s)="onCtrlS($event)"
+                             [unitId]="unitId()"
+                             [readOnlyEditor]="recentRunId() !== undefined"></app-monaco-editor>
+        </div>
       }
       @if (!collapsed && (methodEditorIsDirty | ngrxPush)) {
         <button (click)="onSaveButtonClicked()" content
@@ -40,6 +48,7 @@ export class MethodEditorComponent implements OnInit, OnDestroy {
   recentRunId = input<string>();
 
   protected methodEditorIsDirty = this.store.select(MethodEditorSelectors.isDirty);
+  protected versionMismatch = this.store.select(MethodEditorSelectors.versionMismatch);
   protected editorSizeChange = new Subject<void>();
   protected collapsed = false;
 
