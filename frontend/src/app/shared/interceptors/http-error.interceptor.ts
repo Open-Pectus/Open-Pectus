@@ -7,7 +7,11 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
   const toastr = inject(ToastrService);
   return next(req).pipe(tap({
     error: (error: HttpErrorResponse) => {
-      toastr.error(error.error.message, 'HTTP Error:');
+      const endpoint = error.url?.split('/').at(-1);
+      toastr.error(error.error.message, `HTTP Error "${error.statusText}" on endpoint "${endpoint}"`, {
+        timeOut: 1000 * 30,
+        extendedTimeOut: 1000 * 60 * 60,
+      });
     },
   }));
 };

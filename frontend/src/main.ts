@@ -80,11 +80,7 @@ enableMocking().then(() => bootstrapApplication(AppComponent, {
     }),
     provideRouter(APP_ROUTES),
     provideAnimations(),
-    provideToastr({
-      timeOut: 10000,
-      extendedTimeOut: 5000,
-      disableTimeOut: true,
-    }),
+    provideToastr(),
     importProvidersFrom(
       AuthConfigModule,
     ),
