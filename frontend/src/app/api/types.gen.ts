@@ -62,6 +62,7 @@ export type InProgress = {
 export type Method = {
     lines: Array<MethodLine>;
     version: number;
+    last_author: string;
 };
 
 export type MethodAndState = {
@@ -189,7 +190,7 @@ export type ProcessValueCommandNumberValue = {
 
 export type ProcessValueType = 'string' | 'float' | 'int' | 'choice' | 'none';
 
-export type PubSubTopic = 'run_log' | 'method' | 'control_state' | 'error_log' | 'process_units';
+export type PubSubTopic = 'run_log' | 'method' | 'method_state' | 'control_state' | 'error_log' | 'process_units';
 
 export type Ready = {
     state: "ready";
@@ -334,6 +335,13 @@ export type GetMethodAndStateData = {
 };
 
 export type GetMethodAndStateResponse = (MethodAndState);
+
+export type GetMethodData = {
+    unitId: string;
+    xIdentity?: string;
+};
+
+export type GetMethodResponse = (Method);
 
 export type SaveMethodData = {
     requestBody: Method;

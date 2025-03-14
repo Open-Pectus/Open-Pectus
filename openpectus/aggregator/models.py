@@ -32,10 +32,11 @@ UodDefinition = Mdl.UodDefinition
 
 class Method(Mdl.Method):
     version: int
+    last_author: str
 
     @staticmethod
     def empty() -> Method:
-        return Method(lines=Mdl.Method.empty().lines, version=0)
+        return Method(lines=Mdl.Method.empty().lines, version=0, last_author='')
 
 
 class AggregatedErrorLogEntry(BaseModel):

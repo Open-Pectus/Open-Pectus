@@ -493,6 +493,56 @@
       }
     },
     "/api/process_unit/{unit_id}/method": {
+      "get": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Get Method",
+        "operationId": "get_method",
+        "parameters": [
+          {
+            "name": "unit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            }
+          },
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Method"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "process_unit"
@@ -1784,12 +1834,17 @@
           "version": {
             "type": "integer",
             "title": "Version"
+          },
+          "last_author": {
+            "type": "string",
+            "title": "Last Author"
           }
         },
         "type": "object",
         "required": [
           "lines",
-          "version"
+          "version",
+          "last_author"
         ],
         "title": "Method"
       },
@@ -2347,6 +2402,7 @@
         "enum": [
           "run_log",
           "method",
+          "method_state",
           "control_state",
           "error_log",
           "process_units"
