@@ -36,6 +36,7 @@
     "immer": "^10.0.2",
     "monaco-editor-wrapper": "^6.4.0",
     "monaco-languageclient": "^9.4.0",
+    "ngx-toastr": "^19.0.0",
     "rxjs": "~7.8.0",
     "tslib": "2.8",
     "vscode-ws-jsonrpc": "^3.3.2"

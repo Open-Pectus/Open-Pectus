@@ -1,15 +1,16 @@
 import { DATE_PIPE_DEFAULT_OPTIONS, DatePipe, DecimalPipe } from '@angular/common';
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { provideHttpClient, withInterceptors, withInterceptorsFromDi } from '@angular/common/http';
 import '@angular/common/locales/global/da';
 import { importProvidersFrom, isDevMode, LOCALE_ID, provideExperimentalZonelessChangeDetection } from '@angular/core';
-import { bootstrapApplication, BrowserModule } from '@angular/platform-browser';
+import { bootstrapApplication } from '@angular/platform-browser';
+import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
-import { LetDirective, PushPipe } from '@ngrx/component';
 import { provideEffects } from '@ngrx/effects';
 import { provideRouterStore, RouterState } from '@ngrx/router-store';
 import { provideStore } from '@ngrx/store';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { setupWorker } from 'msw/browser';
+import { provideToastr } from 'ngx-toastr';
 import { AppComponent } from './app/app.component';
 import { APP_ROUTES } from './app/app.routes';
 import { AuthConfigModule } from './app/auth/auth-config.module';
@@ -17,6 +18,7 @@ import { Defaults } from './app/defaults';
 import { DetailsActions } from './app/details/ngrx/details.actions';
 import { metaReducers, reducers } from './app/ngrx';
 import { AppEffects } from './app/ngrx/app.effects';
+import { httpErrorInterceptor } from './app/shared/interceptors/http-error.interceptor';
 import { ProcessValuePipe } from './app/shared/pipes/process-value.pipe';
 
 import { handlers } from './msw/handlers';
@@ -77,18 +79,21 @@ enableMocking().then(() => bootstrapApplication(AppComponent, {
       ],
     }),
     provideRouter(APP_ROUTES),
+    provideAnimations(),
+    provideToastr({
+      timeOut: 10000,
+      extendedTimeOut: 5000,
+      disableTimeOut: true,
+    }),
     importProvidersFrom(
-      BrowserModule,
       AuthConfigModule,
-      PushPipe,
-      LetDirective,
     ),
     {provide: LOCALE_ID, useValue: 'da-DK'},
     DatePipe,
     DecimalPipe,
     ProcessValuePipe,
     {provide: DATE_PIPE_DEFAULT_OPTIONS, useValue: {dateFormat: Defaults.dateFormat}},
-    provideHttpClient(withInterceptorsFromDi()),
+    provideHttpClient(withInterceptorsFromDi(), withInterceptors([httpErrorInterceptor])),
   ],
 })
   .catch(err => console.error(err)));
