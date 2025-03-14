@@ -229,7 +229,8 @@ async def save_method(
     _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
     method_mdl = Mdl.Method(
         lines=[Mdl.MethodLine(id=line.id, content=line.content) for line in method_dto.lines],
-        version=method_dto.version
+        version=method_dto.version,
+        last_author=user_name
     )
     new_version = await agg.from_frontend.method_saved(engine_id=unit_id, method=method_mdl, user_name=user_name)
     return Dto.MethodVersion(version=new_version)

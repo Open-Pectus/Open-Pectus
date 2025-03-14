@@ -62,6 +62,7 @@ export type InProgress = {
 export type Method = {
     lines: Array<MethodLine>;
     version: number;
+    last_author: string;
 };
 
 export type MethodAndState = {

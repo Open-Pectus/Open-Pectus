@@ -14,7 +14,7 @@ export interface MethodEditorState {
 const initialState: MethodEditorState = {
   isDirty: false,
   versionMismatch: false,
-  method: {lines: [], version: 0},
+  method: {lines: [], version: 0, last_author: ''},
   methodState: {
     started_line_ids: [],
     executed_line_ids: [],

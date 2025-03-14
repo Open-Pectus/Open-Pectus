@@ -25,7 +25,7 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
       @if (!collapsed) {
         <div class="h-full flex flex-col" content>
           <div class="w-full bg-red-200 px-2 py-1.5 text-xs text-center" *ngIf="versionMismatch | ngrxPush">
-            Method has been updated. You cannot save your changes without refreshing the page first.
+            Method has been updated by {{ (method | ngrxPush)?.last_author }}. You cannot save your changes without refreshing the page first.
           </div>
           <app-monaco-editor class="block rounded-sm flex-1" [editorSizeChange]="editorSizeChange"
                              (keydown.control.s)="onCtrlS($event)"
@@ -49,6 +49,7 @@ export class MethodEditorComponent implements OnInit, OnDestroy {
 
   protected methodEditorIsDirty = this.store.select(MethodEditorSelectors.isDirty);
   protected versionMismatch = this.store.select(MethodEditorSelectors.versionMismatch);
+  protected method = this.store.select(MethodEditorSelectors.method);
   protected editorSizeChange = new Subject<void>();
   protected collapsed = false;
 

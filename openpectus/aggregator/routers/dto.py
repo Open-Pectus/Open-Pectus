@@ -323,20 +323,22 @@ class MethodLine(Dto):
 class Method(Dto):
     lines: list[MethodLine]
     version: int
+    last_author: str
 
     def __str__(self) -> str:
         lines = [str(line) for line in self.lines]
-        return f'{self.__class__.__name__}(lines={lines})'
+        return f'{self.__class__.__name__}(lines="{lines}", version="{self.version}", last_author="{self.last_author}")'
 
     @staticmethod
     def empty() -> Method:
-        return Method(lines=[], version=0)
+        return Method(lines=[], version=0, last_author='')
 
     @staticmethod
     def from_model(method: Mdl.Method) -> Method:
         return Method(
             lines=[MethodLine(id=line.id, content=line.content) for line in method.lines],
-            version=method.version
+            version=method.version,
+            last_author=method.last_author
         )
 
 class MethodVersion(Dto):

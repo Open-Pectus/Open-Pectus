@@ -1834,12 +1834,17 @@
           "version": {
             "type": "integer",
             "title": "Version"
+          },
+          "last_author": {
+            "type": "string",
+            "title": "Last Author"
           }
         },
         "type": "object",
         "required": [
           "lines",
-          "version"
+          "version",
+          "last_author"
         ],
         "title": "Method"
       },
