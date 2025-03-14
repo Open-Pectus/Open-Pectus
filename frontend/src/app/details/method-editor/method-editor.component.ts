@@ -37,8 +37,9 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
         </div>
       }
       @if (!collapsed && (methodEditorIsDirty | ngrxPush)) {
-        <button (click)="onSaveButtonClicked()" content
-                class="bg-green-300 flex items-center text-black px-3 py-1.5 rounded-md absolute right-9 bottom-6 z-10">
+        <button (click)="onSaveButtonClicked()" content [disabled]="versionMismatch | ngrxPush"
+                class="bg-green-300 flex items-center text-black px-3 py-1.5 rounded-md absolute right-9 bottom-6 z-10"
+                [class.!bg-gray-200]="versionMismatch | ngrxPush">
           <span class="codicon codicon-save !text-lg"></span>
           <span class="ml-2">Save method</span>
         </button>
