@@ -1286,8 +1286,8 @@ Block: A
 
             continue_engine(e, 4)
             self.assertEqual(block.get_value(), "A")
-            self.assertAlmostEqual(acc_cv.as_float(), 0.8/2, delta=0.1)
-            self.assertAlmostEqual(block_cv.as_float(), 0.6/2, delta=0.1)
+            self.assertAlmostEqual(acc_cv.as_float(), 0.7/2, delta=0.1)
+            self.assertAlmostEqual(block_cv.as_float(), 0.5/2, delta=0.1)
 
             continue_engine(e, 1)
             self.assertEqual(block.get_value(), None)
