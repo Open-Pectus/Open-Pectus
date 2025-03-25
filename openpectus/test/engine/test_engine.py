@@ -48,7 +48,7 @@ def get_queue_items(q) -> list[Tag]:
     return items
 
 
-def create_test_uod() -> UnitOperationDefinitionBase:
+def create_test_uod() -> UnitOperationDefinitionBase:  # noqa C901
     def reset(cmd: UodCommand, **kvargs) -> None:
         count = cmd.get_iteration_count()
         max_ticks = 5
@@ -421,7 +421,7 @@ class TestEngine(unittest.TestCase):
 
         test('no_args', False)
 
-    def test_uod_invoke_command_signatures(self):
+    def test_uod_invoke_command_signatures(self):  # noqa C901
 
         def no_args(cmd: UodCommand):
             pass
@@ -1099,27 +1099,27 @@ Block: A
             self.assertEqual(block_vol.as_float(), 0.0)
             self.assertEqual(block_vol.unit, "L")
 
-            continue_engine(e, 2)  # Blank + Base
+            continue_engine(e, 1)  # Base
             self.assertEqual(block.get_value(), None)
-            self.assertAlmostEqual(acc_vol.as_float(), 0.2, delta=0.1)
-            self.assertAlmostEqual(block_vol.as_float(), 0.2, delta=0.1)
+            self.assertAlmostEqual(acc_vol.as_float(), 0.1, delta=0.1)
+            self.assertAlmostEqual(block_vol.as_float(), 0.1, delta=0.1)
 
             continue_engine(e, 1)  # Block
             self.assertEqual(block.get_value(), "A")
-            self.assertAlmostEqual(acc_vol.as_float(), 0.3, delta=0.1)
+            self.assertAlmostEqual(acc_vol.as_float(), 0.2, delta=0.1)
             self.assertAlmostEqual(block_vol.as_float(), 0.1, delta=0.1)
 
-            continue_engine(e, 5)
+            continue_engine(e, 4)
             self.assertEqual(block.get_value(), "A")
-            self.assertAlmostEqual(acc_vol.as_float(), 0.8, delta=0.1)
+            self.assertAlmostEqual(acc_vol.as_float(), 0.7, delta=0.1)
             self.assertAlmostEqual(block_vol.as_float(), 0.6, delta=0.1)
 
             continue_engine(e, 1)
             self.assertEqual(block.get_value(), None)
             # acc_vol keeps counting
-            self.assertAlmostEqual(acc_vol.as_float(), 0.9, delta=0.1)
+            self.assertAlmostEqual(acc_vol.as_float(), 0.8, delta=0.1)
             # block_vol is reset to value before block A - so it matches acc_vol again
-            self.assertAlmostEqual(block_vol.as_float(), 0.9, delta=0.1)
+            self.assertAlmostEqual(block_vol.as_float(), 0.8, delta=0.1)
 
     def test_accumulated_column_volume(self):
         self.engine.cleanup()  # dispose the test default engine
@@ -1267,7 +1267,7 @@ Block: A
             self.assertEqual(block_cv.as_float(), 0.0)
             self.assertEqual(block_cv.unit, "CV")
 
-            continue_engine(e, 2)  # Blank + Base
+            continue_engine(e, 1)  # Base
             self.assertEqual(block.get_value(), None)
             self.assertAlmostEqual(acc_cv.as_float(), 0.2/2, delta=0.1)
             self.assertAlmostEqual(block_cv.as_float(), 0.2/2, delta=0.1)
@@ -1277,7 +1277,7 @@ Block: A
             self.assertAlmostEqual(acc_cv.as_float(), 0.3/2, delta=0.1)
             self.assertAlmostEqual(block_cv.as_float(), 0.1/2, delta=0.1)
 
-            continue_engine(e, 5)
+            continue_engine(e, 4)
             self.assertEqual(block.get_value(), "A")
             self.assertAlmostEqual(acc_cv.as_float(), 0.8/2, delta=0.1)
             self.assertAlmostEqual(block_cv.as_float(), 0.6/2, delta=0.1)
@@ -1330,7 +1330,7 @@ Restart
         e = self.engine
         self.assertEqual(0, e.tags[SystemTagName.RUN_COUNTER].as_number())
 
-        run_engine(e, program, 5)
+        run_engine(e, program, 4)
 
         run_id_1 = e.tags[SystemTagName.RUN_ID].get_value()
         self.assertEqual(e.tags[SystemTagName.SYSTEM_STATE].get_value(), SystemStateEnum.Restarting)
