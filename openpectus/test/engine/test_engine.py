@@ -1082,8 +1082,9 @@ Base: s
 
         program = """
 Base: s
+Wait: 0.45s
 Block: A
-    0.45 End block
+    0.85 End block
 0.45 Mark: A
         """
         with create_engine_context(uod) as e:
@@ -1104,22 +1105,28 @@ Block: A
             self.assertAlmostEqual(acc_vol.as_float(), 0.1, delta=0.1)
             self.assertAlmostEqual(block_vol.as_float(), 0.1, delta=0.1)
 
+            continue_engine(e, 6)  # Wait
+            self.assertEqual(block.get_value(), None)
+            self.assertAlmostEqual(acc_vol.as_float(), 0.7, delta=0.1)
+            self.assertAlmostEqual(block_vol.as_float(), 0.7, delta=0.1)
+
+
             continue_engine(e, 1)  # Block
             self.assertEqual(block.get_value(), "A")
-            self.assertAlmostEqual(acc_vol.as_float(), 0.2, delta=0.1)
+            self.assertAlmostEqual(acc_vol.as_float(), 0.8, delta=0.1)
             self.assertAlmostEqual(block_vol.as_float(), 0.1, delta=0.1)
 
-            continue_engine(e, 4)
+            continue_engine(e, 8)
             self.assertEqual(block.get_value(), "A")
-            self.assertAlmostEqual(acc_vol.as_float(), 0.7, delta=0.1)
-            self.assertAlmostEqual(block_vol.as_float(), 0.6, delta=0.1)
+            self.assertAlmostEqual(acc_vol.as_float(), 1.6, delta=0.1)
+            self.assertAlmostEqual(block_vol.as_float(), 0.9, delta=0.1)
 
             continue_engine(e, 1)
             self.assertEqual(block.get_value(), None)
             # acc_vol keeps counting
-            self.assertAlmostEqual(acc_vol.as_float(), 0.8, delta=0.1)
+            self.assertAlmostEqual(acc_vol.as_float(), 1.7, delta=0.1)
             # block_vol is reset to value before block A - so it matches acc_vol again
-            self.assertAlmostEqual(block_vol.as_float(), 0.8, delta=0.1)
+            self.assertAlmostEqual(block_vol.as_float(), 1.7, delta=0.1)
 
     def test_accumulated_column_volume(self):
         self.engine.cleanup()  # dispose the test default engine
