@@ -93,7 +93,7 @@ class EngineMessageBuilder():
 
     def create_run_stopped_msg(self, run_id: str) -> EM.RunStoppedMsg:
         runlog_msg = self.create_runlog_msg(run_id)
-        state = self.engine.method._method_state
+        state = self.engine.method.get_method_state()
         return EM.RunStoppedMsg(run_id=run_id, runlog=runlog_msg.runlog, method_state=state)
 
     def create_runlog_msg(self, run_id: str) -> EM.RunLogMsg:
@@ -146,5 +146,5 @@ class EngineMessageBuilder():
         ))
 
     def create_method_state_msg(self) -> EM.MethodStateMsg:
-        state = self.engine.calculate_method_state()
+        state = self.engine.method.get_method_state()
         return EM.MethodStateMsg(method_state=state)

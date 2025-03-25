@@ -1,16 +1,16 @@
 from __future__ import annotations
 import logging
 import time
-from typing import Any
 
 from openpectus.engine.internal_commands import (
-    REGEX_DURATION, REGEX_DURATION_OPTIONAL,
+    REGEX_DURATION, REGEX_DURATION_OPTIONAL, REGEX_TEXT,
     InternalCommandsRegistry, InternalEngineCommand
 )
 from openpectus.engine.models import EngineCommandEnum, MethodStatusEnum, SystemStateEnum
 from openpectus.lang.exec.argument_specification import command_argument_none, command_argument_regex
 from openpectus.lang.exec.tags import SystemTagName
 from openpectus.engine.engine import Engine
+from openpectus.lang.exec.units import as_float
 
 
 logger = logging.getLogger(__name__)
@@ -71,29 +71,25 @@ class PauseEngineCommand(InternalEngineCommand):
     def __init__(self, engine: Engine, registry: InternalCommandsRegistry) -> None:
         super().__init__(EngineCommandEnum.PAUSE, registry)
         self.engine = engine
-        self.duration_end_time : float | None = None
-
-    def init_args(self, kvargs: dict[str, Any]):
-        if "time" in kvargs.keys() and "unit" in kvargs.keys():
-            time = float(kvargs.get("time", None))
-            if time is None:
-                raise ValueError("Invalid Pause arguments. Time is not valid")
-            unit = kvargs.get("unit", None)
-            if unit is None:
-                raise ValueError("Invalid Pause arguments. Unit is not valid")
-            self.duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
-        elif "time" in kvargs.keys() or "unit" in kvargs.keys():
-            raise ValueError("Invalid Pause arguments. Specify either no duration arguments or both time and unit")
 
     def _run(self):
+        duration_end_time : float | None = None
+        time = as_float(self.kvargs.pop("number", ""))
+        if time is not None:
+            try:
+                unit = self.kvargs.pop("number_unit")
+            except Exception:
+                raise ValueError(f"Argument error. Actual kvargs: {self.kvargs}")
+            duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
+
         e = self.engine
         e._runstate_paused = True
         e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Paused, e._tick_time)
         e._prev_state = e._apply_safe_state()
 
-        if self.duration_end_time is not None:
+        if duration_end_time is not None:
             logger.debug("Pause duration set. Waiting to unpause.")
-            while self.engine._tick_time < self.duration_end_time:
+            while self.engine._tick_time < duration_end_time:
                 yield
             logger.debug("Resuming using Unpause")
             UnpauseEngineCommand(self.engine, self._registry)._run()
@@ -138,29 +134,25 @@ class HoldEngineCommand(InternalEngineCommand):
     def __init__(self, engine: Engine, registry: InternalCommandsRegistry) -> None:
         super().__init__(EngineCommandEnum.HOLD, registry)
         self.engine = engine
-        self.duration_end_time : float | None = None
-
-    def init_args(self, kvargs: dict[str, Any]):
-        if "time" in kvargs.keys() and "unit" in kvargs.keys():
-            time = float(kvargs.get("time", None))
-            if time is None:
-                raise ValueError("Invalid Hold arguments. Time is not valid")
-            unit = kvargs.get("unit", None)
-            if unit is None:
-                raise ValueError("Invalid Hold arguments. Unit is not valid")
-            self.duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
-        elif "time" in kvargs.keys() or "unit" in kvargs.keys():
-            raise ValueError("Invalid Hold arguments. Specify either no duration arguments or both time and unit")
 
     def _run(self):
+        duration_end_time : float | None = None
+        time = as_float(self.kvargs.pop("number", ""))
+        if time is not None:
+            try:
+                unit = self.kvargs.pop("number_unit")
+            except Exception:
+                raise ValueError(f"Argument error. Actual kvargs: {self.kvargs}")
+            duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
+
         e = self.engine
         e._runstate_holding = True
         if not e._runstate_paused:  # Pause takes precedence
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Holding, e._tick_time)
 
-        if self.duration_end_time is not None:
+        if duration_end_time is not None:
             logger.debug("Hold duration set. Waiting to unhold.")
-            while self.engine._tick_time < self.duration_end_time:
+            while self.engine._tick_time < duration_end_time:
                 yield
             logger.debug("Resuming using Unhold")
             UnholdEngineCommand(self.engine, self._registry)._run()
@@ -231,23 +223,18 @@ class WaitEngineCommand(InternalEngineCommand):
         self.engine = engine
         self.forced = False
 
-    def init_args(self, kvargs: dict[str, Any]):
-        if "time" in kvargs.keys() and "unit" in kvargs.keys():
-            time = float(kvargs.get("time", None))
-            if time is None:
-                raise ValueError("Invalid Wait arguments. Time is not valid")
-            unit = kvargs.get("unit", None)
-            if unit is None:
-                raise ValueError("Invalid Wait arguments. Unit is not valid")
-            self.duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
-        else:
-            raise ValueError("Invalid Wait arguments. A duration is required")
-
     def _run(self):
+        try:
+            time = float(self.kvargs.pop("number"))
+            unit = self.kvargs.pop("number_unit")
+        except Exception:
+            raise ValueError(f"Argument error. Actual kvargs: {self.kvargs}")
+        duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
+
         self.engine._runstate_waiting = True
         start = self.engine._tick_time
-        duration = self.duration_end_time - start
-        while self.engine._tick_time < self.duration_end_time and not self.forced:
+        duration = duration_end_time - start
+        while self.engine._tick_time < duration_end_time and not self.forced:
             if duration > 0:
                 progress = (self.engine._tick_time - start) / duration
                 self.set_progress(progress)
@@ -319,28 +306,31 @@ class RestartEngineCommand(InternalEngineCommand):
             logger.info("Restarting engine complete")
 
 
+@command_argument_regex(REGEX_TEXT)
 class InfoEngineCommand(InternalEngineCommand):
     def __init__(self, engine: Engine, registry: InternalCommandsRegistry) -> None:
         super().__init__(EngineCommandEnum.INFO, registry)
 
     def _run(self):
-        msg = self.kvargs.get("unparsed_args")
+        msg = self.kvargs.get("text")
         logger.info(f"Info: {msg}")
 
 
+@command_argument_regex(REGEX_TEXT)
 class WarningEngineCommand(InternalEngineCommand):
     def __init__(self, engine: Engine, registry: InternalCommandsRegistry) -> None:
         super().__init__(EngineCommandEnum.WARNING, registry)
 
     def _run(self):
-        msg = self.kvargs.get("unparsed_args")
+        msg = self.kvargs.get("text")
         logger.warning(f"Warning: {msg}")
 
 
+@command_argument_regex(REGEX_TEXT)
 class ErrorEngineCommand(InternalEngineCommand):
     def __init__(self, engine: Engine, registry: InternalCommandsRegistry) -> None:
         super().__init__(EngineCommandEnum.ERROR, registry)
 
     def _run(self):
-        msg = self.kvargs.get("unparsed_args")
+        msg = self.kvargs.get("text")
         logger.error(f"Error: {msg}")

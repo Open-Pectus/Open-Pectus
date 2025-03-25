@@ -65,7 +65,7 @@ def main():
     if args.lsp:
         aggregator_url = f"http://{args.host}:{args.port}"
         lsp_mainpy_path = os.path.join(
-            os.path.dirname(__file__), "..", "lsp", "main.py"            
+            os.path.dirname(__file__), "..", "lsp", "main.py"
         )
         process = subprocess.Popen([
             "python", lsp_mainpy_path,

@@ -6,19 +6,19 @@ import httpx
 
 from pylsp.workspace import Document
 from pylsp.lsp import DiagnosticSeverity, SymbolKind
-from pylsp._utils import throttle, debounce
 
 from openpectus.lang.exec.uod import RegexNamedArgumentParser
 from openpectus.lang.exec.analyzer import AnalyzerItem, SemanticCheckAnalyzer
 from openpectus.lang.exec.commands import Command, CommandCollection
 from openpectus.lang.exec.tags import TagValue, TagValueCollection
-from openpectus.lang.model.pprogram import PBlank, PComment, PNode, PProgram
+import openpectus.lang.model.ast as p
+from openpectus.lang.model.parser import Method, create_method_parser, lsp_parse_line
 from openpectus.lsp.model import (
     CompletionItem, CompletionItemKind, Diagnostics,
     DocumentSymbol, Position, Range,
-    get_item_range, get_item_severity, get_node_range
+    get_item_range, get_item_severity
 )
-from openpectus.test.engine.utility_methods import build_program
+
 import openpectus.aggregator.routers.dto as Dto
 
 
@@ -114,7 +114,7 @@ def create_analysis_input(engine_id: str) -> AnalysisInput:
 
 
 class AnalysisResult:
-    def __init__(self, program: PProgram, items: list[AnalyzerItem], input: AnalysisInput):
+    def __init__(self, program: p.ProgramNode, items: list[AnalyzerItem], input: AnalysisInput):
         self.program = program
         self.items = items
         self.input = input
@@ -125,20 +125,25 @@ def analyze(input: AnalysisInput, document: Document) -> AnalysisResult:
     t1 = time.perf_counter()
     logger.debug(f"Starting new analysis, ver: {document.version}")
     pcode = document.source
+    method = Method.from_pcode(pcode)
+    parser = create_method_parser(method, uod_command_names=[])
     try:
-        program = build_program(pcode)
+        program = parser.parse_method(method)
     except Exception as ex:
-        logger.error("Failed to build program: '{pcode}'", exc_info=True)
+        logger.error(f"Failed to build program: '{pcode}'", exc_info=True)
         raise ex
-    analyzer = SemanticCheckAnalyzer(input.tags, input.commands)
-    analyzer.analyze(program)
+    try:
+        analyzer = SemanticCheckAnalyzer(input.tags, input.commands)
+        analyzer.analyze(program)
+    except Exception as ex:
+        logger.error(f"Failed to analyze program: '{pcode}'", exc_info=True)
+        raise ex
     result = AnalysisResult(program, analyzer.items, input)
     dt = time.perf_counter() - t1
     logger.debug(f"Analysis completed, ver: {document.version}, duration: {dt:0.2f}s")
     return result
 
-#@debounce(3, keyed_by="engine_id")
-#@throttle(3)
+
 def lint(document: Document, engine_id: str) -> list[Diagnostics]:
     diagnostics: list[Diagnostics] = []
     logger.debug(f"lint called | {engine_id=} | {document.version=}")
@@ -154,8 +159,8 @@ def lint(document: Document, engine_id: str) -> list[Diagnostics]:
                     start=Position(line=0, character=1),
                     end=Position(line=0, character=100)
                 ),
-                code="Demo Code??",
-                message="Parse error: " + str(ex),
+                code="Parse error",
+                message="Syntax error: " + str(ex),
                 severity=DiagnosticSeverity.Error
             )
         )
@@ -177,57 +182,56 @@ def lint(document: Document, engine_id: str) -> list[Diagnostics]:
         )
 
     # log unspecific errors
-    analysis_result.program.collect_errors()
-    if analysis_result.program.errors and len(analysis_result.program.errors) > 0:
+    if analysis_result.program.has_error():
         logger.error(f"Program errors: {len(analysis_result.program.errors)}")
         for error in analysis_result.program.errors:
             logger.error(error.message)
 
     return diagnostics
 
-def create_node_symbol(node: PNode) -> DocumentSymbol | None:
-    if isinstance(node, (PComment, PBlank)):
-        return None
-    node_range = get_node_range(node)
-    if node_range is None:
-        logger.warning(f"Node {node} has no range")
-        return None
+# def create_node_symbol(node: PNode) -> DocumentSymbol | None:
+#     if isinstance(node, (PComment, PBlank)):
+#         return None
+#     node_range = get_node_range(node)
+#     if node_range is None:
+#         logger.warning(f"Node {node} has no range")
+#         return None
 
-    child_symbols = []
-    for child_node in node.get_child_nodes(recursive=False):
-        child_symbol = create_node_symbol(child_node)
-        if child_symbol is not None:
-            child_symbols.append(child_symbol)
+#     child_symbols = []
+#     for child_node in node.get_child_nodes(recursive=False):
+#         child_symbol = create_node_symbol(child_node)
+#         if child_symbol is not None:
+#             child_symbols.append(child_symbol)
 
-    symbol = DocumentSymbol(
-        name=node.instruction_name or f"(missing instruction name, node type {type(node).__name__})",
-#        detail=None,
-        kind=SymbolKind.Function,
-        range=node_range,
-        selectionRange=node_range,
-        children=child_symbols
-    )
-    return symbol
+#     symbol = DocumentSymbol(
+#         name=node.instruction_name or f"(missing instruction name, node type {type(node).__name__})",
+# #        detail=None,
+#         kind=SymbolKind.Function,
+#         range=node_range,
+#         selectionRange=node_range,
+#         children=child_symbols
+#     )
+#     return symbol
 
 
-def symbols(document: Document, engine_id: str) -> list[DocumentSymbol]:
-    result = []
+# def symbols(document: Document, engine_id: str) -> list[DocumentSymbol]:
+#     result = []
 
-    try:
-        analysis_input = create_analysis_input(engine_id)
-        analysis_result = analyze(analysis_input, document)
-        assert analysis_result is not None
-    except Exception:
-        logger.error("Failed to build program: '{pcode}'", exc_info=True)
-        return []
+#     try:
+#         analysis_input = create_analysis_input(engine_id)
+#         analysis_result = analyze(analysis_input, document)
+#         assert analysis_result is not None
+#     except Exception:
+#         logger.error("Failed to build program: '{pcode}'", exc_info=True)
+#         return []
 
-    # iterate the root and add nodes as direct decendant symbols
-    for node in analysis_result.program.get_child_nodes(recursive=False):
-        symbol = create_node_symbol(node)
-        if symbol is not None:
-            result.append(symbol)
+#     # iterate the root and add nodes as direct decendant symbols
+#     for node in analysis_result.program.get_child_nodes(recursive=False):
+#         symbol = create_node_symbol(node)
+#         if symbol is not None:
+#             result.append(symbol)
 
-    return result
+#     return result
 
 
 def symbols_test(document: Document, engine_id: str) -> list[DocumentSymbol]:
@@ -281,7 +285,7 @@ def starts_with_any(query: str, candidates: list[str]) -> bool:
 def completions(document: Document, position: Position, ignored_names, engine_id: str) -> list[CompletionItem]:
     # Note: Returning a CompletionList with items does not work in the client for some reason. Only
     # The array/list of CompletionItem is working in the client.
-    # Also consider the hook pylsp_completion_item_resolve. The spec has info about how this can be used to add 
+    # Also consider the hook pylsp_completion_item_resolve. The spec has info about how this can be used to add
     # more detail to the suggestions.
     try:
         analysis_input = create_analysis_input(engine_id)
@@ -301,10 +305,16 @@ def completions(document: Document, position: Position, ignored_names, engine_id
     else:
         query = line
 
-    # remove indentation from query
-    query = query.lstrip().removesuffix("\n")
+    lsp_result = lsp_parse_line(query)
+    if lsp_result and lsp_result.threshold:
+        # strip threshold that confuses is_first_word calculation
+        query = lsp_result.instruction_name
+        if lsp_result.argument:
+            query += " " + lsp_result.argument
+    else:
+        query = query.lstrip().removesuffix("\n")
 
-    is_first_word = True if " " not in query else False
+    is_first_word = True if " " not in query.lstrip() else False
     if is_first_word:
         # the simplest and most important case - completions for the first word on a line
         return [
@@ -312,6 +322,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
             for word in analysis_input.get_first_word_completions(query)
         ]
     else:
+        query = query.lstrip().removesuffix("\n")
         if starts_with_any(query, ["Watch:", "Watch: ", "Alarm:", "Alarm: "]):
             # suggest tags
             second_word = query[6:].strip()

@@ -1,6 +1,6 @@
 
 from typing import Literal
-from openpectus.lang.model.pprogram import PNode
+import openpectus.lang.model.ast as p
 
 
 class EngineNotInitializedError(Exception):
@@ -60,7 +60,7 @@ class InterpretationError(Exception):
 
 class NodeInterpretationError(InterpretationError):
     """ Raised by interpreter when an instruction specific error occurs """
-    def __init__(self, node: PNode, message: str, user_message: str | Literal["same"] | None = "same",
+    def __init__(self, node: p.Node, message: str, user_message: str | Literal["same"] | None = "same",
                  exception: Exception | None = None, *args: object) -> None:
         self.node = node
         self.message: str = message

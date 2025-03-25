@@ -91,19 +91,20 @@ def get_engine_id(config: Config):
         engine_id = "MIAWLT-1645-MPO_DemoUod"
     return engine_id
 
-# @hookimpl
-# def pylsp_lint(config: Config, workspace: Workspace, document: Document, is_saved: bool):
-#     logger.debug("pylsp_lint")
-#     t1 = time.perf_counter()
-#     engine_id = get_engine_id(config)
-#     try:
-#         diagnostics = lsp_analysis.lint(document, engine_id)
-#         dt = time.perf_counter() - t1
-#         logger.debug(f"Lint ok, items: {len(diagnostics)}, duration: {dt:0.2f}s")
-#         return diagnostics
-#     except Exception:
-#         logger.error("Lint error", exc_info=True)
-#         return []
+
+@hookimpl
+def pylsp_lint(config: Config, workspace: Workspace, document: Document, is_saved: bool):
+    logger.debug("pylsp_lint")
+    t1 = time.perf_counter()
+    engine_id = get_engine_id(config)
+    try:
+        diagnostics = lsp_analysis.lint(document, engine_id)
+        dt = time.perf_counter() - t1
+        logger.debug(f"Lint ok, items: {len(diagnostics)}, duration: {dt:0.2f}s")
+        return diagnostics
+    except Exception:
+        logger.error("Lint error", exc_info=True)
+        return []
 
 
 # @hookimpl

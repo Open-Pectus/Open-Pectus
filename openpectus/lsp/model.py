@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TypedDict
 
-from pylsp.lsp import DiagnosticSeverity, SymbolKind
+from pylsp.lsp import DiagnosticSeverity
 
 from openpectus.lang.exec.analyzer import AnalyzerItem, AnalyzerItemType
 from openpectus.lang.model.pprogram import PNode
@@ -40,9 +40,9 @@ class Diagnostics(TypedDict):
 
 
 class DocumentSymbol(TypedDict):
-    """ Representation of https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#documentSymbol """
+    """ Representation of
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#documentSymbol """
     name: str
-    #detail: str | None
     kind: int
     """ One of SymbolKind """
     # tags: list[object] | None
@@ -96,7 +96,7 @@ class CompletionItemKind:
 
 
 class CompletionItem(TypedDict):
-    """ Representation of 
+    """ Representation of
     https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#completionItem
     Has LOTS of options
     """
@@ -105,7 +105,7 @@ class CompletionItem(TypedDict):
     preselect: bool | None
 
 class CompletionList(TypedDict):
-    """ Representation of 
+    """ Representation of
     https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/#completionList """
     isIncomplete: bool
     items: list[CompletionItem]
@@ -127,12 +127,12 @@ def get_item_range(item: AnalyzerItem) -> Range:
     """ Represent item position range as lsp RangeItem """
     return Range(
         start=Position(
-            line=item.range_start.line - 1,
-            character=item.range_start.character
+            line=item.range.start.line,
+            character=item.range.start.character
         ),
         end=Position(
-            line=item.range_end.line - 1,
-            character=item.range_end.character
+            line=item.range.end.line,
+            character=item.range.end.character
         ),
     )
 
@@ -143,10 +143,10 @@ def get_node_range(node: PNode) -> Range | None:
 
     return Range(
         start=Position(
-            line=node.line - 1,
+            line=node.line,
             character=node.indent
         ),
-        end=Position( # for now we just pick the rest of the line
+        end=Position(  # for now we just pick the rest of the line
             line=node.line,
             character=0
         ),

@@ -284,6 +284,8 @@ Watch: Block Time > .3s
 
         self.assertEqual(item.forced, True)
         self.assertEqual(item.forcible, False)
+
+        continue_engine(e, 1)
         self.assertEqual(['Foo'], e.interpreter.get_marks())
 
     def test_iteration_modification(self):
@@ -374,6 +376,8 @@ Alarm: Block Time > .3s
 
         self.assertEqual(item.forced, True)
         self.assertEqual(item.forcible, False)
+
+        continue_engine(e, 1)
         self.assertEqual(['Foo'], e.interpreter.get_marks())
 
     def test_runlog_watch_in_alarm_body_runs_in_each_alarm_instance(self):

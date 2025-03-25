@@ -227,7 +227,7 @@ Block: B1
             self.assertEqual("B2", block.get_value())
             self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)
 
-            instance.run_ticks(3)
+            instance.run_ticks(2)
             self.assertEqual("B2", block.get_value())
             self.assertAlmostEqual(0.4, block_time.as_number(), delta=delta)
 

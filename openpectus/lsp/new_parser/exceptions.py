@@ -1,6 +1,0 @@
-
-class InvalidParseOperation(Exception):
-    ...
-
-class NodeFactoryError(Exception):
-    ...

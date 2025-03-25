@@ -31,8 +31,6 @@ from openpectus.lang.exec.tags import (
 from openpectus.lang.exec.tags_impl import MarkTag
 from openpectus.lang.exec.timer import EngineTimer, OneThreadTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand
-from openpectus.lang.grammar.pgrammar import PGrammar
-from openpectus.lang.model.pprogram import PProgram
 import openpectus.protocol.models as Mdl
 from openpectus.engine.archiver import ArchiverTag
 
@@ -149,19 +147,11 @@ class Engine(InterpreterContext):
         self.block_times: dict[str, float] = {}
         """ holds time spent in each block"""
 
-        self._interpreter: PInterpreter = PInterpreter(PProgram(), self)
-        """ The interpreter executing the current program. """
-
-        def on_method_init():
-            self._interpreter.stop()
-            self._interpreter = PInterpreter(self._method.get_program(), self)
-            logger.info("Method and interpreter re-initialized")
-
-        def on_method_error(ex: Exception):
-            logger.error("An error occured while setting new method: " + str(ex))
-
-        self._method: MethodModel = MethodModel(on_method_init, on_method_error)
+        self._method_model: MethodModel = MethodModel(uod.get_command_names())
         """ The model handling changes to program/method code """
+
+        self._interpreter: PInterpreter = PInterpreter(self._method_model.program, self)
+        """ The interpreter executing the current program. """
 
         self._cancel_command_exec_ids: set[UUID] = set()
 
@@ -205,7 +195,7 @@ class Engine(InterpreterContext):
 
     @property
     def method(self) -> MethodModel:
-        return self._method
+        return self._method_model
 
     def cleanup(self):
         self.emitter.emit_on_engine_shutdown()
@@ -248,7 +238,7 @@ class Engine(InterpreterContext):
         self._tick_timer.stop()
         self.cleanup()
 
-    def tick(self, tick_time: float, increment_time: float):
+    def tick(self, tick_time: float, increment_time: float):  # noqa C901
         """ Performs a scan cycle tick. """
         # logger.debug(f"Tick {self._tick_number + 1}")
 
@@ -427,7 +417,7 @@ class Engine(InterpreterContext):
         # get the runtime record to use for tracking if possible
         record = RuntimeRecord.null_record()
         if cmd_request.exec_id is not None:  # happens for all commands not originating from interpreter
-            # during restart, record is None - should ont occur otherwise
+            # during restart, record is None - should not occur otherwise
             record = self.interpreter.runtimeinfo.get_exec_record(cmd_request.exec_id)
 
         # an existing, long running engine_command is running. other commands must wait
@@ -454,17 +444,16 @@ class Engine(InterpreterContext):
         # no engine command is running - start one
         try:
             command = self.registry.create_internal_command(cmd_request.name)
-            args = cmd_request.get_args()
+            args = cmd_request.arguments
             if args is not None:
                 try:
-                    command.init_args(args)
+                    command.validate_arguments(args)
                     logger.debug(f"Initialized command {cmd_request.name} with arguments {args}")
                 except Exception:
                     raise EngineError(
                         f"Failed to initialize arguments '{args}' for command '{cmd_request.name}'",
                         "same"
                     )
-
         except ValueError:
             raise EngineError(
                 f"Unknown internal engine command '{cmd_request.name}'",
@@ -495,7 +484,7 @@ class Engine(InterpreterContext):
 
     def _stop_interpreter(self):
         self._interpreter.stop()
-        self._interpreter = PInterpreter(self._method.get_program(), self)
+        self._interpreter = PInterpreter(self._method_model.program, self)
 
     def _cancel_uod_commands(self):
         logger.debug("Cancelling uod commands")
@@ -609,11 +598,11 @@ class Engine(InterpreterContext):
 
         assert uod_command is not None, f"Failed to get uod_command for command '{cmd_name}'"
 
-        logger.debug(f"Parsing arguments '{cmd_request.unparsed_args}' for uod command {cmd_name}")
-        parsed_args = uod_command.parse_args(cmd_request.unparsed_args or "")
+        logger.debug(f"Parsing arguments '{cmd_request.arguments}' for uod command {cmd_name}")
+        parsed_args = uod_command.parse_args(cmd_request.arguments)
 
         if parsed_args is None:
-            logger.error(f"Invalid argument string: '{cmd_request.unparsed_args}' for command '{cmd_name}'")
+            logger.error(f"Invalid argument string: '{cmd_request.arguments}' for command '{cmd_name}'")
             cmds_done.add(cmd_request)
             raise ValueError(f"Invalid arguments for command '{cmd_name}'")
 
@@ -671,7 +660,7 @@ class Engine(InterpreterContext):
 
             logger.error(
                 f"Uod command execution failed. Command: '{cmd_request.name}', " +
-                f"argument string: '{cmd_request.unparsed_args}'", exc_info=True)
+                f"argument string: '{cmd_request.arguments}'", exc_info=True)
             raise ex
 
     def _apply_safe_state(self) -> TagValueCollection:
@@ -728,12 +717,6 @@ class Engine(InterpreterContext):
     def get_error_state_exception(self) -> Exception | None:
         return self._last_error
 
-    # TODO remove
-    def parse_pcode(self, pcode: str) -> PProgram:
-        p = PGrammar()
-        p.parse(pcode)
-        return p.build_model()
-
     def write_process_image(self):
         if not self._runstate_started:
             return
@@ -755,10 +738,10 @@ class Engine(InterpreterContext):
                 logger.error("Hardware write_batch error", exc_info=True)
                 self.set_error_state(ex)
 
-    def schedule_execution(self, name: str, exec_id: UUID | None = None, **kvargs):
+    def schedule_execution(self, name: str, arguments: str = "", exec_id: UUID | None = None):
         """ Execute named command from interpreter """
         if EngineCommandEnum.has_value(name) or self.uod.has_command_name(name):
-            request = CommandRequest.from_interpreter(name, exec_id, **kvargs)
+            request = CommandRequest.from_interpreter(name, arguments, exec_id)
             self.cmd_queue.put_nowait(request)
         else:
             raise EngineError(
@@ -782,11 +765,9 @@ class Engine(InterpreterContext):
 
     def inject_code(self, pcode: str):
         """ Inject a code snippet to run in the current scope of the current program """
-        # TODO review signal Method change
-        # TODO perform this change via _method
-        logger.warning("TODO set updated method content and signal Method change")
+        # TODO refactor to embed interpreter in method model
         try:
-            injected_program = self.parse_pcode(pcode)
+            injected_program = self._method_model.parse_inject_code(pcode)
             self.interpreter.inject_node(injected_program)
             logger.info("Injected code successful")
         except Exception as ex:
@@ -800,8 +781,11 @@ class Engine(InterpreterContext):
 
         On error, sets error_state and re-raises the error.
         """
+
+        # TODO handle pause+resume in case a method is already running
         try:
-            self._method.set_method(method)
+            self._method_model.save_method(method)
+            self._interpreter = PInterpreter(self._method_model.program, self)
             logger.debug(f"New method set with {len(method.lines)} lines")
         except Exception as ex:
             logger.error("Failed to set method", exc_info=True)
@@ -842,9 +826,6 @@ class Engine(InterpreterContext):
         if record is None:
             logger.error(f"Cannot force instruction {exec_id=}, no runtime record found")
 
-
-    def calculate_method_state(self) -> Mdl.MethodState:
-        return self._method.calculate_method_state(self.interpreter.runtimeinfo)
-
     def get_command_definitions(self) -> list[Mdl.CommandDefinition]:
+        """ Return engine command definitions. """
         return self.registry.get_command_definitions()

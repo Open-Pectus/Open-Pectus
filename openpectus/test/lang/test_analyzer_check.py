@@ -13,9 +13,6 @@ from openpectus.lang.exec.tags import TagValueCollection, TagValue
 from openpectus.test.engine.utility_methods import build_program
 
 
-# TODO present PErrorInstructions as errors
-# TODO present PErrors as errors
-
 class CommandCheckAnalyzerTest(unittest.TestCase):
     def test_command_defined(self):
         program = build_program("""
@@ -23,7 +20,7 @@ Foo
 """)
         cmds = CommandCollection().with_cmd(Command("Foo"))
         analyzer = CommandCheckAnalyzer(cmds)
-        analyzer.visit(program)
+        analyzer.analyze(program)
         self.assertEqual(0, len(analyzer.items))
 
     def test_command_undefined(self):
@@ -32,13 +29,13 @@ Foo
 """)
         cmds = CommandCollection()
         analyzer = CommandCheckAnalyzer(cmds)
-        analyzer.visit(program)
+        analyzer.analyze(program)
         self.assertEqual(1, len(analyzer.items))
         item = analyzer.items[0]
-        self.assertEqual(2, item.range_start.line)
-        self.assertEqual(0, item.range_start.character)
-        self.assertEqual(2, item.range_end.line)
-        self.assertEqual(3, item.range_end.character)
+        self.assertEqual(1, item.range.start.line)
+        self.assertEqual(0, item.range.start.character)
+        self.assertEqual(1, item.range.end.line)
+        self.assertEqual(3, item.range.end.character)
 
     def test_command_undefined_w_arg(self):
         program = build_program("""
@@ -46,13 +43,13 @@ Foo: bar
 """)
         cmds = CommandCollection()
         analyzer = CommandCheckAnalyzer(cmds)
-        analyzer.visit(program)
+        analyzer.analyze(program)
         self.assertEqual(1, len(analyzer.items))
         item = analyzer.items[0]
-        self.assertEqual(2, item.range_start.line)
-        self.assertEqual(0, item.range_start.character)
-        self.assertEqual(2, item.range_end.line)
-        self.assertEqual(3, item.range_end.character)
+        self.assertEqual(1, item.range.start.line)
+        self.assertEqual(0, item.range.start.character)
+        self.assertEqual(1, item.range.end.line)
+        self.assertEqual(3, item.range.end.character)
 
     def test_command_arg_valid(self):
         program = build_program("""
@@ -60,7 +57,7 @@ Foo: bar
 """)
         cmds = CommandCollection().with_cmd(Command("Foo"))
         analyzer = CommandCheckAnalyzer(cmds)
-        analyzer.visit(program)
+        analyzer.analyze(program)
         self.assertEqual(0, len(analyzer.items))
 
     def test_command_arg_invalid(self):
@@ -69,13 +66,13 @@ Foo: bar
 """)
         cmds = CommandCollection().with_cmd(Command("Foo", lambda s: False))
         analyzer = CommandCheckAnalyzer(cmds)
-        analyzer.visit(program)
+        analyzer.analyze(program)
         self.assertEqual(1, len(analyzer.items))
         item = analyzer.items[0]
-        self.assertEqual(2, item.range_start.line)
-        self.assertEqual(5, item.range_start.character)
-        self.assertEqual(2, item.range_end.line)
-        self.assertEqual(8, item.range_end.character)
+        self.assertEqual(1, item.range.start.line)
+        self.assertEqual(5, item.range.start.character)
+        self.assertEqual(1, item.range.end.line)
+        self.assertEqual(8, item.range.end.character)
 
 class ConditionCheckAnalyzerTest(unittest.TestCase):
     def test_tag_name_defined(self):
@@ -85,7 +82,7 @@ Watch: A > 2
 """)
         tags = TagValueCollection([TagValue("A")])
         analyzer = ConditionCheckAnalyzer(tags)
-        analyzer.visit(program)
+        analyzer.analyze(program)
         self.assertEqual(0, len(analyzer.items))
 
     def test_tag_name_undefined(self):
@@ -95,7 +92,7 @@ Watch: A > 2
 """)
         tags = TagValueCollection([])
         analyzer = ConditionCheckAnalyzer(tags)
-        analyzer.visit(program)
+        analyzer.analyze(program)
         self.assertEqual(1, len(analyzer.items))
         item = analyzer.items[0]
         self.assertEqual("UndefinedTag", item.id)
@@ -112,7 +109,7 @@ Watch: A > 2
 """)
         tags = TagValueCollection([TagValue("A")])
         analyzer = ConditionCheckAnalyzer(tags)
-        analyzer.visit(program)
+        analyzer.analyze(program)
         self.assertEqual(0, len(analyzer.items))
 
     def test_tag_unit_unexpected(self):
@@ -122,7 +119,7 @@ Watch: A > 2 mL
 """)
         tags = TagValueCollection([TagValue("A")])
         analyzer = ConditionCheckAnalyzer(tags)
-        analyzer.visit(program)
+        analyzer.analyze(program)
         self.assertEqual(1, len(analyzer.items))
         self.assertEqual("UnexpectedUnit", analyzer.items[0].id)
 
@@ -133,7 +130,7 @@ Watch: A > 2
 """)
         tags = TagValueCollection([TagValue("A", unit="mL")])
         analyzer = ConditionCheckAnalyzer(tags)
-        analyzer.visit(program)
+        analyzer.analyze(program)
         self.assertEqual(1, len(analyzer.items))
         self.assertEqual("MissingUnit", analyzer.items[0].id)
 
@@ -144,7 +141,7 @@ Watch: A > 2 mL
 """)
         tags = TagValueCollection([TagValue("A", unit="s")])
         analyzer = ConditionCheckAnalyzer(tags)
-        analyzer.visit(program)
+        analyzer.analyze(program)
         self.assertEqual(1, len(analyzer.items))
         self.assertEqual("IncompatibleUnits", analyzer.items[0].id)
 
@@ -155,7 +152,7 @@ Watch: A > 2 L
 """)
         tags = TagValueCollection([TagValue("A", unit="L")])
         analyzer = ConditionCheckAnalyzer(tags)
-        analyzer.visit(program)
+        analyzer.analyze(program)
         self.assertEqual(0, len(analyzer.items))
 
     def test_tag_units_compatible(self):
@@ -165,7 +162,7 @@ Watch: A > 2 mL
 """)
         tags = TagValueCollection([TagValue("A", unit="L")])
         analyzer = ConditionCheckAnalyzer(tags)
-        analyzer.visit(program)
+        analyzer.analyze(program)
         self.assertEqual(0, len(analyzer.items))
 
     def test_tag_unit_CV(self):
@@ -176,7 +173,7 @@ Watch: A > 2 CV
 """)
         tags = TagValueCollection([TagValue("A", unit="CV")])
         analyzer = ConditionCheckAnalyzer(tags)
-        analyzer.visit(program)
+        analyzer.analyze(program)
         self.assertEqual(0, len(analyzer.items))
 
 
@@ -199,7 +196,7 @@ Block: A
 Mark: c
 """)
         analyzer = UnreachableCodeCheckAnalyzer()
-        analyzer.visit(program)
+        analyzer.analyze(program)
         self.assertEqual(1, len(analyzer.items))
 
 
@@ -211,7 +208,7 @@ Block: A
 Mark: c
 """)
         sa = InfiniteBlockCheckAnalyzer()
-        sa.visit(program)
+        sa.analyze(program)
         self.assertEqual(1, len(sa.items))
 
     def test_has_global_end(self):
@@ -224,7 +221,7 @@ Block: A
 Mark: c
 """)
         sa = InfiniteBlockCheckAnalyzer()
-        sa.visit(program)
+        sa.analyze(program)
         self.assertEqual(0, len(sa.items))
 
     def test_has_local_end(self):
@@ -236,7 +233,7 @@ Block: A
 Mark: c
 """)
         sa = InfiniteBlockCheckAnalyzer()
-        sa.visit(program)
+        sa.analyze(program)
         self.assertEqual(0, len(sa.items))
 
     def test_has_no_local_end(self):
@@ -250,7 +247,7 @@ Block: B
     Mark: b
 """)
         sa = InfiniteBlockCheckAnalyzer()
-        sa.visit(program)
+        sa.analyze(program)
         self.assertEqual(1, len(sa.items))
 
 
@@ -285,7 +282,7 @@ Macro: A
     Mark: a
 """)
         analyzer = MacroCheckAnalyzer()
-        analyzer.visit(program)
+        analyzer.analyze(program)
         self.assertEqual(0, len(analyzer.items))
 
     @unittest.skip("Fix in #662")
@@ -295,7 +292,7 @@ Macro:
     Mark: a
 """)
         analyzer = MacroCheckAnalyzer()
-        analyzer.visit(program)
+        analyzer.analyze(program)
         self.assertEqual(1, len(analyzer.items))
 
     def test_valid_macro_w_call(self):
@@ -305,7 +302,7 @@ Macro: A
 Call macro: A
 """)
         analyzer = MacroCheckAnalyzer()
-        analyzer.visit(program)
+        analyzer.analyze(program)
         self.assertEqual(0, len(analyzer.items))
 
     def test_invalid_call_macro_to_undefined_macro(self):
@@ -313,7 +310,7 @@ Call macro: A
 Call macro: A
 """)
         analyzer = MacroCheckAnalyzer()
-        analyzer.visit(program)
+        analyzer.analyze(program)
         self.assertEqual(1, len(analyzer.items))
 
     # Add checks for valid and invalid recursive Macro definitions/calls

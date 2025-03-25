@@ -9,9 +9,7 @@ from uuid import UUID, uuid4
 from openpectus.engine.commands import EngineCommand
 from openpectus.lang.exec.tags import TagValueCollection
 from openpectus.lang.exec.uod import UodCommand
-from openpectus.lang.model.pprogram import (
-    PAlarm, PBlank, PComment, PInjectedNode, PNode, PProgram, PErrorInstruction, PWatch
-)
+import openpectus.lang.model.ast as p
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +21,11 @@ class RuntimeInfo:
     states. The record state contain a state name, time and the tag values
     at the time the state was created.
 
-    As interpretation progresses, the program AST nodes (subclasses of PNode)
+    As interpretation progresses, the program AST nodes (subclasses of p.Node)
     are visited and their semantics are executed. The records added are:
 
     - For all visited nodes, a record is added. The name of the record is
-      provided by PNode.runlog_name if overwritten by the particular subclass.
+      provided by p.Node.runlog_name if overwritten by the particular subclass.
       When a record is created, its exec_id is given a random UUID.
 
     - Instructions that are interpreted via an interrupt, reuse the record
@@ -78,14 +76,14 @@ class RuntimeInfo:
 
     def _get_runlog_id(self) -> str | None:
         for r in self.records:
-            if isinstance(r.node, PProgram):
+            if isinstance(r.node, p.ProgramNode):
                 return str(r.node.id)
 
     def _get_record_runlog_items(self, r: RuntimeRecord) -> list[RunLogItem]:
-        if isinstance(r.node, (PProgram, PBlank, PComment)):
+        if isinstance(r.node, (p.ProgramNode, p.BlankNode, p.CommentNode)):
             return []
         if r.name is None:
-            if isinstance(r.node, (PInjectedNode, PErrorInstruction)):
+            if isinstance(r.node, (p.InjectedNode, p.ErrorInstructionNode)):
                 return []
             node_name = str(r.node) if r.node is not None else "node is None"
             logger.error(f"Runtime record has empty name. node: {node_name}. Fix this error or add a rule exception.")
@@ -187,7 +185,7 @@ class RuntimeInfo:
             # UodCommandSet signifies the start of a uod command invocation
             split_states = self._split_states_by_state_name(
                 r.states, RuntimeRecordStateEnum.UodCommandSet, include_prestart_states)
-        elif isinstance(r.node, (PAlarm, PWatch)):
+        elif isinstance(r.node, (p.AlarmNode, p.WatchNode)):
             # AwaitingCondition signifies the start of a new invocation for alarm and watch nodes
             split_states = self._split_states_by_state_name(
                 r.states, RuntimeRecordStateEnum.AwaitingCondition, include_prestart_states)
@@ -262,18 +260,18 @@ class RuntimeInfo:
                     if state.command is not None:
                         return state.command, record
 
-    def get_last_node_record_or_none(self, node: PNode) -> RuntimeRecord | None:
+    def get_last_node_record_or_none(self, node: p.Node) -> RuntimeRecord | None:
         for r in reversed(self._records):
             if r.node == node:
                 return r
 
-    def get_last_node_record(self, node: PNode) -> RuntimeRecord:
+    def get_last_node_record(self, node: p.Node) -> RuntimeRecord:
         record = self.get_last_node_record_or_none(node)
         if record is None:
             raise ValueError("Node has no records")
         return record
 
-    def get_node_records(self, node: PNode) -> list[RuntimeRecord]:
+    def get_node_records(self, node: p.Node) -> list[RuntimeRecord]:
         return [r for r in self._records if r.node.id == node.id]
 
     def _add_record(self, record: RuntimeRecord, exec_id: UUID):
@@ -285,7 +283,7 @@ class RuntimeInfo:
 
     def begin_visit(
             self,
-            node: PNode,
+            node: p.Node,
             time: float, tick: int,
             start_values: TagValueCollection) -> RuntimeRecord:
         exec_id = uuid4()
@@ -339,16 +337,16 @@ class RuntimeInfo:
     def get_as_table(self, description: str = "") -> str:
         records = self.records.copy()
         lines = [f"Runtime records: {description}"]
-        lines.append("line | start | end   | name                 | instruction name     | states")
+        lines.append("line | start | end   | runlog name          | node name            | states")
         lines.append("-----|-------|-------|----------------------|----------------------|-------------------")
         for r in records:
             name = f"{str(r.name):<20}" if r.name is not None else f"{str(r.node):<20}"
-            inst_name = f"{str(r.node.instruction_name):<20}" \
-                if r.node.instruction_name is not None else "   -                  "
-            line = f"{int(r.node.line):4d}" if r.node.line is not None else "   -"
+            node_name = f"{str(r.node.name):<20}" \
+                if r.node.name is not None else "   -                  "
+            line = f"{int(r.node.position.line):4d}" if r.node.position.line is not None else "   -"
             states = ", ".join([f"{st.state_name}: {st.state_tick}" for st in r.states])
             end = f"{r.visit_end_tick:5d}" if r.visit_end_tick != -1 else "    -"
-            lines.append(f"{line}   {r.visit_start_tick:5d}   {end}   {name}   {inst_name}   {states}")
+            lines.append(f"{line}   {r.visit_start_tick:5d}   {end}   {name}   {node_name}   {states}")
         lines.append("-----|-------|-------|----------------------|----------------------|-------------------")
         return "\n".join(lines)
 
@@ -356,7 +354,7 @@ class RuntimeInfo:
         print(self.get_as_table(description))
 
 class RuntimeRecord:
-    def __init__(self, node: PNode, exec_id: UUID) -> None:
+    def __init__(self, node: p.Node, exec_id: UUID) -> None:
         self.exec_id: UUID = exec_id
         self.node = node
         self.name = node.runlog_name
@@ -375,7 +373,7 @@ class RuntimeRecord:
     @staticmethod
     def null_record() -> RuntimeRecord:
         # Returns a Null Object value that can be used when a real value is not available
-        return RuntimeRecord(PNode(None), exec_id=uuid4())
+        return RuntimeRecord(p.Node(), exec_id=uuid4())
 
     def __repr__(self) -> str:
         return f"{self.name} | States: {', '.join([str(st) for st in self.states])}"
@@ -489,6 +487,9 @@ class RuntimeRecordState:
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(state_name="{self.state_name}")'
+
+    def __repr__(self):
+        return self.__str__()
 
 
 class RuntimeRecordStateEnum(StrEnum):

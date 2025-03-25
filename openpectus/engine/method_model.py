@@ -1,91 +1,67 @@
 import logging
-from typing import Callable
-from uuid import UUID
-from openpectus.lang.exec.runlog import RuntimeInfo
-from openpectus.lang.grammar.pgrammar import PGrammar
-from openpectus.lang.model.pprogram import PNode, PProgram
+from openpectus.lang.exec.pinterpreter import PInterpreter
+from openpectus.lang.exec.units import as_int
 import openpectus.protocol.models as Mdl
+from openpectus.lang.model.parser import Method, MethodLine, create_method_parser, create_inject_parser
+import openpectus.lang.model.ast as p
 
 logger = logging.getLogger(__name__)
 
-def parse_pcode(pcode: str) -> PProgram:
-    p = PGrammar()
-    p.parse(pcode)
-    return p.build_model()
 
 
 class MethodModel:
-    """ Manages the mutable method state and its changes.
 
-    Method state is mutated by engine as the program runs, e.g. executed lines are updated
-    Method state is mutated by aggregator, e.g. by the user changing program code lines on injecting code
-    """
-    def __init__(self,
-                 on_method_init: Callable[[], None] | None = None,
-                 on_method_error: Callable[[Exception], None] | None = None) -> None:
+    def __init__(self, uod_command_names: list[str]):
+        self._uod_command_names = uod_command_names
+        self._method = Method.empty
+        self._program = p.ProgramNode.empty()
 
-        self._method = Mdl.Method.empty()
-        self._method_state: Mdl.MethodState = Mdl.MethodState.empty()
-        self._program: PProgram = PProgram()
-        self._pcode: str = ""
-        self._map_line_num_to_line_id: dict[int, str] = {}
-        self._map_line_id_to_line_num: dict[str, int] = {}
-        self._map_line_num_to_node_id: dict[int, UUID] = {}
-        self._map_node_id_to_line_num: dict[UUID, int] = {}
-        self._method_init_callback: Callable[[], None] | None = on_method_init
-        self._method_error_callback: Callable[[Exception], None] | None = on_method_error
+    @property
+    def method(self) -> Method:
+        return self._method
 
-    def __str__(self) -> str:
-        return f'{self.__class__.__name__}(program="{self.get_program()}")'
-
-    def set_method(self, method: Mdl.Method):
-        # initialize new method
-        self._method = method
-        self._pcode = '\n'.join(line.content for line in method.lines)
-        try:
-            self._program = parse_pcode(pcode=self._pcode)
-        except Exception as ex:
-            logger.error(f"Parse error, pcode:\n{self._pcode}", exc_info=True)
-            if self._method_error_callback is not None:
-                self._method_error_callback(ex)
-
-            # TODO: Figure out whether we need to raise here - how is error callback used
-            raise
-
-        # fill mapping between line_num and line_id
-        line_num: int = 1
-        for line in method.lines:
-            self._map_line_num_to_line_id[line_num] = line.id
-            self._map_line_id_to_line_num[line.id] = line_num
-            line_num += 1
-
-        # fill mapping bewteen line_num and node_id
-        def map_node(node: PNode):
-            if node is not PProgram:
-                assert node.line is not None
-                self._map_line_num_to_node_id[node.line] = node.id
-                self._map_node_id_to_line_num[node.id] = node.line
-        self._program.iterate(map_node)
-
-        if self._method_init_callback is not None:
-            self._method_init_callback()
-
-    def get_program(self) -> PProgram:
+    @property
+    def program(self) -> p.ProgramNode:
         return self._program
 
-    def get_code_lines(self) -> list[Mdl.MethodLine]:
-        return list([line for line in self._method.lines])
+    def save_method(self, method: Mdl.Method):
+        """ User saved a modified method"""
+        # concurrency check: aggregator performs the version check and aborts on error
 
-    def calculate_method_state(self, runtimeinfo: RuntimeInfo) -> Mdl.MethodState:
+        # convert method from protocol api
+        _method = Method(lines=[MethodLine(line.id, line.content) for line in method.lines])
+        existing_state = self._program.extract_tree_state()
+
+        # TODO consider engine state - if we're in running state, we should probably pause before modifying the method
+        # TODO consider MethodState - will that automatically be correct when state changes are applied?
+
+        logger.debug(f"Existing tree state size: {len(existing_state.keys())}")
+        logger.debug(f"existing state: {str(existing_state)}")
+        self._method = _method
+        parser = create_method_parser(_method, self._uod_command_names)
+        self._program = parser.parse_method(_method)
+        try:
+            self._program.apply_tree_state(existing_state)
+        except Exception:
+            logger.error("Failed to apply tree state")
+
+    def parse_inject_code(self, pcode: str) -> p.ProgramNode:
+        # TODO - fix poor cohesion here - engine should not deal with ast and pass it to interpreter for injection
+        # should MethodModel know about the current instruction - which is where interpreter injects it ??
+        # We shold probably move interpreter in here so engine only has this class as interface to method/interpreter
+        parser = create_inject_parser(self._uod_command_names)
+        return parser.parse_pcode(pcode)
+
+    def get_method_state(self) -> Mdl.MethodState:
+        all_nodes = self._program.get_all_nodes()
         method_state = Mdl.MethodState.empty()
-        if self._pcode != "":
-            for record in runtimeinfo.records:
-                if not isinstance(record.node, PProgram):
-                    assert record.node is not None, "node is None"
-                    if record.node.line is not None:  # Note: injected nodes have no line numbers
-                        line_num = record.node.line
-                        line_id = self._map_line_num_to_line_id[line_num]
-                        method_state.started_line_ids.append(line_id)
-                        if record.visit_end_time != -1:
-                            method_state.executed_line_ids.append(line_id)
+        for node in all_nodes:
+            if node.completed:
+                method_state.executed_line_ids.append(node.id)
+            elif node.started:
+                method_state.started_line_ids.append(node.id)
+            # injected node ids are created as negative integers
+            id_int = as_int(node.id)
+            if id_int is not None and id_int < 0:
+                method_state.injected_line_ids.append(node.id)
         return method_state
