@@ -50,23 +50,23 @@ def get_pcode_tm_grammar(engine_id: str, agg: Aggregator = Depends(agg_deps.get_
         "fileTypes": "pcode",
         "patterns": [
             {
-                "name": "constant.language.pcode",  # color: blue
+                "name": "constant.language.pcode",  # color: blue, content: system commands
                 "match": f"\\b({'|'.join(sys_cmds)})\\b",
             },
             {
-                "name": "support.constant.color",  # color: lighter blue
+                "name": "support.constant.color",  # color: lighter blue, content: uod commands
                 "match": f"\\b({'|'.join(uod_cmds)})\\b",
             },
             {
-                "name": "comment.control.pcode",  # color: green
+                "name": "comment.control.pcode",  # color: green, content: comments
                 "begin": "#",
                 "end": "$"
             },
             {
-                "name": "support.type.property-name",  # color: bright red
-                "match": "^\\d+(\\.\\d+)?\\s",
+                "name": "support.type.property-name",  # color: bright red, content: thresholds
+                "match": "^\\s*\\d+(\\.\\d+)?\\s",
             },            {
-                "name": "entity.name.class",  # color: blue/green
+                "name": "entity.name.class",  # color: blue/green, content: tags
                 "match": f"\\b({'|'.join(tags)})\\b",
             },
         ]
