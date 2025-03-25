@@ -1,33 +1,12 @@
 from __future__ import annotations
 from enum import Enum
 import logging
-import re
-from typing import List
 
-from openpectus.lang.model.pprogram import (
-    PCommandWithDuration,
-    PComment,
-    PErrorInstruction,
-    PNode,
-    PProgram,
-    PBlank,
-    PBlock,
-    PEndBlock,
-    PEndBlocks,
-    PWatch,
-    PAlarm,
-    PMacro,
-    PCommand,
-    PMark,
-    PCallMacro,
-    PBatch,
-)
-
+from openpectus.lang.exec.visitor import NodeVisitor
+import openpectus.lang.model.ast as p
 from openpectus.lang.exec.tags import TagValueCollection
 from openpectus.lang.exec.units import are_comparable
 from openpectus.lang.exec.commands import CommandCollection
-from openpectus.lang.exec.pinterpreter import PNodeVisitor
-from openpectus.lang import float_re, unit_re
 
 
 logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
@@ -41,16 +20,12 @@ class AnalyzerItemType(Enum):
     WARNING = 'WARNING',
     ERROR = 'ERROR'
 
-class AnalyzerItemRange:
-    def __init__(self, line: int, character: int) -> None:
-        self.line = line
-        self.character = character
 
 class AnalyzerItem:
     def __init__(self,
                  id: str,
                  message: str,
-                 node: PNode | None,
+                 node: p.Node | None,
                  type: AnalyzerItemType,
                  description: str = "",
                  start: int | None = None,
@@ -60,37 +35,37 @@ class AnalyzerItem:
         self.message: str = message
         self.description: str = description
         self.type: AnalyzerItemType = type
-        self.node: PNode | None = node
-        self.range_start: AnalyzerItemRange = AnalyzerItemRange(0, 0)
-        self.range_end: AnalyzerItemRange = AnalyzerItemRange(0, 0)
+        self.node: p.Node | None = node
+        self.range: p.Range = p.Range.empty
 
         # use node for ranges by default
         if node is not None:
-            self.range_start = AnalyzerItemRange(node.line or 0, node.indent or 0)
-            self.range_end = AnalyzerItemRange(self.range_start.line, 100)
+            self.range.start = node.position
+            if node.threshold:
+                self.range.start.character += len(node.threshold_part) + 1
 
         # if start is given, modify default range start (keep line)
         if start is not None:
-            self.range_start.character = start
+            self.range.start.character = start
 
         if length is not None and end is not None:
             raise ValueError("Specify either length or end, not both")
         # if length or end is given, modify range end (keep line)
         if length is not None:
-            self.range_end = AnalyzerItemRange(self.range_start.line, self.range_start.character + length)
+            self.range.end = p.Position(self.range.start.line, self.range.start.character + length)
         if end is not None:
-            self.range_end = AnalyzerItemRange(self.range_start.line, end)
+            self.range.end = p.Position(self.range.start.line, end)
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(id="{self.id}", message="{self.message}", type={self.type}, node={self.node})'
 
 
-class AnalyzerVisitorBase(PNodeVisitor):
+class AnalyzerVisitorBase(NodeVisitor):
     """ Override by specific feature analyzers. """
 
     def __init__(self) -> None:
         super().__init__()
-        self.items: List[AnalyzerItem] = []
+        self.items: list[AnalyzerItem] = []
 
     def __str__(self) -> str:
         items = [str(item) for item in self.items]
@@ -99,154 +74,16 @@ class AnalyzerVisitorBase(PNodeVisitor):
     def add_item(self, item: AnalyzerItem):
         self.items.append(item)
 
-    def visit_children(self, children: List[PNode] | None):
-        if children is not None:
-            for child in children:
-                self.visit(child)
+    def analyze(self, n: p.ProgramNode):
+        """ Run analysis synchronously. """
+        for _ in self.visit(n):
+            pass
 
-    def visit_PProgram(self, node: PProgram):
-        self.visit_children(node.children)
-
-    def visit_PBlank(self, node: PBlank):
-        pass
-
-    def visit_PMark(self, node: PMark):
-        pass
-
-    def visit_PBatch(self, node: PMark):
-        pass
-
-    def visit_PCallMacro(self, node: PCallMacro):
-        pass
-
-    def visit_PBlock(self, node: PBlock):
-        self.visit_children(node.children)
-
-    def visit_PEndBlock(self, node: PEndBlock):
-        pass
-
-    def visit_PEndBlocks(self, node: PEndBlocks):
-        pass
-
-    def visit_PWatch(self, node: PWatch):
-        self.visit_children(node.children)
-
-    def visit_PAlarm(self, node: PAlarm):
-        self.visit_children(node.children)
-
-    def visit_PMacro(self, node: PMacro):
-        self.visit_children(node.children)
-
-    def visit_PCommand(self, node: PCommand):
-        self.visit_children(node.children)
-
-    def visit_PCommandWithDuration(self, node: PCommandWithDuration):
-        self.visit_children(node.children)
-
-    def visit_PErrorInstruction(self, node: PErrorInstruction):
-        self.visit_children(node.children)
-
-    def visit_PComment(self, node: PComment):
-        pass
-
-# --- Enriching analyzers ---
-
-class ConditionEnrichAnalyzer(AnalyzerVisitorBase):
-    """ Analyzer that enriches parsed conditions with tag name, value and unit """
-    def __init__(self) -> None:
-        super().__init__()
-
-    def visit_PWatch(self, node: PWatch):
-        self.enrich_condition(node)
-        return super().visit_PWatch(node)
-
-    def visit_PAlarm(self, node: PAlarm):
-        self.enrich_condition(node)
-        return super().visit_PAlarm(node)
-
-    def enrich_condition(self, node: PAlarm | PWatch):
-        if node.condition is None:
-            return
-        c = node.condition
-        if c.op is None or c.op not in ['<', '<=', '>', '>=', '==', '=', '!=']:
-            return
-        if c.lhs is None or c.lhs.strip() == '' or c.rhs is None or c.rhs.strip() == '':
-            return
-        c.tag_name = c.lhs
-
-        re_rhs = '^' + '(?P<float>' + float_re + ')' + '\\s*' + '(?P<unit>' + unit_re + ')' + '$'
-        re_rhs_no_unit = '^' + '(?P<float>' + float_re + ')' + '\\s*$'
-        match = re.search(re_rhs, c.rhs)
-        if match:  # float with unit
-            c.tag_value = match.group('float')
-            c.tag_value_numeric = float(c.tag_value or "")
-            c.tag_unit = match.group('unit')
-            c.error = False
-        else:
-            match = re.search(re_rhs_no_unit, c.rhs)
-            if match:  # float without unit
-                c.tag_value = match.group('float')
-                c.tag_value_numeric = float(c.tag_value or "")
-                c.error = False
-            else:  # str
-                c.tag_value = c.rhs
-                c.error = False
-
-
-class DurationEnrichAnalyzer(AnalyzerVisitorBase):
-    """ Analyzer that enriches parsed durations with time and unit """
-    def __init__(self) -> None:
-        super().__init__()
-
-    def visit_PCommandWithDuration(self, node: PCommandWithDuration):
-        self.enrich_duration(node)
-        return super().visit_PCommandWithDuration(node)
-
-    def enrich_duration(self, node: PCommandWithDuration):
-        if node.duration is None:
-            return
-        d = node.duration
-
-        re_time_unit = '^' + '(?P<float>' + float_re + ')' + '\\s*' + '(?P<unit>' + unit_re + ')' + '$'
-        # re_time = '^' + '(?P<float>' + float_re + ')' + '\\s*$'
-        match = re.search(re_time_unit, d.duration_str)
-        if match:
-            d.time = float(match.group('float'))
-            d.unit = match.group('unit')
-            d.error = False
-        # Removed in #437 although there was a test specifically for this.
-        # Cannot think of a situation where as duration would be valid without a unit.
-        # else:
-        #     match = re.search(re_time, d.duration_str)
-        #     if match:
-        #         d.time = float(match.group('float'))
-        #         d.error = False
-
-
-class EnrichAnalyzer:
-    """ Facade that combines the enrich analyzers into a single analyzer. """
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.analyzers = [
-            ConditionEnrichAnalyzer(),
-            DurationEnrichAnalyzer(),
-        ]
-
-    def __str__(self) -> str:
-        return f'{self.__class__.__name__}()'
-
-    def analyze(self, program: PProgram):
-        for analyzer in self.analyzers:
-            analyzer.visit(program)
-
-
-# --- Check analyzers ---
 
 class UnreachableCodeCheckAnalyzer(AnalyzerVisitorBase):
     """ Analyser that checks for unreachable code """
 
-    def create_item(self, node: PNode):
+    def create_item(self, node: p.Node):
         return AnalyzerItem(
             "UnreachableCode",
             "Unreachable code",
@@ -255,21 +92,22 @@ class UnreachableCodeCheckAnalyzer(AnalyzerVisitorBase):
             "There is no path to this code."
         )
 
-    def visit_PBlock(self, node: PBlock):
+    def visit_BlockNode(self, node: p.BlockNode):
         has_end = False
         if node.children is not None:
             for child in node.children:
-                if isinstance(child, (PEndBlock, PEndBlocks)):
+                if isinstance(child, (p.EndBlockNode, p.EndBlocksNode)):
                     has_end = True
                     continue
                 if has_end:
                     self.add_item(self.create_item(child))
+        return super().visit_BlockNode(node)
 
 
 class InfiniteBlockCheckAnalyzer(AnalyzerVisitorBase):
     """ Analyser that checks for non-terminated blocks """
 
-    def create_item(self, node: PNode):
+    def create_item(self, node: p.Node):
         return AnalyzerItem(
             "InfiniteBlock",
             "Infinite block",
@@ -281,36 +119,36 @@ class InfiniteBlockCheckAnalyzer(AnalyzerVisitorBase):
     def __init__(self) -> None:
         super().__init__()
         self.has_global_end = False
-        self.requires_global_end: List[PNode] = []
+        self.requires_global_end: list[p.Node] = []
 
     def __str__(self) -> str:
         items = [str(item) for item in self.items]
         return f'{self.__class__.__name__}(items={items}, has_global_end={self.has_global_end})'
 
-    def check_global_end_block(self, node: PEndBlock | PEndBlocks):
-        p = node.parent
-        while p is not None:
-            if isinstance(p, (PWatch, PAlarm)):
-                if isinstance(p.parent, PProgram):
+    def check_global_end_block(self, node: p.EndBlockNode | p.EndBlocksNode):
+        parent = node.parent
+        while parent is not None:
+            if isinstance(parent, (p.WatchNode, p.AlarmNode)):
+                if isinstance(parent.parent, p.ProgramNode):
                     self.has_global_end = True
                     break
-            p = p.parent
+            parent = parent.parent
 
-    def check_local_end_block(self, node: PBlock):
+    def check_local_end_block(self, node: p.BlockNode):
         for child in node.get_child_nodes(recursive=True):
-            if isinstance(child, (PEndBlock, PEndBlocks)):
+            if isinstance(child, (p.EndBlockNode, p.EndBlocksNode)):
                 return True
         return False
 
-    def visit_PProgram(self, node: PProgram):
-        super().visit_PProgram(node)
+    def visit_ProgramNode(self, node: p.ProgramNode):
+        yield from super().visit_ProgramNode(node)
 
         if len(self.requires_global_end) > 0 and not self.has_global_end:
             for n in self.requires_global_end:
                 self.add_item(self.create_item(n))
 
-    def visit_PBlock(self, node: PBlock):
-        super().visit_PBlock(node)
+    def visit_BlockNode(self, node: p.BlockNode):
+        yield from super().visit_BlockNode(node)
 
         has_end = self.check_local_end_block(node)
         # has_end = False
@@ -322,11 +160,13 @@ class InfiniteBlockCheckAnalyzer(AnalyzerVisitorBase):
         if not has_end:
             self.requires_global_end.append(node)
 
-    def visit_PEndBlock(self, node: PEndBlock):
+    def visit_EndBlockNode(self, node: p.EndBlockNode):
         self.check_global_end_block(node)
+        yield
 
-    def visit_PEndBlocks(self, node: PEndBlocks):
+    def visit_EndBlocksNode(self, node: p.EndBlocksNode):
         self.check_global_end_block(node)
+        yield
 
 
 class ConditionCheckAnalyzer(AnalyzerVisitorBase):
@@ -341,18 +181,15 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
         tags = [str(tag) for tag in self.tags]
         return f'{self.__class__.__name__}(items={items}, tags={tags})'
 
-    def visit_PWatch(self, node: PWatch):
+    def visit_WatchNode(self, node: p.WatchNode):
         self.analyze_condition(node)
-        super().visit_PWatch(node)
+        return super().visit_WatchNode(node)
 
-    def visit_PAlarm(self, node: PAlarm):
+    def visit_AlarmNode(self, node: p.AlarmNode):
         self.analyze_condition(node)
-        super().visit_PAlarm(node)
+        return super().visit_AlarmNode(node)
 
-    def analyze_condition(self, node: PWatch | PAlarm):
-        assert node.line is not None
-        assert node.instruction_name is not None
-
+    def analyze_condition(self, node: p.WatchNode | p.AlarmNode):
         if node.condition is None:
             self.add_item(AnalyzerItem(
                 "ConditionMissing",
@@ -360,8 +197,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 node,
                 AnalyzerItemType.ERROR,
                 "A condition is required",
-                start=len(node.instruction_name) + 1,
-                end=len(node.instruction_name) + 1000  # Valid way to express the whole line
+                start=len(node.instruction_part) + 1,
+                end=len(node.instruction_part) + 1000  # Valid way to express the whole line
             ))
             return
         assert node.condition is not None
@@ -375,8 +212,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 node,
                 AnalyzerItemType.ERROR,
                 "A condition must start with a tag name",
-                start=node.condition.start_column,
-                end=node.condition.start_column
+                start=node.condition.range.start.character,
+                end=node.condition.range.end.character
             ))
             return
 
@@ -387,8 +224,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 node,
                 AnalyzerItemType.ERROR,
                 f"The tag name '{tag_name}' is not valid",
-                start=node.condition.start_column,
-                length=len(node.condition.lhs)
+                start=node.condition.lhs_range.start.character,
+                end=node.condition.lhs_range.end.character,
             ))
             return
 
@@ -401,8 +238,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 node,
                 AnalyzerItemType.ERROR,
                 f"Unit '{condition.tag_unit}' was specified for a tag with no unit",
-                start=node.condition.rhs_start,
-                end=node.condition.rhs_end + 1
+                start=node.condition.rhs_range.start.character,
+                end=node.condition.rhs_range.end.character
             ))
             return
 
@@ -413,8 +250,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 node,
                 AnalyzerItemType.ERROR,
                 "The tag requires that a unit is provided",
-                start=node.condition.rhs_start,
-                end=node.condition.rhs_end + 1
+                start=node.condition.rhs_range.start.character,
+                end=node.condition.rhs_range.end.character
             ))
             return
 
@@ -429,8 +266,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                     node,
                     AnalyzerItemType.ERROR,
                     str(vex),
-                    start=node.condition.rhs_start,
-                    end=node.condition.rhs_end + 1
+                    start=node.condition.rhs_range.start.character,
+                    end=node.condition.rhs_range.end.character
                 ))
                 return
             if not comparable:
@@ -440,8 +277,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                     node,
                     AnalyzerItemType.ERROR,
                     f"The tag unit '{tag.unit}' is not compatible with the provided unit '{condition.tag_unit}'",
-                    start=node.condition.rhs_start,
-                    end=node.condition.rhs_end + 1
+                    start=node.condition.range.start.character,
+                    end=node.condition.range.end.character
                 ))
                 return
 
@@ -457,9 +294,24 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
         items = [str(item) for item in self.items]
         return f'{self.__class__.__name__}(items={items}, commands={self.commands})'
 
-    def visit_PCommand(self, node: PCommand):
-        assert node.name is not None
-        name = node.name
+    def visit_InterpreterCommandNode(self, node: p.InterpreterCommandNode):
+        yield from ()
+        self.check_command_node(node)
+
+    def visit_EngineCommandNode(self, node: p.EngineCommandNode):
+        yield from ()
+        self.check_command_node(node)
+
+    def visit_UodCommandNode(self, node: p.UodCommandNode):
+        yield from ()
+        self.check_command_node(node)
+
+    def visit_ErrorInstructionNode(self, node):
+        yield from ()
+        self.check_command_node(node)
+
+    def check_command_node(self, node: p.Node):
+        name = node.instruction_name
 
         if not self.commands.has(name):
             self.add_item(AnalyzerItem(
@@ -473,64 +325,26 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
             return
 
         command = self.commands.get(name)
-        if not command.validate_args(node.args):
+        if not command.validate_args(node.arguments):
             self.add_item(AnalyzerItem(
                 "CommandArgsInvalid",
                 "Invalid command arguments",
                 node,
                 AnalyzerItemType.ERROR,
-                f"The command argument '{node.args}' is not valid",
-                start=(node.indent or 0) + len(node.instruction_name or "") + len(": "),
-                length=len(node.args)
+                f"The command argument '{node.arguments}' is not valid",
+                start=node.position.character + len(node.instruction_name or "") + len(": "),
+                length=len(node.arguments)
             ))
-            return
-
-    def visit_PCommandWithDuration(self, node: PCommandWithDuration):
-        assert node.name is not None
-        name = node.name
-
-        if not self.commands.has(name):
-            self.add_item(AnalyzerItem(
-                "UndefinedCommand",
-                "Undefined command",
-                node,
-                AnalyzerItemType.ERROR,
-                f"The command name '{name}' is not valid",
-                length=len(name)
-            ))
-            return
-
-        # command = self.commands.get(name)
-        # interesting case here - who should validate the args?
-        # the command def or the node? The command def must be able to do it
-        # because it needs to in lsp
-        # if we decide to parse in full depth we will have a result
-        # but what about an error message
-        # if not command.validate_args(node.args):
-        
-        # seems it was already run? probably by an enhance analyzer
-        # node.collect_errors()
-        if node.errors is not None:
-            for err in node.errors:
-                self.add_item(AnalyzerItem(
-                    "CommandArgsInvalid",
-                    "Invalid command arguments",
-                    node,
-                    AnalyzerItemType.ERROR,
-                    err.message or "",
-                    start=(node.indent or 0) + len(node.instruction_name or "") + len(": "),
-                    length=100  # TODO we should make the node length available 
-                ))
             return
 
 
 class MacroCheckAnalyzer(AnalyzerVisitorBase):
     def __init__(self) -> None:
         super().__init__()
-        self.macros: list[PMacro] = []
-        self.macro_calls: list[PCallMacro] = []
+        self.macros: list[p.MacroNode] = []
+        self.macro_calls: list[p.CallMacroNode] = []
 
-    def visit_PCallMacro(self, node: PCallMacro):
+    def visit_CallMacroNode(self, node: p.CallMacroNode):
         if node.name is None or node.name.strip() == "":
             self.add_item(AnalyzerItem(
                 "MacroCallNameInvalid",
@@ -541,9 +355,9 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
             ))
         else:
             self.macro_calls.append(node)
-        return super().visit_PCallMacro(node)
+        return super().visit_CallMacroNode(node)
 
-    def visit_PMacro(self, node: PMacro):
+    def visit_MacroNode(self, node: p.MacroNode):
         if node.name is None or node.name.strip() == "":
             self.add_item(AnalyzerItem(
                 "MacroNameInvalid",
@@ -554,10 +368,10 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
             ))
         else:
             self.macros.append(node)
-        return super().visit_PMacro(node)
+        return super().visit_MacroNode(node)
 
-    def visit_PProgram(self, node: PProgram):
-        super().visit_PProgram(node)
+    def visit_ProgramNode(self, node: p.ProgramNode):
+        yield from super().visit_ProgramNode(node)
 
         for call in self.macro_calls:
             if call.name not in [m.name for m in self.macros]:
@@ -568,6 +382,7 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                     AnalyzerItemType.ERROR,
                     f"Cannot call macro {call.name} because it is not defined"
                 ))
+        yield
 
 
 class SemanticCheckAnalyzer:
@@ -575,8 +390,8 @@ class SemanticCheckAnalyzer:
 
     def __init__(self, tags: TagValueCollection, commands: CommandCollection) -> None:
         super().__init__()
-        self.items: List[AnalyzerItem] = []
-        self.analyzers = [
+        self.items: list[AnalyzerItem] = []
+        self.analyzers: list[AnalyzerVisitorBase] = [
             UnreachableCodeCheckAnalyzer(),
             InfiniteBlockCheckAnalyzer(),
             ConditionCheckAnalyzer(tags),
@@ -588,15 +403,15 @@ class SemanticCheckAnalyzer:
         items = [str(item) for item in self.items]
         return f'{self.__class__.__name__}(items={items})'
 
-    def analyze(self, program: PProgram):
+    def analyze(self, program: p.ProgramNode):
         for analyzer in self.analyzers:
-            analyzer.visit(program)
+            analyzer.analyze(program)
             self.items.extend(analyzer.items)
 
     @property
-    def errors(self) -> List[AnalyzerItem]:
+    def errors(self) -> list[AnalyzerItem]:
         return list([i for i in self.items if i.type == AnalyzerItemType.ERROR])
 
     @property
-    def warnings(self) -> List[AnalyzerItem]:
+    def warnings(self) -> list[AnalyzerItem]:
         return list([i for i in self.items if i.type == AnalyzerItemType.WARNING])
