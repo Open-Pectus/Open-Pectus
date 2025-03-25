@@ -21,7 +21,7 @@ def create_position(pcode: str) -> Position:
         return Position(line=0, character=0)
     elif len(lines) == 1:
         return Position(line=0, character=len(lines[0]))
-    else:        
+    else:
         last_line_index = len(lines) - 1
         last_line = lines[last_line_index]
         return Position(line=last_line_index, character=len(last_line))

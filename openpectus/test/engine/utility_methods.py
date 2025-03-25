@@ -12,17 +12,16 @@ from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 import openpectus.protocol.models as Mdl
 from openpectus.engine.engine import Engine, EngineTiming
-from openpectus.lang.grammar.pgrammar import PGrammar
-from openpectus.lang.model.pprogram import PProgram
-
+import openpectus.lang.model.ast as p
+from openpectus.lang.model.parser import Method, create_method_parser
 
 logger = logging.getLogger(__name__)
 
 
-def build_program(s, skip_enrich_analyzers=False) -> PProgram:
-    p = PGrammar()
-    p.parse(s)
-    return p.build_model(skip_enrich_analyzers=skip_enrich_analyzers)
+def build_program(pcode: str) -> p.ProgramNode:
+    method = Method.from_pcode(pcode)
+    parser = create_method_parser(method)
+    return parser.parse_method(method)
 
 
 UodFactory = Callable[[], UnitOperationDefinitionBase]
@@ -145,7 +144,7 @@ class EngineTestInstance(EventListener):
 
         return ticks
 
-    def run_until_instruction(
+    def run_until_instruction(  # noqa C901
             self,
             instruction_name: InstructionName,
             state: FindInstructionState = "any",

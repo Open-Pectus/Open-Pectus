@@ -7,17 +7,24 @@ from openpectus.engine.models import EngineCommandEnum
 from openpectus.lang.exec.argument_specification import ArgSpec
 from openpectus.lang.exec.commands import InterpreterCommandEnum
 from openpectus.lang.exec.uod import (
-    RegexNamedArgumentParser, RegexNumber, RegexNumberOptional
+    RegexNamedArgumentParser, RegexNumber, RegexNumberOptional, RegexText
 )
 from openpectus.lang.exec.units import BASE_VALID_UNITS
 from openpectus.protocol.models import CommandDefinition
 
 REGEX_DURATION = RegexNumber(units=['s', 'min', 'h'], non_negative=True)
+""" Regex that parses a duration, ie. a number with a time unit to groups 'number' and 'number_unit' """
 REGEX_DURATION_OPTIONAL = RegexNumberOptional(units=['s', 'min', 'h'], non_negative=True)
+""" Regex that parses an optional duration, i.e. optional number with time unit to groups 'number' and 'number_unit' """
 REGEX_INT = RegexNumber(units=None, non_negative=True, int_only=True)
+""" Regex that parses an integer to groups 'number' """
+REGEX_TEXT = RegexText(allow_empty=True)
+""" Regex that parses text input the group 'text' """
 REGEX_BASE_ARG = rf"^\s*({'|'.join(BASE_VALID_UNITS)})\s*$"
 
+
 logger = logging.getLogger(__name__)
+
 
 class InternalCommandsRegistry:
     def __init__(self, engine):
@@ -26,7 +33,7 @@ class InternalCommandsRegistry:
         self._command_spec: dict[str, ArgSpec] = {
             InterpreterCommandEnum.BASE: ArgSpec.Regex(REGEX_BASE_ARG),
             InterpreterCommandEnum.INCREMENT_RUN_COUNTER: ArgSpec.NoArgs(),
-            InterpreterCommandEnum.RUN_COUNTER: ArgSpec.Regex(REGEX_INT),            
+            InterpreterCommandEnum.RUN_COUNTER: ArgSpec.Regex(REGEX_INT),
         }
         # system cmds that are implemented in interpreter and have no command class
         others = [
@@ -144,13 +151,24 @@ class InternalEngineCommand(EngineCommand):
         self.run_result: Generator[None, None, None] | None = None
         self.kvargs: dict[str, Any] = {}
 
-    def _run(self) -> Generator[None, None, None] | None:
-        """ Override to implement the command using a generator style
-        where each yield pauses execution until the next tick (i.e. call to execute()). """
-        raise NotImplementedError()
+    def validate_arguments(self, arguments: str):
+        """ Validates the runtime argument string provided to the command against the command's ArgSpec.
 
-    def init_args(self, kvargs: dict[str, Any]):
-        self.kvargs = kvargs
+        Raises ValueError if the argument is not valid. Otherwise, sets kvargs to the regex groups of the ArgSpec.
+
+        Override for custom (non-regex) argument handling. """
+        if self.argument_validation_spec == ArgSpec.NoCheckInstance:
+            return {}
+        groupdict = self.argument_validation_spec.validate_w_groups(argument=arguments)
+        if groupdict is None:
+            raise ValueError(f"Argument '{arguments}' for command '{self.name}' is not valid")
+        self.kvargs = groupdict
+
+    def _run(self) -> Generator[None, None, None] | None:
+        """ Override to implement the command using a generator style where each yield pauses execution until the next tick
+        (i.e. call to execute()). """
+        # TODO consider mechanism to save/load command state so commands have a supported way to resume if engine crashes
+        raise NotImplementedError()
 
     def fail(self):
         self._failed = True

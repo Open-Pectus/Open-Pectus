@@ -908,7 +908,7 @@ Mark: a
 Wait: .5s
 Mark: b
 """
-        run_engine(e, program, 2)
+        run_engine(e, program, 3)
         self.assertEqual([], e.interpreter.get_marks())
 
         continue_engine(e, 1)

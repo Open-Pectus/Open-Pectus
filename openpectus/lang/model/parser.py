@@ -107,7 +107,6 @@ class Grammar:
     indent_re = r'(?P<indent>\s+)?'
     threshold_re = r'((?P<threshold>\d+(\.\d+)?)\s)?'
     instruction_re = r'(?P<instruction_name>\b[a-zA-Z_][^:#]*)'
-    #argument_re = r'(: (?P<argument>[^#]+\b))?'
     argument_re = r'(: (?P<argument>[^#]+))?'
     comment_re = r'(\s*#\s*(?P<comment>.*$))?'
 
@@ -116,7 +115,6 @@ class Grammar:
     #re_fallback_inst = r'(?P<indent>\s+)?((?P<threshold>\d+(\.\d+)?)\s)?(?P<instruction_name>[^:#]+\b) :? \s*#\s*(?P<comment>.*$))?'  # noqa E501'
 
     instruction_line_pattern = re.compile(full_line_re)
-    lsp_line_pattern = re.compile(indent_re + threshold_re + instruction_re)
 
     operators = ['<', '<=', '>', '>=', '==', '=', '!=']
     operators_1char = ['<', '>', '=']
@@ -141,7 +139,7 @@ class LspParseResult:
 
 
 def lsp_parse_line(pcode_query: str) -> LspParseResult | None:
-    # match = Grammar.lsp_line_pattern.match(pcode_query)
+    """ Provides a fast one-line parse for lsp completions. """
     match = Grammar.instruction_line_pattern.match(pcode_query)
     if match is None:
         return None
@@ -151,7 +149,6 @@ def lsp_parse_line(pcode_query: str) -> LspParseResult | None:
         threshold = match_groups.get("threshold")
         instruction_name = match_groups.get("instruction_name", "") or ""
         argument = match_groups.get("argument", "")
-        # comment = match_groups.get("comment", "")
         return LspParseResult(indent or "", threshold or "", instruction_name, argument or "")
 
 
