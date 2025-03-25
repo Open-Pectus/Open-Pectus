@@ -32,9 +32,6 @@ class EngineMessageHandlers():
     async def handle_methodMsg(self, msg: AM.AggregatorMessage):
         assert isinstance(msg, AM.MethodMsg)
         logger.info("Incomming set_method command from aggregator")
-        if self.engine._runstate_started:
-            logger.error("Cannot modify running method - yet")
-            return AM.ErrorMessage(message="Cannot modify running method")
         try:
             self.engine.set_method(msg.method)
             sentry.engine_method_set(msg.method.as_pcode())
