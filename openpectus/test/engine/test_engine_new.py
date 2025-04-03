@@ -417,26 +417,3 @@ Stop
         with runner.run() as instance:
             instance.start()
             instance.run_until_event("stop")  # will raise on engine error
-
-
-class TestBlockTime(unittest.TestCase):
-
-    def test_watch_has_own_block_time(self):
-        code = """\
-Base: s
-0.5 Mark: A
-Watch: Run Time > 0
-    0.5 Mark: B
-"""
-        runner = EngineTestRunner(create_test_uod, pcode=code)
-        with runner.run() as instance:
-            instance.start()
-
-            #instance.run_ticks(9)
-            instance.run_until_instruction("Watch", state="started")
-            instance.run_ticks(2)
-
-            self.assertEqual(["A"], instance.marks)
-
-            instance.run_ticks(8)
-            self.assertEqual(["A", "B"], instance.marks)

@@ -148,6 +148,7 @@ class EngineTestInstance(EventListener):
             self,
             instruction_name: InstructionName,
             state: FindInstructionState = "any",
+            arguments: str | None = None,
             max_ticks=30,
             increment_index=True
             ) -> int:
@@ -180,7 +181,7 @@ class EngineTestInstance(EventListener):
                 request_state = RuntimeRecordStateEnum.Cancelled
 
         def cond() -> bool:
-            index = self.engine.runtimeinfo.find_instruction(instruction_name, self._search_index, request_state)
+            index = self.engine.runtimeinfo.find_instruction(instruction_name, arguments, self._search_index, request_state)
             if index is None:
                 return False
             else:

@@ -22,6 +22,7 @@ class InternalCommandsRegistry:
             InterpreterCommandEnum.BASE: ArgSpec.Regex(regex.REGEX_BASE_ARG),
             InterpreterCommandEnum.INCREMENT_RUN_COUNTER: ArgSpec.NoArgs(),
             InterpreterCommandEnum.RUN_COUNTER: ArgSpec.Regex(regex.REGEX_INT),
+            InterpreterCommandEnum.WAIT: ArgSpec.Regex(regex.REGEX_DURATION),
         }
         # system cmds that are implemented in interpreter and have no command class
         others = [

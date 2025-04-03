@@ -135,8 +135,6 @@ class Engine(InterpreterContext):
         """ Indicates whether the engine is on hold"""
         self._runstate_stopping: bool = False
         """ Indicates whether the engine is on stopping"""
-        self._runstate_waiting: bool = False
-        """ Indicates whether the engine is waiting in a Wait command"""
 
         self._prev_state: TagValueCollection | None = None
         """ The state prior to applying safe state """
@@ -264,7 +262,6 @@ class Engine(InterpreterContext):
         if self._runstate_started and\
                 not self._runstate_paused and\
                 not self._runstate_holding and\
-                not self._runstate_waiting and\
                 not self._runstate_stopping:
             try:
                 # run one tick of interpretation, i.e. one instruction

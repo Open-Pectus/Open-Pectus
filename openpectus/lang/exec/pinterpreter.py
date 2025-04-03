@@ -5,7 +5,9 @@ from enum import Enum
 from typing import Generator, Iterable
 from uuid import UUID
 
+from openpectus.lang.exec.argument_specification import ArgSpec
 from openpectus.lang.exec.events import EventEmitter
+from openpectus.lang.exec.regex import REGEX_DURATION, get_duration_end
 import openpectus.lang.exec.units as units
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.commands import InterpreterCommandEnum
@@ -615,6 +617,24 @@ class PInterpreter(NodeVisitor):
                 self.context.tags[SystemTagName.RUN_COUNTER].set_value(new_value, self._tick_time)
             except ValueError:
                 raise NodeInterpretationError(node, f"Invalid argument '{node.arguments}'. Argument must be an integer")
+
+        elif node.instruction_name == InterpreterCommandEnum.WAIT:
+            # possibly just import cmd registry
+            arg_spec = ArgSpec.Regex(regex=REGEX_DURATION)
+            groupdict = arg_spec.validate_w_groups(argument=node.arguments)
+            if groupdict is None:
+                raise NodeInterpretationError(node, f"Invalid argument '{node.arguments}'. Argument must be a duration")
+
+            time = float(groupdict["number"])
+            unit = groupdict["number_unit"]
+            duration_end_time = get_duration_end(self._tick_time, time, unit)
+            start = self._tick_time
+            duration = duration_end_time - start
+            while self._tick_time < duration_end_time and not node.forced:
+                if duration > 0:
+                    progress = (self._tick_time - start) / duration
+                    record.progress = progress
+                yield
 
         else:
             record.add_state_failed(self._tick_time, self._tick_number, self.context.tags.as_readonly())

@@ -199,39 +199,6 @@ class StopEngineCommand(InternalEngineCommand):
             e._stop_interpreter()
 
 
-@command_argument_regex(REGEX_DURATION)
-class WaitEngineCommand(InternalEngineCommand):
-    """ Pause execution of commands for the specified duration, keeping time running and output tags in their current state.
-
-    See also Pause and Hold.
-    """
-    def __init__(self, engine: Engine, registry: InternalCommandsRegistry) -> None:
-        super().__init__(EngineCommandEnum.WAIT, registry)
-        self.engine = engine
-        self.forced = False
-
-    def _run(self):
-        try:
-            time = float(self.kvargs.pop("number"))
-            unit = self.kvargs.pop("number_unit")
-        except Exception:
-            raise ValueError(f"Argument error. Actual kvargs: {self.kvargs}")
-        duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
-
-        self.engine._runstate_waiting = True
-        start = self.engine._tick_time
-        duration = duration_end_time - start
-        while self.engine._tick_time < duration_end_time and not self.forced:
-            if duration > 0:
-                progress = (self.engine._tick_time - start) / duration
-                self.set_progress(progress)
-            yield
-        self.engine._runstate_waiting = False
-
-    def force(self):
-        self.forced = True
-
-
 @command_argument_none()
 class RestartEngineCommand(InternalEngineCommand):
     def __init__(self, engine: Engine, registry: InternalCommandsRegistry) -> None:
