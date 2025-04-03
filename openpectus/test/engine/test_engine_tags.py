@@ -4,6 +4,7 @@ import time
 import unittest
 from typing import Any
 from openpectus.engine.models import EngineCommandEnum
+from openpectus.lang.exec.regex import RegexNumber
 from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 from openpectus.engine.hardware import RegisterDirection
 
@@ -13,7 +14,6 @@ from openpectus.lang.exec.uod import (
     UnitOperationDefinitionBase,
     UodCommand,
     UodBuilder,
-    RegexNumber,
 )
 from openpectus.test.engine.utility_methods import (
     EngineTestRunner,
@@ -34,7 +34,7 @@ _ = pint.Quantity("0 s")
 
 delta = 0.1
 
-def create_test_uod() -> UnitOperationDefinitionBase:
+def create_test_uod() -> UnitOperationDefinitionBase:  # noqa C901
     def reset(cmd: UodCommand, **kvargs) -> None:
         count = cmd.get_iteration_count()
         if count == 0:

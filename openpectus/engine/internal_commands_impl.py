@@ -2,12 +2,10 @@ from __future__ import annotations
 import logging
 import time
 
-from openpectus.engine.internal_commands import (
-    REGEX_DURATION, REGEX_DURATION_OPTIONAL, REGEX_TEXT,
-    InternalCommandsRegistry, InternalEngineCommand
-)
+from openpectus.engine.internal_commands import InternalCommandsRegistry, InternalEngineCommand
 from openpectus.engine.models import EngineCommandEnum, MethodStatusEnum, SystemStateEnum
 from openpectus.lang.exec.argument_specification import command_argument_none, command_argument_regex
+from openpectus.lang.exec.regex import REGEX_DURATION_OPTIONAL, REGEX_TEXT, get_duration_end
 from openpectus.lang.exec.tags import SystemTagName
 from openpectus.engine.engine import Engine
 from openpectus.lang.exec.units import as_float
@@ -20,17 +18,6 @@ CANCEL_TIMEOUT_TICKS = 10
 
 # Note: Classes in this module are auto-registered as internal engine commands by
 # InternalCommandsRegistry during engine initialization.
-
-def get_duration_end(tick_time: float, time: float, unit: str) -> float:
-    if unit not in ['s', 'min', 'h']:
-        raise ValueError(f"Wait argument unit must be a time unit, not '{unit}'")
-
-    seconds = time
-    if unit == 'min':
-        seconds = 60 * time
-    elif unit == 'h':
-        seconds = 60 * 60 * time
-    return tick_time + seconds
 
 
 @command_argument_none()

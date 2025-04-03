@@ -3,10 +3,10 @@ import re
 import unittest
 
 from openpectus.engine.engine import Engine
-from openpectus.engine.internal_commands import InternalEngineCommand, InternalCommandsRegistry, REGEX_BASE_ARG
-from openpectus.engine.internal_commands_impl import WaitEngineCommand
+from openpectus.engine.internal_commands import InternalEngineCommand, InternalCommandsRegistry
 from openpectus.lang.exec.commands import InterpreterCommandEnum
-from openpectus.lang.exec.uod import RegexNamedArgumentParser, RegexNumber, RegexNumberOptional, UodBuilder
+from openpectus.lang.exec.regex import REGEX_DURATION, RegexNumber, RegexNumberOptional
+from openpectus.lang.exec.uod import RegexNamedArgumentParser, UodBuilder
 from openpectus.lang.exec.argument_specification import command_argument, ArgSpec
 
 
@@ -158,7 +158,7 @@ class TestArgumentSpecification(unittest.TestCase):
         assert_is_match("s")
 
     def test_wait(self):
-        spec = WaitEngineCommand.argument_validation_spec
+        spec = ArgSpec.Regex(regex=REGEX_DURATION)
 
         self.assertEqual(True, spec.validate("5s"))
 

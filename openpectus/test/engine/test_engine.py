@@ -5,6 +5,7 @@ import time
 import unittest
 from typing import Any, Generator
 from openpectus.lang.exec.errors import UodValidationError
+from openpectus.lang.exec.regex import RegexNumber
 from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 
 import openpectus.protocol.models as Mdl
@@ -18,8 +19,7 @@ from openpectus.lang.exec.uod import (
     UnitOperationDefinitionBase,
     UodCommand,
     UodBuilder,
-    RegexNamedArgumentParser,
-    RegexNumber,
+    RegexNamedArgumentParser
 )
 from openpectus.test.engine.utility_methods import (
     continue_engine, run_engine,
