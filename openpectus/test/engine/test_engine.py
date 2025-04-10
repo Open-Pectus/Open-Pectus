@@ -31,8 +31,6 @@ from typing_extensions import override
 
 configure_test_logger()
 set_engine_debug_logging()
-
-
 logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.INFO)
 
 # pint takes forever to initialize - long enough

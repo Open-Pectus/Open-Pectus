@@ -18,7 +18,6 @@ from openpectus.test.engine.utility_methods import (
 configure_test_logger()
 set_engine_debug_logging()
 set_interpreter_debug_logging()
-logging.getLogger("openpectus.lang.exec.runlog").setLevel(logging.DEBUG)
 
 # pint takes forever to initialize - long enough
 # to throw off timing of the first instruction.
@@ -269,8 +268,7 @@ Mark: A
 Mark: B
 Mark: C
 """
-        runner = EngineTestRunner(create_test_uod, code)
-        logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.DEBUG)
+        runner = EngineTestRunner(create_test_uod, code)        
 
         with runner.run() as instance:
             instance.start()
@@ -284,8 +282,7 @@ Mark: C
 Mark: A
 Stop
 """
-        runner = EngineTestRunner(create_test_uod, code)
-        logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.DEBUG)
+        runner = EngineTestRunner(create_test_uod, code)        
 
         with runner.run() as instance:
             instance.start()

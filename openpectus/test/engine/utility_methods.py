@@ -412,6 +412,12 @@ def set_engine_debug_logging():
         logger.setLevel(logging.DEBUG)
 
 
-def set_interpreter_debug_logging():
+def set_interpreter_debug_logging(include_events=False, include_runlog=False):
     logger = logging.getLogger("openpectus.lang.exec.pinterpreter")
     logger.setLevel(logging.DEBUG)
+
+    if include_runlog:
+        logging.getLogger("openpectus.lang.exec.runlog").setLevel(logging.DEBUG)
+    if include_events:
+        logging.getLogger("openpectus.lang.exec.events").setLevel(logging.DEBUG)
+        logging.getLogger("openpectus.lang.exec.tags_impl").setLevel(logging.DEBUG)
