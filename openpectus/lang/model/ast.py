@@ -287,7 +287,7 @@ class ProgramNode(NodeWithChildren):
         def add_child_nodes(node, nodes: list[Node]):
             nodes.append(node)
             if isinstance(node, NodeWithChildren):
-                for child in self.children:
+                for child in node.children:
                     add_child_nodes(child, nodes)
         nodes = []
         add_child_nodes(self, nodes)

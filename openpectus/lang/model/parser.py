@@ -383,7 +383,7 @@ class PcodeParser:
         factory = self.instruction_name_map.get(instruction_name, None)
         if factory is not None:
             try:
-                return factory()
+                return factory(position=Position(line_number, 0))
             except Exception:
                 logger.error(f"Factory failed, {instruction_name=}")
         else:
