@@ -75,7 +75,7 @@ class UnitOperationDefinitionBase:
             'location': self.location
         }
 
-    def build_commands(self):
+    def build_commands(self):  # noqa C901
         """ Complete configuration of a validated uod. This builds the commands.
         """
         for r in self.readings:
@@ -130,7 +130,7 @@ class UnitOperationDefinitionBase:
 
             self.command_descriptions[cmd_name] = desc
 
-    def validate_configuration(self):
+    def validate_configuration(self):  # noqa C901
         """ Validates these areas:
         - Each Reading matches a defined tag
         - Each Reading Command is verified
@@ -189,7 +189,7 @@ class UnitOperationDefinitionBase:
         if fatal:
             sys.exit(1)
 
-    def validate_command_signatures(self):
+    def validate_command_signatures(self):  # noqa C901
         """ Validate the signatures of command exec functions"""
         import inspect
 
@@ -525,7 +525,7 @@ class UodCommandBuilder:
         self.arg_parse_fn = arg_parse_fn
         return self
 
-    def build(self, uod: UnitOperationDefinitionBase) -> UodCommand:
+    def build(self, uod: UnitOperationDefinitionBase) -> UodCommand:  # noqa C901
         """ Construct the command """
 
         def arg_parse(args: str) -> CommandArgs | None:
@@ -577,9 +577,9 @@ class UodBuilder:
         self.required_roles: set[str] = set()
         self.data_log_interval_seconds = 5
         self.base_unit_provider: BaseUnitProvider = BaseUnitProvider()
-        self.base_unit_provider.set("s", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
-        self.base_unit_provider.set("min", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
-        self.base_unit_provider.set("h", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
+        self.base_unit_provider.set("s", SystemTagName.SCOPE_TIME, SystemTagName.BLOCK_TIME)
+        self.base_unit_provider.set("min", SystemTagName.SCOPE_TIME, SystemTagName.BLOCK_TIME)
+        self.base_unit_provider.set("h", SystemTagName.SCOPE_TIME, SystemTagName.BLOCK_TIME)
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}()'
@@ -1020,68 +1020,3 @@ class RegexNamedArgumentParser:
 
 
 # Common regular expressions for use with RegexNamedArgumentParser
-
-def RegexNumber(units: list[str] | None, non_negative: bool = False, int_only: bool = False) -> str:
-    """ Create a regex that parses a number with optional unit to arguments `number` and optionally `number_unit`.
-
-    `number_unit` is only matched if one or more units are given.
-    """
-    sign_part = "" if non_negative else "-?"
-    unit_part = " ?(?P<number_unit>" + "|".join(re.escape(unit).replace(r"/", r"\/") for unit in units) + ")" \
-        if units else ""
-    if int_only:
-        return rf"^\s*(?P<number>{sign_part}[0-9]+?|{sign_part}[0-9]+)\s*{unit_part}\s*$"
-    else:
-        return rf"^\s*(?P<number>{sign_part}[0-9]+[.][0-9]*?|{sign_part}[.][0-9]+|{sign_part}[0-9]+)\s*{unit_part}\s*$"
-
-
-def RegexNumberOptional(units: list[str] | None, non_negative: bool = False, int_only: bool = False) -> str:
-    """ Create a regex that parses an optional number with optional unit to arguments `number` and optionally `number_unit`.
-
-    `number_unit` is only matched if one or more units are given.
-    """
-    rn = RegexNumber(units=units, non_negative=non_negative, int_only=int_only)
-    return rf"({rn})|^\s*$"
-
-
-def RegexCategorical(exclusive_options: list[str] | None = None, additive_options: list[str] | None = None) -> str:
-    """ Create a regex that parses categorical text into an argument named `option`.
-
-    Examples - exclusive::
-
-        regex = RegexCategorical(exclusive_options=["Open", "Closed"])
-
-        self.assertEqual(re.search(regex, "Closed").groupdict(), dict(option="Closed"))
-
-        self.assertEqual(re.search(regex, "VA01"), None)
-
-        self.assertEqual(re.search(regex, "Open").groupdict(), dict(option="Open"))
-
-        self.assertEqual(re.search(regex, "Open+Closed"), None)
-
-
-    Examples - exclusive and additive::
-
-        regex = RegexCategorical(exclusive_options=['Closed'], additive_options=['VA01', 'VA02', 'VA03'])
-
-        self.assertEqual(re.search(regex, "Closed").groupdict(), dict(option="Closed"))
-
-        self.assertEqual(re.search(regex, "Closed+VA01"), None)
-
-        self.assertEqual(re.search(regex, "VA01").groupdict(), dict(option="VA01"))
-
-        self.assertEqual(re.search(regex, "VA01+VA02").groupdict(), dict(option="VA01+VA02"))
-
-        self.assertEqual(re.search(regex, "Open+Closed"), None)
-    """
-    if exclusive_options is None and additive_options is None:
-        raise TypeError("RegexCategorical() missing argument 'exclusive_options' or 'additive_options'.")
-    exclusive_option_part = "|".join(re.escape(option) for option in exclusive_options) if exclusive_options else ""
-    additive_option_part = "|".join(re.escape(option) for option in additive_options) if additive_options else ""
-    return rf"^(?P<option>({exclusive_option_part}|({additive_option_part}|\+)+))\s*$"
-
-
-def RegexText(allow_empty: bool = False) -> str:
-    """ Parses text into an argument named `text`."""
-    allow_empty_part = "*" if allow_empty else "+"
-    return rf"^(?P<text>.{allow_empty_part})$"

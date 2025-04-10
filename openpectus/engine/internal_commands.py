@@ -6,21 +6,9 @@ from openpectus.engine.commands import EngineCommand
 from openpectus.engine.models import EngineCommandEnum
 from openpectus.lang.exec.argument_specification import ArgSpec
 from openpectus.lang.exec.commands import InterpreterCommandEnum
-from openpectus.lang.exec.uod import (
-    RegexNamedArgumentParser, RegexNumber, RegexNumberOptional, RegexText
-)
-from openpectus.lang.exec.units import BASE_VALID_UNITS
+import openpectus.lang.exec.regex as regex
+from openpectus.lang.exec.uod import RegexNamedArgumentParser
 from openpectus.protocol.models import CommandDefinition
-
-REGEX_DURATION = RegexNumber(units=['s', 'min', 'h'], non_negative=True)
-""" Regex that parses a duration, ie. a number with a time unit to groups 'number' and 'number_unit' """
-REGEX_DURATION_OPTIONAL = RegexNumberOptional(units=['s', 'min', 'h'], non_negative=True)
-""" Regex that parses an optional duration, i.e. optional number with time unit to groups 'number' and 'number_unit' """
-REGEX_INT = RegexNumber(units=None, non_negative=True, int_only=True)
-""" Regex that parses an integer to groups 'number' """
-REGEX_TEXT = RegexText(allow_empty=True)
-""" Regex that parses text input the group 'text' """
-REGEX_BASE_ARG = rf"^\s*({'|'.join(BASE_VALID_UNITS)})\s*$"
 
 
 logger = logging.getLogger(__name__)
@@ -31,9 +19,10 @@ class InternalCommandsRegistry:
         self.engine = engine
         self._command_map: dict[str, Callable[[], InternalEngineCommand]] = {}
         self._command_spec: dict[str, ArgSpec] = {
-            InterpreterCommandEnum.BASE: ArgSpec.Regex(REGEX_BASE_ARG),
+            InterpreterCommandEnum.BASE: ArgSpec.Regex(regex.REGEX_BASE_ARG),
             InterpreterCommandEnum.INCREMENT_RUN_COUNTER: ArgSpec.NoArgs(),
-            InterpreterCommandEnum.RUN_COUNTER: ArgSpec.Regex(REGEX_INT),
+            InterpreterCommandEnum.RUN_COUNTER: ArgSpec.Regex(regex.REGEX_INT),
+            InterpreterCommandEnum.WAIT: ArgSpec.Regex(regex.REGEX_DURATION),
         }
         # system cmds that are implemented in interpreter and have no command class
         others = [
@@ -45,7 +34,7 @@ class InternalCommandsRegistry:
         ]
         for other_cmd in others:
             self._command_spec[other_cmd] = ArgSpec.NoCheck()
-    
+
         self._command_instances: dict[str, InternalEngineCommand] = {}
 
     def __str__(self) -> str:

@@ -3,7 +3,7 @@ import itertools
 import logging
 import uuid
 from queue import Empty, Queue
-from typing import Iterable, List, Set
+from typing import Iterable, Set
 from uuid import UUID
 from openpectus.engine.internal_commands import InternalCommandsRegistry
 from openpectus.engine.hardware import HardwareLayerException, RegisterDirection
@@ -28,7 +28,7 @@ from openpectus.lang.exec.tags import (
     Unset,
     create_system_tags
 )
-from openpectus.lang.exec.tags_impl import MarkTag
+from openpectus.lang.exec.tags_impl import BlockTimeTag, MarkTag, ScopeTimeTag
 from openpectus.lang.exec.timer import EngineTimer, OneThreadTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand
 import openpectus.protocol.models as Mdl
@@ -103,6 +103,8 @@ class Engine(InterpreterContext):
 
         self._system_tags = create_system_tags()
         self._system_tags.add(MarkTag())
+        self._system_tags.add(BlockTimeTag())
+        self._system_tags.add(ScopeTimeTag())
         # Add archiver which is implemented as a tag. The lambda getting the runlog works because the
         # tag_lifetime.on_stop event is emitted just before resetting the interpreter and runlog (and
         # not after).
@@ -117,7 +119,7 @@ class Engine(InterpreterContext):
 
         self.cmd_queue: Queue[CommandRequest] = Queue()
         """ Commands to execute, coming from interpreter and from aggregator """
-        self.cmd_executing: List[CommandRequest] = []
+        self.cmd_executing: list[CommandRequest] = []
         """ Uod commands currently being excuted """
         self.tag_updates: Queue[Tag] = Queue()
         """ Tags updated in last tick """
@@ -135,17 +137,12 @@ class Engine(InterpreterContext):
         """ Indicates whether the engine is on hold"""
         self._runstate_stopping: bool = False
         """ Indicates whether the engine is on stopping"""
-        self._runstate_waiting: bool = False
-        """ Indicates whether the engine is waiting in a Wait command"""
 
         self._prev_state: TagValueCollection | None = None
         """ The state prior to applying safe state """
 
         self._last_error : Exception | None = None
         """ Cause of error_state"""
-
-        self.block_times: dict[str, float] = {}
-        """ holds time spent in each block"""
 
         self._method_model: MethodModel = MethodModel(uod.get_command_names())
         """ The model handling changes to program/method code """
@@ -264,7 +261,6 @@ class Engine(InterpreterContext):
         if self._runstate_started and\
                 not self._runstate_paused and\
                 not self._runstate_holding and\
-                not self._runstate_waiting and\
                 not self._runstate_stopping:
             try:
                 # run one tick of interpretation, i.e. one instruction
@@ -340,18 +336,6 @@ class Engine(InterpreterContext):
         run_time_value = run_time.as_number()
         if sys_state.get_value() not in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
             run_time.set_value(run_time_value + increment_time, tick_time)
-
-        # Block name + signal block changes to tag_context
-        block_name = self._system_tags[SystemTagName.BLOCK].get_value() or ""
-        assert isinstance(block_name, str)
-
-        # Block Time    - 0 at Block start, global but value refers to active block
-        if block_name not in self.block_times.keys():
-            self.block_times[block_name] = 0.0
-        # TODO should probably increment all parent block timers as well.
-        # In that case factor this out into BlockTag class that hold timer tags for each block
-        self.block_times[block_name] += increment_time
-        self._system_tags[SystemTagName.BLOCK_TIME].set_value(self.block_times[block_name], self._tick_time)
 
         # Execute the tick lifetime hook on tags
         self.emitter.emit_on_tick(tick_time, increment_time)
@@ -664,7 +648,7 @@ class Engine(InterpreterContext):
             raise ex
 
     def _apply_safe_state(self) -> TagValueCollection:
-        current_values: List[TagValue] = []
+        current_values: list[TagValue] = []
 
         # TODO we should probably only consider uod tags here. would system tags ever have a safe value?
         for t in self._iter_all_tags():

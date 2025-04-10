@@ -158,6 +158,8 @@ class RuntimeInfo:
                         if isinstance(command, UodCommand):
                             item.cancellable = True  # PCommand.cancellable does not support uod commands
                         self._update_item_progress(item, command)
+                    elif r.progress is not None:
+                        self._update_item_progress(item, r)
 
                 if is_conclusive_state:
                     assert item is not None
@@ -236,14 +238,22 @@ class RuntimeInfo:
                 except Exception:
                     raise
 
-    def _update_item_progress(self, item: RunLogItem, command: EngineCommand):
-        progress = command.get_progress()
-        if isinstance(progress, float):
-            item.progress = progress
-        elif isinstance(progress, bool) and progress:
-            item.progress = 0.5
-        else:
-            item.progress = None
+    def _update_item_progress(self, item: RunLogItem, source: EngineCommand | RuntimeRecord):
+        if isinstance(source, EngineCommand):
+            progress = source.get_progress()
+            if isinstance(progress, float):
+                item.progress = progress
+            elif isinstance(progress, bool) and progress:
+                item.progress = 0.5
+            else:
+                item.progress = None
+        elif isinstance(source, RuntimeRecord):
+            if isinstance(source.progress, float):
+                item.progress = source.progress
+            elif isinstance(source.progress, bool) and source.progress:
+                item.progress = 0.5
+            else:
+                item.progress = None
         # logger.info(f"Updating progress to {item.progress}")
 
     def get_exec_record(self, exec_id: UUID) -> RuntimeRecord | None:
@@ -297,6 +307,7 @@ class RuntimeInfo:
     def find_instruction(
             self,
             instruction_name: str,
+            arguments: str | None,
             start_index: int,
             instruction_state: RuntimeRecordStateEnum | None
             ) -> int | None:
@@ -318,12 +329,13 @@ class RuntimeInfo:
         for i in range(start_index, size):
             r = records_copy[i]
             if r.node.instruction_name == instruction_name:
-                # logger.debug(f"Find record result: {i}, {instruction_name=}, {start_index=}")
-                # logger.debug(self.get_as_table())
-                if instruction_state is None:
-                    return i
-                elif r.has_state(instruction_state):
-                    return i
+                if arguments is None or r.node.arguments == arguments:
+                    # logger.debug(f"Find record result: {i}, {instruction_name=}, {start_index=}")
+                    # logger.debug(self.get_as_table())
+                    if instruction_state is None:
+                        return i
+                    elif r.has_state(instruction_state):
+                        return i
 
     def get_record_by_index(self, index: int) -> RuntimeRecord | None:
         if index < 0:
@@ -366,6 +378,9 @@ class RuntimeRecord:
         self.states: list[RuntimeRecordState] = []
         self.start_values: TagValueCollection | None = None
         self.end_values: TagValueCollection | None = None
+
+        self.progress: float | None = None
+        """ Used for progress for interpreter commands that don't have an command instance """
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(name="{self.name}")'

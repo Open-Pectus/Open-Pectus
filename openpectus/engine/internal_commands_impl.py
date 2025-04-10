@@ -2,12 +2,11 @@ from __future__ import annotations
 import logging
 import time
 
-from openpectus.engine.internal_commands import (
-    REGEX_DURATION, REGEX_DURATION_OPTIONAL, REGEX_TEXT,
-    InternalCommandsRegistry, InternalEngineCommand
-)
+from openpectus.engine.internal_commands import InternalCommandsRegistry, InternalEngineCommand
 from openpectus.engine.models import EngineCommandEnum, MethodStatusEnum, SystemStateEnum
 from openpectus.lang.exec.argument_specification import command_argument_none, command_argument_regex
+from openpectus.lang.exec.events import RunStateChange
+from openpectus.lang.exec.regex import REGEX_DURATION_OPTIONAL, REGEX_TEXT, get_duration_end
 from openpectus.lang.exec.tags import SystemTagName
 from openpectus.engine.engine import Engine
 from openpectus.lang.exec.units import as_float
@@ -20,17 +19,6 @@ CANCEL_TIMEOUT_TICKS = 10
 
 # Note: Classes in this module are auto-registered as internal engine commands by
 # InternalCommandsRegistry during engine initialization.
-
-def get_duration_end(tick_time: float, time: float, unit: str) -> float:
-    if unit not in ['s', 'min', 'h']:
-        raise ValueError(f"Wait argument unit must be a time unit, not '{unit}'")
-
-    seconds = time
-    if unit == 'min':
-        seconds = 60 * time
-    elif unit == 'h':
-        seconds = 60 * 60 * time
-    return tick_time + seconds
 
 
 @command_argument_none()
@@ -55,9 +43,6 @@ class StartEngineCommand(InternalEngineCommand):
             e._system_tags[SystemTagName.RUN_TIME].set_value(0.0, e._tick_time)
             e._system_tags[SystemTagName.PROCESS_TIME].set_value(0.0, e._tick_time)
             e._system_tags[SystemTagName.RUN_COUNTER].set_value(0, e._tick_time)
-
-            e._system_tags[SystemTagName.BLOCK_TIME].set_value(0.0, e._tick_time)
-            e.block_times.clear()  # kinda hackish, tag should be self-contained
 
             e.emitter.emit_on_start(run_id)
 
@@ -86,6 +71,7 @@ class PauseEngineCommand(InternalEngineCommand):
         e._runstate_paused = True
         e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Paused, e._tick_time)
         e._prev_state = e._apply_safe_state()
+        e.emitter.emit_on_runstate_change(RunStateChange.PAUSE)
 
         if duration_end_time is not None:
             logger.debug("Pause duration set. Waiting to unpause.")
@@ -116,6 +102,9 @@ class UnpauseEngineCommand(InternalEngineCommand):
             e._prev_state = None
         else:
             logger.error("Failed to apply state prior to safe state. Prior state was not available")
+
+        # Note: we currently don't have hold/unhold events to worry about here
+        e.emitter.emit_on_runstate_change(RunStateChange.UNPAUSE)
 
         # TODO Consider how a corrected error should be handled. It depends on the cause
         # - Run time value is broken: Maybe trying again will fix it
@@ -212,39 +201,6 @@ class StopEngineCommand(InternalEngineCommand):
             e._stop_interpreter()
 
 
-@command_argument_regex(REGEX_DURATION)
-class WaitEngineCommand(InternalEngineCommand):
-    """ Pause execution of commands for the specified duration, keeping time running and output tags in their current state.
-
-    See also Pause and Hold.
-    """
-    def __init__(self, engine: Engine, registry: InternalCommandsRegistry) -> None:
-        super().__init__(EngineCommandEnum.WAIT, registry)
-        self.engine = engine
-        self.forced = False
-
-    def _run(self):
-        try:
-            time = float(self.kvargs.pop("number"))
-            unit = self.kvargs.pop("number_unit")
-        except Exception:
-            raise ValueError(f"Argument error. Actual kvargs: {self.kvargs}")
-        duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
-
-        self.engine._runstate_waiting = True
-        start = self.engine._tick_time
-        duration = duration_end_time - start
-        while self.engine._tick_time < duration_end_time and not self.forced:
-            if duration > 0:
-                progress = (self.engine._tick_time - start) / duration
-                self.set_progress(progress)
-            yield
-        self.engine._runstate_waiting = False
-
-    def force(self):
-        self.forced = True
-
-
 @command_argument_none()
 class RestartEngineCommand(InternalEngineCommand):
     def __init__(self, engine: Engine, registry: InternalCommandsRegistry) -> None:
@@ -296,8 +252,6 @@ class RestartEngineCommand(InternalEngineCommand):
             e._runstate_started_time = time.time()
             e._runstate_paused = False
             e._runstate_holding = False
-            e._system_tags[SystemTagName.BLOCK_TIME].set_value(0.0, e._tick_time)
-            e.block_times.clear()  # kinda hackish, tag should be self-contained
 
             run_id = e.set_run_id()
             e.emitter.emit_on_start(run_id)

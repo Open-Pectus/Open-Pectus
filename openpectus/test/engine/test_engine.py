@@ -5,6 +5,7 @@ import time
 import unittest
 from typing import Any, Generator
 from openpectus.lang.exec.errors import UodValidationError
+from openpectus.lang.exec.regex import RegexNumber
 from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 
 import openpectus.protocol.models as Mdl
@@ -18,8 +19,7 @@ from openpectus.lang.exec.uod import (
     UnitOperationDefinitionBase,
     UodCommand,
     UodBuilder,
-    RegexNamedArgumentParser,
-    RegexNumber,
+    RegexNamedArgumentParser
 )
 from openpectus.test.engine.utility_methods import (
     continue_engine, run_engine,
@@ -31,8 +31,6 @@ from typing_extensions import override
 
 configure_test_logger()
 set_engine_debug_logging()
-
-
 logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.INFO)
 
 # pint takes forever to initialize - long enough
@@ -1279,7 +1277,7 @@ Block: A
             self.assertAlmostEqual(acc_cv.as_float(), 0.2/2, delta=0.1)
             self.assertAlmostEqual(block_cv.as_float(), 0.2/2, delta=0.1)
 
-            continue_engine(e, 1)  # Block
+            continue_engine(e, 2)  # Block
             self.assertEqual(block.get_value(), "A")
             self.assertAlmostEqual(acc_cv.as_float(), 0.3/2, delta=0.1)
             self.assertAlmostEqual(block_cv.as_float(), 0.1/2, delta=0.1)
@@ -1337,7 +1335,7 @@ Restart
         e = self.engine
         self.assertEqual(0, e.tags[SystemTagName.RUN_COUNTER].as_number())
 
-        run_engine(e, program, 4)
+        run_engine(e, program, 5)
 
         run_id_1 = e.tags[SystemTagName.RUN_ID].get_value()
         self.assertEqual(e.tags[SystemTagName.SYSTEM_STATE].get_value(), SystemStateEnum.Restarting)

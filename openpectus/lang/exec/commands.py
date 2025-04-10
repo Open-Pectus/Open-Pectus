@@ -1,6 +1,6 @@
 from __future__ import annotations
 from enum import StrEnum
-from typing import Any, Callable, Dict, Iterable, List
+from typing import Callable, Dict, Iterable, List
 from uuid import UUID
 
 
@@ -9,6 +9,7 @@ class InterpreterCommandEnum(StrEnum):
     BASE = "Base"
     INCREMENT_RUN_COUNTER = "Increment run counter"
     RUN_COUNTER = "Run counter"
+    WAIT = "Wait"
 
     @staticmethod
     def has_value(value: str):

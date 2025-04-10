@@ -287,7 +287,7 @@ class ProgramNode(NodeWithChildren):
         def add_child_nodes(node, nodes: list[Node]):
             nodes.append(node)
             if isinstance(node, NodeWithChildren):
-                for child in self.children:
+                for child in node.children:
                     add_child_nodes(child, nodes)
         nodes = []
         add_child_nodes(self, nodes)
@@ -448,12 +448,12 @@ class CommandBaseNode(Node):
 
 class InterpreterCommandNode(CommandBaseNode):
     """ Represents commands that are directly executable by the interpreter. """
-    instruction_names = ["Base", "Increment run counter", "Run counter"]
+    instruction_names = ["Base", "Increment run counter", "Run counter", "Wait"]
 
 
 class EngineCommandNode(CommandBaseNode):
     """ Represents internal engine commands that have a command class subclassing InternalEngineCommand. """
-    instruction_names = ["Stop", "Pause", "Unpause", "Hold", "Unhold", "Restart", "Wait",
+    instruction_names = ["Stop", "Pause", "Unpause", "Hold", "Unhold", "Restart",
                          "Info", "Warning", "Error"]
 
 
