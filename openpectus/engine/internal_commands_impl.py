@@ -5,6 +5,7 @@ import time
 from openpectus.engine.internal_commands import InternalCommandsRegistry, InternalEngineCommand
 from openpectus.engine.models import EngineCommandEnum, MethodStatusEnum, SystemStateEnum
 from openpectus.lang.exec.argument_specification import command_argument_none, command_argument_regex
+from openpectus.lang.exec.events import RunStateChange
 from openpectus.lang.exec.regex import REGEX_DURATION_OPTIONAL, REGEX_TEXT, get_duration_end
 from openpectus.lang.exec.tags import SystemTagName
 from openpectus.engine.engine import Engine
@@ -70,6 +71,7 @@ class PauseEngineCommand(InternalEngineCommand):
         e._runstate_paused = True
         e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Paused, e._tick_time)
         e._prev_state = e._apply_safe_state()
+        e.emitter.emit_on_runstate_change(RunStateChange.PAUSE)
 
         if duration_end_time is not None:
             logger.debug("Pause duration set. Waiting to unpause.")
@@ -100,6 +102,9 @@ class UnpauseEngineCommand(InternalEngineCommand):
             e._prev_state = None
         else:
             logger.error("Failed to apply state prior to safe state. Prior state was not available")
+
+        # Note: we currently don't have hold/unhold events to worry about here
+        e.emitter.emit_on_runstate_change(RunStateChange.UNPAUSE)
 
         # TODO Consider how a corrected error should be handled. It depends on the cause
         # - Run time value is broken: Maybe trying again will fix it

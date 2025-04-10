@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 import logging
 import sys
 from typing import Iterable
@@ -11,6 +12,11 @@ import time
 
 
 logger = logging.getLogger(__name__)
+
+
+class RunStateChange(StrEnum):
+    PAUSE = "Pause"
+    UNPAUSE = "Unpause"
 
 
 class EventListener:
@@ -65,6 +71,10 @@ class EventListener:
 
         Intended for NA (calculated/derived) tags to calculate the
         value for the tick and apply it to the value property. """
+        pass
+
+    def on_runstate_change(self, state_change: RunStateChange):
+        """ Is invoked when method interpretation is complete. """
         pass
 
     def on_method_end(self):
@@ -145,6 +155,10 @@ class PerformanceTimer(EventListener):
     def on_tick(self, tick_time: float, increment_time: float):
         with self:
             self._listener.on_tick(tick_time, increment_time)
+
+    def on_runstate_change(self, state_change: RunStateChange):
+        with self:
+            self._listener.on_runstate_change(state_change)
 
     def on_method_end(self):
         with self:
@@ -245,6 +259,13 @@ class EventEmitter:
                 listener.on_scope_end(node_id)
             except Exception:
                 logger.error(f"on_scope_end failed for listener '{listener}'", exc_info=True)
+
+    def emit_on_runstate_change(self, state_change: RunStateChange):
+        for listener in self._listeners:
+            try:
+                listener.on_runstate_change(state_change)
+            except Exception:
+                logger.error(f"on_runstate_change failed for listener '{listener}'", exc_info=True)
 
     def emit_on_method_end(self):
         for listener in self._listeners:

@@ -3,7 +3,7 @@ import logging
 import time
 
 from openpectus.lang.exec.tags import SystemTagName, Tag, TagDirection, TagFormatFunction, format_time_as_clock
-from openpectus.lang.exec.events import BlockInfo
+from openpectus.lang.exec.events import BlockInfo, RunStateChange
 from openpectus.lang.exec.tracer import Tracer
 
 # Make sure the mark separator does not conflict with ArchiverTag delimiter.
@@ -105,6 +105,7 @@ class BlockTimeTag(Tag):
         # need a custom stack because we have no real key. BlockInfo.key is different in
         # on_block_start and on_block_end
         self._stack: list[BlockTimeTag.StackItem] = []
+        self._paused = False
         self.value = 0.0
 
     def on_start(self, run_id):
@@ -122,10 +123,18 @@ class BlockTimeTag(Tag):
         self.tracer.trace(f"{block_info.name=}")
 
     def on_tick(self, tick_time, increment_time):
+        if self._paused:
+            return
         for item in self._stack:
             item.value += increment_time
         self.value = self.get_value()
         # self.tracer.trace(f"{self.value=}")
+
+    def on_runstate_change(self, state_change):
+        if state_change == RunStateChange.PAUSE:
+            self._paused = True
+        elif state_change == RunStateChange.UNPAUSE:
+            self._paused = False
 
     def get_value(self):
         if len(self._stack) == 0:
@@ -140,6 +149,7 @@ class ScopeTimeTag(Tag):
         super().__init__(SystemTagName.SCOPE_TIME, unit="s", format_fn=format_time_as_clock)
         self._timers: dict[str, float] = {}
         self._stack: list[str] = []
+        self._paused = False
         self.value = 0.0
 
     def on_start(self, run_id):
@@ -160,10 +170,18 @@ class ScopeTimeTag(Tag):
         self._stack.pop()
 
     def on_tick(self, tick_time, increment_time):
+        if self._paused:
+            return
         for key in self._timers.keys():
             self._timers[key] += increment_time
         self.value = self.get_value()
         self.tracer.trace(f"{self.value}")
+
+    def on_runstate_change(self, state_change):
+        if state_change == RunStateChange.PAUSE:
+            self._paused = True
+        elif state_change == RunStateChange.UNPAUSE:
+            self._paused = False
 
     def get_value(self):
         if len(self._stack) == 0:
