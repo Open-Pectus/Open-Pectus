@@ -43,9 +43,6 @@ class StartEngineCommand(InternalEngineCommand):
             e._system_tags[SystemTagName.PROCESS_TIME].set_value(0.0, e._tick_time)
             e._system_tags[SystemTagName.RUN_COUNTER].set_value(0, e._tick_time)
 
-            e._system_tags[SystemTagName.BLOCK_TIME].set_value(0.0, e._tick_time)
-            e.block_times.clear()  # kinda hackish, tag should be self-contained
-
             e.emitter.emit_on_start(run_id)
 
 
@@ -250,8 +247,6 @@ class RestartEngineCommand(InternalEngineCommand):
             e._runstate_started_time = time.time()
             e._runstate_paused = False
             e._runstate_holding = False
-            e._system_tags[SystemTagName.BLOCK_TIME].set_value(0.0, e._tick_time)
-            e.block_times.clear()  # kinda hackish, tag should be self-contained
 
             run_id = e.set_run_id()
             e.emitter.emit_on_start(run_id)

@@ -75,7 +75,7 @@ class UnitOperationDefinitionBase:
             'location': self.location
         }
 
-    def build_commands(self):
+    def build_commands(self):  # noqa C901
         """ Complete configuration of a validated uod. This builds the commands.
         """
         for r in self.readings:
@@ -130,7 +130,7 @@ class UnitOperationDefinitionBase:
 
             self.command_descriptions[cmd_name] = desc
 
-    def validate_configuration(self):
+    def validate_configuration(self):  # noqa C901
         """ Validates these areas:
         - Each Reading matches a defined tag
         - Each Reading Command is verified
@@ -189,7 +189,7 @@ class UnitOperationDefinitionBase:
         if fatal:
             sys.exit(1)
 
-    def validate_command_signatures(self):
+    def validate_command_signatures(self):  # noqa C901
         """ Validate the signatures of command exec functions"""
         import inspect
 
@@ -525,7 +525,7 @@ class UodCommandBuilder:
         self.arg_parse_fn = arg_parse_fn
         return self
 
-    def build(self, uod: UnitOperationDefinitionBase) -> UodCommand:
+    def build(self, uod: UnitOperationDefinitionBase) -> UodCommand:  # noqa C901
         """ Construct the command """
 
         def arg_parse(args: str) -> CommandArgs | None:
@@ -577,9 +577,9 @@ class UodBuilder:
         self.required_roles: set[str] = set()
         self.data_log_interval_seconds = 5
         self.base_unit_provider: BaseUnitProvider = BaseUnitProvider()
-        self.base_unit_provider.set("s", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
-        self.base_unit_provider.set("min", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
-        self.base_unit_provider.set("h", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
+        self.base_unit_provider.set("s", SystemTagName.SCOPE_TIME, SystemTagName.BLOCK_TIME)
+        self.base_unit_provider.set("min", SystemTagName.SCOPE_TIME, SystemTagName.BLOCK_TIME)
+        self.base_unit_provider.set("h", SystemTagName.SCOPE_TIME, SystemTagName.BLOCK_TIME)
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}()'

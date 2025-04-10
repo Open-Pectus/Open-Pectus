@@ -398,8 +398,11 @@ class PInterpreter(NodeVisitor):
     def visit_ProgramNode(self, node: p.ProgramNode):
         ar = ActivationRecord(node, self._tick_time)
         self.stack.push(ar)
+        self.context.emitter.emit_on_scope_start(node.id)
+        self.context.emitter.emit_on_scope_activate(node.id)
         yield from self._visit_children(node)
         # TODO consider awaiting uod command completion before emit_on_method_end
+        self.context.emitter.emit_on_scope_end(node.id)
         self.context.emitter.emit_on_method_end()
         self.stack.pop()
 
@@ -519,10 +522,12 @@ class PInterpreter(NodeVisitor):
         self.stack.push(ar)
         self.context.tags[SystemTagName.BLOCK].set_value(node.name, self._tick_number)
         self.context.emitter.emit_on_block_start(node.name, self._tick_number)
+        self.context.emitter.emit_on_scope_start(node.id)
         logger.debug(f"Block Tag set to {node.name}")
 
         yield
 
+        self.context.emitter.emit_on_scope_activate(node.id)
         record.add_state_started(
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
@@ -558,7 +563,7 @@ class PInterpreter(NodeVisitor):
             self.context.tags[SystemTagName.BLOCK].set_value(None, self._tick_number)
             self.context.emitter.emit_on_block_end(node.name, "", self._tick_number)
             logger.debug(f"Block Tag cleared from {node.name}")
-
+        self.context.emitter.emit_on_scope_end(node.id)
 
     def visit_EndBlockNode(self, node: p.EndBlockNode):
         record = self.runtimeinfo.get_last_node_record(node)
@@ -628,8 +633,10 @@ class PInterpreter(NodeVisitor):
             time = float(groupdict["number"])
             unit = groupdict["number_unit"]
             duration_end_time = get_duration_end(self._tick_time, time, unit)
+            duration_end_time -= 0.1  # account for the final yield
             start = self._tick_time
             duration = duration_end_time - start
+            logger.debug(f"Wait {duration=}")
             while self._tick_time < duration_end_time and not node.forced:
                 if duration > 0:
                     progress = (self._tick_time - start) / duration
@@ -641,6 +648,7 @@ class PInterpreter(NodeVisitor):
             raise NodeInterpretationError(node, f"Interpreter command '{node.instruction_name}' is not supported")
 
         record.add_state_completed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+        yield  # avoid other instructions starting in this tick, to allow tests to consistently detect the completed state
 
     def visit_EngineCommandNode(self, node: p.EngineCommandNode):
         record = self.runtimeinfo.get_last_node_record(node)
@@ -694,33 +702,6 @@ class PInterpreter(NodeVisitor):
 
         yield
 
-    # Not sure we still need this - won't Wait and friends jsut use visit_EngineCommandNode?
-    # def visit_PCommandWithDuration(self, node: PCommandWithDuration):
-    #     record = self.runtimeinfo.get_last_node_record(node)
-
-    #     if node.duration is not None and node.duration.error:
-    #         record.add_state_failed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
-    #         raise NodeInterpretationError(node, "Parse error. Command duration not valid") from None
-    #     try:
-    #         logger.debug(f"Executing command '{str(node)}' via engine")
-    #         if node.duration is None:
-    #             self.context.schedule_execution(name=node.name, exec_id=record.exec_id)
-    #         else:
-    #             self.context.schedule_execution(
-    #                 name=node.name,
-    #                 exec_id=record.exec_id,
-    #                 time=node.duration.time,
-    #                 unit=node.duration.unit
-    #             )
-    #     except Exception as ex:
-    #         record.add_state_failed(
-    #             self._tick_time, self._tick_number,
-    #             self.context.tags.as_readonly())
-    #         raise NodeInterpretationError(node, "Failed to pass command to engine") from ex
-
-    #     yield
-
-
     def visit_WatchNode(self, node: p.WatchNode):
         yield from self.visit_WatchOrAlarm(node)
 
@@ -731,8 +712,9 @@ class PInterpreter(NodeVisitor):
         record = self.runtimeinfo.get_last_node_record(node)
 
         ar = self.stack.peek()
-        if ar.owner is not node:
+        if ar.owner.id != node.id:
             ar = ActivationRecord(node)
+            self.context.emitter.emit_on_scope_start(node.id)
             self._register_interrupt(ar, self._create_interrupt_handler(node, ar))
             record.add_state_awaiting_interrupt(
                 self._tick_time, self._tick_number,
@@ -770,6 +752,7 @@ class PInterpreter(NodeVisitor):
 
                     if condition_result:
                         node.activated = True
+                        self.context.emitter.emit_on_scope_activate(node.id)
                         logger.debug(f"{str(node)} executing")
                         record.add_state_started(
                             self._tick_time, self._tick_number,
@@ -778,6 +761,7 @@ class PInterpreter(NodeVisitor):
                         yield from self._visit_children(node)
                         logger.debug(f"{str(node)} executed")
                         ar.complete = True
+                        self.context.emitter.emit_on_scope_end(node.id)
                         record.add_state_completed(
                             self._tick_time, self._tick_number,
                             self.context.tags.as_readonly())

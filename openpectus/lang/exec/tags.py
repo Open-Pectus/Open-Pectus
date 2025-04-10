@@ -5,7 +5,7 @@ import time
 from typing import Any, Callable, Iterable, Set
 
 from openpectus.lang.exec.events import EventListener
-from openpectus.lang.exec.units import convert_value_to_unit, is_supported_unit, add_unit
+from openpectus.lang.exec.units import convert_value_to_unit, is_supported_unit
 
 
 # Represents tag API towards interpreter
@@ -15,6 +15,7 @@ class SystemTagName(StrEnum):
     RUN_COUNTER = "Run Counter"
     BLOCK = "Block"
     BLOCK_TIME = "Block Time"
+    SCOPE_TIME = "Scope Time"
     PROCESS_TIME = "Process Time"
     RUN_TIME = "Run Time"
     CLOCK = "Clock"
@@ -75,7 +76,7 @@ class ChangeSubject:
     """ Inherit to support change notification. Used by engine to track tag changes """
 
     def __init__(self) -> None:
-        super().__init__()
+        super(ChangeSubject, self).__init__()
 
         self._listeners: list[ChangeListener] = []
 
@@ -142,7 +143,7 @@ class Tag(ChangeSubject, EventListener):
             simulated: bool | None = None
             ) -> None:
 
-        super().__init__()
+        super(Tag, self).__init__()
 
         assert name is not None
         assert name != ""
@@ -372,7 +373,6 @@ def create_system_tags() -> "TagCollection":
         Tag(SystemTagName.BASE, value="min"),  # note special value "min" and no unit
         Tag(SystemTagName.RUN_COUNTER, value=0),
         Tag(SystemTagName.BLOCK, value=None),
-        Tag(SystemTagName.BLOCK_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
         Tag(SystemTagName.PROCESS_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
         Tag(SystemTagName.RUN_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
         Tag(SystemTagName.CLOCK, value=0.0, unit="s", format_fn=format_time_as_clock),

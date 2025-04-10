@@ -322,6 +322,7 @@ class FromFrontend:
     async def method_saved(self, engine_id: str, method: Mdl.Method, user_name: str) -> int:
         existing_version = self._engine_data_map[engine_id].method.version
         version_to_overwrite = method.version
+        logger.debug(f"Save method version: {method.version}")
         if existing_version != version_to_overwrite:
             raise AggregatorCallerException(f"Method version mismatch: trying to overwrite version {version_to_overwrite} when existing version is {existing_version}")
         # Take shallow copy and increment version
@@ -332,8 +333,10 @@ class FromFrontend:
             response = await self.dispatcher.rpc_call(engine_id, message=AM.MethodMsg(method=new_method))
             if isinstance(response, M.ErrorMessage):
                 logger.error(f"Failed to set method. Engine response: {response.message}")
-                if response.caller_error: raise AggregatorCallerException(response.message)
-                else: raise AggregatorInternalException(response.message)
+                if response.caller_error:
+                    raise AggregatorCallerException(response.message)
+                else:
+                    raise AggregatorInternalException(response.message)
         except Exception as e:
             logger.error("Failed to set method", exc_info=True)
             raise e

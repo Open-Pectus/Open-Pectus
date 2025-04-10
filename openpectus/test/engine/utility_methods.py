@@ -39,12 +39,14 @@ InstructionName = Literal[
     "Block", "End block", "End blocks",
     "Watch", "Alarm", "Mark",
     "Pause", "Hold", "Wait",
-    "Stop", "Restart"
+    "Stop", "Restart",
+    "Info", "Warning", "Error",
 ]
 """ Defines the awaitable instructions of the test engine runner """
 
 FindInstructionState = Literal[
-    "any", "started", "completed", "failed", "cancelled"
+    "any", "started", "completed", "failed", "cancelled",
+    "awaiting_threshold", "awaiting_condition", "awaiting_interrupt",
 ]
 """ Defines the awaitable instruction states of the test engine runner """
 
@@ -179,6 +181,12 @@ class EngineTestInstance(EventListener):
                 request_state = RuntimeRecordStateEnum.Failed
             elif state == "cancelled":
                 request_state = RuntimeRecordStateEnum.Cancelled
+            elif state == "awaiting_threshold":
+                request_state = RuntimeRecordStateEnum.AwaitingThreshold
+            elif state == "awaiting_condition":
+                request_state = RuntimeRecordStateEnum.AwaitingCondition
+            elif state == "awaiting_interrupt":
+                request_state = RuntimeRecordStateEnum.AwaitingInterrrupt
 
         def cond() -> bool:
             index = self.engine.runtimeinfo.find_instruction(instruction_name, arguments, self._search_index, request_state)
@@ -192,13 +200,14 @@ class EngineTestInstance(EventListener):
                     self._search_index = 0
                 return True
 
-        logger.debug(f"Start waiting for instruction {instruction_name}, state: {state}")
+        logger.debug(f"Start waiting for instruction {instruction_name}, state: {state}, arguments: {arguments}")
         try:
             ticks = self.run_until_condition(cond, max_ticks=max_ticks)
         except TimeoutError:
-            raise TimeoutError(f"Timeout while waiting for instruction '{instruction_name}', state: {state}")
+            raise TimeoutError(
+                f"Timeout while waiting for instruction '{instruction_name}', state: {state}, arguments: {arguments}")
 
-        logger.debug(f"Done waiting for instruction {instruction_name}, state: {state}")
+        logger.debug(f"Done waiting for instruction {instruction_name}, state: {state}, arguments: {arguments}")
         return ticks
 
     def index_step_back(self, steps=1):
@@ -234,6 +243,12 @@ class EngineTestInstance(EventListener):
             return self.run_until_condition(cond, max_ticks=max_ticks)
         except TimeoutError:
             raise TimeoutError(f"Timeout while waiting for event '{event_name}'")
+
+    def restart_and_run_until_started(self) -> None:
+        """ Restart the method and wait a few ticks for engine to come back up. """
+        self.engine.schedule_execution(EngineCommandEnum.RESTART)
+        self._search_index = 0
+        self.run_ticks(3)
 
     def run_ticks(self, ticks: int) -> None:
         """ Continue program execution until te specified number of ticks. """

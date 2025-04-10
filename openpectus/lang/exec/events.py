@@ -8,12 +8,16 @@ import sys
 from typing import Iterable
 import time
 
+
+
 logger = logging.getLogger(__name__)
 
 
 class EventListener:
     """ Defines the listener interface and base class for engine life-time events. """
     def __init__(self) -> None:
+        super(EventListener, self).__init__()
+
         self.run_id: str | None = None
 
     def __str__(self) -> str:
@@ -22,7 +26,6 @@ class EventListener:
     def on_engine_configured(self):
         """ Invoked once on engine startup, after configuration and after
         the connection to hardware has been established. """
-        pass
 
     def _on_before_start(self, run_id: str):
         """ Is run by emitter to avoid having all subclasses call super().on_start(). """
@@ -46,6 +49,15 @@ class EventListener:
     def on_block_end(self, block_info: BlockInfo, new_block_info: BlockInfo | None):
         """ Invoked just after a block is completed, before on_tick,
         in the same engine tick. """
+        pass
+
+    def on_scope_start(self, node_id: str):
+        pass
+
+    def on_scope_activate(self, node_id: str):
+        pass
+
+    def on_scope_end(self, node_id: str):
         pass
 
     def on_tick(self, tick_time: float, increment_time: float):
@@ -117,6 +129,18 @@ class PerformanceTimer(EventListener):
     def on_block_end(self, block_info: BlockInfo, new_block_info: BlockInfo | None):
         with self:
             self._listener.on_block_end(block_info, new_block_info)
+
+    def on_scope_start(self, node_id: str):
+        with self:
+            self._listener.on_scope_start(node_id)
+
+    def on_scope_activate(self, node_id: str):
+        with self:
+            self._listener.on_scope_activate(node_id)
+
+    def on_scope_end(self, node_id: str):
+        with self:
+            self._listener.on_scope_end(node_id)
 
     def on_tick(self, tick_time: float, increment_time: float):
         with self:
@@ -200,6 +224,27 @@ class EventEmitter:
                 listener.on_block_end(BlockInfo(block_name, tick), BlockInfo(new_block_name, tick))
             except Exception:
                 logger.error(f"on_block_end failed for listener '{listener}'", exc_info=True)
+
+    def emit_on_scope_start(self, node_id: str):
+        for listener in self._listeners:
+            try:
+                listener.on_scope_start(node_id)
+            except Exception:
+                logger.error(f"on_scope_start failed for listener '{listener}'", exc_info=True)
+
+    def emit_on_scope_activate(self, node_id: str):
+        for listener in self._listeners:
+            try:
+                listener.on_scope_activate(node_id)
+            except Exception:
+                logger.error(f"on_scope_activate failed for listener '{listener}'", exc_info=True)
+
+    def emit_on_scope_end(self, node_id: str):
+        for listener in self._listeners:
+            try:
+                listener.on_scope_end(node_id)
+            except Exception:
+                logger.error(f"on_scope_end failed for listener '{listener}'", exc_info=True)
 
     def emit_on_method_end(self):
         for listener in self._listeners:
