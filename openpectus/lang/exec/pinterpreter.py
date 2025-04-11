@@ -18,7 +18,7 @@ from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import (
     TagCollection, SystemTagName,
 )
-from openpectus.lang.exec.visitor import NodeVisitor
+from openpectus.lang.exec.visitor import NodeGenerator, NodeVisitor
 import openpectus.lang.model.ast as p
 from typing_extensions import override
 
@@ -150,7 +150,7 @@ class PInterpreter(NodeVisitor):
         self._program = program
         self.context = context
         self.stack: CallStack = CallStack()
-        self.interrupts: list[tuple[ActivationRecord, GenerationType]] = []
+        self.interrupts: list[tuple[ActivationRecord, NodeGenerator]] = []
         self.macros: dict[str, p.MacroNode] = dict()
         self.running: bool = False
 
@@ -158,7 +158,8 @@ class PInterpreter(NodeVisitor):
         self._tick_time: float = 0
         self._tick_number: int = -1
 
-        self.process_instr: GenerationType = None
+        self._process_instr: NodeGenerator | None = None
+
 
         self.runtimeinfo: RuntimeInfo = RuntimeInfo()
         logger.debug("Interpreter initialized")
@@ -187,7 +188,7 @@ class PInterpreter(NodeVisitor):
         ar = ActivationRecord(node, self._tick_time)
         self._register_interrupt(ar, self._create_interrupt_handler(node, ar))
 
-    def _interpret(self) -> GenerationType:
+    def _interpret(self) -> NodeGenerator:
         """ Create generator for interpreting the main program. """
         self.running = True
         tree = self._program
@@ -197,7 +198,7 @@ class PInterpreter(NodeVisitor):
         logger.info("Reset runtime state")
         yield from self.visit(tree)
 
-    def _register_interrupt(self, ar: ActivationRecord, handler: GenerationType):
+    def _register_interrupt(self, ar: ActivationRecord, handler: NodeGenerator):
         logger.debug(f"Interrupt handler registered for {ar}")
         self.interrupts.append((ar, handler))
 
@@ -234,7 +235,7 @@ class PInterpreter(NodeVisitor):
                 raise NotImplementedError(f"Interrupt for node type {str(node)} not implemented")
         return instr_count > 0
 
-    def _create_interrupt_handler(self, node: p.Node, ar: ActivationRecord) -> GenerationType:
+    def _create_interrupt_handler(self, node: p.Node, ar: ActivationRecord) -> NodeGenerator:
         ar.fill_start(self._tick_time)
         yield from self.visit(node)
 
@@ -244,13 +245,13 @@ class PInterpreter(NodeVisitor):
 
         logger.debug(f"Tick {self._tick_number}")
 
-        if self.process_instr is None:
-            self.process_instr = self._interpret()
+        if self._process_instr is None:
+            self._process_instr = self._interpret()
 
         # execute one iteration of program
-        assert self.process_instr is not None, "self.process_instr is None"
+        assert self._process_instr is not None, "self.process_instr is None"
         try:
-            next(self.process_instr)
+            next(self._process_instr)
         except StopIteration:
             pass
         except AssertionError as ae:
@@ -348,7 +349,7 @@ class PInterpreter(NodeVisitor):
             expected_value,
             expected_unit)
 
-    def _visit_children(self, node: p.Node):
+    def _visit_children(self, node: p.Node) -> NodeGenerator:
         ar = self.stack.peek()
         if isinstance(node, p.NodeWithChildren):
             for child in node.children:
@@ -359,7 +360,7 @@ class PInterpreter(NodeVisitor):
     # Visitor Impl
 
     @override
-    def visit(self, node: p.Node):
+    def visit(self, node: p.Node) -> NodeGenerator:
         if not self.running:
             return
 
@@ -395,7 +396,7 @@ class PInterpreter(NodeVisitor):
 
         logger.debug(f"Visit {node} done")
 
-    def visit_ProgramNode(self, node: p.ProgramNode):
+    def visit_ProgramNode(self, node: p.ProgramNode) -> NodeGenerator:
         ar = ActivationRecord(node, self._tick_time)
         self.stack.push(ar)
         self.context.emitter.emit_on_scope_start(node.id)
@@ -406,10 +407,10 @@ class PInterpreter(NodeVisitor):
         self.context.emitter.emit_on_method_end()
         self.stack.pop()
 
-    def visit_BlankNode(self, node: p.BlankNode):
+    def visit_BlankNode(self, node: p.BlankNode) -> NodeGenerator:
         yield
 
-    def visit_MarkNode(self, node: p.MarkNode):
+    def visit_MarkNode(self, node: p.MarkNode) -> NodeGenerator:
         record = self.runtimeinfo.get_last_node_record(node)
 
         logger.info(f"Mark {str(node)}")
@@ -430,7 +431,7 @@ class PInterpreter(NodeVisitor):
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
 
-    def visit_BatchNode(self, node: p.BatchNode):
+    def visit_BatchNode(self, node: p.BatchNode) -> NodeGenerator:
         record = self.runtimeinfo.get_last_node_record(node)
 
         logger.info(f"Batch {str(node)}")
@@ -451,7 +452,7 @@ class PInterpreter(NodeVisitor):
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
 
-    def visit_MacroNode(self, node: p.MacroNode):
+    def visit_MacroNode(self, node: p.MacroNode) -> NodeGenerator:
         record = self.runtimeinfo.get_last_node_record(node)
         record.add_state_started(
             self._tick_time, self._tick_number,
@@ -489,7 +490,7 @@ class PInterpreter(NodeVisitor):
 
         yield
 
-    def visit_CallMacroNode(self, node: p.CallMacroNode):
+    def visit_CallMacroNode(self, node: p.CallMacroNode) -> NodeGenerator:
         record = self.runtimeinfo.get_last_node_record(node)
         record.add_state_started(
             self._tick_time, self._tick_number,
@@ -515,7 +516,7 @@ class PInterpreter(NodeVisitor):
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
 
-    def visit_BlockNode(self, node: p.BlockNode):
+    def visit_BlockNode(self, node: p.BlockNode) -> NodeGenerator:
         record = self.runtimeinfo.get_last_node_record(node)
 
         ar = ActivationRecord(node, self._tick_time)
@@ -565,7 +566,7 @@ class PInterpreter(NodeVisitor):
             logger.debug(f"Block Tag cleared from {node.name}")
         self.context.emitter.emit_on_scope_end(node.id)
 
-    def visit_EndBlockNode(self, node: p.EndBlockNode):
+    def visit_EndBlockNode(self, node: p.EndBlockNode) -> NodeGenerator:
         record = self.runtimeinfo.get_last_node_record(node)
         record.add_state_started(
             self._tick_time, self._tick_number,
@@ -580,7 +581,7 @@ class PInterpreter(NodeVisitor):
         logger.warning("End block found no block to end")
         yield from ()
 
-    def visit_EndBlocksNode(self, node: p.EndBlocksNode):
+    def visit_EndBlocksNode(self, node: p.EndBlocksNode) -> NodeGenerator:
         yield from ()
 
         record = self.runtimeinfo.get_last_node_record(node)
@@ -595,7 +596,7 @@ class PInterpreter(NodeVisitor):
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
 
-    def visit_InterpreterCommandNode(self, node: p.InterpreterCommandNode):
+    def visit_InterpreterCommandNode(self, node: p.InterpreterCommandNode) -> NodeGenerator:  # noqa C901
         yield from ()
 
         record = self.runtimeinfo.get_last_node_record(node)
@@ -650,7 +651,7 @@ class PInterpreter(NodeVisitor):
         record.add_state_completed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
         yield  # avoid other instructions starting in this tick, to allow tests to consistently detect the completed state
 
-    def visit_EngineCommandNode(self, node: p.EngineCommandNode):
+    def visit_EngineCommandNode(self, node: p.EngineCommandNode) -> NodeGenerator:
         record = self.runtimeinfo.get_last_node_record(node)
 
         # Note: Commands can be resident and last multiple ticks.
@@ -676,7 +677,7 @@ class PInterpreter(NodeVisitor):
 
         yield
 
-    def visit_UodCommandNode(self, node: p.UodCommandNode):
+    def visit_UodCommandNode(self, node: p.UodCommandNode) -> NodeGenerator:
         record = self.runtimeinfo.get_last_node_record(node)
 
         # Note: Commands can be resident and last multiple ticks.
@@ -702,13 +703,13 @@ class PInterpreter(NodeVisitor):
 
         yield
 
-    def visit_WatchNode(self, node: p.WatchNode):
+    def visit_WatchNode(self, node: p.WatchNode) -> NodeGenerator:
         yield from self.visit_WatchOrAlarm(node)
 
-    def visit_AlarmNode(self, node: p.AlarmNode):
+    def visit_AlarmNode(self, node: p.AlarmNode) -> NodeGenerator:
         yield from self.visit_WatchOrAlarm(node)
 
-    def visit_WatchOrAlarm(self, node: p.WatchNode | p.AlarmNode):
+    def visit_WatchOrAlarm(self, node: p.WatchNode | p.AlarmNode) -> NodeGenerator:
         record = self.runtimeinfo.get_last_node_record(node)
 
         ar = self.stack.peek()
@@ -770,7 +771,7 @@ class PInterpreter(NodeVisitor):
                     else:
                         yield
 
-    def visit_InjectedNode(self, node: p.InjectedNode):
+    def visit_InjectedNode(self, node: p.InjectedNode) -> NodeGenerator:
         record = self.runtimeinfo.get_last_node_record(node)
 
         ar = self.stack.peek()
@@ -795,10 +796,10 @@ class PInterpreter(NodeVisitor):
                 self._tick_time, self._tick_number,
                 self.context.tags.as_readonly())
 
-    def visit_CommentNode(self, node: p.CommentNode):
+    def visit_CommentNode(self, node: p.CommentNode) -> NodeGenerator:
         yield from ()
 
-    def visit_ErrorInstructionNode(self, node: p.ErrorInstructionNode):
+    def visit_ErrorInstructionNode(self, node: p.ErrorInstructionNode) -> NodeGenerator:
         record = self.runtimeinfo.get_last_node_record(node)
 
         logger.error(f"Invalid instruction: {str(node)}:\n{node.line}")

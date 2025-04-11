@@ -13,13 +13,13 @@ from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 import openpectus.protocol.models as Mdl
 from openpectus.engine.engine import Engine, EngineTiming
 import openpectus.lang.model.ast as p
-from openpectus.lang.model.parser import Method, create_method_parser
+from openpectus.lang.model.parser import ParserMethod, create_method_parser
 
 logger = logging.getLogger(__name__)
 
 
 def build_program(pcode: str) -> p.ProgramNode:
-    method = Method.from_pcode(pcode)
+    method = ParserMethod.from_pcode(pcode)
     parser = create_method_parser(method)
     return parser.parse_method(method)
 

@@ -4,11 +4,10 @@ import threading
 import time
 import unittest
 from typing import Any, Generator
-from openpectus.lang.exec.errors import UodValidationError
+from openpectus.lang.exec.errors import NodeInterpretationError, UodValidationError
 from openpectus.lang.exec.regex import RegexNumber
 from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 
-import openpectus.protocol.models as Mdl
 import pint
 from openpectus.engine.engine import Engine
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
@@ -664,21 +663,12 @@ Mark: C
         self.assertEqual(['A', 'B', 'C'], e.interpreter.get_marks())
 
     def test_set_and_continue_program(self):
-        program = """
-Mark: A
-"""
+        code = "Mark: A\nMark: B"
         e = self.engine
-        run_engine(e, program, 10)
-        self.assertEqual(['A', ], e.interpreter.get_marks())
-
-        program = """
-Mark: B
-Mark: C
-"""
-        e.set_method(Mdl.Method.from_pcode(pcode=program))
+        run_engine(e, code, 3)
+        self.assertEqual(['A'], e.interpreter.get_marks())
         continue_engine(e, 10)
-
-        self.assertEqual(['B', 'C'], e.interpreter.get_marks())
+        self.assertEqual(['A', 'B', 'C'], e.interpreter.get_marks())
 
     @unittest.skip("not implemented, needs input")
     def test_get_status(self):
@@ -966,7 +956,7 @@ Restart
             self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.OK)
 
         with self.subTest("disallows_volume_unit"):
-            with self.assertRaises(ValueError):
+            with self.assertRaises(NodeInterpretationError):
                 run_engine(e, "Base: L\n0.1 Mark: A", 5)
             self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
 

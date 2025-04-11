@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Self, Type, TypeVar
+from typing import Self, Type, TypeVar, TypedDict
 
 
 class Position:
@@ -54,13 +54,15 @@ class NodeIdGenerator:
         ...
 
 
-# Impl note: using dict because it is json serializable. TypedDict also works
-class NodeState(dict[str, Any]):
+# Impl note: using TypedDict because it is trivially json serializable
+class NodeState(TypedDict):
     id: str
     class_name: str
     name: str
     started: bool
     completed: bool
+    cancelled: bool
+    forced: bool
 
 
 TNode = TypeVar("TNode", bound="Node")
@@ -153,19 +155,23 @@ class Node(SupportCancelForce):
         if self.has_children():
             assert isinstance(self, NodeWithChildren)
             for child in self.children:
+                if child.id == id:
+                    return child
                 match = child.get_child_by_id(id)
                 if match is not None:
                     return match
 
     def can_load_state(self, state: NodeState) -> bool:
         """ Determine whether state is valid for this kind of node """
-        return state.class_name == self.__class__.__name__
+        return state["class_name"] == self.__class__.__name__
 
     def apply_state(self, state: NodeState):
         if not self.can_load_state(state):
-            raise ValueError(f"Cannot load state from {state.class_name} into {self.__class__}")
-        self.started = state.started
-        self.completed = state.completed
+            raise ValueError(f"Cannot load state from {state['class_name']} into {self.__class__}")
+        self.started = state["started"]
+        self.completed = state["completed"]
+        self._cancelled = state["cancelled"]
+        self._forced = state["forced"]
 
     def extract_state(self) -> NodeState:
         return NodeState(
@@ -174,7 +180,24 @@ class Node(SupportCancelForce):
             name=self.name,
             started=self.started,
             completed=self.completed,
+            cancelled=self.cancelled,
+            forced=self.forced
         )
+
+    def get_child_by_instruction(self, instruction_name: str, arguments: str | None = None) -> Node | None:
+        """ Find node by instruction name and optionally arguments. """
+
+        def get_by_instruction(node: Node, instruction_name: str, arguments: str | None = None) -> Node | None:
+            if isinstance(node, NodeWithChildren):
+                for child in node.children:
+                    if child.instruction_name == instruction_name\
+                            and arguments is None or child.arguments == arguments:
+                        return child
+                    match = get_by_instruction(child, instruction_name, arguments)
+                    if match:
+                        return match
+
+        return get_by_instruction(self, instruction_name, arguments)
 
     def with_id(self, gen: NodeIdGenerator) -> Self:
         self.id = gen.create_id(self)
@@ -273,7 +296,6 @@ class NodeWithChildren(Node):
 class ProgramNode(NodeWithChildren):
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
-        self.active_instruction: Node | None = None
 
     def get_instructions(self, include_blanks: bool = False) -> list[Node]:
         """ Return list of all program instructions, recursively, depth first. """
@@ -293,12 +315,13 @@ class ProgramNode(NodeWithChildren):
         add_child_nodes(self, nodes)
         return nodes
 
-    def extract_tree_state(self) -> dict[str, NodeState]:
+    def extract_tree_state(self, skip_started_nodes=False) -> dict[str, NodeState]:
         """ Return map of all nodes keyed by their node id """
         result: dict[str, NodeState] = {}
 
         def extract_child_state(node: Node, result: dict[str, NodeState]):
-            result[node.id] = node.extract_state()
+            if node.started or not skip_started_nodes:
+                result[node.id] = node.extract_state()
 
             if isinstance(node, NodeWithChildren):
                 for child in node.children:
@@ -352,15 +375,15 @@ class NodeWithCondition(NodeWithChildren):
         self.condition: Condition | None
         self.activated: bool = False
 
-    def apply_state(self, state):
+    def apply_state(self, state: NodeState):
         super().apply_state(state)
         if "activated" not in state.keys():
-            raise ValueError("Missing state key 'activated'")
-        self.activated = bool(state["activated"])
+            raise ValueError(f"Failed to apply state to node {self}. Missing state key 'activated'")
+        self.activated = bool(state["activated"])  # type: ignore
 
     def extract_state(self) -> NodeState:
         state = super().extract_state()
-        state["activated"] = self.activated
+        state["activated"] = self.activated  # type: ignore
         return state
 
     def reset_runtime_state(self, recursive):

@@ -70,6 +70,7 @@ class NodeInterpretationError(InterpretationError):
         base_message = f"An error occurred in instruction '{node.display_name}': {message}"
         super().__init__(base_message, user_message, exception, *args)
 
+
 class InterpretationInternalError(InterpretationError):
     """ Raised by interpreter if an internal error occurs """
     def __init__(self, message: str, exception: Exception | None = None, *args: object) -> None:
@@ -77,3 +78,14 @@ class InterpretationInternalError(InterpretationError):
         self.exception = exception
         base_message = f"An internal error occurred. Interpretation cannot continue: {message}"
         super().__init__(base_message, "Internal error", exception, *args)
+
+
+class MethodError(Exception):
+    def __init__(self, message: str, exception: Exception | None = None):
+        self.message = message
+        self.exception = exception
+
+
+class MethodEditError(MethodError):
+    def __init__(self, message: str, exception: Exception | None = None):
+        super().__init__(message, exception)

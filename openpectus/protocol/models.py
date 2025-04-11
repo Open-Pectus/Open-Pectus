@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 
 import openpectus.engine.models as EM
 from pydantic import BaseModel, ConfigDict
@@ -154,6 +155,30 @@ class Method(ProtocolModel):
     def as_pcode(self) -> str:
         pcode = '\n'.join([line.content for line in self.lines])
         return pcode
+
+    @staticmethod
+    def from_numbered_pcode(pcode: str) -> Method:
+        """ Creates a test method from specially formatted lines such as
+            `'04 Mark: A'`
+        and assigns the prefixed number as line id. """
+        numbered_pcode_re = r'^(?P<number>\d+)\s(?P<content>.*)$'
+        method = Method.empty()
+        for line in pcode.splitlines():
+            match = re.search(numbered_pcode_re, line)
+            if match:
+                method.lines.append(MethodLine(id=match.group("number"), content=match.group("content")))
+            else:
+                raise ValueError("Numbered method requires a two-digit number on all lines")
+        return method
+
+    def modify_to(self, pcode: str) -> Method:
+        """ Edit the method code while maintaining line ids. Used to emulate method input
+        coming from frontend where line ids are maintained in changed methods. """
+        new_method = Method.from_pcode(pcode)
+        for i, line in enumerate(new_method.lines):
+            if i < len(self.lines):
+                line.id = self.lines[i].id
+        return new_method
 
 
 class MethodState(ProtocolModel):
