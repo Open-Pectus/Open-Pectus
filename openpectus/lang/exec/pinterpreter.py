@@ -160,9 +160,54 @@ class PInterpreter(NodeVisitor):
 
         self._process_instr: NodeGenerator | None = None
 
+        self._current_node: p.Node | None = None
+        self._ffw: bool = False
+        self._ffw_to_node_id: str | None = None
 
         self.runtimeinfo: RuntimeInfo = RuntimeInfo()
         logger.debug("Interpreter initialized")
+
+
+    def update_method_and_ffw(self, program: p.ProgramNode):
+        """ Update method while method is running. """
+        # set new program, recalculate generator, set ffw, ffw to get to where we were
+
+        # patch runtimeinfo records to reference new nodes - before or after ffw? should not matter
+        self.runtimeinfo.patch_node_references(program)
+
+        # collect node id from old method. The id will match in the new method
+        # verify that target is not completed - if so ffw won't find it
+        target_node_id = (self._current_node or program).id
+        self._program = program
+        self._process_instr = None  # clear so either tick or us may set it
+        target_node = program.get_child_by_id(target_node_id)
+        if target_node is None:
+            logger.warning(f"FFW aborted. Target node {target_node_id} was not found in modified method. " +
+                           "Maybe the code changed too much? Stop and Start again to run the method.")
+            raise ValueError(
+                f"Error modifying method. The target node_id {target_node_id} was not found in the updated method.")
+        elif target_node.completed:
+            logger.error("FFW aborted. Target node has already completed")
+            raise ValueError(
+                f"Error modifying method. The target node_id {target_node_id} has already completed.")
+
+        self._ffw = True
+        self._ffw_to_node_id = target_node_id
+
+        logger.info("FFW starting, target node id: " + self._ffw_to_node_id)
+        ffw_process_instr = self._interpret()
+        while self._ffw:
+            try:
+                next(ffw_process_instr)
+            except StopIteration:
+                self._ffw = False
+                logger.error(f"""FFW failed, node {self._ffw_to_node_id} could not be reached.
+TODO - info about the reason and consequences. User should probably Stop and start the method over.
+Currently, the consequence is that the method is jsut started over - we should probably just raise instead
+""")
+        self._process_instr = ffw_process_instr
+        logger.info("FFW complete")
+
 
     def get_marks(self) -> list[str]:
         records: list[tuple[str, int]] = []
@@ -194,8 +239,8 @@ class PInterpreter(NodeVisitor):
         tree = self._program
         if tree is None:
             return None
-        tree.reset_runtime_state(recursive=True)
-        logger.info("Reset runtime state")
+        # tree.reset_runtime_state(recursive=True)
+        # logger.info("Reset runtime state")
         yield from self.visit(tree)
 
     def _register_interrupt(self, ar: ActivationRecord, handler: NodeGenerator):
@@ -283,6 +328,9 @@ class PInterpreter(NodeVisitor):
         self._program.reset_runtime_state(recursive=True)
 
     def _is_awaiting_threshold(self, node: p.Node):
+        if node.completed:
+            return False
+
         if node.threshold is not None and not node.forced:
             base_unit = self.context.tags.get(SystemTagName.BASE).get_value()
             assert isinstance(base_unit, str), \
@@ -364,6 +412,19 @@ class PInterpreter(NodeVisitor):
         if not self.running:
             return
 
+        if self._ffw:
+            logger.debug(f"Visiting {node} during FFW")
+            if self._ffw_to_node_id == node.id:  # node is the one were trying to reach in ffw.
+                self._ffw = False
+            elif node.completed:    # node was completed so all its children are as well
+                return
+            elif node.started:      # node was started and must be visited again
+                pass
+            else:                   # node was not even started and must be visited
+                pass
+        else:
+            self._current_node = node
+
         # interrupts are visited multiple times. make sure to only create
         # a new record on the first visit
         record = self.runtimeinfo.get_last_node_record_or_none(node)
@@ -387,14 +448,18 @@ class PInterpreter(NodeVisitor):
                 self.context.tags.as_readonly())
             yield
 
+        node.started = True
+
         # delegate to concrete visitor via base method
         yield from super().visit(node)
 
-        record.set_end_visit(
-            self._tick_time, self._tick_number,
-            self.context.tags.as_readonly())
+        if not node.completed:
+            record.set_end_visit(
+                self._tick_time, self._tick_number,
+                self.context.tags.as_readonly())
 
         logger.debug(f"Visit {node} done")
+        node.completed = True
 
     def visit_ProgramNode(self, node: p.ProgramNode) -> NodeGenerator:
         ar = ActivationRecord(node, self._tick_time)

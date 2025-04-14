@@ -200,7 +200,7 @@ Wait: 0.99s
 
     def test_tag_pause(self):
         logging.getLogger("openpectus.engine.engine").setLevel(logging.WARNING)
-        runner = EngineTestRunner(create_test_uod, pcode="Wait: 10s")
+        runner = EngineTestRunner(create_test_uod, "Wait: 10s")
         with runner.run() as instance:
             e = instance.engine
             instance.start()
@@ -402,7 +402,7 @@ Watch: Run Time > 0s
     0.5 Info: B
 """
         delta = 0.2
-        runner = EngineTestRunner(create_test_uod, pcode=code)
+        runner = EngineTestRunner(create_test_uod, code)
         with runner.run() as instance:
             instance.start()
             scope_time = instance.engine.tags[SystemTagName.SCOPE_TIME]

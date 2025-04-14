@@ -43,7 +43,9 @@ class MethodManager:
         # validate that the content of the new method does not conflict with the state of the running method
         method_state = self.get_method_state()
         for new_line in method.lines:
-            if new_line.id in method_state.executed_line_ids:
+            # executed lines are no-go, (started lines are no-go except for added line break, not sure how this state
+            # can be represented)
+            if new_line.id in method_state.executed_line_ids or new_line.id in method_state.started_line_ids:
                 cur_line = next((line for line in self._method.lines if line.id == new_line.id))
                 if cur_line is not None and cur_line.content != new_line.content:
                     raise MethodEditError(

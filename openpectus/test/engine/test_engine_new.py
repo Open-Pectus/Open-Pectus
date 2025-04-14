@@ -268,7 +268,7 @@ Mark: A
 Mark: B
 Mark: C
 """
-        runner = EngineTestRunner(create_test_uod, code)        
+        runner = EngineTestRunner(create_test_uod, code)
 
         with runner.run() as instance:
             instance.start()
@@ -282,7 +282,7 @@ Mark: C
 Mark: A
 Stop
 """
-        runner = EngineTestRunner(create_test_uod, code)        
+        runner = EngineTestRunner(create_test_uod, code)
 
         with runner.run() as instance:
             instance.start()
@@ -299,7 +299,7 @@ Wait: 15s
 15 Mark: A2
 Mark: B
 """
-        runner = EngineTestRunner(create_test_uod, pcode=pcode, speed=30)
+        runner = EngineTestRunner(create_test_uod, pcode, speed=30)
         with runner.run() as instance:
             instance.start()
             run_time = instance.engine.tags[SystemTagName.RUN_TIME]
@@ -315,7 +315,7 @@ Mark: B
 Wait: 30s
 Mark: B
 """
-        runner = EngineTestRunner(create_test_uod, pcode=pcode, speed=30)
+        runner = EngineTestRunner(create_test_uod, pcode, speed=30)
         with runner.run() as instance:
             run_time = instance.engine.tags[SystemTagName.RUN_TIME]
             instance.start()
@@ -343,7 +343,7 @@ Mark: A
 Mark: B
 Mark: C
 """
-        runner = EngineTestRunner(create_test_uod, pcode=pcode)
+        runner = EngineTestRunner(create_test_uod, pcode)
         with runner.run() as instance:
             instance.start()
             instance.run_until_instruction("Mark", state="completed")
@@ -364,7 +364,7 @@ Mark: A
 0.25 Mark: B
 Mark: C
 """
-        runner = EngineTestRunner(create_test_uod, pcode=pcode)
+        runner = EngineTestRunner(create_test_uod, pcode)
         with runner.run() as instance:
             instance.start()
 
@@ -387,7 +387,7 @@ Mark: A
 0.2 Mark: B
 Mark: C
 """
-        runner = EngineTestRunner(create_test_uod, pcode=pcode)
+        runner = EngineTestRunner(create_test_uod, pcode)
         with runner.run() as instance:
             instance.start()
 
@@ -410,7 +410,7 @@ Warning: bar
 Error: baz
 Stop
 """
-        runner = EngineTestRunner(create_test_uod, pcode=pcode)
+        runner = EngineTestRunner(create_test_uod, pcode)
         with runner.run() as instance:
             instance.start()
             instance.run_until_event("stop")  # will raise on engine error

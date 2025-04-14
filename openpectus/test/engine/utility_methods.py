@@ -3,6 +3,7 @@ from contextlib import contextmanager
 import logging
 import time
 from typing import Callable, Generator, Literal
+from openpectus.engine.method_manager import MethodManager
 from openpectus.engine.models import EngineCommandEnum
 
 from openpectus.lang.exec.clock import WallClock
@@ -41,6 +42,7 @@ InstructionName = Literal[
     "Pause", "Hold", "Wait",
     "Stop", "Restart",
     "Info", "Warning", "Error",
+    "Macro", "Call macro",
 ]
 """ Defines the awaitable instructions of the test engine runner """
 
@@ -53,9 +55,10 @@ FindInstructionState = Literal[
 
 class EngineTestRunner:
     """ Expose an interface of Engine similar to what is available in the frontend to tests. """
-    def __init__(self, uod_factory: UodFactory, pcode: str = "", interval: float = 0.1, speed: float = 1.0) -> None:
+    def __init__(self, uod_factory: UodFactory, method: str | Mdl.Method = "", interval: float = 0.1, speed: float = 1.0)\
+            -> None:
         self.uod_factory = uod_factory
-        self.pcode = pcode
+        self.method: str | Mdl.Method = method
         self.interval = interval
         self.speed = speed
         logger.debug(f"Created engine test runner, speed: {self.speed:.2f}, interval: {(self.interval*1000):.2f}ms")
@@ -65,7 +68,7 @@ class EngineTestRunner:
         timing = EngineTiming(WallClock(), NullTimer(), self.interval, self.speed)
         uod = self.uod_factory()
         engine = Engine(uod, timing)
-        instance = EngineTestInstance(engine, self.pcode, timing)
+        instance = EngineTestInstance(engine, self.method, timing)
         try:
             yield instance
         except Exception:
@@ -76,20 +79,18 @@ class EngineTestRunner:
 
 
 class EngineTestInstance(EventListener):
-    def __init__(self, engine: Engine, pcode: str, timing: EngineTiming) -> None:
+    def __init__(self, engine: Engine, method: str | Mdl.Method, timing: EngineTiming) -> None:
         self.engine = engine
         self.timing = timing
 
         self.engine.run(skip_timer_start=True)
-        self.set_method(pcode)
+        if isinstance(method, str):
+            method = Mdl.Method.from_pcode(method)
+        self.engine.set_method(method)
 
         self._search_index = 0
         self.engine.emitter.add_listener(self)  # register as listener for lifetime events, so they can be awaited
         self._last_event: EventName | None = None
-
-    def set_method(self, pcode: str):
-        method = Mdl.Method.from_pcode(pcode)
-        self.engine.set_method(method)
 
     def start(self):
         self.engine.schedule_execution(EngineCommandEnum.START)
@@ -98,6 +99,10 @@ class EngineTestInstance(EventListener):
     @property
     def marks(self) -> list[str]:
         return self.engine.interpreter.get_marks()
+
+    @property
+    def method_manager(self) -> MethodManager:
+        return self.engine.method_manager
 
     def run_until_condition(self, condition: RunCondition, max_ticks=30) -> int:
         """ Continue program until condition occurs. Return the number of ticks spent.

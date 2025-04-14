@@ -4,7 +4,7 @@ import threading
 import time
 import unittest
 from typing import Any, Generator
-from openpectus.lang.exec.errors import NodeInterpretationError, UodValidationError
+from openpectus.lang.exec.errors import MethodEditError, NodeInterpretationError, UodValidationError
 from openpectus.lang.exec.regex import RegexNumber
 from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 
@@ -663,11 +663,12 @@ Mark: C
         self.assertEqual(['A', 'B', 'C'], e.interpreter.get_marks())
 
     def test_set_and_continue_program(self):
-        code = "Mark: A\nMark: B"
+        code = "Mark: A\nMark: B\nMark: C"
         e = self.engine
         run_engine(e, code, 3)
         self.assertEqual(['A'], e.interpreter.get_marks())
         continue_engine(e, 10)
+
         self.assertEqual(['A', 'B', 'C'], e.interpreter.get_marks())
 
     @unittest.skip("not implemented, needs input")
@@ -948,17 +949,17 @@ Restart
     # --- Totalizers ---
 
 
-    def test_totalizer_base_units_no_accumulator(self):
+    def test_totalizer_base_units_no_accumulator_allows_time_unit(self):
         e = self.engine
 
-        with self.subTest("allows_time_unit"):
-            run_engine(e, "Base: s\n0.1 Mark: A", 5)
-            self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.OK)
+        run_engine(e, "Base: s\n0.1 Mark: A", 5)
+        self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.OK)
 
-        with self.subTest("disallows_volume_unit"):
-            with self.assertRaises(NodeInterpretationError):
-                run_engine(e, "Base: L\n0.1 Mark: A", 5)
-            self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
+    def test_totalizer_base_units_no_accumulator_disallows_volume_unit(self):
+        e = self.engine
+        with self.assertRaises(ValueError):
+            run_engine(e, "Base: L\n0.1 Mark: A", 5)
+        self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
 
     def test_totalizer_base_units_with_accumulator_volume(self):
         self.engine.cleanup()  # dispose the test default engine
