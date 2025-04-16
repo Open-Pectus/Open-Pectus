@@ -32,7 +32,8 @@ class CommandRequest:
         self.command_exec_id: UUID | None = None
 
     def __str__(self) -> str:
-        return f'{self.__class__.__name__}(name="{self.name}", arguments={self.arguments}, source="{self.source}", exec_id={self.exec_id}, command_exec_id={self.command_exec_id})'
+        return (f'{self.__class__.__name__}(name="{self.name}", arguments={self.arguments}, ' +
+                f'source="{self.source}", exec_id={self.exec_id}, command_exec_id={self.command_exec_id})')
 
     @staticmethod
     def from_user(name: str, arguments: str = "") -> CommandRequest:

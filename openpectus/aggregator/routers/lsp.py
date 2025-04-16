@@ -80,7 +80,7 @@ def get_pcode_tm_grammar(engine_id: str, agg: Aggregator = Depends(agg_deps.get_
 async def lsp_server_endpoint(websocket: WebSocket):
     await websocket.accept()
     loop = asyncio.get_event_loop()
-    
+
     def send_message(message):
         loop.create_task(websocket.send_json(message))
 

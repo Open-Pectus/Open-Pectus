@@ -1,7 +1,6 @@
 import logging
 import os
-from argparse import ArgumentParser, BooleanOptionalAction
-import subprocess
+from argparse import ArgumentParser
 
 from alembic import command
 from alembic.config import Config

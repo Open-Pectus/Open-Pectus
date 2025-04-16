@@ -16,7 +16,7 @@ from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.aggregator.routers import process_unit, recent_runs, auth, version, lsp
 from openpectus.aggregator.spa import SinglePageApplication
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
-from openpectus.aggregator.exceptions import AggregatorCallerException, AggregatorInternalException, AggregatorInternalException
+from openpectus.aggregator.exceptions import AggregatorCallerException, AggregatorInternalException
 
 
 class AggregatorServer:
