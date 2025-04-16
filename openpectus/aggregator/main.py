@@ -33,7 +33,6 @@ def get_arg_parser():
                         help=f"Minimum log level to send as sentry events. Default: '{sentry.EVENT_LEVEL_DEFAULT}'")
     parser.add_argument("-db", "--database", required=False, default=AggregatorServer.default_db_path,
                         help=f"Path to Sqlite3 database. Default: ./{AggregatorServer.default_db_filename}")
-    parser.add_argument("-lsp", "--lsp", action=BooleanOptionalAction, default=False, help="Start LSP server process")
     parser.add_argument("-secret", "--secret", required=False, default=AggregatorServer.default_secret,
                         help="Engines must know this secret to connect to the aggregator")
     return parser
@@ -59,19 +58,6 @@ def main():
     command.upgrade(alembic_config, "head")
 
     server = AggregatorServer(title, args.host, args.port, args.frontend_dist_dir, args.database, args.secret)
-
-    # Start lsp server in seperate process
-    # Note: only in dev - in test and prod, lsp server is started seperately
-    if args.lsp:
-        aggregator_url = f"http://{args.host}:{args.port}"
-        lsp_mainpy_path = os.path.join(
-            os.path.dirname(__file__), "..", "lsp", "main.py"
-        )
-        process = subprocess.Popen([
-            "python", lsp_mainpy_path,
-            "--aggregator_url", aggregator_url
-        ])
-        server.shutdown_callback = lambda: process.kill()
 
     # seart aggregator server
     server.start()
