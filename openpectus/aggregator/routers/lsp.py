@@ -1,11 +1,13 @@
 import logging
+import asyncio
 
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
 import openpectus.aggregator.routers.dto as Dto
-from fastapi import APIRouter, Depends, Response, HTTPException
+from fastapi import APIRouter, Depends, Response, HTTPException, WebSocket
 from openpectus.aggregator.aggregator import Aggregator
 from starlette.status import HTTP_404_NOT_FOUND
+from pylsp.python_lsp import PythonLSPServer
 
 
 logger = logging.getLogger(__name__)
@@ -71,3 +73,24 @@ def get_pcode_tm_grammar(engine_id: str, agg: Aggregator = Depends(agg_deps.get_
             },
         ]
     }
+
+
+@router.websocket("/lsp")
+async def lsp_server_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    loop = asyncio.get_event_loop()
+    tasks = set()
+
+    def send_message(message):
+        task = loop.create_task(websocket.send_json(message))
+        tasks.add(task)
+        task.add_done_callback(tasks.discard)
+
+    lsp_handler = PythonLSPServer(
+        rx=None,
+        tx=None,
+        consumer=send_message,
+    )
+
+    async for message in websocket.iter_json():
+        lsp_handler.consume(message)

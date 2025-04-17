@@ -102,7 +102,7 @@ Mark: D
         class TestNodeVisitor(NodeVisitor):
             def visit(self, node: p.Node) -> NodeGenerator:
                 print(node)
-                #yield from super().visit(node)
+                # yield from super().visit(node)
                 return super().visit(node)
 
         visitor = TestNodeVisitor()

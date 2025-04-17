@@ -1,5 +1,4 @@
 import logging
-from openpectus.lang.exec.pinterpreter import PInterpreter
 from openpectus.lang.exec.units import as_int
 import openpectus.protocol.models as Mdl
 from openpectus.lang.model.parser import Method, MethodLine, create_method_parser, create_inject_parser

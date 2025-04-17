@@ -3,7 +3,7 @@ from typing import List
 from antlr4 import InputStream, CommonTokenStream, Token, ParserRuleContext
 from antlr4.tree.Tree import ParseTree, ParseTreeWalker
 
-#from openpectus.lang.exec.analyzer import EnrichAnalyzer
+# from openpectus.lang.exec.analyzer import EnrichAnalyzer
 from openpectus.lang.grammar.codegen.pcodeLexer import pcodeLexer
 from openpectus.lang.grammar.codegen.pcodeParser import pcodeParser
 from openpectus.lang.model.pprogram import PProgram

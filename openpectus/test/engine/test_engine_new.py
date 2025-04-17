@@ -1,4 +1,3 @@
-import logging
 import time
 import unittest
 from typing import Any
@@ -268,7 +267,7 @@ Mark: A
 Mark: B
 Mark: C
 """
-        runner = EngineTestRunner(create_test_uod, code)        
+        runner = EngineTestRunner(create_test_uod, code)
 
         with runner.run() as instance:
             instance.start()
@@ -282,7 +281,7 @@ Mark: C
 Mark: A
 Stop
 """
-        runner = EngineTestRunner(create_test_uod, code)        
+        runner = EngineTestRunner(create_test_uod, code)
 
         with runner.run() as instance:
             instance.start()

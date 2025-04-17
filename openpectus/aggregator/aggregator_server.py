@@ -16,7 +16,7 @@ from openpectus.aggregator.frontend_publisher import FrontendPublisher
 from openpectus.aggregator.routers import process_unit, recent_runs, auth, version, lsp
 from openpectus.aggregator.spa import SinglePageApplication
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
-from openpectus.aggregator.exceptions import AggregatorCallerException, AggregatorInternalException, AggregatorInternalException
+from openpectus.aggregator.exceptions import AggregatorCallerException, AggregatorInternalException
 
 
 class AggregatorServer:
@@ -45,6 +45,9 @@ class AggregatorServer:
         self.aggregator = _create_aggregator(self.dispatcher, self.publisher, secret)
         _ = AggregatorMessageHandlers(self.aggregator)
         self.shutdown_callback = shutdown_cb
+        import openpectus.lsp.config as config
+        # http (not https) is OK because the URL is only used internally by the LSP server
+        config.aggregator_url = f"http://{self.host}:{self.port}"
         self.setup_fastapi([self.dispatcher.router, self.publisher.router, version.router, lsp.router])
         self.init_db()
 
@@ -66,7 +69,6 @@ class AggregatorServer:
                                lifespan=self.lifespan)
         self.fastapi.include_router(process_unit.router, prefix=api_prefix, dependencies=[UserRolesDependency])
         self.fastapi.include_router(recent_runs.router, prefix=api_prefix, dependencies=[UserRolesDependency])
-        #self.fastapi.include_router(lsp.router, prefix=api_prefix)
         self.fastapi.include_router(auth.router, prefix="/auth")
         for route in additional_routers:
             self.fastapi.include_router(route)
