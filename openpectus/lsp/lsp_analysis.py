@@ -98,6 +98,9 @@ class AnalysisInput:
     def get_tag_completions(self, query: str) -> list[str]:
         return [tag for tag in self.tag_completions if tag.lower().startswith(query.lower())]
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(engine_id="{self.engine_id}", commands={self.commands}, tags={self.tags})'
+
 
 @functools.cache
 def create_analysis_input(engine_id: str) -> AnalysisInput:
@@ -118,6 +121,9 @@ class AnalysisResult:
         self.program = program
         self.items = items
         self.input = input
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(program="{self.program}", commands={self.items}, tags={self.input})'
 
 
 def analyze(input: AnalysisInput, document: Document) -> AnalysisResult:
@@ -290,7 +296,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
     try:
         analysis_input = create_analysis_input(engine_id)
     except Exception:
-        logger.error("Failed to build program: '{pcode}'", exc_info=True)
+        logger.error(f"Failed to analyse program for engine_id: '{engine_id}'", exc_info=True)
         return []
 
     # determine whether position is in first word on the line
@@ -331,7 +337,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                 for name in analysis_input.get_tag_completions(second_word)
             ]
         else:
-            # difficult amd possibly not important case
+            # difficult and possibly not important case
             # we could autocomplete all parts of a condition
             return []
 
