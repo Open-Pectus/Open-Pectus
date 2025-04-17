@@ -510,6 +510,7 @@ class Engine(InterpreterContext):
         for c in self.cmd_executing:
             if c.command_exec_id in self._cancel_command_exec_ids:
                 cmds_done.add(c)
+                assert c.command_exec_id is not None, f"Expected uod command request '{c.name}' to have command_exec_id"
                 self._cancel_command_exec_ids.remove(c.command_exec_id)
                 if cmd_request.name == c.name:
                     cancel_this = True
