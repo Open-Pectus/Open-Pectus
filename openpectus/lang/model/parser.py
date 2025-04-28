@@ -20,7 +20,7 @@ def create_inject_parser(uod_command_names: list[str] = []) -> PcodeParser:
 
 
 @dataclass
-class PerserMethodLine:
+class ParserMethodLine:
     id: str
     content: str
 
@@ -28,9 +28,9 @@ class PerserMethodLine:
 class ParserMethod:
     empty: ParserMethod
 
-    def __init__(self, lines: list[PerserMethodLine]):
+    def __init__(self, lines: list[ParserMethodLine]):
         self.version = 0
-        self.lines: list[PerserMethodLine] = lines
+        self.lines: list[ParserMethodLine] = lines
         # TODO add version and author - we should keep a version number so we can easily detect
         # multiple concurrent editors and bail out quick in that case
 
@@ -50,7 +50,7 @@ class ParserMethod:
         method = ParserMethod.create_empty()
         line_num: int = 1
         for line in pcode.splitlines():
-            method.lines.append(PerserMethodLine(id=f"id_{line_num}", content=line))
+            method.lines.append(ParserMethodLine(id=f"id_{line_num}", content=line))
             line_num += 1
         return method
 

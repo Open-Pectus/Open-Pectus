@@ -6,6 +6,8 @@ import re
 import openpectus.engine.models as EM
 from pydantic import BaseModel, ConfigDict
 
+from openpectus.lang.model.parser import ParserMethod, ParserMethodLine
+
 logger = logging.getLogger(__name__)
 
 SystemStateEnum = EM.SystemStateEnum
@@ -179,6 +181,11 @@ class Method(ProtocolModel):
             if i < len(self.lines):
                 line.id = self.lines[i].id
         return new_method
+
+    def to_parser_method(self) -> ParserMethod:
+        return ParserMethod(
+            lines=[ParserMethodLine(line.id, line.content) for line in self.lines]
+        )
 
 
 class MethodState(ProtocolModel):

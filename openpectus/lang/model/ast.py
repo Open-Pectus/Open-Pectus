@@ -292,6 +292,12 @@ class NodeWithChildren(Node):
         return f"{indent_spaces}{self.instruction_part}{args}\n" + \
             "\n".join(child.as_tree() for child in self.children)
 
+    def extract_state(self) -> NodeState:
+        state = super().extract_state()
+        return state
+
+    def apply_state(self, state):
+        super().apply_state(state)
 
 class ProgramNode(NodeWithChildren):
     def __init__(self, position=Position.empty, id=""):

@@ -400,9 +400,14 @@ def print_runtime_records(e: Engine, description: str = ""):
     table = e.interpreter.runtimeinfo.get_as_table(description)
     print(table)
 
+def clear_log_config():
+    """ Remove any existing logging setup, eg. from logging.basicConfig()"""
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
 
 def configure_test_logger():
-    logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
+    clear_log_config()
+    logging.basicConfig(format='%(name)s : %(levelname)-6s : %(message)s')
 
 
 def set_engine_debug_logging():

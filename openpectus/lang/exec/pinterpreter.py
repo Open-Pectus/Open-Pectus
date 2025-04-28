@@ -85,6 +85,9 @@ class ActivationRecord:
     def __str__(self) -> str:
         return f"AR {self.owner} | {self.artype} | complete: {self.complete}"
 
+    def __repr__(self):
+        return self.__str__()
+
 
 class CallStack:
     def __init__(self):
@@ -108,8 +111,10 @@ class CallStack:
         return self._records[-1]
 
     def __str__(self):
-        s = '\n'.join(repr(ar) for ar in reversed(self._records))
-        s = f'CALL STACK\n{s}\n\n'
+        if len(self._records) == 0:
+            return "CallStack (empty)"
+        s = '\n\t'.join(repr(ar) for ar in reversed(self._records))
+        s = f'CallStack (size: {len(self.records)})\n{s}\n\n'
         return s
 
     def __repr__(self):
@@ -174,6 +179,7 @@ class PInterpreter(NodeVisitor):
 
         # patch runtimeinfo records to reference new nodes - before or after ffw? should not matter
         self.runtimeinfo.patch_node_references(program)
+        self.patch_node_references(program)
 
         # collect node id from old method. The id will match in the new method
         # verify that target is not completed - if so ffw won't find it
@@ -194,20 +200,61 @@ class PInterpreter(NodeVisitor):
         self._ffw = True
         self._ffw_to_node_id = target_node_id
 
+        # run method from start to self._ffw_to_node_id
         logger.info("FFW starting, target node id: " + self._ffw_to_node_id)
         ffw_process_instr = self._interpret()
         while self._ffw:
             try:
                 next(ffw_process_instr)
+                if not self._ffw:
+                    logger.debug("FFW found, target node id: " + self._ffw_to_node_id)
             except StopIteration:
                 self._ffw = False
-                logger.error(f"""FFW failed, node {self._ffw_to_node_id} could not be reached.
-TODO - info about the reason and consequences. User should probably Stop and start the method over.
-Currently, the consequence is that the method is jsut started over - we should probably just raise instead
-""")
+                logger.error(f"FFW failed, node {self._ffw_to_node_id} could not be reached (main).")
+                raise Exception(f"FFW failed, node {self._ffw_to_node_id} could not be reached (main).")                
+            try:
+                if self._ffw:
+                    pass
+                    self._run_interrupt_handlers()
+                    if not self._ffw:
+                        logger.debug("FFW found in interrupts, target node id: " + self._ffw_to_node_id)
+            except Exception:
+                logger.error("Exception during FFW interrupt handler")
+                logger.error(f"FFW failed, node {self._ffw_to_node_id} could not be reached (interrupt).")
         self._process_instr = ffw_process_instr
         logger.info("FFW complete")
 
+    def patch_node_references(self, program: p.ProgramNode):
+        """ Patch node references to updated program nodes to account for edited method. """
+        logger.info("Patching node references in interpreter state")
+        for ar, _ in self.interrupts:
+            node = ar.owner
+            if node is not None and not isinstance(node, p.ProgramNode):
+                new_node = program.get_child_by_id(node.id)
+                if new_node is None:
+                    logger.error(f"No new node was found to replace {node}. Node cannot be patched")
+                else:
+                    if ar.owner != new_node:
+                        ar.owner = new_node
+                        logger.debug(f"Patched node reference {new_node}")
+                    else:
+                        logger.warning(f"Node not patched: {new_node} - old node already matched the new node!?")
+
+        # TODO get rid of this when moving macro processing to analyser
+        for name, node in self.macros.items():
+            if node is not None and not isinstance(node, p.ProgramNode):
+                new_node = program.get_child_by_id(node.id)
+                if new_node is None:
+                    logger.error(f"No new node was found to replace {node}. Node cannot be patched")
+                else:
+                    assert isinstance(new_node, p.MacroNode)
+                    if node != new_node:
+                        self.macros[name] = new_node
+                        logger.debug(f"Patched node reference {new_node}")
+                    else:
+                        logger.warning(f"Node not patched: {new_node} - old node already matched the new node!?")
+
+        logger.info("Patching complete")
 
     def get_marks(self) -> list[str]:
         records: list[tuple[str, int]] = []
@@ -239,8 +286,7 @@ Currently, the consequence is that the method is jsut started over - we should p
         tree = self._program
         if tree is None:
             return None
-        # tree.reset_runtime_state(recursive=True)
-        # logger.info("Reset runtime state")
+
         yield from self.visit(tree)
 
     def _register_interrupt(self, ar: ActivationRecord, handler: NodeGenerator):
@@ -311,9 +357,7 @@ Currently, the consequence is that the method is jsut started over - we should p
 
         # execute one iteration of each interrupt
         try:
-            work_done = self._run_interrupt_handlers()
-            if not work_done:
-                pass
+            self._run_interrupt_handlers()
         except AssertionError as ae:
             raise InterpretationError(message=str(ae), exception=ae)
         except (InterpretationInternalError, InterpretationError):
@@ -397,13 +441,12 @@ Currently, the consequence is that the method is jsut started over - we should p
             expected_value,
             expected_unit)
 
-    def _visit_children(self, node: p.Node) -> NodeGenerator:
+    def _visit_children(self, node: p.NodeWithChildren) -> NodeGenerator:
         ar = self.stack.peek()
-        if isinstance(node, p.NodeWithChildren):
-            for child in node.children:
-                if ar.complete:
-                    break
-                yield from self.visit(child)
+        for child in node.children:
+            if ar.complete:
+                break
+            yield from self.visit(child)
 
     # Visitor Impl
 
@@ -412,16 +455,20 @@ Currently, the consequence is that the method is jsut started over - we should p
         if not self.running:
             return
 
+        # TODO handle ffw below. Must understand all cases
+
         if self._ffw:
             logger.debug(f"Visiting {node} during FFW")
             if self._ffw_to_node_id == node.id:  # node is the one were trying to reach in ffw.
                 self._ffw = False
+                yield
             elif node.completed:    # node was completed so all its children are as well
+                yield
+            else:                 # node was not even started and must be visited
+                node.started = True
+                yield from super().visit(node)
+                node.completed = True
                 return
-            elif node.started:      # node was started and must be visited again
-                pass
-            else:                   # node was not even started and must be visited
-                pass
         else:
             self._current_node = node
 
@@ -442,7 +489,7 @@ Currently, the consequence is that the method is jsut started over - we should p
             if self.stack.peek().complete:
                 logger.debug("Aborting threshold because parent block was complete")
                 return
-
+            # TODO verify that we don't get duplicate await runtime states here
             record.add_state_awaiting_threshold(
                 self._tick_time, self._tick_number,
                 self.context.tags.as_readonly())
@@ -462,20 +509,49 @@ Currently, the consequence is that the method is jsut started over - we should p
         node.completed = True
 
     def visit_ProgramNode(self, node: p.ProgramNode) -> NodeGenerator:
-        ar = ActivationRecord(node, self._tick_time)
-        self.stack.push(ar)
-        self.context.emitter.emit_on_scope_start(node.id)
-        self.context.emitter.emit_on_scope_activate(node.id)
+        if not self._ffw:
+            ar = ActivationRecord(node, self._tick_time)
+            self.stack.push(ar)
+            self.context.emitter.emit_on_scope_start(node.id)
+            self.context.emitter.emit_on_scope_activate(node.id)
+
         yield from self._visit_children(node)
-        # TODO consider awaiting uod command completion before emit_on_method_end
-        self.context.emitter.emit_on_scope_end(node.id)
+
+        # Note: Rather than the method has ended, this means that the last line
+        # of the method is complete. The method may still change.
         self.context.emitter.emit_on_method_end()
-        self.stack.pop()
+
+        # Avoid returning from the visit. This makes it possible to inject or edit
+        # code at the bottom of the method which will then be added as new child nodes
+        # of the ProgramNode.
+        # There may also be commands that still run, in particular Alarm which runs
+        # indefinitely
+        while self.running:
+            yield
+
+
+        # if not self._ffw:
+        #     self.context.emitter.emit_on_scope_end(node.id)
+        #     self.context.emitter.emit_on_method_end()
+            # lets just keep this on the stack so a method change can be added to the program body
+            # unfortunately this causes performance timer error...
+            # which we will have to fix. we cant run interrupts with an empty stack
+            # self.stack.pop()
+
+            # we might also loop and yield
+            # while self.running:
+            #     yield
 
     def visit_BlankNode(self, node: p.BlankNode) -> NodeGenerator:
+        if self._ffw:
+            return
+
         yield
 
     def visit_MarkNode(self, node: p.MarkNode) -> NodeGenerator:
+        if self._ffw:
+            return
+
         record = self.runtimeinfo.get_last_node_record(node)
 
         logger.info(f"Mark {str(node)}")
@@ -497,6 +573,9 @@ Currently, the consequence is that the method is jsut started over - we should p
             self.context.tags.as_readonly())
 
     def visit_BatchNode(self, node: p.BatchNode) -> NodeGenerator:
+        if self._ffw:
+            return
+
         record = self.runtimeinfo.get_last_node_record(node)
 
         logger.info(f"Batch {str(node)}")
@@ -518,6 +597,9 @@ Currently, the consequence is that the method is jsut started over - we should p
             self.context.tags.as_readonly())
 
     def visit_MacroNode(self, node: p.MacroNode) -> NodeGenerator:
+        if self._ffw:
+            return
+
         record = self.runtimeinfo.get_last_node_record(node)
         record.add_state_started(
             self._tick_time, self._tick_number,
@@ -556,6 +638,9 @@ Currently, the consequence is that the method is jsut started over - we should p
         yield
 
     def visit_CallMacroNode(self, node: p.CallMacroNode) -> NodeGenerator:
+        if self._ffw:
+            raise NotImplementedError("what to do here")
+
         record = self.runtimeinfo.get_last_node_record(node)
         record.add_state_started(
             self._tick_time, self._tick_number,
@@ -582,6 +667,10 @@ Currently, the consequence is that the method is jsut started over - we should p
             self.context.tags.as_readonly())
 
     def visit_BlockNode(self, node: p.BlockNode) -> NodeGenerator:
+        if self._ffw:
+            yield from self._visit_children(node)
+            return
+
         record = self.runtimeinfo.get_last_node_record(node)
 
         ar = ActivationRecord(node, self._tick_time)
@@ -662,6 +751,9 @@ Currently, the consequence is that the method is jsut started over - we should p
             self.context.tags.as_readonly())
 
     def visit_InterpreterCommandNode(self, node: p.InterpreterCommandNode) -> NodeGenerator:  # noqa C901
+        if self._ffw:
+            return
+
         yield from ()
 
         record = self.runtimeinfo.get_last_node_record(node)
@@ -717,6 +809,9 @@ Currently, the consequence is that the method is jsut started over - we should p
         yield  # avoid other instructions starting in this tick, to allow tests to consistently detect the completed state
 
     def visit_EngineCommandNode(self, node: p.EngineCommandNode) -> NodeGenerator:
+        if self._ffw:
+            return
+
         record = self.runtimeinfo.get_last_node_record(node)
 
         # Note: Commands can be resident and last multiple ticks.
@@ -743,6 +838,9 @@ Currently, the consequence is that the method is jsut started over - we should p
         yield
 
     def visit_UodCommandNode(self, node: p.UodCommandNode) -> NodeGenerator:
+        if self._ffw:
+            return
+
         record = self.runtimeinfo.get_last_node_record(node)
 
         # Note: Commands can be resident and last multiple ticks.
@@ -775,6 +873,10 @@ Currently, the consequence is that the method is jsut started over - we should p
         yield from self.visit_WatchOrAlarm(node)
 
     def visit_WatchOrAlarm(self, node: p.WatchNode | p.AlarmNode) -> NodeGenerator:
+        if self._ffw:
+            yield from self._visit_children(node)
+            return
+
         record = self.runtimeinfo.get_last_node_record(node)
 
         ar = self.stack.peek()

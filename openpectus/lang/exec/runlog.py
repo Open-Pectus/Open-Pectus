@@ -272,7 +272,7 @@ class RuntimeInfo:
 
     def get_last_node_record_or_none(self, node: p.Node) -> RuntimeRecord | None:
         for r in reversed(self._records):
-            if r.node == node:
+            if r.node.id == node.id:
                 return r
 
     def get_last_node_record(self, node: p.Node) -> RuntimeRecord:

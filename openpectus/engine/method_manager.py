@@ -3,7 +3,9 @@ import logging
 
 from openpectus.lang.exec.errors import MethodEditError
 from openpectus.lang.exec.units import as_int
-from openpectus.lang.model.parser import PerserMethodLine, ParserMethod, create_inject_parser, create_method_parser
+from openpectus.lang.model.parser import (
+    ParserMethodLine, ParserMethod, create_inject_parser, create_method_parser
+)
 import openpectus.lang.model.ast as p
 import openpectus.protocol.models as Mdl
 
@@ -30,7 +32,7 @@ class MethodManager:
         # concurrency check: aggregator performs the version check and aborts on error
 
         # convert method from protocol api and apply the new method
-        _method = ParserMethod(lines=[PerserMethodLine(line.id, line.content) for line in method.lines])
+        _method = ParserMethod(lines=[ParserMethodLine(line.id, line.content) for line in method.lines])
         self._method = _method
         parser = create_method_parser(_method, self._uod_command_names)
         self._program = parser.parse_method(_method)
@@ -55,7 +57,7 @@ class MethodManager:
         existing_state = self._program.extract_tree_state(skip_started_nodes=True)
 
         # convert method from protocol api and apply the new method
-        _method = ParserMethod(lines=[PerserMethodLine(line.id, line.content) for line in method.lines])
+        _method = ParserMethod(lines=[ParserMethodLine(line.id, line.content) for line in method.lines])
         self._method = _method
         parser = create_method_parser(_method, self._uod_command_names)
         self._program = parser.parse_method(_method)
