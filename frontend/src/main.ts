@@ -1,5 +1,4 @@
 import { DATE_PIPE_DEFAULT_OPTIONS, DatePipe, DecimalPipe } from '@angular/common';
-import { provideHttpClient, withInterceptors, withInterceptorsFromDi } from '@angular/common/http';
 import '@angular/common/locales/global/da';
 import { importProvidersFrom, isDevMode, LOCALE_ID, provideExperimentalZonelessChangeDetection } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
@@ -18,7 +17,6 @@ import { Defaults } from './app/defaults';
 import { DetailsActions } from './app/details/ngrx/details.actions';
 import { metaReducers, reducers } from './app/ngrx';
 import { AppEffects } from './app/ngrx/app.effects';
-import { httpErrorInterceptor } from './app/shared/interceptors/http-error.interceptor';
 import { ProcessValuePipe } from './app/shared/pipes/process-value.pipe';
 
 import { handlers } from './msw/handlers';
@@ -89,7 +87,6 @@ enableMocking().then(() => bootstrapApplication(AppComponent, {
     DecimalPipe,
     ProcessValuePipe,
     {provide: DATE_PIPE_DEFAULT_OPTIONS, useValue: {dateFormat: Defaults.dateFormat}},
-    provideHttpClient(withInterceptorsFromDi(), withInterceptors([httpErrorInterceptor])),
   ],
 })
   .catch(err => console.error(err)));

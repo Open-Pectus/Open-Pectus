@@ -1,13 +1,15 @@
-import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptors, withInterceptorsFromDi } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { NgModule } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { AuthInterceptor, AuthModule, LogLevel, OpenIdConfiguration, StsConfigHttpLoader, StsConfigLoader } from 'angular-auth-oidc-client';
+import { authInterceptor, AuthModule, LogLevel, OpenIdConfiguration, StsConfigHttpLoader, StsConfigLoader } from 'angular-auth-oidc-client';
 import { map } from 'rxjs';
 import { AuthConfig, AuthService } from '../api';
 import { authCallbackUrlPart } from '../app.routes';
 import { AppActions } from '../ngrx/app.actions';
+import { httpErrorInterceptor } from '../shared/interceptors/http-error.interceptor';
 import { AuthCallbackComponent } from './auth-callback.component';
 import { identityInterceptor } from './identity.interceptor';
+import { waitForAuthConfigInterceptor } from './wait-for-auth-config.interceptor';
 
 export const httpLoaderFactory = (authService: AuthService, store: Store) => {
   const config = authService.getConfig().pipe<OpenIdConfiguration>(
@@ -28,6 +30,8 @@ export const httpLoaderFactory = (authService: AuthService, store: Store) => {
         scope: 'openid profile offline_access User.Read', // 'openid profile offline_access ' + your scopes
         responseType: 'code',
         silentRenew: true,
+        renewTimeBeforeTokenExpiresInSeconds: 60,
+        tokenRefreshInSeconds: 60,
         useRefreshToken: true,
         maxIdTokenIatOffsetAllowedInSeconds: 600, // 600, i.e. 10 minutes, is the default generated value.
         ignoreNonceAfterRefresh: true,
@@ -59,12 +63,7 @@ export const httpLoaderFactory = (authService: AuthService, store: Store) => {
     AuthCallbackComponent,
   ],
   providers: [
-    {provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true},
-    provideHttpClient(withInterceptorsFromDi(), withInterceptors([identityInterceptor])),
-  ],
-  exports: [
-    AuthModule,
-    AuthCallbackComponent,
+    provideHttpClient(withInterceptors([httpErrorInterceptor, waitForAuthConfigInterceptor, authInterceptor(), identityInterceptor])),
   ],
 })
 export class AuthConfigModule {}
