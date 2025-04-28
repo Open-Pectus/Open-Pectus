@@ -9,7 +9,7 @@ import { AppActions } from '../ngrx/app.actions';
 import { httpErrorInterceptor } from '../shared/interceptors/http-error.interceptor';
 import { AuthCallbackComponent } from './auth-callback.component';
 import { identityInterceptor } from './identity.interceptor';
-import { waitForAuthConfigInterceptor } from './wait-for-auth-config.interceptor';
+import { waitForAuthInterceptor } from './wait-for-auth.interceptor';
 
 export const httpLoaderFactory = (authService: AuthService, store: Store) => {
   const config = authService.getConfig().pipe<OpenIdConfiguration>(
@@ -63,7 +63,7 @@ export const httpLoaderFactory = (authService: AuthService, store: Store) => {
     AuthCallbackComponent,
   ],
   providers: [
-    provideHttpClient(withInterceptors([httpErrorInterceptor, waitForAuthConfigInterceptor, authInterceptor(), identityInterceptor])),
+    provideHttpClient(withInterceptors([httpErrorInterceptor, waitForAuthInterceptor, authInterceptor(), identityInterceptor])),
   ],
 })
 export class AuthConfigModule {}
