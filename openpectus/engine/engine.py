@@ -768,10 +768,9 @@ class Engine(InterpreterContext):
             - Current instruction is a Wait
             - Current instruction is a Pause
             - Engine paused
-            - ??
-        
+            - ??        
             In the waiting cases (threshold, Wait and Pause), the waiting time is reset - this is probably ok?
-        
+
         How should this be enforced?
         - Wait for an active instruction to complete before performing the edit? Probably not
         - Fail unless one of the conditions above is true? This is difficult:
@@ -780,51 +779,28 @@ class Engine(InterpreterContext):
                 and we have tests that depend on this - but this can be changed and probably should. It would
                 certainly make tests easier to write and understand and more robust since they don't have to depend
                 on tick counting.
-
+        - Should the edit be performed as a command? We should always perform the edit in a "pause" so it won't interfere
+          with anything...
 
         If a method is already running, it will
         - Take node of the current instruction
         - Check that no code changes exist in already executed code. If so, MethodEditError is raised
-        - Pause engine and serialize the AST of the running method
+        - Serialize the AST of the running method
         - Parse the updated method, replacing the AST with the new AST
         - Apply persisted data to new AST
         - Patch all node references to point to the updated nodes:
             - In runtime records
             - In interpreter state (activate records)
         - Start executing new program in fast-forward mode to skip directly to the paused instruction
-        - Unpause
         """
 
         try:
             if self._runstate_started:
-                # Dont use safa state - just halt somehow
-
-
-                # pause - TODO Safe State?? - got to be more concrete about what we don't want happening during
-                # merge and ffw
-                logger.info("Method modified while running")
-                self._runstate_paused = True
-                self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Paused, self._tick_time)
-                self._prev_state = self._apply_safe_state()
+                # TODO Dont use safe state - just halt somehow...
 
                 # apply updated method
                 self._method_manager.merge_method(method)
                 self._interpreter.update_method_and_ffw(self._method_manager.program)
-
-                # unpause
-                self._runstate_paused = False
-                sys_state_value = SystemStateEnum.Holding if self._runstate_holding else SystemStateEnum.Running
-                self._system_tags[SystemTagName.SYSTEM_STATE].set_value(sys_state_value, self._tick_time)
-
-                # pre-pause values are always applied on unpause, regardless of hold state.
-                if self._prev_state is not None:
-                    self._apply_state(self._prev_state)
-                    self._prev_state = None
-                else:
-                    logger.error("Failed to apply state prior to safe state. Prior state was not available")
-
-                self._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.OK, self._tick_time)
-
             else:
                 self._method_manager.set_method(method)
                 self._interpreter = PInterpreter(self._method_manager.program, self)
