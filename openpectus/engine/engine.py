@@ -761,18 +761,45 @@ class Engine(InterpreterContext):
     def set_method(self, method: Mdl.Method):
         """ Set new method. This will replace the current method.
 
+        We generally expect that nothing important is going on when performing a method edit. This means
+        that interpreter is in one of these states:
+            - Current instruction is awating a threshold, preferably with at least several seconds before
+              the instruction starts
+            - Current instruction is a Wait
+            - Current instruction is a Pause
+            - Engine paused
+            - ??
+        
+            In the waiting cases (threshold, Wait and Pause), the waiting time is reset - this is probably ok?
+        
+        How should this be enforced?
+        - Wait for an active instruction to complete before performing the edit? Probably not
+        - Fail unless one of the conditions above is true? This is difficult:
+            - This likely requires semantic changes so no two instructions are active in the same tick.
+              - A case is that currently two adjecent Mark instruction are active in the same tick
+                and we have tests that depend on this - but this can be changed and probably should. It would
+                certainly make tests easier to write and understand and more robust since they don't have to depend
+                on tick counting.
+
+
         If a method is already running, it will
-        - take node of the current instruction
-        - pause and persist ast tree
-        - replace the ast with the new ast
-        - apply persisted data to new ast
-        - patch node references in runtime records to point to new nodes
-        - start executing new program in fast-forward mode to skip directly to the paused instruction
-        - unpause
+        - Take node of the current instruction
+        - Check that no code changes exist in already executed code. If so, MethodEditError is raised
+        - Pause engine and serialize the AST of the running method
+        - Parse the updated method, replacing the AST with the new AST
+        - Apply persisted data to new AST
+        - Patch all node references to point to the updated nodes:
+            - In runtime records
+            - In interpreter state (activate records)
+        - Start executing new program in fast-forward mode to skip directly to the paused instruction
+        - Unpause
         """
 
         try:
             if self._runstate_started:
+                # Dont use safa state - just halt somehow
+
+
                 # pause - TODO Safe State?? - got to be more concrete about what we don't want happening during
                 # merge and ffw
                 logger.info("Method modified while running")
