@@ -1,22 +1,28 @@
 import { DATE_PIPE_DEFAULT_OPTIONS, DatePipe, DecimalPipe } from '@angular/common';
 import '@angular/common/locales/global/da';
-import { importProvidersFrom, isDevMode, LOCALE_ID, provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { isDevMode, LOCALE_ID, provideExperimentalZonelessChangeDetection } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { provideEffects } from '@ngrx/effects';
 import { provideRouterStore, RouterState } from '@ngrx/router-store';
-import { provideStore } from '@ngrx/store';
+import { provideStore, Store } from '@ngrx/store';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
+import { authInterceptor, provideAuth, StsConfigLoader } from 'angular-auth-oidc-client';
 import { setupWorker } from 'msw/browser';
 import { provideToastr } from 'ngx-toastr';
+import { AuthService } from './app/api';
 import { AppComponent } from './app/app.component';
 import { APP_ROUTES } from './app/app.routes';
-import { AuthConfigModule } from './app/auth/auth-config.module';
+import { authConfigLoaderFactory } from './app/auth/auth-config-loader.factory';
+import { identityInterceptor } from './app/auth/identity.interceptor';
+import { waitForAuthInterceptor } from './app/auth/wait-for-auth.interceptor';
 import { Defaults } from './app/defaults';
 import { DetailsActions } from './app/details/ngrx/details.actions';
 import { metaReducers, reducers } from './app/ngrx';
 import { AppEffects } from './app/ngrx/app.effects';
+import { httpErrorInterceptor } from './app/shared/interceptors/http-error.interceptor';
 import { ProcessValuePipe } from './app/shared/pipes/process-value.pipe';
 
 import { handlers } from './msw/handlers';
@@ -79,9 +85,14 @@ enableMocking().then(() => bootstrapApplication(AppComponent, {
     provideRouter(APP_ROUTES),
     provideAnimations(),
     provideToastr(),
-    importProvidersFrom(
-      AuthConfigModule,
-    ),
+    provideAuth({
+      loader: {
+        provide: StsConfigLoader,
+        useFactory: authConfigLoaderFactory,
+        deps: [AuthService, Store],
+      },
+    }),
+    provideHttpClient(withInterceptors([httpErrorInterceptor, waitForAuthInterceptor, authInterceptor(), identityInterceptor])),
     {provide: LOCALE_ID, useValue: 'da-DK'},
     DatePipe,
     DecimalPipe,

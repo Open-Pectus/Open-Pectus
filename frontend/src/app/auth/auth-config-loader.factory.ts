@@ -1,17 +1,11 @@
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { NgModule } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { authInterceptor, AuthModule, LogLevel, OpenIdConfiguration, StsConfigHttpLoader, StsConfigLoader } from 'angular-auth-oidc-client';
+import { LogLevel, OpenIdConfiguration, StsConfigHttpLoader } from 'angular-auth-oidc-client';
 import { map } from 'rxjs';
 import { AuthConfig, AuthService } from '../api';
 import { authCallbackUrlPart } from '../app.routes';
 import { AppActions } from '../ngrx/app.actions';
-import { httpErrorInterceptor } from '../shared/interceptors/http-error.interceptor';
-import { AuthCallbackComponent } from './auth-callback.component';
-import { identityInterceptor } from './identity.interceptor';
-import { waitForAuthInterceptor } from './wait-for-auth.interceptor';
 
-export const httpLoaderFactory = (authService: AuthService, store: Store) => {
+export const authConfigLoaderFactory = (authService: AuthService, store: Store) => {
   const config = authService.getConfig().pipe<OpenIdConfiguration>(
     map((customConfig: AuthConfig) => {
       store.dispatch(AppActions.authEnablementFetched({authIsEnabled: customConfig.use_auth}));
@@ -49,21 +43,3 @@ export const httpLoaderFactory = (authService: AuthService, store: Store) => {
 
   return new StsConfigHttpLoader(config);
 };
-
-
-@NgModule({
-  imports: [
-    AuthModule.forRoot({
-      loader: {
-        provide: StsConfigLoader,
-        useFactory: httpLoaderFactory,
-        deps: [AuthService, Store],
-      },
-    }),
-    AuthCallbackComponent,
-  ],
-  providers: [
-    provideHttpClient(withInterceptors([httpErrorInterceptor, waitForAuthInterceptor, authInterceptor(), identityInterceptor])),
-  ],
-})
-export class AuthConfigModule {}
