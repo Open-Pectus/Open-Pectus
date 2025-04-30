@@ -5,6 +5,8 @@ import { AuthConfig, AuthService } from '../api';
 import { authCallbackUrlPart } from '../app.routes';
 import { AppActions } from '../ngrx/app.actions';
 
+export const secureRoutes = [`/api/`, `https://graph.microsoft.com/`];
+
 export const authConfigLoaderFactory = (authService: AuthService, store: Store) => {
   const config = authService.getConfig().pipe<OpenIdConfiguration>(
     map((customConfig: AuthConfig) => {
@@ -36,7 +38,7 @@ export const authConfigLoaderFactory = (authService: AuthService, store: Store) 
         //   prompt: 'select_account', // login, consent
         // },
         logLevel: LogLevel.None,
-        secureRoutes: [`/api/`, `https://graph.microsoft.com/`],
+        secureRoutes: secureRoutes,
       } satisfies OpenIdConfiguration;
     }),
   );

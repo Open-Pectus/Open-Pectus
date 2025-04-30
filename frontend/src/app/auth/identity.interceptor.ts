@@ -1,16 +1,15 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
-import { mergeMap } from 'rxjs';
+import { switchMap } from 'rxjs';
+import { secureRoutes } from './auth-config-loader.factory';
 
 export const identityInterceptor: HttpInterceptorFn = (req, next) => {
   const oidcSecurityService = inject(OidcSecurityService);
-  const secureRoutes = oidcSecurityService.getConfigurations().flatMap(config => config.secureRoutes ?? []);
-
   if(!oidcSecurityService.authenticated().isAuthenticated) return next(req);
   if(!secureRoutes.some(secureRoute => req.url.startsWith(secureRoute))) return next(req);
 
-  return oidcSecurityService.getIdToken().pipe(mergeMap(idToken => {
+  return oidcSecurityService.getIdToken().pipe(switchMap(idToken => {
     const newReq = req.clone({
       headers: req.headers.append('X-Identity', idToken),
     });
