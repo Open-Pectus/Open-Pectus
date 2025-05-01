@@ -88,7 +88,8 @@ def get_recent_run_csv_json(user_roles: UserRolesValue, run_id: str) -> Dto.Rece
 
     plot_log = Dto.PlotLog.model_validate(plot_log_model)
     csv_string = generate_csv_string(plot_log, Dto.RecentRun.model_validate(recent_run))
-    return Dto.RecentRunCsv(filename=f'RecentRun-{run_id}.csv', csv_content=csv_string.getvalue())
+    filename = f'{recent_run.engine_id}_{recent_run.started_date:%Y%m%d_%H%M%S}.csv'
+    return Dto.RecentRunCsv(filename=filename, csv_content=csv_string.getvalue())
 
 
 @router.get('/{run_id}/error_log', response_model_exclude_none=True)
@@ -99,15 +100,3 @@ def get_recent_run_error_log(user_roles: UserRolesValue, run_id: str) -> Dto.Agg
     if error_log is None:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail='Error Log not found')
     return Dto.AggregatedErrorLog.from_model(Mdl.AggregatedErrorLog.model_validate(error_log))
-
-
-@router.get('/{run_id}/csv_file', response_class=StreamingResponse, response_model_exclude_none=True)
-def get_recent_run_csv_file(user_roles: UserRolesValue, run_id: str) -> StreamingResponse:
-    get_recent_run_or_fail(user_roles, run_id)
-    file_content = 'some;CSV;here\nand;more;here'
-    file_name = f'RecentRun-{run_id}.csv'
-    return StreamingResponse(
-        content=iter([file_content]),
-        media_type='text/csv',
-        headers={'Content-Disposition': f'attachment;filename="{file_name}"'}
-    )
