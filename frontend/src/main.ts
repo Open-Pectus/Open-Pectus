@@ -9,15 +9,14 @@ import { provideEffects } from '@ngrx/effects';
 import { provideRouterStore, RouterState } from '@ngrx/router-store';
 import { provideStore, Store } from '@ngrx/store';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
-import { authInterceptor, provideAuth, StsConfigLoader } from 'angular-auth-oidc-client';
+import { provideAuth, StsConfigLoader } from 'angular-auth-oidc-client';
 import { setupWorker } from 'msw/browser';
 import { provideToastr } from 'ngx-toastr';
 import { AuthService } from './app/api';
 import { AppComponent } from './app/app.component';
 import { APP_ROUTES } from './app/app.routes';
 import { authConfigLoaderFactory } from './app/auth/auth-config-loader.factory';
-import { identityInterceptor } from './app/auth/identity.interceptor';
-import { waitForAuthInterceptor } from './app/auth/wait-for-auth.interceptor';
+import { authInterceptor } from './app/auth/auth.interceptor';
 import { Defaults } from './app/defaults';
 import { DetailsActions } from './app/details/ngrx/details.actions';
 import { metaReducers, reducers } from './app/ngrx';
@@ -92,7 +91,7 @@ enableMocking().then(() => bootstrapApplication(AppComponent, {
         deps: [AuthService, Store],
       },
     }),
-    provideHttpClient(withInterceptors([httpErrorInterceptor, waitForAuthInterceptor, authInterceptor(), identityInterceptor])),
+    provideHttpClient(withInterceptors([httpErrorInterceptor, authInterceptor])),
     {provide: LOCALE_ID, useValue: 'da-DK'},
     DatePipe,
     DecimalPipe,
