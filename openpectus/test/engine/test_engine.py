@@ -4,7 +4,7 @@ import threading
 import time
 import unittest
 from typing import Any, Generator
-from openpectus.lang.exec.errors import MethodEditError, NodeInterpretationError, UodValidationError
+from openpectus.lang.exec.errors import EngineError, UodValidationError
 from openpectus.lang.exec.regex import RegexNumber
 from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 
@@ -290,7 +290,7 @@ class TestEngine(unittest.TestCase):
     def test_uod_command_w_arguments_fail(self):
         e = self.engine
         program = "CmdWithArgs: FAIL"
-        with self.assertRaises(ValueError):
+        with self.assertRaises(EngineError):
             run_engine(e, program, 10)
         self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
 
@@ -957,7 +957,7 @@ Restart
 
     def test_totalizer_base_units_no_accumulator_disallows_volume_unit(self):
         e = self.engine
-        with self.assertRaises(ValueError):
+        with self.assertRaises(EngineError):
             run_engine(e, "Base: L\n0.1 Mark: A", 5)
         self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
 
@@ -986,7 +986,7 @@ Restart
 
         with self.subTest("disallows_cv_unit"):
             with create_engine_context(uod) as e:
-                with self.assertRaises(ValueError):
+                with self.assertRaises(EngineError):
                     run_engine(e, "Base: CV\n0.1 Mark: A", 5)
                 self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
 
@@ -1013,7 +1013,7 @@ Restart
 
         with self.subTest("disallows_volume_unit"):
             with create_engine_context(uod) as e:
-                with self.assertRaises(ValueError):
+                with self.assertRaises(EngineError):
                     run_engine(e, "Base: L\n0.1 Mark: A", 5)
                 self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
 
@@ -1391,13 +1391,13 @@ Restart
 
     def test_engine_error_causes_Paused_state(self):
         e = self.engine
-        with self.assertRaises(ValueError):
+        with self.assertRaises(EngineError):
             run_engine(e, "foo bar", 3)
         self.assertTrue(e.has_error_state())
 
     def test_interpreter_error_causes_Paused_state(self):
         e = self.engine
-        with self.assertRaises(ValueError):
+        with self.assertRaises(EngineError):
             run_engine(e, """WATCH x > 2""", 3)
         self.assertTrue(e._runstate_paused)
 

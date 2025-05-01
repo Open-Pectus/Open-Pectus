@@ -167,7 +167,7 @@ class PInterpreter(NodeVisitor):
 
         self._current_node: p.Node | None = None
         self._ffw: bool = False
-        self._ffw_to_node_id: str | None = None
+        self._ffw_target_node_id: str | None = None
 
         self.runtimeinfo: RuntimeInfo = RuntimeInfo()
         logger.debug("Interpreter initialized")
@@ -175,21 +175,22 @@ class PInterpreter(NodeVisitor):
 
     def update_method_and_ffw(self, program: p.ProgramNode):
         """ Update method while method is running. """
-        # set new program, recalculate generator, set ffw, ffw to get to where we were
+        # set new program, and patch state to point to new nodes, set ffw and advance generator to get to where we were
 
         # patch runtimeinfo records to reference new nodes - before or after ffw? should not matter
         self.runtimeinfo.patch_node_references(program)
         self.patch_node_references(program)
 
-        # collect node id from old method. The id will match in the new method
+        # collect node id from old method. The id will match the corresponding node in the new method
+        if self._current_node is None:
+            raise ValueError("Edit cannot be performed when no current node is set")
         # verify that target is not completed - if so ffw won't find it
-        target_node_id = (self._current_node or program).id
+        target_node_id = self._current_node.id
         self._program = program
         self._process_instr = None  # clear so either tick or us may set it
-        target_node = program.get_child_by_id(target_node_id)
+        target_node = program.get_child_by_id(target_node_id)  # find target node in new ast
         if target_node is None:
-            logger.warning(f"FFW aborted. Target node {target_node_id} was not found in modified method. " +
-                           "Maybe the code changed too much? Stop and Start again to run the method.")
+            logger.error(f"FFW aborted because target node {target_node_id} was not found in new ast")
             raise ValueError(
                 f"Error modifying method. The target node_id {target_node_id} was not found in the updated method.")
         elif target_node.completed:
@@ -198,29 +199,33 @@ class PInterpreter(NodeVisitor):
                 f"Error modifying method. The target node_id {target_node_id} has already completed.")
 
         self._ffw = True
-        self._ffw_to_node_id = target_node_id
+        self._ffw_target_node_id = target_node_id
 
-        # run method from start to self._ffw_to_node_id
-        logger.info("FFW starting, target node id: " + self._ffw_to_node_id)
+        # Start fast-forward (FFW) from start to target_node_id
+        logger.info("FFW starting, target node id: " + self._ffw_target_node_id)
         ffw_process_instr = self._interpret()
         while self._ffw:
+            # TODO fix loop:
+            # - support ending in interrupt handler when ffw_process_instr is exhausted
             try:
                 next(ffw_process_instr)
                 if not self._ffw:
-                    logger.debug("FFW found, target node id: " + self._ffw_to_node_id)
+                    logger.debug("FFW found, target node id: " + self._ffw_target_node_id)
             except StopIteration:
                 self._ffw = False
-                logger.error(f"FFW failed, node {self._ffw_to_node_id} could not be reached (main).")
-                raise Exception(f"FFW failed, node {self._ffw_to_node_id} could not be reached (main).")                
+                logger.error(f"FFW failed, node {self._ffw_target_node_id} could not be reached (main).")
+                raise Exception(f"FFW failed, node {self._ffw_target_node_id} could not be reached (main).")
             try:
                 if self._ffw:
                     pass
                     self._run_interrupt_handlers()
                     if not self._ffw:
-                        logger.debug("FFW found in interrupts, target node id: " + self._ffw_to_node_id)
+                        logger.debug("FFW found in interrupts, target node id: " + self._ffw_target_node_id)
             except Exception:
                 logger.error("Exception during FFW interrupt handler")
-                logger.error(f"FFW failed, node {self._ffw_to_node_id} could not be reached (interrupt).")
+                raise
+
+        # set prepared generator as the new source for tick()
         self._process_instr = ffw_process_instr
         logger.info("FFW complete")
 
@@ -455,16 +460,20 @@ class PInterpreter(NodeVisitor):
         if not self.running:
             return
 
-        # TODO handle ffw below. Must understand all cases
-
         if self._ffw:
-            logger.debug(f"Visiting {node} during FFW")
-            if self._ffw_to_node_id == node.id:  # node is the one were trying to reach in ffw.
+            logger.debug(f"Visiting {node} during FFW")            
+            if self._ffw_target_node_id == node.id:
+                # we have reached the ffw target node, disable ffw to make the generator ready for normal use
                 self._ffw = False
                 yield
-            elif node.completed:    # node was completed so all its children are as well
+
+            elif node.completed:
+                # node was completed so all its children are as well
+                # TODO: possibly return here ...
                 yield
-            else:                 # node was not even started and must be visited
+            else:
+                # node was not started and must be visited in ffw mode
+                # TODO: what if ffw is completed during this??
                 node.started = True
                 yield from super().visit(node)
                 node.completed = True
@@ -497,7 +506,7 @@ class PInterpreter(NodeVisitor):
 
         node.started = True
 
-        # delegate to concrete visitor via base method
+        # delegate to concrete visitor method via base method
         yield from super().visit(node)
 
         if not node.completed:
@@ -526,21 +535,9 @@ class PInterpreter(NodeVisitor):
         # of the ProgramNode.
         # There may also be commands that still run, in particular Alarm which runs
         # indefinitely
+        # In particular, we don emit scope end for the root scope and we don't pop the program node AR from the stack
         while self.running:
             yield
-
-
-        # if not self._ffw:
-        #     self.context.emitter.emit_on_scope_end(node.id)
-        #     self.context.emitter.emit_on_method_end()
-            # lets just keep this on the stack so a method change can be added to the program body
-            # unfortunately this causes performance timer error...
-            # which we will have to fix. we cant run interrupts with an empty stack
-            # self.stack.pop()
-
-            # we might also loop and yield
-            # while self.running:
-            #     yield
 
     def visit_BlankNode(self, node: p.BlankNode) -> NodeGenerator:
         if self._ffw:
@@ -598,7 +595,7 @@ class PInterpreter(NodeVisitor):
 
     def visit_MacroNode(self, node: p.MacroNode) -> NodeGenerator:
         if self._ffw:
-            return
+            raise NotImplementedError("FFW not yet implemented for Macro instructions")
 
         record = self.runtimeinfo.get_last_node_record(node)
         record.add_state_started(
@@ -639,7 +636,7 @@ class PInterpreter(NodeVisitor):
 
     def visit_CallMacroNode(self, node: p.CallMacroNode) -> NodeGenerator:
         if self._ffw:
-            raise NotImplementedError("what to do here")
+            raise NotImplementedError("FFW not yet implemented for Macro instructions")
 
         record = self.runtimeinfo.get_last_node_record(node)
         record.add_state_started(
@@ -721,6 +718,9 @@ class PInterpreter(NodeVisitor):
         self.context.emitter.emit_on_scope_end(node.id)
 
     def visit_EndBlockNode(self, node: p.EndBlockNode) -> NodeGenerator:
+        if self._ffw:
+            return
+
         record = self.runtimeinfo.get_last_node_record(node)
         record.add_state_started(
             self._tick_time, self._tick_number,
@@ -736,6 +736,9 @@ class PInterpreter(NodeVisitor):
         yield from ()
 
     def visit_EndBlocksNode(self, node: p.EndBlocksNode) -> NodeGenerator:
+        if self._ffw:
+            return
+
         yield from ()
 
         record = self.runtimeinfo.get_last_node_record(node)
