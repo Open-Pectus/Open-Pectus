@@ -184,6 +184,7 @@ class PcodeParser:
             # incr_indent_allowed = prev_node is not None and isinstance(prev_node, p.NodeWithChildren)
             # decr_indent_allowed = parent_node.position.character > 0 and len(parent_node.children) > 0
             node_error = False
+            is_whitespace_node = isinstance(node, (p.BlankNode, p.CommentNode))
 
             if node.position.character == prev_indent:  # indentation unchanged
                 if increment_required:
@@ -198,7 +199,7 @@ class PcodeParser:
 
             elif node.position.character == prev_indent + 4:  # indentation increased one level
                 # TODO fail if not valid increment
-                if not increment_required:
+                if not increment_required and not is_whitespace_node:
                     node.indent_error = True
                     node_error = True
                 parent_node.append_child(node)
@@ -213,14 +214,15 @@ class PcodeParser:
                 node_error = True
 
             elif node.position.character < prev_indent:  # indentation decreased one or more levels
-                outdent_levels = int((prev_indent - node.position.character) / 4)
-                for _ in range(outdent_levels):
-                    if parent_node.parent is None:
-                        node_error = True
-                        node.indent_error = True
-                        break
-                    else:
-                        parent_node = parent_node.parent
+                if not is_whitespace_node:
+                    outdent_levels = int((prev_indent - node.position.character) / 4)
+                    for _ in range(outdent_levels):
+                        if parent_node.parent is None:
+                            node_error = True
+                            node.indent_error = True
+                            break
+                        else:
+                            parent_node = parent_node.parent
 
                 parent_node.append_child(node)
                 if isinstance(node, p.NodeWithChildren):
@@ -231,7 +233,8 @@ class PcodeParser:
 
             if not node_error:
                 prev_node = node
-                prev_indent = prev_node.position.character
+                if not is_whitespace_node:
+                    prev_indent = prev_node.position.character
 
         return program
 
