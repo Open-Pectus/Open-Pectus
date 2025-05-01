@@ -3,7 +3,7 @@ import time
 import unittest
 from typing import Any
 
-from openpectus.lang.exec.errors import MethodEditError
+from openpectus.lang.exec.errors import EngineError, MethodEditError
 from openpectus.lang.exec.regex import RegexNumber
 from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 from openpectus.engine.hardware import RegisterDirection
@@ -111,8 +111,10 @@ class TestMethodManager(unittest.TestCase):
             method2 = Method.from_numbered_pcode("01 Mark: B")
 
             # verify edit error
-            with self.assertRaises(MethodEditError):
-                instance.engine.set_method(method2)
+            instance.engine.set_method(method2)
+            with self.assertRaises(EngineError) as ctx:
+                instance.run_ticks(1)
+            self.assertIsInstance(ctx.exception.exception, MethodEditError)
 
     def test_may_not_edit_a_started_line(self):
         # consider what changes we want to accept:
@@ -131,10 +133,11 @@ class TestMethodManager(unittest.TestCase):
             method2 = Method.from_numbered_pcode("01 Mark: B")
 
             # verify edit error
-            with self.assertRaises(MethodEditError):
-                instance.engine.set_method(method2)
+            instance.engine.set_method(method2)
+            with self.assertRaises(EngineError) as ctx:
+                instance.run_ticks(1)
+            self.assertIsInstance(ctx.exception.exception, MethodEditError)
 
-# consider editing node arguments - should old arguments overwrite new ones? guess not. currently they are not.
 
     def test_may_edit_line_awaiting_threshold(self):
 
@@ -158,18 +161,19 @@ class TestMethodManager(unittest.TestCase):
             instance.start()
             instance.run_until_instruction("Mark", state="completed", arguments="A")
             instance.run_ticks(4)
+            
             # verify no edit error
             instance.engine.set_method(method2)
+            instance.run_ticks(1)
 
             # note that editing the node resets its threshold progress - which may be ok?
-
             instance.run_ticks(15)
 
-            # ERROR scope errors begins on Mark: C started
-
             # verify edit error
-            with self.assertRaises(MethodEditError):
-                instance.engine.set_method(method3)
+            instance.engine.set_method(method3)
+            with self.assertRaises(EngineError) as ctx:
+                instance.run_ticks(1)
+            self.assertIsInstance(ctx.exception.exception, MethodEditError)
 
 
     def test_may_add_line_after_started_line(self):
@@ -296,5 +300,6 @@ class TestMethodManager(unittest.TestCase):
 
 
 # Case: injected code
-# must also run in ffw
+# must also run in ffw (?)
+
 

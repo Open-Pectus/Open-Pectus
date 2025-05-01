@@ -13,13 +13,19 @@ class EngineNotInitializedError(Exception):
 
 
 class EngineError(Exception):
-    def __init__(self, message: str, user_message: str | Literal["same"] | None = None, *args) -> None:
+    def __init__(
+            self,
+            message: str,
+            user_message: str | Literal["same"] | None = None,
+            exception: Exception | None = None,
+            *args) -> None:
         self.message = message
         if user_message == "same":
             self.user_message = message
         else:
             self.user_message = user_message
         super().__init__(*args)
+        self.exception = exception
 
     def __str__(self) -> str:
         if self.user_message == self.message:

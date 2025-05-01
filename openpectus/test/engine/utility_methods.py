@@ -7,6 +7,7 @@ from openpectus.engine.method_manager import MethodManager
 from openpectus.engine.models import EngineCommandEnum
 
 from openpectus.lang.exec.clock import WallClock
+from openpectus.lang.exec.errors import EngineError
 from openpectus.lang.exec.runlog import RuntimeRecordStateEnum
 from openpectus.lang.exec.events import BlockInfo, EventListener
 from openpectus.lang.exec.timer import NullTimer
@@ -145,9 +146,9 @@ class EngineTestInstance(EventListener):
             if self.engine.has_error_state():
                 ex = self.engine.get_error_state_exception()
                 if ex is None:
-                    raise ValueError("Engine failed with an unspecified error")
+                    raise EngineError("Engine failed with an unspecified error")
                 else:
-                    raise ValueError(f"Engine failed with exception: {ex}")
+                    raise EngineError(f"Engine failed with exception: {ex}", exception=ex)
 
         return ticks
 
@@ -342,9 +343,9 @@ def run_engine(engine: Engine, pcode: str, max_ticks: int = -1) -> int:
         if engine.has_error_state():
             ex = engine.get_error_state_exception()
             if ex is None:
-                raise ValueError("Engine failed with an unspecified error")
+                raise EngineError("Engine failed with an unspecified error")
             else:
-                raise ValueError(f"Engine failed with exception: {ex}")
+                raise EngineError(f"Engine failed with exception: {ex}", exception=ex)
 
         ticks += 1
 
@@ -380,9 +381,9 @@ def continue_engine(engine: Engine, max_ticks: int = -1) -> int:
         if engine.has_error_state():
             ex = engine.get_error_state_exception()
             if ex is None:
-                raise ValueError("Engine failed with an unspecified error")
+                raise EngineError("Engine failed with an unspecified error")
             else:
-                raise ValueError(f"Engine failed with exception: {ex}")
+                raise EngineError(f"Engine failed with exception: {ex}", exception=ex)
 
         ticks += 1
 

@@ -13,7 +13,7 @@ from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.clock import Clock, WallClock
 from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.errors import (
-    EngineError, InterpretationError, InterpretationInternalError
+    EngineError, InterpretationError, InterpretationInternalError, MethodEditError
 )
 from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext
 from openpectus.lang.exec.runlog import RuntimeInfo, RunLog, RuntimeRecord
@@ -146,6 +146,7 @@ class Engine(InterpreterContext):
 
         self._method_manager: MethodManager = MethodManager(uod.get_command_names())
         """ The model handling changes to method code """
+        self._pending_merge_method: Mdl.Method | None = None
 
         self._interpreter: PInterpreter = PInterpreter(self._method_manager.program, self)
         """ The interpreter executing the current method. """
@@ -252,11 +253,25 @@ class Engine(InterpreterContext):
             for tag in self._system_tags.tags.values():
                 tag.tick_time = tick_time
 
+        # edit phase
+        if self._pending_merge_method is not None:
+            logger.debug("Applying scheduled method merge")
+            try:
+                self._method_manager.merge_method(self._pending_merge_method)
+                self._interpreter.update_method_and_ffw(self._method_manager.program)
+                logger.debug("Method edit complete")
+            except Exception as ex:
+                logger.error("Method edit failed", exc_info=True)
+                self.set_error_state(ex)
+            finally:
+                self._pending_merge_method = None
+
         self.uod.hwl.tick()
 
-        # read, error_state on HardwareLayerException
+        # read phase, error_state on HardwareLayerException
         self.read_process_image()
 
+        # execute phase
         # excecute interpreter tick
         if self._runstate_started and\
                 not self._runstate_paused and\
@@ -294,8 +309,9 @@ class Engine(InterpreterContext):
         # notify of tag changes
         self.notify_tag_updates()
 
-        # write, error_state on HardwareLayerException
+        # write phase, error_state on HardwareLayerException
         self.write_process_image()
+
 
     def read_process_image(self):
         """ Read data from relevant hw registers into tags"""
@@ -767,12 +783,14 @@ class Engine(InterpreterContext):
               the instruction starts
             - Current instruction is a Wait
             - Current instruction is a Pause
+            - Method is exhausted
             - Engine paused
             - ??        
             In the waiting cases (threshold, Wait and Pause), the waiting time is reset - this is probably ok?
 
         How should this be enforced?
-        - Wait for an active instruction to complete before performing the edit? Probably not
+        - Wait for an active instruction to complete before performing the edit? Probably. This does not mean
+          wait for a possible command, just wait to engine phase edit
         - Fail unless one of the conditions above is true? This is difficult:
             - This likely requires semantic changes so no two instructions are active in the same tick.
               - A case is that currently two adjecent Mark instruction are active in the same tick
@@ -796,11 +814,10 @@ class Engine(InterpreterContext):
 
         try:
             if self._runstate_started:
-                # TODO Dont use safe state - just halt somehow...
-
-                # apply updated method
-                self._method_manager.merge_method(method)
-                self._interpreter.update_method_and_ffw(self._method_manager.program)
+                if self._pending_merge_method is not None:
+                    raise MethodEditError("An edit is already in progress")
+                # signal to apply updated method on next tick
+                self._pending_merge_method = method
             else:
                 self._method_manager.set_method(method)
                 self._interpreter = PInterpreter(self._method_manager.program, self)
