@@ -9,7 +9,7 @@ from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 from openpectus.engine.hardware import RegisterDirection
 
 import pint
-from openpectus.lang.exec.tags import Tag, TagDirection
+from openpectus.lang.exec.tags import SystemTagName, Tag, TagDirection
 from openpectus.lang.exec.uod import (
     UnitOperationDefinitionBase,
     UodCommand,
@@ -228,6 +228,42 @@ class TestMethodManager(unittest.TestCase):
             # verify run behavior
             self.assertEqual(["B", "C"], instance.marks)
 
+
+    def test_extended_block_does_end(self):
+        method1 = Method.from_numbered_pcode("""\
+01 Base: s
+02 Block: B1
+03     0.5 Mark: A
+05     End block
+""")
+
+        method2 = Method.from_numbered_pcode("""\
+01 Base: s
+02 Block: B1
+03     0.5 Mark: A
+04     1.0 Mark: B
+05     End block
+""")
+
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+            block_tag = instance.engine.tags[SystemTagName.BLOCK]
+            instance.run_until_instruction("Mark", state="started", arguments="A")
+
+            # edit method
+            instance.engine.set_method(method2)
+            instance.run_ticks(1)
+
+            self.assertEqual("B1", block_tag.get_value())
+            instance.run_until_instruction("End block", state="completed")
+            instance.run_ticks(5)
+
+            # verify run behavior
+            self.assertEqual(["A", "B"], instance.marks)
+
+            # verify that block execution has completed
+            self.assertEqual(None, block_tag.get_value())
 
     def test_may_extend_watch_after_watch_activated(self):
 

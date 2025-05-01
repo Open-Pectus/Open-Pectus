@@ -110,6 +110,11 @@ class CallStack:
     def peek(self) -> ActivationRecord:
         return self._records[-1]
 
+    def find_by_owner_id(self, id: str) -> ActivationRecord | None:
+        for r in self.iterate_from_top():
+            if r.owner.id == id:
+                return r
+
     def __str__(self):
         if len(self._records) == 0:
             return "CallStack (empty)"
@@ -527,7 +532,7 @@ class PInterpreter(NodeVisitor):
         yield from self._visit_children(node)
 
         # Note: Rather than the method has ended, this means that the last line
-        # of the method is complete. The method may still change.
+        # of the method is complete. The method may still change by an edit.
         self.context.emitter.emit_on_method_end()
 
         # Avoid returning from the visit. This makes it possible to inject or edit
@@ -542,7 +547,7 @@ class PInterpreter(NodeVisitor):
     def visit_BlankNode(self, node: p.BlankNode) -> NodeGenerator:
         if self._ffw:
             return
-
+        # TODO: keep yielding if only blank lines follow
         yield
 
     def visit_MarkNode(self, node: p.MarkNode) -> NodeGenerator:
@@ -664,58 +669,61 @@ class PInterpreter(NodeVisitor):
             self.context.tags.as_readonly())
 
     def visit_BlockNode(self, node: p.BlockNode) -> NodeGenerator:
-        if self._ffw:
-            yield from self._visit_children(node)
-            return
-
         record = self.runtimeinfo.get_last_node_record(node)
+        ar: ActivationRecord | None = None
 
-        ar = ActivationRecord(node, self._tick_time)
-        self.stack.push(ar)
-        self.context.tags[SystemTagName.BLOCK].set_value(node.name, self._tick_number)
-        self.context.emitter.emit_on_block_start(node.name, self._tick_number)
-        self.context.emitter.emit_on_scope_start(node.id)
-        logger.debug(f"Block Tag set to {node.name}")
+        if not self._ffw:
+            ar = ActivationRecord(node, self._tick_time)
+            self.stack.push(ar)
+            self.context.tags[SystemTagName.BLOCK].set_value(node.name, self._tick_number)
+            self.context.emitter.emit_on_block_start(node.name, self._tick_number)
+            self.context.emitter.emit_on_scope_start(node.id)
+            logger.debug(f"Block Tag set to {node.name}")
 
-        yield
+            yield
 
-        self.context.emitter.emit_on_scope_activate(node.id)
-        record.add_state_started(
-            self._tick_time, self._tick_number,
-            self.context.tags.as_readonly())
+            self.context.emitter.emit_on_scope_activate(node.id)
+            record.add_state_started(
+                self._tick_time, self._tick_number,
+                self.context.tags.as_readonly())
 
         yield from self._visit_children(node)
 
-        if not ar.complete:
-            logger.debug(f"Block {node.name} idle")
-        while not ar.complete and self.running:
-            yield
+        if not self._ffw:
+            if ar is None:
+                ar = self.stack.find_by_owner_id(node.id)
+                assert ar is not None, "AR is none in second visit_Block part"
 
-        # await possible interrupt using the stack
-        while not self.stack.peek() is ar:
-            yield
+            if not ar.complete:
+                logger.debug(f"Block {node.name} idle")
+            while not ar.complete and self.running:
+                yield
 
-        # now it's safe to pop
-        self.stack.pop()
+            # await possible interrupt using the stack
+            while not self.stack.peek() is ar:
+                yield
 
-        record.add_state_completed(
-            self._tick_time, self._tick_number,
-            self.context.tags.as_readonly())
+            # now it's safe to pop
+            self.stack.pop()
 
-        # restore previous block name
-        block_restored = False
-        for ar in self.stack.iterate_from_top():
-            if ar.artype == ARType.BLOCK:
-                assert isinstance(ar.owner, p.BlockNode)
-                self.context.tags[SystemTagName.BLOCK].set_value(ar.owner.name, self._tick_number)
-                self.context.emitter.emit_on_block_end(node.name, ar.owner.name, self._tick_number)
-                logger.debug(f"Block Tag popped to {ar.owner.name}")
-                block_restored = True
-        if not block_restored:
-            self.context.tags[SystemTagName.BLOCK].set_value(None, self._tick_number)
-            self.context.emitter.emit_on_block_end(node.name, "", self._tick_number)
-            logger.debug(f"Block Tag cleared from {node.name}")
-        self.context.emitter.emit_on_scope_end(node.id)
+            record.add_state_completed(
+                self._tick_time, self._tick_number,
+                self.context.tags.as_readonly())
+
+            # restore previous block name
+            block_restored = False
+            for ar in self.stack.iterate_from_top():
+                if ar.artype == ARType.BLOCK:
+                    assert isinstance(ar.owner, p.BlockNode)
+                    self.context.tags[SystemTagName.BLOCK].set_value(ar.owner.name, self._tick_number)
+                    self.context.emitter.emit_on_block_end(node.name, ar.owner.name, self._tick_number)
+                    logger.debug(f"Block Tag popped to {ar.owner.name}")
+                    block_restored = True
+            if not block_restored:
+                self.context.tags[SystemTagName.BLOCK].set_value(None, self._tick_number)
+                self.context.emitter.emit_on_block_end(node.name, "", self._tick_number)
+                logger.debug(f"Block Tag cleared from {node.name}")
+            self.context.emitter.emit_on_scope_end(node.id)
 
     def visit_EndBlockNode(self, node: p.EndBlockNode) -> NodeGenerator:
         if self._ffw:
@@ -728,6 +736,7 @@ class PInterpreter(NodeVisitor):
         for ar in reversed(self.stack.records):
             if ar.artype == ARType.BLOCK:
                 ar.complete = True
+                logger.debug(f"EndBlock ended block {ar.owner.display_name}")
                 record.add_state_completed(
                     self._tick_time, self._tick_number,
                     self.context.tags.as_readonly())
