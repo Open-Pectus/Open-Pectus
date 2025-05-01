@@ -19,18 +19,18 @@ def generate_csv_string(plot_log: PlotLog, recent_run: RecentRun):
 
 
 def _write_metadata_rows(csv_writer, plot_log: PlotLog, recent_run: RecentRun):
-    csv_writer.writerow(['# Recent Run Id', recent_run.run_id])
+    csv_writer.writerow(['# Run Id', recent_run.run_id])
     csv_writer.writerow(['# Engine Id', recent_run.engine_id])
-    csv_writer.writerow(['# Engine Computer name', recent_run.engine_computer_name])
-    csv_writer.writerow(['# Engine Version', recent_run.engine_version])
+    csv_writer.writerow(['# Engine Computer Name', recent_run.engine_computer_name])
+    csv_writer.writerow(['# Open Pectus Engine Version', recent_run.engine_version])
     csv_writer.writerow(['# Engine Hardware string', recent_run.engine_hardware_str])
-    csv_writer.writerow(['# Uod author name', recent_run.uod_author_name])
-    csv_writer.writerow(['# Uod author email', recent_run.uod_author_email])
-    csv_writer.writerow(['# Uod file name', recent_run.uod_filename])
-    csv_writer.writerow(['# Aggregator Computer name', recent_run.aggregator_computer_name])
-    csv_writer.writerow(['# Aggregator Version', recent_run.aggregator_version])
-    csv_writer.writerow(['# Starting Time (UTC)', recent_run.started_date])
-    csv_writer.writerow(['# Ending Time (UTC)', recent_run.completed_date])
+    csv_writer.writerow(['# UOD Author Name', recent_run.uod_author_name])
+    csv_writer.writerow(['# UOD Author Email', recent_run.uod_author_email])
+    csv_writer.writerow(['# UOD File Name', recent_run.uod_filename])
+    csv_writer.writerow(['# Aggregator Computer Name', recent_run.aggregator_computer_name])
+    csv_writer.writerow(['# Open Pectus Aggregator Version', recent_run.aggregator_version])
+    csv_writer.writerow(['# Started Date (UTC)', recent_run.started_date])
+    csv_writer.writerow(['# Completed Date (UTC)', recent_run.completed_date])
     csv_writer.writerow(concat(['# Contributors'], recent_run.contributors))
     csv_writer.writerow([])
 
