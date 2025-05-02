@@ -11,7 +11,7 @@ export const authGuard: CanActivateFn = (route, state) => {
   return authIsEnabled.pipe(
     take(1),
     mergeMap(authIsEnabled => {
-      if(authIsEnabled) return autoLoginGuard.canActivate(route, state);
-      return of(true);
+      if(authIsEnabled === false) return of(true);
+      return autoLoginGuard.canActivate(route, state);
     }));
 };
