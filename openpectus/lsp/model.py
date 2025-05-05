@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TypedDict
+from typing import TypedDict, Literal, NotRequired
 
 from pylsp.lsp import DiagnosticSeverity
 
@@ -130,12 +130,7 @@ class CompletionItem(TypedDict):
     label: str
     kind: int | None
     preselect: bool | None
-
-class CompletionList(TypedDict):
-    """ Representation of
-    https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/#completionList """
-    isIncomplete: bool
-    items: list[CompletionItem]
+    insertText: NotRequired[str]
 
 def get_item_severity(item: AnalyzerItem) -> int:
     """ Represent analyser item type as lsp DiagnosticSeverity """

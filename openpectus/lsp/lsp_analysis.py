@@ -11,6 +11,7 @@ from openpectus.lang.exec.uod import RegexNamedArgumentParser
 from openpectus.lang.exec.analyzer import AnalyzerItem, SemanticCheckAnalyzer
 from openpectus.lang.exec.commands import Command, CommandCollection
 from openpectus.lang.exec.tags import TagValue, TagValueCollection
+from openpectus.lang.exec.units import get_compatible_unit_names
 import openpectus.lang.model.ast as p
 from openpectus.lang.model.parser import Method, create_method_parser, lsp_parse_line, Grammar
 from openpectus.lsp.model import (
@@ -93,7 +94,7 @@ class AnalysisInput:
         self.command_completions = [c.name for c in self.commands.to_list()]
         self.tag_completions = [t.name for t in self.tags]
 
-    def get_first_word_completions(self, query: str) -> list[str]:
+    def get_command_completions(self, query: str) -> list[str]:
         return [c for c in self.command_completions if c.lower().startswith(query.lower())] + []
 
     def get_tag_completions(self, query: str) -> list[str]:
@@ -284,6 +285,23 @@ def starts_with_any(query: str, candidates: list[str]) -> bool:
             return True
     return False
 
+
+def ends_with_any(query: str, candidates: list[str]) -> bool:
+    """ Return True if query ends with any of the candidates """
+    for candidate in candidates:
+        if query.endswith(candidate):
+            return True
+    return False
+
+
+def contains_any(query: str, candidates: list[str]) -> bool:
+    """ Return True if query contains any of the candidates """
+    for candidate in candidates:
+        if candidate in query:
+            return True
+    return False
+
+
 def hover(document: Document, position: Position, engine_id: str) -> Hover | None:
     analysis_input = create_analysis_input(engine_id)
     line = document.lines[position["line"]]
@@ -297,10 +315,8 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
 
 
 def completions(document: Document, position: Position, ignored_names, engine_id: str) -> list[CompletionItem]:
-    # Note: Returning a CompletionList with items does not work in the client for some reason. Only
-    # The array/list of CompletionItem is working in the client.
-    # Also consider the hook pylsp_completion_item_resolve. The spec has info about how this can be used to add
-    # more detail to the suggestions.
+    # Return a list of completion items because pylsp encapsulates it in a CompletionList for us
+    
     try:
         analysis_input = create_analysis_input(engine_id)
     except Exception:
@@ -310,7 +326,11 @@ def completions(document: Document, position: Position, ignored_names, engine_id
     # determine whether position is in first word on the line
     line = get_line(document, position)
     if line is None:
-        return []
+        # Show all possible commands
+        return [
+            CompletionItem(label=command_name, kind=CompletionItemKind.Function, preselect=False)
+            for command_name in analysis_input.commands.names
+        ]
 
     # get whole query, eg "St" or "Alarm: Run T"
     char: int = position["character"]
@@ -320,34 +340,78 @@ def completions(document: Document, position: Position, ignored_names, engine_id
         query = line
 
     lsp_result = lsp_parse_line(query)
-    if lsp_result and lsp_result.threshold:
-        # strip threshold that confuses is_first_word calculation
-        query = lsp_result.instruction_name
-        if lsp_result.argument:
-            query += " " + lsp_result.argument
-    else:
-        query = query.lstrip().removesuffix("\n")
+    query = query.lstrip().removesuffix("\r\n")
 
-    is_first_word = True if " " not in query.lstrip() else False
-    if is_first_word:
-        # the simplest and most important case - completions for the first word on a line
+    if lsp_result:
+        if lsp_result.instruction_name in analysis_input.commands.names:
+            # Completion of Watch/Alarm which are special because of conditions
+            if lsp_result.instruction_name in ["Watch", "Alarm"] and ":" in query:
+                # Complete tag name
+                if query.endswith(": ") or query.endswith(":"):
+                    prefix = " " if query.endswith(":") else ""
+                    tag_name = query.split(":")[1].strip()
+                    print("tag_name", tag_name)
+                    return [
+                        CompletionItem(label=name, insertText=prefix+name, kind=CompletionItemKind.Enum, preselect=False)
+                        for name in analysis_input.get_tag_completions(tag_name)
+                    ]
+                # Complete operator
+                elif analysis_input.tags.has(query.split(":")[1].strip()):
+                    prefix = "" if query.endswith(" ") else " "
+                    return [
+                        CompletionItem(label=operator, insertText=prefix+operator, kind=CompletionItemKind.Enum, preselect=False)
+                        for operator in Grammar.operators
+                    ]
+                # Complete unit
+                elif contains_any(query.strip(), Grammar.operators):
+                    prefix = "" if query.endswith(" ") else " "
+                    operator = ""
+                    for operator in Grammar.operators_2char+Grammar.operators_1char:
+                        if operator in query:
+                            break
+                    tag_name = query.split(":")[1].split(operator)[0].strip()
+                    tag = analysis_input.tags.get(tag_name)
+                    if tag:
+                        if tag.unit:
+                            unit_options = get_compatible_unit_names(tag.unit)
+                            right_of_operator = query.split(operator)[1].strip()
+                            if not contains_any(right_of_operator, unit_options):
+                                return [
+                                    CompletionItem(label=unit, insertText=prefix+unit, kind=CompletionItemKind.Enum, preselect=False)
+                                    for unit in unit_options
+                                ]
+            # Completion of all other commands
+            elif starts_with_any(query, [f"{name}:" for name in analysis_input.commands.names]):
+                arg_parser = analysis_input.commands.get(lsp_result.instruction_name).arg_parser
+                prefix = " " if query.endswith(":") else ""
+                if arg_parser:
+                    options = arg_parser.get_additive_options()+arg_parser.get_exclusive_options()+arg_parser.get_units()
+                    # Complete additive options
+                    if query.endswith("+"):
+                        return [
+                            CompletionItem(label=name, insertText=prefix+name, kind=CompletionItemKind.Enum, preselect=False)
+                            for name in arg_parser.get_additive_options()
+                        ]
+                    # Complete additive, exclusive and units
+                    if not contains_any(query.split(":")[1].strip(), options):
+                        return [
+                            CompletionItem(label=name, insertText=prefix+name, kind=CompletionItemKind.Enum, preselect=False)
+                            for name in options
+                        ]
+        elif lsp_result.instruction_name:
+            if ":" not in query:
+                # Completion of command name
+                return [
+                    CompletionItem(label=word, kind=CompletionItemKind.Function, preselect=False)
+                    for word in analysis_input.get_command_completions(lsp_result.instruction_name)
+                ]
+    if query.strip() == "":
+        # Blank line. Show all possible commands
         return [
-            CompletionItem(label=word, kind=CompletionItemKind.Function, preselect=False)
-            for word in analysis_input.get_first_word_completions(query)
+            CompletionItem(label=command_name, kind=CompletionItemKind.Function, preselect=False)
+            for command_name in analysis_input.commands.names
         ]
-    else:
-        query = query.lstrip().removesuffix("\n")
-        if starts_with_any(query, ["Watch:", "Watch: ", "Alarm:", "Alarm: "]):
-            # suggest tags
-            second_word = query[6:].strip()
-            return [
-                CompletionItem(label=name, kind=CompletionItemKind.Enum, preselect=False)
-                for name in analysis_input.get_tag_completions(second_word)
-            ]
-        else:
-            # difficult amd possibly not important case
-            # we could autocomplete all parts of a condition
-            return []
+    return []
 
 
 def get_line(document: Document, position: Position) -> str | None:
