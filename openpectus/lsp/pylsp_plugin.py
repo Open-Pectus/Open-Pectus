@@ -8,6 +8,7 @@ from typing import Any
 from pylsp import hookimpl
 from pylsp.config.config import Config
 from pylsp.workspace import Document, Workspace
+from pylsp.python_lsp import PythonLSPServer
 
 from openpectus.lsp import lsp_analysis
 from openpectus.lsp.model import Position, CodeAction, WorkspaceEdit, TextEdit, Range
@@ -21,6 +22,15 @@ logger.debug("Open Pectus LSP plugin loading - debug")
 logger.info("Open Pectus LSP plugin loading - info")
 
 timer_format = "0.2f"
+
+
+class OPPythonLSPServer(PythonLSPServer):
+    """ Subclass of PythonLSPServer which triggers autocomplete calculation on specific characters. """
+    def capabilities(self):
+        capabilities = super().capabilities()
+        capabilities["completionProvider"]["triggerCharacters"] = [":", " ", "+"]
+        return capabilities
+
 
 @hookimpl
 def pylsp_settings(config: Config) -> dict[str, dict[str, dict[str, Any]]]:
