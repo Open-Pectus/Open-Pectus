@@ -531,6 +531,7 @@ class TagDefinition(Dto):
 class CommandDefinition(Dto):
     name: str
     validator: str | None = None
+    docstring: str | None = None
 
 class UodDefinition(Dto):
     # name: str
@@ -542,7 +543,7 @@ class UodDefinition(Dto):
     @staticmethod
     def from_model(model: Mdl.UodDefinition) -> UodDefinition:
         return UodDefinition(
-            commands=[CommandDefinition(name=c.name, validator=c.validator) for c in model.commands],
-            system_commands=[CommandDefinition(name=c.name, validator=c.validator) for c in model.system_commands],
+            commands=[CommandDefinition(name=c.name, validator=c.validator, docstring=c.docstring) for c in model.commands],
+            system_commands=[CommandDefinition(name=c.name, validator=c.validator, docstring=c.docstring) for c in model.system_commands],
             tags=[TagDefinition(name=t.name, unit=t.unit) for t in model.tags]
         )

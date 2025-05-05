@@ -76,7 +76,7 @@ def build_commands(uod_def: Dto.UodDefinition) -> CommandCollection:
                         return parser.validate(args)
                 return validate
 
-            cmd = Command(c_def.name, validatorFn=outer(c_def.name, parser))
+            cmd = Command(c_def.name, validatorFn=outer(c_def.name, parser), arg_parser=parser, docstring=c_def.docstring)
             cmds.append(cmd)
         except Exception:
             logger.error(f"Failed to build command '{c_def.name}'", exc_info=True)
