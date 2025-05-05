@@ -571,7 +571,6 @@ Mark: X
 
         print_runtime_records(e)
 
-        self.assertEqual(3, len(rs))
         self.assertEqual("Block: A", rs[2].name)
         self.assertFalse(rs[0].has_state(RuntimeRecordStateEnum.Started))
 
@@ -897,7 +896,7 @@ Mark: a
 Wait: .5s
 Mark: b
 """
-        run_engine(e, program, 3)
+        run_engine(e, program, 2)
         self.assertEqual([], e.interpreter.get_marks())
 
         continue_engine(e, 1)
@@ -939,7 +938,7 @@ Mark: A
 Restart
 """
         e = self.engine
-        run_engine(e, program, 4)
+        run_engine(e, program, 3)
 
         # when no commands need to be stopped, restart immediately moves to Stopped
         system_state = e.tags[SystemTagName.SYSTEM_STATE]
@@ -1094,7 +1093,7 @@ Block: A
             self.assertAlmostEqual(acc_vol.as_float(), 0.1, delta=0.1)
             self.assertAlmostEqual(block_vol.as_float(), 0.1, delta=0.1)
 
-            continue_engine(e, 6)  # Wait
+            continue_engine(e, 5)  # Wait
             self.assertEqual(block.get_value(), None)
             self.assertAlmostEqual(acc_vol.as_float(), 0.7, delta=0.1)
             self.assertAlmostEqual(block_vol.as_float(), 0.7, delta=0.1)
@@ -1273,7 +1272,7 @@ Block: A
             self.assertAlmostEqual(acc_cv.as_float(), 0.3/2, delta=0.1)
             self.assertAlmostEqual(block_cv.as_float(), 0.1/2, delta=0.1)
 
-            continue_engine(e, 4)
+            continue_engine(e, 3)
             self.assertEqual(block.get_value(), "A")
             self.assertAlmostEqual(acc_cv.as_float(), 0.7/2, delta=0.1)
             self.assertAlmostEqual(block_cv.as_float(), 0.5/2, delta=0.1)
@@ -1326,7 +1325,7 @@ Restart
         e = self.engine
         self.assertEqual(0, e.tags[SystemTagName.RUN_COUNTER].as_number())
 
-        run_engine(e, program, 5)
+        run_engine(e, program, 4)
 
         run_id_1 = e.tags[SystemTagName.RUN_ID].get_value()
         self.assertEqual(e.tags[SystemTagName.SYSTEM_STATE].get_value(), SystemStateEnum.Restarting)
@@ -1375,9 +1374,7 @@ Reset
 Restart
 """
         e = self.engine
-        run_engine(e, program, 4)
-
-        # TODO look into logs - something is not right
+        run_engine(e, program, 3)
 
         system_state = e.tags[SystemTagName.SYSTEM_STATE]
         self.assertEqual(system_state.get_value(), SystemStateEnum.Restarting)

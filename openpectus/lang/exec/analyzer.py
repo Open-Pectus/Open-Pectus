@@ -168,6 +168,54 @@ class InfiniteBlockCheckAnalyzer(AnalyzerVisitorBase):
         self.check_global_end_block(node)
         yield
 
+class WhitespaceCheckAnalyzer(AnalyzerVisitorBase):
+    """ Fills in node.has_only_trailing_whitespace for whitespace nodes. This allows the interpreter to not advance
+    over only white space/comments. This allows the use to edit these lines, e.g. append lines to a method while the
+    methods is running. """
+    def __init__(self) -> None:
+        super().__init__()
+        self.whitespace_nodes: list[p.BlankNode | p.CommentNode] = []
+
+    def is_whitespace_node(self, node: p.Node):
+        return isinstance(node, (p.BlankNode, p.CommentNode))
+
+    def visit_BlankNode(self, node):
+        self.whitespace_nodes.append(node)
+        yield from ()
+
+    def visit_CommentNode(self, node):
+        self.whitespace_nodes.append(node)
+        yield from ()
+
+    def visit_AlarmNode(self, node):
+        self.visit_NodeWithChildren(node)
+        yield from super().visit_AlarmNode(node)
+
+    def visit_BlockNode(self, node):
+        self.visit_NodeWithChildren(node)
+        yield from super().visit_BlockNode(node)
+
+    def visit_ProgramNode(self, node):
+        self.visit_NodeWithChildren(node)
+        yield from super().visit_ProgramNode(node)
+
+    def visit_WatchNode(self, node):
+        self.visit_NodeWithChildren(node)
+        yield from super().visit_WatchNode(node)
+
+    def visit_NodeWithChildren(self, node: p.NodeWithChildren):
+        for child in node.children:
+            if not self.is_whitespace_node(child):
+                node._last_non_ws_line = child.position.line
+
+
+    def analyze(self, n):
+        super().analyze(n)
+
+        for node in self.whitespace_nodes:
+            if node.parent is not None and node.position.line > node.parent._last_non_ws_line:
+                node.has_only_trailing_whitespace = True
+
 
 class ConditionCheckAnalyzer(AnalyzerVisitorBase):
     """ Analyser that checks whether conditions are present and refer to valid tag names """
@@ -397,6 +445,7 @@ class SemanticCheckAnalyzer:
             ConditionCheckAnalyzer(tags),
             CommandCheckAnalyzer(commands),
             MacroCheckAnalyzer(),
+            WhitespaceCheckAnalyzer(),
         ]
 
     def __str__(self) -> str:

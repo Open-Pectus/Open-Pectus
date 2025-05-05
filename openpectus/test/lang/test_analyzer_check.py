@@ -7,7 +7,9 @@ from openpectus.lang.exec.analyzer import (
     InfiniteBlockCheckAnalyzer,
     ConditionCheckAnalyzer,
     CommandCheckAnalyzer,
+    WhitespaceCheckAnalyzer,
 )
+import openpectus.lang.model.ast as p
 from openpectus.lang.exec.commands import CommandCollection, Command
 from openpectus.lang.exec.tags import TagValueCollection, TagValue
 from openpectus.test.engine.utility_methods import build_program
@@ -185,6 +187,89 @@ Watch: A > 2 CV
     def test_tag_categorized_invalid(self):
         pass
 
+
+class WhitespaceCheckAnalyzerTest(unittest.TestCase):
+    def test_leading_whitespace_is_ignored(self):
+        program = build_program("""\
+
+Mark: A
+""")
+        analyzer = WhitespaceCheckAnalyzer()
+        analyzer.analyze(program)
+        ws_node = program.get_first_child(p.BlankNode)
+        assert ws_node is not None
+
+        self.assertEqual(program._last_non_ws_line, 1)
+        self.assertEqual(False, ws_node.has_only_trailing_whitespace)
+
+    def test_trailing_whitespace_counted(self):
+        program = build_program("""\
+Mark: A
+
+""")
+        analyzer = WhitespaceCheckAnalyzer()
+        analyzer.analyze(program)
+        blank_node = program.get_first_child(p.BlankNode)
+        assert blank_node is not None
+
+        self.assertEqual(program._last_non_ws_line, 0)
+        self.assertEqual(True, blank_node.has_only_trailing_whitespace)
+
+    def test_middle_whitespace(self):
+        program = build_program("""\
+Mark: A
+
+    # foo
+Mark: B""")
+        analyzer = WhitespaceCheckAnalyzer()
+        analyzer.analyze(program)
+        blank_node = program.get_first_child(p.BlankNode)
+        assert blank_node is not None
+
+        self.assertEqual(program._last_non_ws_line, 3)
+        self.assertEqual(False, blank_node.has_only_trailing_whitespace)
+
+    def test_trailing_whitespace(self):
+        program = build_program("""\
+Mark: A
+
+# foo
+""")
+        analyzer = WhitespaceCheckAnalyzer()
+        analyzer.analyze(program)
+        blank_node = program.get_first_child(p.BlankNode)
+        comment_node = program.get_first_child(p.CommentNode)
+        assert blank_node is not None
+        assert comment_node is not None
+
+        self.assertEqual(program._last_non_ws_line, 0)
+        self.assertEqual(True, blank_node.has_only_trailing_whitespace)
+        self.assertEqual(True, comment_node.has_only_trailing_whitespace)
+
+    @unittest.skip("this case is postponed, is not well defined")
+    def test_trailing_whitespace_in_block(self):
+        program = build_program("""\
+Block: A
+    Mark: B
+    
+
+""")
+        # hmm can we require that this whitespace is indented correctly?
+        # won't we have functionality that depend on this?
+        analyzer = WhitespaceCheckAnalyzer()
+        analyzer.analyze(program)
+
+        self.assertEqual(2, len(program.children))
+        block_node = program.get_first_child(p.BlockNode)
+        assert block_node is not None 
+        blank_node = block_node.get_first_child(p.BlankNode)
+        assert blank_node is not None
+        comment_node = program.get_first_child(p.CommentNode)
+        assert comment_node is not None
+
+        self.assertEqual(program._last_non_ws_line, 0)
+        self.assertEqual(True, blank_node.has_only_trailing_whitespace)
+        self.assertEqual(True, comment_node.has_only_trailing_whitespace)
 
 class UnreachableCodeCheckAnalyzerTest(unittest.TestCase):
     def test_UnreachableCodeVisitor(self):

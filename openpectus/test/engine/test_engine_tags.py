@@ -384,7 +384,6 @@ CmdWithRegexArgs: 2 L/s
             instance.start()
             flowrate = e.tags["CmdWithRegex_Flowrate"]  # [L/h]
 
-            instance.run_ticks(1)
             self.assertEqual(0.0, flowrate.get_value())
             instance.run_ticks(2)
             self.assertEqual(2.0, flowrate.get_value())  # 2 L/h is 2 L/h

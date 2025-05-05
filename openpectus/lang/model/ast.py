@@ -247,6 +247,8 @@ class NodeWithChildren(Node):
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
         self._children: list[Node] = []
+        self._last_non_ws_line: int = 0
+        """ Populated by WhitespaceAnalyzer """
 
     @property
     def children(self) -> list[Node]:
@@ -437,7 +439,19 @@ class Condition:
         self.rhs_range = Range.empty
 
 
-class CommentNode(Node):
+class WhitespaceNode(Node):
+    """ Represents a node that counts as whitespace in regards to
+    interpretation, e.g. blank lines and comment lines.
+
+    Populated by WhitespaceAnalyzer
+    """
+    def __init__(self, position=Position.empty, id=""):
+        super().__init__(position, id)
+        self.has_only_trailing_whitespace: bool = False
+        """ Specifies that only whitespace instructions follow this whitespace instruction. """
+
+
+class CommentNode(WhitespaceNode):
     """ Represents a line with only a comment. """
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
@@ -501,8 +515,10 @@ class Error:
         self.message: str | None = message
 
 
-class BlankNode(Node):
+class BlankNode(WhitespaceNode):
     """ Represents a line that contains only whitespace. """
+    def __init__(self, position=Position.empty, id=""):
+        super().__init__(position, id)
 
 
 class ErrorInstructionNode(Node):

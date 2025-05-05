@@ -531,8 +531,9 @@ class PInterpreter(NodeVisitor):
 
         yield from self._visit_children(node)
 
-        # Note: Rather than the method has ended, this means that the last line
-        # of the method is complete. The method may still change by an edit.
+        # Note: This event means that the last line of the method is complete.
+        # The method may change later by an edit, so it doesn't necessarily mean
+        # that the method has ended.
         self.context.emitter.emit_on_method_end()
 
         # Avoid returning from the visit. This makes it possible to inject or edit
@@ -547,8 +548,12 @@ class PInterpreter(NodeVisitor):
     def visit_BlankNode(self, node: p.BlankNode) -> NodeGenerator:
         if self._ffw:
             return
-        # TODO: keep yielding if only blank lines follow
-        yield
+
+        # avoid advancing into whitespace-only code lines
+        while node.has_only_trailing_whitespace:
+            node.started = False
+            yield
+
 
     def visit_MarkNode(self, node: p.MarkNode) -> NodeGenerator:
         if self._ffw:
@@ -976,7 +981,14 @@ class PInterpreter(NodeVisitor):
                 self.context.tags.as_readonly())
 
     def visit_CommentNode(self, node: p.CommentNode) -> NodeGenerator:
-        yield from ()
+        if self._ffw:
+            return
+
+        # avoid advancing into whitespace-only code lines
+        while node.has_only_trailing_whitespace:
+            node.started = False
+            yield
+
 
     def visit_ErrorInstructionNode(self, node: p.ErrorInstructionNode) -> NodeGenerator:
         record = self.runtimeinfo.get_last_node_record(node)
