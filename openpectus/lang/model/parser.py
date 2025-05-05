@@ -107,8 +107,8 @@ class Grammar:
     indent_re = r'(?P<indent>\s+)?'
     threshold_re = r'((?P<threshold>\d+(\.\d+)?)\s)?'
     instruction_re = r'(?P<instruction_name>\b[a-zA-Z_][^:#]*)'
-    argument_re = r'(: (?P<argument>[^#]+))?'
-    comment_re = r'(\s*#\s*(?P<comment>.*$))?'
+    argument_re = r'((?P<has_argument>:) (?P<argument>[^#]+))?'
+    comment_re = r'(\s*(?P<has_comment>#)\s*(?P<comment>.*$))?'
 
     full_line_re = indent_re + threshold_re + instruction_re + argument_re + comment_re
     # fallback is used to capture the command name, even if the command is not parsable
@@ -257,7 +257,9 @@ class PcodeParser:
         indent = match_groups.get("indent")
         threshold = match_groups.get("threshold")
         instruction_name = match_groups.get("instruction_name", "") or ""
+        has_argument = match_groups.get("has_argument", "") == ":"
         argument = match_groups.get("argument", "")
+        has_comment = match_groups.get("has_comment", "") == "#"
         comment = match_groups.get("comment", "")
 
         node = self._create_node(instruction_name.strip(), line, line_no).with_id(self.id_generator)
@@ -271,7 +273,9 @@ class PcodeParser:
                 end=Position(line=line_no, character=match.end("argument") -
                              count_trailing_spaces(node.arguments_part))
             )
+        node.has_argument = has_argument
         node.arguments = node.arguments_part.strip()  # convenience cleanup, hard to do in regex
+        node.has_comment = has_comment
         node.comment_part = comment or ""
 
         character = 0 if indent is None or indent == "" else len(indent)
