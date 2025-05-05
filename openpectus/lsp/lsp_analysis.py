@@ -162,7 +162,8 @@ def lint(document: Document, engine_id: str) -> list[Diagnostics]:
                 ),
                 code="Parse error",
                 message="Syntax error: " + str(ex),
-                severity=DiagnosticSeverity.Error
+                severity=DiagnosticSeverity.Error,
+                data=dict()
             )
         )
         return diagnostics
@@ -178,7 +179,8 @@ def lint(document: Document, engine_id: str) -> list[Diagnostics]:
                 range=get_item_range(item),
                 code=item.message,
                 message=item.description,
-                severity=get_item_severity(item)
+                severity=get_item_severity(item),
+                data = item.data
             )
         )
 

@@ -43,7 +43,27 @@ class Diagnostics(TypedDict):
     code: str
     message: str
     severity: int
+    data: dict
     """ One of DiagnosticSeverity """
+
+
+class TextEdit(TypedDict):
+    range: Range
+    newText: str
+
+class WorkspaceEdit(TypedDict):
+    changes: dict[str, list[TextEdit]]
+
+
+class CodeAction(TypedDict):
+    title: str
+    kind: Literal["", "quickfix", "refactor", "refactor.extract", "refactor.inline", "refactor.rewrite", "source", "source.fixAll"]
+    #diagnostics: Diagnostics
+    #isPreferred: bool
+    #disabled: bool
+    edit: WorkspaceEdit
+    #command: Command
+    #data: Any
 
 
 class DocumentSymbol(TypedDict):

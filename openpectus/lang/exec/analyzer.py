@@ -2,6 +2,8 @@ from __future__ import annotations
 from enum import Enum
 import logging
 
+from Levenshtein import ratio
+
 from openpectus.lang.exec.visitor import NodeVisitor
 import openpectus.lang.model.ast as p
 from openpectus.lang.exec.tags import TagValueCollection
@@ -30,13 +32,15 @@ class AnalyzerItem:
                  description: str = "",
                  start: int | None = None,
                  length: int | None = None,
-                 end: int | None = None) -> None:
+                 end: int | None = None,
+                 data: dict | None = None) -> None:
         self.id: str = id
         self.message: str = message
         self.description: str = description
         self.type: AnalyzerItemType = type
         self.node: p.Node | None = node
         self.range: p.Range = p.Range.empty
+        self.data = dict() if data is None else data
 
         # use node for ranges by default
         if node is not None:
@@ -314,12 +318,28 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
         name = node.instruction_name
 
         if not self.commands.has(name):
+            if len(name) > 3:
+                similarity: dict[str, float] = dict()
+                for command in self.commands.names:
+                    similarity[command] = ratio(name, command)
+                most_similar_command = max(similarity, key=similarity.get)
+                if similarity[most_similar_command] > 0.7:
+                    self.add_item(AnalyzerItem(
+                        "UndefinedCommand",
+                        "Undefined command",
+                        node,
+                        AnalyzerItemType.ERROR,
+                        f"Did you mean to type '{most_similar_command}'?",
+                        length=len(name),
+                        data=dict(type="fix-typo", fix=most_similar_command)
+                    ))
+                    return
             self.add_item(AnalyzerItem(
                 "UndefinedCommand",
                 "Undefined command",
                 node,
                 AnalyzerItemType.ERROR,
-                f"The command name '{name}' is not valid",
+                f"The command name '{name}' is not defined.",
                 length=len(name)
             ))
             return

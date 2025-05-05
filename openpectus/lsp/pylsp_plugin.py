@@ -10,7 +10,7 @@ from pylsp.config.config import Config
 from pylsp.workspace import Document, Workspace
 
 from openpectus.lsp import lsp_analysis
-from openpectus.lsp.model import Position
+from openpectus.lsp.model import Position, CodeAction, WorkspaceEdit, TextEdit, Range
 
 
 logger = logging.getLogger(__name__)
@@ -136,19 +136,29 @@ def pylsp_completions(config: Config, workspace: Workspace, document: Document, 
         logger.error("Completions error", exc_info=True)
         return []
 
-# @hookimpl
-# def pylsp_hover(config: Config, workspace: Workspace, document: Document, position):
-#     logger.info("pylsp_hover")
-#     logger.debug(f"config: {as_json(config)}")
-#     logger.debug(f"workspace: {as_json(workspace)}")
-#     logger.debug(f"document: {as_json(document)}")
-#     logger.debug(f"position: {position}")
-#     word = document.word_at_position(position)
-#     logger.debug(f"source word: {word}")
-#     logger.debug(f"position: {position}")
-#     if word and word != "secret":
-#         return {"contents": {"kind": "markdown", "value": f"You hovered the word: '{word}'"}}
-#     return None
+
+@hookimpl
+def pylsp_code_actions(
+    config: Config,
+    workspace: Workspace,
+    document: Document,
+    range: dict,
+    context: dict,
+) -> list[CodeAction]:
+    for diagnostic in context["diagnostics"]:
+        data = diagnostic.get("data", None)
+        if data:
+            if data["type"] == "fix-typo":
+                action = CodeAction(title="Fix spelling",
+                                    kind="quickfix",
+                                    edit=WorkspaceEdit(
+                                        changes={
+                                            document.uri: [TextEdit(range=diagnostic["range"], newText=data["fix"])]
+                                        },
+                                    ))
+                return [action]
+    return []
+
 
 @hookimpl
 def pylsp_hover(config: Config, workspace: Workspace, document: Document, position: Position):
