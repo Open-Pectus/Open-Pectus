@@ -26,13 +26,21 @@ Ecosystem
 
 Frontend Setup
 --------------
-Prerequisites: Node 20 (LTS) must be installed.
+Prerequisites: Node 22 (LTS) must be installed.
+
+Follow the steps below to install Node 22 on Ubuntu using Node Version Manager.
+
+.. code-block:: console
+
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+    source ~/.bashrc
+    nvm install v22.11.0
 
 Follow the steps below to install packages and build the frontend.
 
 .. code-block:: console
 
-   cd Open-Pectus/openpectus/frontend
+   cd Open-Pectus/frontend
    npm ci
    npm run build
 
