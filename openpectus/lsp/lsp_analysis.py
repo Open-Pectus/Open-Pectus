@@ -12,10 +12,11 @@ from openpectus.lang.exec.analyzer import AnalyzerItem, SemanticCheckAnalyzer
 from openpectus.lang.exec.commands import Command, CommandCollection
 from openpectus.lang.exec.tags import TagValue, TagValueCollection
 import openpectus.lang.model.ast as p
-from openpectus.lang.model.parser import Method, create_method_parser, lsp_parse_line
+from openpectus.lang.model.parser import Method, create_method_parser, lsp_parse_line, Grammar
 from openpectus.lsp.model import (
     CompletionItem, CompletionItemKind, Diagnostics,
     DocumentSymbol, Position, Range,
+    Hover, MarkupContent,
     get_item_range, get_item_severity
 )
 
@@ -280,6 +281,17 @@ def starts_with_any(query: str, candidates: list[str]) -> bool:
         if query.startswith(candidate):
             return True
     return False
+
+def hover(document: Document, position: Position, engine_id: str) -> Hover | None:
+    analysis_input = create_analysis_input(engine_id)
+    line = document.lines[position["line"]]
+    result = lsp_parse_line(line)
+    if result and result.instruction_name in analysis_input.commands.names:
+        start = line.index(result.instruction_name)
+        end = start + len(result.instruction_name) - 2
+        if start <= position["character"] <= end:
+            docstring = analysis_input.commands.get(result.instruction_name).docstring
+            return Hover(contents=MarkupContent(kind="markdown", value=docstring if docstring else ""))
 
 
 def completions(document: Document, position: Position, ignored_names, engine_id: str) -> list[CompletionItem]:

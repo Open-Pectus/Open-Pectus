@@ -150,6 +150,10 @@ def pylsp_completions(config: Config, workspace: Workspace, document: Document, 
 #         return {"contents": {"kind": "markdown", "value": f"You hovered the word: '{word}'"}}
 #     return None
 
+@hookimpl
+def pylsp_hover(config: Config, workspace: Workspace, document: Document, position: Position):
+    return lsp_analysis.hover(document, position, get_engine_id(config))
+
 
 def as_json(obj) -> str:
     if obj is None:

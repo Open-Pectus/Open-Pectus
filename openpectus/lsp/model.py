@@ -7,6 +7,13 @@ from openpectus.lang.exec.analyzer import AnalyzerItem, AnalyzerItemType
 from openpectus.lang.model.pprogram import PNode
 
 
+class MarkupContent(TypedDict):
+    kind: Literal["markdown", "plaintext"]
+    value: str
+
+class Hover(TypedDict):
+    contents: MarkupContent
+
 class Position(TypedDict):
     """ Representation of
     https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#position """
