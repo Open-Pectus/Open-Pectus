@@ -8,11 +8,16 @@ from openpectus.lang.model.pprogram import PNode
 
 
 class MarkupContent(TypedDict):
+    """ Representation of
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#markupContentInnerDefinition """
     kind: Literal["markdown", "plaintext"]
     value: str
 
 class Hover(TypedDict):
+    """ Representation of
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#hover """
     contents: MarkupContent
+    range: NotRequired[Range]
 
 class Position(TypedDict):
     """ Representation of
@@ -43,19 +48,25 @@ class Diagnostics(TypedDict):
     code: str
     message: str
     severity: int
-    data: dict
+    data: dict[str, str] # Real type is not this strict
     """ One of DiagnosticSeverity """
 
 
 class TextEdit(TypedDict):
+    """ Representation of
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textEdit """
     range: Range
     newText: str
 
 class WorkspaceEdit(TypedDict):
+    """ Representation of
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspaceEdit """
     changes: dict[str, list[TextEdit]]
 
 
 class CodeAction(TypedDict):
+    """ Representation of
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#codeAction """
     title: str
     kind: Literal["", "quickfix", "refactor", "refactor.extract", "refactor.inline", "refactor.rewrite", "source", "source.fixAll"]
     #diagnostics: Diagnostics
@@ -86,7 +97,7 @@ class DocumentSymbol(TypedDict):
 
 
 class Location(TypedDict):
-    """ Repreesntation of
+    """ Representation of
     https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#location """
     uri: str
     range: Range
