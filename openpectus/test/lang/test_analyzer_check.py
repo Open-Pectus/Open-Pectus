@@ -74,6 +74,19 @@ Foo: bar
         self.assertEqual(1, item.range.end.line)
         self.assertEqual(8, item.range.end.character)
 
+    def test_did_you_mean(self):
+        program = build_program("""
+Food: bar
+""")
+        cmds = CommandCollection().with_cmd(Command("Foo", lambda s: False))
+        analyzer = CommandCheckAnalyzer(cmds)
+        analyzer.analyze(program)
+        self.assertEqual(1, len(analyzer.items))
+        item = analyzer.items[0]
+        self.assertEqual(item.data, {"type": "fix-typo", "fix": "Foo"})
+
+
+
 class ConditionCheckAnalyzerTest(unittest.TestCase):
     def test_tag_name_defined(self):
         program = build_program("""
@@ -112,6 +125,19 @@ Watch: A > 2
         analyzer.analyze(program)
         self.assertEqual(0, len(analyzer.items))
 
+    def test_tag_did_you_mean(self):
+        program = build_program("""
+Watch: Food > 2
+    Mark: a
+""")
+        tags = TagValueCollection([TagValue("Foo")])
+        analyzer = ConditionCheckAnalyzer(tags)
+        analyzer.analyze(program)
+        self.assertEqual(1, len(analyzer.items))
+        item = analyzer.items[0]
+        self.assertEqual(item.data, {"type": "fix-typo", "fix": "Foo"})
+
+
     def test_tag_unit_unexpected(self):
         program = build_program("""
 Watch: A > 2 mL
@@ -144,6 +170,17 @@ Watch: A > 2 mL
         analyzer.analyze(program)
         self.assertEqual(1, len(analyzer.items))
         self.assertEqual("IncompatibleUnits", analyzer.items[0].id)
+
+    def test_tag_unit_invalid(self):
+        program = build_program("""
+Watch: A > 2 test
+    Mark: a
+""")
+        tags = TagValueCollection([TagValue("A", unit="s")])
+        analyzer = ConditionCheckAnalyzer(tags)
+        analyzer.analyze(program)
+        self.assertEqual(1, len(analyzer.items))
+        self.assertEqual("InvalidUnit", analyzer.items[0].id)
 
     def test_tag_units_equal(self):
         program = build_program("""
