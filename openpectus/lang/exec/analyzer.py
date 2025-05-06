@@ -7,7 +7,7 @@ from Levenshtein import ratio
 from openpectus.lang.exec.visitor import NodeVisitor
 import openpectus.lang.model.ast as p
 from openpectus.lang.exec.tags import TagValueCollection
-from openpectus.lang.exec.units import are_comparable
+from openpectus.lang.exec.units import are_comparable, get_compatible_unit_names
 from openpectus.lang.exec.commands import CommandCollection
 
 
@@ -33,7 +33,7 @@ class AnalyzerItem:
                  start: int | None = None,
                  length: int | None = None,
                  end: int | None = None,
-                 data: dict | None = None) -> None:
+                 data: dict[str, str] | None = None) -> None:
         self.id: str = id
         self.message: str = message
         self.description: str = description
@@ -222,16 +222,32 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
             return
 
         if not self.tags.has(tag_name):
-            self.add_item(AnalyzerItem(
-                "UndefinedTag",
-                "Undefined tag",
-                node,
-                AnalyzerItemType.ERROR,
-                f"The tag name '{tag_name}' is not valid",
-                start=node.condition.lhs_range.start.character,
-                end=node.condition.lhs_range.end.character,
-            ))
-            return
+            
+            if len(tag_name) > 2:
+                similarity = {tag: ratio(tag_name, tag) for tag in self.tags.names}
+                most_similar_tag = max(similarity, key=similarity.get) # type: ignore
+                if similarity[most_similar_tag] > 0.7:
+                    self.add_item(AnalyzerItem(
+                        "UndefinedCUndefinedTagommand",
+                        "Undefined tag",
+                        node,
+                        AnalyzerItemType.ERROR,
+                        f"Did you mean to type '{most_similar_tag}'?",
+                        length=len(tag_name),
+                        data=dict(type="fix-typo", fix=most_similar_tag)
+                    ))
+                    return
+            else:
+                self.add_item(AnalyzerItem(
+                    "UndefinedTag",
+                    "Undefined tag",
+                    node,
+                    AnalyzerItemType.ERROR,
+                    f"The tag name '{tag_name}' is not valid",
+                    start=node.condition.lhs_range.start.character,
+                    end=node.condition.lhs_range.end.character,
+                ))
+                return
 
         tag = self.tags.get(tag_name)
 
@@ -247,13 +263,18 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
             ))
             return
 
+        valid_units = get_compatible_unit_names(tag.unit)
+        valid_units_str = ""
+        if len(valid_units) > 0:
+            valid_units_str = " Suggested units: " + ", ".join(valid_units) + "."
+
         if tag.unit is not None and condition.tag_unit is None:
             self.add_item(AnalyzerItem(
                 "MissingUnit",
                 "Missing tag unit",
                 node,
                 AnalyzerItemType.ERROR,
-                "The tag requires that a unit is provided",
+                "The tag requires that a unit is provided." + valid_units_str,
                 start=node.condition.rhs_range.start.character,
                 end=node.condition.rhs_range.end.character
             ))
@@ -269,7 +290,7 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                     "Invalid unit",
                     node,
                     AnalyzerItemType.ERROR,
-                    str(vex),
+                    str(vex) + "." + valid_units_str,
                     start=node.condition.rhs_range.start.character,
                     end=node.condition.rhs_range.end.character
                 ))
@@ -280,7 +301,7 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                     "Incompatible units",
                     node,
                     AnalyzerItemType.ERROR,
-                    f"The tag unit '{tag.unit}' is not compatible with the provided unit '{condition.tag_unit}'",
+                    f"The tag unit '{tag.unit}' is not compatible with the provided unit '{condition.tag_unit}'." + valid_units_str,
                     start=node.condition.range.start.character,
                     end=node.condition.range.end.character
                 ))
@@ -318,11 +339,9 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
         name = node.instruction_name
 
         if not self.commands.has(name):
-            if len(name) > 3:
-                similarity: dict[str, float] = dict()
-                for command in self.commands.names:
-                    similarity[command] = ratio(name, command)
-                most_similar_command = max(similarity, key=similarity.get)
+            if len(name) > 2:
+                similarity = {command: ratio(name, command) for command in self.commands.names}
+                most_similar_command = max(similarity, key=similarity.get) # type: ignore
                 if similarity[most_similar_command] > 0.7:
                     self.add_item(AnalyzerItem(
                         "UndefinedCommand",
