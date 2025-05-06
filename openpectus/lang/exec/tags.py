@@ -339,6 +339,11 @@ class TagValueCollection(Iterable[TagValue]):
     def empty() -> TagValueCollection:
         return TagValueCollection([])
 
+    @property
+    def names(self) -> list[str]:
+        """ Return the tag names """
+        return list(self._tag_values.keys())
+
     def get(self, tag_name: str) -> TagValue:
         if tag_name is None or tag_name.strip() == '':
             raise ValueError("tag_name is None or empty")

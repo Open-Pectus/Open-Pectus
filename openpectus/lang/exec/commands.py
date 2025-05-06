@@ -87,7 +87,7 @@ class CommandCollection():
 
     @property
     def names(self) -> List[str]:
-        """ Return the tag names """
+        """ Return the command names """
         return list(self.commands.keys())
 
     def __getitem__(self, tag_name: str):
