@@ -66,6 +66,12 @@ class CodeAction(TypedDict):
     #data: Any
 
 
+class CodeActionContext(TypedDict):
+    """ Representation of
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#codeActionContext """
+    diagnostics: list[Diagnostics]
+
+
 class DocumentSymbol(TypedDict):
     """ Representation of
     https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#documentSymbol """

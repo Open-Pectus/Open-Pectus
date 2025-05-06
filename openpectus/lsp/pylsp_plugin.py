@@ -11,7 +11,7 @@ from pylsp.workspace import Document, Workspace
 from pylsp.python_lsp import PythonLSPServer
 
 from openpectus.lsp import lsp_analysis
-from openpectus.lsp.model import Position, CodeAction, WorkspaceEdit, TextEdit, Range
+from openpectus.lsp.model import Position, CodeAction, WorkspaceEdit, TextEdit, Range, CodeActionContext
 
 
 logger = logging.getLogger(__name__)
@@ -152,8 +152,8 @@ def pylsp_code_actions(
     config: Config,
     workspace: Workspace,
     document: Document,
-    range: dict,
-    context: dict,
+    range: Range,
+    context: CodeActionContext,
 ) -> list[CodeAction]:
     for diagnostic in context["diagnostics"]:
         data = diagnostic.get("data", None)
