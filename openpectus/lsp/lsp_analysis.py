@@ -370,16 +370,15 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                         if operator in query:
                             break
                     tag_name = query.split(":")[1].split(operator)[0].strip()
+                    unit_options = units_compaible_with_tag(analysis_input, tag_name)
                     tag = analysis_input.tags.get(tag_name)
-                    if tag:
-                        if tag.unit:
-                            unit_options = get_compatible_unit_names(tag.unit)
-                            right_of_operator = query.split(operator)[1].strip()
-                            if not contains_any(right_of_operator, unit_options):
-                                return [
-                                    CompletionItem(label=unit, insertText=prefix+unit, kind=CompletionItemKind.Enum, preselect=False)
-                                    for unit in unit_options
-                                ]
+                    if len(unit_options) > 0:
+                        right_of_operator = query.split(operator)[1].strip()
+                        if not contains_any(right_of_operator, unit_options):
+                            return [
+                                CompletionItem(label=unit, insertText=prefix+unit, kind=CompletionItemKind.Enum, preselect=False)
+                                for unit in unit_options
+                            ]
             # Completion of all other commands
             elif starts_with_any(query, [f"{name}:" for name in analysis_input.commands.names]):
                 arg_parser = analysis_input.commands.get(lsp_result.instruction_name).arg_parser
@@ -434,3 +433,10 @@ def find_word_at_position(document: Document, position: Position) -> str | None:
             else:
                 word = line if position["character"] < len(line) else None
                 return word
+
+def units_compaible_with_tag(analysis_input: AnalysisInput, tag_name: str) -> list[str]:
+    tag = analysis_input.tags.get(tag_name)
+    if tag:
+        if tag.unit:
+            return get_compatible_unit_names(tag.unit)
+    return []
