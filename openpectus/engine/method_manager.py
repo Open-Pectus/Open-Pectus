@@ -1,6 +1,7 @@
 
 import logging
 
+from openpectus.lang.exec.analyzer import WhitespaceCheckAnalyzer
 from openpectus.lang.exec.errors import MethodEditError
 from openpectus.lang.exec.units import as_int
 from openpectus.lang.model.parser import (
@@ -36,6 +37,8 @@ class MethodManager:
         self._method = _method
         parser = create_method_parser(_method, self._uod_command_names)
         self._program = parser.parse_method(_method)
+
+        self._apply_analysis()
 
     def merge_method(self, method: Mdl.Method):
         """ User saved method while a run was active. The new method is replacing an existing method
@@ -73,6 +76,7 @@ class MethodManager:
             logger.error("Failed to apply tree state", exc_info=True)
             raise MethodEditError("Failed to apply tree state", ex)
 
+        self._apply_analysis()
 
     def parse_inject_code(self, pcode: str) -> p.ProgramNode:
         parser = create_inject_parser(self._uod_command_names)
@@ -91,3 +95,9 @@ class MethodManager:
             if id_int is not None and id_int < 0:
                 method_state.injected_line_ids.append(node.id)
         return method_state
+
+    def _apply_analysis(self):
+        # TODO improve this. may need additional analizers which also
+        # requires access to tags/commands
+        analyzer = WhitespaceCheckAnalyzer()
+        analyzer.analyze(self._program)
