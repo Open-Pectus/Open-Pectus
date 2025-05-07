@@ -48,7 +48,7 @@ class Diagnostics(TypedDict):
     code: str
     message: str
     severity: int
-    data: dict[str, str] # Real type is not this strict
+    data: dict[str, str]  # Actual type is not this strict
     """ One of DiagnosticSeverity """
 
 
@@ -69,12 +69,12 @@ class CodeAction(TypedDict):
     https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#codeAction """
     title: str
     kind: Literal["", "quickfix", "refactor", "refactor.extract", "refactor.inline", "refactor.rewrite", "source", "source.fixAll"]
-    #diagnostics: Diagnostics
-    #isPreferred: bool
-    #disabled: bool
+    # diagnostics: Diagnostics
+    # isPreferred: bool
+    # disabled: bool
     edit: WorkspaceEdit
-    #command: Command
-    #data: Any
+    # command: Command
+    # data: Any
 
 
 class CodeActionContext(TypedDict):
