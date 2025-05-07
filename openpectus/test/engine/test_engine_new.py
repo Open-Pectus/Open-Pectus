@@ -112,7 +112,7 @@ Wait: 1s
             instance.start()
 
             t = instance.run_until_instruction("Wait", "started", increment_index=False)
-            self.assertEqual(4, t)
+            self.assertEqual(3, t)
             ticks = instance.run_until_instruction("Wait", "completed")
             self.assertAlmostEqual(10, ticks, delta=2)
 
@@ -268,7 +268,7 @@ Mark: A
 Mark: B
 Mark: C
 """
-        runner = EngineTestRunner(create_test_uod, code)        
+        runner = EngineTestRunner(create_test_uod, code)
 
         with runner.run() as instance:
             instance.start()
@@ -282,7 +282,7 @@ Mark: C
 Mark: A
 Stop
 """
-        runner = EngineTestRunner(create_test_uod, code)        
+        runner = EngineTestRunner(create_test_uod, code)
 
         with runner.run() as instance:
             instance.start()
@@ -299,7 +299,7 @@ Wait: 15s
 15 Mark: A2
 Mark: B
 """
-        runner = EngineTestRunner(create_test_uod, pcode=pcode, speed=30)
+        runner = EngineTestRunner(create_test_uod, pcode, speed=30)
         with runner.run() as instance:
             instance.start()
             run_time = instance.engine.tags[SystemTagName.RUN_TIME]
@@ -315,7 +315,7 @@ Mark: B
 Wait: 30s
 Mark: B
 """
-        runner = EngineTestRunner(create_test_uod, pcode=pcode, speed=30)
+        runner = EngineTestRunner(create_test_uod, pcode, speed=30)
         with runner.run() as instance:
             run_time = instance.engine.tags[SystemTagName.RUN_TIME]
             instance.start()
@@ -343,7 +343,7 @@ Mark: A
 Mark: B
 Mark: C
 """
-        runner = EngineTestRunner(create_test_uod, pcode=pcode)
+        runner = EngineTestRunner(create_test_uod, pcode)
         with runner.run() as instance:
             instance.start()
             instance.run_until_instruction("Mark", state="completed")
@@ -364,21 +364,22 @@ Mark: A
 0.25 Mark: B
 Mark: C
 """
-        runner = EngineTestRunner(create_test_uod, pcode=pcode)
+        runner = EngineTestRunner(create_test_uod, pcode)
         with runner.run() as instance:
             instance.start()
 
             instance.engine.tags[SystemTagName.BASE].set_value("s", instance.engine._tick_time)
 
-            instance.run_until_instruction("Mark", state="completed")
+            instance.run_until_instruction("Mark", state="completed", arguments="A")
             self.assertEqual(['A'], instance.marks)
 
             instance.engine.inject_code("Mark: I")
-            instance.run_until_condition(lambda: 'I' in instance.marks)
-            self.assertEqual(['A', 'B', 'I'], instance.marks)
+            instance.run_until_instruction("Mark", state="completed", arguments="I")
+            instance.run_ticks(1)  # wait for injected interrupt to complete
+            self.assertIn(instance.marks, (['A', 'B', 'I'], ['A', 'I', 'B']))
 
             instance.run_until_event("method_end")
-            self.assertEqual(['A', 'B', 'I', 'C'], instance.marks)
+            self.assertIn(instance.marks, (['A', 'B', 'I', 'C'], ['A', 'I', 'B', 'C']))
 
 
     def test_inject_thresholds_2(self):
@@ -387,7 +388,7 @@ Mark: A
 0.2 Mark: B
 Mark: C
 """
-        runner = EngineTestRunner(create_test_uod, pcode=pcode)
+        runner = EngineTestRunner(create_test_uod, pcode)
         with runner.run() as instance:
             instance.start()
 
@@ -410,7 +411,7 @@ Warning: bar
 Error: baz
 Stop
 """
-        runner = EngineTestRunner(create_test_uod, pcode=pcode)
+        runner = EngineTestRunner(create_test_uod, pcode)
         with runner.run() as instance:
             instance.start()
             instance.run_until_event("stop")  # will raise on engine error

@@ -78,7 +78,11 @@ class EventListener:
         pass
 
     def on_method_end(self):
-        """ Is invoked when method interpretation is complete. """
+        """ Is invoked when interpretation of the last method line is complete. Note: This does
+        not necessarily mean that interpretation ends:
+        - Any alarms still have their condition evaluated and may execute
+        - The method may be modified by the user and the new lines will start executing
+        """
         pass
 
     def on_stop(self):
