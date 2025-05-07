@@ -42,12 +42,12 @@ class OPPythonLSPServer(PythonLSPServer):
         capabilities["referencesProvider"] = False
         capabilities["renameProvider"] = False
         capabilities["foldingRangeProvider"] = False
-        capabilities["signatureHelpProvider"] = {"triggerCharacters": []}, # Remove trigger characters
+        capabilities["signatureHelpProvider"] = {"triggerCharacters": []},
         capabilities["declarationProvider"] = False
         capabilities["typeDefinitionProvider"] = False
         capabilities["implementationProvider"] = False
-        capabilities["documentLinkProvider"] = dict()
-        capabilities["documentLinkProvider"]["resolveProvider"] = False
+        # capabilities["documentLinkProvider"] = dict()
+        # capabilities["documentLinkProvider"]["resolveProvider"] = False
         capabilities["colorProvider"] = False
         capabilities["documentOnTypeFormattingProvider"] = False
         capabilities["executeCommandProvider"]["commands"] = []
