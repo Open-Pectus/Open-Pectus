@@ -79,7 +79,7 @@ class RuntimeInfo:
             if isinstance(r.node, p.ProgramNode):
                 return str(r.node.id)
 
-    def _get_record_runlog_items(self, r: RuntimeRecord) -> list[RunLogItem]:
+    def _get_record_runlog_items(self, r: RuntimeRecord) -> list[RunLogItem]:  # noqa C901
         if isinstance(r.node, (p.ProgramNode, p.BlankNode, p.CommentNode)):
             return []
         if r.name is None:
@@ -272,7 +272,7 @@ class RuntimeInfo:
 
     def get_last_node_record_or_none(self, node: p.Node) -> RuntimeRecord | None:
         for r in reversed(self._records):
-            if r.node == node:
+            if r.node.id == node.id:
                 return r
 
     def get_last_node_record(self, node: p.Node) -> RuntimeRecord:
@@ -281,8 +281,18 @@ class RuntimeInfo:
             raise ValueError("Node has no records")
         return record
 
-    def get_node_records(self, node: p.Node) -> list[RuntimeRecord]:
-        return [r for r in self._records if r.node.id == node.id]
+    def get_node_records(self, node: p.Node, test_by_instance=False) -> list[RuntimeRecord]:
+        """ Get the records that references the node.
+
+        If test_by_instance is False (the default) references are tested by node id, otherwise
+        references are tested by object reference. This is relevant when a method is edited while
+        it runs, where nodes are replaced with new instances and these new instances must also
+        be propagated to record node references.
+        """
+        if test_by_instance:
+            return [r for r in self._records if r.node == node]
+        else:
+            return [r for r in self._records if r.node.id == node.id]
 
     def _add_record(self, record: RuntimeRecord, exec_id: UUID):
         index = len(self._records)
@@ -336,6 +346,22 @@ class RuntimeInfo:
                         return i
                     elif r.has_state(instruction_state):
                         return i
+
+    def patch_node_references(self, program: p.ProgramNode):
+        """ Patch node references to updated program nodes to account for edited method. """
+        logger.info("Patching node references in runtime records")
+        for r in self.records:
+            if r.node is not None and not isinstance(r.node, p.ProgramNode):
+                new_node = program.get_child_by_id(r.node.id)
+                if new_node is None:
+                    logger.error(f"No new node was found to replace {r.node}. Node cannot be patched")
+                else:
+                    if r.node != new_node:
+                        r.node = new_node
+                        logger.debug(f"Patched node reference {new_node}")
+                    else:
+                        logger.warning(f"Node not patched: {new_node} - old node already matched the new node!?")
+        logger.info("Patching complete")
 
     def get_record_by_index(self, index: int) -> RuntimeRecord | None:
         if index < 0:

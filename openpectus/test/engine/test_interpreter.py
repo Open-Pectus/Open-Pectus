@@ -6,6 +6,7 @@ import pint
 from openpectus.engine.engine import Engine, EngineTiming
 from openpectus.engine.models import EngineCommandEnum
 from openpectus.lang.exec.clock import WallClock
+from openpectus.lang.exec.errors import EngineError
 from openpectus.lang.exec.pinterpreter import PInterpreter
 from openpectus.lang.exec.tags import Tag, SystemTagName
 from openpectus.lang.exec.timer import NullTimer
@@ -233,10 +234,8 @@ Call macro: A
 """
         engine = self.engine
 
-        self.assertRaises(
-            ValueError,
-            lambda: run_engine(engine, program, 5)
-        )
+        with self.assertRaises(EngineError):
+            run_engine(engine, program, 5)
         self.assertEqual(["a",], engine.interpreter.get_marks())
 
 
@@ -267,10 +266,8 @@ Call macro: A
 """
         engine = self.engine
 
-        self.assertRaises(
-            ValueError,
-            lambda: run_engine(engine, program, 10)
-        )
+        with self.assertRaises(EngineError):
+            run_engine(engine, program, 10)
         self.assertEqual(["a",], engine.interpreter.get_marks())
 
 
@@ -288,10 +285,8 @@ Call macro: A
 """
         engine = self.engine
 
-        self.assertRaises(
-            ValueError,
-            lambda: run_engine(engine, program, 10)
-        )
+        with self.assertRaises(EngineError):
+            run_engine(engine, program, 10)
         self.assertEqual(["a",], engine.interpreter.get_marks())
 
 
@@ -312,10 +307,8 @@ Call macro: A
 """
         engine = self.engine
 
-        self.assertRaises(
-            ValueError,
-            lambda: run_engine(engine, program, 10)
-        )
+        with self.assertRaises(EngineError):
+            run_engine(engine, program, 10)
         self.assertEqual(["a",], engine.interpreter.get_marks())
 
 # --- Conditions ---
