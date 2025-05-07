@@ -181,7 +181,7 @@ def lint(document: Document, engine_id: str) -> list[Diagnostics]:
                 code=item.message,
                 message=item.description,
                 severity=get_item_severity(item),
-                data = item.data
+                data=item.data
             )
         )
 
@@ -321,21 +321,46 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
             if arg_parser:
                 units = arg_parser.get_units()
                 if len(units) == 1:
-                    return Hover(contents=MarkupContent(kind="markdown", value=f"Specify a value with unit '{units[0]}'."))
+                    return Hover(
+                        contents=MarkupContent(
+                            kind="markdown",
+                            value=f"Specify a value with unit '{units[0]}'.",
+                        )
+                    )
                 elif len(units) > 1:
                     unit_str = ", ".join(units)
-                    return Hover(contents=MarkupContent(kind="markdown", value=f"Specify a value with one of the following units: {unit_str}."))
+                    return Hover(
+                        contents=MarkupContent(
+                            kind="markdown",
+                            value=f"Specify a value with one of the following units: {unit_str}.",
+                        )
+                    )
                 additive_options = arg_parser.get_additive_options()
                 exclusive_options = arg_parser.get_exclusive_options()
                 if additive_options and not exclusive_options:
                     options_str = ", ".join(additive_options)
-                    return Hover(contents=MarkupContent(kind="markdown", value=f"Specify one or more (separate with +) of the following options: {options_str}."))
+                    return Hover(
+                        contents=MarkupContent(
+                            kind="markdown",
+                            value=f"Specify one or more (separate with +) of the following options: {options_str}.",
+                        )
+                    )
                 elif not additive_options and exclusive_options:
                     options_str = ", ".join(exclusive_options)
-                    return Hover(contents=MarkupContent(kind="markdown", value=f"Specify one of the following options: {options_str}"))
+                    return Hover(
+                        contents=MarkupContent(
+                            kind="markdown",
+                            value=f"Specify one of the following options: {options_str}",
+                        )
+                    )
                 elif additive_options and exclusive_options:
                     options_str = ", ".join(additive_options+exclusive_options)
-                    return Hover(contents=MarkupContent(kind="markdown", value=f"Specify one or possibly more of the following options: {options_str}."))
+                    return Hover(
+                        contents=MarkupContent(
+                            kind="markdown",
+                            value=f"Specify one or possibly more of the following options: {options_str}.",
+                        )
+                    )
 
 
 def completions(document: Document, position: Position, ignored_names, engine_id: str) -> list[CompletionItem]:
@@ -374,16 +399,25 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                 if query.endswith(": ") or query.endswith(":"):
                     prefix = " " if query.endswith(":") else ""
                     tag_name = query.split(":")[1].strip()
-                    print("tag_name", tag_name)
                     return [
-                        CompletionItem(label=name, insertText=prefix+name, kind=CompletionItemKind.Enum, preselect=False)
+                        CompletionItem(
+                            label=name,
+                            insertText=prefix+name,
+                            kind=CompletionItemKind.Enum,
+                            preselect=False,
+                        )
                         for name in analysis_input.get_tag_completions(tag_name)
                     ]
                 # Complete operator
                 elif analysis_input.tags.has(query.split(":")[1].strip()):
                     prefix = "" if query.endswith(" ") else " "
                     return [
-                        CompletionItem(label=operator, insertText=prefix+operator, kind=CompletionItemKind.Enum, preselect=False)
+                        CompletionItem(
+                            label=operator,
+                            insertText=prefix+operator,
+                            kind=CompletionItemKind.Enum,
+                            preselect=False,
+                        )
                         for operator in Grammar.operators
                     ]
                 # Complete unit
@@ -395,12 +429,16 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                             break
                     tag_name = query.split(":")[1].split(operator)[0].strip()
                     unit_options = units_compaible_with_tag(analysis_input, tag_name)
-                    tag = analysis_input.tags.get(tag_name)
                     if len(unit_options) > 0:
                         right_of_operator = query.split(operator)[1].strip()
                         if not contains_any(right_of_operator, unit_options):
                             return [
-                                CompletionItem(label=unit, insertText=prefix+unit, kind=CompletionItemKind.Enum, preselect=False)
+                                CompletionItem(
+                                    label=unit,
+                                    insertText=prefix+unit,
+                                    kind=CompletionItemKind.Enum,
+                                    preselect=False,
+                                )
                                 for unit in unit_options
                             ]
             # Completion of all other commands
@@ -412,26 +450,44 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                     # Complete additive options
                     if query.endswith("+"):
                         return [
-                            CompletionItem(label=name, insertText=prefix+name, kind=CompletionItemKind.Enum, preselect=False)
+                            CompletionItem(
+                                label=name,
+                                insertText=prefix+name,
+                                kind=CompletionItemKind.Enum,
+                                preselect=False,
+                            )
                             for name in arg_parser.get_additive_options()
                         ]
                     # Complete additive, exclusive and units
                     if not contains_any(query.split(":")[1].strip(), options):
                         return [
-                            CompletionItem(label=name, insertText=prefix+name, kind=CompletionItemKind.Enum, preselect=False)
+                            CompletionItem(
+                                label=name,
+                                insertText=prefix+name,
+                                kind=CompletionItemKind.Enum,
+                                preselect=False,
+                            )
                             for name in options
                         ]
         elif lsp_result.instruction_name:
             if ":" not in query:
                 # Completion of command name
                 return [
-                    CompletionItem(label=word, kind=CompletionItemKind.Function, preselect=False)
+                    CompletionItem(
+                        label=word,
+                        kind=CompletionItemKind.Function,
+                        preselect=False,
+                    )
                     for word in analysis_input.get_command_completions(lsp_result.instruction_name)
                 ]
     if query.strip() == "":
         # Blank line. Show all possible commands
         return [
-            CompletionItem(label=command_name, kind=CompletionItemKind.Function, preselect=False)
+            CompletionItem(
+                label=command_name,
+                kind=CompletionItemKind.Function,
+                preselect=False,
+            )
             for command_name in analysis_input.commands.names
         ]
     return []

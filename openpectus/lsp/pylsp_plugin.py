@@ -26,6 +26,7 @@ timer_format = "0.2f"
 
 class OPPythonLSPServer(PythonLSPServer):
     """ Subclass of PythonLSPServer which triggers autocomplete calculation on specific characters. """
+
     def capabilities(self):
         capabilities = super().capabilities()
         # Let the client know that the following providers are not available
