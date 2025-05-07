@@ -307,11 +307,35 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
     line = document.lines[position["line"]]
     result = lsp_parse_line(line)
     if result and result.instruction_name in analysis_input.commands.names:
+        # Check if hovering instruction name
         start = line.index(result.instruction_name)
         end = start + len(result.instruction_name) - 2
         if start <= position["character"] <= end:
             docstring = analysis_input.commands.get(result.instruction_name).docstring
             return Hover(contents=MarkupContent(kind="markdown", value=docstring if docstring else ""))
+        # Check if argument
+        start = line.index(result.argument)
+        end = start + len(result.argument) - 1
+        if start <= position["character"] <= end:
+            arg_parser = analysis_input.commands.get(result.instruction_name).arg_parser
+            if arg_parser:
+                units = arg_parser.get_units()
+                if len(units) == 1:
+                    return Hover(contents=MarkupContent(kind="markdown", value=f"Specify a value with unit '{units[0]}'."))
+                elif len(units) > 1:
+                    unit_str = ", ".join(units)
+                    return Hover(contents=MarkupContent(kind="markdown", value=f"Specify a value with one of the following units: {unit_str}."))
+                additive_options = arg_parser.get_additive_options()
+                exclusive_options = arg_parser.get_exclusive_options()
+                if additive_options and not exclusive_options:
+                    options_str = ", ".join(additive_options)
+                    return Hover(contents=MarkupContent(kind="markdown", value=f"Specify one or more (separate with +) of the following options: {options_str}."))
+                elif not additive_options and exclusive_options:
+                    options_str = ", ".join(exclusive_options)
+                    return Hover(contents=MarkupContent(kind="markdown", value=f"Specify one of the following options: {options_str}"))
+                elif additive_options and exclusive_options:
+                    options_str = ", ".join(additive_options+exclusive_options)
+                    return Hover(contents=MarkupContent(kind="markdown", value=f"Specify one or possibly more of the following options: {options_str}."))
 
 
 def completions(document: Document, position: Position, ignored_names, engine_id: str) -> list[CompletionItem]:
