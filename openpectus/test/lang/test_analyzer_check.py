@@ -333,6 +333,27 @@ Mark: c
         sa.analyze(program)
         self.assertEqual(1, len(sa.items))
 
+    def test_missing_end_nested(self):
+        program = build_program("""
+Block: A
+    Block: B
+        End block
+""")
+        sa = InfiniteBlockCheckAnalyzer()
+        sa.analyze(program)
+        print(sa)
+        self.assertEqual(1, len(sa.items))
+
+    def test_nested_end_blocks(self):
+        program = build_program("""
+Block: A
+    Block: B
+        End blocks
+""")
+        sa = InfiniteBlockCheckAnalyzer()
+        sa.analyze(program)
+        self.assertEqual(0, len(sa.items))
+
     def test_has_global_end(self):
         program = build_program("""
 Watch: Run counter > 0

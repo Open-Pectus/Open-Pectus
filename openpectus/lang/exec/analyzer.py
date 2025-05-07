@@ -139,8 +139,11 @@ class InfiniteBlockCheckAnalyzer(AnalyzerVisitorBase):
             parent = parent.parent
 
     def check_local_end_block(self, node: p.BlockNode):
+        for child in node.get_child_nodes(recursive=True, exclude_blocks=True):
+            if isinstance(child, p.EndBlockNode):
+                return True
         for child in node.get_child_nodes(recursive=True):
-            if isinstance(child, (p.EndBlockNode, p.EndBlocksNode)):
+            if isinstance(child, p.EndBlocksNode):
                 return True
         return False
 

@@ -263,11 +263,11 @@ class NodeWithChildren(Node):
     def has_children(self):
         return len(self._children) > 0
 
-    def get_child_nodes(self, recursive: bool = False) -> list[Node]:
+    def get_child_nodes(self, recursive: bool = False, exclude_blocks: bool = False) -> list[Node]:
         children: list[Node] = []
         for child in self._children:
             children.append(child)
-            if recursive and isinstance(child, NodeWithChildren):
+            if recursive and isinstance(child, NodeWithChildren) and not ( exclude_blocks and isinstance(child, BlockNode) ):
                 children.extend(child.get_child_nodes(recursive))
         return children
 
