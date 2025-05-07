@@ -176,6 +176,91 @@ Block: A
         block = program.get_first_child(p.BlankNode)
         assert block is not None
 
+    def test_parse_block_w_blank_1(self):
+        code = """\
+Block: A
+    Mark: B
+
+    Mark: C
+"""
+
+        program = parse_program(code)
+        print_program(program)
+
+        block_node = program.children[0]
+        assert isinstance(block_node, p.BlockNode)
+        self.assertIsInstance(block_node.children[0], p.MarkNode)
+        self.assertIsInstance(block_node.children[1], p.BlankNode)
+        self.assertIsInstance(block_node.children[2], p.MarkNode)
+
+    def test_parse_block_w_blank_2(self):
+        code = """\
+Block: A
+    Mark: B
+  
+    Mark: C
+"""
+
+        program = parse_program(code)
+        print_program(program)
+
+        block_node = program.children[0]
+        assert isinstance(block_node, p.BlockNode)
+        self.assertIsInstance(block_node.children[0], p.MarkNode)
+        self.assertIsInstance(block_node.children[1], p.BlankNode)
+        self.assertIsInstance(block_node.children[2], p.MarkNode)
+
+    def test_parse_block_w_blank_3(self):
+        code = """\
+Block: A
+    Mark: B
+    
+    Mark: C
+"""
+
+        program = parse_program(code)
+        print_program(program)
+
+        block_node = program.children[0]
+        assert isinstance(block_node, p.BlockNode)
+        self.assertIsInstance(block_node.children[0], p.MarkNode)
+        self.assertIsInstance(block_node.children[1], p.BlankNode)
+        self.assertIsInstance(block_node.children[2], p.MarkNode)
+
+    def test_parse_block_w_blank_4(self):
+        code = """\
+Block: A
+    Mark: B
+      
+    Mark: C
+"""
+
+        program = parse_program(code)
+        print_program(program)
+
+        block_node = program.children[0]
+        assert isinstance(block_node, p.BlockNode)
+        self.assertIsInstance(block_node.children[0], p.MarkNode)
+        self.assertIsInstance(block_node.children[1], p.BlankNode)
+        self.assertIsInstance(block_node.children[2], p.MarkNode)
+
+    def test_parse_block_w_blank_5(self):
+        code = """\
+Block: A
+    Mark: B
+        
+    Mark: C
+"""
+
+        program = parse_program(code)
+        print_program(program)
+
+        block_node = program.children[0]
+        assert isinstance(block_node, p.BlockNode)
+        self.assertIsInstance(block_node.children[0], p.MarkNode)
+        self.assertIsInstance(block_node.children[1], p.BlankNode)
+        self.assertIsInstance(block_node.children[2], p.MarkNode)
+
     def test_parse_blocks(self):
         code = """\
 Block: A

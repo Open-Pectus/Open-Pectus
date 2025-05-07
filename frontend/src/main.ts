@@ -1,19 +1,22 @@
 import { DATE_PIPE_DEFAULT_OPTIONS, DatePipe, DecimalPipe } from '@angular/common';
-import { provideHttpClient, withInterceptors, withInterceptorsFromDi } from '@angular/common/http';
 import '@angular/common/locales/global/da';
-import { importProvidersFrom, isDevMode, LOCALE_ID, provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { isDevMode, LOCALE_ID, provideExperimentalZonelessChangeDetection } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { provideEffects } from '@ngrx/effects';
 import { provideRouterStore, RouterState } from '@ngrx/router-store';
-import { provideStore } from '@ngrx/store';
+import { provideStore, Store } from '@ngrx/store';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
+import { provideAuth, StsConfigLoader } from 'angular-auth-oidc-client';
 import { setupWorker } from 'msw/browser';
 import { provideToastr } from 'ngx-toastr';
+import { AuthService } from './app/api';
 import { AppComponent } from './app/app.component';
 import { APP_ROUTES } from './app/app.routes';
-import { AuthConfigModule } from './app/auth/auth-config.module';
+import { authConfigLoaderFactory } from './app/auth/auth-config-loader.factory';
+import { authInterceptor } from './app/auth/auth.interceptor';
 import { Defaults } from './app/defaults';
 import { DetailsActions } from './app/details/ngrx/details.actions';
 import { metaReducers, reducers } from './app/ngrx';
@@ -81,15 +84,19 @@ enableMocking().then(() => bootstrapApplication(AppComponent, {
     provideRouter(APP_ROUTES),
     provideAnimations(),
     provideToastr(),
-    importProvidersFrom(
-      AuthConfigModule,
-    ),
+    provideAuth({
+      loader: {
+        provide: StsConfigLoader,
+        useFactory: authConfigLoaderFactory,
+        deps: [AuthService, Store],
+      },
+    }),
+    provideHttpClient(withInterceptors([httpErrorInterceptor, authInterceptor])),
     {provide: LOCALE_ID, useValue: 'da-DK'},
     DatePipe,
     DecimalPipe,
     ProcessValuePipe,
     {provide: DATE_PIPE_DEFAULT_OPTIONS, useValue: {dateFormat: Defaults.dateFormat}},
-    provideHttpClient(withInterceptorsFromDi(), withInterceptors([httpErrorInterceptor])),
   ],
 })
   .catch(err => console.error(err)));

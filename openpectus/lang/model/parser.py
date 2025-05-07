@@ -10,25 +10,27 @@ import openpectus.lang.model.ast as p
 logger = logging.getLogger(__name__)
 
 
-def create_method_parser(method: Method, uod_command_names: list[str] = []) -> PcodeParser:
+def create_method_parser(method: ParserMethod, uod_command_names: list[str] = []) -> PcodeParser:
+    """ Create the default parser that applies line ids to nodes. """
     return PcodeParser(id_generator=MethodLineIdGenerator(method), uod_command_names=uod_command_names)
 
 def create_inject_parser(uod_command_names: list[str] = []) -> PcodeParser:
+    """ Create a parser that applies negative ids to nodes. Used for injecting pcode into a method. """
     return PcodeParser(id_generator=NegativeIdGenerator(), uod_command_names=uod_command_names)
 
+
 @dataclass
-class MethodLine:
+class ParserMethodLine:
     id: str
     content: str
-    # consider MethodState here
 
 
-class Method:
-    empty: Method
+class ParserMethod:
+    empty: ParserMethod
 
-    def __init__(self, lines: list[MethodLine]):
+    def __init__(self, lines: list[ParserMethodLine]):
         self.version = 0
-        self.lines: list[MethodLine] = lines
+        self.lines: list[ParserMethodLine] = lines
         # TODO add version and author - we should keep a version number so we can easily detect
         # multiple concurrent editors and bail out quick in that case
 
@@ -37,18 +39,18 @@ class Method:
         return f'{self.__class__.__name__}(lines={lines})'
 
     @staticmethod
-    def create_empty() -> Method:
-        return Method(lines=[])
+    def create_empty() -> ParserMethod:
+        return ParserMethod(lines=[])
 
     def is_empty(self) -> bool:
         return self.lines == 0
 
     @staticmethod
-    def from_pcode(pcode: str) -> Method:
-        method = Method.create_empty()
+    def from_pcode(pcode: str) -> ParserMethod:
+        method = ParserMethod.create_empty()
         line_num: int = 1
         for line in pcode.splitlines():
-            method.lines.append(MethodLine(id=f"id_{line_num}", content=line))
+            method.lines.append(ParserMethodLine(id=f"id_{line_num}", content=line))
             line_num += 1
         return method
 
@@ -57,7 +59,7 @@ class Method:
         return pcode
 
 
-Method.empty = Method.create_empty()
+ParserMethod.empty = ParserMethod.create_empty()
 
 
 class IncrementalIdGenerator(NodeIdGenerator):
@@ -73,7 +75,7 @@ class IncrementalIdGenerator(NodeIdGenerator):
 
 class MethodLineIdGenerator(NodeIdGenerator):
     """ Generates node ids from line ids in source method """
-    def __init__(self, method: Method):
+    def __init__(self, method: ParserMethod):
         super().__init__()
         self.method = method
 
@@ -159,10 +161,10 @@ class PcodeParser:
         self.uod_command_names = uod_command_names
 
     def parse_pcode(self, pcode: str) -> p.ProgramNode:
-        method = Method.from_pcode(pcode)
+        method = ParserMethod.from_pcode(pcode)
         return self.parse_method(method)
 
-    def parse_method(self, method: Method) -> p.ProgramNode:  # noqa C901
+    def parse_method(self, method: ParserMethod) -> p.ProgramNode:  # noqa C901
         program = p.ProgramNode(position=Position(0, 0)).with_id(self.id_generator)
 
         # first parse all lines individually in one fast pass, ignoring indentation and parent
@@ -182,6 +184,7 @@ class PcodeParser:
             # incr_indent_allowed = prev_node is not None and isinstance(prev_node, p.NodeWithChildren)
             # decr_indent_allowed = parent_node.position.character > 0 and len(parent_node.children) > 0
             node_error = False
+            is_whitespace_node = isinstance(node, (p.BlankNode, p.CommentNode))
 
             if node.position.character == prev_indent:  # indentation unchanged
                 if increment_required:
@@ -196,7 +199,7 @@ class PcodeParser:
 
             elif node.position.character == prev_indent + 4:  # indentation increased one level
                 # TODO fail if not valid increment
-                if not increment_required:
+                if not increment_required and not is_whitespace_node:
                     node.indent_error = True
                     node_error = True
                 parent_node.append_child(node)
@@ -211,14 +214,15 @@ class PcodeParser:
                 node_error = True
 
             elif node.position.character < prev_indent:  # indentation decreased one or more levels
-                outdent_levels = int((prev_indent - node.position.character) / 4)
-                for _ in range(outdent_levels):
-                    if parent_node.parent is None:
-                        node_error = True
-                        node.indent_error = True
-                        break
-                    else:
-                        parent_node = parent_node.parent
+                if not is_whitespace_node:
+                    outdent_levels = int((prev_indent - node.position.character) / 4)
+                    for _ in range(outdent_levels):
+                        if parent_node.parent is None:
+                            node_error = True
+                            node.indent_error = True
+                            break
+                        else:
+                            parent_node = parent_node.parent
 
                 parent_node.append_child(node)
                 if isinstance(node, p.NodeWithChildren):
@@ -229,7 +233,8 @@ class PcodeParser:
 
             if not node_error:
                 prev_node = node
-                prev_indent = prev_node.position.character
+                if not is_whitespace_node:
+                    prev_indent = prev_node.position.character
 
         return program
 
@@ -370,6 +375,8 @@ class PcodeParser:
 
     # consider caching this, we only need to load once per process
     def _inspect_instruction_node_types(self) -> dict[str, type[p.Node]]:
+        """ Build 'instruction_name => node constructor' map based on Node sub classes
+        and their instruction_names class field. """
         import inspect
         map = {}
         for _, node_type in inspect.getmembers(p, inspect.isclass):

@@ -200,7 +200,7 @@ Wait: 0.99s
 
     def test_tag_pause(self):
         logging.getLogger("openpectus.engine.engine").setLevel(logging.WARNING)
-        runner = EngineTestRunner(create_test_uod, pcode="Wait: 10s")
+        runner = EngineTestRunner(create_test_uod, "Wait: 10s")
         with runner.run() as instance:
             e = instance.engine
             instance.start()
@@ -384,7 +384,6 @@ CmdWithRegexArgs: 2 L/s
             instance.start()
             flowrate = e.tags["CmdWithRegex_Flowrate"]  # [L/h]
 
-            instance.run_ticks(1)
             self.assertEqual(0.0, flowrate.get_value())
             instance.run_ticks(2)
             self.assertEqual(2.0, flowrate.get_value())  # 2 L/h is 2 L/h
@@ -402,7 +401,7 @@ Watch: Run Time > 0s
     0.5 Info: B
 """
         delta = 0.2
-        runner = EngineTestRunner(create_test_uod, pcode=code)
+        runner = EngineTestRunner(create_test_uod, code)
         with runner.run() as instance:
             instance.start()
             scope_time = instance.engine.tags[SystemTagName.SCOPE_TIME]

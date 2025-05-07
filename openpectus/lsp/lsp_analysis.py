@@ -12,7 +12,7 @@ from openpectus.lang.exec.analyzer import AnalyzerItem, SemanticCheckAnalyzer
 from openpectus.lang.exec.commands import Command, CommandCollection
 from openpectus.lang.exec.tags import TagValue, TagValueCollection
 import openpectus.lang.model.ast as p
-from openpectus.lang.model.parser import Method, create_method_parser, lsp_parse_line
+from openpectus.lang.model.parser import ParserMethod, create_method_parser, lsp_parse_line
 from openpectus.lsp.model import (
     CompletionItem, Diagnostics,
     DocumentSymbol, Position, Range,
@@ -131,7 +131,7 @@ def analyze(input: AnalysisInput, document: Document) -> AnalysisResult:
     t1 = time.perf_counter()
     logger.debug(f"Starting new analysis, ver: {document.version}")
     pcode = document.source
-    method = Method.from_pcode(pcode)
+    method = ParserMethod.from_pcode(pcode)
     parser = create_method_parser(method, uod_command_names=[])
     try:
         program = parser.parse_method(method)

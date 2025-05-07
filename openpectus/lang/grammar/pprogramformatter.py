@@ -1,7 +1,7 @@
 
 from io import StringIO
 import openpectus.lang.model.ast as p
-from openpectus.lang.model.parser import Method, create_method_parser
+from openpectus.lang.model.parser import ParserMethod, create_method_parser
 
 
 def print_program(program: p.ProgramNode,
@@ -16,14 +16,14 @@ def print_program(program: p.ProgramNode,
     out = ProgramFormatter(opts).format(program)
     print()
     print(out)
-
+    print()
 
 def print_parsed_program(pcode: str,
                          show_line_numbers: bool = False,
                          show_errors: bool = False,
                          show_blanks: bool = False):
     """ Parse pcode and print program to stdout using the provided options. """
-    method = Method.from_pcode(pcode)
+    method = ParserMethod.from_pcode(pcode)
     parser = create_method_parser(method)
     program = parser.parse_method(method)
     return print_program(program, show_line_numbers=show_line_numbers, show_errors=show_errors, show_blanks=show_blanks)
