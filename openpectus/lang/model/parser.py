@@ -189,7 +189,27 @@ class PcodeParser:
             node_error = False
             is_whitespace_node = isinstance(node, (p.BlankNode, p.CommentNode))
 
-            if node.position.character == prev_indent:  # indentation unchanged
+            if node.indent_error:
+                parent_node.append_child(node)
+                node_error = True
+                if isinstance(node, p.NodeWithChildren):
+                    parent_node = node
+                    increment_required = True
+                else:
+                    increment_required = False
+
+
+            elif node.position.character > prev_indent and not increment_required:
+                parent_node.append_child(node)
+                node.indent_error = True
+                node_error = True
+                if isinstance(node, p.NodeWithChildren):
+                    parent_node = node
+                    increment_required = True
+                else:
+                    increment_required = False
+
+            elif node.position.character == prev_indent:  # indentation unchanged
                 if increment_required:
                     # what to do here - the node is in error but the parent may also be
                     logger.error("Expected increment")

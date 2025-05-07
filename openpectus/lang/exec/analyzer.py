@@ -182,6 +182,35 @@ class InfiniteBlockCheckAnalyzer(AnalyzerVisitorBase):
         self.check_global_end_block(node)
         yield
 
+
+class IndentationCheckAnalyzer(AnalyzerVisitorBase):
+    """ Analyzer that checks indentation """
+
+    def create_item(self, node: p.Node):
+        return AnalyzerItem(
+            "InvalidIndentation",
+            "Invalid indentation",
+            node,
+            AnalyzerItemType.ERROR,
+            "This command cannot execute due to incorrect indentation.",
+            start=0,
+        )
+
+    def visit(self, node: p.Node):
+        import inspect
+        method_name = 'visit_' + type(node).__name__
+        visitor = getattr(self, method_name, self.generic_visit)
+        if node.indent_error:
+            self.add_item(self.create_item(node))
+        result = visitor(node)
+
+        if __debug__:
+            if not inspect.isgenerator(result):
+                raise TypeError("Visitor methods must be generators")
+
+        yield from result
+
+
 class WhitespaceCheckAnalyzer(AnalyzerVisitorBase):
     """ Fills in node.has_only_trailing_whitespace for whitespace nodes. This allows the interpreter to not advance
     over only white space/comments. This allows the use to edit these lines, e.g. append lines to a method while the
@@ -494,6 +523,7 @@ class SemanticCheckAnalyzer:
             ConditionCheckAnalyzer(tags),
             CommandCheckAnalyzer(commands),
             MacroCheckAnalyzer(),
+            IndentationCheckAnalyzer(),
             WhitespaceCheckAnalyzer(),
         ]
 
