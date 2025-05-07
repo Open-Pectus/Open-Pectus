@@ -27,7 +27,7 @@ class AnalyzerItem:
     def __init__(self,
                  id: str,
                  message: str,
-                 node: p.Node | None,
+                 node: p.Node | p.NodeWithChildren | None,
                  type: AnalyzerItemType,
                  description: str = "",
                  start: int | None = None,
@@ -47,6 +47,13 @@ class AnalyzerItem:
             self.range.start = node.position
             if node.threshold:
                 self.range.start.character += len(node.threshold_part) + 1
+            # Set the range to end at the end of line denoted by (character=0, line=i+1)
+            self.range.end.character = 0
+            self.range.end.line = self.range.start.line + 1
+            # If the node has children, mark until the end of the last child
+            if isinstance(node, p.NodeWithChildren):
+                if len(node.children):
+                    self.range.end.line = node.children[-1].position.line + 1
 
         # if start is given, modify default range start (keep line)
         if start is not None:
