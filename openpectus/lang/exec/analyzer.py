@@ -110,7 +110,7 @@ class UnreachableCodeCheckAnalyzer(AnalyzerVisitorBase):
                 if isinstance(child, (p.EndBlockNode, p.EndBlocksNode)):
                     has_end = True
                     continue
-                if has_end:
+                if has_end and not isinstance(child, p.BlankNode):
                     self.add_item(self.create_item(child))
         return super().visit_BlockNode(node)
 
