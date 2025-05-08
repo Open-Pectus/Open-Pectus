@@ -289,10 +289,7 @@ def starts_with_any(query: str, candidates: list[str]) -> bool:
 
 
 def completions(document: Document, position: Position, ignored_names, engine_id: str) -> list[CompletionItem]:
-    # Note: Returning a CompletionList with items does not work in the client for some reason. Only
-    # The array/list of CompletionItem is working in the client.
-    # Also consider the hook pylsp_completion_item_resolve. The spec has info about how this can be used to add
-    # more detail to the suggestions.
+    # Return a list of completion items because pylsp encapsulates it in a CompletionList for us
     try:
         analysis_input = create_analysis_input(engine_id)
     except Exception:
