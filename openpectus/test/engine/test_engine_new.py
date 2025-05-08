@@ -1,4 +1,3 @@
-import logging
 import time
 import unittest
 from typing import Any

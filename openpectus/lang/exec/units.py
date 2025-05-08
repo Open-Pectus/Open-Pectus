@@ -110,10 +110,10 @@ def add_unit(unit: str,
     # Unit defined in relation to an existing unit
     if quantity and unit_relation:
         assert quantity_relation is None, ("It is not possible to add a quantity relation when " +
-                                          "defining a new unit in relation to an existing unit.")
+                                           "defining a new unit in relation to an existing unit.")
         assert quantity in QUANTITY_PINT_MAP.keys(), f'Quantity "{quantity}" is not available.'
         assert "=" in unit_relation, (f'Unit relation must define an equality, but "{unit_relation}" ' +
-                                     'contains no equals sign (=).')
+                                      'contains no equals sign (=).')
         if unit in QUANTITY_UNIT_MAP[quantity]:
             logger.warning(f'Unit "{unit}" is already defined for quantity "{quantity}".')
         else:

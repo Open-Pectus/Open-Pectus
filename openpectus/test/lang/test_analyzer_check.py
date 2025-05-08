@@ -298,7 +298,7 @@ Block: A
 
         self.assertEqual(2, len(program.children))
         block_node = program.get_first_child(p.BlockNode)
-        assert block_node is not None 
+        assert block_node is not None
         blank_node = block_node.get_first_child(p.BlankNode)
         assert blank_node is not None
         comment_node = program.get_first_child(p.CommentNode)

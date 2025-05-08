@@ -100,7 +100,7 @@ class UnreachableCodeCheckAnalyzer(AnalyzerVisitorBase):
             "Unreachable code",
             node,
             AnalyzerItemType.WARNING,
-            "There is no path to this code."
+            "There is no path to this code.",
         )
 
     def visit_BlockNode(self, node: p.BlockNode):

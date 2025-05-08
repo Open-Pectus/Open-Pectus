@@ -4,7 +4,9 @@ import openpectus.lang.model.ast as p
 from openpectus.lang.model.parser import ParserMethod, create_method_parser
 
 
-def print_program(program: p.ProgramNode, show_line_numbers: bool = False, show_errors: bool = False,
+def print_program(program: p.ProgramNode,
+                  show_line_numbers: bool = False,
+                  show_errors: bool = False,
                   show_blanks: bool = False):
     """ Print program to stdout using the provided options. """
     opts = FormattingOptions()
@@ -16,7 +18,10 @@ def print_program(program: p.ProgramNode, show_line_numbers: bool = False, show_
     print(out)
     print()
 
-def print_parsed_program(pcode: str, show_line_numbers: bool = False, show_errors: bool = False, show_blanks: bool = False):
+def print_parsed_program(pcode: str,
+                         show_line_numbers: bool = False,
+                         show_errors: bool = False,
+                         show_blanks: bool = False):
     """ Parse pcode and print program to stdout using the provided options. """
     method = ParserMethod.from_pcode(pcode)
     parser = create_method_parser(method)
