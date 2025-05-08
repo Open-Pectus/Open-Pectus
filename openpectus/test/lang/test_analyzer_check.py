@@ -308,6 +308,60 @@ Block: A
         self.assertEqual(True, blank_node.has_only_trailing_whitespace)
         self.assertEqual(True, comment_node.has_only_trailing_whitespace)
 
+
+class IndentationCheckAnalyzerTest(unittest.TestCase):
+    def test_incorrect_indented_at_start(self):
+        program = build_program("""
+ Mark: A
+""")
+        analyzer = IndentationCheckAnalyzer()
+        analyzer.analyze(program)
+        self.assertEqual(1, len(analyzer.items))
+
+    def test_indented_at_start(self):
+        program = build_program("""
+    Mark: A
+""")
+        analyzer = IndentationCheckAnalyzer()
+        analyzer.analyze(program)
+        self.assertEqual(1, len(analyzer.items))
+
+    def test_block_incorrect_body_ok(self):
+        program = build_program("""
+  Block: A
+    Mark: B
+    Mark: C
+    # Comment in block
+
+# Comment
+Mark: D
+""")
+        analyzer = IndentationCheckAnalyzer()
+        analyzer.analyze(program)
+        print(">"*30)
+        for item in analyzer.items:
+            print(item)
+        self.assertEqual(1, len(analyzer.items))
+        item = analyzer.items[0]
+        self.assertEqual(item.range.start.line, 1)
+        self.assertEqual(item.range.end.line, 4)
+
+    def test_block_correct_body_partly_ok(self):
+        program = build_program("""
+Block: A
+     Mark: B
+    Mark: C
+""")
+        analyzer = IndentationCheckAnalyzer()
+        analyzer.analyze(program)
+        for item in analyzer.items:
+            print(item)
+        self.assertEqual(1, len(analyzer.items))
+        item = analyzer.items[0]
+        self.assertEqual(item.range.start.line, 2)
+        self.assertEqual(item.range.end.line, 3)
+
+
 class UnreachableCodeCheckAnalyzerTest(unittest.TestCase):
     def test_UnreachableCodeVisitor(self):
         program = build_program("""
