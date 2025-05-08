@@ -5,6 +5,7 @@ from openpectus.lang.exec.analyzer import (
     SemanticCheckAnalyzer,
     UnreachableCodeCheckAnalyzer,
     InfiniteBlockCheckAnalyzer,
+    IndentationCheckAnalyzer,
     ConditionCheckAnalyzer,
     CommandCheckAnalyzer,
     WhitespaceCheckAnalyzer,

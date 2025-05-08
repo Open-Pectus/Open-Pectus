@@ -200,7 +200,7 @@ class IndentationCheckAnalyzer(AnalyzerVisitorBase):
         import inspect
         method_name = 'visit_' + type(node).__name__
         visitor = getattr(self, method_name, self.generic_visit)
-        if node.indent_error:
+        if node.indent_error and not isinstance(node, p.WhitespaceNode):
             self.add_item(self.create_item(node))
         result = visitor(node)
 
