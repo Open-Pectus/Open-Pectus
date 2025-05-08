@@ -26,6 +26,7 @@ Ecosystem
 
 Frontend Setup
 --------------
+.. _download node as a standalone binary: https://nodejs.org/en/download
 Prerequisites: Node 22 (LTS) must be installed.
 
 Follow the steps below to install Node 22 on Ubuntu using Node Version Manager.
@@ -35,6 +36,12 @@ Follow the steps below to install Node 22 on Ubuntu using Node Version Manager.
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
     source ~/.bashrc
     nvm install v22.11.0
+
+On Windows it is possible to `download node as a standalone binary`_. Extract the ZIP folder, navigate to the binaries and add the folder to PATH:
+
+.. code-block:: console
+
+   SET PATH=%PATH%;C:\Users\User\Downloads\node-vxx.yy.zz-win-x64\node-vxx.yy.z-win-x64
 
 Follow the steps below to install packages and build the frontend.
 
