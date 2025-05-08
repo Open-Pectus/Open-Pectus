@@ -187,7 +187,7 @@ class PcodeParser:
             # incr_indent_allowed = prev_node is not None and isinstance(prev_node, p.NodeWithChildren)
             # decr_indent_allowed = parent_node.position.character > 0 and len(parent_node.children) > 0
             node_error = False
-            is_whitespace_node = isinstance(node, (p.BlankNode, p.CommentNode))
+            is_whitespace_node = isinstance(node, p.WhitespaceNode)
 
             if node.indent_error:
                 parent_node.append_child(node)
@@ -220,7 +220,7 @@ class PcodeParser:
                 else:
                     increment_required = False
 
-            elif node.position.character == prev_indent + 4:  # indentation increased one level
+            elif node.position.character == parent_node.position.character + 4 and not isinstance(parent_node, p.ProgramNode):  # indentation increased one level
                 # TODO fail if not valid increment
                 if not increment_required and not is_whitespace_node:
                     node.indent_error = True
@@ -254,10 +254,16 @@ class PcodeParser:
                 else:
                     increment_required = False
 
-            if not node_error:
+            else:
+                parent_node.append_child(node)
+
+            if not node_error:# and not is_whitespace_node:
                 prev_node = node
                 if not is_whitespace_node:
                     prev_indent = prev_node.position.character
+            
+            if increment_required and not isinstance(node, (p.ProgramNode, p.WatchNode, p.AlarmNode, p.MacroNode, p.BlockNode,)) and not node_error:
+                increment_required = False
 
         return program
 
@@ -265,11 +271,11 @@ class PcodeParser:
         line_stripped = line.strip()
         if line_stripped == "":
             return p.BlankNode(
-                position=Position(line=line_no, character=0)
+                position=Position(line=line_no, character=len(line))
             ).with_id(self.id_generator)
         elif line_stripped.startswith("#"):
             return p.CommentNode(
-                position=Position(line=line_no, character=0)
+                position=Position(line=line_no, character=line.index("#"))
             ).with_id(self.id_generator).with_line(line)
 
         match = Grammar.instruction_line_pattern.match(line)

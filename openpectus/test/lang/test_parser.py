@@ -52,7 +52,7 @@ class TestRegexes(unittest.TestCase):
         self.assertIsNone(r.match("1foo"))
 
     def test_argument(self):
-        r = re.compile(r'(: (?P<argument>[^#]+))?')
+        r = re.compile(r'((?P<has_argument>:) (?P<argument>[^#]+))?')
         self.assertEqual(r.pattern, Grammar.argument_re)
 
         m = r.match(": bar 27 : ")
@@ -60,7 +60,7 @@ class TestRegexes(unittest.TestCase):
         self.assertEqual("bar 27 : ", m.groupdict()['argument'])
 
     def test_instruction_argument(self):
-        r = re.compile(r'(?P<instruction_name>\b[a-zA-Z_][^:#]*)(: (?P<argument>[^#]+))?')
+        r = re.compile(r'(?P<instruction_name>\b[a-zA-Z_][^:#]*)((?P<has_argument>:) (?P<argument>[^#]+))?')
         self.assertEqual(r.pattern, Grammar.instruction_re + Grammar.argument_re)
 
         m = r.match("Foo: bar 27 :")
@@ -175,7 +175,10 @@ Block: A
 
         program = parse_program(code)
         block = program.get_first_child(p.BlankNode)
-        assert block is not None
+        self.assertIsNotNone(block)
+        self.assertIsInstance(program.children[1], p.BlockNode)
+        assert isinstance(program.children[1], p.BlockNode)
+        self.assertIsInstance(program.children[1].children[0], p.MarkNode)
 
     def test_parse_block_w_blank_1(self):
         code = """\
