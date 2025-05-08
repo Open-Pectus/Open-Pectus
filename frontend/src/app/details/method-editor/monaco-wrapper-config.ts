@@ -22,10 +22,11 @@ export class MonacoWrapperConfig {
             'editor.minimap': {
               enabled: UtilMethods.isDesktop,
             },
-            'editor.lightbulb.enabled': 'off',
+            'editor.lightbulb.enabled': true,
             'editor.experimental.asyncTokenization': true,
             'editor.foldingStrategy': 'indentation',
-            'editor.wordBasedSuggestions': 'off',
+            'editor.wordBasedSuggestions': false,
+            'editor.codeLens': false,
             // "editor.quickSuggestions": false
           }),
         },
