@@ -196,7 +196,7 @@ class PcodeParser:
                     parent_node = node
                     increment_required = True
                 else:
-                    increment_required = False
+                    pass#increment_required = False
 
 
             elif node.position.character > prev_indent and not increment_required:
