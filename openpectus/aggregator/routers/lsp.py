@@ -11,7 +11,7 @@ from pylsp.python_lsp import PythonLSPServer
 
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["lsp"], include_in_schema=False)
+router = APIRouter(tags=["lsp"], prefix="/lsp", include_in_schema=True)
 
 
 def get_registered_engine_data_or_fail(engine_id: str, agg: Aggregator) -> Mdl.EngineData:
@@ -21,7 +21,7 @@ def get_registered_engine_data_or_fail(engine_id: str, agg: Aggregator) -> Mdl.E
     return engine_data
 
 
-@router.get('/lsp/uod/{engine_id}', response_model_exclude_none=True)
+@router.get('/engine/{engine_id}/uod_definition', response_model_exclude_none=True)
 def get_uod_info(
         engine_id: str,
         response: Response,
@@ -35,7 +35,7 @@ def get_uod_info(
     return Dto.UodDefinition.from_model(uod_definition)
 
 
-@router.get('/uod/{engine_id}/pcode.tmLanguage.json', response_model_exclude_none=True)
+@router.get('/engine/{engine_id}/pcode.tmLanguage.json', response_model_exclude_none=True)
 def get_pcode_tm_grammar(engine_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)):
     engine_data = get_registered_engine_data_or_fail(engine_id, agg)
     if engine_data.uod_definition is None:
@@ -75,7 +75,7 @@ def get_pcode_tm_grammar(engine_id: str, agg: Aggregator = Depends(agg_deps.get_
     }
 
 
-@router.websocket("/lsp")
+@router.websocket("/websocket")
 async def lsp_server_endpoint(websocket: WebSocket):
     await websocket.accept()
     loop = asyncio.get_event_loop()

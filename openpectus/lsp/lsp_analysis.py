@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 @functools.cache
 def fetch_uod_info(engine_id: str) -> Dto.UodDefinition | None:
     from openpectus.lsp.config import aggregator_url
-    aggregator_endpoint_url = f"{aggregator_url}/lsp/uod/{engine_id}"
+    aggregator_endpoint_url = f"{aggregator_url}/api/lsp/engine/{engine_id}/uod_definition"
     logger.info(f"Fetching uod definition, {aggregator_endpoint_url=}")
     t1 = time.perf_counter()
     try:

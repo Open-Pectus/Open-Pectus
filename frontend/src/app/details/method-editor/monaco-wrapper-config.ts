@@ -67,7 +67,7 @@ export class MonacoWrapperConfig {
               }],
             },
           )],
-          ['./pcode.tmLanguage.json', new URL(`/uod/${unitId}/pcode.tmLanguage.json`, window.location.origin)],
+          ['./pcode.tmLanguage.json', new URL(`/api/lsp/engine/${unitId}/pcode.tmLanguage.json`, window.location.origin)],
         ]),
       }],
       editorAppConfig: {
@@ -90,7 +90,7 @@ export class MonacoWrapperConfig {
           connection: {
             options: {
               $type: 'WebSocketUrl',
-              url: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/lsp`,
+              url: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/lsp/websocket`,
               // startOptions: {
               //   onCall: () => {
               //     console.log('Connected to socket.');

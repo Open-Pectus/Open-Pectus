@@ -1429,6 +1429,88 @@
         }
       }
     },
+    "/api/lsp/engine/{engine_id}/uod_definition": {
+      "get": {
+        "tags": [
+          "lsp"
+        ],
+        "summary": "Get Uod Info",
+        "operationId": "get_uod_info",
+        "parameters": [
+          {
+            "name": "engine_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Engine Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UodDefinition"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lsp/engine/{engine_id}/pcode.tmLanguage.json": {
+      "get": {
+        "tags": [
+          "lsp"
+        ],
+        "summary": "Get Pcode Tm Grammar",
+        "operationId": "get_pcode_tm_grammar",
+        "parameters": [
+          {
+            "name": "engine_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Engine Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/config": {
       "get": {
         "tags": [
@@ -1677,6 +1759,30 @@
           "git_sha"
         ],
         "title": "BuildInfo"
+      },
+      "CommandDefinition": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "validator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validator"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CommandDefinition"
       },
       "CommandExample": {
         "properties": {
@@ -2640,6 +2746,30 @@
         ],
         "title": "SystemStateEnum"
       },
+      "TagDefinition": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "TagDefinition"
+      },
       "TagDirection": {
         "type": "string",
         "enum": [
@@ -2650,6 +2780,38 @@
         ],
         "title": "TagDirection",
         "description": "Specifies whether a tag is read from or written to hardware and whether is can be changed in UI.\n\nDirection of the tag is in relation to the physical IO. Sensors are regarded as inputs and\nactuators as outputs. Derived values are regarded as NA."
+      },
+      "UodDefinition": {
+        "properties": {
+          "commands": {
+            "items": {
+              "$ref": "#/components/schemas/CommandDefinition"
+            },
+            "type": "array",
+            "title": "Commands"
+          },
+          "system_commands": {
+            "items": {
+              "$ref": "#/components/schemas/CommandDefinition"
+            },
+            "type": "array",
+            "title": "System Commands"
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/TagDefinition"
+            },
+            "type": "array",
+            "title": "Tags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "commands",
+          "system_commands",
+          "tags"
+        ],
+        "title": "UodDefinition"
       },
       "UserRole": {
         "type": "string",
