@@ -310,7 +310,7 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
 
         if not self.tags.has(tag_name):
             
-            if len(tag_name) > 2:
+            if len(tag_name) > 2 and self.tags.names:
                 similarity = {tag: ratio(tag_name, tag) for tag in self.tags.names}
                 most_similar_tag = max(similarity, key=similarity.get) # type: ignore
                 if similarity[most_similar_tag] > 0.7:
@@ -426,7 +426,7 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
         name = node.instruction_name
 
         if not self.commands.has(name):
-            if len(name) > 2:
+            if len(name) > 2 and self.commands.names:
                 similarity = {command: ratio(name, command) for command in self.commands.names}
                 most_similar_command = max(similarity, key=similarity.get) # type: ignore
                 if similarity[most_similar_command] > 0.7:
