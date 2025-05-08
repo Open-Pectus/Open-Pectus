@@ -52,8 +52,13 @@ class AnalyzerItem:
             self.range.end.line = self.range.start.line + 1
             # If the node has children, mark until the end of the last child
             if isinstance(node, p.NodeWithChildren):
+                last_line_not_whitespace = self.range.start.line + 1
+                for child in reversed(node.children):
+                    if not isinstance(child, p.WhitespaceNode):
+                        last_line_not_whitespace = child.position.line
+                        break
                 if len(node.children):
-                    self.range.end.line = node.children[-1].position.line + 1
+                    self.range.end.line = last_line_not_whitespace + 1
 
         # if start is given, modify default range start (keep line)
         if start is not None:
