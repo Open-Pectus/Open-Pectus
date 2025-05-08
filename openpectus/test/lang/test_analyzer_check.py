@@ -447,6 +447,16 @@ Block: B
         sa.analyze(program)
         self.assertEqual(1, len(sa.items))
 
+    def test_end_block_after_not_indented_comment(self):
+        program = build_program("""
+Block: A
+    Mark: B
+# Comment in block
+    End block
+""")
+        sa = InfiniteBlockCheckAnalyzer()
+        sa.analyze(program)
+        self.assertEqual(0, len(sa.items))
 
 class SemanticCheckAnalyzerTest(unittest.TestCase):
     def test_basic(self):
