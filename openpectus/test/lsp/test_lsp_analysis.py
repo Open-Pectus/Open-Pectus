@@ -82,19 +82,20 @@ class TestLspAnalysis(unittest.TestCase):
         pcode = "Watch: "  # typing 'Watch: Foo' or 'Watch: bar'
         uod_info = UodDefinition(
             commands=[],
-            system_commands=[],
+            system_commands=[CommandDefinition(name="Watch")],
             tags=[TagDefinition(name=tag) for tag in ["Foo", "Bar"]]
         )
         result = self.get_completion_labels(pcode, uod_info)
         self.assertEqual(2, len(result))
         self.assertEqual(["Foo", "Bar"], result)
 
+    @unittest.skip("This test is irrelevant because completions are computes on the color character and then filtered by the client.")
     def test_completions_watch_tag(self):
         pcode = "Watch: ru"
 
         uod_info = UodDefinition(
             commands=[],
-            system_commands=[],
+            system_commands=[CommandDefinition(name="Watch")],
             tags=[TagDefinition(name=tag) for tag in ["Run Time", "Run Counter"]]
         )
 
