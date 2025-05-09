@@ -46,8 +46,7 @@ class AggregatorServer:
         _ = AggregatorMessageHandlers(self.aggregator)
         self.shutdown_callback = shutdown_cb
         import openpectus.lsp.config as config
-        # http (not https) is OK because the URL is only used internally by the LSP server
-        config.aggregator_url = f"http://{self.host}:{self.port}"
+        config.aggregator = self.aggregator
         self.setup_fastapi([self.dispatcher.router, self.publisher.router, version.router])
         self.init_db()
 

@@ -2,7 +2,6 @@ from __future__ import annotations
 import functools
 import logging
 import time
-import httpx
 
 from pylsp.workspace import Document
 from pylsp.lsp import DiagnosticSeverity, SymbolKind, CompletionItemKind
@@ -19,44 +18,29 @@ from openpectus.lsp.model import (
     get_item_range, get_item_severity
 )
 
-import openpectus.aggregator.routers.dto as Dto
+import openpectus.protocol.models as ProMdl
 
 
 logger = logging.getLogger(__name__)
 
 @functools.cache
-def fetch_uod_info(engine_id: str) -> Dto.UodDefinition | None:
-    from openpectus.lsp.config import aggregator_url
-    aggregator_endpoint_url = f"{aggregator_url}/api/lsp/engine/{engine_id}/uod_definition"
-    logger.info(f"Fetching uod definition, {aggregator_endpoint_url=}")
-    t1 = time.perf_counter()
-    try:
-        response = httpx.get(aggregator_endpoint_url)
-        if response.status_code == 200:
-            result = response.json()
-            uod_def = Dto.UodDefinition(**result)
-            dt = time.perf_counter() - t1
-            logger.info(f"Fetched uod_info, {engine_id=}, duration: {dt:0.2f}s")
-            logger.info(f"{uod_def.tags=}")
-            logger.info(f"{uod_def.system_commands=}")
-            logger.info(f"{uod_def.commands=}")
-            return uod_def
-    except Exception:
-        logger.error("Exception fetching UodDefinition", exc_info=True)
+def fetch_uod_info(engine_id: str) -> ProMdl.UodDefinition | None:
+    from openpectus.lsp.config import aggregator
 
-    logger.error("uod info is not available")
-    return Dto.UodDefinition(
-        commands=[],
-        system_commands=[],
-        tags=[Dto.TagDefinition(name="Foo")]
-    )
+    if not aggregator:
+        return None
+    engine_data = aggregator.get_registered_engine_data(engine_id)
+    if not engine_data:
+        return None
+
+    return engine_data.uod_definition
 
 
-def build_tags(uod_def: Dto.UodDefinition) -> TagValueCollection:
+def build_tags(uod_def: ProMdl.UodDefinition) -> TagValueCollection:
     return TagValueCollection([TagValue(name=t.name, unit=t.unit) for t in uod_def.tags])
 
 
-def build_commands(uod_def: Dto.UodDefinition) -> CommandCollection:
+def build_commands(uod_def: ProMdl.UodDefinition) -> CommandCollection:
     cmds = []
     for c_def in uod_def.commands + uod_def.system_commands:
         try:
