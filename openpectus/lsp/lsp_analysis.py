@@ -326,49 +326,85 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
         # Check if argument
         start = line.index(result.argument)
         end = start + len(result.argument) - 1
-        if start <= position["character"] <= end:
-            arg_parser = analysis_input.commands.get(result.instruction_name).arg_parser
-            if arg_parser:
-                units = arg_parser.get_units()
-                if len(units) == 1:
+        arg_parser = analysis_input.commands.get(result.instruction_name).arg_parser
+        if start <= position["character"] <= end and arg_parser:
+            units = arg_parser.get_units()
+            units_str = ", ".join(units)
+            if len(units) == 1:
+                return Hover(
+                    contents=MarkupContent(
+                        kind="markdown",
+                        value=f"Specify a value with unit '{units_str}'.",
+                    )
+                )
+            elif len(units) > 1:
+                return Hover(
+                    contents=MarkupContent(
+                        kind="markdown",
+                        value=f"Specify a value with one of the following units: {units_str}.",
+                    )
+                )
+            additive_options = arg_parser.get_additive_options()
+            exclusive_options = arg_parser.get_exclusive_options()
+            if additive_options and not exclusive_options:
+                options_str = ", ".join(additive_options)
+                return Hover(
+                    contents=MarkupContent(
+                        kind="markdown",
+                        value=f"Specify one or more (separate with +) of the following options: {options_str}.",
+                    )
+                )
+            elif not additive_options and exclusive_options:
+                options_str = ", ".join(exclusive_options)
+                return Hover(
+                    contents=MarkupContent(
+                        kind="markdown",
+                        value=f"Specify one of the following options: {options_str}",
+                    )
+                )
+            elif additive_options and exclusive_options:
+                options_str = ", ".join(additive_options+exclusive_options)
+                return Hover(
+                    contents=MarkupContent(
+                        kind="markdown",
+                        value=f"Specify one or possibly more of the following options: {options_str}.",
+                    )
+                )
+        # Check if condition
+        pcode_parser = PcodeParser()
+        node = pcode_parser._parse_line(line, 0)
+        if isinstance(node, p.NodeWithCondition) and node.condition:
+            unit_options = units_compaible_with_tag(analysis_input, node.condition.lhs)
+            unit_options_str = ", ".join(unit_options)
+            if unit_options_str and node.condition.lhs_range.start.character <= position["character"] <= node.condition.lhs_range.end.character:
+                return Hover(
+                    contents=MarkupContent(
+                        kind="markdown",
+                        value=f"Tag '{node.condition.lhs}' can be compared to the following unit{'s' if len(unit_options) > 1 else ''}: {unit_options_str}.",
+                    )
+                )
+
+            if node.condition.op_range.start.character <= position["character"] <= node.condition.op_range.end.character:
+                return Hover(
+                    contents=MarkupContent(
+                        kind="markdown",
+                        value=operator_descriptions[node.condition.op],
+                    )
+                )
+
+            if node.condition.rhs_range.start.character <= position["character"] <= node.condition.rhs_range.end.character:
+                if len(unit_options) == 1:
                     return Hover(
                         contents=MarkupContent(
                             kind="markdown",
-                            value=f"Specify a value with unit '{units[0]}'.",
+                            value=f"Specify a value with unit '{unit_options_str}'.",
                         )
                     )
-                elif len(units) > 1:
-                    unit_str = ", ".join(units)
+                elif len(unit_options) > 1:
                     return Hover(
                         contents=MarkupContent(
                             kind="markdown",
-                            value=f"Specify a value with one of the following units: {unit_str}.",
-                        )
-                    )
-                additive_options = arg_parser.get_additive_options()
-                exclusive_options = arg_parser.get_exclusive_options()
-                if additive_options and not exclusive_options:
-                    options_str = ", ".join(additive_options)
-                    return Hover(
-                        contents=MarkupContent(
-                            kind="markdown",
-                            value=f"Specify one or more (separate with +) of the following options: {options_str}.",
-                        )
-                    )
-                elif not additive_options and exclusive_options:
-                    options_str = ", ".join(exclusive_options)
-                    return Hover(
-                        contents=MarkupContent(
-                            kind="markdown",
-                            value=f"Specify one of the following options: {options_str}",
-                        )
-                    )
-                elif additive_options and exclusive_options:
-                    options_str = ", ".join(additive_options+exclusive_options)
-                    return Hover(
-                        contents=MarkupContent(
-                            kind="markdown",
-                            value=f"Specify one or possibly more of the following options: {options_str}.",
+                            value=f"Specify a value with one of the following units: {unit_options_str}.",
                         )
                     )
 
