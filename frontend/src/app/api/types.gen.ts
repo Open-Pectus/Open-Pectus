@@ -23,11 +23,6 @@ export type BuildInfo = {
     git_sha: string;
 };
 
-export type CommandDefinition = {
-    name: string;
-    validator?: (string | null);
-};
-
 export type CommandExample = {
     name: string;
     example: string;
@@ -250,11 +245,6 @@ export type SubPlot = {
 
 export type SystemStateEnum = 'Running' | 'Paused' | 'Holding' | 'Waiting' | 'Stopped' | 'Restarting';
 
-export type TagDefinition = {
-    name: string;
-    unit?: (string | null);
-};
-
 /**
  * Specifies whether a tag is read from or written to hardware and whether is can be changed in UI.
  *
@@ -262,12 +252,6 @@ export type TagDefinition = {
  * actuators as outputs. Derived values are regarded as NA.
  */
 export type TagDirection = 'input' | 'output' | 'na' | 'unspecified';
-
-export type UodDefinition = {
-    commands: Array<CommandDefinition>;
-    system_commands: Array<CommandDefinition>;
-    tags: Array<TagDefinition>;
-};
 
 export type UserRole = 'viewer' | 'admin';
 
@@ -288,12 +272,6 @@ export type ExposePubsubTopicsData = {
 export type ExposePubsubTopicsResponse = (unknown);
 
 export type TriggerPublishMswResponse = (unknown);
-
-export type GetUodInfoData = {
-    engineId: string;
-};
-
-export type GetUodInfoResponse = (UodDefinition);
 
 export type GetPcodeTmGrammarData = {
     engineId: string;

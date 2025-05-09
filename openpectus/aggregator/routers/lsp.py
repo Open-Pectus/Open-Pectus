@@ -21,20 +21,6 @@ def get_registered_engine_data_or_fail(engine_id: str, agg: Aggregator) -> Mdl.E
     return engine_data
 
 
-@router.get('/engine/{engine_id}/uod_definition', response_model_exclude_none=True)
-def get_uod_info(
-        engine_id: str,
-        response: Response,
-        agg: Aggregator = Depends(agg_deps.get_aggregator)
-        ) -> Dto.UodDefinition:
-    response.headers["Cache-Control"] = "no-store"
-    engine_data = get_registered_engine_data_or_fail(engine_id, agg)
-    uod_definition = engine_data.uod_definition
-    if uod_definition is None:
-        raise HTTPException(status_code=HTTP_404_NOT_FOUND)
-    return Dto.UodDefinition.from_model(uod_definition)
-
-
 @router.get('/engine/{engine_id}/pcode.tmLanguage.json', response_model_exclude_none=True)
 def get_pcode_tm_grammar(engine_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)):
     engine_data = get_registered_engine_data_or_fail(engine_id, agg)
