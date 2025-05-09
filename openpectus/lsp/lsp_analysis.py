@@ -411,14 +411,22 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                 # Complete operator
                 elif analysis_input.tags.has(query.split(":")[1].strip()):
                     prefix = "" if query.endswith(" ") else " "
+                    operators = [
+                        ("<", "less than"),
+                        ("<=", "less than or equal"),
+                        (">", "greater than"),
+                        (">=", "greater than or equal"),
+                        ("==", "equal"),
+                        ("!=", "not equal"),
+                    ]
                     return [
                         CompletionItem(
-                            label=operator,
+                            label=f"{operator} ({operator_description})",
                             insertText=prefix+operator,
                             kind=CompletionItemKind.Enum,
                             preselect=False,
                         )
-                        for operator in Grammar.operators
+                        for operator, operator_description in operators
                     ]
                 # Complete unit
                 elif contains_any(query.strip(), Grammar.operators):
