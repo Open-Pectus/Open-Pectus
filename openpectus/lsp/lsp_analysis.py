@@ -26,10 +26,20 @@ import openpectus.aggregator.routers.dto as Dto
 
 logger = logging.getLogger(__name__)
 
+operator_descriptions = {
+    "<": "less than",
+    "<=": "less than or equal",
+    ">": "greater than",
+    ">=": "greater than or equal",
+    "==": "equal",
+    "=": "equal",
+    "!=": "not equal",
+}
+
 @functools.cache
 def fetch_uod_info(engine_id: str) -> Dto.UodDefinition | None:
     from openpectus.lsp.config import aggregator_url
-    aggregator_endpoint_url = f"{aggregator_url}/lsp/uod/{engine_id}"
+    aggregator_endpoint_url = f"{aggregator_url}/api/lsp/engine/{engine_id}/uod_definition"
     logger.info(f"Fetching uod definition, {aggregator_endpoint_url=}")
     t1 = time.perf_counter()
     try:
@@ -411,14 +421,6 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                 # Complete operator
                 elif analysis_input.tags.has(query.split(":")[1].strip()):
                     prefix = "" if query.endswith(" ") else " "
-                    operators = [
-                        ("<", "less than"),
-                        ("<=", "less than or equal"),
-                        (">", "greater than"),
-                        (">=", "greater than or equal"),
-                        ("==", "equal"),
-                        ("!=", "not equal"),
-                    ]
                     return [
                         CompletionItem(
                             label=f"{operator} ({operator_description})",
@@ -426,7 +428,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                             kind=CompletionItemKind.Enum,
                             preselect=False,
                         )
-                        for operator, operator_description in operators
+                        for operator, operator_description in operator_descriptions.items()
                     ]
                 # Complete unit
                 elif contains_any(query.strip(), Grammar.operators):
