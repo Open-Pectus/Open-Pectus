@@ -1,26 +1,28 @@
-from argparse import ArgumentParser, BooleanOptionalAction
+import asyncio
+import logging
+import logging.config
+import os
 import threading
 import time
-import os
-import asyncio
-import logging.config
+from argparse import ArgumentParser, BooleanOptionalAction
 from logging.handlers import RotatingFileHandler
 
-import httpx
-
-from openpectus.engine.configuration import demo_uod
-import openpectus.aggregator.main
 import alembic.command
 import alembic.config
+import httpx
+
+import openpectus.aggregator.main
 from openpectus.aggregator.aggregator_server import AggregatorServer
-from openpectus.engine.main import main_async, get_arg_parser, logging
+from openpectus.engine.configuration import demo_uod
+from openpectus.engine.main import main_async
+from openpectus.engine.main import get_arg_parser as engine_arg_parser
 
 def aggregator_task(port: int):
     """ Adapted from main method in openpectus.aggregator.main """
 
     # Initialize database
     alembic_ini_file_path = os.path.join(os.path.dirname(openpectus.aggregator.main.__file__), "alembic.ini")
-    local_aggregator_db_filepath = os.path.join(os.path.dirname(openpectus.aggregator.main.__file__), "lsp_db.sqlite")
+    local_aggregator_db_filepath = os.path.join(os.path.dirname(__file__), "lsp_db.sqlite3")
     alembic_config = alembic.config.Config(alembic_ini_file_path)
     alembic_config.set_main_option("sqlalchemy.url", f"sqlite:///{local_aggregator_db_filepath}")
     alembic.command.upgrade(alembic_config, "head")
@@ -60,7 +62,7 @@ def engine_task(port: int, uod_file_path: str, console_log: bool = False):
             logging.getLogger(logger).addHandler(logging.StreamHandler())
 
     # Set engine arguments
-    args = get_arg_parser().parse_args("")  # Don't parse from sys.argv
+    args = engine_arg_parser().parse_args("")  # Don't parse from sys.argv
     args.aggregator_port = port  # Set proper aggregator port
     args.uod = uod_file_path  # Set UOD file path
 
