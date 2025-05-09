@@ -1,1 +1,2 @@
-aggregator_url: str = ""
+from openpectus.aggregator.aggregator import Aggregator
+aggregator: Aggregator | None = None

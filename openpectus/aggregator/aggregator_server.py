@@ -46,6 +46,8 @@ class AggregatorServer:
         _ = AggregatorMessageHandlers(self.aggregator)
         self.shutdown_callback = shutdown_cb
         self.setup_fastapi([self.dispatcher.router, self.publisher.router, version.router, lsp.router])
+        import openpectus.lsp.config as config
+        config.aggregator = self.aggregator
         self.init_db()
 
     def __str__(self) -> str:
