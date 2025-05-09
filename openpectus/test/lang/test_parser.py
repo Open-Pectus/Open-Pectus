@@ -68,6 +68,21 @@ class TestRegexes(unittest.TestCase):
         self.assertEqual("Foo", m.groupdict()['instruction_name'])
         self.assertEqual("bar 27 :", m.groupdict()['argument'])
 
+    def test_condition_unit(self):
+        r = re.compile(r'(?P<unit>[a-zA-Z%\/]+)')
+        self.assertEqual(r.pattern, Grammar.unit_re)
+        
+        m = r.match("%")
+        assert m is not None
+        self.assertEqual("%", m.groupdict()["unit"])
+        
+        m = r.match("degC")
+        assert m is not None
+        self.assertEqual("degC", m.groupdict()["unit"])
+        
+        m = r.match("L/h")
+        assert m is not None
+        self.assertEqual("L/h", m.groupdict()["unit"])
 
 # necessary to support python 3.11 in assert_line_parses_as_node_type below
 TNode = TypeVar("TNode", bound=p.Node)

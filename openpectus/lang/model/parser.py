@@ -123,12 +123,12 @@ class Grammar:
     operators_2char = ['<=', '>=', '==', '!=']
     # condition_op_re = "\\s*(?P<op>" + "|".join(op for op in operators) + ")\\s*"
 
-    float_re = r'[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?'
-    unit_re = r'[a-zA-Z]+|%|/'
+    float_re = r'(?P<float>[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?)'
+    unit_re = r'(?P<unit>[a-zA-Z%\/]+)'
 
-    condition_rhs_re = '^' + '(?P<float>' + float_re + ')' + '\\s*' + '(?P<unit>' + unit_re + ')' + '$'
+    condition_rhs_re = '^' + float_re + '\\s*' + unit_re + '$'
     condition_rhs_pattern = re.compile(condition_rhs_re)
-    condition_rhs_no_unit_re = '^' + '(?P<float>' + float_re + ')' + '\\s*$'
+    condition_rhs_no_unit_re = '^' + float_re + '\\s*$'
     condition_rhs_no_unit_pattern = re.compile(condition_rhs_no_unit_re)
 
 
