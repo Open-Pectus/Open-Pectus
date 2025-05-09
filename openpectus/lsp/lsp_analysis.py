@@ -400,30 +400,25 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
                     )
                 )
 
-            if node.condition.rhs_range.start.character <= position["character"] <= node.condition.rhs_range.end.character:
-                if len(unit_options) == 1:
+            unit_options = units_compaible_with_tag(analysis_input, node.condition.lhs)
+            unit_options_str = ", ".join(unit_options)
+            if unit_options_str and node.condition.rhs_range.start.character <= position["character"] <= node.condition.rhs_range.end.character:
+                if len(unit_options) >= 1:
                     return Hover(
                         contents=MarkupContent(
                             kind="markdown",
-                            value=f"Specify a value with unit '{unit_options_str}'.",
-                        )
-                    )
-                elif len(unit_options) > 1:
-                    return Hover(
-                        contents=MarkupContent(
-                            kind="markdown",
-                            value=f"Specify a value with one of the following units: {unit_options_str}.",
+                            value=f"Comparison value unit{'s' if len(unit_options) > 1 else ''}: {unit_options_str}.",
                         )
                     )
 
 
 def completions(document: Document, position: Position, ignored_names, engine_id: str) -> list[CompletionItem]:
     # Return a list of completion items because pylsp encapsulates it in a CompletionList for us
-    
+
     try:
         analysis_input = create_analysis_input(engine_id)
     except Exception:
-        logger.error("Failed to build program: '{pcode}'", exc_info=True)
+        logger.error(f"Failed to analyse program for engine_id: '{engine_id}'", exc_info=True)
         return []
 
     # determine whether position is in first word on the line
