@@ -49,6 +49,20 @@ def fetch_uod_info(engine_id: str) -> ProMdl.UodDefinition | None:
     return engine_data.uod_definition
 
 
+def fetch_process_value(engine_id: str, tag_name) -> ProMdl.TagValue | None:
+    from openpectus.lsp.config import aggregator
+
+    if not aggregator:
+        return None
+    engine_data = aggregator.get_registered_engine_data(engine_id)
+    if not engine_data:
+        return None
+
+    for tag_name_, tag_value in engine_data.tags_info.map.items():
+        if tag_name_ == tag_name:
+            return tag_value
+
+
 def build_tags(uod_def: ProMdl.UodDefinition) -> TagValueCollection:
     return TagValueCollection([TagValue(name=t.name, unit=t.unit) for t in uod_def.tags])
 
@@ -359,13 +373,22 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
         pcode_parser = PcodeParser()
         node = pcode_parser._parse_line(line, 0)
         if isinstance(node, p.NodeWithCondition) and node.condition:
-            unit_options = units_compaible_with_tag(analysis_input, node.condition.lhs)
-            unit_options_str = ", ".join(unit_options)
-            if unit_options_str and node.condition.lhs_range.start.character <= position["character"] <= node.condition.lhs_range.end.character:
+            if analysis_input.tags.has(node.condition.lhs) and node.condition.lhs_range.start.character <= position["character"] <= node.condition.lhs_range.end.character:
+                process_value = fetch_process_value(engine_id, node.condition.lhs)
+                if not process_value:
+                    return
+                value_str = ""
+                if process_value.value_formatted:
+                    value_str = process_value.value_formatted
+                elif process_value.value and process_value.value_unit:
+                    value = f"{process_value.value:0.2f}".replace(".", ",") if isinstance(process_value.value, float) else str(process_value.value)
+                    value_str = value + " " + process_value.value_unit
+                elif process_value.value:
+                    value_str = str(process_value.value)
                 return Hover(
                     contents=MarkupContent(
                         kind="markdown",
-                        value=f"Tag '{node.condition.lhs}' can be compared to the following unit{'s' if len(unit_options) > 1 else ''}: {unit_options_str}.",
+                        value=f"Current value: {value_str}",
                     )
                 )
 
