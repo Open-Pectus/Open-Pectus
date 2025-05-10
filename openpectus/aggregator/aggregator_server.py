@@ -45,8 +45,6 @@ class AggregatorServer:
         self.aggregator = _create_aggregator(self.dispatcher, self.publisher, secret)
         _ = AggregatorMessageHandlers(self.aggregator)
         self.shutdown_callback = shutdown_cb
-        import openpectus.lsp.config as config
-        config.aggregator = self.aggregator
         self.setup_fastapi([self.dispatcher.router, self.publisher.router, version.router])
         self.init_db()
 

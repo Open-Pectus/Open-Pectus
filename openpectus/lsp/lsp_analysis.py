@@ -17,7 +17,7 @@ from openpectus.lsp.model import (
     DocumentSymbol, Position, Range,
     get_item_range, get_item_severity
 )
-
+import openpectus.aggregator.deps as agg_deps
 import openpectus.protocol.models as ProMdl
 
 
@@ -25,14 +25,10 @@ logger = logging.getLogger(__name__)
 
 @functools.cache
 def fetch_uod_info(engine_id: str) -> ProMdl.UodDefinition | None:
-    from openpectus.lsp.config import aggregator
-
-    if not aggregator:
-        return None
+    aggregator = agg_deps.get_aggregator()
     engine_data = aggregator.get_registered_engine_data(engine_id)
     if not engine_data:
         return None
-
     return engine_data.uod_definition
 
 
