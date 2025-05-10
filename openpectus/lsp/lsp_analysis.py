@@ -12,7 +12,7 @@ from openpectus.lang.exec.commands import Command, CommandCollection
 from openpectus.lang.exec.tags import TagValue, TagValueCollection
 from openpectus.lang.exec.units import get_compatible_unit_names
 import openpectus.lang.model.ast as p
-from openpectus.lang.model.parser import ParserMethod, create_method_parser, lsp_parse_line, Grammar
+from openpectus.lang.model.parser import ParserMethod, create_method_parser, lsp_parse_line, Grammar, PcodeParser
 from openpectus.lsp.model import (
     CompletionItem, CompletionItemKind, Diagnostics,
     DocumentSymbol, Position, Range,
@@ -313,67 +313,77 @@ def contains_any(query: str, candidates: list[str]) -> bool:
 
 def hover(document: Document, position: Position, engine_id: str) -> Hover | None:
     analysis_input = create_analysis_input(engine_id)
-    line = document.lines[position["line"]]
-    result = lsp_parse_line(line)
-    if result and result.instruction_name in analysis_input.commands.names:
+    line = get_line(document, position)
+    if not line:
+        return
+    pcode_parser = PcodeParser()
+    node = pcode_parser._parse_line(line, position["line"])
+    position_ast = ast_position_from_lsp_position(position)
+    if node and node.instruction_name in analysis_input.commands.names:
         # Check if hovering instruction name
-        start = line.index(result.instruction_name)
-        end = start + len(result.instruction_name) - 2
-        if start <= position["character"] <= end:
-            docstring = analysis_input.commands.get(result.instruction_name).docstring
-            return Hover(contents=MarkupContent(kind="markdown", value=docstring if docstring else ""))
+        if position_ast in node.instruction_range:
+            docstring = analysis_input.commands.get(node.instruction_name).docstring
+            return Hover(
+                contents=MarkupContent(
+                    kind="markdown",
+                    value=docstring if docstring else "",
+                ),
+                range=lsp_range_from_ast_range(node.instruction_range),
+            )
         # Check if argument
-        start = line.index(result.argument)
-        end = start + len(result.argument) - 1
-        arg_parser = analysis_input.commands.get(result.instruction_name).arg_parser
-        if start <= position["character"] <= end and arg_parser:
-            units = arg_parser.get_units()
-            units_str = ", ".join(units)
-            if len(units) == 1:
-                return Hover(
-                    contents=MarkupContent(
-                        kind="markdown",
-                        value=f"Specify a value with unit '{units_str}'.",
+        arg_parser = analysis_input.commands.get(node.instruction_name).arg_parser
+        if node.arguments_part and arg_parser:
+            if position_ast in node.arguments_range:
+                units = arg_parser.get_units()
+                units_str = ", ".join(units)
+                if len(units) == 1:
+                    return Hover(
+                        contents=MarkupContent(
+                            kind="markdown",
+                            value=f"Specify a value with unit '{units_str}'.",
+                        ),
+                        range=lsp_range_from_ast_range(node.arguments_range),
                     )
-                )
-            elif len(units) > 1:
-                return Hover(
-                    contents=MarkupContent(
-                        kind="markdown",
-                        value=f"Specify a value with one of the following units: {units_str}.",
+                elif len(units) > 1:
+                    return Hover(
+                        contents=MarkupContent(
+                            kind="markdown",
+                            value=f"Specify a value with one of the following units: {units_str}.",
+                        ),
+                        range=lsp_range_from_ast_range(node.arguments_range),
                     )
-                )
-            additive_options = arg_parser.get_additive_options()
-            exclusive_options = arg_parser.get_exclusive_options()
-            if additive_options and not exclusive_options:
-                options_str = ", ".join(additive_options)
-                return Hover(
-                    contents=MarkupContent(
-                        kind="markdown",
-                        value=f"Specify one or more (separate with +) of the following options: {options_str}.",
+                additive_options = arg_parser.get_additive_options()
+                exclusive_options = arg_parser.get_exclusive_options()
+                if additive_options and not exclusive_options:
+                    options_str = ", ".join(additive_options)
+                    return Hover(
+                        contents=MarkupContent(
+                            kind="markdown",
+                            value=f"Specify one or more (separate with +) of the following options: {options_str}.",
+                        ),
+                        range=lsp_range_from_ast_range(node.arguments_range),
                     )
-                )
-            elif not additive_options and exclusive_options:
-                options_str = ", ".join(exclusive_options)
-                return Hover(
-                    contents=MarkupContent(
-                        kind="markdown",
-                        value=f"Specify one of the following options: {options_str}",
+                elif not additive_options and exclusive_options:
+                    options_str = ", ".join(exclusive_options)
+                    return Hover(
+                        contents=MarkupContent(
+                            kind="markdown",
+                            value=f"Specify one of the following options: {options_str}",
+                        ),
+                        range=lsp_range_from_ast_range(node.arguments_range),
                     )
-                )
-            elif additive_options and exclusive_options:
-                options_str = ", ".join(additive_options+exclusive_options)
-                return Hover(
-                    contents=MarkupContent(
-                        kind="markdown",
-                        value=f"Specify one or possibly more of the following options: {options_str}.",
+                elif additive_options and exclusive_options:
+                    options_str = ", ".join(additive_options+exclusive_options)
+                    return Hover(
+                        contents=MarkupContent(
+                            kind="markdown",
+                            value=f"Specify one or possibly more of the following options: {options_str}.",
+                        ),
+                        range=lsp_range_from_ast_range(node.arguments_range),
                     )
-                )
         # Check if condition
-        pcode_parser = PcodeParser()
-        node = pcode_parser._parse_line(line, 0)
         if isinstance(node, p.NodeWithCondition) and node.condition:
-            if analysis_input.tags.has(node.condition.lhs) and node.condition.lhs_range.start.character <= position["character"] <= node.condition.lhs_range.end.character:
+            if analysis_input.tags.has(node.condition.lhs) and position_ast in node.condition.lhs_range:
                 process_value = fetch_process_value(engine_id, node.condition.lhs)
                 if not process_value:
                     return
@@ -389,26 +399,29 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
                     contents=MarkupContent(
                         kind="markdown",
                         value=f"Current value: {value_str}",
-                    )
+                    ),
+                    range=lsp_range_from_ast_range(node.condition.lhs_range),
                 )
 
-            if node.condition.op_range.start.character <= position["character"] <= node.condition.op_range.end.character:
+            if position_ast in node.condition.op_range:
                 return Hover(
                     contents=MarkupContent(
                         kind="markdown",
                         value=operator_descriptions[node.condition.op],
-                    )
+                    ),
+                    range=lsp_range_from_ast_range(node.condition.op_range),
                 )
 
             unit_options = units_compaible_with_tag(analysis_input, node.condition.lhs)
             unit_options_str = ", ".join(unit_options)
-            if unit_options_str and node.condition.rhs_range.start.character <= position["character"] <= node.condition.rhs_range.end.character:
+            if unit_options_str and position_ast in node.condition.rhs_range:
                 if len(unit_options) >= 1:
                     return Hover(
                         contents=MarkupContent(
                             kind="markdown",
                             value=f"Comparison value unit{'s' if len(unit_options) > 1 else ''}: {unit_options_str}.",
-                        )
+                        ),
+                    range=lsp_range_from_ast_range(node.condition.rhs_range),
                     )
 
 
@@ -569,3 +582,21 @@ def units_compaible_with_tag(analysis_input: AnalysisInput, tag_name: str) -> li
         if tag.unit:
             return get_compatible_unit_names(tag.unit)
     return []
+
+def lsp_range_from_ast_range(ast_range: p.Range) -> Range:
+    return Range(
+        start=Position(
+            line=ast_range.start.line,
+            character=ast_range.start.character
+        ),
+        end=Position(
+            line=ast_range.end.line,
+            character=ast_range.end.character
+        )
+    )
+
+def ast_position_from_lsp_position(lsp_position: Position) -> p.Position:
+    return p.Position(
+        line=lsp_position["line"],
+        character=lsp_position["character"],
+    )

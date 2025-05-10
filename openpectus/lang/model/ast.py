@@ -45,6 +45,22 @@ class Range:
     def __str__(self):
         return f"{self.start} - {self.end}"
 
+    def __contains__(self, index: Position):
+        """ Check if position or character index is within range"""
+        assert isinstance(index, Position)
+        return (
+            # Position and range are all on one line
+            (self.start.line == self.end.line == index.line and (self.start.character <= index.character <= self.end.character)) or
+            # Position is on start line
+            (self.start.line == index.line and index.line < self.end.line and (self.start.character <= index.character)) or
+            # Position is between start or end line
+            (self.start.line < index.line < self.end.line) or
+            # Position is on end line
+            (self.end.line == index.line and index.line > self.start.line and (index.character <= self.end.character))
+        )
+
+
+
 
 Range.empty = Range(start=Position.empty, end=Position.empty)
 
