@@ -44,30 +44,42 @@ def get_pcode_tm_grammar(engine_id: str, agg: Aggregator = Depends(agg_deps.get_
     uod_cmds = [c.name for c in engine_data.uod_definition.commands]
     tags = [t.name for t in engine_data.uod_definition.tags]
 
+    patterns = [
+        dict(name="comment.control.pcode", begin="#", end="$"), # P-code comments. Color: green
+        dict(name="support.type.property-name", match=r"^\s*\d+(\.\d+)?\s"), # P-code thresholds. Color: bright red
+    ]
+    """
+    A string such as "Block Time" can be interpreted either as the tag "Block Time"
+    or as the system command "Block" and then the word "Time".
+    The Monaco editor uses the first pattern that matches.
+
+    Thus, patterns must be created such that the longest matches come first.
+    This ensures that "Block Time" matches first.
+    """
+    style_associations = {
+        "entity.name.class": tags, # Color: blue/green
+        "constant.language.pcode": sys_cmds, # Color: blue
+        "support.constant.color": uod_cmds, # Color: lighter blue
+    }
+
+    style_associations_per_item = []
+    for style, items in style_associations.items():
+        for item in items:
+            style_associations_per_item.append((style, item))
+    # Sort so items with most spaces come first.
+    style_associations_per_item.sort(key=lambda x: x[1].count(" "), reverse=True)
+    # Group style associations by number of spaces
+    for n_spaces, group in groupby(style_associations_per_item, key=lambda x: x[1].count(" ")):
+        # Group items by style
+        for style, items in groupby(list(group), key=lambda x: x[0]):
+            patterns.append(dict(
+                name=style,
+                match=fr"\b({'|'.join(item_name for item_style, item_name in items)})\b"
+            ))
+
     return {
         "name": "PCode",
         "scopeName": "source.pcode",
         "fileTypes": "pcode",
-        "patterns": [
-            {
-                "name": "constant.language.pcode",  # color: blue, content: system commands
-                "match": f"\\b({'|'.join(sys_cmds)})\\b",
-            },
-            {
-                "name": "support.constant.color",  # color: lighter blue, content: uod commands
-                "match": f"\\b({'|'.join(uod_cmds)})\\b",
-            },
-            {
-                "name": "comment.control.pcode",  # color: green, content: comments
-                "begin": "#",
-                "end": "$"
-            },
-            {
-                "name": "support.type.property-name",  # color: bright red, content: thresholds
-                "match": "^\\s*\\d+(\\.\\d+)?\\s",
-            },            {
-                "name": "entity.name.class",  # color: blue/green, content: tags
-                "match": f"\\b({'|'.join(tags)})\\b",
-            },
-        ]
+        "patterns": patterns,
     }
