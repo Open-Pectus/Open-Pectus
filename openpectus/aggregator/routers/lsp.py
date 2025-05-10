@@ -56,25 +56,33 @@ def get_pcode_tm_grammar(engine_id: str, agg: Aggregator = Depends(agg_deps.get_
     Thus, patterns must be created such that the longest matches come first.
     This ensures that "Block Time" matches first.
     """
-    style_associations = {
-        "entity.name.class": tags, # Color: blue/green
-        "constant.language.pcode": sys_cmds, # Color: blue
-        "support.constant.color": uod_cmds, # Color: lighter blue
+
+    styles = {
+        "tag": "entity.name.class", # Color: blue/green
+        "sys_cmd": "constant.language.pcode", # Color: blue
+        "uod_cmd": "support.constant.color", # Color: lighter blue
     }
 
-    style_associations_per_item = []
-    for style, items in style_associations.items():
-        for item in items:
-            style_associations_per_item.append((style, item))
+    color_types = {
+        "tag": tags,
+        "sys_cmd": sys_cmds,
+        "uod_cmd": uod_cmds,
+    }
+
+    color_type_item = [(color_type, item) for color_type, items in color_types.items() for item in items]
     # Sort so items with most spaces come first.
-    style_associations_per_item.sort(key=lambda x: x[1].count(" "), reverse=True)
-    # Group style associations by number of spaces
-    for n_spaces, group in groupby(style_associations_per_item, key=lambda x: x[1].count(" ")):
-        # Group items by style
-        for style, items in groupby(list(group), key=lambda x: x[0]):
+    color_type_item.sort(key=lambda x: x[1].count(" "), reverse=True)
+    # Group color_type associations by number of spaces
+    for n_spaces, group in groupby(color_type_item, key=lambda x: x[1].count(" ")):
+        # Group items by color_type
+        for color_type, items in groupby(list(group), key=lambda x: x[0]):
+            # For tag names to match, they must be preceeded by a colon.
+            # This is required because it is otherwise ambiguous if e.g.
+            # "Block" should match the Block command or the Block tag.
+            prefix = r"[\s.]*:[.\s]*" if color_type == "tag" else ""
             patterns.append(dict(
-                name=style,
-                match=fr"\b({'|'.join(item_name for item_style, item_name in items)})\b"
+                name=styles[color_type],
+                match=prefix + fr"\b({'|'.join(item_name for item_color_type, item_name in items)})\b"
             ))
 
     return {
