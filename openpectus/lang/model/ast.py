@@ -116,6 +116,7 @@ class Node(SupportCancelForce):
         self.id: str = id
         self.position: Position = position
         self.instruction_part: str = ""
+        self.instruction_range: Range = Range.empty
         self.threshold_part: str = ""
         self.arguments_part: str = ""
         self.arguments: str = ""

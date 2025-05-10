@@ -296,6 +296,12 @@ class PcodeParser:
         node = self._create_node(instruction_name.strip(), line, line_no).with_id(self.id_generator)
         node.threshold_part = threshold or ""
         node.instruction_part = instruction_name
+        node.instruction_range = p.Range(
+            start=Position(line=line_no, character=match.start("instruction_name") +
+                            count_leading_spaces(node.instruction_part)),
+            end=Position(line=line_no, character=match.end("instruction_name") -
+                            count_trailing_spaces(node.instruction_part))
+        )
         node.arguments_part = (argument or "")
         if len(node.arguments_part) > 0:
             node.arguments_range = p.Range(
