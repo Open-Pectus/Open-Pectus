@@ -15,8 +15,6 @@ from openpectus.lsp.model import Position, CodeAction, WorkspaceEdit, TextEdit, 
 
 
 logger = logging.getLogger(__name__)
-
-
 logger.warning("Open Pectus LSP plugin loading")
 logger.debug("Open Pectus LSP plugin loading - debug")
 logger.info("Open Pectus LSP plugin loading - info")
@@ -70,19 +68,9 @@ class OPPythonLSPServer(PythonLSPServer):
 
         return capabilities
 
-
 @hookimpl
 def pylsp_settings(config: Config) -> dict[str, dict[str, dict[str, Any]]]:
     """Configuration options that can be set on the client."""
-    logger.info("pylsp_settings")
-    # logger.info(f"config provided: {as_json(config)}")
-    # logger.info("textDocument capabilities: " + as_json(config.capabilities["textDocument"]))
-    # config.capabilities["textDocument"]["codeLens"] = None
-    # config.capabilities["workspace"].pop("codeLens", None)
-    # config.capabilities["textDocument"].pop("codeLens", None)
-
-    # logger.info("textDocument capabilities modified: " + as_json(config.capabilities["textDocument"]))
-
     return {
         "plugins": {
             "pylsp_openpectus": {"enabled": True},
@@ -100,40 +88,18 @@ def pylsp_settings(config: Config) -> dict[str, dict[str, dict[str, Any]]]:
             "jedi_rename":  {"enabled": False},
             "jedi_signature_help":  {"enabled": False},
             "jedi_symbols":  {"enabled": False},
+            "preload":  {"enabled": False},
+            "rope_autoimport":  {"enabled": False},
         }
     }
-
-# @hookimpl
-# def pylsp_initialize(config: Config, workspace: Workspace):
-#     logger.info("pylsp_initialize")
-#     logger.debug("config: " + as_json(config))
-#     logger.debug("workspace:" + as_json(workspace))
-
-
-# @hookimpl
-# def pylsp_initialized():
-#     logger.debug("pylsp_initialized")
-
-
-# @hookimpl
-# def pylsp_workspace_configuration_changed(config, workspace) -> None:
-#     logger.debug("pylsp_workspace_configuration_changed")
-#     logger.debug("config: " + as_json(config))
-#     logger.debug("workspace:" + as_json(workspace))
-
 
 @hookimpl
 def pylsp_document_did_open(config: Config, workspace: Workspace, document: Document):
     logger.info("pylsp_document_did_open")
 
-
 @hookimpl
 def pylsp_document_did_save(config, workspace, document):
     logger.info("pylsp_document_did_save")
-
-
-def get_engine_id(config: Config) -> str:
-    return config.init_opts["engineId"]
 
 @hookimpl
 def pylsp_lint(config: Config, workspace: Workspace, document: Document, is_saved: bool):
@@ -149,22 +115,6 @@ def pylsp_lint(config: Config, workspace: Workspace, document: Document, is_save
         logger.error("Lint error", exc_info=True)
         return []
 
-
-# @hookimpl
-# def pylsp_document_symbols(config: Config, workspace: Workspace, document: Document):
-#     logger.debug("pylsp_document_symbols")
-#     t1 = time.perf_counter()
-#     engine_id = get_engine_id(config)
-#     try:
-#         symbols = lsp_analysis.symbols(document, engine_id)
-#         dt = time.perf_counter() - t1
-#         logger.debug(f"Symbols ok, items: {len(symbols)}, duration: {dt:0.2f}s")
-#         return symbols
-#     except Exception:
-#         logger.error("Symbols error", exc_info=True)
-#         return []
-
-
 @hookimpl
 def pylsp_completions(config: Config, workspace: Workspace, document: Document, position: Position, ignored_names):
     logger.debug("pylsp_completions")
@@ -178,7 +128,6 @@ def pylsp_completions(config: Config, workspace: Workspace, document: Document, 
     except Exception:
         logger.error("Completions error", exc_info=True)
         return []
-
 
 @hookimpl
 def pylsp_code_actions(
@@ -202,11 +151,9 @@ def pylsp_code_actions(
                 return [action]
     return []
 
-
 @hookimpl
 def pylsp_hover(config: Config, workspace: Workspace, document: Document, position: Position):
     return lsp_analysis.hover(document, position, get_engine_id(config))
-
 
 def as_json(obj) -> str:
     if obj is None:
@@ -235,7 +182,5 @@ def as_json(obj) -> str:
         })
     return json.dumps(obj)
 
-
-@atexit.register
-def close() -> None:
-    logger.info("close()")
+def get_engine_id(config: Config) -> str:
+    return config.init_opts["engineId"]
