@@ -33,6 +33,27 @@ def get_uod_info(
     return Dto.UodDefinition.from_model(uod_definition)
 
 
+
+@router.get("/pcode.language-configuration.json")
+def get_pcode_language_configuration():
+    return {
+        "comments": {"lineComment": "#"},
+        "onEnterRules": [
+            {
+                "beforeText": {"pattern": '^\\s*(Alarm|Block|Watch|Macro).*$'},
+                "action": {"indent": 'indent'},
+            },
+            {
+                "beforeText": {"pattern": '^\\s*End block$'},
+                "action": {"indent": 'outdent'},
+            },
+            {
+                "beforeText": {"pattern": '^\\s*End blocks$'},
+                "action": {"indent": 'none', "removeText": 1000},
+            }
+        ]
+    }
+
 @router.get('/uod/{engine_id}/pcode.tmLanguage.json', response_model_exclude_none=True)
 def get_pcode_tm_grammar(engine_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)):
     engine_data = get_registered_engine_data_or_fail(engine_id, agg)
