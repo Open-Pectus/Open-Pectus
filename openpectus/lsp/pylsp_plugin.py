@@ -131,15 +131,9 @@ def pylsp_document_did_open(config: Config, workspace: Workspace, document: Docu
 def pylsp_document_did_save(config, workspace, document):
     logger.info("pylsp_document_did_save")
 
-def get_engine_id(config: Config):
-    # "init_opts": {"engineId": "MIAWLT-1645-MPO_DemoUod"}
-    try:
-        engine_id = config.init_opts["engineId"]
-    except KeyError:
-        logger.error("Missing init option 'engineId'")
-        engine_id = "MIAWLT-1645-MPO_DemoUod"
-    return engine_id
 
+def get_engine_id(config: Config) -> str:
+    return config.init_opts["engineId"]
 
 @hookimpl
 def pylsp_lint(config: Config, workspace: Workspace, document: Document, is_saved: bool):
