@@ -107,7 +107,13 @@ class AnalysisInput:
         return [c for c in self.command_completions if c.lower().startswith(query.lower())] + []
 
     def get_tag_completions(self, query: str) -> list[str]:
-        return [tag for tag in self.tag_completions if tag.lower().startswith(query.lower())]
+        if query:
+            return [tag for tag in self.tag_completions if tag.lower().startswith(query.lower())]
+        else:
+            return self.tag_completions
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(engine_id="{self.engine_id}", commands={self.commands}, tags={self.tags})'
 
 
 @functools.cache
@@ -129,6 +135,9 @@ class AnalysisResult:
         self.program = program
         self.items = items
         self.input = input
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(program="{self.program}", commands={self.items}, tags={self.input})'
 
 
 def analyze(input: AnalysisInput, document: Document) -> AnalysisResult:
@@ -173,7 +182,7 @@ def lint(document: Document, engine_id: str) -> list[Diagnostics]:
                 code="Parse error",
                 message="Syntax error: " + str(ex),
                 severity=DiagnosticSeverity.Error,
-                data=dict()
+                data={},
             )
         )
         return diagnostics
@@ -201,91 +210,6 @@ def lint(document: Document, engine_id: str) -> list[Diagnostics]:
             logger.error(error.message)
 
     return diagnostics
-
-# def create_node_symbol(node: PNode) -> DocumentSymbol | None:
-#     if isinstance(node, (PComment, PBlank)):
-#         return None
-#     node_range = get_node_range(node)
-#     if node_range is None:
-#         logger.warning(f"Node {node} has no range")
-#         return None
-
-#     child_symbols = []
-#     for child_node in node.get_child_nodes(recursive=False):
-#         child_symbol = create_node_symbol(child_node)
-#         if child_symbol is not None:
-#             child_symbols.append(child_symbol)
-
-#     symbol = DocumentSymbol(
-#         name=node.instruction_name or f"(missing instruction name, node type {type(node).__name__})",
-# #        detail=None,
-#         kind=SymbolKind.Function,
-#         range=node_range,
-#         selectionRange=node_range,
-#         children=child_symbols
-#     )
-#     return symbol
-
-
-# def symbols(document: Document, engine_id: str) -> list[DocumentSymbol]:
-#     result = []
-
-#     try:
-#         analysis_input = create_analysis_input(engine_id)
-#         analysis_result = analyze(analysis_input, document)
-#         assert analysis_result is not None
-#     except Exception:
-#         logger.error("Failed to build program: '{pcode}'", exc_info=True)
-#         return []
-
-#     # iterate the root and add nodes as direct decendant symbols
-#     for node in analysis_result.program.get_child_nodes(recursive=False):
-#         symbol = create_node_symbol(node)
-#         if symbol is not None:
-#             result.append(symbol)
-
-#     return result
-
-
-def symbols_test(document: Document, engine_id: str) -> list[DocumentSymbol]:
-    """ Return a fixed set of symbols for testing. """
-    mark = DocumentSymbol(
-        name="Mark",
-        kind=SymbolKind.Field,
-        range=Range(
-            start=Position(line=0, character=0), end=Position(line=0, character=4)
-        ),
-        selectionRange=Range(
-            start=Position(line=0, character=0), end=Position(line=0, character=4)
-        ),
-        children=[]
-    )
-    stop = DocumentSymbol(
-        name="Stop",
-        kind=SymbolKind.Method,
-        range=Range(
-            start=Position(line=1, character=0), end=Position(line=1, character=4)
-        ),
-        selectionRange=Range(
-            start=Position(line=1, character=0), end=Position(line=1, character=4)
-        ),
-        children=[]
-    )
-
-    info = DocumentSymbol(
-        name="Info",
-        kind=SymbolKind.Method,
-        range=Range(
-            start=Position(line=2, character=0), end=Position(line=2, character=4)
-        ),
-        selectionRange=Range(
-            start=Position(line=2, character=0), end=Position(line=2, character=4)
-        ),
-        children=[]
-    )
-
-    return [mark, stop, info]
-
 
 def starts_with_any(query: str, candidates: list[str]) -> bool:
     """ Return True if query starts with any of the candidates """
@@ -427,14 +351,7 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
 
 def completions(document: Document, position: Position, ignored_names, engine_id: str) -> list[CompletionItem]:
     # Return a list of completion items because pylsp encapsulates it in a CompletionList for us
-
-    try:
-        analysis_input = create_analysis_input(engine_id)
-    except Exception:
-        logger.error(f"Failed to analyse program for engine_id: '{engine_id}'", exc_info=True)
-        return []
-
-    # determine whether position is in first word on the line
+    analysis_input = create_analysis_input(engine_id)
     line = get_line(document, position)
     if line is None:
         # Show all possible commands
@@ -552,29 +469,13 @@ def completions(document: Document, position: Position, ignored_names, engine_id
             )
             for command_name in analysis_input.commands.names
         ]
-    return []
 
+    return []
 
 def get_line(document: Document, position: Position) -> str | None:
     for i, line in enumerate(document.lines):
         if position["line"] == i:
             return line
-
-
-def find_first_word_position(document: Document, word: str) -> Position | None:
-    for i, line in enumerate(document.lines):
-        if word in line:
-            character = line.index(word)
-            return {"line": i, "character": character}
-
-def find_word_at_position(document: Document, position: Position) -> str | None:
-    for i, line in enumerate(document.lines):
-        if position["line"] == i:
-            if " " in line:
-                word = line.index(" ")
-            else:
-                word = line if position["character"] < len(line) else None
-                return word
 
 def units_compaible_with_tag(analysis_input: AnalysisInput, tag_name: str) -> list[str]:
     tag = analysis_input.tags.get(tag_name)
