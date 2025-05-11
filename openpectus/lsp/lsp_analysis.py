@@ -366,68 +366,82 @@ def completions(document: Document, position: Position, ignored_names, engine_id
         query = line[0:char]
     else:
         query = line
+    pcode_parser = PcodeParser()
+    node = pcode_parser._parse_line(line, position["line"])
+    position_ast = ast_position_from_lsp_position(position)
 
-    lsp_result = lsp_parse_line(query)
-    query = query.lstrip().removesuffix("\r\n")
-
-    if lsp_result:
-        if lsp_result.instruction_name in analysis_input.commands.names:
+    if node:
+        if node.instruction_name in analysis_input.commands.names:
             # Completion of Watch/Alarm which are special because of conditions
-            if lsp_result.instruction_name in ["Watch", "Alarm"] and ":" in query:
+            if isinstance(node, p.NodeWithCondition) and node.condition:
                 # Complete tag name
-                if query.endswith(": ") or query.endswith(":"):
+                if position_ast in node.condition.lhs_range or (node.condition.lhs == "" and node.arguments_part.strip() not in analysis_input.tags.names):
                     prefix = " " if query.endswith(":") else ""
-                    tag_name = query.split(":")[1].strip()
-                    return [
-                        CompletionItem(
-                            label=name,
-                            insertText=prefix+name,
-                            kind=CompletionItemKind.Enum,
-                            preselect=False,
-                        )
-                        for name in analysis_input.get_tag_completions(tag_name)
-                    ]
+                    if node.condition.lhs_range.is_empty():
+                        return [
+                            CompletionItem(
+                                label=name,
+                                insertText=prefix+name,
+                                kind=CompletionItemKind.Enum,
+                                preselect=False,
+                            )
+                            for name in analysis_input.get_tag_completions(node.condition.lhs)
+                        ]
+                    else:
+                        return [
+                            CompletionItem(
+                                label=name,
+                                kind=CompletionItemKind.Enum,
+                                preselect=False,
+                                textEdit=TextEdit(range=lsp_range_from_ast_range(node.condition.lhs_range), newText=prefix+name),
+                            )
+                            for name in analysis_input.get_tag_completions(node.condition.lhs)
+                        ]
                 # Complete operator
-                elif analysis_input.tags.has(query.split(":")[1].strip()):
+                elif position_ast in node.condition.op_range or node.condition.op_range.is_empty():
                     prefix = "" if query.endswith(" ") else " "
-                    return [
-                        CompletionItem(
-                            label=f"{operator} ({operator_description})",
-                            insertText=prefix+operator,
-                            kind=CompletionItemKind.Enum,
-                            preselect=False,
-                        )
-                        for operator, operator_description in operator_descriptions.items()
-                    ]
+                    if node.condition.op_range.is_empty():
+                        return [
+                            CompletionItem(
+                                label=f"{operator} ({operator_description})",
+                                insertText=prefix+operator,
+                                kind=CompletionItemKind.Enum,
+                                preselect=False,
+                            )
+                            for operator, operator_description in operator_descriptions.items()
+                        ]
+                    else:
+                        return [
+                            CompletionItem(
+                                label=f"{operator} ({operator_description})",
+                                kind=CompletionItemKind.Enum,
+                                preselect=False,
+                                textEdit=TextEdit(range=lsp_range_from_ast_range(node.condition.op_range), newText=prefix+operator),
+                            )
+                            for operator, operator_description in operator_descriptions.items()
+                        ]
                 # Complete unit
-                elif contains_any(query.strip(), Grammar.operators):
+                elif position_ast in node.condition.rhs_range or position_ast.character > node.condition.op_range.end.character:
                     prefix = "" if query.endswith(" ") else " "
-                    operator = ""
-                    for operator in Grammar.operators_2char+Grammar.operators_1char:
-                        if operator in query:
-                            break
-                    tag_name = query.split(":")[1].split(operator)[0].strip()
-                    unit_options = units_compaible_with_tag(analysis_input, tag_name)
+                    unit_options = units_compaible_with_tag(analysis_input, node.condition.lhs)
                     if len(unit_options) > 0:
-                        right_of_operator = query.split(operator)[1].strip()
-                        if not contains_any(right_of_operator, unit_options):
-                            return [
-                                CompletionItem(
-                                    label=unit,
-                                    insertText=prefix+unit,
-                                    kind=CompletionItemKind.Enum,
-                                    preselect=False,
-                                )
-                                for unit in unit_options
-                            ]
+                        return [
+                            CompletionItem(
+                                label=unit,
+                                insertText=prefix+unit,
+                                kind=CompletionItemKind.Enum,
+                                preselect=False,
+                            )
+                            for unit in unit_options
+                        ]
             # Completion of all other commands
-            elif starts_with_any(query, [f"{name}:" for name in analysis_input.commands.names]):
-                arg_parser = analysis_input.commands.get(lsp_result.instruction_name).arg_parser
+            elif node.instruction_name in analysis_input.commands.names:
+                arg_parser = analysis_input.commands.get(node.instruction_name).arg_parser
                 prefix = " " if query.endswith(":") else ""
                 if arg_parser:
                     options = arg_parser.get_additive_options()+arg_parser.get_exclusive_options()+arg_parser.get_units()
                     # Complete additive options
-                    if query.endswith("+"):
+                    if node.arguments_part.endswith("+"):
                         return [
                             CompletionItem(
                                 label=name,
@@ -448,16 +462,16 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                             )
                             for name in options
                         ]
-        elif lsp_result.instruction_name:
-            if ":" not in query:
-                # Completion of command name
-                return [
-                    CompletionItem(
-                        label=word,
-                        kind=CompletionItemKind.Function,
-                        preselect=False,
-                    )
-                    for word in analysis_input.get_command_completions(lsp_result.instruction_name)
+        elif node.instruction_name and node.arguments_part == "":
+            # Completion of command name
+            return [
+                CompletionItem(
+                    label=word,
+                    kind=CompletionItemKind.Function,
+                    preselect=False,
+                    textEdit=TextEdit(range=lsp_range_from_ast_range(node.instruction_range), newText=word),
+                )
+                for word in analysis_input.get_command_completions(node.instruction_name)
                 ]
     if query.strip() == "":
         # Blank line. Show all possible commands
