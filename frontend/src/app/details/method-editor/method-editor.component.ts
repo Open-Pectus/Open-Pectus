@@ -31,7 +31,6 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
             </button>
           </div>
           <app-monaco-editor class="block rounded-sm flex-1" [editorSizeChange]="editorSizeChange"
-                             (keydown.control.s)="onCtrlS($event)"
                              [unitId]="unitId()"
                              [readOnlyEditor]="recentRunId() !== undefined"></app-monaco-editor>
         </div>
@@ -79,12 +78,6 @@ export class MethodEditorComponent implements OnInit, OnDestroy {
 
   onContentHeightChanged() {
     this.editorSizeChange.next();
-  }
-
-  onCtrlS(event: Event) {
-    event.preventDefault();
-    event.stopPropagation();
-    this.store.dispatch(MethodEditorActions.saveKeyboardShortcutPressed());
   }
 
   forceRefreshMethod() {
