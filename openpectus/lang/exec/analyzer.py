@@ -39,7 +39,7 @@ class AnalyzerItem:
         self.description: str = description
         self.type: AnalyzerItemType = type
         self.node: p.Node | None = node
-        self.range: p.Range = p.Range.empty
+        self.range: p.Range = p.Range.empty()
         self.data = dict() if data is None else data
 
         # use node for ranges by default
@@ -201,19 +201,53 @@ class IndentationCheckAnalyzer(AnalyzerVisitorBase):
             start=0,
         )
 
-    def visit(self, node: p.Node):
-        import inspect
-        method_name = 'visit_' + type(node).__name__
-        visitor = getattr(self, method_name, self.generic_visit)
+    def visit_Node(self, node: p.Node):
         if node.indent_error and not isinstance(node, p.WhitespaceNode):
             self.add_item(self.create_item(node))
-        result = visitor(node)
 
-        if __debug__:
-            if not inspect.isgenerator(result):
-                raise TypeError("Visitor methods must be generators")
 
-        yield from result
+class ThresholdCheckAnalyzer(AnalyzerVisitorBase):
+    """ Analyzer that checks thresholds """
+
+    def __init__(self):
+        super().__init__()
+        # Dictionary holding the node with the numerically largest threshold
+        # for a given parent block.
+        # The "Base" command has the potential to invalidate numerical comparisons
+        # Take for instance a Base for a block which starts out as a measure of time
+        # and is later changed to a measure of volume. In this case, numerical
+        # comparison makes little sense.
+        # The dictionary is reset whenever a "Base" command is encountered to
+        # avoid this issue.
+        self.max_threshold_in_parent: dict[p.Node, p.Node] = {}
+
+    def visit_Node(self, node: p.Node):
+        if not isinstance(node, p.ProgramNode) and node.parent is not None and node.threshold is not None:
+            possibly_limiting_node = self.max_threshold_in_parent.get(node.parent, None)
+            if possibly_limiting_node is None or (possibly_limiting_node.threshold and node.threshold > possibly_limiting_node.threshold):
+                self.max_threshold_in_parent[node.parent] = node
+            elif possibly_limiting_node.threshold and node.threshold < possibly_limiting_node.threshold:
+                # Create item for the line which is limiting as well as one for the one which is limited.
+                self.add_item(AnalyzerItem(
+                    "ThresholdOutOfOrder",
+                    "Threshold out of order",
+                    node,
+                    AnalyzerItemType.WARNING,
+                    f"This command will not execute at its threshold because it is limited by a prior threshold (line {possibly_limiting_node.position.line+1}).",
+                    start=node.position.character,
+                ))
+                self.add_item(AnalyzerItem(
+                    "ThresholdOutOfOrder",
+                    "Threshold out of order",
+                    possibly_limiting_node,
+                    AnalyzerItemType.INFO,
+                    f"This command hinders line {node.position.line+1} from executing at its threshold.",
+                    start=possibly_limiting_node.position.character,
+                ))
+                if node.instruction_name == "Base":
+                    del self.max_threshold_in_parent[node.parent]
+        if node.instruction_name == "Base" and node.parent is not None:
+            self.max_threshold_in_parent = {}
 
 
 class WhitespaceCheckAnalyzer(AnalyzerVisitorBase):
@@ -529,6 +563,7 @@ class SemanticCheckAnalyzer:
             CommandCheckAnalyzer(commands),
             MacroCheckAnalyzer(),
             IndentationCheckAnalyzer(),
+            ThresholdCheckAnalyzer(),
             WhitespaceCheckAnalyzer(),
         ]
 

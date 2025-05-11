@@ -9,6 +9,7 @@ from openpectus.lang.exec.analyzer import (
     ConditionCheckAnalyzer,
     CommandCheckAnalyzer,
     WhitespaceCheckAnalyzer,
+    ThresholdCheckAnalyzer,
 )
 import openpectus.lang.model.ast as p
 from openpectus.lang.exec.commands import CommandCollection, Command
@@ -522,3 +523,30 @@ Call macro: A
         self.assertEqual(1, len(analyzer.items))
 
     # Add checks for valid and invalid recursive Macro definitions/calls
+
+
+class ThresholdCheckAnalyzerTest(unittest.TestCase):
+    def test_correct_order(self):
+        program = build_program("""
+0 Mark: A
+1 Mark: B
+
+Block: A
+    0 Mark: C
+    2 Mark: D
+    End block
+
+1.5 Mark: C
+""")
+        analyzer = ThresholdCheckAnalyzer()
+        analyzer.analyze(program)
+        self.assertEqual(0, len(analyzer.items))
+
+    def test_invalid_order_program_node(self):
+        program = build_program("""
+1 Mark: A
+0 Mark: B
+""")
+        analyzer = ThresholdCheckAnalyzer()
+        analyzer.analyze(program)
+        self.assertEqual(2, len(analyzer.items))
