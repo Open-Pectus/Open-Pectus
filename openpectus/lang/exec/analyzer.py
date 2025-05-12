@@ -97,7 +97,10 @@ class AnalyzerVisitorBase(NodeVisitor):
 
 
 class UnreachableCodeCheckAnalyzer(AnalyzerVisitorBase):
-    """ Analyser that checks for unreachable code """
+    """
+    Checks:
+    * Presence of code in a Block following End block command
+    """
 
     def create_item(self, node: p.Node):
         return AnalyzerItem(
@@ -121,7 +124,10 @@ class UnreachableCodeCheckAnalyzer(AnalyzerVisitorBase):
 
 
 class InfiniteBlockCheckAnalyzer(AnalyzerVisitorBase):
-    """ Analyser that checks for non-terminated blocks """
+    """
+    Checks:
+    * Block *can* potentially finish due to End block or End blocks
+    """
 
     def create_item(self, node: p.Node):
         return AnalyzerItem(
@@ -189,7 +195,10 @@ class InfiniteBlockCheckAnalyzer(AnalyzerVisitorBase):
 
 
 class IndentationCheckAnalyzer(AnalyzerVisitorBase):
-    """ Analyzer that checks indentation """
+    """
+    Checks:
+    * Presence of indentation error flag from parser
+    """
 
     def create_item(self, node: p.Node):
         return AnalyzerItem(
@@ -207,7 +216,10 @@ class IndentationCheckAnalyzer(AnalyzerVisitorBase):
 
 
 class ThresholdCheckAnalyzer(AnalyzerVisitorBase):
-    """ Analyzer that checks thresholds """
+    """
+    Checks:
+    * Thresholds are ordered from smallest to largest.
+    """
 
     def __init__(self):
         super().__init__()
@@ -251,9 +263,13 @@ class ThresholdCheckAnalyzer(AnalyzerVisitorBase):
 
 
 class WhitespaceCheckAnalyzer(AnalyzerVisitorBase):
-    """ Fills in node.has_only_trailing_whitespace for whitespace nodes. This allows the interpreter to not advance
-    over only white space/comments. This allows the use to edit these lines, e.g. append lines to a method while the
-    methods is running. """
+    """
+    Fills in node.has_only_trailing_whitespace for whitespace nodes.
+    This allows the interpreter to not advance over only white space/comments.
+    This allows the use to edit these lines, e.g. append lines to a method while the
+    methods is running.
+    """
+
     def __init__(self) -> None:
         super().__init__()
         self.whitespace_nodes: list[p.BlankNode | p.CommentNode] = []
@@ -290,7 +306,6 @@ class WhitespaceCheckAnalyzer(AnalyzerVisitorBase):
             if not self.is_whitespace_node(child):
                 node._last_non_ws_line = child.position.line
 
-
     def analyze(self, n):
         super().analyze(n)
 
@@ -300,7 +315,17 @@ class WhitespaceCheckAnalyzer(AnalyzerVisitorBase):
 
 
 class ConditionCheckAnalyzer(AnalyzerVisitorBase):
-    """ Analyser that checks whether conditions are present and refer to valid tag names """
+    """
+    Checks:
+    * Condition is present for Watch and Alarm
+    * Condition contains tag name
+    * Spell check of given tag name
+    * Given tag name is defined
+    * Unit is not defined for compared tag without unit
+    * Unit is defined for compared tag with unit
+    * Given unit is defined
+    * Given unit is compatible with given tag
+    """
 
     def __init__(self, tags: TagValueCollection) -> None:
         super().__init__()
@@ -358,7 +383,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                         node,
                         AnalyzerItemType.ERROR,
                         f"Did you mean to type '{most_similar_tag}'?",
-                        length=len(tag_name),
+                        start=node.condition.lhs_range.start.character,
+                        end=node.condition.lhs_range.end.character,
                         data=dict(type="fix-typo", fix=most_similar_tag)
                     ))
                     return
@@ -434,7 +460,12 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
 
 
 class CommandCheckAnalyzer(AnalyzerVisitorBase):
-    """ Analyzer that checks commands and arguments. """
+    """
+    Checks:
+    * Spell check of command name
+    * Given command name is defined
+    * Arguments pass validation given command argparser
+    """
 
     def __init__(self, commands: CommandCollection) -> None:
         super().__init__()
@@ -504,14 +535,12 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
 
 class MacroCheckAnalyzer(AnalyzerVisitorBase):
     """
-    Analyzer that checks macros and calls to them.
-    
     Checks:
-     * "Macro" has an argument
-     * "Call macro" has and argument
-     * "Call macro" argument is a defined "Macro"
-     * "Macro" is not left unused
-     * Spell check of "Call macro" argument
+    * "Macro" has an argument
+    * "Call macro" has and argument
+    * "Call macro" argument is a defined "Macro"
+    * "Macro" is not left unused
+    * Spell check of "Call macro" argument
     """
 
     def __init__(self) -> None:
@@ -607,12 +636,12 @@ class SemanticCheckAnalyzer:
         self.analyzers: list[AnalyzerVisitorBase] = [
             UnreachableCodeCheckAnalyzer(),
             InfiniteBlockCheckAnalyzer(),
-            ConditionCheckAnalyzer(tags),
-            CommandCheckAnalyzer(commands),
-            MacroCheckAnalyzer(),
             IndentationCheckAnalyzer(),
             ThresholdCheckAnalyzer(),
             WhitespaceCheckAnalyzer(),
+            ConditionCheckAnalyzer(tags),
+            CommandCheckAnalyzer(commands),
+            MacroCheckAnalyzer(),
         ]
 
     def __str__(self) -> str:

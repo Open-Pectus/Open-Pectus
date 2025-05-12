@@ -11,14 +11,32 @@ class Position:
     def is_empty(self) -> bool:
         return self == Position.empty
 
-    @classmethod
-    def empty(cls) -> Position:
-        return cls(line=-1, character=-1)
+    @staticmethod
+    def empty() -> Position:
+        return Position(line=-1, character=-1)
 
     def __eq__(self, value):
         if value is None or not isinstance(value, Position):
             return False
         return self.line == value.line and self.character == value.character
+
+    def __lt__(self, other):
+        if isinstance(other, Range):
+            other = other.start
+        if isinstance(other, Position):
+            return self.line < other.line or (self.line == other.line and self.character < other.character)
+        else:
+            raise TypeError(f"'<' not supported between instances of '{self.__class__.__name__}'" +
+                            " and '{other.__class__.__name__}'")
+
+    def __gt__(self, other):
+        if isinstance(other, Range):
+            other = other.end
+        if isinstance(other, Position):
+            return self.line > other.line or (self.line == other.line and self.character > other.character)
+        else:
+            raise TypeError(f"'>' not supported between instances of '{self.__class__.__name__}'" +
+                            " and '{other.__class__.__name__}'")
 
     def with_character(self, character: int) -> Position:
         return Position(line=self.line, character=character)
@@ -40,9 +58,9 @@ class Range:
             start=self.start,
             end=position)
 
-    @classmethod
-    def empty(cls) -> Range:
-        return cls(start=Position.empty(), end=Position.empty())
+    @staticmethod
+    def empty() -> Range:
+        return Range(start=Position.empty(), end=Position.empty())
 
     def __str__(self):
         return f"{self.start} - {self.end}"
@@ -231,11 +249,7 @@ class Node(SupportCancelForce):
         self.errors.append(error)
 
     def __str__(self):
-        return f"{self.__class__.__name__}(inst: {self.instruction_name}, args: {self.arguments}, id: {self.id})"
-    # def __str__(self):
-    #     indent_spaces = "".join(" " for _ in range(self.position.character))
-    #     args = "" if self.arguments_part == "" else ": " + self.arguments_part
-    #     return f"{indent_spaces}{self.name_part}{args} | id={self.id}"
+        return f"{self.__class__.__name__}(instruction_name='{self.instruction_name}', arguments={self.arguments}, id='{self.id}')"
 
     def __repr__(self):
         return self.__str__()
@@ -243,7 +257,9 @@ class Node(SupportCancelForce):
     def __eq__(self, other) -> bool:
         if not isinstance(other, Node):
             return False
-        return self.position == other.position and self.instruction_name == other.instruction_name and self.name == other.name
+        return (self.position == other.position and
+                self.instruction_name == other.instruction_name and
+                self.name == other.name)
 
     def as_tree(self) -> str:
         indent_spaces = "".join(" " for _ in range(self.position.character))
@@ -463,7 +479,7 @@ class Condition:
         self.lhs_range = Range.empty()
         self.op_range = Range.empty()
         self.rhs_range = Range.empty()
-    
+
     def __str__(self):
         return f'{self.__class__.__name__}(lhs="{self.lhs}", op="{self.op}", rhs="{self.rhs}")'
 

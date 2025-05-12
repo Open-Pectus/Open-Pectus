@@ -174,7 +174,7 @@ def lint(document: Document, engine_id: str) -> list[Diagnostics]:
     except Exception as ex:
         logger.error("Failed to build program: '{pcode}'", exc_info=True)
         diagnostics.append(
-            Diagnostics(
+            Diagnostic(
                 source="Open Pectus",
                 range=Range(
                     start=Position(line=0, character=1),
@@ -194,7 +194,7 @@ def lint(document: Document, engine_id: str) -> list[Diagnostics]:
     # map analyzer result to lsp diagnostics
     for item in analysis_result.items:
         diagnostics.append(
-            Diagnostics(
+            Diagnostic(
                 source="Open Pectus",
                 range=get_item_range(item),
                 code=item.message,
@@ -272,7 +272,7 @@ def get_code_called_by_macro(document: Document, macro_call: p.CallMacroNode) ->
     parser = create_method_parser(method, uod_command_names=[])
     try:
         program = parser.parse_method(method)
-    except:
+    except Exception:
         return None
 
     # Identify called macro
@@ -320,12 +320,13 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
             return Hover(
                 contents=MarkupContent(
                     kind="markdown",
-                    value="```pcode\r\n"+docstring+"```" if docstring else "",
+                    value="```pcode\r\n"+docstring+"\r\n```" if docstring else "",
                 ),
                 range=lsp_range_from_ast_range(node.instruction_range),
             )
         # Hovering condition
         if isinstance(node, p.NodeWithCondition) and node.condition:
+            # Show current tag value
             if analysis_input.tags.has(node.condition.lhs) and position_ast in node.condition.lhs_range:
                 process_value = fetch_process_value(engine_id, node.condition.lhs)
                 if not process_value:
@@ -343,7 +344,11 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
                        process_value.value_unit != node.condition.tag_unit and
                        node.condition.tag_unit in units_compaible_with_tag(analysis_input, node.condition.lhs) and
                        isinstance(process_value.value, (int, float))):
-                        converted_value = convert_value_to_unit(process_value.value, process_value.value_unit, node.condition.tag_unit)
+                        converted_value = convert_value_to_unit(
+                            process_value.value,
+                            process_value.value_unit,
+                            node.condition.tag_unit
+                        )
                         value_str += " (" + f"{converted_value:0.2f}".replace(".", ",") + f" {node.condition.tag_unit})"
                 elif process_value.value:
                     value_str = str(process_value.value)
@@ -354,16 +359,16 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
                     ),
                     range=lsp_range_from_ast_range(node.condition.lhs_range),
                 )
-
+            # Show text desciption of comparison operator
             if position_ast in node.condition.op_range:
                 return Hover(
                     contents=MarkupContent(
-                        kind="markdown",
+                        kind="plaintext",
                         value=operator_descriptions[node.condition.op],
                     ),
                     range=lsp_range_from_ast_range(node.condition.op_range),
                 )
-
+            # Show compatible units of measurement
             unit_options = units_compaible_with_tag(analysis_input, node.condition.lhs)
             unit_options_str = ", ".join(unit_options)
             if unit_options_str and position_ast in node.condition.rhs_range:
@@ -373,7 +378,7 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
                             kind="markdown",
                             value=f"Comparison value unit{'s' if len(unit_options) > 1 else ''}: {unit_options_str}.",
                         ),
-                    range=lsp_range_from_ast_range(node.condition.rhs_range),
+                        range=lsp_range_from_ast_range(node.condition.rhs_range),
                     )
         # Hovering "Call macro"
         elif isinstance(node, p.CallMacroNode) and position_ast in node.arguments_range:
@@ -472,7 +477,6 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                                 label=name,
                                 insertText=prefix+name,
                                 kind=CompletionItemKind.Enum,
-                                preselect=False,
                             )
                             for name in analysis_input.get_tag_completions(node.condition.lhs)
                         ]
@@ -481,8 +485,10 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                             CompletionItem(
                                 label=name,
                                 kind=CompletionItemKind.Enum,
-                                preselect=False,
-                                textEdit=TextEdit(range=lsp_range_from_ast_range(node.condition.lhs_range), newText=prefix+name),
+                                textEdit=TextEdit(
+                                    range=lsp_range_from_ast_range(node.condition.lhs_range),
+                                    newText=prefix+name
+                                ),
                             )
                             for name in analysis_input.get_tag_completions(node.condition.lhs)
                         ]
@@ -495,7 +501,6 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                                 label=f"{operator} ({operator_description})",
                                 insertText=prefix+operator,
                                 kind=CompletionItemKind.Enum,
-                                preselect=False,
                             )
                             for operator, operator_description in operator_descriptions.items()
                         ]
@@ -504,13 +509,15 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                             CompletionItem(
                                 label=f"{operator} ({operator_description})",
                                 kind=CompletionItemKind.Enum,
-                                preselect=False,
-                                textEdit=TextEdit(range=lsp_range_from_ast_range(node.condition.op_range), newText=prefix+operator),
+                                textEdit=TextEdit(
+                                    range=lsp_range_from_ast_range(node.condition.op_range),
+                                    newText=prefix+operator
+                                ),
                             )
                             for operator, operator_description in operator_descriptions.items()
                         ]
                 # Complete unit
-                elif position_ast in node.condition.rhs_range or position_ast.character > node.condition.op_range.end.character:
+                elif position_ast in node.condition.rhs_range or position_ast > node.condition.op_range:
                     prefix = "" if query.endswith(" ") else " "
                     unit_options = units_compaible_with_tag(analysis_input, node.condition.lhs)
                     if len(unit_options) > 0:
@@ -519,7 +526,6 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                                 label=unit,
                                 insertText=prefix+unit,
                                 kind=CompletionItemKind.Enum,
-                                preselect=False,
                             )
                             for unit in unit_options
                         ]
@@ -533,7 +539,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                 parser = create_method_parser(method, uod_command_names=[])
                 try:
                     program = parser.parse_method(method)
-                except:
+                except Exception:
                     return []
                 # Call visitor
                 macro_visitor = MacroVisitor()
@@ -546,7 +552,6 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                             label=name,
                             insertText=prefix+name,
                             kind=CompletionItemKind.Enum,
-                            preselect=False,
                         )
                         for name in list(macro_visitor.macros.keys())
                     ]
@@ -555,7 +560,6 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                         CompletionItem(
                             label=name,
                             kind=CompletionItemKind.Enum,
-                            preselect=False,
                             textEdit=TextEdit(range=lsp_range_from_ast_range(node.arguments_range), newText=prefix+name),
                         )
                         for name in list(macro_visitor.macros.keys())
@@ -573,7 +577,6 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                                 label=name,
                                 insertText=prefix+name,
                                 kind=CompletionItemKind.Enum,
-                                preselect=False,
                             )
                             for name in arg_parser.get_additive_options()
                         ]
@@ -584,7 +587,6 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                                 label=name,
                                 insertText=prefix+name,
                                 kind=CompletionItemKind.Enum,
-                                preselect=False,
                             )
                             for name in options
                         ]
@@ -594,7 +596,6 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                 CompletionItem(
                     label=word,
                     kind=CompletionItemKind.Function,
-                    preselect=False,
                     textEdit=TextEdit(range=lsp_range_from_ast_range(node.instruction_range), newText=word),
                 )
                 for word in analysis_input.get_command_completions(node.instruction_name)
@@ -605,7 +606,6 @@ def completions(document: Document, position: Position, ignored_names, engine_id
             CompletionItem(
                 label=command_name,
                 kind=CompletionItemKind.Function,
-                preselect=False,
             )
             for command_name in analysis_input.commands.names
         ]
@@ -618,7 +618,10 @@ def get_line(document: Document, position: Position) -> str | None:
             return line
 
 def units_compaible_with_tag(analysis_input: AnalysisInput, tag_name: str) -> list[str]:
-    tag = analysis_input.tags.get(tag_name)
+    try:
+        tag = analysis_input.tags.get(tag_name)
+    except ValueError:
+        return []
     if tag:
         if tag.unit:
             return get_compatible_unit_names(tag.unit)

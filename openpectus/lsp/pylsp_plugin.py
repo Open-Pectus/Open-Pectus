@@ -147,7 +147,8 @@ def pylsp_code_actions(
                                         changes={
                                             document.uri: [TextEdit(range=diagnostic["range"], newText=data["fix"])]
                                         },
-                                    ))
+                                    ),
+                                    diagnostics=[diagnostic])
                 return [action]
     return []
 
