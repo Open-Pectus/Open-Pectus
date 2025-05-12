@@ -213,7 +213,7 @@ class ThresholdCheckAnalyzer(AnalyzerVisitorBase):
         super().__init__()
         # Dictionary holding the node with the numerically largest threshold
         # for a given parent block.
-        # The "Base" command has the potential to invalidate numerical comparisons
+        # The "Base" command has the potential to invalidate numerical comparisons.
         # Take for instance a Base for a block which starts out as a measure of time
         # and is later changed to a measure of volume. In this case, numerical
         # comparison makes little sense.
@@ -348,13 +348,12 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
             return
 
         if not self.tags.has(tag_name):
-            
             if len(tag_name) > 2 and self.tags.names:
                 similarity = {tag: ratio(tag_name, tag) for tag in self.tags.names}
                 most_similar_tag = max(similarity, key=similarity.get) # type: ignore
                 if similarity[most_similar_tag] > 0.7:
                     self.add_item(AnalyzerItem(
-                        "UndefinedCUndefinedTagommand",
+                        "UndefinedTag",
                         "Undefined tag",
                         node,
                         AnalyzerItemType.ERROR,
