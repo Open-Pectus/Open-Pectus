@@ -6,6 +6,7 @@ import threading
 import time
 from argparse import ArgumentParser, BooleanOptionalAction
 from logging.handlers import RotatingFileHandler
+import webbrowser
 
 import alembic.command
 import alembic.config
@@ -130,6 +131,9 @@ if __name__ == "__main__":
     # Aggregator is ready. Start engine and run forever
     engine_thread.start()
     try:
+        key = input(f"Press enter to open aggregator website: http://127.0.0.1:{args.port}")
+        if key == "":
+            webbrowser.open(f"http://127.0.0.1:{args.port}")
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
