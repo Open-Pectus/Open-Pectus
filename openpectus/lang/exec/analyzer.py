@@ -503,10 +503,23 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
 
 
 class MacroCheckAnalyzer(AnalyzerVisitorBase):
+    """
+    Analyzer that checks macros and calls to them.
+    
+    Checks:
+     * "Macro" has an argument
+     * "Call macro" has and argument
+     * "Call macro" argument is a defined "Macro"
+     * "Macro" is not left unused
+     * Spell check of "Call macro" argument
+    """
+
     def __init__(self) -> None:
         super().__init__()
         self.macros: dict[str, p.MacroNode] = {}
         self.macro_calls: list[p.CallMacroNode] = []
+        self.macros_registered: list[p.MacroNode] = []
+        self.macros_called: list[p.MacroNode] = []
 
     def visit_CallMacroNode(self, node: p.CallMacroNode):
         if node.name is None or node.name.strip() == "":
@@ -518,15 +531,33 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                 "Call macro must refer to a Macro definition"
             ))
         elif node.name and node.name.strip() not in self.macros:
-            self.add_item(AnalyzerItem(
-                "MacroCallNotDefined",
-                "Invalid macro call",
-                node,
-                AnalyzerItemType.ERROR,
-                f"Cannot call macro {node.name.strip()} because it is not defined"
-            ))
-        else:
+            similarity = {macro: ratio(node.name.strip(), macro) for macro in self.macros.keys()}
+            most_similar_macro = max(similarity, key=similarity.get) # type: ignore
+            if similarity[most_similar_macro] > 0.7:
+                self.add_item(AnalyzerItem(
+                    "MacroCalledNotDefined",
+                    "Referenced macro is not defined",
+                    node,
+                    AnalyzerItemType.ERROR,
+                    f"Did you mean to type '{most_similar_macro}'?",
+                    start=node.arguments_range.start.character,
+                    end=node.arguments_range.end.character,
+                    data=dict(type="fix-typo", fix=most_similar_macro)
+                ))
+            else:
+                self.add_item(AnalyzerItem(
+                    "MacroCalledNotDefined",
+                    "Referenced macro is not defined",
+                    node,
+                    AnalyzerItemType.ERROR,
+                    f"Cannot call macro '{node.name.strip()}' because it is not defined",
+                    start=node.arguments_range.start.character,
+                    end=node.arguments_range.end.character,
+                ))
+        elif node.name and node.name.strip() in self.macros:
+            macro_node = self.macros[node.name]
             self.macro_calls.append(node)
+            self.macros_called.append(macro_node)
         return super().visit_CallMacroNode(node)
 
     def visit_MacroNode(self, node: p.MacroNode):
@@ -538,9 +569,24 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                 AnalyzerItemType.ERROR,
                 "A Macro definition must include a name"
             ))
-        else:
+        elif node.name and node.name.strip():
             self.macros[node.name.strip()] = node
+            self.macros_registered.append(node)
         return super().visit_MacroNode(node)
+
+    def analyze(self, n):
+        super().analyze(n)
+
+        # Find unused macros
+        for macro_node in self.macros_registered:
+            if macro_node not in self.macros_called:
+                self.add_item(AnalyzerItem(
+                    "MacroUnused",
+                    "Macro not used",
+                    macro_node,
+                    AnalyzerItemType.INFO,
+                    f"This macro is not called"
+                ))
 
 
 class SemanticCheckAnalyzer:
