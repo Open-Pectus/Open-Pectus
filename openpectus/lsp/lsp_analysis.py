@@ -10,7 +10,7 @@ from openpectus.lang.exec.uod import RegexNamedArgumentParser
 from openpectus.lang.exec.analyzer import AnalyzerItem, SemanticCheckAnalyzer
 from openpectus.lang.exec.commands import Command, CommandCollection
 from openpectus.lang.exec.tags import TagValue, TagValueCollection
-from openpectus.lang.exec.units import get_compatible_unit_names
+from openpectus.lang.exec.units import get_compatible_unit_names, convert_value_to_unit
 from openpectus.lang.exec import visitor
 import openpectus.lang.model.ast as p
 from openpectus.lang.model.parser import ParserMethod, create_method_parser, lsp_parse_line, Grammar, PcodeParser
@@ -336,6 +336,15 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
                 elif process_value.value and process_value.value_unit:
                     value = f"{process_value.value:0.2f}".replace(".", ",") if isinstance(process_value.value, float) else str(process_value.value)
                     value_str = value + " " + process_value.value_unit
+                    # If the value specified on the RHS has a different measurement unit
+                    # than the tag unit, then we want to show the unit in its own unit
+                    # as well as the one the user want to compare to.
+                    if (node.condition.tag_unit and
+                       process_value.value_unit != node.condition.tag_unit and
+                       node.condition.tag_unit in units_compaible_with_tag(analysis_input, node.condition.lhs) and
+                       isinstance(process_value.value, (int, float))):
+                        converted_value = convert_value_to_unit(process_value.value, process_value.value_unit, node.condition.tag_unit)
+                        value_str += " (" + f"{converted_value:0.2f}".replace(".", ",") + f" {node.condition.tag_unit})"
                 elif process_value.value:
                     value_str = str(process_value.value)
                 return Hover(
