@@ -97,15 +97,14 @@ def get_pcode_tm_grammar(engine_id: str, agg: Aggregator = Depends(agg_deps.get_
     for n_spaces, group in groupby(color_type_item, key=lambda x: x[1].count(" ")):
         # Group items by color_type
         for color_type, items in groupby(list(group), key=lambda x: x[0]):
-            pattern = dict(
-                name=styles[color_type],
-                match=fr"\b({'|'.join(item_name for item_color_type, item_name in items)})\b"
-            )
             # For tag names to match, they must be preceeded by a colon.
             # This is required because it is otherwise ambiguous if e.g.
             # "Block" should match the Block command or the Block tag.
-            if color_type == "tag":
-                pattern["begin"] = r"[\s.]*:[.\s]*"
+            prefix = "(?<=:[^:]*)" if color_type == "tag" else ""
+            pattern = dict(
+                name=styles[color_type],
+                match=prefix + fr"\b({'|'.join(item_name for item_color_type, item_name in items)})\b"
+            )
             patterns.append(pattern)
 
     return {
