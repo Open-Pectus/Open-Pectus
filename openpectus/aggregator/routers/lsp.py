@@ -48,6 +48,10 @@ def get_pcode_language_configuration():
                 "action": {"indent": 'outdent'},
             },
             {
+                "beforeText": {"pattern": r'^\s*(\n|\r)*$'},
+                "action": {"indent": 'outdent'},
+            },
+            {
                 "beforeText": {"pattern": '^\\s*End blocks$'},
                 "action": {"indent": 'none', "removeText": 1000},
             }
