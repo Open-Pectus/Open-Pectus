@@ -69,7 +69,7 @@ class TestRegexes(unittest.TestCase):
         self.assertEqual("bar 27 :", m.groupdict()['argument'])
 
     def test_condition_unit(self):
-        r = re.compile(r'(?P<unit>[a-zA-Z%\/]+)')
+        r = re.compile(r'(?P<unit>[a-zA-Z%\/23]+)')
         self.assertEqual(r.pattern, Grammar.unit_re)
         
         m = r.match("%")
