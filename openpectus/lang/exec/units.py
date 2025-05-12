@@ -3,12 +3,18 @@ import os
 import logging
 import itertools
 from collections import defaultdict
+import time
 
 import pint
 from pint import UnitRegistry, Quantity
 
 cache_folder = os.path.join(os.path.dirname(__file__), "pint-cache")
-ureg = UnitRegistry(cache_folder=cache_folder)
+try:
+    ureg = UnitRegistry(cache_folder=cache_folder)
+except EOFError:
+    time.sleep(0.2)
+    ureg = UnitRegistry(cache_folder=cache_folder)
+
 ureg.define("m3 = m**3")
 ureg.define("m2 = m**2")
 ureg.define("dm2 = dm**2")
