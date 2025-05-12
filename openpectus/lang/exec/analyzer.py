@@ -570,6 +570,15 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                 "A Macro definition must include a name"
             ))
         elif node.name and node.name.strip():
+            if node.name.strip() in self.macros:
+                previous_macro_with_same_name = self.macros[node.name.strip()]
+                self.add_item(AnalyzerItem(
+                    "MacroRedefined",
+                    "Macro redefined",
+                    node,
+                    AnalyzerItemType.INFO,
+                    f"This macro definition overwrites the previous definition at line {previous_macro_with_same_name.position.line+1}."
+                ))
             self.macros[node.name.strip()] = node
             self.macros_registered.append(node)
         return super().visit_MacroNode(node)
