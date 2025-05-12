@@ -5,7 +5,7 @@ from pylsp.workspace import Document, Workspace
 
 from openpectus.aggregator.routers.dto import CommandDefinition, TagDefinition, UodDefinition
 from openpectus.lsp import lsp_analysis
-from openpectus.lsp.model import CompletionItem, Position, Diagnostics
+from openpectus.lsp.model import CompletionItem, Position, Diagnostic
 
 
 def create_workspace() -> Workspace:
@@ -29,7 +29,7 @@ def create_position(pcode: str) -> Position:
 
 class TestLspAnalysis(unittest.TestCase):
 
-    def get_diagnosticss(self, pcode: str, uod_info: UodDefinition | None = None) -> list[Diagnostics]:
+    def get_diagnosticss(self, pcode: str, uod_info: UodDefinition | None = None) -> list[Diagnostic]:
         lsp_analysis.create_analysis_input.cache_clear()
         document = create_document(pcode)
 
@@ -185,7 +185,7 @@ Watch: Run Time > 5s
         self.assertEqual(1, len(diags))
         d = diags[0]
 
-        self.assertEqual("Invalid command arguments", d["code"])
+        self.assertEqual("Invalid command arguments", d.get("code", None))
 
         self.assertEqual(0, d["range"]["start"]["line"])
         self.assertEqual(6, d["range"]["start"]["character"])
