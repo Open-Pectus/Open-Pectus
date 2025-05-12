@@ -235,6 +235,11 @@ class Node(SupportCancelForce):
     def __repr__(self):
         return self.__str__()
 
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Node):
+            return False
+        return self.position == other.position and self.instruction_name == other.instruction_name and self.name == other.name
+
     def as_tree(self) -> str:
         indent_spaces = "".join(" " for _ in range(self.position.character))
         args = "" if self.arguments_part == "" else ": " + self.arguments_part

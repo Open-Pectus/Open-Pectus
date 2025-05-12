@@ -506,7 +506,7 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
 class MacroCheckAnalyzer(AnalyzerVisitorBase):
     def __init__(self) -> None:
         super().__init__()
-        self.macros: list[p.MacroNode] = []
+        self.macros: dict[str, p.MacroNode] = {}
         self.macro_calls: list[p.CallMacroNode] = []
 
     def visit_CallMacroNode(self, node: p.CallMacroNode):
@@ -517,6 +517,14 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                 node,
                 AnalyzerItemType.ERROR,
                 "Call macro must refer to a Macro definition"
+            ))
+        elif node.name and node.name.strip() not in self.macros:
+            self.add_item(AnalyzerItem(
+                "MacroCallNotDefined",
+                "Invalid macro call",
+                node,
+                AnalyzerItemType.ERROR,
+                f"Cannot call macro {node.name.strip()} because it is not defined"
             ))
         else:
             self.macro_calls.append(node)
@@ -532,22 +540,8 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                 "A Macro definition must include a name"
             ))
         else:
-            self.macros.append(node)
+            self.macros[node.name.strip()] = node
         return super().visit_MacroNode(node)
-
-    def visit_ProgramNode(self, node: p.ProgramNode):
-        yield from super().visit_ProgramNode(node)
-
-        for call in self.macro_calls:
-            if call.name not in [m.name for m in self.macros]:
-                self.add_item(AnalyzerItem(
-                    "MacroCallInvalid",
-                    "Invalid macro call",
-                    call,
-                    AnalyzerItemType.ERROR,
-                    f"Cannot call macro {call.name} because it is not defined"
-                ))
-        yield
 
 
 class SemanticCheckAnalyzer:

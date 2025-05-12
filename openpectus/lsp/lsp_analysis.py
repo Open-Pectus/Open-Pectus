@@ -11,6 +11,7 @@ from openpectus.lang.exec.analyzer import AnalyzerItem, SemanticCheckAnalyzer
 from openpectus.lang.exec.commands import Command, CommandCollection
 from openpectus.lang.exec.tags import TagValue, TagValueCollection
 from openpectus.lang.exec.units import get_compatible_unit_names
+from openpectus.lang.exec import visitor
 import openpectus.lang.model.ast as p
 from openpectus.lang.model.parser import ParserMethod, create_method_parser, lsp_parse_line, Grammar, PcodeParser
 from openpectus.lsp.model import (
@@ -235,6 +236,35 @@ def contains_any(query: str, candidates: list[str]) -> bool:
     return False
 
 
+def identify_called_macro(program: p.ProgramNode, macro_call: p.CallMacroNode) -> p.MacroNode:
+
+    class MacroVisitor(visitor.NodeVisitor):
+        def __init__(self, macro_call: p.CallMacroNode) -> None:
+            super().__init__()
+            self.macros: dict[str, p.MacroNode] = {}
+            self.macro_calls: list[p.CallMacroNode] = []
+            self.macro_call: p.CallMacroNode
+            self.macro: p.MacroNode
+
+        def visit_CallMacroNode(self, node: p.CallMacroNode):
+            if node == self.macro_call:
+                self.macro = self.macros[node.name.strip()]
+            if node.name is not None and node.name.strip() in self.macros:
+                self.macro_calls.append(node)
+            return super().visit_CallMacroNode(node)
+
+        def visit_MacroNode(self, node: p.MacroNode):
+            if node.name is not None and node.name.strip():
+                self.macros[node.name.strip()] = node
+            return super().visit_MacroNode(node)
+
+    # Call visitor
+    macro_visitor = MacroVisitor(macro_call)
+    for _ in macro_visitor.visit(program):
+        pass
+
+    return macro_visitor.macro
+
 def hover(document: Document, position: Position, engine_id: str) -> Hover | None:
     analysis_input = create_analysis_input(engine_id)
     line = get_line(document, position)
@@ -244,6 +274,7 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
     node = pcode_parser._parse_line(line, position["line"])
     position_ast = ast_position_from_lsp_position(position)
     if node and node.instruction_name in analysis_input.commands.names:
+        arg_parser = analysis_input.commands.get(node.instruction_name).arg_parser
         # Check if hovering instruction name
         if position_ast in node.instruction_range:
             docstring = analysis_input.commands.get(node.instruction_name).docstring
@@ -254,8 +285,86 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
                 ),
                 range=lsp_range_from_ast_range(node.instruction_range),
             )
+        # Check if condition
+        if isinstance(node, p.NodeWithCondition) and node.condition:
+            if analysis_input.tags.has(node.condition.lhs) and position_ast in node.condition.lhs_range:
+                process_value = fetch_process_value(engine_id, node.condition.lhs)
+                if not process_value:
+                    return
+                value_str = ""
+                if process_value.value_formatted:
+                    value_str = process_value.value_formatted
+                elif process_value.value and process_value.value_unit:
+                    value = f"{process_value.value:0.2f}".replace(".", ",") if isinstance(process_value.value, float) else str(process_value.value)
+                    value_str = value + " " + process_value.value_unit
+                elif process_value.value:
+                    value_str = str(process_value.value)
+                return Hover(
+                    contents=MarkupContent(
+                        kind="markdown",
+                        value=f"Current value: {value_str}",
+                    ),
+                    range=lsp_range_from_ast_range(node.condition.lhs_range),
+                )
+
+            if position_ast in node.condition.op_range:
+                return Hover(
+                    contents=MarkupContent(
+                        kind="markdown",
+                        value=operator_descriptions[node.condition.op],
+                    ),
+                    range=lsp_range_from_ast_range(node.condition.op_range),
+                )
+
+            unit_options = units_compaible_with_tag(analysis_input, node.condition.lhs)
+            unit_options_str = ", ".join(unit_options)
+            if unit_options_str and position_ast in node.condition.rhs_range:
+                if len(unit_options) >= 1:
+                    return Hover(
+                        contents=MarkupContent(
+                            kind="markdown",
+                            value=f"Comparison value unit{'s' if len(unit_options) > 1 else ''}: {unit_options_str}.",
+                        ),
+                    range=lsp_range_from_ast_range(node.condition.rhs_range),
+                    )
+        elif isinstance(node, p.CallMacroNode) and position_ast in node.arguments_range:
+            
+            pcode = document.source
+            method = ParserMethod.from_pcode(pcode)
+            parser = create_method_parser(method, uod_command_names=[])
+            try:
+                program = parser.parse_method(method)
+            except:
+                return None
+            macro_node = identify_called_macro(program, node)
+            indentation = macro_node.position.character
+            line_start = macro_node.position.line
+            line_end = line_start + 1
+            last_line_not_whitespace = line_start + 1
+            for child in reversed(macro_node.children):
+                if not isinstance(child, p.WhitespaceNode):
+                    last_line_not_whitespace = child.position.line
+                    break
+            if len(macro_node.children):
+                line_end = last_line_not_whitespace + 1
+            
+            macro_node_code = []
+            for line_no, line in enumerate(document.lines):
+                if line_start <= line_no <= line_end:
+                    if len(line) <= indentation:
+                        macro_node_code.append("")
+                    else:
+                        macro_node_code.append(line[indentation:])
+
+            return Hover(
+                contents=MarkupContent(
+                    kind="markdown",
+                    value="\n".join(macro_node_code),
+                ),
+                range=lsp_range_from_ast_range(node.arguments_range),
+            )
+
         # Check if argument
-        arg_parser = analysis_input.commands.get(node.instruction_name).arg_parser
         if node.arguments_part and arg_parser:
             if position_ast in node.arguments_range:
                 units = arg_parser.get_units()
@@ -304,48 +413,6 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
                             value=f"Specify one or possibly more of the following options: {options_str}.",
                         ),
                         range=lsp_range_from_ast_range(node.arguments_range),
-                    )
-        # Check if condition
-        if isinstance(node, p.NodeWithCondition) and node.condition:
-            if analysis_input.tags.has(node.condition.lhs) and position_ast in node.condition.lhs_range:
-                process_value = fetch_process_value(engine_id, node.condition.lhs)
-                if not process_value:
-                    return
-                value_str = ""
-                if process_value.value_formatted:
-                    value_str = process_value.value_formatted
-                elif process_value.value and process_value.value_unit:
-                    value = f"{process_value.value:0.2f}".replace(".", ",") if isinstance(process_value.value, float) else str(process_value.value)
-                    value_str = value + " " + process_value.value_unit
-                elif process_value.value:
-                    value_str = str(process_value.value)
-                return Hover(
-                    contents=MarkupContent(
-                        kind="markdown",
-                        value=f"Current value: {value_str}",
-                    ),
-                    range=lsp_range_from_ast_range(node.condition.lhs_range),
-                )
-
-            if position_ast in node.condition.op_range:
-                return Hover(
-                    contents=MarkupContent(
-                        kind="markdown",
-                        value=operator_descriptions[node.condition.op],
-                    ),
-                    range=lsp_range_from_ast_range(node.condition.op_range),
-                )
-
-            unit_options = units_compaible_with_tag(analysis_input, node.condition.lhs)
-            unit_options_str = ", ".join(unit_options)
-            if unit_options_str and position_ast in node.condition.rhs_range:
-                if len(unit_options) >= 1:
-                    return Hover(
-                        contents=MarkupContent(
-                            kind="markdown",
-                            value=f"Comparison value unit{'s' if len(unit_options) > 1 else ''}: {unit_options_str}.",
-                        ),
-                    range=lsp_range_from_ast_range(node.condition.rhs_range),
                     )
 
 
