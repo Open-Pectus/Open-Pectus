@@ -124,7 +124,7 @@ class Grammar:
     # condition_op_re = "\\s*(?P<op>" + "|".join(op for op in operators) + ")\\s*"
 
     float_re = r'(?P<float>[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?)'
-    unit_re = r'(?P<unit>[a-zA-Z%\/]+)'
+    unit_re = r'(?P<unit>[a-zA-Z%\/23]+)'
 
     condition_rhs_re = '^' + float_re + '\\s*' + unit_re + '$'
     condition_rhs_pattern = re.compile(condition_rhs_re)
