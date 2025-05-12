@@ -236,34 +236,73 @@ def contains_any(query: str, candidates: list[str]) -> bool:
     return False
 
 
-def identify_called_macro(program: p.ProgramNode, macro_call: p.CallMacroNode) -> p.MacroNode:
+class MacroVisitor(visitor.NodeVisitor):
+    def __init__(self, macro_call: p.CallMacroNode | None = None) -> None:
+        super().__init__()
+        self.macros: dict[str, p.MacroNode] = {}
+        self.macro_calls: list[p.CallMacroNode] = []
+        self.macro_call: p.CallMacroNode | None = macro_call
+        self.macro_called_by_macro_call: p.MacroNode | None = None
 
-    class MacroVisitor(visitor.NodeVisitor):
-        def __init__(self, macro_call: p.CallMacroNode) -> None:
-            super().__init__()
-            self.macros: dict[str, p.MacroNode] = {}
-            self.macro_calls: list[p.CallMacroNode] = []
-            self.macro_call: p.CallMacroNode
-            self.macro: p.MacroNode
+    def visit_CallMacroNode(self, node: p.CallMacroNode):
+        if node == self.macro_call and node.name.strip() in self.macros:
+            self.macro_called_by_macro_call = self.macros[node.name.strip()]
+        if node.name is not None and node.name.strip() in self.macros:
+            self.macro_calls.append(node)
+        return super().visit_CallMacroNode(node)
 
-        def visit_CallMacroNode(self, node: p.CallMacroNode):
-            if node == self.macro_call:
-                self.macro = self.macros[node.name.strip()]
-            if node.name is not None and node.name.strip() in self.macros:
-                self.macro_calls.append(node)
-            return super().visit_CallMacroNode(node)
+    def visit_MacroNode(self, node: p.MacroNode):
+        if node.name is not None and node.name.strip():
+            self.macros[node.name.strip()] = node
+        return super().visit_MacroNode(node)
 
-        def visit_MacroNode(self, node: p.MacroNode):
-            if node.name is not None and node.name.strip():
-                self.macros[node.name.strip()] = node
-            return super().visit_MacroNode(node)
 
+def identify_called_macro(program: p.ProgramNode, macro_call: p.CallMacroNode) -> None | p.MacroNode:
     # Call visitor
     macro_visitor = MacroVisitor(macro_call)
     for _ in macro_visitor.visit(program):
         pass
 
-    return macro_visitor.macro
+    return macro_visitor.macro_called_by_macro_call
+
+def get_code_called_by_macro(document: Document, macro_call: p.CallMacroNode) -> None | str:
+    # Parse code in document
+    pcode = document.source
+    method = ParserMethod.from_pcode(pcode)
+    parser = create_method_parser(method, uod_command_names=[])
+    try:
+        program = parser.parse_method(method)
+    except:
+        return None
+
+    # Identify called macro
+    macro_node = identify_called_macro(program, macro_call)
+    if macro_node is None:
+        return None
+
+    # Calculate range of lines containing macro
+    indentation = macro_node.position.character
+    line_start = macro_node.position.line
+    line_end = line_start + 1
+    last_line_not_whitespace = line_start + 1
+    for child in reversed(macro_node.children):
+        if not isinstance(child, p.WhitespaceNode):
+            last_line_not_whitespace = child.position.line
+            break
+    if len(macro_node.children):
+        line_end = last_line_not_whitespace + 1
+
+    # Remove indentation to increase readability and format as pcode
+    macro_node_code_lines = ["```pcode\r\n"]
+    for line_no, line in enumerate(document.lines):
+        if line_start <= line_no <= line_end:
+            if len(line) <= indentation:
+                macro_node_code_lines.append("\r\n")
+            else:
+                macro_node_code_lines.append(line[indentation:])
+    macro_node_code_lines.append("```")
+
+    return "".join(macro_node_code_lines)
 
 def hover(document: Document, position: Position, engine_id: str) -> Hover | None:
     analysis_input = create_analysis_input(engine_id)
@@ -275,17 +314,17 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
     position_ast = ast_position_from_lsp_position(position)
     if node and node.instruction_name in analysis_input.commands.names:
         arg_parser = analysis_input.commands.get(node.instruction_name).arg_parser
-        # Check if hovering instruction name
+        # Hovering instruction name
         if position_ast in node.instruction_range:
             docstring = analysis_input.commands.get(node.instruction_name).docstring
             return Hover(
                 contents=MarkupContent(
                     kind="markdown",
-                    value=docstring if docstring else "",
+                    value="```pcode\r\n"+docstring+"```" if docstring else "",
                 ),
                 range=lsp_range_from_ast_range(node.instruction_range),
             )
-        # Check if condition
+        # Hovering condition
         if isinstance(node, p.NodeWithCondition) and node.condition:
             if analysis_input.tags.has(node.condition.lhs) and position_ast in node.condition.lhs_range:
                 process_value = fetch_process_value(engine_id, node.condition.lhs)
@@ -327,44 +366,18 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
                         ),
                     range=lsp_range_from_ast_range(node.condition.rhs_range),
                     )
+        # Hovering "Call macro"
         elif isinstance(node, p.CallMacroNode) and position_ast in node.arguments_range:
-            
-            pcode = document.source
-            method = ParserMethod.from_pcode(pcode)
-            parser = create_method_parser(method, uod_command_names=[])
-            try:
-                program = parser.parse_method(method)
-            except:
-                return None
-            macro_node = identify_called_macro(program, node)
-            indentation = macro_node.position.character
-            line_start = macro_node.position.line
-            line_end = line_start + 1
-            last_line_not_whitespace = line_start + 1
-            for child in reversed(macro_node.children):
-                if not isinstance(child, p.WhitespaceNode):
-                    last_line_not_whitespace = child.position.line
-                    break
-            if len(macro_node.children):
-                line_end = last_line_not_whitespace + 1
-            
-            macro_node_code = []
-            for line_no, line in enumerate(document.lines):
-                if line_start <= line_no <= line_end:
-                    if len(line) <= indentation:
-                        macro_node_code.append("")
-                    else:
-                        macro_node_code.append(line[indentation:])
-
-            return Hover(
-                contents=MarkupContent(
-                    kind="markdown",
-                    value="\n".join(macro_node_code),
-                ),
-                range=lsp_range_from_ast_range(node.arguments_range),
-            )
-
-        # Check if argument
+            code = get_code_called_by_macro(document, node)
+            if code is not None:
+                return Hover(
+                    contents=MarkupContent(
+                        kind="markdown",
+                        value=code,
+                    ),
+                    range=lsp_range_from_ast_range(node.arguments_range),
+                )
+        # Hovering argument
         if node.arguments_part and arg_parser:
             if position_ast in node.arguments_range:
                 units = arg_parser.get_units()
@@ -501,6 +514,43 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                             )
                             for unit in unit_options
                         ]
+            # Completion of argument to "Call macro"
+            elif isinstance(node, p.CallMacroNode):
+                # Parse code in document up until this "Call macro" node
+                # to avoid suggesting macros which are not actually defined
+                # at the point where this call is made.
+                pcode = "\r\n".join(document.source.splitlines()[:node.position.line])
+                method = ParserMethod.from_pcode(pcode)
+                parser = create_method_parser(method, uod_command_names=[])
+                try:
+                    program = parser.parse_method(method)
+                except:
+                    return []
+                # Call visitor
+                macro_visitor = MacroVisitor()
+                for _ in macro_visitor.visit(program):
+                    pass
+                prefix = " " if query.endswith(":") else ""
+                if node.arguments_range.is_empty():
+                    return [
+                        CompletionItem(
+                            label=name,
+                            insertText=prefix+name,
+                            kind=CompletionItemKind.Enum,
+                            preselect=False,
+                        )
+                        for name in list(macro_visitor.macros.keys())
+                    ]
+                else:
+                    return [
+                        CompletionItem(
+                            label=name,
+                            kind=CompletionItemKind.Enum,
+                            preselect=False,
+                            textEdit=TextEdit(range=lsp_range_from_ast_range(node.arguments_range), newText=prefix+name),
+                        )
+                        for name in list(macro_visitor.macros.keys())
+                    ]
             # Completion of all other commands
             elif node.instruction_name in analysis_input.commands.names:
                 arg_parser = analysis_input.commands.get(node.instruction_name).arg_parser
@@ -519,7 +569,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                             for name in arg_parser.get_additive_options()
                         ]
                     # Complete additive, exclusive and units
-                    if not contains_any(query.split(":")[1].strip(), options):
+                    if not contains_any(node.arguments_part.strip(), options):
                         return [
                             CompletionItem(
                                 label=name,

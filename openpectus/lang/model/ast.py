@@ -33,7 +33,7 @@ class Range:
         self.end = end
 
     def is_empty(self) -> bool:
-        return self == Range.empty
+        return self == Range.empty()
 
     def with_end(self, position: Position) -> Range:
         return Range(
@@ -60,6 +60,11 @@ class Range:
             # Position is on end line
             (self.end.line == index.line and index.line > self.start.line and (index.character <= self.end.character))
         )
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Range):
+            return False
+        return self.start == other.start and self.end == other.end
 
 
 class NodeIdGenerator:
