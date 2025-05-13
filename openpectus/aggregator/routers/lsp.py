@@ -4,11 +4,10 @@ from itertools import groupby
 
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
+from openpectus.lsp.pylsp_plugin import OPPythonLSPServer
 from fastapi import APIRouter, Depends, HTTPException, WebSocket
 from openpectus.aggregator.aggregator import Aggregator
 from starlette.status import HTTP_404_NOT_FOUND
-from pylsp.python_lsp import PythonLSPServer
-
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["lsp"], prefix="/lsp", include_in_schema=True)
@@ -116,7 +115,7 @@ async def lsp_server_endpoint(websocket: WebSocket):
         tasks.add(task)
         task.add_done_callback(tasks.discard)
 
-    lsp_handler = PythonLSPServer(
+    lsp_handler = OPPythonLSPServer(
         rx=None,
         tx=None,
         consumer=send_message,
@@ -124,3 +123,9 @@ async def lsp_server_endpoint(websocket: WebSocket):
 
     async for message in websocket.iter_json():
         lsp_handler.consume(message)
+        # If the message is "exit" then we can close the websocket
+        # It would be cleaner to get some sort of signal that the LSP handler
+        # got this exit message. Unfortunately there is no API to accomplish this.
+        if message.get("method", None) == "exit":
+            await websocket.close()
+            break

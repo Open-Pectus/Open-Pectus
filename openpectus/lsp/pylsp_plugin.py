@@ -22,6 +22,54 @@ logger.info("Open Pectus LSP plugin loading - info")
 
 timer_format = "0.2f"
 
+
+class OPPythonLSPServer(PythonLSPServer):
+    """ Subclass of PythonLSPServer which triggers autocomplete calculation on specific characters. """
+
+    def capabilities(self):
+        capabilities = super().capabilities()
+        # Let the client know that the following providers are not available
+        # This saves the client from making requests that we have to answer with []
+        # as well as removing stale options from the GUI right click menu.
+        capabilities["codeLensProvider"]["resolveProvider"] = False
+        capabilities["completionProvider"]["resolveProvider"] = False
+        capabilities["documentFormattingProvider"] = False
+        capabilities["documentHighlightProvider"] = False
+        capabilities["documentRangeFormattingProvider"] = False
+        capabilities["documentSymbolProvider"] = False
+        capabilities["definitionProvider"] = False
+        capabilities["referencesProvider"] = False
+        capabilities["renameProvider"] = False
+        capabilities["foldingRangeProvider"] = False
+        capabilities["signatureHelpProvider"] = {"triggerCharacters": []},
+        capabilities["declarationProvider"] = False
+        capabilities["typeDefinitionProvider"] = False
+        capabilities["implementationProvider"] = False
+        # capabilities["documentLinkProvider"] = dict()
+        # capabilities["documentLinkProvider"]["resolveProvider"] = False
+        capabilities["colorProvider"] = False
+        capabilities["documentOnTypeFormattingProvider"] = False
+        capabilities["executeCommandProvider"]["commands"] = []
+        capabilities["selectionRangeProvider"] = False
+        capabilities["linkedEditingRangeProvider"] = False
+        capabilities["callHierarchyProvider"] = False
+        capabilities["semanticTokensProvider"] = False
+        capabilities["monikerProvider"] = False
+        capabilities["typeHierarchyProvider"] = False
+        capabilities["inlineValueProvider"] = False
+        capabilities["inlayHintProvider"] = False
+        capabilities["diagnosticProvider"] = False
+        capabilities["workspaceSymbolProvider"] = False
+        capabilities["experimental"] = []
+        # Make sure that the following are enabled
+        capabilities["codeActionProvider"] = True
+        capabilities["hoverProvider"] = True
+        # Trigger completion re-calculation on colon, space and plus characters
+        capabilities["completionProvider"]["triggerCharacters"] = [":", " ", "+"]
+
+        return capabilities
+
+
 @hookimpl
 def pylsp_settings(config: Config) -> dict[str, dict[str, dict[str, Any]]]:
     """Configuration options that can be set on the client."""
