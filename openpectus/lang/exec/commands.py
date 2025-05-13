@@ -51,7 +51,8 @@ class CommandRequest:
 
 class Command:
     """ Represents a named command. """
-    def __init__(self, name: str, validatorFn: Callable[[str], bool] | None = None, docstring: str | None = None, arg_parser: RegexNamedArgumentParser | None = None) -> None:
+    def __init__(self, name: str, validatorFn: Callable[[str], bool] | None = None,
+                 docstring: str | None = None, arg_parser: RegexNamedArgumentParser | None = None) -> None:
         self.name: str = name
         self.validatorFn = validatorFn
         self.docstring = docstring

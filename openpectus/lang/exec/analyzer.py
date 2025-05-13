@@ -9,6 +9,7 @@ import openpectus.lang.model.ast as p
 from openpectus.lang.exec.tags import TagValueCollection
 from openpectus.lang.exec.units import are_comparable, get_compatible_unit_names
 from openpectus.lang.exec.commands import CommandCollection
+from openpectus.lang.exec.argument_specification import ArgSpec
 
 
 logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
@@ -72,7 +73,7 @@ class AnalyzerItem:
         if end is not None:
             self.range.end = p.Position(self.range.start.line, end)
 
-    def __str__(self) -> str:
+    def __repr__(self) -> str:
         return f'{self.__class__.__name__}(id="{self.id}", message="{self.message}", type={self.type}, node={self.node})'
 
 
@@ -100,7 +101,14 @@ class UnreachableCodeCheckAnalyzer(AnalyzerVisitorBase):
     """
     Checks:
     * Presence of code in a Block following End block command
+    * Presence of code after "Stop" and "Restart" commands
     """
+
+    def __init__(self):
+        super().__init__()
+        self.method_end: p.EngineCommandNode | None = None
+        self.first_command_after_end: p.Node | None = None
+        self.last_command_after_end: p.Node | None = None
 
     def create_item(self, node: p.Node):
         return AnalyzerItem(
@@ -120,7 +128,34 @@ class UnreachableCodeCheckAnalyzer(AnalyzerVisitorBase):
                     continue
                 if has_end and not isinstance(child, p.BlankNode):
                     self.add_item(self.create_item(child))
-        return super().visit_BlockNode(node)
+        yield from super().visit_BlockNode(node)
+
+    def visit_EngineCommandNode(self, node: p.EngineCommandNode):
+        super().visit_EngineCommandNode(node)
+        if not self.method_end and node.instruction_name in ["Stop", "Restart"]:
+            self.method_end = node
+        yield
+
+    def visit_Node(self, node):
+        super().visit_Node(node)
+        if self.method_end and not self.first_command_after_end:
+            self.first_command_after_end = node
+        if self.method_end:
+            self.last_command_after_end = node
+
+    def analyze(self, n):
+        super().analyze(n)
+        if self.method_end and self.first_command_after_end and self.last_command_after_end:
+            item = AnalyzerItem(
+                "UnreachableCode",
+                "Unreachable code",
+                self.first_command_after_end,
+                AnalyzerItemType.WARNING,
+                f"There is no path to this code because the method will end at line {self.method_end.position.line+1}.",
+            )
+            item.range.end.character = 0
+            item.range.end.line = self.last_command_after_end.position.line+1
+            self.add_item(item)
 
 
 class InfiniteBlockCheckAnalyzer(AnalyzerVisitorBase):
@@ -147,7 +182,7 @@ class InfiniteBlockCheckAnalyzer(AnalyzerVisitorBase):
         items = [str(item) for item in self.items]
         return f'{self.__class__.__name__}(items={items}, has_global_end={self.has_global_end})'
 
-    def check_global_end_block(self, node: p.EndBlockNode | p.EndBlocksNode):
+    def check_global_end_block(self, node: p.EndBlockNode | p.EndBlocksNode | p.EngineCommandNode):
         parent = node.parent
         while parent is not None:
             if isinstance(parent, (p.WatchNode, p.AlarmNode)):
@@ -162,6 +197,8 @@ class InfiniteBlockCheckAnalyzer(AnalyzerVisitorBase):
                 return True
         for child in node.get_child_nodes(recursive=True):
             if isinstance(child, p.EndBlocksNode):
+                return True
+            if isinstance(child, p.EngineCommandNode) and child.instruction_name in ["Stop", "Restart"]:
                 return True
         return False
 
@@ -191,6 +228,12 @@ class InfiniteBlockCheckAnalyzer(AnalyzerVisitorBase):
 
     def visit_EndBlocksNode(self, node: p.EndBlocksNode):
         self.check_global_end_block(node)
+        yield
+
+    def visit_EngineCommandNode(self, node: p.EngineCommandNode):
+        super().visit_EngineCommandNode(node)
+        if node.instruction_name in ["Stop", "Restart"]:
+            self.check_global_end_block(node)
         yield
 
 
@@ -231,7 +274,7 @@ class ThresholdCheckAnalyzer(AnalyzerVisitorBase):
         # comparison makes little sense.
         # The dictionary is reset whenever a "Base" command is encountered to
         # avoid this issue.
-        self.max_threshold_in_parent: dict[p.Node, p.Node] = {}
+        self.max_threshold_in_parent: dict[p.Node, p.Node] = dict()
 
     def visit_Node(self, node: p.Node):
         if not isinstance(node, p.ProgramNode) and node.parent is not None and node.threshold is not None:
@@ -366,16 +409,14 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 "Missing tag",
                 node,
                 AnalyzerItemType.ERROR,
-                "A condition must start with a tag name",
-                start=node.condition.range.start.character,
-                end=node.condition.range.end.character
+                "A condition must start with a tag name"
             ))
             return
 
         if not self.tags.has(tag_name):
             if len(tag_name) > 2 and self.tags.names:
                 similarity = {tag: ratio(tag_name, tag) for tag in self.tags.names}
-                most_similar_tag = max(similarity, key=similarity.get) # type: ignore
+                most_similar_tag = max(similarity, key=similarity.get)  # type: ignore
                 if similarity[most_similar_tag] > 0.7:
                     self.add_item(AnalyzerItem(
                         "UndefinedTag",
@@ -400,6 +441,26 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 ))
                 return
 
+        if condition.op == "":
+            self.add_item(AnalyzerItem(
+                "MissingOperator",
+                "Missing comparator",
+                node,
+                AnalyzerItemType.ERROR,
+                "The tag name in a condition must be followed by a comparator"
+            ))
+            return
+
+        if condition.rhs == "" or condition.tag_value == "":
+            self.add_item(AnalyzerItem(
+                "MissingValue",
+                "Missing value",
+                node,
+                AnalyzerItemType.ERROR,
+                "The comparator must be followed by a value"
+            ))
+            return
+
         tag = self.tags.get(tag_name)
 
         if tag.unit is None and condition.tag_unit is not None:
@@ -419,10 +480,23 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
         if len(valid_units) > 0:
             valid_units_str = " Suggested units: " + ", ".join(valid_units) + "."
 
+        if tag.unit is not None and condition.rhs and condition.rhs.strip() in valid_units and condition.tag_unit is None:
+            self.add_item(AnalyzerItem(
+                "MissingValue",
+                "Missing value",
+                node,
+                AnalyzerItemType.ERROR,
+                "The tag requires that a value is provided.",
+                start=node.condition.rhs_range.start.character,
+                end=node.condition.rhs_range.end.character
+            ))
+            return
+
+
         if tag.unit is not None and condition.tag_unit is None:
             self.add_item(AnalyzerItem(
                 "MissingUnit",
-                "Missing tag unit",
+                "Missing unit",
                 node,
                 AnalyzerItemType.ERROR,
                 "The tag requires that a unit is provided." + valid_units_str,
@@ -465,6 +539,7 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
     * Spell check of command name
     * Given command name is defined
     * Arguments pass validation given command argparser
+    * Commands that don't accept arguments don't get arguments
     """
 
     def __init__(self, commands: CommandCollection) -> None:
@@ -497,7 +572,7 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
         if not self.commands.has(name):
             if len(name) > 2 and self.commands.names:
                 similarity = {command: ratio(name, command) for command in self.commands.names}
-                most_similar_command = max(similarity, key=similarity.get) # type: ignore
+                most_similar_command = max(similarity, key=similarity.get)  # type: ignore
                 if similarity[most_similar_command] > 0.7:
                     self.add_item(AnalyzerItem(
                         "UndefinedCommand",
@@ -520,6 +595,17 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
             return
 
         command = self.commands.get(name)
+
+        if command.arg_parser and node.has_argument and command.arg_parser.regex == ArgSpec.NoArgsInstance.regex:
+            self.add_item(AnalyzerItem(
+                "CommandNoArguments",
+                "Commaned takes no arguments",
+                node,
+                AnalyzerItemType.ERROR,
+                f"The command does not accept an argument",
+                start=node.position.character + len(node.instruction_name or ""),
+            ))
+            return
         if not command.validate_args(node.arguments):
             self.add_item(AnalyzerItem(
                 "CommandArgsInvalid",
@@ -541,6 +627,8 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
     * "Call macro" argument is a defined "Macro"
     * "Macro" is not left unused
     * Spell check of "Call macro" argument
+    * "Macro" is redefined
+    * Macro contains call to itself
     """
 
     def __init__(self) -> None:
@@ -561,8 +649,8 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
             ))
         elif node.name and node.name.strip() not in self.macros:
             similarity = {macro: ratio(node.name.strip(), macro) for macro in self.macros.keys()}
-            most_similar_macro = max(similarity, key=similarity.get) # type: ignore
-            if similarity[most_similar_macro] > 0.7:
+            most_similar_macro = max(similarity, key=similarity.get) if similarity else None  # type: ignore
+            if most_similar_macro and similarity[most_similar_macro] > 0.7:
                 self.add_item(AnalyzerItem(
                     "MacroCalledNotDefined",
                     "Referenced macro is not defined",
@@ -586,7 +674,16 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
         elif node.name and node.name.strip() in self.macros:
             macro_node = self.macros[node.name]
             self.macro_calls.append(node)
-            self.macros_called.append(macro_node)
+            if macro_node not in node.parents:
+                self.macros_called.append(macro_node)
+            else:
+                self.add_item(AnalyzerItem(
+                    "MacroRecursive",
+                    "Macro calls itself",
+                    macro_node,
+                    AnalyzerItemType.ERROR,
+                    f"Macro are not allowed to contain calls to themselves (line {node.position.line+1})",
+                ))
         return super().visit_CallMacroNode(node)
 
     def visit_MacroNode(self, node: p.MacroNode):
@@ -623,7 +720,7 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                     "Macro not used",
                     macro_node,
                     AnalyzerItemType.INFO,
-                    f"This macro is not called"
+                    "This macro is not called"
                 ))
 
 

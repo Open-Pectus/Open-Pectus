@@ -83,8 +83,8 @@ class TestArgumentSpecification(unittest.TestCase):
         command_definitions = engine.get_command_definitions()
         self.assertIsNotNone(command_definitions)
         self.assertTrue("Wait" in [c.name for c in command_definitions])
-        self.assertTrue("Start" in [c.name for c in command_definitions])
-        self.assertTrue("Unhold" in [c.name for c in command_definitions])
+        self.assertTrue("Pause" in [c.name for c in command_definitions])
+        self.assertTrue("Hold" in [c.name for c in command_definitions])
 
         wait_cmd = next(c for c in command_definitions if c.name == "Wait")
         self.assertIsNotNone(wait_cmd.validator)

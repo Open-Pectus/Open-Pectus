@@ -1429,6 +1429,25 @@
         }
       }
     },
+    "/api/lsp/pcode.language-configuration.json": {
+      "get": {
+        "tags": [
+          "lsp"
+        ],
+        "summary": "Get Pcode Language Configuration",
+        "operationId": "get_pcode_language_configuration",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/lsp/engine/{engine_id}/pcode.tmLanguage.json": {
       "get": {
         "tags": [

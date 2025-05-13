@@ -4,7 +4,7 @@ import logging
 import time
 
 from pylsp.workspace import Document
-from pylsp.lsp import DiagnosticSeverity, SymbolKind, CompletionItemKind
+from pylsp.lsp import DiagnosticSeverity, CompletionItemKind
 
 from openpectus.lang.exec.uod import RegexNamedArgumentParser
 from openpectus.lang.exec.analyzer import AnalyzerItem, SemanticCheckAnalyzer
@@ -13,15 +13,15 @@ from openpectus.lang.exec.tags import TagValue, TagValueCollection
 from openpectus.lang.exec.units import get_compatible_unit_names, convert_value_to_unit
 from openpectus.lang.exec import visitor
 import openpectus.lang.model.ast as p
-from openpectus.lang.model.parser import ParserMethod, create_method_parser, lsp_parse_line, Grammar, PcodeParser
+from openpectus.lang.model.parser import ParserMethod, create_method_parser, PcodeParser
 from openpectus.lsp.model import (
-    CompletionItem, Diagnostics,
-    DocumentSymbol, Position, Range,
+    CompletionItem, Diagnostic,
+    Position, Range, TextEdit,
     Hover, MarkupContent,
     get_item_range, get_item_severity
 )
-import openpectus.aggregator.deps as agg_deps
 import openpectus.protocol.models as ProMdl
+import openpectus.aggregator.deps as agg_deps
 
 
 logger = logging.getLogger(__name__)
@@ -39,10 +39,27 @@ operator_descriptions = {
 @functools.cache
 def fetch_uod_info(engine_id: str) -> ProMdl.UodDefinition | None:
     aggregator = agg_deps.get_aggregator()
+
+    if not aggregator:
+        return None
     engine_data = aggregator.get_registered_engine_data(engine_id)
     if not engine_data:
         return None
     return engine_data.uod_definition
+
+
+def fetch_process_value(engine_id: str, tag_name) -> ProMdl.TagValue | None:
+    aggregator = agg_deps.get_aggregator()
+
+    if not aggregator:
+        return None
+    engine_data = aggregator.get_registered_engine_data(engine_id)
+    if not engine_data:
+        return None
+
+    for tag_name_, tag_value in engine_data.tags_info.map.items():
+        if tag_name_ == tag_name:
+            return tag_value
 
 
 def build_tags(uod_def: ProMdl.UodDefinition) -> TagValueCollection:
@@ -146,8 +163,8 @@ def analyze(input: AnalysisInput, document: Document) -> AnalysisResult:
     return result
 
 
-def lint(document: Document, engine_id: str) -> list[Diagnostics]:
-    diagnostics: list[Diagnostics] = []
+def lint(document: Document, engine_id: str) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
     logger.debug(f"lint called | {engine_id=} | {document.version=}")
     try:
         analysis_input = create_analysis_input(engine_id)
@@ -226,7 +243,7 @@ class MacroVisitor(visitor.NodeVisitor):
         self.macro_called_by_macro_call: p.MacroNode | None = None
 
     def visit_CallMacroNode(self, node: p.CallMacroNode):
-        if node == self.macro_call and node.name.strip() in self.macros:
+        if self.macro_call and node.position == self.macro_call.position and node.name.strip() in self.macros:
             self.macro_called_by_macro_call = self.macros[node.name.strip()]
         if node.name is not None and node.name.strip() in self.macros:
             self.macro_calls.append(node)
@@ -308,7 +325,7 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
         # Hovering condition
         if isinstance(node, p.NodeWithCondition) and node.condition:
             # Show current tag value
-            if analysis_input.tags.has(node.condition.lhs) and position_ast in node.condition.lhs_range:
+            if node.condition.lhs and analysis_input.tags.has(node.condition.lhs) and position_ast in node.condition.lhs_range:
                 process_value = fetch_process_value(engine_id, node.condition.lhs)
                 if not process_value:
                     return
@@ -357,7 +374,7 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
                     return Hover(
                         contents=MarkupContent(
                             kind="markdown",
-                            value=f"Comparison value unit{'s' if len(unit_options) > 1 else ''}: {unit_options_str}.",
+                            value=f"Unit{'s' if len(unit_options) > 1 else ''}: {unit_options_str}.",
                         ),
                         range=lsp_range_from_ast_range(node.condition.rhs_range),
                     )

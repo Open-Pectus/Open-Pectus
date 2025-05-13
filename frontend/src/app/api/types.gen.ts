@@ -273,6 +273,8 @@ export type ExposePubsubTopicsResponse = (unknown);
 
 export type TriggerPublishMswResponse = (unknown);
 
+export type GetPcodeLanguageConfigurationResponse = (unknown);
+
 export type GetPcodeTmGrammarData = {
     engineId: string;
 };

@@ -1,10 +1,11 @@
 import logging
 import asyncio
+from itertools import groupby
 
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
-import openpectus.aggregator.routers.dto as Dto
-from fastapi import APIRouter, Depends, Response, HTTPException, WebSocket
+from openpectus.lsp.pylsp_plugin import OPPythonLSPServer
+from fastapi import APIRouter, Depends, HTTPException, WebSocket
 from openpectus.aggregator.aggregator import Aggregator
 from starlette.status import HTTP_404_NOT_FOUND
 from pylsp.python_lsp import PythonLSPServer
@@ -19,22 +20,6 @@ def get_registered_engine_data_or_fail(engine_id: str, agg: Aggregator) -> Mdl.E
     if engine_data is None:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND)
     return engine_data
-
-
-@router.get('/lsp/uod/{engine_id}', response_model_exclude_none=True)
-def get_uod_info(
-        engine_id: str,
-        response: Response,
-        agg: Aggregator = Depends(agg_deps.get_aggregator)
-        ) -> Dto.UodDefinition:
-    response.headers["Cache-Control"] = "no-store"
-    engine_data = get_registered_engine_data_or_fail(engine_id, agg)
-    uod_definition = engine_data.uod_definition
-    if uod_definition is None:
-        raise HTTPException(status_code=HTTP_404_NOT_FOUND)
-    return Dto.UodDefinition.from_model(uod_definition)
-
-
 
 @router.get("/pcode.language-configuration.json")
 def get_pcode_language_configuration():
@@ -60,7 +45,7 @@ def get_pcode_language_configuration():
         ]
     }
 
-@router.get('/uod/{engine_id}/pcode.tmLanguage.json', response_model_exclude_none=True)
+@router.get('/engine/{engine_id}/pcode.tmLanguage.json', response_model_exclude_none=True)
 def get_pcode_tm_grammar(engine_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)):
     engine_data = get_registered_engine_data_or_fail(engine_id, agg)
     if engine_data.uod_definition is None:
@@ -72,8 +57,8 @@ def get_pcode_tm_grammar(engine_id: str, agg: Aggregator = Depends(agg_deps.get_
     tags = [t.name for t in engine_data.uod_definition.tags]
 
     patterns = [
-        dict(name="comment.control.pcode", begin="#", end="$"), # P-code comments. Color: green
-        dict(name="support.type.property-name", match=r"^\s*\d+(\.\d+)?\s"), # P-code thresholds. Color: bright red
+        dict(name="comment.control.pcode", begin="#", end="$"),  # P-code comments. Color: green
+        dict(name="support.type.property-name", match=r"^\s*\d+(\.\d+)?\s"),  # P-code thresholds. Color: bright red
     ]
     """
     A string such as "Block Time" can be interpreted either as the tag "Block Time"
@@ -85,9 +70,9 @@ def get_pcode_tm_grammar(engine_id: str, agg: Aggregator = Depends(agg_deps.get_
     """
 
     styles = {
-        "tag": "entity.name.class", # Color: blue/green
-        "sys_cmd": "constant.language.pcode", # Color: blue
-        "uod_cmd": "support.constant.color", # Color: lighter blue
+        "tag": "entity.name.class",  # Color: blue/green
+        "sys_cmd": "constant.language.pcode",  # Color: blue
+        "uod_cmd": "support.constant.color",  # Color: lighter blue
     }
 
     color_types = {
@@ -132,7 +117,7 @@ async def lsp_server_endpoint(websocket: WebSocket):
         tasks.add(task)
         task.add_done_callback(tasks.discard)
 
-    lsp_handler = PythonLSPServer(
+    lsp_handler = OPPythonLSPServer(
         rx=None,
         tx=None,
         consumer=send_message,
@@ -140,3 +125,9 @@ async def lsp_server_endpoint(websocket: WebSocket):
 
     async for message in websocket.iter_json():
         lsp_handler.consume(message)
+        # If the message is "exit" then we can close the websocket
+        # It would be cleaner to get some sort of signal that the LSP handler
+        # got this exit message. Unfortunately there is no API to accomplish this.
+        if message.get("method", None) == "exit":
+            await websocket.close()
+            break

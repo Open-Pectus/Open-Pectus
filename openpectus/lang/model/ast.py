@@ -44,6 +44,9 @@ class Position:
     def __str__(self):
         return f"Position(line: {self.line}, char: {self.character})"
 
+    def __hash__(self) -> int:
+        return hash(tuple(value for value in self.__dict__.values()))
+
 
 class Range:
     def __init__(self, start: Position, end: Position):
@@ -83,6 +86,9 @@ class Range:
         if not isinstance(other, Range):
             return False
         return self.start == other.start and self.end == other.end
+
+    def __hash__(self) -> int:
+        return hash(tuple(value for value in self.__dict__.values()))
 
 
 class NodeIdGenerator:
@@ -254,17 +260,19 @@ class Node(SupportCancelForce):
     def __repr__(self):
         return self.__str__()
 
-    def __eq__(self, other) -> bool:
-        if not isinstance(other, Node):
-            return False
-        return (self.position == other.position and
-                self.instruction_name == other.instruction_name and
-                self.name == other.name)
-
     def as_tree(self) -> str:
         indent_spaces = "".join(" " for _ in range(self.position.character))
         args = "" if self.arguments_part == "" else ": " + self.arguments_part
         return f"{indent_spaces}{self.instruction_part}{args} | id={self.id}"
+
+    @property
+    def parents(self) -> list[NodeWithChildren]:
+        node = self
+        parents: list[NodeWithChildren] = []
+        while node.parent is not None:
+            parents.append(node.parent)
+            node = node.parent
+        return parents
 
     def reset_runtime_state(self, recursive: bool):
         # TODO implement, possily by just applying an empty state dict

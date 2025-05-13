@@ -128,7 +128,7 @@ class Location(TypedDict):
 
 
 class SymbolInformation(TypedDict):
-    """ 
+    """
     Representation of
     https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#symbolInformation
     """
@@ -149,7 +149,7 @@ class CompletionItem(TypedDict):
     textEdit: NotRequired[TextEdit]
 
 def get_item_severity(item: AnalyzerItem) -> int:
-    """ Represent analyser item type as lsp DiagnosticSeverity """
+    """ Represent analyzer item type as lsp DiagnosticSeverity """
     if item.type == AnalyzerItemType.HINT:
         return DiagnosticSeverity.Hint
     elif item.type == AnalyzerItemType.INFO:

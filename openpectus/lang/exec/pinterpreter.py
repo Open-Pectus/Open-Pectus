@@ -466,7 +466,7 @@ class PInterpreter(NodeVisitor):
             return
 
         if self._ffw:
-            logger.debug(f"Visiting {node} during FFW")            
+            logger.debug(f"Visiting {node} during FFW")
             if self._ffw_target_node_id == node.id:
                 # we have reached the ffw target node, disable ffw to make the generator ready for normal use
                 self._ffw = False

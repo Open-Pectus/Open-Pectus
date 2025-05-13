@@ -108,8 +108,8 @@ def count_trailing_spaces(s: str) -> int:
 class Grammar:
     indent_re = r'(?P<indent>\s+)?'
     threshold_re = r'((?P<threshold>\d+(\.\d+)?)\s)?'
-    instruction_re = r'(?P<instruction_name>\b[a-zA-Z_][^:#]*)'
-    argument_re = r'((?P<has_argument>:) (?P<argument>[^#]+))?'
+    instruction_re = r'(?P<instruction_name>\b[a-zA-Z_0-9][^:#]*)'
+    argument_re = r'(: (?P<argument>[^#]+))?'
     comment_re = r'(\s*(?P<has_comment>#)\s*(?P<comment>.*$))?'
 
     full_line_re = indent_re + threshold_re + instruction_re + argument_re + comment_re
@@ -124,7 +124,7 @@ class Grammar:
     # condition_op_re = "\\s*(?P<op>" + "|".join(op for op in operators) + ")\\s*"
 
     float_re = r'(?P<float>[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?)'
-    unit_re = r'(?P<unit>[a-zA-Z%\/23]+)'
+    unit_re = r'(?P<unit>[a-zA-Z%\/23\*]+)'
 
     condition_rhs_re = '^' + float_re + '\\s*' + unit_re + '$'
     condition_rhs_pattern = re.compile(condition_rhs_re)
@@ -196,7 +196,7 @@ class PcodeParser:
                     parent_node = node
                     increment_required = True
                 else:
-                    pass#increment_required = False
+                    pass
 
 
             elif node.position.character > prev_indent and not increment_required:
@@ -257,11 +257,11 @@ class PcodeParser:
             else:
                 parent_node.append_child(node)
 
-            if not node_error:# and not is_whitespace_node:
+            if not node_error:
                 prev_node = node
                 if not is_whitespace_node:
                     prev_indent = prev_node.position.character
-            
+
             if increment_required and not isinstance(node, (p.ProgramNode, p.WatchNode, p.AlarmNode, p.MacroNode, p.BlockNode,)) and not node_error:
                 increment_required = False
 
@@ -288,27 +288,36 @@ class PcodeParser:
         indent = match_groups.get("indent")
         threshold = match_groups.get("threshold")
         instruction_name = match_groups.get("instruction_name", "") or ""
-        has_argument = match_groups.get("has_argument", "") == ":"
         argument = match_groups.get("argument", "")
         has_comment = match_groups.get("has_comment", "") == "#"
         comment = match_groups.get("comment", "")
+        
+        has_argument = ":" in line_stripped.split("#")[0]
 
         node = self._create_node(instruction_name.strip(), line, line_no).with_id(self.id_generator)
         node.threshold_part = threshold or ""
         node.instruction_part = instruction_name
         node.instruction_range = p.Range(
-            start=Position(line=line_no, character=match.start("instruction_name") +
-                            count_leading_spaces(node.instruction_part)),
-            end=Position(line=line_no, character=match.end("instruction_name") -
-                            count_trailing_spaces(node.instruction_part))
+            start=Position(
+                line=line_no,
+                character=match.start("instruction_name")+count_leading_spaces(node.instruction_part),
+            ),
+            end=Position(
+                line=line_no,
+                character=match.end("instruction_name")-count_trailing_spaces(node.instruction_part),
+            )
         )
         node.arguments_part = (argument or "")
         if len(node.arguments_part) > 0:
             node.arguments_range = p.Range(
-                start=Position(line=line_no, character=match.start("argument") +
-                               count_leading_spaces(node.arguments_part)),
-                end=Position(line=line_no, character=match.end("argument") -
-                             count_trailing_spaces(node.arguments_part))
+                start=Position(
+                    line=line_no,
+                    character=match.start("argument")+count_leading_spaces(node.arguments_part),
+                ),
+                end=Position(
+                    line=line_no,
+                    character=match.end("argument")-count_trailing_spaces(node.arguments_part),
+                )
             )
         node.has_argument = has_argument
         node.arguments = node.arguments_part.strip()  # convenience cleanup, hard to do in regex
@@ -347,6 +356,9 @@ class PcodeParser:
                     c.op = op1
                     break
         if c.op == "":
+            c.lhs = node.arguments_part.strip()
+            c.lhs_range = node.arguments_range
+            c.tag_name = c.lhs
             return
 
         try:
