@@ -24,13 +24,19 @@ class InternalCommandsRegistry:
             InterpreterCommandEnum.INCREMENT_RUN_COUNTER: ArgSpec.NoArgs(),
             InterpreterCommandEnum.RUN_COUNTER: ArgSpec.Regex(regex.REGEX_INT),
             InterpreterCommandEnum.WAIT: ArgSpec.Regex(regex.REGEX_DURATION),
+            "End block": ArgSpec.NoArgs(),
+            "End blocks": ArgSpec.NoArgs(),
+            "Stop": ArgSpec.NoArgs(),
+            "Restart": ArgSpec.NoArgs(),
         }
         # system cmds that are implemented in interpreter and have no command class
         others = [
-            "Watch", "Alarm",
-            "Block", "End block", "End blocks",
+            "Watch",
+            "Alarm",
+            "Block",
             "Mark",
-            "Macro", "Call macro",
+            "Macro",
+            "Call macro",
             "Batch",
         ]
         for other_cmd in others:
