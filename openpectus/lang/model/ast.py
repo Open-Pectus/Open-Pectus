@@ -20,12 +20,32 @@ class Position:
             return False
         return self.line == value.line and self.character == value.character
 
+    def __lt__(self, other):
+        if isinstance(other, Range):
+            other = other.start
+        if isinstance(other, Position):
+            return self.line < other.line or (self.line == other.line and self.character < other.character)
+        else:
+            raise TypeError(f"'<' not supported between instances of '{self.__class__.__name__}'" +
+                            " and '{other.__class__.__name__}'")
+
+    def __gt__(self, other):
+        if isinstance(other, Range):
+            other = other.end
+        if isinstance(other, Position):
+            return self.line > other.line or (self.line == other.line and self.character > other.character)
+        else:
+            raise TypeError(f"'>' not supported between instances of '{self.__class__.__name__}'" +
+                            " and '{other.__class__.__name__}'")
+
     def with_character(self, character: int) -> Position:
         return Position(line=self.line, character=character)
 
     def __str__(self):
         return f"Position(line: {self.line}, char: {self.character})"
 
+    def __hash__(self) -> int:
+        return hash(tuple(value for value in self.__dict__.values()))
 
 
 class Range:
@@ -50,6 +70,25 @@ class Range:
 
     def __contains__(self, index: Position):
         """ Check if position or character index is within range"""
+        assert isinstance(index, Position)
+        return (
+            # Position and range are all on one line
+            (self.start.line == self.end.line == index.line and (self.start.character <= index.character <= self.end.character)) or
+            # Position is on start line
+            (self.start.line == index.line and index.line < self.end.line and (self.start.character <= index.character)) or
+            # Position is between start or end line
+            (self.start.line < index.line < self.end.line) or
+            # Position is on end line
+            (self.end.line == index.line and index.line > self.start.line and (index.character <= self.end.character))
+        )
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Range):
+            return False
+        return self.start == other.start and self.end == other.end
+
+    def __hash__(self) -> int:
+        return hash(tuple(value for value in self.__dict__.values()))
 
 
 class NodeIdGenerator:
@@ -230,6 +269,15 @@ class Node(SupportCancelForce):
         args = "" if self.arguments_part == "" else ": " + self.arguments_part
         return f"{indent_spaces}{self.instruction_part}{args} | id={self.id}"
 
+    @property
+    def parents(self) -> list[NodeWithChildren]:
+        node = self
+        parents: list[NodeWithChildren] = []
+        while node.parent is not None:
+            parents.append(node.parent)
+            node = node.parent
+        return parents
+
     def reset_runtime_state(self, recursive: bool):
         # TODO implement, possily by just applying an empty state dict
         # known state to reset: activated for condition nodes
@@ -267,11 +315,11 @@ class NodeWithChildren(Node):
     def has_children(self):
         return len(self._children) > 0
 
-    def get_child_nodes(self, recursive: bool = False) -> list[Node]:
+    def get_child_nodes(self, recursive: bool = False, exclude_blocks: bool = False) -> list[Node]:
         children: list[Node] = []
         for child in self._children:
             children.append(child)
-            if recursive and isinstance(child, NodeWithChildren):
+            if recursive and isinstance(child, NodeWithChildren) and not (exclude_blocks and isinstance(child, BlockNode)):
                 children.extend(child.get_child_nodes(recursive))
         return children
 
