@@ -986,6 +986,8 @@ class RegexNamedArgumentParser:
         start = self.regex.index("<option>") + len("<option>(")
         end = self.regex.index("|(")
         result = unescape(self.regex[start: end]).split("|")
+        if "" in result:
+            result.remove("")
         return result
 
     def get_additive_options(self) -> list[str]:
@@ -994,6 +996,8 @@ class RegexNamedArgumentParser:
         start = self.regex.index("|(") + len("|(")
         end = self.regex.index("|\\+)+))\\s*")
         result = unescape(self.regex[start: end]).split("|")
+        if "" in result:
+            result.remove("")
         return result
 
     @staticmethod
