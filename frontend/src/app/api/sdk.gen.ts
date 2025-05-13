@@ -5,7 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { PostResponse, GetConfigResponse, ExposePubsubTopicsData, ExposePubsubTopicsResponse, TriggerPublishMswResponse, GetUnitData, GetUnitResponse, GetUnitsData, GetUnitsResponse, GetProcessValuesData, GetProcessValuesResponse, GetAllProcessValuesData, GetAllProcessValuesResponse, ExecuteCommandData, ExecuteCommandResponse, GetProcessDiagramData, GetProcessDiagramResponse, GetCommandExamplesData, GetCommandExamplesResponse, GetRunLogData, GetRunLogResponse, GetMethodAndStateData, GetMethodAndStateResponse, GetMethodData, GetMethodResponse, SaveMethodData, SaveMethodResponse, GetPlotConfigurationData, GetPlotConfigurationResponse, GetPlotLogData, GetPlotLogResponse, GetControlStateData, GetControlStateResponse, GetErrorLogData, GetErrorLogResponse, ForceRunLogLineData, ForceRunLogLineResponse, CancelRunLogLineData, CancelRunLogLineResponse, ExposeSystemStateEnumData, ExposeSystemStateEnumResponse, GetRecentRunsData, GetRecentRunsResponse, GetRecentRunData, GetRecentRunResponse, GetRecentRunMethodAndStateData, GetRecentRunMethodAndStateResponse, GetRecentRunRunLogData, GetRecentRunRunLogResponse, GetRecentRunPlotConfigurationData, GetRecentRunPlotConfigurationResponse, GetRecentRunPlotLogData, GetRecentRunPlotLogResponse, GetRecentRunCsvJsonData, GetRecentRunCsvJsonResponse, GetRecentRunErrorLogData, GetRecentRunErrorLogResponse, GetRecentRunCsvFileData, GetRecentRunCsvFileResponse, GetVersionResponse, GetBuildNumberResponse, GetBuildInfoResponse } from './types.gen';
+import type { PostResponse, GetConfigResponse, ExposePubsubTopicsData, ExposePubsubTopicsResponse, TriggerPublishMswResponse, GetPcodeTmGrammarData, GetPcodeTmGrammarResponse, GetUnitData, GetUnitResponse, GetUnitsData, GetUnitsResponse, GetProcessValuesData, GetProcessValuesResponse, GetAllProcessValuesData, GetAllProcessValuesResponse, ExecuteCommandData, ExecuteCommandResponse, GetProcessDiagramData, GetProcessDiagramResponse, GetCommandExamplesData, GetCommandExamplesResponse, GetRunLogData, GetRunLogResponse, GetMethodAndStateData, GetMethodAndStateResponse, GetMethodData, GetMethodResponse, SaveMethodData, SaveMethodResponse, GetPlotConfigurationData, GetPlotConfigurationResponse, GetPlotLogData, GetPlotLogResponse, GetControlStateData, GetControlStateResponse, GetErrorLogData, GetErrorLogResponse, ForceRunLogLineData, ForceRunLogLineResponse, CancelRunLogLineData, CancelRunLogLineResponse, ExposeSystemStateEnumData, ExposeSystemStateEnumResponse, GetRecentRunsData, GetRecentRunsResponse, GetRecentRunData, GetRecentRunResponse, GetRecentRunMethodAndStateData, GetRecentRunMethodAndStateResponse, GetRecentRunRunLogData, GetRecentRunRunLogResponse, GetRecentRunPlotConfigurationData, GetRecentRunPlotConfigurationResponse, GetRecentRunPlotLogData, GetRecentRunPlotLogResponse, GetRecentRunCsvJsonData, GetRecentRunCsvJsonResponse, GetRecentRunErrorLogData, GetRecentRunErrorLogResponse, GetRecentRunCsvFileData, GetRecentRunCsvFileResponse, GetVersionResponse, GetBuildNumberResponse, GetBuildInfoResponse } from './types.gen';
 
 @Injectable({
     providedIn: 'root'
@@ -84,6 +84,34 @@ export class FrontendPubsubService {
         return __request(OpenAPI, this.http, {
             method: 'POST',
             url: '/api/trigger-publish-msw'
+        });
+    }
+    
+}
+
+@Injectable({
+    providedIn: 'root'
+})
+export class LspService {
+    constructor(public readonly http: HttpClient) { }
+    
+    /**
+     * Get Pcode Tm Grammar
+     * @param data The data for the request.
+     * @param data.engineId
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public getPcodeTmGrammar(data: GetPcodeTmGrammarData): Observable<GetPcodeTmGrammarResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/lsp/engine/{engine_id}/pcode.tmLanguage.json',
+            path: {
+                engine_id: data.engineId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
         });
     }
     

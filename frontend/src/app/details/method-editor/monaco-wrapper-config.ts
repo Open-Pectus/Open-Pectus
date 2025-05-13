@@ -22,10 +22,11 @@ export class MonacoWrapperConfig {
             'editor.minimap': {
               enabled: UtilMethods.isDesktop,
             },
-            'editor.lightbulb.enabled': 'off',
+            'editor.lightbulb.enabled': true,
             'editor.experimental.asyncTokenization': true,
             'editor.foldingStrategy': 'indentation',
-            'editor.wordBasedSuggestions': 'off',
+            'editor.wordBasedSuggestions': false,
+            'editor.codeLens': false,
             // "editor.quickSuggestions": false
           }),
         },
@@ -77,7 +78,7 @@ export class MonacoWrapperConfig {
           connection: {
             options: {
               $type: 'WebSocketUrl',
-              url: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/lsp`,
+              url: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/lsp/websocket`,
               // startOptions: {
               //   onCall: () => {
               //     console.log('Connected to socket.');

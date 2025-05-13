@@ -324,7 +324,8 @@ class FromFrontend:
         version_to_overwrite = method.version
         logger.debug(f"Save method version: {method.version}")
         if existing_version != version_to_overwrite:
-            raise AggregatorCallerException(f"Method version mismatch: trying to overwrite version {version_to_overwrite} when existing version is {existing_version}")
+            raise AggregatorCallerException(f"Method version mismatch: trying to overwrite version {version_to_overwrite}" +
+                                            f"when existing version is {existing_version}")
         # Take shallow copy and increment version
         new_method = copy.copy(method)
         new_method.version += 1

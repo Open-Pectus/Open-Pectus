@@ -4,7 +4,7 @@ import logging
 import time
 
 from pylsp.workspace import Document
-from pylsp.lsp import DiagnosticSeverity, SymbolKind
+from pylsp.lsp import DiagnosticSeverity, SymbolKind, CompletionItemKind
 
 from openpectus.lang.exec.uod import RegexNamedArgumentParser
 from openpectus.lang.exec.analyzer import AnalyzerItem, SemanticCheckAnalyzer
@@ -15,13 +15,12 @@ from openpectus.lang.exec import visitor
 import openpectus.lang.model.ast as p
 from openpectus.lang.model.parser import ParserMethod, create_method_parser, lsp_parse_line, Grammar, PcodeParser
 from openpectus.lsp.model import (
-    CompletionItem, CompletionItemKind, Diagnostics,
+    CompletionItem, Diagnostics,
     DocumentSymbol, Position, Range,
     Hover, MarkupContent,
     get_item_range, get_item_severity
 )
-
-import openpectus.aggregator.routers.dto as Dto
+import openpectus.aggregator.deps as agg_deps
 import openpectus.protocol.models as ProMdl
 
 
@@ -39,29 +38,11 @@ operator_descriptions = {
 
 @functools.cache
 def fetch_uod_info(engine_id: str) -> ProMdl.UodDefinition | None:
-    from openpectus.lsp.config import aggregator
-
-    if not aggregator:
-        return None
+    aggregator = agg_deps.get_aggregator()
     engine_data = aggregator.get_registered_engine_data(engine_id)
     if not engine_data:
         return None
-
     return engine_data.uod_definition
-
-
-def fetch_process_value(engine_id: str, tag_name) -> ProMdl.TagValue | None:
-    from openpectus.lsp.config import aggregator
-
-    if not aggregator:
-        return None
-    engine_data = aggregator.get_registered_engine_data(engine_id)
-    if not engine_data:
-        return None
-
-    for tag_name_, tag_value in engine_data.tags_info.map.items():
-        if tag_name_ == tag_name:
-            return tag_value
 
 
 def build_tags(uod_def: ProMdl.UodDefinition) -> TagValueCollection:
@@ -172,7 +153,7 @@ def lint(document: Document, engine_id: str) -> list[Diagnostics]:
         analysis_input = create_analysis_input(engine_id)
         analysis_result = analyze(analysis_input, document)
     except Exception as ex:
-        logger.error("Failed to build program: '{pcode}'", exc_info=True)
+        logger.error(f"Failed to lint program for engine_id: '{engine_id}'", exc_info=True)
         diagnostics.append(
             Diagnostic(
                 source="Open Pectus",
