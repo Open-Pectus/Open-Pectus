@@ -3,7 +3,6 @@ from typing import Self, Type, TypeVar, TypedDict
 
 
 class Position:
-    empty: Position
 
     def __init__(self, line: int, character: int):
         self.line: int = line   # todo define 0-1 based. should probably change from before to just match lsp
@@ -11,6 +10,10 @@ class Position:
 
     def is_empty(self) -> bool:
         return self == Position.empty
+
+    @staticmethod
+    def empty() -> Position:
+        return Position(line=-1, character=-1)
 
     def __eq__(self, value):
         if value is None or not isinstance(value, Position):
@@ -24,29 +27,29 @@ class Position:
         return f"Position(line: {self.line}, char: {self.character})"
 
 
-Position.empty = Position(line=-1, character=-1)
-
 
 class Range:
-    empty: Range
-
     def __init__(self, start: Position, end: Position):
         self.start = start
         self.end = end
 
     def is_empty(self) -> bool:
-        return self == Range.empty
+        return self == Range.empty()
 
     def with_end(self, position: Position) -> Range:
         return Range(
             start=self.start,
             end=position)
 
+    @staticmethod
+    def empty() -> Range:
+        return Range(start=Position.empty(), end=Position.empty())
+
     def __str__(self):
         return f"{self.start} - {self.end}"
 
-
-Range.empty = Range(start=Position.empty, end=Position.empty)
+    def __contains__(self, index: Position):
+        """ Check if position or character index is within range"""
 
 
 class NodeIdGenerator:
@@ -116,10 +119,11 @@ class Node(SupportCancelForce):
         self.id: str = id
         self.position: Position = position
         self.instruction_part: str = ""
+        self.instruction_range: Range = Range.empty()
         self.threshold_part: str = ""
         self.arguments_part: str = ""
         self.arguments: str = ""
-        self.arguments_range: Range = Range.empty
+        self.arguments_range: Range = Range.empty()
         self.comment_part: str = ""
         self.has_comment: bool = False
         self.has_argument: bool = False
@@ -425,7 +429,7 @@ class Condition:
         self.lhs = ""
         self.op = ""
         self.rhs = ""
-        self.range: Range = Range.empty
+        self.range: Range = Range.empty()
 
         self.tag_name: str | None = None
         self.tag_value: str | None = None
@@ -436,9 +440,9 @@ class Condition:
         # for the LSP purpose of underlining lsh/op/rhs but this conflicts
         # with the calculation of later ones based on the first ones.
 
-        self.lhs_range = Range.empty
-        self.op_range = Range.empty
-        self.rhs_range = Range.empty
+        self.lhs_range = Range.empty()
+        self.op_range = Range.empty()
+        self.rhs_range = Range.empty()
 
 
 class WhitespaceNode(Node):

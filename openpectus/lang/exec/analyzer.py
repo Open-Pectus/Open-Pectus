@@ -36,7 +36,7 @@ class AnalyzerItem:
         self.description: str = description
         self.type: AnalyzerItemType = type
         self.node: p.Node | None = node
-        self.range: p.Range = p.Range.empty
+        self.range: p.Range = p.Range.empty()
 
         # use node for ranges by default
         if node is not None:
