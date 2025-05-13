@@ -3,7 +3,7 @@ import unittest
 
 from pylsp.workspace import Document, Workspace
 
-from openpectus.aggregator.routers.dto import CommandDefinition, TagDefinition, UodDefinition
+from openpectus.protocol.models import CommandDefinition, TagDefinition, UodDefinition
 from openpectus.lsp import lsp_analysis
 from openpectus.lsp.model import CompletionItem, Position, Diagnostics
 
@@ -37,10 +37,10 @@ class TestLspAnalysis(unittest.TestCase):
             uod_info = UodDefinition(
                 commands=[],
                 system_commands=[
-                    CommandDefinition(name="Mark"),
-                    CommandDefinition(name="Watch"),
-                    CommandDefinition(name="End block"),
-                    CommandDefinition(name="End blocks"),
+                    CommandDefinition(name="Mark", validator=None),
+                    CommandDefinition(name="Watch", validator=None),
+                    CommandDefinition(name="End block", validator=None),
+                    CommandDefinition(name="End blocks", validator=None),
                 ],
                 tags=[])
 
@@ -57,10 +57,10 @@ class TestLspAnalysis(unittest.TestCase):
             uod_info = UodDefinition(
                 commands=[],
                 system_commands=[
-                    CommandDefinition(name="Mark"),
-                    CommandDefinition(name="Watch"),
-                    CommandDefinition(name="End block"),
-                    CommandDefinition(name="End blocks"),
+                    CommandDefinition(name="Mark", validator=None),
+                    CommandDefinition(name="Watch", validator=None),
+                    CommandDefinition(name="End block", validator=None),
+                    CommandDefinition(name="End blocks", validator=None),
                 ],
                 tags=[])
 

@@ -77,7 +77,6 @@ class TestParser(unittest.TestCase):
 
     # backport to support python 3.11
     def assert_line_parses_as_node_type(self, line: str, node_type: Type[TNode]) -> TNode:
-    #def assert_line_parses_as_node_type[T: p.Node](self, line: str, node_type: Type[T]) -> T:
         parser = create_parser()
         node = parser._parse_line(line, 0)
         self.assertIsInstance(node, node_type)
@@ -429,14 +428,14 @@ Alarm:  Foo   >=  0.4
         self.assertEqual(21, alarm.condition.range.end.character)
 
         self.assertEqual(8, alarm.condition.lhs_range.start.character)
-        #self.assertEqual(11, alarm.condition.lhs_range.end.character)
+        # self.assertEqual(11, alarm.condition.lhs_range.end.character)
 
         self.assertEqual(14, alarm.condition.op_range.start.character)
         self.assertEqual(16, alarm.condition.op_range.end.character)
 
         # working with these indices is a horrible mess. it's also not important
 
-        #self.assertEqual(18, alarm.condition.rhs_range.start.character)
+        # self.assertEqual(18, alarm.condition.rhs_range.start.character)
         self.assertEqual(21, alarm.condition.rhs_range.end.character)
 
     def test_engine_command(self):

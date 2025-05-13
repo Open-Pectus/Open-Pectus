@@ -51,6 +51,8 @@ def pylsp_settings(config: Config) -> dict[str, dict[str, dict[str, Any]]]:
             "jedi_rename":  {"enabled": False},
             "jedi_signature_help":  {"enabled": False},
             "jedi_symbols":  {"enabled": False},
+            "preload":  {"enabled": False},
+            "rope_autoimport":  {"enabled": False},
         }
     }
 

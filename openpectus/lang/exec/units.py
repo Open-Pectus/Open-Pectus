@@ -3,12 +3,18 @@ import os
 import logging
 import itertools
 from collections import defaultdict
+import time
 
 import pint
 from pint import UnitRegistry, Quantity
 
 cache_folder = os.path.join(os.path.dirname(__file__), "pint-cache")
-ureg = UnitRegistry(cache_folder=cache_folder)
+try:
+    ureg = UnitRegistry(cache_folder=cache_folder)
+except EOFError:
+    time.sleep(0.2)
+    ureg = UnitRegistry(cache_folder=cache_folder)
+
 ureg.define("m3 = m**3")
 ureg.define("m2 = m**2")
 ureg.define("dm2 = dm**2")
@@ -110,10 +116,10 @@ def add_unit(unit: str,
     # Unit defined in relation to an existing unit
     if quantity and unit_relation:
         assert quantity_relation is None, ("It is not possible to add a quantity relation when " +
-                                          "defining a new unit in relation to an existing unit.")
+                                           "defining a new unit in relation to an existing unit.")
         assert quantity in QUANTITY_PINT_MAP.keys(), f'Quantity "{quantity}" is not available.'
         assert "=" in unit_relation, (f'Unit relation must define an equality, but "{unit_relation}" ' +
-                                     'contains no equals sign (=).')
+                                      'contains no equals sign (=).')
         if unit in QUANTITY_UNIT_MAP[quantity]:
             logger.warning(f'Unit "{unit}" is already defined for quantity "{quantity}".')
         else:

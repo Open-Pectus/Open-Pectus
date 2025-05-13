@@ -2,10 +2,9 @@ from __future__ import annotations
 import functools
 import logging
 import time
-import httpx
 
 from pylsp.workspace import Document
-from pylsp.lsp import DiagnosticSeverity, SymbolKind
+from pylsp.lsp import DiagnosticSeverity, SymbolKind, CompletionItemKind
 
 from openpectus.lang.exec.uod import RegexNamedArgumentParser
 from openpectus.lang.exec.analyzer import AnalyzerItem, SemanticCheckAnalyzer
@@ -14,49 +13,30 @@ from openpectus.lang.exec.tags import TagValue, TagValueCollection
 import openpectus.lang.model.ast as p
 from openpectus.lang.model.parser import ParserMethod, create_method_parser, lsp_parse_line
 from openpectus.lsp.model import (
-    CompletionItem, CompletionItemKind, Diagnostics,
+    CompletionItem, Diagnostics,
     DocumentSymbol, Position, Range,
     get_item_range, get_item_severity
 )
-
-import openpectus.aggregator.routers.dto as Dto
+import openpectus.aggregator.deps as agg_deps
+import openpectus.protocol.models as ProMdl
 
 
 logger = logging.getLogger(__name__)
 
 @functools.cache
-def fetch_uod_info(engine_id: str) -> Dto.UodDefinition | None:
-    from openpectus.lsp.config import aggregator_url
-    aggregator_endpoint_url = f"{aggregator_url}/lsp/uod/{engine_id}"
-    logger.info(f"Fetching uod definition, {aggregator_endpoint_url=}")
-    t1 = time.perf_counter()
-    try:
-        response = httpx.get(aggregator_endpoint_url)
-        if response.status_code == 200:
-            result = response.json()
-            uod_def = Dto.UodDefinition(**result)
-            dt = time.perf_counter() - t1
-            logger.info(f"Fetched uod_info, {engine_id=}, duration: {dt:0.2f}s")
-            logger.info(f"{uod_def.tags=}")
-            logger.info(f"{uod_def.system_commands=}")
-            logger.info(f"{uod_def.commands=}")
-            return uod_def
-    except Exception:
-        logger.error("Exception fetching UodDefinition", exc_info=True)
-
-    logger.error("uod info is not available")
-    return Dto.UodDefinition(
-        commands=[],
-        system_commands=[],
-        tags=[Dto.TagDefinition(name="Foo")]
-    )
+def fetch_uod_info(engine_id: str) -> ProMdl.UodDefinition | None:
+    aggregator = agg_deps.get_aggregator()
+    engine_data = aggregator.get_registered_engine_data(engine_id)
+    if not engine_data:
+        return None
+    return engine_data.uod_definition
 
 
-def build_tags(uod_def: Dto.UodDefinition) -> TagValueCollection:
+def build_tags(uod_def: ProMdl.UodDefinition) -> TagValueCollection:
     return TagValueCollection([TagValue(name=t.name, unit=t.unit) for t in uod_def.tags])
 
 
-def build_commands(uod_def: Dto.UodDefinition) -> CommandCollection:
+def build_commands(uod_def: ProMdl.UodDefinition) -> CommandCollection:
     cmds = []
     for c_def in uod_def.commands + uod_def.system_commands:
         try:
@@ -98,6 +78,9 @@ class AnalysisInput:
     def get_tag_completions(self, query: str) -> list[str]:
         return [tag for tag in self.tag_completions if tag.lower().startswith(query.lower())]
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(engine_id="{self.engine_id}", commands={self.commands}, tags={self.tags})'
+
 
 @functools.cache
 def create_analysis_input(engine_id: str) -> AnalysisInput:
@@ -118,6 +101,9 @@ class AnalysisResult:
         self.program = program
         self.items = items
         self.input = input
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(program="{self.program}", commands={self.items}, tags={self.input})'
 
 
 def analyze(input: AnalysisInput, document: Document) -> AnalysisResult:
@@ -151,7 +137,7 @@ def lint(document: Document, engine_id: str) -> list[Diagnostics]:
         analysis_input = create_analysis_input(engine_id)
         analysis_result = analyze(analysis_input, document)
     except Exception as ex:
-        logger.error("Failed to build program: '{pcode}'", exc_info=True)
+        logger.error(f"Failed to lint program for engine_id: '{engine_id}'", exc_info=True)
         diagnostics.append(
             Diagnostics(
                 source="Open Pectus",
@@ -283,14 +269,11 @@ def starts_with_any(query: str, candidates: list[str]) -> bool:
 
 
 def completions(document: Document, position: Position, ignored_names, engine_id: str) -> list[CompletionItem]:
-    # Note: Returning a CompletionList with items does not work in the client for some reason. Only
-    # The array/list of CompletionItem is working in the client.
-    # Also consider the hook pylsp_completion_item_resolve. The spec has info about how this can be used to add
-    # more detail to the suggestions.
+    # Return a list of completion items because pylsp encapsulates it in a CompletionList for us
     try:
         analysis_input = create_analysis_input(engine_id)
     except Exception:
-        logger.error("Failed to build program: '{pcode}'", exc_info=True)
+        logger.error(f"Failed to analyse program for engine_id: '{engine_id}'", exc_info=True)
         return []
 
     # determine whether position is in first word on the line
@@ -331,7 +314,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                 for name in analysis_input.get_tag_completions(second_word)
             ]
         else:
-            # difficult amd possibly not important case
+            # difficult and possibly not important case
             # we could autocomplete all parts of a condition
             return []
 

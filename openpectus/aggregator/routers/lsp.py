@@ -1,15 +1,17 @@
 import logging
+import asyncio
 
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
 import openpectus.aggregator.routers.dto as Dto
-from fastapi import APIRouter, Depends, Response, HTTPException
+from fastapi import APIRouter, Depends, Response, HTTPException, WebSocket
 from openpectus.aggregator.aggregator import Aggregator
 from starlette.status import HTTP_404_NOT_FOUND
+from pylsp.python_lsp import PythonLSPServer
 
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["lsp"], include_in_schema=False)
+router = APIRouter(tags=["lsp"], prefix="/lsp", include_in_schema=True)
 
 
 def get_registered_engine_data_or_fail(engine_id: str, agg: Aggregator) -> Mdl.EngineData:
@@ -19,21 +21,7 @@ def get_registered_engine_data_or_fail(engine_id: str, agg: Aggregator) -> Mdl.E
     return engine_data
 
 
-@router.get('/lsp/uod/{engine_id}', response_model_exclude_none=True)
-def get_uod_info(
-        engine_id: str,
-        response: Response,
-        agg: Aggregator = Depends(agg_deps.get_aggregator)
-        ) -> Dto.UodDefinition:
-    response.headers["Cache-Control"] = "no-store"
-    engine_data = get_registered_engine_data_or_fail(engine_id, agg)
-    uod_definition = engine_data.uod_definition
-    if uod_definition is None:
-        raise HTTPException(status_code=HTTP_404_NOT_FOUND)
-    return Dto.UodDefinition.from_model(uod_definition)
-
-
-@router.get('/uod/{engine_id}/pcode.tmLanguage.json', response_model_exclude_none=True)
+@router.get('/engine/{engine_id}/pcode.tmLanguage.json', response_model_exclude_none=True)
 def get_pcode_tm_grammar(engine_id: str, agg: Aggregator = Depends(agg_deps.get_aggregator)):
     engine_data = get_registered_engine_data_or_fail(engine_id, agg)
     if engine_data.uod_definition is None:
@@ -71,3 +59,24 @@ def get_pcode_tm_grammar(engine_id: str, agg: Aggregator = Depends(agg_deps.get_
             },
         ]
     }
+
+
+@router.websocket("/websocket")
+async def lsp_server_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    loop = asyncio.get_event_loop()
+    tasks = set()
+
+    def send_message(message):
+        task = loop.create_task(websocket.send_json(message))
+        tasks.add(task)
+        task.add_done_callback(tasks.discard)
+
+    lsp_handler = PythonLSPServer(
+        rx=None,
+        tx=None,
+        consumer=send_message,
+    )
+
+    async for message in websocket.iter_json():
+        lsp_handler.consume(message)
