@@ -108,9 +108,9 @@ def count_trailing_spaces(s: str) -> int:
 class Grammar:
     indent_re = r'(?P<indent>\s+)?'
     threshold_re = r'((?P<threshold>\d+(\.\d+)?)\s)?'
-    instruction_re = r'(?P<instruction_name>\b[a-zA-Z_][^:#]*)'
+    instruction_re = r'(?P<instruction_name>\b[a-zA-Z_0-9][^:#]*)'
     argument_re = r'(: (?P<argument>[^#]+))?'
-    comment_re = r'(\s*#\s*(?P<comment>.*$))?'
+    comment_re = r'(\s*(?P<has_comment>#)\s*(?P<comment>.*$))?'
 
     full_line_re = indent_re + threshold_re + instruction_re + argument_re + comment_re
     # fallback is used to capture the command name, even if the command is not parsable
@@ -123,12 +123,12 @@ class Grammar:
     operators_2char = ['<=', '>=', '==', '!=']
     # condition_op_re = "\\s*(?P<op>" + "|".join(op for op in operators) + ")\\s*"
 
-    float_re = r'[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?'
-    unit_re = r'[a-zA-Z]+|%|/'
+    float_re = r'(?P<float>[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?)'
+    unit_re = r'(?P<unit>[a-zA-Z%\/23\*]+)'
 
-    condition_rhs_re = '^' + '(?P<float>' + float_re + ')' + '\\s*' + '(?P<unit>' + unit_re + ')' + '$'
+    condition_rhs_re = '^' + float_re + '\\s*' + unit_re + '$'
     condition_rhs_pattern = re.compile(condition_rhs_re)
-    condition_rhs_no_unit_re = '^' + '(?P<float>' + float_re + ')' + '\\s*$'
+    condition_rhs_no_unit_re = '^' + float_re + '\\s*$'
     condition_rhs_no_unit_pattern = re.compile(condition_rhs_no_unit_re)
 
 
@@ -260,7 +260,10 @@ class PcodeParser:
         threshold = match_groups.get("threshold")
         instruction_name = match_groups.get("instruction_name", "") or ""
         argument = match_groups.get("argument", "")
+        has_comment = match_groups.get("has_comment", "") == "#"
         comment = match_groups.get("comment", "")
+        
+        has_argument = ":" in line_stripped.split("#")[0]
 
         node = self._create_node(instruction_name.strip(), line, line_no).with_id(self.id_generator)
         node.threshold_part = threshold or ""
@@ -273,7 +276,9 @@ class PcodeParser:
                 end=Position(line=line_no, character=match.end("argument") -
                              count_trailing_spaces(node.arguments_part))
             )
+        node.has_argument = has_argument
         node.arguments = node.arguments_part.strip()  # convenience cleanup, hard to do in regex
+        node.has_comment = has_comment
         node.comment_part = comment or ""
 
         character = 0 if indent is None or indent == "" else len(indent)

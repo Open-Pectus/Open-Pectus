@@ -121,6 +121,8 @@ class Node(SupportCancelForce):
         self.arguments: str = ""
         self.arguments_range: Range = Range.empty
         self.comment_part: str = ""
+        self.has_comment: bool = False
+        self.has_argument: bool = False
 
         self.threshold: float | None = None
         self.indent_error: bool = False
@@ -455,6 +457,7 @@ class CommentNode(WhitespaceNode):
     """ Represents a line with only a comment. """
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
+        self.has_comment = True
         self.line: str = ""
 
     def with_line(self, line: str):

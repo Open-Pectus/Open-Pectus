@@ -44,7 +44,7 @@ class TestRegexes(unittest.TestCase):
         self.assertIsNotNone("5.6", m.groupdict()['threshold'])
 
     def test_instruction(self):
-        r = re.compile(r'(?P<instruction_name>\b[a-zA-Z_][^:#]*)')
+        r = re.compile(r'(?P<instruction_name>\b[a-zA-Z_0-9][^:#]*)')
         self.assertEqual(r.pattern, Grammar.instruction_re)
 
         self.assertIsNotNone(r.match("foo"))
@@ -60,7 +60,7 @@ class TestRegexes(unittest.TestCase):
         self.assertEqual("bar 27 : ", m.groupdict()['argument'])
 
     def test_instruction_argument(self):
-        r = re.compile(r'(?P<instruction_name>\b[a-zA-Z_][^:#]*)(: (?P<argument>[^#]+))?')
+        r = re.compile(r'(?P<instruction_name>\b[a-zA-Z_0-9][^:#]*)(: (?P<argument>[^#]+))?')
         self.assertEqual(r.pattern, Grammar.instruction_re + Grammar.argument_re)
 
         m = r.match("Foo: bar 27 :")
@@ -97,12 +97,11 @@ class TestParser(unittest.TestCase):
         self.assertEqual("Mark", node.instruction_name)
         self.assertEqual("A", node.arguments_part)
 
-    @unittest.skip("Not implemented. Requires using fallback regex")
     def test_instruction_must_start_with_non_number(self):
         line = "1Mark: A"
         # Fail with something like "1Mark is not a valid command name. Did you mean Mark?"
         node = self.assert_line_parses_as_node_type(line, p.ErrorInstructionNode)
-        self.assertEqual("Mark", node.instruction_name)
+        self.assertEqual("1Mark", node.instruction_name)
 
 
     def test_parse_instruction_comment(self):
