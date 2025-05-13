@@ -313,6 +313,9 @@ class PcodeParser:
                     c.op = op1
                     break
         if c.op == "":
+            c.lhs = node.arguments_part.strip()
+            c.lhs_range = node.arguments_range
+            c.tag_name = c.lhs
             return
 
         try:
