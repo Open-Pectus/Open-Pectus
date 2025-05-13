@@ -255,11 +255,7 @@ class Node(SupportCancelForce):
         self.errors.append(error)
 
     def __str__(self):
-        return f"{self.__class__.__name__}(inst: {self.instruction_name}, args: {self.arguments}, id: {self.id})"
-    # def __str__(self):
-    #     indent_spaces = "".join(" " for _ in range(self.position.character))
-    #     args = "" if self.arguments_part == "" else ": " + self.arguments_part
-    #     return f"{indent_spaces}{self.name_part}{args} | id={self.id}"
+        return f"{self.__class__.__name__}(instruction_name='{self.instruction_name}', arguments={self.arguments}, id='{self.id}')"
 
     def __repr__(self):
         return self.__str__()
@@ -491,6 +487,9 @@ class Condition:
         self.lhs_range = Range.empty()
         self.op_range = Range.empty()
         self.rhs_range = Range.empty()
+
+    def __str__(self):
+        return f'{self.__class__.__name__}(lhs="{self.lhs}", op="{self.op}", rhs="{self.rhs}")'
 
 
 class WhitespaceNode(Node):

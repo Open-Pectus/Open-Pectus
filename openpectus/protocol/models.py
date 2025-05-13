@@ -269,10 +269,10 @@ class ErrorLog(ProtocolModel):
         return ErrorLog(entries=[])
 
 
-
 class TagDefinition(ProtocolModel):
     name: str
     unit: str | None = None
+
 
 class CommandDefinition(ProtocolModel):
     name: str

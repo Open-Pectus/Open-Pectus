@@ -1024,7 +1024,3 @@ class RegexNamedArgumentParser:
         if serialized.startswith("RNAP-v1-"):
             return RegexNamedArgumentParser(serialized[8:], name)
         return None
-
-
-
-# Common regular expressions for use with RegexNamedArgumentParser
