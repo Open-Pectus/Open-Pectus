@@ -142,6 +142,9 @@ class LspParseResult:
 
 def lsp_parse_line(pcode_query: str) -> LspParseResult | None:
     """ Provides a fast one-line parse for lsp completions. """
+    if "\r\n" in pcode_query:
+        pcode_query, remainder = pcode_query.split("\r\n", maxsplit=1)
+        assert len(remainder) == 0
     match = Grammar.instruction_line_pattern.match(pcode_query)
     if match is None:
         return None
