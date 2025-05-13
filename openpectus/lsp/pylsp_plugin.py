@@ -9,7 +9,7 @@ from pylsp.workspace import Document, Workspace
 from pylsp.python_lsp import PythonLSPServer
 
 from openpectus.lsp import lsp_analysis
-from openpectus.lsp.model import Position
+from openpectus.lsp.model import Position, CodeAction, Range, CodeActionContext
 
 
 logger = logging.getLogger(__name__)
@@ -124,6 +124,19 @@ def pylsp_completions(config: Config, workspace: Workspace, document: Document, 
         logger.error("Completions error", exc_info=True)
         return []
 
+@hookimpl
+def pylsp_code_actions(
+    config: Config,
+    workspace: Workspace,
+    document: Document,
+    range: Range,
+    context: CodeActionContext,
+) -> list[CodeAction]:
+    return lsp_analysis.code_actions(config, workspace, document, range, context)
+
+@hookimpl
+def pylsp_hover(config: Config, workspace: Workspace, document: Document, position: Position):
+    return lsp_analysis.hover(document, position, get_engine_id(config))
 
 def as_json(obj) -> str:
     if obj is None:
