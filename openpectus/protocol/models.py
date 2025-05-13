@@ -279,6 +279,9 @@ class CommandDefinition(ProtocolModel):
     """ Command name, eg. 'Wait' """
     validator: str | None
     """ Serialization of validator or None for no validation"""
+    docstring: str | None
+    """ Command docstring """
+
 
 class UodDefinition(ProtocolModel):
     commands: list[CommandDefinition]

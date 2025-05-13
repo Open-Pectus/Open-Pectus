@@ -373,11 +373,15 @@ The execution function is missing named arguments or a '**kvargs' argument""")
         for name, builder in self.command_factories.items():
             parser = RegexNamedArgumentParser.get_instance(builder.arg_parse_fn)
             if parser is not None:
-                cmds.append(CommandDefinition(name=name, validator=parser.serialize()))
+                cmds.append(CommandDefinition(
+                    name=name,
+                    validator=parser.serialize(),
+                    docstring=self.command_descriptions.get(name, UodCommandDescription(name)).docstring
+                ))
         for name, desc in self.command_descriptions.items():
             if name not in [c.name for c in cmds]:
                 logger.warning(f"Adding command '{name}' which has no command factory/buidler")
-                cmds.append(CommandDefinition(name=name, validator=None))
+                cmds.append(CommandDefinition(name=name, validator=None, docstring=desc.docstring))
         return UodDefinition(
             commands=cmds,
             system_commands=[],

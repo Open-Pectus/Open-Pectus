@@ -9,6 +9,7 @@ from openpectus.lang.exec.commands import InterpreterCommandEnum
 import openpectus.lang.exec.regex as regex
 from openpectus.lang.exec.uod import RegexNamedArgumentParser
 from openpectus.protocol.models import CommandDefinition
+from openpectus.aggregator.command_examples import examples
 
 
 logger = logging.getLogger(__name__)
@@ -116,12 +117,14 @@ class InternalCommandsRegistry:
         if len(self._command_map) == 0:
             raise ValueError("Command map not initialized")
         command_definitions = []
-        for name, spec in self._command_spec.items():
+        for example in examples:
+            name = example.name
+            spec = self._command_spec.get(name)
             if isinstance(spec, ArgSpec):
                 parser = RegexNamedArgumentParser(regex=spec.regex)
-                command_definitions.append(CommandDefinition(name=name, validator=parser.serialize()))
+                command_definitions.append(CommandDefinition(name=name, validator=parser.serialize(), docstring=example.example))
             else:
-                command_definitions.append(CommandDefinition(name=name, validator=None))
+                command_definitions.append(CommandDefinition(name=name, validator=None, docstring=example.example))
         return command_definitions
 
 class InternalEngineCommand(EngineCommand):

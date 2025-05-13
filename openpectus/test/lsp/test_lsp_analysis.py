@@ -57,10 +57,10 @@ class TestLspAnalysis(unittest.TestCase):
             uod_info = UodDefinition(
                 commands=[],
                 system_commands=[
-                    CommandDefinition(name="Mark", validator=None),
-                    CommandDefinition(name="Watch", validator=None),
-                    CommandDefinition(name="End block", validator=None),
-                    CommandDefinition(name="End blocks", validator=None),
+                    CommandDefinition(name="Mark", validator=None, docstring=""),
+                    CommandDefinition(name="Watch", validator=None, docstring=""),
+                    CommandDefinition(name="End block", validator=None, docstring=""),
+                    CommandDefinition(name="End blocks", validator=None, docstring=""),
                 ],
                 tags=[])
 

@@ -3,6 +3,7 @@ from enum import StrEnum
 from typing import Callable, Dict, Iterable, List
 from uuid import UUID
 
+from openpectus.lang.exec.uod import RegexNamedArgumentParser
 
 class InterpreterCommandEnum(StrEnum):
     """ Commands (instructions of type PCommand) that are executed by the interpreter """
@@ -50,9 +51,12 @@ class CommandRequest:
 
 class Command:
     """ Represents a named command. """
-    def __init__(self, name: str, validatorFn: Callable[[str], bool] | None = None) -> None:
+    def __init__(self, name: str, validatorFn: Callable[[str], bool] | None = None,
+                 docstring: str | None = None, arg_parser: RegexNamedArgumentParser | None = None) -> None:
         self.name: str = name
         self.validatorFn = validatorFn
+        self.docstring = docstring
+        self.arg_parser = arg_parser
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(name="{self.name}")'
