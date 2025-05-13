@@ -187,9 +187,29 @@ class PcodeParser:
             # incr_indent_allowed = prev_node is not None and isinstance(prev_node, p.NodeWithChildren)
             # decr_indent_allowed = parent_node.position.character > 0 and len(parent_node.children) > 0
             node_error = False
-            is_whitespace_node = isinstance(node, (p.BlankNode, p.CommentNode))
+            is_whitespace_node = isinstance(node, p.WhitespaceNode)
 
-            if node.position.character == prev_indent:  # indentation unchanged
+            if node.indent_error:
+                parent_node.append_child(node)
+                node_error = True
+                if isinstance(node, p.NodeWithChildren):
+                    parent_node = node
+                    increment_required = True
+                else:
+                    pass
+
+
+            elif node.position.character > prev_indent and not increment_required:
+                parent_node.append_child(node)
+                node.indent_error = True
+                node_error = True
+                if isinstance(node, p.NodeWithChildren):
+                    parent_node = node
+                    increment_required = True
+                else:
+                    increment_required = False
+
+            elif node.position.character == prev_indent:  # indentation unchanged
                 if increment_required:
                     # what to do here - the node is in error but the parent may also be
                     logger.error("Expected increment")
@@ -200,7 +220,7 @@ class PcodeParser:
                 else:
                     increment_required = False
 
-            elif node.position.character == prev_indent + 4:  # indentation increased one level
+            elif node.position.character == parent_node.position.character + 4 and not isinstance(parent_node, p.ProgramNode):  # indentation increased one level
                 # TODO fail if not valid increment
                 if not increment_required and not is_whitespace_node:
                     node.indent_error = True
@@ -234,10 +254,16 @@ class PcodeParser:
                 else:
                     increment_required = False
 
+            else:
+                parent_node.append_child(node)
+
             if not node_error:
                 prev_node = node
                 if not is_whitespace_node:
                     prev_indent = prev_node.position.character
+
+            if increment_required and not isinstance(node, (p.ProgramNode, p.WatchNode, p.AlarmNode, p.MacroNode, p.BlockNode,)) and not node_error:
+                increment_required = False
 
         return program
 
@@ -245,11 +271,11 @@ class PcodeParser:
         line_stripped = line.strip()
         if line_stripped == "":
             return p.BlankNode(
-                position=Position(line=line_no, character=0)
+                position=Position(line=line_no, character=len(line))
             ).with_id(self.id_generator)
         elif line_stripped.startswith("#"):
             return p.CommentNode(
-                position=Position(line=line_no, character=0)
+                position=Position(line=line_no, character=line.index("#"))
             ).with_id(self.id_generator).with_line(line)
 
         match = Grammar.instruction_line_pattern.match(line)
@@ -271,13 +297,27 @@ class PcodeParser:
         node = self._create_node(instruction_name.strip(), line, line_no).with_id(self.id_generator)
         node.threshold_part = threshold or ""
         node.instruction_part = instruction_name
+        node.instruction_range = p.Range(
+            start=Position(
+                line=line_no,
+                character=match.start("instruction_name")+count_leading_spaces(node.instruction_part),
+            ),
+            end=Position(
+                line=line_no,
+                character=match.end("instruction_name")-count_trailing_spaces(node.instruction_part),
+            )
+        )
         node.arguments_part = (argument or "")
         if len(node.arguments_part) > 0:
             node.arguments_range = p.Range(
-                start=Position(line=line_no, character=match.start("argument") +
-                               count_leading_spaces(node.arguments_part)),
-                end=Position(line=line_no, character=match.end("argument") -
-                             count_trailing_spaces(node.arguments_part))
+                start=Position(
+                    line=line_no,
+                    character=match.start("argument")+count_leading_spaces(node.arguments_part),
+                ),
+                end=Position(
+                    line=line_no,
+                    character=match.end("argument")-count_trailing_spaces(node.arguments_part),
+                )
             )
         node.has_argument = has_argument
         node.arguments = node.arguments_part.strip()  # convenience cleanup, hard to do in regex
