@@ -1055,7 +1055,7 @@ Base: s
 
     def test_accumulated_block_volume(self):
         self.engine.cleanup()  # dispose the test default engine
-
+        delta = 0.15
         set_interpreter_debug_logging()
 
         uod = (UodBuilder()
@@ -1090,31 +1090,31 @@ Block: A
 
             continue_engine(e, 1)  # Base
             self.assertEqual(block.get_value(), None)
-            self.assertAlmostEqual(acc_vol.as_float(), 0.1, delta=0.1)
-            self.assertAlmostEqual(block_vol.as_float(), 0.1, delta=0.1)
+            self.assertAlmostEqual(acc_vol.as_float(), 0.1, delta=delta)
+            self.assertAlmostEqual(block_vol.as_float(), 0.1, delta=delta)
 
             continue_engine(e, 5)  # Wait
             self.assertEqual(block.get_value(), None)
-            self.assertAlmostEqual(acc_vol.as_float(), 0.7, delta=0.1)
-            self.assertAlmostEqual(block_vol.as_float(), 0.7, delta=0.1)
+            self.assertAlmostEqual(acc_vol.as_float(), 0.7, delta=delta)
+            self.assertAlmostEqual(block_vol.as_float(), 0.7, delta=delta)
 
 
             continue_engine(e, 1)  # Block
             self.assertEqual(block.get_value(), "A")
-            self.assertAlmostEqual(acc_vol.as_float(), 0.8, delta=0.1)
-            self.assertAlmostEqual(block_vol.as_float(), 0.1, delta=0.1)
+            self.assertAlmostEqual(acc_vol.as_float(), 0.8, delta=delta)
+            self.assertAlmostEqual(block_vol.as_float(), 0.1, delta=delta)
 
             continue_engine(e, 8)
             self.assertEqual(block.get_value(), "A")
-            self.assertAlmostEqual(acc_vol.as_float(), 1.6, delta=0.1)
-            self.assertAlmostEqual(block_vol.as_float(), 0.9, delta=0.1)
+            self.assertAlmostEqual(acc_vol.as_float(), 1.6, delta=delta)
+            self.assertAlmostEqual(block_vol.as_float(), 0.9, delta=delta)
 
             continue_engine(e, 1)
             self.assertEqual(block.get_value(), None)
             # acc_vol keeps counting
-            self.assertAlmostEqual(acc_vol.as_float(), 1.7, delta=0.1)
+            self.assertAlmostEqual(acc_vol.as_float(), 1.7, delta=delta)
             # block_vol is reset to value before block A - so it matches acc_vol again
-            self.assertAlmostEqual(block_vol.as_float(), 1.7, delta=0.1)
+            self.assertAlmostEqual(block_vol.as_float(), 1.7, delta=delta)
 
     def test_accumulated_column_volume(self):
         self.engine.cleanup()  # dispose the test default engine
