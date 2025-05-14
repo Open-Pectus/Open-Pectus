@@ -1189,46 +1189,7 @@ Base: CV
             self.assertAlmostEqual(acc_cv.as_float(), 0.6, delta=0.1)
             self.assertEqual(['A'], e.interpreter.get_marks())
 
-    def test_accumulated_column_volume_watch(self):
-        self.engine.cleanup()  # dispose the test default engine
-
-        uod = (UodBuilder()
-               .with_instrument("TestUod")
-               .with_author("Test Author", "test@openpectus.org")
-               .with_filename(__file__)
-               .with_hardware(TestHW())
-               .with_location("Test location")
-               .with_tag(ReadingTag("CV", "L"))
-               .with_tag(CalculatedLinearTag("calc", "L"))
-               .with_accumulated_cv(cv_tag_name="CV", totalizer_tag_name="calc")
-               .build())
-
-        program = """
-Base: CV
-Watch: Accumulated CV > 0.5 CV
-    Mark: A
-"""
-        with create_engine_context(uod) as e:
-            cv = e.tags["CV"]
-            cv.set_value(2.0, 0)
-            acc_cv = e.tags[SystemTagName.ACCUMULATED_CV]
-            run_engine(e, program, 1)
-
-            self.assertEqual(acc_cv.as_float(), 0.0)
-            self.assertEqual(acc_cv.unit, "CV")
-
-            continue_engine(e, 4)
-            self.assertAlmostEqual(acc_cv.as_float(), 0.2, delta=0.1)
-            self.assertEqual([], e.interpreter.get_marks())
-
-            continue_engine(e, 4)
-            self.assertAlmostEqual(acc_cv.as_float(), 0.4, delta=0.1)
-            self.assertEqual([], e.interpreter.get_marks())
-
-            continue_engine(e, 4)
-            self.assertAlmostEqual(acc_cv.as_float(), 0.6, delta=0.1)
-            self.assertEqual(['A'], e.interpreter.get_marks())
-
+ 
     def test_accumulated_column_block_volume(self):
         self.engine.cleanup()  # dispose the test default engine
 
