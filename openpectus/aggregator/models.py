@@ -162,6 +162,14 @@ class RunData(BaseModel):
         return RunData(run_id=run_id, run_started=run_started)
 
 
+class ActiveUser(BaseModel):
+    """ Represents a user with an active WebSocket at /api/frontend-pubsub. """
+
+    name: str  # Same value as emitted by openpectus.aggregator.auth.user_name
+    photo_base64: str | None  # None allowed for anonymous users
+    subscriber_id: str  # fastapi_websocket_pubsub channel id
+
+
 class EngineData:
     """ Data stored by aggregator for each connected engine. """
 
@@ -193,6 +201,7 @@ class EngineData:
         self.method_state: MethodState = MethodState.empty()
         self.plot_configuration: PlotConfiguration = PlotConfiguration.empty()
         self.contributors: set[str] = set()
+        self.active_users: dict[str, ActiveUser | None] = dict()
         self.required_roles: set[str] = set()
         self.hardware_str: str = hardware_str
         self.data_log_interval_seconds: float = data_log_interval_seconds

@@ -382,6 +382,24 @@ class MethodAndState(Dto):
         )
 
 
+class ActiveUser(Dto):
+    name: str
+    photo_base64: str | SkipJsonSchema[None] = None
+    subscriber_id: str
+
+    @staticmethod
+    def from_model(active_user: Mdl.ActiveUser) -> ActiveUser:
+        return ActiveUser(name=active_user.name, photo_base64=active_user.photo_base64, subscriber_id=active_user.subscriber_id)
+
+
+class ActiveUsers(Dto):
+    active_users: list[ActiveUser]
+
+    @staticmethod
+    def empty() -> ActiveUsers:
+        return ActiveUsers(active_users=[])
+
+
 class PlotColorRegion(Dto):
     process_value_name: str
     # Color string compatible with css e.g.:

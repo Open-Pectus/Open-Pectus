@@ -316,3 +316,42 @@ async def cancel_run_log_line(
 @router.get('/process_units/system_state_enum', response_model_exclude_none=True)
 def expose_system_state_enum() -> Dto.SystemStateEnum:
     return Mdl.SystemStateEnum.Running
+
+
+@router.get('/process_unit/{unit_id}/active_users', response_model_exclude_none=True)
+async def get_active_users(
+        user_name: UserNameValue,
+        user_roles: UserRolesValue,
+        unit_id: str,
+        response: Response,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)):
+    response.headers["Cache-Control"] = "no-store"
+    engine_data = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
+    # Filter out duplicates who are not anonymous and sort by name.
+    active_users = engine_data.active_users.values()
+    active_users_filtered = []
+    for active_user in active_users:
+        if active_user and (active_user.name == "Anon" or active_user not in active_users_filtered):
+            active_users_filtered.append(active_user)
+    active_users_filtered.sort(key=lambda active_user: active_user.name)
+    return Dto.ActiveUsers(
+            active_users=list(map(Dto.ActiveUser.from_model, active_users_filtered))
+        )
+
+
+@router.post('/process_unit/{unit_id}/register_active_user', response_model_exclude_none=True)
+async def register_active_user(
+        user_name: UserNameValue,
+        user_roles: UserRolesValue,
+        unit_id: str,
+        active_user: Dto.ActiveUser,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)):
+    _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
+    if not await agg.from_frontend.register_active_user(
+        engine_id=unit_id,
+        subscriber_id=active_user.subscriber_id,
+        user_name=user_name,
+        photo_base64=active_user.photo_base64
+    ):
+        return Dto.ServerErrorResponse(message="User registration failed")
+    return Dto.ServerSuccessResponse(message="User successfully registered")
