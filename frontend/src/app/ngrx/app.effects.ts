@@ -15,6 +15,13 @@ export class AppEffects {
     switchMap(() => this.oidcSecurityService.getConfiguration()),
   ), {dispatch: false});
 
+  storeUserData = createEffect(() => this.actions.pipe(
+    ofType(AppActions.pageInitialized),
+    switchMap(() => this.oidcSecurityService.userData$.pipe(
+      map(userData => AppActions.userDataLoaded(userData)),
+    )),
+  ));
+
   checkAuthenticationIfEnabled = createEffect(() => this.actions.pipe(
     ofType(AppActions.authEnablementFetched),
     take(1),

@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { OidcSecurityService } from 'angular-auth-oidc-client';
 import { AppActions } from './ngrx/app.actions';
 import { TopBarComponent } from './top-bar.component';
 
@@ -15,15 +14,9 @@ import { TopBarComponent } from './top-bar.component';
   `,
 })
 export class AppComponent implements OnInit {
-  constructor(private store: Store,
-              private oidcSecurityService: OidcSecurityService) {}
+  constructor(private store: Store) {}
 
   ngOnInit() {
-    this.oidcSecurityService.userData$.subscribe(userData => {
-      if(userData.userData === null) return;
-      this.store.dispatch(AppActions.userDataLoaded(userData));
-    });
-
     this.store.dispatch(AppActions.pageInitialized());
   }
 }
