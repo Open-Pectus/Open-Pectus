@@ -30,7 +30,7 @@
     "@ngrx/store": "^19.0.0",
     "@ngrx/store-devtools": "^19.0.0",
     "@vscode/codicons": "^0.0.36",
-    "angular-auth-oidc-client": "^19.0.0",
+    "angular-auth-oidc-client": "^19.0.1",
     "d3": "^7.8.5",
     "date-fns": "^4.1.0",
     "immer": "^10.0.2",
