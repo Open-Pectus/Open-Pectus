@@ -1,7 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { filter, map, mergeMap, switchMap } from 'rxjs';
+import { OidcSecurityService } from 'angular-auth-oidc-client';
+import { filter, map, mergeMap, of, switchMap, take } from 'rxjs';
 import { ProcessUnitService, VersionService } from '../api';
 import { PubSubService } from '../shared/pub-sub.service';
 import { AppActions } from './app.actions';
@@ -9,6 +10,22 @@ import { AppActions } from './app.actions';
 // noinspection JSUnusedGlobalSymbols
 @Injectable()
 export class AppEffects {
+  fetchAuthConfigAtStart = createEffect(() => this.actions.pipe(
+    ofType(AppActions.pageInitialized),
+    switchMap(() => this.oidcSecurityService.getConfiguration()),
+  ), {dispatch: false});
+
+  checkAuthenticationIfEnabled = createEffect(() => this.actions.pipe(
+    ofType(AppActions.authEnablementFetched),
+    take(1),
+    switchMap(({authIsEnabled}) => {
+      if(!authIsEnabled) return of(AppActions.finishedAuthentication({isAuthenticated: false}));
+      return this.oidcSecurityService.checkAuth().pipe(
+        map(loginResponse => AppActions.finishedAuthentication({isAuthenticated: loginResponse.isAuthenticated})),
+      );
+    }),
+  ));
+
   loadProcessUnitsOnPageInitialization = createEffect(() => this.actions.pipe(
     ofType(AppActions.finishedAuthentication),
     switchMap(() => {
@@ -60,7 +77,8 @@ export class AppEffects {
               private processUnitService: ProcessUnitService,
               private pubSubService: PubSubService,
               private versionService: VersionService,
-              private httpClient: HttpClient) {}
+              private httpClient: HttpClient,
+              private oidcSecurityService: OidcSecurityService) {}
 
 
 }

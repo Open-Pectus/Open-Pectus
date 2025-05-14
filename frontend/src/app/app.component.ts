@@ -19,12 +19,6 @@ export class AppComponent implements OnInit {
               private oidcSecurityService: OidcSecurityService) {}
 
   ngOnInit() {
-    this.oidcSecurityService.checkAuth().subscribe(
-      (loginResponse) => {
-        this.store.dispatch(AppActions.finishedAuthentication({isAuthenticated: loginResponse.isAuthenticated}));
-      },
-    );
-
     this.oidcSecurityService.userData$.subscribe(userData => {
       if(userData.userData === null) return;
       this.store.dispatch(AppActions.userDataLoaded(userData));
