@@ -1,5 +1,6 @@
 import datetime
 import logging
+import platform
 import time
 import unittest
 from typing import Any
@@ -169,7 +170,7 @@ Block: A
 Wait: 0.99s
 """
         logging.getLogger("openpectus.lang.exec.tags_impl").setLevel(logging.DEBUG)
-        delta = 0.2
+        delta = 0.3 if platform.system() == 'Windows' else 0.2
         runner = EngineTestRunner(create_test_uod, p)
         with runner.run() as instance:
             e = instance.engine
@@ -419,6 +420,44 @@ Watch: Run Time > 0s
             self.assertAlmostEqual(0.6, scope_time.as_number(), delta=delta)
 
 
+class TestAccumulation(unittest.TestCase):
+
+    def create_test_uod(self):
+        uod = (UodBuilder()
+            .with_instrument("TestUod")
+            .with_author("Test Author", "test@openpectus.org")
+            .with_filename(__file__)
+            #.with_hardware(TestHW())
+            .with_hardware_none()
+            .with_location("Test location")
+            .with_tag(ReadingTag("CV", "L"))
+            .with_tag(CalculatedLinearTag("calc", "L"))
+            .with_accumulated_cv(cv_tag_name="CV", totalizer_tag_name="calc")
+            .build())
+        return uod
+
+    def test_accumulated_column_volume_watch(self):
+        program = """
+Base: CV
+Watch: Accumulated CV > 0.5 CV
+    Mark: A
+"""
+        runner = EngineTestRunner(self.create_test_uod, program)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_ticks(1)
+
+            multiplier = 3.0
+            cv = instance.engine.tags["CV"]
+            cv.set_value(multiplier, 0)
+            acc_cv = instance.engine.tags[SystemTagName.ACCUMULATED_CV]
+            self.assertEqual(acc_cv.as_float(), 0.0)
+            self.assertEqual(acc_cv.unit, "CV")
+
+            elapsed = instance.run_until_instruction("Mark", state="started")
+            self.assertAlmostEqual(5 * multiplier, elapsed, delta=2)
+
+
 class TestFormatting(unittest.TestCase):
 
     def test_formatting(self):
@@ -434,3 +473,16 @@ class TestFormatting(unittest.TestCase):
 
         self.assertEqual("06:46:03", t.value_formatted)
         self.assertIsNotNone(t.value_formatted)
+
+
+class CalculatedLinearTag(Tag):
+    """ Test tag that is used to simulate a value that is a linear function of time. """
+    def __init__(self, name: str, unit: str | None, slope: float = 1.0) -> None:
+        super().__init__(name, value=0.0, unit=unit, direction=TagDirection.NA)
+        self.slope = slope
+
+    def on_start(self, run_id: str):
+        self.value = time.time() * self.slope
+
+    def on_tick(self, tick_time: float, increment_time: float):
+        self.value = time.time() * self.slope

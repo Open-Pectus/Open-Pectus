@@ -1,5 +1,5 @@
 import { Signal } from '@angular/core';
-import { editor as MonacoEditor, KeyCode, Range } from '@codingame/monaco-vscode-editor-api';
+import { editor as MonacoEditor, KeyCode, Range, KeyMod } from '@codingame/monaco-vscode-editor-api';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { combineLatest, filter, Observable, takeUntil } from 'rxjs';
@@ -32,6 +32,13 @@ export class MonacoEditorBehaviours {
     this.setupInjectedLines();
     this.setupStartedAndExecutedLines();
     this.setupReactingToResize();
+    this.setupCtrlSAction();
+  }
+
+  private setupCtrlSAction() {
+    this.editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, () => {
+      this.store.dispatch(MethodEditorActions.saveKeyboardShortcutPressed());
+    })
   }
 
   private setupOnEditorChanged() {

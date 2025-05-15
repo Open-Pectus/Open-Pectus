@@ -23,13 +23,13 @@ class TestRegexes(unittest.TestCase):
         m = r.match("")
         assert m is not None
 
-        m = r.match(" ")
+        m = r.match(" "*1)
         assert m is not None
-        self.assertIsNotNone("1", m.groupdict()['indent'])
+        self.assertEqual(" "*1, m.groupdict()['indent'])
 
-        m = r.match("       ")
+        m = r.match(" "*7)
         assert m is not None
-        self.assertIsNotNone("7", m.groupdict()['indent'])
+        self.assertEqual(" "*7, m.groupdict()['indent'])
 
     def test_threshold(self):
         r = re.compile(r'((?P<threshold>\d+(\.\d+)?)\s)?')
@@ -37,19 +37,18 @@ class TestRegexes(unittest.TestCase):
 
         m = r.match("5 ")
         assert m is not None
-        self.assertIsNotNone("5", m.groupdict()['threshold'])
+        self.assertEqual("5", m.groupdict()['threshold'])
 
         m = r.match("5.6 ")
         assert m is not None
-        self.assertIsNotNone("5.6", m.groupdict()['threshold'])
+        self.assertEqual("5.6", m.groupdict()['threshold'])
 
     def test_instruction(self):
-        r = re.compile(r'(?P<instruction_name>\b[a-zA-Z_][^:#]*)')
+        r = re.compile(r'(?P<instruction_name>\b[a-zA-Z_0-9][^:#]*)')
         self.assertEqual(r.pattern, Grammar.instruction_re)
 
         self.assertIsNotNone(r.match("foo"))
-        # we require this to be able to distinguish instruction name from threshold
-        self.assertIsNone(r.match("1foo"))
+        self.assertIsNotNone(r.match("1foo"))
 
     def test_argument(self):
         r = re.compile(r'(: (?P<argument>[^#]+))?')
@@ -60,13 +59,37 @@ class TestRegexes(unittest.TestCase):
         self.assertEqual("bar 27 : ", m.groupdict()['argument'])
 
     def test_instruction_argument(self):
-        r = re.compile(r'(?P<instruction_name>\b[a-zA-Z_][^:#]*)(: (?P<argument>[^#]+))?')
+        r = re.compile(r'(?P<instruction_name>\b[a-zA-Z_0-9][^:#]*)(: (?P<argument>[^#]+))?')
         self.assertEqual(r.pattern, Grammar.instruction_re + Grammar.argument_re)
 
         m = r.match("Foo: bar 27 :")
         assert m is not None
         self.assertEqual("Foo", m.groupdict()['instruction_name'])
         self.assertEqual("bar 27 :", m.groupdict()['argument'])
+
+    def test_condition_unit(self):
+        r = re.compile(r'(?P<unit>[a-zA-Z%\/23\*]+)')
+        self.assertEqual(r.pattern, Grammar.unit_re)
+
+        m = r.match("%")
+        assert m is not None
+        self.assertEqual("%", m.groupdict()["unit"])
+
+        m = r.match("degC")
+        assert m is not None
+        self.assertEqual("degC", m.groupdict()["unit"])
+
+        m = r.match("L/h")
+        assert m is not None
+        self.assertEqual("L/h", m.groupdict()["unit"])
+
+        m = r.match("m2")
+        assert m is not None
+        self.assertEqual("m2", m.groupdict()["unit"])
+
+        m = r.match("m**2")
+        assert m is not None
+        self.assertEqual("m**2", m.groupdict()["unit"])
 
 
 # necessary to support python 3.11 in assert_line_parses_as_node_type below
@@ -77,7 +100,6 @@ class TestParser(unittest.TestCase):
 
     # backport to support python 3.11
     def assert_line_parses_as_node_type(self, line: str, node_type: Type[TNode]) -> TNode:
-    #def assert_line_parses_as_node_type[T: p.Node](self, line: str, node_type: Type[T]) -> T:
         parser = create_parser()
         node = parser._parse_line(line, 0)
         self.assertIsInstance(node, node_type)
@@ -98,13 +120,11 @@ class TestParser(unittest.TestCase):
         self.assertEqual("Mark", node.instruction_name)
         self.assertEqual("A", node.arguments_part)
 
-    @unittest.skip("Not implemented. Requires using fallback regex")
     def test_instruction_must_start_with_non_number(self):
         line = "1Mark: A"
         # Fail with something like "1Mark is not a valid command name. Did you mean Mark?"
         node = self.assert_line_parses_as_node_type(line, p.ErrorInstructionNode)
-        self.assertEqual("Mark", node.instruction_name)
-
+        self.assertEqual("1Mark", node.instruction_name)
 
     def test_parse_instruction_comment(self):
         line = "Mark: A # no comment"
@@ -116,6 +136,8 @@ class TestParser(unittest.TestCase):
     def test_parse_threshold_instruction_comment(self):
         line = "1.0 Mark: A # no comment"
         node = self.assert_line_parses_as_node_type(line, p.Node)
+        self.assertEqual("1.0", node.threshold_part)
+        self.assertEqual(1.0, node.threshold)
         self.assertEqual("Mark", node.instruction_name)
         self.assertEqual("A", node.arguments)
         self.assertEqual("no comment", node.comment_part)
@@ -149,7 +171,7 @@ class TestParser(unittest.TestCase):
 
     def test_parse_line_block(self):
         line = "Block: A"
-        _ = self.assert_line_parses_as_node_type(line, p.BlockNode)
+        self.assert_line_parses_as_node_type(line, p.BlockNode)
 
     def test_detect_indent_error(self):
 
@@ -175,7 +197,10 @@ Block: A
 
         program = parse_program(code)
         block = program.get_first_child(p.BlankNode)
-        assert block is not None
+        self.assertIsNotNone(block)
+        self.assertIsInstance(program.children[1], p.BlockNode)
+        assert isinstance(program.children[1], p.BlockNode)
+        self.assertIsInstance(program.children[1].children[0], p.MarkNode)
 
     def test_parse_block_w_blank_1(self):
         code = """\
@@ -186,7 +211,6 @@ Block: A
 """
 
         program = parse_program(code)
-        print_program(program)
 
         block_node = program.children[0]
         assert isinstance(block_node, p.BlockNode)
@@ -215,12 +239,11 @@ Block: A
         code = """\
 Block: A
     Mark: B
-    
+   
     Mark: C
 """
 
         program = parse_program(code)
-        print_program(program)
 
         block_node = program.children[0]
         assert isinstance(block_node, p.BlockNode)
@@ -232,12 +255,11 @@ Block: A
         code = """\
 Block: A
     Mark: B
-      
+    
     Mark: C
 """
 
         program = parse_program(code)
-        print_program(program)
 
         block_node = program.children[0]
         assert isinstance(block_node, p.BlockNode)
@@ -249,7 +271,7 @@ Block: A
         code = """\
 Block: A
     Mark: B
-        
+     
     Mark: C
 """
 
@@ -270,17 +292,15 @@ Block: C
     Mark: D
 """
         program = parse_program(code)
-        print_program(program)
         block_a = program.children[0]
         assert isinstance(block_a, p.BlockNode)
         mark_b = block_a.children[0]
-        assert isinstance(mark_b, p.MarkNode)
+        self.assertIsInstance(mark_b, p.MarkNode)
 
         block_c = program.children[1]
         assert isinstance(block_c, p.BlockNode)
         mark_d = block_c.children[0]
-        assert isinstance(mark_d, p.MarkNode)
-
+        self.assertIsInstance(mark_d, p.MarkNode)
 
     def test_parse_nested_blocks(self):
         code = """\
@@ -295,7 +315,6 @@ Block: E
     Mark: G
 """
         program = parse_program(code)
-        print_program(program)
         block_a = program.children[0]
         block_e = program.children[1]
         assert isinstance(block_a, p.BlockNode)
@@ -306,17 +325,15 @@ Block: E
         block_c = block_a.children[1]
         assert isinstance(block_c, p.BlockNode)
         mark_d = block_c.children[0]
-        assert isinstance(mark_d, p.MarkNode)
+        self.assertIsInstance(mark_d, p.MarkNode)
 
         block_f = block_e.children[0]
         assert isinstance(block_f, p.BlockNode)
         endblocks_f = block_f.children[0]
-        assert isinstance(endblocks_f, p.EndBlocksNode)
+        self.assertIsInstance(endblocks_f, p.EndBlocksNode)
 
         mark_g = block_e.children[1]
-        assert isinstance(mark_g, p.MarkNode)
-
-
+        self.assertIsInstance(mark_g, p.MarkNode)
 
     def test_parse_demo(self):
         code = """
@@ -327,15 +344,13 @@ Block: A
 Mark: C
 """
         program = parse_program(code)
-
-        print(program)
+        self.assertIsNotNone(program)
 
     def test_parse_watch(self):
         code = """
 Watch: Run Counter > 0
     Mark: B
 """
-
         program = parse_program(code)
         watch = program.get_first_child(p.WatchNode)
         assert watch is not None
@@ -378,7 +393,6 @@ Watch: Run Counter > 0
 Alarm: Foo > 0
     Stop
 """
-
         program = parse_program(code)
         alarm = program.get_first_child(p.AlarmNode)
         assert alarm is not None
@@ -392,7 +406,7 @@ Alarm: Foo > 0
     def test_get_condition_ranges(self):
         parser = create_parser()
 
-        code = """\
+        code = """
 Alarm: Foo > 0
     Stop
 """
@@ -416,7 +430,7 @@ Alarm: Foo > 0
     def test_get_condition_ranges_alt_ws(self):
         parser = create_parser()
 
-        code = """\
+        code = """
 Alarm:  Foo   >=  0.4  
     Stop
 """
@@ -428,15 +442,16 @@ Alarm:  Foo   >=  0.4
         self.assertEqual(8, alarm.condition.range.start.character)
         self.assertEqual(21, alarm.condition.range.end.character)
 
+        # " Foo "
         self.assertEqual(8, alarm.condition.lhs_range.start.character)
-        #self.assertEqual(11, alarm.condition.lhs_range.end.character)
+        self.assertEqual(12, alarm.condition.lhs_range.end.character)
 
+        # ">="
         self.assertEqual(14, alarm.condition.op_range.start.character)
         self.assertEqual(16, alarm.condition.op_range.end.character)
 
-        # working with these indices is a horrible mess. it's also not important
-
-        #self.assertEqual(18, alarm.condition.rhs_range.start.character)
+        " 0.4"
+        self.assertEqual(17, alarm.condition.rhs_range.start.character)
         self.assertEqual(21, alarm.condition.rhs_range.end.character)
 
     def test_engine_command(self):

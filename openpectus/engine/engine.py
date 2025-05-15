@@ -525,6 +525,7 @@ class Engine(InterpreterContext):
         for c in self.cmd_executing:
             if c.command_exec_id is not None and c.command_exec_id in self._cancel_command_exec_ids:
                 cmds_done.add(c)
+                assert c.command_exec_id is not None, f"Expected uod command request '{c.name}' to have command_exec_id"
                 self._cancel_command_exec_ids.remove(c.command_exec_id)
                 if cmd_request.name == c.name:
                     cancel_this = True
@@ -785,7 +786,7 @@ class Engine(InterpreterContext):
             - Current instruction is a Pause
             - Method is exhausted
             - Engine paused
-            - ??        
+            - ??
             In the waiting cases (threshold, Wait and Pause), the waiting time is reset - this is probably ok?
 
         How should this be enforced?
