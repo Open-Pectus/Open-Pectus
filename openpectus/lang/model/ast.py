@@ -1,9 +1,8 @@
 from __future__ import annotations
-from typing import Any, Self, Type, TypeVar
+from typing import Self, Type, TypeVar, TypedDict
 
 
 class Position:
-    empty: Position
 
     def __init__(self, line: int, character: int):
         self.line: int = line   # todo define 0-1 based. should probably change from before to just match lsp
@@ -12,10 +11,32 @@ class Position:
     def is_empty(self) -> bool:
         return self == Position.empty
 
+    @staticmethod
+    def empty() -> Position:
+        return Position(line=-1, character=-1)
+
     def __eq__(self, value):
         if value is None or not isinstance(value, Position):
             return False
         return self.line == value.line and self.character == value.character
+
+    def __lt__(self, other):
+        if isinstance(other, Range):
+            other = other.start
+        if isinstance(other, Position):
+            return self.line < other.line or (self.line == other.line and self.character < other.character)
+        else:
+            raise TypeError(f"'<' not supported between instances of '{self.__class__.__name__}'" +
+                            " and '{other.__class__.__name__}'")
+
+    def __gt__(self, other):
+        if isinstance(other, Range):
+            other = other.end
+        if isinstance(other, Position):
+            return self.line > other.line or (self.line == other.line and self.character > other.character)
+        else:
+            raise TypeError(f"'>' not supported between instances of '{self.__class__.__name__}'" +
+                            " and '{other.__class__.__name__}'")
 
     def with_character(self, character: int) -> Position:
         return Position(line=self.line, character=character)
@@ -23,30 +44,51 @@ class Position:
     def __str__(self):
         return f"Position(line: {self.line}, char: {self.character})"
 
-
-Position.empty = Position(line=-1, character=-1)
+    def __hash__(self) -> int:
+        return hash(tuple(value for value in self.__dict__.values()))
 
 
 class Range:
-    empty: Range
-
     def __init__(self, start: Position, end: Position):
         self.start = start
         self.end = end
 
     def is_empty(self) -> bool:
-        return self == Range.empty
+        return self == Range.empty()
 
     def with_end(self, position: Position) -> Range:
         return Range(
             start=self.start,
             end=position)
 
+    @staticmethod
+    def empty() -> Range:
+        return Range(start=Position.empty(), end=Position.empty())
+
     def __str__(self):
         return f"{self.start} - {self.end}"
 
+    def __contains__(self, index: Position):
+        """ Check if position or character index is within range"""
+        assert isinstance(index, Position)
+        return (
+            # Position and range are all on one line
+            (self.start.line == self.end.line == index.line and (self.start.character <= index.character <= self.end.character)) or
+            # Position is on start line
+            (self.start.line == index.line and index.line < self.end.line and (self.start.character <= index.character)) or
+            # Position is between start or end line
+            (self.start.line < index.line < self.end.line) or
+            # Position is on end line
+            (self.end.line == index.line and index.line > self.start.line and (index.character <= self.end.character))
+        )
 
-Range.empty = Range(start=Position.empty, end=Position.empty)
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Range):
+            return False
+        return self.start == other.start and self.end == other.end
+
+    def __hash__(self) -> int:
+        return hash(tuple(value for value in self.__dict__.values()))
 
 
 class NodeIdGenerator:
@@ -54,13 +96,15 @@ class NodeIdGenerator:
         ...
 
 
-# Impl note: using dict because it is json serializable. TypedDict also works
-class NodeState(dict[str, Any]):
+# Impl note: using TypedDict because it is trivially json serializable
+class NodeState(TypedDict):
     id: str
     class_name: str
     name: str
     started: bool
     completed: bool
+    cancelled: bool
+    forced: bool
 
 
 TNode = TypeVar("TNode", bound="Node")
@@ -114,11 +158,14 @@ class Node(SupportCancelForce):
         self.id: str = id
         self.position: Position = position
         self.instruction_part: str = ""
+        self.instruction_range: Range = Range.empty()
         self.threshold_part: str = ""
         self.arguments_part: str = ""
         self.arguments: str = ""
-        self.arguments_range: Range = Range.empty
+        self.arguments_range: Range = Range.empty()
         self.comment_part: str = ""
+        self.has_comment: bool = False
+        self.has_argument: bool = False
 
         self.threshold: float | None = None
         self.indent_error: bool = False
@@ -153,19 +200,23 @@ class Node(SupportCancelForce):
         if self.has_children():
             assert isinstance(self, NodeWithChildren)
             for child in self.children:
+                if child.id == id:
+                    return child
                 match = child.get_child_by_id(id)
                 if match is not None:
                     return match
 
     def can_load_state(self, state: NodeState) -> bool:
         """ Determine whether state is valid for this kind of node """
-        return state.class_name == self.__class__.__name__
+        return state["class_name"] == self.__class__.__name__
 
     def apply_state(self, state: NodeState):
         if not self.can_load_state(state):
-            raise ValueError(f"Cannot load state from {state.class_name} into {self.__class__}")
-        self.started = state.started
-        self.completed = state.completed
+            raise ValueError(f"Cannot load state from {state['class_name']} into {self.__class__}")
+        self.started = state["started"]
+        self.completed = state["completed"]
+        self._cancelled = state["cancelled"]
+        self._forced = state["forced"]
 
     def extract_state(self) -> NodeState:
         return NodeState(
@@ -174,7 +225,24 @@ class Node(SupportCancelForce):
             name=self.name,
             started=self.started,
             completed=self.completed,
+            cancelled=self.cancelled,
+            forced=self.forced
         )
+
+    def get_child_by_instruction(self, instruction_name: str, arguments: str | None = None) -> Node | None:
+        """ Find node by instruction name and optionally arguments. """
+
+        def get_by_instruction(node: Node, instruction_name: str, arguments: str | None = None) -> Node | None:
+            if isinstance(node, NodeWithChildren):
+                for child in node.children:
+                    if child.instruction_name == instruction_name\
+                            and arguments is None or child.arguments == arguments:
+                        return child
+                    match = get_by_instruction(child, instruction_name, arguments)
+                    if match:
+                        return match
+
+        return get_by_instruction(self, instruction_name, arguments)
 
     def with_id(self, gen: NodeIdGenerator) -> Self:
         self.id = gen.create_id(self)
@@ -187,11 +255,7 @@ class Node(SupportCancelForce):
         self.errors.append(error)
 
     def __str__(self):
-        return f"{self.__class__.__name__}(inst: {self.instruction_name}, args: {self.arguments}, id: {self.id})"
-    # def __str__(self):
-    #     indent_spaces = "".join(" " for _ in range(self.position.character))
-    #     args = "" if self.arguments_part == "" else ": " + self.arguments_part
-    #     return f"{indent_spaces}{self.name_part}{args} | id={self.id}"
+        return f"{self.__class__.__name__}(instruction_name='{self.instruction_name}', arguments={self.arguments}, id='{self.id}')"
 
     def __repr__(self):
         return self.__str__()
@@ -200,6 +264,15 @@ class Node(SupportCancelForce):
         indent_spaces = "".join(" " for _ in range(self.position.character))
         args = "" if self.arguments_part == "" else ": " + self.arguments_part
         return f"{indent_spaces}{self.instruction_part}{args} | id={self.id}"
+
+    @property
+    def parents(self) -> list[NodeWithChildren]:
+        node = self
+        parents: list[NodeWithChildren] = []
+        while node.parent is not None:
+            parents.append(node.parent)
+            node = node.parent
+        return parents
 
     def reset_runtime_state(self, recursive: bool):
         # TODO implement, possily by just applying an empty state dict
@@ -224,6 +297,8 @@ class NodeWithChildren(Node):
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
         self._children: list[Node] = []
+        self._last_non_ws_line: int = 0
+        """ Populated by WhitespaceAnalyzer """
 
     @property
     def children(self) -> list[Node]:
@@ -236,11 +311,11 @@ class NodeWithChildren(Node):
     def has_children(self):
         return len(self._children) > 0
 
-    def get_child_nodes(self, recursive: bool = False) -> list[Node]:
+    def get_child_nodes(self, recursive: bool = False, exclude_blocks: bool = False) -> list[Node]:
         children: list[Node] = []
         for child in self._children:
             children.append(child)
-            if recursive and isinstance(child, NodeWithChildren):
+            if recursive and isinstance(child, NodeWithChildren) and not (exclude_blocks and isinstance(child, BlockNode)):
                 children.extend(child.get_child_nodes(recursive))
         return children
 
@@ -269,11 +344,16 @@ class NodeWithChildren(Node):
         return f"{indent_spaces}{self.instruction_part}{args}\n" + \
             "\n".join(child.as_tree() for child in self.children)
 
+    def extract_state(self) -> NodeState:
+        state = super().extract_state()
+        return state
+
+    def apply_state(self, state):
+        super().apply_state(state)
 
 class ProgramNode(NodeWithChildren):
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
-        self.active_instruction: Node | None = None
 
     def get_instructions(self, include_blanks: bool = False) -> list[Node]:
         """ Return list of all program instructions, recursively, depth first. """
@@ -293,12 +373,13 @@ class ProgramNode(NodeWithChildren):
         add_child_nodes(self, nodes)
         return nodes
 
-    def extract_tree_state(self) -> dict[str, NodeState]:
+    def extract_tree_state(self, skip_started_nodes=False) -> dict[str, NodeState]:
         """ Return map of all nodes keyed by their node id """
         result: dict[str, NodeState] = {}
 
         def extract_child_state(node: Node, result: dict[str, NodeState]):
-            result[node.id] = node.extract_state()
+            if node.started or not skip_started_nodes:
+                result[node.id] = node.extract_state()
 
             if isinstance(node, NodeWithChildren):
                 for child in node.children:
@@ -352,15 +433,15 @@ class NodeWithCondition(NodeWithChildren):
         self.condition: Condition | None
         self.activated: bool = False
 
-    def apply_state(self, state):
+    def apply_state(self, state: NodeState):
         super().apply_state(state)
         if "activated" not in state.keys():
-            raise ValueError("Missing state key 'activated'")
-        self.activated = bool(state["activated"])
+            raise ValueError(f"Failed to apply state to node {self}. Missing state key 'activated'")
+        self.activated = bool(state["activated"])  # type: ignore
 
     def extract_state(self) -> NodeState:
         state = super().extract_state()
-        state["activated"] = self.activated
+        state["activated"] = self.activated  # type: ignore
         return state
 
     def reset_runtime_state(self, recursive):
@@ -392,7 +473,7 @@ class Condition:
         self.lhs = ""
         self.op = ""
         self.rhs = ""
-        self.range: Range = Range.empty
+        self.range: Range = Range.empty()
 
         self.tag_name: str | None = None
         self.tag_value: str | None = None
@@ -403,15 +484,31 @@ class Condition:
         # for the LSP purpose of underlining lsh/op/rhs but this conflicts
         # with the calculation of later ones based on the first ones.
 
-        self.lhs_range = Range.empty
-        self.op_range = Range.empty
-        self.rhs_range = Range.empty
+        self.lhs_range = Range.empty()
+        self.op_range = Range.empty()
+        self.rhs_range = Range.empty()
+
+    def __str__(self):
+        return f'{self.__class__.__name__}(lhs="{self.lhs}", op="{self.op}", rhs="{self.rhs}")'
 
 
-class CommentNode(Node):
+class WhitespaceNode(Node):
+    """ Represents a node that counts as whitespace in regards to
+    interpretation, e.g. blank lines and comment lines.
+
+    Populated by WhitespaceAnalyzer
+    """
+    def __init__(self, position=Position.empty, id=""):
+        super().__init__(position, id)
+        self.has_only_trailing_whitespace: bool = False
+        """ Specifies that only whitespace instructions follow this whitespace instruction. """
+
+
+class CommentNode(WhitespaceNode):
     """ Represents a line with only a comment. """
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
+        self.has_comment = True
         self.line: str = ""
 
     def with_line(self, line: str):
@@ -472,8 +569,10 @@ class Error:
         self.message: str | None = message
 
 
-class BlankNode(Node):
+class BlankNode(WhitespaceNode):
     """ Represents a line that contains only whitespace. """
+    def __init__(self, position=Position.empty, id=""):
+        super().__init__(position, id)
 
 
 class ErrorInstructionNode(Node):

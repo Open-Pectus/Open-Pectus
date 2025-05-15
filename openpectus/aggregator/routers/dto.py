@@ -360,8 +360,8 @@ class MethodState(Dto):
     @staticmethod
     def from_model(method_state: Mdl.MethodState) -> MethodState:
         return MethodState(started_line_ids=[_id for _id in method_state.started_line_ids],
-                    executed_line_ids=[_id for _id in method_state.executed_line_ids],
-                    injected_line_ids=[_id for _id in method_state.injected_line_ids])
+                           executed_line_ids=[_id for _id in method_state.executed_line_ids],
+                           injected_line_ids=[_id for _id in method_state.injected_line_ids])
 
 class MethodAndState(Dto):
     method: Method
