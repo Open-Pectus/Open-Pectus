@@ -91,10 +91,8 @@ class UnpauseEngineCommand(InternalEngineCommand):
         e = self.engine
 
         e._runstate_paused = False
-        if e._runstate_holding:
-            e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Holding, e._tick_time)
-        else:
-            e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
+        sys_state_value = SystemStateEnum.Holding if e._runstate_holding else SystemStateEnum.Running
+        e._system_tags[SystemTagName.SYSTEM_STATE].set_value(sys_state_value, e._tick_time)
 
         # pre-pause values are always applied on unpause, regardless of hold state.
         if e._prev_state is not None:

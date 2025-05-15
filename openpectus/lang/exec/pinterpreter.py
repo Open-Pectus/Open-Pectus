@@ -18,7 +18,7 @@ from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import (
     TagCollection, SystemTagName,
 )
-from openpectus.lang.exec.visitor import NodeVisitor
+from openpectus.lang.exec.visitor import NodeGenerator, NodeVisitor
 import openpectus.lang.model.ast as p
 from typing_extensions import override
 
@@ -85,6 +85,9 @@ class ActivationRecord:
     def __str__(self) -> str:
         return f"AR {self.owner} | {self.artype} | complete: {self.complete}"
 
+    def __repr__(self):
+        return self.__str__()
+
 
 class CallStack:
     def __init__(self):
@@ -107,9 +110,16 @@ class CallStack:
     def peek(self) -> ActivationRecord:
         return self._records[-1]
 
+    def find_by_owner_id(self, id: str) -> ActivationRecord | None:
+        for r in self.iterate_from_top():
+            if r.owner.id == id:
+                return r
+
     def __str__(self):
-        s = '\n'.join(repr(ar) for ar in reversed(self._records))
-        s = f'CALL STACK\n{s}\n\n'
+        if len(self._records) == 0:
+            return "CallStack (empty)"
+        s = '\n\t'.join(repr(ar) for ar in reversed(self._records))
+        s = f'CallStack (size: {len(self.records)})\n{s}\n\n'
         return s
 
     def __repr__(self):
@@ -150,7 +160,7 @@ class PInterpreter(NodeVisitor):
         self._program = program
         self.context = context
         self.stack: CallStack = CallStack()
-        self.interrupts: list[tuple[ActivationRecord, GenerationType]] = []
+        self.interrupts: list[tuple[ActivationRecord, NodeGenerator]] = []
         self.macros: dict[str, p.MacroNode] = dict()
         self.running: bool = False
 
@@ -158,10 +168,103 @@ class PInterpreter(NodeVisitor):
         self._tick_time: float = 0
         self._tick_number: int = -1
 
-        self.process_instr: GenerationType = None
+        self._process_instr: NodeGenerator | None = None
+
+        self._current_node: p.Node | None = None
+        self._ffw: bool = False
+        self._ffw_target_node_id: str | None = None
 
         self.runtimeinfo: RuntimeInfo = RuntimeInfo()
         logger.debug("Interpreter initialized")
+
+
+    def update_method_and_ffw(self, program: p.ProgramNode):
+        """ Update method while method is running. """
+        # set new program, and patch state to point to new nodes, set ffw and advance generator to get to where we were
+
+        # patch runtimeinfo records to reference new nodes - before or after ffw? should not matter
+        self.runtimeinfo.patch_node_references(program)
+        self.patch_node_references(program)
+
+        # collect node id from old method. The id will match the corresponding node in the new method
+        if self._current_node is None:
+            raise ValueError("Edit cannot be performed when no current node is set")
+        # verify that target is not completed - if so ffw won't find it
+        target_node_id = self._current_node.id
+        self._program = program
+        self._process_instr = None  # clear so either tick or us may set it
+        target_node = program.get_child_by_id(target_node_id)  # find target node in new ast
+        if target_node is None:
+            logger.error(f"FFW aborted because target node {target_node_id} was not found in new ast")
+            raise ValueError(
+                f"Error modifying method. The target node_id {target_node_id} was not found in the updated method.")
+        elif target_node.completed:
+            logger.error("FFW aborted. Target node has already completed")
+            raise ValueError(
+                f"Error modifying method. The target node_id {target_node_id} has already completed.")
+
+        self._ffw = True
+        self._ffw_target_node_id = target_node_id
+
+        # Start fast-forward (FFW) from start to target_node_id
+        logger.info("FFW starting, target node id: " + self._ffw_target_node_id)
+        ffw_process_instr = self._interpret()
+        while self._ffw:
+            # TODO fix loop:
+            # - support ending in interrupt handler when ffw_process_instr is exhausted
+            try:
+                next(ffw_process_instr)
+                if not self._ffw:
+                    logger.debug("FFW found, target node id: " + self._ffw_target_node_id)
+            except StopIteration:
+                self._ffw = False
+                logger.error(f"FFW failed, node {self._ffw_target_node_id} could not be reached (main).")
+                raise Exception(f"FFW failed, node {self._ffw_target_node_id} could not be reached (main).")
+            try:
+                if self._ffw:
+                    pass
+                    self._run_interrupt_handlers()
+                    if not self._ffw:
+                        logger.debug("FFW found in interrupts, target node id: " + self._ffw_target_node_id)
+            except Exception:
+                logger.error("Exception during FFW interrupt handler")
+                raise
+
+        # set prepared generator as the new source for tick()
+        self._process_instr = ffw_process_instr
+        logger.info("FFW complete")
+
+    def patch_node_references(self, program: p.ProgramNode):
+        """ Patch node references to updated program nodes to account for edited method. """
+        logger.info("Patching node references in interpreter state")
+        for ar, _ in self.interrupts:
+            node = ar.owner
+            if node is not None and not isinstance(node, p.ProgramNode):
+                new_node = program.get_child_by_id(node.id)
+                if new_node is None:
+                    logger.error(f"No new node was found to replace {node}. Node cannot be patched")
+                else:
+                    if ar.owner != new_node:
+                        ar.owner = new_node
+                        logger.debug(f"Patched node reference {new_node}")
+                    else:
+                        logger.warning(f"Node not patched: {new_node} - old node already matched the new node!?")
+
+        # TODO get rid of this when moving macro processing to analyser
+        for name, node in self.macros.items():
+            if node is not None and not isinstance(node, p.ProgramNode):
+                new_node = program.get_child_by_id(node.id)
+                if new_node is None:
+                    logger.error(f"No new node was found to replace {node}. Node cannot be patched")
+                else:
+                    assert isinstance(new_node, p.MacroNode)
+                    if node != new_node:
+                        self.macros[name] = new_node
+                        logger.debug(f"Patched node reference {new_node}")
+                    else:
+                        logger.warning(f"Node not patched: {new_node} - old node already matched the new node!?")
+
+        logger.info("Patching complete")
 
     def get_marks(self) -> list[str]:
         records: list[tuple[str, int]] = []
@@ -187,17 +290,16 @@ class PInterpreter(NodeVisitor):
         ar = ActivationRecord(node, self._tick_time)
         self._register_interrupt(ar, self._create_interrupt_handler(node, ar))
 
-    def _interpret(self) -> GenerationType:
+    def _interpret(self) -> NodeGenerator:
         """ Create generator for interpreting the main program. """
         self.running = True
         tree = self._program
         if tree is None:
             return None
-        tree.reset_runtime_state(recursive=True)
-        logger.info("Reset runtime state")
+
         yield from self.visit(tree)
 
-    def _register_interrupt(self, ar: ActivationRecord, handler: GenerationType):
+    def _register_interrupt(self, ar: ActivationRecord, handler: NodeGenerator):
         logger.debug(f"Interrupt handler registered for {ar}")
         self.interrupts.append((ar, handler))
 
@@ -234,7 +336,7 @@ class PInterpreter(NodeVisitor):
                 raise NotImplementedError(f"Interrupt for node type {str(node)} not implemented")
         return instr_count > 0
 
-    def _create_interrupt_handler(self, node: p.Node, ar: ActivationRecord) -> GenerationType:
+    def _create_interrupt_handler(self, node: p.Node, ar: ActivationRecord) -> NodeGenerator:
         ar.fill_start(self._tick_time)
         yield from self.visit(node)
 
@@ -244,13 +346,13 @@ class PInterpreter(NodeVisitor):
 
         logger.debug(f"Tick {self._tick_number}")
 
-        if self.process_instr is None:
-            self.process_instr = self._interpret()
+        if self._process_instr is None:
+            self._process_instr = self._interpret()
 
         # execute one iteration of program
-        assert self.process_instr is not None, "self.process_instr is None"
+        assert self._process_instr is not None, "self.process_instr is None"
         try:
-            next(self.process_instr)
+            next(self._process_instr)
         except StopIteration:
             pass
         except AssertionError as ae:
@@ -265,9 +367,7 @@ class PInterpreter(NodeVisitor):
 
         # execute one iteration of each interrupt
         try:
-            work_done = self._run_interrupt_handlers()
-            if not work_done:
-                pass
+            self._run_interrupt_handlers()
         except AssertionError as ae:
             raise InterpretationError(message=str(ae), exception=ae)
         except (InterpretationInternalError, InterpretationError):
@@ -282,6 +382,9 @@ class PInterpreter(NodeVisitor):
         self._program.reset_runtime_state(recursive=True)
 
     def _is_awaiting_threshold(self, node: p.Node):
+        if node.completed:
+            return False
+
         if node.threshold is not None and not node.forced:
             base_unit = self.context.tags.get(SystemTagName.BASE).get_value()
             assert isinstance(base_unit, str), \
@@ -348,20 +451,40 @@ class PInterpreter(NodeVisitor):
             expected_value,
             expected_unit)
 
-    def _visit_children(self, node: p.Node):
+    def _visit_children(self, node: p.NodeWithChildren) -> NodeGenerator:
         ar = self.stack.peek()
-        if isinstance(node, p.NodeWithChildren):
-            for child in node.children:
-                if ar.complete:
-                    break
-                yield from self.visit(child)
+        for child in node.children:
+            if ar.complete:
+                break
+            yield from self.visit(child)
 
     # Visitor Impl
 
     @override
-    def visit(self, node: p.Node):
+    def visit(self, node: p.Node) -> NodeGenerator:
         if not self.running:
             return
+
+        if self._ffw:
+            logger.debug(f"Visiting {node} during FFW")
+            if self._ffw_target_node_id == node.id:
+                # we have reached the ffw target node, disable ffw to make the generator ready for normal use
+                self._ffw = False
+                yield
+
+            elif node.completed:
+                # node was completed so all its children are as well
+                # TODO: possibly return here ...
+                yield
+            else:
+                # node was not started and must be visited in ffw mode
+                # TODO: what if ffw is completed during this??
+                node.started = True
+                yield from super().visit(node)
+                node.completed = True
+                return
+        else:
+            self._current_node = node
 
         # interrupts are visited multiple times. make sure to only create
         # a new record on the first visit
@@ -380,36 +503,63 @@ class PInterpreter(NodeVisitor):
             if self.stack.peek().complete:
                 logger.debug("Aborting threshold because parent block was complete")
                 return
-
+            # TODO verify that we don't get duplicate await runtime states here
             record.add_state_awaiting_threshold(
                 self._tick_time, self._tick_number,
                 self.context.tags.as_readonly())
             yield
 
-        # delegate to concrete visitor via base method
+        node.started = True
+
+        # delegate to concrete visitor method via base method
         yield from super().visit(node)
 
-        record.set_end_visit(
-            self._tick_time, self._tick_number,
-            self.context.tags.as_readonly())
+        if not node.completed:
+            record.set_end_visit(
+                self._tick_time, self._tick_number,
+                self.context.tags.as_readonly())
 
         logger.debug(f"Visit {node} done")
+        node.completed = True
 
-    def visit_ProgramNode(self, node: p.ProgramNode):
-        ar = ActivationRecord(node, self._tick_time)
-        self.stack.push(ar)
-        self.context.emitter.emit_on_scope_start(node.id)
-        self.context.emitter.emit_on_scope_activate(node.id)
+    def visit_ProgramNode(self, node: p.ProgramNode) -> NodeGenerator:
+        if not self._ffw:
+            ar = ActivationRecord(node, self._tick_time)
+            self.stack.push(ar)
+            self.context.emitter.emit_on_scope_start(node.id)
+            self.context.emitter.emit_on_scope_activate(node.id)
+
         yield from self._visit_children(node)
-        # TODO consider awaiting uod command completion before emit_on_method_end
-        self.context.emitter.emit_on_scope_end(node.id)
+
+        # Note: This event means that the last line of the method is complete.
+        # The method may change later by an edit, so it doesn't necessarily mean
+        # that the method has ended.
         self.context.emitter.emit_on_method_end()
-        self.stack.pop()
 
-    def visit_BlankNode(self, node: p.BlankNode):
-        yield
+        # Avoid returning from the visit. This makes it possible to inject or edit
+        # code at the bottom of the method which will then be added as new child nodes
+        # of the ProgramNode.
+        # There may also be commands that still run, in particular Alarm which runs
+        # indefinitely
+        # In particular, we don emit scope end for the root scope and we don't pop the program node AR from the stack
+        while self.running:
+            yield
 
-    def visit_MarkNode(self, node: p.MarkNode):
+    def visit_BlankNode(self, node: p.BlankNode) -> NodeGenerator:
+        if self._ffw:
+            return
+
+        # avoid advancing into whitespace-only code lines
+        while node.has_only_trailing_whitespace:
+            logging.debug(f"Dont interpret node {node} with has_only_trailing_whitespace")
+            node.started = False
+            yield
+
+
+    def visit_MarkNode(self, node: p.MarkNode) -> NodeGenerator:
+        if self._ffw:
+            return
+
         record = self.runtimeinfo.get_last_node_record(node)
 
         logger.info(f"Mark {str(node)}")
@@ -430,7 +580,10 @@ class PInterpreter(NodeVisitor):
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
 
-    def visit_BatchNode(self, node: p.BatchNode):
+    def visit_BatchNode(self, node: p.BatchNode) -> NodeGenerator:
+        if self._ffw:
+            return
+
         record = self.runtimeinfo.get_last_node_record(node)
 
         logger.info(f"Batch {str(node)}")
@@ -451,7 +604,10 @@ class PInterpreter(NodeVisitor):
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
 
-    def visit_MacroNode(self, node: p.MacroNode):
+    def visit_MacroNode(self, node: p.MacroNode) -> NodeGenerator:
+        if self._ffw:
+            raise NotImplementedError("FFW not yet implemented for Macro instructions")
+
         record = self.runtimeinfo.get_last_node_record(node)
         record.add_state_started(
             self._tick_time, self._tick_number,
@@ -489,7 +645,10 @@ class PInterpreter(NodeVisitor):
 
         yield
 
-    def visit_CallMacroNode(self, node: p.CallMacroNode):
+    def visit_CallMacroNode(self, node: p.CallMacroNode) -> NodeGenerator:
+        if self._ffw:
+            raise NotImplementedError("FFW not yet implemented for Macro instructions")
+
         record = self.runtimeinfo.get_last_node_record(node)
         record.add_state_started(
             self._tick_time, self._tick_number,
@@ -515,57 +674,67 @@ class PInterpreter(NodeVisitor):
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
 
-    def visit_BlockNode(self, node: p.BlockNode):
+    def visit_BlockNode(self, node: p.BlockNode) -> NodeGenerator:
         record = self.runtimeinfo.get_last_node_record(node)
+        ar: ActivationRecord | None = None
 
-        ar = ActivationRecord(node, self._tick_time)
-        self.stack.push(ar)
-        self.context.tags[SystemTagName.BLOCK].set_value(node.name, self._tick_number)
-        self.context.emitter.emit_on_block_start(node.name, self._tick_number)
-        self.context.emitter.emit_on_scope_start(node.id)
-        logger.debug(f"Block Tag set to {node.name}")
+        if not self._ffw:
+            ar = ActivationRecord(node, self._tick_time)
+            self.stack.push(ar)
+            self.context.tags[SystemTagName.BLOCK].set_value(node.name, self._tick_number)
+            self.context.emitter.emit_on_block_start(node.name, self._tick_number)
+            self.context.emitter.emit_on_scope_start(node.id)
+            logger.debug(f"Block Tag set to {node.name}")
 
-        yield
+            yield
 
-        self.context.emitter.emit_on_scope_activate(node.id)
-        record.add_state_started(
-            self._tick_time, self._tick_number,
-            self.context.tags.as_readonly())
+            self.context.emitter.emit_on_scope_activate(node.id)
+            record.add_state_started(
+                self._tick_time, self._tick_number,
+                self.context.tags.as_readonly())
 
         yield from self._visit_children(node)
 
-        if not ar.complete:
-            logger.debug(f"Block {node.name} idle")
-        while not ar.complete and self.running:
-            yield
+        if not self._ffw:
+            if ar is None:
+                ar = self.stack.find_by_owner_id(node.id)
+                assert ar is not None, "AR is none in second visit_Block part"
 
-        # await possible interrupt using the stack
-        while not self.stack.peek() is ar:
-            yield
+            if not ar.complete:
+                logger.debug(f"Block {node.name} idle")
+            while not ar.complete and self.running:
+                yield
 
-        # now it's safe to pop
-        self.stack.pop()
+            # await possible interrupt using the stack
+            while not self.stack.peek() is ar:
+                yield
 
-        record.add_state_completed(
-            self._tick_time, self._tick_number,
-            self.context.tags.as_readonly())
+            # now it's safe to pop
+            self.stack.pop()
 
-        # restore previous block name
-        block_restored = False
-        for ar in self.stack.iterate_from_top():
-            if ar.artype == ARType.BLOCK:
-                assert isinstance(ar.owner, p.BlockNode)
-                self.context.tags[SystemTagName.BLOCK].set_value(ar.owner.name, self._tick_number)
-                self.context.emitter.emit_on_block_end(node.name, ar.owner.name, self._tick_number)
-                logger.debug(f"Block Tag popped to {ar.owner.name}")
-                block_restored = True
-        if not block_restored:
-            self.context.tags[SystemTagName.BLOCK].set_value(None, self._tick_number)
-            self.context.emitter.emit_on_block_end(node.name, "", self._tick_number)
-            logger.debug(f"Block Tag cleared from {node.name}")
-        self.context.emitter.emit_on_scope_end(node.id)
+            record.add_state_completed(
+                self._tick_time, self._tick_number,
+                self.context.tags.as_readonly())
 
-    def visit_EndBlockNode(self, node: p.EndBlockNode):
+            # restore previous block name
+            block_restored = False
+            for ar in self.stack.iterate_from_top():
+                if ar.artype == ARType.BLOCK:
+                    assert isinstance(ar.owner, p.BlockNode)
+                    self.context.tags[SystemTagName.BLOCK].set_value(ar.owner.name, self._tick_number)
+                    self.context.emitter.emit_on_block_end(node.name, ar.owner.name, self._tick_number)
+                    logger.debug(f"Block Tag popped to {ar.owner.name}")
+                    block_restored = True
+            if not block_restored:
+                self.context.tags[SystemTagName.BLOCK].set_value(None, self._tick_number)
+                self.context.emitter.emit_on_block_end(node.name, "", self._tick_number)
+                logger.debug(f"Block Tag cleared from {node.name}")
+            self.context.emitter.emit_on_scope_end(node.id)
+
+    def visit_EndBlockNode(self, node: p.EndBlockNode) -> NodeGenerator:
+        if self._ffw:
+            return
+
         record = self.runtimeinfo.get_last_node_record(node)
         record.add_state_started(
             self._tick_time, self._tick_number,
@@ -573,6 +742,7 @@ class PInterpreter(NodeVisitor):
         for ar in reversed(self.stack.records):
             if ar.artype == ARType.BLOCK:
                 ar.complete = True
+                logger.debug(f"EndBlock ended block {ar.owner.display_name}")
                 record.add_state_completed(
                     self._tick_time, self._tick_number,
                     self.context.tags.as_readonly())
@@ -580,7 +750,10 @@ class PInterpreter(NodeVisitor):
         logger.warning("End block found no block to end")
         yield from ()
 
-    def visit_EndBlocksNode(self, node: p.EndBlocksNode):
+    def visit_EndBlocksNode(self, node: p.EndBlocksNode) -> NodeGenerator:
+        if self._ffw:
+            return
+
         yield from ()
 
         record = self.runtimeinfo.get_last_node_record(node)
@@ -595,7 +768,10 @@ class PInterpreter(NodeVisitor):
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
 
-    def visit_InterpreterCommandNode(self, node: p.InterpreterCommandNode):
+    def visit_InterpreterCommandNode(self, node: p.InterpreterCommandNode) -> NodeGenerator:  # noqa C901
+        if self._ffw:
+            return
+
         yield from ()
 
         record = self.runtimeinfo.get_last_node_record(node)
@@ -650,7 +826,10 @@ class PInterpreter(NodeVisitor):
         record.add_state_completed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
         yield  # avoid other instructions starting in this tick, to allow tests to consistently detect the completed state
 
-    def visit_EngineCommandNode(self, node: p.EngineCommandNode):
+    def visit_EngineCommandNode(self, node: p.EngineCommandNode) -> NodeGenerator:
+        if self._ffw:
+            return
+
         record = self.runtimeinfo.get_last_node_record(node)
 
         # Note: Commands can be resident and last multiple ticks.
@@ -676,7 +855,10 @@ class PInterpreter(NodeVisitor):
 
         yield
 
-    def visit_UodCommandNode(self, node: p.UodCommandNode):
+    def visit_UodCommandNode(self, node: p.UodCommandNode) -> NodeGenerator:
+        if self._ffw:
+            return
+
         record = self.runtimeinfo.get_last_node_record(node)
 
         # Note: Commands can be resident and last multiple ticks.
@@ -702,13 +884,17 @@ class PInterpreter(NodeVisitor):
 
         yield
 
-    def visit_WatchNode(self, node: p.WatchNode):
+    def visit_WatchNode(self, node: p.WatchNode) -> NodeGenerator:
         yield from self.visit_WatchOrAlarm(node)
 
-    def visit_AlarmNode(self, node: p.AlarmNode):
+    def visit_AlarmNode(self, node: p.AlarmNode) -> NodeGenerator:
         yield from self.visit_WatchOrAlarm(node)
 
-    def visit_WatchOrAlarm(self, node: p.WatchNode | p.AlarmNode):
+    def visit_WatchOrAlarm(self, node: p.WatchNode | p.AlarmNode) -> NodeGenerator:
+        if self._ffw:
+            yield from self._visit_children(node)
+            return
+
         record = self.runtimeinfo.get_last_node_record(node)
 
         ar = self.stack.peek()
@@ -770,7 +956,7 @@ class PInterpreter(NodeVisitor):
                     else:
                         yield
 
-    def visit_InjectedNode(self, node: p.InjectedNode):
+    def visit_InjectedNode(self, node: p.InjectedNode) -> NodeGenerator:
         record = self.runtimeinfo.get_last_node_record(node)
 
         ar = self.stack.peek()
@@ -795,10 +981,17 @@ class PInterpreter(NodeVisitor):
                 self._tick_time, self._tick_number,
                 self.context.tags.as_readonly())
 
-    def visit_CommentNode(self, node: p.CommentNode):
-        yield from ()
+    def visit_CommentNode(self, node: p.CommentNode) -> NodeGenerator:
+        if self._ffw:
+            return
 
-    def visit_ErrorInstructionNode(self, node: p.ErrorInstructionNode):
+        # avoid advancing into whitespace-only code lines
+        while node.has_only_trailing_whitespace:
+            node.started = False
+            yield
+
+
+    def visit_ErrorInstructionNode(self, node: p.ErrorInstructionNode) -> NodeGenerator:
         record = self.runtimeinfo.get_last_node_record(node)
 
         logger.error(f"Invalid instruction: {str(node)}:\n{node.line}")
