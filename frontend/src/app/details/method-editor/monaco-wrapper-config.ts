@@ -22,10 +22,11 @@ export class MonacoWrapperConfig {
             'editor.minimap': {
               enabled: UtilMethods.isDesktop,
             },
-            'editor.lightbulb.enabled': 'off',
+            'editor.lightbulb.enabled': true,
             'editor.experimental.asyncTokenization': true,
             'editor.foldingStrategy': 'indentation',
-            'editor.wordBasedSuggestions': 'off',
+            'editor.wordBasedSuggestions': false,
+            'editor.codeLens': false,
             // "editor.quickSuggestions": false
           }),
         },
@@ -48,26 +49,13 @@ export class MonacoWrapperConfig {
               aliases: ['PCODE', 'pcode'],
               extensions: ['.pcode'],
               mimetypes: ['application/pcode'],
-              configuration: './language-configuration.json',
+              configuration: './pcode.language-configuration.json',
             }],
           },
         },
         filesOrContents: new Map<string, string | URL>([
-          ['./language-configuration.json', JSON.stringify({ // adapted from language-configuration.json in @codingame/monaco-vscode-json-default-extension
-              comments: {lineComment: '#'},
-              onEnterRules: [{
-                beforeText: {pattern: '^\\s*(Alarm|Block|Watch|Macro).*$'},
-                action: {indent: 'indent'},
-              }, {
-                beforeText: {pattern: '^\\s*End block$'},
-                action: {indent: 'outdent'},
-              }, {
-                beforeText: {pattern: '^\\s*End blocks$'},
-                action: {indent: 'none', removeText: Number.MAX_VALUE},
-              }],
-            },
-          )],
-          ['./pcode.tmLanguage.json', new URL(`/uod/${unitId}/pcode.tmLanguage.json`, window.location.origin)],
+          ['./pcode.language-configuration.json', new URL(`/api/lsp/pcode.language-configuration.json`, window.location.origin)],
+          ['./pcode.tmLanguage.json', new URL(`/api/lsp/engine/${unitId}/pcode.tmLanguage.json`, window.location.origin)],
         ]),
       }],
       editorAppConfig: {
@@ -90,7 +78,7 @@ export class MonacoWrapperConfig {
           connection: {
             options: {
               $type: 'WebSocketUrl',
-              url: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/lsp`,
+              url: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/lsp/websocket`,
               // startOptions: {
               //   onCall: () => {
               //     console.log('Connected to socket.');
