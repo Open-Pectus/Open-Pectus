@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import shutil
 
 from openpectus.aggregator.aggregator_server import AggregatorServer
 
@@ -20,9 +21,13 @@ if __name__ == "__main__":
         json.dump(AggregatorServer().fastapi.openapi(), f, indent=2)
 
     cmd = "npm run generate"
-    print(f"Generating typescript interfaces using command: {cmd}")
-    retval = subprocess.check_call(cmd, cwd=frontend_path, shell=True)
-    if retval == 0:
-        print("Generation complete")
+    if shutil.which(cmd) is None:
+        print('Generation failed. npm is not available. Please consult https://docs.openpectus.org/latest/src/Development.html#frontend-setup')
     else:
-        print(f"Generation failed with error code: {retval}")
+        print(f"Generating typescript interfaces using command: {cmd}")
+        retval = subprocess.check_call(cmd, cwd=frontend_path, shell=True)
+        if retval == 0:
+            print("Generation complete")
+        else:
+            print(f"Generation failed with error code: {retval}")
+            print('Did you remember to run "npm ci" before running this script?')

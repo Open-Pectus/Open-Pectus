@@ -7,13 +7,13 @@ from typing import Iterable, Set
 from uuid import UUID
 from openpectus.engine.internal_commands import InternalCommandsRegistry
 from openpectus.engine.hardware import HardwareLayerException, RegisterDirection
-from openpectus.engine.method_model import MethodModel
+from openpectus.engine.method_manager import MethodManager
 from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum, SystemTagName
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.clock import Clock, WallClock
 from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.errors import (
-    EngineError, InterpretationError, InterpretationInternalError
+    EngineError, InterpretationError, InterpretationInternalError, MethodEditError
 )
 from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext
 from openpectus.lang.exec.runlog import RuntimeInfo, RunLog, RuntimeRecord
@@ -144,11 +144,12 @@ class Engine(InterpreterContext):
         self._last_error : Exception | None = None
         """ Cause of error_state"""
 
-        self._method_model: MethodModel = MethodModel(uod.get_command_names())
-        """ The model handling changes to program/method code """
+        self._method_manager: MethodManager = MethodManager(uod.get_command_names())
+        """ The model handling changes to method code """
+        self._pending_merge_method: Mdl.Method | None = None
 
-        self._interpreter: PInterpreter = PInterpreter(self._method_model.program, self)
-        """ The interpreter executing the current program. """
+        self._interpreter: PInterpreter = PInterpreter(self._method_manager.program, self)
+        """ The interpreter executing the current method. """
 
         self._cancel_command_exec_ids: set[UUID] = set()
 
@@ -191,8 +192,8 @@ class Engine(InterpreterContext):
         return self.interpreter.runtimeinfo
 
     @property
-    def method(self) -> MethodModel:
-        return self._method_model
+    def method_manager(self) -> MethodManager:
+        return self._method_manager
 
     def cleanup(self):
         self.emitter.emit_on_engine_shutdown()
@@ -252,11 +253,25 @@ class Engine(InterpreterContext):
             for tag in self._system_tags.tags.values():
                 tag.tick_time = tick_time
 
+        # edit phase
+        if self._pending_merge_method is not None:
+            logger.debug("Applying scheduled method merge")
+            try:
+                self._method_manager.merge_method(self._pending_merge_method)
+                self._interpreter.update_method_and_ffw(self._method_manager.program)
+                logger.debug("Method edit complete")
+            except Exception as ex:
+                logger.error("Method edit failed", exc_info=True)
+                self.set_error_state(ex)
+            finally:
+                self._pending_merge_method = None
+
         self.uod.hwl.tick()
 
-        # read, error_state on HardwareLayerException
+        # read phase, error_state on HardwareLayerException
         self.read_process_image()
 
+        # execute phase
         # excecute interpreter tick
         if self._runstate_started and\
                 not self._runstate_paused and\
@@ -294,8 +309,9 @@ class Engine(InterpreterContext):
         # notify of tag changes
         self.notify_tag_updates()
 
-        # write, error_state on HardwareLayerException
+        # write phase, error_state on HardwareLayerException
         self.write_process_image()
+
 
     def read_process_image(self):
         """ Read data from relevant hw registers into tags"""
@@ -391,8 +407,7 @@ class Engine(InterpreterContext):
         else:
             self._execute_uod_command(cmd_request, cmds_done)
 
-    def _execute_internal_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
-
+    def _execute_internal_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):  # noqa C901
         if not self._runstate_started and cmd_request.name not in [EngineCommandEnum.START, EngineCommandEnum.RESTART]:
             logger.warning(f"Command {cmd_request.name} is invalid when Engine is not running")
             cmds_done.add(cmd_request)
@@ -468,7 +483,7 @@ class Engine(InterpreterContext):
 
     def _stop_interpreter(self):
         self._interpreter.stop()
-        self._interpreter = PInterpreter(self._method_model.program, self)
+        self._interpreter = PInterpreter(self.method_manager.program, self)
 
     def _cancel_uod_commands(self):
         logger.debug("Cancelling uod commands")
@@ -494,7 +509,7 @@ class Engine(InterpreterContext):
         for command in cmds_to_finalize:
             command.finalize()
 
-    def _execute_uod_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
+    def _execute_uod_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):  # noqa C901
         cmd_name = cmd_request.name
         assert self.uod.has_command_name(cmd_name), f"Expected Uod to have command named '{cmd_name}'"
         assert cmd_request.exec_id is not None, f"Expected uod command request '{cmd_name}' to have exec_id"
@@ -508,8 +523,9 @@ class Engine(InterpreterContext):
 
         # cancel any pending cancels (per user request)
         for c in self.cmd_executing:
-            if c.command_exec_id in self._cancel_command_exec_ids:
+            if c.command_exec_id is not None and c.command_exec_id in self._cancel_command_exec_ids:
                 cmds_done.add(c)
+                assert c.command_exec_id is not None, f"Expected uod command request '{c.name}' to have command_exec_id"
                 self._cancel_command_exec_ids.remove(c.command_exec_id)
                 if cmd_request.name == c.name:
                     cancel_this = True
@@ -749,9 +765,8 @@ class Engine(InterpreterContext):
 
     def inject_code(self, pcode: str):
         """ Inject a code snippet to run in the current scope of the current program """
-        # TODO refactor to embed interpreter in method model
         try:
-            injected_program = self._method_model.parse_inject_code(pcode)
+            injected_program = self._method_manager.parse_inject_code(pcode)
             self.interpreter.inject_node(injected_program)
             logger.info("Injected code successful")
         except Exception as ex:
@@ -761,16 +776,54 @@ class Engine(InterpreterContext):
 
     # code manipulation api
     def set_method(self, method: Mdl.Method):
-        """ Set new method. This will replace the current method and invoke the on_method_init callback.
+        """ Set new method. This will replace the current method.
 
-        On error, sets error_state and re-raises the error.
+        We generally expect that nothing important is going on when performing a method edit. This means
+        that interpreter is in one of these states:
+            - Current instruction is awating a threshold, preferably with at least several seconds before
+              the instruction starts
+            - Current instruction is a Wait
+            - Current instruction is a Pause
+            - Method is exhausted
+            - Engine paused
+            - ??
+            In the waiting cases (threshold, Wait and Pause), the waiting time is reset - this is probably ok?
+
+        How should this be enforced?
+        - Wait for an active instruction to complete before performing the edit? Probably. This does not mean
+          wait for a possible command, just wait to engine phase edit
+        - Fail unless one of the conditions above is true? This is difficult:
+            - This likely requires semantic changes so no two instructions are active in the same tick.
+              - A case is that currently two adjecent Mark instruction are active in the same tick
+                and we have tests that depend on this - but this can be changed and probably should. It would
+                certainly make tests easier to write and understand and more robust since they don't have to depend
+                on tick counting.
+        - Should the edit be performed as a command? We should always perform the edit in a "pause" so it won't interfere
+          with anything...
+
+        If a method is already running, it will
+        - Take node of the current instruction
+        - Check that no code changes exist in already executed code. If so, MethodEditError is raised
+        - Serialize the AST of the running method
+        - Parse the updated method, replacing the AST with the new AST
+        - Apply persisted data to new AST
+        - Patch all node references to point to the updated nodes:
+            - In runtime records
+            - In interpreter state (activate records)
+        - Start executing new program in fast-forward mode to skip directly to the paused instruction
         """
 
-        # TODO handle pause+resume in case a method is already running
         try:
-            self._method_model.save_method(method)
-            self._interpreter = PInterpreter(self._method_model.program, self)
-            logger.debug(f"New method set with {len(method.lines)} lines")
+            if self._runstate_started:
+                if self._pending_merge_method is not None:
+                    raise MethodEditError("An edit is already in progress")
+                # signal to apply updated method on next tick
+                self._pending_merge_method = method
+            else:
+                self._method_manager.set_method(method)
+                self._interpreter = PInterpreter(self._method_manager.program, self)
+                logger.debug(f"New method set with {len(method.lines)} lines")
+
         except Exception as ex:
             logger.error("Failed to set method", exc_info=True)
             self.set_error_state(ex)
