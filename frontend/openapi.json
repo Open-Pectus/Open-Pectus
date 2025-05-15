@@ -973,6 +973,116 @@
         }
       }
     },
+    "/api/process_unit/{unit_id}/active_users": {
+      "get": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Get Active Users",
+        "operationId": "get_active_users",
+        "parameters": [
+          {
+            "name": "unit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            }
+          },
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/process_unit/{unit_id}/register_active_user": {
+      "post": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Register Active User",
+        "operationId": "register_active_user",
+        "parameters": [
+          {
+            "name": "unit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            }
+          },
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActiveUser"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/recent_runs/": {
       "get": {
         "tags": [
@@ -1650,6 +1760,28 @@
   },
   "components": {
     "schemas": {
+      "ActiveUser": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "photo_base64": {
+            "type": "string",
+            "title": "Photo Base64"
+          },
+          "subscriber_id": {
+            "type": "string",
+            "title": "Subscriber Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "subscriber_id"
+        ],
+        "title": "ActiveUser"
+      },
       "AggregatedErrorLog": {
         "properties": {
           "entries": {
@@ -2464,7 +2596,8 @@
           "method_state",
           "control_state",
           "error_log",
-          "process_units"
+          "process_units",
+          "active_users"
         ],
         "title": "PubSubTopic"
       },
