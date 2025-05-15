@@ -1,6 +1,7 @@
 import { Store } from '@ngrx/store';
 import { LogLevel, OpenIdConfiguration, StsConfigHttpLoader } from 'angular-auth-oidc-client';
-import { map } from 'rxjs';
+import { map, shareReplay } from 'rxjs';
+import { tap } from 'rxjs/operators';
 import { AuthConfig, AuthService } from '../api';
 import { authCallbackUrlPart } from '../app.routes';
 import { AppActions } from '../ngrx/app.actions';
@@ -8,9 +9,9 @@ import { AppActions } from '../ngrx/app.actions';
 export const secureRoutes = [`/api/`, `https://graph.microsoft.com/`];
 
 export const authConfigLoaderFactory = (authService: AuthService, store: Store) => {
-  const config = authService.getConfig().pipe<OpenIdConfiguration>(
+  const config = authService.getConfig().pipe(
+    tap((customConfig: AuthConfig) => store.dispatch(AppActions.authEnablementFetched({authIsEnabled: customConfig.use_auth}))),
     map((customConfig: AuthConfig) => {
-      store.dispatch(AppActions.authEnablementFetched({authIsEnabled: customConfig.use_auth}));
       if(!customConfig.use_auth) {
         return {
           authority: window.location.origin,
@@ -41,6 +42,7 @@ export const authConfigLoaderFactory = (authService: AuthService, store: Store) 
         secureRoutes: secureRoutes,
       } satisfies OpenIdConfiguration;
     }),
+    shareReplay(1),
   );
 
   return new StsConfigHttpLoader(config);
