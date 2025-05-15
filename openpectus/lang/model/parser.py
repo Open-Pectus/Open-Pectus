@@ -108,9 +108,9 @@ def count_trailing_spaces(s: str) -> int:
 class Grammar:
     indent_re = r'(?P<indent>\s+)?'
     threshold_re = r'((?P<threshold>\d+(\.\d+)?)\s)?'
-    instruction_re = r'(?P<instruction_name>\b[a-zA-Z_][^:#]*)'
+    instruction_re = r'(?P<instruction_name>\b[a-zA-Z_0-9][^:#]*)'
     argument_re = r'(: (?P<argument>[^#]+))?'
-    comment_re = r'(\s*#\s*(?P<comment>.*$))?'
+    comment_re = r'(\s*(?P<has_comment>#)\s*(?P<comment>.*$))?'
 
     full_line_re = indent_re + threshold_re + instruction_re + argument_re + comment_re
     # fallback is used to capture the command name, even if the command is not parsable
@@ -123,12 +123,12 @@ class Grammar:
     operators_2char = ['<=', '>=', '==', '!=']
     # condition_op_re = "\\s*(?P<op>" + "|".join(op for op in operators) + ")\\s*"
 
-    float_re = r'[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?'
-    unit_re = r'[a-zA-Z]+|%|/'
+    float_re = r'(?P<float>[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?)'
+    unit_re = r'(?P<unit>[a-zA-Z%\/23\*]+)'
 
-    condition_rhs_re = '^' + '(?P<float>' + float_re + ')' + '\\s*' + '(?P<unit>' + unit_re + ')' + '$'
+    condition_rhs_re = '^' + float_re + '\\s*' + unit_re + '$'
     condition_rhs_pattern = re.compile(condition_rhs_re)
-    condition_rhs_no_unit_re = '^' + '(?P<float>' + float_re + ')' + '\\s*$'
+    condition_rhs_no_unit_re = '^' + float_re + '\\s*$'
     condition_rhs_no_unit_pattern = re.compile(condition_rhs_no_unit_re)
 
 
@@ -142,6 +142,9 @@ class LspParseResult:
 
 def lsp_parse_line(pcode_query: str) -> LspParseResult | None:
     """ Provides a fast one-line parse for lsp completions. """
+    if "\r\n" in pcode_query:
+        pcode_query, remainder = pcode_query.split("\r\n", maxsplit=1)
+        assert len(remainder) == 0
     match = Grammar.instruction_line_pattern.match(pcode_query)
     if match is None:
         return None
@@ -184,9 +187,29 @@ class PcodeParser:
             # incr_indent_allowed = prev_node is not None and isinstance(prev_node, p.NodeWithChildren)
             # decr_indent_allowed = parent_node.position.character > 0 and len(parent_node.children) > 0
             node_error = False
-            is_whitespace_node = isinstance(node, (p.BlankNode, p.CommentNode))
+            is_whitespace_node = isinstance(node, p.WhitespaceNode)
 
-            if node.position.character == prev_indent:  # indentation unchanged
+            if node.indent_error:
+                parent_node.append_child(node)
+                node_error = True
+                if isinstance(node, p.NodeWithChildren):
+                    parent_node = node
+                    increment_required = True
+                else:
+                    pass
+
+
+            elif node.position.character > prev_indent and not increment_required:
+                parent_node.append_child(node)
+                node.indent_error = True
+                node_error = True
+                if isinstance(node, p.NodeWithChildren):
+                    parent_node = node
+                    increment_required = True
+                else:
+                    increment_required = False
+
+            elif node.position.character == prev_indent:  # indentation unchanged
                 if increment_required:
                     # what to do here - the node is in error but the parent may also be
                     logger.error("Expected increment")
@@ -197,7 +220,7 @@ class PcodeParser:
                 else:
                     increment_required = False
 
-            elif node.position.character == prev_indent + 4:  # indentation increased one level
+            elif node.position.character == parent_node.position.character + 4 and not isinstance(parent_node, p.ProgramNode):  # indentation increased one level
                 # TODO fail if not valid increment
                 if not increment_required and not is_whitespace_node:
                     node.indent_error = True
@@ -231,10 +254,16 @@ class PcodeParser:
                 else:
                     increment_required = False
 
+            else:
+                parent_node.append_child(node)
+
             if not node_error:
                 prev_node = node
                 if not is_whitespace_node:
                     prev_indent = prev_node.position.character
+
+            if increment_required and not isinstance(node, (p.ProgramNode, p.WatchNode, p.AlarmNode, p.MacroNode, p.BlockNode,)) and not node_error:
+                increment_required = False
 
         return program
 
@@ -242,11 +271,11 @@ class PcodeParser:
         line_stripped = line.strip()
         if line_stripped == "":
             return p.BlankNode(
-                position=Position(line=line_no, character=0)
+                position=Position(line=line_no, character=len(line))
             ).with_id(self.id_generator)
         elif line_stripped.startswith("#"):
             return p.CommentNode(
-                position=Position(line=line_no, character=0)
+                position=Position(line=line_no, character=line.index("#"))
             ).with_id(self.id_generator).with_line(line)
 
         match = Grammar.instruction_line_pattern.match(line)
@@ -260,20 +289,39 @@ class PcodeParser:
         threshold = match_groups.get("threshold")
         instruction_name = match_groups.get("instruction_name", "") or ""
         argument = match_groups.get("argument", "")
+        has_comment = match_groups.get("has_comment", "") == "#"
         comment = match_groups.get("comment", "")
+        
+        has_argument = ":" in line_stripped.split("#")[0]
 
         node = self._create_node(instruction_name.strip(), line, line_no).with_id(self.id_generator)
         node.threshold_part = threshold or ""
         node.instruction_part = instruction_name
+        node.instruction_range = p.Range(
+            start=Position(
+                line=line_no,
+                character=match.start("instruction_name")+count_leading_spaces(node.instruction_part),
+            ),
+            end=Position(
+                line=line_no,
+                character=match.end("instruction_name")-count_trailing_spaces(node.instruction_part),
+            )
+        )
         node.arguments_part = (argument or "")
         if len(node.arguments_part) > 0:
             node.arguments_range = p.Range(
-                start=Position(line=line_no, character=match.start("argument") +
-                               count_leading_spaces(node.arguments_part)),
-                end=Position(line=line_no, character=match.end("argument") -
-                             count_trailing_spaces(node.arguments_part))
+                start=Position(
+                    line=line_no,
+                    character=match.start("argument")+count_leading_spaces(node.arguments_part),
+                ),
+                end=Position(
+                    line=line_no,
+                    character=match.end("argument")-count_trailing_spaces(node.arguments_part),
+                )
             )
+        node.has_argument = has_argument
         node.arguments = node.arguments_part.strip()  # convenience cleanup, hard to do in regex
+        node.has_comment = has_comment
         node.comment_part = comment or ""
 
         character = 0 if indent is None or indent == "" else len(indent)
@@ -308,6 +356,9 @@ class PcodeParser:
                     c.op = op1
                     break
         if c.op == "":
+            c.lhs = node.arguments_part.strip()
+            c.lhs_range = node.arguments_range
+            c.tag_name = c.lhs
             return
 
         try:

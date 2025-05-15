@@ -786,7 +786,7 @@ class Engine(InterpreterContext):
             - Current instruction is a Pause
             - Method is exhausted
             - Engine paused
-            - ??        
+            - ??
             In the waiting cases (threshold, Wait and Pause), the waiting time is reset - this is probably ok?
 
         How should this be enforced?

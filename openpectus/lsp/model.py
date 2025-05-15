@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TypedDict
+from typing import TypedDict, Literal, NotRequired
 
 from pylsp.lsp import DiagnosticSeverity
 
@@ -7,9 +7,27 @@ from openpectus.lang.exec.analyzer import AnalyzerItem, AnalyzerItemType
 from openpectus.lang.model.pprogram import PNode
 
 
+class MarkupContent(TypedDict):
+    """
+    Representation of
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#markupContentInnerDefinition
+    """
+    kind: Literal["markdown", "plaintext"]
+    value: str
+
+class Hover(TypedDict):
+    """
+    Representation of
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#hover
+    """
+    contents: MarkupContent
+    range: NotRequired[Range]
+
 class Position(TypedDict):
-    """ Representation of
-    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#position """
+    """
+    Representation of
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#position
+    """
     line: int
     """ Zero-based line counter"""
     character: int
@@ -17,7 +35,9 @@ class Position(TypedDict):
 
 
 class Range(TypedDict):
-    """ Representation of https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#range
+    """
+    Representation of
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#range
 
     Note:
     - Lines are zero-based (where PNode lines are 1-based)
@@ -28,62 +48,108 @@ class Range(TypedDict):
     end: Position
 
 
-class Diagnostics(TypedDict):
-    """ Representation of
-    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnostic """
-    source: str
+class Diagnostic(TypedDict):
+    """
+    Representation of
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnostic
+    """
     range: Range
-    code: str
+    severity: NotRequired[int]
+    code: NotRequired[str]
+    source: NotRequired[str]
     message: str
-    severity: int
+    data: NotRequired[dict[str, str]]  # Actual type is not this strict
     """ One of DiagnosticSeverity """
 
 
+class TextEdit(TypedDict):
+    """
+    Representation of
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textEdit
+    """
+    range: Range
+    newText: str
+
+class WorkspaceEdit(TypedDict):
+    """
+    Representation of
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspaceEdit
+    """
+    changes: dict[str, list[TextEdit]]
+
+
+class CodeAction(TypedDict):
+    """
+    Representation of
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#codeAction
+    """
+    title: str
+    kind: NotRequired[Literal[
+        "",
+        "quickfix",
+        "refactor",
+        "refactor.extract",
+        "refactor.inline",
+        "refactor.rewrite",
+        "source",
+        "source.fixAll"
+        ]]
+    diagnostics: NotRequired[list[Diagnostic]]
+    edit: NotRequired[WorkspaceEdit]
+
+
+class CodeActionContext(TypedDict):
+    """
+    Representation of
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#codeActionContext
+    """
+    diagnostics: list[Diagnostic]
+
+
 class DocumentSymbol(TypedDict):
-    """ Representation of
-    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#documentSymbol """
+    """
+    Representation of
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#documentSymbol
+    """
     name: str
-    kind: int
-    """ One of SymbolKind """
-    # tags: list[object] | None
-    # deprecated: bool | None
+    kind: int  # SymbolKind
     range: Range
     selectionRange: Range
     children: list[DocumentSymbol]  # the spec defines this as optional but the client errors out if set to None
 
 
 class Location(TypedDict):
-    """ Repreesntation of
-    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#location """
+    """
+    Representation of
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#location
+    """
     uri: str
     range: Range
 
 
 class SymbolInformation(TypedDict):
-    """ Representation of
-    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#symbolInformation """
+    """
+    Representation of
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#symbolInformation
+    """
     name: str
-    kind: int
+    kind: int  # SymbolKind
     location: Location
 
 
 class CompletionItem(TypedDict):
-    """ Representation of
+    """
+    Representation of
     https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#completionItem
-    Has LOTS of options
     """
     label: str
-    kind: int | None
-    preselect: bool | None
-
-class CompletionList(TypedDict):
-    """ Representation of
-    https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/#completionList """
-    isIncomplete: bool
-    items: list[CompletionItem]
+    kind: NotRequired[int]  # CompletionItemKind
+    preselect: NotRequired[bool]
+    insertText: NotRequired[str]
+    textEdit: NotRequired[TextEdit]
 
 def get_item_severity(item: AnalyzerItem) -> int:
-    """ Represent analyser item type as lsp DiagnosticSeverity """
+    """ Represent analyzer item type as lsp DiagnosticSeverity """
     if item.type == AnalyzerItemType.HINT:
         return DiagnosticSeverity.Hint
     elif item.type == AnalyzerItemType.INFO:

@@ -1,39 +1,71 @@
-import atexit
 import json
 import logging
-import logging.config
 import time
 from typing import Any
 
 from pylsp import hookimpl
 from pylsp.config.config import Config
 from pylsp.workspace import Document, Workspace
+from pylsp.python_lsp import PythonLSPServer
 
 from openpectus.lsp import lsp_analysis
-from openpectus.lsp.model import Position
+from openpectus.lsp.model import Position, CodeAction, Range, CodeActionContext
 
 
 logger = logging.getLogger(__name__)
+logger.info("Open Pectus LSP plugin loading")
 
 
-logger.warning("Open Pectus LSP plugin loading")
-logger.debug("Open Pectus LSP plugin loading - debug")
-logger.info("Open Pectus LSP plugin loading - info")
+class OPPythonLSPServer(PythonLSPServer):
+    """ Subclass of PythonLSPServer which triggers autocomplete calculation on specific characters. """
 
-timer_format = "0.2f"
+    def capabilities(self):
+        capabilities = super().capabilities()
+        # Let the client know that the following providers are not available
+        # This saves the client from making requests that we have to answer with []
+        # as well as removing stale options from the GUI right click menu.
+        capabilities["codeLensProvider"]["resolveProvider"] = False
+        capabilities["completionProvider"]["resolveProvider"] = False
+        capabilities["documentFormattingProvider"] = False
+        capabilities["documentHighlightProvider"] = False
+        capabilities["documentRangeFormattingProvider"] = False
+        capabilities["documentSymbolProvider"] = False
+        capabilities["definitionProvider"] = False
+        capabilities["referencesProvider"] = False
+        capabilities["renameProvider"] = False
+        capabilities["foldingRangeProvider"] = False
+        capabilities["signatureHelpProvider"] = {"triggerCharacters": []},
+        capabilities["declarationProvider"] = False
+        capabilities["typeDefinitionProvider"] = False
+        capabilities["implementationProvider"] = False
+        # capabilities["documentLinkProvider"] = dict()
+        # capabilities["documentLinkProvider"]["resolveProvider"] = False
+        capabilities["colorProvider"] = False
+        capabilities["documentOnTypeFormattingProvider"] = False
+        capabilities["executeCommandProvider"]["commands"] = []
+        capabilities["selectionRangeProvider"] = False
+        capabilities["linkedEditingRangeProvider"] = False
+        capabilities["callHierarchyProvider"] = False
+        capabilities["semanticTokensProvider"] = False
+        capabilities["monikerProvider"] = False
+        capabilities["typeHierarchyProvider"] = False
+        capabilities["inlineValueProvider"] = False
+        capabilities["inlayHintProvider"] = False
+        capabilities["diagnosticProvider"] = False
+        capabilities["workspaceSymbolProvider"] = False
+        capabilities["experimental"] = []
+        # Make sure that the following are enabled
+        capabilities["codeActionProvider"] = True
+        capabilities["hoverProvider"] = True
+        # Trigger completion re-calculation on colon, space and plus characters
+        capabilities["completionProvider"]["triggerCharacters"] = [":", " ", "+"]
+
+        return capabilities
+
 
 @hookimpl
 def pylsp_settings(config: Config) -> dict[str, dict[str, dict[str, Any]]]:
     """Configuration options that can be set on the client."""
-    logger.info("pylsp_settings")
-    # logger.info(f"config provided: {as_json(config)}")
-    # logger.info("textDocument capabilities: " + as_json(config.capabilities["textDocument"]))
-    # config.capabilities["textDocument"]["codeLens"] = None
-    # config.capabilities["workspace"].pop("codeLens", None)
-    # config.capabilities["textDocument"].pop("codeLens", None)
-
-    # logger.info("textDocument capabilities modified: " + as_json(config.capabilities["textDocument"]))
-
     return {
         "plugins": {
             "pylsp_openpectus": {"enabled": True},
@@ -56,43 +88,13 @@ def pylsp_settings(config: Config) -> dict[str, dict[str, dict[str, Any]]]:
         }
     }
 
-# @hookimpl
-# def pylsp_initialize(config: Config, workspace: Workspace):
-#     logger.info("pylsp_initialize")
-#     logger.debug("config: " + as_json(config))
-#     logger.debug("workspace:" + as_json(workspace))
-
-
-# @hookimpl
-# def pylsp_initialized():
-#     logger.debug("pylsp_initialized")
-
-
-# @hookimpl
-# def pylsp_workspace_configuration_changed(config, workspace) -> None:
-#     logger.debug("pylsp_workspace_configuration_changed")
-#     logger.debug("config: " + as_json(config))
-#     logger.debug("workspace:" + as_json(workspace))
-
-
 @hookimpl
 def pylsp_document_did_open(config: Config, workspace: Workspace, document: Document):
     logger.info("pylsp_document_did_open")
 
-
 @hookimpl
 def pylsp_document_did_save(config, workspace, document):
     logger.info("pylsp_document_did_save")
-
-def get_engine_id(config: Config):
-    # "init_opts": {"engineId": "MIAWLT-1645-MPO_DemoUod"}
-    try:
-        engine_id = config.init_opts["engineId"]
-    except KeyError:
-        logger.error("Missing init option 'engineId'")
-        engine_id = "MIAWLT-1645-MPO_DemoUod"
-    return engine_id
-
 
 @hookimpl
 def pylsp_lint(config: Config, workspace: Workspace, document: Document, is_saved: bool):
@@ -108,22 +110,6 @@ def pylsp_lint(config: Config, workspace: Workspace, document: Document, is_save
         logger.error("Lint error", exc_info=True)
         return []
 
-
-# @hookimpl
-# def pylsp_document_symbols(config: Config, workspace: Workspace, document: Document):
-#     logger.debug("pylsp_document_symbols")
-#     t1 = time.perf_counter()
-#     engine_id = get_engine_id(config)
-#     try:
-#         symbols = lsp_analysis.symbols(document, engine_id)
-#         dt = time.perf_counter() - t1
-#         logger.debug(f"Symbols ok, items: {len(symbols)}, duration: {dt:0.2f}s")
-#         return symbols
-#     except Exception:
-#         logger.error("Symbols error", exc_info=True)
-#         return []
-
-
 @hookimpl
 def pylsp_completions(config: Config, workspace: Workspace, document: Document, position: Position, ignored_names):
     logger.debug("pylsp_completions")
@@ -138,20 +124,19 @@ def pylsp_completions(config: Config, workspace: Workspace, document: Document, 
         logger.error("Completions error", exc_info=True)
         return []
 
-# @hookimpl
-# def pylsp_hover(config: Config, workspace: Workspace, document: Document, position):
-#     logger.info("pylsp_hover")
-#     logger.debug(f"config: {as_json(config)}")
-#     logger.debug(f"workspace: {as_json(workspace)}")
-#     logger.debug(f"document: {as_json(document)}")
-#     logger.debug(f"position: {position}")
-#     word = document.word_at_position(position)
-#     logger.debug(f"source word: {word}")
-#     logger.debug(f"position: {position}")
-#     if word and word != "secret":
-#         return {"contents": {"kind": "markdown", "value": f"You hovered the word: '{word}'"}}
-#     return None
+@hookimpl
+def pylsp_code_actions(
+    config: Config,
+    workspace: Workspace,
+    document: Document,
+    range: Range,
+    context: CodeActionContext,
+) -> list[CodeAction]:
+    return lsp_analysis.code_actions(config, workspace, document, range, context)
 
+@hookimpl
+def pylsp_hover(config: Config, workspace: Workspace, document: Document, position: Position):
+    return lsp_analysis.hover(document, position, get_engine_id(config))
 
 def as_json(obj) -> str:
     if obj is None:
@@ -180,7 +165,5 @@ def as_json(obj) -> str:
         })
     return json.dumps(obj)
 
-
-@atexit.register
-def close() -> None:
-    logger.info("close()")
+def get_engine_id(config: Config) -> str:
+    return config.init_opts["engineId"]

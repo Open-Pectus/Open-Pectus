@@ -49,25 +49,12 @@ export class MonacoWrapperConfig {
               aliases: ['PCODE', 'pcode'],
               extensions: ['.pcode'],
               mimetypes: ['application/pcode'],
-              configuration: './language-configuration.json',
+              configuration: './pcode.language-configuration.json',
             }],
           },
         },
         filesOrContents: new Map<string, string | URL>([
-          ['./language-configuration.json', JSON.stringify({ // adapted from language-configuration.json in @codingame/monaco-vscode-json-default-extension
-              comments: {lineComment: '#'},
-              onEnterRules: [{
-                beforeText: {pattern: '^\\s*(Alarm|Block|Watch|Macro).*$'},
-                action: {indent: 'indent'},
-              }, {
-                beforeText: {pattern: '^\\s*End block$'},
-                action: {indent: 'outdent'},
-              }, {
-                beforeText: {pattern: '^\\s*End blocks$'},
-                action: {indent: 'none', removeText: Number.MAX_VALUE},
-              }],
-            },
-          )],
+          ['./pcode.language-configuration.json', new URL(`/api/lsp/pcode.language-configuration.json`, window.location.origin)],
           ['./pcode.tmLanguage.json', new URL(`/api/lsp/engine/${unitId}/pcode.tmLanguage.json`, window.location.origin)],
         ]),
       }],

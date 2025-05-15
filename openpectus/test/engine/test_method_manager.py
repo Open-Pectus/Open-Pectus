@@ -161,7 +161,7 @@ class TestMethodManager(unittest.TestCase):
             instance.start()
             instance.run_until_instruction("Mark", state="completed", arguments="A")
             instance.run_ticks(4)
-            
+
             # verify no edit error
             instance.engine.set_method(method2)
             instance.run_ticks(1)
@@ -191,7 +191,7 @@ class TestMethodManager(unittest.TestCase):
         runner = EngineTestRunner(create_test_uod, method1)
         with runner.run() as instance:
             instance.start()
-            #instance.run_until_instruction("Mark", state="completed", arguments="A")
+            # instance.run_until_instruction("Mark", state="completed", arguments="A")
             instance.run_until_instruction("Mark", state="started", arguments="B")
 
             # verify no edit error
@@ -305,7 +305,7 @@ class TestMethodManager(unittest.TestCase):
         # To fix:
         #   - move macro definition logic to analyzer
         #   - on method edit, rerun analyzers. this may fix other issues as well
-        
+
         method1 = Method.from_numbered_pcode("""\
 01 Macro: M
 02     Mark: B
@@ -337,5 +337,3 @@ class TestMethodManager(unittest.TestCase):
 
 # Case: injected code
 # must also run in ffw (?)
-
-
