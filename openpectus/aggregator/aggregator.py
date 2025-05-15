@@ -391,8 +391,7 @@ class FromFrontend:
             engine_data = self._engine_data_map.get(engine_id)
             if engine_data is None:
                 logger.warning(f"Cannot prepare registration of active user with subscriber_id='{subscriber_id}' and topics={topics} because the associated engine could not be identified.")
-                return False
-            if not subscriber_id in engine_data.active_users:
+            if engine_data and not subscriber_id in engine_data.active_users:
                 engine_data.active_users[subscriber_id] = None
         return True
 
@@ -403,8 +402,7 @@ class FromFrontend:
             engine_data = self._engine_data_map.get(engine_id)
             if engine_data is None:
                 logger.warning(f"Cannot unregister active user with subscriber_id='{subscriber_id}' and topics={topics} because the associated engine could not be identified.")
-                return False
-            if subscriber_id in engine_data.active_users:
+            if engine_data and subscriber_id in engine_data.active_users:
                 del engine_data.active_users[subscriber_id]
             asyncio.create_task(self.publisher.publish_active_users_changed(engine_id))
         return True
