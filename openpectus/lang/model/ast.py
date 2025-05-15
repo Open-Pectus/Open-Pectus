@@ -3,7 +3,6 @@ from typing import Self, Type, TypeVar, TypedDict
 
 
 class Position:
-    empty: Position
 
     def __init__(self, line: int, character: int):
         self.line: int = line   # todo define 0-1 based. should probably change from before to just match lsp
@@ -12,10 +11,32 @@ class Position:
     def is_empty(self) -> bool:
         return self == Position.empty
 
+    @staticmethod
+    def empty() -> Position:
+        return Position(line=-1, character=-1)
+
     def __eq__(self, value):
         if value is None or not isinstance(value, Position):
             return False
         return self.line == value.line and self.character == value.character
+
+    def __lt__(self, other):
+        if isinstance(other, Range):
+            other = other.start
+        if isinstance(other, Position):
+            return self.line < other.line or (self.line == other.line and self.character < other.character)
+        else:
+            raise TypeError(f"'<' not supported between instances of '{self.__class__.__name__}'" +
+                            " and '{other.__class__.__name__}'")
+
+    def __gt__(self, other):
+        if isinstance(other, Range):
+            other = other.end
+        if isinstance(other, Position):
+            return self.line > other.line or (self.line == other.line and self.character > other.character)
+        else:
+            raise TypeError(f"'>' not supported between instances of '{self.__class__.__name__}'" +
+                            " and '{other.__class__.__name__}'")
 
     def with_character(self, character: int) -> Position:
         return Position(line=self.line, character=character)
@@ -23,30 +44,51 @@ class Position:
     def __str__(self):
         return f"Position(line: {self.line}, char: {self.character})"
 
-
-Position.empty = Position(line=-1, character=-1)
+    def __hash__(self) -> int:
+        return hash(tuple(value for value in self.__dict__.values()))
 
 
 class Range:
-    empty: Range
-
     def __init__(self, start: Position, end: Position):
         self.start = start
         self.end = end
 
     def is_empty(self) -> bool:
-        return self == Range.empty
+        return self == Range.empty()
 
     def with_end(self, position: Position) -> Range:
         return Range(
             start=self.start,
             end=position)
 
+    @staticmethod
+    def empty() -> Range:
+        return Range(start=Position.empty(), end=Position.empty())
+
     def __str__(self):
         return f"{self.start} - {self.end}"
 
+    def __contains__(self, index: Position):
+        """ Check if position or character index is within range"""
+        assert isinstance(index, Position)
+        return (
+            # Position and range are all on one line
+            (self.start.line == self.end.line == index.line and (self.start.character <= index.character <= self.end.character)) or
+            # Position is on start line
+            (self.start.line == index.line and index.line < self.end.line and (self.start.character <= index.character)) or
+            # Position is between start or end line
+            (self.start.line < index.line < self.end.line) or
+            # Position is on end line
+            (self.end.line == index.line and index.line > self.start.line and (index.character <= self.end.character))
+        )
 
-Range.empty = Range(start=Position.empty, end=Position.empty)
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Range):
+            return False
+        return self.start == other.start and self.end == other.end
+
+    def __hash__(self) -> int:
+        return hash(tuple(value for value in self.__dict__.values()))
 
 
 class NodeIdGenerator:
@@ -116,11 +158,14 @@ class Node(SupportCancelForce):
         self.id: str = id
         self.position: Position = position
         self.instruction_part: str = ""
+        self.instruction_range: Range = Range.empty()
         self.threshold_part: str = ""
         self.arguments_part: str = ""
         self.arguments: str = ""
-        self.arguments_range: Range = Range.empty
+        self.arguments_range: Range = Range.empty()
         self.comment_part: str = ""
+        self.has_comment: bool = False
+        self.has_argument: bool = False
 
         self.threshold: float | None = None
         self.indent_error: bool = False
@@ -210,11 +255,7 @@ class Node(SupportCancelForce):
         self.errors.append(error)
 
     def __str__(self):
-        return f"{self.__class__.__name__}(inst: {self.instruction_name}, args: {self.arguments}, id: {self.id})"
-    # def __str__(self):
-    #     indent_spaces = "".join(" " for _ in range(self.position.character))
-    #     args = "" if self.arguments_part == "" else ": " + self.arguments_part
-    #     return f"{indent_spaces}{self.name_part}{args} | id={self.id}"
+        return f"{self.__class__.__name__}(instruction_name='{self.instruction_name}', arguments={self.arguments}, id='{self.id}')"
 
     def __repr__(self):
         return self.__str__()
@@ -223,6 +264,15 @@ class Node(SupportCancelForce):
         indent_spaces = "".join(" " for _ in range(self.position.character))
         args = "" if self.arguments_part == "" else ": " + self.arguments_part
         return f"{indent_spaces}{self.instruction_part}{args} | id={self.id}"
+
+    @property
+    def parents(self) -> list[NodeWithChildren]:
+        node = self
+        parents: list[NodeWithChildren] = []
+        while node.parent is not None:
+            parents.append(node.parent)
+            node = node.parent
+        return parents
 
     def reset_runtime_state(self, recursive: bool):
         # TODO implement, possily by just applying an empty state dict
@@ -261,11 +311,11 @@ class NodeWithChildren(Node):
     def has_children(self):
         return len(self._children) > 0
 
-    def get_child_nodes(self, recursive: bool = False) -> list[Node]:
+    def get_child_nodes(self, recursive: bool = False, exclude_blocks: bool = False) -> list[Node]:
         children: list[Node] = []
         for child in self._children:
             children.append(child)
-            if recursive and isinstance(child, NodeWithChildren):
+            if recursive and isinstance(child, NodeWithChildren) and not (exclude_blocks and isinstance(child, BlockNode)):
                 children.extend(child.get_child_nodes(recursive))
         return children
 
@@ -423,7 +473,7 @@ class Condition:
         self.lhs = ""
         self.op = ""
         self.rhs = ""
-        self.range: Range = Range.empty
+        self.range: Range = Range.empty()
 
         self.tag_name: str | None = None
         self.tag_value: str | None = None
@@ -434,9 +484,12 @@ class Condition:
         # for the LSP purpose of underlining lsh/op/rhs but this conflicts
         # with the calculation of later ones based on the first ones.
 
-        self.lhs_range = Range.empty
-        self.op_range = Range.empty
-        self.rhs_range = Range.empty
+        self.lhs_range = Range.empty()
+        self.op_range = Range.empty()
+        self.rhs_range = Range.empty()
+
+    def __str__(self):
+        return f'{self.__class__.__name__}(lhs="{self.lhs}", op="{self.op}", rhs="{self.rhs}")'
 
 
 class WhitespaceNode(Node):
@@ -455,6 +508,7 @@ class CommentNode(WhitespaceNode):
     """ Represents a line with only a comment. """
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
+        self.has_comment = True
         self.line: str = ""
 
     def with_line(self, line: str):

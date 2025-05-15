@@ -269,16 +269,19 @@ class ErrorLog(ProtocolModel):
         return ErrorLog(entries=[])
 
 
-
 class TagDefinition(ProtocolModel):
     name: str
     unit: str | None = None
+
 
 class CommandDefinition(ProtocolModel):
     name: str
     """ Command name, eg. 'Wait' """
     validator: str | None
     """ Serialization of validator or None for no validation"""
+    docstring: str | None
+    """ Command docstring """
+
 
 class UodDefinition(ProtocolModel):
     commands: list[CommandDefinition]
