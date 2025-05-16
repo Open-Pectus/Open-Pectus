@@ -13,6 +13,7 @@ class PubSubTopic(StrEnum):
     CONTROL_STATE = auto()
     ERROR_LOG = auto()
     PROCESS_UNITS = auto()
+    ACTIVE_USERS = auto()
 
 
 class FrontendPublisher:
@@ -52,6 +53,9 @@ class FrontendPublisher:
 
     async def publish_error_log_changed(self, unitId: str):
         await self.pubsub_endpoint.publish(f'{unitId}/{PubSubTopic.ERROR_LOG}')
+
+    async def publish_active_users_changed(self, unitId: str):
+        await self.pubsub_endpoint.publish(f'{unitId}/{PubSubTopic.ACTIVE_USERS}')
 
     def expose_pubsub_topics(self, topic: PubSubTopic):
         """ This endpoint is just for exposing the topic enum to frontend via autogeneration """

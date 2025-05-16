@@ -15,6 +15,7 @@ export class PubSubService {
     method: 'method',
     method_state: 'method_state',
     run_log: 'run_log',
+    active_users: 'active_users',
   };
   private client = new PubSubRxjsClient({
     uri: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/frontend-pubsub`,
@@ -47,5 +48,9 @@ export class PubSubService {
 
   subscribeErrorLog(unitId: string) {
     return this.client.forTopic(`${unitId}/${this.pubSubTopics.error_log}`);
+  }
+
+  subscribeActiveUsers(unitId: string) {
+    return this.client.forTopic(`${unitId}/${this.pubSubTopics.active_users}`);
   }
 }
