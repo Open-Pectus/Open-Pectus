@@ -113,7 +113,7 @@ class TestCompositeHardware(unittest.TestCase):
             ("CONNECT", "Test_Hardware(0)"),
             ("CONNECT", "Test_Hardware(1)"),
             ("CONNECT", "Test_Hardware(2)"),
-            ("READ", "Test_Hardware(1)", "Register(name=Reg 1_0,direction=RegisterDirection.Both)"),
+            ("READ", "Test_Hardware(1)", 'Register(name="Reg 1_0", direction=RegisterDirection.Both)'),
             ("DISCONNECT", "Test_Hardware(0)"),
             ("DISCONNECT", "Test_Hardware(1)"),
             ("DISCONNECT", "Test_Hardware(2)")
@@ -132,7 +132,7 @@ class TestCompositeHardware(unittest.TestCase):
             ("CONNECT", "Test_Hardware(0)"),
             ("CONNECT", "Test_Hardware(1)"),
             ("CONNECT", "Test_Hardware(2)"),
-            ("WRITE", "Test_Hardware(2)", "Register(name=Reg 2_1,direction=RegisterDirection.Both)", 10.1),
+            ("WRITE", "Test_Hardware(2)", 'Register(name="Reg 2_1", direction=RegisterDirection.Both)', 10.1),
             ("DISCONNECT", "Test_Hardware(0)"),
             ("DISCONNECT", "Test_Hardware(1)"),
             ("DISCONNECT", "Test_Hardware(2)")
@@ -157,13 +157,13 @@ class TestCompositeHardware(unittest.TestCase):
             ("CONNECT", "Test_Hardware(1)"),
             ("CONNECT", "Test_Hardware(2)"),
             ("READ", "Test_Hardware(2)",
-                "[Register(name=Reg 2_1,direction=RegisterDirection.Both), " +
-                "Register(name=Reg 2_0,direction=RegisterDirection.Both)]"),
+                '[Register(name="Reg 2_1", direction=RegisterDirection.Both), ' +
+                'Register(name="Reg 2_0", direction=RegisterDirection.Both)]'),
             ("READ", "Test_Hardware(0)",
-                "[Register(name=Reg 0_0,direction=RegisterDirection.Both), " +
-                "Register(name=Reg 0_1,direction=RegisterDirection.Both)]"),
+                '[Register(name="Reg 0_0", direction=RegisterDirection.Both), ' +
+                'Register(name="Reg 0_1", direction=RegisterDirection.Both)]'),
             ("READ", "Test_Hardware(1)",
-                "[Register(name=Reg 1_1,direction=RegisterDirection.Both)]"),
+                '[Register(name="Reg 1_1", direction=RegisterDirection.Both)]'),
             ("DISCONNECT", "Test_Hardware(0)"),
             ("DISCONNECT", "Test_Hardware(1)"),
             ("DISCONNECT", "Test_Hardware(2)")
@@ -189,13 +189,13 @@ class TestCompositeHardware(unittest.TestCase):
             ("CONNECT", "Test_Hardware(1)"),
             ("CONNECT", "Test_Hardware(2)"),
             ("WRITE", "Test_Hardware(2)",
-                "[Register(name=Reg 2_1,direction=RegisterDirection.Both), " +
-                "Register(name=Reg 2_0,direction=RegisterDirection.Both)]", "[1, 4]"),
+                '[Register(name="Reg 2_1", direction=RegisterDirection.Both), ' +
+                'Register(name="Reg 2_0", direction=RegisterDirection.Both)]', "[1, 4]"),
             ("WRITE", "Test_Hardware(0)",
-                "[Register(name=Reg 0_0,direction=RegisterDirection.Both), " +
-                "Register(name=Reg 0_1,direction=RegisterDirection.Both)]", "[2, 3]"),
+                '[Register(name="Reg 0_0", direction=RegisterDirection.Both), ' +
+                'Register(name="Reg 0_1", direction=RegisterDirection.Both)]', "[2, 3]"),
             ("WRITE", "Test_Hardware(1)",
-                "[Register(name=Reg 1_1,direction=RegisterDirection.Both)]", "[5]"),
+                '[Register(name="Reg 1_1", direction=RegisterDirection.Both)]', "[5]"),
             ("DISCONNECT", "Test_Hardware(0)"),
             ("DISCONNECT", "Test_Hardware(1)"),
             ("DISCONNECT", "Test_Hardware(2)")
@@ -210,7 +210,8 @@ class TestCompositeHardware(unittest.TestCase):
         with self.assertRaises(HardwareLayerException) as context:
             composite_hardware.validate_offline()
         self.assertEqual(
-            "Hardware layer undefined for register Register(name=Reg 0_1,direction=RegisterDirection.Both).",
+            'HardwareLayerException(message="Hardware layer undefined for register ' +
+            'Register(name="Reg 0_1", direction=RegisterDirection.Both).")',
             str(context.exception)
         )
 
@@ -225,10 +226,10 @@ class TestCompositeHardware(unittest.TestCase):
             composite_hardware_A.validate_offline()
         self.assertEqual(
             (
-                "Hardware layer Composite_Hardware(hardwares=[Test_Hardware(10), "
-                "Test_Hardware(11), Test_Hardware(12)]) specified for register "
-                "Register(name=Reg 0_1,direction=RegisterDirection.Both) is itself a composite hardware layer. "
-                "This is not allowed."
+                'HardwareLayerException(message="Hardware layer Composite_Hardware(hardwares=[Test_Hardware(10), '
+                'Test_Hardware(11), Test_Hardware(12)]) specified for register '
+                'Register(name="Reg 0_1", direction=RegisterDirection.Both) is itself a composite hardware layer. '
+                'This is not allowed.")'
             ),
             str(context.exception)
         )

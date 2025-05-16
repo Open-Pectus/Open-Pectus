@@ -3,6 +3,7 @@ import logging
 import math
 from datetime import datetime
 from enum import StrEnum, auto
+from typing import Iterable
 
 import openpectus.protocol.models as Mdl
 from pydantic import BaseModel
@@ -13,7 +14,6 @@ logger = logging.getLogger(__name__)
 RunLogLine = Mdl.RunLogLine
 RunLog = Mdl.RunLog
 ControlState = Mdl.ControlState
-Method = Mdl.Method
 MethodLine = Mdl.MethodLine
 MethodState = Mdl.MethodState
 ReadingCommand = Mdl.ReadingCommand
@@ -28,6 +28,15 @@ ErrorLogEntry = Mdl.ErrorLogEntry
 ErrorLog = Mdl.ErrorLog
 SystemStateEnum = Mdl.SystemStateEnum
 TagDirection = Mdl.TagDirection
+UodDefinition = Mdl.UodDefinition
+
+class Method(Mdl.Method):
+    version: int
+    last_author: str
+
+    @staticmethod
+    def empty() -> Method:
+        return Method(lines=Mdl.Method.empty().lines, version=0, last_author='')
 
 
 class AggregatedErrorLogEntry(BaseModel):
@@ -35,6 +44,10 @@ class AggregatedErrorLogEntry(BaseModel):
     created_time: float
     severity: int
     occurrences: int = 1
+
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(message="{self.message}", created_time={self.created_time}, ' +
+                f'severity={self.severity}, occurrences={self.occurrences})')
 
     @staticmethod
     def from_entry(entry: ErrorLogEntry):
@@ -48,6 +61,10 @@ class AggregatedErrorLogEntry(BaseModel):
 
 class AggregatedErrorLog(BaseModel):
     entries: list[AggregatedErrorLogEntry]
+
+    def __str__(self) -> str:
+        entries = [str(entry) for entry in self.entries]
+        return f'{self.__class__.__name__}(entries={entries})'
 
     @staticmethod
     def empty() -> AggregatedErrorLog:
@@ -112,7 +129,8 @@ class TagsInfo(BaseModel):
             return False  # was updated
 
     def __str__(self) -> str:
-        return f"TagsInfo({','.join(self.map.keys())})"
+        tags = [str(tag) for tag in self.map.keys()]
+        return f"{self.__class__.__name__}(tags={tags})"
 
     def get_last_modified_time(self) -> datetime | None:
         if len(self.map.keys()) == 0:
@@ -120,6 +138,8 @@ class TagsInfo(BaseModel):
         max_tick_time = max(t.tick_time for t in self.map.values())
         return datetime.fromtimestamp(max_tick_time)
 
+    def values(self) -> Iterable[TagValue]:
+        return self.map.values()
 
 class RunData(BaseModel):
     """ Represents data that strictly belongs in a specific run. """
@@ -134,15 +154,15 @@ class RunData(BaseModel):
     interrupted_by_error: bool = False
 
     def __str__(self) -> str:
-        return f"RunData({self.run_id=}, {self.run_started=}, " + \
-               f"interrupted_by_error:{self.interrupted_by_error})"
+        return (f'{self.__class__.__name__}(run_id="{self.run_id}", run_started={self.run_started}, ' +
+                f'interrupted_by_error={self.interrupted_by_error})')
 
     @staticmethod
     def empty(run_id: str, run_started: datetime) -> RunData:
         return RunData(run_id=run_id, run_started=run_started)
 
 
-class EngineData():
+class EngineData:
     """ Data stored by aggregator for each connected engine. """
 
     # Note: Not a BaseModel subclass since it doesn't need to be and BaseModel apparently
@@ -165,6 +185,7 @@ class EngineData():
         """ Contains the uod commands that are not related to a process value. """
         self.tags_info: TagsInfo = TagsInfo(map={})
         """ Contains the most current tag values. """
+        self.uod_definition: Mdl.UodDefinition | None = None
         self.control_state: ControlState = ControlState(is_running=False, is_holding=False, is_paused=False)
         self.method: Method = Method.empty()
         self._run_data: RunData | None = None
@@ -175,6 +196,9 @@ class EngineData():
         self.required_roles: set[str] = set()
         self.hardware_str: str = hardware_str
         self.data_log_interval_seconds: float = data_log_interval_seconds
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(engine_id="{self.engine_id}", control_state={self.control_state})'
 
     @property
     def run_data(self) -> RunData:
@@ -206,6 +230,3 @@ class EngineData():
         self.error_log.clear()
         self.method_state = MethodState.empty()
         self.contributors = set()
-
-    def __str__(self) -> str:
-        return f"EngineData(engine_id:{self.engine_id}, control_state':{self.control_state})"

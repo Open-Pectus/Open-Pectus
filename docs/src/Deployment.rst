@@ -151,6 +151,14 @@ Edit :console:`/etc/nginx/sites-enabled/default` to be something like :numref:`n
             proxy_set_header Connection "upgrade";
             proxy_read_timeout 86400;
         }
+        location /lsp {
+            proxy_pass http://127.0.0.1:2087;
+            # WebSocket support
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_read_timeout 86400;
+        }
     }
 
     server {
@@ -160,6 +168,14 @@ Edit :console:`/etc/nginx/sites-enabled/default` to be something like :numref:`n
         ssl_certificate_key /etc/letsencrypt/live/openpectus.com/privkey.pem; # managed by Certbot
         location / {
             proxy_pass http://127.0.0.1:8300;
+            # WebSocket support
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_read_timeout 86400;
+        }
+        location /lsp {
+            proxy_pass http://127.0.0.1:2087;
             # WebSocket support
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
@@ -187,6 +203,7 @@ Commands to pull latest image and run it are given below. The :console:`docker r
 * :console:`-v /home/azureuser/data_prd:/data`, mounts the directory containing the database to :console:`/home/azureuser/data_prd` on the host. This is necessary in order to persist the database across different versions of the Docker image.
 * :console:`-e AZURE_APPLICATION_CLIENT_ID='...'`, :console:`-e AZURE_DIRECTORY_TENANT_ID='...'` and :console:`-e ENABLE_AZURE_AUTHENTICATION='true'` configure the :ref:`user_authorization` integration.
 * :console:`-p 0.0.0.0:8300:8300/tcp`, maps port :console:`8300` of the container to the host.
+* :console:`-p 0.0.0.0:2087:2087/tcp`, maps port :console:`2087` of the container to the host.
 * :console:`6aa`, specifies which image to run. This value is unique for each version of the image.
 
 .. code-block:: console
@@ -203,6 +220,7 @@ Commands to pull latest image and run it are given below. The :console:`docker r
    -e AZURE_DIRECTORY_TENANT_ID='...' \
    -e ENABLE_AZURE_AUTHENTICATION='true' \
    -p 0.0.0.0:8300:8300/tcp \
+   -p 0.0.0.0:2087:2087/tcp \
    6aa
 
 * List running containers using :console:`docker ps`

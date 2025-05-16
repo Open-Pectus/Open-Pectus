@@ -5,14 +5,15 @@ import unittest
 import pint
 from openpectus.engine.engine import Engine, EngineTiming
 from openpectus.engine.models import EngineCommandEnum
-from openpectus.lang.exec.analyzer import ConditionEnrichAnalyzer
 from openpectus.lang.exec.clock import WallClock
+from openpectus.lang.exec.errors import EngineError
 from openpectus.lang.exec.pinterpreter import PInterpreter
 from openpectus.lang.exec.tags import Tag, SystemTagName
 from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
 from openpectus.lang.grammar.pprogramformatter import print_parsed_program as print_program
-from openpectus.lang.model.pprogram import PCondition, PNode, PProgram, PWatch
+import openpectus.lang.model.ast as p
+from openpectus.lang.model.parser import PcodeParser
 from openpectus.test.engine.utility_methods import (
     continue_engine, run_engine, build_program,
     configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging,
@@ -61,7 +62,7 @@ def create_engine(uod: UnitOperationDefinitionBase | None = None) -> Engine:
 
 
 def create_interpreter(
-        program: PProgram,
+        program: p.ProgramNode,
         uod: UnitOperationDefinitionBase | None = None):
     # create interpreter without engine - for non-command programs
 
@@ -176,25 +177,155 @@ Watch: counter > 0
         # self.assertEqual(["a", "c", "d"], i.get_marks())
 
 
+    def test_macro(self):
+        program = """
+Mark: a
+Macro: A
+    Mark: b
+    Mark: c
+Macro: B
+    Mark: d
+    Mark: e
+"""
+        engine = self.engine
+        run_engine(engine, program, 5)
+        self.assertEqual(["a",], engine.interpreter.get_marks())
+
+
+    def test_macro_with_call(self):
+        program = """
+Mark: a
+Macro: A
+    Mark: b
+    Mark: c
+Macro: B
+    Mark: d
+    Mark: e
+Call macro: A
+"""
+        engine = self.engine
+        run_engine(engine, program, 10)
+        self.assertEqual(["a", "b", "c",], engine.interpreter.get_marks())
+
+
+    def test_macro_with_multiple_calls(self):
+        program = """
+Mark: a
+Macro: A
+    Mark: b
+    Mark: c
+Macro: B
+    Mark: d
+    Mark: e
+Call macro: A
+Call macro: A
+"""
+        engine = self.engine
+        run_engine(engine, program, 10)
+        self.assertEqual(["a", "b", "c", "b", "c",], engine.interpreter.get_marks())
+
+
+    def test_call_undefined_macro(self):
+        program = """
+Mark: a
+Macro: B
+    Mark: b
+Call macro: A
+"""
+        engine = self.engine
+
+        with self.assertRaises(EngineError):
+            run_engine(engine, program, 5)
+        self.assertEqual(["a",], engine.interpreter.get_marks())
+
+
+    def test_macro_with_nested_calls(self):
+        program = """
+Mark: a
+Macro: A
+    Mark: b
+    Mark: c
+Macro: B
+    Mark: d
+    Call macro: A
+Call macro: B
+"""
+        engine = self.engine
+        run_engine(engine, program, 10)
+        self.assertEqual(["a", "d", "b", "c",], engine.interpreter.get_marks())
+
+
+    def test_call_cascading_macro(self):
+        program = """
+Mark: a
+Macro: A
+    Mark: b
+    Mark: c
+    Call macro: A
+Call macro: A
+"""
+        engine = self.engine
+
+        with self.assertRaises(EngineError):
+            run_engine(engine, program, 10)
+        self.assertEqual(["a",], engine.interpreter.get_marks())
+
+
+    def test_call_indirect_cascading_macro(self):
+        program = """
+Mark: a
+Macro: A
+    Mark: b
+    Mark: c
+    Call macro: B
+Macro: B
+    Mark: d
+    Call macro: A
+Call macro: A
+"""
+        engine = self.engine
+
+        with self.assertRaises(EngineError):
+            run_engine(engine, program, 10)
+        self.assertEqual(["a",], engine.interpreter.get_marks())
+
+
+    def test_call_multiple_indirect_cascading_macro(self):
+        program = """
+Mark: a
+Macro: A
+    Mark: b
+    Mark: c
+    Call macro: B
+Macro: B
+    Mark: d
+    Call macro: C
+Macro: C
+    Mark: e
+    Call macro: A
+Call macro: A
+"""
+        engine = self.engine
+
+        with self.assertRaises(EngineError):
+            run_engine(engine, program, 10)
+        self.assertEqual(["a",], engine.interpreter.get_marks())
+
 # --- Conditions ---
 
 
     def test_evaluate(self):
         self.engine.interpreter.context.tags.add(Tag("X", value=9, unit="%"))
 
-        parent = PNode(None)
-        c = PWatch(parent)
-        c.condition = PCondition("X > 10%")
-        c.condition.lhs = "X"
-        c.condition.op = ">"
-        c.condition.rhs = "10%"
-        # TODO get rid of enrich analyzers - they are really just in the way
-        an = ConditionEnrichAnalyzer()
-        an.enrich_condition(c)
-        result = self.engine.interpreter._evaluate_condition(c)
+        parent = p.ProgramNode()
+        watch = p.WatchNode()
+        parent.append_child(watch)
+        watch.condition = p.Condition()
+        watch.arguments_part = "X > 10%"
+        PcodeParser._parse_condition(watch)
+
+        result = self.engine.interpreter._evaluate_condition(watch)
         self.assertEqual(result, False)
-
-
 
     def test_watch_nested(self):
         program = """
@@ -371,7 +502,7 @@ Block: A
 Mark: A3
 """
         engine = self.engine
-        run_engine(engine, program, 5)
+        run_engine(engine, program, 6)
 
         self.assertEqual(["A1", "A2"], engine.interpreter.get_marks())
 
@@ -612,7 +743,7 @@ Mark: b"""
         continue_engine(engine, 4)
         self.assertEqual(["a"], i.get_marks())
 
-        continue_engine(engine, 2)
+        continue_engine(engine, 3)
 
         self.assertEqual(["a", "b"], i.get_marks())
 

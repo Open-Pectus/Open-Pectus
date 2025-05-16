@@ -6,7 +6,7 @@
     "configurations": [
 
         {
-            "name": "OpenPectus Engine (debug)",
+            "name": "Engine (debug)",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/openpectus/engine/main.py",
@@ -14,7 +14,7 @@
             "args": [],
         },
         {
-            "name": "OpenPectus Aggregator (debug)",
+            "name": "Aggregator (debug)",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/openpectus/aggregator/main.py",
@@ -25,19 +25,36 @@
                 "AZURE_APPLICATION_CLIENT_ID": "fc7355bb-a6be-493f-90a1-cf57063f7948",
                 "ENABLE_AZURE_AUTHENTICATION": "false",
             },
-            "justMyCode": false,
-            // "serverReadyAction":{
-            //     "uriFormat": "http://127.0.0.1:%s",
-            //     "action": "openExternally",
-            //     "pattern": "Serving frontend at http://127.0.0.1:([0-9]+)",
-            //     "killOnServerStop": false
-            // }
+            "justMyCode": true,
+        },
+        {
+            "name": "Aggregator + LSP (debug)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/openpectus/aggregator/main.py",
+            "console": "integratedTerminal",
+            "args": ["-fdd", "./frontend/dist", "-lsp"],
+            "env": {
+                "AZURE_DIRECTORY_TENANT_ID": "2a41d3b1-09a3-406a-b705-d1c5a70cc21c",
+                "AZURE_APPLICATION_CLIENT_ID": "fc7355bb-a6be-493f-90a1-cf57063f7948",
+                "ENABLE_AZURE_AUTHENTICATION": "false",
+            },
+            "justMyCode": true,
         },        
+        {
+            "name": "LSP server (debug)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/openpectus/lsp/main.py",
+            "console": "integratedTerminal",
+            "args": ["--console_log"],
+            "justMyCode": false
+        },
     ],
     "compounds": [
         {
-            "name": "Openpectus Aggregator, Engine and Frontend",
-            "configurations": ["OpenPectus Aggregator (debug)", "OpenPectus Engine (debug)"],
+            "name": "Aggregator + LSP, Engine",
+            "configurations": ["Aggregator + LSP (debug)", "Engine (debug)"],
             "stopAll": true,
         }
     ]

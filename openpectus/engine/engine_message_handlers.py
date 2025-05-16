@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class EngineDispatcherRpcHandler(Protocol):
     def set_rpc_handler(self, message_type: type[AM.AggregatorMessage], handler: EngineMessageHandler):
-        ...
+        raise NotImplementedError
 
 
 class EngineMessageHandlers():
@@ -26,12 +26,12 @@ class EngineMessageHandlers():
         dispatcher.set_rpc_handler(AM.CancelMsg, self.handle_cancelMsg)
         dispatcher.set_rpc_handler(AM.ForceMsg, self.handle_forceMsg)
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(engine={self.engine})'
+
     async def handle_methodMsg(self, msg: AM.AggregatorMessage):
         assert isinstance(msg, AM.MethodMsg)
         logger.info("Incomming set_method command from aggregator")
-        if self.engine._runstate_started:
-            logger.error("Cannot modify running method - yet")
-            return AM.ErrorMessage(message="Cannot modify running method")
         try:
             self.engine.set_method(msg.method)
             sentry.engine_method_set(msg.method.as_pcode())

@@ -11,7 +11,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/main' }}  
+  SHOULD_PUBLISH_IMAGE: ${{ github.ref == 'refs/heads/main' }}
   NODE_VERSION: 22.11 # 22.12 has incompatibilities https://github.com/nodejs/node/issues/56155 https://github.com/tailwindlabs/tailwindcss/pull/15421 due to https://nodejs.org/en/blog/release/v22.12.0#requireesm-is-now-enabled-by-default
 
 jobs:
@@ -21,14 +21,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-latest]
-        python-version: ["3.11"]
+        os: [ ubuntu-22.04, windows-latest ]
+        python-version: [ "3.11" ]
     permissions:
       contents: read
       pull-requests: write
     steps:
       - name: Debug env
-        run: env    
+        run: env
       - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -62,7 +62,10 @@ jobs:
         shell: bash
         run: |
           echo "REPORT_FILE=${REPORT_OUTPUT}" >> "$GITHUB_ENV"
-          pytest -n auto --md-report --md-report-flavor gfm --md-report-exclude-outcomes passed skipped xpassed --md-report-output "$REPORT_OUTPUT" openpectus/test
+          PYTHONHASHSEED=0 pytest -n auto --md-report --md-report-flavor gfm --md-report-exclude-outcomes passed skipped xpassed --md-report-output "$REPORT_OUTPUT" openpectus/test --ignore openpectus/test/engine/test_runlog.py --ignore openpectus/test/engine/test_interpreter.py
+          touch md_report-separate.md
+          PYTHONHASHSEED=0 pytest -n auto --md-report --md-report-flavor gfm --md-report-exclude-outcomes passed skipped xpassed --md-report-output "md_report-separate.md" openpectus/test/engine/test_runlog.py openpectus/test/engine/test_interpreter.py
+          cat md_report.md md_report-separate.md > md_report.md
       - name: Render the test report to the PR when tests fail
         uses: marocchino/sticky-pull-request-comment@v2
         if: failure()
@@ -70,11 +73,11 @@ jobs:
           header: test-report
           recreate: true
           path: ${{ env.REPORT_FILE }}
-  
+
   validate_uods:
     name: Validate UODs in Closed-Pectus repository
-    needs: [test_backend]
-    runs-on: ubuntu-latest    
+    needs: [ test_backend ]
+    runs-on: ubuntu-latest
     steps:
       - name: Trigger validation of UODs in Closed-Pectus repository
         if: env.SHOULD_PUBLISH_IMAGE == 'true'
@@ -86,11 +89,11 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             https://api.github.com/repos/Open-Pectus/Closed-Pectus/dispatches \
             -d '{"event_type":"dispatch-event"}'
-  
+
   build_engine_manager_gui:
     name: Build Engine Manager Gui
-    needs: [test_backend]
-    runs-on: ubuntu-latest    
+    needs: [ test_backend ]
+    runs-on: ubuntu-latest
     steps:
       - name: Trigger build of Engine-Manager-GUI repository
         if: env.SHOULD_PUBLISH_IMAGE == 'true'
@@ -113,9 +116,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: 'openpectus/frontend/package-lock.json'
+          cache-dependency-path: 'frontend/package-lock.json'
       - name: npm ci, lint, build
-        working-directory: "openpectus/frontend"
+        working-directory: "frontend"
         run: |
           npm ci
           npm run lint
@@ -124,12 +127,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
-          path: "openpectus/frontend/dist"
+          path: "frontend/dist"
 
   package_dist:
     name: Build and Package
     runs-on: ubuntu-22.04
-    needs: [build_frontend, test_backend]
+    needs: [ build_frontend, test_backend ]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python 3.11
@@ -151,7 +154,7 @@ jobs:
         run: |
           echo "{\"build_number\": \"$build_number\", \"git_sha\": \"$git_sha\"}" > openpectus/build.json
           echo "Build number: $build_number"
-      - name: Patch __version__ revision with $github.run_number 
+      - name: Patch __version__ revision with $github.run_number
         env:
           revision: ${{ github.run_number }}
         run: sed -e "/__version__ =/ s/.dev/.$revision/" -i openpectus/__init__.py
@@ -175,9 +178,9 @@ jobs:
             openpectus/Dockerfile
 
   pypi_publish:
-    needs: [package_dist]
+    needs: [ package_dist ]
     name: Upload release to PyPI
-    runs-on: ubuntu-latest    
+    runs-on: ubuntu-latest
     environment:
       name: pypi
       url: https://pypi.org/p/open-pectus
@@ -200,8 +203,8 @@ jobs:
 
   publish_docker_image:
     name: Publish Docker image
-    needs: [package_dist]
-    runs-on: ubuntu-latest    
+    needs: [ package_dist ]
+    runs-on: ubuntu-latest
     permissions:
       packages: write
       contents: read
@@ -245,8 +248,8 @@ jobs:
 
   deploy_image:
     name: Deploy Docker image on Azure and Digital Ocean
-    needs: [publish_docker_image]
-    runs-on: ubuntu-latest    
+    needs: [ publish_docker_image ]
+    runs-on: ubuntu-latest
     permissions:
       packages: write
       contents: read

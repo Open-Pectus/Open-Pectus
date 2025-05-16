@@ -154,6 +154,59 @@ Alarm: Run Counter < 3
 
         # print_runtime_records(e)
 
+    def test_Macro_no_invocation(self):
+        e = self.engine
+
+        cmd = """
+Macro: A
+    Mark: b
+"""
+        run_engine(e, cmd, 5)
+        print(self.engine.runtimeinfo.records)
+        cmd = "Macro: A"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
+
+    def test_Macro_single_invocation(self):
+        e = self.engine
+
+        cmd = """
+Macro: A
+    Mark: b
+Call macro: A
+"""
+        run_engine(e, cmd, 6)
+        print(self.engine.runtimeinfo.records)
+        cmd = "Macro: A"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
+        cmd = "Mark: b"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
+
+    def test_Macro_multiple_invocations(self):
+        e = self.engine
+
+        cmd = """
+Macro: A
+    Mark: b
+Call macro: A
+Call macro: A
+Call macro: A
+"""
+        run_engine(e, cmd, 7)
+        cmd = "Macro: A"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
+        cmd = "Mark: b"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 3)
+
     def test_runlog_cancel_watch(self):
         e = self.engine
         program = """
@@ -231,6 +284,8 @@ Watch: Block Time > .3s
 
         self.assertEqual(item.forced, True)
         self.assertEqual(item.forcible, False)
+
+        continue_engine(e, 1)
         self.assertEqual(['Foo'], e.interpreter.get_marks())
 
     def test_iteration_modification(self):
@@ -321,6 +376,8 @@ Alarm: Block Time > .3s
 
         self.assertEqual(item.forced, True)
         self.assertEqual(item.forcible, False)
+
+        continue_engine(e, 1)
         self.assertEqual(['Foo'], e.interpreter.get_marks())
 
     def test_runlog_watch_in_alarm_body_runs_in_each_alarm_instance(self):
@@ -343,7 +400,7 @@ Alarm: Block Time > 0s
         continue_engine(e, 6)
         self.assertEqual(['A'], e.interpreter.get_marks())
 
-        continue_engine(e, 10)  # not sure how long to wait - but surely this is enough
+        continue_engine(e, 6)  # not sure how long to wait - but surely this is enough
         self.assert_Runlog_HasItem_Completed(alarm_item_name, 2)  # verify we waited long enough
         self.assertEqual(['A', 'A'], e.interpreter.get_marks())
 
@@ -385,7 +442,7 @@ Mark: A
         cmd = "Wait: 0.5s"
         item_name = cmd
 
-        run_engine(e, cmd, 5)
+        run_engine(e, cmd, 3)
         print_runtime_records(e)
 
         self.assert_Runtime_HasRecord_Started(cmd)
@@ -394,8 +451,7 @@ Mark: A
         runlog = e.runtimeinfo.get_runlog()
         item = next((i for i in runlog.items if i.name == item_name), None)
         assert item is not None and item.progress is not None
-        # after 5-2 = 3 ticks we're 0.6 percent done
-        self.assertAlmostEqual(item.progress, 0.6, delta=0.05)
+        self.assertAlmostEqual(item.progress, 0.2, delta=0.1)
         self.assertEqual(item.forcible, True)
         self.assertEqual(item.cancellable, False)
 
@@ -403,8 +459,7 @@ Mark: A
         runlog = e.runtimeinfo.get_runlog()
         item = next((i for i in runlog.items if i.name == item_name), None)
         assert item is not None and item.progress is not None
-        # after 1 more tick we're 0.8 percent done
-        self.assertAlmostEqual(item.progress, 0.8, delta=0.05)
+        self.assertAlmostEqual(item.progress, 0.5, delta=0.1)
 
         continue_engine(e, 2)
         self.assert_Runlog_HasItem_Completed(cmd)

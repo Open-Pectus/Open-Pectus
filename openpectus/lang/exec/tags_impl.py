@@ -1,12 +1,18 @@
+from __future__ import annotations
+import logging
 import time
 
-from openpectus.lang.exec.tags import Tag, TagDirection, TagFormatFunction
-from openpectus.lang.exec.events import BlockInfo
+from openpectus.lang.exec.tags import SystemTagName, Tag, TagDirection, TagFormatFunction, format_time_as_clock
+from openpectus.lang.exec.events import BlockInfo, RunStateChange
+from openpectus.lang.exec.tracer import Tracer
 
 # Make sure the mark separator does not conflict with ArchiverTag delimiter.
 # This wold make the archiver unable to write its archive file.
 # MARK_SEPARATOR = ", "
 MARK_SEPARATOR = "; "
+
+
+logger = logging.getLogger(__name__)
 
 
 class ReadingTag(Tag):
@@ -70,6 +76,9 @@ class AccumulatorTag(Tag):
         self.unit = self.totalizer.unit
         self.v0: float | None = None
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(name="{self.name}", value="{self.value}", v0={self.v0})'
+
     def reset(self):
         self.v0 = self.totalizer.as_float()
         self.value = 0.0
@@ -82,6 +91,107 @@ class AccumulatorTag(Tag):
         assert self.v0 is not None, f"Error in aggregator tag '{self.name}', v0 was not set."
         self.value = self.totalizer.as_float() - self.v0
 
+
+class BlockTimeTag(Tag):
+    tracer = Tracer(logger)
+
+    class StackItem():
+        def __init__(self, name):
+            self.name = name
+            self.value: float = 0.0
+
+    def __init__(self):
+        super().__init__(SystemTagName.BLOCK_TIME, unit="s", format_fn=format_time_as_clock)
+        # need a custom stack because we have no real key. BlockInfo.key is different in
+        # on_block_start and on_block_end
+        self._stack: list[BlockTimeTag.StackItem] = []
+        self._paused = False
+        self.value = 0.0
+
+    def on_start(self, run_id):
+        self.value = 0.0
+        self._stack.clear()
+        self._stack.append(BlockTimeTag.StackItem("root"))
+        self.tracer.trace()
+
+    def on_block_start(self, block_info):
+        self._stack.append(BlockTimeTag.StackItem(block_info.name))
+        self.tracer.trace(f"{block_info.name=}")
+
+    def on_block_end(self, block_info, new_block_info):
+        self._stack.pop()
+        self.tracer.trace(f"{block_info.name=}")
+
+    def on_tick(self, tick_time, increment_time):
+        if self._paused:
+            return
+        for item in self._stack:
+            item.value += increment_time
+        self.value = self.get_value()
+        # self.tracer.trace(f"{self.value=}")
+
+    def on_runstate_change(self, state_change):
+        if state_change == RunStateChange.PAUSE:
+            self._paused = True
+        elif state_change == RunStateChange.UNPAUSE:
+            self._paused = False
+
+    def get_value(self):
+        if len(self._stack) == 0:
+            return 0.0
+        item = self._stack[-1]
+        return item.value
+
+class ScopeTimeTag(Tag):
+    tracer = Tracer(logger)
+
+    def __init__(self):
+        super().__init__(SystemTagName.SCOPE_TIME, unit="s", format_fn=format_time_as_clock)
+        self._timers: dict[str, float] = {}
+        self._stack: list[str] = []
+        self._paused = False
+        self.value = 0.0
+
+    def on_start(self, run_id):
+        self.value = 0.0
+        self.tracer.trace()
+
+    def on_scope_start(self, node_id):
+        self.value = 0.0
+        self.tracer.trace()
+
+    def on_scope_activate(self, node_id):
+        self._timers[node_id] = 0.0
+        self._stack.append(node_id)
+        self.tracer.trace()
+
+    def on_scope_end(self, node_id):
+        del self._timers[node_id]
+        self._stack.pop()
+
+    def on_tick(self, tick_time, increment_time):
+        if self._paused:
+            return
+        for key in self._timers.keys():
+            self._timers[key] += increment_time
+        self.value = self.get_value()
+        self.tracer.trace(f"{self.value}")
+
+    def on_runstate_change(self, state_change):
+        if state_change == RunStateChange.PAUSE:
+            self._paused = True
+        elif state_change == RunStateChange.UNPAUSE:
+            self._paused = False
+
+    def get_value(self):
+        if len(self._stack) == 0:
+            return 0.0
+        node_id = self._stack[-1]
+        try:
+            return self._timers[node_id]
+        except KeyError:
+            logger.error(f"{self.__class__.__name__} | Stack error, node_id: {node_id}, keys: {self._timers.keys()}")
+            return 0.0
 
 class AccumulatorBlockTag(Tag):
     """ Implements a block accumulator. Can be used as the system tag

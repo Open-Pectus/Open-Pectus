@@ -3,6 +3,7 @@ import math
 from typing import List
 
 from antlr4 import ParserRuleContext
+from antlr4.Token import CommonToken
 
 from openpectus.lang.grammar.codegen.pcodeParser import pcodeParser
 from openpectus.lang.grammar.codegen.pcodeListener import pcodeListener
@@ -19,7 +20,10 @@ from openpectus.lang.model.pprogram import (
     PEndBlocks,
     PWatch,
     PAlarm,
+    PMacro,
+    PCallMacro,
     PMark,
+    PBatch,
     PCommand,
     PError,
     PBlank,
@@ -196,23 +200,45 @@ class PProgramBuilder(pcodeListener):
 
     def enterCondition(self, ctx: pcodeParser.ConditionContext):
         assert isinstance(self.scope, PWatch | PAlarm)
-        self.scope.condition = PCondition(ctx.getText())
+        assert isinstance(ctx.start, CommonToken)
+        assert isinstance(ctx.stop, CommonToken)
+        self.scope.condition = PCondition(ctx.getText(), ctx.start.column, ctx.stop.column)
 
     def enterCompare_op(self, ctx: pcodeParser.Compare_opContext):
         if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
             self.scope.condition.op = ctx.getText()
+            assert isinstance(ctx.start, CommonToken)
+            assert isinstance(ctx.stop, CommonToken)
+            self.scope.condition.op_start = ctx.start.column
+            self.scope.condition.op_end = ctx.stop.column
 
     def enterCondition_lhs(self, ctx: pcodeParser.Condition_lhsContext):
         if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
             self.scope.condition.lhs = ctx.getText()
+            assert isinstance(ctx.start, CommonToken)
+            assert isinstance(ctx.stop, CommonToken)
+            self.scope.condition.lhs_start = ctx.start.column
+            self.scope.condition.lhs_end = ctx.stop.column
 
     def enterCondition_rhs(self, ctx: pcodeParser.Condition_rhsContext):
         if isinstance(self.scope, (PAlarm, PWatch)) and self.scope.condition:
             self.scope.condition.rhs = ctx.getText()
+            assert isinstance(ctx.start, CommonToken)
+            assert isinstance(ctx.stop, CommonToken)
+            self.scope.condition.rhs_start = ctx.start.column
+            self.scope.condition.rhs_end = ctx.stop.column
 
     def enterAlarm(self, ctx: pcodeParser.AlarmContext):
         self.instruction = PAlarm(self.scope)
         self.push_scope(self.instruction, ctx)
+
+    def enterMacro(self, ctx: pcodeParser.MacroContext):
+        self.instruction = PMacro(self.scope)
+        self.push_scope(self.instruction, ctx)
+
+    def enterMacro_name(self, ctx: pcodeParser.Macro_nameContext):
+        if isinstance(self.scope, PMacro) and isinstance(self.instruction, PMacro):
+            self.scope.name = ctx.getText()
 
     def enterIncrement_rc(self, ctx: pcodeParser.Increment_rcContext):
         if self.instruction is None:
@@ -253,6 +279,20 @@ class PProgramBuilder(pcodeListener):
 
     def enterMark_name(self, ctx: pcodeParser.Mark_nameContext):
         assert isinstance(self.instruction, PMark)
+        self.instruction.name = ctx.getText()
+
+    def enterBatch(self, ctx: pcodeParser.BatchContext):
+        self.instruction = PBatch(self.scope)
+
+    def enterBatch_name(self, ctx: pcodeParser.Batch_nameContext):
+        assert isinstance(self.instruction, PBatch)
+        self.instruction.name = ctx.getText()
+
+    def enterCall_macro(self, ctx: pcodeParser.Call_macroContext):
+        self.instruction = PCallMacro(self.scope)
+
+    def enterCall_macro_name(self, ctx: pcodeParser.Call_macro_nameContext):
+        assert isinstance(self.instruction, PCallMacro)
         self.instruction.name = ctx.getText()
 
     def enterTimeexp(self, ctx: pcodeParser.TimeexpContext):

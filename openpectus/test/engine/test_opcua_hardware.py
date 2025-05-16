@@ -304,8 +304,33 @@ class TestOPCUAHardware(unittest.TestCase):
             with self.assertRaises(HardwareLayerException):
                 hwl.validate_online()
 
-    def test_access_level_disparity_is_detected(self):
+    def test_type_is_inferred(self):
         port_suffix = 11
+        uint_register = Register("UInt",
+                                 RegisterDirection.Both,
+                                 path="Objects/2:Uint value",
+                                 type=OPCUA_Types.UInt16)
+        registers = {
+            "Uint": uint_register,
+        }
+        test_server = OPCUATestServer(port_suffix, registers=registers)
+
+        uint_register = Register("Uint",
+                                 RegisterDirection.Both,
+                                 path="Objects/2:Uint value")
+        registers = {
+            "Uint": uint_register,
+        }
+        hwl = OPCUA_Hardware(host=opcua_host.format(port_suffix))
+        hwl._registers = registers
+        values_to_write = [1]
+        with test_server, hwl:
+            hwl.validate_online()
+            hwl.write(1, uint_register)
+            hwl.write_batch(values_to_write, list(registers.values()))
+
+    def test_access_level_disparity_is_detected(self):
+        port_suffix = 12
         FT01 = Register("FT01", RegisterDirection.Read, path="Objects/2:FT01")
         registers = {"FT01": FT01}
         test_server = OPCUATestServer(port_suffix, registers=registers)
@@ -319,7 +344,7 @@ class TestOPCUAHardware(unittest.TestCase):
                 hwl.validate_online()
 
     def test_exception_when_attempting_to_access_using_disconnected_client(self):
-        port_suffix = 12
+        port_suffix = 13
         FT01 = Register("FT01", RegisterDirection.Read, path="Objects/2:FT01")
         registers = {"FT01": FT01}
         test_server = OPCUATestServer(port_suffix, registers=registers)
