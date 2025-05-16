@@ -145,6 +145,10 @@ class OPCUA_Hardware(HardwareLayerBase):
                     raise HardwareLayerException((f"Disparity between type '{OPCUA_Types(register_type).name}' "
                                                   f"for register {r} and actual OPC-UA type "
                                                   f"'{OPCUA_Types(opcua_type).name}'."))
+            else:
+                # Use type specified in OPC-UA
+                r.options["type"] = opcua_type
+
             # Verify access level
             access_level = node.get_access_level()
             if (
@@ -264,20 +268,7 @@ class OPCUA_Hardware(HardwareLayerBase):
         return coerced_value
 
     def write(self, value: Any, r: Register):
-        if RegisterDirection.Write not in r.direction:
-            raise HardwareLayerException(f"Attempt to write unwritable register {r}.")
-        try:
-            opcua_node = self._register_to_node(r)
-            value = self._coerce_value_to_proper_type(value, r)
-            if 'type' in r.options:
-                value = asyncua.ua.Variant(value, r.options['type'])
-            data_value = asyncua.ua.DataValue(value)
-            opcua_node.write_attribute(asyncua.ua.AttributeIds.Value, data_value)
-        except ConnectionError:
-            raise HardwareLayerException(f"Not connected to {self.host}")
-        except asyncua.sync.ThreadLoopNotRunning:
-            logger.error("Thread loop not running", exc_info=True)
-            raise HardwareLayerException("OPC-UA client is closed.")
+        return self.write_batch([value], [r])
 
     def write_batch(self, values: Sequence[Any], registers: Sequence[Register]):
         """ Write batch of register values with a single OPC-UA call. """
@@ -300,9 +291,15 @@ class OPCUA_Hardware(HardwareLayerBase):
             # https://github.com/FreeOpcUa/opcua-asyncio/blob/master/asyncua/sync.py
             write_attributes = asyncua.sync.sync_uaclient_method(
                                asyncua.client.ua_client.UaClient.write_attributes)(self._client)
+            write_status_codes = []
             for node_id_batch, data_value_batch in zip(batched(node_ids, self._max_nodes_per_write),
                                                        batched(data_values, self._max_nodes_per_write)):
-                write_attributes(node_id_batch, data_value_batch, asyncua.ua.AttributeIds.Value)
+                result = write_attributes(node_id_batch, data_value_batch, asyncua.ua.AttributeIds.Value)
+                assert isinstance(result, list)
+                write_status_codes.extend(result)
+            for register, value, status_code in  zip(registers, values, write_status_codes):
+                if status_code.value != 0:
+                    raise HardwareLayerException(f'Write of value "{value}" to register {register} failed with status code {asyncua.ua.status_codes.get_name_and_doc(status_code.value)}.')
         except ConnectionError:
             raise HardwareLayerException(f"Not connected to {self.host}")
         except asyncua.sync.ThreadLoopNotRunning:
