@@ -168,7 +168,7 @@ class Tag(ChangeSubject, EventListener):
         self.simulated = False
 
     def __str__(self) -> str:
-        if self.simulation_active:
+        if self.simulated:
             return f'{self.__class__.__name__}(name="{self.name}", value="{self.value}")'
         else:
             return (f'{self.__class__.__name__}(name="{self.name}", value="{self.value}", ' +
@@ -177,7 +177,7 @@ class Tag(ChangeSubject, EventListener):
     def as_readonly(self) -> TagValue:
         """ Convert the value to a readonly and immutable TagValue instance """
         value_formatted = None if self.format_fn is None else self.format_fn(self.get_value())
-        value = self.simulated_value if self.simulation_active else self.value
+        value = self.simulated_value if self.simulated else self.value
         return TagValue(self.name, self.tick_time, value, value_formatted, self.unit, self.direction, self.simulated)
 
     def set_value(self, val: TagValueType, tick_time: float) -> None:
@@ -198,7 +198,6 @@ class Tag(ChangeSubject, EventListener):
     def simulate_value_and_unit(self, val: TagValueType, unit: str, tick_time: float) -> None:
         """ Set a simulated value by converting the provided value and unit into the the unit of the tag. """
         self.simulated = True
-        self.simulation_active = True
         if not isinstance(val, (int, float,)):
             raise ValueError(f"Cannot set unit for a non-numeric value {val} of type {type(val).__name__}")
         if self.unit is None:
@@ -210,21 +209,21 @@ class Tag(ChangeSubject, EventListener):
             self.notify_listeners(self.name)
 
     def stop_simulation(self):
-        self.simulation_active = False
+        self.simulated = False
         self.simulated_value = None
 
     def get_value(self):
-        return self.simulated_value if self.simulation_active else self.value
+        return self.simulated_value if self.simulated else self.value
 
     def as_number(self) -> int | float:
-        value = self.simulated_value if self.simulation_active else self.value
+        value = self.simulated_value if self.simulated else self.value
         if not isinstance(value, (int, float)):
             raise ValueError(
                 f"Value is not numerical: '{value}' has type '{type(value).__name__}' tag: '{self.name}'")
         return value
 
     def as_float(self) -> float:
-        value = self.simulated_value if self.simulation_active else self.value
+        value = self.simulated_value if self.simulated else self.value
         if not isinstance(value, (float,)):
             raise ValueError(
                 f"Value is not a float: '{value}' has type '{type(value).__name__}' tag: '{self.name}'")
@@ -232,7 +231,7 @@ class Tag(ChangeSubject, EventListener):
 
     def archive(self) -> str | None:
         """ The value to write to archive or None to skip that tag from archival """
-        value = self.simulated_value if self.simulation_active else self.value
+        value = self.simulated_value if self.simulated else self.value
         if value is None:
             return ""
         elif isinstance(value, float):
