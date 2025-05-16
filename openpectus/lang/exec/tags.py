@@ -142,7 +142,6 @@ class Tag(ChangeSubject, EventListener):
             direction: TagDirection = TagDirection.NA,
             safe_value: TagValueType | Unset = Unset(),
             format_fn: TagFormatFunction | None = None,
-            allow_simulation: bool = False
             ) -> None:
 
         super(Tag, self).__init__()
@@ -165,7 +164,6 @@ class Tag(ChangeSubject, EventListener):
         self.direction: TagDirection = direction
         self.safe_value: TagValueType | Unset = safe_value
         self.format_fn = format_fn
-        self.allow_simulation = allow_simulation
         self.simulated_value = None
         self.simulated = False
 
@@ -199,8 +197,7 @@ class Tag(ChangeSubject, EventListener):
 
     def simulate_value_and_unit(self, val: TagValueType, unit: str, tick_time: float) -> None:
         """ Set a simulated value by converting the provided value and unit into the the unit of the tag. """
-        if not self.allow_simulation:
-            raise ValueError(f'Cannot set simulated value for tag "{self.name}" because simulation has not been allowed.')
+        self.simulated = True
         self.simulation_active = True
         if not isinstance(val, (int, float,)):
             raise ValueError(f"Cannot set unit for a non-numeric value {val} of type {type(val).__name__}")
