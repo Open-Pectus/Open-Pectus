@@ -389,7 +389,7 @@ class PcodeParser:
 
         # lhs must be a tag but we cannot validate this at parse time. This is done later in an analyzer
         if c.lhs != "":
-            c.tag_name = c.lhs
+            c.tag_name = c.lhs.strip()
         else:
             return
 

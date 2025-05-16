@@ -597,7 +597,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                 if arg_parser:
                     options = arg_parser.get_additive_options()+arg_parser.get_exclusive_options()+arg_parser.get_units()
                     # Complete additive options
-                    if node.arguments_part.endswith("+"):
+                    if node.arguments.endswith("+"):
                         return [
                             CompletionItem(
                                 label=name,
@@ -607,7 +607,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                             for name in arg_parser.get_additive_options()
                         ]
                     # Complete additive, exclusive and units
-                    if not contains_any(node.arguments_part.strip(), options):
+                    if not contains_any(node.arguments, options):
                         return [
                             CompletionItem(
                                 label=name,
@@ -616,7 +616,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                             )
                             for name in options
                         ]
-        elif node.instruction_name and node.arguments_part == "":
+        elif node.instruction_name and node.arguments == "":
             # Completion of command name
             return [
                 CompletionItem(
