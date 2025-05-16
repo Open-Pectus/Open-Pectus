@@ -1384,51 +1384,6 @@
         }
       }
     },
-    "/api/recent_runs/{run_id}/csv_file": {
-      "get": {
-        "tags": [
-          "recent_runs"
-        ],
-        "summary": "Get Recent Run Csv File",
-        "operationId": "get_recent_run_csv_file",
-        "parameters": [
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Run Id"
-            }
-          },
-          {
-            "name": "x-identity",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "",
-              "title": "X-Identity"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/lsp/pcode.language-configuration.json": {
       "get": {
         "tags": [
