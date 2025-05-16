@@ -8,6 +8,7 @@ import pathlib
 from typing import Literal
 from itertools import chain
 import sys
+import copy
 
 import multiprocess
 
@@ -17,7 +18,7 @@ from openpectus.engine.engine_message_handlers import EngineMessageHandlers
 from openpectus.engine.engine_message_builder import EngineMessageBuilder
 from openpectus.engine.hardware import NullHardware
 from openpectus.engine.hardware_recovery import ErrorRecoveryConfig, ErrorRecoveryDecorator
-from openpectus.lang.exec.tags import SystemTagName, TagCollection
+from openpectus.lang.exec.tags import SystemTagName, create_system_tags
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 from openpectus.protocol.engine_dispatcher import EngineDispatcher
 from openpectus.engine.engine_runner import EngineRunner
@@ -187,7 +188,7 @@ def validate_and_exit(uod_name: str):
         logger.error(f"Validation failed. Failed to create uod '{uod_name}'", exc_info=True)
         sys.exit(1)
 
-    uod.system_tags = TagCollection.create_system_tags()
+    uod.system_tags = create_system_tags()
 
     logger.info("Validating uod configuration")
     uod.validate_configuration()
@@ -229,7 +230,7 @@ def run_example_commands(uod: UnitOperationDefinitionBase):
     def run_example_with_description(description: str, example: str) -> list[str]:
         failed_cmds: list[str] = []
         try:
-            runner = EngineTestRunner(uod_factory=lambda: uod, pcode=example)
+            runner = EngineTestRunner(uod_factory=lambda: copy.deepcopy(uod), method=example)
             with runner.run() as instance:
                 instance.start()
                 # wait up to 1 minute, that ought to be enought for everybody
@@ -267,7 +268,7 @@ def show_register_details_and_exit(uod_name: str):
         logger.error(f"Validation failed. Failed to create uod '{uod_name}'", exc_info=True)
         sys.exit(1)
 
-    uod.system_tags = TagCollection.create_system_tags()
+    uod.system_tags = create_system_tags()
 
     try:
         logger.info("Connecting to hardware")

@@ -5,7 +5,7 @@ import time
 from typing import Any, Callable, Iterable, Set
 
 from openpectus.lang.exec.events import EventListener
-from openpectus.lang.exec.units import convert_value_to_unit, is_supported_unit, add_unit
+from openpectus.lang.exec.units import convert_value_to_unit, is_supported_unit
 
 
 # Represents tag API towards interpreter
@@ -15,6 +15,7 @@ class SystemTagName(StrEnum):
     RUN_COUNTER = "Run Counter"
     BLOCK = "Block"
     BLOCK_TIME = "Block Time"
+    SCOPE_TIME = "Scope Time"
     PROCESS_TIME = "Process Time"
     RUN_TIME = "Run Time"
     CLOCK = "Clock"
@@ -75,7 +76,7 @@ class ChangeSubject:
     """ Inherit to support change notification. Used by engine to track tag changes """
 
     def __init__(self) -> None:
-        super().__init__()
+        super(ChangeSubject, self).__init__()
 
         self._listeners: list[ChangeListener] = []
 
@@ -141,10 +142,10 @@ class Tag(ChangeSubject, EventListener):
             direction: TagDirection = TagDirection.NA,
             safe_value: TagValueType | Unset = Unset(),
             format_fn: TagFormatFunction | None = None,
-            allow_simulation: bool = False,
+            allow_simulation: bool = False
             ) -> None:
 
-        super().__init__()
+        super(Tag, self).__init__()
 
         assert name is not None
         assert name != ""
@@ -165,8 +166,8 @@ class Tag(ChangeSubject, EventListener):
         self.safe_value: TagValueType | Unset = safe_value
         self.format_fn = format_fn
         self.allow_simulation = allow_simulation
-        self.simulation_active = False
         self.simulated_value = None
+        self.simulated = False
 
     def __str__(self) -> str:
         if self.simulation_active:
@@ -179,7 +180,7 @@ class Tag(ChangeSubject, EventListener):
         """ Convert the value to a readonly and immutable TagValue instance """
         value_formatted = None if self.format_fn is None else self.format_fn(self.get_value())
         value = self.simulated_value if self.simulation_active else self.value
-        return TagValue(self.name, self.tick_time, value, value_formatted, self.unit, self.direction)
+        return TagValue(self.name, self.tick_time, value, value_formatted, self.unit, self.direction, self.simulated)
 
     def set_value(self, val: TagValueType, tick_time: float) -> None:
         if val != self.value:
@@ -324,24 +325,6 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
             tags.add(tag)
         return tags
 
-    @staticmethod
-    def create_system_tags() -> TagCollection:
-        tags = TagCollection([
-            Tag(SystemTagName.BASE, value="min"),  # note special value "min" and no unit
-            Tag(SystemTagName.RUN_COUNTER, value=0),
-            Tag(SystemTagName.BLOCK, value=None),
-            Tag(SystemTagName.BLOCK_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
-            Tag(SystemTagName.PROCESS_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
-            Tag(SystemTagName.RUN_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
-            Tag(SystemTagName.CLOCK, value=0.0, unit="s", format_fn=format_time_as_clock),
-            Tag(SystemTagName.SYSTEM_STATE, value="Stopped"),
-            Tag(SystemTagName.METHOD_STATUS, value="OK"),
-            Tag(SystemTagName.CONNECTION_STATUS, value="Disconnected"),
-            Tag(SystemTagName.RUN_ID, value=None),
-            Tag(SystemTagName.BATCH_NAME, value=None),
-        ])
-        return tags
-
 
 class TagValue:
     """ Read-only and immutable representation of a tag value. """
@@ -353,6 +336,7 @@ class TagValue:
             value_formatted: str | None = None,
             unit: str | None = None,
             direction: TagDirection = TagDirection.Unspecified,
+            simulated: bool | None = None
     ):
         if name is None or name.strip() == '':
             raise ValueError("name is None or empty")
@@ -363,6 +347,7 @@ class TagValue:
         self.value_formatted = value_formatted
         self.unit = unit
         self.direction = direction
+        self.simulated = simulated
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(name="{self.name}", value="{self.value}")'
@@ -384,6 +369,11 @@ class TagValueCollection(Iterable[TagValue]):
     @staticmethod
     def empty() -> TagValueCollection:
         return TagValueCollection([])
+
+    @property
+    def names(self) -> list[str]:
+        """ Return the tag names """
+        return list(self._tag_values.keys())
 
     def get(self, tag_name: str) -> TagValue:
         if tag_name is None or tag_name.strip() == '':
@@ -411,3 +401,19 @@ class TagValueCollection(Iterable[TagValue]):
 
     def to_list(self) -> list[TagValue]:
         return [v for v in self._tag_values.values()]
+
+
+
+def create_system_tags() -> "TagCollection":
+    return TagCollection([
+        Tag(SystemTagName.BASE, value="min"),  # note special value "min" and no unit
+        Tag(SystemTagName.RUN_COUNTER, value=0),
+        Tag(SystemTagName.BLOCK, value=None),
+        Tag(SystemTagName.PROCESS_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
+        Tag(SystemTagName.RUN_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
+        Tag(SystemTagName.CLOCK, value=0.0, unit="s", format_fn=format_time_as_clock),
+        Tag(SystemTagName.SYSTEM_STATE, value="Stopped"),
+        Tag(SystemTagName.METHOD_STATUS, value="OK"),
+        Tag(SystemTagName.CONNECTION_STATUS, value="Disconnected"),
+        Tag(SystemTagName.RUN_ID, value=None),
+    ])

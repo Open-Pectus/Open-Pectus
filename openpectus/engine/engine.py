@@ -3,17 +3,17 @@ import itertools
 import logging
 import uuid
 from queue import Empty, Queue
-from typing import Iterable, List, Set
+from typing import Iterable, Set
 from uuid import UUID
 from openpectus.engine.internal_commands import InternalCommandsRegistry
 from openpectus.engine.hardware import HardwareLayerException, RegisterDirection
-from openpectus.engine.method_model import MethodModel
+from openpectus.engine.method_manager import MethodManager
 from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum, SystemTagName
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.clock import Clock, WallClock
 from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.errors import (
-    EngineError, InterpretationError, InterpretationInternalError
+    EngineError, InterpretationError, InterpretationInternalError, MethodEditError
 )
 from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext
 from openpectus.lang.exec.runlog import RuntimeInfo, RunLog, RuntimeRecord
@@ -26,12 +26,11 @@ from openpectus.lang.exec.tags import (
     TagValueCollection,
     ChangeListener,
     Unset,
+    create_system_tags
 )
-from openpectus.lang.exec.tags_impl import MarkTag
+from openpectus.lang.exec.tags_impl import BlockTimeTag, MarkTag, ScopeTimeTag
 from openpectus.lang.exec.timer import EngineTimer, OneThreadTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand
-from openpectus.lang.grammar.pgrammar import PGrammar
-from openpectus.lang.model.pprogram import PProgram
 import openpectus.protocol.models as Mdl
 from openpectus.engine.archiver import ArchiverTag
 
@@ -102,8 +101,10 @@ class Engine(InterpreterContext):
         """ Tick count since last START command. It is incremented at the start of each tick.
         First tick is effectively number 0. """
 
-        self._system_tags = TagCollection.create_system_tags()
+        self._system_tags = create_system_tags()
         self._system_tags.add(MarkTag())
+        self._system_tags.add(BlockTimeTag())
+        self._system_tags.add(ScopeTimeTag())
         # Add archiver which is implemented as a tag. The lambda getting the runlog works because the
         # tag_lifetime.on_stop event is emitted just before resetting the interpreter and runlog (and
         # not after).
@@ -118,7 +119,7 @@ class Engine(InterpreterContext):
 
         self.cmd_queue: Queue[CommandRequest] = Queue()
         """ Commands to execute, coming from interpreter and from aggregator """
-        self.cmd_executing: List[CommandRequest] = []
+        self.cmd_executing: list[CommandRequest] = []
         """ Uod commands currently being excuted """
         self.tag_updates: Queue[Tag] = Queue()
         """ Tags updated in last tick """
@@ -136,8 +137,6 @@ class Engine(InterpreterContext):
         """ Indicates whether the engine is on hold"""
         self._runstate_stopping: bool = False
         """ Indicates whether the engine is on stopping"""
-        self._runstate_waiting: bool = False
-        """ Indicates whether the engine is waiting in a Wait command"""
 
         self._prev_state: TagValueCollection | None = None
         """ The state prior to applying safe state """
@@ -145,22 +144,12 @@ class Engine(InterpreterContext):
         self._last_error : Exception | None = None
         """ Cause of error_state"""
 
-        self.block_times: dict[str, float] = {}
-        """ holds time spent in each block"""
+        self._method_manager: MethodManager = MethodManager(uod.get_command_names())
+        """ The model handling changes to method code """
+        self._pending_merge_method: Mdl.Method | None = None
 
-        self._interpreter: PInterpreter = PInterpreter(PProgram(), self)
-        """ The interpreter executing the current program. """
-
-        def on_method_init():
-            self._interpreter.stop()
-            self._interpreter = PInterpreter(self._method.get_program(), self)
-            logger.info("Method and interpreter re-initialized")
-
-        def on_method_error(ex: Exception):
-            logger.error("An error occured while setting new method: " + str(ex))
-
-        self._method: MethodModel = MethodModel(on_method_init, on_method_error)
-        """ The model handling changes to program/method code """
+        self._interpreter: PInterpreter = PInterpreter(self._method_manager.program, self)
+        """ The interpreter executing the current method. """
 
         self._cancel_command_exec_ids: set[UUID] = set()
 
@@ -203,8 +192,8 @@ class Engine(InterpreterContext):
         return self.interpreter.runtimeinfo
 
     @property
-    def method(self) -> MethodModel:
-        return self._method
+    def method_manager(self) -> MethodManager:
+        return self._method_manager
 
     def cleanup(self):
         self.emitter.emit_on_engine_shutdown()
@@ -247,7 +236,7 @@ class Engine(InterpreterContext):
         self._tick_timer.stop()
         self.cleanup()
 
-    def tick(self, tick_time: float, increment_time: float):
+    def tick(self, tick_time: float, increment_time: float):  # noqa C901
         """ Performs a scan cycle tick. """
         # logger.debug(f"Tick {self._tick_number + 1}")
 
@@ -264,16 +253,29 @@ class Engine(InterpreterContext):
             for tag in self._system_tags.tags.values():
                 tag.tick_time = tick_time
 
+        # edit phase
+        if self._pending_merge_method is not None:
+            logger.debug("Applying scheduled method merge")
+            try:
+                self._method_manager.merge_method(self._pending_merge_method)
+                self._interpreter.update_method_and_ffw(self._method_manager.program)
+                logger.debug("Method edit complete")
+            except Exception as ex:
+                logger.error("Method edit failed", exc_info=True)
+                self.set_error_state(ex)
+            finally:
+                self._pending_merge_method = None
+
         self.uod.hwl.tick()
 
-        # read, error_state on HardwareLayerException
+        # read phase, error_state on HardwareLayerException
         self.read_process_image()
 
+        # execute phase
         # excecute interpreter tick
         if self._runstate_started and\
                 not self._runstate_paused and\
                 not self._runstate_holding and\
-                not self._runstate_waiting and\
                 not self._runstate_stopping:
             try:
                 # run one tick of interpretation, i.e. one instruction
@@ -307,8 +309,9 @@ class Engine(InterpreterContext):
         # notify of tag changes
         self.notify_tag_updates()
 
-        # write, error_state on HardwareLayerException
+        # write phase, error_state on HardwareLayerException
         self.write_process_image()
+
 
     def read_process_image(self):
         """ Read data from relevant hw registers into tags"""
@@ -349,18 +352,6 @@ class Engine(InterpreterContext):
         run_time_value = run_time.as_number()
         if sys_state.get_value() not in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
             run_time.set_value(run_time_value + increment_time, tick_time)
-
-        # Block name + signal block changes to tag_context
-        block_name = self._system_tags[SystemTagName.BLOCK].get_value() or ""
-        assert isinstance(block_name, str)
-
-        # Block Time    - 0 at Block start, global but value refers to active block
-        if block_name not in self.block_times.keys():
-            self.block_times[block_name] = 0.0
-        # TODO should probably increment all parent block timers as well.
-        # In that case factor this out into BlockTag class that hold timer tags for each block
-        self.block_times[block_name] += increment_time
-        self._system_tags[SystemTagName.BLOCK_TIME].set_value(self.block_times[block_name], self._tick_time)
 
         # Execute the tick lifetime hook on tags
         self.emitter.emit_on_tick(tick_time, increment_time)
@@ -416,8 +407,7 @@ class Engine(InterpreterContext):
         else:
             self._execute_uod_command(cmd_request, cmds_done)
 
-    def _execute_internal_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
-
+    def _execute_internal_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):  # noqa C901
         if not self._runstate_started and cmd_request.name not in [EngineCommandEnum.START, EngineCommandEnum.RESTART]:
             logger.warning(f"Command {cmd_request.name} is invalid when Engine is not running")
             cmds_done.add(cmd_request)
@@ -426,7 +416,7 @@ class Engine(InterpreterContext):
         # get the runtime record to use for tracking if possible
         record = RuntimeRecord.null_record()
         if cmd_request.exec_id is not None:  # happens for all commands not originating from interpreter
-            # during restart, record is None - should ont occur otherwise
+            # during restart, record is None - should not occur otherwise
             record = self.interpreter.runtimeinfo.get_exec_record(cmd_request.exec_id)
 
         # an existing, long running engine_command is running. other commands must wait
@@ -453,17 +443,16 @@ class Engine(InterpreterContext):
         # no engine command is running - start one
         try:
             command = self.registry.create_internal_command(cmd_request.name)
-            args = cmd_request.get_args()
+            args = cmd_request.arguments
             if args is not None:
                 try:
-                    command.init_args(args)
+                    command.validate_arguments(args)
                     logger.debug(f"Initialized command {cmd_request.name} with arguments {args}")
                 except Exception:
                     raise EngineError(
                         f"Failed to initialize arguments '{args}' for command '{cmd_request.name}'",
                         "same"
                     )
-
         except ValueError:
             raise EngineError(
                 f"Unknown internal engine command '{cmd_request.name}'",
@@ -494,7 +483,7 @@ class Engine(InterpreterContext):
 
     def _stop_interpreter(self):
         self._interpreter.stop()
-        self._interpreter = PInterpreter(self._method.get_program(), self)
+        self._interpreter = PInterpreter(self.method_manager.program, self)
 
     def _cancel_uod_commands(self):
         logger.debug("Cancelling uod commands")
@@ -520,7 +509,7 @@ class Engine(InterpreterContext):
         for command in cmds_to_finalize:
             command.finalize()
 
-    def _execute_uod_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
+    def _execute_uod_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):  # noqa C901
         cmd_name = cmd_request.name
         assert self.uod.has_command_name(cmd_name), f"Expected Uod to have command named '{cmd_name}'"
         assert cmd_request.exec_id is not None, f"Expected uod command request '{cmd_name}' to have exec_id"
@@ -534,8 +523,9 @@ class Engine(InterpreterContext):
 
         # cancel any pending cancels (per user request)
         for c in self.cmd_executing:
-            if c.command_exec_id in self._cancel_command_exec_ids:
+            if c.command_exec_id is not None and c.command_exec_id in self._cancel_command_exec_ids:
                 cmds_done.add(c)
+                assert c.command_exec_id is not None, f"Expected uod command request '{c.name}' to have command_exec_id"
                 self._cancel_command_exec_ids.remove(c.command_exec_id)
                 if cmd_request.name == c.name:
                     cancel_this = True
@@ -608,11 +598,11 @@ class Engine(InterpreterContext):
 
         assert uod_command is not None, f"Failed to get uod_command for command '{cmd_name}'"
 
-        logger.debug(f"Parsing arguments '{cmd_request.unparsed_args}' for uod command {cmd_name}")
-        parsed_args = uod_command.parse_args(cmd_request.unparsed_args or "")
+        logger.debug(f"Parsing arguments '{cmd_request.arguments}' for uod command {cmd_name}")
+        parsed_args = uod_command.parse_args(cmd_request.arguments)
 
         if parsed_args is None:
-            logger.error(f"Invalid argument string: '{cmd_request.unparsed_args}' for command '{cmd_name}'")
+            logger.error(f"Invalid argument string: '{cmd_request.arguments}' for command '{cmd_name}'")
             cmds_done.add(cmd_request)
             raise ValueError(f"Invalid arguments for command '{cmd_name}'")
 
@@ -670,11 +660,11 @@ class Engine(InterpreterContext):
 
             logger.error(
                 f"Uod command execution failed. Command: '{cmd_request.name}', " +
-                f"argument string: '{cmd_request.unparsed_args}'", exc_info=True)
+                f"argument string: '{cmd_request.arguments}'", exc_info=True)
             raise ex
 
     def _apply_safe_state(self) -> TagValueCollection:
-        current_values: List[TagValue] = []
+        current_values: list[TagValue] = []
 
         # TODO we should probably only consider uod tags here. would system tags ever have a safe value?
         for t in self._iter_all_tags():
@@ -727,12 +717,6 @@ class Engine(InterpreterContext):
     def get_error_state_exception(self) -> Exception | None:
         return self._last_error
 
-    # TODO remove
-    def parse_pcode(self, pcode: str) -> PProgram:
-        p = PGrammar()
-        p.parse(pcode)
-        return p.build_model()
-
     def write_process_image(self):
         if not self._runstate_started:
             return
@@ -754,10 +738,10 @@ class Engine(InterpreterContext):
                 logger.error("Hardware write_batch error", exc_info=True)
                 self.set_error_state(ex)
 
-    def schedule_execution(self, name: str, exec_id: UUID | None = None, **kvargs):
+    def schedule_execution(self, name: str, arguments: str = "", exec_id: UUID | None = None):
         """ Execute named command from interpreter """
         if EngineCommandEnum.has_value(name) or self.uod.has_command_name(name):
-            request = CommandRequest.from_interpreter(name, exec_id, **kvargs)
+            request = CommandRequest.from_interpreter(name, arguments, exec_id)
             self.cmd_queue.put_nowait(request)
         else:
             raise EngineError(
@@ -781,11 +765,8 @@ class Engine(InterpreterContext):
 
     def inject_code(self, pcode: str):
         """ Inject a code snippet to run in the current scope of the current program """
-        # TODO review signal Method change
-        # TODO perform this change via _method
-        logger.warning("TODO set updated method content and signal Method change")
         try:
-            injected_program = self.parse_pcode(pcode)
+            injected_program = self._method_manager.parse_inject_code(pcode)
             self.interpreter.inject_node(injected_program)
             logger.info("Injected code successful")
         except Exception as ex:
@@ -795,13 +776,54 @@ class Engine(InterpreterContext):
 
     # code manipulation api
     def set_method(self, method: Mdl.Method):
-        """ Set new method. This will replace the current method and invoke the on_method_init callback.
+        """ Set new method. This will replace the current method.
 
-        On error, sets error_state and re-raises the error.
+        We generally expect that nothing important is going on when performing a method edit. This means
+        that interpreter is in one of these states:
+            - Current instruction is awating a threshold, preferably with at least several seconds before
+              the instruction starts
+            - Current instruction is a Wait
+            - Current instruction is a Pause
+            - Method is exhausted
+            - Engine paused
+            - ??
+            In the waiting cases (threshold, Wait and Pause), the waiting time is reset - this is probably ok?
+
+        How should this be enforced?
+        - Wait for an active instruction to complete before performing the edit? Probably. This does not mean
+          wait for a possible command, just wait to engine phase edit
+        - Fail unless one of the conditions above is true? This is difficult:
+            - This likely requires semantic changes so no two instructions are active in the same tick.
+              - A case is that currently two adjecent Mark instruction are active in the same tick
+                and we have tests that depend on this - but this can be changed and probably should. It would
+                certainly make tests easier to write and understand and more robust since they don't have to depend
+                on tick counting.
+        - Should the edit be performed as a command? We should always perform the edit in a "pause" so it won't interfere
+          with anything...
+
+        If a method is already running, it will
+        - Take node of the current instruction
+        - Check that no code changes exist in already executed code. If so, MethodEditError is raised
+        - Serialize the AST of the running method
+        - Parse the updated method, replacing the AST with the new AST
+        - Apply persisted data to new AST
+        - Patch all node references to point to the updated nodes:
+            - In runtime records
+            - In interpreter state (activate records)
+        - Start executing new program in fast-forward mode to skip directly to the paused instruction
         """
+
         try:
-            self._method.set_method(method)
-            logger.debug(f"New method set with {len(method.lines)} lines")
+            if self._runstate_started:
+                if self._pending_merge_method is not None:
+                    raise MethodEditError("An edit is already in progress")
+                # signal to apply updated method on next tick
+                self._pending_merge_method = method
+            else:
+                self._method_manager.set_method(method)
+                self._interpreter = PInterpreter(self._method_manager.program, self)
+                logger.debug(f"New method set with {len(method.lines)} lines")
+
         except Exception as ex:
             logger.error("Failed to set method", exc_info=True)
             self.set_error_state(ex)
@@ -841,6 +863,6 @@ class Engine(InterpreterContext):
         if record is None:
             logger.error(f"Cannot force instruction {exec_id=}, no runtime record found")
 
-
-    def calculate_method_state(self) -> Mdl.MethodState:
-        return self._method.calculate_method_state(self.interpreter.runtimeinfo)
+    def get_command_definitions(self) -> list[Mdl.CommandDefinition]:
+        """ Return engine command definitions. """
+        return self.registry.get_command_definitions()

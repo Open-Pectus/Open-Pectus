@@ -9,6 +9,7 @@ from fastapi_websocket_pubsub.rpc_event_methods import RpcEventServerMethods
 class PubSubTopic(StrEnum):
     RUN_LOG = auto()
     METHOD = auto()
+    METHOD_STATE = auto()
     CONTROL_STATE = auto()
     ERROR_LOG = auto()
     PROCESS_UNITS = auto()
@@ -44,8 +45,7 @@ class FrontendPublisher:
         await self.pubsub_endpoint.publish(f'{unitId}/{PubSubTopic.METHOD}')
 
     async def publish_method_state_changed(self, unitId: str):
-        # for now we use PubSubTopic.METHOD for both Method and MethodState changes
-        await self.pubsub_endpoint.publish(f'{unitId}/{PubSubTopic.METHOD}')
+        await self.pubsub_endpoint.publish(f'{unitId}/{PubSubTopic.METHOD_STATE}')
 
     async def publish_control_state_changed(self, unitId: str):
         await self.pubsub_endpoint.publish(f'{unitId}/{PubSubTopic.CONTROL_STATE}')

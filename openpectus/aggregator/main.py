@@ -55,7 +55,11 @@ def main():
     alembic_config = Config(alembic_ini_file_path)
     alembic_config.set_main_option("sqlalchemy.url", f"sqlite:///{args.database}")
     command.upgrade(alembic_config, "head")
-    AggregatorServer(title, args.host, args.port, args.frontend_dist_dir, args.database, args.secret).start()
+
+    server = AggregatorServer(title, args.host, args.port, args.frontend_dist_dir, args.database, args.secret)
+
+    # seart aggregator server
+    server.start()
 
 
 if __name__ == "__main__":

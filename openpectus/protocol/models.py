@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import logging
+import re
 
 import openpectus.engine.models as EM
 from pydantic import BaseModel, ConfigDict
+
+from openpectus.lang.model.parser import ParserMethod, ParserMethodLine
 
 logger = logging.getLogger(__name__)
 
@@ -77,10 +80,11 @@ class TagValue(ProtocolModel):
     value_unit: str | None
     value_formatted: str | None = None
     direction: TagDirection = TagDirection.Unspecified
+    simulated: bool | None = None
 
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(name="{self.name}", value="{self.value}", value_unit="{self.value_unit}", ' +
-                f'direction={self.direction})')
+                f'direction="{self.direction}"), simulated="{self.simulated}"')
 
 
 class RunLogLine(ProtocolModel):
@@ -153,6 +157,35 @@ class Method(ProtocolModel):
     def as_pcode(self) -> str:
         pcode = '\n'.join([line.content for line in self.lines])
         return pcode
+
+    @staticmethod
+    def from_numbered_pcode(pcode: str) -> Method:
+        """ Creates a test method from specially formatted lines such as
+            `'04 Mark: A'`
+        and assigns the prefixed number as line id. """
+        numbered_pcode_re = r'^(?P<number>\d+)\s(?P<content>.*)$'
+        method = Method.empty()
+        for line in pcode.splitlines():
+            match = re.search(numbered_pcode_re, line)
+            if match:
+                method.lines.append(MethodLine(id=match.group("number"), content=match.group("content")))
+            else:
+                raise ValueError("Numbered method requires a two-digit number on all lines")
+        return method
+
+    def modify_to(self, pcode: str) -> Method:
+        """ Edit the method code while maintaining line ids. Used to emulate method input
+        coming from frontend where line ids are maintained in changed methods. """
+        new_method = Method.from_pcode(pcode)
+        for i, line in enumerate(new_method.lines):
+            if i < len(self.lines):
+                line.id = self.lines[i].id
+        return new_method
+
+    def to_parser_method(self) -> ParserMethod:
+        return ParserMethod(
+            lines=[ParserMethodLine(line.id, line.content) for line in self.lines]
+        )
 
 
 class MethodState(ProtocolModel):
@@ -234,3 +267,26 @@ class ErrorLog(ProtocolModel):
     @staticmethod
     def empty() -> ErrorLog:
         return ErrorLog(entries=[])
+
+
+class TagDefinition(ProtocolModel):
+    name: str
+    unit: str | None = None
+
+
+class CommandDefinition(ProtocolModel):
+    name: str
+    """ Command name, eg. 'Wait' """
+    validator: str | None
+    """ Serialization of validator or None for no validation"""
+    docstring: str | None
+    """ Command docstring """
+
+
+class UodDefinition(ProtocolModel):
+    commands: list[CommandDefinition]
+    """ Uod commands """
+    system_commands: list[CommandDefinition]
+    """ System commands """
+    tags: list[TagDefinition]
+    """ System and uod tags """

@@ -17,7 +17,9 @@ from openpectus.lang.exec.readings import (
 from openpectus.lang.exec.tags import SystemTagName, Tag, TagCollection
 from openpectus.lang.exec.units import get_compatible_unit_names, get_volume_units, add_unit
 from openpectus.lang.exec.tags_impl import AccumulatorBlockTag, AccumulatedColumnVolume, AccumulatorTag
-from openpectus.protocol.models import EntryDataType, PlotConfiguration
+from openpectus.protocol.models import (
+    EntryDataType, PlotConfiguration, UodDefinition, TagDefinition, CommandDefinition
+)
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +75,7 @@ class UnitOperationDefinitionBase:
             'location': self.location
         }
 
-    def build_commands(self):
+    def build_commands(self):  # noqa C901
         """ Complete configuration of a validated uod. This builds the commands.
         """
         for r in self.readings:
@@ -128,7 +130,7 @@ class UnitOperationDefinitionBase:
 
             self.command_descriptions[cmd_name] = desc
 
-    def validate_configuration(self):
+    def validate_configuration(self):  # noqa C901
         """ Validates these areas:
         - Each Reading matches a defined tag
         - Each Reading Command is verified
@@ -187,7 +189,7 @@ class UnitOperationDefinitionBase:
         if fatal:
             sys.exit(1)
 
-    def validate_command_signatures(self):
+    def validate_command_signatures(self):  # noqa C901
         """ Validate the signatures of command exec functions"""
         import inspect
 
@@ -361,6 +363,31 @@ The execution function is missing named arguments or a '**kvargs' argument""")
 
         return examples
 
+    def create_lsp_definition(self) -> UodDefinition:
+        tags = []
+        for t in self.tags:
+            tags.append(TagDefinition(name=t.name, unit=t.unit))
+        for t in self.system_tags or []:
+            tags.append(TagDefinition(name=t.name, unit=t.unit))
+        cmds: list[CommandDefinition] = []
+        for name, builder in self.command_factories.items():
+            parser = RegexNamedArgumentParser.get_instance(builder.arg_parse_fn)
+            if parser is not None:
+                cmds.append(CommandDefinition(
+                    name=name,
+                    validator=parser.serialize(),
+                    docstring=self.command_descriptions.get(name, UodCommandDescription(name)).docstring
+                ))
+        for name, desc in self.command_descriptions.items():
+            if name not in [c.name for c in cmds]:
+                logger.warning(f"Adding command '{name}' which has no command factory/buidler")
+                cmds.append(CommandDefinition(name=name, validator=None, docstring=desc.docstring))
+        return UodDefinition(
+            commands=cmds,
+            system_commands=[],
+            tags=tags
+        )
+
 
 INIT_FN = Callable[[], None]
 """ Command initialization method. """
@@ -502,7 +529,7 @@ class UodCommandBuilder:
         self.arg_parse_fn = arg_parse_fn
         return self
 
-    def build(self, uod: UnitOperationDefinitionBase) -> UodCommand:
+    def build(self, uod: UnitOperationDefinitionBase) -> UodCommand:  # noqa C901
         """ Construct the command """
 
         def arg_parse(args: str) -> CommandArgs | None:
@@ -554,9 +581,9 @@ class UodBuilder:
         self.required_roles: set[str] = set()
         self.data_log_interval_seconds = 5
         self.base_unit_provider: BaseUnitProvider = BaseUnitProvider()
-        self.base_unit_provider.set("s", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
-        self.base_unit_provider.set("min", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
-        self.base_unit_provider.set("h", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
+        self.base_unit_provider.set("s", SystemTagName.SCOPE_TIME, SystemTagName.BLOCK_TIME)
+        self.base_unit_provider.set("min", SystemTagName.SCOPE_TIME, SystemTagName.BLOCK_TIME)
+        self.base_unit_provider.set("h", SystemTagName.SCOPE_TIME, SystemTagName.BLOCK_TIME)
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}()'
@@ -922,8 +949,9 @@ def unescape(re_escaped_string: str) -> str:
 
 
 class RegexNamedArgumentParser:
-    def __init__(self, regex: str) -> None:
+    def __init__(self, regex: str, name: str | None = None) -> None:
         self.regex = regex
+        self.name = name
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(named_groups={self.get_named_groups()})'
@@ -933,6 +961,10 @@ class RegexNamedArgumentParser:
         if not match:
             return None
         return match.groupdict()
+
+    def validate(self, args: str) -> bool:
+        match = re.search(self.regex, args)
+        return match is not None
 
     def get_named_groups(self) -> list[str]:
         # ex: r"(?P<value>[0-9]+[.][0-9]*?|[.][0-9]+|[0-9]+) ?(?P<unit>m2)"
@@ -958,6 +990,8 @@ class RegexNamedArgumentParser:
         start = self.regex.index("<option>") + len("<option>(")
         end = self.regex.index("|(")
         result = unescape(self.regex[start: end]).split("|")
+        if "" in result:
+            result.remove("")
         return result
 
     def get_additive_options(self) -> list[str]:
@@ -966,10 +1000,15 @@ class RegexNamedArgumentParser:
         start = self.regex.index("|(") + len("|(")
         end = self.regex.index("|\\+)+))\\s*")
         result = unescape(self.regex[start: end]).split("|")
+        if "" in result:
+            result.remove("")
         return result
 
     @staticmethod
     def get_instance(parse_func) -> RegexNamedArgumentParser | None:
+        """ Gets the RegexNamedArgumentParser associated with parse_func or None
+        if parse_func is not a regex validator
+        """
         try:
             instance = getattr(parse_func, "__self__", None)
             if instance is not None and isinstance(instance, RegexNamedArgumentParser):
@@ -977,57 +1016,11 @@ class RegexNamedArgumentParser:
         except Exception:
             return None
 
+    def serialize(self) -> str:
+        return f"RNAP-v1-{self.regex}"
 
-# Common regular expressions for use with RegexNamedArgumentParser
-
-def RegexNumber(units: list[str] | None, non_negative: bool = False) -> str:
-    """ Create a regex that parses a number with optional unit to arguments `number` and optionally `number_unit`.
-
-    `number_unit` is only provided if one or more units are given.
-    """
-    sign_part = "" if non_negative else "-?"
-    unit_part = " ?(?P<number_unit>" + "|".join(re.escape(unit).replace(r"/", r"\/") for unit in units) + ")" \
-        if units else ""
-    return rf"^\s*(?P<number>{sign_part}[0-9]+[.][0-9]*?|{sign_part}[.][0-9]+|{sign_part}[0-9]+)\s*{unit_part}\s*$"
-
-
-def RegexCategorical(exclusive_options: list[str] | None = None, additive_options: list[str] | None = None) -> str:
-    """ Create a regex that parses categorical text into an argument named `option`.
-
-    Examples - exclusive::
-
-        regex = RegexCategorical(exclusive_options=["Open", "Closed"])
-
-        self.assertEqual(re.search(regex, "Closed").groupdict(), dict(option="Closed"))
-
-        self.assertEqual(re.search(regex, "VA01"), None)
-
-        self.assertEqual(re.search(regex, "Open").groupdict(), dict(option="Open"))
-
-        self.assertEqual(re.search(regex, "Open+Closed"), None)
-
-
-    Examples - exclusive and additive::
-
-        regex = RegexCategorical(exclusive_options=['Closed'], additive_options=['VA01', 'VA02', 'VA03'])
-
-        self.assertEqual(re.search(regex, "Closed").groupdict(), dict(option="Closed"))
-
-        self.assertEqual(re.search(regex, "Closed+VA01"), None)
-
-        self.assertEqual(re.search(regex, "VA01").groupdict(), dict(option="VA01"))
-
-        self.assertEqual(re.search(regex, "VA01+VA02").groupdict(), dict(option="VA01+VA02"))
-
-        self.assertEqual(re.search(regex, "Open+Closed"), None)
-    """
-    if exclusive_options is None and additive_options is None:
-        raise TypeError("RegexCategorical() missing argument 'exclusive_options' or 'additive_options'.")
-    exclusive_option_part = "|".join(re.escape(option) for option in exclusive_options) if exclusive_options else ""
-    additive_option_part = "|".join(re.escape(option) for option in additive_options) if additive_options else ""
-    return rf"^(?P<option>({exclusive_option_part}|({additive_option_part}|\+)+))\s*$"
-
-def RegexText(allow_empty: bool = False):
-    """ Parses text into an argument named `text`."""
-    allow_empty_part = "*" if allow_empty else "+"
-    return rf"^(?P<text>.{allow_empty_part})$"
+    @staticmethod
+    def deserialize(serialized: str, name: str | None = None) -> RegexNamedArgumentParser | None:
+        if serialized.startswith("RNAP-v1-"):
+            return RegexNamedArgumentParser(serialized[8:], name)
+        return None

@@ -18,6 +18,5 @@
     "python.formatting.provider": "black",
     "flake8.args": [
         "--config=./openpectus/.flake8"
-    ],
-    "python.analysis.typeCheckingMode": "basic"
+    ],    
 }

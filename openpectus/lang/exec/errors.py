@@ -1,6 +1,6 @@
 
 from typing import Literal
-from openpectus.lang.model.pprogram import PNode
+import openpectus.lang.model.ast as p
 
 
 class EngineNotInitializedError(Exception):
@@ -13,13 +13,19 @@ class EngineNotInitializedError(Exception):
 
 
 class EngineError(Exception):
-    def __init__(self, message: str, user_message: str | Literal["same"] | None = None, *args) -> None:
+    def __init__(
+            self,
+            message: str,
+            user_message: str | Literal["same"] | None = None,
+            exception: Exception | None = None,
+            *args) -> None:
         self.message = message
         if user_message == "same":
             self.user_message = message
         else:
             self.user_message = user_message
         super().__init__(*args)
+        self.exception = exception
 
     def __str__(self) -> str:
         if self.user_message == self.message:
@@ -60,7 +66,7 @@ class InterpretationError(Exception):
 
 class NodeInterpretationError(InterpretationError):
     """ Raised by interpreter when an instruction specific error occurs """
-    def __init__(self, node: PNode, message: str, user_message: str | Literal["same"] | None = "same",
+    def __init__(self, node: p.Node, message: str, user_message: str | Literal["same"] | None = "same",
                  exception: Exception | None = None, *args: object) -> None:
         self.node = node
         self.message: str = message
@@ -70,6 +76,7 @@ class NodeInterpretationError(InterpretationError):
         base_message = f"An error occurred in instruction '{node.display_name}': {message}"
         super().__init__(base_message, user_message, exception, *args)
 
+
 class InterpretationInternalError(InterpretationError):
     """ Raised by interpreter if an internal error occurs """
     def __init__(self, message: str, exception: Exception | None = None, *args: object) -> None:
@@ -77,3 +84,14 @@ class InterpretationInternalError(InterpretationError):
         self.exception = exception
         base_message = f"An internal error occurred. Interpretation cannot continue: {message}"
         super().__init__(base_message, "Internal error", exception, *args)
+
+
+class MethodError(Exception):
+    def __init__(self, message: str, exception: Exception | None = None):
+        self.message = message
+        self.exception = exception
+
+
+class MethodEditError(MethodError):
+    def __init__(self, message: str, exception: Exception | None = None):
+        super().__init__(message, exception)

@@ -3,26 +3,27 @@ from contextlib import contextmanager
 import logging
 import time
 from typing import Callable, Generator, Literal
+from openpectus.engine.method_manager import MethodManager
 from openpectus.engine.models import EngineCommandEnum
 
 from openpectus.lang.exec.clock import WallClock
+from openpectus.lang.exec.errors import EngineError
 from openpectus.lang.exec.runlog import RuntimeRecordStateEnum
 from openpectus.lang.exec.events import BlockInfo, EventListener
 from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 import openpectus.protocol.models as Mdl
 from openpectus.engine.engine import Engine, EngineTiming
-from openpectus.lang.grammar.pgrammar import PGrammar
-from openpectus.lang.model.pprogram import PProgram
-
+import openpectus.lang.model.ast as p
+from openpectus.lang.model.parser import ParserMethod, create_method_parser
 
 logger = logging.getLogger(__name__)
 
 
-def build_program(s, skip_enrich_analyzers=False) -> PProgram:
-    p = PGrammar()
-    p.parse(s)
-    return p.build_model(skip_enrich_analyzers=skip_enrich_analyzers)
+def build_program(pcode: str) -> p.ProgramNode:
+    method = ParserMethod.from_pcode(pcode)
+    parser = create_method_parser(method)
+    return parser.parse_method(method)
 
 
 UodFactory = Callable[[], UnitOperationDefinitionBase]
@@ -40,21 +41,25 @@ InstructionName = Literal[
     "Block", "End block", "End blocks",
     "Watch", "Alarm", "Mark",
     "Pause", "Hold", "Wait",
-    "Stop", "Restart"
+    "Stop", "Restart",
+    "Info", "Warning", "Error",
+    "Macro", "Call macro",
 ]
 """ Defines the awaitable instructions of the test engine runner """
 
 FindInstructionState = Literal[
-    "any", "started", "completed", "failed", "cancelled"
+    "any", "started", "completed", "failed", "cancelled",
+    "awaiting_threshold", "awaiting_condition", "awaiting_interrupt",
 ]
 """ Defines the awaitable instruction states of the test engine runner """
 
 
 class EngineTestRunner:
     """ Expose an interface of Engine similar to what is available in the frontend to tests. """
-    def __init__(self, uod_factory: UodFactory, pcode: str = "", interval: float = 0.1, speed: float = 1.0) -> None:
+    def __init__(self, uod_factory: UodFactory, method: str | Mdl.Method = "", interval: float = 0.1, speed: float = 1.0)\
+            -> None:
         self.uod_factory = uod_factory
-        self.pcode = pcode
+        self.method: str | Mdl.Method = method
         self.interval = interval
         self.speed = speed
         logger.debug(f"Created engine test runner, speed: {self.speed:.2f}, interval: {(self.interval*1000):.2f}ms")
@@ -64,7 +69,7 @@ class EngineTestRunner:
         timing = EngineTiming(WallClock(), NullTimer(), self.interval, self.speed)
         uod = self.uod_factory()
         engine = Engine(uod, timing)
-        instance = EngineTestInstance(engine, self.pcode, timing)
+        instance = EngineTestInstance(engine, self.method, timing)
         try:
             yield instance
         except Exception:
@@ -75,20 +80,18 @@ class EngineTestRunner:
 
 
 class EngineTestInstance(EventListener):
-    def __init__(self, engine: Engine, pcode: str, timing: EngineTiming) -> None:
+    def __init__(self, engine: Engine, method: str | Mdl.Method, timing: EngineTiming) -> None:
         self.engine = engine
         self.timing = timing
 
         self.engine.run(skip_timer_start=True)
-        self.set_method(pcode)
+        if isinstance(method, str):
+            method = Mdl.Method.from_pcode(method)
+        self.engine.set_method(method)
 
         self._search_index = 0
         self.engine.emitter.add_listener(self)  # register as listener for lifetime events, so they can be awaited
         self._last_event: EventName | None = None
-
-    def set_method(self, pcode: str):
-        method = Mdl.Method.from_pcode(pcode)
-        self.engine.set_method(method)
 
     def start(self):
         self.engine.schedule_execution(EngineCommandEnum.START)
@@ -97,6 +100,10 @@ class EngineTestInstance(EventListener):
     @property
     def marks(self) -> list[str]:
         return self.engine.interpreter.get_marks()
+
+    @property
+    def method_manager(self) -> MethodManager:
+        return self.engine.method_manager
 
     def run_until_condition(self, condition: RunCondition, max_ticks=30) -> int:
         """ Continue program until condition occurs. Return the number of ticks spent.
@@ -139,16 +146,17 @@ class EngineTestInstance(EventListener):
             if self.engine.has_error_state():
                 ex = self.engine.get_error_state_exception()
                 if ex is None:
-                    raise ValueError("Engine failed with an unspecified error")
+                    raise EngineError("Engine failed with an unspecified error")
                 else:
-                    raise ValueError(f"Engine failed with exception: {ex}")
+                    raise EngineError(f"Engine failed with exception: {ex}", exception=ex)
 
         return ticks
 
-    def run_until_instruction(
+    def run_until_instruction(  # noqa C901
             self,
             instruction_name: InstructionName,
             state: FindInstructionState = "any",
+            arguments: str | None = None,
             max_ticks=30,
             increment_index=True
             ) -> int:
@@ -179,9 +187,15 @@ class EngineTestInstance(EventListener):
                 request_state = RuntimeRecordStateEnum.Failed
             elif state == "cancelled":
                 request_state = RuntimeRecordStateEnum.Cancelled
+            elif state == "awaiting_threshold":
+                request_state = RuntimeRecordStateEnum.AwaitingThreshold
+            elif state == "awaiting_condition":
+                request_state = RuntimeRecordStateEnum.AwaitingCondition
+            elif state == "awaiting_interrupt":
+                request_state = RuntimeRecordStateEnum.AwaitingInterrrupt
 
         def cond() -> bool:
-            index = self.engine.runtimeinfo.find_instruction(instruction_name, self._search_index, request_state)
+            index = self.engine.runtimeinfo.find_instruction(instruction_name, arguments, self._search_index, request_state)
             if index is None:
                 return False
             else:
@@ -192,13 +206,14 @@ class EngineTestInstance(EventListener):
                     self._search_index = 0
                 return True
 
-        logger.debug(f"Start waiting for instruction {instruction_name}, state: {state}")
+        logger.debug(f"Start waiting for instruction {instruction_name}, state: {state}, arguments: {arguments}")
         try:
             ticks = self.run_until_condition(cond, max_ticks=max_ticks)
         except TimeoutError:
-            raise TimeoutError(f"Timeout while waiting for instruction '{instruction_name}', state: {state}")
+            raise TimeoutError(
+                f"Timeout while waiting for instruction '{instruction_name}', state: {state}, arguments: {arguments}")
 
-        logger.debug(f"Done waiting for instruction {instruction_name}, state: {state}")
+        logger.debug(f"Done waiting for instruction {instruction_name}, state: {state}, arguments: {arguments}")
         return ticks
 
     def index_step_back(self, steps=1):
@@ -234,6 +249,12 @@ class EngineTestInstance(EventListener):
             return self.run_until_condition(cond, max_ticks=max_ticks)
         except TimeoutError:
             raise TimeoutError(f"Timeout while waiting for event '{event_name}'")
+
+    def restart_and_run_until_started(self) -> None:
+        """ Restart the method and wait a few ticks for engine to come back up. """
+        self.engine.schedule_execution(EngineCommandEnum.RESTART)
+        self._search_index = 0
+        self.run_ticks(3)
 
     def run_ticks(self, ticks: int) -> None:
         """ Continue program execution until te specified number of ticks. """
@@ -322,9 +343,9 @@ def run_engine(engine: Engine, pcode: str, max_ticks: int = -1) -> int:
         if engine.has_error_state():
             ex = engine.get_error_state_exception()
             if ex is None:
-                raise ValueError("Engine failed with an unspecified error")
+                raise EngineError("Engine failed with an unspecified error")
             else:
-                raise ValueError(f"Engine failed with exception: {ex}")
+                raise EngineError(f"Engine failed with exception: {ex}", exception=ex)
 
         ticks += 1
 
@@ -360,9 +381,9 @@ def continue_engine(engine: Engine, max_ticks: int = -1) -> int:
         if engine.has_error_state():
             ex = engine.get_error_state_exception()
             if ex is None:
-                raise ValueError("Engine failed with an unspecified error")
+                raise EngineError("Engine failed with an unspecified error")
             else:
-                raise ValueError(f"Engine failed with exception: {ex}")
+                raise EngineError(f"Engine failed with exception: {ex}", exception=ex)
 
         ticks += 1
 
@@ -380,9 +401,14 @@ def print_runtime_records(e: Engine, description: str = ""):
     table = e.interpreter.runtimeinfo.get_as_table(description)
     print(table)
 
+def clear_log_config():
+    """ Remove any existing logging setup, eg. from logging.basicConfig()"""
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
 
 def configure_test_logger():
-    logging.basicConfig(format=' %(name)s :: %(levelname)-8s :: %(message)s')
+    clear_log_config()
+    logging.basicConfig(format='%(name)s : %(levelname)-6s : %(message)s')
 
 
 def set_engine_debug_logging():
@@ -397,6 +423,12 @@ def set_engine_debug_logging():
         logger.setLevel(logging.DEBUG)
 
 
-def set_interpreter_debug_logging():
+def set_interpreter_debug_logging(include_events=False, include_runlog=False):
     logger = logging.getLogger("openpectus.lang.exec.pinterpreter")
     logger.setLevel(logging.DEBUG)
+
+    if include_runlog:
+        logging.getLogger("openpectus.lang.exec.runlog").setLevel(logging.DEBUG)
+    if include_events:
+        logging.getLogger("openpectus.lang.exec.events").setLevel(logging.DEBUG)
+        logging.getLogger("openpectus.lang.exec.tags_impl").setLevel(logging.DEBUG)

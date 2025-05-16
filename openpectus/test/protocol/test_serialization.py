@@ -1,6 +1,6 @@
 import unittest
 
-import openpectus.aggregator.models as Mdl
+import openpectus.protocol.models as Mdl
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 from openpectus.protocol.serialization import serialize, deserialize
