@@ -464,13 +464,6 @@ export type GetRecentRunErrorLogData = {
 
 export type GetRecentRunErrorLogResponse = (AggregatedErrorLog);
 
-export type GetRecentRunCsvFileData = {
-    runId: string;
-    xIdentity?: string;
-};
-
-export type GetRecentRunCsvFileResponse = (unknown);
-
 export type GetVersionResponse = (unknown);
 
 export type GetBuildNumberResponse = (unknown);
