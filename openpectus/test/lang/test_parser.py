@@ -464,6 +464,26 @@ Alarm:  Foo   >=  0.4
         self.assertEqual(17, alarm.tag_operator_value.rhs_range.start.character)
         self.assertEqual(21, alarm.tag_operator_value.rhs_range.end.character)
 
+    def test_simulate_command(self):
+        parser = create_parser()
+
+        code = """
+Simulate: Foo = 3
+"""
+        program = parser.parse_pcode(code)
+        simulate = program.get_first_child(p.SimulateNode)
+        assert simulate is not None
+
+    def test_simulate_off_command(self):
+        parser = create_parser()
+
+        code = """
+Simulate off: Foo
+"""
+        program = parser.parse_pcode(code)
+        simulate_off = program.get_first_child(p.SimulateOffNode)
+        assert simulate_off is not None
+
     def test_engine_command(self):
         parser = create_parser()
         code = "Stop"

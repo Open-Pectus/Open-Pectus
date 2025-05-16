@@ -223,5 +223,18 @@ Macro: A
     Mark: 2
 
 Call macro: A # Mark 1 and Mark 2 are executed.
+""")),
+    CommandExample(name="Simulate", example=cleandoc("""
+# Temporarily set a tag to a specific value
+
+# Example 1:
+Simulate: Run Counter = 10
+""")),
+    CommandExample(name="Simulate off", example=cleandoc("""
+# Stop simulation of value
+
+# Example 1:
+Simulate: Run Counter = 10
+Simulate off: Run Counter
 """))
 ]

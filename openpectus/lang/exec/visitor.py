@@ -80,3 +80,9 @@ class NodeVisitor(NodeVisitorGeneric):
 
     def visit_ErrorInstructionNode(self, node: p.ErrorInstructionNode) -> NodeGenerator:
         yield
+
+    def visit_SimulateNode(self, node: p.SimulateNode) -> NodeGenerator:
+        yield
+
+    def visit_SimulateOffNode(self, node: p.SimulateOffNode) -> NodeGenerator:
+        yield

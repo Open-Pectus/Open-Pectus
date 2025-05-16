@@ -1004,3 +1004,35 @@ class PInterpreter(NodeVisitor):
             self.context.tags.as_readonly())
 
         raise NodeInterpretationError(node, f"Invalid instruction '{node.name}'")
+
+    def visit_SimulateNode(self, node: p.SimulateNode) -> NodeGenerator:
+        if self._ffw:
+            return
+
+        record = self.runtimeinfo.get_last_node_record(node)
+        record.add_state_started(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+        assert node.tag_operator_value
+        assert node.tag_operator_value.tag_name
+        if node.tag_operator_value.tag_value_numeric and node.tag_operator_value.tag_unit:
+            self.context.tags.get(node.tag_operator_value.tag_name).simulate_value_and_unit(
+                node.tag_operator_value.tag_value_numeric,
+                node.tag_operator_value.tag_unit,
+                self._tick_time
+            )
+        elif node.tag_operator_value.tag_value:
+            self.context.tags.get(node.tag_operator_value.tag_name).simulate_value(
+                node.tag_operator_value.tag_value_numeric if node.tag_operator_value.tag_value_numeric else node.tag_operator_value.tag_value,
+                self._tick_number
+            )
+        record.add_state_completed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+        yield
+
+    def visit_SimulateOffNode(self, node: p.SimulateOffNode) -> NodeGenerator:
+        if self._ffw:
+            return
+
+        record = self.runtimeinfo.get_last_node_record(node)
+        record.add_state_started(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+        self.context.tags.get(node.arguments).stop_simulation()
+        record.add_state_completed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+        yield

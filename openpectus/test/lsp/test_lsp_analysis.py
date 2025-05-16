@@ -135,6 +135,17 @@ class TestLspAnalysisCompletion(unittest.TestCase):
         result = self.get_completion_labels(pcode, uod_info)
         self.assertEqual(0, len(result))
 
+    def test_completions_simulate_offtags(self):
+        pcode = "Simulate off: "  # typing 'Watch: Foo' or 'Watch: bar'
+        uod_info = UodDefinition(
+            commands=[],
+            system_commands=[CommandDefinition(name="Simulate off", validator=None, docstring="")],
+            tags=[TagDefinition(name=tag) for tag in ["Foo", "Bar"]]
+        )
+        result = self.get_completion_labels(pcode, uod_info)
+        self.assertEqual(2, len(result))
+        self.assertEqual(["Foo", "Bar"], result)
+
     def test_completions_tags(self):
         pcode = "Watch: "  # typing 'Watch: Foo' or 'Watch: bar'
         uod_info = UodDefinition(

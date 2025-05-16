@@ -465,6 +465,10 @@ class NodeWithCondition(NodeWithTagOperatorValue):
     operators = ["<=", ">=", "==", "!=", "<", ">", "="]
 
 
+class NodeWithAssignment(NodeWithTagOperatorValue):
+    operators = ["="]
+
+
 class WatchNode(NodeWithChildren, NodeWithCondition):
     instruction_names = ["Watch"]
 
@@ -551,7 +555,7 @@ class CommandBaseNode(Node):
 
 class InterpreterCommandNode(CommandBaseNode):
     """ Represents commands that are directly executable by the interpreter. """
-    instruction_names = ["Base", "Increment run counter", "Run counter", "Wait"]
+    instruction_names = ["Base", "Increment run counter", "Run counter", "Wait", "Simulate off"]
 
 
 class EngineCommandNode(CommandBaseNode):
@@ -559,6 +563,11 @@ class EngineCommandNode(CommandBaseNode):
     instruction_names = ["Stop", "Pause", "Unpause", "Hold", "Unhold", "Restart",
                          "Info", "Warning", "Error"]
 
+class SimulateNode(NodeWithAssignment):
+    instruction_names = ["Simulate"]
+
+class SimulateOffNode(NodeWithAssignment):
+    instruction_names = ["Simulate off"]
 
 class UodCommandNode(CommandBaseNode):
     """ Represents a uod command, subclassing UodCommand. """

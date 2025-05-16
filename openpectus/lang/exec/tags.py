@@ -208,9 +208,18 @@ class Tag(ChangeSubject, EventListener):
             self.tick_time = tick_time
             self.notify_listeners(self.name)
 
+    def simulate_value(self, val: TagValueType, tick_time: float):
+        self.simulated = True
+        if val != self.simulated_value:
+            self.simulated_value = val
+            self.tick_time = tick_time
+            self.notify_listeners(self.name)
+
     def stop_simulation(self):
         self.simulated = False
         self.simulated_value = None
+        if self.value != self.simulated_value:
+            self.notify_listeners(self.name)
 
     def get_value(self):
         return self.simulated_value if self.simulated else self.value

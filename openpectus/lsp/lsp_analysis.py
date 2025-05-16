@@ -564,6 +564,32 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                         )
                         for name in list(macro_visitor.macros.keys())
                     ]
+            elif isinstance(node, p.SimulateOffNode):
+                # Complete tag name
+                if position_ast in node.arguments_range or node.arguments == "" or node.arguments not in analysis_input.tags.names:
+                    prefix = " " if query.endswith(":") else ""
+                    if node.arguments_range.is_empty():
+                        return [
+                            CompletionItem(
+                                label=name,
+                                insertText=prefix+name,
+                                kind=CompletionItemKind.Enum,
+                            )
+                            for name in analysis_input.get_tag_completions(node.arguments)
+                        ]
+                    else:
+                        return [
+                            CompletionItem(
+                                label=name,
+                                kind=CompletionItemKind.Enum,
+                                textEdit=TextEdit(
+                                    range=lsp_range_from_ast_range(node.arguments_range),
+                                    newText=prefix+name
+                                ),
+                            )
+                            for name in analysis_input.get_tag_completions(node.arguments)
+                        ]
+
             # Completion of all other commands
             elif node.instruction_name in analysis_input.commands.names:
                 arg_parser = analysis_input.commands.get(node.instruction_name).arg_parser

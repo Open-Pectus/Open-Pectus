@@ -38,6 +38,8 @@ class InternalCommandsRegistry:
             "Macro",
             "Call macro",
             "Batch",
+            "Simulate",
+            "Simulate off"
         ]
         for other_cmd in others:
             self._command_spec[other_cmd] = ArgSpec.NoCheck()
