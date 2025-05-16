@@ -170,14 +170,14 @@ class TestLspAnalysisCompletion(unittest.TestCase):
 
         result = self.get_completion_labels(pcode, uod_info)
         self.assertEqual(7, len(result))
-        self.assertEqual([
-            "< (less than)",
+        self.assertSequenceEqual([
             "<= (less than or equal)",
-            "> (greater than)",
             ">= (greater than or equal)",
             "== (equal)",
-            "= (equal)",
-            "!= (not equal)"], result)
+            "!= (not equal)",
+            "< (less than)",
+            "> (greater than)",
+            "= (equal)"], result)
 
     def test_completions_watch_rhs(self):
         pcode = "Watch: Run Time == "

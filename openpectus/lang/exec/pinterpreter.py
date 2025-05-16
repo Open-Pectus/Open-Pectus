@@ -433,12 +433,12 @@ class PInterpreter(NodeVisitor):
         return False
 
     def _evaluate_condition(self, node: p.NodeWithCondition) -> bool:
-        c = node.condition
+        c = node.tag_operator_value
         assert c is not None, "Error in condition"
-        assert not c.error, f"Error parsing condition '{node.condition_part}'"
+        assert not c.error, f"Error parsing condition '{node.tag_operator_value_part}'"
         assert c.tag_name, "Error in condition tag"
         assert c.tag_value, "Error in condition value"
-        assert self.context.tags.has(c.tag_name), f"Unknown tag '{c.tag_name}' in condition '{node.condition_part}'"
+        assert self.context.tags.has(c.tag_name), f"Unknown tag '{c.tag_name}' in condition '{node.tag_operator_value_part}'"
         tag = self.context.tags.get(c.tag_name)
         tag_value, tag_unit = str(tag.get_value()), tag.unit
         # TODO: Possible enhancement: if no unit specified, pick base unit?

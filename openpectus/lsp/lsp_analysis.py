@@ -325,10 +325,10 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
                 range=lsp_range_from_ast_range(node.instruction_range),
             )
         # Hovering condition
-        if isinstance(node, p.NodeWithCondition) and node.condition:
+        if isinstance(node, p.NodeWithTagOperatorValue) and node.tag_operator_value:
             # Show current tag value
-            if node.condition.lhs and analysis_input.tags.has(node.condition.lhs) and position_ast in node.condition.lhs_range:
-                process_value = fetch_process_value(engine_id, node.condition.lhs)
+            if node.tag_operator_value.lhs and analysis_input.tags.has(node.tag_operator_value.lhs) and position_ast in node.tag_operator_value.lhs_range:
+                process_value = fetch_process_value(engine_id, node.tag_operator_value.lhs)
                 if not process_value:
                     return
                 value_str = ""
@@ -340,16 +340,16 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
                     # If the value specified on the RHS has a different measurement unit
                     # than the tag unit, then we want to show the unit in its own unit
                     # as well as the one the user want to compare to.
-                    if (node.condition.tag_unit and
-                       process_value.value_unit != node.condition.tag_unit and
-                       node.condition.tag_unit in units_compaible_with_tag(analysis_input, node.condition.lhs) and
+                    if (node.tag_operator_value.tag_unit and
+                       process_value.value_unit != node.tag_operator_value.tag_unit and
+                       node.tag_operator_value.tag_unit in units_compaible_with_tag(analysis_input, node.tag_operator_value.lhs) and
                        isinstance(process_value.value, (int, float))):
                         converted_value = convert_value_to_unit(
                             process_value.value,
                             process_value.value_unit,
-                            node.condition.tag_unit
+                            node.tag_operator_value.tag_unit
                         )
-                        value_str += " (" + f"{converted_value:0.2f}".replace(".", ",") + f" {node.condition.tag_unit})"
+                        value_str += " (" + f"{converted_value:0.2f}".replace(".", ",") + f" {node.tag_operator_value.tag_unit})"
                 elif process_value.value:
                     value_str = str(process_value.value)
                 return Hover(
@@ -357,28 +357,28 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
                         kind="markdown",
                         value=f"Current value: {value_str}",
                     ),
-                    range=lsp_range_from_ast_range(node.condition.lhs_range),
+                    range=lsp_range_from_ast_range(node.tag_operator_value.lhs_range),
                 )
             # Show text desciption of comparison operator
-            if position_ast in node.condition.op_range:
+            if position_ast in node.tag_operator_value.op_range:
                 return Hover(
                     contents=MarkupContent(
                         kind="plaintext",
-                        value=operator_descriptions[node.condition.op],
+                        value=operator_descriptions[node.tag_operator_value.op],
                     ),
-                    range=lsp_range_from_ast_range(node.condition.op_range),
+                    range=lsp_range_from_ast_range(node.tag_operator_value.op_range),
                 )
             # Show compatible units of measurement
-            unit_options = units_compaible_with_tag(analysis_input, node.condition.lhs)
+            unit_options = units_compaible_with_tag(analysis_input, node.tag_operator_value.lhs)
             unit_options_str = ", ".join(unit_options)
-            if unit_options_str and position_ast in node.condition.rhs_range:
+            if unit_options_str and position_ast in node.tag_operator_value.rhs_range:
                 if len(unit_options) >= 1:
                     return Hover(
                         contents=MarkupContent(
                             kind="markdown",
                             value=f"Unit{'s' if len(unit_options) > 1 else ''}: {unit_options_str}.",
                         ),
-                        range=lsp_range_from_ast_range(node.condition.rhs_range),
+                        range=lsp_range_from_ast_range(node.tag_operator_value.rhs_range),
                     )
         # Hovering "Call macro"
         elif isinstance(node, p.CallMacroNode) and position_ast in node.arguments_range:
@@ -467,18 +467,18 @@ def completions(document: Document, position: Position, ignored_names, engine_id
     if node:
         if node.instruction_name in analysis_input.commands.names:
             # Completion of Watch/Alarm which are special because of conditions
-            if isinstance(node, p.NodeWithCondition) and node.condition:
+            if isinstance(node, p.NodeWithTagOperatorValue) and node.tag_operator_value:
                 # Complete tag name
-                if position_ast in node.condition.lhs_range or (node.condition.lhs == "" and node.arguments_part.strip() not in analysis_input.tags.names):
+                if position_ast in node.tag_operator_value.lhs_range or (node.tag_operator_value.lhs == "" and node.arguments_part.strip() not in analysis_input.tags.names):
                     prefix = " " if query.endswith(":") else ""
-                    if node.condition.lhs_range.is_empty():
+                    if node.tag_operator_value.lhs_range.is_empty():
                         return [
                             CompletionItem(
                                 label=name,
                                 insertText=prefix+name,
                                 kind=CompletionItemKind.Enum,
                             )
-                            for name in analysis_input.get_tag_completions(node.condition.lhs)
+                            for name in analysis_input.get_tag_completions(node.tag_operator_value.lhs)
                         ]
                     else:
                         return [
@@ -486,40 +486,40 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                                 label=name,
                                 kind=CompletionItemKind.Enum,
                                 textEdit=TextEdit(
-                                    range=lsp_range_from_ast_range(node.condition.lhs_range),
+                                    range=lsp_range_from_ast_range(node.tag_operator_value.lhs_range),
                                     newText=prefix+name
                                 ),
                             )
-                            for name in analysis_input.get_tag_completions(node.condition.lhs)
+                            for name in analysis_input.get_tag_completions(node.tag_operator_value.lhs)
                         ]
                 # Complete operator
-                elif position_ast in node.condition.op_range or node.condition.op_range.is_empty():
+                elif position_ast in node.tag_operator_value.op_range or node.tag_operator_value.op_range.is_empty():
                     prefix = "" if query.endswith(" ") else " "
-                    if node.condition.op_range.is_empty():
+                    if node.tag_operator_value.op_range.is_empty():
                         return [
                             CompletionItem(
-                                label=f"{operator} ({operator_description})",
+                                label=f"{operator} ({operator_descriptions[operator]})",
                                 insertText=prefix+operator,
                                 kind=CompletionItemKind.Enum,
                             )
-                            for operator, operator_description in operator_descriptions.items()
+                            for operator in node.operators
                         ]
                     else:
                         return [
                             CompletionItem(
-                                label=f"{operator} ({operator_description})",
+                                label=f"{operator} ({operator_descriptions[operator]})",
                                 kind=CompletionItemKind.Enum,
                                 textEdit=TextEdit(
-                                    range=lsp_range_from_ast_range(node.condition.op_range),
+                                    range=lsp_range_from_ast_range(node.tag_operator_value.op_range),
                                     newText=prefix+operator
                                 ),
                             )
-                            for operator, operator_description in operator_descriptions.items()
+                            for operator in node.operators
                         ]
                 # Complete unit
-                elif position_ast in node.condition.rhs_range or position_ast > node.condition.op_range:
+                elif position_ast in node.tag_operator_value.rhs_range or position_ast > node.tag_operator_value.op_range:
                     prefix = "" if query.endswith(" ") else " "
-                    unit_options = units_compaible_with_tag(analysis_input, node.condition.lhs)
+                    unit_options = units_compaible_with_tag(analysis_input, node.tag_operator_value.lhs)
                     if len(unit_options) > 0:
                         return [
                             CompletionItem(

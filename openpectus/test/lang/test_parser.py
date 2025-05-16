@@ -106,6 +106,16 @@ class TestParser(unittest.TestCase):
         assert isinstance(node, node_type)
         return node
 
+    def test_operators_ordered_longest_to_smallest(self):
+        def check_operator_order(cls: type[p.NodeWithTagOperatorValue]):
+            ok_length: int = len(max(cls.operators, key=len))
+            for operator in cls.operators:
+                assert len(operator) <= ok_length
+                ok_length = len(operator)
+
+        check_operator_order(p.NodeWithCondition)
+        check_operator_order(p.NodeWithAssignment)
+
     def test_parse_empty_line(self):
         self.assert_line_parses_as_node_type("  ", p.BlankNode)
 
@@ -354,21 +364,21 @@ Watch: Run Counter > 0
         program = parse_program(code)
         watch = program.get_first_child(p.WatchNode)
         assert watch is not None
-        self.assertEqual("Run Counter > 0", watch.condition_part)
-        assert watch.condition is not None
-        self.assertEqual(">", watch.condition.op)
-        self.assertEqual("Run Counter", watch.condition.lhs)
-        self.assertEqual("0", watch.condition.rhs)
-        self.assertEqual(False, watch.condition.error)
+        self.assertEqual("Run Counter > 0", watch.tag_operator_value_part)
+        assert watch.tag_operator_value is not None
+        self.assertEqual(">", watch.tag_operator_value.op)
+        self.assertEqual("Run Counter", watch.tag_operator_value.lhs)
+        self.assertEqual("0", watch.tag_operator_value.rhs)
+        self.assertEqual(False, watch.tag_operator_value.error)
 
     def test_parse_condition(self):
-        def check(condition_part: str, expected_valid: bool):
-            with self.subTest(condition_part + " | " + str(expected_valid)):
+        def check(tag_operator_value_part: str, expected_valid: bool):
+            with self.subTest(tag_operator_value_part + " | " + str(expected_valid)):
                 watch = p.WatchNode()
-                watch.arguments_part = condition_part
-                PcodeParser._parse_condition(node=watch)
-                assert watch.condition is not None
-                self.assertEqual(expected_valid, not watch.condition.error)
+                watch.arguments_part = tag_operator_value_part
+                PcodeParser._parse_tag_operator_value(node=watch)
+                assert watch.tag_operator_value is not None
+                self.assertEqual(expected_valid, not watch.tag_operator_value.error)
 
         # rhs must be int or float optionally followed by a unit
         check("Run Count > 0", True)
@@ -396,12 +406,12 @@ Alarm: Foo > 0
         program = parse_program(code)
         alarm = program.get_first_child(p.AlarmNode)
         assert alarm is not None
-        self.assertEqual("Foo > 0", alarm.condition_part)
-        assert alarm.condition is not None
-        self.assertEqual(">", alarm.condition.op)
-        self.assertEqual("Foo", alarm.condition.lhs)
-        self.assertEqual("0", alarm.condition.rhs)
-        self.assertEqual(False, alarm.condition.error)
+        self.assertEqual("Foo > 0", alarm.tag_operator_value_part)
+        assert alarm.tag_operator_value is not None
+        self.assertEqual(">", alarm.tag_operator_value.op)
+        self.assertEqual("Foo", alarm.tag_operator_value.lhs)
+        self.assertEqual("0", alarm.tag_operator_value.rhs)
+        self.assertEqual(False, alarm.tag_operator_value.error)
 
     def test_get_condition_ranges(self):
         parser = create_parser()
@@ -413,19 +423,19 @@ Alarm: Foo > 0
         program = parser.parse_pcode(code)
         alarm = program.get_first_child(p.AlarmNode)
         assert alarm is not None
-        assert alarm.condition is not None
+        assert alarm.tag_operator_value is not None
 
-        self.assertEqual(7, alarm.condition.range.start.character)
-        self.assertEqual(14, alarm.condition.range.end.character)
+        self.assertEqual(7, alarm.tag_operator_value.range.start.character)
+        self.assertEqual(14, alarm.tag_operator_value.range.end.character)
 
-        self.assertEqual(7, alarm.condition.lhs_range.start.character)
-        self.assertEqual(10, alarm.condition.lhs_range.end.character)
+        self.assertEqual(7, alarm.tag_operator_value.lhs_range.start.character)
+        self.assertEqual(10, alarm.tag_operator_value.lhs_range.end.character)
 
-        self.assertEqual(11, alarm.condition.op_range.start.character)
-        self.assertEqual(12, alarm.condition.op_range.end.character)
+        self.assertEqual(11, alarm.tag_operator_value.op_range.start.character)
+        self.assertEqual(12, alarm.tag_operator_value.op_range.end.character)
 
-        self.assertEqual(13, alarm.condition.rhs_range.start.character)
-        self.assertEqual(14, alarm.condition.rhs_range.end.character)
+        self.assertEqual(13, alarm.tag_operator_value.rhs_range.start.character)
+        self.assertEqual(14, alarm.tag_operator_value.rhs_range.end.character)
 
     def test_get_condition_ranges_alt_ws(self):
         parser = create_parser()
@@ -437,22 +447,22 @@ Alarm:  Foo   >=  0.4
         program = parser.parse_pcode(code)
         alarm = program.get_first_child(p.AlarmNode)
         assert alarm is not None
-        assert alarm.condition is not None
+        assert alarm.tag_operator_value is not None
 
-        self.assertEqual(8, alarm.condition.range.start.character)
-        self.assertEqual(21, alarm.condition.range.end.character)
+        self.assertEqual(8, alarm.tag_operator_value.range.start.character)
+        self.assertEqual(21, alarm.tag_operator_value.range.end.character)
 
         # " Foo "
-        self.assertEqual(8, alarm.condition.lhs_range.start.character)
-        self.assertEqual(12, alarm.condition.lhs_range.end.character)
+        self.assertEqual(8, alarm.tag_operator_value.lhs_range.start.character)
+        self.assertEqual(12, alarm.tag_operator_value.lhs_range.end.character)
 
         # ">="
-        self.assertEqual(14, alarm.condition.op_range.start.character)
-        self.assertEqual(16, alarm.condition.op_range.end.character)
+        self.assertEqual(14, alarm.tag_operator_value.op_range.start.character)
+        self.assertEqual(16, alarm.tag_operator_value.op_range.end.character)
 
         " 0.4"
-        self.assertEqual(17, alarm.condition.rhs_range.start.character)
-        self.assertEqual(21, alarm.condition.rhs_range.end.character)
+        self.assertEqual(17, alarm.tag_operator_value.rhs_range.start.character)
+        self.assertEqual(21, alarm.tag_operator_value.rhs_range.end.character)
 
     def test_engine_command(self):
         parser = create_parser()

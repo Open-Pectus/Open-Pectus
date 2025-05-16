@@ -387,8 +387,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
         self.analyze_condition(node)
         return super().visit_AlarmNode(node)
 
-    def analyze_condition(self, node: p.WatchNode | p.AlarmNode):
-        if node.condition is None:
+    def analyze_condition(self, node: p.NodeWithCondition):
+        if node.tag_operator_value is None:
             self.add_item(AnalyzerItem(
                 "ConditionMissing",
                 "Condition missing",
@@ -399,8 +399,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 end=len(node.instruction_part) + 1000  # Valid way to express the whole line
             ))
             return
-        assert node.condition is not None
-        condition = node.condition
+        assert node.tag_operator_value is not None
+        condition = node.tag_operator_value
 
         tag_name = condition.tag_name
         if tag_name is None or tag_name.strip() == '':
@@ -424,8 +424,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                         node,
                         AnalyzerItemType.ERROR,
                         f"Did you mean to type '{most_similar_tag}'?",
-                        start=node.condition.lhs_range.start.character,
-                        end=node.condition.lhs_range.end.character,
+                        start=node.tag_operator_value.lhs_range.start.character,
+                        end=node.tag_operator_value.lhs_range.end.character,
                         data=dict(type="fix-typo", fix=most_similar_tag)
                     ))
                     return
@@ -436,8 +436,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                     node,
                     AnalyzerItemType.ERROR,
                     f"The tag name '{tag_name}' is not valid",
-                    start=node.condition.lhs_range.start.character,
-                    end=node.condition.lhs_range.end.character,
+                    start=node.tag_operator_value.lhs_range.start.character,
+                    end=node.tag_operator_value.lhs_range.end.character,
                 ))
                 return
 
@@ -470,8 +470,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 node,
                 AnalyzerItemType.ERROR,
                 f"Unit '{condition.tag_unit}' was specified for a tag with no unit",
-                start=node.condition.rhs_range.start.character,
-                end=node.condition.rhs_range.end.character
+                start=node.tag_operator_value.rhs_range.start.character,
+                end=node.tag_operator_value.rhs_range.end.character
             ))
             return
 
@@ -487,8 +487,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 node,
                 AnalyzerItemType.ERROR,
                 "The tag requires that a value is provided.",
-                start=node.condition.rhs_range.start.character,
-                end=node.condition.rhs_range.end.character
+                start=node.tag_operator_value.rhs_range.start.character,
+                end=node.tag_operator_value.rhs_range.end.character
             ))
             return
 
@@ -500,8 +500,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 node,
                 AnalyzerItemType.ERROR,
                 "The tag requires that a unit is provided." + valid_units_str,
-                start=node.condition.rhs_range.start.character,
-                end=node.condition.rhs_range.end.character
+                start=node.tag_operator_value.rhs_range.start.character,
+                end=node.tag_operator_value.rhs_range.end.character
             ))
             return
 
@@ -516,8 +516,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                     node,
                     AnalyzerItemType.ERROR,
                     str(vex) + "." + valid_units_str,
-                    start=node.condition.rhs_range.start.character,
-                    end=node.condition.rhs_range.end.character
+                    start=node.tag_operator_value.rhs_range.start.character,
+                    end=node.tag_operator_value.rhs_range.end.character
                 ))
                 return
             if not comparable:
@@ -527,8 +527,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                     node,
                     AnalyzerItemType.ERROR,
                     f"The tag unit '{tag.unit}' is not compatible with the provided unit '{condition.tag_unit}'." + valid_units_str,
-                    start=node.condition.range.start.character,
-                    end=node.condition.range.end.character
+                    start=node.tag_operator_value.range.start.character,
+                    end=node.tag_operator_value.range.end.character
                 ))
                 return
 
