@@ -426,11 +426,13 @@ class BatchNode(Node):
     instruction_names = ["Batch"]
 
 
-class NodeWithCondition(NodeWithChildren):
+class NodeWithTagOperatorValue(Node):
+    operators: list[str]
+
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
-        self.condition_part: str
-        self.condition: Condition | None
+        self.tag_operator_value_part: str
+        self.tag_operator_value: TagOperatorValue | None
         self.activated: bool = False
 
     def apply_state(self, state: NodeState):
@@ -459,15 +461,23 @@ class NodeWithCondition(NodeWithChildren):
         return not self.cancelled and not self.forced and not self.activated
 
 
-class WatchNode(NodeWithCondition):
+class NodeWithCondition(NodeWithTagOperatorValue):
+    operators = ["<=", ">=", "==", "!=", "<", ">", "="]
+
+
+class NodeWithAssignment(NodeWithTagOperatorValue):
+    operators = ["="]
+
+
+class WatchNode(NodeWithChildren, NodeWithCondition):
     instruction_names = ["Watch"]
 
 
-class AlarmNode(NodeWithCondition):
+class AlarmNode(NodeWithChildren, NodeWithCondition):
     instruction_names = ["Alarm"]
 
 
-class Condition:
+class TagOperatorValue:
     def __init__(self):
         self.error = True
         self.lhs = ""
@@ -553,6 +563,11 @@ class EngineCommandNode(CommandBaseNode):
     instruction_names = ["Stop", "Pause", "Unpause", "Hold", "Unhold", "Restart",
                          "Info", "Warning", "Error"]
 
+class SimulateNode(NodeWithAssignment):
+    instruction_names = ["Simulate"]
+
+class SimulateOffNode(NodeWithAssignment):
+    instruction_names = ["Simulate off"]
 
 class UodCommandNode(CommandBaseNode):
     """ Represents a uod command, subclassing UodCommand. """
