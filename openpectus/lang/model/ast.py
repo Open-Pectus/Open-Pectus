@@ -555,7 +555,7 @@ class CommandBaseNode(Node):
 
 class InterpreterCommandNode(CommandBaseNode):
     """ Represents commands that are directly executable by the interpreter. """
-    instruction_names = ["Base", "Increment run counter", "Run counter", "Wait", "Simulate off"]
+    instruction_names = ["Base", "Increment run counter", "Run counter", "Wait"]
 
 
 class EngineCommandNode(CommandBaseNode):
