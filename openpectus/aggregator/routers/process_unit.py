@@ -33,8 +33,8 @@ def map_pu(engine_data: Mdl.EngineData) -> Dto.ProcessUnit:
         name=f"{engine_data.computer_name} ({engine_data.uod_name})",
         state=state,
         location=engine_data.location,
-        runtime_msec=engine_data.runtime.value if (
-                engine_data.runtime is not None and isinstance(engine_data.runtime.value, int)
+        runtime_msec=int(engine_data.runtime.value*1000) if (
+                engine_data.runtime is not None and engine_data.runtime.value is not None
         ) else 0,
         current_user_role=Dto.UserRole.ADMIN,
         uod_author_name=engine_data.uod_author_name,
