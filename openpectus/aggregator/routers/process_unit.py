@@ -137,6 +137,30 @@ def get_all_process_values(
     return process_values
 
 
+@router.get("/process_units/all_process_values", response_model_exclude_none=True)
+def get_all_process_values_of_all_available_engines(
+        user_roles: UserRolesValue,
+        response: Response,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)
+) -> list[Dto.ProcessUnitAllProcessValues]:
+    """
+    Returns all process value for all online process units (engines)
+    to wich the current user has access.
+    """
+    response.headers["Cache-Control"] = "no-store"
+    process_units: list[Dto.ProcessUnitAllProcessValues] = []
+    all_engine_data = agg.get_all_registered_engine_data()
+    for engine_data in all_engine_data:
+        if not has_access(engine_data, user_roles):
+            continue
+        process_unit = map_pu(engine_data)
+        process_units.append(Dto.ProcessUnitAllProcessValues(
+            process_unit=process_unit,
+            process_values=[Dto.ProcessValue.create(tag_value) for tag_value in engine_data.tags_info.map.values()],
+        ))
+    return process_units
+
+
 @router.post("/process_unit/{unit_id}/execute_command", response_model_exclude_none=True)
 async def execute_command(
         user_name: UserNameValue,
