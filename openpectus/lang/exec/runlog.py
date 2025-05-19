@@ -90,6 +90,8 @@ class RuntimeInfo:
             return []
         if r.name == "Stop":
             return []
+        if not r.node.started:
+            return []
 
         items: list[RunLogItem] = []
 
