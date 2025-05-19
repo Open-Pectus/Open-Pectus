@@ -90,8 +90,6 @@ class RuntimeInfo:
             return []
         if r.name == "Stop":
             return []
-        if not r.node.started:
-            return []
 
         items: list[RunLogItem] = []
 
@@ -152,6 +150,9 @@ class RuntimeInfo:
                                  f"record state command_exec_id {state.command_exec_id}")
                     item.id = str(state.command_exec_id)
                     command = state.command
+                elif state.state_name == RuntimeRecordStateEnum.AwaitingThreshold:
+                    assert item is not None
+                    item.state = RunLogItemState.AwaitingThreshold
 
                 if not is_conclusive_state and item is not None:
                     item.cancellable = r.node.cancellable
@@ -171,7 +172,7 @@ class RuntimeInfo:
                     item.forcible = False
 
                 if not has_more_states or is_conclusive_state:
-                    if item is not None:
+                    if item is not None and item.state not in [RunLogItemState.Unknown, RunLogItemState.AwaitingThreshold]:
                         items.append(item)
                         item = None
                         command = None
@@ -586,7 +587,7 @@ class RunLogItem:
         self.name: str = ""
         self.start: float = 0
         self.end: float | None = None
-        self.state: RunLogItemState = RunLogItemState.Waiting
+        self.state: RunLogItemState = RunLogItemState.Unknown
         self.progress: float | None = None
         self.start_values: TagValueCollection = TagValueCollection.empty()
         self.end_values: TagValueCollection = TagValueCollection.empty()
@@ -601,8 +602,11 @@ class RunLogItem:
 
 class RunLogItemState(StrEnum):
     """ Defines the states that commands in the run log can take """
-    Waiting = auto()
-    """ Waiting for threshold or condition """
+
+    Unknown = auto()
+    """ State unknown. Items in this state are not rendered. """
+    AwaitingThreshold = auto()
+    """ Waiting for threshold. Items in this state are not rendered """
     Started = auto()
     """ Command has started """
     Cancelled = auto()
