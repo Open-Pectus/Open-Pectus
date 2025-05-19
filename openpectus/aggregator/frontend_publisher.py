@@ -34,7 +34,7 @@ class FrontendPublisher:
         self.router = APIRouter(tags=["frontend_pubsub"], prefix='/api')
         self.router.add_api_route('/expose-pubsub-topics', endpoint=self.expose_pubsub_topics, methods=['POST'])
         self.router.add_api_route('/trigger-publish-msw', endpoint=self.trigger_publish_msw, methods=['POST'])
-        self.on_disconnect_callbacks: list[Callable[[str], Awaitable]] = []
+        self.on_disconnect_callbacks: list[Callable[[str], Awaitable[None]]] = []
         self.pubsub_endpoint = PubSubEndpoint(methods_class=FrontendPublisher.MethodsWithUnsubscribe, on_disconnect=[self.on_disconnect]) # type: ignore
         self.pubsub_endpoint.register_route(self.router, path="/frontend-pubsub")
 
@@ -75,5 +75,5 @@ class FrontendPublisher:
     async def on_disconnect(self, rpc_channel: RpcChannel):
         await asyncio.gather(*(callback(rpc_channel.id) for callback in self.on_disconnect_callbacks))
 
-    def register_on_disconnect(self, on_disconnect: Callable[[str], Awaitable]):
+    def register_on_disconnect(self, on_disconnect: Callable[[str], Awaitable[None]]):
         self.on_disconnect_callbacks.append(on_disconnect)

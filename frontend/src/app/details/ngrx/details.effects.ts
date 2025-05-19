@@ -162,29 +162,6 @@ export class DetailsEffects {
     })
   ), {dispatch: false});
 
-  // registerAsActiveUser = createEffect(() => this.actions.pipe(
-  //   ofType(DetailsActions.unitDetailsInitialized),
-  //   map(({unitId}) => {
-  //     this.processUnitService.registerActiveUser({unitId}).subscribe()
-  //     // unregister next time we route to another or no process unit
-  //     return this.store.select(DetailsSelectors.processUnitId).pipe(skip(1),
-  //       tap((newUnitId) => {
-  //         this.processUnitService.unregisterActiveUser({unitId}).subscribe()
-  //         if(newUnitId !== undefined) this.processUnitService.registerActiveUser({unitId: newUnitId}).subscribe()
-  //       }),
-  //       takeUntil()
-  //     )
-  //   })
-  // ), {dispatch: false})
-
-  // unregisterAsActiveUser = createEffect(() => this.actions.pipe(
-  //   ofType(DetailsActions.unitDetailsDestroyed),
-  //   concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
-  //   map(([_, unitId]) => {
-  //     return this.processUnitService.unregisterActiveUser({unitId})
-  //   })
-  // ), {dispatch: false})
-
   constructor(private actions: Actions,
               private store: Store,
               private processUnitService: ProcessUnitService,
