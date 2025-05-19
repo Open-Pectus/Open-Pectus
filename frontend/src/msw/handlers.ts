@@ -5,6 +5,7 @@ import { delay, http, HttpResponse, PathParams } from 'msw';
 import {
   AggregatedErrorLog,
   AuthConfig,
+  BuildInfo,
   CommandExample,
   ControlState,
   ExecutableCommand,
@@ -394,10 +395,17 @@ const runLogLines: RunLogLine[] = [
 export const handlers = [
   http.get('/auth/config', () => {
     return HttpResponse.json<AuthConfig>({
-      use_auth: false,
+      use_auth: true,
       client_id: 'fc7355bb-a6be-493f-90a1-cf57063f7948',
       authority_url: 'https://login.microsoftonline.com/fdfed7bd-9f6a-44a1-b694-6e39c468c150/v2.0',
     });
+  }),
+
+  http.get('/api/build_info', () => {
+    return HttpResponse.json<BuildInfo>({
+      build_number: 'MOCKED',
+      git_sha: 'MOCKED'
+    })
   }),
 
   http.get('/api/process_units', () => {

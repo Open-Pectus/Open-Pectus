@@ -383,13 +383,12 @@ class MethodAndState(Dto):
 
 
 class ActiveUser(Dto):
+    id: str
     name: str
-    photo_base64: str | SkipJsonSchema[None] = None
-    subscriber_id: str
 
     @staticmethod
     def from_model(active_user: Mdl.ActiveUser) -> ActiveUser:
-        return ActiveUser(name=active_user.name, photo_base64=active_user.photo_base64, subscriber_id=active_user.subscriber_id)
+        return ActiveUser(id=active_user.id, name=active_user.name)
 
 
 class ActiveUsers(Dto):

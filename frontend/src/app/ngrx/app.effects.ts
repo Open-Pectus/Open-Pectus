@@ -1,11 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
+import { concatLatestFrom } from '@ngrx/operators';
+import { Store } from '@ngrx/store';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
 import { filter, map, mergeMap, of, switchMap, take } from 'rxjs';
 import { ProcessUnitService, VersionService } from '../api';
 import { PubSubService } from '../shared/pub-sub.service';
 import { AppActions } from './app.actions';
+import { AppSelectors } from './app.selectors';
 
 // noinspection JSUnusedGlobalSymbols
 @Injectable()
@@ -21,6 +24,15 @@ export class AppEffects {
       map(userData => AppActions.userDataLoaded(userData)),
     )),
   ));
+
+  storeUserId = createEffect(() => this.actions.pipe(
+    ofType(AppActions.finishedAuthentication),
+    switchMap(isAuthenticated => {
+      const userIdFromToken = this.oidcSecurityService.getPayloadFromIdToken().pipe<string>(map(payload => payload.sid));
+      const userId = isAuthenticated ? userIdFromToken : of(crypto.randomUUID());
+      return userId.pipe(map(userId => AppActions.userIdLoaded({userId})))
+    })
+  ))
 
   checkAuthenticationIfEnabled = createEffect(() => this.actions.pipe(
     ofType(AppActions.authEnablementFetched),
@@ -80,7 +92,17 @@ export class AppEffects {
     }),
   ));
 
+  subscribeDeadManSwitch = createEffect(() => this.actions.pipe(
+    ofType(AppActions.userIdLoaded, AppActions.websocketReconnected),
+    concatLatestFrom(() => this.store.select(AppSelectors.userId)),
+    map(([_, userId]) => {
+      if(userId === undefined) return;
+      this.pubSubService.subscribeDeadManSwitch(userId).subscribe();
+    }),
+  ), {dispatch: false});
+
   constructor(private actions: Actions,
+              private store: Store,
               private processUnitService: ProcessUnitService,
               private pubSubService: PubSubService,
               private versionService: VersionService,

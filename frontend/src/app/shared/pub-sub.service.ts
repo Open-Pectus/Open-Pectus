@@ -16,6 +16,7 @@ export class PubSubService {
     method_state: 'method_state',
     run_log: 'run_log',
     active_users: 'active_users',
+    dead_man_switch: 'dead_man_switch',
   };
   private client = new PubSubRxjsClient({
     uri: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/frontend-pubsub`,
@@ -52,5 +53,9 @@ export class PubSubService {
 
   subscribeActiveUsers(unitId: string) {
     return this.client.forTopic(`${unitId}/${this.pubSubTopics.active_users}`);
+  }
+
+  subscribeDeadManSwitch(userId: string) {
+    return this.client.forTopic(`${this.pubSubTopics.dead_man_switch}/${userId}`)
   }
 }

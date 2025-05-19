@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
-import { catchError, delay, filter, map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
+import { catchError, delay, EMPTY, filter, map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
 import { ProcessUnitService, RecentRunsService } from '../../api';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { PubSubService } from '../../shared/pub-sub.service';
@@ -140,6 +140,50 @@ export class DetailsEffects {
       );
     }),
   ), {dispatch: false});
+
+  registerAsActiveUser = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.unitDetailsInitialized),
+    mergeMap(({unitId}) => this.processUnitService.registerActiveUser({unitId}))
+  ), {dispatch: false});
+
+  unregisterAsActiveUser = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.processUnitNavigatedFrom),
+    mergeMap(({oldUnitId}) => {
+      if(oldUnitId === undefined) return EMPTY;
+      return this.processUnitService.unregisterActiveUser({unitId: oldUnitId})
+    })
+  ), {dispatch: false});
+
+  reregisterAsActiveUser = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.processUnitNavigatedFrom),
+    mergeMap(({newUnitId}) => {
+      if(newUnitId === undefined) return EMPTY;
+      return this.processUnitService.registerActiveUser({unitId: newUnitId})
+    })
+  ), {dispatch: false});
+
+  // registerAsActiveUser = createEffect(() => this.actions.pipe(
+  //   ofType(DetailsActions.unitDetailsInitialized),
+  //   map(({unitId}) => {
+  //     this.processUnitService.registerActiveUser({unitId}).subscribe()
+  //     // unregister next time we route to another or no process unit
+  //     return this.store.select(DetailsSelectors.processUnitId).pipe(skip(1),
+  //       tap((newUnitId) => {
+  //         this.processUnitService.unregisterActiveUser({unitId}).subscribe()
+  //         if(newUnitId !== undefined) this.processUnitService.registerActiveUser({unitId: newUnitId}).subscribe()
+  //       }),
+  //       takeUntil()
+  //     )
+  //   })
+  // ), {dispatch: false})
+
+  // unregisterAsActiveUser = createEffect(() => this.actions.pipe(
+  //   ofType(DetailsActions.unitDetailsDestroyed),
+  //   concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
+  //   map(([_, unitId]) => {
+  //     return this.processUnitService.unregisterActiveUser({unitId})
+  //   })
+  // ), {dispatch: false})
 
   constructor(private actions: Actions,
               private store: Store,

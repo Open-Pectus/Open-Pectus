@@ -3,13 +3,14 @@ import copy
 import logging
 from datetime import datetime, timezone
 
+from fastapi_websocket_rpc import RpcChannel
 import openpectus.aggregator.models as Mdl
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRepository, RecentEngineRepository
-from openpectus.aggregator.frontend_publisher import FrontendPublisher
+from openpectus.aggregator.frontend_publisher import FrontendPublisher, PubSubTopic
 from openpectus.aggregator.models import EngineData
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.protocol.models import SystemTagName, MethodStatusEnum
@@ -315,8 +316,9 @@ class FromFrontend:
         self._engine_data_map = engine_data_map
         self.dispatcher = dispatcher
         self.publisher = publisher
+        self.dead_man_switch_user_ids: dict[str, str] = dict()
+        self.publisher.register_on_disconnect(self.on_ws_disconnect)
         self.publisher.pubsub_endpoint.methods.event_notifier.register_subscribe_event(self.user_subscribed_pubsub)  # type: ignore
-        self.publisher.pubsub_endpoint.methods.event_notifier.register_unsubscribe_event(self.user_unsubscribed_pubsub)  # type: ignore
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(engine_data_map={self._engine_data_map}, dispatcher={self.dispatcher})'
@@ -384,45 +386,40 @@ class FromFrontend:
         engine_data.contributors.add(user_name)
         return True
 
+    def get_dead_man_switch_user_ids(self, topics: list[str]):
+        return (topic.split("/")[1] for topic in topics if topic.startswith(PubSubTopic.DEAD_MAN_SWITCH))
+
     async def user_subscribed_pubsub(self, subscriber_id: str, topics: list[str]):
-        # Parse engine_id from topic.
-        for topic in [topic for topic in topics if topic.count("/") == 1]:
-            engine_id = topic.split("/")[0]
-            engine_data = self._engine_data_map.get(engine_id)
-            if engine_data is None:
-                logger.warning(f"Cannot prepare registration of active user with subscriber_id='{subscriber_id}' and topics={topics} because the associated engine could not be identified.")
-            if engine_data and not subscriber_id in engine_data.active_users:
-                engine_data.active_users[subscriber_id] = None
-        return True
+        for user_id in self.get_dead_man_switch_user_ids(topics):
+            self.dead_man_switch_user_ids[subscriber_id] = user_id
 
-    async def user_unsubscribed_pubsub(self, subscriber_id, topics: list[str]):
-        # Parse engine_id from topic.
-        for topic in [topic for topic in topics if topic.count("/") == 1]:
-            engine_id = topic.split("/")[0]
-            engine_data = self._engine_data_map.get(engine_id)
-            if engine_data is None:
-                logger.warning(f"Cannot unregister active user with subscriber_id='{subscriber_id}' and topics={topics} because the associated engine could not be identified.")
-            if engine_data and subscriber_id in engine_data.active_users:
-                del engine_data.active_users[subscriber_id]
-            asyncio.create_task(self.publisher.publish_active_users_changed(engine_id))
-        return True
+    async def on_ws_disconnect(self, subscriber_id: str):
+        user_id = self.dead_man_switch_user_ids[subscriber_id]
+        for engine_data in self._engine_data_map.values():
+            engine_data.active_users.pop(user_id, None)
 
-    async def register_active_user(self, engine_id, subscriber_id: str, user_name: str, photo_base64: str | None):
+    async def register_active_user(self, engine_id: str, user_id: str, user_name: str):
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is None:
             logger.warning(f"Cannot register active user, engine {engine_id} not found")
             return False
-        if subscriber_id not in engine_data.active_users:
-            logger.warning(f"Cannot register active user. No Websocket channel with subscriber_id='{subscriber_id}'.")
-            return False
-        engine_data.active_users[subscriber_id] = Mdl.ActiveUser(
+        engine_data.active_users[user_id] = (Mdl.ActiveUser(
+            id=user_id,
             name=user_name,
-            photo_base64=photo_base64,
-            subscriber_id=subscriber_id
-        )
+        ))
         asyncio.create_task(self.publisher.publish_active_users_changed(engine_id))
         return True
 
+    async def unregister_active_user(self, engine_id: str, user_id: str):
+        engine_data = self._engine_data_map.get(engine_id)
+        if engine_data is None:
+            logger.warning(f"Cannot unregister active user, engine {engine_id} not found")
+            return False
+        if engine_data.active_users.pop(user_id) is None:
+            logger.warning(f"Couldn't unregister active user, user with id {user_id} was not found")
+            return False
+        asyncio.create_task(self.publisher.publish_active_users_changed(engine_id))
+        return True
 
 class Aggregator:
     def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, secret: str = "") -> None:
