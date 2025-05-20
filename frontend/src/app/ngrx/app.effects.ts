@@ -27,12 +27,12 @@ export class AppEffects {
 
   storeUserId = createEffect(() => this.actions.pipe(
     ofType(AppActions.finishedAuthentication),
-    switchMap(isAuthenticated => {
+    switchMap(({isAuthenticated}) => {
       const userIdFromToken = this.oidcSecurityService.getPayloadFromIdToken().pipe<string>(map(payload => payload.oid));
       const userId = isAuthenticated ? userIdFromToken : of(crypto.randomUUID());
-      return userId.pipe(map(userId => AppActions.userIdLoaded({userId})))
-    })
-  ))
+      return userId.pipe(map(userId => AppActions.userIdLoaded({userId})));
+    }),
+  ));
 
   checkAuthenticationIfEnabled = createEffect(() => this.actions.pipe(
     ofType(AppActions.authEnablementFetched),

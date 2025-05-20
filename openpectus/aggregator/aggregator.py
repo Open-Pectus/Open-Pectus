@@ -415,7 +415,7 @@ class FromFrontend:
         if engine_data is None:
             logger.warning(f"Cannot unregister active user, engine {engine_id} not found")
             return False
-        if engine_data.active_users.pop(user_id) is None:
+        if engine_data.active_users.pop(user_id, None) is None:
             logger.warning(f"Couldn't unregister active user, user with id {user_id} was not found")
             return False
         asyncio.create_task(self.publisher.publish_active_users_changed(engine_id))

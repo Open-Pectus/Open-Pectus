@@ -423,6 +423,7 @@ export type GetActiveUsersResponse = (Array<ActiveUser>);
 
 export type RegisterActiveUserData = {
     unitId: string;
+    userId?: string;
     xIdentity?: string;
 };
 
@@ -430,6 +431,7 @@ export type RegisterActiveUserResponse = (unknown);
 
 export type UnregisterActiveUserData = {
     unitId: string;
+    userId?: string;
     xIdentity?: string;
 };
 

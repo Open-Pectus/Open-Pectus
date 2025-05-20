@@ -3,6 +3,7 @@
 import { format, getSeconds, sub } from 'date-fns';
 import { delay, http, HttpResponse, PathParams } from 'msw';
 import {
+  ActiveUser,
   AggregatedErrorLog,
   AuthConfig,
   BuildInfo,
@@ -404,8 +405,8 @@ export const handlers = [
   http.get('/api/build_info', () => {
     return HttpResponse.json<BuildInfo>({
       build_number: 'MOCKED',
-      git_sha: 'MOCKED'
-    })
+      git_sha: 'MOCKED',
+    });
   }),
 
   http.get('/api/process_units', () => {
@@ -1156,5 +1157,18 @@ Some;Csv;Data
       line.end = new Date().toISOString();
     }
     return new HttpResponse();
+  }),
+
+  http.post('/api/process_unit/:unitId/register_active_user', () => {
+    return new HttpResponse();
+  }),
+
+  http.post('/api/process_unit/:unitId/unregister_active_user', () => {
+    return new HttpResponse();
+  }),
+
+  http.get('/api/process_unit/:unitId/other_active_users', () => {
+    return HttpResponse.json<ActiveUser[]>([
+    ]);
   }),
 ];

@@ -19,5 +19,5 @@ export class DetailsSelectors {
       return processUnits.find(processUnit => processUnit.id.toString() === unitId);
     });
   static missingRoles = createSelector(this.selectFeature, state => state.missingRoles);
-  static activeUsers = createSelector(this.selectFeature, state => state.activeUsers);
+  static otherActiveUsers = createSelector(this.selectFeature, state => state.otherActiveUsers);
 }

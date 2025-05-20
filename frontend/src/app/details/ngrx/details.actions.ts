@@ -23,7 +23,7 @@ export class DetailsActions {
   static recentRunDownloadCsvButtonClicked = createAction(source + 'Recent Run Download Csv Button Clicked', props<{ recentRunId: string }>());
   static controlStateUpdatedOnBackend = createAction(source + 'Control State Updated On Backend', props<{ unitId: string }>());
   static toggleAllProcessValues = createAction(source + 'All Process Values Toggled', props<{ allProcessValues: boolean }>());
-  static processUnitNavigatedFrom = createAction(source + 'Process Unit Navigated From', props<{oldUnitId?: string, newUnitId?: string}>())
-  static activeUsersFetched = createAction(source + 'Active Users Fetched', props<{activeUsers: ActiveUser[]}>())
-  static activeUsersUpdatedOnBackend = createAction(source + 'Active Users Updated On Backend', props<{unitId: string}>())
+  static processUnitNavigatedFrom = createAction(source + 'Process Unit Navigated From', props<{ oldUnitId?: string, newUnitId?: string }>());
+  static otherActiveUsersFetched = createAction(source + 'Other Active Users Fetched', props<{ otherActiveUsers: ActiveUser[] }>());
+  static activeUsersUpdatedOnBackend = createAction(source + 'Active Users Updated On Backend', props<{ unitId: string }>());
 }

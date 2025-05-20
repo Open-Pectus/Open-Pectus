@@ -13,7 +13,7 @@ export interface DetailsState {
   shouldPoll: boolean;
   errorLog: AggregatedErrorLog;
   missingRoles?: string[];
-  activeUsers: ActiveUser[];
+  otherActiveUsers: ActiveUser[];
 }
 
 const initialState: DetailsState = {
@@ -27,7 +27,7 @@ const initialState: DetailsState = {
     is_holding: false,
     is_paused: false,
   },
-  activeUsers: [],
+  otherActiveUsers: [],
 };
 
 export interface MissingRoleApiError extends ApiError {
@@ -74,8 +74,8 @@ const reducer = createReducer(initialState,
   on(DetailsActions.toggleAllProcessValues, (state, {allProcessValues}) => produce(state, draft => {
     draft.allProcessValues = allProcessValues;
   })),
-  on(DetailsActions.activeUsersFetched, (state, {activeUsers}) => produce(state, draft => {
-    draft.activeUsers = activeUsers;
+  on(DetailsActions.otherActiveUsersFetched, (state, {otherActiveUsers}) => produce(state, draft => {
+    draft.otherActiveUsers = otherActiveUsers;
   })),
 );
 

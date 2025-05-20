@@ -4,6 +4,7 @@ import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { catchError, delay, EMPTY, filter, map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
 import { ProcessUnitService, RecentRunsService } from '../../api';
+import { AppSelectors } from '../../ngrx/app.selectors';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { PubSubService } from '../../shared/pub-sub.service';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
@@ -143,30 +144,46 @@ export class DetailsEffects {
 
   registerAsActiveUser = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.unitDetailsInitialized),
-    mergeMap(({unitId}) => this.processUnitService.registerActiveUser({unitId})),
+    concatLatestFrom(() => [
+      this.store.select(AppSelectors.authIsEnabled),
+      this.store.select(AppSelectors.userId),
+    ]),
+    mergeMap(([{unitId}, authIsEnabled, userId]) => {
+      return this.processUnitService.registerActiveUser({unitId, userId: authIsEnabled ? undefined : userId});
+    }),
   ), {dispatch: false});
 
   unregisterAsActiveUser = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processUnitNavigatedFrom),
-    mergeMap(({oldUnitId}) => {
+    concatLatestFrom(() => [
+      this.store.select(AppSelectors.authIsEnabled),
+      this.store.select(AppSelectors.userId),
+    ]),
+    mergeMap(([{oldUnitId}, authIsEnabled, userId]) => {
       if(oldUnitId === undefined) return EMPTY;
-      return this.processUnitService.unregisterActiveUser({unitId: oldUnitId});
+      return this.processUnitService.unregisterActiveUser({unitId: oldUnitId, userId: authIsEnabled ? undefined : userId});
     }),
   ), {dispatch: false});
 
   reregisterAsActiveUser = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processUnitNavigatedFrom),
-    mergeMap(({newUnitId}) => {
+    concatLatestFrom(() => [
+      this.store.select(AppSelectors.authIsEnabled),
+      this.store.select(AppSelectors.userId),
+    ]),
+    mergeMap(([{newUnitId}, authIsEnabled, userId]) => {
       if(newUnitId === undefined) return EMPTY;
-      return this.processUnitService.registerActiveUser({unitId: newUnitId});
+      return this.processUnitService.registerActiveUser({unitId: newUnitId, userId: authIsEnabled ? undefined : userId});
     }),
   ), {dispatch: false});
 
-  fetchActiveUsers = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.activeUsersUpdatedOnBackend),
-    switchMap(({unitId}) => {
+  fetchOtherActiveUsers = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.unitDetailsInitialized, DetailsActions.activeUsersUpdatedOnBackend),
+    concatLatestFrom(() => this.store.select(AppSelectors.userId)),
+    switchMap(([{unitId}, userId]) => {
       return this.processUnitService.getActiveUsers({unitId}).pipe(
-        map(activeUsers => DetailsActions.activeUsersFetched({activeUsers})),
+        map(activeUsers => activeUsers.filter(activeUser => activeUser.id !== userId)),
+        map(otherActiveUsers => DetailsActions.otherActiveUsersFetched({otherActiveUsers})),
       );
     }),
   ));

@@ -1047,6 +1047,15 @@
             }
           },
           {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
             "name": "x-identity",
             "in": "header",
             "required": false,
@@ -1094,6 +1103,15 @@
             "schema": {
               "type": "string",
               "title": "Unit Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
             }
           },
           {

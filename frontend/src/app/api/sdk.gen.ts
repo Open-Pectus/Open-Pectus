@@ -597,6 +597,7 @@ export class ProcessUnitService {
      * Register Active User
      * @param data The data for the request.
      * @param data.unitId
+     * @param data.userId
      * @param data.xIdentity
      * @returns unknown Successful Response
      * @throws ApiError
@@ -611,6 +612,9 @@ export class ProcessUnitService {
             headers: {
                 'x-identity': data.xIdentity
             },
+            query: {
+                user_id: data.userId
+            },
             errors: {
                 422: 'Validation Error'
             }
@@ -621,6 +625,7 @@ export class ProcessUnitService {
      * Unregister Active User
      * @param data The data for the request.
      * @param data.unitId
+     * @param data.userId
      * @param data.xIdentity
      * @returns unknown Successful Response
      * @throws ApiError
@@ -634,6 +639,9 @@ export class ProcessUnitService {
             },
             headers: {
                 'x-identity': data.xIdentity
+            },
+            query: {
+                user_id: data.userId
             },
             errors: {
                 422: 'Validation Error'
