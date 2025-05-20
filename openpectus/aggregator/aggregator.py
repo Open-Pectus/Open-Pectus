@@ -396,7 +396,9 @@ class FromFrontend:
     async def on_ws_disconnect(self, subscriber_id: str):
         user_id = self.dead_man_switch_user_ids[subscriber_id]
         for engine_data in self._engine_data_map.values():
-            engine_data.active_users.pop(user_id, None)
+            popped_user_id = engine_data.active_users.pop(user_id, None)
+            if(popped_user_id != None):
+                asyncio.create_task(self.publisher.publish_active_users_changed(engine_data.engine_id))
 
     async def register_active_user(self, engine_id: str, user_id: str, user_name: str):
         engine_data = self._engine_data_map.get(engine_id)
