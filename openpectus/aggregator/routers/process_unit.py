@@ -9,7 +9,8 @@ from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.command_examples import examples
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import PlotLogRepository, RecentEngineRepository
-from openpectus.aggregator.routers.auth import has_access, UserRolesValue, UserNameValue
+from openpectus.aggregator.routers.auth import UserIdValue, has_access, UserRolesValue, UserNameValue
+from pydantic.json_schema import SkipJsonSchema
 from starlette.status import HTTP_403_FORBIDDEN, HTTP_404_NOT_FOUND
 
 logger = logging.getLogger(__name__)
@@ -316,3 +317,56 @@ async def cancel_run_log_line(
 @router.get('/process_units/system_state_enum', response_model_exclude_none=True)
 def expose_system_state_enum() -> Dto.SystemStateEnum:
     return Mdl.SystemStateEnum.Running
+
+
+@router.get('/process_unit/{unit_id}/active_users', response_model_exclude_none=True)
+async def get_active_users(
+        user_roles: UserRolesValue,
+        unit_id: str,
+        response: Response,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> list[Dto.ActiveUser]:
+    response.headers["Cache-Control"] = "no-store"
+    engine_data = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
+    active_users = engine_data.active_users.values()
+    return list(map(Dto.ActiveUser.from_model, active_users))
+
+
+@router.post('/process_unit/{unit_id}/register_active_user', response_model_exclude_none=True)
+async def register_active_user(
+        user_id_from_token: UserIdValue,
+        user_name: UserNameValue,
+        user_roles: UserRolesValue,
+        unit_id: str,
+        user_id: str | SkipJsonSchema[None] = None,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)):
+    _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
+    resolved_user_id = user_id_from_token or user_id
+    if(resolved_user_id == None):
+        return Dto.ServerErrorResponse(message="User registration failed due to missing user_id")
+    action_result = await agg.from_frontend.register_active_user(
+        engine_id=unit_id,
+        user_id=resolved_user_id,
+        user_name=user_name,
+    )
+    if not action_result:
+        return Dto.ServerErrorResponse(message="User registration failed")
+    return Dto.ServerSuccessResponse(message="User successfully registered")
+
+@router.post('/process_unit/{unit_id}/unregister_active_user', response_model_exclude_none=True)
+async def unregister_active_user(
+        user_id_from_token: UserIdValue,
+        user_roles: UserRolesValue,
+        unit_id: str,
+        user_id: str | SkipJsonSchema[None] = None,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)):
+    _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
+    resolved_user_id = user_id_from_token or user_id
+    if(resolved_user_id == None):
+        return Dto.ServerErrorResponse(message="User unregistration failed due to missing user_id")
+    action_result = await agg.from_frontend.unregister_active_user(
+        engine_id=unit_id,
+        user_id=resolved_user_id,
+    )
+    if not action_result:
+        return Dto.ServerErrorResponse(message="User unregistration failed")
+    return Dto.ServerSuccessResponse(message="User successfully unregistered")
