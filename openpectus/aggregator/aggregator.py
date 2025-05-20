@@ -395,6 +395,8 @@ class FromFrontend:
 
     async def on_ws_disconnect(self, subscriber_id: str):
         user_id = self.dead_man_switch_user_ids[subscriber_id]
+        user_has_other_dead_man_switch = len([other_user_id for other_user_id in self.dead_man_switch_user_ids.values() if other_user_id == user_id]) > 1
+        if(user_has_other_dead_man_switch): return
         for engine_data in self._engine_data_map.values():
             popped_user_id = engine_data.active_users.pop(user_id, None)
             if(popped_user_id != None):
