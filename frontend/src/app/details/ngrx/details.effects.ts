@@ -143,24 +143,43 @@ export class DetailsEffects {
 
   registerAsActiveUser = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.unitDetailsInitialized),
-    mergeMap(({unitId}) => this.processUnitService.registerActiveUser({unitId}))
+    mergeMap(({unitId}) => this.processUnitService.registerActiveUser({unitId})),
   ), {dispatch: false});
 
   unregisterAsActiveUser = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processUnitNavigatedFrom),
     mergeMap(({oldUnitId}) => {
       if(oldUnitId === undefined) return EMPTY;
-      return this.processUnitService.unregisterActiveUser({unitId: oldUnitId})
-    })
+      return this.processUnitService.unregisterActiveUser({unitId: oldUnitId});
+    }),
   ), {dispatch: false});
 
   reregisterAsActiveUser = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processUnitNavigatedFrom),
     mergeMap(({newUnitId}) => {
       if(newUnitId === undefined) return EMPTY;
-      return this.processUnitService.registerActiveUser({unitId: newUnitId})
-    })
+      return this.processUnitService.registerActiveUser({unitId: newUnitId});
+    }),
   ), {dispatch: false});
+
+  fetchActiveUsers = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.activeUsersUpdatedOnBackend),
+    switchMap(({unitId}) => {
+      return this.processUnitService.getActiveUsers({unitId}).pipe(
+        map(activeUsers => DetailsActions.activeUsersFetched({activeUsers})),
+      );
+    }),
+  ));
+
+  subscribeForActiveUsersUpdatesFromBackend = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.unitDetailsInitialized),
+    mergeMap(({unitId}) => {
+      return this.pubSubService.subscribeActiveUsers(unitId).pipe(
+        takeUntil(this.actions.pipe(ofType(DetailsActions.unitDetailsDestroyed))),
+        map(_ => DetailsActions.activeUsersUpdatedOnBackend({unitId})),
+      );
+    }),
+  ));
 
   constructor(private actions: Actions,
               private store: Store,

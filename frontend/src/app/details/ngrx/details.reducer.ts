@@ -1,6 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
-import { AggregatedErrorLog, ApiError, CommandExample, ControlState, ProcessDiagram, ProcessValue, RecentRun } from '../../api';
+import { ActiveUser, AggregatedErrorLog, ApiError, CommandExample, ControlState, ProcessDiagram, ProcessValue, RecentRun } from '../../api';
 import { DetailsActions } from './details.actions';
 
 export interface DetailsState {
@@ -13,6 +13,7 @@ export interface DetailsState {
   shouldPoll: boolean;
   errorLog: AggregatedErrorLog;
   missingRoles?: string[];
+  activeUsers: ActiveUser[];
 }
 
 const initialState: DetailsState = {
@@ -26,6 +27,7 @@ const initialState: DetailsState = {
     is_holding: false,
     is_paused: false,
   },
+  activeUsers: [],
 };
 
 export interface MissingRoleApiError extends ApiError {
@@ -71,6 +73,9 @@ const reducer = createReducer(initialState,
   })),
   on(DetailsActions.toggleAllProcessValues, (state, {allProcessValues}) => produce(state, draft => {
     draft.allProcessValues = allProcessValues;
+  })),
+  on(DetailsActions.activeUsersFetched, (state, {activeUsers}) => produce(state, draft => {
+    draft.activeUsers = activeUsers;
   })),
 );
 

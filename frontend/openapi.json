@@ -1006,7 +1006,13 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ActiveUser"
+                  },
+                  "title": "Response Get Active Users"
+                }
               }
             }
           },
@@ -1755,6 +1761,24 @@
   },
   "components": {
     "schemas": {
+      "ActiveUser": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ActiveUser"
+      },
       "AggregatedErrorLog": {
         "properties": {
           "entries": {

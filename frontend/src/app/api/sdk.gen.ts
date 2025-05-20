@@ -574,7 +574,7 @@ export class ProcessUnitService {
      * @param data The data for the request.
      * @param data.unitId
      * @param data.xIdentity
-     * @returns unknown Successful Response
+     * @returns ActiveUser Successful Response
      * @throws ApiError
      */
     public getActiveUsers(data: GetActiveUsersData): Observable<GetActiveUsersResponse> {

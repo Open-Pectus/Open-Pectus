@@ -324,7 +324,7 @@ async def get_active_users(
         user_roles: UserRolesValue,
         unit_id: str,
         response: Response,
-        agg: Aggregator = Depends(agg_deps.get_aggregator)):
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> list[Dto.ActiveUser]:
     response.headers["Cache-Control"] = "no-store"
     engine_data = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
     # Filter out duplicates who are not anonymous and sort by name.
@@ -334,9 +334,7 @@ async def get_active_users(
         if active_user and (active_user.name == "Anon" or active_user not in active_users_filtered):
             active_users_filtered.append(active_user)
     active_users_filtered.sort(key=lambda active_user: active_user.name)
-    return Dto.ActiveUsers(
-            active_users=list(map(Dto.ActiveUser.from_model, active_users_filtered))
-        )
+    return list(map(Dto.ActiveUser.from_model, active_users_filtered))
 
 
 @router.post('/process_unit/{unit_id}/register_active_user', response_model_exclude_none=True)

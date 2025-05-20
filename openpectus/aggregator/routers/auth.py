@@ -109,7 +109,7 @@ def user_id(x_identity: Annotated[str, Header()] = "") -> str | None:
         return None
 
     token = decode_token_or_fail(x_identity)
-    subject_id = token.get("sid", None)
+    subject_id = token.get("oid", None)
     return subject_id
 
 
