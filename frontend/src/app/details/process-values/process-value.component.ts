@@ -13,20 +13,22 @@ export interface PvAndPosition {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [NgIf, ProcessValuePipe],
   template: `
-    <div class="flex flex-col bg-sky-200 p-0.5 items-center gap-1 rounded select-none border border-sky-300"
-         [class.cursor-pointer]="hasCommands(processValue())" (click)="onClick()"
-         [class.border-blue-300]="processValue().simulated"
-         [class.bg-blue-200]="processValue().simulated">
-      <div class="mx-1 font-semibold">{{ processValue().name }}</div>
-      <div class="bg-white rounded py-0.5 px-3 whitespace-nowrap min-h-[1.75rem] relative w-full text-center border border-sky-300"
-           [class.border-blue-300]="processValue().simulated">
+    <div class="{{'flex flex-col p-0.5 items-center gap-1 rounded select-none border ' + colorClasses }}"
+         [class.cursor-pointer]="hasCommands(processValue())" (click)="onClick()">
+      <div class="mx-1 font-semibold" [attr.title]="processValue().conditional_description">{{ processValue().name }}</div>
+      <div class="{{'bg-white rounded py-0.5 px-3 whitespace-nowrap min-h-[1.75rem] relative w-full text-center border ' + borderColor}}">
         {{ processValue() | processValue }}
 
+        <div *ngIf="processValue().simulated"
+             class="{{'absolute -top-2 -left-0.5 !text-[0] rounded-full border-b border-r ' + colorClasses}}"
+             title="Is simulated">
+          <div class="codicon-code-review codicon !text-[0.6rem] p-[2.5px]"></div>
+        </div>
+
         <div *ngIf="hasCommands(processValue())"
-             class="absolute -top-2 -right-0.5 !text-[0] bg-sky-200 rounded-full border-sky-300 border-b rotate-45"
-             [class.border-blue-300]="processValue().simulated"
-             [class.bg-blue-200]="processValue().simulated">
-          <div class="codicon-wand codicon !text-[0.6rem] p-[2.5px]  -rotate-45"></div>
+             class="{{'absolute -top-2 -right-0.5 !text-[0] rounded-full border-b border-l ' + colorClasses}}"
+             title="Has commands">
+          <div class="codicon-wand codicon !text-[0.6rem] p-[2.5px] -rotate-90"></div>
         </div>
       </div>
     </div>
@@ -37,6 +39,22 @@ export class ProcessValueComponent {
   @Output() openCommands = new EventEmitter<PvAndPosition>();
 
   constructor(private element: ElementRef<HTMLDivElement>) {}
+
+  get colorClasses() {
+    return `${this.borderColor} ${this.backgroundColor}`;
+  }
+
+  get borderColor() {
+    if(this.processValue().conditional) return 'border-rose-500';
+    if(this.processValue().simulated) return 'border-indigo-400';
+    return 'border-sky-300';
+  }
+
+  get backgroundColor() {
+    if(this.processValue().conditional) return 'bg-rose-300';
+    if(this.processValue().simulated) return 'bg-indigo-300';
+    return 'bg-sky-200';
+  }
 
   onClick() {
     if(!this.hasCommands(this.processValue())) return;

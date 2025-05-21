@@ -2450,6 +2450,14 @@
           "simulated": {
             "type": "boolean",
             "title": "Simulated"
+          },
+          "conditional": {
+            "type": "boolean",
+            "title": "Conditional"
+          },
+          "conditional_description": {
+            "type": "string",
+            "title": "Conditional Description"
           }
         },
         "type": "object",
