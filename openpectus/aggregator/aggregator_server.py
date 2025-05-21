@@ -45,6 +45,7 @@ class AggregatorServer:
         self.aggregator = _create_aggregator(self.dispatcher, self.publisher, secret)
         _ = AggregatorMessageHandlers(self.aggregator)
         self.shutdown_callback = shutdown_cb
+        database.configure_db(f"sqlite:///{self.db_path}")
         self.setup_fastapi([self.dispatcher.router, self.publisher.router, version.router])
         self.init_db()
 
@@ -64,10 +65,16 @@ class AggregatorServer:
                                             url="https://github.com/Open-Pectus/Open-Pectus"),
                                generate_unique_id_function=custom_generate_unique_id,
                                lifespan=self.lifespan)
+        self.fastapi.add_middleware(database.DBSessionMiddleware)
         self.fastapi.include_router(process_unit.router, prefix=api_prefix, dependencies=[UserRolesDependency])
         self.fastapi.include_router(recent_runs.router, prefix=api_prefix, dependencies=[UserRolesDependency])
         self.fastapi.include_router(lsp.router, prefix=api_prefix)
         self.fastapi.include_router(auth.router, prefix="/auth")
+
+        # Set up starlette-admin
+        from openpectus.aggregator.routers.admin import admin
+        admin.mount_to(self.fastapi)
+
         for route in additional_routers:
             self.fastapi.include_router(route)
         self.fastapi.mount("/", SinglePageApplication(directory=self.frontend_dist_dir))
@@ -85,10 +92,6 @@ class AggregatorServer:
                 status_code=HTTP_500_INTERNAL_SERVER_ERROR,
                 content={"message": exc.message},
             )
-
-    def init_db(self):
-        database.configure_db(f"sqlite:///{self.db_path}")
-        self.fastapi.add_middleware(database.DBSessionMiddleware)
 
     def start(self):
         uvicorn.run(self.fastapi, host=self.host, port=self.port, log_level=logging.WARNING)
