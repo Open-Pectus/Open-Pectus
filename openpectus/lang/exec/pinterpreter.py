@@ -436,12 +436,12 @@ class PInterpreter(NodeVisitor):
         return False
 
     def _evaluate_condition(self, node: p.NodeWithCondition) -> bool:
-        c = node.condition
+        c = node.tag_operator_value
         assert c is not None, "Error in condition"
-        assert not c.error, f"Error parsing condition '{node.condition_part}'"
+        assert not c.error, f"Error parsing condition '{node.tag_operator_value_part}'"
         assert c.tag_name, "Error in condition tag"
         assert c.tag_value, "Error in condition value"
-        assert self.context.tags.has(c.tag_name), f"Unknown tag '{c.tag_name}' in condition '{node.condition_part}'"
+        assert self.context.tags.has(c.tag_name), f"Unknown tag '{c.tag_name}' in condition '{node.tag_operator_value_part}'"
         tag = self.context.tags.get(c.tag_name)
         tag_value, tag_unit = str(tag.get_value()), tag.unit
         # TODO: Possible enhancement: if no unit specified, pick base unit?
@@ -1008,3 +1008,35 @@ class PInterpreter(NodeVisitor):
             self.context.tags.as_readonly())
 
         raise NodeInterpretationError(node, f"Invalid instruction '{node.name}'")
+
+    def visit_SimulateNode(self, node: p.SimulateNode) -> NodeGenerator:
+        if self._ffw:
+            return
+
+        record = self.runtimeinfo.get_last_node_record(node)
+        record.add_state_started(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+        assert node.tag_operator_value
+        assert node.tag_operator_value.tag_name
+        if node.tag_operator_value.tag_value_numeric and node.tag_operator_value.tag_unit:
+            self.context.tags.get(node.tag_operator_value.tag_name).simulate_value_and_unit(
+                node.tag_operator_value.tag_value_numeric,
+                node.tag_operator_value.tag_unit,
+                self._tick_time
+            )
+        elif node.tag_operator_value.tag_value:
+            self.context.tags.get(node.tag_operator_value.tag_name).simulate_value(
+                node.tag_operator_value.tag_value_numeric if node.tag_operator_value.tag_value_numeric else node.tag_operator_value.tag_value,
+                self._tick_number
+            )
+        record.add_state_completed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+        yield
+
+    def visit_SimulateOffNode(self, node: p.SimulateOffNode) -> NodeGenerator:
+        if self._ffw:
+            return
+
+        record = self.runtimeinfo.get_last_node_record(node)
+        record.add_state_started(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+        self.context.tags.get(node.arguments).stop_simulation()
+        record.add_state_completed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+        yield
