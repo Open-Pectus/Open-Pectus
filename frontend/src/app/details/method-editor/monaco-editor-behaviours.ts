@@ -1,9 +1,10 @@
-import { Signal } from '@angular/core';
-import { editor as MonacoEditor, KeyCode, Range, KeyMod } from '@codingame/monaco-vscode-editor-api';
+import type { Signal } from '@angular/core';
+import type { MenuItemAction } from '@codingame/monaco-vscode-api/vscode/vs/platform/actions/common/actions';
+import { editor as MonacoEditor, KeyCode, KeyMod, Range } from '@codingame/monaco-vscode-editor-api';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { combineLatest, filter, Observable, takeUntil } from 'rxjs';
-import { MethodLine } from '../../api';
+import type { MethodLine } from '../../api';
 import { UtilMethods } from '../../shared/util-methods';
 import { MethodEditorActions } from './ngrx/method-editor.actions';
 import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
@@ -12,6 +13,10 @@ const startedLineClassName = 'started-line';
 const executedLineClassName = 'executed-line';
 const injectedLineClassName = 'injected-line';
 const lineIdClassNamePrefix = 'line-id-';
+
+interface EditorContributionWithMenuActions extends MonacoEditor.IEditorContribution {
+  _getMenuActions: () => MenuItemAction[];
+}
 
 export class MonacoEditorBehaviours {
   private executedLineIds = this.store.select(MethodEditorSelectors.executedLineIds);
@@ -33,12 +38,13 @@ export class MonacoEditorBehaviours {
     this.setupStartedAndExecutedLines();
     this.setupReactingToResize();
     this.setupCtrlSAction();
+    this.setupContextMenuOverrides();
   }
 
   private setupCtrlSAction() {
     this.editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, () => {
       this.store.dispatch(MethodEditorActions.saveKeyboardShortcutPressed());
-    })
+    });
   }
 
   private setupOnEditorChanged() {
@@ -222,5 +228,17 @@ export class MonacoEditorBehaviours {
   private setupReactingToResize() {
     this.editorSizeChange.pipe(takeUntil(this.componentDestroyed)).subscribe(() => this.editor.layout());
     window.onresize = () => this.editor.layout();
+  }
+
+  // adapted from https://github.com/CodinGame/monaco-vscode-api/issues/596#issuecomment-2711135557
+  private setupContextMenuOverrides() {
+    const contextmenu = this.editor.getContribution('editor.contrib.contextmenu') as EditorContributionWithMenuActions | null;
+    if(contextmenu === null) return;
+
+    const realMethod = contextmenu._getMenuActions;
+    contextmenu._getMenuActions = (...args) => {
+      const items = realMethod.apply(contextmenu, args);
+      return items.filter((item) => item.id !== 'workbench.action.showCommands');
+    };
   }
 }
