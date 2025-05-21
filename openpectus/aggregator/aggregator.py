@@ -394,7 +394,10 @@ class FromFrontend:
             self.dead_man_switch_user_ids[subscriber_id] = user_id
 
     async def on_ws_disconnect(self, subscriber_id: str):
-        user_id = self.dead_man_switch_user_ids[subscriber_id]
+        user_id = self.dead_man_switch_user_ids.get(subscriber_id)
+        if(user_id == None):
+            logger.warning("Websocket disconnected without a dead man switch")
+            return
         user_has_other_dead_man_switch = len([other_user_id for other_user_id in self.dead_man_switch_user_ids.values() if other_user_id == user_id]) > 1
         if(user_has_other_dead_man_switch): return
         for engine_data in self._engine_data_map.values():
