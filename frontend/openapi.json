@@ -2455,9 +2455,13 @@
             "type": "boolean",
             "title": "Conditional"
           },
-          "conditional_description": {
+          "condition_holds": {
+            "type": "boolean",
+            "title": "Condition Holds"
+          },
+          "condition_description": {
             "type": "string",
-            "title": "Conditional Description"
+            "title": "Condition Description"
           }
         },
         "type": "object",

@@ -116,7 +116,8 @@ const getProcessValues: () => ProcessValue[] = () => [
     value_unit: '%',
     direction: 'output',
     conditional: true,
-    conditional_description: 'Shown because some condition apply',
+    condition_holds: true,
+    condition_description: 'Shown because some condition apply',
   }, {
     value_type: 'float',
     name: 'PU04 Speed',
@@ -398,7 +399,7 @@ const runLogLines: RunLogLine[] = [
 export const handlers = [
   http.get('/auth/config', () => {
     return HttpResponse.json<AuthConfig>({
-      use_auth: true,
+      use_auth: false,
       client_id: 'fc7355bb-a6be-493f-90a1-cf57063f7948',
       authority_url: 'https://login.microsoftonline.com/fdfed7bd-9f6a-44a1-b694-6e39c468c150/v2.0',
     });

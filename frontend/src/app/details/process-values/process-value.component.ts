@@ -15,7 +15,7 @@ export interface PvAndPosition {
   template: `
     <div class="{{'flex flex-col p-0.5 items-center gap-1 rounded select-none border ' + colorClasses }}"
          [class.cursor-pointer]="hasCommands(processValue())" (click)="onClick()">
-      <div class="mx-1 font-semibold" [attr.title]="processValue().conditional_description">{{ processValue().name }}</div>
+      <div class="mx-1 font-semibold" [attr.title]="processValue().condition_description">{{ processValue().name }}</div>
       <div class="{{'bg-white rounded py-0.5 px-3 whitespace-nowrap min-h-[1.75rem] relative w-full text-center border ' + borderColor}}">
         {{ processValue() | processValue }}
 

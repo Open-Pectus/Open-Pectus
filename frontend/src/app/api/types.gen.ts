@@ -166,7 +166,8 @@ export type ProcessValue = {
     direction: TagDirection;
     simulated?: boolean;
     conditional?: boolean;
-    conditional_description?: string;
+    condition_holds?: boolean;
+    condition_description?: string;
 };
 
 export type ProcessValueCommand = {

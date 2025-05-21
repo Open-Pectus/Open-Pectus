@@ -206,7 +206,8 @@ class ProcessValue(Dto):
     direction: Mdl.TagDirection
     simulated: bool | SkipJsonSchema[None] = None
     conditional: bool | SkipJsonSchema[None] = None
-    conditional_description: str | SkipJsonSchema[None] = None
+    condition_holds: bool | SkipJsonSchema[None] = None
+    condition_description: str | SkipJsonSchema[None] = None
 
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(name="{self.name}", value="{self.value}", ' +

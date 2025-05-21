@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, EventEmitter, input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, EventEmitter, input, Output } from '@angular/core';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { ProcessValue, TagDirection } from '../../api';
@@ -8,10 +8,10 @@ import { ProcessValueComponent, PvAndPosition } from './process-value.component'
 import { TagDirectionPipe } from './tag-direction.pipe';
 
 @Component({
-    selector: 'app-process-values-categorized',
-    imports: [CommonModule, ProcessValueComponent, PushPipe, TagDirectionPipe],
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    template: `
+  selector: 'app-process-values-categorized',
+  imports: [CommonModule, ProcessValueComponent, PushPipe, TagDirectionPipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
     @if (allProcessValues | ngrxPush) {
       <div class="flex flex-col gap-4 -mt-1">
         @for (direction of tagDirections; track direction) {
@@ -30,7 +30,7 @@ import { TagDirectionPipe } from './tag-direction.pipe';
       </div>
     } @else {
       <div class="flex gap-2 items-start flex-wrap">
-        @for (processValue of processValues(); track processValue.name) {
+        @for (processValue of processValuesFilteringConditionals(); track processValue.name) {
           <app-process-value [processValue]="processValue"
                              (openCommands)="openCommands.emit($event)"></app-process-value>
         } @empty {
@@ -38,19 +38,20 @@ import { TagDirectionPipe } from './tag-direction.pipe';
         }
       </div>
     }
-  `
+  `,
 })
 export class ProcessValuesCategorizedComponent {
   processValues = input<ProcessValue[]>();
+  processValuesFilteringConditionals = computed(() => this.processValues()?.filter(processValue => processValue.condition_holds ?? true));
   @Output() openCommands = new EventEmitter<PvAndPosition>();
   allProcessValues = this.store.select(DetailsSelectors.allProcessValues);
-  protected readonly tagDirections: TagDirection[] = ['input', 'output', 'na', 'unspecified']
+  protected readonly tagDirections: TagDirection[] = ['input', 'output', 'na', 'unspecified'];
   protected readonly Object = Object;
 
   constructor(private store: Store) {}
 
   protected getProcessValuesOfCategory(direction: string) {
-    const processValues = this.processValues()?.filter(processValue => processValue.direction === direction) ?? [];
+    const processValues = this.processValuesFilteringConditionals()?.filter(processValue => processValue.direction === direction) ?? [];
     processValues.sort((a, b) => a.name.localeCompare(b.name));
     return processValues;
   }
