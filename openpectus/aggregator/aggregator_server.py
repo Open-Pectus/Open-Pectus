@@ -47,7 +47,6 @@ class AggregatorServer:
         self.shutdown_callback = shutdown_cb
         database.configure_db(f"sqlite:///{self.db_path}")
         self.setup_fastapi([self.dispatcher.router, self.publisher.router, version.router])
-        self.init_db()
 
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(host="{self.host}", port={self.port}, ' +
