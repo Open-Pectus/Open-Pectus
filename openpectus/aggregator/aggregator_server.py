@@ -17,6 +17,7 @@ from openpectus.aggregator.routers import process_unit, recent_runs, auth, versi
 from openpectus.aggregator.spa import SinglePageApplication
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.aggregator.exceptions import AggregatorCallerException, AggregatorInternalException
+from openpectus.aggregator.routers.admin import build_administration
 
 
 class AggregatorServer:
@@ -71,8 +72,8 @@ class AggregatorServer:
         self.fastapi.include_router(auth.router, prefix="/auth")
 
         # Set up starlette-admin
-        from openpectus.aggregator.routers.admin import admin
-        admin.mount_to(self.fastapi)
+        administration = build_administration(database._engine)
+        administration.mount_to(self.fastapi)
 
         for route in additional_routers:
             self.fastapi.include_router(route)
