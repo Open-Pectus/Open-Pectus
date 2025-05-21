@@ -170,7 +170,6 @@ class PInterpreter(NodeVisitor):
 
         self._process_instr: NodeGenerator | None = None
 
-        self._current_node: p.Node | None = None
         self._ffw: bool = False
         self._ffw_target_node_id: str | None = None
 
@@ -182,15 +181,18 @@ class PInterpreter(NodeVisitor):
         """ Update method while method is running. """
         # set new program, and patch state to point to new nodes, set ffw and advance generator to get to where we were
 
+        # collect node id from old method. The id will match the corresponding node in the new method
+        if self._program.active_node is None:
+            raise ValueError("Edit cannot be performed when no current node is set")
+        # if self._program.active_node.started:
+        #     raise ValueError(f"Active node {self._program.active_node} already started")
+        target_node_id = self._program.active_node.id
+
         # patch runtimeinfo records to reference new nodes - before or after ffw? should not matter
         self.runtimeinfo.patch_node_references(program)
-        self.patch_node_references(program)
+        self._patch_node_references(program)
 
-        # collect node id from old method. The id will match the corresponding node in the new method
-        if self._current_node is None:
-            raise ValueError("Edit cannot be performed when no current node is set")
         # verify that target is not completed - if so ffw won't find it
-        target_node_id = self._current_node.id
         self._program = program
         self._process_instr = None  # clear so either tick or us may set it
         target_node = program.get_child_by_id(target_node_id)  # find target node in new ast
@@ -207,7 +209,7 @@ class PInterpreter(NodeVisitor):
         self._ffw_target_node_id = target_node_id
 
         # Start fast-forward (FFW) from start to target_node_id
-        logger.info("FFW starting, target node id: " + self._ffw_target_node_id)
+        logger.info("FFW starting, target node: " + str(target_node))
         ffw_process_instr = self._interpret()
         while self._ffw:
             # TODO fix loop:
@@ -234,9 +236,9 @@ class PInterpreter(NodeVisitor):
         self._process_instr = ffw_process_instr
         logger.info("FFW complete")
 
-    def patch_node_references(self, program: p.ProgramNode):
+    def _patch_node_references(self, program: p.ProgramNode):
         """ Patch node references to updated program nodes to account for edited method. """
-        logger.info("Patching node references in interpreter state")
+        logger.info("Patching node references in interpreter interrupts")
         for ar, _ in self.interrupts:
             node = ar.owner
             if node is not None and not isinstance(node, p.ProgramNode):
@@ -251,6 +253,7 @@ class PInterpreter(NodeVisitor):
                         logger.warning(f"Node not patched: {new_node} - old node already matched the new node!?")
 
         # TODO get rid of this when moving macro processing to analyser
+        logger.info("Patching node references in interpreter macros")
         for name, node in self.macros.items():
             if node is not None and not isinstance(node, p.ProgramNode):
                 new_node = program.get_child_by_id(node.id)
@@ -484,7 +487,8 @@ class PInterpreter(NodeVisitor):
                 node.completed = True
                 return
         else:
-            self._current_node = node
+            # track the active node before any possible threshold
+            self._program.active_node = node
 
         # interrupts are visited multiple times. make sure to only create
         # a new record on the first visit

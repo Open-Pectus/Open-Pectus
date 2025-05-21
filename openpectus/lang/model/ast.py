@@ -273,6 +273,15 @@ class Node(SupportCancelForce):
             parents.append(node.parent)
             node = node.parent
         return parents
+    
+    @property
+    def root(self) -> ProgramNode:
+        if isinstance(self, ProgramNode):
+            return self
+        root = self.parents[-1]
+        assert isinstance(root, ProgramNode)
+        return root
+
 
     def reset_runtime_state(self, recursive: bool):
         # TODO implement, possily by just applying an empty state dict
@@ -354,6 +363,8 @@ class NodeWithChildren(Node):
 class ProgramNode(NodeWithChildren):
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
+        self.active_node: Node | None = None
+        """ The node currently executing. Maintained by interpreter. """
 
     def get_instructions(self, include_blanks: bool = False) -> list[Node]:
         """ Return list of all program instructions, recursively, depth first. """
