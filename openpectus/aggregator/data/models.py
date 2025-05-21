@@ -54,31 +54,40 @@ class RecentRun(DBModel):
     completed_date: Mapped[datetime] = mapped_column()
     contributors: Mapped[list[str]] = mapped_column(type_=JSON, default=[])  # really a set but this cannot be mapped?
     required_roles: Mapped[list[str]] = mapped_column(type_=JSON, default=[])  # really a set but this cannot be mapped?
+    method_and_state: Mapped[RecentRunMethodAndState] = relationship(back_populates="recent_run", cascade="delete")
+    run_log: Mapped[RecentRunRunLog] = relationship(back_populates="recent_run", cascade="delete")
+    error_log: Mapped[RecentRunErrorLog] = relationship(back_populates="recent_run", cascade="delete")
+    plot_configuration: Mapped[RecentRunPlotConfiguration] = relationship(back_populates="recent_run", cascade="delete")
+    plot_log: Mapped[PlotLog] = relationship(back_populates="recent_run", cascade="delete")
 
 
 class RecentRunMethodAndState(DBModel):
     __tablename__ = "RecentRunMethodAndStates"
-    run_id: Mapped[str] = mapped_column()
+    run_id: Mapped[str] = mapped_column(ForeignKey("RecentRuns.run_id"))
     method: Mapped[Method] = mapped_column(type_=JSON)
     state: Mapped[MethodState] = mapped_column(type_=JSON)
+    recent_run: Mapped[RecentRun] = relationship(back_populates="method_and_state")
 
 
 class RecentRunRunLog(DBModel):
     __tablename__ = "RecentRunRunLogs"
-    run_id: Mapped[str] = mapped_column()
+    run_id: Mapped[str] = mapped_column(ForeignKey("RecentRuns.run_id"))
     run_log: Mapped[RunLog] = mapped_column(type_=JSON)
+    recent_run: Mapped[RecentRun] = relationship(back_populates="run_log")
 
 
 class RecentRunErrorLog(DBModel):
     __tablename__ = "RecentRunErrorLogs"
-    run_id: Mapped[str] = mapped_column()
+    run_id: Mapped[str] = mapped_column(ForeignKey("RecentRuns.run_id"))
     error_log: Mapped[AggregatedErrorLog] = mapped_column(type_=JSON)
+    recent_run: Mapped[RecentRun] = relationship(back_populates="error_log")
 
 
 class RecentRunPlotConfiguration(DBModel):
     __tablename__ = "RecentRunPlotConfigurations"
-    run_id: Mapped[str] = mapped_column()
+    run_id: Mapped[str] = mapped_column(ForeignKey("RecentRuns.run_id"))
     plot_configuration: Mapped[PlotConfiguration] = mapped_column(type_=JSON)
+    recent_run: Mapped[RecentRun] = relationship(back_populates="plot_configuration")
 
 
 class PlotLogEntryValue(DBModel):
@@ -136,9 +145,10 @@ class PlotLogEntry(DBModel):
 class PlotLog(DBModel):
     __tablename__ = "PlotLogs"
     engine_id: Mapped[str] = mapped_column()
-    run_id: Mapped[str] = mapped_column()
+    run_id: Mapped[str] = mapped_column(ForeignKey("RecentRuns.run_id"))
     entries: Mapped[Dict[str, PlotLogEntry]] = relationship(
         collection_class=attribute_keyed_dict("name"),
         back_populates='plot_log',
         cascade="all, delete-orphan"
     )
+    recent_run: Mapped[RecentRun] = relationship(back_populates="plot_log")
