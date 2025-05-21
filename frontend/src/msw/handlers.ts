@@ -121,6 +121,7 @@ const getProcessValues: () => ProcessValue[] = () => [
     value: 123,
     value_unit: '%',
     direction: 'output',
+    simulated: true,
   }, {
     value_type: 'float',
     name: 'PU05 Speed',
