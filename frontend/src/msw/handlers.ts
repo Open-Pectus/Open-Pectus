@@ -1167,8 +1167,51 @@ Some;Csv;Data
     return new HttpResponse();
   }),
 
-  http.get('/api/process_unit/:unitId/other_active_users', () => {
-    return HttpResponse.json<ActiveUser[]>([
-    ]);
+  http.get('/api/process_unit/:unitId/active_users', () => {
+    return HttpResponse.json<ActiveUser[]>([]);
+  }),
+
+  http.get('api/lsp/engine/:unitId/pcode.tmLanguage.json', () => {
+    // content copy-pasted from response for demo oud
+    return HttpResponse.json({
+      'name': 'PCode',
+      'scopeName': 'source.pcode',
+      'fileTypes': 'pcode',
+      'patterns': [
+        {
+          'name': 'comment.control.pcode',
+          'begin': '#',
+          'end': '$',
+        },
+        {
+          'name': 'support.type.property-name',
+          'match': '^\\s*\\d+(\\.\\d+)?\\s',
+        },
+        {
+          'name': 'constant.language.pcode',
+          'match': '\\b(Increment run counter)\\b',
+        },
+        {
+          'name': 'entity.name.class',
+          'match': '(?<=:[^:]*)\\b(Run Counter|Process Time|Run Time|System State|Method Status|Connection Status|Run Id|Block Time|Scope Time|Archive filename)\\b',
+        },
+        {
+          'name': 'constant.language.pcode',
+          'match': '\\b(End block|End blocks|Run counter|Call macro|Simulate off)\\b',
+        },
+        {
+          'name': 'entity.name.class',
+          'match': '(?<=:[^:]*)\\b(FT01|FT02|Category|Time|TestInt|TestFloat|TestString|TestCategorical|Reset|CmdWithRegexArgs|TestPercentage|Base|Block|Clock|Mark)\\b',
+        },
+        {
+          'name': 'constant.language.pcode',
+          'match': '\\b(Alarm|Base|Block|Error|Hold|Info|Mark|Batch|Pause|Restart|Stop|Wait|Warning|Watch|Macro|Simulate)\\b',
+        },
+        {
+          'name': 'support.constant.color',
+          'match': '\\b(CmdWithRegexArgs|TestPercentage|TestCategorical|Reset|TestInt|Category)\\b',
+        },
+      ],
+    });
   }),
 ];
