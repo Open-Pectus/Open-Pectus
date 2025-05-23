@@ -34,6 +34,8 @@ dependencies = [
     "multiprocess==0.70.17",
     "Levenshtein==0.27.1",
     "starlette-admin==0.14.1",
+    "itsdangerous==2.2.0",
+    "identity==0.10.0",
 ]
 
 keywords = ["process control", "process control system", "P code", "P-code", "chemical engineering", "SCADA", "PCS"]
