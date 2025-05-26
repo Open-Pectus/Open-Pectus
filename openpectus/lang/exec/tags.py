@@ -24,6 +24,7 @@ class SystemTagName(StrEnum):
     CONNECTION_STATUS = "Connection Status"
     RUN_ID = "Run Id"
     BATCH_NAME = "Batch Name"
+    MARK = "Mark"
 
     # these tags are only present if defined in uod.
     BLOCK_VOLUME = "Block Volume"
