@@ -1,6 +1,6 @@
 
 import inspect
-from typing import Any, Generator
+from typing import Any, Callable, Generator
 import openpectus.lang.model.ast as p
 
 
@@ -24,7 +24,21 @@ class NodeVisitorGeneric:
         ...
 
 
-NodeGenerator = Generator[None, Any, Any]
+
+class NodeAction():
+    """ Represents (a part of) the action needed to perform when interpreting a node. Allows
+    side effect free visits of an ast tree.  """
+
+    def __init__(self, node: p.Node, action: Callable[[p.Node], None], index: str = ""):
+        self.node = node
+        self.action = action
+        self.index = index
+
+    def execute(self):
+        self.action(self.node)
+
+
+NodeGenerator = Generator[NodeAction | None, Any, Any]
 """ The generator return type for visitor methods. """
 
 

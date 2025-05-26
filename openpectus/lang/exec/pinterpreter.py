@@ -555,7 +555,6 @@ class PInterpreter(NodeVisitor):
 
         # avoid advancing into whitespace-only code lines
         while node.has_only_trailing_whitespace:
-            logging.debug(f"Dont interpret node {node} with has_only_trailing_whitespace")
             node.started = False
             yield
 
