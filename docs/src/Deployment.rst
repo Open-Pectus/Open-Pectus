@@ -170,7 +170,6 @@ Commands to pull latest image and run it are given below. The :console:`docker r
 
 .. code-block:: console
 
-   # In this example the image id started with "6aa"
    docker run --pull=always --detach \
    --name openpectus-prd \
    -h AZR-PECTUS-PRD \
@@ -189,11 +188,56 @@ Commands to pull latest image and run it are given below. The :console:`docker r
 * To delete the container :console:`docker rm openpectus-prd`
 * To delete the image :console:`docker image ls` and :console:`docker rm image-hash`
 
-Aggregator Database Backup
-``````````````````````````
+
+Aggregator Database Administration
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. _Database Administration tool: https://github.com/Open-Pectus/Database-Administration
+
+The Open Pectus aggregator uses sqlite as database backend.
+
+The `Database Administration tool`_ is a useful web interface which enables simple management of the sqlite database. The tool can integrated with :ref:`user_authorization` in which case a client secret must be provided and users who should have access must be assigned to an "Administrator" App Role.
+A docker image is provided which can be run using the command below:
+
+.. code-block:: console
+
+   docker run --pull=always --detach \
+   --name openpectus-database-administration \
+   -h AZR-PECTUS-PRD-DATABASE-ADMINISTRATION \
+   -v /home/azureuser/data_prd:/data
+   -e AZURE_APPLICATION_CLIENT_ID='...' \
+   -e AZURE_DIRECTORY_TENANT_ID='...' \
+   -e AZURE_CLIENT_SECRET='...' \
+   -e ENABLE_AZURE_AUTHENTICATION='true' \
+   -p 0.0.0.0:8301:8301/tcp \
+   ghcr.io/open-pectus/database-administration:main
+
+Add the following to the "server"-blocks of :numref:`nginx_configuration` to access the web interface at https://openpectus.com/admin/.
+
+.. code-block:: yaml
+
+    location /admin/ {
+        proxy_pass http://127.0.0.1:8301;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffer_size 128k;
+        proxy_buffers 8 128k;
+        proxy_busy_buffers_size 256k;
+    }
+
+Database Backup
+```````````````
 
 It is possible to do a database backup of a running aggregator by executing the following command on the host running the Docker container:
 
 .. code-block:: console
    
    sqlite3 /home/azureuser/data_prd/open_pectus_aggregator.sqlite3 ".backup '/home/azureuser/tmp.sqlite3'"; mv /home/azureuser/tmp.sqlite3 /home/azureuser/open_pectus_aggregator_prd-$(date +"%Y-%m-%d").sqlite3
+
+A cron job can be configured to make a backup on a daily basis and only keep the last 30 copies. Create the folder :console:`/home/user/data_prd_backup`, edit the cron table with :console:`crontab -e` and add the following:
+
+.. code-block:: console
+   
+   5 4 * * * sqlite3 /home/azureuser/data_prd/open_pectus_aggregator.sqlite3 ".backup '/home/azureuser/tmp.sqlite3'"; mv /home/azureuser/tmp.sqlite3 /home/azureuser/data_prd_backup/open_pectus_aggregator_prd-$(date +"%Y-%m-%d").sqlite3
+   5 5 * * * rm -f $(ls -1t /home/azureuser/data_prd_backup/ | tail -n +31)
