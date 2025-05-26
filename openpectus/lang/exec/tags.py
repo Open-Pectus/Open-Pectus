@@ -264,7 +264,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
         if tag.name in self.tags.keys() and not exist_ok:
             raise ValueError(f"A tag named {tag.name} already exists")
 
-        self.tags[tag.name] = tag
+        self.tags[str(tag.name)] = tag
         tag.add_listener(self)
 
     def with_tag(self, tag: Tag):
