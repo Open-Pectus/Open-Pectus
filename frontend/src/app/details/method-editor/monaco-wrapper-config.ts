@@ -5,7 +5,7 @@ import { LogLevel } from 'vscode';
 import { UtilMethods } from '../../shared/util-methods';
 
 export class MonacoWrapperConfig {
-  static buildWrapperUserConfig(htmlContainer: HTMLElement, text: string, unitId?: string): WrapperConfig {
+  static buildWrapperUserConfig(htmlContainer: HTMLElement, text: string, unitId?: string, isMethodEditor = true): WrapperConfig {
     return {
       $type: 'extended',
       htmlContainer,
@@ -31,7 +31,7 @@ export class MonacoWrapperConfig {
           }),
         },
       },
-      extensions: [{
+      extensions: !isMethodEditor ? [] : [{
         config: {
           name: 'pcode',
           version: '0.0.0',

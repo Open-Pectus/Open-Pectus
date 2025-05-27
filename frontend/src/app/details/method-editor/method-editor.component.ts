@@ -31,8 +31,8 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
             </button>
           </div>
           <app-monaco-editor class="block rounded-sm flex-1" [editorSizeChange]="editorSizeChange"
-                             [unitId]="unitId()"
-                             [readOnlyEditor]="recentRunId() !== undefined"></app-monaco-editor>
+                             [unitId]="unitId()" [isMethodEditor]="true"
+                             [isReadOnlyEditor]="this.recentRunId() !== undefined"></app-monaco-editor>
         </div>
       }
       @if (!collapsed && (methodEditorIsDirty | ngrxPush)) {
@@ -55,6 +55,7 @@ export class MethodEditorComponent implements OnInit, OnDestroy {
   protected method = this.store.select(MethodEditorSelectors.method);
   protected editorSizeChange = new Subject<void>();
   protected collapsed = false;
+  private componentDestroyed = new Subject<void>();
 
   constructor(private store: Store) {}
 
@@ -69,6 +70,7 @@ export class MethodEditorComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.componentDestroyed.next();
     this.store.dispatch(MethodEditorActions.methodEditorComponentDestroyed());
   }
 
