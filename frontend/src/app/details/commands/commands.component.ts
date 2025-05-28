@@ -24,7 +24,7 @@ import { CommandExamplesListComponent } from './command-examples-list.component'
                       class="resize-none outline-none whitespace-pre flex-1 px-2 py-1.5 border-l border-r border-slate-500 -ml-[1px] min-w-[15rem]">{{ chosenExample?.example }}</textarea>
             <app-monaco-editor [editorSizeChange]="editorSizeChange" (editorContentChanged)="onEditorContentChanged($event)"
                                [editorContent]="commandToExecute" [unitId]="unitId()"
-                               class="flex-1 min-w-[15rem]"></app-monaco-editor>
+                               class="flex-1 min-w-[15rem] pl-1"></app-monaco-editor>
             <button class="absolute right-4 bottom-4 rounded-md bg-green-300 text-black px-3 py-2 flex items-center"
                     (click)="onExecute()">
               <i class="codicon codicon-symbol-event !text-black"></i>

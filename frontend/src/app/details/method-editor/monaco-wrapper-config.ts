@@ -2,7 +2,6 @@ import { WrapperConfig } from 'monaco-editor-wrapper';
 import { Logger } from 'monaco-languageclient/tools';
 import { useWorkerFactory } from 'monaco-languageclient/workerFactory';
 import { LogLevel } from 'vscode';
-import { UtilMethods } from '../../shared/util-methods';
 
 export class MonacoWrapperConfig {
   static buildWrapperUserConfig(htmlContainer: HTMLElement, text?: string, unitId?: string, isMethodEditor = true): WrapperConfig {
@@ -18,15 +17,18 @@ export class MonacoWrapperConfig {
             'editor.fontSize': 18,
             'editor.glyphMargin': false,
             'editor.fixedOverflowWidgets': true,
-            'editor.lineNumbersMinChars': UtilMethods.isMobile ? 1 : 3,
-            'editor.minimap': {
-              enabled: UtilMethods.isDesktop,
-            },
+            'editor.lineNumbersMinChars': 1,
+            'editor.minimap.enabled': false,
             'editor.lightbulb.enabled': true,
             'editor.experimental.asyncTokenization': true,
             'editor.foldingStrategy': 'indentation',
             'editor.wordBasedSuggestions': false,
             'editor.codeLens': false,
+            'scm.diffDecorations': 'none',
+            // 'editor.lineDecorationsWidth': 0,
+            'workbench.activityBar.visible': false,
+            'editor.renderLineHighlightOnlyWhenFocus': true,
+            'editor.folding': false,
             // "editor.quickSuggestions": false
           }),
         },
