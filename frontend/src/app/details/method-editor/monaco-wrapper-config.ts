@@ -25,7 +25,7 @@ export class MonacoWrapperConfig {
             'editor.wordBasedSuggestions': false,
             'editor.codeLens': false,
             'scm.diffDecorations': 'none',
-            // 'editor.lineDecorationsWidth': 0,
+            'editor.lineDecorationsWidth': 12,
             'workbench.activityBar.visible': false,
             'editor.renderLineHighlightOnlyWhenFocus': true,
             'editor.folding': false,
