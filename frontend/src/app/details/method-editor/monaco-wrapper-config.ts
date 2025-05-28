@@ -29,6 +29,7 @@ export class MonacoWrapperConfig {
             'workbench.activityBar.visible': false,
             'editor.renderLineHighlightOnlyWhenFocus': true,
             'editor.folding': false,
+            'editor.scrollBeyondLastColumn': 1,
             // "editor.quickSuggestions": false
           }),
         },
