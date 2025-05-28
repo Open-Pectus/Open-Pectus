@@ -13,8 +13,8 @@ export class MonacoEditorBehaviours {
   constructor(private componentDestroyed: Observable<void>,
               private editor: MonacoEditor.IStandaloneCodeEditor,
               private editorSizeChange: Observable<void>,
-              private onEditorContentChanged?: (lines: string[]) => void,
-              private editorContentSignal?: Signal<string>) {
+              private editorContentSignal: Signal<string | undefined>,
+              private onEditorContentChanged?: (lines: string[]) => void) {
     this.setupOnEditorChanged();
     this.setupReactingToResize();
     this.setupContextMenuOverrides();
@@ -49,11 +49,10 @@ export class MonacoEditorBehaviours {
   }
 
   private setupOnEditorContentSignalChanged() {
-    if(this.editorContentSignal === undefined) return;
-    const editorContentSignal = this.editorContentSignal;
     effect(() => {
+      const signalValue = this.editorContentSignal();
+      if(signalValue === undefined) return;
       const modelValue = this.editor.getModel()?.getLinesContent().join('\n');
-      const signalValue = editorContentSignal();
       if(modelValue !== signalValue) this.editor.setValue(signalValue);
     });
   }

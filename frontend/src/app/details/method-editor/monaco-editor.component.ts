@@ -32,7 +32,7 @@ import { MonacoWrapperConfig } from './monaco-wrapper-config';
 export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   editorSizeChange = input.required<Observable<void>>();
   unitId = input<string>();
-  editorContent = input<string>('');
+  editorContent = input<string>();
   isMethodEditor = input<boolean>(false);
   isReadOnlyEditor = input<boolean>(false);
   @Output() editorContentChanged = new EventEmitter<string[]>();
@@ -62,8 +62,8 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   private setupEditorBehaviours() {
     const editor = this.wrapper.getEditor();
     if(editor === undefined) throw Error('Monaco Editor Wrapper returned no editor!');
-    new MonacoEditorBehaviours(this.componentDestroyed, editor, this.editorSizeChange(), this.onEditorContentChanged.bind(this),
-      this.editorContent);
+    new MonacoEditorBehaviours(this.componentDestroyed, editor, this.editorSizeChange(), this.editorContent,
+      this.onEditorContentChanged.bind(this));
     if(this.isMethodEditor()) new MethodEditorBehaviours(this.store, this.componentDestroyed, editor, this.isReadOnlyEditor());
   }
 
@@ -72,7 +72,8 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   private async initAndStartWrapper() {
-    const wrapperConfig = MonacoWrapperConfig.buildWrapperUserConfig(this.editorElement.nativeElement, this.editorContent(), this.unitId(),
+    const wrapperConfig = MonacoWrapperConfig.buildWrapperUserConfig(this.editorElement.nativeElement, this.editorContent(),
+      this.unitId(),
       this.isMethodEditor());
     await this.wrapper.initAndStart(wrapperConfig, false);
     this.componentDestroyed.pipe(take(1)).subscribe(() => this.wrapper.dispose());
