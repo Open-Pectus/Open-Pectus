@@ -1,5 +1,5 @@
 import { effect, Signal } from '@angular/core';
-import type { MenuItemAction } from '@codingame/monaco-vscode-api/vscode/vs/platform/actions/common/actions';
+import { MenuItemAction } from '@codingame/monaco-vscode-api/vscode/vs/platform/actions/common/actions';
 import { editor as MonacoEditor } from '@codingame/monaco-vscode-editor-api';
 import { Observable, takeUntil } from 'rxjs';
 
