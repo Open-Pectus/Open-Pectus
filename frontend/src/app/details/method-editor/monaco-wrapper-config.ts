@@ -30,6 +30,7 @@ export class MonacoWrapperConfig {
             'editor.renderLineHighlightOnlyWhenFocus': true,
             'editor.folding': false,
             'editor.scrollBeyondLastColumn': 1,
+            'editor.scrollBeyondLastLine': false,
             // "editor.quickSuggestions": false
           }),
         },

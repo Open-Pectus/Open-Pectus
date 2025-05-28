@@ -27,7 +27,7 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
           }
           <app-monaco-editor class="block rounded-sm flex-1 pl-1" [editorSizeChange]="editorSizeChange"
                              [unitId]="unitId()" [isMethodEditor]="true"
-                             [isReadOnlyEditor]="this.recentRunId() !== undefined"></app-monaco-editor>
+                             [editorOptions]="editorOptions"></app-monaco-editor>
         </div>
       }
       @if (!collapsed && (methodEditorIsDirty | ngrxPush)) {
@@ -53,6 +53,10 @@ export class MethodEditorComponent implements OnInit, OnDestroy {
   private componentDestroyed = new Subject<void>();
 
   constructor(private store: Store) {}
+
+  get editorOptions() {
+    return {readOnly: this.recentRunId() !== undefined, readOnlyMessage: {value: 'You cannot edit an already executed program'}};
+  }
 
   ngOnInit() {
     const unitId = this.unitId();

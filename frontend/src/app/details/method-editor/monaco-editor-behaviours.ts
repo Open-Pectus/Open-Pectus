@@ -32,8 +32,8 @@ export class MonacoEditorBehaviours {
   }
 
   private setupReactingToResize() {
-    this.editorSizeChange.pipe(takeUntil(this.componentDestroyed)).subscribe(() => this.editor.layout());
-    window.onresize = () => this.editor.layout();
+    this.editorSizeChange.pipe(takeUntil(this.componentDestroyed)).subscribe(() => this.editor.layout(undefined, true));
+    window.onresize = () => this.editor.layout(undefined, true);
   }
 
   // adapted from https://github.com/CodinGame/monaco-vscode-api/issues/596#issuecomment-2711135557

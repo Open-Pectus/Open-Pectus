@@ -11,7 +11,7 @@ import { CommandExample } from '../../api';
     ':host { position: relative }',
   ],
   template: `
-    <div class="flex flex-col gap-1 w-56 overflow-y-auto h-full pl-1.5 py-1.5" [style.scrollbar-width]="'none'">
+    <div class="flex flex-col gap-1 overflow-y-auto h-full pl-1.5 py-1.5" [style.scrollbar-width]="'none'">
       @if ((commandExamples | ngrxPush)?.length === 0) {
         <div class="m-auto">No examples available</div>
       }

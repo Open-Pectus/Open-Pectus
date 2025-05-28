@@ -24,8 +24,7 @@ export class MethodEditorBehaviours {
 
   constructor(private store: Store,
               private componentDestroyed: Observable<void>,
-              private editor: MonacoEditor.IStandaloneCodeEditor,
-              private isReadOnlyEditor: boolean) {
+              private editor: MonacoEditor.IStandaloneCodeEditor) {
     this.setupOnEditorChanged();
     this.setupOnStoreModelChanged();
     this.setupInjectedLines();
@@ -108,9 +107,7 @@ export class MethodEditorBehaviours {
 
   private setupStartedAndExecutedLines() {
     const startedAndExecutedLinesDecorationCollection = this.setupDecoratingStartedAndExecutedLines();
-    if(this.isReadOnlyEditor) {
-      this.editor.updateOptions({readOnly: true, readOnlyMessage: {value: 'You cannot edit an already executed program.'}});
-    } else {
+    if(!this.editor.getOption(MonacoEditor.EditorOption.readOnly)) {
       this.setupLockingStartedAndExecutedLines(startedAndExecutedLinesDecorationCollection);
     }
   }
@@ -124,7 +121,7 @@ export class MethodEditorBehaviours {
             return selection.intersectRanges(new Range(lockedLineNumber, 0, lockedLineNumber + 1, 0));
           });
       });
-      this.editor.updateOptions({readOnly: selectionInLockedRange, readOnlyMessage: {value: 'Cannot edit lines already started or executed.'}});
+      this.editor.updateOptions({readOnly: selectionInLockedRange, readOnlyMessage: {value: 'Cannot edit lines already started or executed'}});
     };
     this.editor.onDidChangeCursorSelection(lockEditorIfSelectionIntersectsExecutedLines);
     this.executedLineIds.pipe(takeUntil(this.componentDestroyed)).subscribe(lockEditorIfSelectionIntersectsExecutedLines);

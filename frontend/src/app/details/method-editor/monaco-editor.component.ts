@@ -13,6 +13,7 @@ import {
 } from '@angular/core';
 // import '@codingame/monaco-vscode-json-default-extension';
 import '@codingame/monaco-vscode-theme-defaults-default-extension';
+import { editor as MonacoEditor } from '@codingame/monaco-vscode-editor-api';
 import { Store } from '@ngrx/store';
 import { MonacoEditorLanguageClientWrapper } from 'monaco-editor-wrapper';
 import { Observable, Subject, take } from 'rxjs';
@@ -34,7 +35,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   unitId = input<string>();
   editorContent = input<string>();
   isMethodEditor = input<boolean>(false);
-  isReadOnlyEditor = input<boolean>(false);
+  editorOptions = input<MonacoEditor.IEditorOptions & MonacoEditor.IGlobalEditorOptions>({});
   @Output() editorContentChanged = new EventEmitter<string[]>();
   @ViewChild('editor', {static: true}) editorElement!: ElementRef<HTMLDivElement>;
   private componentDestroyed = new Subject<void>();
@@ -62,9 +63,10 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   private setupEditorBehaviours() {
     const editor = this.wrapper.getEditor();
     if(editor === undefined) throw Error('Monaco Editor Wrapper returned no editor!');
+    editor.updateOptions(this.editorOptions());
     new MonacoEditorBehaviours(this.componentDestroyed, editor, this.editorSizeChange(), this.editorContent,
       this.onEditorContentChanged.bind(this));
-    if(this.isMethodEditor()) new MethodEditorBehaviours(this.store, this.componentDestroyed, editor, this.isReadOnlyEditor());
+    if(this.isMethodEditor()) new MethodEditorBehaviours(this.store, this.componentDestroyed, editor);
   }
 
   private onEditorContentChanged(lines: string[]) {
