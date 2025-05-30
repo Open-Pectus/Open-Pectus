@@ -101,6 +101,10 @@ class FromEngine:
                     recent_run_repo.store_recent_run(engine_data)
                     logger.info(f"Stopping existing run and store it as recent run {_run_id=}")
                     engine_data.reset_run()
+                    engine_data.run_data = Mdl.RunData.empty(
+                        run_id=msg.run_id,
+                        run_started=datetime.fromtimestamp(msg.started_tick, timezone.utc)
+                    )
                 except Exception:
                     logger.error(f"Failed to persist recent run {_run_id=}", exc_info=True)
 
