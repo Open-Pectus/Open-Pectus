@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import openpectus.protocol.aggregator_messages as AM
@@ -22,6 +23,7 @@ class AggregatorMessageHandlers:
         aggregator.dispatcher.set_message_handler(EM.ErrorLogMsg, self.handle_ErrorLogMsg)
         aggregator.dispatcher.set_message_handler(EM.RunStartedMsg, self.handle_RunStartedMsg)
         aggregator.dispatcher.set_message_handler(EM.RunStoppedMsg, self.handle_RunStoppedMsg)
+        aggregator.dispatcher.set_message_handler(EM.MethodMsg, self.handle_MethodMsg)
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(aggregator={self.aggregator})'
@@ -151,4 +153,13 @@ class AggregatorMessageHandlers:
             return validation_errors
 
         self.aggregator.from_engine.run_stopped(msg)
+        return AM.SuccessMessage()
+
+    async def handle_MethodMsg(self, msg: EM.MethodMsg):
+        validation_errors = self.validate_msg(msg)
+        if validation_errors is not None:
+            return validation_errors
+        
+        self.aggregator._engine_data_map[msg.engine_id].method.lines = msg.method.lines
+        asyncio.create_task(self.aggregator.from_engine.publisher.publish_method_changed(msg.engine_id))
         return AM.SuccessMessage()

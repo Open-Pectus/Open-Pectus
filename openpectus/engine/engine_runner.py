@@ -266,6 +266,7 @@ class EngineRunner(EventListener):
             err_msg = f"Invalid operation '_send_buffered_batch' for state: {self.state}"
             logger.warning(err_msg)
 
+        await self._post_async(self._message_builder.create_method_msg())
         buffered_message_count = self._get_buffer_size()
         if buffered_message_count > 0:
             message_buffer = self._message_buffer.copy()

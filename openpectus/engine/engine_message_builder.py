@@ -148,3 +148,6 @@ class EngineMessageBuilder():
     def create_method_state_msg(self) -> EM.MethodStateMsg:
         state = self.engine.method_manager.get_method_state()
         return EM.MethodStateMsg(method_state=state)
+
+    def create_method_msg(self) -> EM.MethodMsg:
+        return EM.MethodMsg(method=Mdl.Method.from_parser_method(self.engine._method_manager._method))
