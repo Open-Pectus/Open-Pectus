@@ -16,7 +16,6 @@ import openpectus.protocol.messages as M
 logger = logging.getLogger(__name__)
 
 MAX_RECONNECT_WAIT_SECONDS = 10
-BUFFER_BATCH_SIZE = 10
 
 RecoverState = Literal[
     "Started",
@@ -267,14 +266,10 @@ class EngineRunner(EventListener):
 
         buffered_message_count = self._get_buffer_size()
         if buffered_message_count > 0:
-            message_batch = self._pop_buffer_batch()
-            if __debug__:
-                logger.debug(f"Buffered messages remaining to be sent: {buffered_message_count}")
-                logger.debug(f"Buffer: {EM.print_sequence_range(self._message_buffer)}")
-                logger.debug(f"Batch : {EM.print_sequence_range(message_batch)}")
-
-            for message in message_batch:
-                await self._post_async(message)
+            message_buffer = self._message_buffer.copy()
+            self._message_buffer.clear()
+            logger.debug(f"Sending {len(message_buffer)} buffered messages")
+            await asyncio.gather(*[self._post_async(message) for message in message_buffer])
             logger.debug("Done sending batch")
         else:
             logger.info("All caught up sending buffered messages")
@@ -288,13 +283,6 @@ class EngineRunner(EventListener):
 
     def _get_buffer_size(self) -> int:
         return len(self._message_buffer)
-
-    def _pop_buffer_batch(self) -> list[EM.EngineMessage]:
-        messages = []
-        for _ in range(BUFFER_BATCH_SIZE):
-            if len(self._message_buffer) > 0:
-                messages.append(self._message_buffer.pop(0))
-        return messages
 
     async def _on_connection_established(self):
         await self._post_async(self._message_builder.create_uod_info())
