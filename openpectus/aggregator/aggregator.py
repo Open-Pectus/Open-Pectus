@@ -36,7 +36,6 @@ class FromEngine:
 
         self._try_restore_reconnected_engine_data(engine_data)
 
-        asyncio.create_task(self.publisher.publish_process_units_changed())
         asyncio.create_task(self.publisher.publish_control_state_changed(engine_data.engine_id))
 
     def _try_restore_reconnected_engine_data(self, engine_data: EngineData):
@@ -172,6 +171,7 @@ class FromEngine:
             self._engine_data_map[engine_id].hardware_str = hardware_str
             self._engine_data_map[engine_id].required_roles = required_roles
             self._engine_data_map[engine_id].data_log_interval_seconds = data_log_interval_seconds
+            asyncio.create_task(self.publisher.publish_process_units_changed())
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set uod info.')
 
