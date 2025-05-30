@@ -94,22 +94,14 @@ class EngineRunner(EventListener):
         super().on_start(run_id)
         if True or self.state == "Connected" or self.state == "Reconnected":
             msg = self._message_builder.create_run_started_msg(run_id, time.time())
-            try:
-                self.post(msg)
-            except Exception:
-                logger.warning("Failed to send RunStartedMsg, adding to buffer")
-                self._buffer_message(msg)
+            asyncio.run_coroutine_threadsafe(self._post_async(msg), self._loop)
 
     def on_stop(self):
         assert self.run_id is not None
         run_id = self.run_id
         super().on_stop()
         msg = self._message_builder.create_run_stopped_msg(run_id)
-        try:
-            self.post(msg)
-        except Exception:
-            logger.warning("Failed to send RunStoppedMsg, adding to buffer")
-            self._buffer_message(msg)
+        asyncio.run_coroutine_threadsafe(self._post_async(msg), self._loop)
 
     @property
     def state(self) -> RecoverState:
@@ -174,21 +166,6 @@ class EngineRunner(EventListener):
         await self._set_state("Stopped")
         await self._disconnect_async(set_state_disconnected=False)
         await self._set_state("ShutdownComplete")
-
-    def post(self, message: EM.EngineMessage) -> M.MessageBase:
-        # send sync message using self._loop
-        states_to_post: list[RecoverState] = ["Connected", "Reconnected"]
-        assert self.state in states_to_post, f"Invalid Post state for message: {message.ident}"
-
-        task = asyncio.run_coroutine_threadsafe(self._dispatcher.send_async(message), self._loop)
-        while not task.done():
-            time.sleep(0.01)
-        ex = task.exception()
-        if ex is None:
-            return M.SuccessMessage()
-        else:
-            logger.error(f"Failed to send message: {ex}")
-            return M.ErrorMessage(message="Failed to send message")
 
     async def _post_async(self, message: EM.EngineMessage) -> M.MessageBase:
         states_to_post: list[RecoverState] = ["Connected", "Reconnected", "CatchingUp"]
