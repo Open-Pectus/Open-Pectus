@@ -442,6 +442,14 @@ class Aggregator:
         return (f'{self.__class__.__name__}(dispatcher={self.dispatcher}, ' +
                 f'from_frontend={self.from_frontend}, from_engine={self.from_engine})')
 
+    def shutdown(self):
+        logger.info("Shutting down aggregator.")
+        with database.create_scope():
+            repo = RecentEngineRepository(database.scoped_session())
+            for engine_data in self._engine_data_map.values():
+                    repo.store_recent_engine(engine_data)
+                    logger.info(f"Storing {engine_data} as recent engine.")
+
     def create_engine_id(self, register_engine_msg: EM.RegisterEngineMsg):
         """ Defines the generation of the engine_id that is uniquely assigned to each engine.
 
