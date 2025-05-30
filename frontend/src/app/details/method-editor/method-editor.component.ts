@@ -1,4 +1,3 @@
-import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input, OnDestroy, OnInit } from '@angular/core';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
@@ -11,28 +10,24 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
 @Component({
   selector: 'app-method-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    CollapsibleElementComponent,
-    MonacoEditorComponent,
-    PushPipe,
-    NgIf,
-
-  ],
+  imports: [CollapsibleElementComponent, MonacoEditorComponent, PushPipe],
   template: `
     <app-collapsible-element [name]="'Method Editor'" [heightResizable]="true" (contentHeightChanged)="onContentHeightChanged()"
                              [contentHeight]="400" (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-list-flat'">
 
       @if (!collapsed) {
         <div class="h-full flex flex-col" content>
-          <div class="w-full bg-yellow-100 px-2 py-1.5 text-xs text-end border-b border-stone-100" *ngIf="versionMismatch | ngrxPush">
-            {{ (method | ngrxPush)?.last_author }} has updated the method. You cannot save without refreshing first.
-            <button class="bg-white rounded border-stone-300 border px-2 py-1 ml-2" (click)="forceRefreshMethod()">
-              Discard my changes and refresh
-            </button>
-          </div>
-          <app-monaco-editor class="block rounded-sm flex-1" [editorSizeChange]="editorSizeChange"
-                             [unitId]="unitId()"
-                             [readOnlyEditor]="recentRunId() !== undefined"></app-monaco-editor>
+          @if (versionMismatch | ngrxPush) {
+            <div class="w-full bg-yellow-100 px-2 py-1.5 text-xs text-end border-b border-stone-100">
+              {{ (method | ngrxPush)?.last_author }} has updated the method. You cannot save without refreshing first.
+              <button class="bg-white rounded border-stone-300 border px-2 py-1 ml-2" (click)="forceRefreshMethod()">
+                Discard my changes and refresh
+              </button>
+            </div>
+          }
+          <app-monaco-editor class="block rounded-sm flex-1 pl-1" [editorSizeChange]="editorSizeChange"
+                             [unitId]="unitId()" [isMethodEditor]="true"
+                             [editorOptions]="editorOptions"></app-monaco-editor>
         </div>
       }
       @if (!collapsed && (methodEditorIsDirty | ngrxPush)) {
@@ -55,8 +50,13 @@ export class MethodEditorComponent implements OnInit, OnDestroy {
   protected method = this.store.select(MethodEditorSelectors.method);
   protected editorSizeChange = new Subject<void>();
   protected collapsed = false;
+  private componentDestroyed = new Subject<void>();
 
   constructor(private store: Store) {}
+
+  get editorOptions() {
+    return {readOnly: this.recentRunId() !== undefined, readOnlyMessage: {value: 'You cannot edit an already executed program'}};
+  }
 
   ngOnInit() {
     const unitId = this.unitId();
@@ -69,6 +69,7 @@ export class MethodEditorComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.componentDestroyed.next();
     this.store.dispatch(MethodEditorActions.methodEditorComponentDestroyed());
   }
 

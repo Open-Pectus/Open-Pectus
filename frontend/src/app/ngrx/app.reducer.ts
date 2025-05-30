@@ -22,6 +22,7 @@ export interface AppState {
   userData?: UserData;
   userPicture?: string;
   hasFinishedAuthentication: boolean;
+  userId?: string;
 }
 
 const initialState: AppState = {
@@ -55,5 +56,8 @@ export const appReducer = createReducer(initialState,
   on(AppActions.finishedAuthentication, state => produce(state, draft => {
     draft.hasFinishedAuthentication = true;
   })),
+  on(AppActions.userIdLoaded, (state, {userId}) => produce(state, draft => {
+    draft.userId = userId;
+  }))
 );
 

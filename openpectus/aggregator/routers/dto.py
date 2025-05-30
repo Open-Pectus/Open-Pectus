@@ -382,6 +382,23 @@ class MethodAndState(Dto):
         )
 
 
+class ActiveUser(Dto):
+    id: str
+    name: str
+
+    @staticmethod
+    def from_model(active_user: Mdl.ActiveUser) -> ActiveUser:
+        return ActiveUser(id=active_user.id, name=active_user.name)
+
+
+class ActiveUsers(Dto):
+    active_users: list[ActiveUser]
+
+    @staticmethod
+    def empty() -> ActiveUsers:
+        return ActiveUsers(active_users=[])
+
+
 class PlotColorRegion(Dto):
     process_value_name: str
     # Color string compatible with css e.g.:

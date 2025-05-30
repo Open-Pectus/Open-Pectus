@@ -26,7 +26,7 @@ configure_test_logger()
 set_engine_debug_logging()
 set_interpreter_debug_logging()
 logging.getLogger("openpectus.lang.exec.runlog").setLevel(logging.DEBUG)
-logging.getLogger("openpectus.engine.method_model").setLevel(logging.DEBUG)
+logging.getLogger("openpectus.engine.method_manager").setLevel(logging.DEBUG)
 
 # pint takes forever to initialize - long enough
 # to throw off timing of the first instruction.
