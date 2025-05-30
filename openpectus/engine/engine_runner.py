@@ -242,6 +242,9 @@ class EngineRunner(EventListener):
                     pass
                 self._state_task = None
 
+        if state in ["Connected", "CatchingUp"]:
+            await self._on_connection_established()
+
         if state == "Connected":
             await self._on_connected()
         elif state == "Failed":
@@ -292,6 +295,9 @@ class EngineRunner(EventListener):
             if len(self._message_buffer) > 0:
                 messages.append(self._message_buffer.pop(0))
         return messages
+
+    async def _on_connection_established(self):
+        await self._post_async(self._message_builder.create_uod_info())
 
     async def _on_connected(self):
         logger.debug("on_connected")
@@ -351,7 +357,6 @@ class EngineRunner(EventListener):
         async def send_messages():
             logger.info("Started steady-state sending loop")
             try:
-                await self._post_async(self._message_builder.create_uod_info())
                 await self._post_async(self._message_builder.create_tag_updates_snapshot_msg())
                 while True:
                     messages = []
