@@ -71,6 +71,7 @@ class EngineRunner(EventListener):
         self._message_buffer: list[EM.EngineMessage] = []
         self._lock = asyncio.Lock()
         self._state_task: asyncio.Task[None] | None = None
+        self._transmit_buffer_task: asyncio.Task[None] | None = None
         self._timer = AsyncTimer(0.1, self._tick)
         self._first_steady_state = True
         self._loop = loop
@@ -216,7 +217,11 @@ class EngineRunner(EventListener):
                 await self._set_state("CatchingUp")
 
             elif self._state == "CatchingUp":
-                await self._send_buffered_batch()
+                if self._transmit_buffer_task is None:
+                    self._transmit_buffer_task = asyncio.create_task(self._send_buffered_batch())
+                if self._transmit_buffer_task is not None and self._transmit_buffer_task.done():
+                    self._transmit_buffer_task = asyncio.create_task(self._send_buffered_batch())
+
 
     async def _set_state(self, state: RecoverState):
         prev_state = self.state
@@ -242,6 +247,20 @@ class EngineRunner(EventListener):
                 except asyncio.CancelledError:
                     logger.debug("State task cancelled")
                     self._state_task = None
+
+
+        if self._transmit_buffer_task is not None:
+            if state == "Reconnected":
+                logger.debug("Cancelling buffer transmission task")
+                self._transmit_buffer_task.cancel()
+                try:
+                    await self._transmit_buffer_task  # Await cancellation
+                    self._transmit_buffer_task = None
+                    logger.debug("Buffer transmission task finished")
+                except asyncio.CancelledError:
+                    logger.debug("Buffer transmission task cancelled")
+                    self._transmit_buffer_task = None
+
 
         if state in ["Connected", "CatchingUp"]:
             await self._on_connection_established()
