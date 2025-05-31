@@ -217,9 +217,7 @@ class EngineRunner(EventListener):
                 await self._set_state("CatchingUp")
 
             elif self._state == "CatchingUp":
-                if self._transmit_buffer_task is None:
-                    self._transmit_buffer_task = asyncio.create_task(self._send_buffered_batch())
-                if self._transmit_buffer_task is not None and self._transmit_buffer_task.done():
+                if (self._transmit_buffer_task is None or (self._transmit_buffer_task is not None and self._transmit_buffer_task.done())):
                     self._transmit_buffer_task = asyncio.create_task(self._send_buffered_batch())
 
 

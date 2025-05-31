@@ -98,14 +98,14 @@ class FromEngine:
                 recent_run_repo = RecentRunRepository(database.scoped_session())
                 try:
                     recent_run_repo.store_recent_run(engine_data)
-                    logger.info(f"Stopping existing run and store it as recent run {_run_id=}")
+                    logger.info(f"Stopping existing run and store it as recent run {_run_id}")
                     engine_data.reset_run()
                     engine_data.run_data = Mdl.RunData.empty(
                         run_id=msg.run_id,
                         run_started=datetime.fromtimestamp(msg.started_tick, timezone.utc)
                     )
                 except Exception:
-                    logger.error(f"Failed to persist recent run {_run_id=}", exc_info=True)
+                    logger.error(f"Failed to persist recent run {_run_id}", exc_info=True)
 
             plot_log_repo = PlotLogRepository(database.scoped_session())
             plot_log_repo.create_plot_log(engine_data, msg.run_id)
