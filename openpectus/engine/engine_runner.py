@@ -290,8 +290,23 @@ class EngineRunner(EventListener):
         if buffered_message_count > 0:
             message_buffer = self._message_buffer.copy()
             self._message_buffer.clear()
-            logger.debug(f"Sending {len(message_buffer)} buffered messages")
-            await asyncio.gather(*[self._post_async(message) for message in message_buffer])
+            n_buffer = len(message_buffer)
+            logger.info(f"Sending {n_buffer} buffered messages")
+            # Wrap _post_async to print out some progress.
+            i = 0
+            async def wrap(message):
+                nonlocal i
+                await self._post_async(message)
+                i += 1
+                if i % (n_buffer//10) == 0:
+                    logger.info(f"Submitted {i} of {n_buffer} buffered messages")
+            # Only wrap if there is a substantial amount of messages
+            fn_calls = []
+            if n_buffer < 100:
+                fn_calls = [self._post_async(message) for message in message_buffer]
+            else:
+                fn_calls = [wrap(message) for message in message_buffer]
+            await asyncio.gather(*fn_calls)
             logger.debug("Done sending batch")
         else:
             logger.info("All caught up sending buffered messages")
