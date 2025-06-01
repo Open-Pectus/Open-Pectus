@@ -150,7 +150,7 @@ class TestUsingConsoleAppRunner(unittest.TestCase):
 
 class TestAggregatorRestart(TestUsingConsoleAppRunner):
     @unittest.skipUnless(sys.platform.lower() == "linux", "This test cannot run correctly on Windows.")
-    def test_reconnect_single_engine(self, port: int = 8719):
+    def test_reconnect_single_engine(self, port: int = 8718):
         temporary_sqlite_db_filename = tempfile.NamedTemporaryFile(suffix=".sqlite3").name
 
         method = method_from_text("\n".join([
@@ -237,6 +237,97 @@ class TestAggregatorRestart(TestUsingConsoleAppRunner):
         for a, b in zip(aggregator_method.lines, method.lines):
             self.assertEqual(a.id, b.id)
             self.assertEqual(a.content, b.content)
+
+        # Check that plot log after restart has all the points from
+        # before the restart and that it is larger.
+        plot_log_after_aggregator_restart = get_plot_log_on_process_unit(port, process_unit)
+        self.assertTrue(
+            tick_times_from_plotlog(plot_log_before_stop).issubset(
+                tick_times_from_plotlog(plot_log_after_aggregator_restart)
+            )
+        )
+        self.assertGreater(
+            len(tick_times_from_plotlog(plot_log_after_aggregator_restart)),
+            len(tick_times_from_plotlog(plot_log_before_stop))
+        )
+
+        # Stop run
+        logger.debug("Stopping run")
+        execute_command_on_process_unit(port, "Stop", process_unit)
+        self.assertHasOutput(engine, "Stopped", 30)
+        logger.debug("Engines stopped run")
+        engine.stop()
+        aggregator.stop()
+    
+    @unittest.skipIf(bool(os.environ.get("OPENPECTUS_INTEGRATION_SKIP_SLOW_TESTS")), reason="Skipping slow tests as configured")
+    @unittest.skipUnless(sys.platform.lower() == "linux", "This test cannot run correctly on Windows.")
+    def test_reconnect_single_heavy_engine(self, port: int = 8719):
+        temporary_sqlite_db_filename = tempfile.NamedTemporaryFile(suffix=".sqlite3").name
+
+        # Start aggregator via python (not via command script) to enable py-spy profiling
+        aggregator = ConsoleAppRunner(
+            "python",
+            [
+                openpectus.aggregator.main.__file__,
+                "--port",
+                str(port),
+                "--database",
+                temporary_sqlite_db_filename,
+            ]
+        )
+        logger.debug("Starting aggregator")
+        aggregator.start()
+        self.assertHasOutput(aggregator, "Starting Open Pectus Aggregator")
+        logger.debug(f"Aggregator started http://127.0.0.1:{port}")
+
+        # Create Open Pectus Engine
+        engine = ConsoleAppRunner(
+            "pectus-engine",
+            [
+                "--aggregator_port",
+                str(port),
+                "--uod",
+                os.path.join(os.path.dirname(__file__), "heavy_uod.py"),
+            ]
+        )
+
+        # Start engine and wait for it to be ready
+        logger.debug("Starting engine")
+        engine.start()
+        self.assertHasOutput(engine, "Starting engine on first steady-state")
+        logger.debug("Engine ready for run to start")
+
+        # Check process unit is ready
+        process_units = get_process_units(port)
+        assert len(process_units) == 1
+        process_unit = process_units[0]
+        self.assertEqual(process_unit.state.state, ProcessUnitStateEnum.READY)
+
+        # Start run
+        logger.debug("Starting run")
+        execute_command_on_process_unit(port, "Start", process_unit)
+        self.assertHasOutput(engine, "Archiver started")
+        logger.debug("Runs started")
+        time.sleep(10)
+
+        # Get plotlog before stopping aggregator
+        plot_log_before_stop = get_plot_log_on_process_unit(port, process_unit)
+
+        # Stop aggregator for a while so all engines lose connection
+        logger.debug("Stopping aggregator for a while")
+        aggregator.stop()
+        self.assertHasOutput(engine, "Changing state: Failed -> Disconnected", 10)
+        logger.debug("Engine lost connection to aggregator")
+
+        time.sleep(10)
+
+        # Start aggregator again and wait for all engines to reconnect
+        logger.debug("Starting aggregator again")
+        aggregator.start()
+        self.assertHasOutput(aggregator, "Starting Open Pectus Aggregator")
+        logger.debug("Aggregator started again")
+        self.assertHasOutput(engine, "Changing state: CatchingUp -> Reconnected", 15)
+        logger.debug("Engine reconnected")
 
         # Check that plot log after restart has all the points from
         # before the restart and that it is larger.
