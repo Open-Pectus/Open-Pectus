@@ -9,6 +9,7 @@ from pylsp.config.config import Config
 
 from openpectus.lang.exec.uod import RegexNamedArgumentParser
 from openpectus.lang.exec.analyzer import AnalyzerItem, SemanticCheckAnalyzer
+from openpectus.lang.exec.argument_specification import ArgSpec
 from openpectus.lang.exec.commands import Command, CommandCollection
 from openpectus.lang.exec.tags import TagValue, TagValueCollection
 from openpectus.lang.exec.units import get_compatible_unit_names, convert_value_to_unit
@@ -21,6 +22,7 @@ from openpectus.lsp.model import (
     CodeAction, WorkspaceEdit,
     get_item_range, get_item_severity
 )
+from openpectus.lsp.model import Command as LSPCommand
 import openpectus.lang.model.ast as p
 import openpectus.protocol.models as ProMdl
 import openpectus.aggregator.deps as agg_deps
@@ -471,12 +473,14 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                 # Complete tag name
                 if position_ast in node.condition.lhs_range or (node.condition.lhs == "" and node.arguments_part.strip() not in analysis_input.tags.names):
                     prefix = " " if query.endswith(":") else ""
+                    suffix = "" if node.condition.op_range and position_ast.character < node.condition.op_range.start.character else " "
                     if node.condition.lhs_range.is_empty():
                         return [
                             CompletionItem(
                                 label=name,
-                                insertText=prefix+name,
+                                insertText=prefix+name+suffix,
                                 kind=CompletionItemKind.Enum,
+                                command=LSPCommand(title="", command="editor.action.triggerSuggest")
                             )
                             for name in analysis_input.get_tag_completions(node.condition.lhs)
                         ]
@@ -487,8 +491,9 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                                 kind=CompletionItemKind.Enum,
                                 textEdit=TextEdit(
                                     range=lsp_range_from_ast_range(node.condition.lhs_range),
-                                    newText=prefix+name
+                                    newText=prefix+name+suffix
                                 ),
+                                command=LSPCommand(title="", command="editor.action.triggerSuggest")
                             )
                             for name in analysis_input.get_tag_completions(node.condition.lhs)
                         ]
@@ -499,8 +504,9 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                         return [
                             CompletionItem(
                                 label=f"{operator} ({operator_description})",
-                                insertText=prefix+operator,
+                                insertText=prefix+operator+" ",
                                 kind=CompletionItemKind.Enum,
+                                command=LSPCommand(title="", command="editor.action.triggerSuggest")
                             )
                             for operator, operator_description in operator_descriptions.items()
                         ]
@@ -511,8 +517,9 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                                 kind=CompletionItemKind.Enum,
                                 textEdit=TextEdit(
                                     range=lsp_range_from_ast_range(node.condition.op_range),
-                                    newText=prefix+operator
+                                    newText=prefix+operator+" "
                                 ),
+                                command=LSPCommand(title="", command="editor.action.triggerSuggest")
                             )
                             for operator, operator_description in operator_descriptions.items()
                         ]
@@ -596,7 +603,11 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                 CompletionItem(
                     label=word,
                     kind=CompletionItemKind.Function,
-                    textEdit=TextEdit(range=lsp_range_from_ast_range(node.instruction_range), newText=word),
+                    textEdit=TextEdit(
+                        range=lsp_range_from_ast_range(node.instruction_range),
+                        newText=word if analysis_input.commands.get(word).arg_parser and analysis_input.commands.get(word).arg_parser.regex == ArgSpec.NoArgsInstance.regex else word+": "
+                    ),
+                    command=LSPCommand(title="", command="editor.action.triggerSuggest")
                 )
                 for word in analysis_input.get_command_completions(node.instruction_name)
                 ]
