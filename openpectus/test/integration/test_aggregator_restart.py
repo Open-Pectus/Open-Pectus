@@ -259,6 +259,7 @@ class TestAggregatorRestart(TestUsingConsoleAppRunner):
         engine.stop()
         aggregator.stop()
 
+    @unittest.skipIf(bool(os.environ.get("OPENPECTUS_INTEGRATION_SKIP_SLOW_TESTS")), reason="Skipping slow tests as configured")
     @unittest.skipUnless(sys.platform.lower() == "linux", "This test cannot run correctly on Windows.")
     def test_reconnect_multiple_engines(self, port: int = 8720, n_engines=5):
         temporary_sqlite_db_filename = tempfile.NamedTemporaryFile(suffix=".sqlite3").name
