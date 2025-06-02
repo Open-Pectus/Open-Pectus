@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, OnDestroy, OnInit } from '@angular/core';
 import { editor as MonacoEditor } from '@codingame/monaco-vscode-editor-api';
-import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { Subject } from 'rxjs';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
@@ -13,16 +12,16 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
 @Component({
   selector: 'app-method-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CollapsibleElementComponent, MonacoEditorComponent, PushPipe],
+  imports: [CollapsibleElementComponent, MonacoEditorComponent],
   template: `
     <app-collapsible-element [name]="'Method Editor'" [heightResizable]="true" (contentHeightChanged)="onContentHeightChanged()"
                              [contentHeight]="400" (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-list-flat'">
 
       @if (!collapsed) {
         <div class="h-full flex flex-col" content>
-          @if (versionMismatch | ngrxPush) {
+          @if (versionMismatch()) {
             <div class="w-full bg-yellow-100 px-2 py-1.5 text-xs text-end border-b border-stone-100">
-              {{ (method | ngrxPush)?.last_author }} has updated the method. You cannot save without refreshing first.
+              {{ method().last_author }} has updated the method. You cannot save without refreshing first.
               <button class="bg-white rounded border-stone-300 border px-2 py-1 ml-2" (click)="forceRefreshMethod()">
                 Discard my changes and refresh
               </button>
@@ -34,10 +33,10 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
                              [editorOptions]="editorOptions"></app-monaco-editor>
         </div>
       }
-      @if (!collapsed && (methodEditorIsDirty | ngrxPush)) {
-        <button (click)="onSaveButtonClicked()" content [disabled]="versionMismatch | ngrxPush"
+      @if (!collapsed && methodEditorIsDirty()) {
+        <button (click)="onSaveButtonClicked()" content [disabled]="versionMismatch()"
                 class="bg-green-300 flex items-center text-black px-3 py-1.5 rounded-md absolute right-9 bottom-6 z-10"
-                [class.!bg-gray-200]="versionMismatch | ngrxPush">
+                [class.!bg-gray-200]="versionMismatch()">
           <span class="codicon codicon-save !text-lg"></span>
           <span class="ml-2">Save method</span>
         </button>
@@ -49,9 +48,9 @@ export class MethodEditorComponent implements OnInit, OnDestroy {
   unitId = input<string>();
   recentRunId = input<string>();
 
-  protected methodEditorIsDirty = this.store.select(MethodEditorSelectors.isDirty);
-  protected versionMismatch = this.store.select(MethodEditorSelectors.versionMismatch);
-  protected method = this.store.select(MethodEditorSelectors.method);
+  protected methodEditorIsDirty = this.store.selectSignal(MethodEditorSelectors.isDirty);
+  protected versionMismatch = this.store.selectSignal(MethodEditorSelectors.versionMismatch);
+  protected method = this.store.selectSignal(MethodEditorSelectors.method);
   protected controlState = this.store.selectSignal(DetailsSelectors.controlState);
   protected isStopped = computed(() => !this.controlState().is_running);
   protected editorSizeChange = new Subject<void>();
