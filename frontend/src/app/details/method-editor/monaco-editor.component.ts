@@ -1,12 +1,25 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, input, OnDestroy, ViewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  EventEmitter,
+  Injector,
+  input,
+  OnDestroy,
+  Output,
+  runInInjectionContext,
+  ViewChild,
+} from '@angular/core';
 // import '@codingame/monaco-vscode-json-default-extension';
 import '@codingame/monaco-vscode-theme-defaults-default-extension';
+import { editor as MonacoEditor } from '@codingame/monaco-vscode-editor-api';
 import { Store } from '@ngrx/store';
 import { MonacoEditorLanguageClientWrapper } from 'monaco-editor-wrapper';
-import { firstValueFrom, Observable, Subject, take } from 'rxjs';
+import { Observable, Subject, take } from 'rxjs';
+import { MethodEditorBehaviours } from './method-editor-behaviours';
 import { MonacoEditorBehaviours } from './monaco-editor-behaviours';
 import { MonacoWrapperConfig } from './monaco-wrapper-config';
-import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
 
 
 @Component({
@@ -19,18 +32,20 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
 })
 export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   editorSizeChange = input.required<Observable<void>>();
-  readOnlyEditor = input(false);
   unitId = input<string>();
+  editorContent = input<string>();
+  isMethodEditor = input<boolean>(false);
+  editorOptions = input<MonacoEditor.IEditorOptions & MonacoEditor.IGlobalEditorOptions>({});
+  @Output() editorContentChanged = new EventEmitter<string[]>();
   @ViewChild('editor', {static: true}) editorElement!: ElementRef<HTMLDivElement>;
   private componentDestroyed = new Subject<void>();
   private wrapper = new MonacoEditorLanguageClientWrapper();
-  private methodContent = this.store.select(MethodEditorSelectors.methodContent);
 
-  constructor(private store: Store) {}
+  constructor(private store: Store, private injector: Injector) {}
 
   async ngAfterViewInit() {
     await this.initAndStartWrapper();
-    this.setupEditorBehaviours();
+    runInInjectionContext(this.injector, this.setupEditorBehaviours.bind(this));
     await this.startLanguageClient();
   }
 
@@ -48,12 +63,20 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   private setupEditorBehaviours() {
     const editor = this.wrapper.getEditor();
     if(editor === undefined) throw Error('Monaco Editor Wrapper returned no editor!');
-    new MonacoEditorBehaviours(this.store, this.componentDestroyed, editor, this.readOnlyEditor, this.editorSizeChange());
+    editor.updateOptions(this.editorOptions());
+    new MonacoEditorBehaviours(this.componentDestroyed, editor, this.editorSizeChange(), this.editorContent,
+      this.onEditorContentChanged.bind(this));
+    if(this.isMethodEditor()) new MethodEditorBehaviours(this.store, this.componentDestroyed, editor);
+  }
+
+  private onEditorContentChanged(lines: string[]) {
+    this.editorContentChanged.emit(lines);
   }
 
   private async initAndStartWrapper() {
-    const methodContent = await firstValueFrom(this.methodContent);
-    const wrapperConfig = MonacoWrapperConfig.buildWrapperUserConfig(this.editorElement.nativeElement, methodContent, this.unitId());
+    const wrapperConfig = MonacoWrapperConfig.buildWrapperUserConfig(this.editorElement.nativeElement, this.editorContent(),
+      this.unitId(),
+      this.isMethodEditor());
     await this.wrapper.initAndStart(wrapperConfig, false);
     this.componentDestroyed.pipe(take(1)).subscribe(() => this.wrapper.dispose());
   }
