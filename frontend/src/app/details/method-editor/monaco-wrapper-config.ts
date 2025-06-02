@@ -4,8 +4,13 @@ import { useWorkerFactory } from 'monaco-languageclient/workerFactory';
 import { LogLevel } from 'vscode';
 
 export class MonacoWrapperConfig {
+  static id = 0;
+
   static buildWrapperConfig(htmlContainer: HTMLElement, text?: string, unitId?: string): WrapperConfig {
-    const uuid = crypto.randomUUID();
+    MonacoWrapperConfig.id += 1;
+    const id = MonacoWrapperConfig.id;
+    const languageId = `pcode-${id}`;
+    const extension = `${id}.pcode`;
     return {
       $type: 'extended',
       htmlContainer,
@@ -40,21 +45,21 @@ export class MonacoWrapperConfig {
       // Currently, there's always only one method editor on screen, and possible other editors which are not a method editor.
       extensions: [{
         config: {
-          name: `${uuid}pcode`,
+          name: id.toString(),
           version: '0.0.0',
           publisher: 'openpectus',
           engines: {vscode: '0.10.x'},
           categories: ['Programming Languages'],
           contributes: {
             grammars: [{
-              language: `${uuid}pcode`,
+              language: languageId,
               scopeName: 'source.pcode',
               path: './pcode.tmLanguage.json',
             }],
             languages: [{
-              id: `${uuid}pcode`,
+              id: languageId,
               aliases: ['PCODE', 'pcode'],
-              extensions: [`${uuid}pcode`],
+              extensions: [extension],
               mimetypes: ['application/pcode'],
               configuration: './pcode.language-configuration.json',
             }],
@@ -69,15 +74,15 @@ export class MonacoWrapperConfig {
         codeResources: {
           modified: {
             text: text ?? '',
-            fileExt: `${uuid}pcode`,
+            fileExt: extension,
           },
         },
         monacoWorkerFactory: this.configureMonacoWorkers,
       },
       languageClientConfigs: {
-        [`${uuid}pcode`]: {
+        'pcode': {
           clientOptions: {
-            documentSelector: [`${uuid}pcode`],
+            documentSelector: [languageId],
             initializationOptions: {
               engineId: unitId,
             },
