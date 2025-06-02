@@ -14,7 +14,6 @@ import {
 // import '@codingame/monaco-vscode-json-default-extension';
 import '@codingame/monaco-vscode-theme-defaults-default-extension';
 import { editor as MonacoEditor } from '@codingame/monaco-vscode-editor-api';
-import { Store } from '@ngrx/store';
 import { MonacoEditorLanguageClientWrapper } from 'monaco-editor-wrapper';
 import { Observable, Subject, take } from 'rxjs';
 import { MethodEditorBehaviours } from './method-editor-behaviours';
@@ -41,7 +40,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   private componentDestroyed = new Subject<void>();
   private wrapper = new MonacoEditorLanguageClientWrapper();
 
-  constructor(private store: Store, private injector: Injector) {}
+  constructor(private injector: Injector) {}
 
   async ngAfterViewInit() {
     await this.initAndStartWrapper();
@@ -75,8 +74,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
 
   private async initAndStartWrapper() {
     const wrapperConfig = MonacoWrapperConfig.buildWrapperUserConfig(this.editorElement.nativeElement, this.editorContent(),
-      this.unitId(),
-      this.isMethodEditor());
+      this.unitId());
     await this.wrapper.initAndStart(wrapperConfig, false);
     this.componentDestroyed.pipe(take(1)).subscribe(() => this.wrapper.dispose());
   }

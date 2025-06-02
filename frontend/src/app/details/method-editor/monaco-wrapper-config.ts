@@ -4,7 +4,11 @@ import { useWorkerFactory } from 'monaco-languageclient/workerFactory';
 import { LogLevel } from 'vscode';
 
 export class MonacoWrapperConfig {
-  static buildWrapperUserConfig(htmlContainer: HTMLElement, text?: string, unitId?: string, isMethodEditor = true): WrapperConfig {
+  static extensionAlreadyRegistered = false;
+
+  static buildWrapperUserConfig(htmlContainer: HTMLElement, text?: string, unitId?: string): WrapperConfig {
+    const extensionAlreadyRegistered = MonacoWrapperConfig.extensionAlreadyRegistered;
+    MonacoWrapperConfig.extensionAlreadyRegistered = true;
     return {
       $type: 'extended',
       htmlContainer,
@@ -37,7 +41,7 @@ export class MonacoWrapperConfig {
       },
       // Only one editor should initialize the extensions, otherwise we get an error.
       // Currently, there's always only one method editor on screen, and possible other editors which are not a method editor.
-      extensions: !isMethodEditor ? [] : [{
+      extensions: extensionAlreadyRegistered ? [] : [{
         config: {
           name: 'pcode',
           version: '0.0.0',
