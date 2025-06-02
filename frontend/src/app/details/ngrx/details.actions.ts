@@ -1,5 +1,5 @@
 import { createAction, props } from '@ngrx/store';
-import { ApiError, CommandExample, ControlState, ExecutableCommand, ProcessDiagram, ProcessValue, RecentRun } from '../../api';
+import { ActiveUser, ApiError, CommandExample, ControlState, ExecutableCommand, ProcessDiagram, ProcessValue, RecentRun } from '../../api';
 
 const source = '[Details] ';
 
@@ -23,4 +23,7 @@ export class DetailsActions {
   static recentRunDownloadCsvButtonClicked = createAction(source + 'Recent Run Download Csv Button Clicked', props<{ recentRunId: string }>());
   static controlStateUpdatedOnBackend = createAction(source + 'Control State Updated On Backend', props<{ unitId: string }>());
   static toggleAllProcessValues = createAction(source + 'All Process Values Toggled', props<{ allProcessValues: boolean }>());
+  static processUnitNavigatedFrom = createAction(source + 'Process Unit Navigated From', props<{ oldUnitId?: string, newUnitId?: string }>());
+  static otherActiveUsersFetched = createAction(source + 'Other Active Users Fetched', props<{ otherActiveUsers: ActiveUser[] }>());
+  static activeUsersUpdatedOnBackend = createAction(source + 'Active Users Updated On Backend', props<{ unitId: string }>());
 }

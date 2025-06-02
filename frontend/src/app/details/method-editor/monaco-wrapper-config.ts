@@ -2,10 +2,9 @@ import { WrapperConfig } from 'monaco-editor-wrapper';
 import { Logger } from 'monaco-languageclient/tools';
 import { useWorkerFactory } from 'monaco-languageclient/workerFactory';
 import { LogLevel } from 'vscode';
-import { UtilMethods } from '../../shared/util-methods';
 
 export class MonacoWrapperConfig {
-  static buildWrapperUserConfig(htmlContainer: HTMLElement, text: string, unitId?: string): WrapperConfig {
+  static buildWrapperUserConfig(htmlContainer: HTMLElement, text?: string, unitId?: string, isMethodEditor = true): WrapperConfig {
     return {
       $type: 'extended',
       htmlContainer,
@@ -18,20 +17,27 @@ export class MonacoWrapperConfig {
             'editor.fontSize': 18,
             'editor.glyphMargin': false,
             'editor.fixedOverflowWidgets': true,
-            'editor.lineNumbersMinChars': UtilMethods.isMobile ? 1 : 3,
-            'editor.minimap': {
-              enabled: UtilMethods.isDesktop,
-            },
+            'editor.lineNumbersMinChars': 1,
+            'editor.minimap.enabled': false,
             'editor.lightbulb.enabled': true,
             'editor.experimental.asyncTokenization': true,
             'editor.foldingStrategy': 'indentation',
             'editor.wordBasedSuggestions': false,
             'editor.codeLens': false,
+            'scm.diffDecorations': 'none',
+            'editor.lineDecorationsWidth': 12,
+            'workbench.activityBar.visible': false,
+            'editor.renderLineHighlightOnlyWhenFocus': true,
+            'editor.folding': false,
+            'editor.scrollBeyondLastColumn': 1,
+            'editor.scrollBeyondLastLine': false,
             // "editor.quickSuggestions": false
           }),
         },
       },
-      extensions: [{
+      // Only one editor should initialize the extensions, otherwise we get an error.
+      // Currently, there's always only one method editor on screen, and possible other editors which are not a method editor.
+      extensions: !isMethodEditor ? [] : [{
         config: {
           name: 'pcode',
           version: '0.0.0',
@@ -61,7 +67,7 @@ export class MonacoWrapperConfig {
       editorAppConfig: {
         codeResources: {
           modified: {
-            text,
+            text: text ?? '',
             fileExt: 'pcode',
           },
         },
@@ -103,6 +109,7 @@ export class MonacoWrapperConfig {
     useWorkerFactory({
       workerLoaders: {
         'TextEditorWorker': () => new Worker('/assets/monaco-workers/editor.js', {type: 'module'}),
+        'editorWorkerService': () => new Worker('/assets/monaco-workers/editorService.js', {type: 'module'}),
         'TextMateWorker': () => new Worker('/assets/monaco-workers/textmate.js', {type: 'module'}),
         OutputLinkDetectionWorker: undefined,
         LanguageDetectionWorker: undefined,
