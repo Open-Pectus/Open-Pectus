@@ -9,12 +9,12 @@ export class MonacoWrapperConfig {
   static buildWrapperConfig(htmlContainer: HTMLElement, unitId?: string): WrapperConfig {
     const isInitialized = MonacoWrapperConfig.isInitialized;
     MonacoWrapperConfig.isInitialized = true;
-    console.log(isInitialized, htmlContainer);
+
     // These two variables exist to help keep track of what should match and what is unrelated, even though their value is identical.
     const languageId = 'pcode';
     const extension = 'pcode';
 
-    const everyTimeConfig = {
+    const specificConfig = {
       $type: 'extended' as const,
       htmlContainer,
       logLevel: LogLevel.Warning,
@@ -27,12 +27,12 @@ export class MonacoWrapperConfig {
         },
         monacoWorkerFactory: this.configureMonacoWorkers,
       },
-    } satisfies Partial<WrapperConfig>;
-    
-    if(isInitialized) return everyTimeConfig;
+    } satisfies WrapperConfig;
+
+    if(isInitialized) return specificConfig;
 
     // if multiple editors are on screen, only one of those should initialize this
-    const onlyOnceConfig = {
+    const sharedConfig = {
       vscodeApiConfig: {
         // vscodeApiInitPerformExternally: true,
         // enableExtHostWorker: true,
@@ -108,7 +108,7 @@ export class MonacoWrapperConfig {
       },
     } satisfies Partial<WrapperConfig>;
 
-    return {...everyTimeConfig, ...onlyOnceConfig};
+    return {...specificConfig, ...sharedConfig};
   };
 
   // adapted from https://github.com/TypeFox/monaco-languageclient/blob/70f92b740a06f56210f91464d694b5e5d4dc87db/packages/examples/src/common/client/utils.ts
