@@ -6,7 +6,7 @@ import { LogLevel } from 'vscode';
 export class MonacoWrapperConfig {
   static extensionAlreadyRegistered = false;
 
-  static buildWrapperUserConfig(htmlContainer: HTMLElement, text?: string, unitId?: string): WrapperConfig {
+  static buildWrapperConfig(htmlContainer: HTMLElement, text?: string, unitId?: string): WrapperConfig {
     const extensionAlreadyRegistered = MonacoWrapperConfig.extensionAlreadyRegistered;
     MonacoWrapperConfig.extensionAlreadyRegistered = true;
     return {

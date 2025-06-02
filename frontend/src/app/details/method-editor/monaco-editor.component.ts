@@ -67,9 +67,12 @@ export class MonacoEditorComponent implements AfterViewInit {
   }
 
   private async initAndStartWrapper() {
-    const wrapperConfig = MonacoWrapperConfig.buildWrapperUserConfig(this.editorElement.nativeElement, this.editorContent(),
+    const wrapperConfig = MonacoWrapperConfig.buildWrapperConfig(this.editorElement.nativeElement, this.editorContent(),
       this.unitId());
     await this.wrapper.initAndStart(wrapperConfig, false);
-    this.destroyRef.onDestroy(() => this.wrapper.dispose());
+    this.destroyRef.onDestroy(() => {
+      this.wrapper.dispose();
+      MonacoWrapperConfig.extensionAlreadyRegistered = false;
+    });
   }
 }
