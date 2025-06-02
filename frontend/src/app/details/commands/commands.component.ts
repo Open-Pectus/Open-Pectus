@@ -21,6 +21,7 @@ import { CommandExamplesListComponent } from './command-examples-list.component'
                                      (exampleChosen)="chosenExample = $event"></app-command-examples-list>
           <app-monaco-editor [editorSizeChange]="editorSizeChange" [editorOptions]="exampleEditorOptions"
                              [editorContent]="chosenExampleContent"
+                             [dropFileDisabledReason]="'Cannot change example content'"
                              class="ml-1"></app-monaco-editor>
           <div class="h-full w-[1px] bg-slate-500"></div>
           <app-monaco-editor [editorSizeChange]="editorSizeChange" (editorContentChanged)="onEditorContentChanged($event)"

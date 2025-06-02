@@ -29,7 +29,7 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
           }
           <app-monaco-editor class="block rounded-sm flex-1 pl-1" [editorSizeChange]="editorSizeChange"
                              [unitId]="unitId()" (editorIsReady)="onEditorReady($event)"
-                             [dropFileEnabled]="isStopped()"
+                             [dropFileEnabled]="isStopped()" [dropFileDisabledReason]="dropFileDisabledReason"
                              [editorOptions]="editorOptions"></app-monaco-editor>
         </div>
       }
@@ -58,6 +58,12 @@ export class MethodEditorComponent implements OnInit, OnDestroy {
   private componentDestroyed = new Subject<void>();
 
   constructor(private store: Store) {}
+
+  get dropFileDisabledReason() {
+    if(this.recentRunId() !== undefined) return 'Cannot replace an already run program';
+    if(!this.isStopped()) return 'Cannot replace a running program';
+    return '';
+  }
 
   get editorOptions() {
     return {readOnly: this.recentRunId() !== undefined, readOnlyMessage: {value: 'You cannot edit an already executed program'}};
