@@ -14,8 +14,9 @@ export class MonacoWrapperConfig {
     const languageId = 'pcode';
     const extension = 'pcode';
 
-    const commonConfig = {
+    const everyTimeConfig = {
       $type: 'extended' as const,
+      htmlContainer,
       logLevel: LogLevel.Warning,
       editorAppConfig: {
         codeResources: {
@@ -27,10 +28,8 @@ export class MonacoWrapperConfig {
         monacoWorkerFactory: this.configureMonacoWorkers,
       },
     } satisfies Partial<WrapperConfig>;
-
-    const specificConfig = {
-      htmlContainer,
-    } satisfies Partial<WrapperConfig>;
+    
+    if(isInitialized) return everyTimeConfig;
 
     // if multiple editors are on screen, only one of those should initialize this
     const onlyOnceConfig = {
@@ -69,7 +68,8 @@ export class MonacoWrapperConfig {
           engines: {vscode: '0.10.x'},
           categories: ['Programming Languages'],
           contributes: {
-            grammars: [{
+            // no grammar for recent run where there's no unitId and no url to get the tmLanguage.json from
+            grammars: unitId === undefined ? [] : [{
               language: languageId,
               scopeName: 'source.pcode',
               path: './pcode.tmLanguage.json',
@@ -108,12 +108,7 @@ export class MonacoWrapperConfig {
       },
     } satisfies Partial<WrapperConfig>;
 
-    const commonAndSpecificConfig = {...commonConfig, ...specificConfig};
-    if(isInitialized) {
-      return commonAndSpecificConfig;
-    } else {
-      return {...commonAndSpecificConfig, ...onlyOnceConfig};
-    }
+    return {...everyTimeConfig, ...onlyOnceConfig};
   };
 
   // adapted from https://github.com/TypeFox/monaco-languageclient/blob/70f92b740a06f56210f91464d694b5e5d4dc87db/packages/examples/src/common/client/utils.ts
