@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, input, OnDestroy, OnInit } from '@angular/core';
+import { editor as MonacoEditor } from '@codingame/monaco-vscode-editor-api';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { Subject } from 'rxjs';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
+import { MethodEditorBehaviours } from './method-editor-behaviours';
 import { MonacoEditorComponent } from './monaco-editor.component';
 import { MethodEditorActions } from './ngrx/method-editor.actions';
 import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
@@ -26,7 +28,7 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
             </div>
           }
           <app-monaco-editor class="block rounded-sm flex-1 pl-1" [editorSizeChange]="editorSizeChange"
-                             [unitId]="unitId()" [isMethodEditor]="true"
+                             [unitId]="unitId()" (editorIsReady)="onEditorReady($event)"
                              [editorOptions]="editorOptions"></app-monaco-editor>
         </div>
       }
@@ -66,6 +68,10 @@ export class MethodEditorComponent implements OnInit, OnDestroy {
     } else if(recentRunId !== undefined) {
       this.store.dispatch(MethodEditorActions.methodEditorComponentInitializedForRecentRun({recentRunId}));
     }
+  }
+
+  onEditorReady(editor: MonacoEditor.IStandaloneCodeEditor) {
+    new MethodEditorBehaviours(this.store, this.componentDestroyed, editor);
   }
 
   ngOnDestroy() {

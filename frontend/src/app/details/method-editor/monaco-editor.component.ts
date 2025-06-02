@@ -16,7 +16,6 @@ import '@codingame/monaco-vscode-theme-defaults-default-extension';
 import { editor as MonacoEditor } from '@codingame/monaco-vscode-editor-api';
 import { MonacoEditorLanguageClientWrapper } from 'monaco-editor-wrapper';
 import { Observable, Subject, take } from 'rxjs';
-import { MethodEditorBehaviours } from './method-editor-behaviours';
 import { MonacoEditorBehaviours } from './monaco-editor-behaviours';
 import { MonacoWrapperConfig } from './monaco-wrapper-config';
 
@@ -33,9 +32,9 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
   editorSizeChange = input.required<Observable<void>>();
   unitId = input<string>();
   editorContent = input<string>();
-  isMethodEditor = input<boolean>(false);
   editorOptions = input<MonacoEditor.IEditorOptions & MonacoEditor.IGlobalEditorOptions>({});
   @Output() editorContentChanged = new EventEmitter<string[]>();
+  @Output() editorIsReady = new EventEmitter<MonacoEditor.IStandaloneCodeEditor>();
   @ViewChild('editor', {static: true}) editorElement!: ElementRef<HTMLDivElement>;
   private componentDestroyed = new Subject<void>();
   private wrapper = new MonacoEditorLanguageClientWrapper();
@@ -46,6 +45,7 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     await this.initAndStartWrapper();
     runInInjectionContext(this.injector, this.setupEditorBehaviours.bind(this));
     await this.startLanguageClient();
+    this.editorIsReady.emit(this.wrapper.getEditor());
   }
 
   ngOnDestroy() {
@@ -65,7 +65,6 @@ export class MonacoEditorComponent implements AfterViewInit, OnDestroy {
     editor.updateOptions(this.editorOptions());
     new MonacoEditorBehaviours(this.componentDestroyed, editor, this.editorSizeChange(), this.editorContent,
       this.onEditorContentChanged.bind(this));
-    if(this.isMethodEditor()) new MethodEditorBehaviours(this.store, this.componentDestroyed, editor);
   }
 
   private onEditorContentChanged(lines: string[]) {
