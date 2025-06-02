@@ -121,7 +121,7 @@ def create_command_examples(commands: list[Mdl.CommandInfo]) -> list[Dto.Command
     # TODO We probably need a headline and spacer elements
     examples: list[Dto.CommandExample] = []
     for cmd in commands:
-        example = "No command information available"
+        example = "# No command information available"
         if cmd.docstring is not None and cmd.docstring != "":
             example = cmd.docstring
         examples.append(Dto.CommandExample(name=cmd.name, example=example))
