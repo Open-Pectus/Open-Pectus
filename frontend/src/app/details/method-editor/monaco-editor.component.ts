@@ -13,7 +13,7 @@ import {
 } from '@angular/core';
 // import '@codingame/monaco-vscode-json-default-extension';
 import '@codingame/monaco-vscode-theme-defaults-default-extension';
-import { editor as MonacoEditor } from '@codingame/monaco-vscode-editor-api';
+import { editor as MonacoEditor, Range } from '@codingame/monaco-vscode-editor-api';
 import { MonacoEditorLanguageClientWrapper } from 'monaco-editor-wrapper';
 import { Observable } from 'rxjs';
 import { MonacoEditorBehaviours } from './monaco-editor-behaviours';
@@ -25,7 +25,7 @@ import { MonacoWrapperConfig } from './monaco-wrapper-config';
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['monaco-editor.component.scss'],
   template: `
-    <div #editor class="w-full h-full"></div>
+    <div #editor class="w-full h-full" (dragover)="onDragOver($event)" (drop)="onDrop($event)"></div>
   `,
 })
 export class MonacoEditorComponent implements AfterViewInit {
@@ -33,6 +33,7 @@ export class MonacoEditorComponent implements AfterViewInit {
   unitId = input<string>();
   editorContent = input<string>();
   editorOptions = input<MonacoEditor.IEditorOptions & MonacoEditor.IGlobalEditorOptions>({});
+  dropFileEnabled = input<boolean>(false);
   @Output() editorContentChanged = new EventEmitter<string[]>();
   @Output() editorIsReady = new EventEmitter<MonacoEditor.IStandaloneCodeEditor>();
   @ViewChild('editor', {static: true}) editorElement!: ElementRef<HTMLDivElement>;
@@ -44,7 +45,31 @@ export class MonacoEditorComponent implements AfterViewInit {
     await this.initAndStartWrapper();
     runInInjectionContext(this.injector, this.setupEditorBehaviours.bind(this));
     await this.startLanguageClient();
-    this.editorIsReady.emit(this.wrapper.getEditor());
+  }
+
+  onDragOver(event: DragEvent) {
+    event.preventDefault();
+  }
+
+  async onDrop(event: DragEvent) {
+    event.preventDefault();
+    if(!this.dropFileEnabled()) return;
+    if(this.editorOptions().readOnly) return;
+    if(event.dataTransfer === null) return;
+    const item = event.dataTransfer.items[0];
+    if(item.kind !== 'file') return;
+    const file = item.getAsFile();
+
+    // only accept certain file extensions
+    const fileExtension = file?.name.split('.').at(-1) ?? '';
+    if(!['txt', 'pcode'].includes(fileExtension)) return;
+
+    const text = await file?.text();
+    if(text === undefined) return;
+
+    // using pushEditOperations to get undo functionality, which doesn't work with setValue or applyEdits
+    const editOperation = {range: new Range(0, 0, Number.MAX_VALUE, Number.MAX_VALUE), text};
+    this.wrapper.getEditor()?.getModel()?.pushEditOperations(null, [editOperation], () => null);
   }
 
   private async startLanguageClient() {
@@ -70,6 +95,7 @@ export class MonacoEditorComponent implements AfterViewInit {
     const wrapperConfig = MonacoWrapperConfig.buildWrapperConfig(this.editorElement.nativeElement, this.editorContent(),
       this.unitId());
     await this.wrapper.initAndStart(wrapperConfig, false);
+    this.editorIsReady.emit(this.wrapper.getEditor());
     this.destroyRef.onDestroy(() => {
       this.wrapper.dispose();
       MonacoWrapperConfig.extensionAlreadyRegistered = false;

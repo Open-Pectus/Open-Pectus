@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, input, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, OnDestroy, OnInit } from '@angular/core';
 import { editor as MonacoEditor } from '@codingame/monaco-vscode-editor-api';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { Subject } from 'rxjs';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
+import { DetailsSelectors } from '../ngrx/details.selectors';
 import { MethodEditorBehaviours } from './method-editor-behaviours';
 import { MonacoEditorComponent } from './monaco-editor.component';
 import { MethodEditorActions } from './ngrx/method-editor.actions';
@@ -29,6 +30,7 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
           }
           <app-monaco-editor class="block rounded-sm flex-1 pl-1" [editorSizeChange]="editorSizeChange"
                              [unitId]="unitId()" (editorIsReady)="onEditorReady($event)"
+                             [dropFileEnabled]="isStopped()"
                              [editorOptions]="editorOptions"></app-monaco-editor>
         </div>
       }
@@ -50,6 +52,8 @@ export class MethodEditorComponent implements OnInit, OnDestroy {
   protected methodEditorIsDirty = this.store.select(MethodEditorSelectors.isDirty);
   protected versionMismatch = this.store.select(MethodEditorSelectors.versionMismatch);
   protected method = this.store.select(MethodEditorSelectors.method);
+  protected controlState = this.store.selectSignal(DetailsSelectors.controlState);
+  protected isStopped = computed(() => !this.controlState().is_running);
   protected editorSizeChange = new Subject<void>();
   protected collapsed = false;
   private componentDestroyed = new Subject<void>();

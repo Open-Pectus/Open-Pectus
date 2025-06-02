@@ -25,6 +25,7 @@ import { CommandExamplesListComponent } from './command-examples-list.component'
           <div class="h-full w-[1px] bg-slate-500"></div>
           <app-monaco-editor [editorSizeChange]="editorSizeChange" (editorContentChanged)="onEditorContentChanged($event)"
                              [editorContent]="commandToExecute" [unitId]="unitId()"
+                             [dropFileEnabled]="true"
                              class="ml-1"></app-monaco-editor>
           <button class="absolute right-4 bottom-4 rounded-md bg-green-300 text-black px-3 py-2 flex items-center"
                   (click)="onExecute()">
