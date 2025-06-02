@@ -4,17 +4,36 @@ import { useWorkerFactory } from 'monaco-languageclient/workerFactory';
 import { LogLevel } from 'vscode';
 
 export class MonacoWrapperConfig {
-  static id = 0;
+  static isInitialized = false;
 
-  static buildWrapperConfig(htmlContainer: HTMLElement, text?: string, unitId?: string): WrapperConfig {
-    MonacoWrapperConfig.id += 1;
-    const id = MonacoWrapperConfig.id;
-    const languageId = `pcode-${id}`;
-    const extension = `${id}.pcode`;
-    return {
-      $type: 'extended',
-      htmlContainer,
+  static buildWrapperConfig(htmlContainer: HTMLElement, unitId?: string): WrapperConfig {
+    const isInitialized = MonacoWrapperConfig.isInitialized;
+    MonacoWrapperConfig.isInitialized = true;
+    console.log(isInitialized, htmlContainer);
+    // These two variables exist to help keep track of what should match and what is unrelated, even though their value is identical.
+    const languageId = 'pcode';
+    const extension = 'pcode';
+
+    const commonConfig = {
+      $type: 'extended' as const,
       logLevel: LogLevel.Warning,
+      editorAppConfig: {
+        codeResources: {
+          modified: {
+            text: '',
+            fileExt: extension,
+          },
+        },
+        monacoWorkerFactory: this.configureMonacoWorkers,
+      },
+    } satisfies Partial<WrapperConfig>;
+
+    const specificConfig = {
+      htmlContainer,
+    } satisfies Partial<WrapperConfig>;
+
+    // if multiple editors are on screen, only one of those should initialize this
+    const onlyOnceConfig = {
       vscodeApiConfig: {
         // vscodeApiInitPerformExternally: true,
         // enableExtHostWorker: true,
@@ -37,15 +56,14 @@ export class MonacoWrapperConfig {
             'editor.folding': false,
             'editor.scrollBeyondLastColumn': 1,
             'editor.scrollBeyondLastLine': false,
+            'editor.stickyScroll.enabled': false,
             // "editor.quickSuggestions": false
           }),
         },
       },
-      // Only one editor should initialize the extensions, otherwise we get an error.
-      // Currently, there's always only one method editor on screen, and possible other editors which are not a method editor.
       extensions: [{
         config: {
-          name: id.toString(),
+          name: 'pcode',
           version: '0.0.0',
           publisher: 'openpectus',
           engines: {vscode: '0.10.x'},
@@ -70,15 +88,6 @@ export class MonacoWrapperConfig {
           ['./pcode.tmLanguage.json', new URL(`/api/lsp/engine/${unitId}/pcode.tmLanguage.json`, window.location.origin)],
         ]),
       }],
-      editorAppConfig: {
-        codeResources: {
-          modified: {
-            text: text ?? '',
-            fileExt: extension,
-          },
-        },
-        monacoWorkerFactory: this.configureMonacoWorkers,
-      },
       languageClientConfigs: {
         'pcode': {
           clientOptions: {
@@ -91,23 +100,20 @@ export class MonacoWrapperConfig {
             options: {
               $type: 'WebSocketUrl',
               url: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/lsp/websocket`,
-              // startOptions: {
-              //   onCall: () => {
-              //     console.log('Connected to socket.');
-              //   },
-              //   reportStatus: false,
-              // },
-              // stopOptions: {
-              //   onCall: () => {
-              //     console.log('Disconnected from socket.');
-              //   },
-              //   reportStatus: false,
-              // },
+              // startOptions: { onCall: () => { console.log('Connected to socket.'); }, reportStatus: false,},
+              // stopOptions: { onCall: () => { console.log('Disconnected from socket.'); }, reportStatus: false, },
             },
           },
         },
       },
-    } satisfies WrapperConfig;
+    } satisfies Partial<WrapperConfig>;
+
+    const commonAndSpecificConfig = {...commonConfig, ...specificConfig};
+    if(isInitialized) {
+      return commonAndSpecificConfig;
+    } else {
+      return {...commonAndSpecificConfig, ...onlyOnceConfig};
+    }
   };
 
   // adapted from https://github.com/TypeFox/monaco-languageclient/blob/70f92b740a06f56210f91464d694b5e5d4dc87db/packages/examples/src/common/client/utils.ts
@@ -115,8 +121,8 @@ export class MonacoWrapperConfig {
     useWorkerFactory({
       workerLoaders: {
         'TextEditorWorker': () => new Worker('/assets/monaco-workers/editor.js', {type: 'module'}),
-        'editorWorkerService': () => new Worker('/assets/monaco-workers/editorService.js', {type: 'module'}),
         'TextMateWorker': () => new Worker('/assets/monaco-workers/textmate.js', {type: 'module'}),
+        // 'editorWorkerService': () => new Worker('/assets/monaco-workers/editorService.js', {type: 'module'}),
         OutputLinkDetectionWorker: undefined,
         LanguageDetectionWorker: undefined,
         NotebookEditorWorker: undefined,
