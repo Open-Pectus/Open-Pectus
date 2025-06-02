@@ -4,11 +4,8 @@ import { useWorkerFactory } from 'monaco-languageclient/workerFactory';
 import { LogLevel } from 'vscode';
 
 export class MonacoWrapperConfig {
-  static extensionAlreadyRegistered = false;
-
   static buildWrapperConfig(htmlContainer: HTMLElement, text?: string, unitId?: string): WrapperConfig {
-    const extensionAlreadyRegistered = MonacoWrapperConfig.extensionAlreadyRegistered;
-    MonacoWrapperConfig.extensionAlreadyRegistered = true;
+    const uuid = crypto.randomUUID();
     return {
       $type: 'extended',
       htmlContainer,
@@ -41,23 +38,23 @@ export class MonacoWrapperConfig {
       },
       // Only one editor should initialize the extensions, otherwise we get an error.
       // Currently, there's always only one method editor on screen, and possible other editors which are not a method editor.
-      extensions: extensionAlreadyRegistered ? [] : [{
+      extensions: [{
         config: {
-          name: 'pcode',
+          name: `${uuid}pcode`,
           version: '0.0.0',
           publisher: 'openpectus',
           engines: {vscode: '0.10.x'},
           categories: ['Programming Languages'],
           contributes: {
             grammars: [{
-              language: 'pcode',
+              language: `${uuid}pcode`,
               scopeName: 'source.pcode',
               path: './pcode.tmLanguage.json',
             }],
             languages: [{
-              id: 'pcode',
+              id: `${uuid}pcode`,
               aliases: ['PCODE', 'pcode'],
-              extensions: ['.pcode'],
+              extensions: [`${uuid}pcode`],
               mimetypes: ['application/pcode'],
               configuration: './pcode.language-configuration.json',
             }],
@@ -72,15 +69,15 @@ export class MonacoWrapperConfig {
         codeResources: {
           modified: {
             text: text ?? '',
-            fileExt: 'pcode',
+            fileExt: `${uuid}pcode`,
           },
         },
         monacoWorkerFactory: this.configureMonacoWorkers,
       },
       languageClientConfigs: {
-        'pcode': {
+        [`${uuid}pcode`]: {
           clientOptions: {
-            documentSelector: ['pcode'],
+            documentSelector: [`${uuid}pcode`],
             initializationOptions: {
               engineId: unitId,
             },

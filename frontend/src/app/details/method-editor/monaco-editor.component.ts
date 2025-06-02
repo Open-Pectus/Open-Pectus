@@ -119,7 +119,6 @@ export class MonacoEditorComponent implements AfterViewInit {
     this.editorIsReady.emit(this.wrapper.getEditor());
     this.destroyRef.onDestroy(() => {
       this.wrapper.dispose();
-      MonacoWrapperConfig.extensionAlreadyRegistered = false;
     });
   }
 
