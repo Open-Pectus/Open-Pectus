@@ -83,7 +83,12 @@ enableMocking().then(() => bootstrapApplication(AppComponent, {
     }),
     provideRouter(APP_ROUTES),
     provideAnimations(),
-    provideToastr(),
+    provideToastr({
+      progressBar: true,
+      progressAnimation: 'increasing',
+      tapToDismiss: false,
+      closeButton: true,
+    }),
     provideAuth({
       loader: {
         provide: StsConfigLoader,
