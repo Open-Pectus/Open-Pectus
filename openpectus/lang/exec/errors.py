@@ -38,7 +38,7 @@ class UodValidationError(Exception):
     """ Raised when a UnitOperationDefinition definition/configuration error occurs. """
 
     def __str__(self) -> str:
-        return f'{self.__class__.__name__}()'
+        return f'{self.__class__.__name__}({", ".join(self.args)})'
 
 
 class InterpretationError(Exception):
