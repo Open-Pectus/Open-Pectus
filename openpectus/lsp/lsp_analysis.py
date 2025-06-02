@@ -9,7 +9,6 @@ from pylsp.config.config import Config
 
 from openpectus.lang.exec.uod import RegexNamedArgumentParser
 from openpectus.lang.exec.analyzer import AnalyzerItem, SemanticCheckAnalyzer
-from openpectus.lang.exec.argument_specification import ArgSpec
 from openpectus.lang.exec.commands import Command, CommandCollection
 from openpectus.lang.exec.tags import TagValue, TagValueCollection
 from openpectus.lang.exec.units import get_compatible_unit_names, convert_value_to_unit
@@ -61,9 +60,7 @@ def fetch_process_value(engine_id: str, tag_name) -> ProMdl.TagValue | None:
     if not engine_data:
         return None
 
-    for tag_name_, tag_value in engine_data.tags_info.map.items():
-        if tag_name_ == tag_name:
-            return tag_value
+    return engine_data.tags_info.map.get(tag_name, None)
 
 
 def build_tags(uod_def: ProMdl.UodDefinition) -> TagValueCollection:
@@ -452,7 +449,12 @@ def completions(document: Document, position: Position, ignored_names, engine_id
     if line is None:
         # Show all possible commands
         return [
-            CompletionItem(label=command_name, kind=CompletionItemKind.Function, preselect=False)
+            CompletionItem(
+                label=command_name,
+                insertText=command_name+": " if analysis_input.commands.get(command_name).accepts_arguments else command_name,
+                kind=CompletionItemKind.Function,
+                command=LSPCommand(title="", command="editor.action.triggerSuggest"),
+            )
             for command_name in analysis_input.commands.names
         ]
 
@@ -601,22 +603,24 @@ def completions(document: Document, position: Position, ignored_names, engine_id
             # Completion of command name
             return [
                 CompletionItem(
-                    label=word,
+                    label=command_name,
                     kind=CompletionItemKind.Function,
                     textEdit=TextEdit(
                         range=lsp_range_from_ast_range(node.instruction_range),
-                        newText=word if analysis_input.commands.get(word).arg_parser and analysis_input.commands.get(word).arg_parser.regex == ArgSpec.NoArgsInstance.regex else word+": "
+                        newText=command_name+": " if analysis_input.commands.get(command_name).accepts_arguments else command_name,
                     ),
-                    command=LSPCommand(title="", command="editor.action.triggerSuggest")
+                    command=LSPCommand(title="", command="editor.action.triggerSuggest"),
                 )
-                for word in analysis_input.get_command_completions(node.instruction_name)
+                for command_name in analysis_input.get_command_completions(node.instruction_name)
                 ]
     if query.strip() == "":
         # Blank line. Show all possible commands
         return [
             CompletionItem(
                 label=command_name,
+                insertText=command_name+": " if analysis_input.commands.get(command_name).accepts_arguments else command_name,
                 kind=CompletionItemKind.Function,
+                command=LSPCommand(title="", command="editor.action.triggerSuggest")
             )
             for command_name in analysis_input.commands.names
         ]
