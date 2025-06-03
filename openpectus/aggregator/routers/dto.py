@@ -543,13 +543,13 @@ class PWAIcon(Dto):
     src: str
     type: str | SkipJsonSchema[None] = None
     sizes: str | SkipJsonSchema[None] = None
-    purpose: Literal["monochrome", "maskable", "any"] | SkipJsonSchema[None] = None
+    #purpose: Literal["monochrome", "maskable", "any"] | SkipJsonSchema[None] = None
 
 
 class PWAShortcut(Dto):
     name: str
     short_name: str | SkipJsonSchema[None] = None
-    description: str | SkipJsonSchema[None] = None
+    #description: str | SkipJsonSchema[None] = None
     url: str
     icons: list[PWAIcon] | SkipJsonSchema[None] = None
 
