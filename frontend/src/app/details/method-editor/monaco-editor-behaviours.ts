@@ -1,7 +1,8 @@
-import { effect, Signal } from '@angular/core';
+import { DestroyRef, effect, Signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MenuItemAction } from '@codingame/monaco-vscode-api/vscode/vs/platform/actions/common/actions';
 import { editor as MonacoEditor } from '@codingame/monaco-vscode-editor-api';
-import { Observable, takeUntil } from 'rxjs';
+import { Observable } from 'rxjs';
 
 
 interface EditorContributionWithMenuActions extends MonacoEditor.IEditorContribution {
@@ -10,7 +11,7 @@ interface EditorContributionWithMenuActions extends MonacoEditor.IEditorContribu
 
 // Behaviours common among all instances of Monaco Editor
 export class MonacoEditorBehaviours {
-  constructor(private componentDestroyed: Observable<void>,
+  constructor(private destroyRef: DestroyRef,
               private editor: MonacoEditor.IStandaloneCodeEditor,
               private editorSizeChange: Observable<void>,
               private editorContentSignal: Signal<string | undefined>,
@@ -32,8 +33,10 @@ export class MonacoEditorBehaviours {
   }
 
   private setupReactingToResize() {
-    this.editorSizeChange.pipe(takeUntil(this.componentDestroyed)).subscribe(() => this.editor.layout(undefined, true));
-    window.onresize = () => this.editor.layout(undefined, true);
+    const layoutEditor = () => this.editor.layout(undefined, true);
+    this.editorSizeChange.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(layoutEditor);
+    window.addEventListener('resize', layoutEditor);
+    this.destroyRef.onDestroy(() => window.removeEventListener('resize', layoutEditor));
   }
 
   // adapted from https://github.com/CodinGame/monaco-vscode-api/issues/596#issuecomment-2711135557
