@@ -45,7 +45,7 @@
     "@angular-devkit/build-angular": "^19.0.6",
     "@angular/cli": "^19.0.6",
     "@angular/compiler-cli": "^19.0.5",
-    "@hey-api/openapi-ts": "^0.64.5",
+    "@hey-api/openapi-ts": "^0.69.2",
     "@types/d3": "^7.4.0",
     "@types/node": "^22.10.5",
     "@types/vscode": "^1.100.0",
