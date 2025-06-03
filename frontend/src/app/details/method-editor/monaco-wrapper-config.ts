@@ -22,7 +22,7 @@ export class MonacoWrapperConfig {
         codeResources: {
           modified: {
             text: '',
-            fileExt: extension,
+            uri: `/workspace/${crypto.randomUUID()}.pcode`,
           },
         },
         monacoWorkerFactory: this.configureMonacoWorkers,
@@ -89,19 +89,23 @@ export class MonacoWrapperConfig {
         ]),
       }],
       languageClientConfigs: {
-        'pcode': {
-          clientOptions: {
-            documentSelector: [languageId],
-            initializationOptions: {
-              engineId: unitId,
+        automaticallyInit: false,
+        automaticallyStart: false,
+        configs: {
+          'pcode': {
+            clientOptions: {
+              documentSelector: [languageId],
+              initializationOptions: {
+                engineId: unitId,
+              },
             },
-          },
-          connection: {
-            options: {
-              $type: 'WebSocketUrl',
-              url: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/lsp/websocket`,
-              // startOptions: { onCall: () => { console.log('Connected to socket.'); }, reportStatus: false,},
-              // stopOptions: { onCall: () => { console.log('Disconnected from socket.'); }, reportStatus: false, },
+            connection: {
+              options: {
+                $type: 'WebSocketUrl',
+                url: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/lsp/websocket`,
+                // startOptions: { onCall: () => { console.log('Connected to socket.'); }, reportStatus: false,},
+                // stopOptions: { onCall: () => { console.log('Disconnected from socket.'); }, reportStatus: false, },
+              },
             },
           },
         },
