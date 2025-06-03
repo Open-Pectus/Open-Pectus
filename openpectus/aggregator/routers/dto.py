@@ -537,6 +537,38 @@ class BuildInfo(Dto):
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(build_number="{self.build_number}", git_sha="{self.git_sha}")'
 
+# Progressive Web Application manifest
+
+class PWAIcon(Dto):
+    src: str
+    type: str | SkipJsonSchema[None] = None
+    sizes: str | SkipJsonSchema[None] = None
+    purpose: Literal["monochrome", "maskable", "any"] | SkipJsonSchema[None] = None
+
+
+class PWAShortcut(Dto):
+    name: str
+    short_name: str | SkipJsonSchema[None] = None
+    description: str | SkipJsonSchema[None] = None
+    url: str
+    icons: list[PWAIcon] | SkipJsonSchema[None] = None
+
+
+class PWA(Dto):
+    name: str
+    short_name: str
+    icons: list[PWAIcon]
+    start_url: str
+    display: Literal["fullscreen", "standalone", "minimal-ui", "browser"]
+    id: str | SkipJsonSchema[None] = None
+    description: str | SkipJsonSchema[None] = None
+    categories: list[str] | SkipJsonSchema[None] = None
+    lang: str | SkipJsonSchema[None] = None
+    dir: Literal["auto", "ltr", "rtl"] | SkipJsonSchema[None] = None
+    orientation: Literal["any", "natural", "portrait", "portrait-primary", "portrait-secondary", "lanscape", "landscape-primary", "landscape-secondary"] | SkipJsonSchema[None] = None
+    background_color: str | SkipJsonSchema[None] = None
+    scope: str | SkipJsonSchema[None] = None
+    shortcuts: list[PWAShortcut] | SkipJsonSchema[None] = None
 
 # Lsp models
 
