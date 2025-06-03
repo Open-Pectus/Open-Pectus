@@ -47,6 +47,7 @@ export class MonacoEditorComponent implements AfterViewInit {
     await this.initAndStartWrapper();
     runInInjectionContext(this.injector, this.setupEditorBehaviours.bind(this));
     await this.startLanguageClient();
+    this.editorIsReady.emit(this.wrapper.getEditor());
   }
 
   onDragOver(event: DragEvent) {
@@ -104,8 +105,7 @@ export class MonacoEditorComponent implements AfterViewInit {
     const editor = this.wrapper.getEditor();
     if(editor === undefined) throw Error('Monaco Editor Wrapper returned no editor!');
     editor.updateOptions(this.editorOptions());
-    new MonacoEditorBehaviours(this.destroyRef, editor, this.editorSizeChange(), this.editorContent,
-      this.onEditorContentChanged.bind(this));
+    new MonacoEditorBehaviours(this.destroyRef, editor, this.editorSizeChange(), this.editorContent, this.onEditorContentChanged.bind(this));
   }
 
   private onEditorContentChanged(lines: string[]) {
@@ -115,7 +115,6 @@ export class MonacoEditorComponent implements AfterViewInit {
   private async initAndStartWrapper() {
     const wrapperConfig = MonacoWrapperConfig.buildWrapperConfig(this.editorElement.nativeElement, this.unitId());
     await this.wrapper.initAndStart(wrapperConfig);
-    this.editorIsReady.emit(this.wrapper.getEditor());
     this.destroyRef.onDestroy(() => {
       this.wrapper.dispose();
       MonacoWrapperConfig.isInitialized = false;
