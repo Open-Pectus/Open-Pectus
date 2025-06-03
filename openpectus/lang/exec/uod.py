@@ -140,6 +140,9 @@ class UnitOperationDefinitionBase:
         - Each process value is verified
             - Checks that entry process values have matching tag value type and
               process value entry_data_type.
+        - Plot configuration
+            - Process value names exist
+            - Process values of a single axis share unit
         """
         fatal = False
 
@@ -185,6 +188,11 @@ class UnitOperationDefinitionBase:
             self.validate_command_signatures()
         except UodValidationError as vex:
             log_fatal("Error in command definition. " + str(vex))
+
+        try:
+            self.validate_plot_configuration()
+        except UodValidationError as vex:
+            log_fatal("Error in plot configuration. " + str(vex))
 
         if fatal:
             sys.exit(1)
@@ -280,6 +288,47 @@ either a 'value' argument or a '**kvargs' argument""")
                 if param_count == 2 and last_param.kind != _ParameterKind.VAR_KEYWORD:
                     raise UodValidationError(f"""Command '{key}' has an error.
 The execution function is missing named arguments or a '**kvargs' argument""")
+
+    def validate_plot_configuration(self):
+        """ Validate plot configuration """
+        # Create complete list of tags
+        assert self.system_tags
+        tags = self.tags.merge_with(self.system_tags)
+        # The following tags are added manually here because they are not
+        # present in the self.system_tags list. They will be created by the engine
+        # once it starts.
+        tags.add(Tag(name=SystemTagName.MARK))
+        tags.add(Tag(name=SystemTagName.BLOCK_TIME, unit="s"))
+        tags.add(Tag(name=SystemTagName.SCOPE_TIME, unit="s"))
+
+        # Check that process value names (tags) exist
+        for sub_plot in self.plot_configuration.sub_plots:
+            for plot_axis in sub_plot.axes:
+                for process_value_name in plot_axis.process_value_names:
+                    if not tags.has(process_value_name):
+                        raise UodValidationError(f"Tag '{process_value_name}' referenced in sub_plot of plot configuration does not exist.")
+
+        for process_value_name in self.plot_configuration.x_axis_process_value_names:
+            if not tags.has(process_value_name):
+                raise UodValidationError(f"Tag '{process_value_name}' referenced in x_axis_process_value_names of plot configuration does not exist.")
+
+        for process_value_name in self.plot_configuration.process_value_names_to_annotate:
+            if not tags.has(process_value_name):
+                raise UodValidationError(f"Tag '{process_value_name}' referenced in process_value_names_to_annotate of plot configuration does not exist.")
+
+        for color_region in self.plot_configuration.color_regions:
+            if not tags.has(color_region.process_value_name):
+                raise UodValidationError(f"Tag '{color_region.process_value_name}' referenced in color_regions of plot configuration does not exist.")
+
+        # Check that units of process values of a single axis are homogenous
+        # It might be annoying if it causes validation to fail so it only warns
+        for sub_plot in self.plot_configuration.sub_plots:
+            for plot_axis in sub_plot.axes:
+                plot_axis_tags = [tags.get(process_value_name) for process_value_name in plot_axis.process_value_names]
+                if not all(tag.unit == plot_axis_tags[0].unit for tag in plot_axis_tags):
+                    tag_name_unit = ", ".join(f"{tag.name} [{tag.unit}]" for tag in plot_axis_tags)
+                    logger.warning(f"""Process values sharing a plot axis should all have the same unit of measurement.
+The process values of PlotAxis '{plot_axis.label}' have the following units: {tag_name_unit}.""")
 
     def validate_read_registers(self):
         """ Verify that all read registers have a matching tag. """
