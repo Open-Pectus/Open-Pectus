@@ -187,6 +187,10 @@ class Method(ProtocolModel):
             lines=[ParserMethodLine(line.id, line.content) for line in self.lines]
         )
 
+    @staticmethod
+    def from_parser_method(method: ParserMethod) -> Method:
+        return Method(lines=[MethodLine(id=line.id, content=line.content) for line in method.lines])
+
 
 class MethodState(ProtocolModel):
     started_line_ids: list[str]

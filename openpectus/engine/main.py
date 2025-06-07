@@ -9,6 +9,7 @@ from typing import Literal
 from itertools import chain
 import sys
 import copy
+import os
 
 import multiprocess
 
@@ -51,6 +52,7 @@ logging.getLogger("asyncua.client").setLevel(logging.WARNING)
 default_host = "127.0.0.1"
 default_port = "9800"
 default_port_secure = "443"
+default_uod = "openpectus/engine/configuration/demo_uod.py"
 
 
 def get_arg_parser():
@@ -62,7 +64,7 @@ def get_arg_parser():
                         "if using --secure")
     parser.add_argument("-s", "--secure", action=BooleanOptionalAction,
                         help="Access aggregator using https/wss rather than http/ws")
-    parser.add_argument("-uod", "--uod", required=False, default="openpectus/engine/configuration/demo_uod.py",
+    parser.add_argument("-uod", "--uod", required=False, default=default_uod,
                         help="Filename of the UOD")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-validate", "--validate", action=BooleanOptionalAction,
@@ -290,6 +292,7 @@ def show_register_details_and_exit(uod_name: str):
 def main():
     print(f"OpenPectus Engine v. {__version__}, build: {build_number}")
     args = get_arg_parser().parse_args()
+    args.uod = os.path.join(os.path.dirname(__file__), "configuration/demo_uod.py") if args.uod == default_uod else args.uod
     sentry.init_engine(args.sentry_event_level)
     if args.validate:
         validate_and_exit(args.uod)
