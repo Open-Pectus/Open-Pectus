@@ -71,6 +71,7 @@
             "assets": [
               "src/favicon.ico",
               "src/assets",
+              "src/manifest.webmanifest",
               {
                 "glob": "codicon.ttf",
                 "input": "./node_modules/monaco-editor/esm/vs/base/browser/ui/codicons/codicon",
@@ -83,7 +84,9 @@
               "node_modules/@vscode/codicons/dist/codicon.css",
               "node_modules/ngx-toastr/toastr.css"
             ],
-            "scripts": []
+            "scripts": [],
+            "serviceWorker": true,
+            "ngswConfigPath": "ngsw-config.json"
           },
           "configurations": {
             "production": {
