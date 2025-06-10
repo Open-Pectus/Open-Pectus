@@ -46,8 +46,8 @@ export class MonacoEditorComponent implements AfterViewInit {
   async ngAfterViewInit() {
     await this.initAndStartWrapper();
     runInInjectionContext(this.injector, this.setupEditorBehaviours.bind(this));
-    await this.startLanguageClient();
     this.editorIsReady.emit(this.wrapper.getEditor());
+    void this.startLanguageClient();
   }
 
   onDragOver(event: DragEvent) {
