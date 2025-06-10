@@ -9,6 +9,7 @@ import platform
 
 from fastapi_websocket_rpc import RpcMethodsBase, WebSocketRpcClient
 from fastapi_websocket_rpc.rpc_methods import RpcResponse
+from fastapi_websocket_rpc.rpc_channel import RpcChannelClosedException
 from websockets.exceptions import ConnectionClosedError
 import httpx
 import tenacity
@@ -234,7 +235,7 @@ class EngineDispatcher():
             response = await self._rpc_client.other.dispatch_message_async(message_json=message_json)
             assert isinstance(response, RpcResponse)
             logger.debug(f"Sent message: {message.ident}")
-        except ConnectionClosedError:
+        except (ConnectionClosedError, RpcChannelClosedException):
             raise ProtocolNetworkException("Connection closed")
         except Exception:
             logger.error(f"Unkown error sending message: {message.ident}", exc_info=True)
