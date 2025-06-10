@@ -266,6 +266,21 @@ export type ValidationError = {
     type: string;
 };
 
+export type WebPushConfig = {
+    enabled: boolean;
+    app_server_key?: string;
+};
+
+export type WebPushKeys = {
+    auth: string;
+    p256dh: string;
+};
+
+export type WebPushSubscription = {
+    endpoint: string;
+    keys: WebPushKeys;
+};
+
 export type PostResponse = (unknown);
 
 export type GetConfigResponse = (AuthConfig);
@@ -497,3 +512,13 @@ export type GetVersionResponse = (unknown);
 export type GetBuildNumberResponse = (unknown);
 
 export type GetBuildInfoResponse = (BuildInfo);
+
+export type GetWebpushConfigResponse = (WebPushConfig);
+
+export type SubscribeUserData = {
+    requestBody: WebPushSubscription;
+    userId?: string;
+    xIdentity?: string;
+};
+
+export type SubscribeUserResponse = (unknown);

@@ -1,6 +1,7 @@
 from __future__ import annotations
 import logging
 import math
+import uuid
 from datetime import datetime
 from enum import StrEnum, auto
 from typing import Iterable
@@ -165,7 +166,7 @@ class RunData(BaseModel):
 class ActiveUser(BaseModel):
     """ Represents a user looking at the frontend details page for a process unit  """
 
-    id: str  # sid from identity token, used to get profile photos from ms graph api
+    id: uuid.UUID  # sid from identity token, used to get profile photos from ms graph api
     name: str  # Same value as emitted by openpectus.aggregator.auth.user_name
 
 
@@ -200,7 +201,7 @@ class EngineData:
         self.method_state: MethodState = MethodState.empty()
         self.plot_configuration: PlotConfiguration = PlotConfiguration.empty()
         self.contributors: set[str] = set()
-        self.active_users: dict[str, ActiveUser] = dict()
+        self.active_users: dict[uuid.UUID, ActiveUser] = dict()
         self.required_roles: set[str] = set()
         self.hardware_str: str = hardware_str
         self.data_log_interval_seconds: float = data_log_interval_seconds
@@ -238,3 +239,26 @@ class EngineData:
         self.error_log.clear()
         self.method_state = MethodState.empty()
         self.contributors = set()
+
+
+class NotificationScope(StrEnum):
+    PROCESS_UNITS_WITH_RUNS_IVE_CONTRIBUTED_TO = auto()
+    PROCESS_UNITS_I_HAVE_ACCESS_TO = auto()
+    SPECIFIC_PROCESS_UNITS = auto()
+
+class NotificationTopics(StrEnum):
+    RUN_START = auto()
+    RUN_STOP = auto()
+    RUN_PAUSE = auto()
+    BLOCK_START = auto()
+    NOTIFICATION_CMD = auto()
+    WATCH_TRIGGERED = auto()
+    NEW_CONTRIBUTOR = auto()
+    METHOD_ERROR = auto()
+    NETWORK_ERRORS = auto()
+
+class WebPushNotificationPreferences(BaseModel):
+    user_id: uuid.UUID
+    user_roles: list[str]
+    scope: NotificationScope
+    topics: list[NotificationTopics]

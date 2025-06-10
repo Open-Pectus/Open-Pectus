@@ -1,16 +1,21 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from datetime import datetime
 from enum import StrEnum, auto
 from typing import Literal
 
 import openpectus.aggregator.models as Mdl
+import webpush
 from pydantic import BaseModel, ConfigDict
 from pydantic.json_schema import SkipJsonSchema
+import webpush
 
 SystemStateEnum = Mdl.SystemStateEnum
-
+NotificationScope = Mdl.NotificationScope
+NotificationTopics = Mdl.NotificationTopics
+WebPushSubscription = webpush.WebPushSubscription
 
 class Dto(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -34,7 +39,6 @@ class AuthConfig(Dto):
                     f'client_id="{self.client_id}", well_known_url="{self.well_known_url}")')
         else:
             return f'{self.__class__.__name__}(use_auth={self.use_auth})'
-
 
 class ServerErrorResponse(Dto):
     error: bool = True
@@ -383,7 +387,7 @@ class MethodAndState(Dto):
 
 
 class ActiveUser(Dto):
-    id: str
+    id: uuid.UUID
     name: str
 
     @staticmethod
@@ -563,3 +567,7 @@ class UodDefinition(Dto):
             system_commands=[CommandDefinition(name=c.name, validator=c.validator) for c in model.system_commands],
             tags=[TagDefinition(name=t.name, unit=t.unit) for t in model.tags]
         )
+
+class WebPushConfig(Dto):
+    enabled: bool
+    app_server_key: str | SkipJsonSchema[None] = None

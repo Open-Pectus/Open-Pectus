@@ -12,6 +12,7 @@ from openpectus.aggregator.data.repository import PlotLogRepository, RecentEngin
 from openpectus.aggregator.routers.auth import UserIdValue, has_access, UserRolesValue, UserNameValue
 from pydantic.json_schema import SkipJsonSchema
 from starlette.status import HTTP_403_FORBIDDEN, HTTP_404_NOT_FOUND
+import uuid
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])
@@ -365,7 +366,7 @@ async def unregister_active_user(
         return Dto.ServerErrorResponse(message="User unregistration failed due to missing user_id")
     action_result = await agg.from_frontend.unregister_active_user(
         engine_id=unit_id,
-        user_id=resolved_user_id,
+        user_id=uuid.UUID(resolved_user_id),
     )
     if not action_result:
         return Dto.ServerErrorResponse(message="User unregistration failed")

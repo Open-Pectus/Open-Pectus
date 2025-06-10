@@ -13,7 +13,7 @@ from openpectus.aggregator.aggregator_message_handlers import AggregatorMessageH
 from openpectus.aggregator.data import database
 from openpectus.aggregator.deps import _create_aggregator
 from openpectus.aggregator.frontend_publisher import FrontendPublisher
-from openpectus.aggregator.routers import process_unit, recent_runs, auth, version, lsp
+from openpectus.aggregator.routers import process_unit, recent_runs, auth, version, lsp, webpush
 from openpectus.aggregator.spa import SinglePageApplication
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.aggregator.exceptions import AggregatorCallerException, AggregatorInternalException
@@ -68,6 +68,7 @@ class AggregatorServer:
         self.fastapi.include_router(recent_runs.router, prefix=api_prefix, dependencies=[UserRolesDependency])
         self.fastapi.include_router(lsp.router, prefix=api_prefix)
         self.fastapi.include_router(auth.router, prefix="/auth")
+        self.fastapi.include_router(webpush.router, prefix="/webpush")
         for route in additional_routers:
             self.fastapi.include_router(route)
         self.fastapi.mount("/", SinglePageApplication(directory=self.frontend_dist_dir))

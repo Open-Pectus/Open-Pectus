@@ -1638,6 +1638,87 @@
         }
       }
     },
+    "/webpush/config": {
+      "get": {
+        "tags": [
+          "webpush"
+        ],
+        "summary": "Get Webpush Config",
+        "operationId": "get_webpush_config",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebPushConfig"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webpush/subscribe": {
+      "post": {
+        "tags": [
+          "webpush"
+        ],
+        "summary": "Subscribe User",
+        "operationId": "subscribe_user",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebPushSubscription"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/engine-rest": {
       "post": {
         "tags": [
@@ -1783,6 +1864,7 @@
         "properties": {
           "id": {
             "type": "string",
+            "format": "uuid",
             "title": "Id"
           },
           "name": {
@@ -2899,6 +2981,60 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WebPushConfig": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "app_server_key": {
+            "type": "string",
+            "title": "App Server Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "WebPushConfig"
+      },
+      "WebPushKeys": {
+        "properties": {
+          "auth": {
+            "type": "string",
+            "title": "Auth"
+          },
+          "p256dh": {
+            "type": "string",
+            "title": "P256Dh"
+          }
+        },
+        "type": "object",
+        "required": [
+          "auth",
+          "p256dh"
+        ],
+        "title": "WebPushKeys"
+      },
+      "WebPushSubscription": {
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "minLength": 1,
+            "format": "uri",
+            "title": "Endpoint"
+          },
+          "keys": {
+            "$ref": "#/components/schemas/WebPushKeys"
+          }
+        },
+        "type": "object",
+        "required": [
+          "endpoint",
+          "keys"
+        ],
+        "title": "WebPushSubscription"
       }
     }
   }

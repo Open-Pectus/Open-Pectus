@@ -1,7 +1,9 @@
 import logging
 from datetime import UTC, datetime, timedelta, timezone
+from re import sub
 from socket import gethostname
 from typing import Iterable, Sequence
+import uuid
 
 from openpectus import __version__
 from openpectus.aggregator.data.models import (
@@ -10,12 +12,13 @@ from openpectus.aggregator.data.models import (
     RecentRunErrorLog, RecentRunMethodAndState, RecentRun, PlotLogEntryValue,
     RecentRunPlotConfiguration, RecentRunRunLog,
     get_ProcessValueType_from_value,
-    PlotLog, PlotLogEntry
+    PlotLog, PlotLogEntry,
+    WebPushSubscription, WebPushNotificationPreferences
 )
-from openpectus.aggregator.models import TagValue, ReadingInfo, EngineData
+import openpectus.aggregator.models as agg_mdl
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
+import webpush
 from openpectus.protocol.models import SystemTagName
 
 logger = logging.getLogger(__name__)
@@ -27,12 +30,12 @@ class RepositoryBase():
 
 
 class PlotLogRepository(RepositoryBase):
-    def create_plot_log(self, engine_data: EngineData, run_id: str):
+    def create_plot_log(self, engine_data: agg_mdl.EngineData, run_id: str):
         plot_log = PlotLog()
         plot_log.engine_id = engine_data.engine_id
         plot_log.run_id = run_id
 
-        def map_reading(reading: ReadingInfo):
+        def map_reading(reading: agg_mdl.ReadingInfo):
             entry = PlotLogEntry()
             entry.plot_log = plot_log
             entry.value_type = ProcessValueType.NONE
@@ -49,7 +52,7 @@ class PlotLogRepository(RepositoryBase):
         for tag in engine_data.tags_info.map.values():
             self.store_new_tag_info(engine_data.engine_id, run_id, tag)
 
-    def store_new_tag_info(self, engine_id: str, run_id: str, tag: TagValue):
+    def store_new_tag_info(self, engine_id: str, run_id: str, tag: agg_mdl.TagValue):
         existing_plot_log_entry = self.get_plot_log_entry(engine_id, run_id, tag)
         if existing_plot_log_entry is None:
             logger.debug(f'tag {tag.name} was not found in readings')
@@ -67,7 +70,7 @@ class PlotLogRepository(RepositoryBase):
             .where(PlotLog.run_id == run_id)
         )
 
-    def get_plot_log_entry(self, engine_id: str, run_id: str, tag: TagValue) -> PlotLogEntry | None:
+    def get_plot_log_entry(self, engine_id: str, run_id: str, tag: agg_mdl.TagValue) -> PlotLogEntry | None:
         return self.db_session.scalar(
             select(PlotLogEntry)
             .join(PlotLog)
@@ -84,10 +87,10 @@ class PlotLogRepository(RepositoryBase):
             .where(PlotLog.run_id == run_id)
         ).all()
 
-    def store_tag_values(self, engine_id: str, run_id: str, tags: list[TagValue]):
+    def store_tag_values(self, engine_id: str, run_id: str, tags: list[agg_mdl.TagValue]):
         plot_log_entries = self.get_plot_log_entries(engine_id, run_id)
 
-        def map_tag_to_entry_value(tag: TagValue):
+        def map_tag_to_entry_value(tag: agg_mdl.TagValue):
             plot_log_entry = next((entry for entry in plot_log_entries if entry.name == tag.name), None)
             if plot_log_entry is None:
                 return None
@@ -105,7 +108,7 @@ class PlotLogRepository(RepositoryBase):
 
 
 class RecentRunRepository(RepositoryBase):
-    def store_recent_run(self, engine_data: EngineData):
+    def store_recent_run(self, engine_data: agg_mdl.EngineData):
         """ Store a recent run. Requires that engine_data contain run_data. """
         if not engine_data.has_run():
             raise ValueError('missing run_data when trying to store recent run')
@@ -193,7 +196,7 @@ class RecentEngineRepository(RepositoryBase):
     def get_recent_engine_by_engine_id(self, engine_id: str) -> RecentEngine | None:
         return self.db_session.scalar(select(RecentEngine).where(RecentEngine.engine_id == engine_id))
 
-    def store_recent_engine(self, engine_data: EngineData):
+    def store_recent_engine(self, engine_data: agg_mdl.EngineData):
         if engine_data.engine_id == "":
             raise ValueError("Missing/empty engine_id when trying to store recent_engine")
         existing = self.get_recent_engine_by_engine_id(engine_data.engine_id)
@@ -223,4 +226,23 @@ class RecentEngineRepository(RepositoryBase):
         if system_tag is None:
             logger.warning("The SYSTEM_STATE tag value was not available when saving recent_engine")
         self.db_session.add(recent_engine)
+        self.db_session.commit()
+
+class WebPushRepository(RepositoryBase):
+    def store_notifications_preferences(self, agg_notification_preferences: agg_mdl.WebPushNotificationPreferences):
+        notification_preferences = WebPushNotificationPreferences()
+        notification_preferences.user_id = str(agg_notification_preferences.user_id)
+        notification_preferences.user_roles = agg_notification_preferences.user_roles
+        notification_preferences.scope = agg_notification_preferences.scope
+        notification_preferences.topics = agg_notification_preferences.topics
+        self.db_session.add(notification_preferences)
+        self.db_session.commit()
+
+    def store_subscription(self, agg_subscription: webpush.WebPushSubscription, user_id: uuid.UUID):
+        subscription = WebPushSubscription()
+        subscription.user_id = str(user_id)
+        subscription.endpoint = str(agg_subscription.endpoint)
+        subscription.auth = agg_subscription.keys.auth
+        subscription.p256dh = agg_subscription.keys.p256dh
+        self.db_session.add(subscription)
         self.db_session.commit()
