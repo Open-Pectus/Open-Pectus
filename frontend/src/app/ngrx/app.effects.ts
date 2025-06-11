@@ -6,7 +6,7 @@ import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
 import { filter, map, mergeMap, of, switchMap, take } from 'rxjs';
-import { ProcessUnitService, VersionService, WebpushService } from '../api';
+import { ProcessUnitService, VersionService, WebpushService, WebPushSubscription } from '../api';
 import { PubSubService } from '../shared/pub-sub.service';
 import { AppActions } from './app.actions';
 import { AppSelectors } from './app.selectors';
@@ -108,20 +108,8 @@ export class AppEffects {
       map(webpushConfig => {
         if(!webpushConfig.enabled || webpushConfig.app_server_key === undefined) return;
         this.swPush.requestSubscription({serverPublicKey: webpushConfig.app_server_key}).then(subscription => {
-          const decoder = new TextDecoder();
-          const auth = subscription.getKey('auth');
-          const p256dh = subscription.getKey('p256dh');
-          if(auth === null || p256dh === null) return;
-          this.webpushService.subscribeUser({
-            requestBody: {
-              endpoint: subscription.endpoint,
-              keys: {
-                auth: decoder.decode(auth),
-                p256dh: decoder.decode(p256dh),
-              },
-            },
-            userId,
-          }).subscribe();
+          const requestBody = subscription.toJSON() as WebPushSubscription;
+          this.webpushService.subscribeUser({requestBody, userId}).subscribe();
         });
       }))),
   ), {dispatch: false});
@@ -135,6 +123,4 @@ export class AppEffects {
               private oidcSecurityService: OidcSecurityService,
               private webpushService: WebpushService,
               private swPush: SwPush) {}
-
-
 }

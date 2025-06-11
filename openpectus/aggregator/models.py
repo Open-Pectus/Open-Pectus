@@ -263,3 +263,4 @@ class WebPushNotificationPreferences(BaseModel):
     is_anon: bool
     scope: NotificationScope
     topics: list[NotificationTopics]
+

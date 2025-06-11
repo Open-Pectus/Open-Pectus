@@ -232,10 +232,10 @@ class WebPushRepository(RepositoryBase):
     def get_notifications_preferences(self, user_id: uuid.UUID, is_anon: bool):
         if(is_anon):
             return self.db_session.scalar(select(WebPushNotificationPreferences).where(WebPushNotificationPreferences.is_anon == True))
-        return self.db_session.scalar(select(WebPushNotificationPreferences).where(WebPushNotificationPreferences.user_id == user_id))
+        return self.db_session.scalar(select(WebPushNotificationPreferences).where(WebPushNotificationPreferences.user_id == str(user_id)))
 
     def get_subscriptions(self, user_id: uuid.UUID):
-        return self.db_session.scalar(select(WebPushSubscription).where(WebPushSubscription.user_id == user_id))
+        return self.db_session.scalars(select(WebPushSubscription).where(WebPushSubscription.user_id == str(user_id))).all()
 
     def store_notifications_preferences(self, agg_notification_preferences: agg_mdl.WebPushNotificationPreferences):
         notification_preferences = WebPushNotificationPreferences()

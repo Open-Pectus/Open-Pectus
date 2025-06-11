@@ -522,3 +522,10 @@ export type SubscribeUserData = {
 };
 
 export type SubscribeUserResponse = (unknown);
+
+export type NotifyUserData = {
+    userId: string;
+    xIdentity?: string;
+};
+
+export type NotifyUserResponse = (unknown);
