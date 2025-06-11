@@ -259,6 +259,7 @@ class NotificationTopics(StrEnum):
 
 class WebPushNotificationPreferences(BaseModel):
     user_id: uuid.UUID
-    user_roles: list[str]
+    user_roles: set[str]
+    is_anon: bool
     scope: NotificationScope
     topics: list[NotificationTopics]

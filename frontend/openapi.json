@@ -1638,7 +1638,7 @@
         }
       }
     },
-    "/webpush/config": {
+    "/api/webpush/config": {
       "get": {
         "tags": [
           "webpush"
@@ -1659,7 +1659,7 @@
         }
       }
     },
-    "/webpush/subscribe": {
+    "/api/webpush/subscribe": {
       "post": {
         "tags": [
           "webpush"

@@ -39,7 +39,7 @@ class AggregatorServer:
         self.frontend_dist_dir = frontend_dist_dir
         self.db_path = db_path
         if not os.path.exists(frontend_dist_dir):
-            raise FileNotFoundError("{frontend_dist_dir} not found.")
+            raise FileNotFoundError(f"{frontend_dist_dir} not found.")
         self.dispatcher = AggregatorDispatcher()
         self.publisher = FrontendPublisher()
         self.aggregator = _create_aggregator(self.dispatcher, self.publisher, secret)
@@ -68,7 +68,7 @@ class AggregatorServer:
         self.fastapi.include_router(recent_runs.router, prefix=api_prefix, dependencies=[UserRolesDependency])
         self.fastapi.include_router(lsp.router, prefix=api_prefix)
         self.fastapi.include_router(auth.router, prefix="/auth")
-        self.fastapi.include_router(webpush.router, prefix="/webpush")
+        self.fastapi.include_router(webpush.router, prefix=api_prefix + "/webpush")
         for route in additional_routers:
             self.fastapi.include_router(route)
         self.fastapi.mount("/", SinglePageApplication(directory=self.frontend_dist_dir))

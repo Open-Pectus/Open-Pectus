@@ -905,7 +905,7 @@ export class WebpushService {
     public getWebpushConfig(): Observable<GetWebpushConfigResponse> {
         return __request(OpenAPI, this.http, {
             method: 'GET',
-            url: '/webpush/config'
+            url: '/api/webpush/config'
         });
     }
     
@@ -921,7 +921,7 @@ export class WebpushService {
     public subscribeUser(data: SubscribeUserData): Observable<SubscribeUserResponse> {
         return __request(OpenAPI, this.http, {
             method: 'POST',
-            url: '/webpush/subscribe',
+            url: '/api/webpush/subscribe',
             headers: {
                 'x-identity': data.xIdentity
             },

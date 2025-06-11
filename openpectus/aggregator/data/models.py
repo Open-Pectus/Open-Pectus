@@ -161,7 +161,7 @@ class WebPushNotificationPreferences(DBModel):
     __tablename__ = "WebPushNotificationPreferences"
     user_id: Mapped[str] = mapped_column()
     is_anon: Mapped[bool] = mapped_column()  # when no auth all anon users share web push notification preferences
-    user_roles: Mapped[list[str]] = mapped_column(type_=JSON, default=[])  # User roles. Updated it when change is detected in openpectus.aggregator.routes.auth
+    user_roles: Mapped[set[str]] = mapped_column(type_=JSON, default=[])  # User roles. Updated it when change is detected in openpectus.aggregator.routes.auth
     scope: Mapped[NotificationScope] = mapped_column()
     topics: Mapped[list[NotificationTopics]] = mapped_column(type_=JSON, default=[])
 

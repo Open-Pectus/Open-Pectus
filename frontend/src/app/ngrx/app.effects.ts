@@ -1,11 +1,12 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { SwPush } from '@angular/service-worker';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
 import { filter, map, mergeMap, of, switchMap, take } from 'rxjs';
-import { ProcessUnitService, VersionService } from '../api';
+import { ProcessUnitService, VersionService, WebpushService } from '../api';
 import { PubSubService } from '../shared/pub-sub.service';
 import { AppActions } from './app.actions';
 import { AppSelectors } from './app.selectors';
@@ -101,13 +102,39 @@ export class AppEffects {
     }),
   ), {dispatch: false});
 
+  subscribeToWebPush = createEffect(() => this.actions.pipe(
+    ofType(AppActions.userIdLoaded),
+    switchMap(({userId}) => this.webpushService.getWebpushConfig().pipe(
+      map(webpushConfig => {
+        if(!webpushConfig.enabled || webpushConfig.app_server_key === undefined) return;
+        this.swPush.requestSubscription({serverPublicKey: webpushConfig.app_server_key}).then(subscription => {
+          const decoder = new TextDecoder();
+          const auth = subscription.getKey('auth');
+          const p256dh = subscription.getKey('p256dh');
+          if(auth === null || p256dh === null) return;
+          this.webpushService.subscribeUser({
+            requestBody: {
+              endpoint: subscription.endpoint,
+              keys: {
+                auth: decoder.decode(auth),
+                p256dh: decoder.decode(p256dh),
+              },
+            },
+            userId,
+          }).subscribe();
+        });
+      }))),
+  ), {dispatch: false});
+
   constructor(private actions: Actions,
               private store: Store,
               private processUnitService: ProcessUnitService,
               private pubSubService: PubSubService,
               private versionService: VersionService,
               private httpClient: HttpClient,
-              private oidcSecurityService: OidcSecurityService) {}
+              private oidcSecurityService: OidcSecurityService,
+              private webpushService: WebpushService,
+              private swPush: SwPush) {}
 
 
 }

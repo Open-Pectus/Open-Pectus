@@ -4,18 +4,17 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
-from fastapi_websocket_rpc import RpcChannel
 import openpectus.aggregator.models as Mdl
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRepository, RecentEngineRepository, WebPushRepository
+from openpectus.aggregator.exceptions import AggregatorCallerException, AggregatorInternalException
 from openpectus.aggregator.frontend_publisher import FrontendPublisher, PubSubTopic
-from openpectus.aggregator.models import EngineData
+from openpectus.aggregator.models import EngineData, NotificationScope
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.protocol.models import SystemTagName, MethodStatusEnum
-from openpectus.aggregator.exceptions import AggregatorCallerException, AggregatorInternalException
 from webpush import WebPushSubscription
 
 logger = logging.getLogger(__name__)
@@ -427,10 +426,18 @@ class FromFrontend:
         asyncio.create_task(self.publisher.publish_active_users_changed(engine_id))
         return True
 
-    def webpush_user_subscribed(self, subscription: WebPushSubscription, user_id: uuid.UUID) -> bool:
+    def webpush_user_subscribed(self, subscription: WebPushSubscription, user_id: uuid.UUID, is_anon: bool, user_roles: set[str]) -> bool:
         with database.create_scope():
             webpush_repo = WebPushRepository(database.scoped_session())
+
+            preferences = webpush_repo.get_notifications_preferences(user_id, is_anon)
+            if(preferences == None):
+                webpush_repo.store_notifications_preferences(Mdl.WebPushNotificationPreferences(
+                    user_id=user_id, is_anon=is_anon, user_roles=user_roles,
+                    scope=NotificationScope.PROCESS_UNITS_WITH_RUNS_IVE_CONTRIBUTED_TO, topics=[]))
+
             webpush_repo.store_subscription(subscription, user_id)
+
         return True
 
 class Aggregator:
