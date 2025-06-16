@@ -282,6 +282,7 @@ export type WebPushKeys = {
 export type WebPushNotificationPreferences = {
     scope: NotificationScope;
     topics: Array<NotificationTopic>;
+    process_units: Array<(string)>;
 };
 
 export type WebPushSubscription = {

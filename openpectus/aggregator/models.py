@@ -7,7 +7,7 @@ from enum import StrEnum, auto
 from typing import Iterable
 
 import openpectus.protocol.models as Mdl
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 logger = logging.getLogger(__name__)
 
@@ -258,8 +258,10 @@ class NotificationTopic(StrEnum):
     NETWORK_ERRORS = auto()
 
 class WebPushNotificationPreferences(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     user_id: str
     user_roles: set[str]
     scope: NotificationScope
     topics: list[NotificationTopic]
+    process_units: list[str]
 

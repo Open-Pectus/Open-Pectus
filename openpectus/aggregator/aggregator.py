@@ -433,19 +433,20 @@ class FromFrontend:
             webpush_repo.store_subscription(subscription, str(user_id))
         return True
 
-    def webpush_notification_preferences_requested(self, user_id: str | None, user_roles: set[str]):
+    def webpush_notification_preferences_requested(self, user_id: str | None, user_roles: set[str]) -> Mdl.WebPushNotificationPreferences:
         user_id_as_string = str(user_id)  # without auth all users share the same notification preferences under user_id "None"
         with database.create_scope():
             webpush_repo = WebPushRepository(database.scoped_session())
             preferences = webpush_repo.get_notifications_preferences(user_id_as_string)
             if (preferences == None):
                 # create a default set of notifications preferences
-                default_preferences = Mdl.WebPushNotificationPreferences(
+                preferences = Mdl.WebPushNotificationPreferences(
                     user_id=user_id_as_string,
                     user_roles=user_roles,
                     scope=NotificationScope.PROCESS_UNITS_WITH_RUNS_IVE_CONTRIBUTED_TO,
-                    topics=[])
-                webpush_repo.update_notifications_preferences(default_preferences)
+                    topics=[],
+                    process_units=[])
+                webpush_repo.update_notifications_preferences(preferences)
             return preferences
 
     def webpush_notification_preferences_posted(self, preferences: WebPushNotificationPreferences):

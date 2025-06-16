@@ -3169,12 +3169,20 @@
             },
             "type": "array",
             "title": "Topics"
+          },
+          "process_units": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Process Units"
           }
         },
         "type": "object",
         "required": [
           "scope",
-          "topics"
+          "topics",
+          "process_units"
         ],
         "title": "WebPushNotificationPreferences"
       },

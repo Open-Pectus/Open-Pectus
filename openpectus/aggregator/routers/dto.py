@@ -574,3 +574,4 @@ class WebPushConfig(Dto):
 class WebPushNotificationPreferences(Dto):
     scope: NotificationScope
     topics: list[NotificationTopic]
+    process_units: list[str]

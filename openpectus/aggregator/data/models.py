@@ -163,6 +163,7 @@ class WebPushNotificationPreferences(DBModel):
     user_roles: Mapped[set[str]] = mapped_column(type_=JSON, default=[])  # User roles. Updated it when change is detected in openpectus.aggregator.routes.auth
     scope: Mapped[NotificationScope] = mapped_column()
     topics: Mapped[list[NotificationTopic]] = mapped_column(type_=JSON, default=[])
+    process_units: Mapped[list[str]] = mapped_column(type_=JSON, default=[])
 
 class WebPushSubscription(DBModel):
     __tablename__ = "WebPushSubscriptions"

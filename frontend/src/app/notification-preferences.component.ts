@@ -1,5 +1,5 @@
 import { TitleCasePipe } from '@angular/common';
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, ViewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { SwPush } from '@angular/service-worker';
@@ -22,16 +22,23 @@ import { AppSelectors } from './ngrx/app.selectors';
                     (change)="onEnabledChanged($event)"> Notifications enabled for this device</label>
       <form [formGroup]="formGroup">
         <div class="flex flex-col">
-          <h1 class="font-bold">Scopes:</h1>
+          <h1 class="font-bold mt-2">Scopes:</h1>
           <label><input type="radio" [value]="notificationScopes.process_units_i_have_access_to"
                         [formControlName]="scopeControlName"> Process Units I have access to</label>
           <label><input type="radio"
                         [value]="notificationScopes.process_units_with_runs_ive_contributed_to"
                         [formControlName]="scopeControlName"> Process Units with runs I've contributed to</label>
-          <label><input type="radio" [value]="notificationScopes.specific_process_units"
-                        [formControlName]="scopeControlName"> Specific Process Units</label>
+          <label><input type="radio" [value]="notificationScopes.specific_process_units" #specific
+                        [formControlName]="scopeControlName"> Specific Process Units:</label>
+          @if (formGroup.controls[scopeControlName].value === notificationScopes.specific_process_units) {
+            <select multiple [formControlName]="processUnitsControlName">
+              @for (processUnit of processUnits(); track processUnit.id) {
+                <option [value]="processUnit.id">{{ processUnit.name }}</option>
+              }
+            </select>
+          }
 
-          <h1>Topics:</h1>
+          <h1 class="font-bold mt-2">Topics:</h1>
           <select multiple [formControlName]="topicsControlName">
             @for (optionValue of Object.values(notificationTopics); track optionValue) {
               <option [value]="optionValue">{{ optionValue.replace('_', ' ') | titlecase }}</option>
@@ -39,7 +46,7 @@ import { AppSelectors } from './ngrx/app.selectors';
           </select>
         </div>
       </form>
-      <button class="bg-emerald-300 p-1 rounded-sm border border-slate-300" (click)="onNotifyMeClick()">Notify me!</button>
+      <button class="bg-emerald-300 p-1 rounded-sm border border-slate-300 mt-2" (click)="onNotifyMeClick()">Notify me!</button>
     </div>
   `,
 })
@@ -47,6 +54,7 @@ export class NotificationPreferencesComponent implements AfterViewInit {
   @ViewChild('popover') popover!: ElementRef<HTMLDivElement>;
   @ViewChild('bell') bell!: ElementRef<HTMLButtonElement>;
   protected readonly Object = Object;
+  protected processUnits = this.store.selectSignal(AppSelectors.processUnits);
   protected readonly popoverWidth = 400; // When popover anchor positioning is widely available that should be used instead.
   protected readonly notificationScopes: Record<NotificationScope, NotificationScope> = {
     process_units_i_have_access_to: 'process_units_i_have_access_to',
@@ -55,6 +63,7 @@ export class NotificationPreferencesComponent implements AfterViewInit {
   };
   protected readonly scopeControlName = 'scope';
   protected readonly topicsControlName = 'topics';
+  protected readonly processUnitsControlName = 'process_units';
   protected readonly notificationTopics: Record<NotificationTopic, NotificationTopic> = {
     block_start: 'block_start',
     method_error: 'method_error',
@@ -67,15 +76,17 @@ export class NotificationPreferencesComponent implements AfterViewInit {
     watch_triggered: 'watch_triggered',
   };
   protected readonly formGroup = new FormGroup({
-    [this.scopeControlName]: new FormControl(),
-    [this.topicsControlName]: new FormControl(),
+    [this.scopeControlName]: new FormControl<NotificationScope>(this.notificationScopes.process_units_i_have_access_to),
+    [this.processUnitsControlName]: new FormControl<string[]>([]),
+    [this.topicsControlName]: new FormControl<NotificationTopic[]>([]),
   });
   protected bellPosition = {bottom: 0, right: 0};
   protected hasSubscription = this.swPush.subscription.pipe(map(subscription => subscription !== null));
 
   constructor(private store: Store,
               private webpushService: WebpushService,
-              private swPush: SwPush) {
+              private swPush: SwPush,
+              private cdRef: ChangeDetectorRef) {
     this.formGroup.valueChanges.pipe(takeUntilDestroyed()).subscribe(_ => {
       this.webpushService.saveNotificationPreferences({requestBody: this.formGroup.value as WebPushNotificationPreferences}).subscribe();
     });
@@ -106,6 +117,7 @@ export class NotificationPreferencesComponent implements AfterViewInit {
     this.popover.nativeElement.showPopover();
     this.webpushService.getNotificationPreferences().subscribe(preferences => {
       this.formGroup.reset(preferences, {emitEvent: false});
+      this.cdRef.markForCheck();
     });
   }
 

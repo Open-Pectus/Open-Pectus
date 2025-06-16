@@ -47,7 +47,7 @@ def get_notification_preferences(user_id_from_token: UserIdValue,
                                  user_roles: UserRolesValue,
                                  agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.WebPushNotificationPreferences:
     preferences = agg.from_frontend.webpush_notification_preferences_requested(user_id_from_token, user_roles)
-    return Dto.WebPushNotificationPreferences(scope=preferences.scope, topics=preferences.topics)
+    return Dto.WebPushNotificationPreferences(scope=preferences.scope, topics=preferences.topics, process_units=preferences.process_units)
 
 
 @router.post('/notification_preferences')
@@ -58,7 +58,8 @@ def save_notification_preferences(notification_preferences: Dto.WebPushNotificat
     model = Mdl.WebPushNotificationPreferences(user_id=str(user_id_from_token),
                                                user_roles=user_roles,
                                                scope=notification_preferences.scope,
-                                               topics=notification_preferences.topics)
+                                               topics=notification_preferences.topics,
+                                               process_units=notification_preferences.process_units)
     agg.from_frontend.webpush_notification_preferences_posted(model)
 
 
@@ -81,7 +82,7 @@ def notify_user(user_id_from_token: UserIdValue,
 
     with database.create_scope():
         webpush_repo = WebPushRepository(database.scoped_session())
-        subscriptions = webpush_repo.get_subscriptions(user_id_from_token)
+        subscriptions = webpush_repo.get_subscriptions(str(user_id_from_token))
         logger.debug(f"Publishing to {len(subscriptions)} subscription(s) for user {user_id_from_token}")
         if (len(subscriptions) == 0):
             return Dto.ServerErrorResponse(message="No subscription found")
