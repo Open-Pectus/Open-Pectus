@@ -228,8 +228,9 @@ class RecentEngineRepository(RepositoryBase):
         self.db_session.commit()
 
 class WebPushRepository(RepositoryBase):
-    def get_notifications_preferences(self, user_id: str) -> agg_mdl.WebPushNotificationPreferences:
+    def get_notifications_preferences(self, user_id: str) -> agg_mdl.WebPushNotificationPreferences | None:
         db_model = self.db_session.scalar(select(WebPushNotificationPreferences).where(WebPushNotificationPreferences.user_id == user_id))
+        if(db_model == None): return None
         return agg_mdl.WebPushNotificationPreferences.model_validate(db_model)
 
     def get_subscriptions(self, user_id: str):
