@@ -2,7 +2,6 @@ import json
 import logging
 import os
 import uuid
-from itertools import count
 from pathlib import Path
 
 import httpx
@@ -14,8 +13,9 @@ from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import WebPushRepository
 from openpectus.aggregator.routers.auth import UserIdValue, UserRolesValue
 from pydantic.json_schema import SkipJsonSchema
+from starlette.status import HTTP_404_NOT_FOUND, HTTP_410_GONE
 from webpush import WebPush, WebPushSubscription
-from webpush.types import AnyHttpUrl, WebPushKeys
+from webpush.types import AnyHttpUrl, WebPushKeys, WebPushMessage
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["webpush"])
@@ -74,9 +74,11 @@ def notify_user(user_id: str,
     with database.create_scope():
         webpush_repo = WebPushRepository(database.scoped_session())
         subscriptions = webpush_repo.get_subscriptions(resolved_user_id)
+        logger.debug(f"Publishing to {len(subscriptions)} subscription(s) for user {resolved_user_id}")
         if(len(subscriptions) == 0):
             return Dto.ServerErrorResponse(message="No subscription found")
         for subscription in subscriptions:
+            logger.debug(f"Publishing subscription with id {subscription.id} for user {resolved_user_id}")
             # Encrypt message before sending
             message = wp.get(
                 message=json.dumps(dict(
@@ -88,11 +90,17 @@ def notify_user(user_id: str,
                 subscription=WebPushSubscription(endpoint=AnyHttpUrl(subscription.endpoint), keys=WebPushKeys(auth=subscription.auth, p256dh=subscription.p256dh)),
             )
             # Publish message to notification endpoint
-            background_tasks.add_task(
-                httpx.post,
-                url=subscription.endpoint,
+            # background_tasks.add_task(
+            #     httpx.post,
+            #     url=subscription.endpoint,
+            #     content=message.encrypted,
+            #     headers=message.headers,  # type: ignore
+            # )
+            response = httpx.post(
+                url=str(subscription.endpoint),
                 content=message.encrypted,
-                headers=message.headers,  # type: ignore
+                headers=message.headers  # pyright: ignore [reportArgumentType]
             )
+            if (response.status_code == HTTP_410_GONE):
+                webpush_repo.delete_subscription(subscription)
         return Dto.ServerSuccessResponse(message="Web push notification successful")
-

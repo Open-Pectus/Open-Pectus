@@ -1,17 +1,16 @@
 import { ChangeDetectionStrategy, Component, computed } from '@angular/core';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { take } from 'rxjs';
-import { WebpushService } from './api';
 import { MswEnablementComponent } from './msw-enablement.component';
 import { AppSelectors } from './ngrx/app.selectors';
+import { NotificationPreferencesComponent } from './notification-preferences.component';
 
 @Component({
   selector: 'app-top-bar',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MswEnablementComponent],
+  imports: [MswEnablementComponent, NotificationPreferencesComponent],
   template: `
-    <div class="w-full grid grid-cols-3 items-center px-4 bg-slate-600 text-white relative">
+    <div class="w-full grid grid-cols-3 items-center px-4 bg-slate-600 text-white relative overflow-y-visible">
       <div class="flex items-center">
         @if (isDev()) {
           <app-msw-enablement></app-msw-enablement>
@@ -20,7 +19,7 @@ import { AppSelectors } from './ngrx/app.selectors';
       </div>
       <button class="text-3xl font-bold mx-4 my-2.5" (click)="navigateToRoot()">Open Pectus</button>
       <div class="flex gap-3 items-center flex-1 justify-end">
-        <button (click)="onNotifyMeClick()">Notify me!</button>
+        <app-notification-preferences class="mx-3"></app-notification-preferences>
         <p>{{ formatInitials(userData()) ?? 'Anon' }}</p>
         @if (userPicture() === undefined) {
           <div class="codicon codicon-account !text-3xl"></div>
@@ -39,8 +38,7 @@ export class TopBarComponent {
   userPicture = this.store.selectSignal(AppSelectors.userPicture);
 
   constructor(private store: Store,
-              private router: Router,
-              private webpushService: WebpushService) {}
+              private router: Router) {}
 
   navigateToRoot() {
     this.router.navigate(['/']).then();
@@ -48,12 +46,5 @@ export class TopBarComponent {
 
   formatInitials(userData?: { email: string }) {
     return userData?.email?.split('@')?.[0]?.toUpperCase();
-  }
-
-  onNotifyMeClick() {
-    this.store.select(AppSelectors.userId).pipe(take(1)).subscribe(userId => {
-      if(userId === undefined) return;
-      this.webpushService.notifyUser({userId}).subscribe();
-    });
   }
 }

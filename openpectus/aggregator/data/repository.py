@@ -255,3 +255,7 @@ class WebPushRepository(RepositoryBase):
         subscription.p256dh = agg_subscription.keys.p256dh
         self.db_session.add(subscription)
         self.db_session.commit()
+
+    def delete_subscription(self, subscription: WebPushSubscription):
+        self.db_session.delete(subscription)
+        self.db_session.commit()

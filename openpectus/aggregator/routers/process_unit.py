@@ -366,7 +366,7 @@ async def unregister_active_user(
         return Dto.ServerErrorResponse(message="User unregistration failed due to missing user_id")
     action_result = await agg.from_frontend.unregister_active_user(
         engine_id=unit_id,
-        user_id=uuid.UUID(resolved_user_id),
+        user_id=resolved_user_id,
     )
     if not action_result:
         return Dto.ServerErrorResponse(message="User unregistration failed")

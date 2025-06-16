@@ -18,6 +18,7 @@ log_setup_colorlog(root_loglevel=logging.INFO)
 logger = logging.getLogger("openpectus.aggregator.aggregator")
 logger.setLevel(logging.INFO)
 logging.getLogger("openpectus.protocol.aggregator_dispatcher").setLevel(logging.INFO)
+logging.getLogger("openpectus.aggregator.routers.webpush").setLevel(logging.DEBUG)
 
 def get_arg_parser():
     parser = ArgumentParser("Start Aggregator server")
