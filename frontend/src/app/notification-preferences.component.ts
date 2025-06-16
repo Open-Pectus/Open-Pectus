@@ -1,5 +1,5 @@
 import { TitleCasePipe } from '@angular/common';
-import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, ViewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -19,20 +19,28 @@ import { AppSelectors } from './ngrx/app.selectors';
   template: `
     <button #bell class="codicon codicon-bell !text-xl" (click)="onBellClick()"></button>
 
-    <div popover #popover class="text-black bg-white border-slate-400 p-2 border-2 rounded-lg m-0"
+    <div popover #popover
+         class="text-black bg-white border-slate-400 p-2.5 border rounded-lg m-0 shadow-lg shadow-slate-500 outline outline-[3px] outline-slate-300"
          [style.top.px]="bellPosition.bottom" [style.left.px]="bellPosition.right - popoverWidth" [style.width.px]="popoverWidth">
-      <label><input type="checkbox" [checked]="hasSubscription | ngrxPush"
-                    (change)="onEnabledChanged($event)"> Notifications enabled for this device</label>
+      <label class="flex items-center gap-2">
+        <input type="checkbox" [checked]="hasSubscription | ngrxPush" class="w-5 h-5"
+               (change)="onEnabledChanged($event)"> Notifications enabled for this device
+      </label>
       <form [formGroup]="formGroup">
-        <div class="flex flex-col">
-          <h1 class="font-bold mt-2">Scopes:</h1>
-          <label><input type="radio" [value]="notificationScopes.process_units_i_have_access_to"
-                        [formControlName]="scopeControlName"> Process Units I have access to</label>
-          <label><input type="radio"
-                        [value]="notificationScopes.process_units_with_runs_ive_contributed_to"
-                        [formControlName]="scopeControlName"> Process Units with runs I've contributed to</label>
-          <label><input type="radio" [value]="notificationScopes.specific_process_units" #specific
-                        [formControlName]="scopeControlName"> Specific Process Units:</label>
+        <div class="flex flex-col gap-0.5">
+          <h1 class="font-bold mt-2.5">Scopes:</h1>
+          <label class="flex items-center gap-2">
+            <input type="radio" [value]="notificationScopes.process_units_i_have_access_to" class="w-5 h-5"
+                   [formControlName]="scopeControlName"> Process Units I have access to
+          </label>
+          <label class="flex items-center gap-2">
+            <input type="radio" [value]="notificationScopes.process_units_with_runs_ive_contributed_to" class="w-5 h-5"
+                   [formControlName]="scopeControlName"> Process Units with runs I've contributed to
+          </label>
+          <label class="flex items-center gap-2">
+            <input type="radio" [value]="notificationScopes.specific_process_units" class="w-5 h-5"
+                   [formControlName]="scopeControlName"> Specific Process Units:
+          </label>
           @if (specificProcessUnitsSelected) {
             <select multiple [formControlName]="processUnitsControlName">
               @for (processUnit of processUnits(); track processUnit.id) {
@@ -40,8 +48,10 @@ import { AppSelectors } from './ngrx/app.selectors';
               }
             </select>
           }
+        </div>
 
-          <h1 class="font-bold mt-2">Topics:</h1>
+        <div class="flex flex-col">
+          <h1 class="font-bold mt-2.5">Topics:</h1>
           <select multiple [formControlName]="topicsControlName">
             @for (optionValue of Object.values(notificationTopics); track optionValue) {
               <option [value]="optionValue">{{ optionValue.replace('_', ' ') | titlecase }}</option>
@@ -49,11 +59,11 @@ import { AppSelectors } from './ngrx/app.selectors';
           </select>
         </div>
       </form>
-      <button class="bg-emerald-300 p-1 rounded-sm border border-slate-300 mt-2" (click)="onNotifyMeClick()">Notify me!</button>
+      <button class="bg-emerald-300 p-1 rounded-sm border border-slate-300 mt-2.5" (click)="onNotifyMeClick()">Notify me!</button>
     </div>
   `,
 })
-export class NotificationPreferencesComponent implements AfterViewInit {
+export class NotificationPreferencesComponent {
   @ViewChild('popover') popover!: ElementRef<HTMLDivElement>;
   @ViewChild('bell') bell!: ElementRef<HTMLButtonElement>;
   protected readonly Object = Object;
@@ -107,11 +117,6 @@ export class NotificationPreferencesComponent implements AfterViewInit {
     return this.formGroup.controls[this.scopeControlName].value === this.notificationScopes.specific_process_units;
   }
 
-  ngAfterViewInit() {
-    const bellBoundingRect = this.bell.nativeElement.getBoundingClientRect();
-    this.bellPosition = {bottom: bellBoundingRect.bottom, right: bellBoundingRect.right};
-  }
-
   onNotifyMeClick() {
     this.store.select(AppSelectors.userId).pipe(take(1)).subscribe(userId => {
       if(userId === undefined) return;
@@ -129,6 +134,8 @@ export class NotificationPreferencesComponent implements AfterViewInit {
   }
 
   onBellClick() {
+    const bellBoundingRect = this.bell.nativeElement.getBoundingClientRect();
+    this.bellPosition = {bottom: bellBoundingRect.bottom, right: bellBoundingRect.right};
     this.popover.nativeElement.showPopover();
     this.webpushService.getNotificationPreferences().subscribe(preferences => {
       this.formGroup.reset(preferences, {emitEvent: false});
