@@ -317,7 +317,7 @@ class FromFrontend:
         self._engine_data_map = engine_data_map
         self.dispatcher = dispatcher
         self.publisher = publisher
-        self.dead_man_switch_user_ids: dict[str, uuid.UUID] = dict()
+        self.dead_man_switch_user_ids: dict[str, str] = dict()
         self.publisher.register_on_disconnect(self.on_ws_disconnect)
         self.publisher.pubsub_endpoint.methods.event_notifier.register_subscribe_event(self.user_subscribed_pubsub)  # type: ignore
 
@@ -388,7 +388,7 @@ class FromFrontend:
         return True
 
     def get_dead_man_switch_user_ids(self, topics: list[str]):
-        return (uuid.UUID(topic.split("/")[1]) for topic in topics if topic.startswith(PubSubTopic.DEAD_MAN_SWITCH))
+        return (topic.split("/")[1] for topic in topics if topic.startswith(PubSubTopic.DEAD_MAN_SWITCH))
 
     async def user_subscribed_pubsub(self, subscriber_id: str, topics: list[str]):
         for user_id in self.get_dead_man_switch_user_ids(topics):
@@ -404,7 +404,7 @@ class FromFrontend:
             if (popped_user_id != None):
                 asyncio.create_task(self.publisher.publish_active_users_changed(engine_data.engine_id))
 
-    async def register_active_user(self, engine_id: str, user_id: uuid.UUID, user_name: str):
+    async def register_active_user(self, engine_id: str, user_id: str, user_name: str):
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is None:
             logger.warning(f"Cannot register active user, engine {engine_id} not found")
@@ -416,7 +416,7 @@ class FromFrontend:
         asyncio.create_task(self.publisher.publish_active_users_changed(engine_id))
         return True
 
-    async def unregister_active_user(self, engine_id: str, user_id: uuid.UUID):
+    async def unregister_active_user(self, engine_id: str, user_id: str):
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is None:
             logger.warning(f"Cannot unregister active user, engine {engine_id} not found")

@@ -166,7 +166,7 @@ class RunData(BaseModel):
 class ActiveUser(BaseModel):
     """ Represents a user looking at the frontend details page for a process unit  """
 
-    id: uuid.UUID  # oid from identity token, used to get profile photos from ms graph api
+    id: str  # oid from identity token, used to get profile photos from ms graph api
     name: str  # Same value as emitted by openpectus.aggregator.auth.user_name
 
 
@@ -201,7 +201,7 @@ class EngineData:
         self.method_state: MethodState = MethodState.empty()
         self.plot_configuration: PlotConfiguration = PlotConfiguration.empty()
         self.contributors: set[str] = set()
-        self.active_users: dict[uuid.UUID, ActiveUser] = dict()
+        self.active_users: dict[str, ActiveUser] = dict()
         self.required_roles: set[str] = set()
         self.hardware_str: str = hardware_str
         self.data_log_interval_seconds: float = data_log_interval_seconds

@@ -387,7 +387,7 @@ class MethodAndState(Dto):
 
 
 class ActiveUser(Dto):
-    id: uuid.UUID
+    id: str
     name: str
 
     @staticmethod
