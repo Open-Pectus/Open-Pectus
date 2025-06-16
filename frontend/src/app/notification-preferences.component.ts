@@ -2,11 +2,14 @@ import { TitleCasePipe } from '@angular/common';
 import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, ViewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { SwPush } from '@angular/service-worker';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { firstValueFrom, map, take } from 'rxjs';
 import { NotificationScope, NotificationTopic, WebPushNotificationPreferences, WebpushService, WebPushSubscription } from './api';
+import { detailsUrlPart } from './app.routes';
+import { DetailsRoutingUrlParts } from './details/details-routing-url-parts';
 import { AppSelectors } from './ngrx/app.selectors';
 
 @Component({
@@ -30,7 +33,7 @@ import { AppSelectors } from './ngrx/app.selectors';
                         [formControlName]="scopeControlName"> Process Units with runs I've contributed to</label>
           <label><input type="radio" [value]="notificationScopes.specific_process_units" #specific
                         [formControlName]="scopeControlName"> Specific Process Units:</label>
-          @if (formGroup.controls[scopeControlName].value === notificationScopes.specific_process_units) {
+          @if (specificProcessUnitsSelected) {
             <select multiple [formControlName]="processUnitsControlName">
               @for (processUnit of processUnits(); track processUnit.id) {
                 <option [value]="processUnit.id">{{ processUnit.name }}</option>
@@ -86,10 +89,22 @@ export class NotificationPreferencesComponent implements AfterViewInit {
   constructor(private store: Store,
               private webpushService: WebpushService,
               private swPush: SwPush,
-              private cdRef: ChangeDetectorRef) {
+              private cdRef: ChangeDetectorRef,
+              private router: Router) {
     this.formGroup.valueChanges.pipe(takeUntilDestroyed()).subscribe(_ => {
       this.webpushService.saveNotificationPreferences({requestBody: this.formGroup.value as WebPushNotificationPreferences}).subscribe();
     });
+    if(this.swPush.isEnabled) {
+      this.swPush.notificationClicks.pipe(takeUntilDestroyed()).subscribe(click => {
+        if(click.action === 'navigate') {
+          void this.router.navigate([detailsUrlPart, DetailsRoutingUrlParts.processUnitUrlPart, click.notification.data.id]);
+        }
+      });
+    }
+  }
+
+  get specificProcessUnitsSelected() {
+    return this.formGroup.controls[this.scopeControlName].value === this.notificationScopes.specific_process_units;
   }
 
   ngAfterViewInit() {

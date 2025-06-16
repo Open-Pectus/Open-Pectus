@@ -2,10 +2,10 @@ import json
 import logging
 import os
 from pathlib import Path
-import openpectus.aggregator.models as Mdl
 
 import httpx
 import openpectus.aggregator.deps as agg_deps
+import openpectus.aggregator.models as Mdl
 import openpectus.aggregator.routers.dto as Dto
 from fastapi import APIRouter, BackgroundTasks, Depends
 from openpectus.aggregator.aggregator import Aggregator
@@ -63,7 +63,6 @@ def save_notification_preferences(notification_preferences: Dto.WebPushNotificat
     agg.from_frontend.webpush_notification_preferences_posted(model)
 
 
-
 @router.post("/subscribe")
 def subscribe_user(subscription: WebPushSubscription,
                    user_id: UserIdValue,
@@ -92,8 +91,18 @@ def notify_user(user_id_from_token: UserIdValue,
             message = wp.get(
                 message=json.dumps(dict(
                     notification=dict(
-                        title="Notification Title",
-                        body="Notification Body",
+                        title="Something happened",
+                        body="It's probably fine",
+                        icon="/assets/icons/icon-192x192.png",
+                        data=dict(
+                            id="<some id>"
+                        ),
+                        actions=list([
+                            dict(
+                                action="navigate",
+                                title="Go to process unit"
+                            )
+                        ])
                     )
                 )),
                 subscription=WebPushSubscription(endpoint=AnyHttpUrl(subscription.endpoint),
