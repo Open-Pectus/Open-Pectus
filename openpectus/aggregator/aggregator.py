@@ -12,7 +12,7 @@ from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRepository, RecentEngineRepository, WebPushRepository
 from openpectus.aggregator.exceptions import AggregatorCallerException, AggregatorInternalException
 from openpectus.aggregator.frontend_publisher import FrontendPublisher, PubSubTopic
-from openpectus.aggregator.models import EngineData, NotificationScope
+from openpectus.aggregator.models import EngineData, NotificationScope, WebPushNotificationPreferences
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.protocol.models import SystemTagName, MethodStatusEnum
 from webpush import WebPushSubscription
@@ -242,8 +242,8 @@ class FromEngine:
         latest_persisted_tick_time = engine_data.run_data.latest_persisted_tick_time
         tag_values = engine_data.tags_info.map.values()
         latest_tag_tick_time = max([tag.tick_time for tag in tag_values]) if len(tag_values) > 0 else 0
-        time_threshold_exceeded = latest_persisted_tick_time is None\
-            or latest_tag_tick_time - latest_persisted_tick_time > engine_data.data_log_interval_seconds
+        time_threshold_exceeded = latest_persisted_tick_time is None \
+                                  or latest_tag_tick_time - latest_persisted_tick_time > engine_data.data_log_interval_seconds
 
         if engine_data.run_data.run_id is not None and time_threshold_exceeded:
             tag_values_to_persist = [tag_value.model_copy() for tag_value in engine_data.tags_info.map.values()
@@ -396,11 +396,12 @@ class FromFrontend:
 
     async def on_ws_disconnect(self, subscriber_id: str):
         user_id = self.dead_man_switch_user_ids[subscriber_id]
-        user_has_other_dead_man_switch = len([other_user_id for other_user_id in self.dead_man_switch_user_ids.values() if other_user_id == user_id]) > 1
-        if(user_has_other_dead_man_switch): return
+        other_dead_man_switches = [other_user_id for other_user_id in self.dead_man_switch_user_ids.values() if other_user_id == user_id]
+        user_has_other_dead_man_switch = len(other_dead_man_switches) > 1
+        if (user_has_other_dead_man_switch): return
         for engine_data in self._engine_data_map.values():
             popped_user_id = engine_data.active_users.pop(user_id, None)
-            if(popped_user_id != None):
+            if (popped_user_id != None):
                 asyncio.create_task(self.publisher.publish_active_users_changed(engine_data.engine_id))
 
     async def register_active_user(self, engine_id: str, user_id: uuid.UUID, user_name: str):
@@ -426,19 +427,31 @@ class FromFrontend:
         asyncio.create_task(self.publisher.publish_active_users_changed(engine_id))
         return True
 
-    def webpush_user_subscribed(self, subscription: WebPushSubscription, user_id: uuid.UUID, is_anon: bool, user_roles: set[str]) -> bool:
+    def webpush_user_subscribed(self, subscription: WebPushSubscription, user_id: str | None) -> bool:
         with database.create_scope():
             webpush_repo = WebPushRepository(database.scoped_session())
-
-            preferences = webpush_repo.get_notifications_preferences(user_id, is_anon)
-            if(preferences == None):
-                webpush_repo.store_notifications_preferences(Mdl.WebPushNotificationPreferences(
-                    user_id=user_id, is_anon=is_anon, user_roles=user_roles,
-                    scope=NotificationScope.PROCESS_UNITS_WITH_RUNS_IVE_CONTRIBUTED_TO, topics=[]))
-
-            webpush_repo.store_subscription(subscription, user_id)
-
+            webpush_repo.store_subscription(subscription, str(user_id))
         return True
+
+    def webpush_notification_preferences_requested(self, user_id: str | None, user_roles: set[str]):
+        user_id_as_string = str(user_id)  # without auth all users share the same notification preferences under user_id "None"
+        with database.create_scope():
+            webpush_repo = WebPushRepository(database.scoped_session())
+            preferences = webpush_repo.get_notifications_preferences(user_id_as_string)
+            if (preferences == None):
+                # create a default set of notifications preferences
+                default_preferences = Mdl.WebPushNotificationPreferences(
+                    user_id=user_id_as_string,
+                    user_roles=user_roles,
+                    scope=NotificationScope.PROCESS_UNITS_WITH_RUNS_IVE_CONTRIBUTED_TO,
+                    topics=[])
+                webpush_repo.update_notifications_preferences(default_preferences)
+            return preferences
+
+    def webpush_notification_preferences_posted(self, preferences: WebPushNotificationPreferences):
+        with database.create_scope():
+            webpush_repo = WebPushRepository(database.scoped_session())
+            webpush_repo.update_notifications_preferences(preferences)
 
 class Aggregator:
     def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, secret: str = "") -> None:

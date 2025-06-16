@@ -1659,6 +1659,98 @@
         }
       }
     },
+    "/api/webpush/notification_preferences": {
+      "get": {
+        "tags": [
+          "webpush"
+        ],
+        "summary": "Get Notification Preferences",
+        "operationId": "get_notification_preferences",
+        "parameters": [
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebPushNotificationPreferences"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "webpush"
+        ],
+        "summary": "Save Notification Preferences",
+        "operationId": "save_notification_preferences",
+        "parameters": [
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebPushNotificationPreferences"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/webpush/subscribe": {
       "post": {
         "tags": [
@@ -1667,15 +1759,6 @@
         "summary": "Subscribe User",
         "operationId": "subscribe_user",
         "parameters": [
-          {
-            "name": "user_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "title": "User Id"
-            }
-          },
           {
             "name": "x-identity",
             "in": "header",
@@ -1727,15 +1810,6 @@
         "summary": "Notify User",
         "operationId": "notify_user",
         "parameters": [
-          {
-            "name": "user_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "User Id"
-            }
-          },
           {
             "name": "x-identity",
             "in": "header",
@@ -2284,6 +2358,30 @@
           "last_seen_date"
         ],
         "title": "NotOnline"
+      },
+      "NotificationScope": {
+        "type": "string",
+        "enum": [
+          "process_units_with_runs_ive_contributed_to",
+          "process_units_i_have_access_to",
+          "specific_process_units"
+        ],
+        "title": "NotificationScope"
+      },
+      "NotificationTopic": {
+        "type": "string",
+        "enum": [
+          "run_start",
+          "run_stop",
+          "run_pause",
+          "block_start",
+          "notification_cmd",
+          "watch_triggered",
+          "new_contributor",
+          "method_error",
+          "network_errors"
+        ],
+        "title": "NotificationTopic"
       },
       "PlotAxis": {
         "properties": {
@@ -3034,19 +3132,12 @@
       },
       "WebPushConfig": {
         "properties": {
-          "enabled": {
-            "type": "boolean",
-            "title": "Enabled"
-          },
           "app_server_key": {
             "type": "string",
             "title": "App Server Key"
           }
         },
         "type": "object",
-        "required": [
-          "enabled"
-        ],
         "title": "WebPushConfig"
       },
       "WebPushKeys": {
@@ -3066,6 +3157,26 @@
           "p256dh"
         ],
         "title": "WebPushKeys"
+      },
+      "WebPushNotificationPreferences": {
+        "properties": {
+          "scope": {
+            "$ref": "#/components/schemas/NotificationScope"
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationTopic"
+            },
+            "type": "array",
+            "title": "Topics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scope",
+          "topics"
+        ],
+        "title": "WebPushNotificationPreferences"
       },
       "WebPushSubscription": {
         "properties": {

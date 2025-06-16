@@ -166,7 +166,7 @@ class RunData(BaseModel):
 class ActiveUser(BaseModel):
     """ Represents a user looking at the frontend details page for a process unit  """
 
-    id: uuid.UUID  # sid from identity token, used to get profile photos from ms graph api
+    id: uuid.UUID  # oid from identity token, used to get profile photos from ms graph api
     name: str  # Same value as emitted by openpectus.aggregator.auth.user_name
 
 
@@ -246,7 +246,7 @@ class NotificationScope(StrEnum):
     PROCESS_UNITS_I_HAVE_ACCESS_TO = auto()
     SPECIFIC_PROCESS_UNITS = auto()
 
-class NotificationTopics(StrEnum):
+class NotificationTopic(StrEnum):
     RUN_START = auto()
     RUN_STOP = auto()
     RUN_PAUSE = auto()
@@ -258,9 +258,8 @@ class NotificationTopics(StrEnum):
     NETWORK_ERRORS = auto()
 
 class WebPushNotificationPreferences(BaseModel):
-    user_id: uuid.UUID
+    user_id: str
     user_roles: set[str]
-    is_anon: bool
     scope: NotificationScope
-    topics: list[NotificationTopics]
+    topics: list[NotificationTopic]
 

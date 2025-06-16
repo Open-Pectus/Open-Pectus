@@ -105,13 +105,13 @@ def user_roles(x_identity: Annotated[str, Header()] = "") -> set[str]:
         roles |= set(["Daemon"])
     return roles
 
-def user_id(x_identity: Annotated[str, Header()] = "") -> uuid.UUID | None:
+def user_id(x_identity: Annotated[str, Header()] = "") -> str | None:
     if not use_auth:
         return None
 
     token = decode_token_or_fail(x_identity)
     subject_id = token.get("oid", None)
-    return uuid.UUID(subject_id)
+    return subject_id
 
 
 UserRolesDependency = Security(user_roles)
@@ -119,7 +119,7 @@ UserRolesValue = Annotated[set[str], UserRolesDependency]
 UserNameDependency = Security(user_name)
 UserNameValue = Annotated[str, UserNameDependency]
 UserIdDependency = Security(user_id)
-UserIdValue = Annotated[uuid.UUID, UserIdDependency]
+UserIdValue = Annotated[str | None, UserIdDependency]
 
 
 def has_access(engine_or_run: EngineData | RecentEngine | RecentRun, user_roles: set[str]):

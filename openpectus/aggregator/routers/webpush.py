@@ -1,8 +1,8 @@
 import json
 import logging
 import os
-import uuid
 from pathlib import Path
+import openpectus.aggregator.models as Mdl
 
 import httpx
 import openpectus.aggregator.deps as agg_deps
@@ -12,14 +12,12 @@ from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import WebPushRepository
 from openpectus.aggregator.routers.auth import UserIdValue, UserRolesValue
-from pydantic.json_schema import SkipJsonSchema
-from starlette.status import HTTP_404_NOT_FOUND, HTTP_410_GONE
+from starlette.status import HTTP_410_GONE
 from webpush import WebPush, WebPushSubscription
-from webpush.types import AnyHttpUrl, WebPushKeys, WebPushMessage
+from webpush.types import AnyHttpUrl, WebPushKeys
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["webpush"])
-
 
 try:
     webpush_keys_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "webpush_keys")
@@ -29,7 +27,7 @@ try:
     wp = WebPush(
         private_key=Path(os.path.join(webpush_keys_path, "private_key.pem")),
         public_key=Path(os.path.join(webpush_keys_path, "public_key.pem")),
-        subscriber="jhk@mjolner.dk", # TODO: take from env variable
+        subscriber="jhk@mjolner.dk",  # TODO: take from env variable
         ttl=30,
     )
 except OSError:
@@ -40,45 +38,55 @@ except OSError:
 @router.get("/config")
 def get_webpush_config() -> Dto.WebPushConfig:
     return Dto.WebPushConfig(
-        enabled=app_server_key != None,
         app_server_key=app_server_key
     )
 
 
+@router.get("/notification_preferences")
+def get_notification_preferences(user_id_from_token: UserIdValue,
+                                 user_roles: UserRolesValue,
+                                 agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.WebPushNotificationPreferences:
+    preferences = agg.from_frontend.webpush_notification_preferences_requested(user_id_from_token, user_roles)
+    return Dto.WebPushNotificationPreferences(scope=preferences.scope, topics=preferences.topics)
+
+
+@router.post('/notification_preferences')
+def save_notification_preferences(notification_preferences: Dto.WebPushNotificationPreferences,
+                                  user_id_from_token: UserIdValue,
+                                  user_roles: UserRolesValue,
+                                  agg: Aggregator = Depends(agg_deps.get_aggregator)):
+    model = Mdl.WebPushNotificationPreferences(user_id=str(user_id_from_token),
+                                               user_roles=user_roles,
+                                               scope=notification_preferences.scope,
+                                               topics=notification_preferences.topics)
+    agg.from_frontend.webpush_notification_preferences_posted(model)
+
+
+
 @router.post("/subscribe")
 def subscribe_user(subscription: WebPushSubscription,
-                   user_id_from_token: UserIdValue,
-                   user_roles: UserRolesValue,
-                   user_id: str | SkipJsonSchema[None] = None,
+                   user_id: UserIdValue,
                    agg: Aggregator = Depends(agg_deps.get_aggregator)):
-    resolved_user_id = user_id_from_token or uuid.UUID(user_id)
-    if (resolved_user_id == None):
-        return Dto.ServerErrorResponse(message="Web push subscription failed due to missing user_id")
-    action_result = agg.from_frontend.webpush_user_subscribed(subscription, resolved_user_id, user_id_from_token == None, user_roles)
+    action_result = agg.from_frontend.webpush_user_subscribed(subscription, user_id)
     if not action_result:
         return Dto.ServerErrorResponse(message="Web push subscription failed")
     return Dto.ServerSuccessResponse(message="Web push subscription successful")
 
 
 @router.post("/notify_user")
-def notify_user(user_id: str,
-                user_id_from_token: UserIdValue,
+def notify_user(user_id_from_token: UserIdValue,
                 background_tasks: BackgroundTasks):
     if wp == None:
         return
 
-    resolved_user_id = user_id_from_token or uuid.UUID(user_id)
-    if (resolved_user_id == None):
-        return Dto.ServerErrorResponse(message="Web push subscription failed due to missing user_id")
-
     with database.create_scope():
         webpush_repo = WebPushRepository(database.scoped_session())
-        subscriptions = webpush_repo.get_subscriptions(resolved_user_id)
-        logger.debug(f"Publishing to {len(subscriptions)} subscription(s) for user {resolved_user_id}")
-        if(len(subscriptions) == 0):
+        subscriptions = webpush_repo.get_subscriptions(user_id_from_token)
+        logger.debug(f"Publishing to {len(subscriptions)} subscription(s) for user {user_id_from_token}")
+        if (len(subscriptions) == 0):
             return Dto.ServerErrorResponse(message="No subscription found")
         for subscription in subscriptions:
-            logger.debug(f"Publishing subscription with id {subscription.id} for user {resolved_user_id}")
+            logger.debug(f"Publishing subscription with id {subscription.id} for user {user_id_from_token}")
             # Encrypt message before sending
             message = wp.get(
                 message=json.dumps(dict(
@@ -87,7 +95,8 @@ def notify_user(user_id: str,
                         body="Notification Body",
                     )
                 )),
-                subscription=WebPushSubscription(endpoint=AnyHttpUrl(subscription.endpoint), keys=WebPushKeys(auth=subscription.auth, p256dh=subscription.p256dh)),
+                subscription=WebPushSubscription(endpoint=AnyHttpUrl(subscription.endpoint),
+                                                 keys=WebPushKeys(auth=subscription.auth, p256dh=subscription.p256dh)),
             )
             # Publish message to notification endpoint
             # background_tasks.add_task(

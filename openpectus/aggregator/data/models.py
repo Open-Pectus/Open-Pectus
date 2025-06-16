@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import StrEnum, auto
 from typing import Dict
 
-from openpectus.aggregator.models import Method, MethodState, PlotConfiguration, RunLog, AggregatedErrorLog, NotificationTopics, NotificationScope
+from openpectus.aggregator.models import Method, MethodState, PlotConfiguration, RunLog, AggregatedErrorLog, NotificationTopic, NotificationScope
 from sqlalchemy import JSON, ForeignKey, MetaData
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, attribute_keyed_dict
 
@@ -159,15 +159,14 @@ class PlotLog(DBModel):
 
 class WebPushNotificationPreferences(DBModel):
     __tablename__ = "WebPushNotificationPreferences"
-    user_id: Mapped[str] = mapped_column()
-    is_anon: Mapped[bool] = mapped_column()  # when no auth all anon users share web push notification preferences
+    user_id: Mapped[str] = mapped_column(unique=True)  # when no auth all users share web push notification preferences with user_id "None"
     user_roles: Mapped[set[str]] = mapped_column(type_=JSON, default=[])  # User roles. Updated it when change is detected in openpectus.aggregator.routes.auth
     scope: Mapped[NotificationScope] = mapped_column()
-    topics: Mapped[list[NotificationTopics]] = mapped_column(type_=JSON, default=[])
+    topics: Mapped[list[NotificationTopic]] = mapped_column(type_=JSON, default=[])
 
 class WebPushSubscription(DBModel):
     __tablename__ = "WebPushSubscriptions"
-    user_id: Mapped[str] = mapped_column()
+    user_id: Mapped[str] = mapped_column()  # when no auth user_id is "None"
     endpoint: Mapped[str] = mapped_column()
     auth: Mapped[str] = mapped_column()
     p256dh: Mapped[str] = mapped_column()

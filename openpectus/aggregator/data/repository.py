@@ -1,10 +1,11 @@
 import logging
 from datetime import UTC, datetime, timedelta, timezone
-from re import sub
 from socket import gethostname
 from typing import Iterable, Sequence
 import uuid
 
+import openpectus.aggregator.models as agg_mdl
+import webpush
 from openpectus import __version__
 from openpectus.aggregator.data.models import (
     RecentEngine,
@@ -15,11 +16,9 @@ from openpectus.aggregator.data.models import (
     PlotLog, PlotLogEntry,
     WebPushSubscription, WebPushNotificationPreferences
 )
-import openpectus.aggregator.models as agg_mdl
+from openpectus.protocol.models import SystemTagName
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-import webpush
-from openpectus.protocol.models import SystemTagName
 
 logger = logging.getLogger(__name__)
 
@@ -229,27 +228,27 @@ class RecentEngineRepository(RepositoryBase):
         self.db_session.commit()
 
 class WebPushRepository(RepositoryBase):
-    def get_notifications_preferences(self, user_id: uuid.UUID, is_anon: bool):
-        if(is_anon):
-            return self.db_session.scalar(select(WebPushNotificationPreferences).where(WebPushNotificationPreferences.is_anon == True))
-        return self.db_session.scalar(select(WebPushNotificationPreferences).where(WebPushNotificationPreferences.user_id == str(user_id)))
+    def get_notifications_preferences(self, user_id: str):
+        return self.db_session.scalar(select(WebPushNotificationPreferences).where(WebPushNotificationPreferences.user_id == user_id))
 
-    def get_subscriptions(self, user_id: uuid.UUID):
-        return self.db_session.scalars(select(WebPushSubscription).where(WebPushSubscription.user_id == str(user_id))).all()
+    def get_subscriptions(self, user_id: str):
+        return self.db_session.scalars(select(WebPushSubscription).where(WebPushSubscription.user_id == user_id)).all()
 
-    def store_notifications_preferences(self, agg_notification_preferences: agg_mdl.WebPushNotificationPreferences):
-        notification_preferences = WebPushNotificationPreferences()
-        notification_preferences.user_id = str(agg_notification_preferences.user_id)
-        notification_preferences.user_roles = agg_notification_preferences.user_roles
-        notification_preferences.scope = agg_notification_preferences.scope
-        notification_preferences.topics = agg_notification_preferences.topics
-        notification_preferences.is_anon = agg_notification_preferences.is_anon
-        self.db_session.add(notification_preferences)
+    def update_notifications_preferences(self, agg_notification_preferences: agg_mdl.WebPushNotificationPreferences):
+        existing = self.get_notifications_preferences(agg_notification_preferences.user_id)
+        if(existing == None):
+            model = WebPushNotificationPreferences(user_id=agg_notification_preferences.user_id)
+        else:
+            model = existing
+        model.user_roles = agg_notification_preferences.user_roles
+        model.scope = agg_notification_preferences.scope
+        model.topics = agg_notification_preferences.topics
+        self.db_session.add(model)
         self.db_session.commit()
 
-    def store_subscription(self, agg_subscription: webpush.WebPushSubscription, user_id: uuid.UUID):
+    def store_subscription(self, agg_subscription: webpush.WebPushSubscription, user_id: str):
         subscription = WebPushSubscription()
-        subscription.user_id = str(user_id)
+        subscription.user_id = user_id
         subscription.endpoint = str(agg_subscription.endpoint)
         subscription.auth = agg_subscription.keys.auth
         subscription.p256dh = agg_subscription.keys.p256dh

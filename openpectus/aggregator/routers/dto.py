@@ -14,7 +14,7 @@ import webpush
 
 SystemStateEnum = Mdl.SystemStateEnum
 NotificationScope = Mdl.NotificationScope
-NotificationTopics = Mdl.NotificationTopics
+NotificationTopic = Mdl.NotificationTopic
 WebPushSubscription = webpush.WebPushSubscription
 
 class Dto(BaseModel):
@@ -569,5 +569,8 @@ class UodDefinition(Dto):
         )
 
 class WebPushConfig(Dto):
-    enabled: bool
     app_server_key: str | SkipJsonSchema[None] = None
+
+class WebPushNotificationPreferences(Dto):
+    scope: NotificationScope
+    topics: list[NotificationTopic]
