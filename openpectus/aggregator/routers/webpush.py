@@ -33,12 +33,17 @@ try:
         open(private_key_path, 'xb').write(private_key)
         open(public_key_path, 'xb').write(public_key)
         open(app_server_key_path, 'xt').write(app_server_key)
-    wp = WebPush(
-        private_key=Path(os.path.join(webpush_keys_path, "private_key.pem")),
-        public_key=Path(os.path.join(webpush_keys_path, "public_key.pem")),
-        subscriber="jhk@mjolner.dk",  # TODO: take from env variable
-        ttl=30,
-    )
+
+    webpush_subscriber_email = os.getenv('WEBPUSH_SUBSCRIBER_EMAIL')
+    if(webpush_subscriber_email == None):
+        logger.warning('Missing WEBPUSH_SUBSCRIBER_EMAIL environment variable. Webpush will not work.')
+    else:
+        wp = WebPush(
+            private_key=Path(os.path.join(webpush_keys_path, "private_key.pem")),
+            public_key=Path(os.path.join(webpush_keys_path, "public_key.pem")),
+            subscriber=webpush_subscriber_email,
+            ttl=30,
+        )
 except OSError:
     app_server_key = None
     wp = None
