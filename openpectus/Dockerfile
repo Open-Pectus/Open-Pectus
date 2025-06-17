@@ -1,7 +1,6 @@
-FROM python:3.13
+FROM python:3.13-alpine
 
-# see https://hub.docker.com/_/python/
-
+# Install openpectus and dependencies
 WORKDIR /usr/src/app
 RUN mkdir -p /data
 COPY dist ./dist/
