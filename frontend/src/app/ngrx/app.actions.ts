@@ -15,4 +15,5 @@ export class AppActions {
   static finishedAuthentication = createAction(source + 'Finished Authentication', props<{ isAuthenticated: boolean }>());
   static userDataLoaded = createAction(source + 'User Data Loaded', props<{ userData: UserData }>());
   static userPictureLoaded = createAction(source + 'User Picture Loaded', props<{ userPicture: string }>());
+  static userIdLoaded = createAction(source + 'User Id Loaded', props<{ userId: string }>());
 }

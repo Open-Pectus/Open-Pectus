@@ -6,9 +6,6 @@
     <option name="PARENT_ENVS" value="true" />
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
-      <env name="AZURE_APPLICATION_CLIENT_ID" value="fc7355bb-a6be-493f-90a1-cf57063f7948" />
-      <env name="AZURE_DIRECTORY_TENANT_ID" value="2a41d3b1-09a3-406a-b705-d1c5a70cc21c" />
-      <env name="ENABLE_AZURE_AUTHENTICATION" value="true" />
     </envs>
     <option name="SDK_HOME" value="" />
     <option name="SDK_NAME" value="Python 3.13 (openpectus)" />
@@ -18,7 +15,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/aggregator/main.py" />
-    <option name="PARAMETERS" value="-lsp" />
+    <option name="PARAMETERS" value="" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

@@ -973,6 +973,180 @@
         }
       }
     },
+    "/api/process_unit/{unit_id}/active_users": {
+      "get": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Get Active Users",
+        "operationId": "get_active_users",
+        "parameters": [
+          {
+            "name": "unit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            }
+          },
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ActiveUser"
+                  },
+                  "title": "Response Get Active Users"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/process_unit/{unit_id}/register_active_user": {
+      "post": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Register Active User",
+        "operationId": "register_active_user",
+        "parameters": [
+          {
+            "name": "unit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/process_unit/{unit_id}/unregister_active_user": {
+      "post": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Unregister Active User",
+        "operationId": "unregister_active_user",
+        "parameters": [
+          {
+            "name": "unit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/recent_runs/": {
       "get": {
         "tags": [
@@ -1384,51 +1558,6 @@
         }
       }
     },
-    "/api/recent_runs/{run_id}/csv_file": {
-      "get": {
-        "tags": [
-          "recent_runs"
-        ],
-        "summary": "Get Recent Run Csv File",
-        "operationId": "get_recent_run_csv_file",
-        "parameters": [
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Run Id"
-            }
-          },
-          {
-            "name": "x-identity",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "",
-              "title": "X-Identity"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/lsp/pcode.language-configuration.json": {
       "get": {
         "tags": [
@@ -1534,7 +1663,7 @@
           "frontend_pubsub"
         ],
         "summary": "Expose Pubsub Topics",
-        "description": "This endpoint is just for exposing the topic enum to frontend via autogeneration",
+        "description": "This endpoint is just for exposing the topic enum to frontend via automatic type generation",
         "operationId": "expose_pubsub_topics",
         "parameters": [
           {
@@ -1650,6 +1779,24 @@
   },
   "components": {
     "schemas": {
+      "ActiveUser": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ActiveUser"
+      },
       "AggregatedErrorLog": {
         "properties": {
           "entries": {
@@ -2464,7 +2611,9 @@
           "method_state",
           "control_state",
           "error_log",
-          "process_units"
+          "process_units",
+          "active_users",
+          "dead_man_switch"
         ],
         "title": "PubSubTopic"
       },
