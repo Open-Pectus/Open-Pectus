@@ -1988,7 +1988,6 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid",
             "title": "Id"
           },
           "name": {
