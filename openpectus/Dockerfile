@@ -1,10 +1,15 @@
-FROM python:3.13-alpine
+FROM python:3.13-alpine AS base
 
 # Install openpectus and dependencies
 WORKDIR /usr/src/app
 RUN mkdir -p /data
 COPY dist ./dist/
 RUN pip install --no-cache-dir dist/openpectus.tar.gz
+RUN rm -R ./dist
+
+# Squash layers to reduce image size
+FROM scratch
+COPY --from=base / /
 
 ENV AGGREGATOR_PORT=8300
 EXPOSE $AGGREGATOR_PORT
