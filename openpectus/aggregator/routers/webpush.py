@@ -13,7 +13,7 @@ from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import WebPushRepository
 from openpectus.aggregator.routers.auth import UserIdValue, UserRolesValue
 from starlette.status import HTTP_410_GONE
-from webpush import WebPush, WebPushSubscription
+from webpush import VAPID, WebPush, WebPushSubscription
 from webpush.types import AnyHttpUrl, WebPushKeys
 
 logger = logging.getLogger(__name__)
@@ -21,9 +21,18 @@ router = APIRouter(tags=["webpush"], prefix="/webpush")
 
 try:
     webpush_keys_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "webpush_keys")
+    private_key_path = os.path.join(webpush_keys_path, "private_key.pem")
+    public_key_path = os.path.join(webpush_keys_path, "public_key.pem")
     app_server_key_path = os.path.join(webpush_keys_path, "applicationServerKey")
-    with open(app_server_key_path) as app_server_key_file:
-        app_server_key = app_server_key_file.readline()
+    try:
+        private_key = open(private_key_path).readline()
+        public_key = open(public_key_path).readline()
+        app_server_key = open(app_server_key_path).readline()
+    except OSError:
+        [private_key, public_key, app_server_key] = VAPID.generate_keys()
+        open(private_key_path, 'xb').write(private_key)
+        open(public_key_path, 'xb').write(public_key)
+        open(app_server_key_path, 'xt').write(app_server_key)
     wp = WebPush(
         private_key=Path(os.path.join(webpush_keys_path, "private_key.pem")),
         public_key=Path(os.path.join(webpush_keys_path, "public_key.pem")),
