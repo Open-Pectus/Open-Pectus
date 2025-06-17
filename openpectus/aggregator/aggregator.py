@@ -1,7 +1,6 @@
 import asyncio
 import copy
 import logging
-import uuid
 from datetime import datetime, timezone
 
 import openpectus.aggregator.models as Mdl
@@ -13,6 +12,7 @@ from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRe
 from openpectus.aggregator.exceptions import AggregatorCallerException, AggregatorInternalException
 from openpectus.aggregator.frontend_publisher import FrontendPublisher, PubSubTopic
 from openpectus.aggregator.models import EngineData, NotificationScope
+from openpectus.aggregator.webpush_publisher import WebPushPublisher
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.protocol.models import SystemTagName, MethodStatusEnum
 from webpush import WebPushSubscription
@@ -23,9 +23,10 @@ EngineDataMap = dict[str, EngineData]
 
 
 class FromEngine:
-    def __init__(self, engine_data_map: EngineDataMap, publisher: FrontendPublisher):
+    def __init__(self, engine_data_map: EngineDataMap, publisher: FrontendPublisher, webpush_publisher: WebPushPublisher):
         self._engine_data_map = engine_data_map
         self.publisher = publisher
+        self.webpush_publisher = webpush_publisher
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(engine_data_map={self._engine_data_map}, publisher={self.publisher})'
@@ -457,13 +458,14 @@ class FromFrontend:
             webpush_repo.store_notifications_preferences(preferences)
 
 class Aggregator:
-    def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, secret: str = "") -> None:
+    def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, webpush_publisher: WebPushPublisher, secret: str = "") -> None:
         self._engine_data_map: EngineDataMap = {}
         """ all client data except channels, indexed by engine_id """
         self.dispatcher = dispatcher
         self.from_frontend = FromFrontend(self._engine_data_map, dispatcher, publisher)
-        self.from_engine = FromEngine(self._engine_data_map, publisher)
+        self.from_engine = FromEngine(self._engine_data_map, publisher, webpush_publisher)
         self.secret = secret
+        self.webpush_publisher = webpush_publisher
 
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(dispatcher={self.dispatcher}, ' +

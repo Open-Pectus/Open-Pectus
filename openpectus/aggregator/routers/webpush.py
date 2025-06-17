@@ -1,58 +1,23 @@
 import json
 import logging
-import os
-from pathlib import Path
 
-import httpx
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
 import openpectus.aggregator.routers.dto as Dto
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, Depends
 from openpectus.aggregator.aggregator import Aggregator
-from openpectus.aggregator.data import database
-from openpectus.aggregator.data.repository import WebPushRepository
 from openpectus.aggregator.routers.auth import UserIdValue, UserRolesValue
-from starlette.status import HTTP_410_GONE
-from webpush import VAPID, WebPush, WebPushSubscription
-from webpush.types import AnyHttpUrl, WebPushKeys
+from webpush import WebPushSubscription
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["webpush"], prefix="/webpush")
 
-try:
-    webpush_keys_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "webpush_keys")
-    private_key_path = os.path.join(webpush_keys_path, "private_key.pem")
-    public_key_path = os.path.join(webpush_keys_path, "public_key.pem")
-    app_server_key_path = os.path.join(webpush_keys_path, "applicationServerKey")
-    try:
-        private_key = open(private_key_path).readline()
-        public_key = open(public_key_path).readline()
-        app_server_key = open(app_server_key_path).readline()
-    except OSError:
-        [private_key, public_key, app_server_key] = VAPID.generate_keys()
-        open(private_key_path, 'xb').write(private_key)
-        open(public_key_path, 'xb').write(public_key)
-        open(app_server_key_path, 'xt').write(app_server_key)
-
-    webpush_subscriber_email = os.getenv('WEBPUSH_SUBSCRIBER_EMAIL')
-    if(webpush_subscriber_email == None):
-        logger.warning('Missing WEBPUSH_SUBSCRIBER_EMAIL environment variable. Webpush will not work.')
-    else:
-        wp = WebPush(
-            private_key=Path(os.path.join(webpush_keys_path, "private_key.pem")),
-            public_key=Path(os.path.join(webpush_keys_path, "public_key.pem")),
-            subscriber=webpush_subscriber_email,
-            ttl=30,
-        )
-except OSError:
-    app_server_key = None
-    wp = None
 
 
 @router.get("/config")
-def get_webpush_config() -> Dto.WebPushConfig:
+def get_webpush_config(agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.WebPushConfig:
     return Dto.WebPushConfig(
-        app_server_key=app_server_key
+        app_server_key=agg.webpush_publisher.app_server_key
     )
 
 
@@ -89,51 +54,23 @@ def subscribe_user(subscription: WebPushSubscription,
 
 @router.post("/notify_user")
 def notify_user(user_id_from_token: UserIdValue,
-                background_tasks: BackgroundTasks):
-    if wp == None:
-        return
+                agg: Aggregator = Depends(agg_deps.get_aggregator)):
+    message = json.dumps(dict(
+        notification=dict(
+            title="Something happened",
+            body="It's probably fine",
+            icon="/assets/icons/icon-192x192.png",
+            data=dict(
+                id="<Some Process Unit Id>"
+            ),
+            actions=list([
+                dict(
+                    action="navigate",
+                    title="Go to process unit"
+                )
+            ])
+        )
+    ))
 
-    with database.create_scope():
-        webpush_repo = WebPushRepository(database.scoped_session())
-        subscriptions = webpush_repo.get_subscriptions(str(user_id_from_token))
-        logger.debug(f"Publishing to {len(subscriptions)} subscription(s) for user {user_id_from_token}")
-        if (len(subscriptions) == 0):
-            return Dto.ServerErrorResponse(message="No subscription found")
-        for subscription in subscriptions:
-            logger.debug(f"Publishing subscription with id {subscription.id} for user {user_id_from_token}")
-            # Encrypt message before sending
-            message = wp.get(
-                message=json.dumps(dict(
-                    notification=dict(
-                        title="Something happened",
-                        body="It's probably fine",
-                        icon="/assets/icons/icon-192x192.png",
-                        data=dict(
-                            id="<some id>"
-                        ),
-                        actions=list([
-                            dict(
-                                action="navigate",
-                                title="Go to process unit"
-                            )
-                        ])
-                    )
-                )),
-                subscription=WebPushSubscription(endpoint=AnyHttpUrl(subscription.endpoint),
-                                                 keys=WebPushKeys(auth=subscription.auth, p256dh=subscription.p256dh)),
-            )
-            # Publish message to notification endpoint
-            # background_tasks.add_task(
-            #     httpx.post,
-            #     url=subscription.endpoint,
-            #     content=message.encrypted,
-            #     headers=message.headers,  # type: ignore
-            # )
-            response = httpx.post(
-                url=str(subscription.endpoint),
-                content=message.encrypted,
-                headers=message.headers  # pyright: ignore [reportArgumentType]
-            )
-            if (response.status_code == HTTP_410_GONE):
-                webpush_repo.delete_subscription(subscription)
-        return Dto.ServerSuccessResponse(message="Web push notification successful")
+    agg.webpush_publisher.publish_message(message, user_id_from_token)
+    return Dto.ServerSuccessResponse(message="Web push notification successful")
