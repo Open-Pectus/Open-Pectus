@@ -68,7 +68,7 @@ class AggregatorServer:
         self.fastapi.include_router(recent_runs.router, prefix=api_prefix, dependencies=[UserRolesDependency])
         self.fastapi.include_router(lsp.router, prefix=api_prefix)
         self.fastapi.include_router(auth.router, prefix="/auth")
-        self.fastapi.include_router(webpush.router, prefix=api_prefix + "/webpush")
+        self.fastapi.include_router(webpush.router, prefix=api_prefix)
         for route in additional_routers:
             self.fastapi.include_router(route)
         self.fastapi.mount("/", SinglePageApplication(directory=self.frontend_dist_dir))

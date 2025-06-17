@@ -12,7 +12,7 @@ from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRepository, RecentEngineRepository, WebPushRepository
 from openpectus.aggregator.exceptions import AggregatorCallerException, AggregatorInternalException
 from openpectus.aggregator.frontend_publisher import FrontendPublisher, PubSubTopic
-from openpectus.aggregator.models import EngineData, NotificationScope, WebPushNotificationPreferences
+from openpectus.aggregator.models import EngineData, NotificationScope
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.protocol.models import SystemTagName, MethodStatusEnum
 from webpush import WebPushSubscription
@@ -446,13 +446,15 @@ class FromFrontend:
                     scope=NotificationScope.PROCESS_UNITS_WITH_RUNS_IVE_CONTRIBUTED_TO,
                     topics=[],
                     process_units=[])
-                webpush_repo.update_notifications_preferences(preferences)
+                webpush_repo.store_notifications_preferences(preferences)
+            else:
+                preferences = Mdl.WebPushNotificationPreferences.model_validate(preferences)
             return preferences
 
-    def webpush_notification_preferences_posted(self, preferences: WebPushNotificationPreferences):
+    def webpush_notification_preferences_posted(self, preferences: Mdl.WebPushNotificationPreferences):
         with database.create_scope():
             webpush_repo = WebPushRepository(database.scoped_session())
-            webpush_repo.update_notifications_preferences(preferences)
+            webpush_repo.store_notifications_preferences(preferences)
 
 class Aggregator:
     def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, secret: str = "") -> None:

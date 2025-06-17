@@ -17,7 +17,7 @@ from webpush import WebPush, WebPushSubscription
 from webpush.types import AnyHttpUrl, WebPushKeys
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["webpush"])
+router = APIRouter(tags=["webpush"], prefix="/webpush")
 
 try:
     webpush_keys_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "webpush_keys")

@@ -2,7 +2,6 @@ import logging
 from datetime import UTC, datetime, timedelta, timezone
 from socket import gethostname
 from typing import Iterable, Sequence
-import uuid
 
 import openpectus.aggregator.models as agg_mdl
 import webpush
@@ -228,16 +227,14 @@ class RecentEngineRepository(RepositoryBase):
         self.db_session.commit()
 
 class WebPushRepository(RepositoryBase):
-    def get_notifications_preferences(self, user_id: str) -> agg_mdl.WebPushNotificationPreferences | None:
-        db_model = self.db_session.scalar(select(WebPushNotificationPreferences).where(WebPushNotificationPreferences.user_id == user_id))
-        if(db_model == None): return None
-        return agg_mdl.WebPushNotificationPreferences.model_validate(db_model)
+    def get_notifications_preferences(self, user_id: str) -> WebPushNotificationPreferences | None:
+        return self.db_session.scalar(select(WebPushNotificationPreferences).where(WebPushNotificationPreferences.user_id == user_id))
 
     def get_subscriptions(self, user_id: str):
         return self.db_session.scalars(select(WebPushSubscription).where(WebPushSubscription.user_id == user_id)).all()
 
-    def update_notifications_preferences(self, agg_notification_preferences: agg_mdl.WebPushNotificationPreferences):
-        existing = self.db_session.scalar(select(WebPushNotificationPreferences).where(WebPushNotificationPreferences.user_id == agg_notification_preferences.user_id))
+    def store_notifications_preferences(self, agg_notification_preferences: agg_mdl.WebPushNotificationPreferences):
+        existing = self.get_notifications_preferences(agg_notification_preferences.user_id)
         if(existing == None):
             model = WebPushNotificationPreferences(user_id=agg_notification_preferences.user_id)
         else:
