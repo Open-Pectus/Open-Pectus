@@ -1,5 +1,4 @@
-import { TitleCasePipe } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, ElementRef, ViewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -11,89 +10,75 @@ import { NotificationScope, NotificationTopic, WebPushNotificationPreferences, W
 import { detailsUrlPart } from './app.routes';
 import { DetailsRoutingUrlParts } from './details/details-routing-url-parts';
 import { AppSelectors } from './ngrx/app.selectors';
+import { notificationScopes, topics } from './notification.types';
+import { MultiSelectComponent } from './shared/multi-select.component';
+import { UtilMethods } from './shared/util-methods';
 
 @Component({
   selector: 'app-notification-preferences',
-  imports: [ReactiveFormsModule, PushPipe, TitleCasePipe],
+  imports: [ReactiveFormsModule, PushPipe, MultiSelectComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <button #bell class="codicon codicon-bell !text-xl" (click)="onBellClick()"></button>
 
     <div popover #popover
-         class="text-black bg-white border-slate-400 p-2.5 border rounded-lg m-0 shadow-lg shadow-slate-500 outline outline-[3px] outline-slate-300"
+         class="text-black bg-white border-slate-400 p-3.5 border rounded-lg m-0 shadow-lg shadow-slate-500 outline outline-4 outline-slate-300"
          [style.top.px]="bellPosition.bottom" [style.left.px]="bellPosition.right - popoverWidth" [style.width.px]="popoverWidth">
       <label class="flex items-center gap-2">
-        <input type="checkbox" [checked]="hasSubscription | ngrxPush" class="w-5 h-5"
-               (change)="onEnabledChanged($event)"> Notifications enabled for this device
+        <input type="checkbox" [checked]="hasSubscription | ngrxPush" class="w-5 h-5 accent-blue-500"
+               (change)="onEnabledChanged($event)"> Notifications enabled (this device)
       </label>
       <form [formGroup]="formGroup">
         <div class="flex flex-col gap-0.5">
-          <h1 class="font-bold mt-2.5">Scopes:</h1>
+          <h1 class="font-bold mt-3">Scopes:</h1>
           <label class="flex items-center gap-2">
-            <input type="radio" [value]="notificationScopes.process_units_i_have_access_to" class="w-5 h-5"
+            <input type="radio" [value]="notificationScopes.process_units_i_have_access_to" class="w-5 h-5 accent-blue-500"
                    [formControlName]="scopeControlName"> Process Units I have access to
           </label>
           <label class="flex items-center gap-2">
-            <input type="radio" [value]="notificationScopes.process_units_with_runs_ive_contributed_to" class="w-5 h-5"
-                   [formControlName]="scopeControlName"> Process Units with runs I've contributed to
+            <input type="radio" [value]="notificationScopes.process_units_with_runs_ive_contributed_to" class="w-5 h-5 accent-blue-500"
+                   [formControlName]="scopeControlName"> Process Units I have contributed to
           </label>
           <label class="flex items-center gap-2">
-            <input type="radio" [value]="notificationScopes.specific_process_units" class="w-5 h-5"
+            <input type="radio" [value]="notificationScopes.specific_process_units" class="w-5 h-5 accent-blue-500"
                    [formControlName]="scopeControlName"> Specific Process Units:
           </label>
           @if (specificProcessUnitsSelected) {
-            <select multiple [formControlName]="processUnitsControlName">
-              @for (processUnit of processUnits(); track processUnit.id) {
-                <option [value]="processUnit.id">{{ processUnit.name }}</option>
-              }
-            </select>
+            <app-multi-select class="ml-7" [formControlName]="processUnitsControlName" [options]="processUnitOptions()"></app-multi-select>
           }
         </div>
 
         <div class="flex flex-col">
-          <h1 class="font-bold mt-2.5">Topics:</h1>
-          <select multiple [formControlName]="topicsControlName">
-            @for (optionValue of Object.values(notificationTopics); track optionValue) {
-              <option [value]="optionValue">{{ optionValue.replace('_', ' ') | titlecase }}</option>
-            }
-          </select>
+          <h1 class="font-bold mt-3 mb-0.5">Topics:</h1>
+          <app-multi-select [formControlName]="topicsControlName" [options]="topicOptions"></app-multi-select>
         </div>
       </form>
-      <button class="bg-emerald-300 p-1 rounded-sm border border-slate-300 mt-2.5" (click)="onNotifyMeClick()">Notify me!</button>
+      <button class="bg-green-300 py-1.5 px-2.5 rounded-md border-slate-400 absolute right-4 bottom-4" (click)="onNotifyMeClick()">
+        Notify me!
+      </button>
     </div>
   `,
 })
 export class NotificationPreferencesComponent {
   @ViewChild('popover') popover!: ElementRef<HTMLDivElement>;
   @ViewChild('bell') bell!: ElementRef<HTMLButtonElement>;
-  protected readonly Object = Object;
+  protected readonly notificationScopes = notificationScopes;
+  protected readonly popoverWidth = 350; // When popover anchor positioning is widely available that should be used instead.
+
+  protected bellPosition = {bottom: 0, right: 0};
   protected processUnits = this.store.selectSignal(AppSelectors.processUnits);
-  protected readonly popoverWidth = 400; // When popover anchor positioning is widely available that should be used instead.
-  protected readonly notificationScopes: Record<NotificationScope, NotificationScope> = {
-    process_units_i_have_access_to: 'process_units_i_have_access_to',
-    process_units_with_runs_ive_contributed_to: 'process_units_with_runs_ive_contributed_to',
-    specific_process_units: 'specific_process_units',
-  };
+  protected processUnitOptions = computed(() => this.processUnits().map(processUnit => ({name: processUnit.name, value: processUnit.id})));
   protected readonly scopeControlName = 'scope';
   protected readonly topicsControlName = 'topics';
   protected readonly processUnitsControlName = 'process_units';
-  protected readonly notificationTopics: Record<NotificationTopic, NotificationTopic> = {
-    block_start: 'block_start',
-    method_error: 'method_error',
-    network_errors: 'network_errors',
-    new_contributor: 'new_contributor',
-    notification_cmd: 'notification_cmd',
-    run_pause: 'run_pause',
-    run_start: 'run_start',
-    run_stop: 'run_stop',
-    watch_triggered: 'watch_triggered',
-  };
+  protected readonly topicOptions = Object.values(topics).map(topic => {
+    return {value: topic, name: UtilMethods.titleCase(topic.replace('_', ' '))};
+  });
   protected readonly formGroup = new FormGroup({
-    [this.scopeControlName]: new FormControl<NotificationScope>(this.notificationScopes.process_units_i_have_access_to),
+    [this.scopeControlName]: new FormControl<NotificationScope>(notificationScopes.process_units_i_have_access_to),
     [this.processUnitsControlName]: new FormControl<string[]>([]),
     [this.topicsControlName]: new FormControl<NotificationTopic[]>([]),
   });
-  protected bellPosition = {bottom: 0, right: 0};
   protected hasSubscription = this.swPush.subscription.pipe(map(subscription => subscription !== null));
 
   constructor(private store: Store,
@@ -114,7 +99,7 @@ export class NotificationPreferencesComponent {
   }
 
   get specificProcessUnitsSelected() {
-    return this.formGroup.controls[this.scopeControlName].value === this.notificationScopes.specific_process_units;
+    return this.formGroup.controls[this.scopeControlName].value === notificationScopes.specific_process_units;
   }
 
   onNotifyMeClick() {
