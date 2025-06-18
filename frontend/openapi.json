@@ -1638,6 +1638,210 @@
         }
       }
     },
+    "/api/webpush/config": {
+      "get": {
+        "tags": [
+          "webpush"
+        ],
+        "summary": "Get Webpush Config",
+        "operationId": "get_webpush_config",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebPushConfig"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webpush/notification_preferences": {
+      "get": {
+        "tags": [
+          "webpush"
+        ],
+        "summary": "Get Notification Preferences",
+        "operationId": "get_notification_preferences",
+        "parameters": [
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebPushNotificationPreferences"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "webpush"
+        ],
+        "summary": "Save Notification Preferences",
+        "operationId": "save_notification_preferences",
+        "parameters": [
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebPushNotificationPreferences"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webpush/subscribe": {
+      "post": {
+        "tags": [
+          "webpush"
+        ],
+        "summary": "Subscribe User",
+        "operationId": "subscribe_user",
+        "parameters": [
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebPushSubscription"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webpush/notify_user": {
+      "post": {
+        "tags": [
+          "webpush"
+        ],
+        "summary": "Notify User",
+        "operationId": "notify_user",
+        "parameters": [
+          {
+            "name": "process_unit_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Process Unit Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/engine-rest": {
       "post": {
         "tags": [
@@ -2152,6 +2356,30 @@
           "last_seen_date"
         ],
         "title": "NotOnline"
+      },
+      "NotificationScope": {
+        "type": "string",
+        "enum": [
+          "process_units_with_runs_ive_contributed_to",
+          "process_units_i_have_access_to",
+          "specific_process_units"
+        ],
+        "title": "NotificationScope"
+      },
+      "NotificationTopic": {
+        "type": "string",
+        "enum": [
+          "run_start",
+          "run_stop",
+          "run_pause",
+          "block_start",
+          "notification_cmd",
+          "watch_triggered",
+          "new_contributor",
+          "method_error",
+          "network_errors"
+        ],
+        "title": "NotificationTopic"
       },
       "PlotAxis": {
         "properties": {
@@ -2899,6 +3127,81 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WebPushConfig": {
+        "properties": {
+          "app_server_key": {
+            "type": "string",
+            "title": "App Server Key"
+          }
+        },
+        "type": "object",
+        "title": "WebPushConfig"
+      },
+      "WebPushKeys": {
+        "properties": {
+          "auth": {
+            "type": "string",
+            "title": "Auth"
+          },
+          "p256dh": {
+            "type": "string",
+            "title": "P256Dh"
+          }
+        },
+        "type": "object",
+        "required": [
+          "auth",
+          "p256dh"
+        ],
+        "title": "WebPushKeys"
+      },
+      "WebPushNotificationPreferences": {
+        "properties": {
+          "scope": {
+            "$ref": "#/components/schemas/NotificationScope"
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationTopic"
+            },
+            "type": "array",
+            "title": "Topics"
+          },
+          "process_units": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Process Units"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scope",
+          "topics",
+          "process_units"
+        ],
+        "title": "WebPushNotificationPreferences"
+      },
+      "WebPushSubscription": {
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "minLength": 1,
+            "format": "uri",
+            "title": "Endpoint"
+          },
+          "keys": {
+            "$ref": "#/components/schemas/WebPushKeys"
+          }
+        },
+        "type": "object",
+        "required": [
+          "endpoint",
+          "keys"
+        ],
+        "title": "WebPushSubscription"
       }
     }
   }

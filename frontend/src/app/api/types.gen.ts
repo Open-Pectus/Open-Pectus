@@ -90,6 +90,10 @@ export type MethodVersion = {
     version: number;
 };
 
+export type NotificationScope = 'process_units_with_runs_ive_contributed_to' | 'process_units_i_have_access_to' | 'specific_process_units';
+
+export type NotificationTopic = 'run_start' | 'run_stop' | 'run_pause' | 'block_start' | 'notification_cmd' | 'watch_triggered' | 'new_contributor' | 'method_error' | 'network_errors';
+
 export type NotOnline = {
     state: "not_online";
     last_seen_date: string;
@@ -264,6 +268,26 @@ export type ValidationError = {
     loc: Array<(string | number)>;
     msg: string;
     type: string;
+};
+
+export type WebPushConfig = {
+    app_server_key?: string;
+};
+
+export type WebPushKeys = {
+    auth: string;
+    p256dh: string;
+};
+
+export type WebPushNotificationPreferences = {
+    scope: NotificationScope;
+    topics: Array<NotificationTopic>;
+    process_units: Array<(string)>;
+};
+
+export type WebPushSubscription = {
+    endpoint: string;
+    keys: WebPushKeys;
 };
 
 export type PostResponse = (unknown);
@@ -497,3 +521,31 @@ export type GetVersionResponse = (unknown);
 export type GetBuildNumberResponse = (unknown);
 
 export type GetBuildInfoResponse = (BuildInfo);
+
+export type GetWebpushConfigResponse = (WebPushConfig);
+
+export type GetNotificationPreferencesData = {
+    xIdentity?: string;
+};
+
+export type GetNotificationPreferencesResponse = (WebPushNotificationPreferences);
+
+export type SaveNotificationPreferencesData = {
+    requestBody: WebPushNotificationPreferences;
+    xIdentity?: string;
+};
+
+export type SaveNotificationPreferencesResponse = (unknown);
+
+export type SubscribeUserData = {
+    requestBody: WebPushSubscription;
+    xIdentity?: string;
+};
+
+export type SubscribeUserResponse = (unknown);
+
+export type NotifyUserData = {
+    processUnitId: string;
+};
+
+export type NotifyUserResponse = (unknown);
