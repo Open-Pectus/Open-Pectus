@@ -166,8 +166,18 @@ class RunData(BaseModel):
 class ActiveUser(BaseModel):
     """ Represents a user looking at the frontend details page for a process unit  """
 
-    id: str  # oid from identity token, used to get profile photos from ms graph api
+    id: str  # oid from identity token or a made up id from frontend if Anon, used to get profile photos from ms graph api
     name: str  # Same value as emitted by openpectus.aggregator.auth.user_name
+
+class Contributor(BaseModel):
+    """ Represents a contributor to a process unit """
+
+    id: str | None  # oid from identity token, or None if Anon
+    name: str  # Same value as emitted by openpectus.aggregator.auth.user_name
+
+    # from https://github.com/pydantic/pydantic/issues/1303#issuecomment-599712964
+    def __hash__(self):
+        return hash((type(self),) + tuple(self.__dict__.values()))
 
 
 class EngineData:
@@ -200,7 +210,7 @@ class EngineData:
         self.error_log: AggregatedErrorLog = AggregatedErrorLog.empty()
         self.method_state: MethodState = MethodState.empty()
         self.plot_configuration: PlotConfiguration = PlotConfiguration.empty()
-        self.contributors: set[str] = set()
+        self.contributors: set[Contributor] = set()
         self.active_users: dict[str, ActiveUser] = dict()
         self.required_roles: set[str] = set()
         self.hardware_str: str = hardware_str
@@ -262,8 +272,8 @@ class WebPushNotificationPreferences(BaseModel):
     user_id: str
     user_roles: set[str]
     scope: NotificationScope
-    topics: list[NotificationTopic]
-    process_units: list[str]
+    topics: set[NotificationTopic]
+    process_units: set[str]
 
 
 

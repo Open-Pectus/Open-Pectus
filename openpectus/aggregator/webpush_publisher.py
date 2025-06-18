@@ -9,7 +9,7 @@ from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import WebPushRepository
 from openpectus.aggregator.models import EngineData, NotificationScope, NotificationTopic, WebPushNotification
 from openpectus.aggregator.routers.auth import has_access
-from starlette.status import HTTP_410_GONE
+from starlette.status import HTTP_201_CREATED, HTTP_410_GONE
 from webpush import VAPID, Path, WebPush
 from webpush.types import AnyHttpUrl, WebPushKeys, WebPushSubscription
 
@@ -67,20 +67,22 @@ class WebPushPublisher:
                     headers=encryptedMessage.headers  # pyright: ignore [reportArgumentType]
                 )
                 if (response.status_code == HTTP_410_GONE):
-                        webpush_repo.delete_subscription(subscription)
+                    webpush_repo.delete_subscription(subscription)
+                if(response.status_code != HTTP_201_CREATED):
+                    logger.warning(f"Tried publishing message for user {subscription.user_id} to endpoint {subscription.endpoint} but got response status {response.status_code}")
 
     def _get_subscriptions_for_topic(self, topic: NotificationTopic, process_unit: EngineData, webpush_repo: WebPushRepository) -> Sequence[db_mdl.WebPushSubscription]:
         notification_preferences = webpush_repo.get_notification_preferences_for_topic(topic)
         access = [np.user_id for np in notification_preferences
                   if np.scope == NotificationScope.PROCESS_UNITS_I_HAVE_ACCESS_TO
-                  and has_access(process_unit, np.user_roles)]
+                  and has_access(process_unit, set(np.user_roles))]
         contributed = [np.user_id for np in notification_preferences
                        if np.scope == NotificationScope.PROCESS_UNITS_WITH_RUNS_IVE_CONTRIBUTED_TO
-                       and has_access(process_unit, np.user_roles)
-                       and len(process_unit.contributors.intersection(np.user_id)) > 0]
+                       and has_access(process_unit, set(np.user_roles))
+                       and len([contributor for contributor in process_unit.contributors if contributor.id == np.user_id]) > 0]
         specific = [np.user_id for np in notification_preferences
                     if np.scope == NotificationScope.SPECIFIC_PROCESS_UNITS
-                    and has_access(process_unit, np.user_roles)
+                    and has_access(process_unit, set(np.user_roles))
                     and process_unit.engine_id in np.process_units]
 
         return webpush_repo.get_subscriptions(access + contributed + specific)

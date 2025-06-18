@@ -218,7 +218,7 @@ class RecentEngineRepository(RepositoryBase):
         recent_engine.name = f"{engine_data.computer_name} ({engine_data.uod_name})"
         recent_engine.location = engine_data.location
         recent_engine.last_update = datetime.now(UTC)
-        recent_engine.required_roles = engine_data.required_roles
+        recent_engine.required_roles = list(engine_data.required_roles)
         system_tag = engine_data.tags_info.get(SystemTagName.SYSTEM_STATE)
         recent_engine.system_state = str(system_tag.value) if system_tag is not None else ""
         if system_tag is None:
@@ -242,10 +242,10 @@ class WebPushRepository(RepositoryBase):
             model = WebPushNotificationPreferences(user_id=agg_notification_preferences.user_id)
         else:
             model = existing
-        model.user_roles = agg_notification_preferences.user_roles
+        model.user_roles = list(agg_notification_preferences.user_roles)
         model.scope = agg_notification_preferences.scope
-        model.topics = agg_notification_preferences.topics
-        model.process_units = agg_notification_preferences.process_units
+        model.topics = list(agg_notification_preferences.topics)
+        model.process_units = list(agg_notification_preferences.process_units)
         self.db_session.add(model)
         self.db_session.commit()
 

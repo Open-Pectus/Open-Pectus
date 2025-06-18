@@ -27,7 +27,7 @@ def get_notification_preferences(user_id_from_token: UserIdValue,
                                  user_roles: UserRolesValue,
                                  agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.WebPushNotificationPreferences:
     preferences = agg.from_frontend.webpush_notification_preferences_requested(user_id_from_token, user_roles)
-    return Dto.WebPushNotificationPreferences(scope=preferences.scope, topics=preferences.topics, process_units=preferences.process_units)
+    return Dto.WebPushNotificationPreferences(scope=preferences.scope, topics=list(preferences.topics), process_units=list(preferences.process_units))
 
 
 @router.post('/notification_preferences')
@@ -38,8 +38,8 @@ def save_notification_preferences(notification_preferences: Dto.WebPushNotificat
     model = Mdl.WebPushNotificationPreferences(user_id=str(user_id_from_token),
                                                user_roles=user_roles,
                                                scope=notification_preferences.scope,
-                                               topics=notification_preferences.topics,
-                                               process_units=notification_preferences.process_units)
+                                               topics=set(notification_preferences.topics),
+                                               process_units=set(notification_preferences.process_units))
     agg.from_frontend.webpush_notification_preferences_posted(model)
 
 

@@ -11,7 +11,7 @@ from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRepository, RecentEngineRepository, WebPushRepository
 from openpectus.aggregator.exceptions import AggregatorCallerException, AggregatorInternalException
 from openpectus.aggregator.frontend_publisher import FrontendPublisher, PubSubTopic
-from openpectus.aggregator.models import EngineData, NotificationScope
+from openpectus.aggregator.models import Contributor, EngineData, NotificationScope
 from openpectus.aggregator.webpush_publisher import WebPushPublisher
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.protocol.models import SystemTagName, MethodStatusEnum
@@ -325,7 +325,7 @@ class FromFrontend:
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(engine_data_map={self._engine_data_map}, dispatcher={self.dispatcher})'
 
-    async def method_saved(self, engine_id: str, method: Mdl.Method, user_name: str) -> int:
+    async def method_saved(self, engine_id: str, method: Mdl.Method, user: Contributor) -> int:
         existing_version = self._engine_data_map[engine_id].method.version
         version_to_overwrite = method.version
         logger.debug(f"Save method version: {method.version}")
@@ -352,11 +352,11 @@ class FromFrontend:
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is not None:
             engine_data.method = new_method
-            engine_data.contributors.add(user_name)
+            engine_data.contributors.add(user)
             asyncio.create_task(self.publisher.publish_method_changed(engine_id))
         return new_method.version
 
-    async def request_cancel(self, engine_id, line_id: str, user_name: str) -> bool:
+    async def request_cancel(self, engine_id, line_id: str, user: Contributor) -> bool:
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is None:
             logger.warning(f"Cannot request cancel, engine {engine_id} not found")
@@ -369,10 +369,10 @@ class FromFrontend:
         except Exception:
             logger.error("Cancel request failed with exception", exc_info=True)
             return False
-        engine_data.contributors.add(user_name)
+        engine_data.contributors.add(user)
         return True
 
-    async def request_force(self, engine_id, line_id: str, user_name: str) -> bool:
+    async def request_force(self, engine_id, line_id: str, user: Contributor) -> bool:
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is None:
             logger.warning(f"Cannot request force, engine {engine_id} not found")
@@ -385,7 +385,7 @@ class FromFrontend:
         except Exception:
             logger.error("Force request failed with exception", exc_info=True)
             return False
-        engine_data.contributors.add(user_name)
+        engine_data.contributors.add(user)
         return True
 
     def get_dead_man_switch_user_ids(self, topics: list[str]):
@@ -445,8 +445,8 @@ class FromFrontend:
                     user_id=user_id_as_string,
                     user_roles=user_roles,
                     scope=NotificationScope.PROCESS_UNITS_WITH_RUNS_IVE_CONTRIBUTED_TO,
-                    topics=[],
-                    process_units=[])
+                    topics=set(),
+                    process_units=set())
                 webpush_repo.store_notifications_preferences(preferences)
             else:
                 preferences = Mdl.WebPushNotificationPreferences.model_validate(preferences)
