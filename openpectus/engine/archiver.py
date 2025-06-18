@@ -1,10 +1,10 @@
-import ctypes
-from datetime import UTC, datetime
-import os
-import logging
-import platform
-import time
 import csv
+import ctypes
+import logging
+import os
+import sys
+import time
+from datetime import UTC, datetime
 from typing import Callable, Literal
 
 from openpectus.lang.exec.runlog import RunLog
@@ -28,7 +28,7 @@ escapechar = None
 
 def get_free_space_mb(dirname):
     """Return folder/drive free space (in megabytes)."""
-    if platform.system() == 'Windows':
+    if sys.platform == "win32":
         free_bytes = ctypes.c_ulonglong(0)
         ctypes.windll.kernel32.GetDiskFreeSpaceExW(  # type: ignore
             ctypes.c_wchar_p(dirname),
