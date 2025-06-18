@@ -30,7 +30,7 @@ import { UtilMethods } from './shared/util-methods';
       </label>
       <form [formGroup]="formGroup">
         <div class="flex flex-col gap-0.5">
-          <h1 class="font-bold mt-3">Scopes:</h1>
+          <h1 class="font-bold mt-4">Scopes:</h1>
           <label class="flex items-center gap-2">
             <input type="radio" [value]="notificationScopes.process_units_i_have_access_to" class="w-5 h-5 accent-blue-500"
                    [formControlName]="scopeControlName"> Process Units I have access to
@@ -44,12 +44,13 @@ import { UtilMethods } from './shared/util-methods';
                    [formControlName]="scopeControlName"> Specific Process Units:
           </label>
           @if (specificProcessUnitsSelected) {
-            <app-multi-select class="ml-7" [formControlName]="processUnitsControlName" [options]="processUnitOptions()"></app-multi-select>
+            <app-multi-select class="ml-7 border-l pl-3.5 border-slate-400" [formControlName]="processUnitsControlName"
+                              [options]="processUnitOptions()"></app-multi-select>
           }
         </div>
 
         <div class="flex flex-col">
-          <h1 class="font-bold mt-3 mb-0.5">Topics:</h1>
+          <h1 class="font-bold mt-4 mb-0.5">Topics:</h1>
           <app-multi-select [formControlName]="topicsControlName" [options]="topicOptions"></app-multi-select>
         </div>
       </form>
