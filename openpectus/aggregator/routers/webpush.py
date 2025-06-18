@@ -55,22 +55,20 @@ def subscribe_user(subscription: WebPushSubscription,
 @router.post("/notify_user")
 def notify_user(user_id_from_token: UserIdValue,
                 agg: Aggregator = Depends(agg_deps.get_aggregator)):
-    message = json.dumps(dict(
-        notification=dict(
-            title="Something happened",
-            body="It's probably fine",
-            icon="/assets/icons/icon-192x192.png",
-            data=dict(
-                id="<Some Process Unit Id>"
-            ),
-            actions=list([
-                dict(
-                    action="navigate",
-                    title="Go to process unit"
-                )
-            ])
-        )
-    ))
+    message = Mdl.WebPushNotification(
+        title="Something happened",
+        body="It's probably fine",
+        icon="/assets/icons/icon-192x192.png",
+        data=Mdl.WebPushData(
+            process_unit_id="<Some Process Unit Id>"
+        ),
+        actions=list([
+            Mdl.WebPushAction(
+                action="navigate",
+                title="Go to process unit"
+            )
+        ])
+    )
 
     agg.webpush_publisher.publish_message(message, user_id_from_token)
     return Dto.ServerSuccessResponse(message="Web push notification successful")

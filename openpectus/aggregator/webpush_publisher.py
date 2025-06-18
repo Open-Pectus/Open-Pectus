@@ -1,9 +1,11 @@
+import json
 import logging
 import os
 
 import httpx
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import WebPushRepository
+from openpectus.aggregator.models import WebPushNotification
 from starlette.status import HTTP_410_GONE
 from webpush import VAPID, Path, WebPush
 from webpush.types import AnyHttpUrl, WebPushKeys, WebPushSubscription
@@ -46,7 +48,7 @@ class WebPushPublisher:
             self.app_server_key = None
             self.wp = None
 
-    def publish_message(self, message: str, user_id: str | None):
+    def publish_message(self, notification: WebPushNotification, user_id: str | None):
         if (self.wp == None): return
 
         with database.create_scope():
@@ -55,7 +57,8 @@ class WebPushPublisher:
             for subscription in subscriptions:
                 web_push_subscription = WebPushSubscription(endpoint=AnyHttpUrl(subscription.endpoint),
                                                             keys=WebPushKeys(auth=subscription.auth, p256dh=subscription.p256dh))
-                encryptedMessage = self.wp.get(message=message, subscription=web_push_subscription)
+                message_json = json.dumps(dict(notification=notification.model_dump()))
+                encryptedMessage = self.wp.get(message=message_json, subscription=web_push_subscription)
                 response = httpx.post(
                     url=str(subscription.endpoint),
                     content=encryptedMessage.encrypted,

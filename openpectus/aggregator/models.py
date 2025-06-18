@@ -4,7 +4,7 @@ import math
 import uuid
 from datetime import datetime
 from enum import StrEnum, auto
-from typing import Iterable
+from typing import Iterable, Literal
 
 import openpectus.protocol.models as Mdl
 from pydantic import BaseModel, ConfigDict
@@ -264,4 +264,30 @@ class WebPushNotificationPreferences(BaseModel):
     scope: NotificationScope
     topics: list[NotificationTopic]
     process_units: list[str]
+
+
+
+class WebPushAction(BaseModel):
+    action: Literal['navigate']
+    title: str
+    icon: str | None = None
+
+
+class WebPushData(BaseModel):
+    process_unit_id: str | None = None
+
+
+class WebPushNotification(BaseModel): # see https://developer.mozilla.org/en-US/docs/Web/API/Notification/Notification#parameters for more information
+    title: str
+    actions: list[WebPushAction] | None = None  # buttons user can press
+    badge: str | None = None  # url for smaller image for e.g. the notifcation bar
+    body: str | None = None
+    data: WebPushData | None = None  # arbitrary data the frontend can use for e.g. navigating when user clicks an action button
+    icon: str | None = None  # url
+    image: str | None = None  # url
+    renotify: bool | None = None  # if set to true, tag must also be set
+    requireInteraction: bool | None = None  # notification will automatically close after a time unless this is set to True
+    silent: bool | None = None  # if True, notification will not make sound or vibration
+    tag: str | None = None  # an id for the notification, used for renotify
+    timestamp: float | None = None  # unix timestamp
 

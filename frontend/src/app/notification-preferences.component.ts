@@ -92,7 +92,7 @@ export class NotificationPreferencesComponent {
     if(this.swPush.isEnabled) {
       this.swPush.notificationClicks.pipe(takeUntilDestroyed()).subscribe(click => {
         if(click.action === 'navigate') {
-          void this.router.navigate([detailsUrlPart, DetailsRoutingUrlParts.processUnitUrlPart, click.notification.data.id]);
+          void this.router.navigate([detailsUrlPart, DetailsRoutingUrlParts.processUnitUrlPart, click.notification.data.process_unit_id]);
         }
       });
     }
