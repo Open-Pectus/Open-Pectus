@@ -23,7 +23,7 @@ import { UtilMethods } from './shared/util-methods';
 
     <div popover #popover
          class="text-black bg-white border-slate-400 p-3.5 border rounded-lg m-0 shadow-lg shadow-slate-500 outline outline-4 outline-slate-300"
-         [style.top.px]="bellPosition.bottom" [style.left.px]="bellPosition.right - popoverWidth" [style.width.px]="popoverWidth">
+         [style.top.px]="bellPosition.bottom" [style.left.px]="popoverLeft" [style.width.px]="popoverWidth">
       <label class="flex items-center gap-2">
         <input type="checkbox" [checked]="hasSubscription | ngrxPush" class="w-5 h-5 accent-blue-500"
                (change)="onEnabledChanged($event)"> Notifications enabled (this device)
@@ -96,6 +96,10 @@ export class NotificationPreferencesComponent {
         }
       });
     }
+  }
+
+  get popoverLeft() {
+    return Math.max(this.bellPosition.right - this.popoverWidth, 4); // 4 because of outline width of 4
   }
 
   get specificProcessUnitsSelected() {
