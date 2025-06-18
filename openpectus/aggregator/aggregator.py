@@ -314,10 +314,11 @@ class FromEngine:
 
 
 class FromFrontend:
-    def __init__(self, engine_data_map: EngineDataMap, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher):
+    def __init__(self, engine_data_map: EngineDataMap, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, webpush_publisher: WebPushPublisher):
         self._engine_data_map = engine_data_map
         self.dispatcher = dispatcher
         self.publisher = publisher
+        self.webpush_publisher = webpush_publisher
         self.dead_man_switch_user_ids: dict[str, str] = dict()
         self.publisher.register_on_disconnect(self.on_ws_disconnect)
         self.publisher.pubsub_endpoint.methods.event_notifier.register_subscribe_event(self.user_subscribed_pubsub)  # type: ignore
@@ -457,12 +458,32 @@ class FromFrontend:
             webpush_repo = WebPushRepository(database.scoped_session())
             webpush_repo.store_notifications_preferences(preferences)
 
+    async def webpush_notify_user(self, process_unit_id: str):
+        engine_data = self._engine_data_map[process_unit_id]
+        if(engine_data == None): return
+
+        message = Mdl.WebPushNotification(
+            title="Something happened",
+            body="It's probably fine",
+            icon="/assets/icons/icon-192x192.png",
+            data=Mdl.WebPushData(
+                process_unit_id=process_unit_id
+            ),
+            actions=list([
+                Mdl.WebPushAction(
+                    action="navigate",
+                    title="Go to process unit"
+                )
+            ])
+        )
+        asyncio.create_task(self.webpush_publisher.publish_message(message, Mdl.NotificationTopic.BLOCK_START, engine_data))
+
 class Aggregator:
     def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, webpush_publisher: WebPushPublisher, secret: str = "") -> None:
         self._engine_data_map: EngineDataMap = {}
         """ all client data except channels, indexed by engine_id """
         self.dispatcher = dispatcher
-        self.from_frontend = FromFrontend(self._engine_data_map, dispatcher, publisher)
+        self.from_frontend = FromFrontend(self._engine_data_map, dispatcher, publisher, webpush_publisher)
         self.from_engine = FromEngine(self._engine_data_map, publisher, webpush_publisher)
         self.secret = secret
         self.webpush_publisher = webpush_publisher

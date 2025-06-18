@@ -51,7 +51,7 @@ class WebPushPublisher:
             self.app_server_key = None
             self.wp = None
 
-    def publish_message(self, notification: WebPushNotification, topic: NotificationTopic, process_unit: EngineData):
+    async def publish_message(self, notification: WebPushNotification, topic: NotificationTopic, process_unit: EngineData):
         if (self.wp == None): return
         with database.create_scope():
             webpush_repo = WebPushRepository(database.scoped_session())
