@@ -545,7 +545,7 @@ export type SubscribeUserData = {
 export type SubscribeUserResponse = (unknown);
 
 export type NotifyUserData = {
-    xIdentity?: string;
+    processUnitId: string;
 };
 
 export type NotifyUserResponse = (unknown);

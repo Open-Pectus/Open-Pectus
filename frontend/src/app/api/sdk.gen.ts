@@ -978,16 +978,16 @@ export class WebpushService {
     /**
      * Notify User
      * @param data The data for the request.
-     * @param data.xIdentity
+     * @param data.processUnitId
      * @returns unknown Successful Response
      * @throws ApiError
      */
-    public notifyUser(data: NotifyUserData = {}): Observable<NotifyUserResponse> {
+    public notifyUser(data: NotifyUserData): Observable<NotifyUserResponse> {
         return __request(OpenAPI, this.http, {
             method: 'POST',
             url: '/api/webpush/notify_user',
-            headers: {
-                'x-identity': data.xIdentity
+            query: {
+                process_unit_id: data.processUnitId
             },
             errors: {
                 422: 'Validation Error'

@@ -4,9 +4,10 @@ import logging
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
 import openpectus.aggregator.routers.dto as Dto
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.routers.auth import UserIdValue, UserRolesValue
+from starlette.status import HTTP_404_NOT_FOUND
 from webpush import WebPushSubscription
 
 logger = logging.getLogger(__name__)
@@ -53,14 +54,14 @@ def subscribe_user(subscription: WebPushSubscription,
 
 
 @router.post("/notify_user")
-def notify_user(user_id_from_token: UserIdValue,
+def notify_user(process_unit_id: str,
                 agg: Aggregator = Depends(agg_deps.get_aggregator)):
     message = Mdl.WebPushNotification(
         title="Something happened",
         body="It's probably fine",
         icon="/assets/icons/icon-192x192.png",
         data=Mdl.WebPushData(
-            process_unit_id="<Some Process Unit Id>"
+            process_unit_id=process_unit_id
         ),
         actions=list([
             Mdl.WebPushAction(
@@ -70,5 +71,8 @@ def notify_user(user_id_from_token: UserIdValue,
         ])
     )
 
-    agg.webpush_publisher.publish_message(message, user_id_from_token)
+    engine_data = agg.get_registered_engine_data(process_unit_id)
+    if(engine_data == None):
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND)
+    agg.webpush_publisher.publish_message(message, Mdl.NotificationTopic.BLOCK_START, engine_data)
     return Dto.ServerSuccessResponse(message="Web push notification successful")

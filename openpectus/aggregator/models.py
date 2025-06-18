@@ -7,7 +7,7 @@ from enum import StrEnum, auto
 from typing import Iterable, Literal
 
 import openpectus.protocol.models as Mdl
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, NonNegativeInt
 
 logger = logging.getLogger(__name__)
 
@@ -278,7 +278,6 @@ class WebPushData(BaseModel):
 
 
 class WebPushNotification(BaseModel): # see https://developer.mozilla.org/en-US/docs/Web/API/Notification/Notification#parameters for more information
-    title: str
     actions: list[WebPushAction] | None = None  # buttons user can press
     badge: str | None = None  # url for smaller image for e.g. the notifcation bar
     body: str | None = None
@@ -289,5 +288,7 @@ class WebPushNotification(BaseModel): # see https://developer.mozilla.org/en-US/
     requireInteraction: bool | None = None  # notification will automatically close after a time unless this is set to True
     silent: bool | None = None  # if True, notification will not make sound or vibration
     tag: str | None = None  # an id for the notification, used for renotify
-    timestamp: float | None = None  # unix timestamp
+    timestamp: NonNegativeInt | None = None  # unix timestamp
+    title: str
+    vibrate: list[NonNegativeInt] | None = None
 

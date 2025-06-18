@@ -438,7 +438,7 @@ class FromFrontend:
         user_id_as_string = str(user_id)  # without auth all users share the same notification preferences under user_id "None"
         with database.create_scope():
             webpush_repo = WebPushRepository(database.scoped_session())
-            preferences = webpush_repo.get_notifications_preferences(user_id_as_string)
+            preferences = webpush_repo.get_notification_preferences_for_user(user_id_as_string)
             if (preferences == None):
                 # create a default set of notifications preferences
                 preferences = Mdl.WebPushNotificationPreferences(

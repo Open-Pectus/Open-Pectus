@@ -227,14 +227,17 @@ class RecentEngineRepository(RepositoryBase):
         self.db_session.commit()
 
 class WebPushRepository(RepositoryBase):
-    def get_notifications_preferences(self, user_id: str) -> WebPushNotificationPreferences | None:
+    def get_notification_preferences_for_user(self, user_id: str) -> WebPushNotificationPreferences | None:
         return self.db_session.scalar(select(WebPushNotificationPreferences).where(WebPushNotificationPreferences.user_id == user_id))
 
-    def get_subscriptions(self, user_id: str):
-        return self.db_session.scalars(select(WebPushSubscription).where(WebPushSubscription.user_id == user_id)).all()
+    def get_subscriptions(self, user_ids: list[str]):
+        return self.db_session.scalars(select(WebPushSubscription).where(WebPushSubscription.user_id.in_(user_ids))).all()
+
+    def get_notification_preferences_for_topic(self, topic: agg_mdl.NotificationTopic):
+        return self.db_session.scalars(select(WebPushNotificationPreferences).where(WebPushNotificationPreferences.topics.contains(topic))).all()
 
     def store_notifications_preferences(self, agg_notification_preferences: agg_mdl.WebPushNotificationPreferences):
-        existing = self.get_notifications_preferences(agg_notification_preferences.user_id)
+        existing = self.get_notification_preferences_for_user(agg_notification_preferences.user_id)
         if(existing == None):
             model = WebPushNotificationPreferences(user_id=agg_notification_preferences.user_id)
         else:

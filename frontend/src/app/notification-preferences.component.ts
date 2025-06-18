@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { SwPush } from '@angular/service-worker';
 import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
-import { firstValueFrom, map, take } from 'rxjs';
+import { firstValueFrom, map } from 'rxjs';
 import { NotificationScope, NotificationTopic, WebPushNotificationPreferences, WebpushService, WebPushSubscription } from './api';
 import { detailsUrlPart } from './app.routes';
 import { DetailsRoutingUrlParts } from './details/details-routing-url-parts';
@@ -102,11 +102,11 @@ export class NotificationPreferencesComponent {
     return this.formGroup.controls[this.scopeControlName].value === notificationScopes.specific_process_units;
   }
 
-  onNotifyMeClick() {
-    this.store.select(AppSelectors.userId).pipe(take(1)).subscribe(userId => {
-      if(userId === undefined) return;
-      this.webpushService.notifyUser().subscribe();
-    });
+  async onNotifyMeClick() {
+    const userId = await firstValueFrom(this.store.select(AppSelectors.userId));
+    const processUnitId = await firstValueFrom(this.store.select(AppSelectors.processUnits).pipe(map(processUnits => processUnits[0].id)));
+    if(userId === undefined) return;
+    this.webpushService.notifyUser({processUnitId: processUnitId}).subscribe();
   }
 
   async onEnabledChanged(event: Event) {

@@ -1811,13 +1811,12 @@
         "operationId": "notify_user",
         "parameters": [
           {
-            "name": "x-identity",
-            "in": "header",
-            "required": false,
+            "name": "process_unit_id",
+            "in": "query",
+            "required": true,
             "schema": {
               "type": "string",
-              "default": "",
-              "title": "X-Identity"
+              "title": "Process Unit Id"
             }
           }
         ],

@@ -1,11 +1,14 @@
 import json
 import logging
 import os
+from typing import Sequence
 
 import httpx
+import openpectus.aggregator.data.models as db_mdl
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import WebPushRepository
-from openpectus.aggregator.models import WebPushNotification
+from openpectus.aggregator.models import EngineData, NotificationScope, NotificationTopic, WebPushNotification
+from openpectus.aggregator.routers.auth import has_access
 from starlette.status import HTTP_410_GONE
 from webpush import VAPID, Path, WebPush
 from webpush.types import AnyHttpUrl, WebPushKeys, WebPushSubscription
@@ -48,12 +51,11 @@ class WebPushPublisher:
             self.app_server_key = None
             self.wp = None
 
-    def publish_message(self, notification: WebPushNotification, user_id: str | None):
+    def publish_message(self, notification: WebPushNotification, topic: NotificationTopic, process_unit: EngineData):
         if (self.wp == None): return
-
         with database.create_scope():
             webpush_repo = WebPushRepository(database.scoped_session())
-            subscriptions = webpush_repo.get_subscriptions(str(user_id))
+            subscriptions = self._get_subscriptions_for_topic(topic, process_unit, webpush_repo)
             for subscription in subscriptions:
                 web_push_subscription = WebPushSubscription(endpoint=AnyHttpUrl(subscription.endpoint),
                                                             keys=WebPushKeys(auth=subscription.auth, p256dh=subscription.p256dh))
@@ -65,4 +67,20 @@ class WebPushPublisher:
                     headers=encryptedMessage.headers  # pyright: ignore [reportArgumentType]
                 )
                 if (response.status_code == HTTP_410_GONE):
-                    webpush_repo.delete_subscription(subscription)
+                        webpush_repo.delete_subscription(subscription)
+
+    def _get_subscriptions_for_topic(self, topic: NotificationTopic, process_unit: EngineData, webpush_repo: WebPushRepository) -> Sequence[db_mdl.WebPushSubscription]:
+        notification_preferences = webpush_repo.get_notification_preferences_for_topic(topic)
+        access = [np.user_id for np in notification_preferences
+                  if np.scope == NotificationScope.PROCESS_UNITS_I_HAVE_ACCESS_TO
+                  and has_access(process_unit, np.user_roles)]
+        contributed = [np.user_id for np in notification_preferences
+                       if np.scope == NotificationScope.PROCESS_UNITS_WITH_RUNS_IVE_CONTRIBUTED_TO
+                       and has_access(process_unit, np.user_roles)
+                       and len(process_unit.contributors.intersection(np.user_id)) > 0]
+        specific = [np.user_id for np in notification_preferences
+                    if np.scope == NotificationScope.SPECIFIC_PROCESS_UNITS
+                    and has_access(process_unit, np.user_roles)
+                    and process_unit.engine_id in np.process_units]
+
+        return webpush_repo.get_subscriptions(access + contributed + specific)
