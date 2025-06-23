@@ -4,17 +4,44 @@ from typing import Any, Callable, Generator
 import openpectus.lang.model.ast as p
 
 
+class NodeAction():
+    """ Represents an action (of possibly many) to perform when interpreting a node. Allows
+    side effect free visits of an ast tree.  """
+
+    def __init__(self, node: p.Node, action: Callable[[p.Node], None], name: str = "", tick_break: bool = False):
+        self.node = node
+        self.action = action
+        self.tick_break = tick_break
+
+        if name == "":
+            if action is None:
+                raise ValueError("Argument 'action' was None")
+            action_name = action.__name__
+            if action_name == "<lambda>":
+                if name == "":
+                    raise ValueError("When passing a lambda as action, the name argument must be provided and be " +
+                                     "unique for the calling method")
+            self.action_name = action_name
+        else:
+            self.action_name = name
+
+    def execute(self):
+        if self.action_name in self.node.action_history:
+            raise ValueError(f"The action '{self.action_name}' for node {self.node} has already been executed")
+        self.action(self.node)
+        self.node.action_history.append(self.action_name)
+
+
+NodeGenerator = Generator[NodeAction | None, Any, Any]
+""" The generator return type for visitor methods. """
+
+
 class NodeVisitorGeneric:
     def visit(self, node):
         self.visit_Node(node)
         method_name = 'visit_' + type(node).__name__
         visitor = getattr(self, method_name, self.generic_visit)
         result = visitor(node)
-
-        if __debug__:
-            if not inspect.isgenerator(result):
-                raise TypeError("Visitor methods must be generators")
-
         yield from result
 
     def generic_visit(self, node):
@@ -25,21 +52,17 @@ class NodeVisitorGeneric:
 
 
 
-class NodeAction():
-    """ Represents (a part of) the action needed to perform when interpreting a node. Allows
-    side effect free visits of an ast tree.  """
+def run_tick(gen: NodeGenerator):
+    """ Execute one interpretation tick """
+    while True:
+        x = next(gen)
+        if isinstance(x, NodeAction):
+            x.execute()
+            if x.tick_break:
+                break
+        else:
+            break
 
-    def __init__(self, node: p.Node, action: Callable[[p.Node], None], index: str = ""):
-        self.node = node
-        self.action = action
-        self.index = index
-
-    def execute(self):
-        self.action(self.node)
-
-
-NodeGenerator = Generator[NodeAction | None, Any, Any]
-""" The generator return type for visitor methods. """
 
 
 class NodeVisitor(NodeVisitorGeneric):
