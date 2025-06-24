@@ -464,6 +464,11 @@ class PlotLog(Dto):
     entries: dict[str, PlotLogEntry]
 
 
+class Contributor(Dto):
+    id: str | SkipJsonSchema[None] = None
+    name: str
+
+
 class RecentRun(Dto):
     """ Represents a historical run of a process unit. """
     engine_id: str
@@ -478,7 +483,7 @@ class RecentRun(Dto):
     engine_hardware_str: str
     aggregator_computer_name: str
     aggregator_version: str
-    contributors: list[str] = []
+    contributors: list[Contributor] = []
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(engine_id="{self.engine_id}", run_id="{self.run_id}")'

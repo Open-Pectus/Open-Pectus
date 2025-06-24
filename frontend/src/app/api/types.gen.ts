@@ -35,6 +35,11 @@ export type CommandExample = {
 
 export type CommandSource = 'process_value' | 'manually_entered' | 'unit_button' | 'method';
 
+export type Contributor = {
+    id?: string;
+    name: string;
+};
+
 export type ControlState = {
     is_running: boolean;
     is_holding: boolean;
@@ -221,7 +226,7 @@ export type RecentRun = {
     engine_hardware_str: string;
     aggregator_computer_name: string;
     aggregator_version: string;
-    contributors?: Array<(string)>;
+    contributors?: Array<Contributor>;
 };
 
 export type RecentRunCsv = {
