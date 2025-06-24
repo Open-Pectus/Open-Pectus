@@ -216,9 +216,6 @@ Watch: Block Time > .3s
         e.cancel_instruction(UUID(exec_id))
         continue_engine(e, 5)
 
-        print_runtime_records(e)
-#        print_runlog(e, "post-cancel")
-
         # fetch the updated (rebuilt from runtime records) runlog
         runlog = e.runtimeinfo.get_runlog()
         item = next((i for i in runlog.items if i.name == item_name), None)

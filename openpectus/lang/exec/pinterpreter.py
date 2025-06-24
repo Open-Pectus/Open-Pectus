@@ -813,6 +813,12 @@ class PInterpreter(NodeVisitor):
             self._add_record_state_started(node)
 
         while not node.activated:
+            if node.cancelled:
+                self._add_record_state_cancelled(node)
+                self.context.emitter.emit_on_scope_end(node.id)
+                logger.info(f"Instruction {node} cancelled")
+                node.completed = True
+                return
             self._try_activate_node(node)
             if node.activated:
                 yield NodeAction(node, start)
@@ -863,6 +869,12 @@ class PInterpreter(NodeVisitor):
             self._add_record_state_started(node)
 
         while not node.activated:
+            if node.cancelled:
+                self._add_record_state_cancelled(node)
+                self.context.emitter.emit_on_scope_end(node.id)
+                logger.info(f"Instruction {node} cancelled")
+                node.completed = True
+                return
             self._try_activate_node(node)
             if node.activated:
                 yield NodeAction(node, start)
@@ -933,10 +945,7 @@ class PInterpreter(NodeVisitor):
         assert isinstance(node, p.NodeWithCondition)
         condition_result = False
         if node.cancelled:
-            self._add_record_state_cancelled(node)
-            logger.info(f"Instruction {node} cancelled")
-            node.completed = True
-            return
+            raise TypeError("Cancel must be handled before _try_active_node")
         elif node.forced:
             self._add_record_state_forced(node)
             logger.info(f"Instruction {node} forced")
