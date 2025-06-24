@@ -501,8 +501,7 @@ class PInterpreter(NodeVisitor):
 
 
     def visit_MacroNode(self, node: p.MacroNode) -> NodeGenerator:
-        if self._ffw:
-            raise NotImplementedError("FFW not yet implemented for Macro instructions")
+        # TODO handle FFW
 
         record = self.runtimeinfo.get_last_node_record(node)
         record.add_state_started(
@@ -510,6 +509,7 @@ class PInterpreter(NodeVisitor):
             self.context.tags.as_readonly())
         logger.info(f"Defining macro {node}")
 
+        # TODO move this check to an analyzer
         # Check if calling the macro will call the macro.
         # This would incur a cascade of macros which
         # is probably not intended.
@@ -543,8 +543,7 @@ class PInterpreter(NodeVisitor):
 
     # TODO fix
     def visit_CallMacroNode(self, node: p.CallMacroNode) -> NodeGenerator:
-        if self._ffw:
-            raise NotImplementedError("FFW not yet implemented for Macro instructions")
+        # TODO handle FFW
 
         record = self.runtimeinfo.get_last_node_record(node)
         record.add_state_started(
@@ -556,20 +555,18 @@ class PInterpreter(NodeVisitor):
             available_macros = "None"
             if len(self.macros.keys()):
                 available_macros = ", ".join(f'"{macro}"' for macro in self.macros.keys())
-            raise NodeInterpretationError(node, f'No macro defined with name "{node.name}". ' +
-                                                f'Available macros: {available_macros}.')
-            record.add_state_cancelled(self._tick_time, self._tick_number, self.context.tags.as_readonly())
-            return
+            self._add_record_state_failed(node)
+            raise NodeInterpretationError(
+                node, 
+                f'No macro defined with name "{node.name}". Available macros: {available_macros}.')
 
         macro_node = self.macros[node.name]
-        ar = ActivationRecord(macro_node, self._tick_time)
-        self.stack.push(ar)
         yield from self._visit_children(macro_node)
-        self.stack.pop()
-
         record.add_state_completed(
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
+        # This works - but does it break something, e.g. runlog?
+        macro_node.reset_runtime_state(recursive=True)
 
     def visit_BlockNode(self, node: p.BlockNode) -> NodeGenerator:
 

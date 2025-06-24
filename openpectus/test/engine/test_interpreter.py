@@ -78,13 +78,13 @@ def run_interpreter(interpreter: PInterpreter, max_ticks: int = -1):
     print("Interpretation started")
     ticks = 0
     max_ticks = max_ticks
-    interpreter.running = True
+    running = True
 
-    while interpreter.running:
+    while running:
         ticks += 1
         if max_ticks != -1 and ticks > max_ticks:
             print(f"Stopping because max_ticks {max_ticks} was reached")
-            interpreter.running = False
+            running = False
             return
 
         time.sleep(0.1)
