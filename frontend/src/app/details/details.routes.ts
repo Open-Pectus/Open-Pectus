@@ -16,6 +16,7 @@ import { RecentRunDetailsComponent } from './recent-run-details.component';
 import { RunLogEffects } from './run-log/ngrx/run-log.effects';
 import { runLogSlice } from './run-log/ngrx/run-log.reducer';
 import { UnitDetailsComponent } from './unit-details.component';
+import { unsavedMethodGuard } from './unsaved-method.guard';
 
 export const routes: Routes = [
   {
@@ -32,6 +33,7 @@ export const routes: Routes = [
       {
         path: `${DetailsRoutingUrlParts.processUnitUrlPart}/:${DetailsRoutingUrlParts.processUnitIdParamName}`,
         component: UnitDetailsComponent,
+        canDeactivate: [unsavedMethodGuard],
       },
       {
         path: `${DetailsRoutingUrlParts.recentRunUrlPart}/:${DetailsRoutingUrlParts.recentRunIdParamName}`,

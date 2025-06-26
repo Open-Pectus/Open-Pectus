@@ -44,6 +44,8 @@ InstructionName = Literal[
     "Stop", "Restart",
     "Info", "Warning", "Error",
     "Macro", "Call macro",
+    "Increment run counter",
+    "Noop",
 ]
 """ Defines the awaitable instructions of the test engine runner """
 
@@ -90,10 +92,12 @@ class EngineTestInstance(EventListener):
         self.engine.set_method(method)
 
         self._search_index = 0
-        self.engine.emitter.add_listener(self)  # register as listener for lifetime events, so they can be awaited
+        # register as listener for lifetime events, so these events can be awaited in the tests
+        self.engine.emitter.add_listener(self)
         self._last_event: EventName | None = None
 
     def start(self):
+        """ Schedules the Start command. run_* is required to actually run it """
         self.engine.schedule_execution(EngineCommandEnum.START)
         self.timing.timer.start()
 
@@ -213,7 +217,8 @@ class EngineTestInstance(EventListener):
             raise TimeoutError(
                 f"Timeout while waiting for instruction '{instruction_name}', state: {state}, arguments: {arguments}")
 
-        logger.debug(f"Done waiting for instruction {instruction_name}, state: {state}, arguments: {arguments}")
+        logger.debug(f"Done waiting for instruction {instruction_name}, state: {state}, arguments: {arguments}. " +
+                     f"Duration: {ticks} ticks.")
         return ticks
 
     def index_step_back(self, steps=1):
@@ -254,7 +259,11 @@ class EngineTestInstance(EventListener):
         """ Restart the method and wait a few ticks for engine to come back up. """
         self.engine.schedule_execution(EngineCommandEnum.RESTART)
         self._search_index = 0
-        self.run_ticks(3)
+        self._last_event = None
+        self.run_ticks(1)
+        while self._last_event is None or self._last_event != "start":
+            print("Waiting for started event")
+            self.run_ticks(1)
 
     def run_ticks(self, ticks: int) -> None:
         """ Continue program execution until te specified number of ticks. """

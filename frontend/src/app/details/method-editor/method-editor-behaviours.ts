@@ -19,6 +19,7 @@ export class MethodEditorBehaviours {
   private startedLineIds = this.store.select(MethodEditorSelectors.startedLineIds);
   private lineIds = this.store.select(MethodEditorSelectors.lineIds);
   private methodLines = this.store.select(MethodEditorSelectors.methodLines);
+  private isDirty = this.store.select(MethodEditorSelectors.isDirty);
   private storeModelChangedFromHere = false;
   private editorModelChangedFromStore = false;
 
@@ -30,12 +31,7 @@ export class MethodEditorBehaviours {
     this.setupInjectedLines();
     this.setupStartedAndExecutedLines();
     this.setupCtrlSAction();
-  }
-
-  private setupCtrlSAction() {
-    this.editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, () => {
-      this.store.dispatch(MethodEditorActions.saveKeyboardShortcutPressed());
-    });
+    this.setupDialogOnLeaveWithUnsavedChanges();
   }
 
   private setupOnEditorChanged() {
@@ -211,6 +207,22 @@ export class MethodEditorBehaviours {
     decorations.onDidChange(() => {
       const lineNumbers = decorations.getRanges().flatMap(range => UtilMethods.getNumberRange(range.startLineNumber, range.endLineNumber));
       this.editor.updateOptions({lineNumbers: this.getLineNumberFunction(lineNumbers)});
+    });
+  }
+
+  private setupCtrlSAction() {
+    this.editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, () => {
+      this.store.dispatch(MethodEditorActions.saveKeyboardShortcutPressed());
+    });
+  }
+
+  private setupDialogOnLeaveWithUnsavedChanges() {
+    this.isDirty.pipe(takeUntil(this.componentDestroyed)).subscribe(isDirty => {
+      if(isDirty) {
+        window.onbeforeunload = (event: Event) => event.preventDefault();
+      } else {
+        window.onbeforeunload = null;
+      }
     });
   }
 }
