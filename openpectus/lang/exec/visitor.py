@@ -1,6 +1,5 @@
 
-import inspect
-from typing import Any, Callable, Generator
+from typing import Any, Callable, Generator, TypeVar
 import openpectus.lang.model.ast as p
 
 
@@ -32,7 +31,8 @@ class NodeAction():
         self.node.action_history.append(self.action_name)
 
 
-NodeGenerator = Generator[NodeAction | None, Any, Any]
+NullableActionResult = NodeAction | None
+NodeGenerator = Generator[NullableActionResult, Any, Any]
 """ The generator return type for visitor methods. """
 
 
@@ -47,7 +47,7 @@ class NodeVisitorGeneric:
     def generic_visit(self, node):
         raise TypeError('No visit_{} method'.format(type(node).__name__))
 
-    def visit_Node(self, node: p.Node):
+    def visit_Node(self, node: p.Node) -> NodeGenerator:
         ...
 
 
@@ -63,6 +63,77 @@ def run_tick(gen: NodeGenerator):
         else:
             break
 
+
+
+
+def run_ffw_tick(gen: NodeGenerator) -> bool | NullableActionResult:
+    """ Advance the generator a single tick while skipping execution. Returns
+    node if the generator has reached an action not in action history,
+    True if the generator was exhausted, else False. """
+    while True:
+        try:
+            x = next(gen)
+            if isinstance(x, NodeAction):
+                if x.action_name not in x.node.action_history:
+                    # We got one step too far, x needs to be executed
+                    return x
+                if x.tick_break:
+                    break
+            else:
+                break
+        except StopIteration:
+            return True
+    return False
+
+
+TContent = TypeVar('TContent')
+
+class PrependGenerator(Generator[TContent, Any, Any]):
+    """ Wraps a generator with an element to be returned before elements from the generator"""
+    def __init__(self, prepended_elm: TContent, generator: Generator[TContent, Any, Any]):
+        self.element = prepended_elm
+        self.generator = generator
+        self.first = True
+        super().__init__()
+
+    def __next__(self):
+        if self.first:
+            self.first = False
+            return self.element
+        return self.generator.__next__()
+
+    def send(self, value):
+        raise NotImplementedError()
+
+    def throw(self, a=None, b=None, c=None):
+        raise NotImplementedError()
+
+
+class PrependNodeGenerator(PrependGenerator[NullableActionResult]):
+    pass
+
+def run_ffw(gen: NodeGenerator):
+    """ Advance the generator past all node/actions that have already been executed, without
+    executing them again, leaving the generator ready for normal execution. """
+    x = next(gen)
+    assert isinstance(x, NodeAction)
+    assert isinstance(x.node, p.ProgramNode)
+    active_node = x.node.active_node
+    assert active_node is not None
+
+    while True:
+        x = next(gen)
+        if isinstance(x, NodeAction):
+            if x.action_name in x.node.action_history:
+                continue
+            else:
+                # action with non-executed index found. this should probably be the active node
+                print(f"Got to first non-executed action: {x.action_name}, node: {x.node}")
+                print(f"The active_node is: {active_node}")
+                return
+        else:
+            # None was yielded, just continue
+            pass
 
 
 class NodeVisitor(NodeVisitorGeneric):

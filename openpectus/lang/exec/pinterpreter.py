@@ -16,7 +16,10 @@ from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import (
     TagCollection, SystemTagName,
 )
-from openpectus.lang.exec.visitor import NodeGenerator, NodeVisitor, NodeAction, run_ffw, run_tick
+from openpectus.lang.exec.visitor import (
+    NodeGenerator, NodeVisitor, NodeAction, NullableActionResult, PrependNodeGenerator,
+    run_ffw_tick, run_tick
+)
 import openpectus.lang.model.ast as p
 from typing_extensions import override
 
@@ -125,6 +128,7 @@ class PInterpreter(NodeVisitor):
         raise NotImplementedError("TODO")
         """ Update method while method is running. """
         # set new program, and patch state to point to new nodes, set ffw and advance generator to get to where we were
+        raise NotImplementedError("Edit currently not working")
 
         # collect node id from old method. The id will match the corresponding node in the new method
         if self._program.active_node is None:
@@ -285,26 +289,24 @@ class PInterpreter(NodeVisitor):
             raise InterpretationError("Interpreter error") from ex
 
         # execute one iteration of each interrupt
-        keys = list(self._interrupts_map.keys())
-        for key in keys:
-            if key in self._interrupts_map.keys():
-                interrupt = self._interrupts_map[key]
-                logger.debug(f"Executing interrupt tick for node {interrupt.node}")
-                try:
-                    run_tick(interrupt.actions)
-                except StopIteration:
-                    logger.debug(f"Interrupt generator {interrupt.node} exhausted")
-                    if isinstance(interrupt.node, p.AlarmNode):
-                        logger.debug(f"Restarting completed Alarm {interrupt.node}")
-                        self._re_register_alarm_interrupt(interrupt.node)
-                except AssertionError as ae:
-                    raise InterpretationError(message=str(ae), exception=ae)
-                except (InterpretationInternalError, InterpretationError):
-                    logger.error("Interpreter error in interrupt handler", exc_info=True)
-                    raise
-                except Exception as ex:
-                    logger.error("Unhandled interpretation error in interrupt handler", exc_info=True)
-                    raise InterpretationError("Interpreter error") from ex
+        interrupts = list(self._interrupts_map.values())
+        for interrupt in interrupts:
+            logger.debug(f"Executing interrupt tick for node {interrupt.node}")
+            try:
+                run_tick(interrupt.actions)
+            except StopIteration:
+                logger.debug(f"Interrupt generator {interrupt.node} exhausted")
+                if isinstance(interrupt.node, p.AlarmNode):
+                    logger.debug(f"Restarting completed Alarm {interrupt.node}")
+                    self._re_register_alarm_interrupt(interrupt.node)
+            except AssertionError as ae:
+                raise InterpretationError(message=str(ae), exception=ae)
+            except (InterpretationInternalError, InterpretationError):
+                logger.error("Interpreter error in interrupt handler", exc_info=True)
+                raise
+            except Exception as ex:
+                logger.error("Unhandled interpretation error in interrupt handler", exc_info=True)
+                raise InterpretationError("Interpreter error") from ex
 
     def stop(self):
         self._program.reset_runtime_state(recursive=True)
