@@ -53,8 +53,8 @@ class EventListener:
         pass
 
     def on_block_end(self, block_info: BlockInfo, new_block_info: BlockInfo | None):
-        """ Invoked just after a block is completed, before on_tick,
-        in the same engine tick. """
+        """ Invoked just after a block is completed, before on_tick, in the same engine tick. If the new block
+        is the root/program scope, the name is the empty string. """
         pass
 
     def on_scope_start(self, node_id: str):

@@ -1,16 +1,16 @@
-from datetime import datetime, timezone
 import unittest
+from datetime import datetime, timezone
 from unittest.mock import Mock, AsyncMock
 
-from openpectus.aggregator.data import database
+import openpectus.aggregator.data.models as DMdl
 import openpectus.aggregator.models as Mdl
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 from fastapi_websocket_rpc.schemas import RpcResponse
 from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.aggregator_message_handlers import AggregatorMessageHandlers
+from openpectus.aggregator.data import database
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
-import openpectus.aggregator.data.models as DMdl
 from openpectus.protocol.models import SystemTagName
 
 
@@ -43,7 +43,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
         DMdl.DBModel.metadata.create_all(database._engine)  # type: ignore
 
         dispatcher = AggregatorDispatcher()
-        aggregator = Aggregator(dispatcher, self.createPublisherMock())
+        aggregator = Aggregator(dispatcher, self.createPublisherMock(), Mock())
         _ = AggregatorMessageHandlers(aggregator)
         register_engine_msg = EM.RegisterEngineMsg(
             computer_name='computer-name',
@@ -90,7 +90,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
         DMdl.DBModel.metadata.create_all(database._engine)  # type: ignore
 
         dispatcher = AggregatorDispatcher()
-        aggregator = Aggregator(dispatcher, self.createPublisherMock())
+        aggregator = Aggregator(dispatcher, self.createPublisherMock(), Mock())
         messageHandlers = AggregatorMessageHandlers(aggregator)
         register_engine_msg = EM.RegisterEngineMsg(
             computer_name='computer-name',
@@ -136,7 +136,7 @@ class AggregatorEventsTest(unittest.IsolatedAsyncioTestCase):
         super().__init__(methodName)
         self.stored_tags = []
         self.plot_log_repo = Mock(store_tag_values=self.store_tag_values)
-        self.aggregator = Aggregator(Mock(), Mock())
+        self.aggregator = Aggregator(Mock(), Mock(), Mock())
         self.engine_data = Mdl.EngineData(
             engine_id="test_engine", computer_name="", engine_version="", hardware_str="",
             uod_name="", uod_author_name="", uod_author_email="", uod_filename="", location="",

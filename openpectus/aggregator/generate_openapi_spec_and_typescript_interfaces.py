@@ -21,7 +21,7 @@ if __name__ == "__main__":
         json.dump(AggregatorServer().fastapi.openapi(), f, indent=2)
 
     cmd = "npm run generate"
-    if shutil.which(cmd) is None:
+    if shutil.which("npm") is None:
         print('Generation failed. npm is not available. Please consult https://docs.openpectus.org/latest/src/Development.html#frontend-setup')
     else:
         print(f"Generating typescript interfaces using command: {cmd}")

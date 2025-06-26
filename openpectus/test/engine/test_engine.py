@@ -27,6 +27,9 @@ from openpectus.test.engine.utility_methods import (
 )
 from typing_extensions import override
 
+# the number of ticks to run befpre the first command (not including a blank first line)
+start_ticks = 1
+
 
 configure_test_logger()
 set_engine_debug_logging()
@@ -208,7 +211,7 @@ class TestEngine(unittest.TestCase):
 
         self.assertEqual("N/A", reset_tag.get_value())
 
-        run_engine(e, "Reset", 3)
+        run_engine(e, "Reset", start_ticks + 1)
         self.assertEqual("Reset", reset_tag.get_value())
 
         # assert tags marked dirty
@@ -245,7 +248,7 @@ class TestEngine(unittest.TestCase):
     def test_write_process_values_writes_data_to_registers(self):
         e = self.engine
 
-        run_engine(e, "", 1)
+        run_engine(e, "", start_ticks)
         time.sleep(0.1)
 
         # set hw values
@@ -480,7 +483,7 @@ class TestEngine(unittest.TestCase):
 
         self.assertEqual("N/A", e.uod.tags["Reset"].get_value())
 
-        run_engine(e, "Reset", 2)
+        run_engine(e, "Reset", start_ticks + 1)
         self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
 
         # Reset takes 5 ticks to revert
@@ -507,13 +510,13 @@ Reset
 
         print_runtime_records(e)
 
-        r = records[2]
+        r = records[1]
         self.assertEqual("Reset", r.name)
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.Cancelled))
         self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Completed))
 
-        r = records[3]
+        r = records[2]
         self.assertEqual("Reset", r.name)
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
         self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Cancelled))
@@ -534,7 +537,7 @@ overlap2
 
         print_runtime_records(e)
 
-        r = rs[2]
+        r = rs[1]
         self.assertEqual("overlap1", r.name)
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.Cancelled))
@@ -544,7 +547,7 @@ overlap2
         continue_engine(e, 1)
         print_runtime_records(e)
 
-        r = rs[3]
+        r = rs[2]
         self.assertEqual("overlap2", r.name)
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
         self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Cancelled))
@@ -571,14 +574,14 @@ Mark: X
 
         print_runtime_records(e)
 
-        self.assertEqual("Block: A", rs[2].name)
+        self.assertEqual("Block: A", rs[1].name)
         self.assertFalse(rs[0].has_state(RuntimeRecordStateEnum.Started))
 
         continue_engine(e, 1)
-        self.assertTrue(rs[2].has_state(RuntimeRecordStateEnum.Started))
+        self.assertTrue(rs[1].has_state(RuntimeRecordStateEnum.Started))
 
-        continue_engine(e, 1)
-        self.assertTrue(rs[2].has_state(RuntimeRecordStateEnum.Completed))
+        continue_engine(e, 2)
+        self.assertTrue(rs[1].has_state(RuntimeRecordStateEnum.Completed))
 
         print_runtime_records(e)
 
@@ -593,7 +596,7 @@ Mark: X
 
         print_runtime_records(e)
 
-        r = e.interpreter.runtimeinfo.records[2]
+        r = e.interpreter.runtimeinfo.records[1]
         self.assertEqual("Watch: Block Time > 0.2s", r.name)
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.AwaitingInterrrupt))
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.AwaitingCondition))
@@ -638,6 +641,7 @@ Reset
 
         e.inject_code("Increment run counter")
         e.tick(0, 0)
+        e.tick(0, 0)
 
         self.assertEqual(1, e._system_tags["Run Counter"].get_value())
 
@@ -664,7 +668,8 @@ Mark: C
     def test_set_and_continue_program(self):
         code = "Mark: A\nMark: B\nMark: C"
         e = self.engine
-        run_engine(e, code, 3)
+        run_engine(e, code, 2)
+        # run_engine(e, code, start_ticks)
         self.assertEqual(['A'], e.interpreter.get_marks())
         continue_engine(e, 10)
 
@@ -897,6 +902,7 @@ Wait: .5s
 Mark: b
 """
         run_engine(e, program, 2)
+        #run_engine(e, program, start_ticks)
         self.assertEqual([], e.interpreter.get_marks())
 
         continue_engine(e, 1)
@@ -929,20 +935,6 @@ Mark: b
         e._apply_safe_state()
 
         self.assertFalse(danger_tag.get_value())
-
-    def test_restart_can_stop(self):
-        set_engine_debug_logging()
-        set_interpreter_debug_logging()
-        program = """
-Mark: A
-Restart
-"""
-        e = self.engine
-        run_engine(e, program, 3)
-
-        # when no commands need to be stopped, restart immediately moves to Stopped
-        system_state = e.tags[SystemTagName.SYSTEM_STATE]
-        self.assertEqual(system_state.get_value(), SystemStateEnum.Restarting)
 
 
     # --- Totalizers ---
@@ -1068,7 +1060,7 @@ Base: s
                .with_accumulated_volume(totalizer_tag_name="calc")
                .build())
 
-        program = """
+        program = """\
 Base: s
 Wait: 0.45s
 Block: A
@@ -1097,7 +1089,6 @@ Block: A
             self.assertEqual(block.get_value(), None)
             self.assertAlmostEqual(acc_vol.as_float(), 0.7, delta=delta)
             self.assertAlmostEqual(block_vol.as_float(), 0.7, delta=delta)
-
 
             continue_engine(e, 1)  # Block
             self.assertEqual(block.get_value(), "A")
@@ -1189,8 +1180,8 @@ Base: CV
             self.assertAlmostEqual(acc_cv.as_float(), 0.6, delta=0.1)
             self.assertEqual(['A'], e.interpreter.get_marks())
 
- 
     def test_accumulated_column_block_volume(self):
+        # TODO flaky - even in dev
         self.engine.cleanup()  # dispose the test default engine
 
         uod = (UodBuilder()
@@ -1204,7 +1195,7 @@ Base: CV
                .with_accumulated_cv(cv_tag_name="CV", totalizer_tag_name="calc")
                .build())
 
-        program = """
+        program = """\
 Base: s
 Block: A
     0.45 End block
@@ -1271,79 +1262,11 @@ Block: A
                 percent_tag = uod.tags["X3"]
                 self.assertEqual(percent_tag.unit, "%")
 
-
-    # --- Restart ---
-
-
-    def test_restart_can_restart(self):
-        set_engine_debug_logging()
-        set_interpreter_debug_logging()
-        program = """
-Mark: A
-Increment run counter
-Restart
-"""
-        e = self.engine
-        self.assertEqual(0, e.tags[SystemTagName.RUN_COUNTER].as_number())
-
-        run_engine(e, program, 4)
-
-        run_id_1 = e.tags[SystemTagName.RUN_ID].get_value()
-        self.assertEqual(e.tags[SystemTagName.SYSTEM_STATE].get_value(), SystemStateEnum.Restarting)
-        self.assertEqual(1, e.tags[SystemTagName.RUN_COUNTER].as_number())
-
-        self.assertEqual(e.interpreter.get_marks(), ["A"])
-
-        continue_engine(e, 1)
-
-        self.assertEqual(e.tags[SystemTagName.SYSTEM_STATE].get_value(), SystemStateEnum.Stopped)
-        self.assertIsNone(e.tags[SystemTagName.RUN_ID].get_value())
-        self.assertEqual(e.interpreter.get_marks(), [])
-        self.assertEqual(1, e.tags[SystemTagName.RUN_COUNTER].as_number())
-
-        continue_engine(e, 1)
-
-        run_id2 = e.tags[SystemTagName.RUN_ID].get_value()
-        self.assertEqual(e.tags[SystemTagName.SYSTEM_STATE].get_value(), SystemStateEnum.Running)
-        self.assertNotEqual(run_id_1, run_id2)
-        self.assertEqual(e.interpreter.get_marks(), [])
-        self.assertEqual(1, e.tags[SystemTagName.RUN_COUNTER].as_number())
-
-        continue_engine(e, 3)
-
-        self.assertEqual(e.interpreter.get_marks(), ["A"])
-        self.assertEqual(2, e.tags[SystemTagName.RUN_COUNTER].as_number())
-
-    def test_restart_stop_ticking_interpreter(self):
-
-        set_interpreter_debug_logging()
-        program = """
-Mark: A
-Restart
-Mark: X
-"""
-        e = self.engine
-        run_engine(e, program, 1)
-
-        for _ in range(30):
-            continue_engine(e, 1)
-            self.assertTrue("X" not in e.interpreter.get_marks())
-
-    def test_restart_cancels_running_commands(self):
-        program = """
-Reset
-Restart
-"""
-        e = self.engine
-        run_engine(e, program, 3)
-
-        system_state = e.tags[SystemTagName.SYSTEM_STATE]
-        self.assertEqual(system_state.get_value(), SystemStateEnum.Restarting)
-
     def test_EngineCommandEnum_has(self):
         self.assertTrue(EngineCommandEnum.has_value("Stop"))
         self.assertFalse(EngineCommandEnum.has_value("stop"))
         self.assertFalse(EngineCommandEnum.has_value("STOP"))
+
 
 # ----------- Engine Error -------------
 

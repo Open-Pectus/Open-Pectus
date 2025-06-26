@@ -44,20 +44,20 @@ class MethodManager:
         """ User saved method while a run was active. The new method is replacing an existing method
         whose state should be merged over. """
         # concurrency check: aggregator performs the version check and aborts on error
+        raise NotImplementedError("Edit is currently not working")
 
         # validate that the content of the new method does not conflict with the state of the running method
         method_state = self.get_method_state()
         for new_line in method.lines:
-            # executed lines are no-go, (started lines are no-go except for added line break, not sure how this state
-            # can be represented)
             if new_line.id in method_state.executed_line_ids or new_line.id in method_state.started_line_ids:
                 cur_line = next((line for line in self._method.lines if line.id == new_line.id))
                 if cur_line is not None and cur_line.content != new_line.content:
                     raise MethodEditError(
-                        f"The line {new_line.content} may not be edited, because it is already executed")
+                        f"The line '{new_line.content}' may not be edited, because it is already started")
 
         # extract state for existing method
-        existing_state = self._program.extract_tree_state(skip_started_nodes=True)
+        # existing_state = self._program.extract_tree_state(skip_started_nodes=True)
+        existing_state = self._program.extract_tree_state(skip_started_nodes=False)
 
         # convert method from protocol api and apply the new method
         _method = ParserMethod(lines=[ParserMethodLine(line.id, line.content) for line in method.lines])
@@ -72,6 +72,8 @@ class MethodManager:
 
         try:
             self._program.apply_tree_state(existing_state)
+            self._program.revision = self._program.revision + 1
+
         except Exception as ex:
             logger.error("Failed to apply tree state", exc_info=True)
             raise MethodEditError("Failed to apply tree state", ex)
@@ -97,7 +99,7 @@ class MethodManager:
         return method_state
 
     def _apply_analysis(self):
-        # TODO improve this. may need additional analizers which also
+        # TODO improve this. may need additional analyzers which also
         # requires access to tags/commands
         analyzer = WhitespaceCheckAnalyzer()
         analyzer.analyze(self._program)
