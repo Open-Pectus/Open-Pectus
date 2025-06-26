@@ -19,6 +19,29 @@ Deployment of Engines
 ---------------------
 .. _Miniconda: https://docs.conda.io/en/latest/miniconda.html
 .. _Sentry: https://sentry.io
+.. _Open Pectus Engine Manager: https://github.com/Open-Pectus/Engine-Manager-GUI/releases/download/release/Open.Pectus.Engine.Manager.exe
+
+
+The easiest way to run Open Pectus on Windows is to download and run the `Open Pectus Engine Manager`_ which is entirely self contained. It does not require installation of Python or other software.
+Alternatively, it is possible to install Python and Open Pectus and run an engine from the command line.
+
+Open Pectus Engine Manager
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+Open Pectus Engine Manager can run multiple engines simultaneously in a convenient graphical user interface, see :numref:`open_pectus_engine_manager_screenshot`.
+
+.. _open_pectus_engine_manager_screenshot:
+.. figure:: static/open-pectus-engine-manager-screenshot.png
+   :class: no-scaled-link
+   :align: center
+   :width: 600 px
+   :alt: Screenshot of Open Pectus Engine Manager user interface.
+
+   Screenshot of Open Pectus Engine Manager.
+
+Specify which aggregator to connect to in the `File→Aggregator Settings`.
+Add a UOD by right clicking on the list of engines and select `Load UOD` or select `File→Load UOD`.
+To start an engine with a UOD or validate the UOD right click on the entry and select `Start` or `Validate`.
+A running engine can be stopped by right clicking and selecting `Stop`.
 
 Installation
 ^^^^^^^^^^^^
@@ -53,7 +76,6 @@ The following example starts an engine using a UOD at :console:`C:\\process_uod.
 
 
 See :ref:`pectus_engine_command_reference` for documentation of the :console:`pectus-engine` command.
-
 
 
 Deployment of Aggregator
