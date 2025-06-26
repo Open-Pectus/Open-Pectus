@@ -358,9 +358,13 @@ class NodeWithChildren(Node):
 
     def extract_state(self) -> NodeState:
         state = super().extract_state()
+        state["interrupt_registered"] = self.interrupt_registered  # type: ignore
+        state["children_complete"] = self.children_complete  # type: ignore
         return state
 
     def apply_state(self, state):
+        self.interrupt_registered = state["interrupt_registered"]  # type: ignore
+        self.children_complete = state["children_complete"]  # type: ignore
         super().apply_state(state)
 
     def reset_runtime_state(self, recursive):
@@ -373,6 +377,8 @@ class ProgramNode(NodeWithChildren):
         super().__init__(position, id)
         self.active_node: Node | None = None
         """ The node currently executing. Maintained by interpreter. """
+        self.revision: int = 0
+        """ The program revision. Starts as 0 and increments every time an edit is performed while running. """
 
     def get_instructions(self, include_blanks: bool = False) -> list[Node]:
         """ Return list of all program instructions, recursively, depth first. """
@@ -420,6 +426,15 @@ class ProgramNode(NodeWithChildren):
     def reset_runtime_state(self, recursive):
         self.active_node = None
         super().reset_runtime_state(recursive)
+
+    def extract_state(self) -> NodeState:
+        state = super().extract_state()
+        state["revision"] = self.revision  # type: ignore
+        return state
+
+    def apply_state(self, state: NodeState):
+        self.revision = int(state["revision"])  # type: ignore
+        return super().apply_state(state)
 
     @staticmethod
     def empty() -> ProgramNode:

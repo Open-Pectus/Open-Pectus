@@ -125,7 +125,6 @@ class PInterpreter(NodeVisitor):
 
     # TODO fix
     def update_method_and_ffw(self, program: p.ProgramNode):
-        raise NotImplementedError("TODO")
         """ Update method while method is running. """
         # set new program, and patch state to point to new nodes, set ffw and advance generator to get to where we were
         raise NotImplementedError("Edit currently not working")
@@ -133,6 +132,8 @@ class PInterpreter(NodeVisitor):
         # collect node id from old method. The id will match the corresponding node in the new method
         if self._program.active_node is None:
             raise ValueError("Edit cannot be performed when no current node is set")
+        logger.debug(f"The active node is {self._program.active_node}")
+        logger.debug(f"The active node states are {self._program.active_node.started=} | {self._program.active_node.completed=}")
         target_node_id = self._program.active_node.id
 
         # patch runtimeinfo records to reference new nodes - before or after ffw? should not matter
@@ -143,69 +144,96 @@ class PInterpreter(NodeVisitor):
         self._program = program
         self._generator = None  # clear so either tick or us may set it
         target_node = program.get_child_by_id(target_node_id)  # find target node in new ast
+        if target_node is not None:
+            logger.debug(f"The target node states are {target_node.started=} | {target_node.completed=}")
+
         if target_node is None:
             logger.error(f"FFW aborted because target node {target_node_id} was not found in new ast")
             raise ValueError(
                 f"Error modifying method. The target node_id {target_node_id} was not found in the updated method.")
-        elif target_node.completed:
-            logger.error("FFW aborted. Target node has already completed")
-            raise ValueError(
-                f"Error modifying method. The target node_id {target_node_id} has already completed.")
-
-        self._ffw = True
-        self._ffw_target_node_id = target_node_id
 
         # Start fast-forward (FFW) from start to target_node_id
-        logger.info("FFW starting, target node: " + str(target_node))
-        # create geenrator for the new program
-        gen = self._interpret()
-        run_ffw(gen)
+        logger.info(f"FFW starting, target node: {target_node}")
+        # create the generator for the new program
+        gen = self.visit_ProgramNode(self._program)
 
-        raise NotImplementedError("TODO")
+        # Fast-forward skipping over actions in history
+        main_complete = False
+        active_interrupt_keys = list(self._interrupts_map.keys())
+        while not main_complete or len(active_interrupt_keys) > 0:
+            if not main_complete:
+                try:
+                    x = run_ffw_tick(gen)
+                    if isinstance(x, NullableActionResult):
+                        main_complete = True
+                        gen = PrependNodeGenerator(x, gen)
+                    elif x:
+                        main_complete = True
+                    else:                   
+                        # None was yielded, just continue
+                        pass
+                except Exception:
+                    logger.error("Exception during FFW main handler", exc_info=True)
+                    raise
 
-
-        ffw_process_instr = self._interpret()
-        while self._ffw:
-            # TODO fix loop:
-            # - support ending in interrupt handler when ffw_process_instr is exhausted
-            try:
-                next(ffw_process_instr)
-                if not self._ffw:
-                    logger.debug("FFW found, target node id: " + self._ffw_target_node_id)
-            except StopIteration:
-                self._ffw = False
-                logger.error(f"FFW failed, node {self._ffw_target_node_id} could not be reached (main).")
-                raise Exception(f"FFW failed, node {self._ffw_target_node_id} could not be reached (main).")
-            try:
-                if self._ffw:
-                    pass
-                    self._run_interrupt_handlers()
-                    if not self._ffw:
-                        logger.debug("FFW found in interrupts, target node id: " + self._ffw_target_node_id)
-            except Exception:
-                logger.error("Exception during FFW interrupt handler")
-                raise
+            if len(active_interrupt_keys) > 0:
+                active_interrupt_keys_copy = list(active_interrupt_keys)
+                for key in active_interrupt_keys_copy:
+                    interrupt = self._interrupts_map[key]
+                    try:
+                        x = run_ffw_tick(interrupt.actions)
+                        if isinstance(x, NullableActionResult):
+                            interrupt.actions = PrependNodeGenerator(x, interrupt.actions)
+                            active_interrupt_keys.remove(key)
+                        elif x:
+                            active_interrupt_keys.remove(key)
+                        else:
+                            pass
+                    except Exception:
+                        logger.error("Exception during FFW interrupt handler", exc_info=True)
+                        raise
 
         # set prepared generator as the new source for tick()
-        self._generator = ffw_process_instr
+        self._generator = gen
         logger.info("FFW complete")
 
-    # TODO fix
-    def _patch_node_references(self, program: p.ProgramNode):
-        """ Patch node references to updated program nodes to account for edited method. """
-        logger.info("Patching node references in interpreter interrupts")
-        for ar, _ in self.interrupts:
-            node = ar.owner
+    def _patch_node_references(self, program: p.ProgramNode):  # noqa C901
+        """ Patch node references to updated program nodes to account for a running method edit. """
+        logger.info("Patching node references in stack")
+        for inx, node in enumerate(self.stack._records):
+            # why the check against ProgramNode?
             if node is not None and not isinstance(node, p.ProgramNode):
                 new_node = program.get_child_by_id(node.id)
                 if new_node is None:
                     logger.error(f"No new node was found to replace {node}. Node cannot be patched")
                 else:
-                    if ar.owner != new_node:
-                        ar.owner = new_node
-                        logger.debug(f"Patched node reference {new_node}")
+                    if node != new_node:
+                        if isinstance(new_node, p.BlockNode):
+                            self.stack._records[inx] = new_node
+                            logger.debug(f"Patched node reference {new_node}")
+                        else:
+                            logger.error(f"Node reference not patched {new_node}. A NodeWithChildren instance is required")
                     else:
                         logger.warning(f"Node not patched: {new_node} - old node already matched the new node!?")
+
+        logger.info("Patching node references in interpreter interrupts")
+        keys = list(self._interrupts_map.keys())
+        for key in keys:
+            if key in self._interrupts_map.keys():
+                interrupt = self._interrupts_map[key]
+                if interrupt.node is not None and not isinstance(interrupt.node, p.ProgramNode):
+                    new_node = program.get_child_by_id(interrupt.node.id)
+                    if new_node is None:
+                        logger.error(f"No new node was found to replace {interrupt.node}. Node cannot be patched")
+                    else:
+                        if interrupt.node != new_node:
+                            if isinstance(new_node, p.NodeWithChildren):
+                                interrupt.node = new_node
+                                logger.debug(f"Patched node reference {new_node}")
+                            else:
+                                logger.error(f"Node reference not patched {new_node}. A NodeWithChildren instance is required")
+                        else:
+                            logger.warning(f"Node not patched: {new_node} - old node already matched the new node!?")
 
         # TODO get rid of this when moving macro processing to analyser
         logger.info("Patching node references in interpreter macros")
@@ -239,14 +267,13 @@ class PInterpreter(NodeVisitor):
         records.sort(key=sort_fn)
         return [t[0] for t in records]
 
-    # TODO fix
     def inject_node(self, program: p.ProgramNode):
         """ Inject the child nodes of program into the running program in the current scope
         to be executed as the next instruction. """
         node = p.InjectedNode()
         for n in program.children:
             node.append_child(n)
-        # Note: registers visit rather than visit_InjectedNode because visit has not been 
+        # Note: registers visit rather than visit_InjectedNode because visit has not been
         # run for the node unlike Watch and Alarm
         self._register_interrupt(node, self.visit(node))
 
@@ -271,9 +298,6 @@ class PInterpreter(NodeVisitor):
         # execute one iteration of program
         assert self._generator is not None
         try:
-            # x = next(self._process_instr)
-            # if isinstance(x, NodeAction):
-            #     x.execute()
             run_tick(self._generator)
         except StopIteration:
             logger.debug("Main generator exhausted")

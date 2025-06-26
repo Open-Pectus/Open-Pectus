@@ -38,7 +38,7 @@ NodeGenerator = Generator[NullableActionResult, Any, Any]
 
 class NodeVisitorGeneric:
     def visit(self, node):
-        self.visit_Node(node)
+        yield from self.visit_Node(node)
         method_name = 'visit_' + type(node).__name__
         visitor = getattr(self, method_name, self.generic_visit)
         result = visitor(node)
@@ -48,7 +48,7 @@ class NodeVisitorGeneric:
         raise TypeError('No visit_{} method'.format(type(node).__name__))
 
     def visit_Node(self, node: p.Node) -> NodeGenerator:
-        ...
+        yield from ()
 
 
 
