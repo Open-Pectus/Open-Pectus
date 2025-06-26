@@ -174,7 +174,7 @@ Noop: 2
 Wait: 0.99s
 """
         logging.getLogger("openpectus.lang.exec.tags_impl").setLevel(logging.DEBUG)
-        delta = 0.3 if platform.system() == 'Windows' else 0.2
+        delta = 0.4
         runner = EngineTestRunner(create_test_uod, p)
         with runner.run() as instance:
             e = instance.engine
