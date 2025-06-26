@@ -1,12 +1,16 @@
-FROM python:3.13
+FROM python:3.13-alpine AS base
 
-# see https://hub.docker.com/_/python/
-
+# Install openpectus and dependencies
 WORKDIR /usr/src/app
 RUN mkdir -p /data
 RUN mkdir -p /webpush_keys
 COPY dist ./dist/
 RUN pip install --no-cache-dir dist/openpectus.tar.gz
+RUN rm -R ./dist
+
+# Squash layers to reduce image size
+FROM scratch
+COPY --from=base / /
 
 ENV AGGREGATOR_PORT=8300
 EXPOSE $AGGREGATOR_PORT
