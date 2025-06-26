@@ -18,7 +18,7 @@ from openpectus.lang.exec.tags import (
 )
 from openpectus.lang.exec.visitor import (
     NodeGenerator, NodeVisitor, NodeAction, NullableActionResult, PrependNodeGenerator,
-    run_ffw_tick, run_tick
+    run_ffw_tick, run_tick, run_ffw
 )
 import openpectus.lang.model.ast as p
 from typing_extensions import override
