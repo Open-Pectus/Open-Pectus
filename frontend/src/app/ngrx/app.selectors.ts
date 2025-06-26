@@ -10,4 +10,5 @@ export class AppSelectors {
   static userData = createSelector(this.selectFeature, state => state.userData);
   static userPicture = createSelector(this.selectFeature, state => state.userPicture);
   static hasFinishedAuthentication = createSelector(this.selectFeature, state => state.hasFinishedAuthentication);
+  static userId = createSelector(this.selectFeature, state => state.userId)
 }

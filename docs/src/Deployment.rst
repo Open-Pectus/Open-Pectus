@@ -151,14 +151,6 @@ Edit :console:`/etc/nginx/sites-enabled/default` to be something like :numref:`n
             proxy_set_header Connection "upgrade";
             proxy_read_timeout 86400;
         }
-        location /lsp {
-            proxy_pass http://127.0.0.1:2087;
-            # WebSocket support
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection "upgrade";
-            proxy_read_timeout 86400;
-        }
     }
 
     server {
@@ -168,14 +160,6 @@ Edit :console:`/etc/nginx/sites-enabled/default` to be something like :numref:`n
         ssl_certificate_key /etc/letsencrypt/live/openpectus.com/privkey.pem; # managed by Certbot
         location / {
             proxy_pass http://127.0.0.1:8300;
-            # WebSocket support
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection "upgrade";
-            proxy_read_timeout 86400;
-        }
-        location /lsp {
-            proxy_pass http://127.0.0.1:2087;
             # WebSocket support
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
@@ -198,43 +182,84 @@ Running an Aggregator
 ^^^^^^^^^^^^^^^^^^^^^
 Commands to pull latest image and run it are given below. The :console:`docker run` command options are:
 
+* :console:`--pull=always --detach`, pulls latest image and runs it in detached state
 * :console:`--name openpectus-prd`, allows reference to the the container by name :console:`openpectus-prd` in other Docker commands.
 * :console:`-h AZR-PECTUS-PRD`, sets the hostname. The aggregator host name appears in the :ref:`csv_file_format` metadata.
 * :console:`-v /home/azureuser/data_prd:/data`, mounts the directory containing the database to :console:`/home/azureuser/data_prd` on the host. This is necessary in order to persist the database across different versions of the Docker image.
 * :console:`-e AZURE_APPLICATION_CLIENT_ID='...'`, :console:`-e AZURE_DIRECTORY_TENANT_ID='...'` and :console:`-e ENABLE_AZURE_AUTHENTICATION='true'` configure the :ref:`user_authorization` integration.
+* :console:`-e SENTRY_DSN='...'`, sets the Sentry DSN and enables error logging to Sentry.
 * :console:`-p 0.0.0.0:8300:8300/tcp`, maps port :console:`8300` of the container to the host.
-* :console:`-p 0.0.0.0:2087:2087/tcp`, maps port :console:`2087` of the container to the host.
-* :console:`6aa`, specifies which image to run. This value is unique for each version of the image.
 
 .. code-block:: console
 
-   # Pull image
-   docker pull ghcr.io/open-pectus/open-pectus:main
-   # List docker images. Note image id.
-   docker image ls
-   # In this example the image id started with "6aa"
-   docker run --name openpectus-prd \
+   docker run --pull=always --detach \
+   --name openpectus-prd \
    -h AZR-PECTUS-PRD \
    -v /home/azureuser/data_prd:/data
    -e AZURE_APPLICATION_CLIENT_ID='...' \
    -e AZURE_DIRECTORY_TENANT_ID='...' \
    -e ENABLE_AZURE_AUTHENTICATION='true' \
+   -e SENTRY_DSN='...' \
    -p 0.0.0.0:8300:8300/tcp \
-   -p 0.0.0.0:2087:2087/tcp \
-   6aa
+   ghcr.io/open-pectus/open-pectus:main
 
 * List running containers using :console:`docker ps`
 * To attach to a running container :console:`docker attach openpectus-prd`
   To detach press :console:`<CTRL>+P+Q`
 * To stop the container :console:`docker stop openpectus-prd`
 * To delete the container :console:`docker rm openpectus-prd`
-* To delete the image :console:`docker image rm 6aa`
+* To delete the image :console:`docker image ls` and :console:`docker rm image-hash`
 
-Aggregator Database Backup
-``````````````````````````
+
+Aggregator Database Administration
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. _Database Administration tool: https://github.com/Open-Pectus/Database-Administration
+
+The Open Pectus aggregator uses sqlite as database backend.
+
+The `Database Administration tool`_ is a useful web interface which enables simple management of the sqlite database. The tool can integrated with :ref:`user_authorization` in which case a client secret must be provided and users who should have access must be assigned to an "Administrator" App Role.
+A docker image is provided which can be run using the command below:
+
+.. code-block:: console
+
+   docker run --pull=always --detach \
+   --name openpectus-database-administration \
+   -h AZR-PECTUS-PRD-DATABASE-ADMINISTRATION \
+   -v /home/azureuser/data_prd:/data
+   -e AZURE_APPLICATION_CLIENT_ID='...' \
+   -e AZURE_DIRECTORY_TENANT_ID='...' \
+   -e AZURE_CLIENT_SECRET='...' \
+   -e ENABLE_AZURE_AUTHENTICATION='true' \
+   -p 0.0.0.0:8301:8301/tcp \
+   ghcr.io/open-pectus/database-administration:main
+
+Add the following to the "server"-blocks of :numref:`nginx_configuration` to access the web interface at https://openpectus.com/admin/.
+
+.. code-block:: yaml
+
+    location /admin/ {
+        proxy_pass http://127.0.0.1:8301;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffer_size 128k;
+        proxy_buffers 8 128k;
+        proxy_busy_buffers_size 256k;
+    }
+
+Database Backup
+```````````````
 
 It is possible to do a database backup of a running aggregator by executing the following command on the host running the Docker container:
 
 .. code-block:: console
    
    sqlite3 /home/azureuser/data_prd/open_pectus_aggregator.sqlite3 ".backup '/home/azureuser/tmp.sqlite3'"; mv /home/azureuser/tmp.sqlite3 /home/azureuser/open_pectus_aggregator_prd-$(date +"%Y-%m-%d").sqlite3
+
+A cron job can be configured to make a backup on a daily basis and only keep the last 30 copies. Create the folder :console:`/home/user/data_prd_backup`, edit the cron table with :console:`crontab -e` and add the following:
+
+.. code-block:: console
+   
+   5 4 * * * sqlite3 /home/azureuser/data_prd/open_pectus_aggregator.sqlite3 ".backup '/home/azureuser/tmp.sqlite3'"; mv /home/azureuser/tmp.sqlite3 /home/azureuser/data_prd_backup/open_pectus_aggregator_prd-$(date +"%Y-%m-%d").sqlite3
+   5 5 * * * rm -f $(ls -1t /home/azureuser/data_prd_backup/ | tail -n +31)

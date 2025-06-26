@@ -6,10 +6,14 @@ from enum import StrEnum, auto
 from typing import Literal
 
 import openpectus.aggregator.models as Mdl
+import webpush
 from pydantic import BaseModel, ConfigDict
 from pydantic.json_schema import SkipJsonSchema
 
 SystemStateEnum = Mdl.SystemStateEnum
+NotificationScope = Mdl.NotificationScope
+NotificationTopic = Mdl.NotificationTopic
+WebPushSubscription = webpush.WebPushSubscription
 
 
 class Dto(BaseModel):
@@ -119,6 +123,7 @@ class ProcessUnit(Dto):
     current_user_role: UserRole
     uod_author_name: str | SkipJsonSchema[None] = None
     uod_author_email: str | SkipJsonSchema[None] = None
+
     # users: list[User] ?
 
     def __str__(self) -> str:
@@ -341,8 +346,10 @@ class Method(Dto):
             last_author=method.last_author
         )
 
+
 class MethodVersion(Dto):
     version: int
+
 
 class MethodState(Dto):
     started_line_ids: list[str]
@@ -363,6 +370,7 @@ class MethodState(Dto):
                            executed_line_ids=[_id for _id in method_state.executed_line_ids],
                            injected_line_ids=[_id for _id in method_state.injected_line_ids])
 
+
 class MethodAndState(Dto):
     method: Method
     state: MethodState
@@ -380,6 +388,23 @@ class MethodAndState(Dto):
             method=Method.from_model(method),
             state=MethodState.from_model(method_state)
         )
+
+
+class ActiveUser(Dto):
+    id: str
+    name: str
+
+    @staticmethod
+    def from_model(active_user: Mdl.ActiveUser) -> ActiveUser:
+        return ActiveUser(id=active_user.id, name=active_user.name)
+
+
+class ActiveUsers(Dto):
+    active_users: list[ActiveUser]
+
+    @staticmethod
+    def empty() -> ActiveUsers:
+        return ActiveUsers(active_users=[])
 
 
 class PlotColorRegion(Dto):
@@ -439,6 +464,11 @@ class PlotLog(Dto):
     entries: dict[str, PlotLogEntry]
 
 
+class Contributor(Dto):
+    id: str | SkipJsonSchema[None] = None
+    name: str
+
+
 class RecentRun(Dto):
     """ Represents a historical run of a process unit. """
     engine_id: str
@@ -453,7 +483,7 @@ class RecentRun(Dto):
     engine_hardware_str: str
     aggregator_computer_name: str
     aggregator_version: str
-    contributors: list[str] = []
+    contributors: list[Contributor] = []
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(engine_id="{self.engine_id}", run_id="{self.run_id}")'
@@ -501,6 +531,7 @@ class AggregatedErrorLogEntry(Dto):
             occurrences=model.occurrences
         )
 
+
 class AggregatedErrorLog(Dto):
     entries: list[AggregatedErrorLogEntry]
 
@@ -528,9 +559,11 @@ class TagDefinition(Dto):
     unit: str | None = None
     # possibly value_type:
 
+
 class CommandDefinition(Dto):
     name: str
     validator: str | None = None
+
 
 class UodDefinition(Dto):
     # name: str
@@ -546,3 +579,13 @@ class UodDefinition(Dto):
             system_commands=[CommandDefinition(name=c.name, validator=c.validator) for c in model.system_commands],
             tags=[TagDefinition(name=t.name, unit=t.unit) for t in model.tags]
         )
+
+
+class WebPushConfig(Dto):
+    app_server_key: str | SkipJsonSchema[None] = None
+
+
+class WebPushNotificationPreferences(Dto):
+    scope: NotificationScope
+    topics: list[NotificationTopic]
+    process_units: list[str]
