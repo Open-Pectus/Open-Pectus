@@ -14,8 +14,8 @@ const config = {
         test: /\.css$/,
         use: ['style-loader', 'css-loader'],
         include: [
-          resolve(__dirname, './node_modules/monaco-editor'),
           resolve(__dirname, './node_modules/vscode'),
+          resolve(__dirname, './node_modules/@codingame'),
         ],
       },
       {
