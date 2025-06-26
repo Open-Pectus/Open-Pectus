@@ -45,6 +45,8 @@ export class MonacoEditorComponent implements AfterViewInit {
 
   async ngAfterViewInit() {
     await this.initAndStartWrapper();
+    // if a collapsible element with a monaco editor starts collapsed, the above will run, but we won't have an editor afterwards
+    if(this.wrapper.getEditor() === undefined) return;
     runInInjectionContext(this.injector, this.setupEditorBehaviours.bind(this));
     this.editorIsReady.emit(this.wrapper.getEditor());
     void this.startLanguageClient();
