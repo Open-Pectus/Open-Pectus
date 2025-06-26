@@ -283,7 +283,7 @@ class RuntimeInfo:
         """ Get last record by node id. Raise if no record is found """
         record = self.get_last_node_record_or_none(node)
         if record is None:
-            raise ValueError("Node has no records")
+            raise ValueError(f"Node {node} has no records")
         return record
 
     def get_node_records(self, node: p.Node, test_by_instance=False) -> list[RuntimeRecord]:
