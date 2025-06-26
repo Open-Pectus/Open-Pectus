@@ -14,7 +14,6 @@ readme = "README.md"
 requires-python = ">= 3.11"
 
 dependencies = [
-    "antlr4-python3-runtime==4.13.2",
     "pint==0.24.4",
     "pydantic==2.11.5",
     "fastapi==0.115.12",
