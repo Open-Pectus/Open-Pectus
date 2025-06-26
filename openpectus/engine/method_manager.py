@@ -44,6 +44,7 @@ class MethodManager:
         """ User saved method while a run was active. The new method is replacing an existing method
         whose state should be merged over. """
         # concurrency check: aggregator performs the version check and aborts on error
+        raise NotImplementedError("Edit is currently not working")
 
         # validate that the content of the new method does not conflict with the state of the running method
         method_state = self.get_method_state()
@@ -55,7 +56,8 @@ class MethodManager:
                         f"The line '{new_line.content}' may not be edited, because it is already started")
 
         # extract state for existing method
-        existing_state = self._program.extract_tree_state(skip_started_nodes=True)
+        # existing_state = self._program.extract_tree_state(skip_started_nodes=True)
+        existing_state = self._program.extract_tree_state(skip_started_nodes=False)
 
         # convert method from protocol api and apply the new method
         _method = ParserMethod(lines=[ParserMethodLine(line.id, line.content) for line in method.lines])
@@ -70,6 +72,8 @@ class MethodManager:
 
         try:
             self._program.apply_tree_state(existing_state)
+            self._program.revision = self._program.revision + 1
+
         except Exception as ex:
             logger.error("Failed to apply tree state", exc_info=True)
             raise MethodEditError("Failed to apply tree state", ex)
@@ -95,7 +99,7 @@ class MethodManager:
         return method_state
 
     def _apply_analysis(self):
-        # TODO improve this. may need additional analizers which also
+        # TODO improve this. may need additional analyzers which also
         # requires access to tags/commands
         analyzer = WhitespaceCheckAnalyzer()
         analyzer.analyze(self._program)

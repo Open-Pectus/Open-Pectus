@@ -274,14 +274,16 @@ class RuntimeInfo:
                         return state.command, record
 
     def get_last_node_record_or_none(self, node: p.Node) -> RuntimeRecord | None:
+        """ Get last record by node id """
         for r in reversed(self._records):
             if r.node.id == node.id:
                 return r
 
     def get_last_node_record(self, node: p.Node) -> RuntimeRecord:
+        """ Get last record by node id. Raise if no record is found """
         record = self.get_last_node_record_or_none(node)
         if record is None:
-            raise ValueError("Node has no records")
+            raise ValueError(f"Node {node} has no records")
         return record
 
     def get_node_records(self, node: p.Node, test_by_instance=False) -> list[RuntimeRecord]:
@@ -622,3 +624,56 @@ class RunLogItemState(StrEnum):
     def has_value(value: str):
         """ Determine if enum has this string value defined. Case sensitive. """
         return hasattr(RunLogItemState, value)
+
+
+def assert_Runlog_HasItem(runtimeinfo: RuntimeInfo, name: str):
+    runlog = runtimeinfo.get_runlog()
+    for item in runlog.items:
+        if item.name == name:
+            return
+    item_names = [item.name for item in runlog.items]
+    raise AssertionError(f"Runlog has no item named '{name}'. It has these names:  {','.join(item_names)}")
+
+def assert_Runlog_HasNoItem(runtimeinfo: RuntimeInfo, name: str):
+    runlog = runtimeinfo.get_runlog()
+    item_names = [item.name for item in runlog.items]
+    for item in runlog.items:
+        if item.name == name:
+            raise AssertionError(f"Runlog has item named '{name}' which was not expected. It has these names:  {','.join(item_names)}")
+
+def assert_Runlog_HasItem_Started(runtimeinfo: RuntimeInfo, name: str):
+    runlog = runtimeinfo.get_runlog()
+    for item in runlog.items:
+        if item.name == name and item.state == RunLogItemState.Started:
+            return
+    raise AssertionError(f"Runlog has no item named '{name}' in Started state")
+
+def assert_Runlog_HasItem_Completed(runtimeinfo: RuntimeInfo, name: str, min_times=1):
+    occurrences = 0
+    runlog = runtimeinfo.get_runlog()
+    for item in runlog.items:
+        if item.name == name and item.state == RunLogItemState.Completed:
+            occurrences += 1
+
+    if occurrences < min_times:
+        raise AssertionError(
+            f"Runlog item named '{name}' did not occur in Completed state at least " +
+            f"{min_times} time(s). It did occur {occurrences} time(s)")
+
+def assert_Runtime_HasRecord(runtimeinfo: RuntimeInfo, name: str):
+    for r in runtimeinfo.records:
+        if r.name == name:
+            return
+    raise AssertionError(f"Runtime has no record named '{name}'")
+
+def assert_Runtime_HasRecord_Started(runtimeinfo: RuntimeInfo, name: str):
+    for r in runtimeinfo.records:
+        if r.name == name and r.has_state(RuntimeRecordStateEnum.Started):
+            return
+    raise AssertionError(f"Runtime has no record named '{name}' in state Started")
+
+def assert_Runtime_HasRecord_Completed(runtimeinfo: RuntimeInfo, name: str):
+    for r in runtimeinfo.records:
+        if r.name == name and r.has_state(RuntimeRecordStateEnum.Started):
+            return
+    raise AssertionError(f"Runtime has no record named '{name}' in state Completed")
