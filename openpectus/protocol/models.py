@@ -212,6 +212,22 @@ class ControlState(ProtocolModel):
                 f'is_paused={self.is_paused})')
 
 
+class Colors:
+    C0 = "#1F77B4"
+    C1 = "#FF7F0E"
+    C2 = "#2CA02C"
+    C3 = "#D62728"
+    C4 = "#9467BD"
+    C5 = "#8C564B"
+    C6 = "#E377C2"
+    C7 = "#7F7F7F"
+    C8 = "#BCBD22"
+    C9 = "#17BECF"
+
+    Red = "#FF0000"
+    Green = "#00FF00"
+
+
 class PlotColorRegion(ProtocolModel):
     process_value_name: str
     # color string compatible with css e.g.: '#aa33bb', 'rgb(0,0,0)', 'rgba(0,0,0,0)', 'red'

@@ -3,7 +3,7 @@ from typing import Type, TypeVar
 import unittest
 
 
-from openpectus.lang.grammar.pprogramformatter import print_program
+from openpectus.lang.model.pprogramformatter import print_program
 from openpectus.lang.model.parser import PcodeParser, Grammar
 import openpectus.lang.model.ast as p
 

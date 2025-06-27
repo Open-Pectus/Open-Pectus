@@ -2,10 +2,12 @@ import { DatePipe, NgFor, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
 import { compareAsc, compareDesc } from 'date-fns';
 
-export interface TableColumn<T> {
-  key: keyof T;
+export interface TableColumn<T, E extends keyof T = keyof T> {
+  key: E;
   header: string;
   isDate?: boolean;
+
+  transform?(value: T[E]): string;
 }
 
 export enum TableSortDirection {
@@ -19,10 +21,10 @@ export interface DefaultTableSort<T> {
 }
 
 @Component({
-    selector: 'app-table',
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [NgFor, NgIf],
-    template: `
+  selector: 'app-table',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [NgFor, NgIf],
+  template: `
     <div class="bg-stone-100 rounded-md shadow-lg overflow-hidden">
       <table class="w-full table-fixed border-collapse">
         <thead>
@@ -45,7 +47,7 @@ export interface DefaultTableSort<T> {
         </tbody>
       </table>
     </div>
-  `
+  `,
 })
 export class TableComponent<T> {
   @Input() columns?: TableColumn<T>[];
@@ -83,7 +85,7 @@ export class TableComponent<T> {
 
   format(value: T[keyof T], column: TableColumn<T>): string | T[keyof T] | undefined {
     if(column.isDate) return this.datePipe.transform(this.toDate(value))?.toString();
-    if(Array.isArray(value)) return value.join(', ');
+    if(column.transform !== undefined) return column.transform(value);
     return value;
   }
 

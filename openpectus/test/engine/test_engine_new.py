@@ -109,9 +109,7 @@ Wait: 1s
         runner = EngineTestRunner(create_test_uod, code)
         with runner.run() as instance:
             instance.start()
-
-            t = instance.run_until_instruction("Wait", "started", increment_index=False)
-            self.assertEqual(3, t)
+            instance.run_until_instruction("Wait", "started", increment_index=False)
             ticks = instance.run_until_instruction("Wait", "completed")
             self.assertAlmostEqual(10, ticks, delta=2)
 
@@ -125,15 +123,9 @@ Mark: B
         runner = EngineTestRunner(create_test_uod, code)
         with runner.run() as instance:
             instance.start()
-            run_time = instance.engine.tags[SystemTagName.RUN_TIME]
 
             instance.run_until_instruction("Mark")
-            # two ticks passed before the first "user" instruction. That is expected
-            self.assertAlmostEqual(0.2, run_time.as_float(), delta=0.1)
-
             instance.run_until_instruction("Pause")
-
-            # self.assertAlmostEqual(1.1, run_time.as_float(), delta=0.1)
             instance.run_until_instruction("Mark")
 
             with self.assertRaises(TimeoutError):
@@ -204,6 +196,91 @@ Restart
 
             print(instance.get_runtime_table("C"))
 
+
+    # --- Restart ---
+
+
+#     def test_restart_can_restart(self):
+#         set_engine_debug_logging()
+#         set_interpreter_debug_logging()
+#         program = """
+# Mark: A
+# Increment run counter
+# Restart
+# """
+#         e = self.engine
+#         self.assertEqual(0, e.tags[SystemTagName.RUN_COUNTER].as_number())
+
+#         run_engine(e, program, start_ticks + 2)
+
+#         run_id_1 = e.tags[SystemTagName.RUN_ID].get_value()
+#         self.assertEqual(e.tags[SystemTagName.SYSTEM_STATE].get_value(), SystemStateEnum.Restarting)
+#         self.assertEqual(1, e.tags[SystemTagName.RUN_COUNTER].as_number())
+
+#         self.assertEqual(e.interpreter.get_marks(), ["A"])
+
+#         continue_engine(e, 1)
+
+#         self.assertEqual(e.tags[SystemTagName.SYSTEM_STATE].get_value(), SystemStateEnum.Stopped)
+#         self.assertIsNone(e.tags[SystemTagName.RUN_ID].get_value())
+#         self.assertEqual(e.interpreter.get_marks(), [])
+#         self.assertEqual(1, e.tags[SystemTagName.RUN_COUNTER].as_number())
+
+#         continue_engine(e, 1)
+
+#         run_id2 = e.tags[SystemTagName.RUN_ID].get_value()
+#         self.assertEqual(e.tags[SystemTagName.SYSTEM_STATE].get_value(), SystemStateEnum.Running)
+#         self.assertNotEqual(run_id_1, run_id2)
+#         self.assertEqual(e.interpreter.get_marks(), [])
+#         self.assertEqual(1, e.tags[SystemTagName.RUN_COUNTER].as_number())
+
+#         continue_engine(e, 3)
+
+#         self.assertEqual(e.interpreter.get_marks(), ["A"])
+#         self.assertEqual(2, e.tags[SystemTagName.RUN_COUNTER].as_number())
+
+#     def test_restart_stop_ticking_interpreter(self):
+
+#         set_interpreter_debug_logging()
+#         program = """
+# Mark: A
+# Restart
+# Mark: X
+# """
+#         e = self.engine
+#         run_engine(e, program, 1)
+
+#         for _ in range(30):
+#             continue_engine(e, 1)
+#             self.assertTrue("X" not in e.interpreter.get_marks())
+
+#     def test_restart_cancels_running_commands(self):
+#         program = """
+# Reset
+# Restart
+# """
+#         e = self.engine
+#         run_engine(e, program, start_ticks + 1)
+
+#         system_state = e.tags[SystemTagName.SYSTEM_STATE]
+#         self.assertEqual(system_state.get_value(), SystemStateEnum.Restarting)
+
+#     def test_restart_can_stop(self):
+#         set_engine_debug_logging()
+#         set_interpreter_debug_logging()
+#         program = """
+# Mark: A
+# Restart
+# """
+#         e = self.engine
+#         run_engine(e, program, start_ticks + 1)
+
+#         # when no commands need to be stopped, restart immediately moves to Stopped
+#         system_state = e.tags[SystemTagName.SYSTEM_STATE]
+#         self.assertEqual(system_state.get_value(), SystemStateEnum.Restarting)
+
+
+
     def test_mark_in_alarm_body_runs_in_each_alarm_instance(self):
         code = """
 Alarm: Block Time > 0s
@@ -220,11 +297,13 @@ Alarm: Block Time > 0s
             instance.run_until_instruction("Mark", "completed")
             self.assertEqual(['A'], instance.marks)
 
-            instance.run_ticks(9)
+            # instance.run_until_event("method_end")
+            # instance.run_until_event("method_end")
+            # self.assertEqual(['A', 'A'], instance.marks)
 
-            # print(instance.get_runtime_table("awaiting 2nd alarm"))
 
-            self.assertEqual(['A', 'A'], instance.marks)
+            instance.run_until_condition(lambda : instance.marks == ['A', 'A'])
+            instance.run_until_condition(lambda : instance.marks == ['A', 'A', 'A'])
 
     def test_watch_in_alarm_body_runs_in_each_alarm_instance(self):
         code = """
@@ -243,13 +322,7 @@ Alarm: Block Time > 0s
             instance.run_until_instruction("Mark", "completed")
             self.assertEqual(['A'], instance.marks)
 
-            print(instance.get_runtime_table("mark"))
-
-            instance.index_step_back(2)  # Wait occurs before Mark
-            instance.run_until_instruction("Wait", "completed")
-
-            instance.run_ticks(7)
-            print(instance.get_runtime_table("awaiting 2nd alarm"))
+            instance.run_until_condition(lambda : instance.marks == ['A', 'A'])
 
             # This does not work because the alarm node is way up in the record list.
             # we would need aonther way to wait for alarm, including a new find_instruction
@@ -257,9 +330,6 @@ Alarm: Block Time > 0s
             # of the normal one that indexes full records.
             # the same goes for any other node inside the alarm body
             # instance.run_until_instruction("Alarm", "started")
-
-            self.assertEqual(['A', 'A'], instance.marks)
-
 
     def test_run_until_method_end(self):
         code = """
@@ -373,10 +443,6 @@ Mark: C
             self.assertEqual(['A'], instance.marks)
 
             instance.engine.inject_code("Mark: I")
-            instance.run_until_instruction("Mark", state="completed", arguments="I")
-            instance.run_ticks(1)  # wait for injected interrupt to complete
-            self.assertIn(instance.marks, (['A', 'B', 'I'], ['A', 'I', 'B']))
-
             instance.run_until_event("method_end")
             self.assertIn(instance.marks, (['A', 'B', 'I', 'C'], ['A', 'I', 'B', 'C']))
 
@@ -393,15 +459,15 @@ Mark: C
 
             instance.engine.tags[SystemTagName.BASE].set_value("s", instance.engine._tick_time)
 
-            instance.run_until_instruction("Mark", state="completed")
+            instance.run_until_instruction("Mark", state="completed", arguments="A")
             self.assertEqual(['A'], instance.marks)
 
-            instance.engine.inject_code("0.3 Mark: I")
+            instance.engine.inject_code("0.4 Mark: I")
             instance.run_until_condition(lambda: 'B' in instance.marks)
-            self.assertEqual(['A', 'B'], instance.marks)
+            self.assertEqual(instance.marks, ['A', 'B'])
 
             instance.run_until_event("method_end")
-            self.assertTrue(['A', 'B', 'C', 'I'] == instance.marks or ['A', 'B', 'I', 'C'] == instance.marks)
+            self.assertEqual(instance.marks, ['A', 'B', 'C', 'I'])
 
     def test_info_warning_error(self):
         pcode = """

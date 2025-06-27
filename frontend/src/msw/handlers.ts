@@ -397,7 +397,7 @@ const runLogLines: RunLogLine[] = [
 export const handlers = [
   http.get('/auth/config', () => {
     return HttpResponse.json<AuthConfig>({
-      use_auth: true,
+      use_auth: false,
       client_id: 'fc7355bb-a6be-493f-90a1-cf57063f7948',
       authority_url: 'https://login.microsoftonline.com/fdfed7bd-9f6a-44a1-b694-6e39c468c150/v2.0',
     });
@@ -445,7 +445,7 @@ export const handlers = [
         run_id: crypto.randomUUID(),
         started_date: getStartedDate(),
         completed_date: getCompletedDate(),
-        contributors: ['Eskild'],
+        contributors: [{id: '', name: 'Eskild'}],
         engine_computer_name: 'A computer name',
         engine_version: '0.0.1',
         engine_hardware_str: 'something',
@@ -460,7 +460,7 @@ export const handlers = [
         run_id: crypto.randomUUID(),
         started_date: getStartedDate(),
         completed_date: getCompletedDate(),
-        contributors: ['Eskild', 'Morten'],
+        contributors: [{id: '', name: 'Morten'}, {id: '', name: 'Eskild'}],
         engine_computer_name: 'A computer name',
         engine_version: '0.0.1',
         engine_hardware_str: 'something',
@@ -475,7 +475,7 @@ export const handlers = [
         run_id: crypto.randomUUID(),
         started_date: getStartedDate(),
         completed_date: getCompletedDate(),
-        contributors: ['Eskild'],
+        contributors: [{id: '', name: 'Eskild'}],
         engine_computer_name: 'A computer name',
         engine_version: '0.0.1',
         engine_hardware_str: 'something',
@@ -490,7 +490,7 @@ export const handlers = [
         run_id: crypto.randomUUID(),
         started_date: getStartedDate(),
         completed_date: getCompletedDate(),
-        contributors: ['Eskild'],
+        contributors: [{id: '', name: 'Eskild'}],
         engine_computer_name: 'A computer name',
         engine_version: '0.0.1',
         engine_hardware_str: 'something',
@@ -941,7 +941,7 @@ export const handlers = [
     return HttpResponse.json<RecentRun>({
       started_date: sub(new Date(), {hours: 3, minutes: 22, seconds: 11}).toISOString(),
       completed_date: sub(new Date(), {hours: 1}).toISOString(),
-      contributors: ['Morten', 'Eskild'],
+      contributors: [{id: '', name: 'Morten'}, {id: '', name: 'Eskild'}],
       engine_id: 'A process unit id',
       run_id: crypto.randomUUID(),
       engine_computer_name: 'A computer name',
@@ -1168,7 +1168,7 @@ Some;Csv;Data
     return new HttpResponse();
   }),
 
-  http.get('/api/process_unit/:unitId/active_users', () => {
+  http.get('/api/process_unit/:unitId/other_active_users', () => {
     return HttpResponse.json<ActiveUser[]>([]);
   }),
 

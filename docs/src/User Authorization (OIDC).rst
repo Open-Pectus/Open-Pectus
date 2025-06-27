@@ -34,6 +34,7 @@ Configure the `App Registration` as follows:
     * :console:`openid`
     * :console:`profile`
     * :console:`User.Read`
+    * :console:`User.ReadBasic.All`
     
 * (Optional) Define app roles. When a user is authenticated then the role assignments for that user are used to restrict access.
 
