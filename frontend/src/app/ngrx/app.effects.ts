@@ -108,6 +108,4 @@ export class AppEffects {
               private versionService: VersionService,
               private httpClient: HttpClient,
               private oidcSecurityService: OidcSecurityService) {}
-
-
 }

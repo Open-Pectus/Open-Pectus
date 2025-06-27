@@ -4,10 +4,18 @@ from datetime import datetime
 from enum import StrEnum, auto
 from typing import Dict
 
-from openpectus.aggregator.models import Method, MethodState, PlotConfiguration, RunLog, AggregatedErrorLog
+from openpectus.aggregator.models import Contributor, Method, MethodState, PlotConfiguration, RunLog, AggregatedErrorLog, NotificationTopic, NotificationScope
 from sqlalchemy import JSON, ForeignKey, MetaData
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, attribute_keyed_dict
 
+# class IdLessDBModel(DeclarativeBase):
+#     metadata = MetaData(naming_convention={
+#         "ix": "ix_%(column_0_label)s",
+#         "uq": "uq_%(table_name)s_%(column_0_name)s",
+#         "ck": "ck_%(table_name)s_`%(constraint_name)s`",
+#         "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+#         "pk": "pk_%(table_name)s"
+#     })
 
 class DBModel(DeclarativeBase):
     """ Base model for data entity classes. """
@@ -32,8 +40,8 @@ class RecentEngine(DBModel):
     system_state: Mapped[str] = mapped_column()
     location: Mapped[str] = mapped_column()
     last_update: Mapped[datetime] = mapped_column()
-    contributors: Mapped[list[str]] = mapped_column(type_=JSON, default=[])
-    required_roles: Mapped[set[str]] = mapped_column(type_=JSON, default=[])
+    contributors: Mapped[list[Contributor]] = mapped_column(type_=JSON, default=[])
+    required_roles: Mapped[list[str]] = mapped_column(type_=JSON, default=[])
 
 
 class RecentRun(DBModel):
@@ -52,8 +60,8 @@ class RecentRun(DBModel):
     uod_author_email: Mapped[str] = mapped_column()
     started_date: Mapped[datetime] = mapped_column()
     completed_date: Mapped[datetime] = mapped_column()
-    contributors: Mapped[list[str]] = mapped_column(type_=JSON, default=[])  # really a set but this cannot be mapped?
-    required_roles: Mapped[list[str]] = mapped_column(type_=JSON, default=[])  # really a set but this cannot be mapped?
+    contributors: Mapped[list[Contributor]] = mapped_column(type_=JSON, default=[])
+    required_roles: Mapped[list[str]] = mapped_column(type_=JSON, default=[])
 
 
 class RecentRunMethodAndState(DBModel):
@@ -142,3 +150,24 @@ class PlotLog(DBModel):
         back_populates='plot_log',
         cascade="all, delete-orphan"
     )
+
+# class User(IdLessDBModel):
+#     __tablename__ = "Users"
+#     id: Mapped[str] = mapped_column(primary_key=True) # uuid from AD or generated if no auth
+#     webpush_notification_preferences: Mapped[WebPushNotificationPreferences] = relationship(cascade="all, delete-orphan")
+#     webpush_subscriptions: Mapped[list[WebPushSubscription]] = relationship(cascade="all, delete-orphan")
+
+class WebPushNotificationPreferences(DBModel):
+    __tablename__ = "WebPushNotificationPreferences"
+    user_id: Mapped[str] = mapped_column(unique=True)  # when no auth all users share web push notification preferences with user_id "None"
+    user_roles: Mapped[list[str]] = mapped_column(type_=JSON, default=[])  # User roles. Updated it when change is detected in openpectus.aggregator.routes.auth
+    scope: Mapped[NotificationScope] = mapped_column()
+    topics: Mapped[list[NotificationTopic]] = mapped_column(type_=JSON, default=[])
+    process_units: Mapped[list[str]] = mapped_column(type_=JSON, default=[])
+
+class WebPushSubscription(DBModel):
+    __tablename__ = "WebPushSubscriptions"
+    user_id: Mapped[str] = mapped_column()  # when no auth user_id is "None"
+    endpoint: Mapped[str] = mapped_column()
+    auth: Mapped[str] = mapped_column()
+    p256dh: Mapped[str] = mapped_column()

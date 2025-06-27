@@ -35,6 +35,11 @@ export type CommandExample = {
 
 export type CommandSource = 'process_value' | 'manually_entered' | 'unit_button' | 'method';
 
+export type Contributor = {
+    id?: string;
+    name: string;
+};
+
 export type ControlState = {
     is_running: boolean;
     is_holding: boolean;
@@ -89,6 +94,10 @@ export type MethodState = {
 export type MethodVersion = {
     version: number;
 };
+
+export type NotificationScope = 'process_units_with_runs_ive_contributed_to' | 'process_units_i_have_access_to' | 'specific_process_units';
+
+export type NotificationTopic = 'run_start' | 'run_stop' | 'run_pause' | 'block_start' | 'notification_cmd' | 'watch_triggered' | 'new_contributor' | 'method_error' | 'network_errors';
 
 export type NotOnline = {
     state: "not_online";
@@ -217,7 +226,7 @@ export type RecentRun = {
     engine_hardware_str: string;
     aggregator_computer_name: string;
     aggregator_version: string;
-    contributors?: Array<(string)>;
+    contributors?: Array<Contributor>;
 };
 
 export type RecentRunCsv = {
@@ -264,6 +273,26 @@ export type ValidationError = {
     loc: Array<(string | number)>;
     msg: string;
     type: string;
+};
+
+export type WebPushConfig = {
+    app_server_key?: string;
+};
+
+export type WebPushKeys = {
+    auth: string;
+    p256dh: string;
+};
+
+export type WebPushNotificationPreferences = {
+    scope: NotificationScope;
+    topics: Array<NotificationTopic>;
+    process_units: Array<(string)>;
+};
+
+export type WebPushSubscription = {
+    endpoint: string;
+    keys: WebPushKeys;
 };
 
 export type PostResponse = (unknown);
@@ -497,3 +526,31 @@ export type GetVersionResponse = (unknown);
 export type GetBuildNumberResponse = (unknown);
 
 export type GetBuildInfoResponse = (BuildInfo);
+
+export type GetWebpushConfigResponse = (WebPushConfig);
+
+export type GetNotificationPreferencesData = {
+    xIdentity?: string;
+};
+
+export type GetNotificationPreferencesResponse = (WebPushNotificationPreferences);
+
+export type SaveNotificationPreferencesData = {
+    requestBody: WebPushNotificationPreferences;
+    xIdentity?: string;
+};
+
+export type SaveNotificationPreferencesResponse = (unknown);
+
+export type SubscribeUserData = {
+    requestBody: WebPushSubscription;
+    xIdentity?: string;
+};
+
+export type SubscribeUserResponse = (unknown);
+
+export type NotifyUserData = {
+    processUnitId: string;
+};
+
+export type NotifyUserResponse = (unknown);

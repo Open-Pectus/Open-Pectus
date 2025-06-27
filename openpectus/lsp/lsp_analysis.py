@@ -39,7 +39,6 @@ operator_descriptions = {
     "!=": "not equal",
 }
 
-@functools.cache
 def fetch_uod_info(engine_id: str) -> ProMdl.UodDefinition | None:
     aggregator = agg_deps.get_aggregator()
 

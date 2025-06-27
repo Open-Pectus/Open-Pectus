@@ -4,7 +4,8 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { isDevMode, LOCALE_ID, provideExperimentalZonelessChangeDetection } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { provideRouter } from '@angular/router';
+import { PreloadAllModules, provideRouter, withPreloading } from '@angular/router';
+import { provideServiceWorker } from '@angular/service-worker';
 import { provideEffects } from '@ngrx/effects';
 import { provideRouterStore, RouterState } from '@ngrx/router-store';
 import { provideStore, Store } from '@ngrx/store';
@@ -81,7 +82,7 @@ enableMocking().then(() => bootstrapApplication(AppComponent, {
         // MethodEditorActions.methodPolledForUnit.type,
       ],
     }),
-    provideRouter(APP_ROUTES),
+    provideRouter(APP_ROUTES, withPreloading(PreloadAllModules)),
     provideAnimations(),
     provideToastr({
       progressBar: true,
@@ -102,6 +103,10 @@ enableMocking().then(() => bootstrapApplication(AppComponent, {
     DecimalPipe,
     ProcessValuePipe,
     {provide: DATE_PIPE_DEFAULT_OPTIONS, useValue: {dateFormat: Defaults.dateFormat}},
+    provideServiceWorker('ngsw-worker.js', {
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerWhenStable:30000',
+    }),
   ],
 })
   .catch(err => console.error(err)));

@@ -3,7 +3,6 @@ from typing import Self, Type, TypeVar, TypedDict
 
 
 class Position:
-
     def __init__(self, line: int, character: int):
         self.line: int = line   # todo define 0-1 based. should probably change from before to just match lsp
         self.character: int = character  # start index = indentation
@@ -105,6 +104,7 @@ class NodeState(TypedDict):
     completed: bool
     cancelled: bool
     forced: bool
+    action_history: list[str]
 
 
 TNode = TypeVar("TNode", bound="Node")
@@ -175,6 +175,7 @@ class Node(SupportCancelForce):
         # interpretation state
         self.started: bool = False
         self.completed: bool = False
+        self.action_history: list[str] = []
 
     @property
     def name(self) -> str:
@@ -217,6 +218,7 @@ class Node(SupportCancelForce):
         self.completed = state["completed"]
         self._cancelled = state["cancelled"]
         self._forced = state["forced"]
+        self.action_history = state["action_history"]
 
     def extract_state(self) -> NodeState:
         return NodeState(
@@ -226,7 +228,8 @@ class Node(SupportCancelForce):
             started=self.started,
             completed=self.completed,
             cancelled=self.cancelled,
-            forced=self.forced
+            forced=self.forced,
+            action_history=self.action_history
         )
 
     def get_child_by_instruction(self, instruction_name: str, arguments: str | None = None) -> Node | None:
@@ -284,17 +287,11 @@ class Node(SupportCancelForce):
 
 
     def reset_runtime_state(self, recursive: bool):
-        # TODO implement, possily by just applying an empty state dict
-        # known state to reset: activated for condition nodes
-        # state = self.extract_state()
-        # state.started = False
-        # state.completed = False
-        # self.apply_state(state)
-
         self._forced = False
 
         self.started = False
         self.completed = False
+        self.action_history = []
 
         if recursive:
             if isinstance(self, NodeWithChildren):
@@ -306,6 +303,12 @@ class NodeWithChildren(Node):
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
         self._children: list[Node] = []
+
+        self.interrupt_registered: bool = False
+        """ Whether an interrupt was registered to execute the node. """
+        self.children_complete: bool = False
+        """ Specifies that execution of child nodes should stop or is completed. """
+
         self._last_non_ws_line: int = 0
         """ Populated by WhitespaceAnalyzer """
 
@@ -355,16 +358,27 @@ class NodeWithChildren(Node):
 
     def extract_state(self) -> NodeState:
         state = super().extract_state()
+        state["interrupt_registered"] = self.interrupt_registered  # type: ignore
+        state["children_complete"] = self.children_complete  # type: ignore
         return state
 
     def apply_state(self, state):
+        self.interrupt_registered = state["interrupt_registered"]  # type: ignore
+        self.children_complete = state["children_complete"]  # type: ignore
         super().apply_state(state)
+
+    def reset_runtime_state(self, recursive):
+        self.interrupt_registered = False
+        self.children_complete = False
+        super().reset_runtime_state(recursive)
 
 class ProgramNode(NodeWithChildren):
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
         self.active_node: Node | None = None
         """ The node currently executing. Maintained by interpreter. """
+        self.revision: int = 0
+        """ The program revision. Starts as 0 and increments every time an edit is performed while running. """
 
     def get_instructions(self, include_blanks: bool = False) -> list[Node]:
         """ Return list of all program instructions, recursively, depth first. """
@@ -409,6 +423,19 @@ class ProgramNode(NodeWithChildren):
                     apply_child_state(child)
         apply_child_state(self)
 
+    def reset_runtime_state(self, recursive):
+        self.active_node = None
+        super().reset_runtime_state(recursive)
+
+    def extract_state(self) -> NodeState:
+        state = super().extract_state()
+        state["revision"] = self.revision  # type: ignore
+        return state
+
+    def apply_state(self, state: NodeState):
+        self.revision = int(state["revision"])  # type: ignore
+        return super().apply_state(state)
+
     @staticmethod
     def empty() -> ProgramNode:
         return ProgramNode()
@@ -425,6 +452,11 @@ class MarkNode(Node):
 class BlockNode(NodeWithChildren):
     instruction_names = ["Block"]
 
+    def __init__(self, position=Position.empty, id=""):
+        super().__init__(position, id)
+        self.lock_aquired = False
+
+    # TODO consider wether lock_required should persist
 
 class EndBlockNode(Node):
     instruction_names = ["End block"]
@@ -442,20 +474,25 @@ class NodeWithCondition(NodeWithChildren):
         super().__init__(position, id)
         self.condition_part: str
         self.condition: Condition | None
+        self.interrupt_registered: bool = False
         self.activated: bool = False
+        """ Node condition was evaluated true"""
 
     def apply_state(self, state: NodeState):
         super().apply_state(state)
         if "activated" not in state.keys():
             raise ValueError(f"Failed to apply state to node {self}. Missing state key 'activated'")
+        self.interrupt_registered = bool(state["interrupt_registered"])  # type: ignore
         self.activated = bool(state["activated"])  # type: ignore
 
     def extract_state(self) -> NodeState:
         state = super().extract_state()
+        state["interrupt_registered"] = self.interrupt_registered  # type: ignore
         state["activated"] = self.activated  # type: ignore
         return state
 
     def reset_runtime_state(self, recursive):
+        self.interrupt_registered = False
         self.activated = False
         self._cancelled = False
         self._forced = False
@@ -557,6 +594,23 @@ class CommandBaseNode(Node):
 class InterpreterCommandNode(CommandBaseNode):
     """ Represents commands that are directly executable by the interpreter. """
     instruction_names = ["Base", "Increment run counter", "Run counter", "Wait"]
+
+    def __init__(self, position=Position.empty, id=""):
+        super().__init__(position, id)
+        self.wait_start_time: float | None = None
+
+    def extract_state(self):
+        state = super().extract_state()
+        state["wait_start_time"] = self.wait_start_time  # type: ignore
+        return state
+
+    def apply_state(self, state):
+        self.wait_start_time = state["wait_start_time"]  # type: ignore
+        super().apply_state(state)
+
+    def reset_runtime_state(self, recursive):
+        self.wait_start_time = None
+        super().reset_runtime_state(recursive)
 
 
 class EngineCommandNode(CommandBaseNode):

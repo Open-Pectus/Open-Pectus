@@ -6,6 +6,7 @@ import { firstValueFrom, pairwise } from 'rxjs';
 import { CommandsComponent } from './commands/commands.component';
 import { ErrorLogComponent } from './error-log/error-log.component';
 import { MethodEditorComponent } from './method-editor/method-editor.component';
+import { MethodEditorSelectors } from './method-editor/ngrx/method-editor.selectors';
 import { MissingRolesComponent } from './missing-roles.component';
 import { DetailsActions } from './ngrx/details.actions';
 import { DetailsSelectors } from './ngrx/details.selectors';
@@ -17,24 +18,24 @@ import { UnitHeaderComponent } from './unit-header/unit-header.component';
 import { VariableRowSpanDirective } from './variable-row-span.directive';
 
 @Component({
-    selector: 'app-unit-details',
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [
-        LetDirective,
-        UnitHeaderComponent,
-        ProcessValuesComponent,
-        MethodEditorComponent,
-        CommandsComponent,
-        RunLogComponent,
-        ProcessDiagramComponent,
-        ProcessPlotContainerComponent,
-        ErrorLogComponent,
-        ErrorLogComponent,
-        PushPipe,
-        VariableRowSpanDirective,
-        MissingRolesComponent,
-    ],
-    template: `
+  selector: 'app-unit-details',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    LetDirective,
+    UnitHeaderComponent,
+    ProcessValuesComponent,
+    MethodEditorComponent,
+    CommandsComponent,
+    RunLogComponent,
+    ProcessDiagramComponent,
+    ProcessPlotContainerComponent,
+    ErrorLogComponent,
+    ErrorLogComponent,
+    PushPipe,
+    VariableRowSpanDirective,
+    MissingRolesComponent,
+  ],
+  template: `
     <app-missing-roles>
       @if ((processUnit | ngrxPush)?.state?.state === 'not_online') {
         <span class="absolute-center lg:text-xl font-bold whitespace-nowrap">
@@ -57,16 +58,17 @@ import { VariableRowSpanDirective } from './variable-row-span.directive';
         </div>
       }
     </app-missing-roles>
-  `
+  `,
 })
 export class UnitDetailsComponent implements OnInit, OnDestroy {
+  public readonly methodIsDirty = this.store.selectSignal(MethodEditorSelectors.isDirty);
   protected readonly unitId = this.store.select(DetailsSelectors.processUnitId);
   protected readonly processUnit = this.store.select(DetailsSelectors.processUnit);
 
   constructor(private store: Store) {
     this.unitId.pipe(pairwise(), takeUntilDestroyed()).subscribe(([oldUnitId, newUnitId]) => {
-      this.store.dispatch(DetailsActions.processUnitNavigatedFrom({oldUnitId, newUnitId}))
-    })
+      this.store.dispatch(DetailsActions.processUnitNavigatedFrom({oldUnitId, newUnitId}));
+    });
   }
 
   async ngOnInit() {

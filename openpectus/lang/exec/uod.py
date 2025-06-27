@@ -898,7 +898,7 @@ class UodBuilder:
             execute_command_name=execute_command_name)
         return self._with_process_value(reading)
 
-    def with_process_value_choice(self, tag_name: str, command_options: dict[str, str] | None = None) -> UodBuilder:
+    def with_process_value_choice(self, tag_name: str, command_options: dict[str, str]) -> UodBuilder:
         """ Add process value for the given tag and enable command choices.
 
         Parameters:
@@ -907,20 +907,13 @@ class UodBuilder:
                 command_options are specified.
             command_options: optional
                 Dictionary that maps command names to their pcode implementation.
-                If not specified, the tag's choices are used as both names and
-                pcode implementation. If specified, the tag's choices are not used and the
-                tag does not need to have choices defined.
         """
         if not self.tags.has(tag_name):
             raise ValueError(f"Cannot add process value choice for tag name {tag_name}. The tag name was not found")
-        tag = self.tags.get(tag_name)
+        if not command_options:
+            raise ValueError(f"Cannot add process value choice without any command_options. Use 'with_process_value' instead.")
         if command_options is not None:
             reading = ReadingWithChoice(tag_name, command_options)
-        elif tag.choices is None or len(tag.choices) == 0:
-            raise ValueError(f"Cannot add process value choice for tag name {tag_name}. " +
-                             "The tag has no choices defined and no options were given")
-        else:
-            reading = ReadingWithChoice(tag_name)
         return self._with_process_value(reading)
 
     def _with_process_value(self, reading: Reading) -> UodBuilder:
