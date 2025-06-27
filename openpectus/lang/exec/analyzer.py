@@ -4,7 +4,7 @@ import logging
 
 from Levenshtein import ratio
 
-from openpectus.lang.exec.visitor import NodeVisitor
+from openpectus.lang.exec.visitor import NodeGenerator, NodeVisitor
 import openpectus.lang.model.ast as p
 from openpectus.lang.exec.tags import TagValueCollection
 from openpectus.lang.exec.units import are_comparable, get_compatible_unit_names
@@ -136,7 +136,8 @@ class UnreachableCodeCheckAnalyzer(AnalyzerVisitorBase):
             self.method_end = node
         yield
 
-    def visit_Node(self, node):
+    def visit_Node(self, node) -> NodeGenerator:
+        yield from ()
         super().visit_Node(node)
         if self.method_end and not self.first_command_after_end:
             self.first_command_after_end = node
@@ -253,7 +254,8 @@ class IndentationCheckAnalyzer(AnalyzerVisitorBase):
             start=0,
         )
 
-    def visit_Node(self, node: p.Node):
+    def visit_Node(self, node: p.Node) -> NodeGenerator:
+        yield from ()
         if node.indent_error and not isinstance(node, p.WhitespaceNode):
             self.add_item(self.create_item(node))
 
@@ -276,7 +278,9 @@ class ThresholdCheckAnalyzer(AnalyzerVisitorBase):
         # avoid this issue.
         self.max_threshold_in_parent: dict[p.Node, p.Node] = dict()
 
-    def visit_Node(self, node: p.Node):
+    def visit_Node(self, node: p.Node) -> NodeGenerator:
+        yield from ()
+
         if not isinstance(node, p.ProgramNode) and node.parent is not None and node.threshold is not None:
             possibly_limiting_node = self.max_threshold_in_parent.get(node.parent, None)
             if possibly_limiting_node is None or (possibly_limiting_node.threshold and node.threshold > possibly_limiting_node.threshold):

@@ -267,7 +267,7 @@ class RepositoryTest(unittest.TestCase):
         entity.uod_author_email = "my_uod_email"
         entity.started_date = datetime.now()
         entity.completed_date = datetime.now()
-        entity.contributors = ['foo', 'bar']
+        entity.contributors = list([Mdl.Contributor(name='foo', id='foo'), Mdl.Contributor(name='baz', id='baz')])
         entity.engine_version = '0.0.1'
         entity.engine_hardware_str = 'hardware'
         entity.aggregator_version = '0.0.1'
@@ -295,7 +295,7 @@ class RepositoryTest(unittest.TestCase):
         entity.uod_filename = "my_uod_filename.py"
         entity.uod_author_name = "my_uod_author_name"
         entity.uod_author_email = "my_uod_email"
-        entity.contributors = ['foo', 'bar']
+        entity.contributors = list([Mdl.Contributor(name='foo', id='foo'), Mdl.Contributor(name='bar', id='bar')])
         entity.run_id = 'a run id'
         entity.started_date = datetime.now()
         entity.completed_date = datetime.now()
@@ -319,12 +319,12 @@ class RepositoryTest(unittest.TestCase):
 
             created_entity = repo.get_by_run_id(entity.run_id)
             assert created_entity is not None
-            self.assertEqual(set(['foo', 'bar']), set(created_entity.contributors))
+            self.assertEqual([{'id': 'foo', 'name': 'foo'}, {'id': 'bar', 'name': 'bar'}], created_entity.contributors)
 
             # Must reassign with new instance for change to be persisted
-            contributors = set(created_entity.contributors)
-            contributors.add('baz')
-            created_entity.contributors = list(contributors)
+            contributors = list(created_entity.contributors)
+            contributors.append(Mdl.Contributor(name='baz', id='baz'))
+            created_entity.contributors = contributors
             session.commit()
 
         with database.create_scope():
@@ -332,7 +332,7 @@ class RepositoryTest(unittest.TestCase):
             repo = RecentRunRepository(session)
             updated_entity = repo.get_by_run_id(entity.run_id)
             assert updated_entity is not None
-            self.assertEqual(set(['foo', 'bar', 'baz']), set(updated_entity.contributors))
+            self.assertEqual([{'id': 'foo', 'name': 'foo'}, {'id': 'bar', 'name': 'bar'}, {'id': 'baz', 'name': 'baz'}], updated_entity.contributors)
 
     def test_nested_json(self):
         init_db()

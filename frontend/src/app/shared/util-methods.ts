@@ -34,4 +34,12 @@ export class UtilMethods {
   static arrayEquals<T>(a: T[], b: T[]): boolean {
     return a.length === b.length && a.every((value, index) => b[index] === value);
   }
+
+  // based on angular's TitleCasePipe
+  static titleCase(value: string) {
+    return value.replace(
+      /[0-9\p{L}]\S*/gu, // from https://github.com/angular/angular/blob/main/packages/common/src/pipes/case_conversion_pipes.ts#L49
+      (txt) => txt[0].toUpperCase() + txt.slice(1).toLowerCase(),
+    );
+  }
 }

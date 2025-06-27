@@ -24,9 +24,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     ),
     switchMap(([_, authIsEnabled, accessToken, idToken]) => {
       if(!authIsEnabled) return next(req);
-      req = req.clone({
-        headers: req.headers.set('Authorization', 'Bearer ' + accessToken).set('X-Identity', idToken),
-      });
+      let headers = req.headers.set('Authorization', 'Bearer ' + accessToken);
+      if(req.url.startsWith('/')) headers = headers.set('X-Identity', idToken);
+      req = req.clone({headers});
       return next(req);
     }),
   );

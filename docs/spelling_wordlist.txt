@@ -14,7 +14,6 @@ miniconda
 novo
 nordisk
 mjølner
-antlr
 walkthrough
 centrifugation
 solubilization
