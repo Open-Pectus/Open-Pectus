@@ -5,7 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { PostResponse, GetConfigResponse, ExposePubsubTopicsData, ExposePubsubTopicsResponse, TriggerPublishMswResponse, GetUnitData, GetUnitResponse, GetUnitsData, GetUnitsResponse, GetProcessValuesData, GetProcessValuesResponse, GetAllProcessValuesData, GetAllProcessValuesResponse, ExecuteCommandData, ExecuteCommandResponse, GetProcessDiagramData, GetProcessDiagramResponse, GetCommandExamplesData, GetCommandExamplesResponse, GetRunLogData, GetRunLogResponse, GetMethodAndStateData, GetMethodAndStateResponse, SaveMethodData, SaveMethodResponse, GetPlotConfigurationData, GetPlotConfigurationResponse, GetPlotLogData, GetPlotLogResponse, GetControlStateData, GetControlStateResponse, GetErrorLogData, GetErrorLogResponse, ForceRunLogLineData, ForceRunLogLineResponse, CancelRunLogLineData, CancelRunLogLineResponse, ExposeSystemStateEnumData, ExposeSystemStateEnumResponse, GetRecentRunsData, GetRecentRunsResponse, GetRecentRunData, GetRecentRunResponse, GetRecentRunMethodAndStateData, GetRecentRunMethodAndStateResponse, GetRecentRunRunLogData, GetRecentRunRunLogResponse, GetRecentRunPlotConfigurationData, GetRecentRunPlotConfigurationResponse, GetRecentRunPlotLogData, GetRecentRunPlotLogResponse, GetRecentRunCsvJsonData, GetRecentRunCsvJsonResponse, GetRecentRunErrorLogData, GetRecentRunErrorLogResponse, GetRecentRunCsvFileData, GetRecentRunCsvFileResponse, GetVersionResponse, GetBuildNumberResponse, GetBuildInfoResponse } from './types.gen';
+import type { PostResponse, GetConfigResponse, ExposePubsubTopicsData, ExposePubsubTopicsResponse, TriggerPublishMswResponse, GetPcodeLanguageConfigurationResponse, GetPcodeTmGrammarData, GetPcodeTmGrammarResponse, GetUnitData, GetUnitResponse, GetUnitsData, GetUnitsResponse, GetProcessValuesData, GetProcessValuesResponse, GetAllProcessValuesData, GetAllProcessValuesResponse, ExecuteCommandData, ExecuteCommandResponse, GetProcessDiagramData, GetProcessDiagramResponse, GetCommandExamplesData, GetCommandExamplesResponse, GetRunLogData, GetRunLogResponse, GetMethodAndStateData, GetMethodAndStateResponse, GetMethodData, GetMethodResponse, SaveMethodData, SaveMethodResponse, GetPlotConfigurationData, GetPlotConfigurationResponse, GetPlotLogData, GetPlotLogResponse, GetControlStateData, GetControlStateResponse, GetErrorLogData, GetErrorLogResponse, ForceRunLogLineData, ForceRunLogLineResponse, CancelRunLogLineData, CancelRunLogLineResponse, ExposeSystemStateEnumData, ExposeSystemStateEnumResponse, GetActiveUsersData, GetActiveUsersResponse, RegisterActiveUserData, RegisterActiveUserResponse, UnregisterActiveUserData, UnregisterActiveUserResponse, GetRecentRunsData, GetRecentRunsResponse, GetRecentRunData, GetRecentRunResponse, GetRecentRunMethodAndStateData, GetRecentRunMethodAndStateResponse, GetRecentRunRunLogData, GetRecentRunRunLogResponse, GetRecentRunPlotConfigurationData, GetRecentRunPlotConfigurationResponse, GetRecentRunPlotLogData, GetRecentRunPlotLogResponse, GetRecentRunCsvJsonData, GetRecentRunCsvJsonResponse, GetRecentRunErrorLogData, GetRecentRunErrorLogResponse, GetVersionResponse, GetBuildNumberResponse, GetBuildInfoResponse, GetWebpushConfigResponse, GetNotificationPreferencesData, GetNotificationPreferencesResponse, SaveNotificationPreferencesData, SaveNotificationPreferencesResponse, SubscribeUserData, SubscribeUserResponse, NotifyUserData, NotifyUserResponse } from './types.gen';
 
 @Injectable({
     providedIn: 'root'
@@ -55,7 +55,7 @@ export class FrontendPubsubService {
     
     /**
      * Expose Pubsub Topics
-     * This endpoint is just for exposing the topic enum to frontend via autogeneration
+     * This endpoint is just for exposing the topic enum to frontend via automatic type generation
      * @param data The data for the request.
      * @param data.topic
      * @returns unknown Successful Response
@@ -84,6 +84,46 @@ export class FrontendPubsubService {
         return __request(OpenAPI, this.http, {
             method: 'POST',
             url: '/api/trigger-publish-msw'
+        });
+    }
+    
+}
+
+@Injectable({
+    providedIn: 'root'
+})
+export class LspService {
+    constructor(public readonly http: HttpClient) { }
+    
+    /**
+     * Get Pcode Language Configuration
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public getPcodeLanguageConfiguration(): Observable<GetPcodeLanguageConfigurationResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/lsp/pcode.language-configuration.json'
+        });
+    }
+    
+    /**
+     * Get Pcode Tm Grammar
+     * @param data The data for the request.
+     * @param data.engineId
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public getPcodeTmGrammar(data: GetPcodeTmGrammarData): Observable<GetPcodeTmGrammarResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/lsp/engine/{engine_id}/pcode.tmLanguage.json',
+            path: {
+                engine_id: data.engineId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
         });
     }
     
@@ -311,12 +351,36 @@ export class ProcessUnitService {
     }
     
     /**
+     * Get Method
+     * @param data The data for the request.
+     * @param data.unitId
+     * @param data.xIdentity
+     * @returns Method Successful Response
+     * @throws ApiError
+     */
+    public getMethod(data: GetMethodData): Observable<GetMethodResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/process_unit/{unit_id}/method',
+            path: {
+                unit_id: data.unitId
+            },
+            headers: {
+                'x-identity': data.xIdentity
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
      * Save Method
      * @param data The data for the request.
      * @param data.unitId
      * @param data.requestBody
      * @param data.xIdentity
-     * @returns unknown Successful Response
+     * @returns MethodVersion Successful Response
      * @throws ApiError
      */
     public saveMethod(data: SaveMethodData): Observable<SaveMethodResponse> {
@@ -498,6 +562,86 @@ export class ProcessUnitService {
             url: '/api/process_units/system_state_enum',
             headers: {
                 'x-identity': data.xIdentity
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Active Users
+     * @param data The data for the request.
+     * @param data.unitId
+     * @param data.xIdentity
+     * @returns ActiveUser Successful Response
+     * @throws ApiError
+     */
+    public getActiveUsers(data: GetActiveUsersData): Observable<GetActiveUsersResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/process_unit/{unit_id}/active_users',
+            path: {
+                unit_id: data.unitId
+            },
+            headers: {
+                'x-identity': data.xIdentity
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Register Active User
+     * @param data The data for the request.
+     * @param data.unitId
+     * @param data.userId
+     * @param data.xIdentity
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public registerActiveUser(data: RegisterActiveUserData): Observable<RegisterActiveUserResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'POST',
+            url: '/api/process_unit/{unit_id}/register_active_user',
+            path: {
+                unit_id: data.unitId
+            },
+            headers: {
+                'x-identity': data.xIdentity
+            },
+            query: {
+                user_id: data.userId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Unregister Active User
+     * @param data The data for the request.
+     * @param data.unitId
+     * @param data.userId
+     * @param data.xIdentity
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public unregisterActiveUser(data: UnregisterActiveUserData): Observable<UnregisterActiveUserResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'POST',
+            url: '/api/process_unit/{unit_id}/unregister_active_user',
+            path: {
+                unit_id: data.unitId
+            },
+            headers: {
+                'x-identity': data.xIdentity
+            },
+            query: {
+                user_id: data.userId
             },
             errors: {
                 422: 'Validation Error'
@@ -701,30 +845,6 @@ export class RecentRunsService {
         });
     }
     
-    /**
-     * Get Recent Run Csv File
-     * @param data The data for the request.
-     * @param data.runId
-     * @param data.xIdentity
-     * @returns unknown Successful Response
-     * @throws ApiError
-     */
-    public getRecentRunCsvFile(data: GetRecentRunCsvFileData): Observable<GetRecentRunCsvFileResponse> {
-        return __request(OpenAPI, this.http, {
-            method: 'GET',
-            url: '/api/recent_runs/{run_id}/csv_file',
-            path: {
-                run_id: data.runId
-            },
-            headers: {
-                'x-identity': data.xIdentity
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
 }
 
 @Injectable({
@@ -766,6 +886,112 @@ export class VersionService {
         return __request(OpenAPI, this.http, {
             method: 'GET',
             url: '/api/build_info'
+        });
+    }
+    
+}
+
+@Injectable({
+    providedIn: 'root'
+})
+export class WebpushService {
+    constructor(public readonly http: HttpClient) { }
+    
+    /**
+     * Get Webpush Config
+     * @returns WebPushConfig Successful Response
+     * @throws ApiError
+     */
+    public getWebpushConfig(): Observable<GetWebpushConfigResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/webpush/config'
+        });
+    }
+    
+    /**
+     * Get Notification Preferences
+     * @param data The data for the request.
+     * @param data.xIdentity
+     * @returns WebPushNotificationPreferences Successful Response
+     * @throws ApiError
+     */
+    public getNotificationPreferences(data: GetNotificationPreferencesData = {}): Observable<GetNotificationPreferencesResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/webpush/notification_preferences',
+            headers: {
+                'x-identity': data.xIdentity
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Save Notification Preferences
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @param data.xIdentity
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public saveNotificationPreferences(data: SaveNotificationPreferencesData): Observable<SaveNotificationPreferencesResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'POST',
+            url: '/api/webpush/notification_preferences',
+            headers: {
+                'x-identity': data.xIdentity
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Subscribe User
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @param data.xIdentity
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public subscribeUser(data: SubscribeUserData): Observable<SubscribeUserResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'POST',
+            url: '/api/webpush/subscribe',
+            headers: {
+                'x-identity': data.xIdentity
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Notify User
+     * @param data The data for the request.
+     * @param data.processUnitId
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public notifyUser(data: NotifyUserData): Observable<NotifyUserResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'POST',
+            url: '/api/webpush/notify_user',
+            query: {
+                process_unit_id: data.processUnitId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
         });
     }
     

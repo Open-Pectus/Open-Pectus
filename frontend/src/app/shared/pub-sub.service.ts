@@ -13,8 +13,11 @@ export class PubSubService {
     control_state: 'control_state',
     error_log: 'error_log',
     method: 'method',
+    method_state: 'method_state',
     run_log: 'run_log',
-  }
+    active_users: 'active_users',
+    dead_man_switch: 'dead_man_switch',
+  };
   private client = new PubSubRxjsClient({
     uri: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/frontend-pubsub`,
     imitatePublishOnReconnect: true,
@@ -36,11 +39,23 @@ export class PubSubService {
     return this.client.forTopic(`${unitId}/${this.pubSubTopics.method}`);
   }
 
+  subscribeMethodState(unitId: string) {
+    return this.client.forTopic(`${unitId}/${this.pubSubTopics.method_state}`);
+  }
+
   subscribeControlState(unitId: string) {
     return this.client.forTopic(`${unitId}/${this.pubSubTopics.control_state}`);
   }
 
   subscribeErrorLog(unitId: string) {
     return this.client.forTopic(`${unitId}/${this.pubSubTopics.error_log}`);
+  }
+
+  subscribeActiveUsers(unitId: string) {
+    return this.client.forTopic(`${unitId}/${this.pubSubTopics.active_users}`);
+  }
+
+  subscribeDeadManSwitch(userId: string) {
+    return this.client.forTopic(`${this.pubSubTopics.dead_man_switch}/${userId}`)
   }
 }

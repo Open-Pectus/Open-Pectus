@@ -1,9 +1,12 @@
 import datetime
 import logging
+import platform
 import time
 import unittest
 from typing import Any
+
 from openpectus.engine.models import EngineCommandEnum
+from openpectus.lang.exec.regex import RegexNumber
 from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 from openpectus.engine.hardware import RegisterDirection
 
@@ -13,7 +16,6 @@ from openpectus.lang.exec.uod import (
     UnitOperationDefinitionBase,
     UodCommand,
     UodBuilder,
-    RegexNumber,
 )
 from openpectus.test.engine.utility_methods import (
     EngineTestRunner,
@@ -23,8 +25,7 @@ from openpectus.test.engine.utility_methods import (
 
 configure_test_logger()
 set_engine_debug_logging()
-set_interpreter_debug_logging()
-logging.getLogger("openpectus.lang.exec.runlog").setLevel(logging.DEBUG)
+set_interpreter_debug_logging(include_runlog=True)
 
 # pint takes forever to initialize - long enough
 # to throw off timing of the first instruction.
@@ -34,7 +35,7 @@ _ = pint.Quantity("0 s")
 
 delta = 0.1
 
-def create_test_uod() -> UnitOperationDefinitionBase:
+def create_test_uod() -> UnitOperationDefinitionBase:  # noqa C901
     def reset(cmd: UodCommand, **kvargs) -> None:
         count = cmd.get_iteration_count()
         if count == 0:
@@ -160,98 +161,154 @@ class TestEngineTags(unittest.TestCase):
             # not paused while system is Paused
             self.assertAlmostEqual(1.0, run_time.as_float(), delta=delta)
 
+    
     def test_tag_block_time(self):
-        p = """
-Wait: 0.25s
-Block: B1
-    Wait: 0.25s
+        p = """\
+Wait: 0.9s
+Noop: 1
+Block: A
+    Wait: 2s
+    Wait: 3s
     End block
+Noop: 2
+Wait: 0.99s
 """
+        logging.getLogger("openpectus.lang.exec.tags_impl").setLevel(logging.DEBUG)
+        delta = 0.4
         runner = EngineTestRunner(create_test_uod, p)
+        with runner.run() as instance:
+            e = instance.engine
+            block_time = e.tags[SystemTagName.BLOCK_TIME]
+            block = e.tags[SystemTagName.BLOCK]
+            instance.start()
+
+            instance.run_until_instruction("Noop", state="completed")
+            self.assertEqual(None, block.get_value())
+            self.assertGreater(block_time.as_number(), 1)
+
+            instance.run_until_instruction("Wait", state="started", arguments="2s")
+            # instance.run_until_instruction("Block", state="started", arguments="A")
+            self.assertEqual("A", block.get_value())
+            self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)
+
+            instance.index_step_back(1)
+            instance.run_until_instruction("Wait", state="completed", arguments="2s")
+            self.assertAlmostEqual(2, block_time.as_number(), delta=delta)
+
+            instance.run_until_instruction("Wait", state="completed", arguments="3s", max_ticks=40)
+            self.assertAlmostEqual(2 + 3, block_time.as_number(), delta=delta)
+
+            instance.index_step_back(10)
+            #instance.run_until_instruction("Block", state="completed")
+            instance.run_until_instruction("Noop", arguments="2")
+
+            self.assertEqual(None, block.get_value())
+            self.assertAlmostEqual(1 + 2 + 3 + 0.1, block_time.as_number(), delta=delta)
+
+
+    def test_tag_pause(self):
+        logging.getLogger("openpectus.engine.engine").setLevel(logging.WARNING)
+        runner = EngineTestRunner(create_test_uod, "Wait: 10s")
         with runner.run() as instance:
             e = instance.engine
             instance.start()
 
             instance.run_ticks(2)
 
+            run_time = e.tags[SystemTagName.RUN_TIME]
             block_time = e.tags[SystemTagName.BLOCK_TIME]
-            block = e.tags[SystemTagName.BLOCK]
+            scope_time = e.tags[SystemTagName.SCOPE_TIME]
+            self.assertAlmostEqual(0.2, run_time.as_float(), delta=delta)
+            self.assertAlmostEqual(0.1, block_time.as_float(), delta=delta)
+            self.assertAlmostEqual(0.1, scope_time.as_float(), delta=delta)
 
-            self.assertEqual(None, block.get_value())
-            self.assertAlmostEqual(0.2, block_time.as_number(), delta=delta)
+            e.schedule_execution(EngineCommandEnum.STOP)
+            instance.run_ticks(10)
 
-            instance.run_ticks(4)
-            self.assertEqual(None, block.get_value())
-            self.assertAlmostEqual(0.6, block_time.as_number(), delta=delta)
+            self.assertAlmostEqual(0.3, run_time.as_float(), delta=delta)
+            self.assertAlmostEqual(0.3, block_time.as_float(), delta=delta)
+            self.assertAlmostEqual(0.3, scope_time.as_float(), delta=delta)
 
-            instance.run_ticks(1)
-            self.assertEqual("B1", block.get_value())
-            self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)
+            e.schedule_execution(EngineCommandEnum.START)
+            instance.run_ticks(5)
 
-            instance.run_ticks(6)
-            self.assertEqual(None, block.get_value())
-            self.assertAlmostEqual(0.1 + 0.6, block_time.as_number(), delta=delta)
+            # is reset on system Start
+            self.assertAlmostEqual(0.5, run_time.as_float(), delta=delta)
+            self.assertAlmostEqual(0.5, block_time.as_float(), delta=delta)
+            self.assertAlmostEqual(0.5, scope_time.as_float(), delta=delta)
 
-    # @unittest.skip("Test is likely wrong. Should discuss nested block times")
+            e.schedule_execution(EngineCommandEnum.PAUSE)
+            instance.run_ticks(5)
+
+            # not paused while system is Paused
+            self.assertAlmostEqual(1.0, run_time.as_float(), delta=delta)
+            # paused while system is Paused
+            self.assertAlmostEqual(0.6, block_time.as_float(), delta=delta)
+            self.assertAlmostEqual(0.6, scope_time.as_float(), delta=delta)
+
+
     def test_tag_block_time_nested_blocks(self):
-        p = """
-Block: B1
-    Wait: 0.15s
-    Block: B2
-        Wait: 0.05s
+        p = """\
+Wait: 1s
+Block: A
+    Wait: 2s
+    Block: B
+        Wait: 3s
         End block
-    Wait: 0.25s
+    Wait: 2s
     End block
+Wait: 1s
 """
+        delta = 0.2
         runner = EngineTestRunner(create_test_uod, p)
         with runner.run() as instance:
             e = instance.engine
             instance.start()
 
+            instance.run_until_instruction("Wait", state="completed")
+
             block_time = e.tags[SystemTagName.BLOCK_TIME]
             block = e.tags[SystemTagName.BLOCK]
+            self.assertEqual(None, block.get_value())
+            self.assertAlmostEqual(1, block_time.as_number(), delta=delta)
 
-            instance.run_ticks(2)
+            instance.run_until_instruction("Block", state="started", arguments="A")
+            self.assertEqual("A", block.get_value())
+            self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)
+
+            instance.run_until_instruction("Wait", state="completed", arguments="2s")
+            self.assertAlmostEqual(2, block_time.as_number(), delta=delta)
+
+            instance.run_until_instruction("Block", state="started", arguments="B")
+            self.assertEqual("B", block.get_value())
+            self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)
+
+            instance.run_until_instruction("Wait", state="completed", arguments="3s", max_ticks=50)
+            self.assertAlmostEqual(3, block_time.as_number(), delta=delta)
+
+            instance.index_step_back(3)  # search back to Block: B which is before Wait: 3s
+            instance.run_until_instruction("Block", state="completed", arguments="B", increment_index=False)
+            # print(instance.get_runtime_table())
+            # return
+            
+            self.assertEqual("A", block.get_value())
+            self.assertAlmostEqual(2 + 3, block_time.as_number(), delta=delta)
+
+            instance.index_step_back(2)  # search even further back to Block: A
+            instance.run_until_instruction("Block", state="completed", arguments="A")
 
             self.assertEqual(None, block.get_value())
-            self.assertAlmostEqual(0.2, block_time.as_number(), delta=delta)
-
-            instance.run_until_event("block_start")
-            self.assertEqual("B1", block.get_value())
-            self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)
-            instance.run_ticks(3)
-            self.assertEqual("B1", block.get_value())
-            self.assertAlmostEqual(0.4, block_time.as_number(), delta=delta)
-
-            instance.run_until_event("block_start")
-            self.assertEqual("B2", block.get_value())
-            self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)
-
-            instance.run_ticks(3)
-            self.assertEqual("B2", block.get_value())
-            self.assertAlmostEqual(0.4, block_time.as_number(), delta=delta)
-
-            instance.run_until_event("block_end")
-            # continue_engine(e, 1)
-            self.assertEqual("B1", block.get_value())
-            # TODO currently does not increment block B1 timer while B2 is active
-            self.assertAlmostEqual(0.5, block_time.as_number(), delta=delta)  # 0.4 + 0.4 ???
-            # self.assertAlmostEqual(0.5 + 0.4, block_time.as_number(), delta=delta)  # 0.4 + 0.4 ???
-            # continue_engine(e, 4)
-            # self.assertEqual("B1", block.get_value())
-            # self.assertAlmostEqual(0.9, block_time.as_number(), delta=delta)
-
-            # continue_engine(e, 1)
-            # self.assertEqual(None, block.get_value())
-            # self.assertAlmostEqual(0.2, block_time.as_number(), delta=delta)  # 0.9 + 0.2 ???
+            # Two times End block = 0.2
+            self.assertAlmostEqual(2 + 3 + 2 + 1 + 0.2, block_time.as_number(), delta=delta)
 
     def test_tag_block_time_restart(self):
-        p = """
-Wait: 0.25s
+        p = """\
+Wait: 1s
 Block: B1
-    Wait: 0.25s
+    Wait: 2s
     End block
 """
+        delta = 0.25
         runner = EngineTestRunner(create_test_uod, p)
         with runner.run() as instance:
             e = instance.engine
@@ -259,37 +316,45 @@ Block: B1
             block_time = e.tags[SystemTagName.BLOCK_TIME]
             block = e.tags[SystemTagName.BLOCK]
 
-            instance.run_ticks(2)
+            instance.run_until_instruction("Wait", state="completed", arguments="1s")
             self.assertEqual(None, block.get_value())
-            self.assertAlmostEqual(0.2, block_time.as_number(), delta=delta)
+            self.assertAlmostEqual(1, block_time.as_number(), delta=delta)
 
-            instance.run_ticks(4)
-            self.assertEqual(None, block.get_value())
-            self.assertAlmostEqual(0.6, block_time.as_number(), delta=delta)
-
-            instance.run_ticks(1)
+            instance.run_until_instruction("Block", state="started")
             self.assertEqual("B1", block.get_value())
-            self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)
+            self.assertAlmostEqual(0.0, block_time.as_number(), delta=delta)
 
-            instance.run_ticks(6)
+            instance.run_until_instruction("Wait", state="completed", arguments="2s")
+            self.assertEqual("B1", block.get_value())
+            self.assertAlmostEqual(2, block_time.as_number(), delta=delta)
+
+            instance.index_step_back(2)
+            instance.run_until_instruction("Block", state="completed")
             self.assertEqual(None, block.get_value())
-            self.assertAlmostEqual(0.1 + 0.6, block_time.as_number(), delta=delta)
+            # this is the important test for scope timers
+            self.assertAlmostEqual(1 + 2, block_time.as_number(), delta=delta)
 
-            e.schedule_execution(EngineCommandEnum.RESTART)
-            instance.run_ticks(3)
+            instance.restart_and_run_until_started()
             self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)  # is reset after restart
 
-            # instance.run_until_condition(lambda: block.get_value() == "B1")
-            instance.run_until_event("block_start")
-            self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)  # nested timer is also reset
+            instance.index_step_back(1)
+            instance.run_until_instruction("Wait", state="completed", arguments="1s")
+            self.assertEqual(None, block.get_value())
+            self.assertAlmostEqual(1, block_time.as_number(), delta=delta)
+            return
+
+            instance.run_until_instruction("Block", state="started")
+            self.assertEqual("B1", block.get_value())
+            self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)  # is also reset after restart
 
     def test_tag_block_time_stop_start(self):
         p = """
-Wait: 0.25s
+Wait: 1s
 Block: B1
-    Wait: 0.25s
+    Wait: 2s
     End block
 """
+        delta = 0.3
         runner = EngineTestRunner(create_test_uod, p)
         with runner.run() as instance:
             e = instance.engine
@@ -297,21 +362,18 @@ Block: B1
             block_time = e.tags[SystemTagName.BLOCK_TIME]
             block = e.tags[SystemTagName.BLOCK]
 
-            instance.run_ticks(2)
+            instance.run_until_instruction("Wait", state="completed", arguments="1s")
             self.assertEqual(None, block.get_value())
-            self.assertAlmostEqual(0.2, block_time.as_number(), delta=delta)
+            self.assertAlmostEqual(1, block_time.as_number(), delta=delta)
 
-            instance.run_ticks(4)
-            self.assertEqual(None, block.get_value())
-            self.assertAlmostEqual(0.6, block_time.as_number(), delta=delta)
-
-            instance.run_ticks(1)
+            instance.run_until_instruction("Wait", state="started", arguments="2s")
             self.assertEqual("B1", block.get_value())
-            self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)
+            self.assertAlmostEqual(0, block_time.as_number(), delta=delta)
 
-            instance.run_ticks(6)
+            instance.index_step_back(2)
+            instance.run_until_instruction("Block", state="completed")
             self.assertEqual(None, block.get_value())
-            self.assertAlmostEqual(0.1 + 0.6, block_time.as_number(), delta=delta)
+            self.assertAlmostEqual(3, block_time.as_number(), delta=delta)
 
             e.schedule_execution(EngineCommandEnum.STOP)
             instance.run_ticks(3)
@@ -333,17 +395,81 @@ CmdWithRegexArgs: 2 L/s
         with runner.run() as instance:
             e = instance.engine
             instance.start()
+            instance.run_ticks(2)
+
             flowrate = e.tags["CmdWithRegex_Flowrate"]  # [L/h]
 
-            instance.run_ticks(1)
             self.assertEqual(0.0, flowrate.get_value())
-            instance.run_ticks(2)
+            instance.run_ticks(1)
             self.assertEqual(2.0, flowrate.get_value())  # 2 L/h is 2 L/h
             instance.run_ticks(1)
             self.assertEqual(120.0, flowrate.get_value())  # 2 L/min is 120 L/h
             instance.run_ticks(1)
             self.assertEqual(7200.0, flowrate.get_value())  # 2 L/s is 7200 L/h
 
+
+    def test_watch_has_scope_time(self):
+        code = """\
+Base: s
+0.5 Info: A
+Watch: Run Time > 0s
+    0.5 Info: B
+"""
+        delta = 0.2
+        runner = EngineTestRunner(create_test_uod, code)
+        with runner.run() as instance:
+            instance.start()
+            scope_time = instance.engine.tags[SystemTagName.SCOPE_TIME]
+
+            instance.run_until_instruction("Info", state="completed", arguments="A")
+            self.assertAlmostEqual(0.6, scope_time.as_number(), delta=delta)
+
+            instance.run_until_instruction("Watch", state="awaiting_interrupt")
+            self.assertAlmostEqual(0, scope_time.as_number(), delta=delta)
+
+            instance.run_until_instruction("Info", state="awaiting_threshold", arguments="B", increment_index=False)
+            self.assertAlmostEqual(0, scope_time.as_number(), delta=delta)
+
+            instance.run_until_instruction("Info", state="completed", arguments="B")
+            self.assertAlmostEqual(0.6, scope_time.as_number(), delta=delta)
+
+
+class TestAccumulation(unittest.TestCase):
+
+    def create_test_uod(self):
+        uod = (UodBuilder()
+               .with_instrument("TestUod")
+               .with_author("Test Author", "test@openpectus.org")
+               .with_filename(__file__)
+               # .with_hardware(TestHW())
+               .with_hardware_none()
+               .with_location("Test location")
+               .with_tag(ReadingTag("CV", "L"))
+               .with_tag(CalculatedLinearTag("calc", "L"))
+               .with_accumulated_cv(cv_tag_name="CV", totalizer_tag_name="calc")
+               .build())
+        return uod
+
+    def test_accumulated_column_volume_watch(self):
+        program = """
+Base: CV
+Watch: Accumulated CV > 0.5 CV
+    Mark: A
+"""
+        runner = EngineTestRunner(self.create_test_uod, program)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_ticks(1)
+
+            multiplier = 3.0
+            cv = instance.engine.tags["CV"]
+            cv.set_value(multiplier, 0)
+            acc_cv = instance.engine.tags[SystemTagName.ACCUMULATED_CV]
+            self.assertEqual(acc_cv.as_float(), 0.0)
+            self.assertEqual(acc_cv.unit, "CV")
+
+            elapsed = instance.run_until_instruction("Mark", state="started")
+            self.assertAlmostEqual(5 * multiplier, elapsed, delta=2)
 
 
 class TestFormatting(unittest.TestCase):
@@ -361,3 +487,16 @@ class TestFormatting(unittest.TestCase):
 
         self.assertEqual("06:46:03", t.value_formatted)
         self.assertIsNotNone(t.value_formatted)
+
+
+class CalculatedLinearTag(Tag):
+    """ Test tag that is used to simulate a value that is a linear function of time. """
+    def __init__(self, name: str, unit: str | None, slope: float = 1.0) -> None:
+        super().__init__(name, value=0.0, unit=unit, direction=TagDirection.NA)
+        self.slope = slope
+
+    def on_start(self, run_id: str):
+        self.value = time.time() * self.slope
+
+    def on_tick(self, tick_time: float, increment_time: float):
+        self.value = time.time() * self.slope

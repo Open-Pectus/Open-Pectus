@@ -150,3 +150,6 @@ docs/spelling/
 docs/html/
 
 open_pectus_aggregator.sqlite3
+openpectus/lsp/lsp_db.sqlite3
+*.pem
+openpectus/aggregator/webpush_keys/

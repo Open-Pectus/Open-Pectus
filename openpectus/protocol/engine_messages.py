@@ -140,11 +140,11 @@ class RunStartedMsg(EngineMessage):
 class RunStoppedMsg(EngineMessage):
     run_id: str
     runlog: Mdl.RunLog
-    method: Mdl.Method
+    method_state: Mdl.MethodState
 
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(engine_id="{self.engine_id}", sequence_number={self.sequence_number}, ' +
-                f'run_id="{self.run_id}", runlog={self.runlog}, method={self.method})')
+                f'run_id="{self.run_id}", runlog={self.runlog}, method_state="{self.method_state}"')
 
 
 def print_sequence_range(messages: Sequence[EngineMessage]) -> str:

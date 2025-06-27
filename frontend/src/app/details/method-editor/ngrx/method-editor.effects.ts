@@ -21,7 +21,7 @@ export class MethodEditorEffects {
     switchMap(([_, unitId, method]) => {
       if(unitId === undefined) return of();
       return this.processUnitService.saveMethod({unitId, requestBody: method}).pipe(
-        map(() => MethodEditorActions.modelSaved()));
+        map(response => MethodEditorActions.modelSaved({newVersion: response.version})));
     }),
   ));
 
@@ -43,7 +43,7 @@ export class MethodEditorEffects {
     }),
   ));
 
-  subscribeForUpdatesFromBackend = createEffect(() => this.actions.pipe(
+  subscribeForMethodUpdatesFromBackend = createEffect(() => this.actions.pipe(
     ofType(MethodEditorActions.methodEditorComponentInitializedForUnit),
     mergeMap(({unitId}) => {
       return this.pubSubService.subscribeMethod(unitId).pipe(
@@ -53,11 +53,39 @@ export class MethodEditorEffects {
     }),
   ));
 
-  fetchOnUpdateFromBackend = createEffect(() => this.actions.pipe(
+  subscribeForMethodStateUpdatesFromBackend = createEffect(() => this.actions.pipe(
+    ofType(MethodEditorActions.methodEditorComponentInitializedForUnit),
+    mergeMap(({unitId}) => {
+      return this.pubSubService.subscribeMethodState(unitId).pipe(
+        takeUntil(this.actions.pipe(ofType(MethodEditorActions.methodEditorComponentDestroyed))),
+        map(_ => MethodEditorActions.methodStateUpdatedOnBackend({unitId})),
+      );
+    }),
+  ));
+
+  fetchMethodOnUpdateFromBackend = createEffect(() => this.actions.pipe(
     ofType(MethodEditorActions.methodUpdatedOnBackend),
     mergeMap(({unitId}) => {
+      return this.processUnitService.getMethod({unitId}).pipe(
+        map(method => MethodEditorActions.methodFetchedDueToUpdate({method})),
+      );
+    }),
+  ));
+
+  fetchMethodStateOnUpdateFromBackend = createEffect(() => this.actions.pipe(
+    ofType(MethodEditorActions.methodStateUpdatedOnBackend),
+    mergeMap(({unitId}) => {
       return this.processUnitService.getMethodAndState({unitId}).pipe(
-        map(methodAndState => MethodEditorActions.methodFetchedDueToUpdate({methodAndState})),
+        map(methodAndState => MethodEditorActions.methodStateFetchedDueToUpdate({methodAndState})),
+      );
+    }),
+  ));
+
+  fetchMethodRefreshRequest = createEffect(() => this.actions.pipe(
+    ofType(MethodEditorActions.methodRefreshRequested),
+    mergeMap(({unitId}) => {
+      return this.processUnitService.getMethod({unitId}).pipe(
+        map(method => MethodEditorActions.methodFetchedDueToUpdate({method})),
       );
     }),
   ));

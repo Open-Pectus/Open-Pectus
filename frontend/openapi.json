@@ -493,6 +493,56 @@
       }
     },
     "/api/process_unit/{unit_id}/method": {
+      "get": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Get Method",
+        "operationId": "get_method",
+        "parameters": [
+          {
+            "name": "unit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            }
+          },
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Method"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "process_unit"
@@ -535,7 +585,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MethodVersion"
+                }
               }
             }
           },
@@ -905,6 +957,180 @@
                 "schema": {
                   "$ref": "#/components/schemas/SystemStateEnum"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/process_unit/{unit_id}/active_users": {
+      "get": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Get Active Users",
+        "operationId": "get_active_users",
+        "parameters": [
+          {
+            "name": "unit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            }
+          },
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ActiveUser"
+                  },
+                  "title": "Response Get Active Users"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/process_unit/{unit_id}/register_active_user": {
+      "post": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Register Active User",
+        "operationId": "register_active_user",
+        "parameters": [
+          {
+            "name": "unit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/process_unit/{unit_id}/unregister_active_user": {
+      "post": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Unregister Active User",
+        "operationId": "unregister_active_user",
+        "parameters": [
+          {
+            "name": "unit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -1332,37 +1558,51 @@
         }
       }
     },
-    "/api/recent_runs/{run_id}/csv_file": {
+    "/api/lsp/pcode.language-configuration.json": {
       "get": {
         "tags": [
-          "recent_runs"
+          "lsp"
         ],
-        "summary": "Get Recent Run Csv File",
-        "operationId": "get_recent_run_csv_file",
+        "summary": "Get Pcode Language Configuration",
+        "operationId": "get_pcode_language_configuration",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lsp/engine/{engine_id}/pcode.tmLanguage.json": {
+      "get": {
+        "tags": [
+          "lsp"
+        ],
+        "summary": "Get Pcode Tm Grammar",
+        "operationId": "get_pcode_tm_grammar",
         "parameters": [
           {
-            "name": "run_id",
+            "name": "engine_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Run Id"
-            }
-          },
-          {
-            "name": "x-identity",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "",
-              "title": "X-Identity"
+              "title": "Engine Id"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -1398,6 +1638,210 @@
         }
       }
     },
+    "/api/webpush/config": {
+      "get": {
+        "tags": [
+          "webpush"
+        ],
+        "summary": "Get Webpush Config",
+        "operationId": "get_webpush_config",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebPushConfig"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webpush/notification_preferences": {
+      "get": {
+        "tags": [
+          "webpush"
+        ],
+        "summary": "Get Notification Preferences",
+        "operationId": "get_notification_preferences",
+        "parameters": [
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebPushNotificationPreferences"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "webpush"
+        ],
+        "summary": "Save Notification Preferences",
+        "operationId": "save_notification_preferences",
+        "parameters": [
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebPushNotificationPreferences"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webpush/subscribe": {
+      "post": {
+        "tags": [
+          "webpush"
+        ],
+        "summary": "Subscribe User",
+        "operationId": "subscribe_user",
+        "parameters": [
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebPushSubscription"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webpush/notify_user": {
+      "post": {
+        "tags": [
+          "webpush"
+        ],
+        "summary": "Notify User",
+        "operationId": "notify_user",
+        "parameters": [
+          {
+            "name": "process_unit_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Process Unit Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/engine-rest": {
       "post": {
         "tags": [
@@ -1423,7 +1867,7 @@
           "frontend_pubsub"
         ],
         "summary": "Expose Pubsub Topics",
-        "description": "This endpoint is just for exposing the topic enum to frontend via autogeneration",
+        "description": "This endpoint is just for exposing the topic enum to frontend via automatic type generation",
         "operationId": "expose_pubsub_topics",
         "parameters": [
           {
@@ -1539,6 +1983,24 @@
   },
   "components": {
     "schemas": {
+      "ActiveUser": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ActiveUser"
+      },
       "AggregatedErrorLog": {
         "properties": {
           "entries": {
@@ -1653,6 +2115,23 @@
           "method"
         ],
         "title": "CommandSource"
+      },
+      "Contributor": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "Contributor"
       },
       "ControlState": {
         "properties": {
@@ -1778,11 +2257,21 @@
             },
             "type": "array",
             "title": "Lines"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "last_author": {
+            "type": "string",
+            "title": "Last Author"
           }
         },
         "type": "object",
         "required": [
-          "lines"
+          "lines",
+          "version",
+          "last_author"
         ],
         "title": "Method"
       },
@@ -1852,6 +2341,19 @@
         ],
         "title": "MethodState"
       },
+      "MethodVersion": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "MethodVersion"
+      },
       "NotOnline": {
         "properties": {
           "state": {
@@ -1871,6 +2373,30 @@
           "last_seen_date"
         ],
         "title": "NotOnline"
+      },
+      "NotificationScope": {
+        "type": "string",
+        "enum": [
+          "process_units_with_runs_ive_contributed_to",
+          "process_units_i_have_access_to",
+          "specific_process_units"
+        ],
+        "title": "NotificationScope"
+      },
+      "NotificationTopic": {
+        "type": "string",
+        "enum": [
+          "run_start",
+          "run_stop",
+          "run_pause",
+          "block_start",
+          "notification_cmd",
+          "watch_triggered",
+          "new_contributor",
+          "method_error",
+          "network_errors"
+        ],
+        "title": "NotificationTopic"
       },
       "PlotAxis": {
         "properties": {
@@ -2165,6 +2691,10 @@
           },
           "direction": {
             "$ref": "#/components/schemas/TagDirection"
+          },
+          "simulated": {
+            "type": "boolean",
+            "title": "Simulated"
           }
         },
         "type": "object",
@@ -2323,9 +2853,12 @@
         "enum": [
           "run_log",
           "method",
+          "method_state",
           "control_state",
           "error_log",
-          "process_units"
+          "process_units",
+          "active_users",
+          "dead_man_switch"
         ],
         "title": "PubSubTopic"
       },
@@ -2397,7 +2930,7 @@
           },
           "contributors": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/Contributor"
             },
             "type": "array",
             "title": "Contributors",
@@ -2611,6 +3144,81 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WebPushConfig": {
+        "properties": {
+          "app_server_key": {
+            "type": "string",
+            "title": "App Server Key"
+          }
+        },
+        "type": "object",
+        "title": "WebPushConfig"
+      },
+      "WebPushKeys": {
+        "properties": {
+          "auth": {
+            "type": "string",
+            "title": "Auth"
+          },
+          "p256dh": {
+            "type": "string",
+            "title": "P256Dh"
+          }
+        },
+        "type": "object",
+        "required": [
+          "auth",
+          "p256dh"
+        ],
+        "title": "WebPushKeys"
+      },
+      "WebPushNotificationPreferences": {
+        "properties": {
+          "scope": {
+            "$ref": "#/components/schemas/NotificationScope"
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationTopic"
+            },
+            "type": "array",
+            "title": "Topics"
+          },
+          "process_units": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Process Units"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scope",
+          "topics",
+          "process_units"
+        ],
+        "title": "WebPushNotificationPreferences"
+      },
+      "WebPushSubscription": {
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "minLength": 1,
+            "format": "uri",
+            "title": "Endpoint"
+          },
+          "keys": {
+            "$ref": "#/components/schemas/WebPushKeys"
+          }
+        },
+        "type": "object",
+        "required": [
+          "endpoint",
+          "keys"
+        ],
+        "title": "WebPushSubscription"
       }
     }
   }

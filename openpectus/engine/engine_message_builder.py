@@ -38,7 +38,8 @@ def to_model_tag(tag: TagValue) -> Mdl.TagValue:
         value=tag.value,
         value_formatted=tag.value_formatted,
         value_unit=tag.unit,
-        direction=tag.direction
+        direction=tag.direction,
+        simulated=tag.simulated
     )
 
 class EngineMessageBuilder():
@@ -92,8 +93,8 @@ class EngineMessageBuilder():
 
     def create_run_stopped_msg(self, run_id: str) -> EM.RunStoppedMsg:
         runlog_msg = self.create_runlog_msg(run_id)
-        method = self.engine._method._method
-        return EM.RunStoppedMsg(run_id=run_id, runlog=runlog_msg.runlog, method=method)
+        state = self.engine.method_manager.get_method_state()
+        return EM.RunStoppedMsg(run_id=run_id, runlog=runlog_msg.runlog, method_state=state)
 
     def create_runlog_msg(self, run_id: str) -> EM.RunLogMsg:
         tag_names: list[str] = []
@@ -145,5 +146,5 @@ class EngineMessageBuilder():
         ))
 
     def create_method_state_msg(self) -> EM.MethodStateMsg:
-        state = self.engine.calculate_method_state()
+        state = self.engine.method_manager.get_method_state()
         return EM.MethodStateMsg(method_state=state)

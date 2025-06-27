@@ -1,9 +1,10 @@
 
 import unittest
 
+from openpectus.lang.exec.regex import RegexCategorical, RegexNumber
 from openpectus.lang.exec.tags import Tag, create_system_tags
 from openpectus.lang.exec.tags_impl import ReadingTag
-from openpectus.lang.exec.uod import RegexNumber, RegexCategorical, UodBuilder, UodCommand
+from openpectus.lang.exec.uod import UodBuilder, UodCommand
 
 def create_minimal_builder() -> UodBuilder:
     builder = (

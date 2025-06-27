@@ -1,15 +1,24 @@
 {
-  "/api/frontend-pubsub": {
-    "target": "ws://127.0.0.1:9800",
-    "ws": true,
-    "secure": false
-  },
   "/api/": {
     "target": "http://127.0.0.1:9800",
     "secure": false
   },
   "/auth/": {
     "target": "http://127.0.0.1:9800",
+    "secure": false
+  },
+  "/uod/": {
+    "target": "http://127.0.0.1:9800",
+    "secure": false
+  },
+  "/api/frontend-pubsub": {
+    "target": "ws://127.0.0.1:9800",
+    "ws": true,
+    "secure": false
+  },
+  "/api/lsp/websocket": {
+    "target": "ws://127.0.0.1:9800",
+    "ws": true,
     "secure": false
   }
 }

@@ -3,17 +3,27 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 import logging
 import sys
 from typing import Iterable
 import time
 
+
+
 logger = logging.getLogger(__name__)
+
+
+class RunStateChange(StrEnum):
+    PAUSE = "Pause"
+    UNPAUSE = "Unpause"
 
 
 class EventListener:
     """ Defines the listener interface and base class for engine life-time events. """
     def __init__(self) -> None:
+        super(EventListener, self).__init__()
+
         self.run_id: str | None = None
 
     def __str__(self) -> str:
@@ -22,7 +32,6 @@ class EventListener:
     def on_engine_configured(self):
         """ Invoked once on engine startup, after configuration and after
         the connection to hardware has been established. """
-        pass
 
     def _on_before_start(self, run_id: str):
         """ Is run by emitter to avoid having all subclasses call super().on_start(). """
@@ -44,8 +53,17 @@ class EventListener:
         pass
 
     def on_block_end(self, block_info: BlockInfo, new_block_info: BlockInfo | None):
-        """ Invoked just after a block is completed, before on_tick,
-        in the same engine tick. """
+        """ Invoked just after a block is completed, before on_tick, in the same engine tick. If the new block
+        is the root/program scope, the name is the empty string. """
+        pass
+
+    def on_scope_start(self, node_id: str):
+        pass
+
+    def on_scope_activate(self, node_id: str):
+        pass
+
+    def on_scope_end(self, node_id: str):
         pass
 
     def on_tick(self, tick_time: float, increment_time: float):
@@ -55,8 +73,16 @@ class EventListener:
         value for the tick and apply it to the value property. """
         pass
 
-    def on_method_end(self):
+    def on_runstate_change(self, state_change: RunStateChange):
         """ Is invoked when method interpretation is complete. """
+        pass
+
+    def on_method_end(self):
+        """ Is invoked when interpretation of the last method line is complete. Note: This does
+        not necessarily mean that interpretation ends:
+        - Any alarms still have their condition evaluated and may execute
+        - The method may be modified by the user and the new lines will start executing
+        """
         pass
 
     def on_stop(self):
@@ -118,9 +144,25 @@ class PerformanceTimer(EventListener):
         with self:
             self._listener.on_block_end(block_info, new_block_info)
 
+    def on_scope_start(self, node_id: str):
+        with self:
+            self._listener.on_scope_start(node_id)
+
+    def on_scope_activate(self, node_id: str):
+        with self:
+            self._listener.on_scope_activate(node_id)
+
+    def on_scope_end(self, node_id: str):
+        with self:
+            self._listener.on_scope_end(node_id)
+
     def on_tick(self, tick_time: float, increment_time: float):
         with self:
             self._listener.on_tick(tick_time, increment_time)
+
+    def on_runstate_change(self, state_change: RunStateChange):
+        with self:
+            self._listener.on_runstate_change(state_change)
 
     def on_method_end(self):
         with self:
@@ -200,6 +242,34 @@ class EventEmitter:
                 listener.on_block_end(BlockInfo(block_name, tick), BlockInfo(new_block_name, tick))
             except Exception:
                 logger.error(f"on_block_end failed for listener '{listener}'", exc_info=True)
+
+    def emit_on_scope_start(self, node_id: str):
+        for listener in self._listeners:
+            try:
+                listener.on_scope_start(node_id)
+            except Exception:
+                logger.error(f"on_scope_start failed for listener '{listener}'", exc_info=True)
+
+    def emit_on_scope_activate(self, node_id: str):
+        for listener in self._listeners:
+            try:
+                listener.on_scope_activate(node_id)
+            except Exception:
+                logger.error(f"on_scope_activate failed for listener '{listener}'", exc_info=True)
+
+    def emit_on_scope_end(self, node_id: str):
+        for listener in self._listeners:
+            try:
+                listener.on_scope_end(node_id)
+            except Exception:
+                logger.error(f"on_scope_end failed for listener '{listener}'", exc_info=True)
+
+    def emit_on_runstate_change(self, state_change: RunStateChange):
+        for listener in self._listeners:
+            try:
+                listener.on_runstate_change(state_change)
+            except Exception:
+                logger.error(f"on_runstate_change failed for listener '{listener}'", exc_info=True)
 
     def emit_on_method_end(self):
         for listener in self._listeners:

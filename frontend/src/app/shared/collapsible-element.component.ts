@@ -3,10 +3,10 @@ import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, On
 import { CollapsibleElementStorageService } from './collapsible-element-storage.service';
 
 @Component({
-    selector: 'app-collapsible-element',
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [NgIf, NgClass],
-    template: `
+  selector: 'app-collapsible-element',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [NgIf, NgClass],
+  template: `
     <div
         class="flex flex-col bg-slate-100 py-1 lg:rounded-lg lg:p-1 shadow-md shadow-slate-200 border-slate-400 border relative transition-[padding-bottom]"
         [class.pb-0]="collapsed">
@@ -42,7 +42,7 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
         <ng-content select="[popover]"></ng-content>
       </div>
     </div>
-  `
+  `,
 })
 export class CollapsibleElementComponent implements OnInit {
   @Input() name?: string;
@@ -135,5 +135,6 @@ export class CollapsibleElementComponent implements OnInit {
     const collapsed = this.collapsibleElementStorageService.getCollapsedState(this.name);
     if(collapsed === null) return;
     this.collapsed = collapsed;
+    setTimeout(() => this.collapseStateChanged.emit(this.collapsed));
   }
 }

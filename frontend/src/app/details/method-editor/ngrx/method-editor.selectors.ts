@@ -12,4 +12,5 @@ export class MethodEditorSelectors {
   static injectedLineIds = createSelector(this.methodState, methodState => methodState.injected_line_ids);
   static executedLineIds = createSelector(this.methodState, methodState => methodState.executed_line_ids);
   static startedLineIds = createSelector(this.methodState, methodState => methodState.started_line_ids);
+  static versionMismatch = createSelector(this.selectFeature, state => state.versionMismatch);
 }

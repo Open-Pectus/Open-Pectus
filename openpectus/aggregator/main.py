@@ -1,7 +1,6 @@
 import logging
 import os
-from argparse import ArgumentParser, BooleanOptionalAction
-import subprocess
+from argparse import ArgumentParser
 
 from alembic import command
 from alembic.config import Config
@@ -19,6 +18,7 @@ log_setup_colorlog(root_loglevel=logging.INFO)
 logger = logging.getLogger("openpectus.aggregator.aggregator")
 logger.setLevel(logging.INFO)
 logging.getLogger("openpectus.protocol.aggregator_dispatcher").setLevel(logging.INFO)
+logging.getLogger("openpectus.aggregator.routers.webpush").setLevel(logging.DEBUG)
 
 def get_arg_parser():
     parser = ArgumentParser("Start Aggregator server")
@@ -33,9 +33,10 @@ def get_arg_parser():
                         help=f"Minimum log level to send as sentry events. Default: '{sentry.EVENT_LEVEL_DEFAULT}'")
     parser.add_argument("-db", "--database", required=False, default=AggregatorServer.default_db_path,
                         help=f"Path to Sqlite3 database. Default: ./{AggregatorServer.default_db_filename}")
-    parser.add_argument("-lsp", "--lsp", action=BooleanOptionalAction, default=False, help="Start LSP server process")
     parser.add_argument("-secret", "--secret", required=False, default=AggregatorServer.default_secret,
                         help="Engines must know this secret to connect to the aggregator")
+    parser.add_argument("-wpk", "--webpush_keys_path", required=False, default=AggregatorServer.default_webpush_keys_path,
+                        help=f"Path to directory where VAPID key files for Webpush should be stored. Default: {AggregatorServer.default_webpush_keys_path}")
     return parser
 
 
@@ -58,13 +59,7 @@ def main():
     alembic_config.set_main_option("sqlalchemy.url", f"sqlite:///{args.database}")
     command.upgrade(alembic_config, "head")
 
-    server = AggregatorServer(title, args.host, args.port, args.frontend_dist_dir, args.database, args.secret)
-
-    # start lsp server in seperate process
-    if args.lsp:
-        lsp_mainpy_path = os.path.join(os.path.dirname(__file__), "..", "lsp", "main.py")
-        process = subprocess.Popen(["python", lsp_mainpy_path])  # --watch_parent"])
-        server.shutdown_callback = lambda: process.kill()
+    server = AggregatorServer(title, args.host, args.port, args.frontend_dist_dir, args.database, args.secret, args.webpush_keys_path)
 
     # seart aggregator server
     server.start()

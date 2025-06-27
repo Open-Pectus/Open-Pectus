@@ -21,11 +21,14 @@ export interface AppState {
   buildInfo?: BuildInfo;
   userData?: UserData;
   userPicture?: string;
+  hasFinishedAuthentication: boolean;
+  userId?: string;
 }
 
 const initialState: AppState = {
   processUnits: [],
   webSocketIsDisconnected: false,
+  hasFinishedAuthentication: false,
 };
 
 export const appReducer = createReducer(initialState,
@@ -50,5 +53,11 @@ export const appReducer = createReducer(initialState,
   on(AppActions.userPictureLoaded, (state, {userPicture}) => produce(state, draft => {
     draft.userPicture = userPicture;
   })),
+  on(AppActions.finishedAuthentication, state => produce(state, draft => {
+    draft.hasFinishedAuthentication = true;
+  })),
+  on(AppActions.userIdLoaded, (state, {userId}) => produce(state, draft => {
+    draft.userId = userId;
+  }))
 );
 

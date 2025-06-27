@@ -9,9 +9,7 @@ from uuid import UUID, uuid4
 from openpectus.engine.commands import EngineCommand
 from openpectus.lang.exec.tags import TagValueCollection
 from openpectus.lang.exec.uod import UodCommand
-from openpectus.lang.model.pprogram import (
-    PAlarm, PBlank, PComment, PInjectedNode, PNode, PProgram, PErrorInstruction, PWatch
-)
+import openpectus.lang.model.ast as p
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +21,11 @@ class RuntimeInfo:
     states. The record state contain a state name, time and the tag values
     at the time the state was created.
 
-    As interpretation progresses, the program AST nodes (subclasses of PNode)
+    As interpretation progresses, the program AST nodes (subclasses of p.Node)
     are visited and their semantics are executed. The records added are:
 
     - For all visited nodes, a record is added. The name of the record is
-      provided by PNode.runlog_name if overwritten by the particular subclass.
+      provided by p.Node.runlog_name if overwritten by the particular subclass.
       When a record is created, its exec_id is given a random UUID.
 
     - Instructions that are interpreted via an interrupt, reuse the record
@@ -78,14 +76,14 @@ class RuntimeInfo:
 
     def _get_runlog_id(self) -> str | None:
         for r in self.records:
-            if isinstance(r.node, PProgram):
+            if isinstance(r.node, p.ProgramNode):
                 return str(r.node.id)
 
-    def _get_record_runlog_items(self, r: RuntimeRecord) -> list[RunLogItem]:
-        if isinstance(r.node, (PProgram, PBlank, PComment)):
+    def _get_record_runlog_items(self, r: RuntimeRecord) -> list[RunLogItem]:  # noqa C901
+        if isinstance(r.node, (p.ProgramNode, p.BlankNode, p.CommentNode)):
             return []
         if r.name is None:
-            if isinstance(r.node, (PInjectedNode, PErrorInstruction)):
+            if isinstance(r.node, (p.InjectedNode, p.ErrorInstructionNode)):
                 return []
             node_name = str(r.node) if r.node is not None else "node is None"
             logger.error(f"Runtime record has empty name. node: {node_name}. Fix this error or add a rule exception.")
@@ -152,6 +150,9 @@ class RuntimeInfo:
                                  f"record state command_exec_id {state.command_exec_id}")
                     item.id = str(state.command_exec_id)
                     command = state.command
+                elif state.state_name == RuntimeRecordStateEnum.AwaitingThreshold:
+                    assert item is not None
+                    item.state = RunLogItemState.AwaitingThreshold
 
                 if not is_conclusive_state and item is not None:
                     item.cancellable = r.node.cancellable
@@ -160,6 +161,8 @@ class RuntimeInfo:
                         if isinstance(command, UodCommand):
                             item.cancellable = True  # PCommand.cancellable does not support uod commands
                         self._update_item_progress(item, command)
+                    elif r.progress is not None:
+                        self._update_item_progress(item, r)
 
                 if is_conclusive_state:
                     assert item is not None
@@ -169,7 +172,7 @@ class RuntimeInfo:
                     item.forcible = False
 
                 if not has_more_states or is_conclusive_state:
-                    if item is not None:
+                    if item is not None and item.state not in [RunLogItemState.Unknown, RunLogItemState.AwaitingThreshold]:
                         items.append(item)
                         item = None
                         command = None
@@ -187,7 +190,7 @@ class RuntimeInfo:
             # UodCommandSet signifies the start of a uod command invocation
             split_states = self._split_states_by_state_name(
                 r.states, RuntimeRecordStateEnum.UodCommandSet, include_prestart_states)
-        elif isinstance(r.node, (PAlarm, PWatch)):
+        elif isinstance(r.node, (p.AlarmNode, p.WatchNode)):
             # AwaitingCondition signifies the start of a new invocation for alarm and watch nodes
             split_states = self._split_states_by_state_name(
                 r.states, RuntimeRecordStateEnum.AwaitingCondition, include_prestart_states)
@@ -238,14 +241,22 @@ class RuntimeInfo:
                 except Exception:
                     raise
 
-    def _update_item_progress(self, item: RunLogItem, command: EngineCommand):
-        progress = command.get_progress()
-        if isinstance(progress, float):
-            item.progress = progress
-        elif isinstance(progress, bool) and progress:
-            item.progress = 0.5
-        else:
-            item.progress = None
+    def _update_item_progress(self, item: RunLogItem, source: EngineCommand | RuntimeRecord):
+        if isinstance(source, EngineCommand):
+            progress = source.get_progress()
+            if isinstance(progress, float):
+                item.progress = progress
+            elif isinstance(progress, bool) and progress:
+                item.progress = 0.5
+            else:
+                item.progress = None
+        elif isinstance(source, RuntimeRecord):
+            if isinstance(source.progress, float):
+                item.progress = source.progress
+            elif isinstance(source.progress, bool) and source.progress:
+                item.progress = 0.5
+            else:
+                item.progress = None
         # logger.info(f"Updating progress to {item.progress}")
 
     def get_exec_record(self, exec_id: UUID) -> RuntimeRecord | None:
@@ -262,19 +273,31 @@ class RuntimeInfo:
                     if state.command is not None:
                         return state.command, record
 
-    def get_last_node_record_or_none(self, node: PNode) -> RuntimeRecord | None:
+    def get_last_node_record_or_none(self, node: p.Node) -> RuntimeRecord | None:
+        """ Get last record by node id """
         for r in reversed(self._records):
-            if r.node == node:
+            if r.node.id == node.id:
                 return r
 
-    def get_last_node_record(self, node: PNode) -> RuntimeRecord:
+    def get_last_node_record(self, node: p.Node) -> RuntimeRecord:
+        """ Get last record by node id. Raise if no record is found """
         record = self.get_last_node_record_or_none(node)
         if record is None:
-            raise ValueError("Node has no records")
+            raise ValueError(f"Node {node} has no records")
         return record
 
-    def get_node_records(self, node: PNode) -> list[RuntimeRecord]:
-        return [r for r in self._records if r.node.id == node.id]
+    def get_node_records(self, node: p.Node, test_by_instance=False) -> list[RuntimeRecord]:
+        """ Get the records that references the node.
+
+        If test_by_instance is False (the default) references are tested by node id, otherwise
+        references are tested by object reference. This is relevant when a method is edited while
+        it runs, where nodes are replaced with new instances and these new instances must also
+        be propagated to record node references.
+        """
+        if test_by_instance:
+            return [r for r in self._records if r.node == node]
+        else:
+            return [r for r in self._records if r.node.id == node.id]
 
     def _add_record(self, record: RuntimeRecord, exec_id: UUID):
         index = len(self._records)
@@ -285,7 +308,7 @@ class RuntimeInfo:
 
     def begin_visit(
             self,
-            node: PNode,
+            node: p.Node,
             time: float, tick: int,
             start_values: TagValueCollection) -> RuntimeRecord:
         exec_id = uuid4()
@@ -299,6 +322,7 @@ class RuntimeInfo:
     def find_instruction(
             self,
             instruction_name: str,
+            arguments: str | None,
             start_index: int,
             instruction_state: RuntimeRecordStateEnum | None
             ) -> int | None:
@@ -320,12 +344,29 @@ class RuntimeInfo:
         for i in range(start_index, size):
             r = records_copy[i]
             if r.node.instruction_name == instruction_name:
-                # logger.debug(f"Find record result: {i}, {instruction_name=}, {start_index=}")
-                # logger.debug(self.get_as_table())
-                if instruction_state is None:
-                    return i
-                elif r.has_state(instruction_state):
-                    return i
+                if arguments is None or r.node.arguments == arguments:
+                    # logger.debug(f"Find record result: {i}, {instruction_name=}, {start_index=}")
+                    # logger.debug(self.get_as_table())
+                    if instruction_state is None:
+                        return i
+                    elif r.has_state(instruction_state):
+                        return i
+
+    def patch_node_references(self, program: p.ProgramNode):
+        """ Patch node references to updated program nodes to account for edited method. """
+        logger.info("Patching node references in runtime records")
+        for r in self.records:
+            if r.node is not None and not isinstance(r.node, p.ProgramNode):
+                new_node = program.get_child_by_id(r.node.id)
+                if new_node is None:
+                    logger.error(f"No new node was found to replace {r.node}. Node cannot be patched")
+                else:
+                    if r.node != new_node:
+                        r.node = new_node
+                        logger.debug(f"Patched node reference {new_node}")
+                    else:
+                        logger.warning(f"Node not patched: {new_node} - old node already matched the new node!?")
+        logger.info("Patching complete")
 
     def get_record_by_index(self, index: int) -> RuntimeRecord | None:
         if index < 0:
@@ -339,16 +380,16 @@ class RuntimeInfo:
     def get_as_table(self, description: str = "") -> str:
         records = self.records.copy()
         lines = [f"Runtime records: {description}"]
-        lines.append("line | start | end   | name                 | instruction name     | states")
+        lines.append("line | start | end   | runlog name          | node name            | states")
         lines.append("-----|-------|-------|----------------------|----------------------|-------------------")
         for r in records:
             name = f"{str(r.name):<20}" if r.name is not None else f"{str(r.node):<20}"
-            inst_name = f"{str(r.node.instruction_name):<20}" \
-                if r.node.instruction_name is not None else "   -                  "
-            line = f"{int(r.node.line):4d}" if r.node.line is not None else "   -"
+            node_name = f"{str(r.node.name):<20}" \
+                if r.node.name is not None else "   -                  "
+            line = f"{int(r.node.position.line):4d}" if r.node.position.line is not None else "   -"
             states = ", ".join([f"{st.state_name}: {st.state_tick}" for st in r.states])
             end = f"{r.visit_end_tick:5d}" if r.visit_end_tick != -1 else "    -"
-            lines.append(f"{line}   {r.visit_start_tick:5d}   {end}   {name}   {inst_name}   {states}")
+            lines.append(f"{line}   {r.visit_start_tick:5d}   {end}   {name}   {node_name}   {states}")
         lines.append("-----|-------|-------|----------------------|----------------------|-------------------")
         return "\n".join(lines)
 
@@ -356,7 +397,7 @@ class RuntimeInfo:
         print(self.get_as_table(description))
 
 class RuntimeRecord:
-    def __init__(self, node: PNode, exec_id: UUID) -> None:
+    def __init__(self, node: p.Node, exec_id: UUID) -> None:
         self.exec_id: UUID = exec_id
         self.node = node
         self.name = node.runlog_name
@@ -369,13 +410,16 @@ class RuntimeRecord:
         self.start_values: TagValueCollection | None = None
         self.end_values: TagValueCollection | None = None
 
+        self.progress: float | None = None
+        """ Used for progress for interpreter commands that don't have an command instance """
+
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(name="{self.name}")'
 
     @staticmethod
     def null_record() -> RuntimeRecord:
         # Returns a Null Object value that can be used when a real value is not available
-        return RuntimeRecord(PNode(None), exec_id=uuid4())
+        return RuntimeRecord(p.Node(), exec_id=uuid4())
 
     def __repr__(self) -> str:
         return f"{self.name} | States: {', '.join([str(st) for st in self.states])}"
@@ -490,6 +534,9 @@ class RuntimeRecordState:
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(state_name="{self.state_name}")'
 
+    def __repr__(self):
+        return self.__str__()
+
 
 class RuntimeRecordStateEnum(StrEnum):
     """ Defines the states runtime records can take """
@@ -542,7 +589,7 @@ class RunLogItem:
         self.name: str = ""
         self.start: float = 0
         self.end: float | None = None
-        self.state: RunLogItemState = RunLogItemState.Waiting
+        self.state: RunLogItemState = RunLogItemState.Unknown
         self.progress: float | None = None
         self.start_values: TagValueCollection = TagValueCollection.empty()
         self.end_values: TagValueCollection = TagValueCollection.empty()
@@ -557,8 +604,11 @@ class RunLogItem:
 
 class RunLogItemState(StrEnum):
     """ Defines the states that commands in the run log can take """
-    Waiting = auto()
-    """ Waiting for threshold or condition """
+
+    Unknown = auto()
+    """ State unknown. Items in this state are not rendered. """
+    AwaitingThreshold = auto()
+    """ Waiting for threshold. Items in this state are not rendered """
     Started = auto()
     """ Command has started """
     Cancelled = auto()
@@ -574,3 +624,56 @@ class RunLogItemState(StrEnum):
     def has_value(value: str):
         """ Determine if enum has this string value defined. Case sensitive. """
         return hasattr(RunLogItemState, value)
+
+
+def assert_Runlog_HasItem(runtimeinfo: RuntimeInfo, name: str):
+    runlog = runtimeinfo.get_runlog()
+    for item in runlog.items:
+        if item.name == name:
+            return
+    item_names = [item.name for item in runlog.items]
+    raise AssertionError(f"Runlog has no item named '{name}'. It has these names:  {','.join(item_names)}")
+
+def assert_Runlog_HasNoItem(runtimeinfo: RuntimeInfo, name: str):
+    runlog = runtimeinfo.get_runlog()
+    item_names = [item.name for item in runlog.items]
+    for item in runlog.items:
+        if item.name == name:
+            raise AssertionError(f"Runlog has item named '{name}' which was not expected. It has these names:  {','.join(item_names)}")
+
+def assert_Runlog_HasItem_Started(runtimeinfo: RuntimeInfo, name: str):
+    runlog = runtimeinfo.get_runlog()
+    for item in runlog.items:
+        if item.name == name and item.state == RunLogItemState.Started:
+            return
+    raise AssertionError(f"Runlog has no item named '{name}' in Started state")
+
+def assert_Runlog_HasItem_Completed(runtimeinfo: RuntimeInfo, name: str, min_times=1):
+    occurrences = 0
+    runlog = runtimeinfo.get_runlog()
+    for item in runlog.items:
+        if item.name == name and item.state == RunLogItemState.Completed:
+            occurrences += 1
+
+    if occurrences < min_times:
+        raise AssertionError(
+            f"Runlog item named '{name}' did not occur in Completed state at least " +
+            f"{min_times} time(s). It did occur {occurrences} time(s)")
+
+def assert_Runtime_HasRecord(runtimeinfo: RuntimeInfo, name: str):
+    for r in runtimeinfo.records:
+        if r.name == name:
+            return
+    raise AssertionError(f"Runtime has no record named '{name}'")
+
+def assert_Runtime_HasRecord_Started(runtimeinfo: RuntimeInfo, name: str):
+    for r in runtimeinfo.records:
+        if r.name == name and r.has_state(RuntimeRecordStateEnum.Started):
+            return
+    raise AssertionError(f"Runtime has no record named '{name}' in state Started")
+
+def assert_Runtime_HasRecord_Completed(runtimeinfo: RuntimeInfo, name: str):
+    for r in runtimeinfo.records:
+        if r.name == name and r.has_state(RuntimeRecordStateEnum.Started):
+            return
+    raise AssertionError(f"Runtime has no record named '{name}' in state Completed")

@@ -3,8 +3,10 @@ import re
 import unittest
 
 from openpectus.engine.engine import Engine
-from openpectus.engine.internal_commands import InternalEngineCommand
-from openpectus.lang.exec.uod import RegexNumber, RegexNumberOptional, UodBuilder
+from openpectus.engine.internal_commands import InternalEngineCommand, InternalCommandsRegistry
+from openpectus.lang.exec.commands import InterpreterCommandEnum
+from openpectus.lang.exec.regex import REGEX_DURATION, RegexNumber, RegexNumberOptional
+from openpectus.lang.exec.uod import RegexNamedArgumentParser, UodBuilder
 from openpectus.lang.exec.argument_specification import command_argument, ArgSpec
 
 
@@ -40,6 +42,7 @@ class TestArgumentSpecification(unittest.TestCase):
             ...
 
         self.assertEqual(ArgSpec.NoCheckInstance, TestCommand.argument_validation_spec)
+        self.assertEqual(True, TestCommand.argument_validation_spec.validate(""))
         self.assertEqual(True, TestCommand.argument_validation_spec.validate(" "))
         self.assertEqual(True, TestCommand.argument_validation_spec.validate(" something  "))
 
@@ -80,8 +83,8 @@ class TestArgumentSpecification(unittest.TestCase):
         command_definitions = engine.get_command_definitions()
         self.assertIsNotNone(command_definitions)
         self.assertTrue("Wait" in [c.name for c in command_definitions])
-        self.assertTrue("Start" in [c.name for c in command_definitions])
-        self.assertTrue("Unhold" in [c.name for c in command_definitions])
+        self.assertTrue("Pause" in [c.name for c in command_definitions])
+        self.assertTrue("Hold" in [c.name for c in command_definitions])
 
         wait_cmd = next(c for c in command_definitions if c.name == "Wait")
         self.assertIsNotNone(wait_cmd.validator)
@@ -118,6 +121,25 @@ class TestArgumentSpecification(unittest.TestCase):
         assert_is_match("5")
         assert_is_match("5 f")
 
+    def test_regex_int(self):
+        regex = re.compile(RegexNumber(units=None, int_only=True))
+
+        def assert_is_match(arg: str, match: bool = False):
+            with self.subTest(arg + " | " + str(match)):
+                if match:
+                    self.assertIsNotNone(regex.match(arg))
+                else:
+                    self.assertIsNone(regex.match(arg))
+
+        assert_is_match("5", True)
+        assert_is_match("5.89", False)
+        assert_is_match("-5", True)
+        assert_is_match("-5.89", False)
+        assert_is_match("-", False)
+        assert_is_match("-.8", False)
+        assert_is_match(".8", False)
+
+
     def test_regex_optional_number_w_unit(self):
         regex = re.compile(RegexNumberOptional(units=['s', 'min', 'h']))
 
@@ -134,3 +156,72 @@ class TestArgumentSpecification(unittest.TestCase):
         assert_is_match("5")
         assert_is_match("5 f")
         assert_is_match("s")
+
+    def test_wait(self):
+        spec = ArgSpec.Regex(regex=REGEX_DURATION)
+
+        self.assertEqual(True, spec.validate("5s"))
+
+        self.assertEqual(False, spec.validate("s"))
+        self.assertEqual(False, spec.validate(""))
+        self.assertEqual(False, spec.validate(" "))
+
+    def test_registry_internal_interpreter_cmds(self):
+        with InternalCommandsRegistry(engine=None) as registry:
+
+            def assert_is_match(arg: str, match: bool = False):
+                nonlocal command_name
+                nonlocal parser
+                assert parser is not None
+                with self.subTest(command_name + ": " + arg + " | " + str(match)):
+                    self.assertEqual(match, parser.validate(arg))
+
+            definitions = registry.get_command_definitions()
+
+            # Base must be one of the base units in the total list
+            command_name = InterpreterCommandEnum.BASE
+            definition = next((d for d in definitions if d.name == command_name), None)
+            assert definition is not None and definition.validator is not None
+            parser = RegexNamedArgumentParser.deserialize(definition.validator)
+            assert parser is not None
+
+            assert_is_match("s", True)
+            assert_is_match("min", True)
+            assert_is_match("h", True)
+            assert_is_match(" s", True)
+            assert_is_match("min ", True)
+            assert_is_match(" h ", True)
+            assert_is_match("CV", True)
+            assert_is_match("kg", True)
+            assert_is_match("L", True)
+
+            assert_is_match("xx", False)
+
+
+            command_name = InterpreterCommandEnum.INCREMENT_RUN_COUNTER
+            definition = next((d for d in definitions if d.name == command_name), None)
+            assert definition is not None and definition.validator is not None
+            parser = RegexNamedArgumentParser.deserialize(definition.validator)
+            assert parser is not None
+
+            assert_is_match("", True)
+            # assert_is_match(" ", True) # NoArgs means on whitespace - this may or may not be important.
+
+            assert_is_match("x", False)
+            assert_is_match(" y ", False)
+            assert_is_match("1", False)
+            assert_is_match(" 2 ", False)
+
+            command_name = InterpreterCommandEnum.RUN_COUNTER
+            definition = next((d for d in definitions if d.name == command_name), None)
+            assert definition is not None and definition.validator is not None
+            parser = RegexNamedArgumentParser.deserialize(definition.validator)
+            assert parser is not None
+
+            assert_is_match("3", True)
+            assert_is_match(" 4", True)
+            assert_is_match(" 5 ", True)
+
+            assert_is_match("", False)
+            assert_is_match("-2", False)
+            assert_is_match("xx", False)

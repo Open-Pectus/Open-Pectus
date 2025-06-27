@@ -5,17 +5,43 @@ from typing import Any, Callable, Generator
 from openpectus.engine.commands import EngineCommand
 from openpectus.engine.models import EngineCommandEnum
 from openpectus.lang.exec.argument_specification import ArgSpec
+from openpectus.lang.exec.commands import InterpreterCommandEnum
+import openpectus.lang.exec.regex as regex
 from openpectus.lang.exec.uod import RegexNamedArgumentParser
 from openpectus.protocol.models import CommandDefinition
+from openpectus.aggregator.command_examples import examples
 
 
 logger = logging.getLogger(__name__)
+
 
 class InternalCommandsRegistry:
     def __init__(self, engine):
         self.engine = engine
         self._command_map: dict[str, Callable[[], InternalEngineCommand]] = {}
-        self._command_spec: dict[str, ArgSpec] = {}
+        self._command_spec: dict[str, ArgSpec] = {
+            InterpreterCommandEnum.BASE: ArgSpec.Regex(regex.REGEX_BASE_ARG),
+            InterpreterCommandEnum.INCREMENT_RUN_COUNTER: ArgSpec.NoArgs(),
+            InterpreterCommandEnum.RUN_COUNTER: ArgSpec.Regex(regex.REGEX_INT),
+            InterpreterCommandEnum.WAIT: ArgSpec.Regex(regex.REGEX_DURATION),
+            "End block": ArgSpec.NoArgs(),
+            "End blocks": ArgSpec.NoArgs(),
+            "Stop": ArgSpec.NoArgs(),
+            "Restart": ArgSpec.NoArgs(),
+        }
+        # system cmds that are implemented in interpreter and have no command class
+        others = [
+            "Watch",
+            "Alarm",
+            "Block",
+            "Mark",
+            "Macro",
+            "Call macro",
+            "Batch",
+        ]
+        for other_cmd in others:
+            self._command_spec[other_cmd] = ArgSpec.NoCheck()
+
         self._command_instances: dict[str, InternalEngineCommand] = {}
 
     def __str__(self) -> str:
@@ -97,12 +123,14 @@ class InternalCommandsRegistry:
         if len(self._command_map) == 0:
             raise ValueError("Command map not initialized")
         command_definitions = []
-        for name, spec in self._command_spec.items():
+        for example in examples:
+            name = example.name
+            spec = self._command_spec.get(name)
             if isinstance(spec, ArgSpec):
                 parser = RegexNamedArgumentParser(regex=spec.regex)
-                command_definitions.append(CommandDefinition(name=name, validator=parser.serialize()))
+                command_definitions.append(CommandDefinition(name=name, validator=parser.serialize(), docstring=example.example))
             else:
-                command_definitions.append(CommandDefinition(name=name, validator=None))
+                command_definitions.append(CommandDefinition(name=name, validator=None, docstring=example.example))
         return command_definitions
 
 class InternalEngineCommand(EngineCommand):
@@ -121,13 +149,24 @@ class InternalEngineCommand(EngineCommand):
         self.run_result: Generator[None, None, None] | None = None
         self.kvargs: dict[str, Any] = {}
 
-    def _run(self) -> Generator[None, None, None] | None:
-        """ Override to implement the command using a generator style
-        where each yield pauses execution until the next tick (i.e. call to execute()). """
-        raise NotImplementedError()
+    def validate_arguments(self, arguments: str):
+        """ Validates the runtime argument string provided to the command against the command's ArgSpec.
 
-    def init_args(self, kvargs: dict[str, Any]):
-        self.kvargs = kvargs
+        Raises ValueError if the argument is not valid. Otherwise, sets kvargs to the regex groups of the ArgSpec.
+
+        Override for custom (non-regex) argument handling. """
+        if self.argument_validation_spec == ArgSpec.NoCheckInstance:
+            return {}
+        groupdict = self.argument_validation_spec.validate_w_groups(argument=arguments)
+        if groupdict is None:
+            raise ValueError(f"Argument '{arguments}' for command '{self.name}' is not valid")
+        self.kvargs = groupdict
+
+    def _run(self) -> Generator[None, None, None] | None:
+        """ Override to implement the command using a generator style where each yield pauses execution until the next tick
+        (i.e. call to execute()). """
+        # TODO consider mechanism to save/load command state so commands have a supported way to resume if engine crashes
+        raise NotImplementedError()
 
     def fail(self):
         self._failed = True

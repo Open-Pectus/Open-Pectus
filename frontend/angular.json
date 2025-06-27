@@ -60,42 +60,41 @@
               "vscode-oniguruma",
               "vscode-textmate",
               "@vscode/iconv-lite-umd",
-              "!../../../../../../../style-loader/dist/runtime/styleTagTransform.js",
-              "!../../../../../../../style-loader/dist/runtime/injectStylesIntoStyleTag.js",
-              "!../../../../../../../style-loader/dist/runtime/insertBySelector.js",
-              "!../../../../../../../style-loader/dist/runtime/insertStyleElement.js",
-              "!../../../../../../../style-loader/dist/runtime/setAttributesWithoutAttributes.js",
-              "!../../../../../../../style-loader/dist/runtime/styleDomAPI.js"
+              "!../../../../../../../../style-loader/dist/runtime/styleTagTransform.js",
+              "!../../../../../../../../style-loader/dist/runtime/injectStylesIntoStyleTag.js",
+              "!../../../../../../../../style-loader/dist/runtime/insertBySelector.js",
+              "!../../../../../../../../style-loader/dist/runtime/insertStyleElement.js",
+              "!../../../../../../../../style-loader/dist/runtime/setAttributesWithoutAttributes.js",
+              "!../../../../../../../../style-loader/dist/runtime/styleDomAPI.js"
             ],
             "inlineStyleLanguage": "scss",
             "assets": [
               "src/favicon.ico",
               "src/assets",
+              "src/manifest.webmanifest",
               {
                 "glob": "codicon.ttf",
                 "input": "./node_modules/monaco-editor/esm/vs/base/browser/ui/codicons/codicon",
                 "output": ""
               },
-              "src/mockServiceWorker.js",
-              {
-                "glob": "editorWorker-es.js",
-                "input": "./node_modules/monaco-editor-wrapper/dist/workers",
-                "output": "/monaco-workers/"
-              }
+              "src/mockServiceWorker.js"
             ],
             "styles": [
               "src/styles.scss",
-              "node_modules/@vscode/codicons/dist/codicon.css"
+              "node_modules/@vscode/codicons/dist/codicon.css",
+              "node_modules/ngx-toastr/toastr.css"
             ],
-            "scripts": []
+            "scripts": [],
+            "serviceWorker": true,
+            "ngswConfigPath": "ngsw-config.json"
           },
           "configurations": {
             "production": {
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "500kb",
-                  "maximumError": "1mb"
+                  "maximumWarning": "2mb",
+                  "maximumError": "100mb"
                 },
                 {
                   "type": "anyComponentStyle",

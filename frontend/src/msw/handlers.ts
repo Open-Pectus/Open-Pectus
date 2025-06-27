@@ -3,8 +3,10 @@
 import { format, getSeconds, sub } from 'date-fns';
 import { delay, http, HttpResponse, PathParams } from 'msw';
 import {
+  ActiveUser,
   AggregatedErrorLog,
   AuthConfig,
+  BuildInfo,
   CommandExample,
   ControlState,
   ExecutableCommand,
@@ -40,6 +42,8 @@ const processUnits: ProcessUnit[] = [
       progress_pct: 30,
     },
     current_user_role: 'admin',
+    uod_author_name: 'admin',
+    uod_author_email: 'admin@example.com',
   },
   {
     name: 'Some other unit with a long title',
@@ -50,6 +54,8 @@ const processUnits: ProcessUnit[] = [
       state: 'ready',
     },
     current_user_role: 'admin',
+    uod_author_name: 'admin',
+    uod_author_email: 'admin@example.com',
   },
   {
     name: 'Some third unit',
@@ -61,6 +67,8 @@ const processUnits: ProcessUnit[] = [
       last_seen_date: new Date().toJSON(),
     },
     current_user_role: 'admin',
+    uod_author_name: 'admin',
+    uod_author_email: 'admin@example.com',
   },
   {
     name: 'A fourth for linebreak',
@@ -71,6 +79,8 @@ const processUnits: ProcessUnit[] = [
       state: 'error',
     },
     current_user_role: 'viewer',
+    uod_author_name: 'viewer',
+    uod_author_email: 'viewer@example.com',
   },
 ];
 
@@ -160,6 +170,7 @@ const getProcessValues: () => ProcessValue[] = () => [
     value: 123 + Math.random() * 2,
     value_unit: 'L/h',
     direction: 'output',
+    simulated: true,
     commands: [
       {
         command: 'fdsafsa',
@@ -391,6 +402,13 @@ export const handlers = [
     });
   }),
 
+  http.get('/api/build_info', () => {
+    return HttpResponse.json<BuildInfo>({
+      build_number: 'MOCKED',
+      git_sha: 'MOCKED',
+    });
+  }),
+
   http.get('/api/process_units', () => {
     return HttpResponse.json<ProcessUnit[]>(processUnits);
   }),
@@ -426,7 +444,7 @@ export const handlers = [
         run_id: crypto.randomUUID(),
         started_date: getStartedDate(),
         completed_date: getCompletedDate(),
-        contributors: ['Eskild'],
+        contributors: [{id: '', name: 'Eskild'}],
         engine_computer_name: 'A computer name',
         engine_version: '0.0.1',
         engine_hardware_str: 'something',
@@ -441,7 +459,7 @@ export const handlers = [
         run_id: crypto.randomUUID(),
         started_date: getStartedDate(),
         completed_date: getCompletedDate(),
-        contributors: ['Eskild', 'Morten'],
+        contributors: [{id: '', name: 'Morten'}, {id: '', name: 'Eskild'}],
         engine_computer_name: 'A computer name',
         engine_version: '0.0.1',
         engine_hardware_str: 'something',
@@ -456,7 +474,7 @@ export const handlers = [
         run_id: crypto.randomUUID(),
         started_date: getStartedDate(),
         completed_date: getCompletedDate(),
-        contributors: ['Eskild'],
+        contributors: [{id: '', name: 'Eskild'}],
         engine_computer_name: 'A computer name',
         engine_version: '0.0.1',
         engine_hardware_str: 'something',
@@ -471,7 +489,7 @@ export const handlers = [
         run_id: crypto.randomUUID(),
         started_date: getStartedDate(),
         completed_date: getCompletedDate(),
-        contributors: ['Eskild'],
+        contributors: [{id: '', name: 'Eskild'}],
         engine_computer_name: 'A computer name',
         engine_version: '0.0.1',
         engine_hardware_str: 'something',
@@ -571,7 +589,7 @@ export const handlers = [
       {id: 'g', content: '}'},
     ];
     const result = HttpResponse.json<MethodAndState>({
-      method: {lines: lines},
+      method: {lines: lines, version: 3, last_author: 'some guy'},
       state: {
         started_line_ids: startedLines.map(no => (no + 9).toString(36)),
         executed_line_ids: executedLines.map(no => (no + 9).toString(36)),
@@ -788,6 +806,8 @@ export const handlers = [
           {id: 'f', content: ' "another unrun": "line"'},
           {id: 'g', content: '}'},
         ],
+        version: 3,
+        last_author: 'your worst enemy',
       },
       state: {
         started_line_ids: ['d'],
@@ -920,7 +940,7 @@ export const handlers = [
     return HttpResponse.json<RecentRun>({
       started_date: sub(new Date(), {hours: 3, minutes: 22, seconds: 11}).toISOString(),
       completed_date: sub(new Date(), {hours: 1}).toISOString(),
-      contributors: ['Morten', 'Eskild'],
+      contributors: [{id: '', name: 'Morten'}, {id: '', name: 'Eskild'}],
       engine_id: 'A process unit id',
       run_id: crypto.randomUUID(),
       engine_computer_name: 'A computer name',
@@ -1137,5 +1157,17 @@ Some;Csv;Data
       line.end = new Date().toISOString();
     }
     return new HttpResponse();
+  }),
+
+  http.post('/api/process_unit/:unitId/register_active_user', () => {
+    return new HttpResponse();
+  }),
+
+  http.post('/api/process_unit/:unitId/unregister_active_user', () => {
+    return new HttpResponse();
+  }),
+
+  http.get('/api/process_unit/:unitId/other_active_users', () => {
+    return HttpResponse.json<ActiveUser[]>([]);
   }),
 ];

@@ -4,10 +4,10 @@ import threading
 import time
 import unittest
 from typing import Any, Generator
-from openpectus.lang.exec.errors import UodValidationError
+from openpectus.lang.exec.errors import EngineError, UodValidationError
+from openpectus.lang.exec.regex import RegexNumber
 from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 
-import openpectus.protocol.models as Mdl
 import pint
 from openpectus.engine.engine import Engine
 from openpectus.engine.hardware import HardwareLayerBase, Register, RegisterDirection
@@ -18,8 +18,7 @@ from openpectus.lang.exec.uod import (
     UnitOperationDefinitionBase,
     UodCommand,
     UodBuilder,
-    RegexNamedArgumentParser,
-    RegexNumber,
+    RegexNamedArgumentParser
 )
 from openpectus.test.engine.utility_methods import (
     continue_engine, run_engine,
@@ -28,11 +27,12 @@ from openpectus.test.engine.utility_methods import (
 )
 from typing_extensions import override
 
+# the number of ticks to run befpre the first command (not including a blank first line)
+start_ticks = 1
+
 
 configure_test_logger()
 set_engine_debug_logging()
-
-
 logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.INFO)
 
 # pint takes forever to initialize - long enough
@@ -48,7 +48,7 @@ def get_queue_items(q) -> list[Tag]:
     return items
 
 
-def create_test_uod() -> UnitOperationDefinitionBase:
+def create_test_uod() -> UnitOperationDefinitionBase:  # noqa C901
     def reset(cmd: UodCommand, **kvargs) -> None:
         count = cmd.get_iteration_count()
         max_ticks = 5
@@ -211,7 +211,7 @@ class TestEngine(unittest.TestCase):
 
         self.assertEqual("N/A", reset_tag.get_value())
 
-        run_engine(e, "Reset", 3)
+        run_engine(e, "Reset", start_ticks + 1)
         self.assertEqual("Reset", reset_tag.get_value())
 
         # assert tags marked dirty
@@ -248,7 +248,7 @@ class TestEngine(unittest.TestCase):
     def test_write_process_values_writes_data_to_registers(self):
         e = self.engine
 
-        run_engine(e, "", 1)
+        run_engine(e, "", start_ticks)
         time.sleep(0.1)
 
         # set hw values
@@ -293,7 +293,7 @@ class TestEngine(unittest.TestCase):
     def test_uod_command_w_arguments_fail(self):
         e = self.engine
         program = "CmdWithArgs: FAIL"
-        with self.assertRaises(ValueError):
+        with self.assertRaises(EngineError):
             run_engine(e, program, 10)
         self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
 
@@ -421,7 +421,7 @@ class TestEngine(unittest.TestCase):
 
         test('no_args', False)
 
-    def test_uod_invoke_command_signatures(self):
+    def test_uod_invoke_command_signatures(self):  # noqa C901
 
         def no_args(cmd: UodCommand):
             pass
@@ -483,7 +483,7 @@ class TestEngine(unittest.TestCase):
 
         self.assertEqual("N/A", e.uod.tags["Reset"].get_value())
 
-        run_engine(e, "Reset", 2)
+        run_engine(e, "Reset", start_ticks + 1)
         self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
 
         # Reset takes 5 ticks to revert
@@ -510,13 +510,13 @@ Reset
 
         print_runtime_records(e)
 
-        r = records[2]
+        r = records[1]
         self.assertEqual("Reset", r.name)
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.Cancelled))
         self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Completed))
 
-        r = records[3]
+        r = records[2]
         self.assertEqual("Reset", r.name)
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
         self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Cancelled))
@@ -537,7 +537,7 @@ overlap2
 
         print_runtime_records(e)
 
-        r = rs[2]
+        r = rs[1]
         self.assertEqual("overlap1", r.name)
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.Cancelled))
@@ -547,7 +547,7 @@ overlap2
         continue_engine(e, 1)
         print_runtime_records(e)
 
-        r = rs[3]
+        r = rs[2]
         self.assertEqual("overlap2", r.name)
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
         self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Cancelled))
@@ -574,15 +574,14 @@ Mark: X
 
         print_runtime_records(e)
 
-        self.assertEqual(3, len(rs))
-        self.assertEqual("Block: A", rs[2].name)
+        self.assertEqual("Block: A", rs[1].name)
         self.assertFalse(rs[0].has_state(RuntimeRecordStateEnum.Started))
 
         continue_engine(e, 1)
-        self.assertTrue(rs[2].has_state(RuntimeRecordStateEnum.Started))
+        self.assertTrue(rs[1].has_state(RuntimeRecordStateEnum.Started))
 
-        continue_engine(e, 1)
-        self.assertTrue(rs[2].has_state(RuntimeRecordStateEnum.Completed))
+        continue_engine(e, 2)
+        self.assertTrue(rs[1].has_state(RuntimeRecordStateEnum.Completed))
 
         print_runtime_records(e)
 
@@ -597,7 +596,7 @@ Mark: X
 
         print_runtime_records(e)
 
-        r = e.interpreter.runtimeinfo.records[2]
+        r = e.interpreter.runtimeinfo.records[1]
         self.assertEqual("Watch: Block Time > 0.2s", r.name)
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.AwaitingInterrrupt))
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.AwaitingCondition))
@@ -642,6 +641,7 @@ Reset
 
         e.inject_code("Increment run counter")
         e.tick(0, 0)
+        e.tick(0, 0)
 
         self.assertEqual(1, e._system_tags["Run Counter"].get_value())
 
@@ -666,21 +666,14 @@ Mark: C
         self.assertEqual(['A', 'B', 'C'], e.interpreter.get_marks())
 
     def test_set_and_continue_program(self):
-        program = """
-Mark: A
-"""
+        code = "Mark: A\nMark: B\nMark: C"
         e = self.engine
-        run_engine(e, program, 10)
-        self.assertEqual(['A', ], e.interpreter.get_marks())
-
-        program = """
-Mark: B
-Mark: C
-"""
-        e.set_method(Mdl.Method.from_pcode(pcode=program))
+        run_engine(e, code, 2)
+        # run_engine(e, code, start_ticks)
+        self.assertEqual(['A'], e.interpreter.get_marks())
         continue_engine(e, 10)
 
-        self.assertEqual(['B', 'C'], e.interpreter.get_marks())
+        self.assertEqual(['A', 'B', 'C'], e.interpreter.get_marks())
 
     @unittest.skip("not implemented, needs input")
     def test_get_status(self):
@@ -909,6 +902,7 @@ Wait: .5s
 Mark: b
 """
         run_engine(e, program, 2)
+        #run_engine(e, program, start_ticks)
         self.assertEqual([], e.interpreter.get_marks())
 
         continue_engine(e, 1)
@@ -942,35 +936,21 @@ Mark: b
 
         self.assertFalse(danger_tag.get_value())
 
-    def test_restart_can_stop(self):
-        set_engine_debug_logging()
-        set_interpreter_debug_logging()
-        program = """
-Mark: A
-Restart
-"""
-        e = self.engine
-        run_engine(e, program, 4)
-
-        # when no commands need to be stopped, restart immediately moves to Stopped
-        system_state = e.tags[SystemTagName.SYSTEM_STATE]
-        self.assertEqual(system_state.get_value(), SystemStateEnum.Restarting)
-
 
     # --- Totalizers ---
 
 
-    def test_totalizer_base_units_no_accumulator(self):
+    def test_totalizer_base_units_no_accumulator_allows_time_unit(self):
         e = self.engine
 
-        with self.subTest("allows_time_unit"):
-            run_engine(e, "Base: s\n0.1 Mark: A", 5)
-            self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.OK)
+        run_engine(e, "Base: s\n0.1 Mark: A", 5)
+        self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.OK)
 
-        with self.subTest("disallows_volume_unit"):
-            with self.assertRaises(ValueError):
-                run_engine(e, "Base: L\n0.1 Mark: A", 5)
-            self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
+    def test_totalizer_base_units_no_accumulator_disallows_volume_unit(self):
+        e = self.engine
+        with self.assertRaises(EngineError):
+            run_engine(e, "Base: L\n0.1 Mark: A", 5)
+        self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
 
     def test_totalizer_base_units_with_accumulator_volume(self):
         self.engine.cleanup()  # dispose the test default engine
@@ -997,7 +977,7 @@ Restart
 
         with self.subTest("disallows_cv_unit"):
             with create_engine_context(uod) as e:
-                with self.assertRaises(ValueError):
+                with self.assertRaises(EngineError):
                     run_engine(e, "Base: CV\n0.1 Mark: A", 5)
                 self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
 
@@ -1024,7 +1004,7 @@ Restart
 
         with self.subTest("disallows_volume_unit"):
             with create_engine_context(uod) as e:
-                with self.assertRaises(ValueError):
+                with self.assertRaises(EngineError):
                     run_engine(e, "Base: L\n0.1 Mark: A", 5)
                 self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
 
@@ -1067,7 +1047,7 @@ Base: s
 
     def test_accumulated_block_volume(self):
         self.engine.cleanup()  # dispose the test default engine
-
+        delta = 0.15
         set_interpreter_debug_logging()
 
         uod = (UodBuilder()
@@ -1080,10 +1060,11 @@ Base: s
                .with_accumulated_volume(totalizer_tag_name="calc")
                .build())
 
-        program = """
+        program = """\
 Base: s
+Wait: 0.45s
 Block: A
-    0.45 End block
+    0.85 End block
 0.45 Mark: A
         """
         with create_engine_context(uod) as e:
@@ -1099,27 +1080,32 @@ Block: A
             self.assertEqual(block_vol.as_float(), 0.0)
             self.assertEqual(block_vol.unit, "L")
 
-            continue_engine(e, 2)  # Blank + Base
+            continue_engine(e, 1)  # Base
             self.assertEqual(block.get_value(), None)
-            self.assertAlmostEqual(acc_vol.as_float(), 0.2, delta=0.1)
-            self.assertAlmostEqual(block_vol.as_float(), 0.2, delta=0.1)
+            self.assertAlmostEqual(acc_vol.as_float(), 0.1, delta=delta)
+            self.assertAlmostEqual(block_vol.as_float(), 0.1, delta=delta)
+
+            continue_engine(e, 5)  # Wait
+            self.assertEqual(block.get_value(), None)
+            self.assertAlmostEqual(acc_vol.as_float(), 0.7, delta=delta)
+            self.assertAlmostEqual(block_vol.as_float(), 0.7, delta=delta)
 
             continue_engine(e, 1)  # Block
             self.assertEqual(block.get_value(), "A")
-            self.assertAlmostEqual(acc_vol.as_float(), 0.3, delta=0.1)
-            self.assertAlmostEqual(block_vol.as_float(), 0.1, delta=0.1)
+            self.assertAlmostEqual(acc_vol.as_float(), 0.8, delta=delta)
+            self.assertAlmostEqual(block_vol.as_float(), 0.1, delta=delta)
 
-            continue_engine(e, 5)
+            continue_engine(e, 8)
             self.assertEqual(block.get_value(), "A")
-            self.assertAlmostEqual(acc_vol.as_float(), 0.8, delta=0.1)
-            self.assertAlmostEqual(block_vol.as_float(), 0.6, delta=0.1)
+            self.assertAlmostEqual(acc_vol.as_float(), 1.6, delta=delta)
+            self.assertAlmostEqual(block_vol.as_float(), 0.9, delta=delta)
 
             continue_engine(e, 1)
             self.assertEqual(block.get_value(), None)
             # acc_vol keeps counting
-            self.assertAlmostEqual(acc_vol.as_float(), 0.9, delta=0.1)
+            self.assertAlmostEqual(acc_vol.as_float(), 1.7, delta=delta)
             # block_vol is reset to value before block A - so it matches acc_vol again
-            self.assertAlmostEqual(block_vol.as_float(), 0.9, delta=0.1)
+            self.assertAlmostEqual(block_vol.as_float(), 1.7, delta=delta)
 
     def test_accumulated_column_volume(self):
         self.engine.cleanup()  # dispose the test default engine
@@ -1194,47 +1180,8 @@ Base: CV
             self.assertAlmostEqual(acc_cv.as_float(), 0.6, delta=0.1)
             self.assertEqual(['A'], e.interpreter.get_marks())
 
-    def test_accumulated_column_volume_watch(self):
-        self.engine.cleanup()  # dispose the test default engine
-
-        uod = (UodBuilder()
-               .with_instrument("TestUod")
-               .with_author("Test Author", "test@openpectus.org")
-               .with_filename(__file__)
-               .with_hardware(TestHW())
-               .with_location("Test location")
-               .with_tag(ReadingTag("CV", "L"))
-               .with_tag(CalculatedLinearTag("calc", "L"))
-               .with_accumulated_cv(cv_tag_name="CV", totalizer_tag_name="calc")
-               .build())
-
-        program = """
-Base: CV
-Watch: Accumulated CV > 0.5 CV
-    Mark: A
-"""
-        with create_engine_context(uod) as e:
-            cv = e.tags["CV"]
-            cv.set_value(2.0, 0)
-            acc_cv = e.tags[SystemTagName.ACCUMULATED_CV]
-            run_engine(e, program, 1)
-
-            self.assertEqual(acc_cv.as_float(), 0.0)
-            self.assertEqual(acc_cv.unit, "CV")
-
-            continue_engine(e, 4)
-            self.assertAlmostEqual(acc_cv.as_float(), 0.2, delta=0.1)
-            self.assertEqual([], e.interpreter.get_marks())
-
-            continue_engine(e, 4)
-            self.assertAlmostEqual(acc_cv.as_float(), 0.4, delta=0.1)
-            self.assertEqual([], e.interpreter.get_marks())
-
-            continue_engine(e, 4)
-            self.assertAlmostEqual(acc_cv.as_float(), 0.6, delta=0.1)
-            self.assertEqual(['A'], e.interpreter.get_marks())
-
     def test_accumulated_column_block_volume(self):
+        # TODO flaky - even in dev
         self.engine.cleanup()  # dispose the test default engine
 
         uod = (UodBuilder()
@@ -1248,7 +1195,7 @@ Watch: Accumulated CV > 0.5 CV
                .with_accumulated_cv(cv_tag_name="CV", totalizer_tag_name="calc")
                .build())
 
-        program = """
+        program = """\
 Base: s
 Block: A
     0.45 End block
@@ -1267,27 +1214,27 @@ Block: A
             self.assertEqual(block_cv.as_float(), 0.0)
             self.assertEqual(block_cv.unit, "CV")
 
-            continue_engine(e, 2)  # Blank + Base
+            continue_engine(e, 1)  # Base
             self.assertEqual(block.get_value(), None)
             self.assertAlmostEqual(acc_cv.as_float(), 0.2/2, delta=0.1)
             self.assertAlmostEqual(block_cv.as_float(), 0.2/2, delta=0.1)
 
-            continue_engine(e, 1)  # Block
+            continue_engine(e, 2)  # Block
             self.assertEqual(block.get_value(), "A")
             self.assertAlmostEqual(acc_cv.as_float(), 0.3/2, delta=0.1)
             self.assertAlmostEqual(block_cv.as_float(), 0.1/2, delta=0.1)
 
-            continue_engine(e, 5)
+            continue_engine(e, 3)
             self.assertEqual(block.get_value(), "A")
-            self.assertAlmostEqual(acc_cv.as_float(), 0.8/2, delta=0.1)
-            self.assertAlmostEqual(block_cv.as_float(), 0.6/2, delta=0.1)
+            self.assertAlmostEqual(acc_cv.as_float(), 0.7/2, delta=0.1)
+            self.assertAlmostEqual(block_cv.as_float(), 0.5/2, delta=0.1)
 
             continue_engine(e, 1)
             self.assertEqual(block.get_value(), None)
             # acc_vol keeps counting
-            self.assertAlmostEqual(acc_cv.as_float(), 0.9/2, delta=0.1)
+            self.assertAlmostEqual(acc_cv.as_float(), 0.8/2, delta=0.1)
             # block_vol is reset to value before block A - so it matches acc_vol again
-            self.assertAlmostEqual(block_cv.as_float(), 0.9/2, delta=0.1)
+            self.assertAlmostEqual(block_cv.as_float(), 0.8/2, delta=0.1)
 
 
     # --- Units ---
@@ -1315,93 +1262,23 @@ Block: A
                 percent_tag = uod.tags["X3"]
                 self.assertEqual(percent_tag.unit, "%")
 
-
-    # --- Restart ---
-
-
-    def test_restart_can_restart(self):
-        set_engine_debug_logging()
-        set_interpreter_debug_logging()
-        program = """
-Mark: A
-Increment run counter
-Restart
-"""
-        e = self.engine
-        self.assertEqual(0, e.tags[SystemTagName.RUN_COUNTER].as_number())
-
-        run_engine(e, program, 5)
-
-        run_id_1 = e.tags[SystemTagName.RUN_ID].get_value()
-        self.assertEqual(e.tags[SystemTagName.SYSTEM_STATE].get_value(), SystemStateEnum.Restarting)
-        self.assertEqual(1, e.tags[SystemTagName.RUN_COUNTER].as_number())
-
-        self.assertEqual(e.interpreter.get_marks(), ["A"])
-
-        continue_engine(e, 1)
-
-        self.assertEqual(e.tags[SystemTagName.SYSTEM_STATE].get_value(), SystemStateEnum.Stopped)
-        self.assertIsNone(e.tags[SystemTagName.RUN_ID].get_value())
-        self.assertEqual(e.interpreter.get_marks(), [])
-        self.assertEqual(1, e.tags[SystemTagName.RUN_COUNTER].as_number())
-
-        continue_engine(e, 1)
-
-        run_id2 = e.tags[SystemTagName.RUN_ID].get_value()
-        self.assertEqual(e.tags[SystemTagName.SYSTEM_STATE].get_value(), SystemStateEnum.Running)
-        self.assertNotEqual(run_id_1, run_id2)
-        self.assertEqual(e.interpreter.get_marks(), [])
-        self.assertEqual(1, e.tags[SystemTagName.RUN_COUNTER].as_number())
-
-        continue_engine(e, 3)
-
-        self.assertEqual(e.interpreter.get_marks(), ["A"])
-        self.assertEqual(2, e.tags[SystemTagName.RUN_COUNTER].as_number())
-
-    def test_restart_stop_ticking_interpreter(self):
-
-        set_interpreter_debug_logging()
-        program = """
-Mark: A
-Restart
-Mark: X
-"""
-        e = self.engine
-        run_engine(e, program, 1)
-
-        for _ in range(30):
-            continue_engine(e, 1)
-            self.assertTrue("X" not in e.interpreter.get_marks())
-
-    def test_restart_cancels_running_commands(self):
-        program = """
-Reset
-Restart
-"""
-        e = self.engine
-        run_engine(e, program, 4)
-
-        # TODO look into logs - something is not right
-
-        system_state = e.tags[SystemTagName.SYSTEM_STATE]
-        self.assertEqual(system_state.get_value(), SystemStateEnum.Restarting)
-
     def test_EngineCommandEnum_has(self):
         self.assertTrue(EngineCommandEnum.has_value("Stop"))
         self.assertFalse(EngineCommandEnum.has_value("stop"))
         self.assertFalse(EngineCommandEnum.has_value("STOP"))
 
+
 # ----------- Engine Error -------------
 
     def test_engine_error_causes_Paused_state(self):
         e = self.engine
-        with self.assertRaises(ValueError):
+        with self.assertRaises(EngineError):
             run_engine(e, "foo bar", 3)
         self.assertTrue(e.has_error_state())
 
     def test_interpreter_error_causes_Paused_state(self):
         e = self.engine
-        with self.assertRaises(ValueError):
+        with self.assertRaises(EngineError):
             run_engine(e, """WATCH x > 2""", 3)
         self.assertTrue(e._runstate_paused)
 

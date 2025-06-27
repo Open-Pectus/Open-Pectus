@@ -1,12 +1,13 @@
 from __future__ import annotations
 import logging
 import math
+import uuid
 from datetime import datetime
 from enum import StrEnum, auto
-from typing import Iterable
+from typing import Iterable, Literal
 
 import openpectus.protocol.models as Mdl
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, NonNegativeInt
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,6 @@ logger = logging.getLogger(__name__)
 RunLogLine = Mdl.RunLogLine
 RunLog = Mdl.RunLog
 ControlState = Mdl.ControlState
-Method = Mdl.Method
 MethodLine = Mdl.MethodLine
 MethodState = Mdl.MethodState
 ReadingCommand = Mdl.ReadingCommand
@@ -30,6 +30,14 @@ ErrorLog = Mdl.ErrorLog
 SystemStateEnum = Mdl.SystemStateEnum
 TagDirection = Mdl.TagDirection
 UodDefinition = Mdl.UodDefinition
+
+class Method(Mdl.Method):
+    version: int
+    last_author: str
+
+    @staticmethod
+    def empty() -> Method:
+        return Method(lines=Mdl.Method.empty().lines, version=0, last_author='')
 
 
 class AggregatedErrorLogEntry(BaseModel):
@@ -155,6 +163,23 @@ class RunData(BaseModel):
         return RunData(run_id=run_id, run_started=run_started)
 
 
+class ActiveUser(BaseModel):
+    """ Represents a user looking at the frontend details page for a process unit  """
+
+    id: str  # oid from identity token or a made up id from frontend if Anon, used to get profile photos from ms graph api
+    name: str  # Same value as emitted by openpectus.aggregator.auth.user_name
+
+class Contributor(BaseModel):
+    """ Represents a contributor to a process unit """
+
+    id: str | None  # oid from identity token, or None if Anon
+    name: str  # Same value as emitted by openpectus.aggregator.auth.user_name
+
+    # from https://github.com/pydantic/pydantic/issues/1303#issuecomment-599712964
+    def __hash__(self):
+        return hash((type(self),) + tuple(self.__dict__.values()))
+
+
 class EngineData:
     """ Data stored by aggregator for each connected engine. """
 
@@ -185,7 +210,8 @@ class EngineData:
         self.error_log: AggregatedErrorLog = AggregatedErrorLog.empty()
         self.method_state: MethodState = MethodState.empty()
         self.plot_configuration: PlotConfiguration = PlotConfiguration.empty()
-        self.contributors: set[str] = set()
+        self.contributors: set[Contributor] = set()
+        self.active_users: dict[str, ActiveUser] = dict()
         self.required_roles: set[str] = set()
         self.hardware_str: str = hardware_str
         self.data_log_interval_seconds: float = data_log_interval_seconds
@@ -223,3 +249,56 @@ class EngineData:
         self.error_log.clear()
         self.method_state = MethodState.empty()
         self.contributors = set()
+
+
+class NotificationScope(StrEnum):
+    PROCESS_UNITS_WITH_RUNS_IVE_CONTRIBUTED_TO = auto()
+    PROCESS_UNITS_I_HAVE_ACCESS_TO = auto()
+    SPECIFIC_PROCESS_UNITS = auto()
+
+class NotificationTopic(StrEnum):
+    RUN_START = auto()
+    RUN_STOP = auto()
+    RUN_PAUSE = auto()
+    BLOCK_START = auto()
+    NOTIFICATION_CMD = auto()
+    WATCH_TRIGGERED = auto()
+    NEW_CONTRIBUTOR = auto()
+    METHOD_ERROR = auto()
+    NETWORK_ERRORS = auto()
+
+class WebPushNotificationPreferences(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    user_id: str
+    user_roles: set[str]
+    scope: NotificationScope
+    topics: set[NotificationTopic]
+    process_units: set[str]
+
+
+
+class WebPushAction(BaseModel):
+    action: Literal['navigate']
+    title: str
+    icon: str | None = None
+
+
+class WebPushData(BaseModel):
+    process_unit_id: str | None = None
+
+
+class WebPushNotification(BaseModel): # see https://developer.mozilla.org/en-US/docs/Web/API/Notification/Notification#parameters for more information
+    actions: list[WebPushAction] | None = None  # buttons user can press
+    badge: str | None = None  # url for smaller image for e.g. the notifcation bar
+    body: str | None = None
+    data: WebPushData | None = None  # arbitrary data the frontend can use for e.g. navigating when user clicks an action button
+    icon: str | None = None  # url
+    image: str | None = None  # url
+    renotify: bool | None = None  # if set to true, tag must also be set
+    requireInteraction: bool | None = None  # notification will automatically close after a time unless this is set to True
+    silent: bool | None = None  # if True, notification will not make sound or vibration
+    tag: str | None = None  # an id for the notification, used for renotify
+    timestamp: NonNegativeInt | None = None  # unix timestamp
+    title: str
+    vibrate: list[NonNegativeInt] | None = None
+

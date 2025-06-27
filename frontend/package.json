@@ -8,9 +8,11 @@
     "start public": "ng serve  --host 0.0.0.0 --disable-host-check",
     "start prod": "ng serve --configuration production",
     "build": "ng build",
+    "build dev": "ng build --configuration development",
     "watch": "ng build --watch --configuration development",
     "generate": "openapi-ts",
-    "lint": "ng lint"
+    "lint": "ng lint",
+    "bundle monaco workers": "webpack --config bundle-monaco-workers.js"
   },
   "private": true,
   "dependencies": {
@@ -22,6 +24,7 @@
     "@angular/platform-browser": "^19.0.5",
     "@angular/platform-browser-dynamic": "^19.0.5",
     "@angular/router": "^19.0.5",
+    "@angular/service-worker": "^19.0.5",
     "@ngrx/component": "^19.0.0",
     "@ngrx/effects": "^19.0.0",
     "@ngrx/operators": "^19.0.0",
@@ -29,12 +32,12 @@
     "@ngrx/store": "^19.0.0",
     "@ngrx/store-devtools": "^19.0.0",
     "@vscode/codicons": "^0.0.36",
-    "angular-auth-oidc-client": "^19.0.0",
+    "angular-auth-oidc-client": "^19.0.1",
     "d3": "^7.8.5",
     "date-fns": "^4.1.0",
     "immer": "^10.0.2",
     "monaco-editor-wrapper": "^6.4.0",
-    "monaco-languageclient": "^9.4.0",
+    "ngx-toastr": "^19.0.0",
     "rxjs": "~7.8.0",
     "tslib": "2.8",
     "vscode-ws-jsonrpc": "^3.3.2"
@@ -44,10 +47,10 @@
     "@angular-devkit/build-angular": "^19.0.6",
     "@angular/cli": "^19.0.6",
     "@angular/compiler-cli": "^19.0.5",
-    "@hey-api/openapi-ts": "^0.61.0",
+    "@hey-api/openapi-ts": "^0.69.2",
     "@types/d3": "^7.4.0",
     "@types/node": "^22.10.5",
-    "@types/vscode": "1.95",
+    "@types/vscode": "^1.100.0",
     "angular-eslint": "^19.0.2",
     "autoprefixer": "^10.4.19",
     "eslint": "^9.17.0",
@@ -57,7 +60,8 @@
     "style-loader": "^4.0.0",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.6.3",
-    "typescript-eslint": "^8.19.0"
+    "typescript-eslint": "^8.19.0",
+    "webpack-cli": "^6.0.1"
   },
   "msw": {
     "workerDirectory": "src"

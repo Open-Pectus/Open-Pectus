@@ -1,14 +1,16 @@
 from __future__ import annotations
 from enum import StrEnum
-from typing import Any, Callable, Dict, Iterable, List
+from typing import Callable, Dict, Iterable, List
 from uuid import UUID
 
+from openpectus.lang.exec.uod import RegexNamedArgumentParser
 
 class InterpreterCommandEnum(StrEnum):
     """ Commands (instructions of type PCommand) that are executed by the interpreter """
     BASE = "Base"
     INCREMENT_RUN_COUNTER = "Increment run counter"
     RUN_COUNTER = "Run counter"
+    WAIT = "Wait"
 
     @staticmethod
     def has_value(value: str):
@@ -21,10 +23,9 @@ class InterpreterCommandEnum(StrEnum):
 
 class CommandRequest:
     """ Represents a command request for engine to execute. """
-    def __init__(self, name: str, source: str, exec_id: UUID | None = None, kwargs: dict[str, Any] = {}) -> None:
+    def __init__(self, name: str, arguments: str, source: str, exec_id: UUID | None = None) -> None:
         self.name: str = name
-        self.unparsed_args: str | None = None
-        self.kwargs: dict[str, Any] | None = kwargs
+        self.arguments: str = arguments
         self.exec_id: UUID | None = exec_id
         self.source: str = source
 
@@ -32,28 +33,16 @@ class CommandRequest:
         self.command_exec_id: UUID | None = None
 
     def __str__(self) -> str:
-        return f'{self.__class__.__name__}(name="{self.name}", unparsed_args={self.unparsed_args}, source="{self.source}")'
+        return (f'{self.__class__.__name__}(name="{self.name}", arguments={self.arguments}, ' +
+                f'source="{self.source}", exec_id={self.exec_id}, command_exec_id={self.command_exec_id})')
 
     @staticmethod
-    def from_user(name: str, unparsed_args: str | None = None) -> CommandRequest:
-        cmd_req = CommandRequest(name=name, source='user')
-        cmd_req.unparsed_args = unparsed_args
-        return cmd_req
+    def from_user(name: str, arguments: str = "") -> CommandRequest:
+        return CommandRequest(name=name, arguments=arguments, source='user')
 
     @staticmethod
-    def from_interpreter(name: str, exec_id: UUID | None, **kwargs) -> CommandRequest:
-        if "unparsed_args" in kwargs.keys():
-            cmd_req = CommandRequest(name=name, source="@interpreter", exec_id=exec_id)
-            cmd_req.unparsed_args = kwargs["unparsed_args"]
-            return cmd_req
-        else:
-            return CommandRequest(name=name, source="@interpreter", exec_id=exec_id, kwargs=kwargs)
-
-    def get_args(self) -> dict[str, Any]:
-        if self.kwargs is None or (self.kwargs == {} and self.unparsed_args is not None):
-            return {"unparsed_args": self.unparsed_args}
-        else:
-            return self.kwargs
+    def from_interpreter(name: str, arguments: str, exec_id: UUID | None) -> CommandRequest:
+        return CommandRequest(name=name, arguments=arguments, source="@interpreter", exec_id=exec_id)
 
 
 # Represents command API towards interpreter
@@ -62,9 +51,12 @@ class CommandRequest:
 
 class Command:
     """ Represents a named command. """
-    def __init__(self, name: str, validatorFn: Callable[[str], bool] | None = None) -> None:
+    def __init__(self, name: str, validatorFn: Callable[[str], bool] | None = None,
+                 docstring: str | None = None, arg_parser: RegexNamedArgumentParser | None = None) -> None:
         self.name: str = name
         self.validatorFn = validatorFn
+        self.docstring = docstring
+        self.arg_parser = arg_parser
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(name="{self.name}")'
@@ -97,7 +89,7 @@ class CommandCollection():
 
     @property
     def names(self) -> List[str]:
-        """ Return the tag names """
+        """ Return the command names """
         return list(self.commands.keys())
 
     def __getitem__(self, tag_name: str):
