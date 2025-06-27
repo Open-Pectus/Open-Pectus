@@ -174,10 +174,12 @@ class WebPushNotificationPreferences(DBModel):
     scope: Mapped[NotificationScope] = mapped_column()
     topics: Mapped[list[NotificationTopic]] = mapped_column(type_=JSON, default=[])
     process_units: Mapped[list[str]] = mapped_column(type_=JSON, default=[])
+    webpush_subscriptions: Mapped[list[WebPushSubscription]] = relationship(back_populates="webpush_notification_preferences", cascade="all, delete-orphan")
 
 class WebPushSubscription(DBModel):
     __tablename__ = "WebPushSubscriptions"
-    user_id: Mapped[str] = mapped_column()  # when no auth user_id is "None"
+    user_id: Mapped[str] = mapped_column(ForeignKey('WebPushNotificationPreferences.user_id'))  # when no auth user_id is "None"
     endpoint: Mapped[str] = mapped_column()
     auth: Mapped[str] = mapped_column()
     p256dh: Mapped[str] = mapped_column()
+    webpush_notification_preferences: Mapped[WebPushNotificationPreferences] = relationship(back_populates="webpush_subscriptions")
