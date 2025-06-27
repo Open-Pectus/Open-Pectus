@@ -87,15 +87,16 @@ class ArchiverTag(Tag):
         """ Create file and write header row"""
         assert self.file_path is not None
         assert self.tags is not None
-        with open(self.file_path, 'xt', newline='', encoding=encoding) as f:
-            writer = csv.writer(f, delimiter=delimiter, quoting=quoting, escapechar=escapechar)
-            tag_values = [tag.archive() for tag in self.tags]
-            writer.writerow(
-                ['Datetime (UTC)',] +
-                [f'{tag.name} [{tag.unit}]' if tag.unit is not None else tag.name
-                 for tag, val in zip(self.tags, tag_values)
-                 if val is not None]
-            )
+        if not os.path.isfile(self.file_path):
+            with open(self.file_path, 'xt', newline='', encoding=encoding) as f:
+                writer = csv.writer(f, delimiter=delimiter, quoting=quoting, escapechar=escapechar)
+                tag_values = [tag.archive() for tag in self.tags]
+                writer.writerow(
+                    ['Datetime (UTC)',] +
+                    [f'{tag.name} [{tag.unit}]' if tag.unit is not None else tag.name
+                    for tag, val in zip(self.tags, tag_values)
+                    if val is not None]
+                )
         self.file_ready = True
 
     def write_tags_row(self):

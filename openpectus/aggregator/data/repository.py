@@ -207,7 +207,7 @@ class RecentEngineRepository(RepositoryBase):
             assert engine_data.run_data is not None
             recent_engine.run_id = engine_data.run_data.run_id
             recent_engine.run_started = engine_data.run_data.run_started
-            contributors = set(recent_engine.contributors)
+            contributors = set(recent_engine.contributors or [])  # Even though default=[] it is actually None
             for c in engine_data.contributors:
                 contributors.add(c)
             recent_engine.contributors = list(contributors)
