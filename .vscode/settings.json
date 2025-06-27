@@ -1,11 +1,4 @@
 {
-    "antlr4.generation": {        
-        "outputDir": "codegen",
-        "mode": "external",
-        "language": "Python3",
-        "listeners": true,
-        "visitors": false
-    },
     "python.testing.unittestArgs": [
         "-v",
         "-s",

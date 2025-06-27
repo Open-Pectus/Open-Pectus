@@ -22,6 +22,9 @@ module.exports = {
       animation: {
         'ping-pong-x': 'ping-pong-x 1.4s linear alternate infinite',
       },
+      spacing: {
+        'injected-line-icon': '10px',
+      }
     },
   },
   plugins: [],

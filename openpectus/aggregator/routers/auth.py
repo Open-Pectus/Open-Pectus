@@ -1,4 +1,5 @@
 import os
+import uuid
 from typing import Annotated, Any
 
 import jwt
@@ -118,7 +119,7 @@ UserRolesValue = Annotated[set[str], UserRolesDependency]
 UserNameDependency = Security(user_name)
 UserNameValue = Annotated[str, UserNameDependency]
 UserIdDependency = Security(user_id)
-UserIdValue = Annotated[str, UserIdDependency]
+UserIdValue = Annotated[str | None, UserIdDependency]
 
 
 def has_access(engine_or_run: EngineData | RecentEngine | RecentRun, user_roles: set[str]):

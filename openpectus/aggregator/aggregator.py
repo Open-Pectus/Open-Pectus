@@ -3,18 +3,19 @@ import copy
 import logging
 from datetime import datetime, timezone
 
-from fastapi_websocket_rpc import RpcChannel
 import openpectus.aggregator.models as Mdl
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.messages as M
 from openpectus.aggregator.data import database
-from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRepository, RecentEngineRepository
+from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRepository, RecentEngineRepository, WebPushRepository
+from openpectus.aggregator.exceptions import AggregatorCallerException, AggregatorInternalException
 from openpectus.aggregator.frontend_publisher import FrontendPublisher, PubSubTopic
-from openpectus.aggregator.models import EngineData
+from openpectus.aggregator.models import Contributor, EngineData, NotificationScope
+from openpectus.aggregator.webpush_publisher import WebPushPublisher
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.protocol.models import SystemTagName, MethodStatusEnum
-from openpectus.aggregator.exceptions import AggregatorCallerException, AggregatorInternalException
+from webpush import WebPushSubscription
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +23,10 @@ EngineDataMap = dict[str, EngineData]
 
 
 class FromEngine:
-    def __init__(self, engine_data_map: EngineDataMap, publisher: FrontendPublisher):
+    def __init__(self, engine_data_map: EngineDataMap, publisher: FrontendPublisher, webpush_publisher: WebPushPublisher):
         self._engine_data_map = engine_data_map
         self.publisher = publisher
+        self.webpush_publisher = webpush_publisher
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(engine_data_map={self._engine_data_map}, publisher={self.publisher})'
@@ -241,8 +243,8 @@ class FromEngine:
         latest_persisted_tick_time = engine_data.run_data.latest_persisted_tick_time
         tag_values = engine_data.tags_info.map.values()
         latest_tag_tick_time = max([tag.tick_time for tag in tag_values]) if len(tag_values) > 0 else 0
-        time_threshold_exceeded = latest_persisted_tick_time is None\
-            or latest_tag_tick_time - latest_persisted_tick_time > engine_data.data_log_interval_seconds
+        time_threshold_exceeded = latest_persisted_tick_time is None \
+                                  or latest_tag_tick_time - latest_persisted_tick_time > engine_data.data_log_interval_seconds
 
         if engine_data.run_data.run_id is not None and time_threshold_exceeded:
             tag_values_to_persist = [tag_value.model_copy() for tag_value in engine_data.tags_info.map.values()
@@ -312,10 +314,11 @@ class FromEngine:
 
 
 class FromFrontend:
-    def __init__(self, engine_data_map: EngineDataMap, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher):
+    def __init__(self, engine_data_map: EngineDataMap, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, webpush_publisher: WebPushPublisher):
         self._engine_data_map = engine_data_map
         self.dispatcher = dispatcher
         self.publisher = publisher
+        self.webpush_publisher = webpush_publisher
         self.dead_man_switch_user_ids: dict[str, str] = dict()
         self.publisher.register_on_disconnect(self.on_ws_disconnect)
         self.publisher.pubsub_endpoint.methods.event_notifier.register_subscribe_event(self.user_subscribed_pubsub)  # type: ignore
@@ -323,7 +326,7 @@ class FromFrontend:
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(engine_data_map={self._engine_data_map}, dispatcher={self.dispatcher})'
 
-    async def method_saved(self, engine_id: str, method: Mdl.Method, user_name: str) -> int:
+    async def method_saved(self, engine_id: str, method: Mdl.Method, user: Contributor) -> int:
         existing_version = self._engine_data_map[engine_id].method.version
         version_to_overwrite = method.version
         logger.debug(f"Save method version: {method.version}")
@@ -350,11 +353,11 @@ class FromFrontend:
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is not None:
             engine_data.method = new_method
-            engine_data.contributors.add(user_name)
+            engine_data.contributors.add(user)
             asyncio.create_task(self.publisher.publish_method_changed(engine_id))
         return new_method.version
 
-    async def request_cancel(self, engine_id, line_id: str, user_name: str) -> bool:
+    async def request_cancel(self, engine_id, line_id: str, user: Contributor) -> bool:
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is None:
             logger.warning(f"Cannot request cancel, engine {engine_id} not found")
@@ -367,10 +370,10 @@ class FromFrontend:
         except Exception:
             logger.error("Cancel request failed with exception", exc_info=True)
             return False
-        engine_data.contributors.add(user_name)
+        engine_data.contributors.add(user)
         return True
 
-    async def request_force(self, engine_id, line_id: str, user_name: str) -> bool:
+    async def request_force(self, engine_id, line_id: str, user: Contributor) -> bool:
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is None:
             logger.warning(f"Cannot request force, engine {engine_id} not found")
@@ -383,7 +386,7 @@ class FromFrontend:
         except Exception:
             logger.error("Force request failed with exception", exc_info=True)
             return False
-        engine_data.contributors.add(user_name)
+        engine_data.contributors.add(user)
         return True
 
     def get_dead_man_switch_user_ids(self, topics: list[str]):
@@ -395,11 +398,12 @@ class FromFrontend:
 
     async def on_ws_disconnect(self, subscriber_id: str):
         user_id = self.dead_man_switch_user_ids[subscriber_id]
-        user_has_other_dead_man_switch = len([other_user_id for other_user_id in self.dead_man_switch_user_ids.values() if other_user_id == user_id]) > 1
-        if(user_has_other_dead_man_switch): return
+        other_dead_man_switches = [other_user_id for other_user_id in self.dead_man_switch_user_ids.values() if other_user_id == user_id]
+        user_has_other_dead_man_switch = len(other_dead_man_switches) > 1
+        if (user_has_other_dead_man_switch): return
         for engine_data in self._engine_data_map.values():
             popped_user_id = engine_data.active_users.pop(user_id, None)
-            if(popped_user_id != None):
+            if (popped_user_id != None):
                 asyncio.create_task(self.publisher.publish_active_users_changed(engine_data.engine_id))
 
     async def register_active_user(self, engine_id: str, user_id: str, user_name: str):
@@ -425,14 +429,64 @@ class FromFrontend:
         asyncio.create_task(self.publisher.publish_active_users_changed(engine_id))
         return True
 
+    def webpush_user_subscribed(self, subscription: WebPushSubscription, user_id: str | None) -> bool:
+        with database.create_scope():
+            webpush_repo = WebPushRepository(database.scoped_session())
+            webpush_repo.store_subscription(subscription, str(user_id))
+        return True
+
+    def webpush_notification_preferences_requested(self, user_id: str | None, user_roles: set[str]) -> Mdl.WebPushNotificationPreferences:
+        user_id_as_string = str(user_id)  # without auth all users share the same notification preferences under user_id "None"
+        with database.create_scope():
+            webpush_repo = WebPushRepository(database.scoped_session())
+            preferences = webpush_repo.get_notification_preferences_for_user(user_id_as_string)
+            if (preferences == None):
+                # create a default set of notifications preferences
+                preferences = Mdl.WebPushNotificationPreferences(
+                    user_id=user_id_as_string,
+                    user_roles=user_roles,
+                    scope=NotificationScope.PROCESS_UNITS_WITH_RUNS_IVE_CONTRIBUTED_TO,
+                    topics=set(),
+                    process_units=set())
+                webpush_repo.store_notifications_preferences(preferences)
+            else:
+                preferences = Mdl.WebPushNotificationPreferences.model_validate(preferences)
+            return preferences
+
+    def webpush_notification_preferences_posted(self, preferences: Mdl.WebPushNotificationPreferences):
+        with database.create_scope():
+            webpush_repo = WebPushRepository(database.scoped_session())
+            webpush_repo.store_notifications_preferences(preferences)
+
+    async def webpush_notify_user(self, process_unit_id: str):
+        engine_data = self._engine_data_map[process_unit_id]
+        if(engine_data == None): return
+
+        message = Mdl.WebPushNotification(
+            title="Something happened",
+            body="It's probably fine",
+            icon="/assets/icons/icon-192x192.png",
+            data=Mdl.WebPushData(
+                process_unit_id=process_unit_id
+            ),
+            actions=list([
+                Mdl.WebPushAction(
+                    action="navigate",
+                    title="Go to process unit"
+                )
+            ])
+        )
+        asyncio.create_task(self.webpush_publisher.publish_message(message, Mdl.NotificationTopic.BLOCK_START, engine_data))
+
 class Aggregator:
-    def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, secret: str = "") -> None:
+    def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, webpush_publisher: WebPushPublisher, secret: str = "") -> None:
         self._engine_data_map: EngineDataMap = {}
         """ all client data except channels, indexed by engine_id """
         self.dispatcher = dispatcher
-        self.from_frontend = FromFrontend(self._engine_data_map, dispatcher, publisher)
-        self.from_engine = FromEngine(self._engine_data_map, publisher)
+        self.from_frontend = FromFrontend(self._engine_data_map, dispatcher, publisher, webpush_publisher)
+        self.from_engine = FromEngine(self._engine_data_map, publisher, webpush_publisher)
         self.secret = secret
+        self.webpush_publisher = webpush_publisher
 
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(dispatcher={self.dispatcher}, ' +
