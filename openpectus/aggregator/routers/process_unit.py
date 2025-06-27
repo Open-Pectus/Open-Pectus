@@ -147,7 +147,7 @@ def get_all_process_values_of_all_available_engines(
 ) -> list[Dto.ProcessUnitAllProcessValues]:
     """
     Returns all process value for all online process units (engines)
-    to wich the current user has access.
+    that the current user has access to.
     """
     response.headers["Cache-Control"] = "no-store"
     process_units: list[Dto.ProcessUnitAllProcessValues] = []
