@@ -7,6 +7,7 @@ from openpectus.lang.exec.analyzer import (
     ThresholdCheckAnalyzer,
     WhitespaceCheckAnalyzer,
     ConditionCheckAnalyzer,
+    SimulateCheckAnalyzer,
     CommandCheckAnalyzer,
     MacroCheckAnalyzer,
     SemanticCheckAnalyzer,
@@ -565,6 +566,130 @@ Watch: A < h
 """)
         tags = TagValueCollection([TagValue("A", unit="s")])
         analyzer = ConditionCheckAnalyzer(tags)
+        analyzer.analyze(program)
+        self.assertEqual(1, len(analyzer.items))
+        self.assertEqual("MissingValue", analyzer.items[0].id)
+
+
+class SimulateCheckAnalyzerTest(unittest.TestCase):
+    def test_tag_name_defined(self):
+        program = build_program("Simulate: A = 2")
+        tags = TagValueCollection([TagValue("A")])
+        analyzer = SimulateCheckAnalyzer(tags)
+        analyzer.analyze(program)
+        self.assertEqual(0, len(analyzer.items))
+
+    def test_tag_name_undefined(self):
+        program = build_program("Simulate: A = 2")
+        tags = TagValueCollection([])
+        analyzer = SimulateCheckAnalyzer(tags)
+        analyzer.analyze(program)
+        self.assertEqual(1, len(analyzer.items))
+        item = analyzer.items[0]
+        self.assertEqual("UndefinedTag", item.id)
+        self.assertEqual(0, item.range.start.line)
+        self.assertEqual(10, item.range.start.character)
+        self.assertEqual(0, item.range.end.line)
+        self.assertEqual(11, item.range.end.character)
+
+    def test_tag_unit_valid(self):
+        program = build_program("Simulate: A = 2")
+        tags = TagValueCollection([TagValue("A")])
+        analyzer = SimulateCheckAnalyzer(tags)
+        analyzer.analyze(program)
+        self.assertEqual(0, len(analyzer.items))
+
+    def test_tag_did_you_mean(self):
+        program = build_program("Simulate: Food = 2")
+        tags = TagValueCollection([TagValue("Foo")])
+        analyzer = SimulateCheckAnalyzer(tags)
+        analyzer.analyze(program)
+        self.assertEqual(1, len(analyzer.items))
+        item = analyzer.items[0]
+        self.assertEqual(item.data, {"type": "fix-typo", "fix": "Foo"})
+
+    def test_tag_unit_unexpected(self):
+        program = build_program("Simulate: A = 2 mL")
+        tags = TagValueCollection([TagValue("A")])
+        analyzer = SimulateCheckAnalyzer(tags)
+        analyzer.analyze(program)
+        self.assertEqual(1, len(analyzer.items))
+        self.assertEqual("UnexpectedUnit", analyzer.items[0].id)
+
+    def test_tag_unit_missing(self):
+        program = build_program("Simulate: A = 2")
+        tags = TagValueCollection([TagValue("A", unit="mL")])
+        analyzer = SimulateCheckAnalyzer(tags)
+        analyzer.analyze(program)
+        self.assertEqual(1, len(analyzer.items))
+        self.assertEqual("MissingUnit", analyzer.items[0].id)
+
+    def test_tag_units_incompatible(self):
+        program = build_program("Simulate: A = 2 mL")
+        tags = TagValueCollection([TagValue("A", unit="s")])
+        analyzer = SimulateCheckAnalyzer(tags)
+        analyzer.analyze(program)
+        self.assertEqual(1, len(analyzer.items))
+        self.assertEqual("IncompatibleUnits", analyzer.items[0].id)
+
+    def test_tag_unit_invalid(self):
+        program = build_program("Simulate: A = 2 test")
+        tags = TagValueCollection([TagValue("A", unit="s")])
+        analyzer = SimulateCheckAnalyzer(tags)
+        analyzer.analyze(program)
+        self.assertEqual(1, len(analyzer.items))
+        self.assertEqual("InvalidUnit", analyzer.items[0].id)
+
+    def test_tag_units_equal(self):
+        program = build_program("Watch: A > 2 L")
+        tags = TagValueCollection([TagValue("A", unit="L")])
+        analyzer = SimulateCheckAnalyzer(tags)
+        analyzer.analyze(program)
+        self.assertEqual(0, len(analyzer.items))
+
+    def test_tag_units_compatible(self):
+        program = build_program("Watch: A = 2 mL")
+        tags = TagValueCollection([TagValue("A", unit="L")])
+        analyzer = SimulateCheckAnalyzer(tags)
+        analyzer.analyze(program)
+        self.assertEqual(0, len(analyzer.items))
+
+    def test_empty_argument(self):
+        program = build_program("Simulate: ")
+        tags = TagValueCollection([])
+        analyzer = SimulateCheckAnalyzer(tags)
+        analyzer.analyze(program)
+        self.assertEqual(1, len(analyzer.items))
+        self.assertEqual("MissingTag", analyzer.items[0].id)
+
+    def test_no_tag(self):
+        program = build_program("Simulate: =")
+        tags = TagValueCollection([])
+        analyzer = SimulateCheckAnalyzer(tags)
+        analyzer.analyze(program)
+        self.assertEqual(1, len(analyzer.items))
+        self.assertEqual("MissingTag", analyzer.items[0].id)
+
+    def test_no_assignment(self):
+        program = build_program("Simulate: A")
+        tags = TagValueCollection([TagValue("A", unit="s")])
+        analyzer = SimulateCheckAnalyzer(tags)
+        analyzer.analyze(program)
+        self.assertEqual(1, len(analyzer.items))
+        self.assertEqual("MissingOperator", analyzer.items[0].id)
+
+    def test_no_rhs(self):
+        program = build_program("Simulate: A = ")
+        tags = TagValueCollection([TagValue("A", unit="s")])
+        analyzer = SimulateCheckAnalyzer(tags)
+        analyzer.analyze(program)
+        self.assertEqual(1, len(analyzer.items))
+        self.assertEqual("MissingValue", analyzer.items[0].id)
+
+    def test_no_value(self):
+        program = build_program("Simulate: A = h")
+        tags = TagValueCollection([TagValue("A", unit="s")])
+        analyzer = SimulateCheckAnalyzer(tags)
         analyzer.analyze(program)
         self.assertEqual(1, len(analyzer.items))
         self.assertEqual("MissingValue", analyzer.items[0].id)
