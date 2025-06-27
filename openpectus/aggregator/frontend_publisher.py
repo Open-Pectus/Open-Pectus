@@ -21,21 +21,12 @@ class PubSubTopic(StrEnum):
 
 
 class FrontendPublisher:
-    class MethodsWithUnsubscribe(RpcEventServerMethods):
-        """ We need to add our own unsubscribe method to support this for the frontend client.
-            If/when I get this added to the library itself, we can remove this """
-
-        async def unsubscribe(self, topics: TopicList = []) -> bool:
-            channel_id = await self._get_channel_id_()
-            await self.event_notifier.unsubscribe(channel_id, topics)
-            return True
-
     def __init__(self):
         self.router = APIRouter(tags=["frontend_pubsub"], prefix='/api')
         self.router.add_api_route('/expose-pubsub-topics', endpoint=self.expose_pubsub_topics, methods=['POST'])
         self.router.add_api_route('/trigger-publish-msw', endpoint=self.trigger_publish_msw, methods=['POST'])
         self.on_disconnect_callbacks: list[Callable[[str], Awaitable[None]]] = []
-        self.pubsub_endpoint = PubSubEndpoint(methods_class=FrontendPublisher.MethodsWithUnsubscribe, on_disconnect=[self.on_disconnect]) # type: ignore
+        self.pubsub_endpoint = PubSubEndpoint(on_disconnect=[self.on_disconnect]) # type: ignore
         self.pubsub_endpoint.register_route(self.router, path="/frontend-pubsub")
 
     def __str__(self) -> str:
