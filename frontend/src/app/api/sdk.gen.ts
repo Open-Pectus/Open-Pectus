@@ -5,7 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { PostResponse, GetConfigResponse, ExposePubsubTopicsData, ExposePubsubTopicsResponse, TriggerPublishMswResponse, GetPcodeLanguageConfigurationResponse, GetPcodeTmGrammarData, GetPcodeTmGrammarResponse, GetUnitData, GetUnitResponse, GetUnitsData, GetUnitsResponse, GetProcessValuesData, GetProcessValuesResponse, GetAllProcessValuesData, GetAllProcessValuesResponse, ExecuteCommandData, ExecuteCommandResponse, GetProcessDiagramData, GetProcessDiagramResponse, GetCommandExamplesData, GetCommandExamplesResponse, GetRunLogData, GetRunLogResponse, GetMethodAndStateData, GetMethodAndStateResponse, GetMethodData, GetMethodResponse, SaveMethodData, SaveMethodResponse, GetPlotConfigurationData, GetPlotConfigurationResponse, GetPlotLogData, GetPlotLogResponse, GetControlStateData, GetControlStateResponse, GetErrorLogData, GetErrorLogResponse, ForceRunLogLineData, ForceRunLogLineResponse, CancelRunLogLineData, CancelRunLogLineResponse, ExposeSystemStateEnumData, ExposeSystemStateEnumResponse, GetActiveUsersData, GetActiveUsersResponse, RegisterActiveUserData, RegisterActiveUserResponse, UnregisterActiveUserData, UnregisterActiveUserResponse, GetRecentRunsData, GetRecentRunsResponse, GetRecentRunData, GetRecentRunResponse, GetRecentRunMethodAndStateData, GetRecentRunMethodAndStateResponse, GetRecentRunRunLogData, GetRecentRunRunLogResponse, GetRecentRunPlotConfigurationData, GetRecentRunPlotConfigurationResponse, GetRecentRunPlotLogData, GetRecentRunPlotLogResponse, GetRecentRunCsvJsonData, GetRecentRunCsvJsonResponse, GetRecentRunErrorLogData, GetRecentRunErrorLogResponse, GetVersionResponse, GetBuildNumberResponse, GetBuildInfoResponse, GetWebpushConfigResponse, GetNotificationPreferencesData, GetNotificationPreferencesResponse, SaveNotificationPreferencesData, SaveNotificationPreferencesResponse, SubscribeUserData, SubscribeUserResponse, NotifyUserData, NotifyUserResponse } from './types.gen';
+import type { PostResponse, GetConfigResponse, ExposePubsubTopicsData, ExposePubsubTopicsResponse, TriggerPublishMswResponse, GetPcodeLanguageConfigurationResponse, GetPcodeTmGrammarData, GetPcodeTmGrammarResponse, GetUnitData, GetUnitResponse, GetUnitsData, GetUnitsResponse, GetProcessValuesData, GetProcessValuesResponse, GetAllProcessValuesData, GetAllProcessValuesResponse, GetAllProcessValuesOfAllAvailableEnginesData, GetAllProcessValuesOfAllAvailableEnginesResponse, ExecuteCommandData, ExecuteCommandResponse, GetProcessDiagramData, GetProcessDiagramResponse, GetCommandExamplesData, GetCommandExamplesResponse, GetRunLogData, GetRunLogResponse, GetMethodAndStateData, GetMethodAndStateResponse, GetMethodData, GetMethodResponse, SaveMethodData, SaveMethodResponse, GetPlotConfigurationData, GetPlotConfigurationResponse, GetPlotLogData, GetPlotLogResponse, GetControlStateData, GetControlStateResponse, GetErrorLogData, GetErrorLogResponse, ForceRunLogLineData, ForceRunLogLineResponse, CancelRunLogLineData, CancelRunLogLineResponse, ExposeSystemStateEnumData, ExposeSystemStateEnumResponse, GetActiveUsersData, GetActiveUsersResponse, RegisterActiveUserData, RegisterActiveUserResponse, UnregisterActiveUserData, UnregisterActiveUserResponse, GetRecentRunsData, GetRecentRunsResponse, GetRecentRunData, GetRecentRunResponse, GetRecentRunMethodAndStateData, GetRecentRunMethodAndStateResponse, GetRecentRunRunLogData, GetRecentRunRunLogResponse, GetRecentRunPlotConfigurationData, GetRecentRunPlotConfigurationResponse, GetRecentRunPlotLogData, GetRecentRunPlotLogResponse, GetRecentRunCsvJsonData, GetRecentRunCsvJsonResponse, GetRecentRunErrorLogData, GetRecentRunErrorLogResponse, GetVersionResponse, GetBuildNumberResponse, GetBuildInfoResponse, GetWebpushConfigResponse, GetNotificationPreferencesData, GetNotificationPreferencesResponse, SaveNotificationPreferencesData, SaveNotificationPreferencesResponse, SubscribeUserData, SubscribeUserResponse, NotifyUserData, NotifyUserResponse } from './types.gen';
 
 @Injectable({
     providedIn: 'root'
@@ -218,6 +218,28 @@ export class ProcessUnitService {
             path: {
                 engine_id: data.engineId
             },
+            headers: {
+                'x-identity': data.xIdentity
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get All Process Values Of All Available Engines
+     * Returns all process value for all online process units (engines)
+     * that the current user has access to.
+     * @param data The data for the request.
+     * @param data.xIdentity
+     * @returns ProcessUnitAllProcessValues Successful Response
+     * @throws ApiError
+     */
+    public getAllProcessValuesOfAllAvailableEngines(data: GetAllProcessValuesOfAllAvailableEnginesData = {}): Observable<GetAllProcessValuesOfAllAvailableEnginesResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/process_units/all_process_values',
             headers: {
                 'x-identity': data.xIdentity
             },
