@@ -636,7 +636,7 @@ class SimulateNode(NodeWithAssignment):
     instruction_names = ["Simulate"]
 
 
-class SimulateOffNode(NodeWithAssignment):
+class SimulateOffNode(Node):
     instruction_names = ["Simulate off"]
 
 
