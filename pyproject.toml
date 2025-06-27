@@ -20,7 +20,7 @@ dependencies = [
     "uvicorn[standard]==0.34.3",
     "httpx==0.28.1",
     "fastapi_websocket_rpc==0.1.29",
-    "fastapi_websocket_pubsub==1.0.0",
+    "fastapi_websocket_pubsub==1.0.1",
     "colorlog==6.9.0",
     "sqlalchemy==2.0.41",
     "asyncua==1.1.6",
