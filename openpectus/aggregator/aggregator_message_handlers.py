@@ -5,6 +5,7 @@ import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 import openpectus.aggregator.models as Mdl
 from openpectus.aggregator.aggregator import Aggregator
+from openpectus.lsp.lsp_analysis import create_analysis_input
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +67,10 @@ class AggregatorMessageHandlers:
             )
 
         logger.info(f"Registration of engine {engine_id} successful")
+        # Clear LSP analysis cache to ensure that any UOD changes will be applied
+        # This fits better in aggregator, but it cannot be there because it would incur
+        # a circular import.
+        create_analysis_input.cache_clear()
         return AM.RegisterEngineReplyMsg(success=True, engine_id=engine_id, secret_match=True)
 
     def validate_msg(self, msg: EM.EngineMessage):

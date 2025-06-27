@@ -1,11 +1,11 @@
-import ctypes
-from datetime import UTC, datetime
-import os
-import logging
-import platform
-import time
 import csv
-from typing import Callable
+import ctypes
+import logging
+import os
+import sys
+import time
+from datetime import UTC, datetime
+from typing import Callable, Literal
 
 from openpectus.lang.exec.runlog import RunLog
 from openpectus.lang.exec.tags import Tag, TagCollection
@@ -21,14 +21,14 @@ encoding = 'utf-8'
 # csv option defaults
 delimiter = ','     # used in old system
 # delimiter = ';'    # makes Excel 365 understand it out of the box
-quoting = csv.QUOTE_NONE
+quoting: Literal[3] = csv.QUOTE_NONE
 escapechar = None
 # Note:  The MarkTag value may include a separator char/string. Make sure that does not conflict with the options here.
 
 
 def get_free_space_mb(dirname):
     """Return folder/drive free space (in megabytes)."""
-    if platform.system() == 'Windows':
+    if sys.platform == "win32":
         free_bytes = ctypes.c_ulonglong(0)
         ctypes.windll.kernel32.GetDiskFreeSpaceExW(  # type: ignore
             ctypes.c_wchar_p(dirname),

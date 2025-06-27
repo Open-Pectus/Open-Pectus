@@ -12,6 +12,7 @@ from openpectus.aggregator.data.repository import PlotLogRepository, RecentEngin
 from openpectus.aggregator.routers.auth import UserIdValue, has_access, UserRolesValue, UserNameValue
 from pydantic.json_schema import SkipJsonSchema
 from starlette.status import HTTP_403_FORBIDDEN, HTTP_404_NOT_FOUND
+import uuid
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])
@@ -34,8 +35,8 @@ def map_pu(engine_data: Mdl.EngineData) -> Dto.ProcessUnit:
         name=f"{engine_data.computer_name} ({engine_data.uod_name})",
         state=state,
         location=engine_data.location,
-        runtime_msec=engine_data.runtime.value if (
-                engine_data.runtime is not None and isinstance(engine_data.runtime.value, int)
+        runtime_msec=int(engine_data.runtime.value*1000) if (
+                engine_data.runtime is not None and engine_data.runtime.value is not None
         ) else 0,
         current_user_role=Dto.UserRole.ADMIN,
         uod_author_name=engine_data.uod_author_name,
@@ -141,6 +142,7 @@ def get_all_process_values(
 @router.post("/process_unit/{unit_id}/execute_command", response_model_exclude_none=True)
 async def execute_command(
         user_name: UserNameValue,
+        user_id: UserIdValue,
         user_roles: UserRolesValue,
         unit_id: str,
         command: Dto.ExecutableCommand,
@@ -162,7 +164,7 @@ async def execute_command(
 
     # for now, all users issuing a command become contributors. may nee to filter that somehow
     # and when wo we clear the contributors?
-    engine_data.contributors.add(user_name)
+    engine_data.contributors.add(Mdl.Contributor(id=user_id, name=user_name))
     return Dto.ServerSuccessResponse()
 
 
@@ -223,6 +225,7 @@ def get_method(
 @router.post('/process_unit/{unit_id}/method', response_model_exclude_none=True)
 async def save_method(
         user_name: UserNameValue,
+        user_id: UserIdValue,
         user_roles: UserRolesValue,
         unit_id: str,
         method_dto: Dto.Method,
@@ -233,7 +236,7 @@ async def save_method(
         version=method_dto.version,
         last_author=user_name
     )
-    new_version = await agg.from_frontend.method_saved(engine_id=unit_id, method=method_mdl, user_name=user_name)
+    new_version = await agg.from_frontend.method_saved(engine_id=unit_id, method=method_mdl, user=Mdl.Contributor(id=user_id, name=user_name))
     return Dto.MethodVersion(version=new_version)
 
 
@@ -291,12 +294,13 @@ def get_error_log(
 @router.post('/process_unit/{unit_id}/run_log/force_line/{line_id}', response_model_exclude_none=True)
 async def force_run_log_line(
         user_name: UserNameValue,
+        user_id: UserIdValue,
         user_roles: UserRolesValue,
         unit_id: str,
         line_id: str,
         agg: Aggregator = Depends(agg_deps.get_aggregator)):
     _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
-    if not await agg.from_frontend.request_force(engine_id=unit_id, line_id=line_id, user_name=user_name):
+    if not await agg.from_frontend.request_force(engine_id=unit_id, line_id=line_id, user=Mdl.Contributor(id=user_id, name=user_name)):
         return Dto.ServerErrorResponse(message="Force request failed")
     return Dto.ServerSuccessResponse(message="Force successfully requested")
 
@@ -304,12 +308,13 @@ async def force_run_log_line(
 @router.post('/process_unit/{unit_id}/run_log/cancel_line/{line_id}', response_model_exclude_none=True)
 async def cancel_run_log_line(
         user_name: UserNameValue,
+        user_id: UserIdValue,
         user_roles: UserRolesValue,
         unit_id: str,
         line_id: str,
         agg: Aggregator = Depends(agg_deps.get_aggregator)):
     _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
-    if not await agg.from_frontend.request_cancel(engine_id=unit_id, line_id=line_id, user_name=user_name):
+    if not await agg.from_frontend.request_cancel(engine_id=unit_id, line_id=line_id, user=Mdl.Contributor(id=user_id, name=user_name)):
         return Dto.ServerErrorResponse(message="Cancel request failed")
     return Dto.ServerSuccessResponse(message="Cancel successfully requested")
 

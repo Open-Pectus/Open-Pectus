@@ -1,10 +1,8 @@
+import contextlib
 import logging
 import os
-import contextlib
 
-from starlette.status import HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR
 import uvicorn
-from openpectus.aggregator.routers.auth import UserRolesDependency
 from fastapi import FastAPI, APIRouter, Request
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
@@ -12,11 +10,14 @@ from openpectus import __version__
 from openpectus.aggregator.aggregator_message_handlers import AggregatorMessageHandlers
 from openpectus.aggregator.data import database
 from openpectus.aggregator.deps import _create_aggregator
-from openpectus.aggregator.frontend_publisher import FrontendPublisher
-from openpectus.aggregator.routers import process_unit, recent_runs, auth, version, lsp
-from openpectus.aggregator.spa import SinglePageApplication
-from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.aggregator.exceptions import AggregatorCallerException, AggregatorInternalException
+from openpectus.aggregator.frontend_publisher import FrontendPublisher
+from openpectus.aggregator.routers import process_unit, recent_runs, auth, version, lsp, webpush
+from openpectus.aggregator.routers.auth import UserRolesDependency
+from openpectus.aggregator.spa import SinglePageApplication
+from openpectus.aggregator.webpush_publisher import WebPushPublisher
+from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
+from starlette.status import HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR
 
 
 class AggregatorServer:
@@ -27,11 +28,13 @@ class AggregatorServer:
     default_db_filename = "open_pectus_aggregator.sqlite3"
     default_db_path = os.path.join(os.getcwd(), default_db_filename)
     default_secret = ""
+    default_webpush_keys_path = os.path.join(os.path.dirname(__file__), "webpush_keys")
 
     def __init__(self, title: str = default_title, host: str = default_host, port: int = default_port,
                  frontend_dist_dir: str = default_frontend_dist_dir,
                  db_path: str = default_db_path,
                  secret: str = default_secret,
+                 webpush_keys_path: str = default_webpush_keys_path,
                  shutdown_cb=None):
         self.title = title
         self.host = host
@@ -39,10 +42,11 @@ class AggregatorServer:
         self.frontend_dist_dir = frontend_dist_dir
         self.db_path = db_path
         if not os.path.exists(frontend_dist_dir):
-            raise FileNotFoundError("{frontend_dist_dir} not found.")
+            raise FileNotFoundError(f"{frontend_dist_dir} not found.")
         self.dispatcher = AggregatorDispatcher()
         self.publisher = FrontendPublisher()
-        self.aggregator = _create_aggregator(self.dispatcher, self.publisher, secret)
+        self.webpush_publisher = WebPushPublisher(webpush_keys_path)
+        self.aggregator = _create_aggregator(self.dispatcher, self.publisher, self.webpush_publisher, secret)
         _ = AggregatorMessageHandlers(self.aggregator)
         self.shutdown_callback = shutdown_cb
         self.setup_fastapi([self.dispatcher.router, self.publisher.router, version.router])
@@ -68,6 +72,7 @@ class AggregatorServer:
         self.fastapi.include_router(recent_runs.router, prefix=api_prefix, dependencies=[UserRolesDependency])
         self.fastapi.include_router(lsp.router, prefix=api_prefix)
         self.fastapi.include_router(auth.router, prefix="/auth")
+        self.fastapi.include_router(webpush.router, prefix=api_prefix)
         for route in additional_routers:
             self.fastapi.include_router(route)
         self.fastapi.mount("/", SinglePageApplication(directory=self.frontend_dist_dir))
