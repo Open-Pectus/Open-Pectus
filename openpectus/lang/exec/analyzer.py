@@ -678,16 +678,7 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
         elif node.name and node.name.strip() in self.macros:
             macro_node = self.macros[node.name]
             self.macro_calls.append(node)
-            if macro_node not in node.parents:
-                self.macros_called.append(macro_node)
-            else:
-                self.add_item(AnalyzerItem(
-                    "MacroRecursive",
-                    "Macro calls itself",
-                    macro_node,
-                    AnalyzerItemType.ERROR,
-                    f"Macro are not allowed to contain calls to themselves (line {node.position.line+1})",
-                ))
+            self.macros_called.append(macro_node)
         return super().visit_CallMacroNode(node)
 
     def visit_MacroNode(self, node: p.MacroNode):
@@ -699,7 +690,7 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                 AnalyzerItemType.ERROR,
                 "A Macro definition must include a name"
             ))
-        elif node.name and node.name.strip():
+        if node.name and node.name.strip():
             if node.name.strip() in self.macros:
                 previous_macro_with_same_name = self.macros[node.name.strip()]
                 self.add_item(AnalyzerItem(
@@ -711,7 +702,43 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                 ))
             self.macros[node.name.strip()] = node
             self.macros_registered.append(node)
+
+            cascade = self.macro_calling_macro(node)
+            if cascade and node.name in cascade:
+                if len(cascade) == 1:
+                    self.add_item(AnalyzerItem(
+                        "MacroRecursive",
+                        "Macro calls itself",
+                        node,
+                        AnalyzerItemType.ERROR,
+                        f'Macro "{node.name}" calls itself. Unfortunately, this is not allowed.'
+                    ))
+                elif len(cascade) > 1:
+                    path = " which calls ".join(f'macro "{link}"' for link in cascade)
+                    self.add_item(AnalyzerItem(
+                        "MacroRecursive",
+                        "Macro calls itself indirectly",
+                        node,
+                        AnalyzerItemType.ERROR,
+                        f'Macro "{node.name}" calls itself by calling {path}. Unfortunately, this is not allowed.'
+                    ))
+
         return super().visit_MacroNode(node)
+
+    def macro_calling_macro(self, node: p.MacroNode, name: str | None = None) -> list[str]:
+        '''
+        Recurse through macro to produce a path of calls it makes to other macros.
+        This is used to identify if a macro will at some point call itself.
+        '''
+        name = name if name is not None else node.name
+        assert node.children is not None
+        for child in node.children:
+            if isinstance(child, p.CallMacroNode):
+                if child.name == name:
+                    return [child.name]
+                elif child.name in self.macros.keys():
+                    return [child.name] + self.macro_calling_macro(self.macros[child.name], name)
+        return []
 
     def analyze(self, n):
         super().analyze(n)

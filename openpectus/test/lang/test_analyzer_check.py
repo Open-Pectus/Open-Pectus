@@ -752,7 +752,7 @@ Call macro: A
         analyzer.analyze(program)
         self.assertEqual(0, len(analyzer.items))
 
-    def test_macro_recursive_indirect(self):
+    def test_macro_recursive_indirect_nested(self):
         program = build_program("""
 Macro: A
     Macro: B
@@ -765,6 +765,23 @@ Call macro: A
         analyzer.analyze(program)
         self.assertEqual(1, len(analyzer.items))
         self.assertEqual(analyzer.items[0].id, "MacroRecursive")
+
+    def test_macro_recursive_indirect_flat(self):
+        program = build_program("""
+Macro: B
+    Mark: B
+
+Macro: A
+    Call macro: B
+
+Macro: B
+    Call macro: A
+
+Call macro: A
+""")
+        analyzer = MacroCheckAnalyzer()
+        analyzer.analyze(program)
+        self.assertIn("MacroRecursive", [item.id for item in analyzer.items])
 
 
 class SemanticCheckAnalyzerTest(unittest.TestCase):
