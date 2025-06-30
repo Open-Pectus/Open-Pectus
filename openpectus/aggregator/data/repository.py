@@ -17,7 +17,7 @@ from openpectus.aggregator.data.models import (
 )
 from openpectus.protocol.models import SystemTagName
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +66,7 @@ class PlotLogRepository(RepositoryBase):
             .join(PlotLog.entries)
             .join(PlotLogEntry.values)
             .where(PlotLog.run_id == run_id)
+            .options(selectinload(PlotLog.entries).subqueryload(PlotLogEntry.values))
         )
 
     def get_plot_log_entry(self, engine_id: str, run_id: str, tag: agg_mdl.TagValue) -> PlotLogEntry | None:
