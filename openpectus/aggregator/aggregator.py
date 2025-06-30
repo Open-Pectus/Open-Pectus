@@ -38,7 +38,6 @@ class FromEngine:
 
         self._try_restore_reconnected_engine_data(engine_data)
 
-        asyncio.create_task(self.publisher.publish_process_units_changed())
         asyncio.create_task(self.publisher.publish_control_state_changed(engine_data.engine_id))
 
     def _try_restore_reconnected_engine_data(self, engine_data: EngineData):
@@ -101,10 +100,14 @@ class FromEngine:
                 recent_run_repo = RecentRunRepository(database.scoped_session())
                 try:
                     recent_run_repo.store_recent_run(engine_data)
-                    logger.info(f"Stopping existing run and store it as recent run {_run_id=}")
+                    logger.info(f"Stopping existing run and store it as recent run {_run_id}")
                     engine_data.reset_run()
+                    engine_data.run_data = Mdl.RunData.empty(
+                        run_id=msg.run_id,
+                        run_started=datetime.fromtimestamp(msg.started_tick, timezone.utc)
+                    )
                 except Exception:
-                    logger.error(f"Failed to persist recent run {_run_id=}", exc_info=True)
+                    logger.error(f"Failed to persist recent run {_run_id}", exc_info=True)
 
             plot_log_repo = PlotLogRepository(database.scoped_session())
             plot_log_repo.create_plot_log(engine_data, msg.run_id)
@@ -170,6 +173,7 @@ class FromEngine:
             self._engine_data_map[engine_id].hardware_str = hardware_str
             self._engine_data_map[engine_id].required_roles = required_roles
             self._engine_data_map[engine_id].data_log_interval_seconds = data_log_interval_seconds
+            asyncio.create_task(self.publisher.publish_process_units_changed())
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set uod info.')
 
@@ -491,6 +495,14 @@ class Aggregator:
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(dispatcher={self.dispatcher}, ' +
                 f'from_frontend={self.from_frontend}, from_engine={self.from_engine})')
+
+    def shutdown(self):
+        logger.info("Shutting down aggregator.")
+        with database.create_scope():
+            repo = RecentEngineRepository(database.scoped_session())
+            for engine_data in self._engine_data_map.values():
+                    repo.store_recent_engine(engine_data)
+                    logger.info(f"Storing {engine_data} as recent engine.")
 
     def create_engine_id(self, register_engine_msg: EM.RegisterEngineMsg):
         """ Defines the generation of the engine_id that is uniquely assigned to each engine.
