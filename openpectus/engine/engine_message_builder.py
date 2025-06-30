@@ -25,9 +25,6 @@ engine_logger.addHandler(frontend_logging_handler)
 archiver_logger.addHandler(frontend_logging_handler)
 internal_cmds_logger.addHandler(frontend_logging_handler)
 
-MAX_SIZE_TagsUpdatedMsg = 100
-""" The maximum number of tags to include in a single TagsUpdatedMsg message """
-
 def to_model_tag(tag: TagValue) -> Mdl.TagValue:
     if tag.tick_time == 0.0:
         logger.warning(f"Tick time was 0 for tag {tag.name}")
@@ -69,7 +66,7 @@ class EngineMessageBuilder():
             self.engine.notify_all_tags()
         tags: dict[str, Mdl.TagValue] = {}  # using dict to de-duplicate
         try:
-            for _ in range(MAX_SIZE_TagsUpdatedMsg):
+            while True:
                 tag_org = self.engine.tag_updates.get_nowait()
                 tag = tag_org.as_readonly()
                 tags[tag.name] = to_model_tag(tag)
@@ -148,3 +145,6 @@ class EngineMessageBuilder():
     def create_method_state_msg(self) -> EM.MethodStateMsg:
         state = self.engine.method_manager.get_method_state()
         return EM.MethodStateMsg(method_state=state)
+
+    def create_method_msg(self) -> EM.MethodMsg:
+        return EM.MethodMsg(method=Mdl.Method.from_parser_method(self.engine._method_manager._method))
