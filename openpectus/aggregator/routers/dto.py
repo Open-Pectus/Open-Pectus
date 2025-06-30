@@ -130,6 +130,11 @@ class ProcessUnit(Dto):
         return f'{self.__class__.__name__}(id="{self.id}", name="{self.name}", state={self.state})'
 
 
+class ProcessUnitAllProcessValues(Dto):
+    process_unit: ProcessUnit
+    process_values: list[ProcessValue]
+
+
 class ProcessValueType(StrEnum):
     STRING = auto()
     FLOAT = auto()
