@@ -19,6 +19,7 @@ class MethodManager:
         self._uod_command_names = uod_command_names
         self._method = ParserMethod.empty
         self._program = p.ProgramNode.empty()
+        self._inject_parser = create_inject_parser(self._uod_command_names)
 
     def to_model_method(self) -> Mdl.Method:
         return Mdl.Method(lines=[Mdl.MethodLine(id=line.id, content=line.content) for line in self._method.lines])
@@ -81,8 +82,7 @@ class MethodManager:
         self._apply_analysis()
 
     def parse_inject_code(self, pcode: str) -> p.ProgramNode:
-        parser = create_inject_parser(self._uod_command_names)
-        return parser.parse_pcode(pcode)
+        return self._inject_parser.parse_pcode(pcode)
 
     def get_method_state(self) -> Mdl.MethodState:
         all_nodes = self._program.get_all_nodes()
