@@ -62,11 +62,11 @@ class RecentRun(DBModel):
     completed_date: Mapped[datetime] = mapped_column()
     contributors: Mapped[list[Contributor]] = mapped_column(type_=JSON, default=[])
     required_roles: Mapped[list[str]] = mapped_column(type_=JSON, default=[])
-    plot_log: Mapped[PlotLog] = relationship(back_populates="recent_run", cascade="delete")
-    plot_configuration: Mapped[RecentRunPlotConfiguration] = relationship(back_populates="recent_run", cascade="delete")
-    error_log: Mapped[RecentRunErrorLog] = relationship(back_populates="recent_run", cascade="delete")
-    run_log: Mapped[RecentRunRunLog] = relationship(back_populates="recent_run", cascade="delete")
-    method_and_state: Mapped[RecentRunMethodAndState] = relationship(back_populates="recent_run", cascade="delete")
+    plot_log: Mapped[PlotLog] = relationship(back_populates="recent_run", cascade="all, delete-orphan")
+    plot_configuration: Mapped[RecentRunPlotConfiguration] = relationship(back_populates="recent_run", cascade="all, delete-orphan")
+    error_log: Mapped[RecentRunErrorLog] = relationship(back_populates="recent_run", cascade="all, delete-orphan")
+    run_log: Mapped[RecentRunRunLog] = relationship(back_populates="recent_run", cascade="all, delete-orphan")
+    method_and_state: Mapped[RecentRunMethodAndState] = relationship(back_populates="recent_run", cascade="all, delete-orphan")
 
 
 class RecentRunMethodAndState(DBModel):
