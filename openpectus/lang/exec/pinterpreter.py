@@ -157,7 +157,11 @@ class PInterpreter(NodeVisitor):
         # Fast-forward skipping over actions in history
         main_complete = False
         active_interrupt_keys = list(self._interrupts_map.keys())
+        ffw_tick = 0
         while not main_complete or len(active_interrupt_keys) > 0:
+            ffw_tick += 1
+            if ffw_tick > self.ffw_tick_limit:
+                raise MethodEditError(message=f"FFW failed to complete. Aborted after {ffw_tick} iterations.")
             if not main_complete:
                 try:
                     x = run_ffw_tick(gen)
