@@ -62,31 +62,40 @@ class RecentRun(DBModel):
     completed_date: Mapped[datetime] = mapped_column()
     contributors: Mapped[list[Contributor]] = mapped_column(type_=JSON, default=[])
     required_roles: Mapped[list[str]] = mapped_column(type_=JSON, default=[])
+    plot_log: Mapped[PlotLog] = relationship(back_populates="recent_run", cascade="all, delete-orphan")
+    plot_configuration: Mapped[RecentRunPlotConfiguration] = relationship(back_populates="recent_run", cascade="all, delete-orphan")
+    error_log: Mapped[RecentRunErrorLog] = relationship(back_populates="recent_run", cascade="all, delete-orphan")
+    run_log: Mapped[RecentRunRunLog] = relationship(back_populates="recent_run", cascade="all, delete-orphan")
+    method_and_state: Mapped[RecentRunMethodAndState] = relationship(back_populates="recent_run", cascade="all, delete-orphan")
 
 
 class RecentRunMethodAndState(DBModel):
     __tablename__ = "RecentRunMethodAndStates"
-    run_id: Mapped[str] = mapped_column()
+    run_id: Mapped[str] = mapped_column(ForeignKey("RecentRuns.run_id"))
     method: Mapped[Method] = mapped_column(type_=JSON)
     state: Mapped[MethodState] = mapped_column(type_=JSON)
+    recent_run: Mapped[RecentRun] = relationship(back_populates="method_and_state")
 
 
 class RecentRunRunLog(DBModel):
     __tablename__ = "RecentRunRunLogs"
-    run_id: Mapped[str] = mapped_column()
+    run_id: Mapped[str] = mapped_column(ForeignKey("RecentRuns.run_id"))
     run_log: Mapped[RunLog] = mapped_column(type_=JSON)
+    recent_run: Mapped[RecentRun] = relationship(back_populates="run_log")
 
 
 class RecentRunErrorLog(DBModel):
     __tablename__ = "RecentRunErrorLogs"
-    run_id: Mapped[str] = mapped_column()
+    run_id: Mapped[str] = mapped_column(ForeignKey("RecentRuns.run_id"))
     error_log: Mapped[AggregatedErrorLog] = mapped_column(type_=JSON)
+    recent_run: Mapped[RecentRun] = relationship(back_populates="error_log")
 
 
 class RecentRunPlotConfiguration(DBModel):
     __tablename__ = "RecentRunPlotConfigurations"
-    run_id: Mapped[str] = mapped_column()
+    run_id: Mapped[str] = mapped_column(ForeignKey("RecentRuns.run_id"))
     plot_configuration: Mapped[PlotConfiguration] = mapped_column(type_=JSON)
+    recent_run: Mapped[RecentRun] = relationship(back_populates="plot_configuration")
 
 
 class PlotLogEntryValue(DBModel):
@@ -144,12 +153,13 @@ class PlotLogEntry(DBModel):
 class PlotLog(DBModel):
     __tablename__ = "PlotLogs"
     engine_id: Mapped[str] = mapped_column()
-    run_id: Mapped[str] = mapped_column()
+    run_id: Mapped[str] = mapped_column(ForeignKey("RecentRuns.run_id"))
     entries: Mapped[Dict[str, PlotLogEntry]] = relationship(
         collection_class=attribute_keyed_dict("name"),
         back_populates='plot_log',
         cascade="all, delete-orphan"
     )
+    recent_run: Mapped[RecentRun] = relationship(back_populates="plot_log")
 
 # class User(IdLessDBModel):
 #     __tablename__ = "Users"
@@ -164,10 +174,12 @@ class WebPushNotificationPreferences(DBModel):
     scope: Mapped[NotificationScope] = mapped_column()
     topics: Mapped[list[NotificationTopic]] = mapped_column(type_=JSON, default=[])
     process_units: Mapped[list[str]] = mapped_column(type_=JSON, default=[])
+    webpush_subscriptions: Mapped[list[WebPushSubscription]] = relationship(back_populates="webpush_notification_preferences", cascade="all, delete-orphan")
 
 class WebPushSubscription(DBModel):
     __tablename__ = "WebPushSubscriptions"
-    user_id: Mapped[str] = mapped_column()  # when no auth user_id is "None"
+    user_id: Mapped[str] = mapped_column(ForeignKey('WebPushNotificationPreferences.user_id'))  # when no auth user_id is "None"
     endpoint: Mapped[str] = mapped_column()
     auth: Mapped[str] = mapped_column()
     p256dh: Mapped[str] = mapped_column()
+    webpush_notification_preferences: Mapped[WebPushNotificationPreferences] = relationship(back_populates="webpush_subscriptions")
