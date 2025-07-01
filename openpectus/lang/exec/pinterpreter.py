@@ -364,6 +364,7 @@ class PInterpreter(NodeVisitor):
 
             time_value = str(block_value_tag.get_value() if is_in_block else value_tag.get_value())
             time_unit = block_value_tag.unit if is_in_block else value_tag.unit
+            time_value_formatted = time_value if len(time_value) < 5 else time_value[0:5]
 
             try:
                 # calculate result of 'value < threshold'
@@ -372,13 +373,13 @@ class PInterpreter(NodeVisitor):
                     threshold_value, threshold_unit)
                 if result:
                     logger.debug(
-                        f"Node {node} is awaiting threshold: {threshold_value}, " +
-                        f"current: {time_value}, base unit: '{base_unit}'")
+                        f"Node {node} is awaiting threshold: {time_value_formatted} of {threshold_value}, " +
+                        f"base unit: '{base_unit}'")
                     return True
 
                 logger.debug(
-                    f"Node {node} is done awaiting threshold {threshold_value}, " +
-                    f"current: {time_value}, base unit: '{base_unit}'")
+                    f"Node {node} is done awaiting threshold {time_value_formatted} of {threshold_value}, " +
+                    f"base unit: '{base_unit}'")
             except Exception as ex:
                 raise NodeInterpretationError(
                     node,
@@ -493,16 +494,16 @@ class PInterpreter(NodeVisitor):
             yield
         node.completed = True
 
-    def visit_MarkNode(self, node: p.MarkNode) -> NodeGenerator:
-        logger.info(f"Mark {str(node)}")
 
-        def do(node):
+    def visit_MarkNode(self, node: p.MarkNode) -> NodeGenerator:
+        def do(node):            
             assert isinstance(node, p.MarkNode)
+            logger.info(f"Mark {node.name} running")
             try:
                 mark_tag = self.context.tags.get("Mark")
                 mark_tag.set_value(node.name, self._tick_time)
             except ValueError:
-                logger.error(f"Failed to get Mark tag {node.name}")
+                logger.error(f"Failed to get Mark tag {node}")
 
             self._add_record_state_started(node)
             self._add_record_state_complete(node)
