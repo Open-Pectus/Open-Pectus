@@ -98,7 +98,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:  # noqa
     uod.hwl.connect()
     return uod
 
-@unittest.skip(reason="Edit currently not working")
+
 class TestMethodManager(unittest.TestCase):
 
     def test_may_not_edit_an_executed_line(self):
@@ -158,6 +158,7 @@ class TestMethodManager(unittest.TestCase):
 """)
         runner = EngineTestRunner(create_test_uod, method1)
         with runner.run() as instance:
+            instance.engine.interpreter.ffw_tick_limit = 50
             instance.start()
             instance.run_until_instruction("Mark", state="completed", arguments="A")
             instance.run_ticks(4)

@@ -18,7 +18,7 @@ from openpectus.lang.exec.tags import (
 )
 from openpectus.lang.exec.visitor import (
     NodeGenerator, NodeVisitor, NodeAction, NullableActionResult, PrependNodeGenerator,
-    run_ffw_tick, run_tick, run_ffw
+    run_ffw_tick, run_tick
 )
 import openpectus.lang.model.ast as p
 from typing_extensions import override
@@ -26,7 +26,7 @@ from typing_extensions import override
 logger = logging.getLogger(__name__)
 
 term_uod = "Unit Operation Definition file."
-
+FFW_TICK_LIMIT = 1000  # Default limit for how many ticks are allowed during the fast-forward phase of a method edit.
 
 def macro_calling_macro(node: p.MacroNode, macros: dict[str, p.MacroNode], name: str | None = None) -> list[str]:
     '''
@@ -119,21 +119,18 @@ class PInterpreter(NodeVisitor):
 
         self._generator: NodeGenerator | None = None
 
-        self.runtimeinfo: RuntimeInfo = RuntimeInfo()
+        self.runtimeinfo: RuntimeInfo = RuntimeInfo()        
+        self.ffw_tick_limit = FFW_TICK_LIMIT
         logger.debug("Interpreter initialized")
 
 
-    # TODO fix
     def update_method_and_ffw(self, program: p.ProgramNode):
         """ Update method while method is running. """
         # set new program, and patch state to point to new nodes, set ffw and advance generator to get to where we were
-        raise NotImplementedError("Edit currently not working")
 
         # collect node id from old method. The id will match the corresponding node in the new method
         if self._program.active_node is None:
             raise ValueError("Edit cannot be performed when no current node is set")
-        logger.debug(f"The active node is {self._program.active_node}")
-        logger.debug(f"The active node states are {self._program.active_node.started=} | {self._program.active_node.completed=}")
         target_node_id = self._program.active_node.id
 
         # patch runtimeinfo records to reference new nodes - before or after ffw? should not matter

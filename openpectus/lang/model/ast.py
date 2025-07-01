@@ -456,7 +456,18 @@ class BlockNode(NodeWithChildren):
         super().__init__(position, id)
         self.lock_aquired = False
 
-    # TODO consider wether lock_required should persist
+    def reset_runtime_state(self, recursive):
+        self.lock_aquired = False
+        super().reset_runtime_state(recursive)
+
+    def extract_state(self) -> NodeState:
+        state = super().extract_state()
+        state["lock_aquired"] = self.lock_aquired  # type: ignore
+        return state
+
+    def apply_state(self, state: NodeState):
+        self.lock_aquired = bool(state["lock_aquired"])  # type: ignore
+        return super().apply_state(state)    
 
 class EndBlockNode(Node):
     instruction_names = ["End block"]
