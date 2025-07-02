@@ -75,7 +75,7 @@ class FromEngine:
                 repo.store_recent_engine(engine_data)
             logger.info("Recent engine saved")
             if engine_data.has_run():
-                asyncio.create_task(self.publish_engine_disconnected_notification(engine_id))
+                self.publish_engine_disconnected_notification(engine_id)
             del self._engine_data_map[engine_id]
             asyncio.create_task(self.publisher.publish_process_units_changed())
         else:
@@ -320,7 +320,7 @@ class FromEngine:
         asyncio.create_task(self.publisher.publish_error_log_changed(engine_id))
 
     def publish_engine_disconnected_notification(self, engine_id: str):
-        return self.webpush_publisher.publish_message(
+        asyncio.create_task(self.webpush_publisher.publish_message(
             notification=WebPushNotification(
                 title=self._engine_data_map[engine_id].uod_name,
                 body="Connection between aggregator and engine has been lost.",
@@ -337,7 +337,7 @@ class FromEngine:
             ),
             topic=NotificationTopic.NETWORK_ERRORS,
             process_unit=self._engine_data_map[engine_id],
-        )
+        ))
 
 
 class FromFrontend:
@@ -381,7 +381,7 @@ class FromFrontend:
         if engine_data is not None:
             engine_data.method = new_method
             if user not in engine_data.contributors:
-                asyncio.create_task(self.publish_new_contributor_notification(engine_id, user))
+                self.publish_new_contributor_notification(engine_id, user)
             engine_data.contributors.add(user)
             asyncio.create_task(self.publisher.publish_method_changed(engine_id))
         return new_method.version
@@ -400,7 +400,7 @@ class FromFrontend:
             logger.error("Cancel request failed with exception", exc_info=True)
             return False
         if user not in engine_data.contributors:
-            asyncio.create_task(self.publish_new_contributor_notification(engine_id, user))
+            self.publish_new_contributor_notification(engine_id, user)
         engine_data.contributors.add(user)
         return True
 
@@ -418,7 +418,7 @@ class FromFrontend:
             logger.error("Force request failed with exception", exc_info=True)
             return False
         if user not in engine_data.contributors:
-            asyncio.create_task(self.publish_new_contributor_notification(engine_id, user))
+            self.publish_new_contributor_notification(engine_id, user)
         engine_data.contributors.add(user)
         return True
 
@@ -492,7 +492,7 @@ class FromFrontend:
             webpush_repo.store_notifications_preferences(preferences)
 
     def publish_new_contributor_notification(self, engine_id: str, contributor: Contributor):
-        return self.webpush_publisher.publish_message(
+        asyncio.create_task(self.webpush_publisher.publish_message(
             notification=WebPushNotification(
                 title=self._engine_data_map[engine_id].uod_name,
                 body=f"{contributor.name} contributed to the current run.",
@@ -509,7 +509,7 @@ class FromFrontend:
             ),
             topic=NotificationTopic.NEW_CONTRIBUTOR,
             process_unit=self._engine_data_map[engine_id],
-        )
+        ))
 
 class Aggregator:
     def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, webpush_publisher: WebPushPublisher, secret: str = "") -> None:

@@ -190,9 +190,7 @@ async def execute_command(
     # and when wo we clear the contributors?
     contributor = Mdl.Contributor(id=user_id, name=user_name)
     if contributor not in engine_data.contributors:
-        asyncio.create_task(
             agg.from_frontend.publish_new_contributor_notification(unit_id, contributor)
-        )
     engine_data.contributors.add(contributor)
     return Dto.ServerSuccessResponse()
 
