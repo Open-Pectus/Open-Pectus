@@ -1,4 +1,5 @@
 import logging
+import asyncio
 
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
@@ -12,7 +13,6 @@ from openpectus.aggregator.data.repository import PlotLogRepository, RecentEngin
 from openpectus.aggregator.routers.auth import UserIdValue, has_access, UserRolesValue, UserNameValue
 from pydantic.json_schema import SkipJsonSchema
 from starlette.status import HTTP_403_FORBIDDEN, HTTP_404_NOT_FOUND
-import uuid
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])
@@ -188,7 +188,12 @@ async def execute_command(
 
     # for now, all users issuing a command become contributors. may nee to filter that somehow
     # and when wo we clear the contributors?
-    engine_data.contributors.add(Mdl.Contributor(id=user_id, name=user_name))
+    contributor = Mdl.Contributor(id=user_id, name=user_name)
+    if contributor not in engine_data.contributors:
+        asyncio.create_task(
+            agg.from_frontend.publish_new_contributor_notification(unit_id, contributor)
+        )
+    engine_data.contributors.add(contributor)
     return Dto.ServerSuccessResponse()
 
 
