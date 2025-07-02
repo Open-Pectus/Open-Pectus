@@ -67,6 +67,9 @@ class EventListener:
     def on_scope_end(self, scope_info: ScopeInfo):
         pass
 
+    def on_notify_command(self, argument: str):
+        pass
+
     def on_tick(self, tick_time: float, increment_time: float):
         """ Is invoked on each tick.
 
@@ -93,6 +96,14 @@ class EventListener:
     def on_engine_shutdown(self):
         """ Invoked once when engine shuts down"""
         self.run_id = None
+
+    def on_method_error(self, exception: Exception):
+        """ Invoked by engine when an error state is encountered which is severe enough to cause pause """
+        pass
+
+    def on_connection_status_change(self, status: Literal["Disconnected", "Connected"]):
+        """ Invoked by system tag Connection Status on value change """
+        pass
 
 
 class PerformanceTimer(EventListener):
@@ -157,6 +168,10 @@ class PerformanceTimer(EventListener):
         with self:
             self._listener.on_scope_end(scope_info)
 
+    def on_notify_command(self, argument: str):
+        with self:
+            self._listener.on_notify_command(argument)
+
     def on_tick(self, tick_time: float, increment_time: float):
         with self:
             self._listener.on_tick(tick_time, increment_time)
@@ -178,6 +193,14 @@ class PerformanceTimer(EventListener):
         with self:
             self._listener.on_engine_shutdown()
         self.run_id = None
+
+    def on_method_error(self, exception: Exception):
+        with self:
+            self._listener.on_method_error(exception)
+
+    def on_connection_status_change(self, status: Literal["Disconnected", "Connected"]):
+        with self:
+            self._listener.on_connection_status_change(status)
 
     def __str__(self) -> str:
         return f"PerformanceTimer(listener: {self._listener}, warned: {self._warned}, is_tag: {self._is_tag}"
@@ -265,6 +288,13 @@ class EventEmitter:
             except Exception:
                 logger.error(f"on_scope_end failed for listener '{listener}'", exc_info=True)
 
+    def emit_on_notify_command(self, argument: str):
+        for listener in self._listeners:
+            try:
+                listener.on_notify_command(argument)
+            except Exception:
+                logger.error(f"on_notify failed for listener '{listener}'", exc_info=True)
+
     def emit_on_runstate_change(self, state_change: RunStateChange):
         for listener in self._listeners:
             try:
@@ -293,6 +323,19 @@ class EventEmitter:
             except Exception:
                 logger.error(f"on_engine_shutdown failed for listener '{listener}'", exc_info=True)
 
+    def emit_on_method_error(self, exception: Exception):
+        for listener in self._listeners:
+            try:
+                listener.on_method_error(exception)
+            except Exception:
+                logger.error(f"on_method_error failed for listener '{listener}'", exc_info=True)
+
+    def emit_on_connection_status_change(self, status: Literal["Disconnected", "Connected"]):
+        for listener in self._listeners:
+            try:
+                listener.on_connection_status_change(status)
+            except Exception:
+                logger.error(f"on_connection_status_change failed for listener '{listener}'", exc_info=True)
 
 @dataclass(frozen=True)
 class BlockInfo:
