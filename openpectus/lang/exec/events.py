@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 import logging
 import sys
-from typing import Iterable
+from typing import Iterable, Literal
 import time
 
 
@@ -18,6 +18,7 @@ class RunStateChange(StrEnum):
     PAUSE = "Pause"
     UNPAUSE = "Unpause"
 
+ScopeType = Literal["Program", "Watch", "Alarm", "Block"]
 
 class EventListener:
     """ Defines the listener interface and base class for engine life-time events. """
@@ -57,13 +58,13 @@ class EventListener:
         is the root/program scope, the name is the empty string. """
         pass
 
-    def on_scope_start(self, node_id: str):
+    def on_scope_start(self, scope_info: ScopeInfo):
         pass
 
-    def on_scope_activate(self, node_id: str):
+    def on_scope_activate(self, scope_info: ScopeInfo):
         pass
 
-    def on_scope_end(self, node_id: str):
+    def on_scope_end(self, scope_info: ScopeInfo):
         pass
 
     def on_tick(self, tick_time: float, increment_time: float):
@@ -144,17 +145,17 @@ class PerformanceTimer(EventListener):
         with self:
             self._listener.on_block_end(block_info, new_block_info)
 
-    def on_scope_start(self, node_id: str):
+    def on_scope_start(self, scope_info: ScopeInfo):
         with self:
-            self._listener.on_scope_start(node_id)
+            self._listener.on_scope_start(scope_info)
 
-    def on_scope_activate(self, node_id: str):
+    def on_scope_activate(self, scope_info: ScopeInfo):
         with self:
-            self._listener.on_scope_activate(node_id)
+            self._listener.on_scope_activate(scope_info)
 
-    def on_scope_end(self, node_id: str):
+    def on_scope_end(self, scope_info: ScopeInfo):
         with self:
-            self._listener.on_scope_end(node_id)
+            self._listener.on_scope_end(scope_info)
 
     def on_tick(self, tick_time: float, increment_time: float):
         with self:
@@ -243,24 +244,24 @@ class EventEmitter:
             except Exception:
                 logger.error(f"on_block_end failed for listener '{listener}'", exc_info=True)
 
-    def emit_on_scope_start(self, node_id: str):
+    def emit_on_scope_start(self, node_id: str, scope_type: ScopeType, argument: str):
         for listener in self._listeners:
             try:
-                listener.on_scope_start(node_id)
+                listener.on_scope_start(ScopeInfo(node_id, argument, scope_type))
             except Exception:
                 logger.error(f"on_scope_start failed for listener '{listener}'", exc_info=True)
 
-    def emit_on_scope_activate(self, node_id: str):
+    def emit_on_scope_activate(self, node_id: str, scope_type: ScopeType, argument: str):
         for listener in self._listeners:
             try:
-                listener.on_scope_activate(node_id)
+                listener.on_scope_activate(ScopeInfo(node_id, argument, scope_type))
             except Exception:
                 logger.error(f"on_scope_activate failed for listener '{listener}'", exc_info=True)
 
-    def emit_on_scope_end(self, node_id: str):
+    def emit_on_scope_end(self, node_id: str, scope_type: ScopeType, argument: str):
         for listener in self._listeners:
             try:
-                listener.on_scope_end(node_id)
+                listener.on_scope_end(ScopeInfo(node_id, argument, scope_type))
             except Exception:
                 logger.error(f"on_scope_end failed for listener '{listener}'", exc_info=True)
 
@@ -302,3 +303,9 @@ class BlockInfo:
     def key(self) -> str :
         """ Gets the block name as a unique name across a single excution. """
         return self.name + "_" + str(self.tick)
+
+@dataclass(frozen=True)
+class ScopeInfo:
+    node_id: str
+    argument: str
+    scope_type: ScopeType
