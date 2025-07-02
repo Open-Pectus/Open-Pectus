@@ -4,7 +4,7 @@ name: Combined Workflows
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "850-modify-running-method-iii" ]
   pull_request:
     branches: [ "main" ]
 
