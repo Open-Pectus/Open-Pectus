@@ -1,13 +1,13 @@
 from __future__ import annotations
 import logging
 import math
-import uuid
+import time
 from datetime import datetime
 from enum import StrEnum, auto
 from typing import Iterable, Literal
 
 import openpectus.protocol.models as Mdl
-from pydantic import BaseModel, ConfigDict, NonNegativeInt
+from pydantic import BaseModel, ConfigDict, NonNegativeInt, Field
 
 logger = logging.getLogger(__name__)
 
@@ -293,13 +293,13 @@ class WebPushNotification(BaseModel): # see https://developer.mozilla.org/en-US/
     badge: str | None = None  # url for smaller image for e.g. the notifcation bar
     body: str | None = None
     data: WebPushData | None = None  # arbitrary data the frontend can use for e.g. navigating when user clicks an action button
-    icon: str | None = None  # url
+    icon: str | None = "/assets/icons/icon-192x192.png"  # url
     image: str | None = None  # url
     renotify: bool | None = None  # if set to true, tag must also be set
     requireInteraction: bool | None = None  # notification will automatically close after a time unless this is set to True
     silent: bool | None = None  # if True, notification will not make sound or vibration
     tag: str | None = None  # an id for the notification, used for renotify
-    timestamp: NonNegativeInt | None = None  # unix timestamp
+    timestamp: NonNegativeInt | None = Field(default_factory=lambda: int(time.time()*1000))  # unix timestamp in milliseconds
     title: str
     vibrate: list[NonNegativeInt] | None = None
 
