@@ -57,8 +57,20 @@ class WebPushPublisher:
             webpush_repo = WebPushRepository(database.scoped_session())
             subscriptions = self._get_subscriptions_for_topic(topic, process_unit, webpush_repo)
             for subscription in subscriptions:
-                web_push_subscription = WebPushSubscription(endpoint=AnyHttpUrl(subscription.endpoint),
-                                                            keys=WebPushKeys(auth=subscription.auth, p256dh=subscription.p256dh))
+                # Handle special case of notifying about NEW_CONTRIBUTOR.
+                # We should not send messages about this to the user who
+                # is the new contributor.
+                if topic is NotificationTopic.NEW_CONTRIBUTOR and notification.data:
+                    if notification.data.contributor_id == subscription.user_id:
+                        continue
+
+                web_push_subscription = WebPushSubscription(
+                    endpoint=AnyHttpUrl(subscription.endpoint),
+                    keys=WebPushKeys(
+                        auth=subscription.auth,
+                        p256dh=subscription.p256dh
+                    )
+                )
                 message_json = json.dumps(dict(notification=notification.model_dump()))
                 encryptedMessage = self.wp.get(message=message_json, subscription=web_push_subscription)
                 response = httpx.post(
