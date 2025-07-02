@@ -55,7 +55,7 @@ import { UtilMethods } from './shared/util-methods';
         </div>
       </form>
       <button class="bg-green-300 py-1.5 px-2.5 rounded-md border-slate-400 absolute right-4 bottom-4" (click)="onTestNotificationClick()">
-        Send test notification
+        Test notification
       </button>
     </div>
   `,
