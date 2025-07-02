@@ -285,6 +285,7 @@ class WebPushAction(BaseModel):
 
 class WebPushData(BaseModel):
     process_unit_id: str | None = None
+    contributor_id: str | None = None
 
 
 class WebPushNotification(BaseModel): # see https://developer.mozilla.org/en-US/docs/Web/API/Notification/Notification#parameters for more information
