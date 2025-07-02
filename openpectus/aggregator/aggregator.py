@@ -491,6 +491,9 @@ class FromFrontend:
             webpush_repo = WebPushRepository(database.scoped_session())
             webpush_repo.store_notifications_preferences(preferences)
 
+    def publish_notification_test(self, user_id: None | str):
+        asyncio.create_task(self.webpush_publisher.publish_test_message(str(user_id)))
+
     def publish_new_contributor_notification(self, engine_id: str, contributor: Contributor):
         if contributor.id is None:
             return

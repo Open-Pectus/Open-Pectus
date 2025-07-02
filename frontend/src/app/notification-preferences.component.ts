@@ -54,8 +54,8 @@ import { UtilMethods } from './shared/util-methods';
           <app-multi-select [formControlName]="topicsControlName" [options]="topicOptions"></app-multi-select>
         </div>
       </form>
-      <button class="bg-green-300 py-1.5 px-2.5 rounded-md border-slate-400 absolute right-4 bottom-4" (click)="onNotifyMeClick()">
-        Notify me!
+      <button class="bg-green-300 py-1.5 px-2.5 rounded-md border-slate-400 absolute right-4 bottom-4" (click)="onTestNotificationClick()">
+        Send test notification
       </button>
     </div>
   `,
@@ -107,11 +107,10 @@ export class NotificationPreferencesComponent {
     return this.formGroup.controls[this.scopeControlName].value === notificationScopes.specific_process_units;
   }
 
-  async onNotifyMeClick() {
+  async onTestNotificationClick() {
     const userId = await firstValueFrom(this.store.select(AppSelectors.userId));
-    const processUnitId = await firstValueFrom(this.store.select(AppSelectors.processUnits).pipe(map(processUnits => processUnits[0].id)));
     if(userId === undefined) return;
-    this.webpushService.notifyUser({processUnitId: processUnitId}).subscribe();
+    this.webpushService.testNotification().subscribe();
   }
 
   async onEnabledChanged(event: Event) {
