@@ -10,7 +10,7 @@ import openpectus.lang.exec.units as units
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.commands import InterpreterCommandEnum
 from openpectus.lang.exec.errors import (
-    EngineError, InterpretationError, InterpretationInternalError, NodeInterpretationError
+    EngineError, InterpretationError, InterpretationInternalError, MethodEditError, NodeInterpretationError
 )
 from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import (
