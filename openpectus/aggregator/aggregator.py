@@ -492,6 +492,10 @@ class FromFrontend:
             webpush_repo.store_notifications_preferences(preferences)
 
     def publish_new_contributor_notification(self, engine_id: str, contributor: Contributor):
+        if contributor.id is None:
+            return
+        if not self._engine_data_map[engine_id].has_run():
+            return
         asyncio.create_task(self.webpush_publisher.publish_message(
             notification=WebPushNotification(
                 title=self._engine_data_map[engine_id].uod_name,
