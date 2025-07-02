@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 class WebPushPublisher:
     def __init__(self, webpush_keys_path: str):
         self.webpush_keys_path = webpush_keys_path
+        self.wp = None
         self.setup_webpush()
 
     def setup_webpush(self):
@@ -49,7 +50,6 @@ class WebPushPublisher:
                 )
         except OSError:
             self.app_server_key = None
-            self.wp = None
 
     async def publish_message(self, notification: WebPushNotification, topic: NotificationTopic, process_unit: EngineData):
         if (self.wp == None): return
