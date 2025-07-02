@@ -756,6 +756,14 @@ class PInterpreter(NodeVisitor):
 
         yield NodeAction(node, complete)
 
+    def visit_NotifyNode(self, node: p.NotifyNode):
+        def do(node):
+            self.context.emitter.emit_on_notify_command(node.arguments)
+
+            self._add_record_state_started(node)
+            self._add_record_state_complete(node)
+            node.completed = True
+        yield NodeAction(node, do)
 
     def visit_EngineCommandNode(self, node: p.EngineCommandNode) -> NodeGenerator:
         # TODO node.completed
