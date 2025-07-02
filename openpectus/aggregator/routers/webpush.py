@@ -54,5 +54,4 @@ def subscribe_user(subscription: WebPushSubscription,
 @router.post("/notify_user")
 async def notify_user(process_unit_id: str,
                 agg: Aggregator = Depends(agg_deps.get_aggregator)):
-    await agg.from_frontend.webpush_notify_user(process_unit_id)
     return Dto.ServerSuccessResponse(message="Web push notification successful")
