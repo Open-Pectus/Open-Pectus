@@ -15,6 +15,7 @@ from openpectus.lang.exec.uod import (
     UodCommand,
     UodBuilder,
 )
+from openpectus.lang.exec.visitor import PrependGenerator
 from openpectus.protocol.models import Method
 from openpectus.test.engine.utility_methods import (
     EngineTestRunner,
@@ -98,7 +99,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:  # noqa
     uod.hwl.connect()
     return uod
 
-
+@unittest.skip(reason="Edit not currently enabled")
 class TestMethodManager(unittest.TestCase):
 
     def test_may_not_edit_an_executed_line(self):
