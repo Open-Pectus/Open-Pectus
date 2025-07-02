@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import asyncio
 from typing import Sequence
 
 import httpx
@@ -56,6 +57,7 @@ class WebPushPublisher:
         with database.create_scope():
             webpush_repo = WebPushRepository(database.scoped_session())
             subscriptions = self._get_subscriptions_for_topic(topic, process_unit, webpush_repo)
+            tasks = set()
             for subscription in subscriptions:
                 # Handle special case of notifying about NEW_CONTRIBUTOR.
                 # We should not send messages about this to the user who
@@ -73,15 +75,19 @@ class WebPushPublisher:
                 )
                 message_json = json.dumps(dict(notification=notification.model_dump()))
                 encryptedMessage = self.wp.get(message=message_json, subscription=web_push_subscription)
-                response = httpx.post(
-                    url=str(subscription.endpoint),
-                    content=encryptedMessage.encrypted,
-                    headers=encryptedMessage.headers  # pyright: ignore [reportArgumentType]
-                )
-                if (response.status_code == HTTP_410_GONE):
-                    webpush_repo.delete_subscription(subscription)
-                if(response.status_code != HTTP_201_CREATED):
-                    logger.warning(f"Tried publishing message for user {subscription.user_id} to endpoint {subscription.endpoint} but got response status {response.status_code}")
+                async def task():
+                    async with httpx.AsyncClient() as client:
+                        response = await client.post(
+                            url=str(subscription.endpoint),
+                            content=encryptedMessage.encrypted,
+                            headers=encryptedMessage.headers  # pyright: ignore [reportArgumentType]
+                        )
+                    if (response.status_code == HTTP_410_GONE):
+                        webpush_repo.delete_subscription(subscription)
+                    if(response.status_code != HTTP_201_CREATED):
+                        logger.warning(f"Tried publishing message for user {subscription.user_id} to endpoint {subscription.endpoint} but got response status {response.status_code}")
+                tasks.add(asyncio.create_task(task()))
+            await asyncio.gather(*tasks)
 
     def _get_subscriptions_for_topic(self, topic: NotificationTopic, process_unit: EngineData, webpush_repo: WebPushRepository) -> Sequence[db_mdl.WebPushSubscription]:
         notification_preferences = webpush_repo.get_notification_preferences_for_topic(topic)
