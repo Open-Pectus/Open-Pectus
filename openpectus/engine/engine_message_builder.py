@@ -161,7 +161,7 @@ class EngineMessageBuilder():
         return EM.WebPushNotificationMsg(
             notification=EM.WebPushNotification(
                 title=self.engine.uod.instrument,
-                body=f"Run which started {started_time_str} has been stopped.",
+                body=f"Run which started {started_time_str} has stopped.",
             ),
             topic=EM.NotificationTopic.RUN_STOP,
         )
