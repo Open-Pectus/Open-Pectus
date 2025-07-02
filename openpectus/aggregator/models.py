@@ -289,10 +289,10 @@ class WebPushData(BaseModel):
 
 
 class WebPushNotification(BaseModel): # see https://developer.mozilla.org/en-US/docs/Web/API/Notification/Notification#parameters for more information
-    actions: list[WebPushAction] | None = None  # buttons user can press
+    actions: list[WebPushAction] = Field(default_factory=list)  # buttons user can press
     badge: str | None = None  # url for smaller image for e.g. the notifcation bar
     body: str | None = None
-    data: WebPushData | None = None  # arbitrary data the frontend can use for e.g. navigating when user clicks an action button
+    data: WebPushData = Field(default_factory=WebPushData)  # arbitrary data the frontend can use for e.g. navigating when user clicks an action button
     icon: str | None = "/assets/icons/icon-192x192.png"  # url
     image: str | None = None  # url
     renotify: bool | None = None  # if set to true, tag must also be set
