@@ -75,7 +75,7 @@ class WebPushPublisher:
 
     async def publish_message(self, notification: WebPushNotification, topic: NotificationTopic, process_unit: EngineData):
         if (self.wp == None): return
-        if (time.time()-5*60)*1000 > notification.timestamp:
+        if notification.timestamp and (time.time()-5*60)*1000 > notification.timestamp:
             logger.warning(f"Notification {notification} is more than 5 minutes old and will not be published.")
             return
         with database.create_scope():
