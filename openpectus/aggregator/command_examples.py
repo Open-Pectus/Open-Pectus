@@ -223,5 +223,11 @@ Macro: A
     Mark: 2
 
 Call macro: A # Mark 1 and Mark 2 are executed.
+""")),
+    CommandExample(name="Notify", example=cleandoc("""
+# Trigger a notification on subscribed iPhones
+                                                   
+# Example 1:
+Notify: Example message
 """))
 ]

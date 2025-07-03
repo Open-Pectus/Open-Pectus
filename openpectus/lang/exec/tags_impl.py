@@ -156,17 +156,17 @@ class ScopeTimeTag(Tag):
         self.value = 0.0
         self.tracer.trace()
 
-    def on_scope_start(self, node_id):
+    def on_scope_start(self, scope_info):
         self.value = 0.0
         self.tracer.trace()
 
-    def on_scope_activate(self, node_id):
-        self._timers[node_id] = 0.0
-        self._stack.append(node_id)
+    def on_scope_activate(self, scope_info):
+        self._timers[scope_info.node_id] = 0.0
+        self._stack.append(scope_info.node_id)
         self.tracer.trace()
 
-    def on_scope_end(self, node_id):
-        del self._timers[node_id]
+    def on_scope_end(self, scope_info):
+        del self._timers[scope_info.node_id]
         self._stack.pop()
 
     def on_tick(self, tick_time, increment_time):

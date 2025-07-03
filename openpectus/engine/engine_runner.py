@@ -7,7 +7,7 @@ import time
 from typing import Awaitable, Callable, Literal
 
 from openpectus.engine.engine_message_builder import EngineMessageBuilder
-from openpectus.lang.exec.events import EventEmitter, EventListener
+from openpectus.lang.exec.events import EventEmitter, EventListener, RunStateChange
 from openpectus.protocol.engine_dispatcher import EngineDispatcher
 import openpectus.protocol.engine_messages as EM
 from openpectus.protocol.exceptions import ProtocolNetworkException
@@ -95,12 +95,42 @@ class EngineRunner(EventListener):
         if True or self.state == "Connected" or self.state == "Reconnected":
             msg = self._message_builder.create_run_started_msg(run_id, time.time())
             asyncio.run_coroutine_threadsafe(self._post_async(msg), self._loop)
+            msg = self._message_builder.create_wpn_run_started_msg()
+            asyncio.run_coroutine_threadsafe(self._post_async(msg), self._loop)
 
     def on_stop(self):
         assert self.run_id is not None
         run_id = self.run_id
         super().on_stop()
         msg = self._message_builder.create_run_stopped_msg(run_id)
+        asyncio.run_coroutine_threadsafe(self._post_async(msg), self._loop)
+        msg = self._message_builder.create_wpn_run_stopped_msg()
+        asyncio.run_coroutine_threadsafe(self._post_async(msg), self._loop)
+
+    def on_runstate_change(self, state_change):
+        if state_change == RunStateChange.PAUSE:
+            msg = self._message_builder.create_wpn_run_paused_msg()
+            asyncio.run_coroutine_threadsafe(self._post_async(msg), self._loop)
+
+    def on_block_start(self, block_info):
+        msg = self._message_builder.create_wpn_block_started_msg(block_name=block_info.name)
+        asyncio.run_coroutine_threadsafe(self._post_async(msg), self._loop)
+
+    def on_notify_command(self, argument):
+        msg = self._message_builder.create_wpn_notify_command_msg(text=argument)
+        asyncio.run_coroutine_threadsafe(self._post_async(msg), self._loop)
+
+    def on_scope_activate(self, scope_info):
+        if scope_info.scope_type == "Watch":
+            msg = self._message_builder.create_wpn_watch_activated_msg(watch_argument=scope_info.argument)
+            asyncio.run_coroutine_threadsafe(self._post_async(msg), self._loop)
+
+    def on_method_error(self, exception):
+        msg = self._message_builder.create_wpn_method_error_msg()
+        asyncio.run_coroutine_threadsafe(self._post_async(msg), self._loop)
+
+    def on_connection_status_change(self, status):
+        msg = self._message_builder.create_wpn_network_error_msg()
         asyncio.run_coroutine_threadsafe(self._post_async(msg), self._loop)
 
     @property

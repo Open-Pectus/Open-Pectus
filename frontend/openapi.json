@@ -1850,21 +1850,22 @@
         }
       }
     },
-    "/api/webpush/notify_user": {
+    "/api/webpush/test_notification": {
       "post": {
         "tags": [
           "webpush"
         ],
-        "summary": "Notify User",
-        "operationId": "notify_user",
+        "summary": "Test Notification",
+        "operationId": "test_notification",
         "parameters": [
           {
-            "name": "process_unit_id",
-            "in": "query",
-            "required": true,
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
             "schema": {
               "type": "string",
-              "title": "Process Unit Id"
+              "default": "",
+              "title": "X-Identity"
             }
           }
         ],
