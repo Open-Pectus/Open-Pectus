@@ -45,7 +45,6 @@ class MethodManager:
         """ User saved method while a run was active. The new method is replacing an existing method
         whose state should be merged over. """
         # concurrency check: aggregator performs the version check and aborts on error
-        raise NotImplementedError("Edit is currently not working")
 
         # validate that the content of the new method does not conflict with the state of the running method
         method_state = self.get_method_state()
