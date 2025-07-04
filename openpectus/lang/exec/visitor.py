@@ -66,10 +66,11 @@ def run_tick(gen: NodeGenerator):
 
 
 
-def run_ffw_tick(gen: NodeGenerator) -> bool | NullableActionResult:
+def run_ffw_tick(gen: NodeGenerator) -> bool | NodeAction:
     """ Advance the generator a single tick while skipping execution. Returns
-    node if the generator has reached an action not in action history,
-    True if the generator was exhausted, else False. """
+    node action if the generator has reached an action not in action history,
+    False if tick_break or None was encountered or else True (the generator
+    was exhausted) """
     while True:
         try:
             x = next(gen)

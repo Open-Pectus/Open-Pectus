@@ -71,6 +71,7 @@ class RuntimeInfo:
                 runlog.items.extend(items)
             except Exception:
                 logger.error(f"Failed to create runlog item for record {r}", exc_info=True)
+                raise
         runlog.items.sort(key=lambda item: item.start)
         return runlog
 
@@ -151,7 +152,7 @@ class RuntimeInfo:
                     item.id = str(state.command_exec_id)
                     command = state.command
                 elif state.state_name == RuntimeRecordStateEnum.AwaitingThreshold:
-                    assert item is not None
+                    assert item is not None, f"Item for record {r} was unexpectedly None in state {state.state_name}. States: {invocation_states}"
                     item.state = RunLogItemState.AwaitingThreshold
 
                 if not is_conclusive_state and item is not None:
