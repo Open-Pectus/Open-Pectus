@@ -248,7 +248,7 @@ class Tag(ChangeSubject, EventListener):
             return f"{self.as_float():0.5f}"
         else:
             return str(value)
-    
+
     def on_stop(self):
         if self.simulated:
             self.stop_simulation()
