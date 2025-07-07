@@ -181,6 +181,9 @@ class NodeVisitor(NodeVisitorGeneric):
     def visit_InterpreterCommandNode(self, node: p.InterpreterCommandNode) -> NodeGenerator:
         yield
 
+    def visit_NotifyNode(self, node: p.NotifyNode) -> NodeGenerator:
+        yield
+
     def visit_EngineCommandNode(self, node: p.EngineCommandNode) -> NodeGenerator:
         yield
 

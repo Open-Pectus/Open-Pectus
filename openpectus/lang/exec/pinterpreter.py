@@ -517,8 +517,8 @@ class PInterpreter(NodeVisitor):
     def visit_ProgramNode(self, node: p.ProgramNode) -> NodeGenerator:
         def start(node):
             self.stack.push(node)
-            self.context.emitter.emit_on_scope_start(node.id)
-            self.context.emitter.emit_on_scope_activate(node.id)
+            self.context.emitter.emit_on_scope_start(node.id, "Program", "")
+            self.context.emitter.emit_on_scope_activate(node.id, "Program", "")
         yield NodeAction(node, start)
 
         yield from self._visit_children(node)
@@ -671,12 +671,12 @@ class PInterpreter(NodeVisitor):
             self.stack.push(node)
             self.context.tags[SystemTagName.BLOCK].set_value(node.name, self._tick_number)
             self.context.emitter.emit_on_block_start(node.name, self._tick_number)
-            self.context.emitter.emit_on_scope_start(node.id)
+            self.context.emitter.emit_on_scope_start(node.id, "Block", node.arguments)
             logger.debug(f"Block Tag set to {node.name}")
         yield NodeAction(node, push_to_stack)
 
         def emit_scope_activated(node):
-            self.context.emitter.emit_on_scope_activate(node.id)
+            self.context.emitter.emit_on_scope_activate(node.id, "Block", node.arguments)
             self._add_record_state_started(node)
         yield NodeAction(node, emit_scope_activated)
 
@@ -813,6 +813,14 @@ class PInterpreter(NodeVisitor):
 
         yield NodeAction(node, complete)
 
+    def visit_NotifyNode(self, node: p.NotifyNode):
+        def do(node):
+            self.context.emitter.emit_on_notify_command(node.arguments)
+
+            self._add_record_state_started(node)
+            self._add_record_state_complete(node)
+            node.completed = True
+        yield NodeAction(node, do)
 
     def visit_EngineCommandNode(self, node: p.EngineCommandNode) -> NodeGenerator:
         # TODO node.completed
@@ -874,7 +882,7 @@ class PInterpreter(NodeVisitor):
 
         def register_interrupt(node):
             assert isinstance(node, p.WatchNode)
-            self.context.emitter.emit_on_scope_start(node.id)
+            self.context.emitter.emit_on_scope_start(node.id, "Watch", node.arguments)
             self._register_interrupt(node, self.visit_WatchNode(node))
             node.interrupt_registered = True
             self._add_record_state_awaiting_interrupt(node)
@@ -891,14 +899,14 @@ class PInterpreter(NodeVisitor):
             yield NodeAction(node, self._add_record_state_awaiting_condition)
 
         def start(node):
-            self.context.emitter.emit_on_scope_activate(node.id)
+            self.context.emitter.emit_on_scope_activate(node.id, "Watch", node.arguments)
             logger.debug(f"{str(node)} executing")
             self._add_record_state_started(node)
 
         while not node.activated:
             if node.cancelled:
                 self._add_record_state_cancelled(node)
-                self.context.emitter.emit_on_scope_end(node.id)
+                self.context.emitter.emit_on_scope_end(node.id, "Watch", node.arguments)
                 logger.info(f"Instruction {node} cancelled")
                 node.completed = True
                 return
@@ -915,7 +923,7 @@ class PInterpreter(NodeVisitor):
         def complete(node):
             assert isinstance(node, p.WatchNode)
             logger.debug(f"Watch {node} complete")
-            self.context.emitter.emit_on_scope_end(node.id)
+            self.context.emitter.emit_on_scope_end(node.id, "Watch", node.arguments)
             self._add_record_state_complete(node)
             #self._unregister_interrupt(node) # we need to keep the interrupt handler active - but this conflicts with using emit_on_scope_end???
             node.completed = True
@@ -932,7 +940,7 @@ class PInterpreter(NodeVisitor):
 
         def register_alarm_interrupt(node):
             assert isinstance(node, p.AlarmNode)
-            self.context.emitter.emit_on_scope_start(node.id)
+            self.context.emitter.emit_on_scope_start(node.id, "Alarm", node.arguments)
             self._register_interrupt(node, self.visit_AlarmNode(node))
             node.interrupt_registered = True
             self._add_record_state_awaiting_interrupt(node)
@@ -947,14 +955,14 @@ class PInterpreter(NodeVisitor):
             yield NodeAction(node, self._add_record_state_awaiting_condition)
 
         def start(node):
-            self.context.emitter.emit_on_scope_activate(node.id)
+            self.context.emitter.emit_on_scope_activate(node.id, "Alarm", node.arguments)
             logger.debug(f"{str(node)} executing")
             self._add_record_state_started(node)
 
         while not node.activated:
             if node.cancelled:
                 self._add_record_state_cancelled(node)
-                self.context.emitter.emit_on_scope_end(node.id)
+                self.context.emitter.emit_on_scope_end(node.id, "Alarm", node.arguments)
                 logger.info(f"Instruction {node} cancelled")
                 node.completed = True
                 return
@@ -970,7 +978,7 @@ class PInterpreter(NodeVisitor):
         def complete(node):
             assert isinstance(node, p.AlarmNode)
             logger.debug(f"Alarm {node} complete")
-            self.context.emitter.emit_on_scope_end(node.id)
+            self.context.emitter.emit_on_scope_end(node.id, "Alarm", node.arguments)
             self._add_record_state_complete(node)
         yield NodeAction(node, complete)
 

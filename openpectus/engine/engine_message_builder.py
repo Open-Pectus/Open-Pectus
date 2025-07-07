@@ -2,6 +2,7 @@ import logging
 from logging.handlers import QueueHandler
 from queue import Empty, SimpleQueue
 import time
+import datetime
 
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.models as Mdl
@@ -148,3 +149,85 @@ class EngineMessageBuilder():
 
     def create_method_msg(self) -> EM.MethodMsg:
         return EM.MethodMsg(method=Mdl.Method.from_parser_method(self.engine._method_manager._method))
+
+    # Web Push Notification messages
+    def create_wpn_run_stopped_msg(self) -> EM.WebPushNotificationMsg:
+        started_datetime = datetime.datetime.fromtimestamp(self.engine._runstate_started_time)
+
+        started_time_str = started_datetime.strftime("%H:%M")
+        if datetime.datetime.now().day != started_datetime.day:
+            started_time_str = started_datetime.strftime("%Y-%m-%d %H:%M")
+
+        return EM.WebPushNotificationMsg(
+            notification=EM.WebPushNotification(
+                title=self.engine.uod.instrument,
+                body=f"Run which started {started_time_str} has stopped.",
+            ),
+            topic=EM.NotificationTopic.RUN_STOP,
+        )
+    
+    def create_wpn_run_started_msg(self) -> EM.WebPushNotificationMsg:
+        started_datetime = datetime.datetime.fromtimestamp(self.engine._runstate_started_time)
+        started_time_str = started_datetime.strftime("%H:%M")
+
+        return EM.WebPushNotificationMsg(
+            notification=EM.WebPushNotification(
+                title=self.engine.uod.instrument,
+                body=f"Run started {started_time_str}.",
+            ),
+            topic=EM.NotificationTopic.RUN_START,
+        )
+    
+    def create_wpn_run_paused_msg(self) -> EM.WebPushNotificationMsg:
+        return EM.WebPushNotificationMsg(
+            notification=EM.WebPushNotification(
+                title=self.engine.uod.instrument,
+                body=f"Run has been paused.",
+            ),
+            topic=EM.NotificationTopic.RUN_PAUSE,
+        )
+    
+    def create_wpn_block_started_msg(self, block_name: str) -> EM.WebPushNotificationMsg:
+        return EM.WebPushNotificationMsg(
+            notification=EM.WebPushNotification(
+                title=self.engine.uod.instrument,
+                body=f'Block "{block_name}" is now running.',
+            ),
+            topic=EM.NotificationTopic.BLOCK_START,
+        )
+    
+    def create_wpn_notify_command_msg(self, text: str) -> EM.WebPushNotificationMsg:
+        return EM.WebPushNotificationMsg(
+            notification=EM.WebPushNotification(
+                title=self.engine.uod.instrument,
+                body=text,
+            ),
+            topic=EM.NotificationTopic.NOTIFICATION_CMD,
+        )
+    
+    def create_wpn_watch_activated_msg(self, watch_argument: str) -> EM.WebPushNotificationMsg:
+        return EM.WebPushNotificationMsg(
+            notification=EM.WebPushNotification(
+                title=self.engine.uod.instrument,
+                body=f"Watch condition triggered: {watch_argument}",
+            ),
+            topic=EM.NotificationTopic.WATCH_TRIGGERED,
+        )
+    
+    def create_wpn_method_error_msg(self) -> EM.WebPushNotificationMsg:
+        return EM.WebPushNotificationMsg(
+            notification=EM.WebPushNotification(
+                title=self.engine.uod.instrument,
+                body=f"Error in method. Run paused.",
+            ),
+            topic=EM.NotificationTopic.METHOD_ERROR,
+        )
+    
+    def create_wpn_network_error_msg(self) -> EM.WebPushNotificationMsg:
+        return EM.WebPushNotificationMsg(
+            notification=EM.WebPushNotification(
+                title=self.engine.uod.instrument,
+                body="Connection between Open Pectus and equipment has been lost.",
+            ),
+            topic=EM.NotificationTopic.NETWORK_ERRORS,
+        )

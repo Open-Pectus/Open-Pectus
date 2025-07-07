@@ -1,6 +1,8 @@
 import json
 import logging
 import os
+import asyncio
+import time
 from typing import Sequence
 
 import httpx
@@ -19,6 +21,7 @@ logger = logging.getLogger(__name__)
 class WebPushPublisher:
     def __init__(self, webpush_keys_path: str):
         self.webpush_keys_path = webpush_keys_path
+        self.wp = None
         self.setup_webpush()
 
     def setup_webpush(self):
@@ -49,27 +52,49 @@ class WebPushPublisher:
                 )
         except OSError:
             self.app_server_key = None
-            self.wp = None
+
+    async def publish_test_message(self, user_id: None | str):
+        if (self.wp == None): return
+
+        notification = WebPushNotification(
+            title="Open Pectus",
+            body="Test notification",
+        )
+
+        with database.create_scope():
+            webpush_repo = WebPushRepository(database.scoped_session())
+            subscriptions = webpush_repo.get_subscriptions_for_user(str(user_id))
+            tasks = set()
+            for subscription in subscriptions:
+                tasks.add(asyncio.create_task(self._post_webpush(
+                    subscription,
+                    webpush_repo,
+                    notification
+                )))
+            await asyncio.gather(*tasks)
 
     async def publish_message(self, notification: WebPushNotification, topic: NotificationTopic, process_unit: EngineData):
         if (self.wp == None): return
+        if notification.timestamp and (time.time()-5*60)*1000 > notification.timestamp:
+            logger.warning(f"Notification {notification} is more than 5 minutes old and will not be published.")
+            return
         with database.create_scope():
             webpush_repo = WebPushRepository(database.scoped_session())
             subscriptions = self._get_subscriptions_for_topic(topic, process_unit, webpush_repo)
+            tasks = set()
             for subscription in subscriptions:
-                web_push_subscription = WebPushSubscription(endpoint=AnyHttpUrl(subscription.endpoint),
-                                                            keys=WebPushKeys(auth=subscription.auth, p256dh=subscription.p256dh))
-                message_json = json.dumps(dict(notification=notification.model_dump()))
-                encryptedMessage = self.wp.get(message=message_json, subscription=web_push_subscription)
-                response = httpx.post(
-                    url=str(subscription.endpoint),
-                    content=encryptedMessage.encrypted,
-                    headers=encryptedMessage.headers  # pyright: ignore [reportArgumentType]
-                )
-                if (response.status_code == HTTP_410_GONE):
-                    webpush_repo.delete_subscription(subscription)
-                if(response.status_code != HTTP_201_CREATED):
-                    logger.warning(f"Tried publishing message for user {subscription.user_id} to endpoint {subscription.endpoint} but got response status {response.status_code}")
+                # Handle special case of notifying about NEW_CONTRIBUTOR.
+                # We should not send messages about this to the user who
+                # is the new contributor.
+                if topic is NotificationTopic.NEW_CONTRIBUTOR and notification.data:
+                    if notification.data.contributor_id == subscription.user_id:
+                        continue
+                tasks.add(asyncio.create_task(self._post_webpush(
+                    subscription,
+                    webpush_repo,
+                    notification
+                )))
+            await asyncio.gather(*tasks)
 
     def _get_subscriptions_for_topic(self, topic: NotificationTopic, process_unit: EngineData, webpush_repo: WebPushRepository) -> Sequence[db_mdl.WebPushSubscription]:
         notification_preferences = webpush_repo.get_notification_preferences_for_topic(topic)
@@ -86,3 +111,28 @@ class WebPushPublisher:
                     and process_unit.engine_id in np.process_units]
 
         return webpush_repo.get_subscriptions(access + contributed + specific)
+
+    async def _post_webpush(self, 
+                                    subscription: db_mdl.WebPushSubscription,
+                                    web_push_repository: WebPushRepository,
+                                    notification: WebPushNotification):
+        assert self.wp
+        web_push_subscription = WebPushSubscription(
+            endpoint=AnyHttpUrl(subscription.endpoint),
+            keys=WebPushKeys(
+                auth=subscription.auth,
+                p256dh=subscription.p256dh
+            )
+        )
+        message_json = json.dumps(dict(notification=notification.model_dump()))
+        encryptedMessage = self.wp.get(message=message_json, subscription=web_push_subscription)
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                url=str(web_push_subscription.endpoint),
+                content=encryptedMessage.encrypted,
+                headers=encryptedMessage.headers  # pyright: ignore [reportArgumentType]
+            )
+        if (response.status_code == HTTP_410_GONE):
+            web_push_repository.delete_subscription(subscription)
+        if(response.status_code != HTTP_201_CREATED):
+            logger.warning(f"Tried publishing message for user {subscription.user_id} to endpoint {subscription.endpoint} but got response status {response.status_code}")
