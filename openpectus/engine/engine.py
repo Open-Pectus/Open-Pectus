@@ -255,7 +255,7 @@ class Engine(InterpreterContext):
 
         # edit phase
         if self._pending_merge_method is not None:
-            logger.debug("Applying scheduled method merge")
+            logger.debug("Applying scheduled method merge edit")
             try:
                 self._method_manager.merge_method(self._pending_merge_method)
                 self._interpreter.update_method_and_ffw(self._method_manager.program)
@@ -776,49 +776,18 @@ class Engine(InterpreterContext):
 
     # code manipulation api
     def set_method(self, method: Mdl.Method):
-        """ Set new method. This will replace the current method.
-
-        We generally expect that nothing important is going on when performing a method edit. This means
-        that interpreter is in one of these states:
-            - Current instruction is awating a threshold, preferably with at least several seconds before
-              the instruction starts
-            - Current instruction is a Wait
-            - Current instruction is a Pause
-            - Method is exhausted
-            - Engine paused
-            - ??
-            In the waiting cases (threshold, Wait and Pause), the waiting time is reset - this is probably ok?
-
-        How should this be enforced?
-        - Wait for an active instruction to complete before performing the edit? Probably. This does not mean
-          wait for a possible command, just wait to engine phase edit
-        - Fail unless one of the conditions above is true? This is difficult:
-            - This likely requires semantic changes so no two instructions are active in the same tick.
-              - A case is that currently two adjecent Mark instruction are active in the same tick
-                and we have tests that depend on this - but this can be changed and probably should. It would
-                certainly make tests easier to write and understand and more robust since they don't have to depend
-                on tick counting.
-        - Should the edit be performed as a command? We should always perform the edit in a "pause" so it won't interfere
-          with anything...
-
-        If a method is already running, it will
-        - Take node of the current instruction
-        - Check that no code changes exist in already executed code. If so, MethodEditError is raised
-        - Serialize the AST of the running method
-        - Parse the updated method, replacing the AST with the new AST
-        - Apply persisted data to new AST
-        - Patch all node references to point to the updated nodes:
-            - In runtime records
-            - In interpreter state (activate records)
-        - Start executing new program in fast-forward mode to skip directly to the paused instruction
-        """
+        """ Set new method. This will replace the current method. """
 
         try:
             if self._runstate_started:
                 if self._pending_merge_method is not None:
                     raise MethodEditError("An edit is already in progress")
+                # would be really nice if we could do more checks here rather than
+                # wait - but those checks depend on actual state which may have changed
+                # once we get to applying the edit
                 # signal to apply updated method on next tick
                 self._pending_merge_method = method
+                logger.debug(f"Method merge edit scheduled")
             else:
                 self._method_manager.set_method(method)
                 self._interpreter = PInterpreter(self._method_manager.program, self)

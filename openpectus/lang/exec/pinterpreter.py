@@ -164,9 +164,6 @@ class PInterpreter(NodeVisitor):
         self._program = program
         self._generator = None  # clear so either tick or us may set it
         target_node = program.get_child_by_id(target_node_id)  # find target node in new ast
-        if target_node is not None:
-            logger.debug(f"The target node states are {target_node.started=} | {target_node.completed=}")
-
         if target_node is None:
             logger.error(f"FFW aborted because target node {target_node_id} was not found in new ast")
             raise ValueError(

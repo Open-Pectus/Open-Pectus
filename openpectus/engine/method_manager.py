@@ -73,6 +73,7 @@ class MethodManager:
         try:
             self._program.apply_tree_state(existing_state)
             self._program.revision = self._program.revision + 1
+            logger.debug(f"Updating method revision to {self._program.revision}")
 
         except Exception as ex:
             logger.error("Failed to apply tree state", exc_info=True)
