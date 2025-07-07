@@ -600,6 +600,15 @@ class CallMacroNode(Node):
         self._forcible = False
 
 
+class NotifyNode(Node):
+    instruction_names = ["Notify"]
+
+    def __init__(self, position=Position.empty, id=""):
+        super().__init__(position, id)
+        self._cancellable = False
+        self._forcible = False
+
+
 class CommandBaseNode(Node):
     pass
 

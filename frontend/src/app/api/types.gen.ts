@@ -560,8 +560,8 @@ export type SubscribeUserData = {
 
 export type SubscribeUserResponse = (unknown);
 
-export type NotifyUserData = {
-    processUnitId: string;
+export type TestNotificationData = {
+    xIdentity?: string;
 };
 
-export type NotifyUserResponse = (unknown);
+export type TestNotificationResponse = (unknown);

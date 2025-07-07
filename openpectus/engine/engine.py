@@ -698,6 +698,11 @@ class Engine(InterpreterContext):
         for tag_name in self._system_listener.changes:
             tag = self._system_tags[tag_name]
             self.tag_updates.put(tag)
+            if tag_name == SystemTagName.CONNECTION_STATUS:
+                status = self._system_tags[SystemTagName.CONNECTION_STATUS].get_value()
+                assert isinstance(status, str)
+                assert status  == "Disconnected" or status == "Connected"
+                self._emitter.emit_on_connection_status_change(status)
         self._system_listener.clear_changes()
 
         for tag_name in self._uod_listener.changes:
@@ -711,6 +716,7 @@ class Engine(InterpreterContext):
         self._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Paused, self._tick_time)
         self._last_error = exception
         self._runstate_paused = True
+        self._emitter.emit_on_method_error(exception)
 
     def has_error_state(self) -> bool:
         method_status = self._system_tags[SystemTagName.METHOD_STATUS]
