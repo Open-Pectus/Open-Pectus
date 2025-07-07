@@ -458,7 +458,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
         ]
 
     # get whole query, eg "St" or "Alarm: Run T"
-    char: int = position["character"]
+    char = position["character"]
     if char < len(line):
         query = line[0:char]
     else:
@@ -466,6 +466,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
     pcode_parser = PcodeParser()
     node = pcode_parser._parse_line(line, position["line"])
     position_ast = ast_position_from_lsp_position(position)
+    leading_space = position["character"] > 0 and line[position["character"]-1:position["character"]] == " "
 
     if node:
         if node.instruction_name in analysis_input.commands.names:
@@ -473,12 +474,12 @@ def completions(document: Document, position: Position, ignored_names, engine_id
             if isinstance(node, p.NodeWithTagOperatorValue) and node.tag_operator_value:
                 # Complete tag name
                 if position_ast in node.tag_operator_value.lhs_range or (node.tag_operator_value.lhs == "" and node.arguments_part.strip() not in analysis_input.tags.names):
-                    prefix = " " if query.endswith(":") else ""
+                    prefix = "" if leading_space else " "
                     if node.tag_operator_value.lhs_range.is_empty():
                         return [
                             CompletionItem(
                                 label=name,
-                                insertText=prefix+name+suffix,
+                                insertText=prefix+name+" ",
                                 kind=CompletionItemKind.Enum,
                                 command=LSPCommand(title="", command="editor.action.triggerSuggest")
                             )
@@ -491,7 +492,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                                 kind=CompletionItemKind.Enum,
                                 textEdit=TextEdit(
                                     range=lsp_range_from_ast_range(node.tag_operator_value.lhs_range),
-                                    newText=prefix+name
+                                    newText=prefix+name+" "
                                 ),
                                 command=LSPCommand(title="", command="editor.action.triggerSuggest")
                             )
@@ -499,12 +500,12 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                         ]
                 # Complete operator
                 elif position_ast in node.tag_operator_value.op_range or node.tag_operator_value.op_range.is_empty():
-                    prefix = "" if query.endswith(" ") else " "
+                    prefix = "" if leading_space else " "
                     if node.tag_operator_value.op_range.is_empty():
                         return [
                             CompletionItem(
                                 label=f"{operator} ({operator_descriptions[operator]})",
-                                insertText=prefix+operator,
+                                insertText=prefix+operator+" ",
                                 kind=CompletionItemKind.Enum,
                                 command=LSPCommand(title="", command="editor.action.triggerSuggest")
                             )
@@ -525,7 +526,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                         ]
                 # Complete unit
                 elif position_ast in node.tag_operator_value.rhs_range or position_ast > node.tag_operator_value.op_range:
-                    prefix = "" if query.endswith(" ") else " "
+                    prefix = "" if leading_space else " "
                     unit_options = units_compaible_with_tag(analysis_input, node.tag_operator_value.lhs)
                     if len(unit_options) > 0:
                         return [
@@ -552,7 +553,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                 macro_visitor = MacroVisitor()
                 for _ in macro_visitor.visit(program):
                     pass
-                prefix = " " if query.endswith(":") else ""
+                prefix = "" if leading_space else " "
                 if node.arguments_range.is_empty():
                     return [
                         CompletionItem(
@@ -574,7 +575,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
             elif isinstance(node, p.SimulateOffNode):
                 # Complete tag name
                 if position_ast in node.arguments_range or node.arguments == "" or node.arguments not in analysis_input.tags.names:
-                    prefix = " " if query.endswith(":") else ""
+                    prefix = "" if leading_space else " "
                     if node.arguments_range.is_empty():
                         return [
                             CompletionItem(
@@ -600,7 +601,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
             # Completion of all other commands
             elif node.instruction_name in analysis_input.commands.names:
                 arg_parser = analysis_input.commands.get(node.instruction_name).arg_parser
-                prefix = " " if query.endswith(":") else ""
+                prefix = "" if leading_space else " "
                 if arg_parser:
                     options = arg_parser.get_additive_options()+arg_parser.get_exclusive_options()+arg_parser.get_units()
                     # Complete additive options
