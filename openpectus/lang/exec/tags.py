@@ -165,8 +165,8 @@ class Tag(ChangeSubject, EventListener):
         self.direction: TagDirection = direction
         self.safe_value: TagValueType | Unset = safe_value
         self.format_fn = format_fn
-        self.simulated_value = None
-        self.simulated = False
+        self.simulated_value: TagValueType = None
+        self.simulated: bool = False
 
     def __str__(self) -> str:
         if self.simulated:
@@ -248,7 +248,11 @@ class Tag(ChangeSubject, EventListener):
             return f"{self.as_float():0.5f}"
         else:
             return str(value)
-
+    
+    def on_stop(self):
+        if self.simulated:
+            self.stop_simulation()
+        return super().on_stop()
 
 class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
     """ Represents a  name/tag dictionary. """

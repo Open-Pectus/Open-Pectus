@@ -673,8 +673,6 @@ class Engine(InterpreterContext):
                 if not isinstance(safe_value, Unset):
                     current_values.append(t.as_readonly())
                     t.set_value(safe_value, self._tick_time)
-            if t.simulated:
-                t.stop_simulation()
 
         return TagValueCollection(current_values)
 

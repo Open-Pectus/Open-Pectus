@@ -433,6 +433,42 @@ Watch: Run Time > 0s
             instance.run_until_instruction("Info", state="completed", arguments="B")
             self.assertAlmostEqual(0.6, scope_time.as_number(), delta=delta)
 
+    def test_simulation(self):
+        code = """\
+Simulate: Run Counter = 7
+Simulate off: Run Counter
+"""        
+        runner = EngineTestRunner(create_test_uod, code)
+        with runner.run() as instance:
+            instance.start()
+            run_counter = instance.engine.tags[SystemTagName.RUN_COUNTER]
+
+            self.assertEqual(run_counter.as_number(), 0)
+
+            instance.run_until_instruction("Simulate", state="completed", arguments="Run Counter = 7")
+            self.assertEqual(run_counter.as_number(), 7)
+
+            instance.run_until_instruction("Simulate off", state="completed", arguments="Run Counter")
+            self.assertEqual(run_counter.as_number(), 0)
+
+    def test_simulation_is_turned_off_at_stop(self):
+        code = """\
+Simulate: Run Counter = 7
+Stop
+"""        
+        runner = EngineTestRunner(create_test_uod, code)
+        with runner.run() as instance:
+            instance.start()
+            run_counter = instance.engine.tags[SystemTagName.RUN_COUNTER]
+
+            self.assertEqual(run_counter.as_number(), 0)
+            
+            instance.run_until_instruction("Simulate", state="completed", arguments="Run Counter = 7")
+            self.assertEqual(run_counter.as_number(), 7)
+            
+            # Stop should have this effect
+            instance.run_until_condition(lambda : run_counter.as_number() == 0)
+
 
 class TestAccumulation(unittest.TestCase):
 

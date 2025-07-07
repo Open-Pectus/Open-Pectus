@@ -46,6 +46,7 @@ InstructionName = Literal[
     "Macro", "Call macro",
     "Increment run counter",
     "Noop", "Notify",
+    "Simulate", "Simulate off"
 ]
 """ Defines the awaitable instructions of the test engine runner """
 
