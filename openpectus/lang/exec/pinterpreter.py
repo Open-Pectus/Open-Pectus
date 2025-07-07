@@ -135,14 +135,15 @@ class PInterpreter(NodeVisitor):
             raise ValueError("Edit cannot be performed when no current node is set")
         target_node_id = self._program.active_node.id
 
-        # patch runtimeinfo records to reference new nodes - before or after ffw? should not matter
+        # patch runtimeinfo records to reference new nodes
         self.runtimeinfo.patch_node_references(program)
         self._patch_node_references(program)
         
-        # we can't patch the interrupts because the contain iterators of child collections of the
+        # Remove existing interrupts and modify their nodes such that interrupts are recreated during ffw.
+        # We can't patch the interrupts because they contain iterators of child collections of the
         # old nodes. However, we can have the relevant nodes recreate their interrupts
         # and trust the child nodes' state to ffw to the correct position.
-        # This just requires that we reset (only) the parent nodes of activate interrupts.
+        # This just requires that we modify (only) the parent nodes of activate interrupts.
         for key in self._interrupts_map.keys():
             node = program.get_child_by_id(key)
             if node is None:
@@ -151,8 +152,7 @@ class PInterpreter(NodeVisitor):
             assert isinstance(node, (p.WatchNode, p.AlarmNode, p.InjectedNode))
             logger.debug(f"Resetting interrupt for node {node}")
             
-            # TODO figure out the best approach here. node.reset_runtime_state() does
-            # not work so             
+            # Modify the node state such that the removed interrupt will be recreated during ffw
             node.interrupt_registered = False
             for key in ['register_interrupt']:
                 if key in node.action_history:
@@ -160,7 +160,6 @@ class PInterpreter(NodeVisitor):
 
         self._interrupts_map.clear()
 
-        # verify that target is not completed - if so ffw won't find it
         self._program = program
         self._generator = None  # clear so either tick or us may set it
         target_node = program.get_child_by_id(target_node_id)  # find target node in new ast
