@@ -236,5 +236,11 @@ Simulate: Run Counter = 10
 # Example 1:
 Simulate: Run Counter = 10
 Simulate off: Run Counter
+""")),
+    CommandExample(name="Notify", example=cleandoc("""
+# Trigger a notification on subscribed iPhones
+                                                   
+# Example 1:
+Notify: Example message
 """))
 ]
