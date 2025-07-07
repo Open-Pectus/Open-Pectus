@@ -568,7 +568,10 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                         CompletionItem(
                             label=name,
                             kind=CompletionItemKind.Enum,
-                            textEdit=TextEdit(range=lsp_range_from_ast_range(node.arguments_range), newText=prefix+name),
+                            textEdit=TextEdit(
+                                range=lsp_range_from_ast_range(node.arguments_range),
+                                newText=prefix+name
+                            ),
                         )
                         for name in list(macro_visitor.macros.keys())
                     ]
