@@ -481,7 +481,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                                 label=name,
                                 insertText=prefix+name+" ",
                                 kind=CompletionItemKind.Enum,
-                                command=LSPCommand(title="", command="editor.action.triggerSuggest")
+                                command=LSPCommand(title="", command="editor.action.triggerSuggest") if node.tag_operator_value.op is "" else None
                             )
                             for name in analysis_input.get_tag_completions(node.tag_operator_value.lhs)
                         ]
@@ -494,7 +494,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                                     range=lsp_range_from_ast_range(node.tag_operator_value.lhs_range),
                                     newText=prefix+name+" "
                                 ),
-                                command=LSPCommand(title="", command="editor.action.triggerSuggest")
+                                command=LSPCommand(title="", command="editor.action.triggerSuggest") if node.tag_operator_value.op is "" else None
                             )
                             for name in analysis_input.get_tag_completions(node.tag_operator_value.lhs)
                         ]
@@ -507,11 +507,11 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                                 label=f"{operator} ({operator_descriptions[operator]})",
                                 insertText=prefix+operator+" ",
                                 kind=CompletionItemKind.Enum,
-                                command=LSPCommand(title="", command="editor.action.triggerSuggest")
+                                command=LSPCommand(title="", command="editor.action.triggerSuggest") if node.tag_operator_value.tag_unit is None else None
                             )
                             for operator in node.operators
                         ]
-                    else:
+                    elif node.tag_operator_value.op is None:
                         return [
                             CompletionItem(
                                 label=f"{operator} ({operator_descriptions[operator]})",
@@ -520,7 +520,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                                     range=lsp_range_from_ast_range(node.tag_operator_value.op_range),
                                     newText=prefix+operator
                                 ),
-                                command=LSPCommand(title="", command="editor.action.triggerSuggest")
+                                command=LSPCommand(title="", command="editor.action.triggerSuggest") if node.tag_operator_value.tag_unit is None else None
                             )
                             for operator in node.operators
                         ]
@@ -528,7 +528,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                 elif position_ast in node.tag_operator_value.rhs_range or position_ast > node.tag_operator_value.op_range:
                     prefix = "" if leading_space else " "
                     unit_options = units_compaible_with_tag(analysis_input, node.tag_operator_value.lhs)
-                    if len(unit_options) > 0:
+                    if len(unit_options) > 0 and node.tag_operator_value.tag_unit is None:
                         return [
                             CompletionItem(
                                 label=unit,

@@ -156,7 +156,7 @@ class CompletionItem(TypedDict):
     preselect: NotRequired[bool]
     insertText: NotRequired[str]
     textEdit: NotRequired[TextEdit]
-    command: NotRequired[Command]
+    command: NotRequired[Command | None]
 
 def get_item_severity(item: AnalyzerItem) -> int:
     """ Represent analyzer item type as lsp DiagnosticSeverity """
