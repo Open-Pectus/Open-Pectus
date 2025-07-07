@@ -1,13 +1,15 @@
-
 from typing import Any, Callable, Generator, TypeVar
 import openpectus.lang.model.ast as p
+
+
+TNode = TypeVar("TNode", bound=p.Node)
 
 
 class NodeAction():
     """ Represents an action (of possibly many) to perform when interpreting a node. Allows
     side effect free visits of an ast tree.  """
 
-    def __init__(self, node: p.Node, action: Callable[[p.Node], None], name: str = "", tick_break: bool = False):
+    def __init__(self, node: TNode, action: Callable[[TNode], None], name: str = "", tick_break: bool = False):
         self.node = node
         self.action = action
         self.tick_break = tick_break
@@ -62,8 +64,6 @@ def run_tick(gen: NodeGenerator):
                 break
         else:
             break
-
-
 
 
 def run_ffw_tick(gen: NodeGenerator) -> bool | NodeAction:

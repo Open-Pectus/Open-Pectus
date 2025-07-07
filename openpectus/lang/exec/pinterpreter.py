@@ -17,7 +17,7 @@ from openpectus.lang.exec.tags import (
     TagCollection, SystemTagName,
 )
 from openpectus.lang.exec.visitor import (
-    NodeGenerator, NodeVisitor, NodeAction, NullableActionResult, PrependNodeGenerator,
+    NodeGenerator, NodeVisitor, NodeAction, PrependNodeGenerator,
     run_ffw_tick, run_tick
 )
 import openpectus.lang.model.ast as p
@@ -473,8 +473,7 @@ class PInterpreter(NodeVisitor):
         def start(node):
             self._program.active_node = node
 
-            # interrupts are visited multiple times. make sure to only create
-            # a new record on the first visit
+            # interrupts are visited multiple times and we only create a new record on the first visit
             record = self.runtimeinfo.get_last_node_record_or_none(node)
             if record is None:
                 record = self.runtimeinfo.begin_visit(
@@ -547,8 +546,7 @@ class PInterpreter(NodeVisitor):
 
 
     def visit_MarkNode(self, node: p.MarkNode) -> NodeGenerator:
-        def do(node):            
-            assert isinstance(node, p.MarkNode)
+        def do(node: p.MarkNode):            
             logger.info(f"Mark {node.name} running")
             try:
                 mark_tag = self.context.tags.get("Mark")
@@ -565,8 +563,7 @@ class PInterpreter(NodeVisitor):
     def visit_BatchNode(self, node: p.BatchNode) -> NodeGenerator:
         logger.info(f"Batch {str(node)}")
 
-        def do(node):
-            assert isinstance(node, p.BatchNode)
+        def do(node: p.BatchNode):
             try:
                 batch_tag = self.context.tags.get("Batch Name")
                 batch_tag.set_value(node.name, self._tick_time)
@@ -649,8 +646,7 @@ class PInterpreter(NodeVisitor):
 
     def visit_BlockNode(self, node: p.BlockNode) -> NodeGenerator:
 
-        def try_aquire_block_lock(node):
-            assert isinstance(node, p.BlockNode)
+        def try_aquire_block_lock(node: p.BlockNode):
             scope = self.stack.peek()
             if isinstance(scope, p.ProgramNode) or scope == node.parent:
                 logger.debug(f"Block lock for {node} aquired")
@@ -664,8 +660,7 @@ class PInterpreter(NodeVisitor):
                     break
                 yield
 
-        def push_to_stack(node):
-            assert isinstance(node, p.BlockNode)
+        def push_to_stack(node: p.BlockNode):
             node.lock_aquired = True
             self.stack.push(node)
             self.context.tags[SystemTagName.BLOCK].set_value(node.name, self._tick_number)
@@ -674,7 +669,7 @@ class PInterpreter(NodeVisitor):
             logger.debug(f"Block Tag set to {node.name}")
         yield NodeAction(node, push_to_stack)
 
-        def emit_scope_activated(node):
+        def emit_scope_activated(node: p.BlockNode):
             self.context.emitter.emit_on_scope_activate(node.id, "Block", node.arguments)
             self._add_record_state_started(node)
         yield NodeAction(node, emit_scope_activated)
@@ -693,8 +688,7 @@ class PInterpreter(NodeVisitor):
 
 
     def visit_EndBlockNode(self, node: p.EndBlockNode) -> NodeGenerator:
-        def end_block(node):
-            assert isinstance(node, p.EndBlockNode)
+        def end_block(node: p.EndBlockNode):
             self._add_record_state_started(node)
             if not isinstance(self.stack.peek(), p.BlockNode):
                 logger.debug(f"No blocks to end for node {node}")
@@ -716,8 +710,7 @@ class PInterpreter(NodeVisitor):
 
 
     def visit_EndBlocksNode(self, node: p.EndBlocksNode) -> NodeGenerator:
-        def end_blocks(node):
-            assert isinstance(node, p.EndBlocksNode)
+        def end_blocks(node: p.EndBlocksNode):
             self._add_record_state_started(node)
             if not isinstance(self.stack.peek(), p.BlockNode):
                 logger.debug(f"No blocks to end for node {node}")
@@ -746,8 +739,7 @@ class PInterpreter(NodeVisitor):
         yield NodeAction(node, InterpreterCommandNode_start)
 
         if node.instruction_name == InterpreterCommandEnum.BASE:
-            def base(node):
-                assert isinstance(node, p.InterpreterCommandNode)
+            def base(node: p.InterpreterCommandNode):
                 valid_units = self.context.base_unit_provider.get_units()
                 if node.arguments is None or node.arguments not in valid_units:
                     self._add_record_state_failed(node)
@@ -765,7 +757,7 @@ class PInterpreter(NodeVisitor):
             yield NodeAction(node, increment_run_counter)
 
         elif node.instruction_name == InterpreterCommandEnum.RUN_COUNTER:
-            def run_counter(node):
+            def run_counter(node: p.InterpreterCommandNode):
                 try:
                     new_value = int(node.arguments)
                     logger.debug(f"Run Counter set to {new_value}")
@@ -813,9 +805,8 @@ class PInterpreter(NodeVisitor):
         yield NodeAction(node, complete)
 
     def visit_NotifyNode(self, node: p.NotifyNode):
-        def do(node):
+        def do(node: p.NotifyNode):
             self.context.emitter.emit_on_notify_command(node.arguments)
-
             self._add_record_state_started(node)
             self._add_record_state_complete(node)
             node.completed = True
@@ -823,8 +814,7 @@ class PInterpreter(NodeVisitor):
 
     def visit_EngineCommandNode(self, node: p.EngineCommandNode) -> NodeGenerator:
         # TODO node.completed
-        def schedule(node):
-            assert isinstance(node, p.EngineCommandNode)
+        def schedule(node: p.EngineCommandNode):
             record = self.runtimeinfo.get_last_node_record(node)
 
             # Note: Commands can be resident and last multiple ticks.
@@ -850,8 +840,7 @@ class PInterpreter(NodeVisitor):
 
     def visit_SimulateNode(self, node: p.SimulateNode) -> NodeGenerator:
 
-        def simulate_on(node):
-            assert isinstance(node, p.SimulateNode)
+        def simulate_on(node: p.SimulateNode):
             assert node.tag_operator_value
             assert node.tag_operator_value.tag_name
             if node.tag_operator_value.tag_value_numeric and node.tag_operator_value.tag_unit:
@@ -876,8 +865,7 @@ class PInterpreter(NodeVisitor):
 
     def visit_SimulateOffNode(self, node: p.SimulateOffNode) -> NodeGenerator:
 
-        def simulate_off(node):
-            assert isinstance(node, p.SimulateOffNode)
+        def simulate_off(node: p.SimulateOffNode):
             self.context.tags.get(node.arguments).stop_simulation()
             self._add_record_state_started(node)
             self._add_record_state_complete(node)
@@ -889,8 +877,7 @@ class PInterpreter(NodeVisitor):
     def visit_UodCommandNode(self, node: p.UodCommandNode) -> NodeGenerator:
         # TODO node-completed
 
-        def schedule(node):
-            assert isinstance(node, p.UodCommandNode)
+        def schedule(node: p.UodCommandNode):
             record = self.runtimeinfo.get_last_node_record(node)
 
             # Note: Commands can be resident and last multiple ticks.
@@ -917,8 +904,7 @@ class PInterpreter(NodeVisitor):
     def visit_WatchNode(self, node: p.WatchNode) -> NodeGenerator:
         logger.debug(f"visit_WatchNode {node} method start")
 
-        def register_interrupt(node):
-            assert isinstance(node, p.WatchNode)
+        def register_interrupt(node: p.WatchNode):
             self.context.emitter.emit_on_scope_start(node.id, "Watch", node.arguments)
             self._register_interrupt(node, self.visit_WatchNode(node))
             node.interrupt_registered = True
@@ -935,7 +921,7 @@ class PInterpreter(NodeVisitor):
         if not node.activated:
             yield NodeAction(node, self._add_record_state_awaiting_condition)
 
-        def start(node):
+        def start(node: p.WatchNode):
             self.context.emitter.emit_on_scope_activate(node.id, "Watch", node.arguments)
             logger.debug(f"{str(node)} executing")
             self._add_record_state_started(node)
@@ -957,8 +943,7 @@ class PInterpreter(NodeVisitor):
         yield from self._visit_children(node)
 
 
-        def complete(node):
-            assert isinstance(node, p.WatchNode)
+        def complete(node: p.WatchNode):
             logger.debug(f"Watch {node} complete")
             self.context.emitter.emit_on_scope_end(node.id, "Watch", node.arguments)
             self._add_record_state_complete(node)
@@ -975,8 +960,7 @@ class PInterpreter(NodeVisitor):
     def visit_AlarmNode(self, node: p.AlarmNode) -> NodeGenerator:
         logger.debug(f"visit_AlarmNode {node} method start")
 
-        def register_alarm_interrupt(node):
-            assert isinstance(node, p.AlarmNode)
+        def register_alarm_interrupt(node: p.AlarmNode):
             self.context.emitter.emit_on_scope_start(node.id, "Alarm", node.arguments)
             self._register_interrupt(node, self.visit_AlarmNode(node))
             node.interrupt_registered = True
@@ -991,7 +975,7 @@ class PInterpreter(NodeVisitor):
         if not node.activated:
             yield NodeAction(node, self._add_record_state_awaiting_condition)
 
-        def start(node):
+        def start(node: p.AlarmNode):
             self.context.emitter.emit_on_scope_activate(node.id, "Alarm", node.arguments)
             logger.debug(f"{str(node)} executing")
             self._add_record_state_started(node)
@@ -1012,8 +996,7 @@ class PInterpreter(NodeVisitor):
         # was activated
         yield from self._visit_children(node)
 
-        def complete(node):
-            assert isinstance(node, p.AlarmNode)
+        def complete(node: p.AlarmNode):
             logger.debug(f"Alarm {node} complete")
             self.context.emitter.emit_on_scope_end(node.id, "Alarm", node.arguments)
             self._add_record_state_complete(node)
