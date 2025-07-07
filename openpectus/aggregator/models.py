@@ -127,6 +127,7 @@ class TagsInfo(BaseModel):
             current.value = tag_value.value
             current.value_formatted = tag_value.value_formatted
             current.tick_time = tag_value.tick_time
+            current.simulated = tag_value.simulated
             return False  # was updated
 
     def __str__(self) -> str:

@@ -387,12 +387,12 @@ class PInterpreter(NodeVisitor):
         return False
 
     def _evaluate_condition(self, node: p.NodeWithCondition) -> bool:
-        c = node.condition
+        c = node.tag_operator_value
         assert c is not None, "Error in condition"
-        assert not c.error, f"Error parsing condition '{node.condition_part}'"
+        assert not c.error, f"Error parsing condition '{node.tag_operator_value_part}'"
         assert c.tag_name, "Error in condition tag"
         assert c.tag_value, "Error in condition value"
-        assert self.context.tags.has(c.tag_name), f"Unknown tag '{c.tag_name}' in condition '{node.condition_part}'"
+        assert self.context.tags.has(c.tag_name), f"Unknown tag '{c.tag_name}' in condition '{node.tag_operator_value_part}'"
         tag = self.context.tags.get(c.tag_name)
         tag_value, tag_unit = str(tag.get_value()), tag.unit
         # TODO: Possible enhancement: if no unit specified, pick base unit?
@@ -790,6 +790,44 @@ class PInterpreter(NodeVisitor):
                     raise NodeInterpretationError(node, "Failed to pass engine command to engine") from ex
 
         yield NodeAction(node, schedule)
+
+
+    def visit_SimulateNode(self, node: p.SimulateNode) -> NodeGenerator:
+
+        def simulate_on(node):
+            assert isinstance(node, p.SimulateNode)
+            assert node.tag_operator_value
+            assert node.tag_operator_value.tag_name
+            if node.tag_operator_value.tag_value_numeric and node.tag_operator_value.tag_unit:
+                self.context.tags.get(node.tag_operator_value.tag_name).simulate_value_and_unit(
+                    node.tag_operator_value.tag_value_numeric,
+                    node.tag_operator_value.tag_unit,
+                    self._tick_time
+                )
+            elif node.tag_operator_value.tag_value:
+                self.context.tags.get(node.tag_operator_value.tag_name).simulate_value(
+                    node.tag_operator_value.tag_value_numeric if node.tag_operator_value.tag_value_numeric else node.tag_operator_value.tag_value,
+                    self._tick_number
+                )
+            else:
+                logger.error(f"Unable to simulate {str(node)}")
+            self._add_record_state_started(node)
+            self._add_record_state_complete(node)
+            node.completed = True
+
+        yield NodeAction(node, simulate_on)
+
+
+    def visit_SimulateOffNode(self, node: p.SimulateOffNode) -> NodeGenerator:
+
+        def simulate_off(node):
+            assert isinstance(node, p.SimulateOffNode)
+            self.context.tags.get(node.arguments).stop_simulation()
+            self._add_record_state_started(node)
+            self._add_record_state_complete(node)
+            node.completed = True
+
+        yield NodeAction(node, simulate_off)
 
 
     def visit_UodCommandNode(self, node: p.UodCommandNode) -> NodeGenerator:

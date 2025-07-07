@@ -422,11 +422,9 @@ class FromFrontend:
         engine_data.contributors.add(user)
         return True
 
-    def get_dead_man_switch_user_ids(self, topics: list[str]):
-        return (topic.split("/")[1] for topic in topics if topic.startswith(PubSubTopic.DEAD_MAN_SWITCH))
-
     async def user_subscribed_pubsub(self, subscriber_id: str, topics: list[str]):
-        for user_id in self.get_dead_man_switch_user_ids(topics):
+        dead_man_switch_user_ids = (topic.split("/")[1] for topic in topics if topic.startswith(PubSubTopic.DEAD_MAN_SWITCH))
+        for user_id in dead_man_switch_user_ids:
             self.dead_man_switch_user_ids[subscriber_id] = user_id
 
     async def on_ws_disconnect(self, subscriber_id: str):

@@ -469,11 +469,20 @@ class BatchNode(Node):
     instruction_names = ["Batch"]
 
 
-class NodeWithCondition(NodeWithChildren):
+class NodeWithTagOperatorValue(Node):
+    operators: list[str]
+
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
-        self.condition_part: str
-        self.condition: Condition | None
+        self.tag_operator_value_part: str
+        self.tag_operator_value: TagOperatorValue | None
+
+
+class NodeWithCondition(NodeWithTagOperatorValue):
+    operators = ["<=", ">=", "==", "!=", "<", ">", "="]
+
+    def __init__(self, position=Position.empty, id=""):
+        super().__init__(position, id)
         self.interrupt_registered: bool = False
         self.activated: bool = False
         """ Node condition was evaluated true"""
@@ -507,15 +516,19 @@ class NodeWithCondition(NodeWithChildren):
         return not self.cancelled and not self.forced and not self.activated
 
 
-class WatchNode(NodeWithCondition):
+class NodeWithAssignment(NodeWithTagOperatorValue):
+    operators = ["="]
+
+
+class WatchNode(NodeWithChildren, NodeWithCondition):
     instruction_names = ["Watch"]
 
 
-class AlarmNode(NodeWithCondition):
+class AlarmNode(NodeWithChildren, NodeWithCondition):
     instruction_names = ["Alarm"]
 
 
-class Condition:
+class TagOperatorValue:
     def __init__(self):
         self.error = True
         self.lhs = ""
@@ -626,6 +639,14 @@ class EngineCommandNode(CommandBaseNode):
     """ Represents internal engine commands that have a command class subclassing InternalEngineCommand. """
     instruction_names = ["Stop", "Pause", "Unpause", "Hold", "Unhold", "Restart",
                          "Info", "Warning", "Error"]
+
+
+class SimulateNode(NodeWithAssignment):
+    instruction_names = ["Simulate"]
+
+
+class SimulateOffNode(Node):
+    instruction_names = ["Simulate off"]
 
 
 class UodCommandNode(CommandBaseNode):
