@@ -322,9 +322,9 @@ Call macro: A
         parent = p.ProgramNode()
         watch = p.WatchNode()
         parent.append_child(watch)
-        watch.condition = p.Condition()
+        watch.tag_operator_value = p.TagOperatorValue()
         watch.arguments_part = "X > 10%"
-        PcodeParser._parse_condition(watch)
+        PcodeParser._parse_tag_operator_value(watch)
 
         result = self.engine.interpreter._evaluate_condition(watch)
         self.assertEqual(result, False)

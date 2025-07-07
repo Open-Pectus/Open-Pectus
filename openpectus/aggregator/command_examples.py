@@ -157,20 +157,6 @@ Restart
 # Example 1
 Run counter: 3
 """)),
-#     CommandExample(name="Simulate", example=cleandoc("""
-# # Simulate a value of a measured tag.
-
-# # Example 1
-# Simulate: UV01 Absorbance = 1 AU
-# """)),
-#     CommandExample(name="Simulate off", example=cleandoc("""
-# # Stop simulation of measured tag.
-
-# # Example 1
-# Simulate: UV01 Absorbance = 1 AU
-# Wait: 5s
-# Simulate off: UV01 Absorbance
-# """)),
     CommandExample(name="Stop", example=cleandoc("""
 # Stop execution.
 
@@ -223,6 +209,19 @@ Macro: A
     Mark: 2
 
 Call macro: A # Mark 1 and Mark 2 are executed.
+""")),
+    CommandExample(name="Simulate", example=cleandoc("""
+# Temporarily set a tag to a specific value
+
+# Example 1:
+Simulate: Run Counter = 10
+""")),
+    CommandExample(name="Simulate off", example=cleandoc("""
+# Stop simulation of value
+
+# Example 1:
+Simulate: Run Counter = 10
+Simulate off: Run Counter
 """)),
     CommandExample(name="Notify", example=cleandoc("""
 # Trigger a notification on subscribed iPhones

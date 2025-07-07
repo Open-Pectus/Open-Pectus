@@ -118,9 +118,6 @@ class Grammar:
 
     instruction_line_pattern = re.compile(full_line_re)
 
-    operators = ['<', '<=', '>', '>=', '==', '=', '!=']
-    operators_1char = ['<', '>', '=']
-    operators_2char = ['<=', '>=', '==', '!=']
     # condition_op_re = "\\s*(?P<op>" + "|".join(op for op in operators) + ")\\s*"
 
     float_re = r'(?P<float>[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?)'
@@ -332,29 +329,24 @@ class PcodeParser:
             node.indent_error = True
 
         # could leave this out initially to speed up parsing
-        if isinstance(node, p.NodeWithCondition):
-            self._parse_condition(node)
+        if isinstance(node, p.NodeWithTagOperatorValue):
+            self._parse_tag_operator_value(node)
 
         return node
 
     @staticmethod
-    def _parse_condition(node: p.NodeWithCondition):  # noqa C901
-        node.condition_part = node.arguments_part
-        node.condition = p.Condition()
+    def _parse_tag_operator_value(node: p.NodeWithTagOperatorValue):  # noqa C901
+        node.tag_operator_value_part = node.arguments_part
+        node.tag_operator_value = p.TagOperatorValue()
 
-        c = node.condition
+        c = node.tag_operator_value
         c.range = node.arguments_range
 
         # check operator existence
-        for op2 in Grammar.operators_2char:
-            if op2 in node.condition_part:
-                c.op = op2
+        for op in node.operators:
+            if op in node.tag_operator_value_part:
+                c.op = op
                 break
-        if c.op == "":
-            for op1 in Grammar.operators_1char:
-                if op1 in node.condition_part:
-                    c.op = op1
-                    break
         if c.op == "":
             c.lhs = node.arguments_part.strip()
             c.lhs_range = node.arguments_range
@@ -362,10 +354,10 @@ class PcodeParser:
             return
 
         try:
-            op_start = node.condition_part.index(c.op)
-            leading_spaces = count_leading_spaces(node.condition_part)
-            trailing_spaces = count_trailing_spaces(node.condition_part)
-            [lhs, rhs] = node.condition_part.split(c.op)
+            op_start = node.tag_operator_value_part.index(c.op)
+            leading_spaces = count_leading_spaces(node.tag_operator_value_part)
+            trailing_spaces = count_trailing_spaces(node.tag_operator_value_part)
+            [lhs, rhs] = node.tag_operator_value_part.split(c.op)
             c.lhs = lhs.strip()
             c.lhs_range = p.Range(
                 start=c.range.start,
@@ -397,7 +389,7 @@ class PcodeParser:
 
         # lhs must be a tag but we cannot validate this at parse time. This is done later in an analyzer
         if c.lhs != "":
-            c.tag_name = c.lhs
+            c.tag_name = c.lhs.strip()
         else:
             return
 
@@ -422,7 +414,7 @@ class PcodeParser:
             else:  # str
                 c.tag_value = c.rhs
                 c.error = False
-        node.condition.error = False
+        node.tag_operator_value.error = False
 
     # consider caching this, we only need to load once per process
     def _inspect_instruction_node_types(self) -> dict[str, type[p.Node]]:
