@@ -80,10 +80,10 @@ class RuntimeInfo:
                 return str(r.node.id)
 
     def _get_record_runlog_items(self, r: RuntimeRecord) -> list[RunLogItem]:  # noqa C901
-        if isinstance(r.node, (p.ProgramNode, p.BlankNode, p.CommentNode)):
+        if isinstance(r.node, (p.ProgramNode, p.BlankNode, p.CommentNode, p.InjectedNode)):
             return []
         if r.name is None:
-            if isinstance(r.node, (p.InjectedNode, p.ErrorInstructionNode)):
+            if isinstance(r.node, (p.ErrorInstructionNode)):
                 return []
             node_name = str(r.node) if r.node is not None else "node is None"
             logger.error(f"Runtime record has empty name. node: {node_name}. Fix this error or add a rule exception.")

@@ -180,6 +180,9 @@ class NodeVisitor(NodeVisitorGeneric):
     def visit_InterpreterCommandNode(self, node: p.InterpreterCommandNode) -> NodeGenerator:
         yield
 
+    def visit_NotifyNode(self, node: p.NotifyNode) -> NodeGenerator:
+        yield
+
     def visit_EngineCommandNode(self, node: p.EngineCommandNode) -> NodeGenerator:
         yield
 
@@ -187,4 +190,10 @@ class NodeVisitor(NodeVisitorGeneric):
         yield
 
     def visit_ErrorInstructionNode(self, node: p.ErrorInstructionNode) -> NodeGenerator:
+        yield
+
+    def visit_SimulateNode(self, node: p.SimulateNode) -> NodeGenerator:
+        yield
+
+    def visit_SimulateOffNode(self, node: p.SimulateOffNode) -> NodeGenerator:
         yield

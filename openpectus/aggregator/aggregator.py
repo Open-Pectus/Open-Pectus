@@ -2,6 +2,7 @@ import asyncio
 import copy
 import logging
 from datetime import datetime, timezone
+import time
 
 import openpectus.aggregator.models as Mdl
 import openpectus.protocol.aggregator_messages as AM
@@ -12,7 +13,7 @@ from openpectus.aggregator.data.repository import RecentRunRepository, PlotLogRe
 from openpectus.aggregator.exceptions import AggregatorCallerException, AggregatorInternalException
 from openpectus.aggregator.frontend_publisher import FrontendPublisher, PubSubTopic
 from openpectus.aggregator.models import Contributor, EngineData, NotificationScope
-from openpectus.aggregator.webpush_publisher import WebPushPublisher
+from openpectus.aggregator.webpush_publisher import WebPushPublisher, WebPushNotification, NotificationTopic
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.protocol.models import SystemTagName, MethodStatusEnum
 from webpush import WebPushSubscription
@@ -38,7 +39,6 @@ class FromEngine:
 
         self._try_restore_reconnected_engine_data(engine_data)
 
-        asyncio.create_task(self.publisher.publish_process_units_changed())
         asyncio.create_task(self.publisher.publish_control_state_changed(engine_data.engine_id))
 
     def _try_restore_reconnected_engine_data(self, engine_data: EngineData):
@@ -74,6 +74,8 @@ class FromEngine:
                 repo = RecentEngineRepository(database.scoped_session())
                 repo.store_recent_engine(engine_data)
             logger.info("Recent engine saved")
+            if engine_data.has_run():
+                self.publish_engine_disconnected_notification(engine_id)
             del self._engine_data_map[engine_id]
             asyncio.create_task(self.publisher.publish_process_units_changed())
         else:
@@ -101,10 +103,14 @@ class FromEngine:
                 recent_run_repo = RecentRunRepository(database.scoped_session())
                 try:
                     recent_run_repo.store_recent_run(engine_data)
-                    logger.info(f"Stopping existing run and store it as recent run {_run_id=}")
+                    logger.info(f"Stopping existing run and store it as recent run {_run_id}")
                     engine_data.reset_run()
+                    engine_data.run_data = Mdl.RunData.empty(
+                        run_id=msg.run_id,
+                        run_started=datetime.fromtimestamp(msg.started_tick, timezone.utc)
+                    )
                 except Exception:
-                    logger.error(f"Failed to persist recent run {_run_id=}", exc_info=True)
+                    logger.error(f"Failed to persist recent run {_run_id}", exc_info=True)
 
             plot_log_repo = PlotLogRepository(database.scoped_session())
             plot_log_repo.create_plot_log(engine_data, msg.run_id)
@@ -170,6 +176,7 @@ class FromEngine:
             self._engine_data_map[engine_id].hardware_str = hardware_str
             self._engine_data_map[engine_id].required_roles = required_roles
             self._engine_data_map[engine_id].data_log_interval_seconds = data_log_interval_seconds
+            asyncio.create_task(self.publisher.publish_process_units_changed())
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set uod info.')
 
@@ -312,6 +319,26 @@ class FromEngine:
         engine_data.error_log.aggregate_with(error_log)
         asyncio.create_task(self.publisher.publish_error_log_changed(engine_id))
 
+    def publish_engine_disconnected_notification(self, engine_id: str):
+        asyncio.create_task(self.webpush_publisher.publish_message(
+            notification=WebPushNotification(
+                title=self._engine_data_map[engine_id].uod_name,
+                body="Connection between aggregator and engine has been lost.",
+                timestamp=int(time.time()*1000),
+                data=Mdl.WebPushData(
+                    process_unit_id=engine_id
+                ),
+                actions=list([
+                    Mdl.WebPushAction(
+                        action="navigate",
+                        title="Go to process unit"
+                    )
+                ]),
+            ),
+            topic=NotificationTopic.NETWORK_ERRORS,
+            process_unit=self._engine_data_map[engine_id],
+        ))
+
 
 class FromFrontend:
     def __init__(self, engine_data_map: EngineDataMap, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, webpush_publisher: WebPushPublisher):
@@ -353,6 +380,8 @@ class FromFrontend:
         engine_data = self._engine_data_map.get(engine_id)
         if engine_data is not None:
             engine_data.method = new_method
+            if user not in engine_data.contributors:
+                self.publish_new_contributor_notification(engine_id, user)
             engine_data.contributors.add(user)
             asyncio.create_task(self.publisher.publish_method_changed(engine_id))
         return new_method.version
@@ -370,6 +399,8 @@ class FromFrontend:
         except Exception:
             logger.error("Cancel request failed with exception", exc_info=True)
             return False
+        if user not in engine_data.contributors:
+            self.publish_new_contributor_notification(engine_id, user)
         engine_data.contributors.add(user)
         return True
 
@@ -386,14 +417,14 @@ class FromFrontend:
         except Exception:
             logger.error("Force request failed with exception", exc_info=True)
             return False
+        if user not in engine_data.contributors:
+            self.publish_new_contributor_notification(engine_id, user)
         engine_data.contributors.add(user)
         return True
 
-    def get_dead_man_switch_user_ids(self, topics: list[str]):
-        return (topic.split("/")[1] for topic in topics if topic.startswith(PubSubTopic.DEAD_MAN_SWITCH))
-
     async def user_subscribed_pubsub(self, subscriber_id: str, topics: list[str]):
-        for user_id in self.get_dead_man_switch_user_ids(topics):
+        dead_man_switch_user_ids = (topic.split("/")[1] for topic in topics if topic.startswith(PubSubTopic.DEAD_MAN_SWITCH))
+        for user_id in dead_man_switch_user_ids:
             self.dead_man_switch_user_ids[subscriber_id] = user_id
 
     async def on_ws_disconnect(self, subscriber_id: str):
@@ -458,25 +489,32 @@ class FromFrontend:
             webpush_repo = WebPushRepository(database.scoped_session())
             webpush_repo.store_notifications_preferences(preferences)
 
-    async def webpush_notify_user(self, process_unit_id: str):
-        engine_data = self._engine_data_map[process_unit_id]
-        if(engine_data == None): return
+    def publish_notification_test(self, user_id: None | str):
+        asyncio.create_task(self.webpush_publisher.publish_test_message(str(user_id)))
 
-        message = Mdl.WebPushNotification(
-            title="Something happened",
-            body="It's probably fine",
-            icon="/assets/icons/icon-192x192.png",
-            data=Mdl.WebPushData(
-                process_unit_id=process_unit_id
+    def publish_new_contributor_notification(self, engine_id: str, contributor: Contributor):
+        if contributor.id is None:
+            return
+        if not self._engine_data_map[engine_id].has_run():
+            return
+        asyncio.create_task(self.webpush_publisher.publish_message(
+            notification=WebPushNotification(
+                title=self._engine_data_map[engine_id].uod_name,
+                body=f"{contributor.name} contributed to the current run.",
+                data=Mdl.WebPushData(
+                    process_unit_id=engine_id,
+                    contributor_id=contributor.id,
+                ),
+                actions=list([
+                    Mdl.WebPushAction(
+                        action="navigate",
+                        title="Go to process unit"
+                    )
+                ]),
             ),
-            actions=list([
-                Mdl.WebPushAction(
-                    action="navigate",
-                    title="Go to process unit"
-                )
-            ])
-        )
-        asyncio.create_task(self.webpush_publisher.publish_message(message, Mdl.NotificationTopic.BLOCK_START, engine_data))
+            topic=NotificationTopic.NEW_CONTRIBUTOR,
+            process_unit=self._engine_data_map[engine_id],
+        ))
 
 class Aggregator:
     def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, webpush_publisher: WebPushPublisher, secret: str = "") -> None:
@@ -491,6 +529,14 @@ class Aggregator:
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(dispatcher={self.dispatcher}, ' +
                 f'from_frontend={self.from_frontend}, from_engine={self.from_engine})')
+
+    def shutdown(self):
+        logger.info("Shutting down aggregator.")
+        with database.create_scope():
+            repo = RecentEngineRepository(database.scoped_session())
+            for engine_data in self._engine_data_map.values():
+                    repo.store_recent_engine(engine_data)
+                    logger.info(f"Storing {engine_data} as recent engine.")
 
     def create_engine_id(self, register_engine_msg: EM.RegisterEngineMsg):
         """ Defines the generation of the engine_id that is uniquely assigned to each engine.

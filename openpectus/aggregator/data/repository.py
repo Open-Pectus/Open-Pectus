@@ -207,7 +207,7 @@ class RecentEngineRepository(RepositoryBase):
             assert engine_data.run_data is not None
             recent_engine.run_id = engine_data.run_data.run_id
             recent_engine.run_started = engine_data.run_data.run_started
-            contributors = set(recent_engine.contributors)
+            contributors = set(recent_engine.contributors or [])  # Even though default=[] it is actually None
             for c in engine_data.contributors:
                 contributors.add(c)
             recent_engine.contributors = list(contributors)
@@ -232,6 +232,9 @@ class WebPushRepository(RepositoryBase):
 
     def get_subscriptions(self, user_ids: list[str]):
         return self.db_session.scalars(select(WebPushSubscription).where(WebPushSubscription.user_id.in_(user_ids))).all()
+
+    def get_subscriptions_for_user(self, user_id: str):
+        return self.db_session.scalars(select(WebPushSubscription).where(WebPushSubscription.user_id == user_id)).all()
 
     def get_notification_preferences_for_topic(self, topic: agg_mdl.NotificationTopic):
         return self.db_session.scalars(select(WebPushNotificationPreferences).where(WebPushNotificationPreferences.topics.contains(topic))).all()

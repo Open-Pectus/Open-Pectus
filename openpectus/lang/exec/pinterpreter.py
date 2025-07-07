@@ -387,12 +387,12 @@ class PInterpreter(NodeVisitor):
         return False
 
     def _evaluate_condition(self, node: p.NodeWithCondition) -> bool:
-        c = node.condition
+        c = node.tag_operator_value
         assert c is not None, "Error in condition"
-        assert not c.error, f"Error parsing condition '{node.condition_part}'"
+        assert not c.error, f"Error parsing condition '{node.tag_operator_value_part}'"
         assert c.tag_name, "Error in condition tag"
         assert c.tag_value, "Error in condition value"
-        assert self.context.tags.has(c.tag_name), f"Unknown tag '{c.tag_name}' in condition '{node.condition_part}'"
+        assert self.context.tags.has(c.tag_name), f"Unknown tag '{c.tag_name}' in condition '{node.tag_operator_value_part}'"
         tag = self.context.tags.get(c.tag_name)
         tag_value, tag_unit = str(tag.get_value()), tag.unit
         # TODO: Possible enhancement: if no unit specified, pick base unit?
@@ -465,8 +465,8 @@ class PInterpreter(NodeVisitor):
     def visit_ProgramNode(self, node: p.ProgramNode) -> NodeGenerator:
         def start(node):
             self.stack.push(node)
-            self.context.emitter.emit_on_scope_start(node.id)
-            self.context.emitter.emit_on_scope_activate(node.id)
+            self.context.emitter.emit_on_scope_start(node.id, "Program", "")
+            self.context.emitter.emit_on_scope_activate(node.id, "Program", "")
         yield NodeAction(node, start)
 
         yield from self._visit_children(node)
@@ -617,12 +617,12 @@ class PInterpreter(NodeVisitor):
             self.stack.push(node)
             self.context.tags[SystemTagName.BLOCK].set_value(node.name, self._tick_number)
             self.context.emitter.emit_on_block_start(node.name, self._tick_number)
-            self.context.emitter.emit_on_scope_start(node.id)
+            self.context.emitter.emit_on_scope_start(node.id, "Block", node.arguments)
             logger.debug(f"Block Tag set to {node.name}")
         yield NodeAction(node, push_to_stack)
 
         def emit_scope_activated(node):
-            self.context.emitter.emit_on_scope_activate(node.id)
+            self.context.emitter.emit_on_scope_activate(node.id, "Block", node.arguments)
             self._add_record_state_started(node)
         yield NodeAction(node, emit_scope_activated)
 
@@ -756,6 +756,14 @@ class PInterpreter(NodeVisitor):
 
         yield NodeAction(node, complete)
 
+    def visit_NotifyNode(self, node: p.NotifyNode):
+        def do(node):
+            self.context.emitter.emit_on_notify_command(node.arguments)
+
+            self._add_record_state_started(node)
+            self._add_record_state_complete(node)
+            node.completed = True
+        yield NodeAction(node, do)
 
     def visit_EngineCommandNode(self, node: p.EngineCommandNode) -> NodeGenerator:
         # TODO node.completed
@@ -782,6 +790,44 @@ class PInterpreter(NodeVisitor):
                     raise NodeInterpretationError(node, "Failed to pass engine command to engine") from ex
 
         yield NodeAction(node, schedule)
+
+
+    def visit_SimulateNode(self, node: p.SimulateNode) -> NodeGenerator:
+
+        def simulate_on(node):
+            assert isinstance(node, p.SimulateNode)
+            assert node.tag_operator_value
+            assert node.tag_operator_value.tag_name
+            if node.tag_operator_value.tag_value_numeric and node.tag_operator_value.tag_unit:
+                self.context.tags.get(node.tag_operator_value.tag_name).simulate_value_and_unit(
+                    node.tag_operator_value.tag_value_numeric,
+                    node.tag_operator_value.tag_unit,
+                    self._tick_time
+                )
+            elif node.tag_operator_value.tag_value:
+                self.context.tags.get(node.tag_operator_value.tag_name).simulate_value(
+                    node.tag_operator_value.tag_value_numeric if node.tag_operator_value.tag_value_numeric else node.tag_operator_value.tag_value,
+                    self._tick_number
+                )
+            else:
+                logger.error(f"Unable to simulate {str(node)}")
+            self._add_record_state_started(node)
+            self._add_record_state_complete(node)
+            node.completed = True
+
+        yield NodeAction(node, simulate_on)
+
+
+    def visit_SimulateOffNode(self, node: p.SimulateOffNode) -> NodeGenerator:
+
+        def simulate_off(node):
+            assert isinstance(node, p.SimulateOffNode)
+            self.context.tags.get(node.arguments).stop_simulation()
+            self._add_record_state_started(node)
+            self._add_record_state_complete(node)
+            node.completed = True
+
+        yield NodeAction(node, simulate_off)
 
 
     def visit_UodCommandNode(self, node: p.UodCommandNode) -> NodeGenerator:
@@ -817,7 +863,7 @@ class PInterpreter(NodeVisitor):
 
         def register_interrupt(node):
             assert isinstance(node, p.WatchNode)
-            self.context.emitter.emit_on_scope_start(node.id)
+            self.context.emitter.emit_on_scope_start(node.id, "Watch", node.arguments)
             self._register_interrupt(node, self.visit_WatchNode(node))
             node.interrupt_registered = True
             self._add_record_state_awaiting_interrupt(node)
@@ -831,14 +877,14 @@ class PInterpreter(NodeVisitor):
             yield NodeAction(node, self._add_record_state_awaiting_condition)
 
         def start(node):
-            self.context.emitter.emit_on_scope_activate(node.id)
+            self.context.emitter.emit_on_scope_activate(node.id, "Watch", node.arguments)
             logger.debug(f"{str(node)} executing")
             self._add_record_state_started(node)
 
         while not node.activated:
             if node.cancelled:
                 self._add_record_state_cancelled(node)
-                self.context.emitter.emit_on_scope_end(node.id)
+                self.context.emitter.emit_on_scope_end(node.id, "Watch", node.arguments)
                 logger.info(f"Instruction {node} cancelled")
                 node.completed = True
                 return
@@ -855,7 +901,7 @@ class PInterpreter(NodeVisitor):
         def complete(node):
             assert isinstance(node, p.WatchNode)
             logger.debug(f"Watch {node} complete")
-            self.context.emitter.emit_on_scope_end(node.id)
+            self.context.emitter.emit_on_scope_end(node.id, "Watch", node.arguments)
             self._add_record_state_complete(node)
             #self._unregister_interrupt(node) # we need to keep the interrupt handler active - but this conflicts with using emit_on_scope_end???
             node.completed = True
@@ -872,7 +918,7 @@ class PInterpreter(NodeVisitor):
 
         def register_alarm_interrupt(node):
             assert isinstance(node, p.AlarmNode)
-            self.context.emitter.emit_on_scope_start(node.id)
+            self.context.emitter.emit_on_scope_start(node.id, "Alarm", node.arguments)
             self._register_interrupt(node, self.visit_AlarmNode(node))
             node.interrupt_registered = True
             self._add_record_state_awaiting_interrupt(node)
@@ -887,14 +933,14 @@ class PInterpreter(NodeVisitor):
             yield NodeAction(node, self._add_record_state_awaiting_condition)
 
         def start(node):
-            self.context.emitter.emit_on_scope_activate(node.id)
+            self.context.emitter.emit_on_scope_activate(node.id, "Alarm", node.arguments)
             logger.debug(f"{str(node)} executing")
             self._add_record_state_started(node)
 
         while not node.activated:
             if node.cancelled:
                 self._add_record_state_cancelled(node)
-                self.context.emitter.emit_on_scope_end(node.id)
+                self.context.emitter.emit_on_scope_end(node.id, "Alarm", node.arguments)
                 logger.info(f"Instruction {node} cancelled")
                 node.completed = True
                 return
@@ -910,7 +956,7 @@ class PInterpreter(NodeVisitor):
         def complete(node):
             assert isinstance(node, p.AlarmNode)
             logger.debug(f"Alarm {node} complete")
-            self.context.emitter.emit_on_scope_end(node.id)
+            self.context.emitter.emit_on_scope_end(node.id, "Alarm", node.arguments)
             self._add_record_state_complete(node)
         yield NodeAction(node, complete)
 

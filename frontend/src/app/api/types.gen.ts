@@ -162,6 +162,11 @@ export type ProcessUnit = {
     uod_author_email?: string;
 };
 
+export type ProcessUnitAllProcessValues = {
+    process_unit: ProcessUnit;
+    process_values: Array<ProcessValue>;
+};
+
 /**
  * Represents a process value.
  */
@@ -341,6 +346,12 @@ export type GetAllProcessValuesData = {
 };
 
 export type GetAllProcessValuesResponse = (Array<ProcessValue>);
+
+export type GetAllProcessValuesOfAllAvailableEnginesData = {
+    xIdentity?: string;
+};
+
+export type GetAllProcessValuesOfAllAvailableEnginesResponse = (Array<ProcessUnitAllProcessValues>);
 
 export type ExecuteCommandData = {
     requestBody: ExecutableCommand;
@@ -549,8 +560,8 @@ export type SubscribeUserData = {
 
 export type SubscribeUserResponse = (unknown);
 
-export type NotifyUserData = {
-    processUnitId: string;
+export type TestNotificationData = {
+    xIdentity?: string;
 };
 
-export type NotifyUserResponse = (unknown);
+export type TestNotificationResponse = (unknown);
