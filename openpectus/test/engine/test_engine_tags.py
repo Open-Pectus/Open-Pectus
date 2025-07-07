@@ -451,7 +451,7 @@ Simulate off: Run Counter
             instance.run_until_instruction("Simulate off", state="completed", arguments="Run Counter")
             self.assertEqual(run_counter.as_number(), 0)
 
-    def test_simulation_is_turned_off_at_stop(self):
+    def test_simulation_is_disabled_on_stop(self):
         code = """\
 Simulate: Run Counter = 7
 Stop
@@ -463,7 +463,7 @@ Stop
 
             self.assertEqual(run_counter.as_number(), 0)
             
-            instance.run_until_instruction("Simulate", state="completed", arguments="Run Counter = 7")
+            instance.run_until_instruction("Simulate", state="completed")
             self.assertEqual(run_counter.as_number(), 7)
             
             # Stop should have this effect
