@@ -2,6 +2,7 @@ from typing import Sequence
 
 import openpectus.protocol.messages as Msg
 import openpectus.protocol.models as Mdl
+from openpectus.aggregator.models import WebPushNotification, NotificationTopic
 
 
 # Note: These are the messages sent by EngineDispatcher and handled by AggregatorMessageHandlers.
@@ -145,6 +146,14 @@ class RunStoppedMsg(EngineMessage):
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(engine_id="{self.engine_id}", sequence_number={self.sequence_number}, ' +
                 f'run_id="{self.run_id}", runlog={self.runlog}, method_state="{self.method_state}"')
+
+
+class WebPushNotificationMsg(EngineMessage):
+    notification: WebPushNotification
+    topic: NotificationTopic
+
+    def __str__(self):
+        return f'{self.__class__.__name__}(title="{self.notification.title}", body="{self.notification.body}", topic="{self.topic}")'
 
 
 def print_sequence_range(messages: Sequence[EngineMessage]) -> str:
