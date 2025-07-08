@@ -811,6 +811,7 @@ class PInterpreter(NodeVisitor):
 
         yield NodeAction(node, complete)
 
+
     def visit_NotifyNode(self, node: p.NotifyNode):
         def do(node: p.NotifyNode):
             self.context.emitter.emit_on_notify_command(node.arguments)
@@ -818,6 +819,7 @@ class PInterpreter(NodeVisitor):
             self._add_record_state_complete(node)
             node.completed = True
         yield NodeAction(node, do)
+
 
     def visit_EngineCommandNode(self, node: p.EngineCommandNode) -> NodeGenerator:
         # TODO node.completed
@@ -907,36 +909,36 @@ class PInterpreter(NodeVisitor):
 
         yield NodeAction(node, schedule)
 
-
     def visit_WatchNode(self, node: p.WatchNode) -> NodeGenerator:
-        logger.debug(f"visit_WatchNode {node} method start")
+        #yield from self.visit_WatchOrAlarm(node)
+        return self.visit_WatchOrAlarm(node)
 
-        def register_watch_interrupt(node: p.WatchNode):
-            self.context.emitter.emit_on_scope_start(node.id, "Watch", node.arguments)
-            self._register_interrupt(node, self.visit_WatchNode(node))
-            node.interrupt_registered = True
-            self._add_record_state_awaiting_interrupt(node)
+    def visit_AlarmNode(self, node: p.AlarmNode) -> NodeGenerator:
+        return self.visit_WatchOrAlarm(node)
+
+    def visit_WatchOrAlarm(self, node: p.WatchNode | p.AlarmNode) -> NodeGenerator:
 
         if not node.interrupt_registered:
             # Note self._in_interrupt == True is uncommon but valid if watch is nested inside a watch or alarm
-            yield NodeAction(node, register_watch_interrupt, tick_break=True)
+            yield NodeAction(node, self._register_interrupt, tick_break=True)
             return
 
         # running from interrupt
-        assert self._in_interrupt, "Running visit_WatchNode body must always occur in an interrupt context"
+        assert self._in_interrupt, "Running visit_WatchOrAlarm body must always occur in an interrupt context"
 
         if not node.activated:
             yield NodeAction(node, self._add_record_state_awaiting_condition)
 
-        def start(node: p.WatchNode):
-            self.context.emitter.emit_on_scope_activate(node.id, "Watch", node.arguments)
-            logger.debug(f"{str(node)} executing")
+        def start(node: p.WatchNode | p.AlarmNode):
+            scope_type = "Watch" if isinstance(node, p.WatchNode) else "Alarm"
+            self.context.emitter.emit_on_scope_activate(node.id, scope_type, node.arguments)
             self._add_record_state_started(node)
 
         while not node.activated:
             if node.cancelled:
                 self._add_record_state_cancelled(node)
-                self.context.emitter.emit_on_scope_end(node.id, "Watch", node.arguments)
+                scope_type = "Watch" if isinstance(node, p.WatchNode) else "Alarm"
+                self.context.emitter.emit_on_scope_end(node.id, scope_type, node.arguments)
                 logger.info(f"Instruction {node} cancelled")
                 node.completed = True
                 return
@@ -949,79 +951,23 @@ class PInterpreter(NodeVisitor):
         # was activated
         yield from self._visit_children(node)
 
-
-        def complete(node: p.WatchNode):
-            logger.debug(f"Watch {node} complete")
-            self.context.emitter.emit_on_scope_end(node.id, "Watch", node.arguments)
+        def complete(node: p.WatchNode | p.AlarmNode):
             self._add_record_state_complete(node)
+            scope_type = "Watch" if isinstance(node, p.WatchNode) else "Alarm"
+            self.context.emitter.emit_on_scope_end(node.id, scope_type, node.arguments)
             node.completed = True
         if not node.completed:
             yield NodeAction(node, complete)
 
-        logger.debug(f"visit_WatchNode {node} method end")
-        
         # now idle until a possible method edit which may append child nodes to the Watch
 
-
-    def visit_AlarmNode(self, node: p.AlarmNode) -> NodeGenerator:
-        logger.debug(f"visit_AlarmNode {node} method start")
-
-        def register_alarm_interrupt(node: p.AlarmNode):
-            self.context.emitter.emit_on_scope_start(node.id, "Alarm", node.arguments)
-            self._register_interrupt(node, self.visit_AlarmNode(node))
-            node.interrupt_registered = True
-            self._add_record_state_awaiting_interrupt(node)
-
-        if not node.interrupt_registered:
-            yield NodeAction(node, register_alarm_interrupt)
-            logger.debug("Return after register")
-            return
-
-        # running from interrupt
-        assert self._in_interrupt, "Running visit_WatchNode body must always occur in an interrupt context"
-
-        if not node.activated:
-            yield NodeAction(node, self._add_record_state_awaiting_condition)
-
-        def start(node: p.AlarmNode):
-            self.context.emitter.emit_on_scope_activate(node.id, "Alarm", node.arguments)
-            logger.debug(f"{str(node)} executing")
-            self._add_record_state_started(node)
-
-        while not node.activated:
-            if node.cancelled:
-                self._add_record_state_cancelled(node)
-                self.context.emitter.emit_on_scope_end(node.id, "Alarm", node.arguments)
-                logger.info(f"Instruction {node} cancelled")
-                node.completed = True
-                return
-            self._try_activate_node(node)
-            if node.activated:
-                yield NodeAction(node, start)
-            else:
-                yield
-
-        # was activated
-        yield from self._visit_children(node)
-
-        def complete(node: p.AlarmNode):
-            logger.debug(f"Alarm {node} complete")
-            self.context.emitter.emit_on_scope_end(node.id, "Alarm", node.arguments)
-            self._add_record_state_complete(node)
-            node.completed = True
-        if not node.completed:
-            yield NodeAction(node, complete)
-
-        logger.debug(f"visit_AlarmNode {node} method end")
-
-        # now idle which will make the interrupt runner recreate the interrupt
 
     def _re_register_alarm_interrupt(self, node: p.AlarmNode):
         self._unregister_interrupt(node)
         node.reset_runtime_state(recursive=True)
         try:
             x = next(self.visit_AlarmNode(node))  # because node was reset this runs just the registration part
-            assert isinstance(x, NodeAction) and x.action_name == "register_alarm_interrupt"
+            assert isinstance(x, NodeAction) and x.action_name == "_register_interrupt"
             x.execute()
         except Exception:
             logger.error("Failed to run alarm interrupt registration", exc_info=True)

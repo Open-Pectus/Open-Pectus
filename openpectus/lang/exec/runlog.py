@@ -451,9 +451,6 @@ class RuntimeRecord:
     def add_state_awaiting_condition(self, time: float, tick: int, state_values: TagValueCollection | None):
         self.add_state(RuntimeRecordStateEnum.AwaitingCondition, time, tick, state_values)
 
-    def add_state_awaiting_interrupt(self, time: float, tick: int, state_values: TagValueCollection | None):
-        self.add_state(RuntimeRecordStateEnum.AwaitingInterrrupt, time, tick, state_values)
-
     def add_state_started(self, time: float, tick: int, start_values: TagValueCollection):
         self.add_state(RuntimeRecordStateEnum.Started, time, tick, start_values)
 
@@ -552,8 +549,6 @@ class RuntimeRecordStateEnum(StrEnum):
     """ Waiting for threshold """
     AwaitingCondition = auto()
     """ Waiting for condition """
-    AwaitingInterrrupt = auto()
-    """ Instruction is awaiting invocation by interrupt """
     Started = auto()
     """ Command has started """
     Cancelled = auto()
