@@ -135,15 +135,15 @@ class PInterpreter(NodeVisitor):
             raise ValueError("Edit cannot be performed when no current node is set")
         target_node_id = self._program.active_node.id
 
-        # patch runtimeinfo records to reference new nodes
+        # replace references to old nodes with references to the corresponding new nodes
         self.runtimeinfo.patch_node_references(program)
         self._patch_node_references(program)
 
         # Remove existing interrupts and modify their nodes such that interrupts are recreated during ffw.
-        # We can't patch the interrupts because they contain iterators of child collections of the
-        # old nodes. However, we can have the relevant nodes recreate their interrupts
-        # and trust the child nodes' state to ffw to the correct position.
-        # This just requires that we modify (only) the parent nodes of activate interrupts.
+        # We can't patch the interrupts because they contain iterators of child collections of the old nodes.
+        # However, we can have the relevant nodes recreate their interrupts and trust the child nodes' state
+        # to guide ffw to the correct position. This just requires that we modify (only) the parent nodes of
+        # activate interrupts.
         interrupt_keys = list(self._interrupts_map.keys())
         for key in interrupt_keys:
             node = program.get_child_by_id(key)
@@ -170,24 +170,27 @@ class PInterpreter(NodeVisitor):
         # create the generator for the new program
         self._generator = self.visit_ProgramNode(self._program)
 
-        # Fast-forward skipping over actions in history
-        main_complete = False
+        # Fast-forward iteration over both the main generator and any interrupt generators until the actions produced
+        # are no longer present in the nodes' history. The purpose is to prepare all the generators to the state just
+        # after the last action in their respective nodes' history.
+        main_complete = False # whether the main generator is 'complete'
         active_interrupt_keys = list(self._interrupts_map.keys())
-        ffw_tick = 0
+        ffw_tick = 0  # number of ticks we spent in the ffw loop
+        last_work_tick = 0  # tick number of the last tick we noticed progress
         self._ffw = True
         completed_interrupt_keys = []
         has_reached_target_node = False
-        while not main_complete or len(active_interrupt_keys) > 0:
+        
+        while True:
             ffw_tick += 1
-            if ffw_tick > self.ffw_tick_limit:
-                logger.error(f"ffw tick limit {self.ffw_tick_limit} reached. Failing the edit operation")
-                break
-                raise MethodEditError(message=f"FFW failed to complete. Aborted after {ffw_tick} iterations.")
+
             if not main_complete:
                 try:
                     logger.debug(f"Run main ffw tick {ffw_tick}")
                     x = run_ffw_tick(self._generator)
                     if isinstance(x, NodeAction):
+                        last_work_tick = ffw_tick
+                        main_complete = True
                         if x.node.id == target_node_id:
                             has_reached_target_node = True
                         if isinstance(x.node, p.SupportsInterrupt) \
@@ -196,26 +199,23 @@ class PInterpreter(NodeVisitor):
                             logger.debug("Executing Watch ffw interrupt registration")
                             self._register_interrupt(x.node)
                         else:
-                            main_complete = True
                             # schedule x.action for execution right after ffw
                             logger.debug(f"Scheduling {x.action_name}, {x.node} for execution right after ffw")
                             self._generator = PrependNodeGenerator(x, self._generator)
                     elif x:
+                        last_work_tick = ffw_tick
                         main_complete = True
-                    else:
-                        # None was yielded, just continue
-                        pass
+                    else:                        
+                        pass  # None was yielded, just continue, we can't know for sure whether any work was done or not
                     logger.debug(f"Main ffw tick {ffw_tick} complete")
                 except Exception:
                     logger.error("Exception during FFW main handler", exc_info=True)
                     raise
 
             active_interrupt_keys = list(self._interrupts_map.keys())
-            has_active_interrupts = len(active_interrupt_keys) > 0
-            for key in active_interrupt_keys.copy():
-                if key in completed_interrupt_keys:
+            for key in active_interrupt_keys:
+                if key in completed_interrupt_keys:  # skip interrupts we know are 'complete'
                     continue
-                has_active_interrupts = True
                 interrupt = self._interrupts_map[key]
                 try:
                     logger.debug(f"Run interrupt {key} ffw tick {ffw_tick}")
@@ -223,29 +223,33 @@ class PInterpreter(NodeVisitor):
                     x = run_ffw_tick(interrupt.actions)
                     self._in_interrupt = False
                     if isinstance(x, NodeAction):
+                        last_work_tick = ffw_tick
                         if x.node.id == target_node_id:
                             has_reached_target_node = True
-                        logger.warning(f"Action {x.action_name} for node {x.node} was not in history - but how do we get to execute it and where? ")
-                        logger.warning("should be ok - maybe? not really")
                         interrupt.actions = PrependNodeGenerator(x, interrupt.actions)
                         completed_interrupt_keys.append(key)
                     elif x:
+                        last_work_tick = ffw_tick
                         completed_interrupt_keys.append(key)
                     else:
-                        pass
+                        pass  # None was yielded, just continue, we can't know for sure whether any work was done or not
                     logger.debug(f"Interrupt {key} ffw tick {ffw_tick} complete")
                 except Exception:
                     logger.error("Exception during FFW interrupt handler", exc_info=True)
                     raise
             
-            # we somehow need to distinguish between exhausted generators
-            # which, if it persists indicates that we're done 
-            # - and the condition that we're stuck during ffw...
-            # can this be done?
-            # keep count if ticks where has_reached_target_node was True?
-
-            if has_reached_target_node and not has_active_interrupts and ffw_tick > 5:
+            # FFW termination is tricky because we need to synchronize the last outcomes of the main and interrupt actions.
+            # If a generator is exhausted we know its done. We also may not iterate it again because its prepared state will change
+            if has_reached_target_node:
+                logger.debug("FFW termination because target node was reached")
                 break
+            if last_work_tick + 100 < ffw_tick:
+                # we'll assume nothing more will happen after 100 idle ticks
+                logger.debug("FFW termination because loop was idle")
+                break
+            if ffw_tick > self.ffw_tick_limit:
+                logger.error(f"FFW failed to complete. Aborted after {ffw_tick} iterations.")
+                raise MethodEditError(message=f"FFW failed to complete. Aborted after {ffw_tick} iterations.")
         
         self._ffw = False
         logger.info("FFW complete")
@@ -307,16 +311,13 @@ class PInterpreter(NodeVisitor):
         node = p.InjectedNode()
         for n in program.children:
             node.append_child(n)
-        # Note: registers visit rather than visit_InjectedNode because visit has not been
-        # run for the node unlike Watch and Alarm
         self._register_interrupt(node)
 
     def _register_interrupt(self, node: p.NodeWithChildren):
         handler = self._create_interrupt_handler(node)
         assert hasattr(handler, "__name__"), f"Handler {str(handler)} has no name"
         handler_name = getattr(handler, "__name__")
-        # Note: we have to accept overwriting the handler because Watch-in-Alarm cases
-        # require it.
+        # Note: we have to allow overwriting the handler because Watch-in-Alarm cases require it.
         # if node.id in self._interrupts_map.keys():
         #     logger.error(f"Cannot register interrupt for node {node}. A handler for this node already exists.")
         #     raise Exception("Interrupt registration failed for node {node}")
