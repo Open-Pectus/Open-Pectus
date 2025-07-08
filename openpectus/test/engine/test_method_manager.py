@@ -28,6 +28,8 @@ set_engine_debug_logging()
 set_interpreter_debug_logging()
 logging.getLogger("openpectus.lang.exec.runlog").setLevel(logging.DEBUG)
 logging.getLogger("openpectus.engine.method_manager").setLevel(logging.DEBUG)
+logging.getLogger("openpectus.lang.exec.visitor").setLevel(logging.DEBUG)
+
 
 # pint takes forever to initialize - long enough
 # to throw off timing of the first instruction.
@@ -99,7 +101,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:  # noqa
     uod.hwl.connect()
     return uod
 
-#@unittest.skip(reason="Edit not currently enabled")
+
 class TestMethodManager(unittest.TestCase):
 
     def test_may_not_edit_an_executed_line(self):
@@ -296,6 +298,42 @@ class TestMethodManager(unittest.TestCase):
             instance.run_until_instruction("Mark", state="completed", arguments="B")
 
             # verify no edit error
+            instance.engine.set_method(method2)
+            instance.run_ticks(1)
+
+            instance.run_until_instruction("Mark", state="completed", arguments="D")
+
+            # verify run behavior
+            self.assertEqual(["B", "C", "D"], instance.marks)
+
+    def test_may_extend_alarm_after_alarm_activated(self):
+
+        # Editing a Watch body requires that FFW will also run interrupt handlers to find
+        # the current node. This test verifies that.
+
+        method1 = Method.from_numbered_pcode("""\
+01 Base: s
+02 Alarm: Run Time > 0s
+03     Mark: B
+04     0.5 Mark: C
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Base: s
+02 Alarm: Run Time > 0s
+03     Mark: B
+04     0.5 Mark: C
+05     Mark: D
+""")
+
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+            instance.engine.interpreter.ffw_tick_limit = 50
+
+            #instance.run_until_instruction("Mark", state="awaiting_threshold", arguments="C")
+            instance.run_until_instruction("Mark", state="completed", arguments="B")
+
+            # insert Mark: D and verify no edit error
             instance.engine.set_method(method2)
             instance.run_ticks(1)
 

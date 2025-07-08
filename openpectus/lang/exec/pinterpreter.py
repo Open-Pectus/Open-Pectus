@@ -138,7 +138,7 @@ class PInterpreter(NodeVisitor):
         # patch runtimeinfo records to reference new nodes
         self.runtimeinfo.patch_node_references(program)
         self._patch_node_references(program)
-        
+
         # Remove existing interrupts and modify their nodes such that interrupts are recreated during ffw.
         # We can't patch the interrupts because they contain iterators of child collections of the
         # old nodes. However, we can have the relevant nodes recreate their interrupts
@@ -151,10 +151,10 @@ class PInterpreter(NodeVisitor):
                 continue
             assert isinstance(node, (p.WatchNode, p.AlarmNode, p.InjectedNode))
             logger.debug(f"Resetting interrupt for node {node}")
-            
+
             # Modify the node state such that the removed interrupt will be recreated during ffw
             node.interrupt_registered = False
-            for key in ['register_interrupt']:
+            for key in ['register_watch_interrupt', 'register_alarm_interrupt']:
                 if key in node.action_history:
                     node.action_history.remove(key)
 
@@ -197,15 +197,22 @@ class PInterpreter(NodeVisitor):
                     if isinstance(x, NodeAction):
                         if x.node.id == target_node_id:
                             has_reached_target_node = True
-                        # HACK
+                        # HACK - instead of this, run the node's registration step
                         if isinstance(x.node, p.WatchNode) and not x.node.interrupt_registered:
                             logger.debug("Executing Watch ffw interrupt registration")
                             # TODO consider emit_on_scope_start
                             self._register_interrupt(x.node, self.visit_WatchNode(x.node))
                             x.node.interrupt_registered = True
-                            x.node.action_history.append("register_interrupt")
+                            x.node.action_history.append("register_watch_interrupt")
                             self._add_record_state_awaiting_interrupt(x.node)
                             # TODO make sure we have consumed all of x.node's actions
+                        elif isinstance(x.node, p.AlarmNode) and not x.node.interrupt_registered:
+                            logger.debug("Executing Alarm ffw interrupt registration")
+                            # TODO consider emit_on_scope_start
+                            self._register_interrupt(x.node, self.visit_AlarmNode(x.node))
+                            x.node.interrupt_registered = True
+                            x.node.action_history.append("register_alarm_interrupt")
+                            self._add_record_state_awaiting_interrupt(x.node)
                         else:
                             main_complete = True
                             # schedule x.action for execution right after ffw
@@ -256,11 +263,11 @@ class PInterpreter(NodeVisitor):
             # can this be done?
             # keep count if ticks where has_reached_target_node was True?
 
-            if not has_active_interrupts and ffw_tick > 5:
+            if has_reached_target_node and not has_active_interrupts and ffw_tick > 5:
                 break
         
         self._ffw = False
-        self._generator = gen_main # set prepared generator as the new source for tick()
+        self._generator = gen_main  # set prepared generator as the new source for tick()
         logger.info("FFW complete")
 
     def _patch_node_references(self, program: p.ProgramNode):  # noqa C901
@@ -904,20 +911,20 @@ class PInterpreter(NodeVisitor):
     def visit_WatchNode(self, node: p.WatchNode) -> NodeGenerator:
         logger.debug(f"visit_WatchNode {node} method start")
 
-        def register_interrupt(node: p.WatchNode):
+        def register_watch_interrupt(node: p.WatchNode):
             self.context.emitter.emit_on_scope_start(node.id, "Watch", node.arguments)
             self._register_interrupt(node, self.visit_WatchNode(node))
             node.interrupt_registered = True
             self._add_record_state_awaiting_interrupt(node)
 
-        if not node.interrupt_registered:            
+        if not node.interrupt_registered:
             # Note self._in_interrupt == True is uncommon but valid if watch is nested inside a watch or alarm
-            yield NodeAction(node, register_interrupt, tick_break=True)
+            yield NodeAction(node, register_watch_interrupt, tick_break=True)
             return
 
         # running from interrupt
-        assert self._in_interrupt == True, f"Running visit_WatchNode body must always occur in an interrupt context"
-        
+        assert self._in_interrupt, "Running visit_WatchNode body must always occur in an interrupt context"
+
         if not node.activated:
             yield NodeAction(node, self._add_record_state_awaiting_condition)
 
@@ -947,7 +954,6 @@ class PInterpreter(NodeVisitor):
             logger.debug(f"Watch {node} complete")
             self.context.emitter.emit_on_scope_end(node.id, "Watch", node.arguments)
             self._add_record_state_complete(node)
-            #self._unregister_interrupt(node) # we need to keep the interrupt handler active - but this conflicts with using emit_on_scope_end???
             node.completed = True
         if not node.completed:
             yield NodeAction(node, complete)
@@ -972,6 +978,8 @@ class PInterpreter(NodeVisitor):
             return
 
         # running from interrupt
+        assert self._in_interrupt, "Running visit_WatchNode body must always occur in an interrupt context"
+
         if not node.activated:
             yield NodeAction(node, self._add_record_state_awaiting_condition)
 
@@ -1000,7 +1008,9 @@ class PInterpreter(NodeVisitor):
             logger.debug(f"Alarm {node} complete")
             self.context.emitter.emit_on_scope_end(node.id, "Alarm", node.arguments)
             self._add_record_state_complete(node)
-        yield NodeAction(node, complete)
+            node.completed = True
+        if not node.completed:
+            yield NodeAction(node, complete)
 
         logger.debug(f"visit_AlarmNode {node} method end")
 

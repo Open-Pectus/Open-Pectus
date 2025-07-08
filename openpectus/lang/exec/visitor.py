@@ -1,6 +1,9 @@
 from typing import Any, Callable, Generator, TypeVar
+import logging
+
 import openpectus.lang.model.ast as p
 
+logger = logging.getLogger(__name__)
 
 TNode = TypeVar("TNode", bound=p.Node)
 
@@ -28,7 +31,9 @@ class NodeAction():
 
     def execute(self):
         if self.action_name in self.node.action_history:
+            logger.error(f"The action '{self.action_name}' for node {self.node} has already been executed")
             raise ValueError(f"The action '{self.action_name}' for node {self.node} has already been executed")
+        logger.debug(f"Executing action '{self.action_name}' for node {self.node}")
         self.action(self.node)
         self.node.action_history.append(self.action_name)
 
@@ -76,6 +81,7 @@ def run_ffw_tick(gen: NodeGenerator) -> bool | NodeAction:
             x = next(gen)
             if isinstance(x, NodeAction):
                 if x.action_name not in x.node.action_history:
+                    logger.info(f"FFW about to complete, action '{x.action_name}' not in history for node {x.node}")
                     # We got one step too far, x needs to be executed
                     return x
                 if x.tick_break:
