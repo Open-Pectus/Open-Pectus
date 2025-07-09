@@ -734,6 +734,7 @@ class SimulateCheckAnalyzer(AnalyzerVisitorBase):
                 return super().visit_SimulateNode(node)
         return super().visit_SimulateNode(node)
 
+
 # Show blue squiggly lines notifying that condition is based on a simulated value.
 # Possibly uncomment this code at a later time. Right now it does not work
 # because UOD tags and their state are cached.
@@ -763,7 +764,7 @@ class SimulateCheckAnalyzer(AnalyzerVisitorBase):
                     f"The value of tag {node.tag_operator_value.tag_name} is simulated.",
                     start=node.tag_operator_value.stripped_lhs_range.start.character,
                     end=node.tag_operator_value.stripped_lhs_range.end.character
-                )) 
+                ))
         return super().visit_AlarmNode(node)
 """
 

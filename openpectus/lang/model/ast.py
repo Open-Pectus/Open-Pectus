@@ -278,7 +278,7 @@ class Node(SupportCancelForce):
             parents.append(node.parent)
             node = node.parent
         return parents
-    
+
     @property
     def root(self) -> ProgramNode:
         if isinstance(self, ProgramNode):

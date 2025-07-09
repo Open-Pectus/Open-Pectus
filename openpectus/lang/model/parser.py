@@ -288,7 +288,7 @@ class PcodeParser:
         argument = match_groups.get("argument", "")
         has_comment = match_groups.get("has_comment", "") == "#"
         comment = match_groups.get("comment", "")
-        
+
         has_argument = ":" in line_stripped.split("#")[0]
 
         node = self._create_node(instruction_name.strip(), line, line_no).with_id(self.id_generator)
