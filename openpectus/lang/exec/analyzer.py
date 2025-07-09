@@ -428,8 +428,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                         node,
                         AnalyzerItemType.ERROR,
                         f"Did you mean to type '{most_similar_tag}'?",
-                        start=node.tag_operator_value.lhs_range.start.character,
-                        end=node.tag_operator_value.lhs_range.end.character,
+                        start=node.tag_operator_value.stripped_lhs_range.start.character,
+                        end=node.tag_operator_value.stripped_lhs_range.end.character,
                         data=dict(type="fix-typo", fix=most_similar_tag)
                     ))
                     return
@@ -440,8 +440,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                     node,
                     AnalyzerItemType.ERROR,
                     f"The tag name '{tag_name}' is not valid",
-                    start=node.tag_operator_value.lhs_range.start.character,
-                    end=node.tag_operator_value.lhs_range.end.character,
+                    start=node.tag_operator_value.stripped_lhs_range.start.character,
+                    end=node.tag_operator_value.stripped_lhs_range.end.character,
                 ))
                 return
 
@@ -474,8 +474,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 node,
                 AnalyzerItemType.ERROR,
                 f"Unit '{condition.tag_unit}' was specified for a tag with no unit",
-                start=node.tag_operator_value.rhs_range.start.character,
-                end=node.tag_operator_value.rhs_range.end.character
+                start=node.tag_operator_value.tag_unit_range.start.character,
+                end=node.tag_operator_value.tag_unit_range.end.character
             ))
             return
 
@@ -504,8 +504,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 node,
                 AnalyzerItemType.ERROR,
                 "The tag requires that a unit is provided." + valid_units_str,
-                start=node.tag_operator_value.rhs_range.start.character,
-                end=node.tag_operator_value.rhs_range.end.character
+                start=node.tag_operator_value.stripped_rhs_range.start.character,
+                end=node.tag_operator_value.stripped_rhs_range.end.character
             ))
             return
 
@@ -520,8 +520,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                     node,
                     AnalyzerItemType.ERROR,
                     str(vex) + "." + valid_units_str,
-                    start=node.tag_operator_value.rhs_range.start.character,
-                    end=node.tag_operator_value.rhs_range.end.character
+                    start=node.tag_operator_value.tag_unit_range.start.character,
+                    end=node.tag_operator_value.tag_unit_range.end.character
                 ))
                 return
             if not comparable:
@@ -531,8 +531,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                     node,
                     AnalyzerItemType.ERROR,
                     f"The tag unit '{tag.unit}' is not compatible with the provided unit '{condition.tag_unit}'." + valid_units_str,
-                    start=node.tag_operator_value.range.start.character,
-                    end=node.tag_operator_value.range.end.character
+                    start=node.tag_operator_value.stripped_range.start.character,
+                    end=node.tag_operator_value.stripped_range.end.character
                 ))
                 return
 
@@ -572,8 +572,8 @@ class SimulateCheckAnalyzer(AnalyzerVisitorBase):
                         node,
                         AnalyzerItemType.ERROR,
                         f"Did you mean to type '{most_similar_tag}'?",
-                        start=node.arguments_range.start.character,
-                        end=node.arguments_range.end.character,
+                        start=node.stripped_arguments_range.start.character,
+                        end=node.stripped_arguments_range.end.character,
                         data=dict(type="fix-typo", fix=most_similar_tag)
                     ))
             else:
@@ -583,8 +583,8 @@ class SimulateCheckAnalyzer(AnalyzerVisitorBase):
                     node,
                     AnalyzerItemType.ERROR,
                     f"The tag name '{tag_name}' is not valid",
-                    start=node.arguments_range.start.character,
-                    end=node.arguments_range.end.character,
+                    start=node.stripped_arguments_range.start.character,
+                    end=node.stripped_arguments_range.end.character,
                 ))
         return super().visit_SimulateOffNode(node)
 
@@ -625,8 +625,8 @@ class SimulateCheckAnalyzer(AnalyzerVisitorBase):
                         node,
                         AnalyzerItemType.ERROR,
                         f"Did you mean to type '{most_similar_tag}'?",
-                        start=node.tag_operator_value.lhs_range.start.character,
-                        end=node.tag_operator_value.lhs_range.end.character,
+                        start=node.tag_operator_value.stripped_lhs_range.start.character,
+                        end=node.tag_operator_value.stripped_lhs_range.end.character,
                         data=dict(type="fix-typo", fix=most_similar_tag)
                     ))
                     return super().visit_SimulateNode(node)
@@ -637,8 +637,8 @@ class SimulateCheckAnalyzer(AnalyzerVisitorBase):
                     node,
                     AnalyzerItemType.ERROR,
                     f"The tag name '{tag_name}' is not valid",
-                    start=node.tag_operator_value.lhs_range.start.character,
-                    end=node.tag_operator_value.lhs_range.end.character,
+                    start=node.tag_operator_value.stripped_lhs_range.start.character,
+                    end=node.tag_operator_value.stripped_lhs_range.end.character,
                 ))
                 return super().visit_SimulateNode(node)
 
@@ -671,8 +671,8 @@ class SimulateCheckAnalyzer(AnalyzerVisitorBase):
                 node,
                 AnalyzerItemType.ERROR,
                 f"Unit '{condition.tag_unit}' was specified for a tag with no unit",
-                start=node.tag_operator_value.rhs_range.start.character,
-                end=node.tag_operator_value.rhs_range.end.character
+                start=node.tag_operator_value.tag_unit_range.start.character,
+                end=node.tag_operator_value.tag_unit_range.end.character
             ))
             return super().visit_SimulateNode(node)
 
@@ -688,8 +688,8 @@ class SimulateCheckAnalyzer(AnalyzerVisitorBase):
                 node,
                 AnalyzerItemType.ERROR,
                 "The tag requires that a value is provided.",
-                start=node.tag_operator_value.rhs_range.start.character,
-                end=node.tag_operator_value.rhs_range.end.character
+                start=node.tag_operator_value.stripped_rhs_range.start.character,
+                end=node.tag_operator_value.stripped_rhs_range.end.character
             ))
             return super().visit_SimulateNode(node)
 
@@ -701,8 +701,8 @@ class SimulateCheckAnalyzer(AnalyzerVisitorBase):
                 node,
                 AnalyzerItemType.ERROR,
                 "The tag requires that a unit is provided." + valid_units_str,
-                start=node.tag_operator_value.rhs_range.start.character,
-                end=node.tag_operator_value.rhs_range.end.character
+                start=node.tag_operator_value.stripped_rhs_range.start.character,
+                end=node.tag_operator_value.stripped_rhs_range.end.character
             ))
             return super().visit_SimulateNode(node)
 
@@ -717,8 +717,8 @@ class SimulateCheckAnalyzer(AnalyzerVisitorBase):
                     node,
                     AnalyzerItemType.ERROR,
                     str(vex) + "." + valid_units_str,
-                    start=node.tag_operator_value.rhs_range.start.character,
-                    end=node.tag_operator_value.rhs_range.end.character
+                    start=node.tag_operator_value.tag_unit_range.start.character,
+                    end=node.tag_operator_value.tag_unit_range.end.character
                 ))
                 return super().visit_SimulateNode(node)
             if not comparable:
@@ -728,8 +728,8 @@ class SimulateCheckAnalyzer(AnalyzerVisitorBase):
                     node,
                     AnalyzerItemType.ERROR,
                     f"The tag unit '{tag.unit}' is not compatible with the provided unit '{condition.tag_unit}'." + valid_units_str,
-                    start=node.tag_operator_value.range.start.character,
-                    end=node.tag_operator_value.range.end.character
+                    start=node.tag_operator_value.stripped_range.start.character,
+                    end=node.tag_operator_value.stripped_range.end.character
                 ))
                 return super().visit_SimulateNode(node)
         return super().visit_SimulateNode(node)
@@ -859,8 +859,8 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                     node,
                     AnalyzerItemType.ERROR,
                     f"Did you mean to type '{most_similar_macro}'?",
-                    start=node.arguments_range.start.character,
-                    end=node.arguments_range.end.character,
+                    start=node.stripped_arguments_range.start.character,
+                    end=node.stripped_arguments_range.end.character,
                     data=dict(type="fix-typo", fix=most_similar_macro)
                 ))
             else:
@@ -870,8 +870,8 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                     node,
                     AnalyzerItemType.ERROR,
                     f"Cannot call macro '{node.name.strip()}' because it is not defined",
-                    start=node.arguments_range.start.character,
-                    end=node.arguments_range.end.character,
+                    start=node.stripped_arguments_range.start.character,
+                    end=node.stripped_arguments_range.end.character,
                 ))
         elif node.name and node.name.strip() in self.macros:
             macro_node = self.macros[node.name]

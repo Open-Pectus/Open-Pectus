@@ -320,12 +320,12 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
                     kind="markdown",
                     value="```pcode\r\n"+docstring+"\r\n```" if docstring else "",
                 ),
-                range=lsp_range_from_ast_range(node.instruction_range),
+                range=lsp_range_from_ast_range(node.stripped_instruction_range),
             )
         # Hovering condition
         if isinstance(node, p.NodeWithTagOperatorValue) and node.tag_operator_value:
             # Show current tag value
-            if node.tag_operator_value.lhs and analysis_input.tags.has(node.tag_operator_value.lhs) and position_ast in node.tag_operator_value.lhs_range:
+            if node.tag_operator_value.lhs and analysis_input.tags.has(node.tag_operator_value.lhs) and position_ast in node.tag_operator_value.stripped_lhs_range:
                 process_value = fetch_process_value(engine_id, node.tag_operator_value.lhs)
                 if not process_value:
                     return
@@ -355,7 +355,7 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
                         kind="markdown",
                         value=f"Current value: {value_str}",
                     ),
-                    range=lsp_range_from_ast_range(node.tag_operator_value.lhs_range),
+                    range=lsp_range_from_ast_range(node.tag_operator_value.stripped_lhs_range),
                 )
             # Show text desciption of comparison operator
             if position_ast in node.tag_operator_value.op_range:
@@ -369,14 +369,14 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
             # Show compatible units of measurement
             unit_options = units_compaible_with_tag(analysis_input, node.tag_operator_value.lhs)
             unit_options_str = ", ".join(unit_options)
-            if unit_options_str and position_ast in node.tag_operator_value.rhs_range:
+            if unit_options_str and position_ast in node.tag_operator_value.stripped_rhs_range:
                 if len(unit_options) >= 1:
                     return Hover(
                         contents=MarkupContent(
                             kind="markdown",
                             value=f"Unit{'s' if len(unit_options) > 1 else ''}: {unit_options_str}.",
                         ),
-                        range=lsp_range_from_ast_range(node.tag_operator_value.rhs_range),
+                        range=lsp_range_from_ast_range(node.tag_operator_value.stripped_rhs_range),
                     )
         # Hovering "Call macro"
         elif isinstance(node, p.CallMacroNode) and position_ast in node.arguments_range:
@@ -400,7 +400,7 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
                             kind="markdown",
                             value=f"Specify a value with unit '{units_str}'.",
                         ),
-                        range=lsp_range_from_ast_range(node.arguments_range),
+                        range=lsp_range_from_ast_range(node.stripped_arguments_range),
                     )
                 elif len(units) > 1:
                     return Hover(
@@ -408,7 +408,7 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
                             kind="markdown",
                             value=f"Specify a value with one of the following units: {units_str}.",
                         ),
-                        range=lsp_range_from_ast_range(node.arguments_range),
+                        range=lsp_range_from_ast_range(node.stripped_arguments_range),
                     )
                 additive_options = arg_parser.get_additive_options()
                 exclusive_options = arg_parser.get_exclusive_options()
@@ -419,7 +419,7 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
                             kind="markdown",
                             value=f"Specify one or more (separate with +) of the following options: {options_str}.",
                         ),
-                        range=lsp_range_from_ast_range(node.arguments_range),
+                        range=lsp_range_from_ast_range(node.stripped_arguments_range),
                     )
                 elif not additive_options and exclusive_options:
                     options_str = ", ".join(exclusive_options)
@@ -428,7 +428,7 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
                             kind="markdown",
                             value=f"Specify one of the following options: {options_str}",
                         ),
-                        range=lsp_range_from_ast_range(node.arguments_range),
+                        range=lsp_range_from_ast_range(node.stripped_arguments_range),
                     )
                 elif additive_options and exclusive_options:
                     options_str = ", ".join(additive_options+exclusive_options)
@@ -437,7 +437,7 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
                             kind="markdown",
                             value=f"Specify one or possibly more of the following options: {options_str}.",
                         ),
-                        range=lsp_range_from_ast_range(node.arguments_range),
+                        range=lsp_range_from_ast_range(node.stripped_arguments_range),
                     )
 
 
@@ -473,7 +473,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
             # Completion of Watch/Alarm which are special because of conditions
             if isinstance(node, p.NodeWithTagOperatorValue) and node.tag_operator_value:
                 # Complete tag name
-                if position_ast in node.tag_operator_value.lhs_range or (node.tag_operator_value.lhs == "" and node.arguments_part.strip() not in analysis_input.tags.names):
+                if position_ast in node.tag_operator_value.stripped_lhs_range or (node.tag_operator_value.lhs == "" and node.arguments_part.strip() not in analysis_input.tags.names):
                     prefix = "" if leading_space else " "
                     if node.tag_operator_value.lhs_range.is_empty():
                         return [
