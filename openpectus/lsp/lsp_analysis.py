@@ -467,6 +467,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
     node = pcode_parser._parse_line(line, position["line"])
     position_ast = ast_position_from_lsp_position(position)
     leading_space = position["character"] > 0 and line[position["character"]-1:position["character"]] == " "
+    leading_plus = position["character"] > 0 and line[position["character"]-1:position["character"]] == "+"
 
     if node:
         if node.instruction_name in analysis_input.commands.names:
@@ -481,7 +482,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                                 label=name,
                                 insertText=prefix+name+" ",
                                 kind=CompletionItemKind.Enum,
-                                command=LSPCommand(title="", command="editor.action.triggerSuggest") if node.tag_operator_value.op is "" else None
+                                command=LSPCommand(title="", command="editor.action.triggerSuggest") if node.tag_operator_value.op == "" else None
                             )
                             for name in analysis_input.get_tag_completions(node.tag_operator_value.lhs)
                         ]
@@ -492,14 +493,14 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                                 kind=CompletionItemKind.Enum,
                                 textEdit=TextEdit(
                                     range=lsp_range_from_ast_range(node.tag_operator_value.lhs_range),
-                                    newText=prefix+name+" "
+                                    newText=" "+name+" "
                                 ),
-                                command=LSPCommand(title="", command="editor.action.triggerSuggest") if node.tag_operator_value.op is "" else None
+                                command=LSPCommand(title="", command="editor.action.triggerSuggest") if node.tag_operator_value.op == "" else None
                             )
                             for name in analysis_input.get_tag_completions(node.tag_operator_value.lhs)
                         ]
                 # Complete operator
-                elif position_ast in node.tag_operator_value.op_range or node.tag_operator_value.op_range.is_empty():
+                elif position_ast in node.tag_operator_value.op_range or node.tag_operator_value.op == "":
                     prefix = "" if leading_space else " "
                     if node.tag_operator_value.op_range.is_empty():
                         return [
@@ -511,14 +512,14 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                             )
                             for operator in node.operators
                         ]
-                    elif node.tag_operator_value.op is None:
+                    else:
                         return [
                             CompletionItem(
                                 label=f"{operator} ({operator_descriptions[operator]})",
                                 kind=CompletionItemKind.Enum,
                                 textEdit=TextEdit(
                                     range=lsp_range_from_ast_range(node.tag_operator_value.op_range),
-                                    newText=prefix+operator
+                                    newText=operator
                                 ),
                                 command=LSPCommand(title="", command="editor.action.triggerSuggest") if node.tag_operator_value.tag_unit is None else None
                             )
@@ -604,7 +605,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
             # Completion of all other commands
             elif node.instruction_name in analysis_input.commands.names:
                 arg_parser = analysis_input.commands.get(node.instruction_name).arg_parser
-                prefix = "" if leading_space else " "
+                prefix = "" if leading_space or leading_plus else " "
                 if arg_parser:
                     options = arg_parser.get_additive_options()+arg_parser.get_exclusive_options()+arg_parser.get_units()
                     # Complete additive options
@@ -615,7 +616,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                                 insertText=prefix+name,
                                 kind=CompletionItemKind.Enum,
                             )
-                            for name in arg_parser.get_additive_options()
+                            for name in arg_parser.get_additive_options() if name not in node.arguments
                         ]
                     # Complete additive, exclusive and units
                     if not contains_any(node.arguments, options):
