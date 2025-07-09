@@ -425,17 +425,27 @@ Alarm: Foo > 0
         assert alarm is not None
         assert alarm.tag_operator_value is not None
 
+        # "Foo > 0"
         self.assertEqual(7, alarm.tag_operator_value.range.start.character)
         self.assertEqual(14, alarm.tag_operator_value.range.end.character)
 
-        self.assertEqual(7, alarm.tag_operator_value.lhs_range.start.character)
-        self.assertEqual(10, alarm.tag_operator_value.lhs_range.end.character)
+        # " Foo "
+        self.assertEqual(6, alarm.tag_operator_value.lhs_range.start.character)
+        self.assertEqual(11, alarm.tag_operator_value.lhs_range.end.character)
+        # "Foo"
+        self.assertEqual(7, alarm.tag_operator_value.stripped_lhs_range.start.character)
+        self.assertEqual(10, alarm.tag_operator_value.stripped_lhs_range.end.character)
 
+        # ">"
         self.assertEqual(11, alarm.tag_operator_value.op_range.start.character)
         self.assertEqual(12, alarm.tag_operator_value.op_range.end.character)
 
-        self.assertEqual(13, alarm.tag_operator_value.rhs_range.start.character)
+        # " 0"
+        self.assertEqual(12, alarm.tag_operator_value.rhs_range.start.character)
         self.assertEqual(14, alarm.tag_operator_value.rhs_range.end.character)
+        # "0"
+        self.assertEqual(13, alarm.tag_operator_value.stripped_rhs_range.start.character)
+        self.assertEqual(14, alarm.tag_operator_value.stripped_rhs_range.end.character)
 
     def test_get_condition_ranges_alt_ws(self):
         parser = create_parser()
@@ -449,20 +459,26 @@ Alarm:  Foo   >=  0.4
         assert alarm is not None
         assert alarm.tag_operator_value is not None
 
-        self.assertEqual(8, alarm.tag_operator_value.range.start.character)
-        self.assertEqual(21, alarm.tag_operator_value.range.end.character)
+        self.assertEqual(7, alarm.tag_operator_value.range.start.character)
+        self.assertEqual(23, alarm.tag_operator_value.range.end.character)
 
-        # " Foo "
-        self.assertEqual(8, alarm.tag_operator_value.lhs_range.start.character)
-        self.assertEqual(12, alarm.tag_operator_value.lhs_range.end.character)
+        # "  Foo   "
+        self.assertEqual(6, alarm.tag_operator_value.lhs_range.start.character)
+        self.assertEqual(14, alarm.tag_operator_value.lhs_range.end.character)
+        # "Foo"
+        self.assertEqual(8, alarm.tag_operator_value.stripped_lhs_range.start.character)
+        self.assertEqual(11, alarm.tag_operator_value.stripped_lhs_range.end.character)
 
         # ">="
         self.assertEqual(14, alarm.tag_operator_value.op_range.start.character)
         self.assertEqual(16, alarm.tag_operator_value.op_range.end.character)
 
-        " 0.4"
-        self.assertEqual(17, alarm.tag_operator_value.rhs_range.start.character)
-        self.assertEqual(21, alarm.tag_operator_value.rhs_range.end.character)
+        # "  0.4"
+        self.assertEqual(16, alarm.tag_operator_value.rhs_range.start.character)
+        self.assertEqual(23, alarm.tag_operator_value.rhs_range.end.character)
+        # "0.4"
+        self.assertEqual(18, alarm.tag_operator_value.stripped_rhs_range.start.character)
+        self.assertEqual(21, alarm.tag_operator_value.stripped_rhs_range.end.character)
 
     def test_simulate_command(self):
         parser = create_parser()

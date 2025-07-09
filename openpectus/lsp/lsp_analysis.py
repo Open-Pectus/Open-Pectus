@@ -325,8 +325,8 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
         # Hovering condition
         if isinstance(node, p.NodeWithTagOperatorValue) and node.tag_operator_value:
             # Show current tag value
-            if node.tag_operator_value.lhs and analysis_input.tags.has(node.tag_operator_value.lhs) and position_ast in node.tag_operator_value.stripped_lhs_range:
-                process_value = fetch_process_value(engine_id, node.tag_operator_value.lhs)
+            if node.tag_operator_value.tag_name and analysis_input.tags.has(node.tag_operator_value.tag_name) and position_ast in node.tag_operator_value.stripped_lhs_range:
+                process_value = fetch_process_value(engine_id, node.tag_operator_value.tag_name)
                 if not process_value:
                     return
                 value_str = ""
