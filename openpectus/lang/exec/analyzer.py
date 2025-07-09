@@ -734,6 +734,39 @@ class SimulateCheckAnalyzer(AnalyzerVisitorBase):
                 return super().visit_SimulateNode(node)
         return super().visit_SimulateNode(node)
 
+# Show blue squiggly lines notifying that condition is based on a simulated value.
+# Possibly uncomment this code at a later time. Right now it does not work
+# because UOD tags and their state are cached.
+"""
+    def visit_WatchNode(self, node: p.WatchNode):
+        if node.tag_operator_value and node.tag_operator_value.tag_name:
+            if self.tags.has(node.tag_operator_value.tag_name) and self.tags.get(node.tag_operator_value.tag_name).simulated:
+                self.add_item(AnalyzerItem(
+                    "SimulatedValue",
+                    "Tag has simulated value",
+                    node,
+                    AnalyzerItemType.INFO,
+                    f"The value of tag {node.tag_operator_value.tag_name} is simulated.",
+                    start=node.tag_operator_value.stripped_lhs_range.start.character,
+                    end=node.tag_operator_value.stripped_lhs_range.end.character
+                ))
+        return super().visit_WatchNode(node)
+
+    def visit_AlarmNode(self, node: p.AlarmNode):
+        if node.tag_operator_value and node.tag_operator_value.tag_name:
+            if self.tags.has(node.tag_operator_value.tag_name) and self.tags.get(node.tag_operator_value.tag_name).simulated:
+                self.add_item(AnalyzerItem(
+                    "SimulatedValue",
+                    "Tag has simulated value",
+                    node,
+                    AnalyzerItemType.INFO,
+                    f"The value of tag {node.tag_operator_value.tag_name} is simulated.",
+                    start=node.tag_operator_value.stripped_lhs_range.start.character,
+                    end=node.tag_operator_value.stripped_lhs_range.end.character
+                )) 
+        return super().visit_AlarmNode(node)
+"""
+
 
 class CommandCheckAnalyzer(AnalyzerVisitorBase):
     """
