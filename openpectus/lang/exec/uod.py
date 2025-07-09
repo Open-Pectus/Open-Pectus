@@ -1043,7 +1043,7 @@ class RegexNamedArgumentParser:
         if "option" not in self.get_named_groups():
             return []
         start = self.regex.index("|(") + len("|(")
-        end = self.regex.index("|\\+)+))\\s*")
+        end = self.regex.index(r"|\+)+)(?<!\+))\s*")
         result = unescape(self.regex[start: end]).split("|")
         if "" in result:
             result.remove("")
