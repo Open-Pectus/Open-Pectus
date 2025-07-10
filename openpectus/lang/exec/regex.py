@@ -62,7 +62,7 @@ def RegexCategorical(exclusive_options: list[str] | None = None, additive_option
         raise TypeError("RegexCategorical() missing argument 'exclusive_options' or 'additive_options'.")
     exclusive_option_part = "|".join(re.escape(option) for option in exclusive_options) if exclusive_options else ""
     additive_option_part = "|".join(re.escape(option) for option in additive_options) if additive_options else ""
-    return rf"^(?P<option>({exclusive_option_part}|({additive_option_part}|\+)+))\s*$"
+    return rf"^(?P<option>({exclusive_option_part}|({additive_option_part}|\+)+)(?<!\+))\s*$"
 
 
 def RegexText(allow_empty: bool = False) -> str:

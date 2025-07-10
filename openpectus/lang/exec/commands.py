@@ -4,6 +4,7 @@ from typing import Callable, Dict, Iterable, List
 from uuid import UUID
 
 from openpectus.lang.exec.uod import RegexNamedArgumentParser
+from openpectus.lang.exec.argument_specification import ArgSpec
 
 class InterpreterCommandEnum(StrEnum):
     """ Commands (instructions of type PCommand) that are executed by the interpreter """
@@ -72,6 +73,13 @@ class Command:
 
     def clone(self) -> Command:
         return Command(self.name)
+
+    @property
+    def accepts_arguments(self) -> bool:
+        if self.arg_parser and self.arg_parser.regex:
+            if self.arg_parser.regex == ArgSpec.NoArgsInstance.regex:
+                return False
+        return True
 
 
 class CommandCollection():
