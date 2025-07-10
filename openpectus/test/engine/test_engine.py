@@ -598,7 +598,6 @@ Mark: X
 
         r = e.interpreter.runtimeinfo.records[1]
         self.assertEqual("Watch: Block Time > 0.2s", r.name)
-        self.assertTrue(r.has_state(RuntimeRecordStateEnum.AwaitingInterrrupt))
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.AwaitingCondition))
         # self.assertFalse(r.has_state(RuntimeRecordStateEnum.Started))
 

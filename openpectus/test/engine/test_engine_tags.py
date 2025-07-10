@@ -424,9 +424,6 @@ Watch: Run Time > 0s
             instance.run_until_instruction("Info", state="completed", arguments="A")
             self.assertAlmostEqual(0.6, scope_time.as_number(), delta=delta)
 
-            instance.run_until_instruction("Watch", state="awaiting_interrupt")
-            self.assertAlmostEqual(0, scope_time.as_number(), delta=delta)
-
             instance.run_until_instruction("Info", state="awaiting_threshold", arguments="B", increment_index=False)
             self.assertAlmostEqual(0, scope_time.as_number(), delta=delta)
 
