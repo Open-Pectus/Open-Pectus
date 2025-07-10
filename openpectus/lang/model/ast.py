@@ -169,10 +169,12 @@ class Node(SupportCancelForce):
         self.position: Position = position
         self.instruction_part: str = ""
         self.instruction_range: Range = Range.empty()
+        self.stripped_instruction_range: Range = Range.empty()
         self.threshold_part: str = ""
         self.arguments_part: str = ""
         self.arguments: str = ""
         self.arguments_range: Range = Range.empty()
+        self.stripped_arguments_range: Range = Range.empty()
         self.comment_part: str = ""
         self.has_comment: bool = False
         self.has_argument: bool = False
@@ -286,7 +288,7 @@ class Node(SupportCancelForce):
             parents.append(node.parent)
             node = node.parent
         return parents
-    
+
     @property
     def root(self) -> ProgramNode:
         if isinstance(self, ProgramNode):
@@ -573,19 +575,20 @@ class TagOperatorValue:
         self.op = ""
         self.rhs = ""
         self.range: Range = Range.empty()
+        self.stripped_range: Range = Range.empty()
 
         self.tag_name: str | None = None
         self.tag_value: str | None = None
         self.tag_unit: str | None = None
         self.tag_value_numeric: int | float | None = None
 
-        # these ranges are problematic. we somehow want to exclude whitespace
-        # for the LSP purpose of underlining lsh/op/rhs but this conflicts
-        # with the calculation of later ones based on the first ones.
-
         self.lhs_range = Range.empty()
+        self.stripped_lhs_range = Range.empty()
         self.op_range = Range.empty()
         self.rhs_range = Range.empty()
+        self.stripped_rhs_range = Range.empty()
+        self.tag_unit_range = Range.empty()
+
 
     def __str__(self):
         return f'{self.__class__.__name__}(lhs="{self.lhs}", op="{self.op}", rhs="{self.rhs}")'

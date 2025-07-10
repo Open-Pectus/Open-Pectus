@@ -117,9 +117,9 @@ class TestLspAnalysisCompletion(unittest.TestCase):
             tags=[]
         )
         result = self.get_completion_labels(pcode, uod_info)
-        # Expect two elements. Filtering to remove "A" is on client side.
-        self.assertEqual(2, len(result))
-        self.assertTrue(result, ["A", "B"])
+        # Expect one element. Filtering to remove "A" is on server side.
+        self.assertEqual(1, len(result))
+        self.assertTrue(result, ["B"])
 
     def test_completions_categorical_add_option_exclusive(self):
         pcode = "Category: C"

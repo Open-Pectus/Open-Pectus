@@ -137,6 +137,15 @@ class SymbolInformation(TypedDict):
     location: Location
 
 
+class Command(TypedDict):
+    """
+    Representation of
+    https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#command
+    """
+    title: str
+    command: str
+
+
 class CompletionItem(TypedDict):
     """
     Representation of
@@ -147,6 +156,7 @@ class CompletionItem(TypedDict):
     preselect: NotRequired[bool]
     insertText: NotRequired[str]
     textEdit: NotRequired[TextEdit]
+    command: NotRequired[Command | None]
 
 def get_item_severity(item: AnalyzerItem) -> int:
     """ Represent analyzer item type as lsp DiagnosticSeverity """
