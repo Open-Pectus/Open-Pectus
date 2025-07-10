@@ -15,12 +15,12 @@ from openpectus.lang.exec.uod import (
     UodCommand,
     UodBuilder,
 )
-from openpectus.lang.exec.visitor import PrependGenerator
 from openpectus.protocol.models import Method
 from openpectus.test.engine.utility_methods import (
     EngineTestRunner,
     configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging
 )
+import openpectus.lang.model.ast as p
 
 
 configure_test_logger()
@@ -308,7 +308,7 @@ class TestMethodManager(unittest.TestCase):
 
     def test_may_extend_alarm_after_alarm_activated(self):
 
-        # Editing a Watch body requires that FFW will also run interrupt handlers to find
+        # Editing an Alarm body requires that FFW will also run interrupt handlers to find
         # the current node. This test verifies that.
 
         method1 = Method.from_numbered_pcode("""\
@@ -341,6 +341,83 @@ class TestMethodManager(unittest.TestCase):
 
             # verify run behavior
             self.assertEqual(["B", "C", "D"], instance.marks)
+
+            # verify alarm is repeated
+            alarm_node = instance.method_manager.program.get_first_child(p.AlarmNode)
+            assert alarm_node is not None
+            instance.run_until_condition(lambda: alarm_node.run_count == 2)
+            self.assertEqual(["B", "C", "D", "B", "C", "D"], instance.marks)
+
+
+    def test_may_extend_nested_alarm_after_alarm_activated(self):
+        method1 = Method.from_numbered_pcode("""\
+01 Base: s
+02 Alarm: Run Time > 0s
+03     Mark: B
+04     0.5 Mark: C
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Base: s
+02 Alarm: Run Time > 0s
+03     Mark: B
+04     0.5 Mark: C
+05     Watch: Run Time > 0s
+06         Mark: D
+""")
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+            instance.engine.interpreter.ffw_tick_limit = 50
+
+            instance.run_until_instruction("Mark", state="completed", arguments="B")
+
+            # insert Mark: D and verify no edit error
+            instance.engine.set_method(method2)
+            instance.run_ticks(1)
+
+            instance.run_until_instruction("Mark", state="completed", arguments="D")
+
+            # verify run behavior
+            self.assertEqual(["B", "C", "D"], instance.marks)
+
+
+    def test_may_extend_alarm(self):
+        # bug - alarm is unregistered before ffw but does not get registered back during ffw
+        
+        method1 = Method.from_numbered_pcode("""\
+02 Alarm: Run Time > 0s
+03     Mark: B
+04     Mark: C
+""")
+        method2 = Method.from_numbered_pcode("""\
+02 Alarm: Run Time > 0s
+03     Mark: B
+04     Mark: C
+05     Mark: D
+""")
+
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+            instance.engine.interpreter.ffw_tick_limit = 50
+
+            instance.run_until_instruction("Mark", state="completed", arguments="B")
+
+            # insert Mark: D and verify no edit error
+            instance.engine.set_method(method2)
+            instance.run_ticks(1)
+
+            instance.run_until_instruction("Mark", state="completed", arguments="D")
+
+            # verify run behavior
+            self.assertEqual(["B", "C", "D"], instance.marks)
+
+            # verify alarm is repeated
+            alarm_node = instance.method_manager.program.get_first_child(p.AlarmNode)
+            assert alarm_node is not None
+            instance.run_until_condition(lambda: alarm_node.run_count == 2)
+            self.assertEqual(["B", "C", "D", "B", "C", "D"], instance.marks)
+
 
     @unittest.skip("Looks like a straightforward fix - skip for now")
     def test_may_extend_macro_if_not_executed(self):
@@ -378,22 +455,15 @@ class TestMethodManager(unittest.TestCase):
             # verify run behavior
             self.assertEqual(["A", "B", "C"], instance.marks)
 
+    @unittest.skip("TODO")
+    def test_edit_injected(self):
+        # hmm this is weird. a method is running and user injects code - that's not a method edit, just an injection
+        # so what should happen for edit if interpreter har injected code?
+        raise NotImplementedError()
+
+    @unittest.skip("TODO")
+    def test_macro(self):
+        raise NotImplementedError()
 
 # Can edit macro until it has run the first time
 # consider line state - 
-
-class PrependGeneratorTest(unittest.TestCase):
-    def test_None(self):
-        def elms():
-            yield 1
-            yield 2
-            yield 3
-
-        x = PrependGenerator(7, elms())
-        self.assertEqual([7, 1, 2, 3], list(x))
-
-        with self.assertRaises(StopIteration):
-            next(x)
-
-# Case: injected code
-# must also run in ffw (?)

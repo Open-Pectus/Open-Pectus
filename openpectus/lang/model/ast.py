@@ -547,6 +547,24 @@ class WatchNode(NodeWithChildren, NodeWithCondition, SupportsInterrupt):
 class AlarmNode(NodeWithChildren, NodeWithCondition, SupportsInterrupt):
     instruction_names = ["Alarm"]
 
+    def __init__(self, position=Position.empty, id=""):
+        super().__init__(position, id)
+        self.run_count: int = 0
+        """ The number of times the alarm has completed """
+
+    def extract_state(self):
+        state = super().extract_state()
+        state["run_count"] = self.run_count  # type: ignore
+        return state
+
+    def apply_state(self, state):
+        self.run_count = int(state["run_count"])
+        super().apply_state(state)
+
+    def reset_runtime_state(self, recursive):
+        # Note: run_count is not reset because it counts alarm invocations
+        super().reset_runtime_state(recursive)
+
 
 class TagOperatorValue:
     def __init__(self):
