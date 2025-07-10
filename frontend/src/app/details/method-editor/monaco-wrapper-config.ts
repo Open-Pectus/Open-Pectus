@@ -46,7 +46,7 @@ export class MonacoWrapperConfig {
             'editor.lightbulb.enabled': true,
             'editor.experimental.asyncTokenization': true,
             'editor.foldingStrategy': 'indentation',
-            'editor.wordBasedSuggestions': false,
+            'editor.wordBasedSuggestions': "off",
             'editor.codeLens': false,
             'scm.diffDecorations': 'none',
             'editor.lineDecorationsWidth': 12,
@@ -56,7 +56,7 @@ export class MonacoWrapperConfig {
             'editor.scrollBeyondLastColumn': 1,
             'editor.scrollBeyondLastLine': false,
             'editor.stickyScroll.enabled': false,
-            // "editor.quickSuggestions": false
+            "editor.suggest.preview": true,
           }),
         },
       },

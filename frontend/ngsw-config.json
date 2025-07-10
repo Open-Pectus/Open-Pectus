@@ -26,5 +26,8 @@
         ]
       }
     }
+  ],
+  "navigationUrls": [
+    "!/docs"
   ]
 }
