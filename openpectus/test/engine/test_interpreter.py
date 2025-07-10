@@ -11,9 +11,11 @@ from openpectus.lang.exec.pinterpreter import PInterpreter
 from openpectus.lang.exec.tags import Tag, SystemTagName
 from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
+from openpectus.lang.exec.visitor import NodeAction
 from openpectus.lang.model.pprogramformatter import print_parsed_program as print_program
 import openpectus.lang.model.ast as p
 from openpectus.lang.model.parser import PcodeParser
+from openpectus.protocol.models import Method
 from openpectus.test.engine.utility_methods import (
     EngineTestRunner, continue_engine, run_engine, build_program,
     configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging,
@@ -320,9 +322,9 @@ Call macro: A
         parent = p.ProgramNode()
         watch = p.WatchNode()
         parent.append_child(watch)
-        watch.condition = p.Condition()
+        watch.tag_operator_value = p.TagOperatorValue()
         watch.arguments_part = "X > 10%"
-        PcodeParser._parse_condition(watch)
+        PcodeParser._parse_tag_operator_value(watch)
 
         result = self.engine.interpreter._evaluate_condition(watch)
         self.assertEqual(result, False)
@@ -341,7 +343,7 @@ Watch: counter > 0
     Mark: d
 """
         engine = self.engine
-        run_engine(engine, program, 25)
+        run_engine(engine, program, 15)
 
         # TODO abgiguous ...
         # self.assertEqual(["a", "c", "b", "e", "d"], engine.interpreter.get_marks())
@@ -775,6 +777,65 @@ Wait: 0.5 s
             t2 = instance.run_until_instruction("Wait", "completed")
             print(f"{t1=} | {t2=}")
             self.assertAlmostEqual(t2, 5, delta=1)
+
+    def test_debug_node_actions(self):
+        # this test demonstrates the details of run_tick() and run_ffw_tick()
+        # used when fast-forwarding an edited method.
+
+        method1 = Method.from_numbered_pcode("""\
+01 Base: s
+02 Watch: Run Time > 0s
+03     Mark: B
+04     0.5 Mark: C
+""")
+        runner = EngineTestRunner(create_test_uod, method1)        
+        with runner.run() as instance:
+            # Note: start() is skipped so the test is in control
+            # instance.start()
+            interpreter = instance.engine.interpreter
+            
+            gen = interpreter.visit_ProgramNode(interpreter._program)
+            xs = []
+            for x in gen:
+                if isinstance(x, NodeAction):
+                    x.execute()
+                    xs.append(str(x.node) + "  |  " + x.action_name)
+                else:
+                    xs.append(x)
+
+                if len(xs) > 5 and xs[-6:-1] == [None, None, None, None, None]:
+                    break
+            
+            print()
+            print(f"Nodes:")
+            print()
+            [print(x) for x in xs]
+            print()
+
+            interpreter._in_interrupt = True
+            def evaluate_condition(node: p.NodeWithCondition):
+                return True
+            interpreter._evaluate_condition = evaluate_condition
+            def is_awaiting_threshold(node: p.Node):
+                return False
+            interpreter._is_awaiting_threshold = is_awaiting_threshold
+            for interrupt in interpreter._interrupts_map.values():
+                print("--------------")
+                print(f"Interrupt {interrupt.node}")
+                print()
+                xs = []
+                for x in interrupt.actions:
+                    if isinstance(x, NodeAction):
+                        x.execute()
+                        xs.append(str(x.node) + "  |  " + x.action_name)
+                    else:
+                        xs.append(x)
+
+                    if len(xs) > 5 and xs[-6:-1] == [None, None, None, None, None]:
+                        break
+                
+                [print(x) for x in xs]
+                print()
 
 
 if __name__ == "__main__":

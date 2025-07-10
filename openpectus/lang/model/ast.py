@@ -147,6 +147,16 @@ class SupportCancelForce:
             self._forced = True
 
 
+class SupportsInterrupt():
+    """ Marker interface that indicates that the node type uses the interrupt mechanism.
+
+    Requirements:
+    - it must provide a interrupt_registered property, currently NodeWithChildren does this
+    - interpreter._create_interrupt_handler() must be able to create a handler for the node type
+    """
+    ...
+
+
 class Node(SupportCancelForce):
     instruction_names: list[str] = []
     """ Specifies which node the parser should instantiate for a given instruction name(s) """
@@ -303,7 +313,6 @@ class NodeWithChildren(Node):
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
         self._children: list[Node] = []
-
         self.interrupt_registered: bool = False
         """ Whether an interrupt was registered to execute the node. """
         self.children_complete: bool = False
@@ -456,7 +465,18 @@ class BlockNode(NodeWithChildren):
         super().__init__(position, id)
         self.lock_aquired = False
 
-    # TODO consider wether lock_required should persist
+    def reset_runtime_state(self, recursive):
+        self.lock_aquired = False
+        super().reset_runtime_state(recursive)
+
+    def extract_state(self) -> NodeState:
+        state = super().extract_state()
+        state["lock_aquired"] = self.lock_aquired  # type: ignore
+        return state
+
+    def apply_state(self, state: NodeState):
+        self.lock_aquired = bool(state["lock_aquired"])  # type: ignore
+        return super().apply_state(state)    
 
 class EndBlockNode(Node):
     instruction_names = ["End block"]
@@ -469,11 +489,20 @@ class BatchNode(Node):
     instruction_names = ["Batch"]
 
 
-class NodeWithCondition(NodeWithChildren):
+class NodeWithTagOperatorValue(Node):
+    operators: list[str]
+
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
-        self.condition_part: str
-        self.condition: Condition | None
+        self.tag_operator_value_part: str
+        self.tag_operator_value: TagOperatorValue | None
+
+
+class NodeWithCondition(NodeWithTagOperatorValue):
+    operators = ["<=", ">=", "==", "!=", "<", ">", "="]
+
+    def __init__(self, position=Position.empty, id=""):
+        super().__init__(position, id)
         self.interrupt_registered: bool = False
         self.activated: bool = False
         """ Node condition was evaluated true"""
@@ -507,15 +536,37 @@ class NodeWithCondition(NodeWithChildren):
         return not self.cancelled and not self.forced and not self.activated
 
 
-class WatchNode(NodeWithCondition):
+class NodeWithAssignment(NodeWithTagOperatorValue):
+    operators = ["="]
+
+
+class WatchNode(NodeWithChildren, NodeWithCondition, SupportsInterrupt):
     instruction_names = ["Watch"]
 
 
-class AlarmNode(NodeWithCondition):
+class AlarmNode(NodeWithChildren, NodeWithCondition, SupportsInterrupt):
     instruction_names = ["Alarm"]
 
+    def __init__(self, position=Position.empty, id=""):
+        super().__init__(position, id)
+        self.run_count: int = 0
+        """ The number of times the alarm has completed """
 
-class Condition:
+    def extract_state(self):
+        state = super().extract_state()
+        state["run_count"] = self.run_count  # type: ignore
+        return state
+
+    def apply_state(self, state):
+        self.run_count = int(state["run_count"])
+        super().apply_state(state)
+
+    def reset_runtime_state(self, recursive):
+        # Note: run_count is not reset because it counts alarm invocations
+        super().reset_runtime_state(recursive)
+
+
+class TagOperatorValue:
     def __init__(self):
         self.error = True
         self.lhs = ""
@@ -564,7 +615,7 @@ class CommentNode(WhitespaceNode):
         return self
 
 
-class InjectedNode(NodeWithChildren):
+class InjectedNode(NodeWithChildren, SupportsInterrupt):
     pass
 
 
@@ -580,6 +631,15 @@ class MacroNode(NodeWithChildren):
 
 class CallMacroNode(Node):
     instruction_names = ["Call macro"]
+
+    def __init__(self, position=Position.empty, id=""):
+        super().__init__(position, id)
+        self._cancellable = False
+        self._forcible = False
+
+
+class NotifyNode(Node):
+    instruction_names = ["Notify"]
 
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
@@ -617,6 +677,14 @@ class EngineCommandNode(CommandBaseNode):
     """ Represents internal engine commands that have a command class subclassing InternalEngineCommand. """
     instruction_names = ["Stop", "Pause", "Unpause", "Hold", "Unhold", "Restart",
                          "Info", "Warning", "Error"]
+
+
+class SimulateNode(NodeWithAssignment):
+    instruction_names = ["Simulate"]
+
+
+class SimulateOffNode(Node):
+    instruction_names = ["Simulate off"]
 
 
 class UodCommandNode(CommandBaseNode):

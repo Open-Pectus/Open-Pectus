@@ -1,4 +1,5 @@
 import logging
+import asyncio
 
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
@@ -12,7 +13,6 @@ from openpectus.aggregator.data.repository import PlotLogRepository, RecentEngin
 from openpectus.aggregator.routers.auth import UserIdValue, has_access, UserRolesValue, UserNameValue
 from pydantic.json_schema import SkipJsonSchema
 from starlette.status import HTTP_403_FORBIDDEN, HTTP_404_NOT_FOUND
-import uuid
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])
@@ -139,6 +139,30 @@ def get_all_process_values(
     return process_values
 
 
+@router.get("/process_units/all_process_values", response_model_exclude_none=True)
+def get_all_process_values_of_all_available_engines(
+        user_roles: UserRolesValue,
+        response: Response,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)
+) -> list[Dto.ProcessUnitAllProcessValues]:
+    """
+    Returns all process value for all online process units (engines)
+    that the current user has access to.
+    """
+    response.headers["Cache-Control"] = "no-store"
+    process_units: list[Dto.ProcessUnitAllProcessValues] = []
+    all_engine_data = agg.get_all_registered_engine_data()
+    for engine_data in all_engine_data:
+        if not has_access(engine_data, user_roles):
+            continue
+        process_unit = map_pu(engine_data)
+        process_units.append(Dto.ProcessUnitAllProcessValues(
+            process_unit=process_unit,
+            process_values=[Dto.ProcessValue.create(tag_value) for tag_value in engine_data.tags_info.map.values()],
+        ))
+    return process_units
+
+
 @router.post("/process_unit/{unit_id}/execute_command", response_model_exclude_none=True)
 async def execute_command(
         user_name: UserNameValue,
@@ -164,7 +188,10 @@ async def execute_command(
 
     # for now, all users issuing a command become contributors. may nee to filter that somehow
     # and when wo we clear the contributors?
-    engine_data.contributors.add(Mdl.Contributor(id=user_id, name=user_name))
+    contributor = Mdl.Contributor(id=user_id, name=user_name)
+    if contributor not in engine_data.contributors:
+            agg.from_frontend.publish_new_contributor_notification(unit_id, contributor)
+    engine_data.contributors.add(contributor)
     return Dto.ServerSuccessResponse()
 
 

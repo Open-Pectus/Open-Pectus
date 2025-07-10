@@ -19,6 +19,7 @@ class MethodManager:
         self._uod_command_names = uod_command_names
         self._method = ParserMethod.empty
         self._program = p.ProgramNode.empty()
+        self._inject_parser = create_inject_parser(self._uod_command_names)
 
     def to_model_method(self) -> Mdl.Method:
         return Mdl.Method(lines=[Mdl.MethodLine(id=line.id, content=line.content) for line in self._method.lines])
@@ -44,7 +45,6 @@ class MethodManager:
         """ User saved method while a run was active. The new method is replacing an existing method
         whose state should be merged over. """
         # concurrency check: aggregator performs the version check and aborts on error
-        raise NotImplementedError("Edit is currently not working")
 
         # validate that the content of the new method does not conflict with the state of the running method
         method_state = self.get_method_state()
@@ -73,6 +73,7 @@ class MethodManager:
         try:
             self._program.apply_tree_state(existing_state)
             self._program.revision = self._program.revision + 1
+            logger.debug(f"Updating method revision to {self._program.revision}")
 
         except Exception as ex:
             logger.error("Failed to apply tree state", exc_info=True)
@@ -81,8 +82,7 @@ class MethodManager:
         self._apply_analysis()
 
     def parse_inject_code(self, pcode: str) -> p.ProgramNode:
-        parser = create_inject_parser(self._uod_command_names)
-        return parser.parse_pcode(pcode)
+        return self._inject_parser.parse_pcode(pcode)
 
     def get_method_state(self) -> Mdl.MethodState:
         all_nodes = self._program.get_all_nodes()

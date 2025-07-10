@@ -45,13 +45,14 @@ InstructionName = Literal[
     "Info", "Warning", "Error",
     "Macro", "Call macro",
     "Increment run counter",
-    "Noop",
+    "Noop", "Notify",
+    "Simulate", "Simulate off"
 ]
 """ Defines the awaitable instructions of the test engine runner """
 
 FindInstructionState = Literal[
     "any", "started", "completed", "failed", "cancelled",
-    "awaiting_threshold", "awaiting_condition", "awaiting_interrupt",
+    "awaiting_threshold", "awaiting_condition",
 ]
 """ Defines the awaitable instruction states of the test engine runner """
 

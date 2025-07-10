@@ -101,6 +101,7 @@ class AggregatorServer:
     @contextlib.asynccontextmanager
     async def lifespan(self, app):
         yield
+        self.aggregator.shutdown()
         await self.dispatcher.shutdown()
         if self.shutdown_callback is not None:
             self.shutdown_callback()
