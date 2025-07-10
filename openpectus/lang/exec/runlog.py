@@ -71,6 +71,7 @@ class RuntimeInfo:
                 runlog.items.extend(items)
             except Exception:
                 logger.error(f"Failed to create runlog item for record {r}", exc_info=True)
+                raise
         runlog.items.sort(key=lambda item: item.start)
         return runlog
 
@@ -151,7 +152,7 @@ class RuntimeInfo:
                     item.id = str(state.command_exec_id)
                     command = state.command
                 elif state.state_name == RuntimeRecordStateEnum.AwaitingThreshold:
-                    assert item is not None
+                    assert item is not None, f"Item for record {r} was unexpectedly None in state {state.state_name}. States: {invocation_states}"
                     item.state = RunLogItemState.AwaitingThreshold
 
                 if not is_conclusive_state and item is not None:
@@ -450,9 +451,6 @@ class RuntimeRecord:
     def add_state_awaiting_condition(self, time: float, tick: int, state_values: TagValueCollection | None):
         self.add_state(RuntimeRecordStateEnum.AwaitingCondition, time, tick, state_values)
 
-    def add_state_awaiting_interrupt(self, time: float, tick: int, state_values: TagValueCollection | None):
-        self.add_state(RuntimeRecordStateEnum.AwaitingInterrrupt, time, tick, state_values)
-
     def add_state_started(self, time: float, tick: int, start_values: TagValueCollection):
         self.add_state(RuntimeRecordStateEnum.Started, time, tick, start_values)
 
@@ -551,8 +549,6 @@ class RuntimeRecordStateEnum(StrEnum):
     """ Waiting for threshold """
     AwaitingCondition = auto()
     """ Waiting for condition """
-    AwaitingInterrrupt = auto()
-    """ Instruction is awaiting invocation by interrupt """
     Started = auto()
     """ Command has started """
     Cancelled = auto()

@@ -472,6 +472,7 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
         self.finalize_fn: FINAL_FN | None = None
         self.arg_parse_fn: PARSE_FN | None = None
         self._performance_warned = False
+        self.cmd_state: dict[str, Any] = dict()
 
     @staticmethod
     def builder() -> UodCommandBuilder:

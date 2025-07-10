@@ -147,6 +147,16 @@ class SupportCancelForce:
             self._forced = True
 
 
+class SupportsInterrupt():
+    """ Marker interface that indicates that the node type uses the interrupt mechanism.
+
+    Requirements:
+    - it must provide a interrupt_registered property, currently NodeWithChildren does this
+    - interpreter._create_interrupt_handler() must be able to create a handler for the node type
+    """
+    ...
+
+
 class Node(SupportCancelForce):
     instruction_names: list[str] = []
     """ Specifies which node the parser should instantiate for a given instruction name(s) """
@@ -305,7 +315,6 @@ class NodeWithChildren(Node):
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
         self._children: list[Node] = []
-
         self.interrupt_registered: bool = False
         """ Whether an interrupt was registered to execute the node. """
         self.children_complete: bool = False
@@ -458,7 +467,18 @@ class BlockNode(NodeWithChildren):
         super().__init__(position, id)
         self.lock_aquired = False
 
-    # TODO consider wether lock_required should persist
+    def reset_runtime_state(self, recursive):
+        self.lock_aquired = False
+        super().reset_runtime_state(recursive)
+
+    def extract_state(self) -> NodeState:
+        state = super().extract_state()
+        state["lock_aquired"] = self.lock_aquired  # type: ignore
+        return state
+
+    def apply_state(self, state: NodeState):
+        self.lock_aquired = bool(state["lock_aquired"])  # type: ignore
+        return super().apply_state(state)    
 
 class EndBlockNode(Node):
     instruction_names = ["End block"]
@@ -522,12 +542,30 @@ class NodeWithAssignment(NodeWithTagOperatorValue):
     operators = ["="]
 
 
-class WatchNode(NodeWithChildren, NodeWithCondition):
+class WatchNode(NodeWithChildren, NodeWithCondition, SupportsInterrupt):
     instruction_names = ["Watch"]
 
 
-class AlarmNode(NodeWithChildren, NodeWithCondition):
+class AlarmNode(NodeWithChildren, NodeWithCondition, SupportsInterrupt):
     instruction_names = ["Alarm"]
+
+    def __init__(self, position=Position.empty, id=""):
+        super().__init__(position, id)
+        self.run_count: int = 0
+        """ The number of times the alarm has completed """
+
+    def extract_state(self):
+        state = super().extract_state()
+        state["run_count"] = self.run_count  # type: ignore
+        return state
+
+    def apply_state(self, state):
+        self.run_count = int(state["run_count"])
+        super().apply_state(state)
+
+    def reset_runtime_state(self, recursive):
+        # Note: run_count is not reset because it counts alarm invocations
+        super().reset_runtime_state(recursive)
 
 
 class TagOperatorValue:
@@ -580,7 +618,7 @@ class CommentNode(WhitespaceNode):
         return self
 
 
-class InjectedNode(NodeWithChildren):
+class InjectedNode(NodeWithChildren, SupportsInterrupt):
     pass
 
 

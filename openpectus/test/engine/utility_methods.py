@@ -52,7 +52,7 @@ InstructionName = Literal[
 
 FindInstructionState = Literal[
     "any", "started", "completed", "failed", "cancelled",
-    "awaiting_threshold", "awaiting_condition", "awaiting_interrupt",
+    "awaiting_threshold", "awaiting_condition",
 ]
 """ Defines the awaitable instruction states of the test engine runner """
 
