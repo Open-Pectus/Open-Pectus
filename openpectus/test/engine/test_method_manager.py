@@ -418,6 +418,86 @@ class TestMethodManager(unittest.TestCase):
             instance.run_until_condition(lambda: alarm_node.run_count == 2)
             self.assertEqual(["B", "C", "D", "B", "C", "D"], instance.marks)
 
+    def test_may_edit_blank_to_other_instruction(self):
+        # When editing the last line, it is interpreted as an edited node type. This type of edit
+        # is generally not supported, but if the source is blank, it should obviously be allowed
+        method1 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Mark: B
+""")
+
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+
+            # Method from frontend must always be sent with a trailing blank line. This means we should only test on such data
+            
+            instance.run_ticks(5)
+
+            # verify no edit error
+            instance.engine.set_method(method2)
+            instance.run_ticks(1)
+
+            instance.run_until_instruction("Mark", "completed", arguments="B")
+            self.assertEqual(["A", "B"], instance.marks)
+
+
+    def test_may_edit_blank_to_other_instruction_in_watch(self):
+        # When editing the last line, it is interpreted as an edited node type. This type of edit
+        # is generally not supported, but if the source is blank, it should obviously be allowed
+        method1 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Watch: Run Counter > -1
+03     Mark: B
+04 
+05 Mark: X
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Watch: Run Counter > -1
+03     Mark: B
+04     Mark: C
+05 Mark: X
+""")
+
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+
+            # Note line 04 - it does not matter whether it is indented or not in method1. 
+            # Its indentation will be set to whatever method2 specifies            
+            
+            instance.run_until_instruction("Mark", "completed", arguments="B")
+
+            # verify no edit error
+            instance.engine.set_method(method2)
+            instance.run_ticks(1)
+
+            instance.run_until_instruction("Mark", "completed", arguments="X")
+
+            # instance.run_until_instruction("Mark", "completed", arguments="B")
+            # self.assertEqual(["A", "B"], instance.marks)
+            self.assertEqual(["A", "B", "C", "X"], instance.marks)
+
+    @unittest.skip(reason="Not yet implemented")
+    def test_may_not_add_instruction_text_in_empty_lines(self):
+        
+        method1 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 
+03 Watch: Run Counter > -1
+04     Mark: X
+05 
+06 Mark: B
+""")
+        # in this method line 05 is not marked as completed even when 06 is completed. Not sure why.
+        # but we have to validate against this
+
+
 
     @unittest.skip("Looks like a straightforward fix - skip for now")
     def test_may_extend_macro_if_not_executed(self):

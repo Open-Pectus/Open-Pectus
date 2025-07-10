@@ -186,6 +186,7 @@ class Node(SupportCancelForce):
         self.started: bool = False
         self.completed: bool = False
         self.action_history: list[str] = []
+        self._empty_node_class_names = [BlankNode.__name__, CommentNode.__name__]
 
     @property
     def name(self) -> str:
@@ -218,7 +219,9 @@ class Node(SupportCancelForce):
                     return match
 
     def can_load_state(self, state: NodeState) -> bool:
-        """ Determine whether state is valid for this kind of node """
+        """ Determine whether state is valid for this kind of node """        
+        if state["class_name"] in self._empty_node_class_names:
+            return True
         return state["class_name"] == self.__class__.__name__
 
     def apply_state(self, state: NodeState):
