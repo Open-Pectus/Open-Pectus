@@ -73,13 +73,6 @@ class CallStack:
         return self.__str__()
 
 
-class LogEntry():
-    def __init__(self, time: float, unit_time: float | None = None, message: str = '') -> None:
-        self.time: float = time
-        self.unit_time: float | None = unit_time
-        self.message: str = message
-
-
 class InterpreterContext():
     """ Defines the context of program interpretation"""
 
@@ -134,10 +127,9 @@ class PInterpreter(NodeVisitor):
         """ Update method while method is running. """
         # set new program, and patch state to point to new nodes, set ffw and advance generator to get to where we were
 
-        # collect node id from old method. The id will match the corresponding node in the new method
-        if self._program.active_node is None:
-            raise ValueError("Edit cannot be performed when no current node is set")
-        target_node_id = self._program.active_node.id
+        # collect node id from old method. The id will match the corresponding node in the new method.
+        # there may be no active node, e.g. if all nodes have been interpreted
+        target_node_id: str | None = self._program.active_node.id if self._program.active_node is not None else None
 
         # replace references to old nodes with references to the corresponding new nodes
         self.runtimeinfo.patch_node_references(program)
@@ -160,18 +152,22 @@ class PInterpreter(NodeVisitor):
 
         self._program = program
         self._generator = None  # clear so either tick or us may set it
-        target_node = program.get_child_by_id(target_node_id)  # find target node in new ast
-        if target_node is None:
+        target_node = program.get_child_by_id(target_node_id) if target_node_id is not None else None  # find target node in new ast
+        if target_node is None and target_node_id is not None:
             logger.error(f"FFW aborted because target node {target_node_id} was not found in new ast")
             raise ValueError(
                 f"Error modifying method. The target node_id {target_node_id} was not found in the updated method.")
 
-        if self._is_awaiting_threshold(target_node):
+        if target_node is not None and self._is_awaiting_threshold(target_node):
             logger.debug("Target node is awaiting threshold - clearing its history to start over")
             target_node.action_history.clear()
 
         # Start fast-forward (FFW) from start to target_node_id
-        logger.info(f"FFW starting, target node: {target_node}, history: {target_node.action_history}")
+        if target_node is not None:
+            logger.info(f"FFW starting, target node: {target_node}, history: {target_node.action_history}")
+        else:
+            logger.info(f"FFW starting, no target node.")
+        
         # create the generator for the new program
         self._generator = self.visit_ProgramNode(self._program)
 
@@ -206,7 +202,7 @@ class PInterpreter(NodeVisitor):
                     if isinstance(x, NodeAction):
                         last_work_tick = ffw_tick
                         main_complete = True
-                        if x.node.id == target_node_id:
+                        if target_node_id is not None and x.node.id == target_node_id:
                             has_reached_target_node = True
                         logger.debug(f"Scheduling {x.action_name}, {x.node} for execution in main right after ffw")
                         self.pending_main_action = x
@@ -234,7 +230,7 @@ class PInterpreter(NodeVisitor):
                     self._in_interrupt = False
                     if isinstance(x, NodeAction):
                         last_work_tick = ffw_tick
-                        if x.node.id == target_node_id:
+                        if target_node_id is not None and x.node.id == target_node_id:
                             has_reached_target_node = True
                         logger.debug(f"Scheduling {x.action_name}, {x.node} for execution in interrupt {key} right after ffw")
                         self.pending_interrupt_actions[key] = x
@@ -385,7 +381,7 @@ class PInterpreter(NodeVisitor):
         assert self._generator is not None
         try:
             if self.pending_main_action is not None:
-                logger.debug(f"Run pending main action {self.pending_main_action.action_name} for node {self.pending_main_action.node}")
+                logger.debug(f"Run pending main action '{self.pending_main_action.action_name}' for node {self.pending_main_action.node}")
                 self.pending_main_action.execute()
                 self.pending_main_action = None
             else:
@@ -412,7 +408,7 @@ class PInterpreter(NodeVisitor):
                 key = interrupt.node.id
                 if key in self.pending_interrupt_actions.keys():
                     interrupt_action = self.pending_interrupt_actions[key]
-                    logger.debug(f"Run pending interrupt action {interrupt_action.action_name} for node {interrupt_action.node}")
+                    logger.debug(f"Run pending interrupt action '{interrupt_action.action_name}' for node {interrupt_action.node}")
                     interrupt_action.execute()
                     del self.pending_interrupt_actions[key]
                 else:

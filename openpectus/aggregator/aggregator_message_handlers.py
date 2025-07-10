@@ -166,6 +166,11 @@ class AggregatorMessageHandlers:
         if validation_errors is not None:
             return validation_errors
         
+        if msg.method.lines is None or len(msg.method.lines) == 0:
+            return AM.ErrorMessage(message="Invalid method. Method was empty but should always contain at least one line")
+        if msg.method.lines[-1].content != "":
+            return AM.ErrorMessage(message="Invalid method. Method should always end in a blank line")
+        
         self.aggregator._engine_data_map[msg.engine_id].method.lines = msg.method.lines
         asyncio.create_task(self.aggregator.from_engine.publisher.publish_method_changed(msg.engine_id))
         return AM.SuccessMessage()
