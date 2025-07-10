@@ -9,6 +9,7 @@ import time
 
 from openpectus.engine.commands import ContextEngineCommand, CommandArgs
 from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
+from openpectus.lang.exec.argument_specification import ArgSpec
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.errors import UodValidationError
 from openpectus.lang.exec.readings import (
@@ -471,6 +472,7 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
         self.finalize_fn: FINAL_FN | None = None
         self.arg_parse_fn: PARSE_FN | None = None
         self._performance_warned = False
+        self.cmd_state: dict[str, Any] = dict()
 
     @staticmethod
     def builder() -> UodCommandBuilder:
@@ -816,6 +818,8 @@ class UodBuilder:
             cb.with_arg_parse_fn(defaultArgumentParser)
         elif arg_parse_fn is not None:
             cb.with_arg_parse_fn(arg_parse_fn)
+        elif arg_parse_fn is None:
+            cb.with_arg_parse_fn(RegexNamedArgumentParser(ArgSpec.NoArgsInstance.regex).parse)
         if cb.name in self.command_factories.keys():
             raise ValueError(f"Duplicate command name: {cb.name}")
         self.command_factories[cb.name] = cb
@@ -1040,7 +1044,7 @@ class RegexNamedArgumentParser:
         if "option" not in self.get_named_groups():
             return []
         start = self.regex.index("|(") + len("|(")
-        end = self.regex.index("|\\+)+))\\s*")
+        end = self.regex.index(r"|\+)+)(?<!\+))\s*")
         result = unescape(self.regex[start: end]).split("|")
         if "" in result:
             result.remove("")

@@ -391,8 +391,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
         self.analyze_condition(node)
         return super().visit_AlarmNode(node)
 
-    def analyze_condition(self, node: p.WatchNode | p.AlarmNode):
-        if node.condition is None:
+    def analyze_condition(self, node: p.NodeWithCondition):
+        if node.tag_operator_value is None:
             self.add_item(AnalyzerItem(
                 "ConditionMissing",
                 "Condition missing",
@@ -403,8 +403,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 end=len(node.instruction_part) + 1000  # Valid way to express the whole line
             ))
             return
-        assert node.condition is not None
-        condition = node.condition
+        assert node.tag_operator_value is not None
+        condition = node.tag_operator_value
 
         tag_name = condition.tag_name
         if tag_name is None or tag_name.strip() == '':
@@ -428,8 +428,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                         node,
                         AnalyzerItemType.ERROR,
                         f"Did you mean to type '{most_similar_tag}'?",
-                        start=node.condition.lhs_range.start.character,
-                        end=node.condition.lhs_range.end.character,
+                        start=node.tag_operator_value.stripped_lhs_range.start.character,
+                        end=node.tag_operator_value.stripped_lhs_range.end.character,
                         data=dict(type="fix-typo", fix=most_similar_tag)
                     ))
                     return
@@ -440,8 +440,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                     node,
                     AnalyzerItemType.ERROR,
                     f"The tag name '{tag_name}' is not valid",
-                    start=node.condition.lhs_range.start.character,
-                    end=node.condition.lhs_range.end.character,
+                    start=node.tag_operator_value.stripped_lhs_range.start.character,
+                    end=node.tag_operator_value.stripped_lhs_range.end.character,
                 ))
                 return
 
@@ -474,8 +474,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 node,
                 AnalyzerItemType.ERROR,
                 f"Unit '{condition.tag_unit}' was specified for a tag with no unit",
-                start=node.condition.rhs_range.start.character,
-                end=node.condition.rhs_range.end.character
+                start=node.tag_operator_value.tag_unit_range.start.character,
+                end=node.tag_operator_value.tag_unit_range.end.character
             ))
             return
 
@@ -491,8 +491,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 node,
                 AnalyzerItemType.ERROR,
                 "The tag requires that a value is provided.",
-                start=node.condition.rhs_range.start.character,
-                end=node.condition.rhs_range.end.character
+                start=node.tag_operator_value.rhs_range.start.character,
+                end=node.tag_operator_value.rhs_range.end.character
             ))
             return
 
@@ -504,8 +504,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                 node,
                 AnalyzerItemType.ERROR,
                 "The tag requires that a unit is provided." + valid_units_str,
-                start=node.condition.rhs_range.start.character,
-                end=node.condition.rhs_range.end.character
+                start=node.tag_operator_value.stripped_rhs_range.start.character,
+                end=node.tag_operator_value.stripped_rhs_range.end.character
             ))
             return
 
@@ -520,8 +520,8 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                     node,
                     AnalyzerItemType.ERROR,
                     str(vex) + "." + valid_units_str,
-                    start=node.condition.rhs_range.start.character,
-                    end=node.condition.rhs_range.end.character
+                    start=node.tag_operator_value.tag_unit_range.start.character,
+                    end=node.tag_operator_value.tag_unit_range.end.character
                 ))
                 return
             if not comparable:
@@ -531,10 +531,242 @@ class ConditionCheckAnalyzer(AnalyzerVisitorBase):
                     node,
                     AnalyzerItemType.ERROR,
                     f"The tag unit '{tag.unit}' is not compatible with the provided unit '{condition.tag_unit}'." + valid_units_str,
-                    start=node.condition.range.start.character,
-                    end=node.condition.range.end.character
+                    start=node.tag_operator_value.stripped_range.start.character,
+                    end=node.tag_operator_value.stripped_range.end.character
                 ))
                 return
+
+
+class SimulateCheckAnalyzer(AnalyzerVisitorBase):
+    """
+    Checks same as ConditionCheckAnalyzer
+    """
+
+    def __init__(self, tags: TagValueCollection) -> None:
+        super().__init__()
+        self.tags = tags
+
+    def __str__(self) -> str:
+        items = [str(item) for item in self.items]
+        tags = [str(tag) for tag in self.tags]
+        return f'{self.__class__.__name__}(items={items}, tags={tags})'
+
+    def visit_SimulateOffNode(self, node: p.SimulateOffNode):
+        tag_name = node.arguments
+        if tag_name is None or tag_name == '':
+            self.add_item(AnalyzerItem(
+                "MissingTag",
+                "Missing tag",
+                node,
+                AnalyzerItemType.ERROR,
+                "Argument must start with a tag name"
+            ))
+        elif not self.tags.has(tag_name):
+            if len(tag_name) > 2 and self.tags.names:
+                similarity = {tag: ratio(tag_name, tag) for tag in self.tags.names}
+                most_similar_tag = max(similarity, key=similarity.get)  # type: ignore
+                if similarity[most_similar_tag] > 0.7:
+                    self.add_item(AnalyzerItem(
+                        "UndefinedTag",
+                        "Undefined tag",
+                        node,
+                        AnalyzerItemType.ERROR,
+                        f"Did you mean to type '{most_similar_tag}'?",
+                        start=node.stripped_arguments_range.start.character,
+                        end=node.stripped_arguments_range.end.character,
+                        data=dict(type="fix-typo", fix=most_similar_tag)
+                    ))
+            else:
+                self.add_item(AnalyzerItem(
+                    "UndefinedTag",
+                    "Undefined tag",
+                    node,
+                    AnalyzerItemType.ERROR,
+                    f"The tag name '{tag_name}' is not valid",
+                    start=node.stripped_arguments_range.start.character,
+                    end=node.stripped_arguments_range.end.character,
+                ))
+        return super().visit_SimulateOffNode(node)
+
+    def visit_SimulateNode(self, node: p.SimulateNode):
+        if node.tag_operator_value is None:
+            self.add_item(AnalyzerItem(
+                "AssignmentMissing",
+                "Assignment missing",
+                node,
+                AnalyzerItemType.ERROR,
+                "Assignment of a value to a tag is required",
+                start=len(node.instruction_part) + 1,
+                end=len(node.instruction_part) + 1000  # Valid way to express the whole line
+            ))
+            return super().visit_SimulateNode(node)
+        assert node.tag_operator_value is not None
+        condition = node.tag_operator_value
+
+        tag_name = condition.tag_name
+        if tag_name is None or tag_name.strip() == '':
+            self.add_item(AnalyzerItem(
+                "MissingTag",
+                "Missing tag",
+                node,
+                AnalyzerItemType.ERROR,
+                "Argument must start with a tag name"
+            ))
+            return super().visit_SimulateNode(node)
+
+        if not self.tags.has(tag_name):
+            if len(tag_name) > 2 and self.tags.names:
+                similarity = {tag: ratio(tag_name, tag) for tag in self.tags.names}
+                most_similar_tag = max(similarity, key=similarity.get)  # type: ignore
+                if similarity[most_similar_tag] > 0.7:
+                    self.add_item(AnalyzerItem(
+                        "UndefinedTag",
+                        "Undefined tag",
+                        node,
+                        AnalyzerItemType.ERROR,
+                        f"Did you mean to type '{most_similar_tag}'?",
+                        start=node.tag_operator_value.stripped_lhs_range.start.character,
+                        end=node.tag_operator_value.stripped_lhs_range.end.character,
+                        data=dict(type="fix-typo", fix=most_similar_tag)
+                    ))
+                    return super().visit_SimulateNode(node)
+            else:
+                self.add_item(AnalyzerItem(
+                    "UndefinedTag",
+                    "Undefined tag",
+                    node,
+                    AnalyzerItemType.ERROR,
+                    f"The tag name '{tag_name}' is not valid",
+                    start=node.tag_operator_value.stripped_lhs_range.start.character,
+                    end=node.tag_operator_value.stripped_lhs_range.end.character,
+                ))
+                return super().visit_SimulateNode(node)
+
+        if condition.op != "=":
+            self.add_item(AnalyzerItem(
+                "MissingOperator",
+                "Missing equals symbol",
+                node,
+                AnalyzerItemType.ERROR,
+                "The tag name must be followed by an equals symbol"
+            ))
+            return super().visit_SimulateNode(node)
+
+        if condition.rhs == "" or condition.tag_value == "":
+            self.add_item(AnalyzerItem(
+                "MissingValue",
+                "Missing value",
+                node,
+                AnalyzerItemType.ERROR,
+                "Equals symbol (=) must be followed by a value"
+            ))
+            return super().visit_SimulateNode(node)
+
+        tag = self.tags.get(tag_name)
+
+        if tag.unit is None and condition.tag_unit is not None:
+            self.add_item(AnalyzerItem(
+                "UnexpectedUnit",
+                "Unexpected tag unit",
+                node,
+                AnalyzerItemType.ERROR,
+                f"Unit '{condition.tag_unit}' was specified for a tag with no unit",
+                start=node.tag_operator_value.tag_unit_range.start.character,
+                end=node.tag_operator_value.tag_unit_range.end.character
+            ))
+            return super().visit_SimulateNode(node)
+
+        valid_units = get_compatible_unit_names(tag.unit)
+        valid_units_str = ""
+        if len(valid_units) > 0:
+            valid_units_str = " Suggested units: " + ", ".join(valid_units) + "."
+
+        if tag.unit is not None and condition.rhs and condition.rhs.strip() in valid_units and condition.tag_unit is None:
+            self.add_item(AnalyzerItem(
+                "MissingValue",
+                "Missing value",
+                node,
+                AnalyzerItemType.ERROR,
+                "The tag requires that a value is provided.",
+                start=node.tag_operator_value.stripped_rhs_range.start.character,
+                end=node.tag_operator_value.stripped_rhs_range.end.character
+            ))
+            return super().visit_SimulateNode(node)
+
+
+        if tag.unit is not None and condition.tag_unit is None:
+            self.add_item(AnalyzerItem(
+                "MissingUnit",
+                "Missing unit",
+                node,
+                AnalyzerItemType.ERROR,
+                "The tag requires that a unit is provided." + valid_units_str,
+                start=node.tag_operator_value.stripped_rhs_range.start.character,
+                end=node.tag_operator_value.stripped_rhs_range.end.character
+            ))
+            return super().visit_SimulateNode(node)
+
+        if tag.unit is not None:
+            assert condition.tag_unit is not None
+            try:
+                comparable = are_comparable(tag.unit, condition.tag_unit)
+            except ValueError as vex:
+                self.add_item(AnalyzerItem(
+                    "InvalidUnit",
+                    "Invalid unit",
+                    node,
+                    AnalyzerItemType.ERROR,
+                    str(vex) + "." + valid_units_str,
+                    start=node.tag_operator_value.tag_unit_range.start.character,
+                    end=node.tag_operator_value.tag_unit_range.end.character
+                ))
+                return super().visit_SimulateNode(node)
+            if not comparable:
+                self.add_item(AnalyzerItem(
+                    "IncompatibleUnits",
+                    "Incompatible units",
+                    node,
+                    AnalyzerItemType.ERROR,
+                    f"The tag unit '{tag.unit}' is not compatible with the provided unit '{condition.tag_unit}'." + valid_units_str,
+                    start=node.tag_operator_value.stripped_range.start.character,
+                    end=node.tag_operator_value.stripped_range.end.character
+                ))
+                return super().visit_SimulateNode(node)
+        return super().visit_SimulateNode(node)
+
+
+# Show blue squiggly lines notifying that condition is based on a simulated value.
+# Possibly uncomment this code at a later time. Right now it does not work
+# because UOD tags and their state are cached.
+"""
+    def visit_WatchNode(self, node: p.WatchNode):
+        if node.tag_operator_value and node.tag_operator_value.tag_name:
+            if self.tags.has(node.tag_operator_value.tag_name) and self.tags.get(node.tag_operator_value.tag_name).simulated:
+                self.add_item(AnalyzerItem(
+                    "SimulatedValue",
+                    "Tag has simulated value",
+                    node,
+                    AnalyzerItemType.INFO,
+                    f"The value of tag {node.tag_operator_value.tag_name} is simulated.",
+                    start=node.tag_operator_value.stripped_lhs_range.start.character,
+                    end=node.tag_operator_value.stripped_lhs_range.end.character
+                ))
+        return super().visit_WatchNode(node)
+
+    def visit_AlarmNode(self, node: p.AlarmNode):
+        if node.tag_operator_value and node.tag_operator_value.tag_name:
+            if self.tags.has(node.tag_operator_value.tag_name) and self.tags.get(node.tag_operator_value.tag_name).simulated:
+                self.add_item(AnalyzerItem(
+                    "SimulatedValue",
+                    "Tag has simulated value",
+                    node,
+                    AnalyzerItemType.INFO,
+                    f"The value of tag {node.tag_operator_value.tag_name} is simulated.",
+                    start=node.tag_operator_value.stripped_lhs_range.start.character,
+                    end=node.tag_operator_value.stripped_lhs_range.end.character
+                ))
+        return super().visit_AlarmNode(node)
+"""
 
 
 class CommandCheckAnalyzer(AnalyzerVisitorBase):
@@ -661,8 +893,8 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                     node,
                     AnalyzerItemType.ERROR,
                     f"Did you mean to type '{most_similar_macro}'?",
-                    start=node.arguments_range.start.character,
-                    end=node.arguments_range.end.character,
+                    start=node.stripped_arguments_range.start.character,
+                    end=node.stripped_arguments_range.end.character,
                     data=dict(type="fix-typo", fix=most_similar_macro)
                 ))
             else:
@@ -672,8 +904,8 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                     node,
                     AnalyzerItemType.ERROR,
                     f"Cannot call macro '{node.name.strip()}' because it is not defined",
-                    start=node.arguments_range.start.character,
-                    end=node.arguments_range.end.character,
+                    start=node.stripped_arguments_range.start.character,
+                    end=node.stripped_arguments_range.end.character,
                 ))
         elif node.name and node.name.strip() in self.macros:
             macro_node = self.macros[node.name]
@@ -768,6 +1000,7 @@ class SemanticCheckAnalyzer:
             ThresholdCheckAnalyzer(),
             WhitespaceCheckAnalyzer(),
             ConditionCheckAnalyzer(tags),
+            SimulateCheckAnalyzer(tags),
             CommandCheckAnalyzer(commands),
             MacroCheckAnalyzer(),
         ]

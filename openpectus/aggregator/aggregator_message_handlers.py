@@ -25,6 +25,7 @@ class AggregatorMessageHandlers:
         aggregator.dispatcher.set_message_handler(EM.RunStartedMsg, self.handle_RunStartedMsg)
         aggregator.dispatcher.set_message_handler(EM.RunStoppedMsg, self.handle_RunStoppedMsg)
         aggregator.dispatcher.set_message_handler(EM.MethodMsg, self.handle_MethodMsg)
+        aggregator.dispatcher.set_message_handler(EM.WebPushNotificationMsg, self.handle_WebPushNotificationMsg)
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(aggregator={self.aggregator})'
@@ -165,6 +166,33 @@ class AggregatorMessageHandlers:
         if validation_errors is not None:
             return validation_errors
         
+        if msg.method.lines is None or len(msg.method.lines) == 0:
+            return AM.ErrorMessage(message="Invalid method. Method was empty but should always contain at least one line")
+        if msg.method.lines[-1].content != "":
+            return AM.ErrorMessage(message="Invalid method. Method should always end in a blank line")
+        
         self.aggregator._engine_data_map[msg.engine_id].method.lines = msg.method.lines
         asyncio.create_task(self.aggregator.from_engine.publisher.publish_method_changed(msg.engine_id))
+        return AM.SuccessMessage()
+
+    async def handle_WebPushNotificationMsg(self, msg: EM.WebPushNotificationMsg):
+        validation_errors = self.validate_msg(msg)
+        if validation_errors is not None:
+            return validation_errors
+        
+        if msg.notification.data is None:
+            msg.notification.data = Mdl.WebPushData(
+                process_unit_id=msg.engine_id
+            )
+            msg.notification.actions = [
+                Mdl.WebPushAction(
+                    action="navigate",
+                    title="Go to process unit"
+                )
+            ]
+        asyncio.create_task(self.aggregator.webpush_publisher.publish_message(
+            notification=msg.notification,
+            topic=msg.topic,
+            process_unit=self.aggregator._engine_data_map[msg.engine_id],
+        ))
         return AM.SuccessMessage()

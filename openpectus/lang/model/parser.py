@@ -118,9 +118,6 @@ class Grammar:
 
     instruction_line_pattern = re.compile(full_line_re)
 
-    operators = ['<', '<=', '>', '>=', '==', '=', '!=']
-    operators_1char = ['<', '>', '=']
-    operators_2char = ['<=', '>=', '==', '!=']
     # condition_op_re = "\\s*(?P<op>" + "|".join(op for op in operators) + ")\\s*"
 
     float_re = r'(?P<float>[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?)'
@@ -291,7 +288,7 @@ class PcodeParser:
         argument = match_groups.get("argument", "")
         has_comment = match_groups.get("has_comment", "") == "#"
         comment = match_groups.get("comment", "")
-        
+
         has_argument = ":" in line_stripped.split("#")[0]
 
         node = self._create_node(instruction_name.strip(), line, line_no).with_id(self.id_generator)
@@ -300,11 +297,21 @@ class PcodeParser:
         node.instruction_range = p.Range(
             start=Position(
                 line=line_no,
-                character=match.start("instruction_name")+count_leading_spaces(node.instruction_part),
+                character=match.start("instruction_name"),
             ),
             end=Position(
                 line=line_no,
-                character=match.end("instruction_name")-count_trailing_spaces(node.instruction_part),
+                character=match.end("instruction_name"),
+            )
+        )
+        node.stripped_instruction_range = p.Range(
+            start=Position(
+                line=line_no,
+                character=match.start("instruction_name"),
+            ),
+            end=Position(
+                line=line_no,
+                character=match.end("instruction_name")-count_trailing_spaces(instruction_name),
             )
         )
         node.arguments_part = (argument or "")
@@ -312,11 +319,21 @@ class PcodeParser:
             node.arguments_range = p.Range(
                 start=Position(
                     line=line_no,
-                    character=match.start("argument")+count_leading_spaces(node.arguments_part),
+                    character=match.start("argument"),
                 ),
                 end=Position(
                     line=line_no,
-                    character=match.end("argument")-count_trailing_spaces(node.arguments_part),
+                    character=match.end("argument"),
+                )
+            )
+            node.stripped_arguments_range = p.Range(
+                start=Position(
+                    line=line_no,
+                    character=match.start("argument") + count_leading_spaces(argument),
+                ),
+                end=Position(
+                    line=line_no,
+                    character=match.end("argument") - count_trailing_spaces(argument),
                 )
             )
         node.has_argument = has_argument
@@ -332,72 +349,86 @@ class PcodeParser:
             node.indent_error = True
 
         # could leave this out initially to speed up parsing
-        if isinstance(node, p.NodeWithCondition):
-            self._parse_condition(node)
+        if isinstance(node, p.NodeWithTagOperatorValue):
+            self._parse_tag_operator_value(node)
 
         return node
 
     @staticmethod
-    def _parse_condition(node: p.NodeWithCondition):  # noqa C901
-        node.condition_part = node.arguments_part
-        node.condition = p.Condition()
+    def _parse_tag_operator_value(node: p.NodeWithTagOperatorValue):  # noqa C901
+        node.tag_operator_value_part = node.arguments_part
+        node.tag_operator_value = p.TagOperatorValue()
 
-        c = node.condition
+        c = node.tag_operator_value
         c.range = node.arguments_range
+        c.stripped_range = node.stripped_arguments_range
 
         # check operator existence
-        for op2 in Grammar.operators_2char:
-            if op2 in node.condition_part:
-                c.op = op2
+        for op in node.operators:
+            if op in node.tag_operator_value_part:
+                c.op = op
                 break
         if c.op == "":
-            for op1 in Grammar.operators_1char:
-                if op1 in node.condition_part:
-                    c.op = op1
-                    break
-        if c.op == "":
-            c.lhs = node.arguments_part.strip()
+            c.lhs = node.arguments_part
             c.lhs_range = node.arguments_range
-            c.tag_name = c.lhs
+            c.stripped_lhs_range = node.stripped_arguments_range
+            c.tag_name = c.lhs.strip()
             return
 
         try:
-            op_start = node.condition_part.index(c.op)
-            leading_spaces = count_leading_spaces(node.condition_part)
-            trailing_spaces = count_trailing_spaces(node.condition_part)
-            [lhs, rhs] = node.condition_part.split(c.op)
+            op_start = node.tag_operator_value_part.index(c.op)
+            [lhs, rhs] = node.tag_operator_value_part.split(c.op)
             c.lhs = lhs.strip()
             c.lhs_range = p.Range(
-                start=c.range.start,
-                end=Position(
-                    line=c.range.start.line,
-                    character=c.range.start.character + op_start - 1 - trailing_spaces)
-            )
-
-            c.op_range = p.Range(
                 start=Position(
                     line=c.range.start.line,
-                    character=c.range.start.character + op_start - leading_spaces),
+                    character=c.range.start.character - 1),
                 end=Position(
                     line=c.range.start.line,
-                    character=c.range.start.character + op_start - leading_spaces + len(c.op)),
+                    character=c.range.start.character + op_start)
             )
+            c.stripped_lhs_range = p.Range(
+                start=Position(
+                    line=c.range.start.line,
+                    character=c.range.start.character + count_leading_spaces(lhs)),
+                end=Position(
+                    line=c.range.start.line,
+                    character=c.range.start.character + op_start - count_trailing_spaces(lhs))
+            )
+
+            c.op_range = c.op_range = p.Range(
+                start=Position(
+                    line=c.range.start.line,
+                    character=c.range.start.character + op_start),
+                end=Position(
+                    line=c.range.start.line,
+                    character=c.range.start.character + op_start + len(c.op)),
+            )
+
             c.rhs = rhs.strip()
             c.rhs_range = p.Range(
                 start=Position(
                     line=c.range.start.line,
-                    character=c.op_range.end.character + 1),
+                    character=c.op_range.end.character),
                 end=Position(
                     line=c.range.start.line,
-                    character=c.op_range.end.character + len(rhs) - trailing_spaces)
-                )
+                    character=c.op_range.end.character + len(rhs))
+            )
+            c.stripped_rhs_range = p.Range(
+                start=Position(
+                    line=c.range.start.line,
+                    character=c.op_range.end.character + count_leading_spaces(rhs)),
+                end=Position(
+                    line=c.range.start.line,
+                    character=c.op_range.end.character + len(rhs) - count_trailing_spaces(rhs))
+            )
 
         except Exception:
             return
 
         # lhs must be a tag but we cannot validate this at parse time. This is done later in an analyzer
         if c.lhs != "":
-            c.tag_name = c.lhs
+            c.tag_name = c.lhs.strip()
         else:
             return
 
@@ -411,6 +442,15 @@ class PcodeParser:
             c.tag_value = match.group('float')
             c.tag_value_numeric = float(c.tag_value or "")
             c.tag_unit = match.group('unit')
+            assert c.tag_unit
+            c.tag_unit_range = p.Range(
+                start=Position(
+                    line=c.range.start.line,
+                    character=c.stripped_rhs_range.start.character+match.start("unit")),
+                end=Position(
+                    line=c.range.start.line,
+                    character=c.stripped_rhs_range.start.character+match.start("unit") + len(c.tag_unit)),
+            )
             c.error = False
         else:
             match = re.search(Grammar.condition_rhs_no_unit_pattern, c.rhs)
@@ -422,7 +462,7 @@ class PcodeParser:
             else:  # str
                 c.tag_value = c.rhs
                 c.error = False
-        node.condition.error = False
+        node.tag_operator_value.error = False
 
     # consider caching this, we only need to load once per process
     def _inspect_instruction_node_types(self) -> dict[str, type[p.Node]]:

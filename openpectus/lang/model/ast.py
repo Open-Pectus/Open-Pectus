@@ -147,6 +147,16 @@ class SupportCancelForce:
             self._forced = True
 
 
+class SupportsInterrupt():
+    """ Marker interface that indicates that the node type uses the interrupt mechanism.
+
+    Requirements:
+    - it must provide a interrupt_registered property, currently NodeWithChildren does this
+    - interpreter._create_interrupt_handler() must be able to create a handler for the node type
+    """
+    ...
+
+
 class Node(SupportCancelForce):
     instruction_names: list[str] = []
     """ Specifies which node the parser should instantiate for a given instruction name(s) """
@@ -159,10 +169,12 @@ class Node(SupportCancelForce):
         self.position: Position = position
         self.instruction_part: str = ""
         self.instruction_range: Range = Range.empty()
+        self.stripped_instruction_range: Range = Range.empty()
         self.threshold_part: str = ""
         self.arguments_part: str = ""
         self.arguments: str = ""
         self.arguments_range: Range = Range.empty()
+        self.stripped_arguments_range: Range = Range.empty()
         self.comment_part: str = ""
         self.has_comment: bool = False
         self.has_argument: bool = False
@@ -176,6 +188,7 @@ class Node(SupportCancelForce):
         self.started: bool = False
         self.completed: bool = False
         self.action_history: list[str] = []
+        self._empty_node_class_names = [BlankNode.__name__, CommentNode.__name__]
 
     @property
     def name(self) -> str:
@@ -208,7 +221,9 @@ class Node(SupportCancelForce):
                     return match
 
     def can_load_state(self, state: NodeState) -> bool:
-        """ Determine whether state is valid for this kind of node """
+        """ Determine whether state is valid for this kind of node """        
+        if state["class_name"] in self._empty_node_class_names:
+            return True
         return state["class_name"] == self.__class__.__name__
 
     def apply_state(self, state: NodeState):
@@ -276,7 +291,7 @@ class Node(SupportCancelForce):
             parents.append(node.parent)
             node = node.parent
         return parents
-    
+
     @property
     def root(self) -> ProgramNode:
         if isinstance(self, ProgramNode):
@@ -303,7 +318,6 @@ class NodeWithChildren(Node):
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
         self._children: list[Node] = []
-
         self.interrupt_registered: bool = False
         """ Whether an interrupt was registered to execute the node. """
         self.children_complete: bool = False
@@ -456,7 +470,18 @@ class BlockNode(NodeWithChildren):
         super().__init__(position, id)
         self.lock_aquired = False
 
-    # TODO consider wether lock_required should persist
+    def reset_runtime_state(self, recursive):
+        self.lock_aquired = False
+        super().reset_runtime_state(recursive)
+
+    def extract_state(self) -> NodeState:
+        state = super().extract_state()
+        state["lock_aquired"] = self.lock_aquired  # type: ignore
+        return state
+
+    def apply_state(self, state: NodeState):
+        self.lock_aquired = bool(state["lock_aquired"])  # type: ignore
+        return super().apply_state(state)    
 
 class EndBlockNode(Node):
     instruction_names = ["End block"]
@@ -469,11 +494,20 @@ class BatchNode(Node):
     instruction_names = ["Batch"]
 
 
-class NodeWithCondition(NodeWithChildren):
+class NodeWithTagOperatorValue(Node):
+    operators: list[str]
+
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
-        self.condition_part: str
-        self.condition: Condition | None
+        self.tag_operator_value_part: str
+        self.tag_operator_value: TagOperatorValue | None
+
+
+class NodeWithCondition(NodeWithTagOperatorValue):
+    operators = ["<=", ">=", "==", "!=", "<", ">", "="]
+
+    def __init__(self, position=Position.empty, id=""):
+        super().__init__(position, id)
         self.interrupt_registered: bool = False
         self.activated: bool = False
         """ Node condition was evaluated true"""
@@ -507,34 +541,57 @@ class NodeWithCondition(NodeWithChildren):
         return not self.cancelled and not self.forced and not self.activated
 
 
-class WatchNode(NodeWithCondition):
+class NodeWithAssignment(NodeWithTagOperatorValue):
+    operators = ["="]
+
+
+class WatchNode(NodeWithChildren, NodeWithCondition, SupportsInterrupt):
     instruction_names = ["Watch"]
 
 
-class AlarmNode(NodeWithCondition):
+class AlarmNode(NodeWithChildren, NodeWithCondition, SupportsInterrupt):
     instruction_names = ["Alarm"]
 
+    def __init__(self, position=Position.empty, id=""):
+        super().__init__(position, id)
+        self.run_count: int = 0
+        """ The number of times the alarm has completed """
 
-class Condition:
+    def extract_state(self):
+        state = super().extract_state()
+        state["run_count"] = self.run_count  # type: ignore
+        return state
+
+    def apply_state(self, state):
+        self.run_count = int(state["run_count"])
+        super().apply_state(state)
+
+    def reset_runtime_state(self, recursive):
+        # Note: run_count is not reset because it counts alarm invocations
+        super().reset_runtime_state(recursive)
+
+
+class TagOperatorValue:
     def __init__(self):
         self.error = True
         self.lhs = ""
         self.op = ""
         self.rhs = ""
         self.range: Range = Range.empty()
+        self.stripped_range: Range = Range.empty()
 
         self.tag_name: str | None = None
         self.tag_value: str | None = None
         self.tag_unit: str | None = None
         self.tag_value_numeric: int | float | None = None
 
-        # these ranges are problematic. we somehow want to exclude whitespace
-        # for the LSP purpose of underlining lsh/op/rhs but this conflicts
-        # with the calculation of later ones based on the first ones.
-
         self.lhs_range = Range.empty()
+        self.stripped_lhs_range = Range.empty()
         self.op_range = Range.empty()
         self.rhs_range = Range.empty()
+        self.stripped_rhs_range = Range.empty()
+        self.tag_unit_range = Range.empty()
+
 
     def __str__(self):
         return f'{self.__class__.__name__}(lhs="{self.lhs}", op="{self.op}", rhs="{self.rhs}")'
@@ -564,7 +621,7 @@ class CommentNode(WhitespaceNode):
         return self
 
 
-class InjectedNode(NodeWithChildren):
+class InjectedNode(NodeWithChildren, SupportsInterrupt):
     pass
 
 
@@ -580,6 +637,15 @@ class MacroNode(NodeWithChildren):
 
 class CallMacroNode(Node):
     instruction_names = ["Call macro"]
+
+    def __init__(self, position=Position.empty, id=""):
+        super().__init__(position, id)
+        self._cancellable = False
+        self._forcible = False
+
+
+class NotifyNode(Node):
+    instruction_names = ["Notify"]
 
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
@@ -617,6 +683,14 @@ class EngineCommandNode(CommandBaseNode):
     """ Represents internal engine commands that have a command class subclassing InternalEngineCommand. """
     instruction_names = ["Stop", "Pause", "Unpause", "Hold", "Unhold", "Restart",
                          "Info", "Warning", "Error"]
+
+
+class SimulateNode(NodeWithAssignment):
+    instruction_names = ["Simulate"]
+
+
+class SimulateOffNode(Node):
+    instruction_names = ["Simulate off"]
 
 
 class UodCommandNode(CommandBaseNode):

@@ -117,9 +117,9 @@ class TestLspAnalysisCompletion(unittest.TestCase):
             tags=[]
         )
         result = self.get_completion_labels(pcode, uod_info)
-        # Expect two elements. Filtering to remove "A" is on client side.
-        self.assertEqual(2, len(result))
-        self.assertTrue(result, ["A", "B"])
+        # Expect one element. Filtering to remove "A" is on server side.
+        self.assertEqual(1, len(result))
+        self.assertTrue(result, ["B"])
 
     def test_completions_categorical_add_option_exclusive(self):
         pcode = "Category: C"
@@ -134,6 +134,17 @@ class TestLspAnalysisCompletion(unittest.TestCase):
         )
         result = self.get_completion_labels(pcode, uod_info)
         self.assertEqual(0, len(result))
+
+    def test_completions_simulate_off_tags(self):
+        pcode = "Simulate off: "  # typing 'Simulate off: Foo' or 'Simulate off: bar'
+        uod_info = UodDefinition(
+            commands=[],
+            system_commands=[CommandDefinition(name="Simulate off", validator=None, docstring="")],
+            tags=[TagDefinition(name=tag) for tag in ["Foo", "Bar"]]
+        )
+        result = self.get_completion_labels(pcode, uod_info)
+        self.assertEqual(2, len(result))
+        self.assertEqual(["Foo", "Bar"], result)
 
     def test_completions_tags(self):
         pcode = "Watch: "  # typing 'Watch: Foo' or 'Watch: bar'
@@ -170,14 +181,14 @@ class TestLspAnalysisCompletion(unittest.TestCase):
 
         result = self.get_completion_labels(pcode, uod_info)
         self.assertEqual(7, len(result))
-        self.assertEqual([
-            "< (less than)",
+        self.assertSequenceEqual([
             "<= (less than or equal)",
-            "> (greater than)",
             ">= (greater than or equal)",
             "== (equal)",
-            "= (equal)",
-            "!= (not equal)"], result)
+            "!= (not equal)",
+            "< (less than)",
+            "> (greater than)",
+            "= (equal)"], result)
 
     def test_completions_watch_rhs(self):
         pcode = "Watch: Run Time == "
