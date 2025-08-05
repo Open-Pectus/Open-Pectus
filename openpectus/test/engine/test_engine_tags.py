@@ -466,6 +466,20 @@ Stop
             # Stop should have this effect
             instance.run_until_condition(lambda : run_counter.as_number() == 0)
 
+    def test_safe_values_are_written_on_stop(self):
+        code = """\
+Info: A
+Stop
+"""
+        runner = EngineTestRunner(create_test_uod, code)
+        with runner.run() as instance:
+            instance.start()
+            danger = instance.engine.tags["Danger"]
+            instance.run_until_instruction("Info")
+            danger.set_value(True, instance.engine._tick_time)
+
+            instance.run_until_event("stop")
+            self.assertEqual(danger.get_value(), False)
 
 class TestAccumulation(unittest.TestCase):
 
