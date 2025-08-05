@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 import inspect
 import logging
+import math
 import time
 from typing import Any, Callable, Sequence
 
@@ -34,6 +35,8 @@ class ErrorRecoveryConfig:
     """ Number of seconds in state Issue before changing to state Reconnect """
     error_timeout_seconds = 5*60*60
     """ Number of seconds in state Reconnect before changing to state Error """
+    only_write_modified_values = True
+    """ Set to True to only write register values that have changes since last successful write """
 
 
 class ErrorRecoveryDecorator(HardwareLayerBase):
@@ -72,10 +75,14 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
     """
 
     def __str__(self) -> str:
-        return (f'{self.__class__.__name__}(state={self.state}, ' +
-                f'last_success_read_write={self.last_success_read_write}, ' +
-                f'last_success_connect={self.last_success_connect}, ' +
-                f'last_state_reconnect_time={self.last_state_reconnect_time}, decorated={self.decorated})')
+        return (
+            f'{self.__class__.__name__}(state={self.state}, ' +
+            f'config={self.config}' +
+            f'last_success_read_write={self.last_success_read_write}, ' +
+            f'last_success_connect={self.last_success_connect}, ' +
+            f'last_state_reconnect_time={self.last_state_reconnect_time}, ' +
+            f'decorated={self.decorated})'
+        )
 
     def __init__(self, decorated: HardwareLayerBase, config: ErrorRecoveryConfig, connection_status_tag: Tag) -> None:
         super().__init__()
@@ -90,6 +97,7 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
 
         self.last_known_good_reads: dict[str, Any] = {}
         self.pending_writes: dict[Register, Any] = {}
+        self.last_success_writes: dict[str, Any] = {}
 
         self.state: ErrorRecoveryState = ErrorRecoveryState.Disconnected
 
@@ -128,18 +136,55 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
     def registers(self):
         return self.decorated.registers
 
-    def success_read_write(self):
+    def success_read(self):
         now = time.time()
-        logger.debug(f"RW success, state: {self.state}")
+        logger.debug(f"Read success, state: {self.state}")
         self.last_success_read_write = now
         if self.state == ErrorRecoveryState.Issue:
-            logger.debug(f"RW success, state transition: {ErrorRecoveryState.Issue} -> {ErrorRecoveryState.OK}")
+            logger.debug(f"Read success, state transition: {ErrorRecoveryState.Issue} -> {ErrorRecoveryState.OK}")
             self.state = ErrorRecoveryState.OK
             self.on_ok()
+
+    def success_write(self, values: Sequence[Any], registers: Sequence[Register]):
+        now = time.time()
+        logger.debug(f"Write success, state: {self.state}")
+        self.last_success_read_write = now
+        for value, register in zip(values, registers, strict=True):
+            self.last_success_writes[register.name] = value
+        if self.state == ErrorRecoveryState.Issue:
+            logger.debug(f"Write success, state transition: {ErrorRecoveryState.Issue} -> {ErrorRecoveryState.OK}")
+            self.state = ErrorRecoveryState.OK
+            self.on_ok()
+
+    def filter_write_values(self, values: Sequence[Any], registers: Sequence[Register]) \
+            -> tuple[Sequence[Any], Sequence[Register]]:
+        """ Filteres out register values that do not need to be written because they have not changed
+        since the last time the were written. """
+        out_values = []
+        out_registers = []
+        for value, register in zip(values, registers):
+            if register.name not in self.last_success_writes.keys():
+                out_values.append(value)
+                out_registers.append(register)
+            else:
+                # value already exist - filter it unless the value was modified
+                old_value = self.last_success_writes[register.name]
+                if isinstance(value, (float)):
+                    # floats must be compared using some defined relative and absolute tolerances
+                    if isinstance(old_value, (int, float)):
+                        if not math.isclose(value, old_value):
+                            out_values.append(value)
+                            out_registers.append(register)
+                else:
+                    if value != old_value:
+                        out_values.append(value)
+                        out_registers.append(register)
+        return out_values, out_registers
 
     def error_read_write(self):
         now = time.time()
         logger.debug(f"RW error, state: {self.state}")
+        self.last_success_writes.clear()
         if self.state == ErrorRecoveryState.OK:
             logger.debug(f"RW error, state transition: {ErrorRecoveryState.OK} -> {ErrorRecoveryState.Issue}")
             self.state = ErrorRecoveryState.Issue
@@ -243,7 +288,7 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
         try:
             value = self.decorated.read(r)
             self.last_known_good_reads[r.name] = value
-            self.success_read_write()
+            self.success_read()
             return value
         except HardwareLayerException:
             self.error_read_write()
@@ -265,7 +310,7 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
             values = self.decorated.read_batch(registers)
             for value, r in zip(values, registers):
                 self.last_known_good_reads[r.name] = value
-            self.success_read_write()
+            self.success_read()
             return values
         except HardwareLayerException:
             self.error_read_write()
@@ -294,9 +339,14 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
             return
 
         try:
-            self.decorated.write(value, r)
-            self.success_read_write()
-            self._write_pending_values(except_names=[r.name])
+            is_modified = True
+            if self.config.only_write_modified_values:
+                values, _ = self.filter_write_values([value], [r])
+                is_modified = len(values) > 0
+            if is_modified > 0:
+                self.decorated.write(value, r)
+                self.success_write([value], [r])
+                self._write_pending_values(except_names=[r.name])
         except HardwareLayerException:
             self.error_read_write()
             if self.state == ErrorRecoveryState.Error:
@@ -319,8 +369,10 @@ class ErrorRecoveryDecorator(HardwareLayerBase):
             return
 
         try:
+            if self.config.only_write_modified_values:
+                values, registers = self.filter_write_values(values, registers)
             self.decorated.write_batch(values, registers)
-            self.success_read_write()
+            self.success_write(values, registers)
             self._write_pending_values(except_names=[r.name for r in registers])
         except HardwareLayerException:
             self.error_read_write()
