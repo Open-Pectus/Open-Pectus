@@ -683,7 +683,7 @@ class Engine(InterpreterContext):
         """ Collect tag updates from all tags, even unmodified tags """
         for tag in self._iter_all_tags():
             if tag.tick_time is None:
-                logger.warning(f'Setting a tick time on {tag.name} tag missing it in notify_initial_tags()')
+                logger.warning(f'Setting a tick time on {tag.name} tag missing it in notify_all_tags()')
                 tag.tick_time = self._tick_time
             self.tag_updates.put(tag)
 
