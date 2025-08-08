@@ -72,6 +72,15 @@ class CallStack:
     def __repr__(self):
         return self.__str__()
 
+    def with_edited_program(self, program: p.ProgramNode) -> CallStack:
+        instance = CallStack()
+        for node in self._records:
+            new_node = program.get_child_by_id(node.id, include_self=True)
+            if new_node is None:
+                raise ValueError(f"Failed to clone node: {node}")
+            assert isinstance(new_node, (p.BlockNode, p.ProgramNode))
+            instance.push(new_node)
+        return instance
 
 class InterpreterContext():
     """ Defines the context of program interpretation"""

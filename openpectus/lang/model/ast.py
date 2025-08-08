@@ -210,7 +210,9 @@ class Node(SupportCancelForce):
     def has_children(self) -> bool:
         return False
 
-    def get_child_by_id(self, id: str) -> Node | None:
+    def get_child_by_id(self, id: str, include_self=False) -> Node | None:
+        if include_self and self.id == id:
+            return self
         if self.has_children():
             assert isinstance(self, NodeWithChildren)
             for child in self.children:
@@ -449,6 +451,10 @@ class ProgramNode(NodeWithChildren):
     def apply_state(self, state: NodeState):
         self.revision = int(state["revision"])  # type: ignore
         return super().apply_state(state)
+
+    def __str__(self):
+        return f"{self.__class__.__name__}(instruction_name='{self.instruction_name}', revision={self.revision}, " + \
+            f"id='{self.id}')"
 
     @staticmethod
     def empty() -> ProgramNode:
