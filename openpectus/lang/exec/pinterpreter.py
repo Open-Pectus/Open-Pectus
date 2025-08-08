@@ -214,7 +214,7 @@ class PInterpreter(NodeVisitor):
                         if target_node_id is not None and x.node.id == target_node_id:
                             has_reached_target_node = True
                         logger.debug(f"Scheduling {x.action_name}, {x.node} for execution in main right after ffw")
-                        self.pending_main_action = x
+                        self._generator = prepend(x, self._generator)
                         last_work_tick = ffw_tick
                         main_complete = True
                     elif x:
@@ -242,7 +242,7 @@ class PInterpreter(NodeVisitor):
                         if target_node_id is not None and x.node.id == target_node_id:
                             has_reached_target_node = True
                         logger.debug(f"Scheduling {x.action_name}, {x.node} for execution in interrupt {key} right after ffw")
-                        self.pending_interrupt_actions[key] = x
+                        interrupt.actions = prepend(x, interrupt.actions)
                         last_work_tick = ffw_tick
                         completed_interrupt_keys.append(key)
                     elif x:
@@ -339,7 +339,7 @@ class PInterpreter(NodeVisitor):
         #     logger.error(f"Cannot register interrupt for node {node}. A handler for this node already exists.")
         #     raise Exception("Interrupt registration failed for node {node}")
         if node.interrupt_registered:
-            logger.warning("The state for node {node} indicates that it already has a registered interrupt")
+            logger.warning(f"The state for node {node} indicates that it already has a registered interrupt")
 
         logger.debug(f"Interrupt registered for {node}, handler: {handler_name}")
         self._interrupts_map[node.id] = Interrupt(node, handler)
@@ -389,12 +389,7 @@ class PInterpreter(NodeVisitor):
         # execute one iteration of program
         assert self._generator is not None
         try:
-            if self.pending_main_action is not None:
-                logger.debug(f"Run pending main action '{self.pending_main_action.action_name}' for node {self.pending_main_action.node}")
-                self.pending_main_action.execute()
-                self.pending_main_action = None
-            else:
-                run_tick(self._generator)
+            run_tick(self._generator)
         except StopIteration:
             logger.debug("Main generator exhausted")
             pass
@@ -414,14 +409,7 @@ class PInterpreter(NodeVisitor):
             logger.debug(f"Executing interrupt tick for node {interrupt.node}")
             try:
                 self._in_interrupt = True
-                key = interrupt.node.id
-                if key in self.pending_interrupt_actions.keys():
-                    interrupt_action = self.pending_interrupt_actions[key]
-                    logger.debug(f"Run pending interrupt action '{interrupt_action.action_name}' for node {interrupt_action.node}")
-                    interrupt_action.execute()
-                    del self.pending_interrupt_actions[key]
-                else:
-                    run_tick(interrupt.actions)
+                run_tick(interrupt.actions)
                 self._in_interrupt = False
             except StopIteration:
                 logger.debug(f"Interrupt generator {interrupt.node} exhausted")
@@ -539,7 +527,7 @@ class PInterpreter(NodeVisitor):
                     node,
                     self._tick_time, self._tick_number,
                     self.context.tags.as_readonly())
-        # use custom name to avoid action name collision with actions in the visit_* method
+        # use custom name to avoid action name collision with actions in the visit_* methods
         yield NodeAction(node, start, name="visit_start")
 
         # log all visits
@@ -565,7 +553,7 @@ class PInterpreter(NodeVisitor):
                 self._tick_time, self._tick_number,
                 self.context.tags.as_readonly())
 
-        # use custom name to avoid action name collision with actions in the visit_* method
+        # use custom name to avoid action name collision with actions in the visit_* methods
         yield NodeAction(node, end, name="visit_end", tick_break=True)
 
         logger.debug(f"Visit {node} done")
@@ -605,7 +593,7 @@ class PInterpreter(NodeVisitor):
 
 
     def visit_MarkNode(self, node: p.MarkNode) -> NodeGenerator:
-        def do(node: p.MarkNode):            
+        def do(node: p.MarkNode):
             logger.info(f"Mark {node.name} running")
             try:
                 mark_tag = self.context.tags.get("Mark")
