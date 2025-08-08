@@ -253,19 +253,6 @@ class Engine(InterpreterContext):
             for tag in self._system_tags.tags.values():
                 tag.tick_time = tick_time
 
-        # edit phase
-        if self._pending_merge_method is not None:
-            logger.debug("Applying scheduled method merge edit")
-            try:
-                self._method_manager.merge_method(self._pending_merge_method)
-                self._interpreter.update_method_and_ffw(self._method_manager.program)
-                logger.debug("Method edit complete")
-            except Exception as ex:
-                logger.error("Method edit failed", exc_info=True)
-                self.set_error_state(ex)
-            finally:
-                self._pending_merge_method = None
-
         self.uod.hwl.tick()
 
         # read phase, error_state on HardwareLayerException
@@ -783,19 +770,26 @@ class Engine(InterpreterContext):
 
         try:
             if self._runstate_started:
-                if self._pending_merge_method is not None:
-                    raise MethodEditError("An edit is already in progress")
-                # would be really nice if we could do more checks here rather than
-                # wait - but those checks depend on actual state which may have changed
-                # once we get to applying the edit
-                # signal to apply updated method on next tick
-                self._pending_merge_method = method
-                logger.debug(f"Method merge edit scheduled")
+                logger.info(f"Method changed while running. Current revision {self.method_manager.program.revision}")
+                try:
+                    self._method_manager.merge_method(method)
+                    logger.info(f"Method merged successfully. Revision is now {self.method_manager.program.revision}")
+                except Exception:
+                    logger.error("Error merging method", exc_info=True)
+                    raise
             else:
-                self._method_manager.set_method(method)
-                self._interpreter = PInterpreter(self._method_manager.program, self)
-                logger.debug(f"New method set with {len(method.lines)} lines")
+                logger.info("Setting new method")
+                try:
+                    self._method_manager.set_method(method)
+                    logger.info(f"Method set successfully. Revision is {self.method_manager.program.revision}")
+                except Exception:
+                    logger.error("Error setting method", exc_info=True)
+                    raise
 
+        except MethodEditError:
+            # skip setting error_state(?)
+            # depends on how we will handle these errors on the client side
+            raise
         except Exception as ex:
             logger.error("Failed to set method", exc_info=True)
             self.set_error_state(ex)
