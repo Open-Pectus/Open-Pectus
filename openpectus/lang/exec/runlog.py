@@ -168,7 +168,7 @@ class RuntimeInfo:
                 if is_conclusive_state:
                     assert item is not None
                     item.end = state.state_time
-                    item.end_values = state.values or TagValueCollection. empty()
+                    item.end_values = state.values or TagValueCollection.empty()
                     item.cancellable = False
                     item.forcible = False
 
@@ -382,6 +382,11 @@ class RuntimeInfo:
         print(self.get_as_table(description))
 
     def with_edited_program(self, program: p.ProgramNode) -> RuntimeInfo:
+        """ Return a deep copy with node references set to nodes in program. Does not
+        modify any existing records.
+
+        Note: Uses RuntimeRecordState.clone() which does not change command and command_exec_id.
+        """
         instance = RuntimeInfo()
         for r in self.records:
             # clone record and add the clone
@@ -391,9 +396,12 @@ class RuntimeInfo:
 
 class RuntimeRecord:
     def __init__(self, node: p.Node, exec_id: UUID) -> None:
-        """ Create new node.
-        
-        Note: Changes to node fields must be mirrored in clone() and with_edited_program() as well. """
+        """ Create new node. This only happens in
+        - RuntimeInfo.begin_visit() which creates and assigns a random value
+        - null_record() which creates and assigns a random value
+        - clone() / with_edited_node() which copy the existing value
+
+        Note: Changes to node fields must be mirrored in clone() and with_edited_program(). """
         self.exec_id: UUID = exec_id
         self.node = node
         self.name = node.runlog_name
@@ -518,7 +526,6 @@ class RuntimeRecord:
         instance.visit_end_time = self.visit_end_time
         instance.visit_end_tick = instance.visit_end_tick
 
-        # TODO: reuses the command instance and exec_id here - figure out if that is ok
         instance.states = [s.clone() for s in self.states]
         instance.start_values = None if self.start_values is None else self.start_values.clone()
         instance.end_values = None if self.end_values is None else self.end_values.clone()
@@ -529,7 +536,6 @@ class RuntimeRecord:
 
     def with_edited_node(self, program: p.ProgramNode) -> RuntimeRecord:
         """ Clones the record, updates the node to the matching node in the new program and returns the clone """
-        # TODO: reuses the command instance and exec_id here - figure out if that is ok
         instance = self.clone()
         if self.node.id != "":
             new_node = program.get_child_by_id(self.node.id)
@@ -560,9 +566,10 @@ class RuntimeRecordState:
         return self.__str__()
 
     def clone(self) -> RuntimeRecordState:
+        """ Note: command and command_exec_id are copied from existing state. These reference
+        command objects outside or RuntimeInfo. """
         values = None if self.values is None else self.values.clone()
         instance = RuntimeRecordState(self.state_name, self.state_time, self.state_tick, values)
-        #TODO can we reuse the command instance and exec_id here???
         instance.command = self.command
         instance.command_exec_id = self.command_exec_id
         return instance
