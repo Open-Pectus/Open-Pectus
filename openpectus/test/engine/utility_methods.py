@@ -211,15 +211,15 @@ class EngineTestInstance(EventListener):
                     self._search_index = 0
                 return True
 
-        logger.debug(f"Start waiting for instruction {instruction_name}, state: {state}, arguments: {arguments}")
+        logger.info(f"Start waiting for instruction {instruction_name}, state: {state}, arguments: {arguments}")
         try:
             ticks = self.run_until_condition(cond, max_ticks=max_ticks)
         except TimeoutError:
             raise TimeoutError(
                 f"Timeout while waiting for instruction '{instruction_name}', state: {state}, arguments: {arguments}")
 
-        logger.debug(f"Done waiting for instruction {instruction_name}, state: {state}, arguments: {arguments}. " +
-                     f"Duration: {ticks} ticks.")
+        logger.info(f"Done waiting for instruction {instruction_name}, state: {state}, arguments: {arguments}. " +
+                    f"Duration: {ticks} ticks.")
         return ticks
 
     def index_step_back(self, steps=1):
@@ -269,12 +269,12 @@ class EngineTestInstance(EventListener):
     def run_ticks(self, ticks: int) -> None:
         """ Continue program execution until te specified number of ticks. """
 
-        logger.debug(f"Start waiting for {ticks} ticks")
+        logger.info(f"Start waiting for {ticks} ticks")
         max_ticks = ticks + 1
         try:
             _ = self.run_until_condition(lambda: False, max_ticks)
         except TimeoutError:
-            logger.debug(f"Done waiting for {ticks} ticks")
+            logger.info(f"Done waiting for {ticks} ticks")
             return
 
         raise ValueError("Could not wait??")

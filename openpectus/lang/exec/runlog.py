@@ -168,7 +168,7 @@ class RuntimeInfo:
                 if is_conclusive_state:
                     assert item is not None
                     item.end = state.state_time
-                    item.end_values = state.values or TagValueCollection. empty()
+                    item.end_values = state.values or TagValueCollection.empty()
                     item.cancellable = False
                     item.forcible = False
 
@@ -353,22 +353,6 @@ class RuntimeInfo:
                     elif r.has_state(instruction_state):
                         return i
 
-    def patch_node_references(self, program: p.ProgramNode):
-        """ Patch node references to updated program nodes to account for edited method. """
-        logger.info("Patching node references in runtime records")
-        for r in self.records:
-            if r.node is not None and not isinstance(r.node, p.ProgramNode):
-                new_node = program.get_child_by_id(r.node.id)
-                if new_node is None:
-                    logger.error(f"No new node was found to replace {r.node}. Node cannot be patched")
-                else:
-                    if r.node != new_node:
-                        r.node = new_node
-                        logger.debug(f"Patched node reference {new_node}")
-                    else:
-                        logger.warning(f"Node not patched: {new_node} - old node already matched the new node!?")
-        logger.info("Patching complete")
-
     def get_record_by_index(self, index: int) -> RuntimeRecord | None:
         if index < 0:
             raise ValueError(f"index {index} is invalid")
@@ -397,8 +381,27 @@ class RuntimeInfo:
     def print_as_table(self, description: str = ""):
         print(self.get_as_table(description))
 
+    def with_edited_program(self, program: p.ProgramNode) -> RuntimeInfo:
+        """ Return a deep copy with node references set to nodes in program. Does not
+        modify any existing records.
+
+        Note: Uses RuntimeRecordState.clone() which does not change command and command_exec_id.
+        """
+        instance = RuntimeInfo()
+        for r in self.records:
+            # clone record and add the clone
+            record = r.with_edited_node(program)
+            instance._add_record(record, record.exec_id)
+        return instance
+
 class RuntimeRecord:
     def __init__(self, node: p.Node, exec_id: UUID) -> None:
+        """ Create new node. This only happens in
+        - RuntimeInfo.begin_visit() which creates and assigns a random value
+        - null_record() which creates and assigns a random value
+        - clone() / with_edited_node() which copy the existing value
+
+        Note: Changes to node fields must be mirrored in clone() and with_edited_program(). """
         self.exec_id: UUID = exec_id
         self.node = node
         self.name = node.runlog_name
@@ -514,6 +517,33 @@ class RuntimeRecord:
         state = self.add_state(RuntimeRecordStateEnum.Failed, time, tick, end_values)
         state.command_exec_id = command_exec_id
 
+    def clone(self) -> RuntimeRecord:
+        instance = RuntimeRecord(self.node, self.exec_id)
+
+        instance.name = self.node.runlog_name
+        instance.visit_start_time = self.visit_start_time
+        instance.visit_start_tick = self.visit_start_tick
+        instance.visit_end_time = self.visit_end_time
+        instance.visit_end_tick = instance.visit_end_tick
+
+        instance.states = [s.clone() for s in self.states]
+        instance.start_values = None if self.start_values is None else self.start_values.clone()
+        instance.end_values = None if self.end_values is None else self.end_values.clone()
+
+        instance.progress = self.progress
+        return instance
+
+
+    def with_edited_node(self, program: p.ProgramNode) -> RuntimeRecord:
+        """ Clones the record, updates the node to the matching node in the new program and returns the clone """
+        instance = self.clone()
+        if self.node.id != "":
+            new_node = program.get_child_by_id(self.node.id)
+            if new_node is None:
+                raise ValueError(f"Failed to copy record for node {self.node} - No new node available")
+            else:
+                instance.node = new_node
+        return instance
 
 class RuntimeRecordState:
     def __init__(
@@ -534,6 +564,15 @@ class RuntimeRecordState:
 
     def __repr__(self):
         return self.__str__()
+
+    def clone(self) -> RuntimeRecordState:
+        """ Note: command and command_exec_id are copied from existing state. These reference
+        command objects outside or RuntimeInfo. """
+        values = None if self.values is None else self.values.clone()
+        instance = RuntimeRecordState(self.state_name, self.state_time, self.state_tick, values)
+        instance.command = self.command
+        instance.command_exec_id = self.command_exec_id
+        return instance
 
 
 class RuntimeRecordStateEnum(StrEnum):

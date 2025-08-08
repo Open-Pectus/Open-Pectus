@@ -362,6 +362,17 @@ class TagValue:
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(name="{self.name}", value="{self.value}")'
 
+    def clone(self) -> TagValue:
+        return TagValue(
+            self.name,
+            self.tick_time,
+            self.value,
+            self.value_formatted,
+            self.unit,
+            self.direction,
+            self.simulated
+        )
+
 
 class TagValueCollection(Iterable[TagValue]):
     """ Represents a read-only and immutable dictionary of tag values. """
@@ -412,7 +423,8 @@ class TagValueCollection(Iterable[TagValue]):
     def to_list(self) -> list[TagValue]:
         return [v for v in self._tag_values.values()]
 
-
+    def clone(self) -> TagValueCollection:
+        return TagValueCollection([v.clone() for v in self])
 
 def create_system_tags() -> "TagCollection":
     return TagCollection([

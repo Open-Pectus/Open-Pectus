@@ -210,7 +210,9 @@ class Node(SupportCancelForce):
     def has_children(self) -> bool:
         return False
 
-    def get_child_by_id(self, id: str) -> Node | None:
+    def get_child_by_id(self, id: str, include_self=False) -> Node | None:
+        if include_self and self.id == id:
+            return self
         if self.has_children():
             assert isinstance(self, NodeWithChildren)
             for child in self.children:
@@ -390,7 +392,11 @@ class ProgramNode(NodeWithChildren):
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
         self.active_node: Node | None = None
-        """ The node currently executing. Maintained by interpreter. """
+        """ The node currently executing. Is never ProgramNode. Is None untli first instruction is
+        visited. Is not cleared at the end but keeps pointing to the last instruction.
+
+        The value is maintained by the interpreters program iterator. """
+
         self.revision: int = 0
         """ The program revision. Starts as 0 and increments every time an edit is performed while running. """
 
@@ -449,6 +455,10 @@ class ProgramNode(NodeWithChildren):
     def apply_state(self, state: NodeState):
         self.revision = int(state["revision"])  # type: ignore
         return super().apply_state(state)
+
+    def __str__(self):
+        return f"{self.__class__.__name__}(instruction_name='{self.instruction_name}', revision={self.revision}, " + \
+            f"id='{self.id}')"
 
     @staticmethod
     def empty() -> ProgramNode:
