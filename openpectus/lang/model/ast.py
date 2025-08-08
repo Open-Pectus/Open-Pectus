@@ -392,7 +392,11 @@ class ProgramNode(NodeWithChildren):
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
         self.active_node: Node | None = None
-        """ The node currently executing. Maintained by interpreter. """
+        """ The node currently executing. Is never ProgramNode. Is None untli first instruction is
+        visited. Is not cleared at the end but keeps pointing to the last instruction.
+
+        The value is maintained by the interpreters program iterator. """
+
         self.revision: int = 0
         """ The program revision. Starts as 0 and increments every time an edit is performed while running. """
 

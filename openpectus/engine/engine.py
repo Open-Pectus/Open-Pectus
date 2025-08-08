@@ -3,7 +3,7 @@ import itertools
 import logging
 import uuid
 from queue import Empty, Queue
-from typing import Iterable, Set
+from typing import Iterable, Literal, Set
 from uuid import UUID
 from openpectus.engine.internal_commands import InternalCommandsRegistry
 from openpectus.engine.hardware import HardwareLayerException, RegisterDirection
@@ -144,12 +144,8 @@ class Engine(InterpreterContext):
         self._last_error : Exception | None = None
         """ Cause of error_state"""
 
-        self._method_manager: MethodManager = MethodManager(uod.get_command_names())
-        """ The model handling changes to method code """
-        self._pending_merge_method: Mdl.Method | None = None
-
-        self._interpreter: PInterpreter = PInterpreter(self._method_manager.program, self)
-        """ The interpreter executing the current method. """
+        self._method_manager: MethodManager = MethodManager(uod.get_command_names(), self)
+        """ The model handling changes to method code and interpreter running it """
 
         self._cancel_command_exec_ids: set[UUID] = set()
 
@@ -183,17 +179,17 @@ class Engine(InterpreterContext):
         return self.uod.base_unit_provider
 
     @property
+    def method_manager(self) -> MethodManager:
+        return self._method_manager
+
+    @property
     def interpreter(self) -> PInterpreter:
-        assert self._interpreter is not None
-        return self._interpreter
+        return self.method_manager.interpreter
 
     @property
     def runtimeinfo(self) -> RuntimeInfo:
         return self.interpreter.runtimeinfo
 
-    @property
-    def method_manager(self) -> MethodManager:
-        return self._method_manager
 
     def cleanup(self):
         self.emitter.emit_on_engine_shutdown()
@@ -266,7 +262,7 @@ class Engine(InterpreterContext):
                 not self._runstate_stopping:
             try:
                 # run one tick of interpretation, i.e. one instruction
-                self._interpreter.tick(tick_time, self._tick_number)
+                self.interpreter.tick(tick_time, self._tick_number)
             except InterpretationInternalError as ex:
                 logger.fatal("A serious internal interpreter error occured. The method should be stopped. If it is resumed, \
                              additional errors may occur.", exc_info=True)
@@ -469,8 +465,16 @@ class Engine(InterpreterContext):
         self._system_tags[SystemTagName.RUN_ID].set_value(None, self._tick_time)
 
     def _stop_interpreter(self):
-        self._interpreter.stop()
-        self._interpreter = PInterpreter(self.method_manager.program, self)
+        # called from Stop and Restart
+
+        # does not seem necessary if calling reset_interpreter() below but it is
+        self.interpreter.stop()
+
+        # TODO: This hack reproduces the behavior of setting new interpreter
+        # a few tests related to start/stop/restart depend on this - but it is not
+        # clear whether this is a real requirement or not. In fact it may make more
+        # sense to wait until start
+        self.method_manager.reset_interpreter()
 
     def _cancel_uod_commands(self):
         logger.debug("Cancelling uod commands")
@@ -765,15 +769,17 @@ class Engine(InterpreterContext):
             raise
 
     # code manipulation api
-    def set_method(self, method: Mdl.Method):
+    def set_method(self, method: Mdl.Method) -> Literal["merge_method", "set_method"]:
         """ Set new method. This will replace the current method. """
 
         try:
             if self._runstate_started:
                 logger.info(f"Method changed while running. Current revision {self.method_manager.program.revision}")
                 try:
-                    self._method_manager.merge_method(method)
-                    logger.info(f"Method merged successfully. Revision is now {self.method_manager.program.revision}")
+                    status = self._method_manager.merge_method(method)
+                    logger.info(f"Method merged successfully (status: {status}). " +
+                                "Revision is now {self.method_manager.program.revision}")
+                    return status
                 except Exception:
                     logger.error("Error merging method", exc_info=True)
                     raise
@@ -782,6 +788,7 @@ class Engine(InterpreterContext):
                 try:
                     self._method_manager.set_method(method)
                     logger.info(f"Method set successfully. Revision is {self.method_manager.program.revision}")
+                    return "set_method"
                 except Exception:
                     logger.error("Error setting method", exc_info=True)
                     raise
