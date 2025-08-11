@@ -665,15 +665,12 @@ class Engine(InterpreterContext):
 
     def _apply_safe_state(self) -> TagValueCollection:
         current_values: list[TagValue] = []
-
-        # TODO we should probably only consider uod tags here. would system tags ever have a safe value?
         for t in self._iter_all_tags():
             if t.direction == TagDirection.Output:
                 safe_value = t.safe_value
                 if not isinstance(safe_value, Unset):
                     current_values.append(t.as_readonly())
                     t.set_value(safe_value, self._tick_time)
-
         return TagValueCollection(current_values)
 
     def _apply_state(self, state: TagValueCollection):
@@ -686,7 +683,7 @@ class Engine(InterpreterContext):
         """ Collect tag updates from all tags, even unmodified tags """
         for tag in self._iter_all_tags():
             if tag.tick_time is None:
-                logger.warning(f'Setting a tick time on {tag.name} tag missing it in notify_initial_tags()')
+                logger.warning(f'Setting a tick time on {tag.name} tag missing it in notify_all_tags()')
                 tag.tick_time = self._tick_time
             self.tag_updates.put(tag)
 
@@ -699,7 +696,7 @@ class Engine(InterpreterContext):
             if tag_name == SystemTagName.CONNECTION_STATUS:
                 status = self._system_tags[SystemTagName.CONNECTION_STATUS].get_value()
                 assert isinstance(status, str)
-                assert status  == "Disconnected" or status == "Connected"
+                assert status == "Disconnected" or status == "Connected"
                 self._emitter.emit_on_connection_status_change(status)
         self._system_listener.clear_changes()
 

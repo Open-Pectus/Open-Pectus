@@ -191,6 +191,7 @@ class StopEngineCommand(InternalEngineCommand):
             e._runstate_holding = False
             e._runstate_stopping = False
             e._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.OK, e._tick_time)
+            e._apply_safe_state()
 
             e.emitter.emit_on_stop()
 
