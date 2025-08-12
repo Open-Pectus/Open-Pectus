@@ -374,8 +374,6 @@ class TestMethodManager(unittest.TestCase):
 
 
     def test_may_extend_alarm(self):
-        # bug - alarm is unregistered before ffw but does not get registered back during ffw
-        
         method1 = Method.from_numbered_pcode("""\
 02 Alarm: Run Time > 0s
 03     Mark: B
@@ -397,7 +395,6 @@ class TestMethodManager(unittest.TestCase):
 
             # insert Mark: D and verify no edit error
             instance.engine.set_method(method2)
-            instance.run_ticks(1)
 
             instance.run_until_instruction("Mark", state="completed", arguments="D")
 
@@ -463,17 +460,14 @@ class TestMethodManager(unittest.TestCase):
 
             # Note line 04 - it does not matter whether it is indented or not in method1. 
             # Its indentation will be set to whatever method2 specifies            
-            
+
             instance.run_until_instruction("Mark", "completed", arguments="B")
 
             # verify no edit error
             instance.engine.set_method(method2)
-            instance.run_ticks(1)
 
             instance.run_until_instruction("Mark", "completed", arguments="X")
 
-            # instance.run_until_instruction("Mark", "completed", arguments="B")
-            # self.assertEqual(["A", "B"], instance.marks)
             self.assertEqual(["A", "B", "C", "X"], instance.marks)
 
     @unittest.skip(reason="Not yet implemented")
@@ -569,14 +563,33 @@ class TestMethodManager(unittest.TestCase):
             # not entirely sure how revisions (should) work, who increments and such
             # and its probably different when setting than merging
             self.assertEqual(rev_0, rev_1,
-                             "Expected method revision meaning that set_method happened instead of merge_method ")
+                             "Expected same method revision meaning that set_method happened instead of merge_method ")
 
             instance.run_until_instruction("Mark", state="completed", arguments="B")
 
             # verify run behavior
             self.assertEqual(["A", "B"], instance.marks)
 
-    @unittest.skip("TODO")
+    def test_wait(self):
+        method1 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Wait: 0.3s
+03 
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Wait: 0.3s
+03 Wait: 0.6s
+""")
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_instruction("Wait", state="completed", arguments="0.3s")
+            instance.engine.set_method(method2)
+
+            instance.run_until_instruction("Wait", state="completed", arguments="0.6s")
+
+
     def test_command_exec_id(self):
         # Check how it works if a program containing commands is edited.
         # Specifically, RuntimeInfo.with_edited_program() use RuntimeRecordState.clone() which reuses the
@@ -584,7 +597,58 @@ class TestMethodManager(unittest.TestCase):
         # command is set by RuntimeRecord.add_state_internal_engine_command_set() and add_state_uod_command_set()
         # command_exec_id is set RuntimeRecord.add_command_state_started() and friends
         # so how to test this?
-        raise NotImplementedError()
+
+        method1 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Reset
+03 Wait: 0.2s
+04 
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Reset
+03 Wait: 0.2s
+04 Wait: 0.6s
+""")
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+
+            # Wait until mid-execution of Reset's 5 ticks, note that this is right at the end of the v0 method
+            instance.run_until_instruction("Wait", state="completed", arguments="0.2s")
+
+            instance.engine.set_method(method2)
+
+            # note how Reset still gets ticked by engine, even though it's water under the bridge for interpreter
+            instance.run_until_instruction("Wait", state="completed", arguments="0.6s")
+
+    def test_command_exec_id_2(self):
+        # Variation of the above that performs the edit earlier than end-of-method
+
+        method1 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Reset
+03 Wait: 0.2s
+04 
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Reset
+03 Wait: 0.2s
+04 Wait: 0.6s
+""")
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+
+            # Wait until mid-execution of Reset's 5 ticks but also not at the end of the v0 method
+            instance.run_until_instruction("Wait", state="started", arguments="0.2s")
+
+            instance.engine.set_method(method2)
+
+            # note how Reset still gets ticked by engine, even though interpreter
+            instance.run_until_instruction("Wait", state="completed", arguments="0.6s")
+
 
     @unittest.skip("TODO")
     def test_continue_after_failed_edit(self):

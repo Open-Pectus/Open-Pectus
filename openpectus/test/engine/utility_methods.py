@@ -151,8 +151,10 @@ class EngineTestInstance(EventListener):
             if self.engine.has_error_state():
                 ex = self.engine.get_error_state_exception()
                 if ex is None:
+                    logger.error("Engine failed with an unspecified error", exc_info=True)
                     raise EngineError("Engine failed with an unspecified error")
                 else:
+                    logger.error(f"Engine failed with exception: {ex}", exc_info=True)
                     raise EngineError(f"Engine failed with exception: {ex}", exception=ex)
 
         return ticks

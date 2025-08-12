@@ -143,13 +143,15 @@ class PInterpreter(NodeVisitor):
         instance.runtimeinfo = self.runtimeinfo.with_edited_program(program)
         instance.stack = self.stack.with_edited_program(program)
 
-        assert self._program.active_node is not None, "Active node is  None. Thsi should not occur during method merge"        
+        assert self._program.active_node is not None, "Active node is  None. This should not occur during method merge"
         assert not isinstance(self._program.active_node, p.ProgramNode)
         target_node_id: str = self._program.active_node.id
-        target_node = program.get_child_by_id(target_node_id)        
+        target_node = program.get_child_by_id(target_node_id)
         if target_node is None:
             raise ValueError(f"FFW aborted because target node with id {target_node_id} was not found in updated method")
         logger.info(f"Target node for ffw is {target_node}")
+        if target_node.completed:
+            logger.debug("Note: Target node is already completed")
 
         if self._is_awaiting_threshold(self._program.active_node):  # same as testing target_node but seems safer
             logger.debug("Target node is awaiting threshold - clearing its history to start over")
@@ -169,6 +171,7 @@ class PInterpreter(NodeVisitor):
         generator = instance.visit_ProgramNode(program)
         instance._run_ffw(generator, target_node_id)
 
+        logger.info(f"Interpreter for revision {instance._program.revision} is ready")
         return instance
 
     def _run_ffw(self, generator: NodeGenerator, target_node_id: str):  # noqa C901
@@ -782,7 +785,7 @@ class PInterpreter(NodeVisitor):
 
 
     def visit_InterpreterCommandNode(self, node: p.InterpreterCommandNode) -> NodeGenerator:  # noqa C901
-        # TODO node.completed
+
         def InterpreterCommandNode_start(node):
             self._add_record_state_started(node)
         yield NodeAction(node, InterpreterCommandNode_start)
@@ -847,9 +850,10 @@ class PInterpreter(NodeVisitor):
             self._add_record_state_failed(node)
             raise NodeInterpretationError(node, f"Interpreter command '{node.instruction_name}' is not supported")
 
-        def complete(node):
+        def complete(node: p.InterpreterCommandNode):
             logger.debug(f"Interpreter command Node {node} complete")
             self._add_record_state_complete(node)
+            node.completed = True
 
         yield NodeAction(node, complete)
 

@@ -770,16 +770,16 @@ class Engine(InterpreterContext):
 
     # code manipulation api
     def set_method(self, method: Mdl.Method) -> Literal["merge_method", "set_method"]:
-        """ Set new method. This will replace the current method. """
+        """ Set new method. This will replace the current method, either by merging in changes in case the method is already
+        running or just setting the method otherwise. """
 
         try:
-            if self._runstate_started:
+            if self._runstate_started and self.method_manager.program_is_started:
                 logger.info(f"Method changed while running. Current revision {self.method_manager.program.revision}")
                 try:
-                    status = self._method_manager.merge_method(method)
-                    logger.info(f"Method merged successfully (status: {status}). " +
-                                "Revision is now {self.method_manager.program.revision}")
-                    return status
+                    self._method_manager.merge_method(method)
+                    logger.info(f"Method merged successfully. Revision is now {self.method_manager.program.revision}")
+                    return "merge_method"
                 except Exception:
                     logger.error("Error merging method", exc_info=True)
                     raise

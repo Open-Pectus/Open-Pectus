@@ -64,7 +64,13 @@ def run_tick(gen: NodeGenerator):
     while True:
         x = next(gen)
         if isinstance(x, NodeAction):
-            x.execute()
+            # account for exhausted pre-edit program which will have the last onde
+            # as active_node wven when it is completed
+            # see tests test_wait and test_command_exec_id for details
+            if x.node.completed and 'visit_end' in x.node.action_history:
+                pass
+            else:
+                x.execute()
             if x.tick_break:
                 break
         else:

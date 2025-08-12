@@ -275,7 +275,8 @@ class Node(SupportCancelForce):
         self.errors.append(error)
 
     def __str__(self):
-        return f"{self.__class__.__name__}(instruction_name='{self.instruction_name}', arguments={self.arguments}, id='{self.id}')"
+        return f"{self.__class__.__name__}(instruction_name='{self.instruction_name}', " + \
+            f"arguments={self.arguments}, id='{self.id}')"
 
     def __repr__(self):
         return self.__str__()
@@ -435,9 +436,12 @@ class ProgramNode(NodeWithChildren):
 
     def apply_tree_state(self, state: dict[str, NodeState]):
         def apply_child_state(node: Node):
-            node_state = state.get(node.id, None)
-            if node_state is not None:
-                node.apply_state(node_state)
+            try:
+                node_state = state.get(node.id, None)
+                if node_state is not None:
+                    node.apply_state(node_state)
+            except KeyError as ke:
+                raise ValueError(f"Failed to apply state {state} to node {node}. Error: {str(ke)}")
             if isinstance(node, NodeWithChildren):
                 for child in node.children:
                     apply_child_state(child)
@@ -681,7 +685,10 @@ class InterpreterCommandNode(CommandBaseNode):
         return state
 
     def apply_state(self, state):
-        self.wait_start_time = state["wait_start_time"]  # type: ignore
+        try:
+            self.wait_start_time = state["wait_start_time"]  # type: ignore
+        except KeyError:
+            self.wait_start_time = None
         super().apply_state(state)
 
     def reset_runtime_state(self, recursive):

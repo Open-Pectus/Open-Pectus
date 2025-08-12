@@ -36,12 +36,18 @@ class MethodManager:
     def program(self) -> p.ProgramNode:
         return self._program
 
+    @property
+    def program_is_started(self) -> bool:
+        """ Determine whether the method is started, i.e. the first non-ProgramNode has started executing. """
+        return self._program.active_node is not None
+
     def set_method(self, method: Mdl.Method):
         """ User saved method. The new method just replaces the existing method. Use when
         no run is active. """
         # concurrency check: aggregator performs the version check and aborts on error
 
         # convert method from protocol api and apply the new method
+        assert not self.program_is_started, "Program has already started, use merge_method() instead of set_method()"
         _method = ParserMethod(lines=[ParserMethodLine(line.id, line.content) for line in method.lines])
         self._method = _method
         parser = create_method_parser(_method, self._uod_command_names)
@@ -53,13 +59,8 @@ class MethodManager:
     def reset_interpreter(self):
         self._interpreter = self._create_interpreter(self._program)
 
-    def merge_method(self, _new_method: Mdl.Method) -> Literal["merge_method", "set_method"]:
-        if self._program.active_node is None:
-            # The program has not really started so a merge is not relevant
-            logger.info("merge_method found no active node so falling back to set_method")
-            self.set_method(_new_method)
-            return "set_method"
-
+    def merge_method(self, _new_method: Mdl.Method):
+        assert self.program_is_started, "Program has not yet started, use set_method() rather that merge_method()"
         try:
             new_method, new_program = self._merge_method(_new_method)
         except Exception as ex:
@@ -80,7 +81,6 @@ class MethodManager:
         self._interpreter = interpreter
         self._method = new_method
         self._program = new_program
-        return "merge_method"
 
     def _merge_method(self, new_method: Mdl.Method) -> tuple[ParserMethod, p.ProgramNode]:
         """ User saved method while a run was active. The new method is replacing an existing method
