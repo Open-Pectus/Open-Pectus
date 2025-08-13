@@ -430,7 +430,7 @@ class Engine(InterpreterContext):
             if args is not None:
                 try:
                     command.validate_arguments(args)
-                    logger.debug(f"Initialized command {cmd_request.name} with arguments {args}")
+                    logger.debug(f"Initialized command {cmd_request.name} with arguments '{args}'")
                 except Exception:
                     raise EngineError(
                         f"Failed to initialize arguments '{args}' for command '{cmd_request.name}'",

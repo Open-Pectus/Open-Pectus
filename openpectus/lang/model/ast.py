@@ -419,13 +419,12 @@ class ProgramNode(NodeWithChildren):
         add_child_nodes(self, nodes)
         return nodes
 
-    def extract_tree_state(self, skip_started_nodes=False) -> dict[str, NodeState]:
+    def extract_tree_state(self) -> dict[str, NodeState]:
         """ Return map of all nodes keyed by their node id """
         result: dict[str, NodeState] = {}
 
         def extract_child_state(node: Node, result: dict[str, NodeState]):
-            if node.started or not skip_started_nodes:
-                result[node.id] = node.extract_state()
+            result[node.id] = node.extract_state()
 
             if isinstance(node, NodeWithChildren):
                 for child in node.children:
@@ -439,7 +438,11 @@ class ProgramNode(NodeWithChildren):
             try:
                 node_state = state.get(node.id, None)
                 if node_state is not None:
-                    node.apply_state(node_state)
+                    # Only import state from nodes that have run. This leaves nodes
+                    # later in the method alone, which also allows change node types
+                    # for nodes that have not rune
+                    if len(node_state["action_history"]) > 0:
+                        node.apply_state(node_state)
             except KeyError as ke:
                 raise ValueError(f"Failed to apply state {state} to node {node}. Error: {str(ke)}")
             if isinstance(node, NodeWithChildren):

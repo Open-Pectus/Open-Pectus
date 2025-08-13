@@ -101,7 +101,7 @@ class MethodManager:
                         "has already started")
 
         # extract state for existing method
-        existing_state = old_program.extract_tree_state(skip_started_nodes=False)
+        existing_state = old_program.extract_tree_state()
 
         # convert method from protocol api and apply the new method
         _new_method = ParserMethod(lines=[ParserMethodLine(line.id, line.content) for line in new_method.lines])

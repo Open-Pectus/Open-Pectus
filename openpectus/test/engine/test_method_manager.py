@@ -133,7 +133,7 @@ class TestMethodManager(unittest.TestCase):
 
             method2 = Method.from_numbered_pcode("01 Mark: B")
 
-            # verify edit erro
+            # verify edit error
             with self.assertRaises(MethodEditError):
                 instance.engine.set_method(method2)
 
@@ -190,14 +190,36 @@ class TestMethodManager(unittest.TestCase):
             instance.run_until_instruction("Mark", state="completed", arguments="A")
 
             # verify no edit error
-            instance.engine.set_method(method2)
-            instance.run_ticks(1)
+            instance.engine.set_method(method2)            
 
             instance.run_until_event("method_end")
 
             # verify run behavior
             self.assertEqual(["A", "B", "C"], instance.marks)
 
+    def test_may_edit_line_after_started_line(self):
+        method1 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Wait: 0.1s
+03 Mark: B
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Wait: 0.1s
+03 Info: C
+""")
+
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_instruction("Mark", state="completed", arguments="A")
+            self.assertEqual(["A"], instance.marks)
+            
+            # verify no edit error
+            instance.engine.set_method(method2)
+
+            instance.run_until_instruction("Info", state="completed", arguments="C")
+            self.assertEqual(["A"], instance.marks)
 
     def test_may_extend_block_after_block_started(self):
 
