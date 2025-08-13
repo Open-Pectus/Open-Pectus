@@ -671,11 +671,34 @@ class TestMethodManager(unittest.TestCase):
             instance.run_until_instruction("Wait", state="completed", arguments="0.6s")
 
 
-    @unittest.skip("TODO")
     def test_continue_after_failed_edit(self):
         # if an edit fails, we should be able to continue running the old method, as if
         # no edit has happened, i.e. the old interpreter instance still works
-        raise NotImplementedError()
+        method1 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Mark: B
+03 Mark: C
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Mark: D
+03 Mark: C
+""")
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+
+            self.assertEqual(0, instance.method_manager.program.revision)
+            instance.run_until_instruction("Mark", arguments="B")
+
+            # can't edit running/completed line
+            with self.assertRaises(MethodEditError):
+                instance.engine.set_method(method2)
+
+            # but the previous interpreter can still continue
+            self.assertEqual(0, instance.method_manager.program.revision)
+            instance.run_until_instruction("Mark", arguments="C")
+            self.assertEqual(['A', 'B', 'C'], instance.marks)
 
 # Can edit macro until it has run the first time
 # consider line state
