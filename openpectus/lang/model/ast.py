@@ -462,6 +462,8 @@ class ProgramNode(NodeWithChildren):
         return state
 
     def apply_state(self, state: NodeState):
+        # Note: while revision is imported from the edited method, method_manager increments it
+        # right after the merge
         self.revision = int(state["revision"])  # type: ignore
         return super().apply_state(state)
 

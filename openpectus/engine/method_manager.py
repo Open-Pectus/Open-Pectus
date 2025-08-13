@@ -113,7 +113,7 @@ class MethodManager:
         logger.info("Merging existing method state into modified method")
         try:
             new_program.apply_tree_state(existing_state)
-            new_program.revision = new_program.revision + 1
+            new_program.revision = old_program.revision + 1
             logger.debug(f"Updating method revision from {old_program.revision} to {new_program.revision}")
 
             if debug_enabled:

@@ -190,7 +190,7 @@ class TestMethodManager(unittest.TestCase):
             instance.run_until_instruction("Mark", state="completed", arguments="A")
 
             # verify no edit error
-            instance.engine.set_method(method2)            
+            instance.engine.set_method(method2)
 
             instance.run_until_event("method_end")
 
@@ -214,7 +214,7 @@ class TestMethodManager(unittest.TestCase):
             instance.start()
             instance.run_until_instruction("Mark", state="completed", arguments="A")
             self.assertEqual(["A"], instance.marks)
-            
+
             # verify no edit error
             instance.engine.set_method(method2)
 
@@ -313,7 +313,6 @@ class TestMethodManager(unittest.TestCase):
 
             # verify no edit error
             instance.engine.set_method(method2)
-            instance.run_ticks(1)
 
             instance.run_until_instruction("Mark", state="completed", arguments="D")
 
