@@ -420,7 +420,10 @@ class ProgramNode(NodeWithChildren):
         return nodes
 
     def extract_tree_state(self) -> dict[str, NodeState]:
-        """ Return map of all nodes keyed by their node id """
+        """ Return map of all nodes' state keyed by their node id.
+
+        This includes non-started nodes that should not be imported.
+        apply_tree_state() handles the filtering on import. """
         result: dict[str, NodeState] = {}
 
         def extract_child_state(node: Node, result: dict[str, NodeState]):
@@ -438,9 +441,8 @@ class ProgramNode(NodeWithChildren):
             try:
                 node_state = state.get(node.id, None)
                 if node_state is not None:
-                    # Only import state from nodes that have run. This leaves nodes
-                    # later in the method alone, which also allows change node types
-                    # for nodes that have not rune
+                    # Only import state from nodes that have run, i.e nodes before active_node. This leaves
+                    # nodes after active_node alone, which allows changing node types for all nodes that have not started.
                     if len(node_state["action_history"]) > 0:
                         node.apply_state(node_state)
             except KeyError as ke:
