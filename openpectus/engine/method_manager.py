@@ -109,17 +109,30 @@ class MethodManager:
         parser = create_method_parser(_new_method, self._uod_command_names)
         new_program = parser.parse_method(_new_method)
 
-        logger.info("Merging existing ast state into modified method ast")
-        logger.debug(f"Existing tree state size: {len(existing_state.keys())}, values:")
-        for v in existing_state.values():
-            logger.debug(v)
-
+        debug_enabled = True  # logger.isEnabledFor(logging.DEBUG)
+        logger.info("Merging existing method state into modified method")
         try:
             new_program.apply_tree_state(existing_state)
             new_program.revision = new_program.revision + 1
             logger.debug(f"Updating method revision from {old_program.revision} to {new_program.revision}")
+
+            if debug_enabled:
+                logger.debug("Tree debugging state:")
+                debug_state = {
+                    "old export state": existing_state,
+                    "new_patched_state": new_program.extract_tree_state()
+                }
+                out = self._serialize(debug_state)
+                logger.debug("\n\n" + out + "\n")
+
         except Exception as ex:
             logger.error("Failed to apply tree state", exc_info=True)
+            debug_state = {
+                "old export state": existing_state,
+                "new_patched_state": new_program.extract_tree_state()
+            }
+            out = self._serialize(debug_state)
+            logger.debug("\n\n" + out + "\n")
             raise MethodEditError("Failed to apply tree state to updated method", ex)
 
         return _new_method, new_program
@@ -149,3 +162,15 @@ class MethodManager:
         # require access to tags/commands
         analyzer = WhitespaceCheckAnalyzer()
         analyzer.analyze(program)
+
+    def _serialize(self, obj) -> str:
+        """ Serialize data for debugging """
+        import json
+        from collections import abc
+
+        def serialize_dict_values(obj):
+            if isinstance(obj, abc.ValuesView):
+                return list(obj)
+            raise TypeError("Type %s is not serializable" % type(obj))
+
+        return json.dumps(obj, default=serialize_dict_values)
