@@ -505,7 +505,12 @@ class TestMethodManager(unittest.TestCase):
         # in this method line 05 is not marked as completed even when 06 is completed. Not sure why.
         # but we have to validate against this
 
+    @unittest.skip("TODO")
+    def test_macro(self):
+        # Can edit macro until it has run the first time
+        # consider line state
 
+        raise NotImplementedError()
 
     @unittest.skip("Looks like a straightforward fix - skip for now")
     def test_may_extend_macro_if_not_executed(self):
@@ -546,11 +551,7 @@ class TestMethodManager(unittest.TestCase):
     @unittest.skip("TODO")
     def test_edit_injected(self):
         # hmm this is weird. a method is running and user injects code - that's not a method edit, just an injection
-        # so what should happen for edit if interpreter har injected code?
-        raise NotImplementedError()
-
-    @unittest.skip("TODO")
-    def test_macro(self):
+        # discussion in issue #829
         raise NotImplementedError()
 
     def test_active_node(self):
@@ -609,7 +610,6 @@ class TestMethodManager(unittest.TestCase):
             instance.engine.set_method(method2)
 
             instance.run_until_instruction("Wait", state="completed", arguments="0.6s")
-
 
     def test_command_exec_id(self):
         # Check how it works if a program containing commands is edited.
@@ -699,6 +699,3 @@ class TestMethodManager(unittest.TestCase):
             self.assertEqual(0, instance.method_manager.program.revision)
             instance.run_until_instruction("Mark", arguments="C")
             self.assertEqual(['A', 'B', 'C'], instance.marks)
-
-# Can edit macro until it has run the first time
-# consider line state
