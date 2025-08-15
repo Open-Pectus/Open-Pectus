@@ -4,8 +4,10 @@ from typing import Self, Type, TypeVar, TypedDict
 
 class Position:
     def __init__(self, line: int, character: int):
-        self.line: int = line   # todo define 0-1 based. should probably change from before to just match lsp
-        self.character: int = character  # start index = indentation
+        self.line: int = line
+        """ Line number, zero based """
+        self.character: int = character
+        """ Character number on line, zero-based. Corresponds to the indentation of the line """
 
     def is_empty(self) -> bool:
         return self == Position.empty
