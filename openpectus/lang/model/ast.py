@@ -406,6 +406,8 @@ class ProgramNode(NodeWithChildren):
         self.revision: int = 0
         """ The program revision. Starts as 0 and increments every time an edit is performed while running. """
 
+        self.macros: dict[str, MacroNode] = dict()
+
     def get_instructions(self, include_blanks: bool = False) -> list[Node]:
         """ Return list of all program instructions, recursively, depth first. """
         children: list[Node] = self.get_child_nodes(recursive=True)

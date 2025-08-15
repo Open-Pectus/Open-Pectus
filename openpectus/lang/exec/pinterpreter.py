@@ -114,7 +114,6 @@ class PInterpreter(NodeVisitor):
         self.context = context
         self.stack: CallStack = CallStack()
         self._interrupts_map: dict[str, Interrupt] = {}
-        self.macros: dict[str, p.MacroNode] = dict()
 
         self.start_time: float = 0
         self._tick_time: float = 0
@@ -270,43 +269,6 @@ class PInterpreter(NodeVisitor):
 
         self._ffw = False
         logger.info("FFW complete")
-
-    # TODO Remove - when macro is completed in #822
-    def _patch_node_references(self, program: p.ProgramNode):  # noqa C901
-        """ Patch node references to updated program nodes to account for a running method edit. """
-        logger.info("Patching node references in stack")
-        for inx, node in enumerate(self.stack._records):
-            # why the check against ProgramNode?
-            if node is not None and not isinstance(node, p.ProgramNode):
-                new_node = program.get_child_by_id(node.id)
-                if new_node is None:
-                    logger.error(f"No new node was found to replace {node}. Node cannot be patched")
-                else:
-                    if node != new_node:
-                        if isinstance(new_node, p.BlockNode):
-                            self.stack._records[inx] = new_node
-                            logger.debug(f"Patched node reference {new_node}")
-                        else:
-                            logger.error(f"Node reference not patched {new_node}. A NodeWithChildren instance is required")
-                    else:
-                        logger.warning(f"Node not patched: {new_node} - old node already matched the new node!?")
-
-        # TODO get rid of this when moving macro processing to analyser
-        logger.info("Patching node references in interpreter macros")
-        for name, node in self.macros.items():
-            if node is not None and not isinstance(node, p.ProgramNode):
-                new_node = program.get_child_by_id(node.id)
-                if new_node is None:
-                    logger.error(f"No new node was found to replace {node}. Node cannot be patched")
-                else:
-                    assert isinstance(new_node, p.MacroNode)
-                    if node != new_node:
-                        self.macros[name] = new_node
-                        logger.debug(f"Patched node reference {new_node}")
-                    else:
-                        logger.warning(f"Node not patched: {new_node} - old node already matched the new node!?")
-
-        logger.info("Patching complete")
 
     def get_marks(self) -> list[str]:
         records: list[tuple[str, int]] = []
@@ -644,7 +606,8 @@ class PInterpreter(NodeVisitor):
         # this macro is added. This dict is only used
         # to try to determine if the macro will at some
         # point try to call itself.
-        temporary_macros = self.macros.copy()
+        program_node = node.root
+        temporary_macros = program_node.macros.copy()
         temporary_macros[node.name] = node
         cascade = macro_calling_macro(node, temporary_macros)
         if cascade and node.name in cascade:
@@ -659,9 +622,9 @@ class PInterpreter(NodeVisitor):
                 raise NodeInterpretationError(node, f'Macro "{node.name}" calls itself by calling {path}. ' +
                                                     'Unfortunately, this is not allowed.')
 
-        if node.name in self.macros.keys():
+        if node.name in program_node.macros.keys():
             logger.warning(f'Re-defining macro with name "{node.name}"')
-        self.macros[node.name] = node
+        program_node.macros[node.name] = node
         record.add_state_completed(
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
@@ -677,17 +640,18 @@ class PInterpreter(NodeVisitor):
             self._tick_time, self._tick_number,
             self.context.tags.as_readonly())
 
-        if node.name not in self.macros.keys():
+        program_node = node.root
+        if node.name not in program_node.macros.keys():
             logger.warning(f'No macro defined with name "{node.name}"')
             available_macros = "None"
-            if len(self.macros.keys()):
-                available_macros = ", ".join(f'"{macro}"' for macro in self.macros.keys())
+            if len(program_node.macros.keys()):
+                available_macros = ", ".join(f'"{macro}"' for macro in program_node.macros.keys())
             self._add_record_state_failed(node)
             raise NodeInterpretationError(
                 node, 
                 f'No macro defined with name "{node.name}". Available macros: {available_macros}.')
 
-        macro_node = self.macros[node.name]
+        macro_node = program_node.macros[node.name]
         yield from self._visit_children(macro_node)
         record.add_state_completed(
             self._tick_time, self._tick_number,
