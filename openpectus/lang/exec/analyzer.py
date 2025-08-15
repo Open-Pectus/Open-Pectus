@@ -92,8 +92,12 @@ class AnalyzerVisitorBase(NodeVisitor):
         self.items.append(item)
 
     def analyze(self, n: p.ProgramNode):
-        """ Run analysis synchronously. """
-        for _ in self.visit(n):
+        """ Run analysis synchronously.
+
+        Note: This runs visit_ProgramNode(n) for ProgramNode, same way as interpreter. For interpretation,
+        this differs from visit(n) but for analysis it should not make a difference.
+        """
+        for _ in self.visit_ProgramNode(n):
             pass
 
 
@@ -935,7 +939,7 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
             self.macros[node.name] = node
             self.macros_registered.append(node)
 
-            cascade = self.macro_calling_macro(node)
+            cascade = node.macro_calling_macro(self.macros)
             if cascade and node.name in cascade:
                 if len(cascade) == 1:
                     self.add_item(AnalyzerItem(
@@ -956,21 +960,6 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                     ))
 
         return super().visit_MacroNode(node)
-
-    def macro_calling_macro(self, node: p.MacroNode, name: str | None = None) -> list[str]:
-        '''
-        Recurse through macro to produce a path of calls it makes to other macros.
-        This is used to identify if a macro will at some point call itself.
-        '''
-        name = name if name is not None else node.name
-        assert node.children is not None
-        for child in node.children:
-            if isinstance(child, p.CallMacroNode):
-                if child.name == name:
-                    return [child.name]
-                elif child.name in self.macros.keys():
-                    return [child.name] + self.macro_calling_macro(self.macros[child.name], name)
-        return []
 
     def analyze(self, n):
         super().analyze(n)

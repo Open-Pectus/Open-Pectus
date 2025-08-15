@@ -28,22 +28,6 @@ term_uod = "Unit Operation Definition file."
 FFW_TICK_LIMIT = 1000  # Default limit for how many ticks are allowed during the fast-forward phase of a method edit.
 ACTION_NAME_REGISTER = "_register_interrupt"
 
-def macro_calling_macro(node: p.MacroNode, macros: dict[str, p.MacroNode], name: str | None = None) -> list[str]:
-    '''
-    Recurse through macro to produce a path of calls it makes to other macros.
-    This is used to identify if a macro will at some point call itself.
-    '''
-    name = name if name is not None else node.name
-    assert node.children is not None
-    for child in node.children:
-        if isinstance(child, p.CallMacroNode):
-            if child.name == name:
-                return [child.name]
-            elif child.name in macros.keys():
-                return [child.name] + macro_calling_macro(macros[child.name], macros, name)
-    return []
-
-
 
 class CallStack:
     def __init__(self):
@@ -598,7 +582,6 @@ class PInterpreter(NodeVisitor):
             self.context.tags.as_readonly())
         logger.info(f"Defining macro {node}")
 
-        # TODO move this check to an analyzer
         # Check if calling the macro will call the macro.
         # This would incur a cascade of macros which
         # is probably not intended.
@@ -609,7 +592,7 @@ class PInterpreter(NodeVisitor):
         program_node = node.root
         temporary_macros = program_node.macros.copy()
         temporary_macros[node.name] = node
-        cascade = macro_calling_macro(node, temporary_macros)
+        cascade = node.macro_calling_macro(temporary_macros)
         if cascade and node.name in cascade:
             record.add_state_cancelled(self._tick_time, self._tick_number, self.context.tags.as_readonly())
             if len(cascade) == 1:

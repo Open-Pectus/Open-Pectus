@@ -662,6 +662,26 @@ class MacroNode(NodeWithChildren):
         self._cancellable = False
         self._forcible = False
 
+    def macro_calling_macro(self, macros: dict[str, MacroNode], name: str | None = None) -> list[str]:
+        """ Recurse through macro to produce a path of calls it makes to other macros.
+
+        This is used to identify if a macro will at some point call itself. """
+
+        # Note: This should be done once during analysis and the result be exposed 
+        # and cached on MacroNode/CallMacroNode, possibly as lists of incoming and 
+        # outgoing calls, which could even make this method reduntant
+        # In that case remember injected nodes - should probably rerun analysis on
+        # injection because that may change macro definitions
+
+        name = name if name is not None else self.name
+        assert self.children is not None
+        for child in self.children:
+            if isinstance(child, CallMacroNode):
+                if child.name == name:
+                    return [child.name]
+                elif child.name in macros.keys():
+                    return [child.name] + macros[child.name].macro_calling_macro(macros, name)
+        return []
 
 class CallMacroNode(Node):
     instruction_names = ["Call macro"]
