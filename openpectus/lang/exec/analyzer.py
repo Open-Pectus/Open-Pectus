@@ -875,7 +875,7 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
         self.macros_called: list[p.MacroNode] = []
 
     def visit_CallMacroNode(self, node: p.CallMacroNode):
-        if node.name is None or node.name.strip() == "":
+        if node.name == "":
             self.add_item(AnalyzerItem(
                 "MacroCallNameInvalid",
                 "Invalid macro call",
@@ -883,8 +883,8 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                 AnalyzerItemType.ERROR,
                 "Call macro must refer to a Macro definition"
             ))
-        elif node.name and node.name.strip() not in self.macros:
-            similarity = {macro: ratio(node.name.strip(), macro) for macro in self.macros.keys()}
+        elif node.name not in self.macros:
+            similarity = {macro: ratio(node.name, macro) for macro in self.macros.keys()}
             most_similar_macro = max(similarity, key=similarity.get) if similarity else None  # type: ignore
             if most_similar_macro and similarity[most_similar_macro] > 0.7:
                 self.add_item(AnalyzerItem(
@@ -903,18 +903,18 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                     "Referenced macro is not defined",
                     node,
                     AnalyzerItemType.ERROR,
-                    f"Cannot call macro '{node.name.strip()}' because it is not defined",
+                    f"Cannot call macro '{node.name}' because it is not defined",
                     start=node.stripped_arguments_range.start.character,
                     end=node.stripped_arguments_range.end.character,
                 ))
-        elif node.name and node.name.strip() in self.macros:
+        elif node.name in self.macros:
             macro_node = self.macros[node.name]
             self.macro_calls.append(node)
             self.macros_called.append(macro_node)
         return super().visit_CallMacroNode(node)
 
     def visit_MacroNode(self, node: p.MacroNode):
-        if node.name is None or node.name.strip() == "":
+        if node.name == "":
             self.add_item(AnalyzerItem(
                 "MacroNameInvalid",
                 "Invalid macro definition",
@@ -922,9 +922,9 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                 AnalyzerItemType.ERROR,
                 "A Macro definition must include a name"
             ))
-        if node.name and node.name.strip():
-            if node.name.strip() in self.macros:
-                previous_macro_with_same_name = self.macros[node.name.strip()]
+        else:
+            if node.name in self.macros:
+                previous_macro_with_same_name = self.macros[node.name]
                 self.add_item(AnalyzerItem(
                     "MacroRedefined",
                     "Macro redefined",
@@ -932,7 +932,7 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                     AnalyzerItemType.INFO,
                     f"This macro definition overwrites the previous definition at line {previous_macro_with_same_name.position.line+1}."
                 ))
-            self.macros[node.name.strip()] = node
+            self.macros[node.name] = node
             self.macros_registered.append(node)
 
             cascade = self.macro_calling_macro(node)

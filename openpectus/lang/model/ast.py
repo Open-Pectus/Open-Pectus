@@ -194,6 +194,9 @@ class Node(SupportCancelForce):
 
     @property
     def name(self) -> str:
+        """ Get node name. Parser guarantees it to not be None and be stripped. May be the empty string"""
+        # parser guards against None
+        assert self.arguments is not None
         return self.arguments
 
     @property
