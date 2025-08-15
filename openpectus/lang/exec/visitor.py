@@ -1,4 +1,4 @@
-from typing import Any, Callable, Generator, TypeVar
+from typing import Callable, Iterator, TypeVar
 import logging
 
 import openpectus.lang.model.ast as p
@@ -39,12 +39,12 @@ class NodeAction():
 
 
 NullableActionResult = NodeAction | None
-NodeGenerator = Generator[NullableActionResult, Any, Any]
+NodeGenerator = Iterator[NullableActionResult]
 """ The generator return type for visitor methods. """
 
 
 class NodeVisitorGeneric:
-    def visit(self, node):
+    def visit(self, node) -> NodeGenerator:
         yield from self.visit_Node(node)
         method_name = 'visit_' + type(node).__name__
         visitor = getattr(self, method_name, self.generic_visit)
@@ -64,7 +64,13 @@ def run_tick(gen: NodeGenerator):
     while True:
         x = next(gen)
         if isinstance(x, NodeAction):
-            x.execute()
+            # account for exhausted pre-edit program which will have the last onde
+            # as active_node wven when it is completed
+            # see tests test_wait and test_command_exec_id for details
+            if x.node.completed and 'visit_end' in x.node.action_history:
+                pass
+            else:
+                x.execute()
             if x.tick_break:
                 break
         else:
@@ -104,7 +110,9 @@ def run_ffw_tick(gen: NodeGenerator, interrupt_node_callback: Callable[[NodeActi
     return False
 
 
-TContent = TypeVar('TContent')
+def prepend(action: NodeAction, gen: NodeGenerator) -> NodeGenerator:
+    yield action
+    yield from gen
 
 
 class NodeVisitor(NodeVisitorGeneric):

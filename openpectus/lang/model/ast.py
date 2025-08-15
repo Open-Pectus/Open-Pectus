@@ -210,7 +210,9 @@ class Node(SupportCancelForce):
     def has_children(self) -> bool:
         return False
 
-    def get_child_by_id(self, id: str) -> Node | None:
+    def get_child_by_id(self, id: str, include_self=False) -> Node | None:
+        if include_self and self.id == id:
+            return self
         if self.has_children():
             assert isinstance(self, NodeWithChildren)
             for child in self.children:
@@ -273,7 +275,8 @@ class Node(SupportCancelForce):
         self.errors.append(error)
 
     def __str__(self):
-        return f"{self.__class__.__name__}(instruction_name='{self.instruction_name}', arguments={self.arguments}, id='{self.id}')"
+        return f"{self.__class__.__name__}(instruction_name='{self.instruction_name}', " + \
+            f"arguments={self.arguments}, id='{self.id}')"
 
     def __repr__(self):
         return self.__str__()
@@ -390,7 +393,11 @@ class ProgramNode(NodeWithChildren):
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
         self.active_node: Node | None = None
-        """ The node currently executing. Maintained by interpreter. """
+        """ The node currently executing. Is never ProgramNode. Is None untli first instruction is
+        visited. Is not cleared at the end but keeps pointing to the last instruction.
+
+        The value is maintained by the interpreters program iterator. """
+
         self.revision: int = 0
         """ The program revision. Starts as 0 and increments every time an edit is performed while running. """
 
@@ -412,13 +419,15 @@ class ProgramNode(NodeWithChildren):
         add_child_nodes(self, nodes)
         return nodes
 
-    def extract_tree_state(self, skip_started_nodes=False) -> dict[str, NodeState]:
-        """ Return map of all nodes keyed by their node id """
+    def extract_tree_state(self) -> dict[str, NodeState]:
+        """ Return map of all nodes' state keyed by their node id.
+
+        This includes non-started nodes that should not be imported.
+        apply_tree_state() handles the filtering on import. """
         result: dict[str, NodeState] = {}
 
         def extract_child_state(node: Node, result: dict[str, NodeState]):
-            if node.started or not skip_started_nodes:
-                result[node.id] = node.extract_state()
+            result[node.id] = node.extract_state()
 
             if isinstance(node, NodeWithChildren):
                 for child in node.children:
@@ -429,9 +438,15 @@ class ProgramNode(NodeWithChildren):
 
     def apply_tree_state(self, state: dict[str, NodeState]):
         def apply_child_state(node: Node):
-            node_state = state.get(node.id, None)
-            if node_state is not None:
-                node.apply_state(node_state)
+            try:
+                node_state = state.get(node.id, None)
+                if node_state is not None:
+                    # Only import state from nodes that have run, i.e nodes before active_node. This leaves
+                    # nodes after active_node alone, which allows changing node types for all nodes that have not started.
+                    if len(node_state["action_history"]) > 0:
+                        node.apply_state(node_state)
+            except KeyError as ke:
+                raise ValueError(f"Failed to apply state {state} to node {node}. Error: {str(ke)}")
             if isinstance(node, NodeWithChildren):
                 for child in node.children:
                     apply_child_state(child)
@@ -447,8 +462,14 @@ class ProgramNode(NodeWithChildren):
         return state
 
     def apply_state(self, state: NodeState):
+        # Note: while revision is imported from the edited method, method_manager increments it
+        # right after the merge
         self.revision = int(state["revision"])  # type: ignore
         return super().apply_state(state)
+
+    def __str__(self):
+        return f"{self.__class__.__name__}(instruction_name='{self.instruction_name}', revision={self.revision}, " + \
+            f"id='{self.id}')"
 
     @staticmethod
     def empty() -> ProgramNode:
@@ -671,7 +692,10 @@ class InterpreterCommandNode(CommandBaseNode):
         return state
 
     def apply_state(self, state):
-        self.wait_start_time = state["wait_start_time"]  # type: ignore
+        try:
+            self.wait_start_time = state["wait_start_time"]  # type: ignore
+        except KeyError:
+            self.wait_start_time = None
         super().apply_state(state)
 
     def reset_runtime_state(self, recursive):

@@ -24,11 +24,11 @@ import openpectus.lang.model.ast as p
 
 
 configure_test_logger()
-set_engine_debug_logging()
+#set_engine_debug_logging()
 set_interpreter_debug_logging()
 logging.getLogger("openpectus.lang.exec.runlog").setLevel(logging.DEBUG)
 logging.getLogger("openpectus.engine.method_manager").setLevel(logging.DEBUG)
-logging.getLogger("openpectus.lang.exec.visitor").setLevel(logging.DEBUG)
+#logging.getLogger("openpectus.lang.exec.visitor").setLevel(logging.DEBUG)
 
 
 # pint takes forever to initialize - long enough
@@ -114,10 +114,8 @@ class TestMethodManager(unittest.TestCase):
             method2 = Method.from_numbered_pcode("01 Mark: B")
 
             # verify edit error
-            instance.engine.set_method(method2)
-            with self.assertRaises(EngineError) as ctx:
-                instance.run_ticks(1)
-            self.assertIsInstance(ctx.exception.exception, MethodEditError)
+            with self.assertRaises(MethodEditError):
+                instance.engine.set_method(method2)
 
     def test_may_not_edit_a_started_line(self):
         # consider what changes we want to accept:
@@ -136,10 +134,8 @@ class TestMethodManager(unittest.TestCase):
             method2 = Method.from_numbered_pcode("01 Mark: B")
 
             # verify edit error
-            instance.engine.set_method(method2)
-            with self.assertRaises(EngineError) as ctx:
-                instance.run_ticks(1)
-            self.assertIsInstance(ctx.exception.exception, MethodEditError)
+            with self.assertRaises(MethodEditError):
+                instance.engine.set_method(method2)
 
 
     def test_may_edit_line_awaiting_threshold(self):
@@ -168,17 +164,13 @@ class TestMethodManager(unittest.TestCase):
 
             # verify no edit error
             instance.engine.set_method(method2)
-            instance.run_ticks(1)
 
             # note that editing the node resets its threshold progress - which may be ok?
             instance.run_ticks(15)
 
             # verify edit error
-            instance.engine.set_method(method3)
-            with self.assertRaises(EngineError) as ctx:
-                instance.run_ticks(1)
-            self.assertIsInstance(ctx.exception.exception, MethodEditError)
-
+            with self.assertRaises(MethodEditError):
+                instance.engine.set_method(method3)
 
     def test_may_add_line_after_started_line(self):
 
@@ -199,13 +191,35 @@ class TestMethodManager(unittest.TestCase):
 
             # verify no edit error
             instance.engine.set_method(method2)
-            instance.run_ticks(1)
 
             instance.run_until_event("method_end")
 
             # verify run behavior
             self.assertEqual(["A", "B", "C"], instance.marks)
 
+    def test_may_edit_line_after_started_line(self):
+        method1 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Wait: 0.1s
+03 Mark: B
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Wait: 0.1s
+03 Info: C
+""")
+
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_instruction("Mark", state="completed", arguments="A")
+            self.assertEqual(["A"], instance.marks)
+
+            # verify no edit error
+            instance.engine.set_method(method2)
+
+            instance.run_until_instruction("Info", state="completed", arguments="C")
+            self.assertEqual(["A"], instance.marks)
 
     def test_may_extend_block_after_block_started(self):
 
@@ -299,7 +313,6 @@ class TestMethodManager(unittest.TestCase):
 
             # verify no edit error
             instance.engine.set_method(method2)
-            instance.run_ticks(1)
 
             instance.run_until_instruction("Mark", state="completed", arguments="D")
 
@@ -382,8 +395,6 @@ class TestMethodManager(unittest.TestCase):
 
 
     def test_may_extend_alarm(self):
-        # bug - alarm is unregistered before ffw but does not get registered back during ffw
-        
         method1 = Method.from_numbered_pcode("""\
 02 Alarm: Run Time > 0s
 03     Mark: B
@@ -405,7 +416,6 @@ class TestMethodManager(unittest.TestCase):
 
             # insert Mark: D and verify no edit error
             instance.engine.set_method(method2)
-            instance.run_ticks(1)
 
             instance.run_until_instruction("Mark", state="completed", arguments="D")
 
@@ -434,13 +444,14 @@ class TestMethodManager(unittest.TestCase):
         with runner.run() as instance:
             instance.start()
 
-            # Method from frontend must always be sent with a trailing blank line. This means we should only test on such data
-            
-            instance.run_ticks(5)
+            # Method from frontend must always be sent with a trailing blank line.
+            # This means we should only test on such data
+
+            instance.run_until_instruction("Mark", "completed", arguments="A")
+            instance.run_ticks(2)
 
             # verify no edit error
             instance.engine.set_method(method2)
-            instance.run_ticks(1)
 
             instance.run_until_instruction("Mark", "completed", arguments="B")
             self.assertEqual(["A", "B"], instance.marks)
@@ -470,17 +481,14 @@ class TestMethodManager(unittest.TestCase):
 
             # Note line 04 - it does not matter whether it is indented or not in method1. 
             # Its indentation will be set to whatever method2 specifies            
-            
+
             instance.run_until_instruction("Mark", "completed", arguments="B")
 
             # verify no edit error
             instance.engine.set_method(method2)
-            instance.run_ticks(1)
 
             instance.run_until_instruction("Mark", "completed", arguments="X")
 
-            # instance.run_until_instruction("Mark", "completed", arguments="B")
-            # self.assertEqual(["A", "B"], instance.marks)
             self.assertEqual(["A", "B", "C", "X"], instance.marks)
 
     @unittest.skip(reason="Not yet implemented")
@@ -497,7 +505,12 @@ class TestMethodManager(unittest.TestCase):
         # in this method line 05 is not marked as completed even when 06 is completed. Not sure why.
         # but we have to validate against this
 
+    @unittest.skip("TODO")
+    def test_macro(self):
+        # Can edit macro until it has run the first time
+        # consider line state
 
+        raise NotImplementedError()
 
     @unittest.skip("Looks like a straightforward fix - skip for now")
     def test_may_extend_macro_if_not_executed(self):
@@ -538,12 +551,151 @@ class TestMethodManager(unittest.TestCase):
     @unittest.skip("TODO")
     def test_edit_injected(self):
         # hmm this is weird. a method is running and user injects code - that's not a method edit, just an injection
-        # so what should happen for edit if interpreter har injected code?
+        # discussion in issue #829
         raise NotImplementedError()
 
-    @unittest.skip("TODO")
-    def test_macro(self):
-        raise NotImplementedError()
+    def test_active_node(self):
+        # program.active_node is never ProgramNode and is only None right at the beginning until the first program child
+        # node is visited. In this case, a method merge is not necessary, and a simple set will do. Automatic fallback is
+        # implemented for this because it simplifiex merge to always have a valid target_node_id
+        method1 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Mark: B
+""")
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_ticks(1)  # break fast (before first instruction is set as active_node)
+            self.assertIsNone(instance.method_manager.program.active_node)
 
-# Can edit macro until it has run the first time
-# consider line state - 
+            rev_0 = instance.engine.method_manager.program.revision
+
+            # verify no edit error
+            status = instance.engine.set_method(method2)
+
+            # verify fall back to set_method
+            self.assertTrue(status == "set_method")
+
+            rev_1 = instance.engine.method_manager.program.revision
+
+            # not entirely sure how revisions (should) work, who increments and such
+            # and its probably different when setting than merging
+            self.assertEqual(rev_0, rev_1,
+                             "Expected same method revision meaning that set_method happened instead of merge_method ")
+
+            instance.run_until_instruction("Mark", state="completed", arguments="B")
+
+            # verify run behavior
+            self.assertEqual(["A", "B"], instance.marks)
+
+    def test_wait(self):
+        method1 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Wait: 0.3s
+03 
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Wait: 0.3s
+03 Wait: 0.6s
+""")
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_instruction("Wait", state="completed", arguments="0.3s")
+            instance.engine.set_method(method2)
+
+            instance.run_until_instruction("Wait", state="completed", arguments="0.6s")
+
+    def test_command_exec_id(self):
+        # Check how it works if a program containing commands is edited.
+        # Specifically, RuntimeInfo.with_edited_program() use RuntimeRecordState.clone() which reuses the
+        # command instance and command_exec_id which may be a problem.
+        # command is set by RuntimeRecord.add_state_internal_engine_command_set() and add_state_uod_command_set()
+        # command_exec_id is set RuntimeRecord.add_command_state_started() and friends
+        # so how to test this?
+
+        method1 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Reset
+03 Wait: 0.2s
+04 
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Reset
+03 Wait: 0.2s
+04 Wait: 0.6s
+""")
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+
+            # Wait until mid-execution of Reset's 5 ticks, note that this is right at the end of the v0 method
+            instance.run_until_instruction("Wait", state="completed", arguments="0.2s")
+
+            instance.engine.set_method(method2)
+
+            # note how Reset still gets ticked by engine, even though it's water under the bridge for interpreter
+            instance.run_until_instruction("Wait", state="completed", arguments="0.6s")
+
+    def test_command_exec_id_2(self):
+        # Variation of the above that performs the edit earlier than end-of-method
+
+        method1 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Reset
+03 Wait: 0.2s
+04 
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Reset
+03 Wait: 0.2s
+04 Wait: 0.6s
+""")
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+
+            # Wait until mid-execution of Reset's 5 ticks but also not at the end of the v0 method
+            instance.run_until_instruction("Wait", state="started", arguments="0.2s")
+
+            instance.engine.set_method(method2)
+
+            # note how Reset still gets ticked by engine, even though interpreter
+            instance.run_until_instruction("Wait", state="completed", arguments="0.6s")
+
+
+    def test_continue_after_failed_edit(self):
+        # if an edit fails, we should be able to continue running the old method, as if
+        # no edit has happened, i.e. the old interpreter instance still works
+        method1 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Mark: B
+03 Mark: C
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Mark: D
+03 Mark: C
+""")
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+
+            self.assertEqual(0, instance.method_manager.program.revision)
+            instance.run_until_instruction("Mark", arguments="B")
+
+            # can't edit running/completed line
+            with self.assertRaises(MethodEditError):
+                instance.engine.set_method(method2)
+
+            # but the previous interpreter can still continue
+            self.assertEqual(0, instance.method_manager.program.revision)
+            instance.run_until_instruction("Mark", arguments="C")
+            self.assertEqual(['A', 'B', 'C'], instance.marks)

@@ -17,7 +17,7 @@ from openpectus.lang.exec.tags import (
     TagCollection, SystemTagName,
 )
 from openpectus.lang.exec.visitor import (
-    NodeGenerator, NodeVisitor, NodeAction, run_ffw_tick, run_tick
+    NodeGenerator, NodeVisitor, NodeAction, prepend, run_ffw_tick, run_tick
 )
 import openpectus.lang.model.ast as p
 from typing_extensions import override
@@ -72,6 +72,16 @@ class CallStack:
     def __repr__(self):
         return self.__str__()
 
+    def with_edited_program(self, program: p.ProgramNode) -> CallStack:
+        instance = CallStack()
+        for node in self._records:
+            new_node = program.get_child_by_id(node.id, include_self=True)
+            if new_node is None:
+                raise ValueError(f"Failed to clone node: {node}")
+            assert isinstance(new_node, (p.BlockNode, p.ProgramNode))
+            instance.push(new_node)
+        return instance
+
 
 class InterpreterContext():
     """ Defines the context of program interpretation"""
@@ -114,82 +124,80 @@ class PInterpreter(NodeVisitor):
         self._ffw = False
         self._in_interrupt = False
 
-        self.runtimeinfo: RuntimeInfo = RuntimeInfo()        
+        self.runtimeinfo: RuntimeInfo = RuntimeInfo()
         self.ffw_tick_limit = FFW_TICK_LIMIT
-        self.pending_main_action: NodeAction | None = None
-        self.pending_interrupt_actions: dict[str, NodeAction] = {}
         """ instructions pending following a ffw run """
 
         logger.debug("Interpreter initialized")
 
+    def with_edited_program(self, program: p.ProgramNode) -> PInterpreter:
+        """ Returns a new interpreter instance with program modified and in the state it would have been in if the updated
+        program had been run from the beginning for the same number of ticks.
 
-    def update_method_and_ffw(self, program: p.ProgramNode):
-        """ Update method while method is running. """
-        # set new program, and patch state to point to new nodes, set ffw and advance generator to get to where we were
+        Either succeeds and returns the updated interpreter instance or fails with EditError.
+        The source interpreter and its entire state is unmodified, so the method edit is transactional. """
 
-        # collect node id from old method. The id will match the corresponding node in the new method.
-        # there may be no active node, e.g. if all nodes have been interpreted
-        target_node_id: str | None = self._program.active_node.id if self._program.active_node is not None else None
+        # Use same context. We have to trust that e.g. tags will not be updated or events emitted until ffw is complete
+        # Note: We could possibly verify this by adding some safeguards
+        instance = PInterpreter(program, self.context)
+        instance.runtimeinfo = self.runtimeinfo.with_edited_program(program)
+        instance.stack = self.stack.with_edited_program(program)
 
-        # replace references to old nodes with references to the corresponding new nodes
-        self.runtimeinfo.patch_node_references(program)
-        self._patch_node_references(program)
+        assert self._program.active_node is not None, "Active node is  None. This should not occur during method merge"
+        assert not isinstance(self._program.active_node, p.ProgramNode)
+        target_node_id: str = self._program.active_node.id
+        target_node = program.get_child_by_id(target_node_id)
+        if target_node is None:
+            raise ValueError(f"FFW aborted because target node with id {target_node_id} was not found in updated method")
+        logger.info(f"Target node for ffw is {target_node}")
+        if target_node.completed:
+            logger.debug("Note: Target node is already completed")
 
-        # Remove existing interrupts and modify their nodes such that interrupts are recreated during ffw.
-        # We can't patch the interrupts because they contain iterators of child collections of the old nodes.
-        # However, we can have the relevant nodes recreate their interrupts and have the child nodes' state
-        # guide ffw to the correct position. This just requires that we modify (only) the parent nodes of
-        # activate interrupts.
-        interrupt_keys = list(self._interrupts_map.keys())
-        for key in interrupt_keys:
+        if self._is_awaiting_threshold(self._program.active_node):  # same as testing target_node but seems safer
+            logger.debug("Target node is awaiting threshold - clearing its history to start over")
+            target_node.action_history.clear()
+
+        # modify new nodes corresponding to old nodes with registered interrupts, so the new nodes can re-register during ffw
+        for key in self._interrupts_map.keys():
             node = program.get_child_by_id(key)
             if node is None:
                 logger.warning(f"Failed to find and reset interrupt node id {key}")
                 continue
-            logger.debug(f"Resetting interrupt for node {node}")
-            self._unregister_interrupt(node)
+            logger.debug(f"Resetting interrupt state for node {node}")
+            assert isinstance(node, p.NodeWithChildren)
+            node.interrupt_registered = False
             node.action_history.remove(ACTION_NAME_REGISTER)
 
-        self._program = program
-        self._generator = None  # clear so either tick or us may set it
-        target_node = program.get_child_by_id(target_node_id) if target_node_id is not None else None  # find target node in new ast
-        if target_node is None and target_node_id is not None:
-            logger.error(f"FFW aborted because target node {target_node_id} was not found in new ast")
-            raise ValueError(
-                f"Error modifying method. The target node_id {target_node_id} was not found in the updated method.")
+        generator = instance.visit_ProgramNode(program)
+        instance._run_ffw(generator, target_node_id)
 
-        if target_node is not None and self._is_awaiting_threshold(target_node):
-            logger.debug("Target node is awaiting threshold - clearing its history to start over")
-            target_node.action_history.clear()
+        logger.info(f"Interpreter for revision {instance._program.revision} is ready")
+        return instance
 
-        # Start fast-forward (FFW) from start to target_node_id
-        if target_node is not None:
-            logger.info(f"FFW starting, target node: {target_node}, history: {target_node.action_history}")
-        else:
-            logger.info(f"FFW starting, no target node.")
-        
-        # create the generator for the new program
-        self._generator = self.visit_ProgramNode(self._program)
+    def _run_ffw(self, generator: NodeGenerator, target_node_id: str):  # noqa C901
+        """ Fast-forward iteration over both the main generator and any interrupt generators until the actions produced
+        are no longer present in the nodes' history. The purpose is to prepare all the generators to the state just
+        after the last action in their respective nodes' history.
+        """
+        assert self._generator is None
+        self._generator = generator
 
-        # Fast-forward iteration over both the main generator and any interrupt generators until the actions produced
-        # are no longer present in the nodes' history. The purpose is to prepare all the generators to the state just
-        # after the last action in their respective nodes' history.
-        main_complete = False # whether the main generator is 'complete'
+        main_complete = False  # whether the main generator is 'complete'
         active_interrupt_keys = list(self._interrupts_map.keys())
         ffw_tick = 0  # number of ticks we spent in the ffw loop
         last_work_tick = 0  # tick number of the last tick we noticed progress
         self._ffw = True
         completed_interrupt_keys = []
         has_reached_target_node = False
-        
+
         def on_interrupt_node(action: NodeAction) -> None:
             if action.action_name == ACTION_NAME_REGISTER:
                 logger.warning(f"on_interrupt_node: {self._in_interrupt=} | {action.node=}")
                 assert isinstance(action.node, p.NodeWithChildren)
                 if not action.node.interrupt_registered:
-                    # Note: Rather that just calling self._register_interrupt(), we need to execute the register action. This emulates
-                    # the normal behavior that the generator hits the return statement of the NodeAction and skips the child nodes
-                    # which are only to be run by the interrupt.
+                    # Note: Rather that just calling self._register_interrupt(), we need to execute the register action.
+                    # This emulates the normal behavior that the generator hits the return statement of the NodeAction
+                    # and skips the child nodes which are only to be run by the interrupt.
                     action.execute()
 
         while True:
@@ -202,10 +210,10 @@ class PInterpreter(NodeVisitor):
                     if isinstance(x, NodeAction):
                         last_work_tick = ffw_tick
                         main_complete = True
-                        if target_node_id is not None and x.node.id == target_node_id:
+                        if x.node.id == target_node_id:
                             has_reached_target_node = True
                         logger.debug(f"Scheduling {x.action_name}, {x.node} for execution in main right after ffw")
-                        self.pending_main_action = x
+                        self._generator = prepend(x, self._generator)
                         last_work_tick = ffw_tick
                         main_complete = True
                     elif x:
@@ -230,10 +238,10 @@ class PInterpreter(NodeVisitor):
                     self._in_interrupt = False
                     if isinstance(x, NodeAction):
                         last_work_tick = ffw_tick
-                        if target_node_id is not None and x.node.id == target_node_id:
+                        if x.node.id == target_node_id:
                             has_reached_target_node = True
                         logger.debug(f"Scheduling {x.action_name}, {x.node} for execution in interrupt {key} right after ffw")
-                        self.pending_interrupt_actions[key] = x
+                        interrupt.actions = prepend(x, interrupt.actions)
                         last_work_tick = ffw_tick
                         completed_interrupt_keys.append(key)
                     elif x:
@@ -245,9 +253,10 @@ class PInterpreter(NodeVisitor):
                 except Exception:
                     logger.error("Exception during FFW interrupt handler", exc_info=True)
                     raise
-            
+
             # FFW termination is tricky because we need to synchronize the last outcomes of the main and interrupt actions.
-            # If a generator is exhausted we know its done. We also may not iterate it again because its prepared state will change
+            # If a generator is exhausted we know its done. We also may not iterate it again because its prepared state will
+            # change
             if has_reached_target_node:
                 logger.debug("FFW termination because target node was reached")
                 break
@@ -258,10 +267,11 @@ class PInterpreter(NodeVisitor):
             if ffw_tick > self.ffw_tick_limit:
                 logger.error(f"FFW failed to complete. Aborted after {ffw_tick} iterations.")
                 raise MethodEditError(message=f"FFW failed to complete. Aborted after {ffw_tick} iterations.")
-        
+
         self._ffw = False
         logger.info("FFW complete")
 
+    # TODO Remove - when macro is completed in #822
     def _patch_node_references(self, program: p.ProgramNode):  # noqa C901
         """ Patch node references to updated program nodes to account for a running method edit. """
         logger.info("Patching node references in stack")
@@ -330,7 +340,7 @@ class PInterpreter(NodeVisitor):
         #     logger.error(f"Cannot register interrupt for node {node}. A handler for this node already exists.")
         #     raise Exception("Interrupt registration failed for node {node}")
         if node.interrupt_registered:
-            logger.warning("The state for node {node} indicates that it already has a registered interrupt")
+            logger.warning(f"The state for node {node} indicates that it already has a registered interrupt")
 
         logger.debug(f"Interrupt registered for {node}, handler: {handler_name}")
         self._interrupts_map[node.id] = Interrupt(node, handler)
@@ -380,12 +390,7 @@ class PInterpreter(NodeVisitor):
         # execute one iteration of program
         assert self._generator is not None
         try:
-            if self.pending_main_action is not None:
-                logger.debug(f"Run pending main action '{self.pending_main_action.action_name}' for node {self.pending_main_action.node}")
-                self.pending_main_action.execute()
-                self.pending_main_action = None
-            else:
-                run_tick(self._generator)
+            run_tick(self._generator)
         except StopIteration:
             logger.debug("Main generator exhausted")
             pass
@@ -405,14 +410,7 @@ class PInterpreter(NodeVisitor):
             logger.debug(f"Executing interrupt tick for node {interrupt.node}")
             try:
                 self._in_interrupt = True
-                key = interrupt.node.id
-                if key in self.pending_interrupt_actions.keys():
-                    interrupt_action = self.pending_interrupt_actions[key]
-                    logger.debug(f"Run pending interrupt action '{interrupt_action.action_name}' for node {interrupt_action.node}")
-                    interrupt_action.execute()
-                    del self.pending_interrupt_actions[key]
-                else:
-                    run_tick(interrupt.actions)
+                run_tick(interrupt.actions)
                 self._in_interrupt = False
             except StopIteration:
                 logger.debug(f"Interrupt generator {interrupt.node} exhausted")
@@ -520,6 +518,10 @@ class PInterpreter(NodeVisitor):
 
     @override
     def visit(self, node: p.Node) -> NodeGenerator:
+        # Node iterators must be prepared using visit_ProgramNode(), not visit().
+        # This means ProgramNode won't appear here.
+        assert not isinstance(node, p.ProgramNode)
+
         def start(node):
             self._program.active_node = node
 
@@ -530,7 +532,7 @@ class PInterpreter(NodeVisitor):
                     node,
                     self._tick_time, self._tick_number,
                     self.context.tags.as_readonly())
-        # use custom name to avoid action name collision with actions in the visit_* method
+        # use custom name to avoid action name collision with actions in the visit_* methods
         yield NodeAction(node, start, name="visit_start")
 
         # log all visits
@@ -556,7 +558,7 @@ class PInterpreter(NodeVisitor):
                 self._tick_time, self._tick_number,
                 self.context.tags.as_readonly())
 
-        # use custom name to avoid action name collision with actions in the visit_* method
+        # use custom name to avoid action name collision with actions in the visit_* methods
         yield NodeAction(node, end, name="visit_end", tick_break=True)
 
         logger.debug(f"Visit {node} done")
@@ -596,7 +598,7 @@ class PInterpreter(NodeVisitor):
 
 
     def visit_MarkNode(self, node: p.MarkNode) -> NodeGenerator:
-        def do(node: p.MarkNode):            
+        def do(node: p.MarkNode):
             logger.info(f"Mark {node.name} running")
             try:
                 mark_tag = self.context.tags.get("Mark")
@@ -783,7 +785,7 @@ class PInterpreter(NodeVisitor):
 
 
     def visit_InterpreterCommandNode(self, node: p.InterpreterCommandNode) -> NodeGenerator:  # noqa C901
-        # TODO node.completed
+
         def InterpreterCommandNode_start(node):
             self._add_record_state_started(node)
         yield NodeAction(node, InterpreterCommandNode_start)
@@ -848,9 +850,10 @@ class PInterpreter(NodeVisitor):
             self._add_record_state_failed(node)
             raise NodeInterpretationError(node, f"Interpreter command '{node.instruction_name}' is not supported")
 
-        def complete(node):
+        def complete(node: p.InterpreterCommandNode):
             logger.debug(f"Interpreter command Node {node} complete")
             self._add_record_state_complete(node)
+            node.completed = True
 
         yield NodeAction(node, complete)
 
