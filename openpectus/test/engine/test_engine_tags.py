@@ -21,6 +21,7 @@ from openpectus.test.engine.utility_methods import (
     EngineTestRunner,
     configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging
 )
+from openpectus.lang.exec.units import as_decimal
 
 
 configure_test_logger()
@@ -57,7 +58,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:  # noqa C901
         return result
 
     def cmd_regex(cmd: UodCommand, number: str, number_unit: str) -> None:
-        cmd.context.tags["CmdWithRegex_Flowrate"].set_value_and_unit(float(number), number_unit, time.time())
+        cmd.context.tags["CmdWithRegex_Flowrate"].set_value_and_unit(as_decimal(number), number_unit, time.time())
         cmd.set_complete()
 
     def overlap_exec(cmd: UodCommand, **kvargs) -> None:
