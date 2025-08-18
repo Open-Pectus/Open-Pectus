@@ -190,7 +190,7 @@ class Tag(ChangeSubject, EventListener):
 
     def set_value_and_unit(self, val: TagValueType, unit: str, tick_time: float) -> None:
         """ Set a new value by converting the provided value and unit into the the unit of the tag. """
-        if not isinstance(val, (int, float,)):
+        if not isinstance(val, (int, float, decimal.Decimal)):
             raise ValueError(f"Cannot set unit for a non-numeric value {val} of type {type(val).__name__}")
         if self.unit is None:
             raise ValueError("Cannot change unit on a tag with no unit")
@@ -200,7 +200,7 @@ class Tag(ChangeSubject, EventListener):
     def simulate_value_and_unit(self, val: TagValueType, unit: str, tick_time: float) -> None:
         """ Set a simulated value by converting the provided value and unit into the the unit of the tag. """
         self.simulated = True
-        if not isinstance(val, (int, float,)):
+        if not isinstance(val, (int, float, decimal.Decimal)):
             raise ValueError(f"Cannot set unit for a non-numeric value {val} of type {type(val).__name__}")
         if self.unit is None:
             raise ValueError("Cannot change unit on a tag with no unit")
