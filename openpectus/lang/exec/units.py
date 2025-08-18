@@ -196,10 +196,16 @@ def get_compatible_unit_names(unit: str | None) -> list[str]:
     if unit is None:
         return [""]
 
+    if unit in ['vol%', 'wt%', 'mol%']:
+        return [unit]
+
     quantity_name = get_unit_quantity_name(unit)
     assert quantity_name is not None and quantity_name != ""
 
-    pint_mapping = QUANTITY_PINT_MAP.get(quantity_name)
+    if quantity_name.startswith("[") and quantity_name.endswith("]"):
+        quantity_name = quantity_name[1:-2]
+
+    pint_mapping = QUANTITY_PINT_MAP.get(quantity_name[1:-2])
     if pint_mapping is None:
         # non-pint unit, return all units of this quantity name
         return QUANTITY_UNIT_MAP[quantity_name]
