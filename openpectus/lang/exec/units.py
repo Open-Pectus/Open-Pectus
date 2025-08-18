@@ -25,7 +25,6 @@ ureg.define("cm2 = cm**2")
 ureg.define("LMH = mm/h")
 ureg.define("wt = 1")
 ureg.define("vol = 1")
-ureg.define("AU = [absorbance]")
 Q_ = Quantity
 
 logger = logging.getLogger(__name__)
@@ -73,6 +72,7 @@ QUANTITY_PINT_MAP: dict[str, str] = {
     'flux': '[length] / [time]',
     'permeability': '[length] ** 2 * [time] / [mass]',
     'absorbance': '[absorbance]',
+    'conductivity': '[conductivity]',
 }
 """ Map quantity names to pint dimensions or None if not a pint dimension. """
 
