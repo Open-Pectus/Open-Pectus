@@ -3,15 +3,28 @@ import json
 import os
 import unittest
 
-from openpectus.aggregator.aggregator_server import AggregatorServer
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-project_path = os.path.join(os.path.dirname(__file__), "..", "..")
-fastapi = AggregatorServer().fastapi
-client = TestClient(fastapi)
+from openpectus.aggregator.aggregator_server import AggregatorServer
+
+project_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+fastapi: FastAPI
+client: TestClient
 
 
 class AggregatorOpenAPIApiTest(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        # This is just a quick way to avoid instantiating AggregatorServer on import (__init__ is called during test discovery)
+        # It seems to just magically work using shared instances of fastapi and client and even clean up without explicit shutdown
+        # of AggregatorServer (which is difficult becase its lifespan() method is async). Obviously the test cases will not work
+        # in parallel.
+        global fastapi, client
+        fastapi = AggregatorServer().fastapi
+        client = TestClient(fastapi)
+    
     def test_read_openapi_docs(self):
         response = client.get("/docs")
         self.assertEqual(200, response.status_code)
@@ -25,7 +38,7 @@ class AggregatorOpenAPIApiTest(unittest.TestCase):
     def test_write_openapi_spec_to_file_and_compare_with_existing(self):
         response = client.get("/openapi.json")
         self.assertEqual(200, response.status_code)
-        openapi_file = os.path.join(project_path, "frontend", "openapi.json")
+        openapi_file = os.path.join(project_path, "..", "frontend", "openapi.json")
         current_md5, updated_md5 = "", ""
         with open(openapi_file, "rb") as f:
             current_md5 = hashlib.md5(f.read()).hexdigest()

@@ -7,6 +7,9 @@ from os import path
 import pathlib
 from typing import Literal
 from itertools import chain
+import sys
+import copy
+import os
 
 import multiprocess
 
@@ -16,7 +19,7 @@ from openpectus.engine.engine_message_handlers import EngineMessageHandlers
 from openpectus.engine.engine_message_builder import EngineMessageBuilder
 from openpectus.engine.hardware import NullHardware
 from openpectus.engine.hardware_recovery import ErrorRecoveryConfig, ErrorRecoveryDecorator
-from openpectus.lang.exec.tags import SystemTagName, TagCollection
+from openpectus.lang.exec.tags import SystemTagName, create_system_tags
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 from openpectus.protocol.engine_dispatcher import EngineDispatcher
 from openpectus.engine.engine_runner import EngineRunner
@@ -49,6 +52,7 @@ logging.getLogger("asyncua.client").setLevel(logging.WARNING)
 default_host = "127.0.0.1"
 default_port = "9800"
 default_port_secure = "443"
+default_uod = "openpectus/engine/configuration/demo_uod.py"
 
 
 def get_arg_parser():
@@ -60,7 +64,7 @@ def get_arg_parser():
                         "if using --secure")
     parser.add_argument("-s", "--secure", action=BooleanOptionalAction,
                         help="Access aggregator using https/wss rather than http/ws")
-    parser.add_argument("-uod", "--uod", required=False, default="openpectus/engine/configuration/demo_uod.py",
+    parser.add_argument("-uod", "--uod", required=False, default=default_uod,
                         help="Filename of the UOD")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-validate", "--validate", action=BooleanOptionalAction,
@@ -70,6 +74,8 @@ def get_arg_parser():
     parser.add_argument("-sev", "--sentry_event_level", required=False,
                         default=sentry.EVENT_LEVEL_DEFAULT, choices=sentry.EVENT_LEVEL_NAMES,
                         help=f"Minimum log level to send as sentry events. Default is '{sentry.EVENT_LEVEL_DEFAULT}'")
+    parser.add_argument("-secret", "--secret", required=False, default="",
+                        help="Secret used to get access to aggregator")
     return parser
 
 
@@ -98,7 +104,7 @@ async def main_async(args, loop: asyncio.AbstractEventLoop):
     try:
         uod = create_uod(args.uod)
     except Exception as ex:
-        logger.error(f"Failed to create uod: {ex}")
+        logger.error(f"Failed to create uod: {ex}. Apply -v flag to validate UOD with more verbose error descriptions.")
         return
 
     engine = Engine(uod, enable_archiver=True)
@@ -109,14 +115,14 @@ async def main_async(args, loop: asyncio.AbstractEventLoop):
     else:
         port = default_port_secure if args.secure else default_port
 
-    dispatcher = EngineDispatcher(f"{args.aggregator_hostname}:{port}", args.secure, uod.options)
+    dispatcher = EngineDispatcher(f"{args.aggregator_hostname}:{port}", args.secure, uod.options, args.secret)
 
     if len(uod.required_roles) > 0 and not dispatcher.is_aggregator_authentication_enabled():
         logger.warning('"with_required_roles" specified in "demo_uod.py" but aggregator does ' +
                        'not support authentication. Engine will not be visible in the frontend.')
 
     if not run_validations(uod):
-        exit(1)
+        sys.exit(1)
 
     sentry.set_engine_uod(uod)
 
@@ -182,9 +188,9 @@ def validate_and_exit(uod_name: str):
         logger.info(f"Uod '{uod_name}' created successfully")
     except Exception:
         logger.error(f"Validation failed. Failed to create uod '{uod_name}'", exc_info=True)
-        exit(1)
+        sys.exit(1)
 
-    uod.system_tags = TagCollection.create_system_tags()
+    uod.system_tags = create_system_tags()
 
     logger.info("Validating uod configuration")
     uod.validate_configuration()
@@ -195,7 +201,7 @@ def validate_and_exit(uod_name: str):
         logger.info("Offline validation successful")
     except Exception:
         logger.error("Offline validation failed", exc_info=True)
-        exit(1)
+        sys.exit(1)
 
     run_example_commands(uod)
 
@@ -206,7 +212,7 @@ def validate_and_exit(uod_name: str):
         logger.info("Hardware connected")
     except Exception:
         logger.info("Hardware connection failed", exc_info=True)
-        exit(1)
+        sys.exit(1)
 
     try:
         uod.hwl.validate_online()
@@ -215,7 +221,7 @@ def validate_and_exit(uod_name: str):
         logger.error("Online validation failed", exc_info=True)
 
     logger.info("Validation complete. Exiting.")
-    exit(0)
+    sys.exit(0)
 
 
 def run_example_commands(uod: UnitOperationDefinitionBase):
@@ -226,7 +232,7 @@ def run_example_commands(uod: UnitOperationDefinitionBase):
     def run_example_with_description(description: str, example: str) -> list[str]:
         failed_cmds: list[str] = []
         try:
-            runner = EngineTestRunner(uod_factory=lambda: uod, pcode=example)
+            runner = EngineTestRunner(uod_factory=lambda: copy.deepcopy(uod), method=example)
             with runner.run() as instance:
                 instance.start()
                 # wait up to 1 minute, that ought to be enought for everybody
@@ -262,9 +268,9 @@ def show_register_details_and_exit(uod_name: str):
         logger.info(f"Uod '{uod_name}' created successfully")
     except Exception:
         logger.error(f"Validation failed. Failed to create uod '{uod_name}'", exc_info=True)
-        exit(1)
+        sys.exit(1)
 
-    uod.system_tags = TagCollection.create_system_tags()
+    uod.system_tags = create_system_tags()
 
     try:
         logger.info("Connecting to hardware")
@@ -272,20 +278,21 @@ def show_register_details_and_exit(uod_name: str):
         logger.info("Hardware connected")
     except Exception:
         logger.info("Hardware connection failed", exc_info=True)
-        exit(1)
+        sys.exit(1)
 
     try:
         uod.hwl.show_online_register_details()
     except Exception:
         logger.error("Error showing register details")
-        exit(1)
+        sys.exit(1)
 
-    exit(0)
+    sys.exit(0)
 
 
 def main():
     print(f"OpenPectus Engine v. {__version__}, build: {build_number}")
     args = get_arg_parser().parse_args()
+    args.uod = os.path.join(os.path.dirname(__file__), "configuration/demo_uod.py") if args.uod == default_uod else args.uod
     sentry.init_engine(args.sentry_event_level)
     if args.validate:
         validate_and_exit(args.uod)

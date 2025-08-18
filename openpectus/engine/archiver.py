@@ -1,11 +1,11 @@
-import ctypes
-from datetime import UTC, datetime
-import os
-import logging
-import platform
-import time
 import csv
-from typing import Callable
+import ctypes
+import logging
+import os
+import sys
+import time
+from datetime import UTC, datetime
+from typing import Callable, Literal
 
 from openpectus.lang.exec.runlog import RunLog
 from openpectus.lang.exec.tags import Tag, TagCollection
@@ -21,14 +21,14 @@ encoding = 'utf-8'
 # csv option defaults
 delimiter = ','     # used in old system
 # delimiter = ';'    # makes Excel 365 understand it out of the box
-quoting = csv.QUOTE_NONE
+quoting: Literal[3] = csv.QUOTE_NONE
 escapechar = None
 # Note:  The MarkTag value may include a separator char/string. Make sure that does not conflict with the options here.
 
 
 def get_free_space_mb(dirname):
     """Return folder/drive free space (in megabytes)."""
-    if platform.system() == 'Windows':
+    if sys.platform == "win32":
         free_bytes = ctypes.c_ulonglong(0)
         ctypes.windll.kernel32.GetDiskFreeSpaceExW(  # type: ignore
             ctypes.c_wchar_p(dirname),
@@ -67,6 +67,10 @@ class ArchiverTag(Tag):
 
         self.check_diskspace()
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(data_path="{self.data_path}", ' +
+                f'data_log_interval_seconds={self.data_log_interval_seconds}, last_save_tick={self.last_save_tick})')
+
     def archive(self) -> str | None:
         return None
 
@@ -83,15 +87,16 @@ class ArchiverTag(Tag):
         """ Create file and write header row"""
         assert self.file_path is not None
         assert self.tags is not None
-        with open(self.file_path, 'xt', newline='', encoding=encoding) as f:
-            writer = csv.writer(f, delimiter=delimiter, quoting=quoting, escapechar=escapechar)
-            tag_values = [tag.archive() for tag in self.tags]
-            writer.writerow(
-                ['Datetime (UTC)',] +
-                [f'{tag.name} [{tag.unit}]' if tag.unit is not None else tag.name
-                 for tag, val in zip(self.tags, tag_values)
-                 if val is not None]
-            )
+        if not os.path.isfile(self.file_path):
+            with open(self.file_path, 'xt', newline='', encoding=encoding) as f:
+                writer = csv.writer(f, delimiter=delimiter, quoting=quoting, escapechar=escapechar)
+                tag_values = [tag.archive() for tag in self.tags]
+                writer.writerow(
+                    ['Datetime (UTC)',] +
+                    [f'{tag.name} [{tag.unit}]' if tag.unit is not None else tag.name
+                    for tag, val in zip(self.tags, tag_values)
+                    if val is not None]
+                )
         self.file_ready = True
 
     def write_tags_row(self):

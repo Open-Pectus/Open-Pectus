@@ -1,11 +1,4 @@
 {
-    "antlr4.generation": {        
-        "outputDir": "codegen",
-        "mode": "external",
-        "language": "Python3",
-        "listeners": true,
-        "visitors": false
-    },
     "python.testing.unittestArgs": [
         "-v",
         "-s",
@@ -18,6 +11,5 @@
     "python.formatting.provider": "black",
     "flake8.args": [
         "--config=./openpectus/.flake8"
-    ],
-    "python.analysis.typeCheckingMode": "basic"
+    ],    
 }

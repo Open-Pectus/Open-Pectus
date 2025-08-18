@@ -9,6 +9,7 @@ import platform
 
 from fastapi_websocket_rpc import RpcMethodsBase, WebSocketRpcClient
 from fastapi_websocket_rpc.rpc_methods import RpcResponse
+from fastapi_websocket_rpc.rpc_channel import RpcChannelClosedException
 from websockets.exceptions import ConnectionClosedError
 import httpx
 import tenacity
@@ -36,6 +37,9 @@ if platform.system() == "Windows":
     # of Anaconda provided certificates.
     ssl_context = ssl.create_default_context()
     ssl_context.load_default_certs()
+    # Disable strict mode for ZScaler to work with Python > 3.12
+    # See https://community.zscaler.com/s/question/0D54u0000AfJDtECQW/
+    ssl_context.verify_flags &= ~ssl.VERIFY_X509_STRICT
 else:
     # SSL library method load_default_certs only does
     # something useful on Windows. On other systems
@@ -76,7 +80,7 @@ class EngineDispatcher():
             # Note: Must be declared async to be usable by RPC
             return self.engine_id
 
-    def __init__(self, aggregator_host: str, secure: bool, uod_options: dict[str, str]) -> None:
+    def __init__(self, aggregator_host: str, secure: bool, uod_options: dict[str, str], secret: str = "") -> None:
         super().__init__()
         self._aggregator_host = aggregator_host
         self._uod_name = uod_options.pop("uod_name")
@@ -88,18 +92,24 @@ class EngineDispatcher():
         self._handlers: dict[type, Callable[[Any], Awaitable[M.MessageBase]]] = {}
         self._engine_id = None
         self._sequence_number = 1
+        self._secret = secret
 
         http_scheme = "https" if secure else "http"
         ws_scheme = "wss" if secure else "ws"
+        self._ssl_context: ssl.SSLContext | bool = ssl_context if secure else False
         self._post_url = f"{http_scheme}://{aggregator_host}{AGGREGATOR_REST_PATH}"
         self._health_url = f"{http_scheme}://{self._aggregator_host}{AGGREGATOR_HEALTH_PATH}"
         self._rpc_url = f"{ws_scheme}://{self._aggregator_host}{AGGREGATOR_RPC_WS_PATH}"
         self._auth_config_url = f"{http_scheme}://{self._aggregator_host}{AGGREGATOR_AUTH_CONFIG_PATH}"
         logger.info(f"Connecting to aggregator using urls:\n{self._post_url}\n{self._rpc_url}")
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(_rpc_url="{self._rpc_url}", _engine_id="{self._engine_id}", ' +
+                f'_sequence_number={self._sequence_number})')
+
     def check_aggregator_alive(self) -> bool:
         try:
-            resp = httpx.get(self._health_url, headers=engine_headers, verify=ssl_context)
+            resp = httpx.get(self._health_url, headers=engine_headers, verify=self._ssl_context)
         except httpx.ConnectError as ex:
             logger.error(f"Connection to Aggregator health end point {self._health_url} failed.")
             logger.info("Connection to Aggregator health end point failed.")
@@ -120,7 +130,7 @@ class EngineDispatcher():
         return True
 
     def is_aggregator_authentication_enabled(self) -> bool:
-        response = httpx.get(self._auth_config_url, headers=engine_headers, verify=ssl_context)
+        response = httpx.get(self._auth_config_url, headers=engine_headers, verify=self._ssl_context)
         auth_config = AuthConfig(**response.json())
         return auth_config.use_auth
 
@@ -151,7 +161,7 @@ class EngineDispatcher():
             retry_config=retry_config,
             on_disconnect=[self.on_disconnect],
             user_agent_header=engine_headers,
-            ssl=ssl_context,
+            ssl=self._ssl_context if self._ssl_context else None,
         )
         try:
             await self._rpc_client.__aenter__()
@@ -184,7 +194,7 @@ class EngineDispatcher():
             return M.ErrorMessage(message="Message serialization failed")
 
         try:
-            async with httpx.AsyncClient(verify=ssl_context) as client:
+            async with httpx.AsyncClient(verify=self._ssl_context) as client:
                 response = await client.post(url=self._post_url, json=message_json, headers=engine_headers)
         except Exception as ex:
             logger.error(f"Post failed with  exception type {type(ex).__name__}")  # skip details,  exc_info=True)
@@ -225,7 +235,7 @@ class EngineDispatcher():
             response = await self._rpc_client.other.dispatch_message_async(message_json=message_json)
             assert isinstance(response, RpcResponse)
             logger.debug(f"Sent message: {message.ident}")
-        except ConnectionClosedError:
+        except (ConnectionClosedError, RpcChannelClosedException):
             raise ProtocolNetworkException("Connection closed")
         except Exception:
             logger.error(f"Unkown error sending message: {message.ident}", exc_info=True)
@@ -274,10 +284,13 @@ class EngineDispatcher():
             uod_author_email=self._uod_author_email,
             uod_filename=self._uod_filename,
             location=self._location,
-            engine_version=__version__)
+            engine_version=__version__,
+            secret=self._secret)
         register_response = await self.send_registration_msg_async(register_engine_msg)
         if not isinstance(register_response, AM.RegisterEngineReplyMsg) or not register_response.success:
             logger.warning("Aggregator refused registration")
+            if isinstance(register_response, AM.RegisterEngineReplyMsg) and not register_response.secret_match:
+                logger.error("Secret supplied by engine does not match aggregator secret")
             return None
         logger.debug(f"Aggregator accepted registration and issued engine_id: {register_response.engine_id}")
         return register_response.engine_id

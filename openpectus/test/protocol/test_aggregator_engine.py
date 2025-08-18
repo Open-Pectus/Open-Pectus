@@ -3,6 +3,7 @@ import asyncio
 from dataclasses import dataclass
 import logging
 import unittest
+from unittest.mock import Mock
 
 from openpectus.aggregator.aggregator_message_handlers import AggregatorMessageHandlers
 from openpectus.aggregator.data import database
@@ -38,6 +39,7 @@ logging.getLogger('openpectus.protocol.aggregator_dispatcher').setLevel(logging.
 
 
 class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
+    ctx: ProtocolIntegrationTestCase.Context | None = None
 
     @dataclass
     class Context:
@@ -50,10 +52,6 @@ class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
         aggregatorDispatcher: AggregatorTestDispatcher
         frontendPublisher: FrontendPublisher
         aggregator: Aggregator
-
-    def __init__(self, methodName: str = "runTest") -> None:
-        super().__init__(methodName)
-        self.ctx: ProtocolIntegrationTestCase.Context | None = None
 
     async def asyncSetUp(self) -> None:
         assert self.ctx is None
@@ -74,7 +72,7 @@ class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
 
         aggregatorDispatcher = AggregatorTestDispatcher()
         frontendPublisher = FrontendPublisher()
-        aggregator = Aggregator(aggregatorDispatcher, frontendPublisher)
+        aggregator = Aggregator(aggregatorDispatcher, frontendPublisher, Mock())
         _ = AggregatorMessageHandlers(aggregator)
 
         # connect the two test dispatchers for direct communication

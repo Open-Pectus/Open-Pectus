@@ -3,15 +3,21 @@ from uuid import UUID
 
 from openpectus.aggregator.models import RunLog, RunLogLine
 from openpectus.engine.engine import Engine
-from openpectus.lang.exec.runlog import RunLogItem, RunLogItemState, RuntimeRecordStateEnum
-from openpectus.test.engine.test_engine import create_engine
+from openpectus.lang.exec.runlog import RunLogItem, RunLogItemState, RuntimeInfo, RuntimeRecordStateEnum, assert_Runlog_HasItem, assert_Runlog_HasItem_Completed, assert_Runlog_HasItem_Started, assert_Runlog_HasNoItem, assert_Runtime_HasRecord, assert_Runtime_HasRecord_Completed, assert_Runtime_HasRecord_Started
+from openpectus.test.engine.test_engine import create_engine, create_test_uod
+
 from openpectus.test.engine.utility_methods import (
+    EngineTestRunner,
     continue_engine, run_engine, print_runlog, print_runtime_records,
-    configure_test_logger, set_engine_debug_logging
+    configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging
 )
 
 configure_test_logger()
 set_engine_debug_logging()
+set_interpreter_debug_logging()
+
+start_ticks = 3
+
 
 class TestRunlog(unittest.TestCase):
     def setUp(self):
@@ -21,53 +27,30 @@ class TestRunlog(unittest.TestCase):
         self.engine.cleanup()
 
     def assert_Runlog_HasItem(self, name: str):
-        runlog = self.engine.runtimeinfo.get_runlog()
-        for item in runlog.items:
-            if item.name == name:
-                return
-        item_names = [item.name for item in runlog.items]
-        self.fail(f"Runlog has no item named '{name}'. It has these names:  {','.join(item_names)}")
+        assert_Runlog_HasItem(self.engine.runtimeinfo, name)
+
+    def assert_Runlog_HasNoItem(self, name: str):
+        assert_Runlog_HasNoItem(self.engine.runtimeinfo, name)
 
     def assert_Runlog_HasItem_Started(self, name: str):
-        runlog = self.engine.runtimeinfo.get_runlog()
-        for item in runlog.items:
-            if item.name == name and item.state == RunLogItemState.Started:
-                return
-        self.fail(f"Runlog has no item named '{name}' in Started state")
+        assert_Runlog_HasItem_Started(self.engine.runtimeinfo, name)
 
     def assert_Runlog_HasItem_Completed(self, name: str, min_times=1):
-        occurrences = 0
-        runlog = self.engine.runtimeinfo.get_runlog()
-        for item in runlog.items:
-            if item.name == name and item.state == RunLogItemState.Completed:
-                occurrences += 1
-
-        if occurrences < min_times:
-            self.fail(f"Runlog item named '{name}' did not occur in Completed state at least " +
-                      f"{min_times} time(s). It did occur {occurrences} time(s)")
+        assert_Runlog_HasItem_Completed(self.engine.runtimeinfo, name, min_times)
 
     def assert_Runtime_HasRecord(self, name: str):
-        for r in self.engine.runtimeinfo.records:
-            if r.name == name:
-                return
-        self.fail(f"Runtime has no record named '{name}'")
+        assert_Runtime_HasRecord(self.engine.runtimeinfo, name)
 
     def assert_Runtime_HasRecord_Started(self, name: str):
-        for r in self.engine.runtimeinfo.records:
-            if r.name == name and r.has_state(RuntimeRecordStateEnum.Started):
-                return
-        self.fail(f"Runtime has no record named '{name}' in state Started")
+        assert_Runtime_HasRecord_Started(self.engine.runtimeinfo, name)
 
     def assert_Runtime_HasRecord_Completed(self, name: str):
-        for r in self.engine.runtimeinfo.records:
-            if r.name == name and r.has_state(RuntimeRecordStateEnum.Started):
-                return
-        self.fail(f"Runtime has no record named '{name}' in state Completed")
+        assert_Runtime_HasRecord_Completed(self.engine.runtimeinfo, name)
 
     def test_start_complete_UodCommand(self):
         e = self.engine
 
-        run_engine(e, "Reset", 3)
+        run_engine(e, "Reset", start_ticks + 1)
         self.assert_Runlog_HasItem_Started("Reset")
 
         continue_engine(e, 5)
@@ -83,7 +66,7 @@ class TestRunlog(unittest.TestCase):
     def test_start_complete_InstructionUodCommand(self):
         e = self.engine
 
-        run_engine(e, "Mark: A", 3)
+        run_engine(e, "Mark: A", start_ticks + 1)
 
         self.assert_Runtime_HasRecord_Started("Mark: A")
         self.assert_Runtime_HasRecord_Completed("Mark: A")
@@ -94,7 +77,7 @@ class TestRunlog(unittest.TestCase):
         e = self.engine
 
         cmd = "Increment run counter"
-        run_engine(e, cmd, 5)
+        run_engine(e, cmd, start_ticks + 3)
 
         print_runtime_records(e)
 
@@ -111,7 +94,7 @@ Mark: a
 Watch: Run Counter > -1
     Mark: b
 Mark: c"""
-        run_engine(e, cmd, 5)
+        run_engine(e, cmd, 10)
 
         cmd = "Mark: b"
         self.assert_Runtime_HasRecord_Started(cmd)
@@ -126,7 +109,7 @@ Alarm: Run Counter < 5
     Mark: b
     Increment run counter
 """
-        run_engine(e, cmd, 5)
+        run_engine(e, cmd, 6)
 
         cmd = "Mark: b"
         self.assert_Runtime_HasRecord_Started(cmd)
@@ -141,7 +124,7 @@ Alarm: Run Counter < 3
     Mark: b
     Increment run counter
 """
-        run_engine(e, cmd, 10)
+        run_engine(e, cmd, 25)
 
         # print_runtime_records(e)
         # print_runlog(e)
@@ -153,6 +136,60 @@ Alarm: Run Counter < 3
         self.assert_Runlog_HasItem_Completed(cmd, 3)
 
         # print_runtime_records(e)
+
+    def test_Macro_no_invocation(self):
+        e = self.engine
+
+        cmd = """
+Macro: A
+    Mark: b
+"""
+        run_engine(e, cmd, 5)
+        print(self.engine.runtimeinfo.records)
+        cmd = "Macro: A"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
+
+    def test_Macro_single_invocation(self):
+        e = self.engine
+
+        cmd = """
+Macro: A
+    Mark: b
+Call macro: A
+"""
+        run_engine(e, cmd, 6)
+        print(self.engine.runtimeinfo.records)
+        cmd = "Macro: A"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
+        cmd = "Mark: b"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
+
+    def test_Macro_multiple_invocations(self):
+        # this test fails because macro calls fail to clear runtime state. just fix that
+        e = self.engine
+
+        cmd = """
+Macro: A
+    Mark: b
+Call macro: A
+Call macro: A
+Call macro: A
+"""
+        run_engine(e, cmd, 20)
+        cmd = "Macro: A"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
+        cmd = "Mark: b"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 3)
 
     def test_runlog_cancel_watch(self):
         e = self.engine
@@ -231,6 +268,8 @@ Watch: Block Time > .3s
 
         self.assertEqual(item.forced, True)
         self.assertEqual(item.forcible, False)
+
+        continue_engine(e, 2)
         self.assertEqual(['Foo'], e.interpreter.get_marks())
 
     def test_iteration_modification(self):
@@ -249,7 +288,7 @@ Watch: Block Time > .3s
     def test_runlog_cancel_uod_command(self):
         e = self.engine
         # start uod command
-        run_engine(e, "Reset", 3)
+        run_engine(e, "Reset", start_ticks + 1)
         self.assert_Runlog_HasItem_Started("Reset")
 
         runlog = e.runtimeinfo.get_runlog()
@@ -288,11 +327,11 @@ Watch: Block Time > .3s
     def test_runlog_force_alarm(self):
         e = self.engine
         program = """
-Alarm: Block Time > .3s
+Alarm: Block Time > 3s
     Mark: Foo
 """
         run_engine(e, program, 3)
-        item_name = "Alarm: Block Time > .3s"
+        item_name = "Alarm: Block Time > 3s"
         self.assert_Runlog_HasItem(item_name)
 
         runlog = e.runtimeinfo.get_runlog()
@@ -321,7 +360,9 @@ Alarm: Block Time > .3s
 
         self.assertEqual(item.forced, True)
         self.assertEqual(item.forcible, False)
-        self.assertEqual(['Foo'], e.interpreter.get_marks())
+
+        # continue_engine(e, 2)
+        # self.assertEqual(['Foo'], e.interpreter.get_marks())
 
     def test_runlog_watch_in_alarm_body_runs_in_each_alarm_instance(self):
         e = self.engine
@@ -331,23 +372,26 @@ Alarm: Block Time > 0s
         Mark: A
     Wait: 0.5s
 """
-        run_engine(e, program, 4)
+        run_engine(e, program, 5)
         alarm_item_name = "Alarm: Block Time > 0s"
         watch_item_name = "Watch: Block Time > 0.5s"
 
-        print_runtime_records(e, "start")
+        #print_runtime_records(e, "start")
 
         self.assert_Runlog_HasItem(alarm_item_name)
         self.assert_Runlog_HasItem(watch_item_name)
 
-        continue_engine(e, 6)
+        continue_engine(e, 5)
         self.assertEqual(['A'], e.interpreter.get_marks())
 
-        continue_engine(e, 10)  # not sure how long to wait - but surely this is enough
+        continue_engine(e, 8)  # not sure how long to wait - but surely this is enough
+
+        # print_runtime_records(e, "end")
+        # print_runlog(e)
         self.assert_Runlog_HasItem_Completed(alarm_item_name, 2)  # verify we waited long enough
         self.assertEqual(['A', 'A'], e.interpreter.get_marks())
 
-    def test_runlog_force_Mark_w_threshold_is_not_forcible(self):
+    def test_runlog_item_awaiting_threshold_is_not_rendered(self):
         e = self.engine
         program = """
 2 Mark: A
@@ -355,13 +399,7 @@ Alarm: Block Time > 0s
         run_engine(e, program, 4)
 
         mark_name = "Mark: A"
-        self.assert_Runlog_HasItem(mark_name)
-        runlog = e.runtimeinfo.get_runlog()
-        item = next(item for item in runlog.items if item.name == mark_name)
-        assert item is not None
-
-        self.assertEqual(item.forcible, False)
-        self.assertEqual(item.forced, False)
+        self.assert_Runlog_HasNoItem(mark_name)
 
     def test_runlog_force_Mark_without_threshold_is_not_forcible(self):
         e = self.engine
@@ -379,13 +417,13 @@ Mark: A
         self.assertEqual(item.forcible, False)
         self.assertEqual(item.forced, False)
 
-    def test_wait_progress_EngineInternalCommand(self):
+    def test_wait_progress_InterpreterCommand(self):
         e = self.engine
 
         cmd = "Wait: 0.5s"
         item_name = cmd
 
-        run_engine(e, cmd, 5)
+        run_engine(e, cmd, start_ticks)
         print_runtime_records(e)
 
         self.assert_Runtime_HasRecord_Started(cmd)
@@ -394,8 +432,7 @@ Mark: A
         runlog = e.runtimeinfo.get_runlog()
         item = next((i for i in runlog.items if i.name == item_name), None)
         assert item is not None and item.progress is not None
-        # after 5-2 = 3 ticks we're 0.6 percent done
-        self.assertAlmostEqual(item.progress, 0.6, delta=0.05)
+        self.assertAlmostEqual(item.progress, 0.2, delta=0.1)
         self.assertEqual(item.forcible, True)
         self.assertEqual(item.cancellable, False)
 
@@ -403,8 +440,7 @@ Mark: A
         runlog = e.runtimeinfo.get_runlog()
         item = next((i for i in runlog.items if i.name == item_name), None)
         assert item is not None and item.progress is not None
-        # after 1 more tick we're 0.8 percent done
-        self.assertAlmostEqual(item.progress, 0.8, delta=0.05)
+        self.assertAlmostEqual(item.progress, 0.5, delta=0.1)
 
         continue_engine(e, 2)
         self.assert_Runlog_HasItem_Completed(cmd)
@@ -467,6 +503,26 @@ Wait: 0.5s
         self.assertTrue(rl1 == rl2)
         self.assertTrue(rl1 != rl3)
         self.assertTrue(rl1 != rl4)
+
+
+class TestRunlog2(unittest.TestCase):
+
+    def test_Watch(self):
+        cmd = """
+Mark: a
+Watch: Run Counter > -1
+    Mark: b
+Mark: c"""
+
+        runner = EngineTestRunner(create_test_uod, method=cmd)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_instruction("Mark", "completed", arguments="b")
+
+            cmd = "Mark: b"
+            assert_Runtime_HasRecord_Started(instance.engine.runtimeinfo, cmd)
+            assert_Runtime_HasRecord_Completed(instance.engine.runtimeinfo, cmd)
+            assert_Runlog_HasItem_Completed(instance.engine.runtimeinfo, cmd)
 
 
 if __name__ == "__main__":

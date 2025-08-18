@@ -123,17 +123,10 @@ class OPCUATestServer():
         self.process.join(timeout=2)
 
 
-port_suffix = 0
 @unittest.skipIf(bool(os.environ.get("OPENPECTUS_ENGINE_SKIP_SLOW_TESTS")), reason="Skipping slow tests as configured")
 class TestOPCUAHardware(unittest.TestCase):
-    def setUp(self):
-        # Increment port_suffix by 1 for each test in the class
-        # to obtain unique port numbers for their associated
-        # test OPC-UA servers.
-        global port_suffix
-        port_suffix += 1
-
     def test_can_connect(self):
+        port_suffix = 0
         test_server = OPCUATestServer(port_suffix)
         with test_server:
             hwl = OPCUA_Hardware(host=opcua_host.format(port_suffix))
@@ -144,6 +137,7 @@ class TestOPCUAHardware(unittest.TestCase):
                 self.fail()
 
     def test_reconnect(self):
+        port_suffix = 1
         FT01 = Register("FT01", RegisterDirection.Read, path="Objects/2:FT01")
         registers = {"FT01": FT01}
 
@@ -162,6 +156,7 @@ class TestOPCUAHardware(unittest.TestCase):
             self.assertEqual(0.0, hwl.read(FT01))
 
     def test_connection_left_connected_does_not_hang(self):
+        port_suffix = 2
         FT01 = Register("FT01", RegisterDirection.Read, path="Objects/2:FT01")
         registers = {"FT01": FT01}
         test_server = OPCUATestServer(port_suffix, registers=registers)
@@ -172,6 +167,7 @@ class TestOPCUAHardware(unittest.TestCase):
             hwl.connect()  # Connection is opened but not closed subsequently
 
     def test_can_read_register(self):
+        port_suffix = 3
         FT01 = Register("FT01", RegisterDirection.Read, path="Objects/2:FT01")
         registers = {"FT01": FT01}
         test_server = OPCUATestServer(port_suffix, registers=registers)
@@ -182,6 +178,7 @@ class TestOPCUAHardware(unittest.TestCase):
             self.assertEqual(0.0, hwl.read(FT01))
 
     def test_can_write_register(self):
+        port_suffix = 4
         PU01 = Register("PU01", RegisterDirection.Both, path="Objects/2:PU01")
         registers = {"PU01": PU01}
         test_server = OPCUATestServer(port_suffix, registers=registers)
@@ -193,6 +190,7 @@ class TestOPCUAHardware(unittest.TestCase):
         self.assertIn((PU01.options["path"], 10.2,), test_server.server_write_events)
 
     def test_can_read_multiple_registers(self):
+        port_suffix = 5
         registers = {f"Readable {i:02d}": Register(f"{i:02d}",
                                                    RegisterDirection.Read,
                                                    path=f"Objects/2:readable_{i:02d}") for i in range(100)}
@@ -206,6 +204,7 @@ class TestOPCUAHardware(unittest.TestCase):
                 self.assertEqual(0.0, value)
 
     def test_can_write_multiple_registers(self):
+        port_suffix = 6
         registers = {f"Writable {i:02d}": Register(f"{i:02d}",
                      RegisterDirection.Both,
                      path=f"Objects/2:writable_{i:02d}") for i in range(100)}
@@ -220,6 +219,7 @@ class TestOPCUAHardware(unittest.TestCase):
             self.assertIn((register.options["path"], value_to_write,), test_server.server_write_events)
 
     def test_does_help_user_fix_path_typo(self):
+        port_suffix = 7
         FT01_totalizer_1_total_with_typo = Register("FT01",
                                                     RegisterDirection.Read,
                                                     path="Objects/2:FT01/2:Totalizer/2:Totaal 1")
@@ -236,6 +236,7 @@ class TestOPCUAHardware(unittest.TestCase):
             self.assertIn("Objects/2:FT01/2:Totalizer/2:Totaal 1 cannot be found", str(context.exception))
 
     def test_can_read_write_registers_with_type(self):
+        port_suffix = 8
         bool_register = Register("Bool",
                                  RegisterDirection.Both,
                                  path="Objects/2:Boolean value",
@@ -268,6 +269,7 @@ class TestOPCUAHardware(unittest.TestCase):
         self.assertEqual(values, [True, 1.0, 1,])
 
     def test_illegal_register_type_is_detected(self):
+        port_suffix = 9
         FT01_type_not_ok = Register("FT01", RegisterDirection.Read, path="Objects/2:FT01", type=bool)
         FT01_type_ok = Register("FT01", RegisterDirection.Read, path="Objects/2:FT01", type=OPCUA_Types.Boolean)
         test_server = OPCUATestServer(port_suffix, registers={"FT01": FT01_type_ok})
@@ -279,6 +281,7 @@ class TestOPCUAHardware(unittest.TestCase):
                 hwl.validate_offline()
 
     def test_type_disparity_is_detected(self):
+        port_suffix = 10
         bool_register = Register("Bool",
                                  RegisterDirection.Both,
                                  path="Objects/2:Boolean value",
@@ -301,7 +304,33 @@ class TestOPCUAHardware(unittest.TestCase):
             with self.assertRaises(HardwareLayerException):
                 hwl.validate_online()
 
+    def test_type_is_inferred(self):
+        port_suffix = 11
+        uint_register = Register("UInt",
+                                 RegisterDirection.Both,
+                                 path="Objects/2:Uint value",
+                                 type=OPCUA_Types.UInt16)
+        registers = {
+            "Uint": uint_register,
+        }
+        test_server = OPCUATestServer(port_suffix, registers=registers)
+
+        uint_register = Register("Uint",
+                                 RegisterDirection.Both,
+                                 path="Objects/2:Uint value")
+        registers = {
+            "Uint": uint_register,
+        }
+        hwl = OPCUA_Hardware(host=opcua_host.format(port_suffix))
+        hwl._registers = registers
+        values_to_write = [1]
+        with test_server, hwl:
+            hwl.validate_online()
+            hwl.write(1, uint_register)
+            hwl.write_batch(values_to_write, list(registers.values()))
+
     def test_access_level_disparity_is_detected(self):
+        port_suffix = 12
         FT01 = Register("FT01", RegisterDirection.Read, path="Objects/2:FT01")
         registers = {"FT01": FT01}
         test_server = OPCUATestServer(port_suffix, registers=registers)
@@ -315,6 +344,7 @@ class TestOPCUAHardware(unittest.TestCase):
                 hwl.validate_online()
 
     def test_exception_when_attempting_to_access_using_disconnected_client(self):
+        port_suffix = 13
         FT01 = Register("FT01", RegisterDirection.Read, path="Objects/2:FT01")
         registers = {"FT01": FT01}
         test_server = OPCUATestServer(port_suffix, registers=registers)

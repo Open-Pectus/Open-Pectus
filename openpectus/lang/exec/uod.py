@@ -4,18 +4,23 @@ from inspect import _ParameterKind, Parameter
 import logging
 import re
 from typing import Any, Callable, Literal, Tuple
+import sys
+import time
 
 from openpectus.engine.commands import ContextEngineCommand, CommandArgs
 from openpectus.engine.hardware import HardwareLayerBase, NullHardware, Register, RegisterDirection
+from openpectus.lang.exec.argument_specification import ArgSpec
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.errors import UodValidationError
 from openpectus.lang.exec.readings import (
     Reading, ReadingCollection, ReadingWithChoice, ReadingWithEntry, UodCommandDescription
 )
 from openpectus.lang.exec.tags import SystemTagName, Tag, TagCollection
-from openpectus.lang.exec.units import get_compatible_unit_names, get_volume_units
+from openpectus.lang.exec.units import get_compatible_unit_names, get_volume_units, add_unit
 from openpectus.lang.exec.tags_impl import AccumulatorBlockTag, AccumulatedColumnVolume, AccumulatorTag
-from openpectus.protocol.models import EntryDataType, PlotConfiguration
+from openpectus.protocol.models import (
+    EntryDataType, PlotConfiguration, UodDefinition, TagDefinition, CommandDefinition
+)
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +64,7 @@ class UnitOperationDefinitionBase:
         self.base_unit_provider: BaseUnitProvider = base_unit_provider
 
     def __str__(self) -> str:
-        return f"UnitOperationDefinition({self.instrument=},{self.location=},hwl={str(self.hwl)})"
+        return f'{self.__class__.__name__}(instrument={self.instrument}, location={self.location}, hwl={self.hwl})'
 
     @property
     def options(self) -> dict[str, str]:
@@ -71,7 +76,7 @@ class UnitOperationDefinitionBase:
             'location': self.location
         }
 
-    def build_commands(self):
+    def build_commands(self):  # noqa C901
         """ Complete configuration of a validated uod. This builds the commands.
         """
         for r in self.readings:
@@ -126,7 +131,7 @@ class UnitOperationDefinitionBase:
 
             self.command_descriptions[cmd_name] = desc
 
-    def validate_configuration(self):
+    def validate_configuration(self):  # noqa C901
         """ Validates these areas:
         - Each Reading matches a defined tag
         - Each Reading Command is verified
@@ -136,13 +141,18 @@ class UnitOperationDefinitionBase:
         - Each process value is verified
             - Checks that entry process values have matching tag value type and
               process value entry_data_type.
+        - Plot configuration
+            - Process value names exist
+            - Process values of a single axis share unit
         """
         fatal = False
 
         def log_fatal(msg: str):
             nonlocal fatal
             if not fatal:
-                logger.fatal("An error occured while validating the Unit Operation Definition. Pectus Engine cannot start.")
+                logger.fatal("An error occured while validating the Unit Operation Definition. " +
+                             "Pectus Engine cannot start. " +
+                             "Apply -v flag to validate UOD with more verbose error descriptions.")
             fatal = True
             logger.fatal(msg)
 
@@ -180,10 +190,15 @@ class UnitOperationDefinitionBase:
         except UodValidationError as vex:
             log_fatal("Error in command definition. " + str(vex))
 
-        if fatal:
-            exit(1)
+        try:
+            self.validate_plot_configuration()
+        except UodValidationError as vex:
+            log_fatal("Error in plot configuration. " + str(vex))
 
-    def validate_command_signatures(self):
+        if fatal:
+            sys.exit(1)
+
+    def validate_command_signatures(self):  # noqa C901
         """ Validate the signatures of command exec functions"""
         import inspect
 
@@ -275,6 +290,47 @@ either a 'value' argument or a '**kvargs' argument""")
                     raise UodValidationError(f"""Command '{key}' has an error.
 The execution function is missing named arguments or a '**kvargs' argument""")
 
+    def validate_plot_configuration(self):
+        """ Validate plot configuration """
+        # Create complete list of tags
+        assert self.system_tags
+        tags = self.tags.merge_with(self.system_tags)
+        # The following tags are added manually here because they are not
+        # present in the self.system_tags list. They will be created by the engine
+        # once it starts.
+        tags.add(Tag(name=SystemTagName.MARK))
+        tags.add(Tag(name=SystemTagName.BLOCK_TIME, unit="s"))
+        tags.add(Tag(name=SystemTagName.SCOPE_TIME, unit="s"))
+
+        # Check that process value names (tags) exist
+        for sub_plot in self.plot_configuration.sub_plots:
+            for plot_axis in sub_plot.axes:
+                for process_value_name in plot_axis.process_value_names:
+                    if not tags.has(process_value_name):
+                        raise UodValidationError(f"Tag '{process_value_name}' referenced in sub_plot of plot configuration does not exist.")
+
+        for process_value_name in self.plot_configuration.x_axis_process_value_names:
+            if not tags.has(process_value_name):
+                raise UodValidationError(f"Tag '{process_value_name}' referenced in x_axis_process_value_names of plot configuration does not exist.")
+
+        for process_value_name in self.plot_configuration.process_value_names_to_annotate:
+            if not tags.has(process_value_name):
+                raise UodValidationError(f"Tag '{process_value_name}' referenced in process_value_names_to_annotate of plot configuration does not exist.")
+
+        for color_region in self.plot_configuration.color_regions:
+            if not tags.has(color_region.process_value_name):
+                raise UodValidationError(f"Tag '{color_region.process_value_name}' referenced in color_regions of plot configuration does not exist.")
+
+        # Check that units of process values of a single axis are homogenous
+        # It might be annoying if it causes validation to fail so it only warns
+        for sub_plot in self.plot_configuration.sub_plots:
+            for plot_axis in sub_plot.axes:
+                plot_axis_tags = [tags.get(process_value_name) for process_value_name in plot_axis.process_value_names]
+                if not all(tag.unit == plot_axis_tags[0].unit for tag in plot_axis_tags):
+                    tag_name_unit = ", ".join(f"{tag.name} [{tag.unit}]" for tag in plot_axis_tags)
+                    logger.warning(f"""Process values sharing a plot axis should all have the same unit of measurement.
+The process values of PlotAxis '{plot_axis.label}' have the following units: {tag_name_unit}.""")
+
     def validate_read_registers(self):
         """ Verify that all read registers have a matching tag. """
         read_registers = [r for r in self.hwl.registers.values() if RegisterDirection.Read in r.direction]
@@ -357,6 +413,31 @@ The execution function is missing named arguments or a '**kvargs' argument""")
 
         return examples
 
+    def create_lsp_definition(self) -> UodDefinition:
+        tags = []
+        for t in self.tags:
+            tags.append(TagDefinition(name=t.name, unit=t.unit))
+        for t in self.system_tags or []:
+            tags.append(TagDefinition(name=t.name, unit=t.unit))
+        cmds: list[CommandDefinition] = []
+        for name, builder in self.command_factories.items():
+            parser = RegexNamedArgumentParser.get_instance(builder.arg_parse_fn)
+            if parser is not None:
+                cmds.append(CommandDefinition(
+                    name=name,
+                    validator=parser.serialize(),
+                    docstring=self.command_descriptions.get(name, UodCommandDescription(name)).docstring
+                ))
+        for name, desc in self.command_descriptions.items():
+            if name not in [c.name for c in cmds]:
+                logger.warning(f"Adding command '{name}' which has no command factory/buidler")
+                cmds.append(CommandDefinition(name=name, validator=None, docstring=desc.docstring))
+        return UodDefinition(
+            commands=cmds,
+            system_commands=[],
+            tags=tags
+        )
+
 
 INIT_FN = Callable[[], None]
 """ Command initialization method. """
@@ -390,6 +471,8 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
         self.exec_fn: EXEC_FN | None = None
         self.finalize_fn: FINAL_FN | None = None
         self.arg_parse_fn: PARSE_FN | None = None
+        self._performance_warned = False
+        self.cmd_state: dict[str, Any] = dict()
 
     @staticmethod
     def builder() -> UodCommandBuilder:
@@ -405,18 +488,24 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
 
     def execute(self, args: CommandArgs) -> None:
         if self.exec_fn is None:
-            raise ValueError(f"Command '{self.name}' has no execution function defined")
+            raise ValueError(f"Command {self} has no execution function defined")
 
         if not isinstance(args, dict):
             raise TypeError(
-                f"Invalid arguments provided to command '{self.name}'. Must be a dictionary, not {type(args).__name__}")
+                f"Invalid arguments provided to command {self}. Must be a dictionary, not {type(args).__name__}")
 
         super().execute(args)
+        t0 = time.perf_counter()
         self.exec_fn(args)
+        t1 = time.perf_counter()
+        dt = t1-t0
+        if not self._performance_warned and dt > 0.1:
+            logger.warning(f"exec_fn {self.exec_fn} for {self} is slow. Execution time: {dt:0.1f} s. " +
+                           "This warning is only issued once.")
+            self._performance_warned = True
 
     def cancel(self):
         super().cancel()
-        self.context.dispose_command(self)
 
     def finalize(self):
         super().finalize()
@@ -434,7 +523,7 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
             return self.arg_parse_fn(args)
 
 
-class UodCommandBuilder():
+class UodCommandBuilder:
     """ Used to builds command specifications and as factory to instantiate commands from the specifications. """
     def __init__(self) -> None:
         self.name = ""
@@ -442,6 +531,9 @@ class UodCommandBuilder():
         self.exec_fn: Callable[..., None] | None = None
         self.finalize_fn: Callable[[UodCommand], None] | None = None
         self.arg_parse_fn: Callable[[str], CommandArgs | None] | None = None
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(name={self.name})'
 
     def with_name(self, name: str) -> UodCommandBuilder:
         """ Define the name of the command. Required. """
@@ -488,7 +580,7 @@ class UodCommandBuilder():
         self.arg_parse_fn = arg_parse_fn
         return self
 
-    def build(self, uod: UnitOperationDefinitionBase) -> UodCommand:
+    def build(self, uod: UnitOperationDefinitionBase) -> UodCommand:  # noqa C901
         """ Construct the command """
 
         def arg_parse(args: str) -> CommandArgs | None:
@@ -522,7 +614,7 @@ class UodCommandBuilder():
         return c
 
 
-class UodBuilder():
+class UodBuilder:
     """ Provides a builder api to define a Unit Operation Definition """
     def __init__(self) -> None:
         self.instrument: str = ""
@@ -540,9 +632,12 @@ class UodBuilder():
         self.required_roles: set[str] = set()
         self.data_log_interval_seconds = 5
         self.base_unit_provider: BaseUnitProvider = BaseUnitProvider()
-        self.base_unit_provider.set("s", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
-        self.base_unit_provider.set("min", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
-        self.base_unit_provider.set("h", SystemTagName.BLOCK_TIME, SystemTagName.BLOCK_TIME)
+        self.base_unit_provider.set("s", SystemTagName.SCOPE_TIME, SystemTagName.BLOCK_TIME)
+        self.base_unit_provider.set("min", SystemTagName.SCOPE_TIME, SystemTagName.BLOCK_TIME)
+        self.base_unit_provider.set("h", SystemTagName.SCOPE_TIME, SystemTagName.BLOCK_TIME)
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}()'
 
     def get_logger(self):
         return logging.getLogger(f'{__name__}.user_uod')
@@ -723,6 +818,8 @@ class UodBuilder():
             cb.with_arg_parse_fn(defaultArgumentParser)
         elif arg_parse_fn is not None:
             cb.with_arg_parse_fn(arg_parse_fn)
+        elif arg_parse_fn is None:
+            cb.with_arg_parse_fn(RegexNamedArgumentParser(ArgSpec.NoArgsInstance.regex).parse)
         if cb.name in self.command_factories.keys():
             raise ValueError(f"Duplicate command name: {cb.name}")
         self.command_factories[cb.name] = cb
@@ -802,7 +899,7 @@ class UodBuilder():
             execute_command_name=execute_command_name)
         return self._with_process_value(reading)
 
-    def with_process_value_choice(self, tag_name: str, command_options: dict[str, str] | None = None) -> UodBuilder:
+    def with_process_value_choice(self, tag_name: str, command_options: dict[str, str]) -> UodBuilder:
         """ Add process value for the given tag and enable command choices.
 
         Parameters:
@@ -811,20 +908,13 @@ class UodBuilder():
                 command_options are specified.
             command_options: optional
                 Dictionary that maps command names to their pcode implementation.
-                If not specified, the tag's choices are used as both names and
-                pcode implementation. If specified, the tag's choices are not used and the
-                tag does not need to have choices defined.
         """
         if not self.tags.has(tag_name):
             raise ValueError(f"Cannot add process value choice for tag name {tag_name}. The tag name was not found")
-        tag = self.tags.get(tag_name)
+        if not command_options:
+            raise ValueError(f"Cannot add process value choice without any command_options. Use 'with_process_value' instead.")
         if command_options is not None:
             reading = ReadingWithChoice(tag_name, command_options)
-        elif tag.choices is None or len(tag.choices) == 0:
-            raise ValueError(f"Cannot add process value choice for tag name {tag_name}. " +
-                             "The tag has no choices defined and no options were given")
-        else:
-            reading = ReadingWithChoice(tag_name)
         return self._with_process_value(reading)
 
     def _with_process_value(self, reading: Reading) -> UodBuilder:
@@ -841,6 +931,14 @@ class UodBuilder():
 
     def with_data_log_interval_seconds(self, data_log_interval_seconds: float) -> UodBuilder:
         self.data_log_interval_seconds = data_log_interval_seconds
+        return self
+
+    def with_measurement_unit(self,
+                              unit: str,
+                              unit_relation: None | str = None,
+                              quantity_relation: None | dict[str, str] = None,
+                              quantity: None | str = None) -> UodBuilder:
+        add_unit(unit=unit, unit_relation=unit_relation, quantity_relation=quantity_relation, quantity=quantity)
         return self
 
     def build(self) -> UnitOperationDefinitionBase:
@@ -888,7 +986,7 @@ def unescape(re_escaped_string: str) -> str:
     """
     re.escape is used to escape options supplied to
     RegexCategorical. This function can reverses operation.
-    
+
     assert unescape(re.escape('A B')) == 'A B'
     assert unescape(re.escape('A/B')) == 'A/B'
     """
@@ -896,15 +994,23 @@ def unescape(re_escaped_string: str) -> str:
     return re.sub(r'\\(.)', r'\1', re_escaped_string)
 
 
-class RegexNamedArgumentParser():
-    def __init__(self, regex: str) -> None:
+class RegexNamedArgumentParser:
+    def __init__(self, regex: str, name: str | None = None) -> None:
         self.regex = regex
+        self.name = name
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(named_groups={self.get_named_groups()})'
 
     def parse(self, args: str) -> dict[str, Any] | None:
         match = re.search(self.regex, args)
         if not match:
             return None
         return match.groupdict()
+
+    def validate(self, args: str) -> bool:
+        match = re.search(self.regex, args)
+        return match is not None
 
     def get_named_groups(self) -> list[str]:
         # ex: r"(?P<value>[0-9]+[.][0-9]*?|[.][0-9]+|[0-9]+) ?(?P<unit>m2)"
@@ -929,20 +1035,26 @@ class RegexNamedArgumentParser():
             return []
         start = self.regex.index("<option>") + len("<option>(")
         end = self.regex.index("|(")
-        option_string = self.regex[start: end]
         result = unescape(self.regex[start: end]).split("|")
+        if "" in result:
+            result.remove("")
         return result
 
     def get_additive_options(self) -> list[str]:
         if "option" not in self.get_named_groups():
             return []
         start = self.regex.index("|(") + len("|(")
-        end = self.regex.index("|\\+)+))\\s*")
+        end = self.regex.index(r"|\+)+)(?<!\+))\s*")
         result = unescape(self.regex[start: end]).split("|")
+        if "" in result:
+            result.remove("")
         return result
 
     @staticmethod
     def get_instance(parse_func) -> RegexNamedArgumentParser | None:
+        """ Gets the RegexNamedArgumentParser associated with parse_func or None
+        if parse_func is not a regex validator
+        """
         try:
             instance = getattr(parse_func, "__self__", None)
             if instance is not None and isinstance(instance, RegexNamedArgumentParser):
@@ -950,57 +1062,11 @@ class RegexNamedArgumentParser():
         except Exception:
             return None
 
+    def serialize(self) -> str:
+        return f"RNAP-v1-{self.regex}"
 
-# Common regular expressions for use with RegexNamedArgumentParser
-
-def RegexNumber(units: list[str] | None, non_negative: bool = False) -> str:
-    """ Create a regex that parses a number with optional unit to arguments `number` and optionally `number_unit`.
-
-    `number_unit` is only provided if one or more units are given.
-    """
-    sign_part = "" if non_negative else "-?"
-    unit_part = " ?(?P<number_unit>" + "|".join(re.escape(unit).replace(r"/", r"\/") for unit in units) + ")" \
-        if units else ""
-    return rf"^\s*(?P<number>{sign_part}[0-9]+[.][0-9]*?|{sign_part}[.][0-9]+|{sign_part}[0-9]+)\s*{unit_part}\s*$"
-
-
-def RegexCategorical(exclusive_options: list[str] | None = None, additive_options: list[str] | None = None) -> str:
-    """ Create a regex that parses categorical text into an argument named `option`.
-
-    Examples - exclusive::
-
-        regex = RegexCategorical(exclusive_options=["Open", "Closed"])
-
-        self.assertEqual(re.search(regex, "Closed").groupdict(), dict(option="Closed"))
-
-        self.assertEqual(re.search(regex, "VA01"), None)
-
-        self.assertEqual(re.search(regex, "Open").groupdict(), dict(option="Open"))
-
-        self.assertEqual(re.search(regex, "Open+Closed"), None)
-
-
-    Examples - exclusive and additive::
-
-        regex = RegexCategorical(exclusive_options=['Closed'], additive_options=['VA01', 'VA02', 'VA03'])
-
-        self.assertEqual(re.search(regex, "Closed").groupdict(), dict(option="Closed"))
-
-        self.assertEqual(re.search(regex, "Closed+VA01"), None)
-
-        self.assertEqual(re.search(regex, "VA01").groupdict(), dict(option="VA01"))
-
-        self.assertEqual(re.search(regex, "VA01+VA02").groupdict(), dict(option="VA01+VA02"))
-
-        self.assertEqual(re.search(regex, "Open+Closed"), None)
-    """
-    if exclusive_options is None and additive_options is None:
-        raise TypeError("RegexCategorical() missing argument 'exclusive_options' or 'additive_options'.")
-    exclusive_option_part = "|".join(re.escape(option) for option in exclusive_options) if exclusive_options else ""
-    additive_option_part = "|".join(re.escape(option) for option in additive_options) if additive_options else ""
-    return rf"^(?P<option>({exclusive_option_part}|({additive_option_part}|\+)+))\s*$"
-
-def RegexText(allow_empty: bool = False):
-    """ Parses text into an argument named `text`."""
-    allow_empty_part = "*" if allow_empty else "+"
-    return rf"^(?P<text>.{allow_empty_part})$"
+    @staticmethod
+    def deserialize(serialized: str, name: str | None = None) -> RegexNamedArgumentParser | None:
+        if serialized.startswith("RNAP-v1-"):
+            return RegexNamedArgumentParser(serialized[8:], name)
+        return None

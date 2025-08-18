@@ -2,6 +2,7 @@ import logging
 from logging.handlers import QueueHandler
 from queue import Empty, SimpleQueue
 import time
+import datetime
 import decimal
 
 import openpectus.protocol.engine_messages as EM
@@ -26,9 +27,6 @@ engine_logger.addHandler(frontend_logging_handler)
 archiver_logger.addHandler(frontend_logging_handler)
 internal_cmds_logger.addHandler(frontend_logging_handler)
 
-MAX_SIZE_TagsUpdatedMsg = 100
-""" The maximum number of tags to include in a single TagsUpdatedMsg message """
-
 def to_model_tag(tag: TagValue) -> Mdl.TagValue:
     if tag.tick_time == 0.0:
         logger.warning(f"Tick time was 0 for tag {tag.name}")
@@ -42,7 +40,8 @@ def to_model_tag(tag: TagValue) -> Mdl.TagValue:
         value=tag_value,
         value_formatted=tag.value_formatted,
         value_unit=tag.unit,
-        direction=tag.direction
+        direction=tag.direction,
+        simulated=tag.simulated
     )
 
 class EngineMessageBuilder():
@@ -50,10 +49,18 @@ class EngineMessageBuilder():
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(engine={self.engine})'
+
     def create_uod_info(self) -> EM.UodInfoMsg:
+
+        uod_definition = self.engine.uod.create_lsp_definition()
+        uod_definition.system_commands = self.engine.get_command_definitions()
+
         return EM.UodInfoMsg(
             readings=[reading.as_reading_info() for reading in self.engine.uod.readings],
             commands=[command.as_command_info() for command in self.engine.uod.command_descriptions.values()],
+            uod_definition=uod_definition,
             plot_configuration=self.engine.uod.plot_configuration,
             hardware_str=str(self.engine.uod.hwl),
             required_roles=self.engine.uod.required_roles,
@@ -64,7 +71,7 @@ class EngineMessageBuilder():
             self.engine.notify_all_tags()
         tags: dict[str, Mdl.TagValue] = {}  # using dict to de-duplicate
         try:
-            for _ in range(MAX_SIZE_TagsUpdatedMsg):
+            while True:
                 tag_org = self.engine.tag_updates.get_nowait()
                 tag = tag_org.as_readonly()
                 tags[tag.name] = to_model_tag(tag)
@@ -88,8 +95,8 @@ class EngineMessageBuilder():
 
     def create_run_stopped_msg(self, run_id: str) -> EM.RunStoppedMsg:
         runlog_msg = self.create_runlog_msg(run_id)
-        method = self.engine._method._method
-        return EM.RunStoppedMsg(run_id=run_id, runlog=runlog_msg.runlog, method=method)
+        state = self.engine.method_manager.get_method_state()
+        return EM.RunStoppedMsg(run_id=run_id, runlog=runlog_msg.runlog, method_state=state)
 
     def create_runlog_msg(self, run_id: str) -> EM.RunLogMsg:
         tag_names: list[str] = []
@@ -141,5 +148,90 @@ class EngineMessageBuilder():
         ))
 
     def create_method_state_msg(self) -> EM.MethodStateMsg:
-        state = self.engine.calculate_method_state()
+        state = self.engine.method_manager.get_method_state()
         return EM.MethodStateMsg(method_state=state)
+
+    def create_method_msg(self) -> EM.MethodMsg:
+        return EM.MethodMsg(method=Mdl.Method.from_parser_method(self.engine._method_manager._method))
+
+    # Web Push Notification messages
+    def create_wpn_run_stopped_msg(self) -> EM.WebPushNotificationMsg:
+        started_datetime = datetime.datetime.fromtimestamp(self.engine._runstate_started_time)
+
+        started_time_str = started_datetime.strftime("%H:%M")
+        if datetime.datetime.now().day != started_datetime.day:
+            started_time_str = started_datetime.strftime("%Y-%m-%d %H:%M")
+
+        return EM.WebPushNotificationMsg(
+            notification=EM.WebPushNotification(
+                title=self.engine.uod.instrument,
+                body=f"Run which started {started_time_str} has stopped.",
+            ),
+            topic=EM.NotificationTopic.RUN_STOP,
+        )
+    
+    def create_wpn_run_started_msg(self) -> EM.WebPushNotificationMsg:
+        started_datetime = datetime.datetime.fromtimestamp(self.engine._runstate_started_time)
+        started_time_str = started_datetime.strftime("%H:%M")
+
+        return EM.WebPushNotificationMsg(
+            notification=EM.WebPushNotification(
+                title=self.engine.uod.instrument,
+                body=f"Run started {started_time_str}.",
+            ),
+            topic=EM.NotificationTopic.RUN_START,
+        )
+    
+    def create_wpn_run_paused_msg(self) -> EM.WebPushNotificationMsg:
+        return EM.WebPushNotificationMsg(
+            notification=EM.WebPushNotification(
+                title=self.engine.uod.instrument,
+                body=f"Run has been paused.",
+            ),
+            topic=EM.NotificationTopic.RUN_PAUSE,
+        )
+    
+    def create_wpn_block_started_msg(self, block_name: str) -> EM.WebPushNotificationMsg:
+        return EM.WebPushNotificationMsg(
+            notification=EM.WebPushNotification(
+                title=self.engine.uod.instrument,
+                body=f'Block "{block_name}" is now running.',
+            ),
+            topic=EM.NotificationTopic.BLOCK_START,
+        )
+    
+    def create_wpn_notify_command_msg(self, text: str) -> EM.WebPushNotificationMsg:
+        return EM.WebPushNotificationMsg(
+            notification=EM.WebPushNotification(
+                title=self.engine.uod.instrument,
+                body=text,
+            ),
+            topic=EM.NotificationTopic.NOTIFICATION_CMD,
+        )
+    
+    def create_wpn_watch_activated_msg(self, watch_argument: str) -> EM.WebPushNotificationMsg:
+        return EM.WebPushNotificationMsg(
+            notification=EM.WebPushNotification(
+                title=self.engine.uod.instrument,
+                body=f"Watch condition triggered: {watch_argument}",
+            ),
+            topic=EM.NotificationTopic.WATCH_TRIGGERED,
+        )
+    
+    def create_wpn_method_error_msg(self) -> EM.WebPushNotificationMsg:
+        return EM.WebPushNotificationMsg(
+            notification=EM.WebPushNotification(
+                title=self.engine.uod.instrument,
+                body=f"Error in method. Run paused.",
+            ),
+            topic=EM.NotificationTopic.METHOD_ERROR,
+        )
+    
+    def create_wpn_network_error_msg(self) -> EM.WebPushNotificationMsg:
+        return EM.WebPushNotificationMsg(
+            notification=EM.WebPushNotification(
+                title=self.engine.uod.instrument,
+                body="Connection between Open Pectus and equipment has been lost.",
+            ),
+            topic=EM.NotificationTopic.NETWORK_ERRORS,
+        )

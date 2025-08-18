@@ -1,14 +1,17 @@
 from __future__ import annotations
 from enum import StrEnum
-from typing import Any, Callable, Dict, List
+from typing import Callable, Dict, Iterable, List
 from uuid import UUID
 
+from openpectus.lang.exec.uod import RegexNamedArgumentParser
+from openpectus.lang.exec.argument_specification import ArgSpec
 
 class InterpreterCommandEnum(StrEnum):
     """ Commands (instructions of type PCommand) that are executed by the interpreter """
     BASE = "Base"
     INCREMENT_RUN_COUNTER = "Increment run counter"
     RUN_COUNTER = "Run counter"
+    WAIT = "Wait"
 
     @staticmethod
     def has_value(value: str):
@@ -19,41 +22,28 @@ class InterpreterCommandEnum(StrEnum):
 # Represents part of Engine API
 
 
-class CommandRequest():
+class CommandRequest:
     """ Represents a command request for engine to execute. """
-    def __init__(self, name: str, source: str, exec_id: UUID | None = None, kvargs: dict[str, Any] = {}) -> None:
+    def __init__(self, name: str, arguments: str, source: str, exec_id: UUID | None = None) -> None:
         self.name: str = name
-        self.unparsed_args: str | None = None
-        self.kvargs: dict[str, Any] | None = kvargs
+        self.arguments: str = arguments
         self.exec_id: UUID | None = exec_id
         self.source: str = source
 
         # allows tracking individual commands
         self.command_exec_id: UUID | None = None
 
-    @staticmethod
-    def from_user(name: str, unparsed_args: str | None = None) -> CommandRequest:
-        cmd_req = CommandRequest(name=name, source='user')
-        cmd_req.unparsed_args = unparsed_args
-        return cmd_req
-
-    @staticmethod
-    def from_interpreter(name: str, exec_id: UUID | None, **kvargs) -> CommandRequest:
-        if "unparsed_args" in kvargs.keys():
-            cmd_req = CommandRequest(name=name, source="@interpreter", exec_id=exec_id)
-            cmd_req.unparsed_args = kvargs["unparsed_args"]
-            return cmd_req
-        else:
-            return CommandRequest(name=name, source="@interpreter", exec_id=exec_id, kvargs=kvargs)
-
     def __str__(self) -> str:
-        return f"EngineCommand {self.name} | kvargs: {str(self.kvargs)} | unparsed_args: {self.unparsed_args}"
+        return (f'{self.__class__.__name__}(name="{self.name}", arguments={self.arguments}, ' +
+                f'source="{self.source}", exec_id={self.exec_id}, command_exec_id={self.command_exec_id})')
 
-    def get_args(self) -> dict[str, Any]:
-        if self.kvargs is None or (self.kvargs == {} and self.unparsed_args is not None):
-            return {"unparsed_args": self.unparsed_args}
-        else:
-            return self.kvargs
+    @staticmethod
+    def from_user(name: str, arguments: str = "") -> CommandRequest:
+        return CommandRequest(name=name, arguments=arguments, source='user')
+
+    @staticmethod
+    def from_interpreter(name: str, arguments: str, exec_id: UUID | None) -> CommandRequest:
+        return CommandRequest(name=name, arguments=arguments, source="@interpreter", exec_id=exec_id)
 
 
 # Represents command API towards interpreter
@@ -62,9 +52,15 @@ class CommandRequest():
 
 class Command:
     """ Represents a named command. """
-    def __init__(self, name: str, validatorFn: Callable[[str], bool] | None = None) -> None:
+    def __init__(self, name: str, validatorFn: Callable[[str], bool] | None = None,
+                 docstring: str | None = None, arg_parser: RegexNamedArgumentParser | None = None) -> None:
         self.name: str = name
         self.validatorFn = validatorFn
+        self.docstring = docstring
+        self.arg_parser = arg_parser
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(name="{self.name}")'
 
     def is_complete(self) -> bool:
         return True
@@ -78,25 +74,39 @@ class Command:
     def clone(self) -> Command:
         return Command(self.name)
 
+    @property
+    def accepts_arguments(self) -> bool:
+        if self.arg_parser and self.arg_parser.regex:
+            if self.arg_parser.regex == ArgSpec.NoArgsInstance.regex:
+                return False
+        return True
+
 
 class CommandCollection():
-    """ Represents a case insensitive name/command dictionary. """
+    """ Represents a name/command dictionary. """
 
-    def __init__(self) -> None:
+    def __init__(self, commands: Iterable[Command] | None = None) -> None:
         self.commands: Dict[str, Command] = {}
+        if commands is not None:
+            for cmd in commands:
+                self.add(cmd, False)
+
+    def __str__(self) -> str:
+        commands = [str(command) for command in self.commands]
+        return f'{self.__class__.__name__}(commands={commands})'
 
     @property
     def names(self) -> List[str]:
-        """ Return the tag names in upper case. """
+        """ Return the command names """
         return list(self.commands.keys())
 
     def __getitem__(self, tag_name: str):
-        return self.commands[tag_name.upper()]
+        return self.commands[tag_name]
 
     def get(self, cmd_name: str) -> Command:
         if cmd_name is None or cmd_name.strip() == '':
             raise ValueError("cmd_name is None or empty")
-        if not cmd_name.upper() in self.commands.keys():
+        if cmd_name not in self.commands.keys():
             raise ValueError(f"Command name {cmd_name} not found")
         return self[cmd_name]
 
@@ -109,7 +119,7 @@ class CommandCollection():
         if cmd.name in self.commands.keys() and not exist_ok:
             raise ValueError(f"A command named {cmd.name} already exists")
 
-        self.commands[cmd.name.upper()] = cmd
+        self.commands[cmd.name] = cmd
 
     def with_cmd(self, cmd: Command):
         self.add(cmd)
@@ -118,7 +128,7 @@ class CommandCollection():
     def has(self, cmd_name: str) -> bool:
         if cmd_name is None or cmd_name.strip() == '':
             raise ValueError("cmd_name is None or empty")
-        return cmd_name.upper() in self.commands.keys()
+        return cmd_name in self.commands.keys()
 
     def clone(self) -> CommandCollection:
         """ Returns a deep clone of the collection. """
@@ -126,6 +136,9 @@ class CommandCollection():
         for cmd in self.commands.values():
             cmds.add(cmd.clone())
         return cmds
+
+    def to_list(self):
+        return list(self.commands.values())
 
     def merge_with(self, other: CommandCollection) -> CommandCollection:
         """ Returns a new CommandCollection with the combined commands of both collections.

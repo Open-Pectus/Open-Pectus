@@ -16,7 +16,7 @@ from openpectus.engine.hardware_recovery import (
     ErrorRecoveryState,
 )
 from openpectus.engine.models import ConnectionStatusEnum
-from openpectus.lang.exec.tags import SystemTagName, TagCollection
+from openpectus.lang.exec.tags import SystemTagName, create_system_tags
 from openpectus.test.engine.test_engine import TestHW, create_test_uod
 
 
@@ -25,7 +25,6 @@ logging.basicConfig(format='%(asctime)-15s :: %(name)s :: %(levelname)-8s :: %(m
                     force=True)
 logger = logging.getLogger("openpectus.engine.hardware_error")
 logger.setLevel(logging.DEBUG)
-
 
 class TestHardwareLayer(unittest.TestCase):
     def test_can_read_register(self):
@@ -57,7 +56,8 @@ class TestHardwareErrorRecovery(unittest.TestCase):
     def create_hardwares(self) -> tuple[ErrorRecoveryDecorator, ErrorTestHardware]:
         hwl = ErrorTestHardware()
         error_config = ErrorRecoveryConfig()
-        connection_status_tag = TagCollection.create_system_tags()[SystemTagName.CONNECTION_STATUS]
+        system_tags = create_system_tags()
+        connection_status_tag = system_tags[SystemTagName.CONNECTION_STATUS]
         return ErrorRecoveryDecorator(hwl, error_config, connection_status_tag), hwl
 
     def test_initial_state_Disconnected(self):
@@ -78,7 +78,8 @@ class TestHardwareErrorRecovery(unittest.TestCase):
         hwl = ErrorTestHardware()
         hwl._is_connected = True
         error_config = ErrorRecoveryConfig()
-        connection_status_tag = TagCollection.create_system_tags()[SystemTagName.CONNECTION_STATUS]
+        system_tags = create_system_tags()
+        connection_status_tag = system_tags[SystemTagName.CONNECTION_STATUS]
         decorator = ErrorRecoveryDecorator(hwl, error_config, connection_status_tag)
 
         self.assertEqual(decorator.get_recovery_state(), ErrorRecoveryState.OK)
@@ -254,6 +255,81 @@ class TestHardwareErrorRecovery(unittest.TestCase):
         # applies the pending write to B
         self.assertEqual(hwl.reg_B_value, 3)
 
+    # Writes with only_write_modified_values = True
+
+    def test_write_only_writes_modified_values(self):
+        decorator, hwl = self.create_hardwares()
+        decorator.connect()
+
+        hwl.reg_B_value = 2
+        decorator.write(7, hwl.reg_B)
+
+        # the write was applied
+        self.assertEqual(hwl.reg_B_value, 7)
+        # because the write was intercepted
+        self.assertTrue(hwl.has_intercepted_write("B"))
+
+        # clear test (interception) state
+        hwl.intercepted_writes.clear()
+
+        # write the same value
+        decorator.write(7, hwl.reg_B)
+
+        # value was not written
+        self.assertFalse(hwl.has_intercepted_write("B"))
+
+
+    def test_write_batch_only_writes_modified_values(self):
+        decorator, hwl = self.create_hardwares()
+        decorator.connect()
+
+        hwl.reg_B_value = 2
+        hwl.reg_C_value = 2
+        decorator.write_batch([7, 8], [hwl.reg_B, hwl.reg_C])
+
+        # the writes were applied
+        self.assertEqual(hwl.reg_B_value, 7)
+        self.assertEqual(hwl.reg_C_value, 8)
+        # and intercepted
+        self.assertTrue(hwl.has_intercepted_write("B"))
+        self.assertTrue(hwl.has_intercepted_write("C"))
+
+        hwl.intercepted_writes.clear()
+        decorator.write_batch([7, 9], [hwl.reg_B, hwl.reg_C])
+
+        self.assertFalse(hwl.has_intercepted_write("B"))
+        self.assertTrue(hwl.has_intercepted_write("C"))
+
+    def test_write_only_writes_modified_values_float(self):
+        decorator, hwl = self.create_hardwares()
+        decorator.connect()
+
+        # Note: The default tolerances are e-9 and 0
+        # For the long story, see https://peps.python.org/pep-0485/
+        x = 7.000000000
+        y = 7.000000001
+        z = 7.00000001
+
+        hwl.reg_B_value = 2
+        decorator.write(x, hwl.reg_B)
+
+        # the write was applied
+        self.assertEqual(hwl.reg_B_value, x)
+        # the write was intercepted
+        self.assertTrue(hwl.has_intercepted_write("B"))
+
+        hwl.intercepted_writes.clear()
+
+        # y is close to x and not written
+        decorator.write(y, hwl.reg_B)
+        self.assertEqual(hwl.reg_B_value, x)
+        self.assertFalse(hwl.has_intercepted_write("B"))
+
+        # # z is not close enough to x and is written
+        decorator.write(z, hwl.reg_B)
+        self.assertEqual(hwl.reg_B_value, z)
+        self.assertTrue(hwl.has_intercepted_write("B"))
+
     # Reconnect
 
     def test_reconnect_is_correctly_backed_off(self):
@@ -314,6 +390,7 @@ class TestHardwareErrorRecovery(unittest.TestCase):
         decorator.test_cmd()  # type: ignore
 
 class ErrorTestHardware(HardwareLayerBase):
+    __test__ = False
     """ A test hardware class that can fail its operations when so directed by the test"""
     def __init__(self) -> None:
         super().__init__()
@@ -330,8 +407,18 @@ class ErrorTestHardware(HardwareLayerBase):
         self.reg_B_value = 0
         self.reg_C_value = 0
 
+        self.intercepted_writes: list[str] = []
+        """ Exposes write and write_batch calls to tests """
+
     def test_cmd(self):
         print("Test Cmd executed")
+
+    def _write_intercepted(self, register_name: str):
+        if register_name not in self.intercepted_writes:
+            self.intercepted_writes.append(register_name)
+
+    def has_intercepted_write(self, register_name: str):
+        return register_name in self.intercepted_writes
 
     def read(self, r: Register) -> Any:
         if self.read_fail:
@@ -346,8 +433,10 @@ class ErrorTestHardware(HardwareLayerBase):
             raise HardwareLayerException("Write failed as requested")
         if r.name == "B":
             self.reg_B_value = value
+            self._write_intercepted("B")
         elif r.name == "C":
             self.reg_C_value = value
+            self._write_intercepted("C")
         else:
             raise ValueError("Cannot write to register " + r.name)
 

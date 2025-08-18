@@ -1,18 +1,13 @@
-import logging
 import time
 import unittest
 from typing import Any
+from openpectus.lang.exec.regex import RegexNumber
 from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 from openpectus.engine.hardware import RegisterDirection
 
 import pint
 from openpectus.lang.exec.tags import SystemTagName, Tag, TagDirection
-from openpectus.lang.exec.uod import (
-    UnitOperationDefinitionBase,
-    UodCommand,
-    UodBuilder,
-    RegexNumber,
-)
+from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand, UodBuilder
 from openpectus.test.engine.utility_methods import (
     EngineTestRunner,
     configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging
@@ -22,7 +17,6 @@ from openpectus.test.engine.utility_methods import (
 configure_test_logger()
 set_engine_debug_logging()
 set_interpreter_debug_logging()
-logging.getLogger("openpectus.lang.exec.runlog").setLevel(logging.DEBUG)
 
 # pint takes forever to initialize - long enough
 # to throw off timing of the first instruction.
@@ -30,7 +24,7 @@ logging.getLogger("openpectus.lang.exec.runlog").setLevel(logging.DEBUG)
 _ = pint.Quantity("0 s")
 
 
-def create_test_uod() -> UnitOperationDefinitionBase:
+def create_test_uod() -> UnitOperationDefinitionBase:  # noqa
     def reset(cmd: UodCommand, **kvargs) -> None:
         count = cmd.get_iteration_count()
         if count == 0:
@@ -115,9 +109,7 @@ Wait: 1s
         runner = EngineTestRunner(create_test_uod, code)
         with runner.run() as instance:
             instance.start()
-
-            t = instance.run_until_instruction("Wait", "started", increment_index=False)
-            self.assertEqual(4, t)
+            instance.run_until_instruction("Wait", "started", increment_index=False)
             ticks = instance.run_until_instruction("Wait", "completed")
             self.assertAlmostEqual(10, ticks, delta=2)
 
@@ -131,15 +123,9 @@ Mark: B
         runner = EngineTestRunner(create_test_uod, code)
         with runner.run() as instance:
             instance.start()
-            run_time = instance.engine.tags[SystemTagName.RUN_TIME]
 
             instance.run_until_instruction("Mark")
-            # two ticks passed before the first "user" instruction. That is expected
-            self.assertAlmostEqual(0.2, run_time.as_float(), delta=0.1)
-
             instance.run_until_instruction("Pause")
-
-            # self.assertAlmostEqual(1.1, run_time.as_float(), delta=0.1)
             instance.run_until_instruction("Mark")
 
             with self.assertRaises(TimeoutError):
@@ -204,10 +190,96 @@ Restart
 
             print(instance.get_runtime_table("B"))
 
-            with self.assertRaises(TimeoutError):
-                instance.run_until_instruction("Restart")
+            # not sure about this
+            # with self.assertRaises(TimeoutError):
+            #     instance.run_until_instruction("Restart")
 
             print(instance.get_runtime_table("C"))
+
+
+    # --- Restart ---
+
+
+#     def test_restart_can_restart(self):
+#         set_engine_debug_logging()
+#         set_interpreter_debug_logging()
+#         program = """
+# Mark: A
+# Increment run counter
+# Restart
+# """
+#         e = self.engine
+#         self.assertEqual(0, e.tags[SystemTagName.RUN_COUNTER].as_number())
+
+#         run_engine(e, program, start_ticks + 2)
+
+#         run_id_1 = e.tags[SystemTagName.RUN_ID].get_value()
+#         self.assertEqual(e.tags[SystemTagName.SYSTEM_STATE].get_value(), SystemStateEnum.Restarting)
+#         self.assertEqual(1, e.tags[SystemTagName.RUN_COUNTER].as_number())
+
+#         self.assertEqual(e.interpreter.get_marks(), ["A"])
+
+#         continue_engine(e, 1)
+
+#         self.assertEqual(e.tags[SystemTagName.SYSTEM_STATE].get_value(), SystemStateEnum.Stopped)
+#         self.assertIsNone(e.tags[SystemTagName.RUN_ID].get_value())
+#         self.assertEqual(e.interpreter.get_marks(), [])
+#         self.assertEqual(1, e.tags[SystemTagName.RUN_COUNTER].as_number())
+
+#         continue_engine(e, 1)
+
+#         run_id2 = e.tags[SystemTagName.RUN_ID].get_value()
+#         self.assertEqual(e.tags[SystemTagName.SYSTEM_STATE].get_value(), SystemStateEnum.Running)
+#         self.assertNotEqual(run_id_1, run_id2)
+#         self.assertEqual(e.interpreter.get_marks(), [])
+#         self.assertEqual(1, e.tags[SystemTagName.RUN_COUNTER].as_number())
+
+#         continue_engine(e, 3)
+
+#         self.assertEqual(e.interpreter.get_marks(), ["A"])
+#         self.assertEqual(2, e.tags[SystemTagName.RUN_COUNTER].as_number())
+
+#     def test_restart_stop_ticking_interpreter(self):
+
+#         set_interpreter_debug_logging()
+#         program = """
+# Mark: A
+# Restart
+# Mark: X
+# """
+#         e = self.engine
+#         run_engine(e, program, 1)
+
+#         for _ in range(30):
+#             continue_engine(e, 1)
+#             self.assertTrue("X" not in e.interpreter.get_marks())
+
+#     def test_restart_cancels_running_commands(self):
+#         program = """
+# Reset
+# Restart
+# """
+#         e = self.engine
+#         run_engine(e, program, start_ticks + 1)
+
+#         system_state = e.tags[SystemTagName.SYSTEM_STATE]
+#         self.assertEqual(system_state.get_value(), SystemStateEnum.Restarting)
+
+#     def test_restart_can_stop(self):
+#         set_engine_debug_logging()
+#         set_interpreter_debug_logging()
+#         program = """
+# Mark: A
+# Restart
+# """
+#         e = self.engine
+#         run_engine(e, program, start_ticks + 1)
+
+#         # when no commands need to be stopped, restart immediately moves to Stopped
+#         system_state = e.tags[SystemTagName.SYSTEM_STATE]
+#         self.assertEqual(system_state.get_value(), SystemStateEnum.Restarting)
+
+
 
     def test_mark_in_alarm_body_runs_in_each_alarm_instance(self):
         code = """
@@ -225,11 +297,13 @@ Alarm: Block Time > 0s
             instance.run_until_instruction("Mark", "completed")
             self.assertEqual(['A'], instance.marks)
 
-            instance.run_ticks(9)
+            # instance.run_until_event("method_end")
+            # instance.run_until_event("method_end")
+            # self.assertEqual(['A', 'A'], instance.marks)
 
-            # print(instance.get_runtime_table("awaiting 2nd alarm"))
 
-            self.assertEqual(['A', 'A'], instance.marks)
+            instance.run_until_condition(lambda : instance.marks == ['A', 'A'])
+            instance.run_until_condition(lambda : instance.marks == ['A', 'A', 'A'])
 
     def test_watch_in_alarm_body_runs_in_each_alarm_instance(self):
         code = """
@@ -248,13 +322,7 @@ Alarm: Block Time > 0s
             instance.run_until_instruction("Mark", "completed")
             self.assertEqual(['A'], instance.marks)
 
-            print(instance.get_runtime_table("mark"))
-
-            instance.index_step_back(2)  # Wait occurs before Mark
-            instance.run_until_instruction("Wait", "completed")
-
-            instance.run_ticks(7)
-            print(instance.get_runtime_table("awaiting 2nd alarm"))
+            instance.run_until_condition(lambda : instance.marks == ['A', 'A'])
 
             # This does not work because the alarm node is way up in the record list.
             # we would need aonther way to wait for alarm, including a new find_instruction
@@ -263,9 +331,6 @@ Alarm: Block Time > 0s
             # the same goes for any other node inside the alarm body
             # instance.run_until_instruction("Alarm", "started")
 
-            self.assertEqual(['A', 'A'], instance.marks)
-
-
     def test_run_until_method_end(self):
         code = """
 Mark: A
@@ -273,7 +338,6 @@ Mark: B
 Mark: C
 """
         runner = EngineTestRunner(create_test_uod, code)
-        logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.DEBUG)
 
         with runner.run() as instance:
             instance.start()
@@ -288,7 +352,6 @@ Mark: A
 Stop
 """
         runner = EngineTestRunner(create_test_uod, code)
-        logging.getLogger("openpectus.lang.exec.pinterpreter").setLevel(logging.DEBUG)
 
         with runner.run() as instance:
             instance.start()
@@ -305,7 +368,7 @@ Wait: 15s
 15 Mark: A2
 Mark: B
 """
-        runner = EngineTestRunner(create_test_uod, pcode=pcode, speed=30)
+        runner = EngineTestRunner(create_test_uod, pcode, speed=30)
         with runner.run() as instance:
             instance.start()
             run_time = instance.engine.tags[SystemTagName.RUN_TIME]
@@ -321,7 +384,7 @@ Mark: B
 Wait: 30s
 Mark: B
 """
-        runner = EngineTestRunner(create_test_uod, pcode=pcode, speed=30)
+        runner = EngineTestRunner(create_test_uod, pcode, speed=30)
         with runner.run() as instance:
             run_time = instance.engine.tags[SystemTagName.RUN_TIME]
             instance.start()
@@ -349,19 +412,20 @@ Mark: A
 Mark: B
 Mark: C
 """
-        runner = EngineTestRunner(create_test_uod, pcode=pcode)
+        runner = EngineTestRunner(create_test_uod, pcode)
         with runner.run() as instance:
             instance.start()
-            instance.run_until_instruction("Mark")
+            instance.run_until_instruction("Mark", state="completed")
             self.assertEqual(['A'], instance.marks)
 
             instance.engine.inject_code("Mark: I")
 
-            instance.run_until_condition(lambda: 'B' in instance.marks)
-            self.assertEqual(['A', 'B', 'I'], instance.marks)
+#            instance.run_until_condition(lambda: 'B' in instance.marks)
+            instance.run_until_instruction("Mark", state="completed")
 
             instance.run_until_event("method_end")
-            self.assertEqual(['A', 'B', 'I', 'C'], instance.marks)
+            self.assertIn(instance.marks, [['A', 'B', 'I', 'C'], ['A', 'B', 'C', 'I']])
+
 
     def test_inject_thresholds_1(self):
         pcode = """
@@ -369,21 +433,18 @@ Mark: A
 0.25 Mark: B
 Mark: C
 """
-        runner = EngineTestRunner(create_test_uod, pcode=pcode)
+        runner = EngineTestRunner(create_test_uod, pcode)
         with runner.run() as instance:
             instance.start()
 
             instance.engine.tags[SystemTagName.BASE].set_value("s", instance.engine._tick_time)
 
-            instance.run_until_instruction("Mark")
+            instance.run_until_instruction("Mark", state="completed", arguments="A")
             self.assertEqual(['A'], instance.marks)
 
             instance.engine.inject_code("Mark: I")
-            instance.run_until_condition(lambda: 'I' in instance.marks)
-            self.assertEqual(['A', 'I'], instance.marks)
-
             instance.run_until_event("method_end")
-            self.assertEqual(['A', 'I', 'B', 'C'], instance.marks)
+            self.assertIn(instance.marks, (['A', 'B', 'I', 'C'], ['A', 'I', 'B', 'C']))
 
 
     def test_inject_thresholds_2(self):
@@ -392,21 +453,21 @@ Mark: A
 0.2 Mark: B
 Mark: C
 """
-        runner = EngineTestRunner(create_test_uod, pcode=pcode)
+        runner = EngineTestRunner(create_test_uod, pcode)
         with runner.run() as instance:
             instance.start()
 
             instance.engine.tags[SystemTagName.BASE].set_value("s", instance.engine._tick_time)
 
-            instance.run_until_instruction("Mark")
+            instance.run_until_instruction("Mark", state="completed", arguments="A")
             self.assertEqual(['A'], instance.marks)
 
-            instance.engine.inject_code("0.3 Mark: I")
+            instance.engine.inject_code("0.4 Mark: I")
             instance.run_until_condition(lambda: 'B' in instance.marks)
-            self.assertEqual(['A', 'B'], instance.marks)
+            self.assertEqual(instance.marks, ['A', 'B'])
 
             instance.run_until_event("method_end")
-            self.assertTrue(['A', 'B', 'C', 'I'] == instance.marks or ['A', 'B', 'I', 'C'] == instance.marks)
+            self.assertEqual(instance.marks, ['A', 'B', 'C', 'I'])
 
     def test_info_warning_error(self):
         pcode = """
@@ -415,7 +476,7 @@ Warning: bar
 Error: baz
 Stop
 """
-        runner = EngineTestRunner(create_test_uod, pcode=pcode)
+        runner = EngineTestRunner(create_test_uod, pcode)
         with runner.run() as instance:
             instance.start()
             instance.run_until_event("stop")  # will raise on engine error

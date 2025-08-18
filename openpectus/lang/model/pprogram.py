@@ -374,6 +374,51 @@ class PAlarm(PInstruction):
         super().reset_runtime_state(recursive=recursive)
 
 
+class PMacro(PInstruction):
+    """ Represents a Macro instruction. """
+    def __init__(self, parent: PNode) -> None:
+        super().__init__(parent)
+
+        self.children = []
+        self.name: str = ''
+        self.activated: bool = False
+        self._cancellable = False
+        self._forcible = False
+
+    def __str__(self) -> str:
+        return super().__str__() + ": " + self.name
+
+    @property
+    def runlog_name(self) -> str | None:
+        return "Macro: " + self.name
+
+    @property
+    def instruction_name(self) -> str | None:
+        return "Macro"
+
+
+class PCallMacro(PInstruction):
+    """ Represents a Call macro instruction. """
+    def __init__(self, parent: PNode) -> None:
+        super().__init__(parent)
+
+        self.children = []
+        self.name: str = ''
+        self._cancellable = False
+        self._forcible = False
+
+    def __str__(self) -> str:
+        return super().__str__() + ": " + self.name
+
+    @property
+    def runlog_name(self) -> str | None:
+        return "Call macro: " + self.name
+
+    @property
+    def instruction_name(self) -> str | None:
+        return "Call macro"
+
+
 class PMark(PInstruction):
     """ Represents an Mark instruction. """
     def __init__(self, parent: PNode) -> None:
@@ -393,6 +438,28 @@ class PMark(PInstruction):
     @property
     def instruction_name(self) -> str | None:
         return "Mark"
+
+
+class PBatch(PInstruction):
+    """ Represents a Batch name instruction. """
+    def __init__(self, parent: PNode) -> None:
+        super().__init__(parent)
+
+        self.children = []
+        self.name: str = ''
+        self._forcible = False
+
+    def __str__(self) -> str:
+        return super().__str__() + ": " + self.name
+
+    @property
+    def runlog_name(self) -> str | None:
+        return "Batch: " + self.name
+
+    @property
+    def instruction_name(self) -> str | None:
+        return "Batch"
+
 
 class PCommand(PInstruction):
     """ Represents a Command instruction (Start, Stop, Restart, ...) as well as uod commands.
@@ -415,7 +482,8 @@ class PCommand(PInstruction):
 
     @property
     def runlog_name(self) -> str | None:
-        return self.name
+        args = "" if self.args == "" else f": {self.args}"
+        return self.name + args
 
     @property
     def instruction_name(self) -> str | None:
@@ -515,9 +583,12 @@ class PCondition:
 
     The condition is resolved by ConditionEnrichAnalyzer.
     """
-    def __init__(self, condition_str: str) -> None:
+    def __init__(self, condition_str: str, start_column: int, end_column: int) -> None:
         self.condition_str = condition_str
         """ Original condition string expression """
+        self.start_column = start_column
+        self.end_column = end_column
+
         self.op = ""
         """ Unresolved condition operator """
         self.lhs = ""
@@ -531,6 +602,13 @@ class PCondition:
         self.tag_value: str | None = None
         self.tag_unit: str | None = None
         self.tag_value_numeric: int | float | None = None
+
+        self.lhs_start: int = 0
+        self.lhs_end: int = 0
+        self.op_start: int = 0
+        self.op_end: int = 0
+        self.rhs_start: int = 0
+        self.rhs_end: int = 0
 
 
 class PDuration:

@@ -6,15 +6,18 @@ from enum import StrEnum, auto
 from typing import Literal
 
 import openpectus.aggregator.models as Mdl
-from pydantic import BaseModel
+import webpush
+from pydantic import BaseModel, ConfigDict
 from pydantic.json_schema import SkipJsonSchema
 
 SystemStateEnum = Mdl.SystemStateEnum
+NotificationScope = Mdl.NotificationScope
+NotificationTopic = Mdl.NotificationTopic
+WebPushSubscription = webpush.WebPushSubscription
 
 
 class Dto(BaseModel):
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
     # deliver undefined instead of null for None values. Adapted from:
     # https://github.com/fastapi/fastapi/issues/3314#issuecomment-962932368
@@ -29,14 +32,27 @@ class AuthConfig(Dto):
     client_id: str | SkipJsonSchema[None] = None
     well_known_url: str | SkipJsonSchema[None] = None
 
+    def __str__(self) -> str:
+        if self.use_auth:
+            return (f'{self.__class__.__name__}(authority_url="{self.authority_url}", ' +
+                    f'client_id="{self.client_id}", well_known_url="{self.well_known_url}")')
+        else:
+            return f'{self.__class__.__name__}(use_auth={self.use_auth})'
+
 
 class ServerErrorResponse(Dto):
     error: bool = True
     message: str
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(message="{self.message}")'
+
 
 class ServerSuccessResponse(Dto):
     message: str | SkipJsonSchema[None] = None
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(message="{self.message}")'
 
 
 class ProcessUnitStateEnum(StrEnum):
@@ -71,6 +87,9 @@ class CommandExample(Dto):
     name: str
     example: str
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(name="{self.name}", example="{self.example}")'
+
 
 class UserRole(StrEnum):
     VIEWER = auto()
@@ -81,6 +100,10 @@ class ControlState(Dto):
     is_running: bool
     is_holding: bool
     is_paused: bool
+
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(is_running={self.is_running}, ' +
+                f'is_holding={self.is_holding}, is_paused={self.is_paused})')
 
     @staticmethod
     def default() -> ControlState:
@@ -100,7 +123,16 @@ class ProcessUnit(Dto):
     current_user_role: UserRole
     uod_author_name: str | SkipJsonSchema[None] = None
     uod_author_email: str | SkipJsonSchema[None] = None
+
     # users: list[User] ?
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(id="{self.id}", name="{self.name}", state={self.state})'
+
+
+class ProcessUnitAllProcessValues(Dto):
+    process_unit: ProcessUnit
+    process_values: list[ProcessValue]
 
 
 class ProcessValueType(StrEnum):
@@ -120,16 +152,25 @@ class ProcessValueCommandNumberValue(Dto):
     value_type: Literal[ProcessValueType.INT] | Literal[ProcessValueType.FLOAT]
     """ Specifies the type of allowed values. """
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(value={self.value}, value_unit="{self.value_unit}")'
+
 
 class ProcessValueCommandFreeTextValue(Dto):
     value: str
     value_type: Literal[ProcessValueType.STRING]
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(value="{self.value}")'
 
 
 class ProcessValueCommandChoiceValue(Dto):
     value: str
     value_type: Literal[ProcessValueType.CHOICE]
     options: list[str]
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(value="{self.value}")'
 
 
 class ProcessValueCommand(Dto):
@@ -142,6 +183,10 @@ class ProcessValueCommand(Dto):
             ProcessValueCommandFreeTextValue |
             ProcessValueCommandChoiceValue |
             SkipJsonSchema[None]) = None
+
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(command_id="{self.command_id}", name="{self.name}", ' +
+                f'command="{self.command}", value={self.value})')
 
 
 ProcessValueValueType = float | int | str | SkipJsonSchema[None]
@@ -169,6 +214,12 @@ class ProcessValue(Dto):
     """ Specifies the type of allowed values. """
     commands: list[ProcessValueCommand] | SkipJsonSchema[None] = None
     direction: Mdl.TagDirection
+    simulated: bool | SkipJsonSchema[None] = None
+
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(name="{self.name}", value="{self.value}", ' +
+                f'value_unit="{self.value_unit}", value_formatted="{self.value_formatted}"), ' +
+                f'simulated="{self.simulated}"')
 
     @staticmethod
     def create(tag: Mdl.TagValue) -> ProcessValue:
@@ -179,7 +230,8 @@ class ProcessValue(Dto):
             value_type=get_ProcessValueType_from_value(tag.value),
             value_unit=tag.value_unit,
             commands=[],
-            direction=tag.direction
+            direction=tag.direction,
+            simulated=tag.simulated
         )
 
     @staticmethod
@@ -207,6 +259,10 @@ class ExecutableCommand(Dto):
             ProcessValueCommandChoiceValue |
             SkipJsonSchema[None]) = None
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(command_id="{self.command_id}", ' +
+                f'command="{self.command}", name="{self.name}", value={self.value})')
+
 
 class RunLogLine(Dto):
     id: str
@@ -220,6 +276,16 @@ class RunLogLine(Dto):
     cancellable: bool | SkipJsonSchema[None] = None
     forced: bool | SkipJsonSchema[None] = None
     cancelled: bool | SkipJsonSchema[None] = None
+
+    def __str__(self) -> str:
+        if self.cancelled:
+            return f'{self.__class__.__name__}(id="{self.id}", command="{self.command}", cancelled={self.cancelled})'
+        elif self.forced:
+            return f'{self.__class__.__name__}(id="{self.id}", command="{self.command}", forced={self.forced})'
+        elif self.progress is not None:
+            return f'{self.__class__.__name__}(id="{self.id}", command="{self.command}", progress={self.progress})'
+        else:
+            return f'{self.__class__.__name__}(id="{self.id}", command="{self.command}")'
 
     @staticmethod
     def from_model(model: Mdl.RunLogLine) -> RunLogLine:
@@ -247,6 +313,10 @@ class RunLogLine(Dto):
 class RunLog(Dto):
     lines: list[RunLogLine]
 
+    def __str__(self) -> str:
+        lines = [str(line) for line in self.lines]
+        return f'{self.__class__.__name__}(lines={lines})'
+
     @staticmethod
     def empty() -> RunLog:
         return RunLog(lines=[])
@@ -256,13 +326,34 @@ class MethodLine(Dto):
     id: str
     content: str
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(id="{self.id}", content="{self.content}")'
+
 
 class Method(Dto):
     lines: list[MethodLine]
+    version: int
+    last_author: str
+
+    def __str__(self) -> str:
+        lines = [str(line) for line in self.lines]
+        return f'{self.__class__.__name__}(lines="{lines}", version="{self.version}", last_author="{self.last_author}")'
 
     @staticmethod
     def empty() -> Method:
-        return Method(lines=[])
+        return Method(lines=[], version=0, last_author='')
+
+    @staticmethod
+    def from_model(method: Mdl.Method) -> Method:
+        return Method(
+            lines=[MethodLine(id=line.id, content=line.content) for line in method.lines],
+            version=method.version,
+            last_author=method.last_author
+        )
+
+
+class MethodVersion(Dto):
+    version: int
 
 
 class MethodState(Dto):
@@ -270,18 +361,55 @@ class MethodState(Dto):
     executed_line_ids: list[str]
     injected_line_ids: list[str]
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(started_line_ids={self.started_line_ids}, ' +
+                f'executed_line_ids={self.executed_line_ids}, injected_line_ids={self.injected_line_ids})')
+
     @staticmethod
     def empty() -> MethodState:
         return MethodState(started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
+
+    @staticmethod
+    def from_model(method_state: Mdl.MethodState) -> MethodState:
+        return MethodState(started_line_ids=[_id for _id in method_state.started_line_ids],
+                           executed_line_ids=[_id for _id in method_state.executed_line_ids],
+                           injected_line_ids=[_id for _id in method_state.injected_line_ids])
 
 
 class MethodAndState(Dto):
     method: Method
     state: MethodState
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(method={self.method}, state={self.state})'
+
     @staticmethod
     def empty() -> MethodAndState:
         return MethodAndState(method=Method.empty(), state=MethodState.empty())
+
+    @staticmethod
+    def from_models(method: Mdl.Method, method_state: Mdl.MethodState) -> MethodAndState:
+        return MethodAndState(
+            method=Method.from_model(method),
+            state=MethodState.from_model(method_state)
+        )
+
+
+class ActiveUser(Dto):
+    id: str
+    name: str
+
+    @staticmethod
+    def from_model(active_user: Mdl.ActiveUser) -> ActiveUser:
+        return ActiveUser(id=active_user.id, name=active_user.name)
+
+
+class ActiveUsers(Dto):
+    active_users: list[ActiveUser]
+
+    @staticmethod
+    def empty() -> ActiveUsers:
+        return ActiveUsers(active_users=[])
 
 
 class PlotColorRegion(Dto):
@@ -341,6 +469,11 @@ class PlotLog(Dto):
     entries: dict[str, PlotLogEntry]
 
 
+class Contributor(Dto):
+    id: str | SkipJsonSchema[None] = None
+    name: str
+
+
 class RecentRun(Dto):
     """ Represents a historical run of a process unit. """
     engine_id: str
@@ -355,7 +488,10 @@ class RecentRun(Dto):
     engine_hardware_str: str
     aggregator_computer_name: str
     aggregator_version: str
-    contributors: list[str] = []
+    contributors: list[Contributor] = []
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(engine_id="{self.engine_id}", run_id="{self.run_id}")'
 
 
 class RecentRunMethod(Dto):
@@ -364,10 +500,16 @@ class RecentRunMethod(Dto):
     method: Method
     method_state: MethodState
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(id="{self.id}", run_id="{self.run_id}")'
+
 
 class RecentRunCsv(Dto):
     filename: str
     csv_content: str
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(filename="{self.filename}")'
 
 
 class ErrorLogSeverity(StrEnum):
@@ -381,6 +523,10 @@ class AggregatedErrorLogEntry(Dto):
     severity: ErrorLogSeverity
     occurrences: int = 1
 
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(message="{self.message}", created_time={self.created_time}, ' +
+                f'severity={self.severity}, occurrences={self.occurrences})')
+
     @staticmethod
     def from_model(model: Mdl.AggregatedErrorLogEntry) -> AggregatedErrorLogEntry:
         return AggregatedErrorLogEntry(
@@ -390,8 +536,13 @@ class AggregatedErrorLogEntry(Dto):
             occurrences=model.occurrences
         )
 
+
 class AggregatedErrorLog(Dto):
     entries: list[AggregatedErrorLogEntry]
+
+    def __str__(self) -> str:
+        entries = [str(entry) for entry in self.entries]
+        return f'{self.__class__.__name__}(entries="{entries}")'
 
     @staticmethod
     def from_model(model: Mdl.AggregatedErrorLog) -> AggregatedErrorLog:
@@ -401,3 +552,45 @@ class AggregatedErrorLog(Dto):
 class BuildInfo(Dto):
     build_number: str
     git_sha: str
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(build_number="{self.build_number}", git_sha="{self.git_sha}")'
+
+
+# Lsp models
+
+class TagDefinition(Dto):
+    name: str
+    unit: str | None = None
+    # possibly value_type:
+
+
+class CommandDefinition(Dto):
+    name: str
+    validator: str | None = None
+
+
+class UodDefinition(Dto):
+    # name: str
+    # filename: str
+    commands: list[CommandDefinition]
+    system_commands: list[CommandDefinition]
+    tags: list[TagDefinition]
+
+    @staticmethod
+    def from_model(model: Mdl.UodDefinition) -> UodDefinition:
+        return UodDefinition(
+            commands=[CommandDefinition(name=c.name, validator=c.validator) for c in model.commands],
+            system_commands=[CommandDefinition(name=c.name, validator=c.validator) for c in model.system_commands],
+            tags=[TagDefinition(name=t.name, unit=t.unit) for t in model.tags]
+        )
+
+
+class WebPushConfig(Dto):
+    app_server_key: str | SkipJsonSchema[None] = None
+
+
+class WebPushNotificationPreferences(Dto):
+    scope: NotificationScope
+    topics: list[NotificationTopic]
+    process_units: list[str]

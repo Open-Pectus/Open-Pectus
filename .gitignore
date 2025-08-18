@@ -140,6 +140,7 @@ conda/*
 openpectus/engine/data/*.txt
 openpectus/engine/*.log.*
 openpectus/.idea/pyright.xml
+open_pectus_aggregator.sqlite3
 
 docs/src/openapi.yml
 docs/_autosummary/
@@ -148,3 +149,7 @@ docs/doctrees/
 docs/spelling/
 docs/html/
 
+open_pectus_aggregator.sqlite3
+openpectus/lsp/lsp_db.sqlite3
+*.pem
+openpectus/aggregator/webpush_keys/

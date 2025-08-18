@@ -16,6 +16,7 @@ class SystemTagName(StrEnum):
     RUN_COUNTER = "Run Counter"
     BLOCK = "Block"
     BLOCK_TIME = "Block Time"
+    SCOPE_TIME = "Scope Time"
     PROCESS_TIME = "Process Time"
     RUN_TIME = "Run Time"
     CLOCK = "Clock"
@@ -23,6 +24,8 @@ class SystemTagName(StrEnum):
     METHOD_STATUS = "Method Status"
     CONNECTION_STATUS = "Connection Status"
     RUN_ID = "Run Id"
+    BATCH_NAME = "Batch Name"
+    MARK = "Mark"
 
     # these tags are only present if defined in uod.
     BLOCK_VOLUME = "Block Volume"
@@ -51,11 +54,14 @@ def format_time_as_clock(value: float) -> str:
     return f"{tm.hour:02}:{tm.minute:02}:{tm.second:02}"
 
 
-class ChangeListener():
+class ChangeListener:
     """ Collects named changes. Used by engine to track tag changes """
 
     def __init__(self) -> None:
         self._changes: Set[str] = set()
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(_changes="{self._changes}")'
 
     def notify_change(self, elm: str):
         self._changes.add(elm)
@@ -68,13 +74,17 @@ class ChangeListener():
         return list(self._changes)
 
 
-class ChangeSubject():
+class ChangeSubject:
     """ Inherit to support change notification. Used by engine to track tag changes """
 
     def __init__(self) -> None:
-        super().__init__()
+        super(ChangeSubject, self).__init__()
 
         self._listeners: list[ChangeListener] = []
+
+    def __str__(self) -> str:
+        listeners = [str(listener) for listener in self._listeners]
+        return f'{self.__class__.__name__}(_listeners="{listeners}")'
 
     def add_listener(self, listener: ChangeListener):
         self._listeners.append(listener)
@@ -105,12 +115,15 @@ class TagDirection(StrEnum):
     Unspecified = auto()
 
 
-class Unset():
+class Unset:
     """ Used to specify that a value has not been set.
 
     Used for nullable values to distinguish between being set to None and not being set.
     """
     pass
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}()'
 
 
 class Tag(ChangeSubject, EventListener):
@@ -119,6 +132,8 @@ class Tag(ChangeSubject, EventListener):
     Supports change tracking which is used by engine to detect changes between reads of hardware values.
 
     Supports lifetime notification events that are automatically invoked by the engine.
+
+    Supports masking the actual value with a simulated value.
     """
     def __init__(
             self,
@@ -128,10 +143,10 @@ class Tag(ChangeSubject, EventListener):
             unit: str | None = None,
             direction: TagDirection = TagDirection.NA,
             safe_value: TagValueType | Unset = Unset(),
-            format_fn: TagFormatFunction | None = None
+            format_fn: TagFormatFunction | None = None,
             ) -> None:
 
-        super().__init__()
+        super(Tag, self).__init__()
 
         assert name is not None
         assert name != ""
@@ -151,11 +166,21 @@ class Tag(ChangeSubject, EventListener):
         self.direction: TagDirection = direction
         self.safe_value: TagValueType | Unset = safe_value
         self.format_fn = format_fn
+        self.simulated_value: TagValueType = None
+        self.simulated: bool = False
+
+    def __str__(self) -> str:
+        if self.simulated:
+            return f'{self.__class__.__name__}(name="{self.name}", value="{self.value}")'
+        else:
+            return (f'{self.__class__.__name__}(name="{self.name}", value="{self.value}", ' +
+                    f'simulated_value="{self.simulated_value}")')
 
     def as_readonly(self) -> TagValue:
         """ Convert the value to a readonly and immutable TagValue instance """
         value_formatted = None if self.format_fn is None else self.format_fn(self.get_value())
-        return TagValue(self.name, self.tick_time, self.value, value_formatted, self.unit, self.direction)
+        value = self.simulated_value if self.simulated else self.value
+        return TagValue(self.name, self.tick_time, value, value_formatted, self.unit, self.direction, self.simulated)
 
     def set_value(self, val: TagValueType, tick_time: float) -> None:
         if val != self.value:
@@ -172,30 +197,63 @@ class Tag(ChangeSubject, EventListener):
         val = convert_value_to_unit(val, unit, self.unit)
         self.set_value(val, tick_time)
 
+    def simulate_value_and_unit(self, val: TagValueType, unit: str, tick_time: float) -> None:
+        """ Set a simulated value by converting the provided value and unit into the the unit of the tag. """
+        self.simulated = True
+        if not isinstance(val, (int, float,)):
+            raise ValueError(f"Cannot set unit for a non-numeric value {val} of type {type(val).__name__}")
+        if self.unit is None:
+            raise ValueError("Cannot change unit on a tag with no unit")
+        val = convert_value_to_unit(val, unit, self.unit)
+        if val != self.simulated_value:
+            self.simulated_value = val
+            self.tick_time = tick_time
+            self.notify_listeners(self.name)
+
+    def simulate_value(self, val: TagValueType, tick_time: float):
+        self.simulated = True
+        if val != self.simulated_value:
+            self.simulated_value = val
+            self.tick_time = tick_time
+            self.notify_listeners(self.name)
+
+    def stop_simulation(self):
+        self.simulated = False
+        self.simulated_value = None
+        if self.value != self.simulated_value:
+            self.notify_listeners(self.name)
+
     def get_value(self):
-        return self.value
+        return self.simulated_value if self.simulated else self.value
 
     def as_number(self) -> int | float:
-        if not isinstance(self.value, (int, float)):
+        value = self.simulated_value if self.simulated else self.value
+        if not isinstance(value, (int, float)):
             raise ValueError(
-                f"Value is not numerical: '{self.value}' has type '{type(self. value).__name__}' tag: '{self.name}'")
-        return self.value
+                f"Value is not numerical: '{value}' has type '{type(value).__name__}' tag: '{self.name}'")
+        return value
 
     def as_float(self) -> float:
-        if not isinstance(self.value, (float,)):
+        value = self.simulated_value if self.simulated else self.value
+        if not isinstance(value, (float,)):
             raise ValueError(
-                f"Value is not a float: '{self.value}' has type '{type(self. value).__name__}' tag: '{self.name}'")
-        return self.value
+                f"Value is not a float: '{value}' has type '{type(value).__name__}' tag: '{self.name}'")
+        return value
 
     def archive(self) -> str | None:
         """ The value to write to archive or None to skip that tag from archival """
-        if self.value is None:
+        value = self.simulated_value if self.simulated else self.value
+        if value is None:
             return ""
-        elif isinstance(self.value, float):
+        elif isinstance(value, float):
             return f"{self.as_float():0.5f}"
         else:
-            return str(self.value)
+            return str(value)
 
+    def on_stop(self):
+        if self.simulated:
+            self.stop_simulation()
+        return super().on_stop()
 
 class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
     """ Represents a  name/tag dictionary. """
@@ -205,6 +263,10 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
         if tags is not None:
             for tag in tags:
                 self.add(tag, exist_ok=False)
+
+    def __str__(self) -> str:
+        values = [str(value) for value in self.tags.values()]
+        return f'{self.__class__.__name__}(tags={values})'
 
     def as_readonly(self) -> TagValueCollection:
         return TagValueCollection([t.as_readonly() for t in self.tags.values()])
@@ -243,7 +305,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
         if tag.name in self.tags.keys() and not exist_ok:
             raise ValueError(f"A tag named {tag.name} already exists")
 
-        self.tags[tag.name] = tag
+        self.tags[str(tag.name)] = tag
         tag.add_listener(self)
 
     def with_tag(self, tag: Tag):
@@ -274,25 +336,8 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
             tags.add(tag)
         return tags
 
-    @staticmethod
-    def create_system_tags() -> TagCollection:
-        tags = TagCollection([
-            Tag(SystemTagName.BASE, value="min"),  # note special value "min" and no unit
-            Tag(SystemTagName.RUN_COUNTER, value=0),
-            Tag(SystemTagName.BLOCK, value=None),
-            Tag(SystemTagName.BLOCK_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
-            Tag(SystemTagName.PROCESS_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
-            Tag(SystemTagName.RUN_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
-            Tag(SystemTagName.CLOCK, value=0.0, unit="s", format_fn=format_time_as_clock),
-            Tag(SystemTagName.SYSTEM_STATE, value="Stopped"),
-            Tag(SystemTagName.METHOD_STATUS, value="OK"),
-            Tag(SystemTagName.CONNECTION_STATUS, value="Disconnected"),
-            Tag(SystemTagName.RUN_ID, value=None),
-        ])
-        return tags
 
-
-class TagValue():
+class TagValue:
     """ Read-only and immutable representation of a tag value. """
     def __init__(
             self,
@@ -302,6 +347,7 @@ class TagValue():
             value_formatted: str | None = None,
             unit: str | None = None,
             direction: TagDirection = TagDirection.Unspecified,
+            simulated: bool | None = None
     ):
         if name is None or name.strip() == '':
             raise ValueError("name is None or empty")
@@ -312,6 +358,21 @@ class TagValue():
         self.value_formatted = value_formatted
         self.unit = unit
         self.direction = direction
+        self.simulated = simulated
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(name="{self.name}", value="{self.value}")'
+
+    def clone(self) -> TagValue:
+        return TagValue(
+            self.name,
+            self.tick_time,
+            self.value,
+            self.value_formatted,
+            self.unit,
+            self.direction,
+            self.simulated
+        )
 
 
 class TagValueCollection(Iterable[TagValue]):
@@ -323,9 +384,18 @@ class TagValueCollection(Iterable[TagValue]):
         for v in values:
             self._add(v)
 
+    def __str__(self) -> str:
+        values = [str(value) for value in self._tag_values.values()]
+        return f'{self.__class__.__name__}(_tag_values={values})'
+
     @staticmethod
     def empty() -> TagValueCollection:
         return TagValueCollection([])
+
+    @property
+    def names(self) -> list[str]:
+        """ Return the tag names """
+        return list(self._tag_values.keys())
 
     def get(self, tag_name: str) -> TagValue:
         if tag_name is None or tag_name.strip() == '':
@@ -353,3 +423,20 @@ class TagValueCollection(Iterable[TagValue]):
 
     def to_list(self) -> list[TagValue]:
         return [v for v in self._tag_values.values()]
+
+    def clone(self) -> TagValueCollection:
+        return TagValueCollection([v.clone() for v in self])
+
+def create_system_tags() -> "TagCollection":
+    return TagCollection([
+        Tag(SystemTagName.BASE, value="min"),  # note special value "min" and no unit
+        Tag(SystemTagName.RUN_COUNTER, value=0),
+        Tag(SystemTagName.BLOCK, value=None),
+        Tag(SystemTagName.PROCESS_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
+        Tag(SystemTagName.RUN_TIME, value=0.0, unit="s", format_fn=format_time_as_clock),
+        Tag(SystemTagName.CLOCK, value=0.0, unit="s", format_fn=format_time_as_clock),
+        Tag(SystemTagName.SYSTEM_STATE, value="Stopped"),
+        Tag(SystemTagName.METHOD_STATUS, value="OK"),
+        Tag(SystemTagName.CONNECTION_STATUS, value="Disconnected"),
+        Tag(SystemTagName.RUN_ID, value=None),
+    ])

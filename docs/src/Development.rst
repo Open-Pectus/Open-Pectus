@@ -26,13 +26,28 @@ Ecosystem
 
 Frontend Setup
 --------------
-Prerequisites: Node 20 (LTS) must be installed.
+.. _download node as a standalone binary: https://nodejs.org/en/download
+Prerequisites: Node 22 (LTS) must be installed.
+
+Follow the steps below to install Node 22 on Ubuntu using Node Version Manager.
+
+.. code-block:: console
+
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+    source ~/.bashrc
+    nvm install v22.11.0
+
+On Windows it is possible to `download node as a standalone binary`_. Extract the ZIP folder, navigate to the binaries and add the folder to PATH:
+
+.. code-block:: console
+
+   SET PATH=%PATH%;C:\Users\User\Downloads\node-vxx.yy.zz-win-x64\node-vxx.yy.z-win-x64
 
 Follow the steps below to install packages and build the frontend.
 
 .. code-block:: console
 
-   cd Open-Pectus/openpectus/frontend
+   cd Open-Pectus/frontend
    npm ci
    npm run build
 
@@ -40,22 +55,11 @@ Follow the steps below to install packages and build the frontend.
 Backend Setup
 -------------
 .. _Download Miniconda: https://docs.conda.io/en/latest/miniconda.html
-.. _ANTLR4 grammar syntax support: https://github.com/mike-lischke/vscode-antlr4
 .. _Sentry: https://sentry.io
 
 Prerequisites:
 
 * (Optional) A conda installation is highly recommended although it is possible to do without. `Download Miniconda`_.
-* (Optional) Java SE SDK is needed for parser generation when updating P-code grammar.
-* (Optional) The simplest way to get going using VS Code is this:
-
-   #. Install Java
-    
-      :console:`conda install -c conda-forge openjdk`
-   #. Install VS Code extension `ANTLR4 grammar syntax support`_.
-      This should cause the Antlr plugin to automatically regenerate parser code whenever pcode.g4 is modified. 
-   #. openjdk-21.0.2 is known to work.
-
 
 All the following commands can only be run from within the conda prompt, and from the `Open-Pectus` folder.
 

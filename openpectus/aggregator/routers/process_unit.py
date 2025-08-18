@@ -1,4 +1,5 @@
 import logging
+import asyncio
 
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
@@ -9,7 +10,8 @@ from openpectus.aggregator.aggregator import Aggregator
 from openpectus.aggregator.command_examples import examples
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import PlotLogRepository, RecentEngineRepository
-from openpectus.aggregator.routers.auth import has_access, UserRolesValue, UserNameValue
+from openpectus.aggregator.routers.auth import UserIdValue, has_access, UserRolesValue, UserNameValue
+from pydantic.json_schema import SkipJsonSchema
 from starlette.status import HTTP_403_FORBIDDEN, HTTP_404_NOT_FOUND
 
 logger = logging.getLogger(__name__)
@@ -33,8 +35,8 @@ def map_pu(engine_data: Mdl.EngineData) -> Dto.ProcessUnit:
         name=f"{engine_data.computer_name} ({engine_data.uod_name})",
         state=state,
         location=engine_data.location,
-        runtime_msec=engine_data.runtime.value if (
-            engine_data.runtime is not None and isinstance(engine_data.runtime.value, int)
+        runtime_msec=int(engine_data.runtime.value*1000) if (
+                engine_data.runtime is not None and engine_data.runtime.value is not None
         ) else 0,
         current_user_role=Dto.UserRole.ADMIN,
         uod_author_name=engine_data.uod_author_name,
@@ -90,6 +92,7 @@ def get_units(user_roles: UserRolesValue, agg: Aggregator = Depends(agg_deps.get
 
     return units
 
+
 @router.get("/process_unit/{engine_id}/process_values", response_model_exclude_none=True)
 def get_process_values(
         user_roles: UserRolesValue,
@@ -118,7 +121,7 @@ def get_all_process_values(
         engine_id: str,
         response: Response,
         agg: Aggregator = Depends(agg_deps.get_aggregator)
-        ) -> list[Dto.ProcessValue]:
+) -> list[Dto.ProcessValue]:
     response.headers["Cache-Control"] = "no-store"
     engine_data = get_registered_engine_data_or_fail(engine_id, user_roles, agg)
     tags_info = engine_data.tags_info.map
@@ -136,9 +139,34 @@ def get_all_process_values(
     return process_values
 
 
+@router.get("/process_units/all_process_values", response_model_exclude_none=True)
+def get_all_process_values_of_all_available_engines(
+        user_roles: UserRolesValue,
+        response: Response,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)
+) -> list[Dto.ProcessUnitAllProcessValues]:
+    """
+    Returns all process value for all online process units (engines)
+    that the current user has access to.
+    """
+    response.headers["Cache-Control"] = "no-store"
+    process_units: list[Dto.ProcessUnitAllProcessValues] = []
+    all_engine_data = agg.get_all_registered_engine_data()
+    for engine_data in all_engine_data:
+        if not has_access(engine_data, user_roles):
+            continue
+        process_unit = map_pu(engine_data)
+        process_units.append(Dto.ProcessUnitAllProcessValues(
+            process_unit=process_unit,
+            process_values=[Dto.ProcessValue.create(tag_value) for tag_value in engine_data.tags_info.map.values()],
+        ))
+    return process_units
+
+
 @router.post("/process_unit/{unit_id}/execute_command", response_model_exclude_none=True)
 async def execute_command(
         user_name: UserNameValue,
+        user_id: UserIdValue,
         user_roles: UserRolesValue,
         unit_id: str,
         command: Dto.ExecutableCommand,
@@ -160,7 +188,10 @@ async def execute_command(
 
     # for now, all users issuing a command become contributors. may nee to filter that somehow
     # and when wo we clear the contributors?
-    engine_data.contributors.add(user_name)
+    contributor = Mdl.Contributor(id=user_id, name=user_name)
+    if contributor not in engine_data.contributors:
+            agg.from_frontend.publish_new_contributor_notification(unit_id, contributor)
+    engine_data.contributors.add(contributor)
     return Dto.ServerSuccessResponse()
 
 
@@ -206,30 +237,34 @@ def get_method_and_state(
         unit_id: str,
         agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.MethodAndState:
     engine_data = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
+    return Dto.MethodAndState.from_models(engine_data.method, engine_data.method_state)
 
-    def from_models(method: Mdl.Method, method_state: Mdl.MethodState) -> Dto.MethodAndState:
-        return Dto.MethodAndState(
-            method=Dto.Method(lines=[Dto.MethodLine(id=line.id, content=line.content) for line in method.lines]),
-            state=Dto.MethodState(started_line_ids=[_id for _id in method_state.started_line_ids],
-                                  executed_line_ids=[_id for _id in method_state.executed_line_ids],
-                                  injected_line_ids=[_id for _id in method_state.injected_line_ids])
-        )
 
-    return from_models(engine_data.method, engine_data.method_state)
+@router.get('/process_unit/{unit_id}/method', response_model_exclude_none=True)
+def get_method(
+        user_roles: UserRolesValue,
+        unit_id: str,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.Method:
+    engine_data = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
+    return Dto.Method.from_model(engine_data.method)
 
 
 @router.post('/process_unit/{unit_id}/method', response_model_exclude_none=True)
 async def save_method(
         user_name: UserNameValue,
+        user_id: UserIdValue,
         user_roles: UserRolesValue,
         unit_id: str,
         method_dto: Dto.Method,
-        agg: Aggregator = Depends(agg_deps.get_aggregator)):
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.MethodVersion:
     _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
-    method_mdl = Mdl.Method(lines=[Mdl.MethodLine(id=line.id, content=line.content) for line in method_dto.lines])
-
-    if not await agg.from_frontend.method_saved(engine_id=unit_id, method=method_mdl, user_name=user_name):
-        return Dto.ServerErrorResponse(message="Failed to set method")
+    method_mdl = Mdl.Method(
+        lines=[Mdl.MethodLine(id=line.id, content=line.content) for line in method_dto.lines],
+        version=method_dto.version,
+        last_author=user_name
+    )
+    new_version = await agg.from_frontend.method_saved(engine_id=unit_id, method=method_mdl, user=Mdl.Contributor(id=user_id, name=user_name))
+    return Dto.MethodVersion(version=new_version)
 
 
 @router.get('/process_unit/{unit_id}/plot_configuration', response_model_exclude_none=True)
@@ -286,12 +321,13 @@ def get_error_log(
 @router.post('/process_unit/{unit_id}/run_log/force_line/{line_id}', response_model_exclude_none=True)
 async def force_run_log_line(
         user_name: UserNameValue,
+        user_id: UserIdValue,
         user_roles: UserRolesValue,
         unit_id: str,
         line_id: str,
         agg: Aggregator = Depends(agg_deps.get_aggregator)):
     _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
-    if not await agg.from_frontend.request_force(engine_id=unit_id, line_id=line_id, user_name=user_name):
+    if not await agg.from_frontend.request_force(engine_id=unit_id, line_id=line_id, user=Mdl.Contributor(id=user_id, name=user_name)):
         return Dto.ServerErrorResponse(message="Force request failed")
     return Dto.ServerSuccessResponse(message="Force successfully requested")
 
@@ -299,17 +335,70 @@ async def force_run_log_line(
 @router.post('/process_unit/{unit_id}/run_log/cancel_line/{line_id}', response_model_exclude_none=True)
 async def cancel_run_log_line(
         user_name: UserNameValue,
+        user_id: UserIdValue,
         user_roles: UserRolesValue,
         unit_id: str,
         line_id: str,
         agg: Aggregator = Depends(agg_deps.get_aggregator)):
     _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
-    if not await agg.from_frontend.request_cancel(engine_id=unit_id, line_id=line_id, user_name=user_name):
+    if not await agg.from_frontend.request_cancel(engine_id=unit_id, line_id=line_id, user=Mdl.Contributor(id=user_id, name=user_name)):
         return Dto.ServerErrorResponse(message="Cancel request failed")
     return Dto.ServerSuccessResponse(message="Cancel successfully requested")
-
 
 
 @router.get('/process_units/system_state_enum', response_model_exclude_none=True)
 def expose_system_state_enum() -> Dto.SystemStateEnum:
     return Mdl.SystemStateEnum.Running
+
+
+@router.get('/process_unit/{unit_id}/active_users', response_model_exclude_none=True)
+async def get_active_users(
+        user_roles: UserRolesValue,
+        unit_id: str,
+        response: Response,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> list[Dto.ActiveUser]:
+    response.headers["Cache-Control"] = "no-store"
+    engine_data = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
+    active_users = engine_data.active_users.values()
+    return list(map(Dto.ActiveUser.from_model, active_users))
+
+
+@router.post('/process_unit/{unit_id}/register_active_user', response_model_exclude_none=True)
+async def register_active_user(
+        user_id_from_token: UserIdValue,
+        user_name: UserNameValue,
+        user_roles: UserRolesValue,
+        unit_id: str,
+        user_id: str | SkipJsonSchema[None] = None,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)):
+    _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
+    resolved_user_id = user_id_from_token or user_id
+    if(resolved_user_id == None):
+        return Dto.ServerErrorResponse(message="User registration failed due to missing user_id")
+    action_result = await agg.from_frontend.register_active_user(
+        engine_id=unit_id,
+        user_id=resolved_user_id,
+        user_name=user_name,
+    )
+    if not action_result:
+        return Dto.ServerErrorResponse(message="User registration failed")
+    return Dto.ServerSuccessResponse(message="User successfully registered")
+
+@router.post('/process_unit/{unit_id}/unregister_active_user', response_model_exclude_none=True)
+async def unregister_active_user(
+        user_id_from_token: UserIdValue,
+        user_roles: UserRolesValue,
+        unit_id: str,
+        user_id: str | SkipJsonSchema[None] = None,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)):
+    _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
+    resolved_user_id = user_id_from_token or user_id
+    if(resolved_user_id == None):
+        return Dto.ServerErrorResponse(message="User unregistration failed due to missing user_id")
+    action_result = await agg.from_frontend.unregister_active_user(
+        engine_id=unit_id,
+        user_id=resolved_user_id,
+    )
+    if not action_result:
+        return Dto.ServerErrorResponse(message="User unregistration failed")
+    return Dto.ServerSuccessResponse(message="User successfully unregistered")
