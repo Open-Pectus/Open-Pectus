@@ -15,6 +15,7 @@ from openpectus.lang.exec.uod import (
     UodCommand,
     UodBuilder,
 )
+from openpectus.lang.model.parser import ParserMethod, create_method_parser
 from openpectus.protocol.models import Method
 from openpectus.test.engine.utility_methods import (
     EngineTestRunner,
@@ -505,21 +506,39 @@ class TestMethodManager(unittest.TestCase):
         # in this method line 05 is not marked as completed even when 06 is completed. Not sure why.
         # but we have to validate against this
 
-    @unittest.skip("TODO")
-    def test_macro(self):
+    def test_macro_allows_editing_uncalled_macro(self):
         # Can edit macro until it has run the first time
         # consider line state
+        method1 = Method.from_numbered_pcode("""\
+01 Macro: M
+02     Mark: A
+03 Mark: C
+04 Call macro: M
+05 Mark: D
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Macro: M
+02     Mark: B
+03 Mark: C
+04 Call macro: M
+05 Mark: D
+""")
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_instruction("Mark", state="completed", arguments="C")
 
-        raise NotImplementedError()
+            # verify no edit error
+            instance.engine.set_method(method2)
 
-    @unittest.skip("Looks like a straightforward fix - skip for now")
-    def test_may_extend_macro_if_not_executed(self):
+            # verify macros are defined in new revision
+            self.assertEqual(1, len(instance.method_manager.program.macros))
 
-        # change is not included when macro is called??
-        # clearly because interpreter holds macro nodes references to unmodified nodes
-        # To fix:
-        #   - move macro definition logic to analyzer
-        #   - on method edit, rerun analyzers. this may fix other issues as well
+            # method2 runs
+            instance.run_until_instruction("Mark", state="completed", arguments="D")
+            self.assertEqual(["C", "B", "D"], instance.marks)
+
+    def test_macro_disallows_editing_called_macro(self):
 
         method1 = Method.from_numbered_pcode("""\
 01 Macro: M
@@ -534,19 +553,348 @@ class TestMethodManager(unittest.TestCase):
 03 Mark: A
 04 Call macro: M
 """)
-
         runner = EngineTestRunner(create_test_uod, method1)
         with runner.run() as instance:
             instance.start()
-            instance.run_until_instruction("Mark", state="completed", arguments="A")
-
-            # verify no edit error
-            instance.engine.set_method(method2)
-
             instance.run_until_instruction("Call macro", state="completed")
 
-            # verify run behavior
-            self.assertEqual(["A", "B", "C"], instance.marks)
+            # verify edit error
+            with self.assertRaises(MethodEditError):
+                instance.engine.set_method(method2)
+
+    def test_compare_macro_source(self):
+        logger = logging.getLogger("null")
+
+        def test(macro1_pcode: str, macro2_pcode: str, expected_match: bool, id: int):
+            with self.subTest(f"macro source match test {id}"):
+                method1 = ParserMethod.from_pcode(macro1_pcode)
+                method2 = ParserMethod.from_pcode(macro2_pcode)
+                program1 = create_method_parser(method1).parse_method(method1)
+                program2 = create_method_parser(method2).parse_method(method2)
+                result = program1.matches_source(program2, logger)
+                if result != expected_match:
+                    self.fail(f"Expected match result {expected_match}, but was {result}")
+
+        test(
+            "Macro: M\n    Mark: A",
+            "Macro: M\n    Mark: A",
+            expected_match=True, id=1)
+        test(
+            "Macro: M\n    Mark: A",
+            "Macro: M\n    Mark: A # comment",
+            expected_match=True, id=2)
+        test(
+            "Macro: M\n    Mark: A",
+            "Macro: X\n    Mark: A",
+            expected_match=False, id=3)
+
+        test("""\
+Macro: M
+    Mark: A
+    Watch: Run counter > 0
+        Mark: B
+""",
+             """\
+Macro: M
+    Mark: A
+    Watch: Run counter > 0
+        Mark: B
+
+""",
+             expected_match=True, id=4)
+
+        test("""\
+Macro: M
+    Mark: A
+    Watch: Run counter > 0
+        Mark: B
+        Mark: C
+""",
+             """\
+Macro: M
+    Mark: A
+    Watch: Run counter > 0
+        Mark: B
+
+""",
+             expected_match=False, id=5)
+
+        test("""\
+# foo
+
+Macro: M
+    Mark: A
+
+    Watch: Run counter > 0
+        Mark: B
+        # baz
+        Mark: C
+
+    # bar
+
+""",
+             """\
+Macro: M
+    Mark: A
+    Watch: Run counter > 0
+        Mark: B
+        Mark:     C
+""",
+             expected_match=True, id=6)
+        
+        
+
+        # it works for all nodes even though we have only needed it for macros
+        test("""\
+# foo
+Watch: Run counter > 0 # bar
+    Mark: B
+    # baz
+""",
+             """\
+Watch: Run counter > 0
+    Mark: B
+""",
+             expected_match=True, id=6)
+
+
+# Generational Edits - multiple edits of running method revisions
+
+    def test_edit_2_revisions(self):
+        # test re-edits of method with interrupts and macros
+        method1 = Method.from_numbered_pcode("""\
+01 Macro: M
+02     Mark: A
+03 Watch: Run Time > 1s
+04     Mark: B
+05 Wait: 0.2s
+06 Mark: E
+07  
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Macro: M
+02     Mark: A
+03 Watch: Run Time > 1s
+04     Mark: B
+05 Wait: 0.2s
+06 Mark: E
+07 Mark: F
+""")
+        method3 = Method.from_numbered_pcode("""\
+01 Macro: M
+02     Mark: A
+03 Watch: Run Time > 1s
+04     Mark: B
+05 Wait: 0.2s
+06 Mark: E
+07 Mark: G
+""")
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_instruction("Wait", state="completed")
+            self.assertEqual([], instance.marks)
+
+            # method2 runs
+            instance.engine.set_method(method2)
+            instance.run_until_instruction("Mark", state="completed", arguments="E")
+            self.assertEqual(["E"], instance.marks)
+
+            # method3 runs
+            instance.engine.set_method(method3)
+            instance.run_until_instruction("Mark", state="completed", arguments="G")
+            self.assertEqual(["E", "G"], instance.marks)
+
+    def test_watch_edit_2_revisions_1(self):
+        # test re-edits of method with interrupt
+        method1 = Method.from_numbered_pcode("""\
+01 Watch: Run Time > 0.5s
+02     Mark: A
+03 Mark: B
+04 Wait: 0.5s
+05 Mark: C
+06 
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Watch: Run Time > 0.5s
+02     Mark: A
+03 Mark: B
+04 Wait: 0.5s
+05 Mark: D
+06 
+""")
+        method3 = Method.from_numbered_pcode("""\
+01 Watch: Run Time > 0.5s
+02     Mark: A
+03 Mark: B
+04 Wait: 0.5s
+05 Mark: D
+06 Mark: E
+""")
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+
+            # method1 runs - watch interrupt registeret
+            instance.run_until_instruction("Mark", state="completed", arguments="B")
+            self.assertEqual(["B"], instance.marks)
+
+            # method2 runs - watch interrupt executed
+            instance.engine.set_method(method2)
+            instance.run_until_instruction("Mark", state="completed", arguments="D")
+            self.assertEqual(["B", "A", "D"], instance.marks)
+
+            # method3 runs - does nothing
+            instance.engine.set_method(method3)
+            instance.run_until_instruction("Mark", state="completed", arguments="E")
+            self.assertEqual(["B", "A", "D", "E"], instance.marks)
+
+    def test_watch_edit_2_revisions_2(self):
+        # test re-edits of method with interrupt
+        method1 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Watch: Run Time > 0.5s
+03     Mark: B
+04 Mark: C
+05 Wait: 0.5s
+06 Mark: D
+06 
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Watch: Run Time > 0.5s
+03     Mark: B
+04 Mark: C
+05 Wait: 0.5s
+06 Mark: D
+06 
+""")
+        method3 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Watch: Run Time > 0.5s
+03     Mark: B
+04 Mark: C
+05 Wait: 0.5s
+06 Mark: E
+06 
+""")
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+
+            # method1 runs - watch interrupt not registeret
+            instance.run_until_instruction("Mark", state="completed", arguments="A")
+            self.assertEqual(["A"], instance.marks)
+
+            # method2 runs - watch interrupt registered during ffw
+            instance.engine.set_method(method2)
+            instance.run_until_instruction("Mark", state="completed", arguments="C")
+            self.assertEqual(["A", "C"], instance.marks)
+
+            # method3 runs - watch interrupt executed
+            instance.engine.set_method(method3)
+            instance.run_until_instruction("Mark", state="completed", arguments="E")
+            self.assertEqual(["A", "C", "B", "E"], instance.marks)
+
+
+    def test_macro_edit_2_revisions_1(self):
+        # test re-edits of method with macro
+        method1 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Macro: M
+03     Mark: B
+04 Mark: C
+05 Call macro: M
+06 Mark: D
+07 # 1
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Macro: M
+03     Mark: B
+04 Mark: C
+05 Call macro: M
+06 Mark: D
+07 # 2
+""")
+        method3 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Macro: M
+03     Mark: B
+04 Mark: C
+05 Call macro: M
+06 Mark: D
+07 # 3
+""")
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+
+            # method1 runs - nothing
+            instance.run_until_instruction("Mark", state="completed", arguments="A")
+            self.assertEqual(["A"], instance.marks)
+
+            # method2 runs - macro registered
+            instance.engine.set_method(method2)
+            instance.run_until_instruction("Mark", state="completed", arguments="C")
+            self.assertEqual(["A", "C"], instance.marks)
+
+            # method3 runs - macro runs
+            instance.engine.set_method(method3)
+            instance.run_until_instruction("Mark", state="completed", arguments="D")
+            self.assertEqual(["A", "C", "B", "D"], instance.marks)
+
+    @unittest.skip(reason="TODO")
+    def test_macro_edit_2_revisions_2(self):
+        # test re-edits of method with macro
+        method1 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Macro: M
+03     Mark: B
+04 Mark: C
+05 Call macro: M
+06 Mark: D
+07 # 1
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Macro: M
+03     Mark: B
+04 Mark: C
+05 Call macro: M
+06 Mark: D
+07 # 2
+""")
+        method3 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Macro: M
+03     Mark: B
+04 Mark: C
+05 Call macro: M
+06 Mark: D
+07 Call macro: M
+08 Mark: E
+09 
+""")
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+
+            # method1 runs - macro registered
+            instance.run_until_instruction("Mark", state="completed", arguments="C")
+            self.assertEqual(["A", "C"], instance.marks)
+
+            # method2 runs - macro reruns
+            instance.engine.set_method(method2)
+            instance.run_until_instruction("Mark", state="completed", arguments="D")
+            self.assertEqual(["A", "C", "B", "D"], instance.marks)
+
+            # method3 runs - macro runs
+            instance.engine.set_method(method3)
+            instance.run_until_instruction("Mark", state="completed", arguments="E")
+            self.assertEqual(["A", "C", "B", "D", "B", "E"], instance.marks)
+
+# End Generational Edits
 
     @unittest.skip("TODO")
     def test_edit_injected(self):

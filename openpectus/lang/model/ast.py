@@ -1,4 +1,5 @@
 from __future__ import annotations
+from logging import Logger
 from typing import Self, Type, TypeVar, TypedDict
 
 
@@ -321,6 +322,61 @@ class Node(SupportCancelForce):
                 for child in self.children:
                     child.reset_runtime_state(True)
 
+    def matches_source(self, other: Node, logger: Logger) -> bool:  # noqa: C901
+        """ Returns True if the two nodes correspond to the same pcode source lines, else False.
+
+        Some white space and comments are not considered changes
+        """
+        logger.debug(f"Comparing nodes {self} and {other}")
+
+        def is_significant_node(node: Node) -> bool:
+            if isinstance(node, WhitespaceNode):
+                return False
+            return True
+
+        def matches(node: Node, other: Node, logger: Logger) -> bool:
+            if node.__class__ != other.__class__:
+                logger.debug(f"Nodes differ by class on line {node.position.line}. " +
+                             f"'{node.__class__}' differs from '{other.__class__}'")
+                return False
+            if node.name != other.name:
+                # Note: This may never happen because if their names differ, they would not be chosen for comparison.
+                logger.debug(f"Nodes differ by name on line {node.position.line}")
+                return False
+            if node.arguments != other.arguments:
+                logger.debug(f"Nodes differ by argument, {node.arguments} differs from {other.arguments} " +
+                             f"on line {node.position.line}")
+                return False
+            if node.threshold != other.threshold:
+                logger.debug(f"Nodes differ by threshold, {node.threshold} differs from {other.threshold} " +
+                             f"on line {node.position.line}")
+                return False
+            if node.position.character != other.position.character:
+                logger.debug(f"Nodes differ by indentation, {node.position.character} differs from {other.position.character} " +
+                             f"on line {node.position.line}")
+            if isinstance(node, NodeWithChildren):
+                assert isinstance(other, NodeWithChildren)  # node and other have the same class
+                node_significant_child_count = len([n for n in node.children if is_significant_node(n)])
+                other_significant_child_count = len([n for n in other.children if is_significant_node(n)])
+                if node_significant_child_count != other_significant_child_count:
+                    logger.debug(f"Nodes differ by number of significant child nodes following line {node.position.line}")
+                    return False
+                match_index = -1
+                for child in node.children:
+                    if not is_significant_node(child):
+                        continue
+                    for index, other_child in enumerate(other.children):
+                        if index <= match_index:
+                            continue
+                        if not is_significant_node(other_child):
+                            continue
+                        match_index = index
+                        result = matches(child, other_child, logger)
+                        if not result:
+                            return False
+                        break
+            return True
+        return matches(self, other, logger)
 
 class NodeWithChildren(Node):
     def __init__(self, position=Position.empty, id=""):
@@ -661,6 +717,21 @@ class MacroNode(NodeWithChildren):
         self.activated: bool = False
         self._cancellable = False
         self._forcible = False
+        self.run_started_count: int = 0
+        """ The number of times the macro has started """
+
+    def extract_state(self):
+        state = super().extract_state()
+        state["run_started_count"] = self.run_started_count  # type: ignore
+        return state
+
+    def apply_state(self, state):
+        self.run_started_count = int(state["run_started_count"])
+        super().apply_state(state)
+
+    def reset_runtime_state(self, recursive):
+        # Note: run_started_count is not reset because it must maintain the macro invocations count
+        super().reset_runtime_state(recursive)
 
     def macro_calling_macro(self, macros: dict[str, MacroNode], name: str | None = None) -> list[str]:
         """ Recurse through macro to produce a path of calls it makes to other macros.

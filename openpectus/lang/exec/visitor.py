@@ -77,7 +77,10 @@ def run_tick(gen: NodeGenerator):
             break
 
 
-def run_ffw_tick(gen: NodeGenerator, interrupt_node_callback: Callable[[NodeAction], None]) -> bool | NodeAction:
+TickCallback = Callable[[NodeAction], None]
+
+
+def run_ffw_tick(gen: NodeGenerator, interrupt_node_callback: TickCallback, macro_node_callback: TickCallback) -> bool | NodeAction:
     """ Advance the generator a single tick while skipping execution.
 
     Calls interrupt_node_callback if it encounters a node that may require interrupt registration.
@@ -97,6 +100,8 @@ def run_ffw_tick(gen: NodeGenerator, interrupt_node_callback: Callable[[NodeActi
             if isinstance(x, NodeAction):
                 if isinstance(x.node, p.SupportsInterrupt):
                     interrupt_node_callback(x)
+                if isinstance(x.node, p.MacroNode):
+                    macro_node_callback(x)
                 if x.action_name not in x.node.action_history:
                     logger.info(f"FFW about to complete, action '{x.action_name}' not in history for node {x.node}")
                     # We got one step too far, x needs to be executed
