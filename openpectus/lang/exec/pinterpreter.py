@@ -602,44 +602,21 @@ class PInterpreter(NodeVisitor):
             logger.debug(f"Defining macro '{node}'")
         yield NodeAction(node, init_define_macro)
 
-        # Check if calling the macro will call the macro.
-        # This would incur a cascade of macros which
-        # is probably not intended.
-        # Make a temporary dict of macros to which
-        # this macro is added. This dict is only used
-        # to try to determine if the macro will at some
-        # point try to call itself.
-        def cancel_if_calling_itself(node: p.MacroNode):
-            program_node = node.root
-            temporary_macros = program_node.macros.copy()
-            temporary_macros[node.name] = node
-            cascade = node.macro_calling_macro(temporary_macros)
-            if cascade and node.name in cascade:
-                record = self.runtimeinfo.get_last_node_record(node)
-                record.add_state_cancelled(self._tick_time, self._tick_number, self.context.tags.as_readonly())
-                if len(cascade) == 1:
-                    logger.warning(f'Macro "{node.name}" calls itself. This is not allowed.')
-                    raise NodeInterpretationError(node, f'Macro "{node.name}" calls itself. ' +
-                                                        'Unfortunately, this is not allowed.')
-                else:
-                    path = " which calls ".join(f'macro "{link}"' for link in cascade)
-                    logger.warning(f'Macro "{node.name}" calls itself by calling {path}. This is not allowed.')
-                    raise NodeInterpretationError(node, f'Macro "{node.name}" calls itself by calling {path}. ' +
-                                                        'Unfortunately, this is not allowed.')
-        # TODO: this is also relevant on ffw - but we don't support failure in there
-        yield NodeAction(node, cancel_if_calling_itself)
+        # Don't check macro self reference here because
+        # - that is an analyzer responsibility
+        # - it will be checked before the macro is executed by visit_CallMacroNode
 
-        def define_macro(node: p.MacroNode):
+        if not node.is_registered:
             program_node = node.root
             if node.name in program_node.macros.keys():
                 logger.warning(f"Re-defining macro '{node.name}'")
             program_node.macros[node.name] = node
-            logger.debug(f"Macro '{node}' defined")
+            logger.debug(f"Macro '{node}' registered")
             record = self.runtimeinfo.get_last_node_record(node)
             record.add_state_completed(
                 self._tick_time, self._tick_number,
                 self.context.tags.as_readonly())
-        yield NodeAction(node, define_macro, ACTION_NAME_DEFINE_MACRO)
+            node.is_registered = True
 
 
     def visit_CallMacroNode(self, node: p.CallMacroNode) -> NodeGenerator:
@@ -653,7 +630,8 @@ class PInterpreter(NodeVisitor):
 
         def call_macro_check(node: p.CallMacroNode):
             program_node = node.root
-            if node.name not in program_node.macros.keys():
+            macro_node = node.root.macros.get(node.name)
+            if macro_node is None:
                 logger.warning(f'No macro defined with name "{node.name}"')
                 available_macros = "None"
                 if len(program_node.macros.keys()):
@@ -661,7 +639,30 @@ class PInterpreter(NodeVisitor):
                 self._add_record_state_failed(node)
                 raise NodeInterpretationError(
                     node,
-                    f'No macro defined with name "{node.name}". Available macros: {available_macros}.')            
+                    f'No macro defined with name "{node.name}". Available macros: {available_macros}.')
+
+            # Check if calling the macro will call the macro.
+            # This would incur a cascade of macros which
+            # is probably not intended.
+            # Make a temporary dict of macros to which
+            # this macro is added. This dict is only used
+            # to try to determine if the macro will at some
+            # point try to call itself.
+            temporary_macros = program_node.macros.copy()
+            temporary_macros[node.name] = macro_node
+            cascade = macro_node.macro_calling_macro(temporary_macros)
+            if cascade and node.name in cascade:
+                record = self.runtimeinfo.get_last_node_record(node)
+                record.add_state_cancelled(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+                if len(cascade) == 1:
+                    logger.warning(f'Macro "{node.name}" calls itself. This is not allowed.')
+                    raise NodeInterpretationError(node, f'Macro "{node.name}" calls itself. ' +
+                                                        'Unfortunately, this is not allowed.')
+                else:
+                    path = " which calls ".join(f'macro "{link}"' for link in cascade)
+                    logger.warning(f'Macro "{node.name}" calls itself by calling {path}. This is not allowed.')
+                    raise NodeInterpretationError(node, f'Macro "{node.name}" calls itself by calling {path}. ' +
+                                                        'Unfortunately, this is not allowed.')
         yield NodeAction(node, call_macro_check)
 
         def increment_start_count(node: p.CallMacroNode):
