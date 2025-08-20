@@ -1168,8 +1168,10 @@ Some;Csv;Data
     return new HttpResponse();
   }),
 
-  http.get('/api/process_unit/:unitId/other_active_users', () => {
-    return HttpResponse.json<ActiveUser[]>([]);
+  http.get('/api/process_unit/:unitId/active_users', () => {
+    return HttpResponse.json<ActiveUser[]>([
+      {id: 'fdsa', name: 'fdsa'},
+    ]);
   }),
 
   http.get('api/lsp/engine/:unitId/pcode.tmLanguage.json', () => {
@@ -1215,4 +1217,12 @@ Some;Csv;Data
       ],
     });
   }),
+
+  http.get('https://graph.microsoft.com/beta/users/:userId/photos/48x48/$value', () => {
+    return new HttpResponse(null, {status: 404});
+  }),
+
+  // http.get('https://graph.microsoft.com/beta/me/photos/48x48/$value', () => {
+  //   return new HttpResponse(null, {status: 404});
+  // }),
 ];
