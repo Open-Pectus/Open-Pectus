@@ -717,19 +717,30 @@ class MacroNode(NodeWithChildren):
         self.activated: bool = False
         self._cancellable = False
         self._forcible = False
+        self.is_registered: bool = False
+        """ Whether the macro has been registered in the revision. Lifetime is revision. """
         self.run_started_count: int = 0
-        """ The number of times the macro has started """
+        """ The number of times the macro has started. Life time is the whole run """
 
     def extract_state(self):
         state = super().extract_state()
+        state["is_registered"] = self.is_registered  # type: ignore
         state["run_started_count"] = self.run_started_count  # type: ignore
         return state
 
     def apply_state(self, state):
+        self.is_registered = bool(state["is_registered"])
         self.run_started_count = int(state["run_started_count"])
         super().apply_state(state)
 
+    def prepare_for_call(self):
+        """ Clears state left over by any previous calls of the macro so it can be called again """
+        self.children_complete = False
+        for macro_child in self.children:
+            macro_child.reset_runtime_state(recursive=True)
+
     def reset_runtime_state(self, recursive):
+        # Note: is_registered is not reset because that would cause re-registering the macro
         # Note: run_started_count is not reset because it must maintain the macro invocations count
         super().reset_runtime_state(recursive)
 
@@ -761,6 +772,20 @@ class CallMacroNode(Node):
         super().__init__(position, id)
         self._cancellable = False
         self._forcible = False
+        self.activated = False
+
+    def extract_state(self):
+        state = super().extract_state()
+        state["activated"] = self.activated  # type: ignore
+        return state
+
+    def apply_state(self, state):
+        self.activated = bool(state["activated"])  # type: ignore
+        super().apply_state(state)
+
+    def reset_runtime_state(self, recursive):
+        self.activated = False
+        super().reset_runtime_state(recursive)
 
 
 class NotifyNode(Node):

@@ -26,8 +26,7 @@ logger = logging.getLogger(__name__)
 
 term_uod = "Unit Operation Definition file."
 FFW_TICK_LIMIT = 1000  # Default limit for how many ticks are allowed during the fast-forward phase of a method edit.
-ACTION_NAME_REGISTER = "_register_interrupt"
-ACTION_NAME_DEFINE_MACRO = "define_macro"
+
 
 class CallStack:
     def __init__(self):
@@ -149,20 +148,16 @@ class PInterpreter(NodeVisitor):
             logger.debug(f"Resetting interrupt state for node {node}")
             assert isinstance(node, p.NodeWithChildren)
             node.interrupt_registered = False
-            node.action_history.remove(ACTION_NAME_REGISTER)
 
-        # modify new macro nodes corresponding to defined macros, so the new nodes can define
-        # new macros during ffw
+        # modify new macro nodes corresponding to registered macros, so the new nodes can register new macros during ffw
         for macro_node in self._program.macros.values():
             node = program.get_child_by_id(macro_node.id)
             if node is None:
                 logger.warning(f"Failed ro find and reset macro node: {macro_node}")
                 continue
             logger.debug(f"Resetting macro state for node {node}")
-            if ACTION_NAME_DEFINE_MACRO in node.action_history:
-                # this might not be good enough - seeing generationsl error
-                # possibly related to this
-                node.action_history.remove(ACTION_NAME_DEFINE_MACRO)
+            assert isinstance(node, p.MacroNode)
+            node.is_registered = False
 
         generator = instance.visit_ProgramNode(program)
         instance._run_ffw(generator, target_node_id)
@@ -186,29 +181,13 @@ class PInterpreter(NodeVisitor):
         completed_interrupt_keys = []
         has_reached_target_node = False
 
-        def on_interrupt_node(action: NodeAction) -> None:
-            if action.action_name == ACTION_NAME_REGISTER:
-                logger.debug(f"on_interrupt_node: {self._in_interrupt=} | {action.node=}")
-                assert isinstance(action.node, p.NodeWithChildren)
-                if not action.node.interrupt_registered:
-                    # Note: Rather that just calling self._register_interrupt(), we need to execute the register action.
-                    # This emulates the normal behavior that the generator hits the return statement of the NodeAction
-                    # and skips the child nodes which are only to be run by the interrupt.
-                    action.execute()
-
-        def on_macro_node(action: NodeAction):
-            if action.action_name == ACTION_NAME_DEFINE_MACRO:
-                logger.debug(f"on_macro_node: {self._in_interrupt=} | {action.node=}")
-                assert isinstance(action.node, p.MacroNode)
-                action.execute()
-
         while True:
             ffw_tick += 1
 
             if not main_complete:
                 try:
                     logger.debug(f"Run main ffw tick {ffw_tick}")
-                    x = run_ffw_tick(self._generator, on_interrupt_node, on_macro_node)
+                    x = run_ffw_tick(self._generator)
                     if isinstance(x, NodeAction):
                         last_work_tick = ffw_tick
                         main_complete = True
@@ -236,7 +215,7 @@ class PInterpreter(NodeVisitor):
                 try:
                     logger.debug(f"Run interrupt {key} ffw tick {ffw_tick}")
                     self._in_interrupt = True
-                    x = run_ffw_tick(interrupt.actions, on_interrupt_node, on_macro_node)
+                    x = run_ffw_tick(interrupt.actions)
                     self._in_interrupt = False
                     if isinstance(x, NodeAction):
                         last_work_tick = ffw_tick
@@ -301,9 +280,6 @@ class PInterpreter(NodeVisitor):
         assert hasattr(handler, "__name__"), f"Handler {str(handler)} has no name"
         handler_name = getattr(handler, "__name__")
         # Note: we may have to allow overwriting the handler because Watch-in-Alarm cases require it.
-        # if node.id in self._interrupts_map.keys():
-        #     logger.error(f"Cannot register interrupt for node {node}. A handler for this node already exists.")
-        #     raise Exception("Interrupt registration failed for node {node}")
         if node.interrupt_registered:
             logger.warning(f"The state for node {node} indicates that it already has a registered interrupt")
 
@@ -333,7 +309,7 @@ class PInterpreter(NodeVisitor):
         if not isinstance(node, p.SupportsInterrupt):
             logger.error(f"Node {node} does not support interrupts")
             raise Exception(f"Node {node} does not support interrupts")
-        if not isinstance(node, p.NodeWithChildren):            
+        if not isinstance(node, p.NodeWithChildren):
             raise TypeError(f"Node {node} implements SupportsInterrupt but not NodeWithChildren")
         assert isinstance(node, p.Node)
         if node.id in self._interrupts_map.keys():
@@ -670,18 +646,18 @@ class PInterpreter(NodeVisitor):
             macro_node.run_started_count += 1
         yield NodeAction(node, increment_start_count)
 
-        macro_node = node.root.macros[node.name]
-        yield from self._visit_children(macro_node)
+        # call the macro by visiting the macro's child nodes
+        if not node.activated:
+            macro_node = node.root.macros[node.name]
+            macro_node.prepare_for_call()
+            node.activated = True
+            yield from self._visit_children(macro_node)
 
         def call_macro_complete(node: p.CallMacroNode):
             record = self.runtimeinfo.get_last_node_record(node)
             record.add_state_completed(
                 self._tick_time, self._tick_number,
                 self.context.tags.as_readonly())
-            macro_node = node.root.macros[node.name]            
-            # This works - but does it break something, e.g. runlog?
-            # This might be causing the generational edit problems
-            macro_node.reset_runtime_state(recursive=True)            
         yield NodeAction(node, call_macro_complete)
 
 
@@ -957,7 +933,8 @@ class PInterpreter(NodeVisitor):
 
         if not node.interrupt_registered:
             # Note self._in_interrupt == True is uncommon but valid if watch/alarm is nested inside a watch/alarm
-            yield NodeAction(node, self._register_interrupt, ACTION_NAME_REGISTER, tick_break=True)
+            self._register_interrupt(node)
+            yield
             return
 
         # running from interrupt

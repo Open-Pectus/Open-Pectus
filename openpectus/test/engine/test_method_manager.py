@@ -844,7 +844,6 @@ Watch: Run counter > 0
             instance.run_until_instruction("Mark", state="completed", arguments="D")
             self.assertEqual(["A", "C", "B", "D"], instance.marks)
 
-    @unittest.skip(reason="TODO")
     def test_macro_edit_2_revisions_2(self):
         # test re-edits of method with macro
         method1 = Method.from_numbered_pcode("""\
@@ -884,12 +883,12 @@ Watch: Run counter > 0
             instance.run_until_instruction("Mark", state="completed", arguments="C")
             self.assertEqual(["A", "C"], instance.marks)
 
-            # method2 runs - macro reruns
+            # method2 runs - macro re-registers and runs
             instance.engine.set_method(method2)
             instance.run_until_instruction("Mark", state="completed", arguments="D")
             self.assertEqual(["A", "C", "B", "D"], instance.marks)
 
-            # method3 runs - macro runs
+            # method3 runs - macro re-re-registers re-runs
             instance.engine.set_method(method3)
             instance.run_until_instruction("Mark", state="completed", arguments="E")
             self.assertEqual(["A", "C", "B", "D", "B", "E"], instance.marks)
