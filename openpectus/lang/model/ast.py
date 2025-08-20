@@ -1,11 +1,14 @@
 from __future__ import annotations
+from logging import Logger
 from typing import Self, Type, TypeVar, TypedDict
 
 
 class Position:
     def __init__(self, line: int, character: int):
-        self.line: int = line   # todo define 0-1 based. should probably change from before to just match lsp
-        self.character: int = character  # start index = indentation
+        self.line: int = line
+        """ Line number, zero based """
+        self.character: int = character
+        """ Character number on line, zero-based. Corresponds to the indentation of the line """
 
     def is_empty(self) -> bool:
         return self == Position.empty
@@ -192,6 +195,9 @@ class Node(SupportCancelForce):
 
     @property
     def name(self) -> str:
+        """ Get node name. Parser guarantees it to not be None and be stripped. May be the empty string"""
+        # parser guards against None
+        assert self.arguments is not None
         return self.arguments
 
     @property
@@ -316,6 +322,61 @@ class Node(SupportCancelForce):
                 for child in self.children:
                     child.reset_runtime_state(True)
 
+    def matches_source(self, other: Node, logger: Logger) -> bool:  # noqa: C901
+        """ Returns True if the two nodes correspond to the same pcode source lines, else False.
+
+        Some white space and comments are not considered changes
+        """
+        logger.debug(f"Comparing nodes {self} and {other}")
+
+        def is_significant_node(node: Node) -> bool:
+            if isinstance(node, WhitespaceNode):
+                return False
+            return True
+
+        def matches(node: Node, other: Node, logger: Logger) -> bool:
+            if node.__class__ != other.__class__:
+                logger.debug(f"Nodes differ by class on line {node.position.line}. " +
+                             f"'{node.__class__}' differs from '{other.__class__}'")
+                return False
+            if node.name != other.name:
+                # Note: This may never happen because if their names differ, they would not be chosen for comparison.
+                logger.debug(f"Nodes differ by name on line {node.position.line}")
+                return False
+            if node.arguments != other.arguments:
+                logger.debug(f"Nodes differ by argument, {node.arguments} differs from {other.arguments} " +
+                             f"on line {node.position.line}")
+                return False
+            if node.threshold != other.threshold:
+                logger.debug(f"Nodes differ by threshold, {node.threshold} differs from {other.threshold} " +
+                             f"on line {node.position.line}")
+                return False
+            if node.position.character != other.position.character:
+                logger.debug(f"Nodes differ by indentation, {node.position.character} differs from {other.position.character} " +
+                             f"on line {node.position.line}")
+            if isinstance(node, NodeWithChildren):
+                assert isinstance(other, NodeWithChildren)  # node and other have the same class
+                node_significant_child_count = len([n for n in node.children if is_significant_node(n)])
+                other_significant_child_count = len([n for n in other.children if is_significant_node(n)])
+                if node_significant_child_count != other_significant_child_count:
+                    logger.debug(f"Nodes differ by number of significant child nodes following line {node.position.line}")
+                    return False
+                match_index = -1
+                for child in node.children:
+                    if not is_significant_node(child):
+                        continue
+                    for index, other_child in enumerate(other.children):
+                        if index <= match_index:
+                            continue
+                        if not is_significant_node(other_child):
+                            continue
+                        match_index = index
+                        result = matches(child, other_child, logger)
+                        if not result:
+                            return False
+                        break
+            return True
+        return matches(self, other, logger)
 
 class NodeWithChildren(Node):
     def __init__(self, position=Position.empty, id=""):
@@ -400,6 +461,8 @@ class ProgramNode(NodeWithChildren):
 
         self.revision: int = 0
         """ The program revision. Starts as 0 and increments every time an edit is performed while running. """
+
+        self.macros: dict[str, MacroNode] = dict()
 
     def get_instructions(self, include_blanks: bool = False) -> list[Node]:
         """ Return list of all program instructions, recursively, depth first. """
@@ -654,7 +717,53 @@ class MacroNode(NodeWithChildren):
         self.activated: bool = False
         self._cancellable = False
         self._forcible = False
+        self.is_registered: bool = False
+        """ Whether the macro has been registered in the revision. Lifetime is revision. """
+        self.run_started_count: int = 0
+        """ The number of times the macro has started. Life time is the whole run """
 
+    def extract_state(self):
+        state = super().extract_state()
+        state["is_registered"] = self.is_registered  # type: ignore
+        state["run_started_count"] = self.run_started_count  # type: ignore
+        return state
+
+    def apply_state(self, state):
+        self.is_registered = bool(state["is_registered"])
+        self.run_started_count = int(state["run_started_count"])
+        super().apply_state(state)
+
+    def prepare_for_call(self):
+        """ Clears state left over by any previous calls of the macro so it can be called again """
+        self.children_complete = False
+        for macro_child in self.children:
+            macro_child.reset_runtime_state(recursive=True)
+
+    def reset_runtime_state(self, recursive):
+        # Note: is_registered is not reset because that would cause re-registering the macro
+        # Note: run_started_count is not reset because it must maintain the macro invocations count
+        super().reset_runtime_state(recursive)
+
+    def macro_calling_macro(self, macros: dict[str, MacroNode], name: str | None = None) -> list[str]:
+        """ Recurse through macro to produce a path of calls it makes to other macros.
+
+        This is used to identify if a macro will at some point call itself. """
+
+        # Note: This should be done once during analysis and the result be exposed 
+        # and cached on MacroNode/CallMacroNode, possibly as lists of incoming and 
+        # outgoing calls, which could even make this method reduntant
+        # In that case remember injected nodes - should probably rerun analysis on
+        # injection because that may change macro definitions
+
+        name = name if name is not None else self.name
+        assert self.children is not None
+        for child in self.children:
+            if isinstance(child, CallMacroNode):
+                if child.name == name:
+                    return [child.name]
+                elif child.name in macros.keys():
+                    return [child.name] + macros[child.name].macro_calling_macro(macros, name)
+        return []
 
 class CallMacroNode(Node):
     instruction_names = ["Call macro"]
@@ -663,6 +772,20 @@ class CallMacroNode(Node):
         super().__init__(position, id)
         self._cancellable = False
         self._forcible = False
+        self.activated = False
+
+    def extract_state(self):
+        state = super().extract_state()
+        state["activated"] = self.activated  # type: ignore
+        return state
+
+    def apply_state(self, state):
+        self.activated = bool(state["activated"])  # type: ignore
+        super().apply_state(state)
+
+    def reset_runtime_state(self, recursive):
+        self.activated = False
+        super().reset_runtime_state(recursive)
 
 
 class NotifyNode(Node):

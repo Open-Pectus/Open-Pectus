@@ -65,7 +65,7 @@ def run_tick(gen: NodeGenerator):
         x = next(gen)
         if isinstance(x, NodeAction):
             # account for exhausted pre-edit program which will have the last onde
-            # as active_node wven when it is completed
+            # as active_node even when it is completed
             # see tests test_wait and test_command_exec_id for details
             if x.node.completed and 'visit_end' in x.node.action_history:
                 pass
@@ -77,11 +77,11 @@ def run_tick(gen: NodeGenerator):
             break
 
 
-def run_ffw_tick(gen: NodeGenerator, interrupt_node_callback: Callable[[NodeAction], None]) -> bool | NodeAction:
+def run_ffw_tick(gen: NodeGenerator) -> bool | NodeAction:
     """ Advance the generator a single tick while skipping execution.
 
     Calls interrupt_node_callback if it encounters a node that may require interrupt registration.
-    
+
     Return value:
         - node action
             if the generator has reached an action whose name was not in action history. This
@@ -95,11 +95,9 @@ def run_ffw_tick(gen: NodeGenerator, interrupt_node_callback: Callable[[NodeActi
         try:
             x = next(gen)
             if isinstance(x, NodeAction):
-                if isinstance(x.node, p.SupportsInterrupt):
-                    interrupt_node_callback(x)
                 if x.action_name not in x.node.action_history:
                     logger.info(f"FFW about to complete, action '{x.action_name}' not in history for node {x.node}")
-                    # We got one step too far, x needs to be executed
+                    # We got one step too far, x needs to be executed, caller will handle that
                     return x
                 if x.tick_break:
                     break

@@ -26,23 +26,6 @@ logger = logging.getLogger(__name__)
 
 term_uod = "Unit Operation Definition file."
 FFW_TICK_LIMIT = 1000  # Default limit for how many ticks are allowed during the fast-forward phase of a method edit.
-ACTION_NAME_REGISTER = "_register_interrupt"
-
-def macro_calling_macro(node: p.MacroNode, macros: dict[str, p.MacroNode], name: str | None = None) -> list[str]:
-    '''
-    Recurse through macro to produce a path of calls it makes to other macros.
-    This is used to identify if a macro will at some point call itself.
-    '''
-    name = name if name is not None else node.name
-    assert node.children is not None
-    for child in node.children:
-        if isinstance(child, p.CallMacroNode):
-            if child.name == name:
-                return [child.name]
-            elif child.name in macros.keys():
-                return [child.name] + macro_calling_macro(macros[child.name], macros, name)
-    return []
-
 
 
 class CallStack:
@@ -114,7 +97,6 @@ class PInterpreter(NodeVisitor):
         self.context = context
         self.stack: CallStack = CallStack()
         self._interrupts_map: dict[str, Interrupt] = {}
-        self.macros: dict[str, p.MacroNode] = dict()
 
         self.start_time: float = 0
         self._tick_time: float = 0
@@ -166,7 +148,16 @@ class PInterpreter(NodeVisitor):
             logger.debug(f"Resetting interrupt state for node {node}")
             assert isinstance(node, p.NodeWithChildren)
             node.interrupt_registered = False
-            node.action_history.remove(ACTION_NAME_REGISTER)
+
+        # modify new macro nodes corresponding to registered macros, so the new nodes can register new macros during ffw
+        for macro_node in self._program.macros.values():
+            node = program.get_child_by_id(macro_node.id)
+            if node is None:
+                logger.warning(f"Failed ro find and reset macro node: {macro_node}")
+                continue
+            logger.debug(f"Resetting macro state for node {node}")
+            assert isinstance(node, p.MacroNode)
+            node.is_registered = False
 
         generator = instance.visit_ProgramNode(program)
         instance._run_ffw(generator, target_node_id)
@@ -190,23 +181,13 @@ class PInterpreter(NodeVisitor):
         completed_interrupt_keys = []
         has_reached_target_node = False
 
-        def on_interrupt_node(action: NodeAction) -> None:
-            if action.action_name == ACTION_NAME_REGISTER:
-                logger.warning(f"on_interrupt_node: {self._in_interrupt=} | {action.node=}")
-                assert isinstance(action.node, p.NodeWithChildren)
-                if not action.node.interrupt_registered:
-                    # Note: Rather that just calling self._register_interrupt(), we need to execute the register action.
-                    # This emulates the normal behavior that the generator hits the return statement of the NodeAction
-                    # and skips the child nodes which are only to be run by the interrupt.
-                    action.execute()
-
         while True:
             ffw_tick += 1
 
             if not main_complete:
                 try:
                     logger.debug(f"Run main ffw tick {ffw_tick}")
-                    x = run_ffw_tick(self._generator, on_interrupt_node)
+                    x = run_ffw_tick(self._generator)
                     if isinstance(x, NodeAction):
                         last_work_tick = ffw_tick
                         main_complete = True
@@ -234,7 +215,7 @@ class PInterpreter(NodeVisitor):
                 try:
                     logger.debug(f"Run interrupt {key} ffw tick {ffw_tick}")
                     self._in_interrupt = True
-                    x = run_ffw_tick(interrupt.actions, on_interrupt_node)
+                    x = run_ffw_tick(interrupt.actions)
                     self._in_interrupt = False
                     if isinstance(x, NodeAction):
                         last_work_tick = ffw_tick
@@ -271,43 +252,6 @@ class PInterpreter(NodeVisitor):
         self._ffw = False
         logger.info("FFW complete")
 
-    # TODO Remove - when macro is completed in #822
-    def _patch_node_references(self, program: p.ProgramNode):  # noqa C901
-        """ Patch node references to updated program nodes to account for a running method edit. """
-        logger.info("Patching node references in stack")
-        for inx, node in enumerate(self.stack._records):
-            # why the check against ProgramNode?
-            if node is not None and not isinstance(node, p.ProgramNode):
-                new_node = program.get_child_by_id(node.id)
-                if new_node is None:
-                    logger.error(f"No new node was found to replace {node}. Node cannot be patched")
-                else:
-                    if node != new_node:
-                        if isinstance(new_node, p.BlockNode):
-                            self.stack._records[inx] = new_node
-                            logger.debug(f"Patched node reference {new_node}")
-                        else:
-                            logger.error(f"Node reference not patched {new_node}. A NodeWithChildren instance is required")
-                    else:
-                        logger.warning(f"Node not patched: {new_node} - old node already matched the new node!?")
-
-        # TODO get rid of this when moving macro processing to analyser
-        logger.info("Patching node references in interpreter macros")
-        for name, node in self.macros.items():
-            if node is not None and not isinstance(node, p.ProgramNode):
-                new_node = program.get_child_by_id(node.id)
-                if new_node is None:
-                    logger.error(f"No new node was found to replace {node}. Node cannot be patched")
-                else:
-                    assert isinstance(new_node, p.MacroNode)
-                    if node != new_node:
-                        self.macros[name] = new_node
-                        logger.debug(f"Patched node reference {new_node}")
-                    else:
-                        logger.warning(f"Node not patched: {new_node} - old node already matched the new node!?")
-
-        logger.info("Patching complete")
-
     def get_marks(self) -> list[str]:
         records: list[tuple[str, int]] = []
         for r in self.runtimeinfo.records:
@@ -336,9 +280,6 @@ class PInterpreter(NodeVisitor):
         assert hasattr(handler, "__name__"), f"Handler {str(handler)} has no name"
         handler_name = getattr(handler, "__name__")
         # Note: we may have to allow overwriting the handler because Watch-in-Alarm cases require it.
-        # if node.id in self._interrupts_map.keys():
-        #     logger.error(f"Cannot register interrupt for node {node}. A handler for this node already exists.")
-        #     raise Exception("Interrupt registration failed for node {node}")
         if node.interrupt_registered:
             logger.warning(f"The state for node {node} indicates that it already has a registered interrupt")
 
@@ -368,7 +309,7 @@ class PInterpreter(NodeVisitor):
         if not isinstance(node, p.SupportsInterrupt):
             logger.error(f"Node {node} does not support interrupts")
             raise Exception(f"Node {node} does not support interrupts")
-        if not isinstance(node, p.NodeWithChildren):            
+        if not isinstance(node, p.NodeWithChildren):
             raise TypeError(f"Node {node} implements SupportsInterrupt but not NodeWithChildren")
         assert isinstance(node, p.Node)
         if node.id in self._interrupts_map.keys():
@@ -628,72 +569,96 @@ class PInterpreter(NodeVisitor):
 
 
     def visit_MacroNode(self, node: p.MacroNode) -> NodeGenerator:
-        # TODO handle FFW
 
-        record = self.runtimeinfo.get_last_node_record(node)
-        record.add_state_started(
-            self._tick_time, self._tick_number,
-            self.context.tags.as_readonly())
-        logger.info(f"Defining macro {node}")
+        def init_define_macro(node: p.MacroNode):
+            record = self.runtimeinfo.get_last_node_record(node)
+            record.add_state_started(
+                self._tick_time, self._tick_number,
+                self.context.tags.as_readonly())
+            logger.debug(f"Defining macro '{node}'")
+        yield NodeAction(node, init_define_macro)
 
-        # TODO move this check to an analyzer
-        # Check if calling the macro will call the macro.
-        # This would incur a cascade of macros which
-        # is probably not intended.
-        # Make a temporary dict of macros to which
-        # this macro is added. This dict is only used
-        # to try to determine if the macro will at some
-        # point try to call itself.
-        temporary_macros = self.macros.copy()
-        temporary_macros[node.name] = node
-        cascade = macro_calling_macro(node, temporary_macros)
-        if cascade and node.name in cascade:
-            record.add_state_cancelled(self._tick_time, self._tick_number, self.context.tags.as_readonly())
-            if len(cascade) == 1:
-                logger.warning(f'Macro "{node.name}" calls itself. This is not allowed.')
-                raise NodeInterpretationError(node, f'Macro "{node.name}" calls itself. ' +
-                                                    'Unfortunately, this is not allowed.')
-            else:
-                path = " which calls ".join(f'macro "{link}"' for link in cascade)
-                logger.warning(f'Macro "{node.name}" calls itself by calling {path}. This is not allowed.')
-                raise NodeInterpretationError(node, f'Macro "{node.name}" calls itself by calling {path}. ' +
-                                                    'Unfortunately, this is not allowed.')
+        # Don't check macro self reference here because
+        # - that is an analyzer responsibility
+        # - it will be checked before the macro is executed by visit_CallMacroNode
 
-        if node.name in self.macros.keys():
-            logger.warning(f'Re-defining macro with name "{node.name}"')
-        self.macros[node.name] = node
-        record.add_state_completed(
-            self._tick_time, self._tick_number,
-            self.context.tags.as_readonly())
+        if not node.is_registered:
+            program_node = node.root
+            if node.name in program_node.macros.keys():
+                logger.warning(f"Re-defining macro '{node.name}'")
+            program_node.macros[node.name] = node
+            logger.debug(f"Macro '{node}' registered")
+            record = self.runtimeinfo.get_last_node_record(node)
+            record.add_state_completed(
+                self._tick_time, self._tick_number,
+                self.context.tags.as_readonly())
+            node.is_registered = True
 
-        yield
 
-    # TODO fix
     def visit_CallMacroNode(self, node: p.CallMacroNode) -> NodeGenerator:
-        # TODO handle FFW
 
-        record = self.runtimeinfo.get_last_node_record(node)
-        record.add_state_started(
-            self._tick_time, self._tick_number,
-            self.context.tags.as_readonly())
+        def call_macro_init(node: p.CallMacroNode):
+            record = self.runtimeinfo.get_last_node_record(node)
+            record.add_state_started(
+                self._tick_time, self._tick_number,
+                self.context.tags.as_readonly())
+        yield NodeAction(node, call_macro_init)
 
-        if node.name not in self.macros.keys():
-            logger.warning(f'No macro defined with name "{node.name}"')
-            available_macros = "None"
-            if len(self.macros.keys()):
-                available_macros = ", ".join(f'"{macro}"' for macro in self.macros.keys())
-            self._add_record_state_failed(node)
-            raise NodeInterpretationError(
-                node, 
-                f'No macro defined with name "{node.name}". Available macros: {available_macros}.')
+        def call_macro_check(node: p.CallMacroNode):
+            program_node = node.root
+            macro_node = node.root.macros.get(node.name)
+            if macro_node is None:
+                logger.warning(f'No macro defined with name "{node.name}"')
+                available_macros = "None"
+                if len(program_node.macros.keys()):
+                    available_macros = ", ".join(f'"{macro}"' for macro in program_node.macros.keys())
+                self._add_record_state_failed(node)
+                raise NodeInterpretationError(
+                    node,
+                    f'No macro defined with name "{node.name}". Available macros: {available_macros}.')
 
-        macro_node = self.macros[node.name]
-        yield from self._visit_children(macro_node)
-        record.add_state_completed(
-            self._tick_time, self._tick_number,
-            self.context.tags.as_readonly())
-        # This works - but does it break something, e.g. runlog?
-        macro_node.reset_runtime_state(recursive=True)
+            # Check if calling the macro will call the macro.
+            # This would incur a cascade of macros which
+            # is probably not intended.
+            # Make a temporary dict of macros to which
+            # this macro is added. This dict is only used
+            # to try to determine if the macro will at some
+            # point try to call itself.
+            temporary_macros = program_node.macros.copy()
+            temporary_macros[node.name] = macro_node
+            cascade = macro_node.macro_calling_macro(temporary_macros)
+            if cascade and node.name in cascade:
+                record = self.runtimeinfo.get_last_node_record(node)
+                record.add_state_cancelled(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+                if len(cascade) == 1:
+                    logger.warning(f'Macro "{node.name}" calls itself. This is not allowed.')
+                    raise NodeInterpretationError(node, f'Macro "{node.name}" calls itself. ' +
+                                                        'Unfortunately, this is not allowed.')
+                else:
+                    path = " which calls ".join(f'macro "{link}"' for link in cascade)
+                    logger.warning(f'Macro "{node.name}" calls itself by calling {path}. This is not allowed.')
+                    raise NodeInterpretationError(node, f'Macro "{node.name}" calls itself by calling {path}. ' +
+                                                        'Unfortunately, this is not allowed.')
+        yield NodeAction(node, call_macro_check)
+
+        def increment_start_count(node: p.CallMacroNode):
+            macro_node = node.root.macros[node.name]
+            macro_node.run_started_count += 1
+        yield NodeAction(node, increment_start_count)
+
+        # call the macro by visiting the macro's child nodes
+        if not node.activated:
+            macro_node = node.root.macros[node.name]
+            macro_node.prepare_for_call()
+            node.activated = True
+            yield from self._visit_children(macro_node)
+
+        def call_macro_complete(node: p.CallMacroNode):
+            record = self.runtimeinfo.get_last_node_record(node)
+            record.add_state_completed(
+                self._tick_time, self._tick_number,
+                self.context.tags.as_readonly())
+        yield NodeAction(node, call_macro_complete)
 
 
     def visit_BlockNode(self, node: p.BlockNode) -> NodeGenerator:
@@ -955,17 +920,21 @@ class PInterpreter(NodeVisitor):
 
         yield NodeAction(node, schedule)
 
+
     def visit_WatchNode(self, node: p.WatchNode) -> NodeGenerator:
         return self.visit_WatchOrAlarm(node)
 
+
     def visit_AlarmNode(self, node: p.AlarmNode) -> NodeGenerator:
         return self.visit_WatchOrAlarm(node)
+
 
     def visit_WatchOrAlarm(self, node: p.WatchNode | p.AlarmNode) -> NodeGenerator:
 
         if not node.interrupt_registered:
             # Note self._in_interrupt == True is uncommon but valid if watch/alarm is nested inside a watch/alarm
-            yield NodeAction(node, self._register_interrupt, ACTION_NAME_REGISTER, tick_break=True)
+            self._register_interrupt(node)
+            yield
             return
 
         # running from interrupt

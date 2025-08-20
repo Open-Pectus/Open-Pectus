@@ -63,6 +63,8 @@ class MethodManager:
         assert self.program_is_started, "Program has not yet started, use set_method() rather that merge_method()"
         try:
             new_method, new_program = self._merge_method(_new_method)
+        except MethodEditError:
+            raise
         except Exception as ex:
             logger.error("merge_method failed", exc_info=True)
             raise MethodEditError(f"Merging the new method failed: Ex: {ex}")
@@ -73,6 +75,8 @@ class MethodManager:
             # create new interpreter instance with the new method and whose
             # state is fast-forwarded to the same instruction as before
             interpreter = self.interpreter.with_edited_program(new_program)
+        except MethodEditError:
+            raise
         except Exception as ex:
             logger.error("Preparing new interpreter failed", exc_info=True)
             raise MethodEditError(f"Preparing new interpreter failed: Ex: {ex}")
@@ -103,11 +107,27 @@ class MethodManager:
         # extract state for existing method
         existing_state = old_program.extract_tree_state()
 
-        # convert method from protocol api and apply the new method
+        # convert new method from protocol api and parse it
         _new_method = ParserMethod(lines=[ParserMethodLine(line.id, line.content) for line in new_method.lines])
 
         parser = create_method_parser(_new_method, self._uod_command_names)
         new_program = parser.parse_method(_new_method)
+
+        # validate that macros that have started executing are not modified
+        for old_macro_node in old_program.macros.values():
+            if old_macro_node.run_started_count > 0:
+                new_macro_node = new_program.get_child_by_id(old_macro_node.id)
+                if new_macro_node is None:
+                    raise MethodEditError(
+                        f"The macro '{old_macro_node.name}' that has already started executing may not be deleted.")
+                elif not isinstance(new_macro_node, p.MacroNode):
+                    raise MethodEditError(
+                        f"The macro '{old_macro_node.name}' that has already started executing has been changed " +
+                        "to another instruction type. This is not allowed. ")
+                else:
+                    if not old_macro_node.matches_source(new_macro_node, logger):
+                        raise MethodEditError(
+                            f"The macro '{old_macro_node.name}' has already started executing may not be modified")
 
         debug_enabled = True  # logger.isEnabledFor(logging.DEBUG)
         logger.info("Merging existing method state into modified method")
@@ -117,13 +137,12 @@ class MethodManager:
             logger.debug(f"Updating method revision from {old_program.revision} to {new_program.revision}")
 
             if debug_enabled:
-                logger.debug("Tree debugging state:")
                 debug_state = {
                     "old export state": existing_state,
                     "new_patched_state": new_program.extract_tree_state()
                 }
                 out = self._serialize(debug_state)
-                logger.debug("\n\n" + out + "\n")
+                logger.debug("Tree debugging state:\n\n" + out + "\n")
 
         except Exception as ex:
             logger.error("Failed to apply tree state", exc_info=True)
@@ -132,7 +151,7 @@ class MethodManager:
                 "new_patched_state": new_program.extract_tree_state()
             }
             out = self._serialize(debug_state)
-            logger.debug("\n\n" + out + "\n")
+            logger.debug("Tree debugging state:\n\n" + out + "\n")
             raise MethodEditError("Failed to apply tree state to updated method", ex)
 
         return _new_method, new_program

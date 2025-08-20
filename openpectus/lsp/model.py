@@ -4,7 +4,6 @@ from typing import TypedDict, Literal, NotRequired
 from pylsp.lsp import DiagnosticSeverity
 
 from openpectus.lang.exec.analyzer import AnalyzerItem, AnalyzerItemType
-from openpectus.lang.model.pprogram import PNode
 
 
 class MarkupContent(TypedDict):
@@ -40,9 +39,8 @@ class Range(TypedDict):
     https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#range
 
     Note:
-    - Lines are zero-based (where PNode lines are 1-based)
-    - Characters are also zero-based (like PNode increment and column) but the end position is not included. To include a
-      complete line, use character 0 on the next line as end position.
+    - Lines are zero-based
+    - Characters are zero-based
     """
     start: Position
     end: Position
@@ -181,21 +179,5 @@ def get_item_range(item: AnalyzerItem) -> Range:
         end=Position(
             line=item.range.end.line,
             character=item.range.end.character
-        ),
-    )
-
-def get_node_range(node: PNode) -> Range | None:
-    """ Represent item position range as lsp RangeItem """
-    if node.line is None or node.indent is None:
-        return None
-
-    return Range(
-        start=Position(
-            line=node.line,
-            character=node.indent
-        ),
-        end=Position(  # for now we just pick the rest of the line
-            line=node.line,
-            character=0
         ),
     )
