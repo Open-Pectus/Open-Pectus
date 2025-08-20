@@ -119,8 +119,7 @@ class MethodManager:
                 new_macro_node = new_program.get_child_by_id(old_macro_node.id)
                 if new_macro_node is None:
                     raise MethodEditError(
-                        f"The macro '{old_macro_node.name}' that has already started executing may not be deleted. " +
-                        "This is not allowed. ")
+                        f"The macro '{old_macro_node.name}' that has already started executing may not be deleted.")
                 elif not isinstance(new_macro_node, p.MacroNode):
                     raise MethodEditError(
                         f"The macro '{old_macro_node.name}' that has already started executing has been changed " +
