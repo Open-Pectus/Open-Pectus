@@ -1,6 +1,5 @@
 
 import logging
-from typing import Literal
 
 from openpectus.lang.exec.analyzer import WhitespaceCheckAnalyzer
 from openpectus.lang.exec.errors import MethodEditError
@@ -57,6 +56,11 @@ class MethodManager:
         self._interpreter = self._create_interpreter(self._program)
 
     def reset_interpreter(self):
+        # re-parse the method to reset all runtime state. self._program.reset_runtime_state() is not sufficient
+        # because some nodes maintain some state to support method merge
+        parser = create_method_parser(self._method, self._uod_command_names)
+        self._program = parser.parse_method(self._method)
+        self._apply_analysis(self._program)
         self._interpreter = self._create_interpreter(self._program)
 
     def merge_method(self, _new_method: Mdl.Method):
@@ -64,10 +68,11 @@ class MethodManager:
         try:
             new_method, new_program = self._merge_method(_new_method)
         except MethodEditError:
+            logger.error("merge_method failed")
             raise
         except Exception as ex:
             logger.error("merge_method failed", exc_info=True)
-            raise MethodEditError(f"Merging the new method failed: Ex: {ex}")
+            raise MethodEditError(f"Merging the new method failed: Ex: {ex}", ex)
 
         self._apply_analysis(new_program)
 
@@ -76,17 +81,18 @@ class MethodManager:
             # state is fast-forwarded to the same instruction as before
             interpreter = self.interpreter.with_edited_program(new_program)
         except MethodEditError:
+            logger.error("Preparing new interpreter failed", exc_info=True)
             raise
         except Exception as ex:
             logger.error("Preparing new interpreter failed", exc_info=True)
-            raise MethodEditError(f"Preparing new interpreter failed: Ex: {ex}")
+            raise MethodEditError(f"Preparing new interpreter failed: Ex: {ex}", ex)
 
         # finally commit the "transaction"
         self._interpreter = interpreter
         self._method = new_method
         self._program = new_program
 
-    def _merge_method(self, new_method: Mdl.Method) -> tuple[ParserMethod, p.ProgramNode]:
+    def _merge_method(self, new_method: Mdl.Method) -> tuple[ParserMethod, p.ProgramNode]:  # noqa C901
         """ User saved method while a run was active. The new method is replacing an existing method
         whose state should be merged over. """
         # concurrency check: aggregator performs the version check and aborts on error

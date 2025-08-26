@@ -3,7 +3,14 @@ from uuid import UUID
 
 from openpectus.aggregator.models import RunLog, RunLogLine
 from openpectus.engine.engine import Engine
-from openpectus.lang.exec.runlog import RunLogItem, RunLogItemState, RuntimeInfo, RuntimeRecordStateEnum, assert_Runlog_HasItem, assert_Runlog_HasItem_Completed, assert_Runlog_HasItem_Started, assert_Runlog_HasNoItem, assert_Runtime_HasRecord, assert_Runtime_HasRecord_Completed, assert_Runtime_HasRecord_Started
+from openpectus.engine.models import EngineCommandEnum
+from openpectus.lang.exec.runlog import (
+    RunLogItem, assert_Runlog_HasItem,
+    assert_Runlog_HasItem_Completed, assert_Runlog_HasItem_Started,
+    assert_Runlog_HasNoItem, assert_Runtime_HasRecord,
+    assert_Runtime_HasRecord_Completed, assert_Runtime_HasRecord_Started
+)
+from openpectus.lang.model.pprogramformatter import print_program
 from openpectus.test.engine.test_engine import create_engine, create_test_uod
 
 from openpectus.test.engine.utility_methods import (
@@ -149,29 +156,35 @@ Macro: A
         cmd = "Macro: A"
         self.assert_Runtime_HasRecord_Started(cmd)
         self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem(cmd)
+        # is completed after definition. once it's called, the states start over
         self.assert_Runlog_HasItem_Completed(cmd, 1)
 
     def test_Macro_single_invocation(self):
         e = self.engine
 
-        cmd = """
+        program = """
 Macro: A
     Mark: b
 Call macro: A
 """
-        run_engine(e, cmd, 6)
+        run_engine(e, program, 8)
+        print_program(e.method_manager.program, show_blanks=True)
         print(self.engine.runtimeinfo.records)
         cmd = "Macro: A"
         self.assert_Runtime_HasRecord_Started(cmd)
         self.assert_Runtime_HasRecord_Completed(cmd)
-        self.assert_Runlog_HasItem_Completed(cmd, 1)
+        self.assert_Runlog_HasItem_Completed(cmd)
         cmd = "Mark: b"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
+        cmd = "Call macro: A"
         self.assert_Runtime_HasRecord_Started(cmd)
         self.assert_Runtime_HasRecord_Completed(cmd)
         self.assert_Runlog_HasItem_Completed(cmd, 1)
 
     def test_Macro_multiple_invocations(self):
-        # this test fails because macro calls fail to clear runtime state. just fix that
         e = self.engine
 
         cmd = """
@@ -181,7 +194,7 @@ Call macro: A
 Call macro: A
 Call macro: A
 """
-        run_engine(e, cmd, 20)
+        run_engine(e, cmd, 12)
         cmd = "Macro: A"
         self.assert_Runtime_HasRecord_Started(cmd)
         self.assert_Runtime_HasRecord_Completed(cmd)
@@ -190,6 +203,73 @@ Call macro: A
         self.assert_Runtime_HasRecord_Started(cmd)
         self.assert_Runtime_HasRecord_Completed(cmd)
         self.assert_Runlog_HasItem_Completed(cmd, 3)
+        cmd = "Call macro: A"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 3)
+
+    def test_Macro_restart(self):
+        e = self.engine
+
+        cmd = """\
+Macro: M
+    Mark: M1
+Call macro: M
+"""
+        run_engine(e, cmd, 10)
+        cmd = "Macro: M"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
+        cmd = "Mark: M1"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
+        cmd = "Call macro: M"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
+
+        e.schedule_execution(EngineCommandEnum.RESTART)
+        continue_engine(e, 15)
+
+        cmd = "Macro: M"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
+        cmd = "Mark: M1"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
+        cmd = "Call macro: M"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
+
+    def test_Macro_followed_by_blank(self):
+        e = self.engine
+
+        program = """
+Macro: A
+    Mark: b
+
+Call macro: A
+"""
+        run_engine(e, program, 8)
+        print_program(e.method_manager.program, show_blanks=True)
+        print(self.engine.runtimeinfo.records)
+        cmd = "Macro: A"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd)
+        cmd = "Mark: b"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
+        cmd = "Call macro: A"
+        self.assert_Runtime_HasRecord_Started(cmd)
+        self.assert_Runtime_HasRecord_Completed(cmd)
+        self.assert_Runlog_HasItem_Completed(cmd, 1)
 
     def test_runlog_cancel_watch(self):
         e = self.engine

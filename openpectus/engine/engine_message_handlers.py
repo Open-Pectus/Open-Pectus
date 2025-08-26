@@ -37,7 +37,7 @@ class EngineMessageHandlers():
             sentry.engine_method_set(msg.method.as_pcode())
             return AM.SuccessMessage()
         except Exception as ex:
-            logger.error("Failed to set method")
+            logger.error(f"Failed to set method. Exception: {ex}")
             return AM.ErrorMessage(message="Failed to set method", exception_message=str(ex))
 
     async def handle_invokeCommandMsg(self, msg: AM.AggregatorMessage) -> M.MessageBase:
