@@ -898,7 +898,6 @@ class PInterpreter(NodeVisitor):
 
 
     def visit_UodCommandNode(self, node: p.UodCommandNode) -> NodeGenerator:
-        # TODO node-completed
 
         def schedule(node: p.UodCommandNode):
             record = self.runtimeinfo.get_last_node_record(node)
@@ -909,7 +908,7 @@ class PInterpreter(NodeVisitor):
             # We do, however, provide the execution id to the context
             # so that it can update the runtime record appropriately.
             try:
-                logger.debug(f"Executing command '{node}' via engine")
+                logger.debug(f"Executing uod command '{node}' with record '{record}' via engine")
                 self.context.schedule_execution(
                     name=node.instruction_name,
                     arguments=node.arguments,

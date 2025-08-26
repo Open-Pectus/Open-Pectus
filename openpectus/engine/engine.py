@@ -629,6 +629,7 @@ class Engine(InterpreterContext):
                     cmd_request.command_exec_id,
                     self._tick_time, self._tick_number,
                     self.tags_as_readonly())
+                record.node.completed = True
                 cmds_done.add(cmd_request)
                 uod_command.finalize()
                 logger.debug(f"Command {cmd_request.name} finalized")
