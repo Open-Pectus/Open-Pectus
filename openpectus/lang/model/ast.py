@@ -522,12 +522,14 @@ class ProgramNode(NodeWithChildren):
     def extract_state(self) -> NodeState:
         state = super().extract_state()
         state["revision"] = self.revision  # type: ignore
+        state["active_node_id"] = "" if self.active_node is None else self.active_node.id  # type: ignore
         return state
 
     def apply_state(self, state: NodeState):
         # Note: while revision is imported from the edited method, method_manager increments it
         # right after the merge
         self.revision = int(state["revision"])  # type: ignore
+        # active_node_id is not imported, it is only used during FFW
         return super().apply_state(state)
 
     def __str__(self):
@@ -690,7 +692,8 @@ class WhitespaceNode(Node):
     def __init__(self, position=Position.empty, id=""):
         super().__init__(position, id)
         self.has_only_trailing_whitespace: bool = False
-        """ Specifies that only whitespace instructions follow this whitespace instruction. """
+        """ Specifies that only whitespace instructions follow this whitespace instruction in
+        the current scope as well as outer scopes. """
 
 
 class CommentNode(WhitespaceNode):
@@ -736,6 +739,7 @@ class MacroNode(NodeWithChildren):
     def prepare_for_call(self):
         """ Clears state left over by any previous calls of the macro so it can be called again """
         self.children_complete = False
+        self.completed = False
         for macro_child in self.children:
             macro_child.reset_runtime_state(recursive=True)
 

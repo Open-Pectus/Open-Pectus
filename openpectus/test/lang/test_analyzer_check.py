@@ -370,6 +370,37 @@ Mark: A
         self.assertEqual(True, blank_node.has_only_trailing_whitespace)
         self.assertEqual(True, comment_node.has_only_trailing_whitespace)
 
+
+    def test_block_trailing_whitespace(self):
+        program = build_program("""\
+Macro: M
+    Mark: A
+
+Mark: C
+""")
+        analyzer = WhitespaceCheckAnalyzer()
+        analyzer.analyze(program)
+        blank_node = program.get_first_child(p.BlankNode)
+        assert blank_node is not None
+
+        self.assertEqual(program._last_non_ws_line, 3)
+        self.assertEqual(False, blank_node.has_only_trailing_whitespace)
+
+    def test_block_trailing_whitespace_2(self):
+        program = build_program("""\
+Macro: M
+    Mark: A
+    
+Mark: C
+""")
+        analyzer = WhitespaceCheckAnalyzer()
+        analyzer.analyze(program)
+        blank_node = program.get_first_child(p.BlankNode)
+        assert blank_node is not None
+
+        self.assertEqual(program._last_non_ws_line, 3)
+        self.assertEqual(False, blank_node.has_only_trailing_whitespace)
+
     @unittest.skip("this case is postponed, is not well defined")
     def test_trailing_whitespace_in_block(self):
         program = build_program("""\

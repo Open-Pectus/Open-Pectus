@@ -153,7 +153,7 @@ class PInterpreter(NodeVisitor):
         for macro_node in self._program.macros.values():
             node = program.get_child_by_id(macro_node.id)
             if node is None:
-                logger.warning(f"Failed ro find and reset macro node: {macro_node}")
+                logger.warning(f"Failed to find and reset macro node: {macro_node}")
                 continue
             logger.debug(f"Resetting macro state for node {node}")
             assert isinstance(node, p.MacroNode)
@@ -530,8 +530,9 @@ class PInterpreter(NodeVisitor):
 
 
     def visit_BlankNode(self, node: p.BlankNode) -> NodeGenerator:
-        # avoid advancing into whitespace-only code lines
-        # TODO consider edit mode
+        # avoid advancing into whitespace that is followed by only more whitespace. This improves editability/appendability
+        # of sibling nodes, i.e. it remains possible to append lines at the end of the method because the whitespace will
+        # remain non-started
         while node.has_only_trailing_whitespace:
             node.started = False
             yield
@@ -652,12 +653,14 @@ class PInterpreter(NodeVisitor):
             macro_node.prepare_for_call()
             node.activated = True
             yield from self._visit_children(macro_node)
+            macro_node.completed = True
 
         def call_macro_complete(node: p.CallMacroNode):
             record = self.runtimeinfo.get_last_node_record(node)
             record.add_state_completed(
                 self._tick_time, self._tick_number,
                 self.context.tags.as_readonly())
+            node.completed = True
         yield NodeAction(node, call_macro_complete)
 
 
@@ -990,7 +993,6 @@ class PInterpreter(NodeVisitor):
         while node.has_only_trailing_whitespace:
             node.started = False
             yield
-
         node.completed = True
 
 
