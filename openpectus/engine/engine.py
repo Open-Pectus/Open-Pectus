@@ -782,7 +782,7 @@ class Engine(InterpreterContext):
                     logger.info(f"Method merged successfully. Revision is now {self.method_manager.program.revision}")
                     return "merge_method"
                 except Exception:
-                    logger.error("Error merging method", exc_info=True)
+                    logger.error("Error merging method")
                     raise
             else:
                 logger.info("Setting new method")
@@ -791,15 +791,17 @@ class Engine(InterpreterContext):
                     logger.info(f"Method set successfully. Revision is {self.method_manager.program.revision}")
                     return "set_method"
                 except Exception:
-                    logger.error("Error setting method", exc_info=True)
+                    logger.error("Error setting method")
                     raise
 
         except MethodEditError:
-            # skip setting error_state(?)
+            # skip setting error_state(?) tests expects this and fails on error_state
             # depends on how we will handle these errors on the client side
             raise
         except Exception as ex:
             logger.error("Failed to set method", exc_info=True)
+            logger.error(f"Current method content:\n\n{self.method_manager._method}\n")
+            logger.error(f"New method content:\n\n{method}\n")
             self.set_error_state(ex)
             raise
 

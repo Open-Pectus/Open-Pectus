@@ -145,16 +145,19 @@ class TestMethodManager(unittest.TestCase):
 00 Base: s
 01 Mark: A
 02 0.8 Mark: B
+03 
 """)
         method2 = Method.from_numbered_pcode("""\
 00 Base: s
 01 Mark: A
 02 0.8 Mark: C
+03 
 """)
         method3 = Method.from_numbered_pcode("""\
 00 Base: s
 01 Mark: A
 02 0.8 Mark: D
+03 
 """)
         runner = EngineTestRunner(create_test_uod, method1)
         with runner.run() as instance:
@@ -162,12 +165,16 @@ class TestMethodManager(unittest.TestCase):
             instance.start()
             instance.run_until_instruction("Mark", state="completed", arguments="A")
             instance.run_ticks(4)
+            self.assertEqual(0, instance.method_manager.program.revision)
+            self.assertEqual(True, instance.method_manager.program_is_started)
 
             # verify no edit error
             instance.engine.set_method(method2)
 
-            # note that editing the node resets its threshold progress - which may be ok?
-            instance.run_ticks(15)
+            self.assertEqual(1, instance.method_manager.program.revision)
+            self.assertEqual(True, instance.method_manager.program_is_started)
+
+            instance.run_until_instruction("Mark", state="completed", arguments="C")
 
             # verify edit error
             with self.assertRaises(MethodEditError):

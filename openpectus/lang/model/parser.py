@@ -58,6 +58,10 @@ class ParserMethod:
         pcode = '\n'.join([line.content for line in self.lines])
         return pcode
 
+    def as_pcode_w_id(self) -> str:
+        pcode = '\n'.join([line.id + ' ' + line.content for line in self.lines])
+        return pcode
+
 
 ParserMethod.empty = ParserMethod.create_empty()
 

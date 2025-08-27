@@ -135,6 +135,21 @@ class MethodManager:
                         raise MethodEditError(
                             f"The macro '{old_macro_node.name}' has already started executing may not be modified")
 
+        # more validation and action history cleanup
+        assert self._program.active_node is not None, "Active node is None. This should not occur during method merge"
+        assert not isinstance(self._program.active_node, p.ProgramNode)
+        target_node_id: str = self._program.active_node.id
+        target_node = new_program.get_child_by_id(target_node_id)
+        if target_node is None:
+            raise MethodEditError(f"Edit aborted because target node, id {target_node_id} was not found in updated method")
+        logger.info(f"Active node, source: {self._program.active_node}, target: {target_node}")
+        if target_node.completed:
+            logger.debug("Note: Target node is already completed")
+
+        # allow a started node that awaits its threshold to be changed in the target method, but clear its history to start over
+        if self.interpreter._is_awaiting_threshold(self._program.active_node):  # same as testing target_node but seems safer
+            logger.debug("Source active node is awaiting threshold - clearing its history to start over")
+            target_node.action_history.clear()
         debug_enabled = True  # logger.isEnabledFor(logging.DEBUG)
         logger.info("Merging existing method state into modified method")
         try:

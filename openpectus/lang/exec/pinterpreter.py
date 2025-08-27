@@ -125,19 +125,9 @@ class PInterpreter(NodeVisitor):
         instance.runtimeinfo = self.runtimeinfo.with_edited_program(program)
         instance.stack = self.stack.with_edited_program(program)
 
-        assert self._program.active_node is not None, "Active node is  None. This should not occur during method merge"
+        assert self._program.active_node is not None, "Active node is None. This should not occur during method merge"
         assert not isinstance(self._program.active_node, p.ProgramNode)
         target_node_id: str = self._program.active_node.id
-        target_node = program.get_child_by_id(target_node_id)
-        if target_node is None:
-            raise ValueError(f"FFW aborted because target node with id {target_node_id} was not found in updated method")
-        logger.info(f"Target node for ffw is {target_node}")
-        if target_node.completed:
-            logger.debug("Note: Target node is already completed")
-
-        if self._is_awaiting_threshold(self._program.active_node):  # same as testing target_node but seems safer
-            logger.debug("Target node is awaiting threshold - clearing its history to start over")
-            target_node.action_history.clear()
 
         # modify new nodes corresponding to old nodes with registered interrupts, so the new nodes can re-register during ffw
         for key in self._interrupts_map.keys():
@@ -463,9 +453,9 @@ class PInterpreter(NodeVisitor):
         # This means ProgramNode won't appear here.
         assert not isinstance(node, p.ProgramNode)
 
-        def start(node):
-            self._program.active_node = node
+        self._program.active_node = node
 
+        def start(node):
             # interrupts are visited multiple times and we only create a new record on the first visit
             record = self.runtimeinfo.get_last_node_record_or_none(node)
             if record is None:

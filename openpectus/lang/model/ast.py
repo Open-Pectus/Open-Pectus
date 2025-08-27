@@ -522,14 +522,14 @@ class ProgramNode(NodeWithChildren):
     def extract_state(self) -> NodeState:
         state = super().extract_state()
         state["revision"] = self.revision  # type: ignore
-        state["active_node_id"] = "" if self.active_node is None else self.active_node.id  # type: ignore
+        state["active_node"] = "" if self.active_node is None else str(self.active_node)  # type: ignore
         return state
 
     def apply_state(self, state: NodeState):
         # Note: while revision is imported from the edited method, method_manager increments it
         # right after the merge
         self.revision = int(state["revision"])  # type: ignore
-        # active_node_id is not imported, it is only used during FFW
+        # active_node is not imported, it is only used during FFW
         return super().apply_state(state)
 
     def __str__(self):
