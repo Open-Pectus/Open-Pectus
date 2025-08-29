@@ -156,9 +156,17 @@ class PInterpreter(NodeVisitor):
         return instance
 
     def _run_ffw(self, target_node_id: str):  # noqa C901
-        """ Fast-forward iteration over both the main generator and any interrupt generators until the actions produced
-        are no longer present in the nodes' history. The purpose is to prepare all the generators to the state just
-        after the last action in their respective nodes' history.
+        """ Fast-forward iteration over both the main generator and any interrupt generators without executing the nodes'
+        functionality, until the actions produced are no longer present in the nodes' history.
+
+        The purpose is to prepare all the generators to the state just after the last action in their respective nodes'
+        history.
+
+        Notes:
+        - active_node: The node that is currently being visited, both during normal and ffw processing
+        - target_node: The node in the new program with the same id as active_node in the old program at the time
+            ffw starts. When ffw is complete, this should be the same as active_node in the new program (or possibly
+            the following node, in case active node is completed)
         """
         assert self._generator is not None
 
@@ -234,14 +242,18 @@ class PInterpreter(NodeVisitor):
                 break
             if last_work_tick + 10 < ffw_tick:
                 # we'll assume nothing more will happen after 10 idle ticks
-                logger.debug(f"FFW termination because loop was idle")
+                logger.debug("FFW termination because loop was idle")
                 if self._program.active_node is not None and self._program.active_node.id != target_node_id:
+                    # It would be great if we could always ensure a complete match between
+                    # active_node and target_node - but we allow this slight difference - the
+                    # test suite passes this whereas the strict comparison breaks quite a few tests
+
                     # count distances
                     all_nodes = self._program.get_all_nodes()
                     target_index = all_nodes.index(target_node)
                     active_index = all_nodes.index(self._program.active_node)
-                    err = f"FFW loop was idle but active node {self._program.active_node} is not the target: {target_node}" +\
-                          f" | {active_index=}, {target_index=}"
+                    err = f"FFW loop was idle but active node {self._program.active_node} is not the target: " +\
+                          f"{target_node} | {active_index=}, {target_index=}"
                     logger.error(err)
                     if target_node.completed and active_index == target_index + 1:
                         # if the target node is completed, it's ok if active_node is just one step later
@@ -252,7 +264,7 @@ class PInterpreter(NodeVisitor):
                 break
             if ffw_tick > self.ffw_tick_limit:
                 logger.error(f"FFW failed to complete. Aborted after {ffw_tick} iterations.")
-                raise MethodEditError(message=f"FFW failed to complete. Aborted after {ffw_tick} iterations.")
+                raise MethodEditError(message=f"Internal error. FFW failed to complete. Aborted after {ffw_tick} iterations")
 
         self._ffw = False
         logger.info("FFW complete")
@@ -759,9 +771,6 @@ class PInterpreter(NodeVisitor):
 
     def visit_InterpreterCommandNode(self, node: p.InterpreterCommandNode) -> NodeGenerator:  # noqa C901
 
-        if node.completed:
-            return
-
         def InterpreterCommandNode_start(node):
             self._add_record_state_started(node)
         yield NodeAction(node, InterpreterCommandNode_start)
@@ -795,7 +804,13 @@ class PInterpreter(NodeVisitor):
             yield NodeAction(node, run_counter)
 
         elif node.instruction_name == InterpreterCommandEnum.WAIT:
-            # use persisted start time to avoid resetting the wait on edit            
+
+            if node.completed:
+                if __debug__:
+                    assert self._ffw
+                return
+
+            # use persisted start time to avoid resetting the wait on edit
             if node.wait_start_time is None:
                 node.wait_start_time = self._tick_time
 

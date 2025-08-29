@@ -147,8 +147,8 @@ class MethodManager:
                                   f"on line {old_program.active_node.position.line} was deleted from the method.")
         logger.info(f"Active node, source: {old_program.active_node}, target: {target_node}")
         if target_node.completed:
-            logger.debug("Note: Target node is already completed")
-            raise Exception("Target node is already completed ???")
+            logger.error(f"Internal error. Target node {target_node} is already completed")
+            raise Exception(f"Internal error. Target node {target_node} is already completed")
 
         # allow a started node that awaits its threshold to be changed to anything but clear history to start over
         # clearing history will disable importing state from source
