@@ -112,7 +112,7 @@ class PInterpreter(NodeVisitor):
 
         logger.debug("Interpreter initialized")
 
-    def with_edited_program(self, program: p.ProgramNode) -> PInterpreter:
+    def with_edited_program(self, new_program: p.ProgramNode) -> PInterpreter:
         """ Returns a new interpreter instance with program modified and in the state it would have been in if the updated
         program had been run from the beginning for the same number of ticks.
 
@@ -121,9 +121,9 @@ class PInterpreter(NodeVisitor):
 
         # Use same context. We have to trust that e.g. tags will not be updated or events emitted until ffw is complete
         # Note: We could possibly verify this by adding some safeguards
-        instance = PInterpreter(program, self.context)
-        instance.runtimeinfo = self.runtimeinfo.with_edited_program(program)
-        instance.stack = self.stack.with_edited_program(program)
+        instance = PInterpreter(new_program, self.context)
+        instance.runtimeinfo = self.runtimeinfo.with_edited_program(new_program)
+        instance.stack = self.stack.with_edited_program(new_program)
 
         assert self._program.active_node is not None, "Active node is None. This should not occur during method merge"
         assert not isinstance(self._program.active_node, p.ProgramNode)
@@ -131,7 +131,7 @@ class PInterpreter(NodeVisitor):
 
         # modify new nodes corresponding to old nodes with registered interrupts, so the new nodes can re-register during ffw
         for key in self._interrupts_map.keys():
-            node = program.get_child_by_id(key)
+            node = new_program.get_child_by_id(key)
             if node is None:
                 logger.warning(f"Failed to find and reset interrupt node id {key}")
                 continue
@@ -141,7 +141,7 @@ class PInterpreter(NodeVisitor):
 
         # modify new macro nodes corresponding to registered macros, so the new nodes can register new macros during ffw
         for macro_node in self._program.macros.values():
-            node = program.get_child_by_id(macro_node.id)
+            node = new_program.get_child_by_id(macro_node.id)
             if node is None:
                 logger.warning(f"Failed to find and reset macro node: {macro_node}")
                 continue
@@ -149,19 +149,18 @@ class PInterpreter(NodeVisitor):
             assert isinstance(node, p.MacroNode)
             node.is_registered = False
 
-        generator = instance.visit_ProgramNode(program)
-        instance._run_ffw(generator, target_node_id)
+        instance._generator = instance.visit_ProgramNode(new_program)
+        instance._run_ffw(target_node_id)
 
         logger.info(f"Interpreter for revision {instance._program.revision} is ready")
         return instance
 
-    def _run_ffw(self, generator: NodeGenerator, target_node_id: str):  # noqa C901
+    def _run_ffw(self, target_node_id: str):  # noqa C901
         """ Fast-forward iteration over both the main generator and any interrupt generators until the actions produced
         are no longer present in the nodes' history. The purpose is to prepare all the generators to the state just
         after the last action in their respective nodes' history.
         """
-        assert self._generator is None
-        self._generator = generator
+        assert self._generator is not None
 
         main_complete = False  # whether the main generator is 'complete'
         active_interrupt_keys = list(self._interrupts_map.keys())
@@ -170,6 +169,8 @@ class PInterpreter(NodeVisitor):
         self._ffw = True
         completed_interrupt_keys = []
         has_reached_target_node = False
+        target_node: p.Node | None = self._program.get_child_by_id(target_node_id)
+        assert target_node is not None  # is checked by method_manager
 
         while True:
             ffw_tick += 1
@@ -190,7 +191,7 @@ class PInterpreter(NodeVisitor):
                     elif x:
                         last_work_tick = ffw_tick
                         main_complete = True
-                    else:                        
+                    else:
                         pass  # None was yielded, just continue, we can't know for sure whether any work was done or not
                     logger.debug(f"Main ffw tick {ffw_tick} complete")
                 except Exception:
@@ -233,7 +234,21 @@ class PInterpreter(NodeVisitor):
                 break
             if last_work_tick + 10 < ffw_tick:
                 # we'll assume nothing more will happen after 10 idle ticks
-                logger.debug("FFW termination because loop was idle")
+                logger.debug(f"FFW termination because loop was idle")
+                if self._program.active_node is not None and self._program.active_node.id != target_node_id:
+                    # count distances
+                    all_nodes = self._program.get_all_nodes()
+                    target_index = all_nodes.index(target_node)
+                    active_index = all_nodes.index(self._program.active_node)
+                    err = f"FFW loop was idle but active node {self._program.active_node} is not the target: {target_node}" +\
+                          f" | {active_index=}, {target_index=}"
+                    logger.error(err)
+                    if target_node.completed and active_index == target_index + 1:
+                        # if the target node is completed, it's ok if active_node is just one step later
+                        pass
+                    else:
+                        raise MethodEditError(err)
+                    #raise MethodEditError(err)
                 break
             if ffw_tick > self.ffw_tick_limit:
                 logger.error(f"FFW failed to complete. Aborted after {ffw_tick} iterations.")
@@ -744,6 +759,9 @@ class PInterpreter(NodeVisitor):
 
     def visit_InterpreterCommandNode(self, node: p.InterpreterCommandNode) -> NodeGenerator:  # noqa C901
 
+        if node.completed:
+            return
+
         def InterpreterCommandNode_start(node):
             self._add_record_state_started(node)
         yield NodeAction(node, InterpreterCommandNode_start)
@@ -777,7 +795,7 @@ class PInterpreter(NodeVisitor):
             yield NodeAction(node, run_counter)
 
         elif node.instruction_name == InterpreterCommandEnum.WAIT:
-            # use persisted start time to avoid resetting the wait on edit
+            # use persisted start time to avoid resetting the wait on edit            
             if node.wait_start_time is None:
                 node.wait_start_time = self._tick_time
 

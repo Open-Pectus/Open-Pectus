@@ -567,7 +567,8 @@ class BlockNode(NodeWithChildren):
 
     def apply_state(self, state: NodeState):
         self.lock_aquired = bool(state["lock_aquired"])  # type: ignore
-        return super().apply_state(state)    
+        return super().apply_state(state)
+
 
 class EndBlockNode(Node):
     instruction_names = ["End block"]
@@ -575,6 +576,7 @@ class EndBlockNode(Node):
 
 class EndBlocksNode(Node):
     instruction_names = ["End blocks"]
+
 
 class BatchNode(Node):
     instruction_names = ["Batch"]
@@ -819,10 +821,7 @@ class InterpreterCommandNode(CommandBaseNode):
         return state
 
     def apply_state(self, state):
-        try:
-            self.wait_start_time = state["wait_start_time"]  # type: ignore
-        except KeyError:
-            self.wait_start_time = None
+        self.wait_start_time = state["wait_start_time"]  # type: ignore
         super().apply_state(state)
 
     def reset_runtime_state(self, recursive):

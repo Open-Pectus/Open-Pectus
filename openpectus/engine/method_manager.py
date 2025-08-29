@@ -101,6 +101,7 @@ class MethodManager:
         old_program = self._program
 
         # validate that the content of the new method does not conflict with the state of the running method
+        # this state is based off of Node.started and Node.completed. It does not consider Node.action_history
         method_state = self._get_method_state(old_program)
         for new_line in new_method.lines:
             if new_line.id in method_state.executed_line_ids or new_line.id in method_state.started_line_ids:
@@ -136,20 +137,32 @@ class MethodManager:
                             f"The macro '{old_macro_node.name}' has already started executing may not be modified")
 
         # more validation and action history cleanup
-        assert self._program.active_node is not None, "Active node is None. This should not occur during method merge"
-        assert not isinstance(self._program.active_node, p.ProgramNode)
-        target_node_id: str = self._program.active_node.id
-        target_node = new_program.get_child_by_id(target_node_id)
+        assert old_program.active_node is not None, "Active node is None. This should not occur during method merge"
+        assert not isinstance(old_program.active_node, p.ProgramNode)
+        target_node_id: str = old_program.active_node.id
+        target_node = new_program.get_child_by_id(target_node_id, include_self=True)
         if target_node is None:
-            raise MethodEditError(f"Edit aborted because target node, id {target_node_id} was not found in updated method")
-        logger.info(f"Active node, source: {self._program.active_node}, target: {target_node}")
+            logger.error(f"Edit aborted because the active node, id {target_node_id} was not found in updated method")
+            raise MethodEditError(f"Edit aborted. The active instruction '{old_program.active_node.instruction_name}' " +
+                                  f"on line {old_program.active_node.position.line} was deleted from the method.")
+        logger.info(f"Active node, source: {old_program.active_node}, target: {target_node}")
         if target_node.completed:
             logger.debug("Note: Target node is already completed")
+            raise Exception("Target node is already completed ???")
 
-        # allow a started node that awaits its threshold to be changed in the target method, but clear its history to start over
-        if self.interpreter._is_awaiting_threshold(self._program.active_node):  # same as testing target_node but seems safer
+        # allow a started node that awaits its threshold to be changed to anything but clear history to start over
+        # clearing history will disable importing state from source
+        if self.interpreter._is_awaiting_threshold(old_program.active_node):
             logger.debug("Source active node is awaiting threshold - clearing its history to start over")
             target_node.action_history.clear()
+        # allow any whitespace node to be changed, but clear its history to start over
+        for old_node in self._program.get_all_nodes():
+            if isinstance(old_node, p.WhitespaceNode):
+                node = new_program.get_child_by_id(old_node.id, include_self=True)
+                if node is not None:
+                    logger.debug(f"Clearing history of target node {node} because its source was whitespace")
+                    node.action_history.clear()
+
         debug_enabled = True  # logger.isEnabledFor(logging.DEBUG)
         logger.info("Merging existing method state into modified method")
         try:
@@ -158,6 +171,8 @@ class MethodManager:
             logger.debug(f"Updating method revision from {old_program.revision} to {new_program.revision}")
 
             if debug_enabled:
+                print(f"\n----- Old method, rev {old_program.revision}: -----\n{old_method.as_pcode_w_id()}\n")
+                print(f"\n----- New method, rev {new_program.revision}: -----\n{_new_method.as_pcode_w_id()}\n")
                 debug_state = {
                     "old export state": existing_state,
                     "new_patched_state": new_program.extract_tree_state()

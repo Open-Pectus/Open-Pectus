@@ -965,6 +965,37 @@ Watch: Run counter > 0
 
             instance.run_until_instruction("Wait", state="completed", arguments="0.6s")
 
+    def test_wait_2(self):
+        method1 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Wait: 0.3s
+03 
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Wait: 0.3s
+03 Mark: B
+04 
+""")
+
+        def edit_at(ticks: int):
+            with self.subTest(ticks):
+                runner = EngineTestRunner(create_test_uod, method1)
+                with runner.run() as instance:
+                    instance.start()
+                    instance.run_ticks(ticks)
+                    action = instance.engine.set_method(method2)
+                    self.assertTrue(action == "merge_method")
+                    instance.run_until_instruction("Mark", state="completed", arguments="B")
+
+        edit_at(2)
+        edit_at(3)
+        edit_at(4)
+        edit_at(5)
+        edit_at(6)
+        edit_at(7)
+
+
     def test_command_exec_id(self):
         # Check how it works if a program containing commands is edited.
         # Specifically, RuntimeInfo.with_edited_program() use RuntimeRecordState.clone() which reuses the
