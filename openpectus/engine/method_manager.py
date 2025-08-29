@@ -1,6 +1,5 @@
 
 import logging
-from typing import Literal
 
 from openpectus.lang.exec.analyzer import WhitespaceCheckAnalyzer
 from openpectus.lang.exec.errors import MethodEditError
@@ -57,6 +56,11 @@ class MethodManager:
         self._interpreter = self._create_interpreter(self._program)
 
     def reset_interpreter(self):
+        # re-parse the method to reset all runtime state. self._program.reset_runtime_state() is not sufficient
+        # because some nodes maintain some state to support method merge
+        parser = create_method_parser(self._method, self._uod_command_names)
+        self._program = parser.parse_method(self._method)
+        self._apply_analysis(self._program)
         self._interpreter = self._create_interpreter(self._program)
 
     def merge_method(self, _new_method: Mdl.Method):
@@ -64,10 +68,11 @@ class MethodManager:
         try:
             new_method, new_program = self._merge_method(_new_method)
         except MethodEditError:
+            logger.error("merge_method failed")
             raise
         except Exception as ex:
             logger.error("merge_method failed", exc_info=True)
-            raise MethodEditError(f"Merging the new method failed: Ex: {ex}")
+            raise MethodEditError(f"Merging the new method failed: Ex: {ex}", ex)
 
         self._apply_analysis(new_program)
 
@@ -76,17 +81,18 @@ class MethodManager:
             # state is fast-forwarded to the same instruction as before
             interpreter = self.interpreter.with_edited_program(new_program)
         except MethodEditError:
+            logger.error("Preparing new interpreter failed", exc_info=True)
             raise
         except Exception as ex:
             logger.error("Preparing new interpreter failed", exc_info=True)
-            raise MethodEditError(f"Preparing new interpreter failed: Ex: {ex}")
+            raise MethodEditError(f"Preparing new interpreter failed: Ex: {ex}", ex)
 
         # finally commit the "transaction"
         self._interpreter = interpreter
         self._method = new_method
         self._program = new_program
 
-    def _merge_method(self, new_method: Mdl.Method) -> tuple[ParserMethod, p.ProgramNode]:
+    def _merge_method(self, new_method: Mdl.Method) -> tuple[ParserMethod, p.ProgramNode]:  # noqa C901
         """ User saved method while a run was active. The new method is replacing an existing method
         whose state should be merged over. """
         # concurrency check: aggregator performs the version check and aborts on error
@@ -95,6 +101,7 @@ class MethodManager:
         old_program = self._program
 
         # validate that the content of the new method does not conflict with the state of the running method
+        # this state is based off of Node.started and Node.completed. It does not consider Node.action_history
         method_state = self._get_method_state(old_program)
         for new_line in new_method.lines:
             if new_line.id in method_state.executed_line_ids or new_line.id in method_state.started_line_ids:
@@ -129,6 +136,33 @@ class MethodManager:
                         raise MethodEditError(
                             f"The macro '{old_macro_node.name}' has already started executing may not be modified")
 
+        # more validation and action history cleanup
+        assert old_program.active_node is not None, "Active node is None. This should not occur during method merge"
+        assert not isinstance(old_program.active_node, p.ProgramNode)
+        target_node_id: str = old_program.active_node.id
+        target_node = new_program.get_child_by_id(target_node_id, include_self=True)
+        if target_node is None:
+            logger.error(f"Edit aborted because the active node, id {target_node_id} was not found in updated method")
+            raise MethodEditError(f"Edit aborted. The active instruction '{old_program.active_node.instruction_name}' " +
+                                  f"on line {old_program.active_node.position.line} was deleted from the method.")
+        logger.info(f"Active node, source: {old_program.active_node}, target: {target_node}")
+        if target_node.completed:
+            logger.error(f"Internal error. Target node {target_node} is already completed")
+            raise Exception(f"Internal error. Target node {target_node} is already completed")
+
+        # allow a started node that awaits its threshold to be changed to anything but clear history to start over
+        # clearing history will disable importing state from source
+        if self.interpreter._is_awaiting_threshold(old_program.active_node):
+            logger.debug("Source active node is awaiting threshold - clearing its history to start over")
+            target_node.action_history.clear()
+        # allow any whitespace node to be changed, but clear its history to start over
+        for old_node in self._program.get_all_nodes():
+            if isinstance(old_node, p.WhitespaceNode):
+                node = new_program.get_child_by_id(old_node.id, include_self=True)
+                if node is not None:
+                    logger.debug(f"Clearing history of target node {node} because its source was whitespace")
+                    node.action_history.clear()
+
         debug_enabled = True  # logger.isEnabledFor(logging.DEBUG)
         logger.info("Merging existing method state into modified method")
         try:
@@ -137,6 +171,8 @@ class MethodManager:
             logger.debug(f"Updating method revision from {old_program.revision} to {new_program.revision}")
 
             if debug_enabled:
+                print(f"\n----- Old method, rev {old_program.revision}: -----\n{old_method.as_pcode_w_id()}\n")
+                print(f"\n----- New method, rev {new_program.revision}: -----\n{_new_method.as_pcode_w_id()}\n")
                 debug_state = {
                     "old export state": existing_state,
                     "new_patched_state": new_program.extract_tree_state()

@@ -32,7 +32,7 @@ class NodeAction():
     def execute(self):
         if self.action_name in self.node.action_history:
             logger.error(f"The action '{self.action_name}' for node {self.node} has already been executed")
-            raise ValueError(f"The action '{self.action_name}' for node {self.node} has already been executed")
+            raise AssertionError(f"The action '{self.action_name}' for node {self.node} has already been executed")
         logger.debug(f"Executing action '{self.action_name}' for node {self.node}")
         self.action(self.node)
         self.node.action_history.append(self.action_name)

@@ -418,7 +418,7 @@ class RuntimeRecord:
         """ Used for progress for interpreter commands that don't have an command instance """
 
     def __str__(self) -> str:
-        return f'{self.__class__.__name__}(name="{self.name}")'
+        return f'{self.__class__.__name__}(name="{self.name}, exec_id={self.exec_id}")'
 
     @staticmethod
     def null_record() -> RuntimeRecord:

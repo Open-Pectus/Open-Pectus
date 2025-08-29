@@ -290,6 +290,16 @@ class TestEngine(unittest.TestCase):
 
         self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.OK)
 
+    def test_uod_command_method_state(self):
+        e = self.engine
+        program = "CmdWithArgs: a, b,c ,  d"
+        run_engine(e, program, 10)
+
+        method_state = e.method_manager.get_method_state()
+        node = e.method_manager.program.get_child_by_instruction("CmdWithArgs")
+        assert node is not None
+        self.assertTrue(node.id in method_state.executed_line_ids)
+
     def test_uod_command_w_arguments_fail(self):
         e = self.engine
         program = "CmdWithArgs: FAIL"

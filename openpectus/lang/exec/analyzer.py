@@ -361,7 +361,13 @@ class WhitespaceCheckAnalyzer(AnalyzerVisitorBase):
         super().analyze(n)
 
         for node in self.whitespace_nodes:
-            if node.parent is not None and node.position.line > node.parent._last_non_ws_line:
+            last_non_ws_line = -1
+            parent = node.parent
+            while parent is not None:
+                if parent._last_non_ws_line > last_non_ws_line:
+                    last_non_ws_line = parent._last_non_ws_line
+                parent = parent.parent
+            if node.position.line > last_non_ws_line:
                 node.has_only_trailing_whitespace = True
 
 
