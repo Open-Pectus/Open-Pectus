@@ -459,12 +459,18 @@ class RuntimeRecord:
 
     def add_state_completed(self, time: float, tick: int, end_values: TagValueCollection):
         self.add_state(RuntimeRecordStateEnum.Completed, time, tick, end_values)
+        if self.node is not None and not (self.node.completed or self.node.failed):
+            self.node.completed = True
 
     def add_state_failed(self, time: float, tick: int, end_values: TagValueCollection):
         self.add_state(RuntimeRecordStateEnum.Failed, time, tick, end_values)
+        if self.node is not None and not (self.node.completed or self.node.failed):
+            self.node.failed = True
 
     def add_state_cancelled(self, time: float, tick: int, state_values: TagValueCollection | None):
         self.add_state(RuntimeRecordStateEnum.Cancelled, time, tick, state_values)
+        if self.node is not None and not (self.node.completed or self.node.failed):
+            self.node.completed = True
 
     def add_state_forced(self, time: float, tick: int, state_values: TagValueCollection | None):
         self.add_state(RuntimeRecordStateEnum.Forced, time, tick, state_values)
@@ -498,6 +504,8 @@ class RuntimeRecord:
             time: float, tick: int, end_values: TagValueCollection):
         state = self.add_state(RuntimeRecordStateEnum.Cancelled, time, tick, end_values)
         state.command_exec_id = command_exec_id
+        if self.node is not None and not (self.node.completed or self.node.failed):
+            self.node.completed = True
 
     def add_command_state_started(
             self, command_exec_id: UUID,
@@ -510,12 +518,16 @@ class RuntimeRecord:
             time: float, tick: int, end_values: TagValueCollection):
         state = self.add_state(RuntimeRecordStateEnum.Completed, time, tick, end_values)
         state.command_exec_id = command_exec_id
+        if self.node is not None and not (self.node.completed or self.node.failed):
+            self.node.completed = True
 
     def add_command_state_failed(
             self, command_exec_id: UUID,
             time: float, tick: int, end_values: TagValueCollection):
         state = self.add_state(RuntimeRecordStateEnum.Failed, time, tick, end_values)
         state.command_exec_id = command_exec_id
+        if self.node is not None and not (self.node.completed or self.node.failed):
+            self.node.failed = True
 
     def clone(self) -> RuntimeRecord:
         instance = RuntimeRecord(self.node, self.exec_id)
