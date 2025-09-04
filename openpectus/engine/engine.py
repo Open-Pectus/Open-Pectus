@@ -657,12 +657,12 @@ class Engine(InterpreterContext):
 
     def _apply_safe_state(self) -> TagValueCollection:
         current_values: list[TagValue] = []
-        for t in self._iter_all_tags():
-            if t.direction == TagDirection.Output:
-                safe_value = t.safe_value
-                if not isinstance(safe_value, Unset):
-                    current_values.append(t.as_readonly())
-                    t.set_value(safe_value, self._tick_time)
+        hwl = self.uod.hwl
+        registers = [r for r in hwl.registers.values() if RegisterDirection.Write in r.direction and "safe_value" in r._options]
+        for r in registers:
+            tag = self.uod.tags[r.name]
+            current_values.append(tag.as_readonly())
+            tag.set_value(r._options["safe_value"], self._tick_time)
         return TagValueCollection(current_values)
 
     def _apply_state(self, state: TagValueCollection):
