@@ -141,7 +141,6 @@ class Tag(ChangeSubject, EventListener):
             value: TagValueType = None,
             unit: str | None = None,
             direction: TagDirection = TagDirection.NA,
-            safe_value: TagValueType | Unset = Unset(),
             format_fn: TagFormatFunction | None = None,
             ) -> None:
 
@@ -163,7 +162,6 @@ class Tag(ChangeSubject, EventListener):
         self.unit: str | None = unit
         self.choices: list[str] | None = None
         self.direction: TagDirection = direction
-        self.safe_value: TagValueType | Unset = safe_value
         self.format_fn = format_fn
         self.simulated_value: TagValueType = None
         self.simulated: bool = False
