@@ -1,6 +1,6 @@
 from __future__ import annotations
 from logging import Logger
-from typing import Self, Type, TypeVar, TypedDict
+from typing import Callable, Self, Type, TypeVar, TypedDict
 
 
 class Position:
@@ -105,6 +105,7 @@ class NodeState(TypedDict):
     name: str
     started: bool
     completed: bool
+    failed: bool
     cancelled: bool
     forced: bool
     action_history: list[str]
@@ -190,6 +191,7 @@ class Node(SupportCancelForce):
         # interpretation state
         self.started: bool = False
         self.completed: bool = False
+        self.failed: bool = False
         self.action_history: list[str] = []
         self._empty_node_class_names = [BlankNode.__name__, CommentNode.__name__]
 
@@ -239,6 +241,7 @@ class Node(SupportCancelForce):
             raise ValueError(f"Cannot load state from {state['class_name']} into {self.__class__}")
         self.started = state["started"]
         self.completed = state["completed"]
+        self.failed = state["failed"]
         self._cancelled = state["cancelled"]
         self._forced = state["forced"]
         self.action_history = state["action_history"]
@@ -250,6 +253,7 @@ class Node(SupportCancelForce):
             name=self.name,
             started=self.started,
             completed=self.completed,
+            failed=self.failed,
             cancelled=self.cancelled,
             forced=self.forced,
             action_history=self.action_history
@@ -269,6 +273,18 @@ class Node(SupportCancelForce):
                         return match
 
         return get_by_instruction(self, instruction_name, arguments)
+
+    def get_child_by_condition(self, predicate: Callable[[Node], bool], include_self=True) -> Node | None:
+        """ Return the first child node that matches the condition """
+        if include_self and predicate(self):
+            return self
+        if isinstance(self, NodeWithChildren):
+            for child in self.children:
+                # Note: we must use include_self=True here regardless of its value above
+                result = child.get_child_by_condition(predicate, include_self=True)
+                if result is not None:
+                    return result
+        return None
 
     def with_id(self, gen: NodeIdGenerator) -> Self:
         self.id = gen.create_id(self)

@@ -86,12 +86,6 @@ class InterpretationInternalError(InterpretationError):
         super().__init__(base_message, "Internal error", exception, *args)
 
 
-class MethodError(Exception):
-    def __init__(self, message: str, exception: Exception | None = None):
-        self.message = message
-        self.exception = exception
-
-
-class MethodEditError(MethodError):
+class MethodEditError(Exception):
     def __init__(self, message: str, exception: Exception | None = None):
         super().__init__(message, exception)

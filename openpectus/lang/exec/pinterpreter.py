@@ -352,9 +352,21 @@ class PInterpreter(NodeVisitor):
         except StopIteration:
             logger.debug("Main generator exhausted")
             pass
+        except NodeInterpretationError as ex:
+            ex.node.failed = True
+            self._add_record_state_failed(ex.node)
+            raise
         except AssertionError as ae:
+            if self._program.active_node is not None:
+                self._program.active_node.failed = True
+                self._add_record_state_failed(self._program.active_node)
+                raise NodeInterpretationError(self._program.active_node, message=str(ae), exception=ae)
             raise InterpretationError(message=str(ae), exception=ae)
-        except (InterpretationInternalError, InterpretationError):
+        except InterpretationInternalError:
+            raise
+        except InterpretationError:
+            # TODO should we have this? are there node-non-specific general errors? so that we can not try
+            # fixing them with an edit? If it is that bad, why isn't it an internal error then?
             raise
         except EngineError:  # a method call on context failed - engine will know what to do
             raise
@@ -378,7 +390,15 @@ class PInterpreter(NodeVisitor):
                     self._unregister_interrupt(interrupt.node)
                     interrupt.node.reset_runtime_state(recursive=True)
                     self._register_interrupt(interrupt.node)
+            except NodeInterpretationError as ex:
+                ex.node.failed = True
+                self._add_record_state_failed(ex.node)
+                raise
             except AssertionError as ae:
+                if self._program.active_node is not None:
+                    self._program.active_node.failed = True
+                    self._add_record_state_failed(self._program.active_node)
+                    raise NodeInterpretationError(self._program.active_node, message=str(ae), exception=ae)
                 raise InterpretationError(message=str(ae), exception=ae)
             except (InterpretationInternalError, InterpretationError):
                 logger.error("Interpreter error in interrupt handler", exc_info=True)
@@ -386,6 +406,8 @@ class PInterpreter(NodeVisitor):
             except Exception as ex:
                 logger.error("Unhandled interpretation error in interrupt handler", exc_info=True)
                 raise InterpretationError("Interpreter error") from ex
+            finally:
+                self._in_interrupt = False
 
     def stop(self):
         self._program.reset_runtime_state(recursive=True)

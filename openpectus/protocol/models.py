@@ -196,14 +196,16 @@ class MethodState(ProtocolModel):
     started_line_ids: list[str]
     executed_line_ids: list[str]
     injected_line_ids: list[str]
+    failed_line_ids: list[str]
 
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(started_line_ids={self.started_line_ids}, ' +
-                f'executed_line_ids={self.executed_line_ids}, injected_line_ids={self.injected_line_ids})')
+                f'executed_line_ids={self.executed_line_ids}, injected_line_ids={self.injected_line_ids}, ' +
+                f'failed_line_ids={self.failed_line_ids})')
 
     @staticmethod
     def empty() -> MethodState:
-        return MethodState(started_line_ids=[], executed_line_ids=[], injected_line_ids=[])
+        return MethodState(started_line_ids=[], executed_line_ids=[], injected_line_ids=[], failed_line_ids=[])
 
 
 class ControlState(ProtocolModel):

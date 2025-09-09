@@ -629,7 +629,6 @@ class Engine(InterpreterContext):
                     cmd_request.command_exec_id,
                     self._tick_time, self._tick_number,
                     self.tags_as_readonly())
-                record.node.completed = True
                 cmds_done.add(cmd_request)
                 uod_command.finalize()
                 logger.debug(f"Command {cmd_request.name} finalized")
@@ -712,6 +711,10 @@ class Engine(InterpreterContext):
     def get_error_state_exception(self) -> Exception | None:
         return self._last_error
 
+    def clear_error_state(self):
+        self._last_error = None
+        self._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.OK, self._tick_time)
+
     def write_process_image(self):
         if not self._runstate_started:
             return
@@ -780,6 +783,11 @@ class Engine(InterpreterContext):
                 try:
                     self._method_manager.merge_method(method)
                     logger.info(f"Method merged successfully. Revision is now {self.method_manager.program.revision}")
+
+                    # consider the edit an attempt to fix error state
+                    if self.has_error_state():
+                        self.clear_error_state()
+
                     return "merge_method"
                 except Exception:
                     logger.error("Error merging method")

@@ -3,8 +3,10 @@ import time
 import unittest
 from typing import Any
 
-from openpectus.lang.exec.errors import EngineError, MethodEditError
+from openpectus.engine.models import EngineCommandEnum
+from openpectus.lang.exec.errors import EngineError, InterpretationError, MethodEditError
 from openpectus.lang.exec.regex import RegexNumber
+from openpectus.lang.exec.runlog import RunLogItemState
 from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 from openpectus.engine.hardware import RegisterDirection
 
@@ -19,7 +21,9 @@ from openpectus.lang.model.parser import ParserMethod, create_method_parser
 from openpectus.protocol.models import Method
 from openpectus.test.engine.utility_methods import (
     EngineTestRunner,
-    configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging
+    configure_test_logger,
+    print_runlog,
+    print_runtime_records, set_engine_debug_logging, set_interpreter_debug_logging
 )
 import openpectus.lang.model.ast as p
 
@@ -1084,3 +1088,53 @@ Watch: Run counter > 0
             self.assertEqual(0, instance.method_manager.program.revision)
             instance.run_until_instruction("Mark", arguments="C")
             self.assertEqual(['A', 'B', 'C'], instance.marks)
+
+# Resume after error
+
+    def test_resume_after_error_invalid_unit(self):
+
+        method_w_error = Method.from_numbered_pcode("""\
+00 Info: Start
+01 Watch: Run Time > 1x
+02     Mark: A
+""")
+        runner = EngineTestRunner(create_test_uod, method_w_error)
+        with runner.run() as instance:
+            instance.start()
+
+            with self.assertRaises(EngineError) as ctx:
+                instance.run_until_instruction("Watch", "completed")
+
+            ex = ctx.exception.exception
+            assert isinstance(ex, InterpretationError)
+            assert "Invalid unit: 'x'" in ex.message
+            watch_node = instance.method_manager.program.get_child_by_id("01")
+            assert watch_node is not None
+            assert watch_node.failed
+            assert instance.engine.has_error_state()
+
+            print_runtime_records(instance.engine, "Error has just occurred")
+
+            method_corrected = Method.from_numbered_pcode("""\
+00 Info: Start
+01 Watch: Run Time > 1s
+02     Mark: A
+""")
+            # User edits and clicks Save
+            instance.engine.set_method(method_corrected)
+
+            print_runtime_records(instance.engine, "Method corrected")
+
+            assert not instance.engine.has_error_state()
+            watch_node = instance.method_manager.program.get_child_by_id("01")
+            assert watch_node is not None
+            assert watch_node.arguments == "Run Time > 1s"
+            assert not watch_node.failed
+
+            # user clicks Pause to resume (Unpause) from the error instruction
+            instance.engine.schedule_execution(EngineCommandEnum.UNPAUSE)
+
+            instance.run_until_instruction("Watch", "completed")
+            self.assertEqual(['A'], instance.marks)
+
+# End Resume after error
