@@ -413,12 +413,14 @@ class Engine(InterpreterContext):
                     cmds_done.add(cmd_request)
                     if record is not None:
                         record.add_state_failed(self._tick_time, self._tick_number, self.tags_as_readonly())
+                        record.node.failed = True
                     else:
                         logger.error(f"Failed to record failed state for command {cmd_request}")
                 elif command.is_finalized():
                     cmds_done.add(cmd_request)
                     if record is not None:
                         record.add_state_completed(self._tick_time, self._tick_number, self.tags_as_readonly())
+                        record.node.completed = True
                     else:
                         logger.error(f"Failed to record completed state for command {cmd_request}")
             return
@@ -448,9 +450,11 @@ class Engine(InterpreterContext):
             command.tick()
             if command.has_failed():
                 record.add_state_failed(self._tick_time, self._tick_number, self.tags_as_readonly())
+                record.node.failed = True
                 cmds_done.add(cmd_request)
             elif command.is_finalized():
                 record.add_state_completed(self._tick_time, self._tick_number, self.tags_as_readonly())
+                record.node.completed = True
                 cmds_done.add(cmd_request)
         else:
             logger.error(f"Runtime record is None for command {cmd_request}, this should not occur")
@@ -629,6 +633,7 @@ class Engine(InterpreterContext):
                     cmd_request.command_exec_id,
                     self._tick_time, self._tick_number,
                     self.tags_as_readonly())
+                record.node.completed = True
                 cmds_done.add(cmd_request)
                 uod_command.finalize()
                 logger.debug(f"Command {cmd_request.name} finalized")
