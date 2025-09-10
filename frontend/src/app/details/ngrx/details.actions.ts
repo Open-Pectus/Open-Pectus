@@ -1,5 +1,6 @@
 import { createAction, props } from '@ngrx/store';
 import { ActiveUser, ApiError, CommandExample, ControlState, ExecutableCommand, ProcessDiagram, ProcessValue, RecentRun } from '../../api';
+import { UnitControlCommands } from '../unit-control-commands.';
 
 const source = '[Details] ';
 
@@ -9,7 +10,8 @@ export class DetailsActions {
   static unitDetailsDestroyed = createAction(source + 'Unit Details Destroyed');
   static processValuesFetched = createAction(source + 'Process Values Fetched', props<{ processValues: ProcessValue[] }>());
   static processValuesFailedToLoad = createAction(source + 'Process Values Failed to load', props<{ error: ApiError }>());
-  static processUnitCommandButtonClicked = createAction(source + 'Process Unit Command Button Clicked', props<{ command: string }>());
+  static processUnitCommandButtonClicked = createAction(source + 'Process Unit Command Button Clicked',
+    props<{ command: UnitControlCommands }>());
   static processDiagramInitialized = createAction(source + 'Process Diagram Initialized');
   static processDiagramFetched = createAction(source + 'Process Diagram Fetched', props<{ processDiagram: ProcessDiagram }>());
   static commandsComponentInitialized = createAction(source + 'Commands Component Initialized');

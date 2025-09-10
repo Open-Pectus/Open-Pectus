@@ -2,6 +2,7 @@ import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
 import { ActiveUser, AggregatedErrorLog, ApiError, CommandExample, ControlState, ProcessDiagram, ProcessValue, RecentRun } from '../../api';
 import { DetailsActions } from './details.actions';
+import { UnitControlCommands } from '../unit-control-commands.';
 
 export interface DetailsState {
   processValues: ProcessValue[];
@@ -77,6 +78,14 @@ const reducer = createReducer(initialState,
   on(DetailsActions.otherActiveUsersFetched, (state, {otherActiveUsers}) => produce(state, draft => {
     draft.otherActiveUsers = otherActiveUsers;
   })),
+  on(DetailsActions.processUnitCommandButtonClicked, (state, {command}) => produce(state, draft => {
+    if(command === UnitControlCommands.Start) draft.controlState.is_running = true;
+    if(command === UnitControlCommands.Stop) draft.controlState.is_running = false;
+    if(command === UnitControlCommands.Pause) draft.controlState.is_paused = true;
+    if(command === UnitControlCommands.Unpause) draft.controlState.is_paused = false;
+    if(command === UnitControlCommands.Hold) draft.controlState.is_holding = true;
+    if(command === UnitControlCommands.Unhold) draft.controlState.is_holding = false;
+  }))
 );
 
 export const detailsSlice = {name: 'details', reducer};
