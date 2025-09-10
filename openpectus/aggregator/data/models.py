@@ -20,7 +20,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship,
 
 
 # Adapted from https://docs.sqlalchemy.org/en/20/core/custom_types.html#store-timezone-aware-timestamps-as-timezone-naive-utc
-class TZDateTime(TypeDecorator):
+class TZDateTime(TypeDecorator[datetime]):  # [datetime] is only to appease pyright
     impl = DateTime
     cache_ok = True
 
