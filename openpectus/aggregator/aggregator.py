@@ -1,7 +1,7 @@
 import asyncio
 import copy
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 import time
 
 import openpectus.aggregator.models as Mdl
@@ -53,7 +53,7 @@ class FromEngine:
                 logger.debug(f"Applying run_data {run_id=} from recent_engine")
                 if recent_engine.run_started is None:
                     logger.warning("Recent engine had a run without run_started value. Using now as run_started")
-                    run_started = datetime.now(timezone.utc)
+                    run_started = datetime.now(UTC)
                 else:
                     run_started = recent_engine.run_started
                 engine_data.run_data = Mdl.RunData.empty(run_id=run_id, run_started=run_started)

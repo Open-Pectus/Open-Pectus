@@ -1,6 +1,6 @@
 import os
 import unittest
-from datetime import datetime
+from datetime import UTC, datetime
 
 import openpectus.aggregator.data.models as DMdl
 import openpectus.aggregator.models as Mdl
@@ -72,12 +72,11 @@ class DatabaseTest(unittest.TestCase):
             result = session.execute(stmt)
             self.assertIsNotNone(result)
 
-
     def test_no_missing_migration(self):
         db_filename = os.path.join(os.path.dirname(__file__), 'temp_db')
         configure_db()
         alembic_cfg = get_modified_alembic_config()
-        alembic_cfg.set_main_option('sqlalchemy.url', "sqlite:///"+db_filename)
+        alembic_cfg.set_main_option('sqlalchemy.url', "sqlite:///" + db_filename)
 
         migrate_db(alembic_cfg)
         # command.current(alembic_cfg, True) # useful for debugging
@@ -182,8 +181,8 @@ class RepositoryTest(unittest.TestCase):
         entity.uod_author_name = "my_uod_author_name"
         entity.uod_author_email = ""
         entity.run_id = 'a run id'
-        entity.started_date = datetime.now()
-        entity.completed_date = datetime.now()
+        entity.started_date = datetime.now(UTC)
+        entity.completed_date = datetime.now(UTC)
         entity.engine_version = '0.0.1'
         entity.engine_hardware_str = 'hardware'
         entity.aggregator_version = '0.0.1'
@@ -219,8 +218,8 @@ class RepositoryTest(unittest.TestCase):
         entity.uod_author_name = "my_uod_author_name"
         entity.uod_author_email = "my_uod_email"
         entity.run_id = 'a run id'
-        entity.started_date = datetime.now()
-        entity.completed_date = datetime.now()
+        entity.started_date = datetime.now(UTC)
+        entity.completed_date = datetime.now(UTC)
         entity.engine_version = '0.0.1'
         entity.engine_hardware_str = 'hardware'
         entity.aggregator_version = '0.0.1'
@@ -265,8 +264,8 @@ class RepositoryTest(unittest.TestCase):
         entity.uod_filename = "my_uod_filename.py"
         entity.uod_author_name = "my_uod_author_name"
         entity.uod_author_email = "my_uod_email"
-        entity.started_date = datetime.now()
-        entity.completed_date = datetime.now()
+        entity.started_date = datetime.now(UTC)
+        entity.completed_date = datetime.now(UTC)
         entity.contributors = list([Mdl.Contributor(name='foo', id='foo'), Mdl.Contributor(name='baz', id='baz')])
         entity.engine_version = '0.0.1'
         entity.engine_hardware_str = 'hardware'
@@ -297,8 +296,8 @@ class RepositoryTest(unittest.TestCase):
         entity.uod_author_email = "my_uod_email"
         entity.contributors = list([Mdl.Contributor(name='foo', id='foo'), Mdl.Contributor(name='bar', id='bar')])
         entity.run_id = 'a run id'
-        entity.started_date = datetime.now()
-        entity.completed_date = datetime.now()
+        entity.started_date = datetime.now(UTC)
+        entity.completed_date = datetime.now(UTC)
         entity.engine_version = '0.0.1'
         entity.engine_hardware_str = 'hardware'
         entity.aggregator_version = '0.0.1'
@@ -332,7 +331,8 @@ class RepositoryTest(unittest.TestCase):
             repo = RecentRunRepository(session)
             updated_entity = repo.get_by_run_id(entity.run_id)
             assert updated_entity is not None
-            self.assertEqual([{'id': 'foo', 'name': 'foo'}, {'id': 'bar', 'name': 'bar'}, {'id': 'baz', 'name': 'baz'}], updated_entity.contributors)
+            self.assertEqual([{'id': 'foo', 'name': 'foo'}, {'id': 'bar', 'name': 'bar'}, {'id': 'baz', 'name': 'baz'}],
+                             updated_entity.contributors)
 
     def test_nested_json(self):
         init_db()
