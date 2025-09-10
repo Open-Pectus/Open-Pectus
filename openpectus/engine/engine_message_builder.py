@@ -1,4 +1,5 @@
 import logging
+from datetime import UTC
 from logging.handlers import QueueHandler
 from queue import Empty, SimpleQueue
 import time
@@ -155,7 +156,7 @@ class EngineMessageBuilder():
         started_datetime = datetime.datetime.fromtimestamp(self.engine._runstate_started_time)
 
         started_time_str = started_datetime.strftime("%H:%M")
-        if datetime.datetime.now().day != started_datetime.day:
+        if datetime.datetime.now(UTC).day != started_datetime.day:
             started_time_str = started_datetime.strftime("%Y-%m-%d %H:%M")
 
         return EM.WebPushNotificationMsg(
@@ -165,7 +166,7 @@ class EngineMessageBuilder():
             ),
             topic=EM.NotificationTopic.RUN_STOP,
         )
-    
+
     def create_wpn_run_started_msg(self) -> EM.WebPushNotificationMsg:
         started_datetime = datetime.datetime.fromtimestamp(self.engine._runstate_started_time)
         started_time_str = started_datetime.strftime("%H:%M")
@@ -177,7 +178,7 @@ class EngineMessageBuilder():
             ),
             topic=EM.NotificationTopic.RUN_START,
         )
-    
+
     def create_wpn_run_paused_msg(self) -> EM.WebPushNotificationMsg:
         return EM.WebPushNotificationMsg(
             notification=EM.WebPushNotification(
@@ -186,7 +187,7 @@ class EngineMessageBuilder():
             ),
             topic=EM.NotificationTopic.RUN_PAUSE,
         )
-    
+
     def create_wpn_block_started_msg(self, block_name: str) -> EM.WebPushNotificationMsg:
         return EM.WebPushNotificationMsg(
             notification=EM.WebPushNotification(
@@ -195,7 +196,7 @@ class EngineMessageBuilder():
             ),
             topic=EM.NotificationTopic.BLOCK_START,
         )
-    
+
     def create_wpn_notify_command_msg(self, text: str) -> EM.WebPushNotificationMsg:
         return EM.WebPushNotificationMsg(
             notification=EM.WebPushNotification(
@@ -204,7 +205,7 @@ class EngineMessageBuilder():
             ),
             topic=EM.NotificationTopic.NOTIFICATION_CMD,
         )
-    
+
     def create_wpn_watch_activated_msg(self, watch_argument: str) -> EM.WebPushNotificationMsg:
         return EM.WebPushNotificationMsg(
             notification=EM.WebPushNotification(
@@ -213,7 +214,7 @@ class EngineMessageBuilder():
             ),
             topic=EM.NotificationTopic.WATCH_TRIGGERED,
         )
-    
+
     def create_wpn_method_error_msg(self) -> EM.WebPushNotificationMsg:
         return EM.WebPushNotificationMsg(
             notification=EM.WebPushNotification(
@@ -222,7 +223,7 @@ class EngineMessageBuilder():
             ),
             topic=EM.NotificationTopic.METHOD_ERROR,
         )
-    
+
     def create_wpn_network_error_msg(self) -> EM.WebPushNotificationMsg:
         return EM.WebPushNotificationMsg(
             notification=EM.WebPushNotification(

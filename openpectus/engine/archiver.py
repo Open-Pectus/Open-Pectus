@@ -114,7 +114,7 @@ class ArchiverTag(Tag):
                     logger.error(f"Error writing row: {row}", exc_info=True)
 
     def write_runlog(self):
-        date_part = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        date_part = datetime.now(UTC).strftime("%Y-%m-%d_%H%M%S")
         runlog_file_path = os.path.join(self.data_path, "archiver-runlog-" + date_part + ".txt")
 
         logger.info(f"Writing runlog to {runlog_file_path}")
@@ -135,7 +135,7 @@ class ArchiverTag(Tag):
     def on_start(self, run_id: str):
         self.tags = self.tags_accessor()
         tick_time = time.time()
-        date_part = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        date_part = datetime.now(UTC).strftime("%Y-%m-%d_%H%M%S")
         filename = "archiver-" + date_part + ".txt"
         self.set_value(filename, tick_time)
         self.file_path = os.path.join(self.data_path, filename)

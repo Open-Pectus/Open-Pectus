@@ -126,7 +126,7 @@ class RecentRunRepository(RepositoryBase):
         recent_run.uod_author_email = engine_data.uod_author_email
         recent_run.uod_filename = engine_data.uod_filename
         recent_run.started_date = engine_data.run_data.run_started
-        recent_run.completed_date = datetime.now(timezone.utc)
+        recent_run.completed_date = datetime.now(UTC)
         current_contributors = set(recent_run.contributors or [])
         for user_name in engine_data.contributors:  # append contributers from this 'session'
             current_contributors.add(user_name)
@@ -186,7 +186,7 @@ class RecentRunRepository(RepositoryBase):
 
 class RecentEngineRepository(RepositoryBase):
     def get_recent_engines(self) -> Sequence[RecentEngine]:
-        last_month = datetime.now() - timedelta(days=30)
+        last_month = datetime.now(UTC) - timedelta(days=30)
         return self.db_session.scalars(
             select(RecentEngine)
             .where(RecentEngine.last_update > last_month)
