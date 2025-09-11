@@ -21,10 +21,7 @@ import { UnitControlCommands } from '../unit-control-commands.';
     </button>
     @if (showLock()) {
       <button class="absolute top-0 w-full h-full flex items-center" (click)="onLockClicked()">
-        <div class="absolute w-[calc(100%+2.5px)] h-full bg-white opacity-50"></div>
-        <div class="absolute w-full h-0.5 translate-y-[-1px] bg-slate-700"></div>
-        <div class="absolute ml-5 w-0.5 translate-x-[-1px] h-full bg-slate-700"></div>
-        <div class="absolute ml-2 mb-[2px] rounded-full w-6 h-6 bg-slate-700 flex items-center justify-center">
+        <div class="absolute ml-2.5 mb-[3px] rounded-full w-6 h-6 bg-gray-700 flex items-center justify-center border border-gray-300">
           <div class="codicon codicon-lock !font-bolder text-white"></div>
         </div>
       </button>
