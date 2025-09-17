@@ -1,5 +1,4 @@
 import logging
-import asyncio
 
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
@@ -35,7 +34,7 @@ def map_pu(engine_data: Mdl.EngineData) -> Dto.ProcessUnit:
         name=f"{engine_data.computer_name} ({engine_data.uod_name})",
         state=state,
         location=engine_data.location,
-        runtime_msec=int(engine_data.runtime.value*1000) if (
+        runtime_msec=int(engine_data.runtime.value * 1000) if (
                 engine_data.runtime is not None and engine_data.runtime.value is not None
         ) else 0,
         current_user_role=Dto.UserRole.ADMIN,
@@ -170,7 +169,7 @@ async def execute_command(
         user_roles: UserRolesValue,
         unit_id: str,
         command: Dto.ExecutableCommand,
-        agg: Aggregator = Depends(agg_deps.get_aggregator)):
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.ServerErrorResponse | Dto.ServerSuccessResponse:
     if __debug__:
         print("ExecutableCommand", command)
     engine_data = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
@@ -186,11 +185,11 @@ async def execute_command(
         logger.error(f"Rpc call to engine_id '{unit_id}' failed", exc_info=True)
         return Dto.ServerErrorResponse(message="Failed to send message")
 
-    # for now, all users issuing a command become contributors. may nee to filter that somehow
+    # for now, all users issuing a command become contributors. may need to filter that somehow
     # and when wo we clear the contributors?
     contributor = Mdl.Contributor(id=user_id, name=user_name)
     if contributor not in engine_data.contributors:
-            agg.from_frontend.publish_new_contributor_notification(unit_id, contributor)
+        agg.from_frontend.publish_new_contributor_notification(unit_id, contributor)
     engine_data.contributors.add(contributor)
     return Dto.ServerSuccessResponse()
 
@@ -373,7 +372,7 @@ async def register_active_user(
         agg: Aggregator = Depends(agg_deps.get_aggregator)):
     _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
     resolved_user_id = user_id_from_token or user_id
-    if(resolved_user_id == None):
+    if (resolved_user_id == None):
         return Dto.ServerErrorResponse(message="User registration failed due to missing user_id")
     action_result = await agg.from_frontend.register_active_user(
         engine_id=unit_id,
@@ -384,6 +383,7 @@ async def register_active_user(
         return Dto.ServerErrorResponse(message="User registration failed")
     return Dto.ServerSuccessResponse(message="User successfully registered")
 
+
 @router.post('/process_unit/{unit_id}/unregister_active_user', response_model_exclude_none=True)
 async def unregister_active_user(
         user_id_from_token: UserIdValue,
@@ -393,7 +393,7 @@ async def unregister_active_user(
         agg: Aggregator = Depends(agg_deps.get_aggregator)):
     _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
     resolved_user_id = user_id_from_token or user_id
-    if(resolved_user_id == None):
+    if (resolved_user_id == None):
         return Dto.ServerErrorResponse(message="User unregistration failed due to missing user_id")
     action_result = await agg.from_frontend.unregister_active_user(
         engine_id=unit_id,

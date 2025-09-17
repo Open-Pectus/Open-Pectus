@@ -504,6 +504,7 @@ export const handlers = [
   }),
 
   http.post<PathParams, ExecutableCommand>('/api/process_unit/:unitId/execute_command', ({request}) => {
+    // return HttpResponse.text(null, {status: 500});
     request.json().then(executableCommand => {
       if(executableCommand.source === 'unit_button') {
         switch(executableCommand.command) {
