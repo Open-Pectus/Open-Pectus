@@ -1,8 +1,8 @@
 import asyncio
 import copy
 import logging
-from datetime import datetime, timezone, UTC
 import time
+from datetime import datetime, timezone, UTC
 
 import openpectus.aggregator.models as Mdl
 import openpectus.protocol.aggregator_messages as AM
@@ -137,7 +137,7 @@ class FromEngine:
                     f"engine {engine_id}, run_data run_id: {engine_data.run_data.run_id}, message run_id: {_run_id}")
                 logger.warning(f"Saving existing run {_run_id}. No data is available for the other run")
                 try:
-                    recent_run_repo.store_recent_run(engine_data)
+                    recent_run_repo.store_recent_run(engine_data, archive=msg.archive)
                     logger.info(f"Stored recent run {_run_id=}")
                 except Exception:
                     logger.error(f"Failed to persist recent run {_run_id=}")
@@ -146,7 +146,7 @@ class FromEngine:
                 engine_data.run_data.runlog = msg.runlog
                 engine_data.method_state = msg.method_state
                 try:
-                    recent_run_repo.store_recent_run(engine_data)
+                    recent_run_repo.store_recent_run(engine_data, archive=msg.archive)
                     logger.info(f"Stored recent run {_run_id=}")
                 except Exception:
                     logger.error(f"Failed to persist recent run {_run_id=}")
@@ -324,7 +324,7 @@ class FromEngine:
             notification=WebPushNotification(
                 title=self._engine_data_map[engine_id].uod_name,
                 body="Connection between aggregator and engine has been lost.",
-                timestamp=int(time.time()*1000),
+                timestamp=int(time.time() * 1000),
                 data=Mdl.WebPushData(
                     process_unit_id=engine_id
                 ),
@@ -341,7 +341,8 @@ class FromEngine:
 
 
 class FromFrontend:
-    def __init__(self, engine_data_map: EngineDataMap, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, webpush_publisher: WebPushPublisher):
+    def __init__(self, engine_data_map: EngineDataMap, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher,
+                 webpush_publisher: WebPushPublisher):
         self._engine_data_map = engine_data_map
         self.dispatcher = dispatcher
         self.publisher = publisher
@@ -516,8 +517,10 @@ class FromFrontend:
             process_unit=self._engine_data_map[engine_id],
         ))
 
+
 class Aggregator:
-    def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, webpush_publisher: WebPushPublisher, secret: str = "") -> None:
+    def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, webpush_publisher: WebPushPublisher,
+                 secret: str = "") -> None:
         self._engine_data_map: EngineDataMap = {}
         """ all client data except channels, indexed by engine_id """
         self.dispatcher = dispatcher
@@ -535,8 +538,8 @@ class Aggregator:
         with database.create_scope():
             repo = RecentEngineRepository(database.scoped_session())
             for engine_data in self._engine_data_map.values():
-                    repo.store_recent_engine(engine_data)
-                    logger.info(f"Storing {engine_data} as recent engine.")
+                repo.store_recent_engine(engine_data)
+                logger.info(f"Storing {engine_data} as recent engine.")
 
     def create_engine_id(self, register_engine_msg: EM.RegisterEngineMsg):
         """ Defines the generation of the engine_id that is uniquely assigned to each engine.

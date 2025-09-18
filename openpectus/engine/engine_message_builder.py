@@ -1,19 +1,19 @@
+import datetime
 import logging
+import time
 from datetime import UTC
 from logging.handlers import QueueHandler
 from queue import Empty, SimpleQueue
-import time
-import datetime
 
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.models as Mdl
+from openpectus.engine.archiver import ArchiverTag, logger as archiver_logger
 from openpectus.engine.engine import Engine
-from openpectus.lang.exec.runlog import RunLogItem
-from openpectus.lang.exec.tags import TagValue
-from openpectus.lang.exec.uod import logger as uod_logger
 from openpectus.engine.engine import frontend_logger as engine_logger
-from openpectus.engine.archiver import logger as archiver_logger
 from openpectus.engine.internal_commands_impl import logger as internal_cmds_logger
+from openpectus.lang.exec.runlog import RunLogItem
+from openpectus.lang.exec.tags import SystemTagName, TagValue
+from openpectus.lang.exec.uod import logger as uod_logger
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,7 @@ uod_logger.addHandler(frontend_logging_handler)
 engine_logger.addHandler(frontend_logging_handler)
 archiver_logger.addHandler(frontend_logging_handler)
 internal_cmds_logger.addHandler(frontend_logging_handler)
+
 
 def to_model_tag(tag: TagValue) -> Mdl.TagValue:
     if tag.tick_time == 0.0:
@@ -41,8 +42,10 @@ def to_model_tag(tag: TagValue) -> Mdl.TagValue:
         simulated=tag.simulated
     )
 
+
 class EngineMessageBuilder():
     """ Collects data from engine and constructs engine messages """
+
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
 
@@ -93,7 +96,10 @@ class EngineMessageBuilder():
     def create_run_stopped_msg(self, run_id: str) -> EM.RunStoppedMsg:
         runlog_msg = self.create_runlog_msg(run_id)
         state = self.engine.method_manager.get_method_state()
-        return EM.RunStoppedMsg(run_id=run_id, runlog=runlog_msg.runlog, method_state=state)
+        archiver = self.engine._system_tags.get(SystemTagName.ARCHIVER)
+        assert isinstance(archiver, ArchiverTag)
+        archive = archiver.read_last_run_archive(run_id)
+        return EM.RunStoppedMsg(run_id=run_id, runlog=runlog_msg.runlog, method_state=state, archive=archive)
 
     def create_runlog_msg(self, run_id: str) -> EM.RunLogMsg:
         tag_names: list[str] = []

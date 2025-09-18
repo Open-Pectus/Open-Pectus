@@ -76,6 +76,7 @@ class TagsUpdatedMsg(EngineMessage):
         return (f'{self.__class__.__name__}(engine_id="{self.engine_id}", sequence_number={self.sequence_number}, ' +
                 f'tags={self.tags})')
 
+
 # TODO: One possible way to supprt buffered messages. This would make it easier to persist
 # the values for plot_log but maybe harder to insert in the realtime plot
 class TagsBufferedMsg(EngineMessage):
@@ -142,6 +143,7 @@ class RunStoppedMsg(EngineMessage):
     run_id: str
     runlog: Mdl.RunLog
     method_state: Mdl.MethodState
+    archive: str | None
 
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(engine_id="{self.engine_id}", sequence_number={self.sequence_number}, ' +

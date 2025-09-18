@@ -1,5 +1,5 @@
 import logging
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from socket import gethostname
 from typing import Iterable, Sequence
 
@@ -107,7 +107,7 @@ class PlotLogRepository(RepositoryBase):
 
 
 class RecentRunRepository(RepositoryBase):
-    def store_recent_run(self, engine_data: agg_mdl.EngineData):
+    def store_recent_run(self, engine_data: agg_mdl.EngineData, archive: str | None = None):
         """ Store a recent run. Requires that engine_data contain run_data. """
         if not engine_data.has_run():
             raise ValueError('missing run_data when trying to store recent run')
@@ -132,6 +132,7 @@ class RecentRunRepository(RepositoryBase):
             current_contributors.add(user_name)
         recent_run.contributors = list(current_contributors)  # must assign new instance in json field
         recent_run.required_roles = list(engine_data.required_roles)
+        recent_run.archive = archive
 
         method_and_state = RecentRunMethodAndState()
         method_and_state.run_id = run_id
@@ -227,6 +228,7 @@ class RecentEngineRepository(RepositoryBase):
         self.db_session.add(recent_engine)
         self.db_session.commit()
 
+
 class WebPushRepository(RepositoryBase):
     def get_notification_preferences_for_user(self, user_id: str) -> WebPushNotificationPreferences | None:
         return self.db_session.scalar(select(WebPushNotificationPreferences).where(WebPushNotificationPreferences.user_id == user_id))
@@ -238,11 +240,12 @@ class WebPushRepository(RepositoryBase):
         return self.db_session.scalars(select(WebPushSubscription).where(WebPushSubscription.user_id == user_id)).all()
 
     def get_notification_preferences_for_topic(self, topic: agg_mdl.NotificationTopic):
-        return self.db_session.scalars(select(WebPushNotificationPreferences).where(WebPushNotificationPreferences.topics.contains(topic))).all()
+        return self.db_session.scalars(
+            select(WebPushNotificationPreferences).where(WebPushNotificationPreferences.topics.contains(topic))).all()
 
     def store_notifications_preferences(self, agg_notification_preferences: agg_mdl.WebPushNotificationPreferences):
         existing = self.get_notification_preferences_for_user(agg_notification_preferences.user_id)
-        if(existing == None):
+        if (existing == None):
             model = WebPushNotificationPreferences(user_id=agg_notification_preferences.user_id)
         else:
             model = existing
