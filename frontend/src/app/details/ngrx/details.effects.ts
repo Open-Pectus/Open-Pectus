@@ -81,7 +81,7 @@ export class DetailsEffects {
     concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
     mergeMap(([{command}, unitId]) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.executeCommand({unitId, requestBody: {command, source: 'unit_button'}}).pipe(
+      return this.processUnitService.executeControlButtonCommand({unitId, requestBody: {command, source: 'unit_button'}}).pipe(
         map(() => DetailsActions.controlCommandExecutionSucceeded()),
         catchError(() => of(DetailsActions.controlCommandExecutionFailed())),
       );

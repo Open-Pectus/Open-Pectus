@@ -1,12 +1,16 @@
 from __future__ import annotations
+
 import itertools
 import logging
 import uuid
 from queue import Empty, Queue
 from typing import Iterable, Literal, Set
 from uuid import UUID
-from openpectus.engine.internal_commands import InternalCommandsRegistry
+
+import openpectus.protocol.models as Mdl
+from openpectus.engine.archiver import ArchiverTag
 from openpectus.engine.hardware import HardwareLayerException, RegisterDirection
+from openpectus.engine.internal_commands import InternalCommandsRegistry
 from openpectus.engine.method_manager import MethodManager
 from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum, SystemTagName
 from openpectus.lang.exec.base_unit import BaseUnitProvider
@@ -15,30 +19,28 @@ from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.errors import (
     EngineError, InterpretationError, InterpretationInternalError, MethodEditError
 )
+from openpectus.lang.exec.events import EventEmitter
 from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext
 from openpectus.lang.exec.runlog import RuntimeInfo, RunLog, RuntimeRecord
-from openpectus.lang.exec.events import EventEmitter
 from openpectus.lang.exec.tags import (
     Tag,
     TagCollection,
-    TagDirection,
     TagValue,
     TagValueCollection,
     ChangeListener,
-    Unset,
     create_system_tags
 )
 from openpectus.lang.exec.tags_impl import BlockTimeTag, MarkTag, ScopeTimeTag
 from openpectus.lang.exec.timer import EngineTimer, OneThreadTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand
-import openpectus.protocol.models as Mdl
-from openpectus.engine.archiver import ArchiverTag
 
 logger = logging.getLogger(__name__)
 frontend_logger = logging.getLogger(__name__ + ".frontend")
 
+
 class EngineTiming():
     """ Represents timing information used by engine and any related components. """
+
     def __init__(self, clock: Clock, timer: EngineTimer, interval: float, speed: float) -> None:
         self._clock = clock
         self._timer = timer
@@ -68,6 +70,7 @@ class EngineTiming():
     @property
     def speed(self) -> float:
         return self._speed
+
 
 class Engine(InterpreterContext):
     """ Main engine class. Handles
@@ -110,8 +113,8 @@ class Engine(InterpreterContext):
         # not after).
         if enable_archiver:
             archiver = ArchiverTag(
-                lambda : self.runtimeinfo.get_runlog(),
-                lambda : self.tags,
+                lambda: self.runtimeinfo.get_runlog(),
+                lambda: self.tags,
                 self.uod.data_log_interval_seconds)
             self._system_tags.add(archiver)
 
@@ -141,7 +144,7 @@ class Engine(InterpreterContext):
         self._prev_state: TagValueCollection | None = None
         """ The state prior to applying safe state """
 
-        self._last_error : Exception | None = None
+        self._last_error: Exception | None = None
         """ Cause of error_state"""
 
         self._method_manager: MethodManager = MethodManager(uod.get_command_names(), self)
@@ -189,7 +192,6 @@ class Engine(InterpreterContext):
     @property
     def runtimeinfo(self) -> RuntimeInfo:
         return self.interpreter.runtimeinfo
-
 
     def cleanup(self):
         self.emitter.emit_on_engine_shutdown()
@@ -256,9 +258,9 @@ class Engine(InterpreterContext):
 
         # execute phase
         # excecute interpreter tick
-        if self._runstate_started and\
-                not self._runstate_paused and\
-                not self._runstate_holding and\
+        if self._runstate_started and \
+                not self._runstate_paused and \
+                not self._runstate_holding and \
                 not self._runstate_stopping:
             try:
                 # run one tick of interpretation, i.e. one instruction
@@ -294,7 +296,6 @@ class Engine(InterpreterContext):
 
         # write phase, error_state on HardwareLayerException
         self.write_process_image()
-
 
     def read_process_image(self):
         """ Read data from relevant hw registers into tags"""
@@ -744,14 +745,11 @@ class Engine(InterpreterContext):
                 f"Unknown command: '{name}'"
             )
 
-    def schedule_execution_user(self, name: str, args: str | None = None):
+    def execute_control_command_from_user(self, name: str):
         """ Execute named command from user """
-        # TODO args format needs to be specified in more detail. Its intended usage is
-        # to contain argument values added to tag buttons. But in that case why not just use pcode?
         if EngineCommandEnum.has_value(name) or self.uod.has_command_name(name):
-            if args is not None:
-                raise NotImplementedError("User arguments format not implemented - command name: " + name)
             request = CommandRequest.from_user(name)
+            # TODO: MPO should implement a synchronous way (with timeout) to produce success/failure response
             self.cmd_queue.put_nowait(request)
         else:
             logger.error(f"Invalid command type scheduled: '{name}'")

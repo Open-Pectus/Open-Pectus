@@ -170,27 +170,35 @@ async def execute_command(
         unit_id: str,
         command: Dto.ExecutableCommand,
         agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.ServerErrorResponse | Dto.ServerSuccessResponse:
-    if __debug__:
-        print("ExecutableCommand", command)
     engine_data = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
     try:
-        msg = command_util.parse_as_message(command, engine_data.readings)
+        msg = command_util.parse_command(command, engine_data.readings)
     except Exception:
         logger.error(f"Parse error for command: {command}", exc_info=True)
-        return Dto.ServerErrorResponse(message="Message parse error")
-    logger.info(f"Sending msg '{str(msg)}' of type {type(msg)} to engine '{unit_id}'")
+        raise HTTPException(status_code=500, detail="Message parse error")
     try:
-        await agg.dispatcher.rpc_call(unit_id, msg)
-    except Exception:
-        logger.error(f"Rpc call to engine_id '{unit_id}' failed", exc_info=True)
-        return Dto.ServerErrorResponse(message="Failed to send message")
+        await agg.from_frontend.excute_command(unit_id, user_id, user_name, msg)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to execute command: {e}")
+    return Dto.ServerSuccessResponse()
 
-    # for now, all users issuing a command become contributors. may need to filter that somehow
-    # and when wo we clear the contributors?
-    contributor = Mdl.Contributor(id=user_id, name=user_name)
-    if contributor not in engine_data.contributors:
-        agg.from_frontend.publish_new_contributor_notification(unit_id, contributor)
-    engine_data.contributors.add(contributor)
+
+@router.post("/process_unit/{unit_id}/execute_control_button_command", response_model_exclude_none=True)
+async def execute_control_button_command(
+        user_roles: UserRolesValue,
+        unit_id: str,
+        command: Dto.ExecutableCommand,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.ServerErrorResponse | Dto.ServerSuccessResponse:
+    get_registered_engine_data_or_fail(unit_id, user_roles, agg)
+    try:
+        msg = command_util.parse_control_button_command(command)
+    except Exception:
+        logger.error(f"Parse error for command: {command}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Message parse error")
+    try:
+        await agg.from_frontend.excute_control_button_command(unit_id, msg)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to execute control button command: {e}")
     return Dto.ServerSuccessResponse()
 
 
@@ -262,7 +270,7 @@ async def save_method(
         version=method_dto.version,
         last_author=user_name
     )
-    new_version = await agg.from_frontend.method_saved(engine_id=unit_id, method=method_mdl, user=Mdl.Contributor(id=user_id, name=user_name))
+    new_version = await agg.from_frontend.save_method(engine_id=unit_id, method=method_mdl, user=Mdl.Contributor(id=user_id, name=user_name))
     return Dto.MethodVersion(version=new_version)
 
 

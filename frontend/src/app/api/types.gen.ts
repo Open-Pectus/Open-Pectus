@@ -370,6 +370,14 @@ export type ExecuteCommandData = {
 
 export type ExecuteCommandResponse = ((ServerErrorResponse | ServerSuccessResponse));
 
+export type ExecuteControlButtonCommandData = {
+    requestBody: ExecutableCommand;
+    unitId: string;
+    xIdentity?: string;
+};
+
+export type ExecuteControlButtonCommandResponse = ((ServerErrorResponse | ServerSuccessResponse));
+
 export type GetProcessDiagramData = {
     unitId: string;
     xIdentity?: string;

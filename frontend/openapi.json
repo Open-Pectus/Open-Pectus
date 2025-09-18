@@ -338,6 +338,76 @@
         }
       }
     },
+    "/api/process_unit/{unit_id}/execute_control_button_command": {
+      "post": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Execute Control Button Command",
+        "operationId": "execute_control_button_command",
+        "parameters": [
+          {
+            "name": "unit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            }
+          },
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecutableCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ServerErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServerSuccessResponse"
+                    }
+                  ],
+                  "title": "Response Execute Control Button Command"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/process_unit/{unit_id}/process_diagram": {
       "get": {
         "tags": [
