@@ -25,6 +25,8 @@ export class DetailsActions {
   static recentRunFetched = createAction(source + 'Recent Run Fetched', props<{ recentRun: RecentRun }>());
   static recentRunFailedToLoad = createAction(source + 'Recent Run Failed To Load', props<{ error: ApiError }>());
   static recentRunDownloadCsvButtonClicked = createAction(source + 'Recent Run Download Csv Button Clicked', props<{ recentRunId: string }>());
+  static recentRunDownloadArchiveButtonClicked = createAction(source + 'Recent Run Download Archive Button Clicked',
+    props<{ recentRunId: string }>());
   static controlStateUpdatedOnBackend = createAction(source + 'Control State Updated On Backend', props<{ unitId: string }>());
   static toggleAllProcessValues = createAction(source + 'All Process Values Toggled', props<{ allProcessValues: boolean }>());
   static processUnitNavigatedFrom = createAction(source + 'Process Unit Navigated From', props<{ oldUnitId?: string, newUnitId?: string }>());

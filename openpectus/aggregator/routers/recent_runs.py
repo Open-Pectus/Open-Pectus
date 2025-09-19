@@ -1,10 +1,9 @@
 from typing import List
 
+import openpectus.aggregator.data.models as Db
 import openpectus.aggregator.models as Mdl
 import openpectus.aggregator.routers.dto as Dto
-import openpectus.aggregator.data.models as Db
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
 from openpectus.aggregator.csv_generator import generate_csv_string
 from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import PlotLogRepository, RecentRunRepository
@@ -90,6 +89,14 @@ def get_recent_run_csv_json(user_roles: UserRolesValue, run_id: str) -> Dto.Rece
     csv_string = generate_csv_string(plot_log, Dto.RecentRun.model_validate(recent_run))
     filename = f'{recent_run.engine_id}_{recent_run.started_date:%Y%m%d_%H%M%S}.csv'
     return Dto.RecentRunCsv(filename=filename, csv_content=csv_string.getvalue())
+
+
+@router.get('/{run_id}/archive', response_model_exclude_none=True)
+def get_recent_run_archive(user_roles: UserRolesValue, run_id: str) -> Dto.RecentRunArchive:
+    recent_run = get_recent_run_or_fail(user_roles, run_id)
+    if recent_run.archive_filename is None or recent_run.archive is None:
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail='Recent run archive not found')
+    return Dto.RecentRunArchive.model_validate(dict(content=recent_run.archive, filename=recent_run.archive_filename))
 
 
 @router.get('/{run_id}/error_log', response_model_exclude_none=True)

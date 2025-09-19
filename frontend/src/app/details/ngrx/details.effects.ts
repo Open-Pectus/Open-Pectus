@@ -145,6 +145,20 @@ export class DetailsEffects {
     }),
   ), {dispatch: false});
 
+  downloadRecentRunArchiveWhenButtonClicked = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.recentRunDownloadArchiveButtonClicked),
+    switchMap(({recentRunId}) => {
+      return this.recentRunsService.getRecentRunArchive({runId: recentRunId}).pipe(
+        map(recentRunArchive => {
+          const link = document.createElement('a');
+          link.download = recentRunArchive.filename;
+          link.href = URL.createObjectURL(new Blob([recentRunArchive.content]));
+          link.click();
+        }),
+      );
+    }),
+  ), {dispatch: false});
+
   registerAsActiveUser = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.unitDetailsInitialized),
     concatLatestFrom(() => [

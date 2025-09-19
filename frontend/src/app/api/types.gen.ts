@@ -234,6 +234,11 @@ export type RecentRun = {
     contributors?: Array<Contributor>;
 };
 
+export type RecentRunArchive = {
+    filename: string;
+    content: string;
+};
+
 export type RecentRunCsv = {
     filename: string;
     csv_content: string;
@@ -541,6 +546,13 @@ export type GetRecentRunCsvJsonData = {
 };
 
 export type GetRecentRunCsvJsonResponse = (RecentRunCsv);
+
+export type GetRecentRunArchiveData = {
+    runId: string;
+    xIdentity?: string;
+};
+
+export type GetRecentRunArchiveResponse = (RecentRunArchive);
 
 export type GetRecentRunErrorLogData = {
     runId: string;
