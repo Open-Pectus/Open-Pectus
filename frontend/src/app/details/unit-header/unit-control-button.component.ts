@@ -16,7 +16,7 @@ import { UnitControlCommands } from '../unit-control-commands.';
             [class.bg-slate-400]="disabled"
             [style.margin]="showPressed() ? '3px 0 0 2px' : '0 2px 3px 0'"
             [style.background-color]="toggled() ? toggledColor : null"
-            [style.box-shadow]="showPressed() ? null : disabled ? '2.5px 3px #cbd5e1' : '2.5px 3px #075985'">
+            [style.box-shadow]="showPressed() ? null : disabled ? '2.5px 3px #cbd5e1' : ('2.5px 3px color-mix(in srgb, '+shadowColor()+', black 10%)')">
       <span class="codicon" [ngClass]="'codicon-'+iconName"></span>{{ command | titlecase }}
     </button>
     @if (showLock()) {
@@ -40,6 +40,7 @@ export class UnitControlButtonComponent {
   isLocked = signal(true);
   showLock = computed(() => this.hasLock() && this.isLocked() && !this.toggled() && !this.optimisticClicked());
   showPressed = computed(() => (this.toggled() && !this.optimisticClicked()) || (!this.toggled() && this.optimisticClicked()));
+  shadowColor = computed(() => this.toggled() ? this.toggledColor : '#0369a1');
 
   constructor(private store: Store) {}
 
