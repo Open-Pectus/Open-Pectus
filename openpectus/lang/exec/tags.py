@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from enum import StrEnum, auto
 import time
+from enum import StrEnum, auto
 from typing import Any, Callable, Iterable, Set
 
 from openpectus.lang.exec.events import EventListener
@@ -25,13 +25,13 @@ class SystemTagName(StrEnum):
     RUN_ID = "Run Id"
     BATCH_NAME = "Batch Name"
     MARK = "Mark"
+    ARCHIVER = "Archive filename"
 
     # these tags are only present if defined in uod.
     BLOCK_VOLUME = "Block Volume"
     ACCUMULATED_VOLUME = "Accumulated Volume"
     BLOCK_CV = "Block CV"
     ACCUMULATED_CV = "Accumulated CV"
-
 
     @staticmethod
     def has_value(value: str):
@@ -134,6 +134,7 @@ class Tag(ChangeSubject, EventListener):
 
     Supports masking the actual value with a simulated value.
     """
+
     def __init__(
             self,
             name: str,
@@ -142,7 +143,7 @@ class Tag(ChangeSubject, EventListener):
             unit: str | None = None,
             direction: TagDirection = TagDirection.NA,
             format_fn: TagFormatFunction | None = None,
-            ) -> None:
+    ) -> None:
 
         super(Tag, self).__init__()
 
@@ -252,8 +253,10 @@ class Tag(ChangeSubject, EventListener):
             self.stop_simulation()
         return super().on_stop()
 
+
 class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
     """ Represents a  name/tag dictionary. """
+
     def __init__(self, tags: Iterable[Tag] | None = None) -> None:
         super().__init__()
         self.tags: dict[str, Tag] = {}
@@ -336,6 +339,7 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
 
 class TagValue:
     """ Read-only and immutable representation of a tag value. """
+
     def __init__(
             self,
             name: str,
@@ -423,6 +427,7 @@ class TagValueCollection(Iterable[TagValue]):
 
     def clone(self) -> TagValueCollection:
         return TagValueCollection([v.clone() for v in self])
+
 
 def create_system_tags() -> "TagCollection":
     return TagCollection([

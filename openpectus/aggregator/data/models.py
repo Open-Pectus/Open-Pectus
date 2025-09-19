@@ -87,6 +87,8 @@ class RecentRun(DBModel):
     error_log: Mapped[RecentRunErrorLog] = relationship(back_populates="recent_run", cascade="all, delete-orphan")
     run_log: Mapped[RecentRunRunLog] = relationship(back_populates="recent_run", cascade="all, delete-orphan")
     method_and_state: Mapped[RecentRunMethodAndState] = relationship(back_populates="recent_run", cascade="all, delete-orphan")
+    archive: Mapped[str | None] = mapped_column()
+    archive_filename: Mapped[str | None] = mapped_column()
 
 
 class RecentRunMethodAndState(DBModel):

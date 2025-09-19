@@ -9,6 +9,7 @@ from typing import Callable, Literal
 
 from openpectus.lang.exec.runlog import RunLog
 from openpectus.lang.exec.tags import Tag, TagCollection
+from openpectus.protocol.models import SystemTagName
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +20,12 @@ VERY_LOW_DISKSPACE_MB = 5
 encoding = 'utf-8'
 
 # csv option defaults
-delimiter = ','     # used in old system
+delimiter = ','  # used in old system
 # delimiter = ';'    # makes Excel 365 understand it out of the box
 quoting: Literal[3] = csv.QUOTE_NONE
 escapechar = None
+
+
 # Note:  The MarkTag value may include a separator char/string. Make sure that does not conflict with the options here.
 
 
@@ -50,7 +53,7 @@ class ArchiverTag(Tag):
                  runlog_accessor: RunlogAccessor,
                  tags_accessor: TagsAccessor,
                  data_log_interval_seconds: float) -> None:
-        super().__init__("Archive filename")
+        super().__init__(SystemTagName.ARCHIVER)
         self.runlog_accessor = runlog_accessor
         self.tags_accessor = tags_accessor
         self.tags: TagCollection | None = None
@@ -60,6 +63,8 @@ class ArchiverTag(Tag):
         self.data_log_interval_seconds = data_log_interval_seconds
         self.file_path: str | None = None
         self.file_ready = False
+        self.last_run_id: str | None = None
+        self.last_run_file_path: str | None = None
 
         if not os.path.exists(self.data_path):
             os.makedirs(self.data_path)
@@ -92,10 +97,10 @@ class ArchiverTag(Tag):
                 writer = csv.writer(f, delimiter=delimiter, quoting=quoting, escapechar=escapechar)
                 tag_values = [tag.archive() for tag in self.tags]
                 writer.writerow(
-                    ['Datetime (UTC)',] +
+                    ['Datetime (UTC)', ] +
                     [f'{tag.name} [{tag.unit}]' if tag.unit is not None else tag.name
-                    for tag, val in zip(self.tags, tag_values)
-                    if val is not None]
+                     for tag, val in zip(self.tags, tag_values)
+                     if val is not None]
                 )
         self.file_ready = True
 
@@ -132,6 +137,12 @@ class ArchiverTag(Tag):
                 end = datetime.fromtimestamp(x.end, UTC) if x.end is not None else ""
                 writer.writerow([x.name, start, end])
 
+    def read_last_run_archive(self, run_id: str):
+        assert self.last_run_file_path is not None
+        assert self.last_run_id == run_id
+        with open(self.last_run_file_path, 'r', encoding=encoding) as f:
+            return f.read()
+
     def on_start(self, run_id: str):
         self.tags = self.tags_accessor()
         tick_time = time.time()
@@ -156,6 +167,8 @@ class ArchiverTag(Tag):
         tick_time = time.time()
         logger.info("Stopped")
         self.set_value(None, tick_time)
+        self.last_run_file_path = self.file_path
+        self.last_run_id = self.run_id
         self.file_path = None
         self.file_ready = False
         self.write_runlog()

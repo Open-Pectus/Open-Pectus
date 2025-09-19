@@ -1554,6 +1554,58 @@
         }
       }
     },
+    "/api/recent_runs/{run_id}/archive": {
+      "get": {
+        "tags": [
+          "recent_runs"
+        ],
+        "summary": "Get Recent Run Archive",
+        "operationId": "get_recent_run_archive",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecentRunArchive"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/recent_runs/{run_id}/error_log": {
       "get": {
         "tags": [
@@ -3023,6 +3075,24 @@
         ],
         "title": "RecentRun",
         "description": "Represents a historical run of a process unit. "
+      },
+      "RecentRunArchive": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "content"
+        ],
+        "title": "RecentRunArchive"
       },
       "RecentRunCsv": {
         "properties": {
