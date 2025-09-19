@@ -4,12 +4,20 @@ import { ActiveUser, AggregatedErrorLog, ApiError, CommandExample, ControlState,
 import { DetailsActions } from './details.actions';
 import { UnitControlCommands } from '../unit-control-commands.';
 
+export interface OptimisticClickedControlButtons {
+  start: boolean,
+  hold: boolean,
+  pause: boolean,
+  stop: boolean,
+}
+
 export interface DetailsState {
   processValues: ProcessValue[];
   allProcessValues: boolean;
   processDiagram?: ProcessDiagram;
   commandExamples: CommandExample[];
   controlState: ControlState;
+  optimisticClickedControlButtons: OptimisticClickedControlButtons;
   recentRun?: RecentRun;
   shouldPoll: boolean;
   errorLog: AggregatedErrorLog;
@@ -27,6 +35,12 @@ const initialState: DetailsState = {
     is_running: false,
     is_holding: false,
     is_paused: false,
+  },
+  optimisticClickedControlButtons: {
+    start: false,
+    hold: false,
+    pause: false,
+    stop: false,
   },
   otherActiveUsers: [],
 };
@@ -64,6 +78,7 @@ const reducer = createReducer(initialState,
   })),
   on(DetailsActions.controlStateFetched, (state, {controlState}) => produce(state, draft => {
     draft.controlState = controlState;
+    draft.optimisticClickedControlButtons = {start: false, stop: false, pause: false, hold: false};
   })),
   on(DetailsActions.recentRunFetched, (state, {recentRun}) => produce(state, draft => {
     draft.recentRun = recentRun;
@@ -79,13 +94,16 @@ const reducer = createReducer(initialState,
     draft.otherActiveUsers = otherActiveUsers;
   })),
   on(DetailsActions.processUnitCommandButtonClicked, (state, {command}) => produce(state, draft => {
-    if(command === UnitControlCommands.Start) draft.controlState.is_running = true;
-    if(command === UnitControlCommands.Stop) draft.controlState.is_running = false;
-    if(command === UnitControlCommands.Pause) draft.controlState.is_paused = true;
-    if(command === UnitControlCommands.Unpause) draft.controlState.is_paused = false;
-    if(command === UnitControlCommands.Hold) draft.controlState.is_holding = true;
-    if(command === UnitControlCommands.Unhold) draft.controlState.is_holding = false;
-  }))
+    if(command === UnitControlCommands.Start) draft.optimisticClickedControlButtons.start = true;
+    if(command === UnitControlCommands.Stop) draft.optimisticClickedControlButtons.stop = true;
+    if(command === UnitControlCommands.Pause) draft.optimisticClickedControlButtons.pause = true;
+    if(command === UnitControlCommands.Unpause) draft.optimisticClickedControlButtons.pause = true;
+    if(command === UnitControlCommands.Hold) draft.optimisticClickedControlButtons.hold = true;
+    if(command === UnitControlCommands.Unhold) draft.optimisticClickedControlButtons.hold = true;
+  })),
+  on(DetailsActions.controlCommandExecutionFailed, state => produce(state, draft => {
+    draft.optimisticClickedControlButtons = {start: false, stop: false, pause: false, hold: false};
+  })),
 );
 
 export const detailsSlice = {name: 'details', reducer};

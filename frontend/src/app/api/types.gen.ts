@@ -262,6 +262,15 @@ export type RunLogLine = {
     cancelled?: boolean;
 };
 
+export type ServerErrorResponse = {
+    error?: boolean;
+    message: string;
+};
+
+export type ServerSuccessResponse = {
+    message?: string;
+};
+
 export type SubPlot = {
     axes: Array<PlotAxis>;
     ratio: (number);
@@ -364,7 +373,15 @@ export type ExecuteCommandData = {
     xIdentity?: string;
 };
 
-export type ExecuteCommandResponse = (unknown);
+export type ExecuteCommandResponse = ((ServerErrorResponse | ServerSuccessResponse));
+
+export type ExecuteControlButtonCommandData = {
+    requestBody: ExecutableCommand;
+    unitId: string;
+    xIdentity?: string;
+};
+
+export type ExecuteControlButtonCommandResponse = ((ServerErrorResponse | ServerSuccessResponse));
 
 export type GetProcessDiagramData = {
     unitId: string;

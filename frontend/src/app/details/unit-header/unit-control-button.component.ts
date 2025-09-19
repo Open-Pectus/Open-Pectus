@@ -14,9 +14,9 @@ import { UnitControlCommands } from '../unit-control-commands.';
             (click)="executeCommand()"
             [disabled]="disabled || (toggled() && unCommand === undefined)"
             [class.bg-slate-400]="disabled"
-            [style.margin]="toggled() ? '3px 0 0 2px' : '0 2px 3px 0'"
+            [style.margin]="showPressed() ? '3px 0 0 2px' : '0 2px 3px 0'"
             [style.background-color]="toggled() ? toggledColor : null"
-            [style.box-shadow]="toggled() ? null : disabled ? '2.5px 3px #cbd5e1' : '2.5px 3px #075985'">
+            [style.box-shadow]="showPressed() ? null : disabled ? '2.5px 3px #cbd5e1' : ('2.5px 3px color-mix(in srgb, '+color()+', black 10%)')">
       <span class="codicon" [ngClass]="'codicon-'+iconName"></span>{{ command | titlecase }}
     </button>
     @if (showLock()) {
@@ -34,14 +34,18 @@ export class UnitControlButtonComponent {
   @Input() iconName?: string;
   @Input() disabled = false;
   toggled = input(false);
+  optimisticClicked = input(false);
   @Input() toggledColor = '#0f172a';
   hasLock = input(false);
   isLocked = signal(true);
-  showLock = computed(() => this.hasLock() && this.isLocked() && !this.toggled());
+  showLock = computed(() => this.hasLock() && this.isLocked() && !this.toggled() && !this.optimisticClicked());
+  showPressed = computed(() => (this.toggled() && !this.optimisticClicked()) || (!this.toggled() && this.optimisticClicked()));
+  color = computed(() => this.toggled() ? this.toggledColor : '#0369a1');
 
   constructor(private store: Store) {}
 
   executeCommand() {
+    if(this.optimisticClicked()) return;
     const command = this.toggled() ? this.unCommand : this.command;
     if(command === undefined) return;
     this.store.dispatch(DetailsActions.processUnitCommandButtonClicked({command}));

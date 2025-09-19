@@ -354,7 +354,7 @@ class FromFrontend:
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(engine_data_map={self._engine_data_map}, dispatcher={self.dispatcher})'
 
-    async def method_saved(self, engine_id: str, method: Mdl.Method, user: Contributor) -> int:
+    async def save_method(self, engine_id: str, method: Mdl.Method, user: Contributor) -> int:
         existing_version = self._engine_data_map[engine_id].method.version
         version_to_overwrite = method.version
         logger.debug(f"Save method version: {method.version}")
@@ -489,6 +489,30 @@ class FromFrontend:
         with database.create_scope():
             webpush_repo = WebPushRepository(database.scoped_session())
             webpush_repo.store_notifications_preferences(preferences)
+
+    async def add_contributor(self, unit_id: str, user_id: str | None, user_name: str):
+        contributor = Mdl.Contributor(id=user_id, name=user_name)
+        contributors = self._engine_data_map[unit_id].contributors
+        if contributor not in contributors:
+            self.publish_new_contributor_notification(unit_id, contributor)
+            contributors.add(contributor)
+
+    async def excute_command(self, unit_id: str, user_id: str | None, user_name: str, msg: AM.InjectCodeMsg):
+        logger.info(f"Sending msg '{str(msg)}' of type {type(msg)} to engine '{unit_id}'")
+        response = await self.dispatcher.rpc_call(unit_id, msg)
+        if isinstance(response, AM.ErrorMessage):
+            raise Exception(f"RPC call returned error message: {response.message}")
+        await self.add_contributor(unit_id, user_id, user_name)
+
+    async def excute_control_button_command(self, unit_id: str, user_id: str | None, user_name: str, msg: AM.ExecuteControlCommandMsg):
+        logger.info(f"Sending msg '{str(msg)}' of type {type(msg)} to engine '{unit_id}'")
+        response = await self.dispatcher.rpc_call(unit_id, msg)
+        if isinstance(response, AM.ErrorMessage):
+            if response.caller_error:
+                raise ValueError(f"RPC call returned error message: {response.message}")
+            else:
+                raise Exception(f"RPC call returned error message: {response.message}")
+        await self.add_contributor(unit_id, user_id, user_name)
 
     def publish_notification_test(self, user_id: None | str):
         asyncio.create_task(self.webpush_publisher.publish_test_message(str(user_id)))

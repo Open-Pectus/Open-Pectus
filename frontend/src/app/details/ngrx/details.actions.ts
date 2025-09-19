@@ -18,6 +18,8 @@ export class DetailsActions {
   static commandExamplesFetched = createAction(source + 'Command Examples Fetched', props<{ commandExamples: CommandExample[] }>());
   static commandsComponentExecuteClicked = createAction(source + 'Commands Component Execute Clicked', props<{ command: ExecutableCommand }>());
   static controlStateFetched = createAction(source + 'Control State Fetched', props<{ controlState: ControlState }>());
+  static controlCommandExecutionFailed = createAction(source + 'Control Command Execution Failed');
+  static controlCommandExecutionSucceeded = createAction(source + 'Control Command Execution Succeeded');
   static recentRunDetailsInitialized = createAction(source + 'Recent Run Details Initialized');
   static recentRunDetailsDestroyed = createAction(source + 'Recent Run Details Destroyed');
   static recentRunFetched = createAction(source + 'Recent Run Fetched', props<{ recentRun: RecentRun }>());
