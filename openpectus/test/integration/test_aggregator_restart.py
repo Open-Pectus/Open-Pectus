@@ -2,19 +2,17 @@ import asyncio
 import atexit
 import logging
 import os
-import time
-import urllib.parse
-import unittest
-import tempfile
-import sys
-import subprocess
-import signal
 import shutil
+import signal
+import subprocess
+import sys
+import tempfile
+import time
+import unittest
+import urllib.parse
 from typing import Any
 
-from pydantic import TypeAdapter
 import httpx
-
 import openpectus.aggregator.main
 import openpectus.engine.configuration.demo_uod
 from openpectus.aggregator.routers.dto import (
@@ -26,6 +24,7 @@ from openpectus.aggregator.routers.dto import (
     MethodLine,
     PlotLog,
 )
+from pydantic import TypeAdapter
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -37,13 +36,15 @@ def get_process_units(port) -> list[ProcessUnit]:
     response = httpx.get(f"http://127.0.0.1:{port}/api/process_units")
     return process_list_adapter.validate_json(response.text)
 
+
 def execute_command_on_process_unit(port, command_name: str, process_unit: ProcessUnit):
     command = ExecutableCommand(
         command=command_name,
         source=CommandSource.UNIT_BUTTON
     )
-    url = f"http://127.0.0.1:{port}/api/process_unit/{urllib.parse.quote(process_unit.id)}/execute_command"
+    url = f"http://127.0.0.1:{port}/api/process_unit/{urllib.parse.quote(process_unit.id)}/execute_control_button_command"
     httpx.post(url, json=command.model_dump(), timeout=5)
+
 
 def method_from_text(method_text: str):
     return Method(
@@ -52,17 +53,21 @@ def method_from_text(method_text: str):
         last_author="TEST"
     )
 
+
 def set_method_on_process_unit(port, method: Method, process_unit: ProcessUnit):
     url = f"http://127.0.0.1:{port}/api/process_unit/{urllib.parse.quote(process_unit.id)}/method"
     httpx.post(url, json=method.model_dump(), timeout=5)
+
 
 def get_method_on_process_unit(port, process_unit: ProcessUnit):
     url = f"http://127.0.0.1:{port}/api/process_unit/{urllib.parse.quote(process_unit.id)}/method"
     return Method.model_validate(httpx.get(url, timeout=5).json())
 
+
 def get_plot_log_on_process_unit(port, process_unit: ProcessUnit):
     url = f"http://127.0.0.1:{port}/api/process_unit/{urllib.parse.quote(process_unit.id)}/plot_log"
     return PlotLog.model_validate(httpx.get(url, timeout=5).json())
+
 
 def tick_times_from_plotlog(plot_log: PlotLog) -> set[float]:
     tick_times = set()
@@ -258,7 +263,7 @@ class TestAggregatorRestart(TestUsingConsoleAppRunner):
         logger.debug("Engines stopped run")
         engine.stop()
         aggregator.stop()
-    
+
     @unittest.skipIf(bool(os.environ.get("OPENPECTUS_INTEGRATION_SKIP_SLOW_TESTS")), reason="Skipping slow tests as configured")
     @unittest.skipUnless(sys.platform.lower() == "linux", "This test cannot run correctly on Windows.")
     def test_reconnect_single_heavy_engine(self, port: int = 8719):
@@ -381,7 +386,7 @@ class TestAggregatorRestart(TestUsingConsoleAppRunner):
                 "record",
                 "-o",
                 f'"{os.path.join(os.path.dirname(__file__), "output.svg")}"',
-                "-p",str(aggregator.process.pid),
+                "-p", str(aggregator.process.pid),
             ]
             logger.info(" ".join(command))
             time.sleep(10)
@@ -425,9 +430,10 @@ class TestAggregatorRestart(TestUsingConsoleAppRunner):
                 command = ExecutableCommand(command=command_name, source=CommandSource.UNIT_BUTTON)
                 responses = []
                 for process_unit in process_units:
-                    url = f"http://127.0.0.1:{port}/api/process_unit/{urllib.parse.quote(process_unit.id)}/execute_command"
+                    url = f"http://127.0.0.1:{port}/api/process_unit/{urllib.parse.quote(process_unit.id)}/execute_control_button_command"
                     responses.append(client.post(url, json=command.model_dump(), timeout=10))
                 await asyncio.gather(*responses)
+
         logger.info("Starting runs")
         asyncio.run(execute_command_on_process_units("Start", process_units))
         [self.assertHasOutput(engine, "Archiver started") for engine in engines]
