@@ -745,11 +745,46 @@ class Engine(InterpreterContext):
                 f"Unknown command: '{name}'"
             )
 
+    def _validate_control_command(self, command_name: str):
+        """ Raise a ValueError if the command is a control command that is not valid in the current
+        engine state. """
+        sys_state_value = self._system_tags[SystemTagName.SYSTEM_STATE].get_value()
+        if command_name == EngineCommandEnum.START:
+            if sys_state_value != SystemStateEnum.Stopped:
+                raise ValueError(
+                    f"Start command is only valid when system state is stopped. Current state is {sys_state_value}")
+        elif command_name == EngineCommandEnum.STOP:
+            if sys_state_value in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
+                raise ValueError(f"Stop command is not valid when system state is {sys_state_value}")
+        elif command_name == EngineCommandEnum.RESTART:
+            if sys_state_value in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
+                raise ValueError(f"Restart command is not valid when system state is {sys_state_value}")
+        elif command_name == EngineCommandEnum.PAUSE:
+            if sys_state_value in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
+                raise ValueError(f"Pause command is not valid when system state is {sys_state_value}")
+            if self._runstate_paused:
+                raise ValueError("Pause command is not valid when system state is paused")
+        elif command_name == EngineCommandEnum.UNPAUSE:
+            if sys_state_value in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
+                raise ValueError(f"Unpause command is not valid when system state is {sys_state_value}")
+            if not self._runstate_paused:
+                raise ValueError("Unpause command is not valid when system state is not paused")
+        elif command_name == EngineCommandEnum.HOLD:
+            if sys_state_value in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
+                raise ValueError(f"Hold command is not valid when system state is {sys_state_value}")
+            if not self._runstate_holding:
+                raise ValueError("Hold command is not valid when system state is on hold")
+        elif command_name == EngineCommandEnum.UNHOLD:
+            if sys_state_value in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
+                raise ValueError(f"Unhold command is not valid when system state is {sys_state_value}")
+            if not self._runstate_holding:
+                raise ValueError("Unhold command is not valid when system state is not on hold")    
+
     def execute_control_command_from_user(self, name: str):
         """ Execute named command from user """
         if EngineCommandEnum.has_value(name) or self.uod.has_command_name(name):
             request = CommandRequest.from_user(name)
-            # TODO: MPO should implement a synchronous way (with timeout) to produce success/failure response
+            self._validate_control_command(name)            
             self.cmd_queue.put_nowait(request)
         else:
             logger.error(f"Invalid command type scheduled: '{name}'")
