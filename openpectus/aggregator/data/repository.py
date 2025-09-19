@@ -107,7 +107,7 @@ class PlotLogRepository(RepositoryBase):
 
 
 class RecentRunRepository(RepositoryBase):
-    def store_recent_run(self, engine_data: agg_mdl.EngineData, archive: str | None = None):
+    def store_recent_run(self, engine_data: agg_mdl.EngineData, archive: str | None = None, archive_filename: str | None = None):
         """ Store a recent run. Requires that engine_data contain run_data. """
         if not engine_data.has_run():
             raise ValueError('missing run_data when trying to store recent run')
@@ -133,6 +133,7 @@ class RecentRunRepository(RepositoryBase):
         recent_run.contributors = list(current_contributors)  # must assign new instance in json field
         recent_run.required_roles = list(engine_data.required_roles)
         recent_run.archive = archive
+        recent_run.archive_filename = archive_filename
 
         method_and_state = RecentRunMethodAndState()
         method_and_state.run_id = run_id

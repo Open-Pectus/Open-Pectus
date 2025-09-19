@@ -5,7 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { PostResponse, GetConfigResponse, ExposePubsubTopicsData, ExposePubsubTopicsResponse, TriggerPublishMswResponse, GetPcodeLanguageConfigurationResponse, GetPcodeTmGrammarData, GetPcodeTmGrammarResponse, GetUnitData, GetUnitResponse, GetUnitsData, GetUnitsResponse, GetProcessValuesData, GetProcessValuesResponse, GetAllProcessValuesData, GetAllProcessValuesResponse, GetAllProcessValuesOfAllAvailableEnginesData, GetAllProcessValuesOfAllAvailableEnginesResponse, ExecuteCommandData, ExecuteCommandResponse, GetProcessDiagramData, GetProcessDiagramResponse, GetCommandExamplesData, GetCommandExamplesResponse, GetRunLogData, GetRunLogResponse, GetMethodAndStateData, GetMethodAndStateResponse, GetMethodData, GetMethodResponse, SaveMethodData, SaveMethodResponse, GetPlotConfigurationData, GetPlotConfigurationResponse, GetPlotLogData, GetPlotLogResponse, GetControlStateData, GetControlStateResponse, GetErrorLogData, GetErrorLogResponse, ForceRunLogLineData, ForceRunLogLineResponse, CancelRunLogLineData, CancelRunLogLineResponse, ExposeSystemStateEnumData, ExposeSystemStateEnumResponse, GetActiveUsersData, GetActiveUsersResponse, RegisterActiveUserData, RegisterActiveUserResponse, UnregisterActiveUserData, UnregisterActiveUserResponse, GetRecentRunsData, GetRecentRunsResponse, GetRecentRunData, GetRecentRunResponse, GetRecentRunMethodAndStateData, GetRecentRunMethodAndStateResponse, GetRecentRunRunLogData, GetRecentRunRunLogResponse, GetRecentRunPlotConfigurationData, GetRecentRunPlotConfigurationResponse, GetRecentRunPlotLogData, GetRecentRunPlotLogResponse, GetRecentRunCsvJsonData, GetRecentRunCsvJsonResponse, GetRecentRunErrorLogData, GetRecentRunErrorLogResponse, GetVersionResponse, GetBuildNumberResponse, GetBuildInfoResponse, GetWebpushConfigResponse, GetNotificationPreferencesData, GetNotificationPreferencesResponse, SaveNotificationPreferencesData, SaveNotificationPreferencesResponse, SubscribeUserData, SubscribeUserResponse, TestNotificationData, TestNotificationResponse } from './types.gen';
+import type { PostResponse, GetConfigResponse, ExposePubsubTopicsData, ExposePubsubTopicsResponse, TriggerPublishMswResponse, GetPcodeLanguageConfigurationResponse, GetPcodeTmGrammarData, GetPcodeTmGrammarResponse, GetUnitData, GetUnitResponse, GetUnitsData, GetUnitsResponse, GetProcessValuesData, GetProcessValuesResponse, GetAllProcessValuesData, GetAllProcessValuesResponse, GetAllProcessValuesOfAllAvailableEnginesData, GetAllProcessValuesOfAllAvailableEnginesResponse, ExecuteCommandData, ExecuteCommandResponse, GetProcessDiagramData, GetProcessDiagramResponse, GetCommandExamplesData, GetCommandExamplesResponse, GetRunLogData, GetRunLogResponse, GetMethodAndStateData, GetMethodAndStateResponse, GetMethodData, GetMethodResponse, SaveMethodData, SaveMethodResponse, GetPlotConfigurationData, GetPlotConfigurationResponse, GetPlotLogData, GetPlotLogResponse, GetControlStateData, GetControlStateResponse, GetErrorLogData, GetErrorLogResponse, ForceRunLogLineData, ForceRunLogLineResponse, CancelRunLogLineData, CancelRunLogLineResponse, ExposeSystemStateEnumData, ExposeSystemStateEnumResponse, GetActiveUsersData, GetActiveUsersResponse, RegisterActiveUserData, RegisterActiveUserResponse, UnregisterActiveUserData, UnregisterActiveUserResponse, GetRecentRunsData, GetRecentRunsResponse, GetRecentRunData, GetRecentRunResponse, GetRecentRunMethodAndStateData, GetRecentRunMethodAndStateResponse, GetRecentRunRunLogData, GetRecentRunRunLogResponse, GetRecentRunPlotConfigurationData, GetRecentRunPlotConfigurationResponse, GetRecentRunPlotLogData, GetRecentRunPlotLogResponse, GetRecentRunCsvJsonData, GetRecentRunCsvJsonResponse, GetRecentRunArchiveData, GetRecentRunArchiveResponse, GetRecentRunErrorLogData, GetRecentRunErrorLogResponse, GetVersionResponse, GetBuildNumberResponse, GetBuildInfoResponse, GetWebpushConfigResponse, GetNotificationPreferencesData, GetNotificationPreferencesResponse, SaveNotificationPreferencesData, SaveNotificationPreferencesResponse, SubscribeUserData, SubscribeUserResponse, TestNotificationData, TestNotificationResponse } from './types.gen';
 
 @Injectable({
     providedIn: 'root'
@@ -831,6 +831,30 @@ export class RecentRunsService {
         return __request(OpenAPI, this.http, {
             method: 'GET',
             url: '/api/recent_runs/{run_id}/csv_json',
+            path: {
+                run_id: data.runId
+            },
+            headers: {
+                'x-identity': data.xIdentity
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Recent Run Archive
+     * @param data The data for the request.
+     * @param data.runId
+     * @param data.xIdentity
+     * @returns RecentRunArchive Successful Response
+     * @throws ApiError
+     */
+    public getRecentRunArchive(data: GetRecentRunArchiveData): Observable<GetRecentRunArchiveResponse> {
+        return __request(OpenAPI, this.http, {
+            method: 'GET',
+            url: '/api/recent_runs/{run_id}/archive',
             path: {
                 run_id: data.runId
             },

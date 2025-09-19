@@ -137,7 +137,7 @@ class FromEngine:
                     f"engine {engine_id}, run_data run_id: {engine_data.run_data.run_id}, message run_id: {_run_id}")
                 logger.warning(f"Saving existing run {_run_id}. No data is available for the other run")
                 try:
-                    recent_run_repo.store_recent_run(engine_data, archive=msg.archive)
+                    recent_run_repo.store_recent_run(engine_data, archive=msg.archive, archive_filename=msg.archive_filename)
                     logger.info(f"Stored recent run {_run_id=}")
                 except Exception:
                     logger.error(f"Failed to persist recent run {_run_id=}")
@@ -146,7 +146,7 @@ class FromEngine:
                 engine_data.run_data.runlog = msg.runlog
                 engine_data.method_state = msg.method_state
                 try:
-                    recent_run_repo.store_recent_run(engine_data, archive=msg.archive)
+                    recent_run_repo.store_recent_run(engine_data, archive=msg.archive, archive_filename=msg.archive_filename)
                     logger.info(f"Stored recent run {_run_id=}")
                 except Exception:
                     logger.error(f"Failed to persist recent run {_run_id=}")

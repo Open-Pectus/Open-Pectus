@@ -144,10 +144,11 @@ class RunStoppedMsg(EngineMessage):
     runlog: Mdl.RunLog
     method_state: Mdl.MethodState
     archive: str | None
+    archive_filename: str | None
 
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(engine_id="{self.engine_id}", sequence_number={self.sequence_number}, ' +
-                f'run_id="{self.run_id}", runlog={self.runlog}, method_state="{self.method_state}"')
+                f'run_id="{self.run_id}", runlog={self.runlog}, method_state="{self.method_state}", archive_filename="{self.archive_filename}"')
 
 
 class WebPushNotificationMsg(EngineMessage):

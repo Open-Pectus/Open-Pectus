@@ -512,6 +512,14 @@ class RecentRunCsv(Dto):
         return f'{self.__class__.__name__}(filename="{self.filename}")'
 
 
+class RecentRunArchive(Dto):
+    filename: str
+    content: str
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(filename="{self.filename}")'
+
+
 class ErrorLogSeverity(StrEnum):
     Warning = auto()
     Error = auto()

@@ -138,10 +138,10 @@ class ArchiverTag(Tag):
                 writer.writerow([x.name, start, end])
 
     def read_last_run_archive(self, run_id: str):
-        if self.last_run_file_path is not None:
-            assert self.last_run_id == run_id
-            with open(self.last_run_file_path, 'r', encoding=encoding) as f:
-                return f.read()
+        assert self.last_run_file_path is not None
+        assert self.last_run_id == run_id
+        with open(self.last_run_file_path, 'r', encoding=encoding) as f:
+            return f.read()
 
     def on_start(self, run_id: str):
         self.tags = self.tags_accessor()

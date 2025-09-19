@@ -1,5 +1,6 @@
 import datetime
 import logging
+import os
 import time
 from datetime import UTC
 from logging.handlers import QueueHandler
@@ -99,7 +100,9 @@ class EngineMessageBuilder():
         archiver = self.engine._system_tags.get(SystemTagName.ARCHIVER)
         assert isinstance(archiver, ArchiverTag)
         archive = archiver.read_last_run_archive(run_id)
-        return EM.RunStoppedMsg(run_id=run_id, runlog=runlog_msg.runlog, method_state=state, archive=archive)
+        assert archiver.last_run_file_path is not None
+        archive_filename = os.path.basename(archiver.last_run_file_path)
+        return EM.RunStoppedMsg(run_id=run_id, runlog=runlog_msg.runlog, method_state=state, archive=archive, archive_filename=archive_filename)
 
     def create_runlog_msg(self, run_id: str) -> EM.RunLogMsg:
         tag_names: list[str] = []
