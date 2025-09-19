@@ -11,7 +11,7 @@ from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import PlotLogRepository, RecentEngineRepository
 from openpectus.aggregator.routers.auth import UserIdValue, has_access, UserRolesValue, UserNameValue
 from pydantic.json_schema import SkipJsonSchema
-from starlette.status import HTTP_403_FORBIDDEN, HTTP_404_NOT_FOUND
+from starlette.status import HTTP_400_BAD_REQUEST, HTTP_403_FORBIDDEN, HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])
@@ -196,11 +196,13 @@ async def execute_control_button_command(
         msg = command_util.parse_control_button_command(command)
     except Exception:
         logger.error(f"Parse error for command: {command}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Message parse error")
+        raise HTTPException(status_code=HTTP_500_INTERNAL_SERVER_ERROR, detail="Message parse error")
     try:
         await agg.from_frontend.excute_control_button_command(unit_id, user_id, user_name, msg)
+    except ValueError:
+        raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail=f"Engine is not in a state to receive that command")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to execute control button command: {e}")
+        raise HTTPException(status_code=HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to execute control button command: {e}")
     return Dto.ServerSuccessResponse()
 
 

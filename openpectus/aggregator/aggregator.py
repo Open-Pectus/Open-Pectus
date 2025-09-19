@@ -508,7 +508,10 @@ class FromFrontend:
         logger.info(f"Sending msg '{str(msg)}' of type {type(msg)} to engine '{unit_id}'")
         response = await self.dispatcher.rpc_call(unit_id, msg)
         if isinstance(response, AM.ErrorMessage):
-            raise Exception(f"RPC call returned error message: {response.message}")
+            if response.caller_error:
+                raise ValueError(f"RPC call returned error message: {response.message}")
+            else:
+                raise Exception(f"RPC call returned error message: {response.message}")
         await self.add_contributor(unit_id, user_id, user_name)
 
     def publish_notification_test(self, user_id: None | str):

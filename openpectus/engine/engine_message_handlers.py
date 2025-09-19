@@ -45,7 +45,10 @@ class EngineMessageHandlers():
         try:
             self.engine.execute_control_command_from_user(name=msg.name)
             return AM.SuccessMessage()
-        except Exception:
+        except ValueError as ex:
+            logger.error(f"The command '{msg.name}' was invalid. Exception: {ex}")
+            return AM.ErrorMessage(message=f"The command '{msg.name}' was invalid", caller_error=True)
+        except Exception as ex:
             logger.error(f"The command '{msg.name}' could not be scheduled. Exception: {ex}")
             return AM.ErrorMessage(message=f"The command '{msg.name}' could not be scheduled")
 
