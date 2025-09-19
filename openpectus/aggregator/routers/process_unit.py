@@ -185,6 +185,8 @@ async def execute_command(
 
 @router.post("/process_unit/{unit_id}/execute_control_button_command", response_model_exclude_none=True)
 async def execute_control_button_command(
+        user_name: UserNameValue,
+        user_id: UserIdValue,
         user_roles: UserRolesValue,
         unit_id: str,
         command: Dto.ExecutableCommand,
@@ -196,7 +198,7 @@ async def execute_control_button_command(
         logger.error(f"Parse error for command: {command}", exc_info=True)
         raise HTTPException(status_code=500, detail="Message parse error")
     try:
-        await agg.from_frontend.excute_control_button_command(unit_id, msg)
+        await agg.from_frontend.excute_control_button_command(unit_id, user_id, user_name, msg)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to execute control button command: {e}")
     return Dto.ServerSuccessResponse()
