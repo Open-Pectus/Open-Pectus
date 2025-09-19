@@ -9,7 +9,7 @@ from typing import Callable, Literal
 
 from openpectus.lang.exec.runlog import RunLog
 from openpectus.lang.exec.tags import Tag, TagCollection
-from protocol.models import SystemTagName
+from openpectus.protocol.models import SystemTagName
 
 logger = logging.getLogger(__name__)
 
