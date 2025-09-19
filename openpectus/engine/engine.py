@@ -772,19 +772,19 @@ class Engine(InterpreterContext):
         elif command_name == EngineCommandEnum.HOLD:
             if sys_state_value in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
                 raise ValueError(f"Hold command is not valid when system state is {sys_state_value}")
-            if not self._runstate_holding:
+            if self._runstate_holding:
                 raise ValueError("Hold command is not valid when system state is on hold")
         elif command_name == EngineCommandEnum.UNHOLD:
             if sys_state_value in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
                 raise ValueError(f"Unhold command is not valid when system state is {sys_state_value}")
             if not self._runstate_holding:
-                raise ValueError("Unhold command is not valid when system state is not on hold")    
+                raise ValueError("Unhold command is not valid when system state is not on hold")
 
     def execute_control_command_from_user(self, name: str):
         """ Execute named command from user """
         if EngineCommandEnum.has_value(name) or self.uod.has_command_name(name):
             request = CommandRequest.from_user(name)
-            self._validate_control_command(name)            
+            self._validate_control_command(name)
             self.cmd_queue.put_nowait(request)
         else:
             logger.error(f"Invalid command type scheduled: '{name}'")
