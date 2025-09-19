@@ -46,7 +46,7 @@ class EngineMessageHandlers():
             self.engine.execute_control_command_from_user(name=msg.name)
             return AM.SuccessMessage()
         except Exception:
-            logger.error(f"The command '{msg.name}' could not be scheduled")
+            logger.error(f"The command '{msg.name}' could not be scheduled. Exception: {ex}")
             return AM.ErrorMessage(message=f"The command '{msg.name}' could not be scheduled")
 
     async def handle_injectCodeMsg(self, msg: AM.AggregatorMessage) -> M.MessageBase:
