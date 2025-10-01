@@ -13,19 +13,13 @@ class EngineNotInitializedError(Exception):
 
 
 class EngineError(Exception):
-    def __init__(
-            self,
-            message: str,
-            user_message: str | Literal["same"] | None = None,
-            exception: Exception | None = None,
-            *args) -> None:
+    def __init__(self, message: str, user_message: str | Literal["same"] | None = None) -> None:
         self.message = message
         if user_message == "same":
             self.user_message = message
         else:
             self.user_message = user_message
-        super().__init__(*args)
-        self.exception = exception
+        super().__init__()
 
     def __str__(self) -> str:
         if self.user_message == self.message:
@@ -43,49 +37,44 @@ class UodValidationError(Exception):
 
 class InterpretationError(Exception):
     """ Raised by interpreter when a general error occurs """
-    def __init__(self,
-                 message: str,
-                 user_message: str | Literal["same"] | None = "same",
-                 exception: Exception | None = None, *args: object
-                 ) -> None:
+    def __init__(self, message: str, user_message: str | Literal["same"] | None = "same") -> None:
+        super().__init__()
         self.message: str = message
         if user_message == "same":
             self.user_message = message
         else:
             self.user_message = user_message
-        self.exception = exception
-        super().__init__(*args)
 
     def __str__(self) -> str:
+        ex_info = self.__cause__ if self.__cause__ else self.__context__ if self.__context__ else None
+
         if self.user_message == self.message:
-            return f'{self.__class__.__name__}(message="{self.message}", exception={self.exception})'
+            return f'{self.__class__.__name__}(message="{self.message}", exception={ex_info})'
         else:
             return (f'{self.__class__.__name__}(message="{self.message}", user_message="{self.user_message}", ' +
-                    f'exception={self.exception})')
+                    f'exception={ex_info})')
 
 
 class NodeInterpretationError(InterpretationError):
     """ Raised by interpreter when an instruction specific error occurs """
-    def __init__(self, node: p.Node, message: str, user_message: str | Literal["same"] | None = "same",
-                 exception: Exception | None = None, *args: object) -> None:
+    # TODO remove exception argument+property. Replace usage with 'raise ... from ex'
+    def __init__(self, node: p.Node, message: str, user_message: str | Literal["same"] | None = "same") -> None:
         self.node = node
         self.message: str = message
-        self.exception = exception
         if user_message == "same":  # avoid using base message for user messages
             user_message = message
-        base_message = f"An error occurred in instruction '{node.display_name}': {message}"
-        super().__init__(base_message, user_message, exception, *args)
+        base_message = f"An error occurred in instruction '{node}': {message}"
+        super().__init__(base_message, user_message)
 
 
 class InterpretationInternalError(InterpretationError):
     """ Raised by interpreter if an internal error occurs """
-    def __init__(self, message: str, exception: Exception | None = None, *args: object) -> None:
+    def __init__(self, message: str) -> None:
         self.message: str = message
-        self.exception = exception
         base_message = f"An internal error occurred. Interpretation cannot continue: {message}"
-        super().__init__(base_message, "Internal error", exception, *args)
+        super().__init__(base_message, "Internal error")
 
 
 class MethodEditError(Exception):
-    def __init__(self, message: str, exception: Exception | None = None):
-        super().__init__(message, exception)
+    def __init__(self, message: str):
+        super().__init__(message)

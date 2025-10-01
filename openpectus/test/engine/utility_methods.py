@@ -8,7 +8,7 @@ from openpectus.engine.models import EngineCommandEnum
 
 from openpectus.lang.exec.clock import WallClock
 from openpectus.lang.exec.errors import EngineError
-from openpectus.lang.exec.runlog import RuntimeRecordStateEnum
+from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
 from openpectus.lang.exec.events import BlockInfo, EventListener
 from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
@@ -24,6 +24,13 @@ def build_program(pcode: str) -> p.ProgramNode:
     method = ParserMethod.from_pcode(pcode)
     parser = create_method_parser(method)
     return parser.parse_method(method)
+
+def _handle_engine_error(engine: Engine):
+    ex = engine.get_error_state_exception()
+    if ex is None:
+        raise EngineError("Engine failed with an unspecified error")
+    else:
+        raise EngineError(f"Engine failed with exception: {ex}") from ex
 
 
 UodFactory = Callable[[], UnitOperationDefinitionBase]
@@ -110,6 +117,10 @@ class EngineTestInstance(EventListener):
     def method_manager(self) -> MethodManager:
         return self.engine.method_manager
 
+    @property
+    def runtimeinfo(self) -> RuntimeInfo:
+        return self.engine.interpreter.runtimeinfo
+
     def run_until_condition(self, condition: RunCondition, max_ticks=30) -> int:
         """ Continue program until condition occurs. Return the number of ticks spent.
 
@@ -149,15 +160,28 @@ class EngineTestInstance(EventListener):
                 logger.warning(f"Sleep deadline for tick was negative: {deadline}")
 
             if self.engine.has_error_state():
-                ex = self.engine.get_error_state_exception()
-                if ex is None:
-                    logger.error("Engine failed with an unspecified error", exc_info=True)
-                    raise EngineError("Engine failed with an unspecified error")
-                else:
-                    logger.error(f"Engine failed with exception: {ex}", exc_info=True)
-                    raise EngineError(f"Engine failed with exception: {ex}", exception=ex)
+                _handle_engine_error(self.engine)
 
         return ticks
+
+    def _convert_FindInstruction_state_to_enum(self, state: FindInstructionState) -> RuntimeRecordStateEnum | None:
+        # convert the easy-to-use literal into one of the enum states that find_instruction needs
+        if state == "any":
+            return None
+        elif state == "started":
+            return RuntimeRecordStateEnum.Started
+        elif state == "completed":
+            return RuntimeRecordStateEnum.Completed
+        elif state == "failed":
+            return RuntimeRecordStateEnum.Failed
+        elif state == "cancelled":
+            return RuntimeRecordStateEnum.Cancelled
+        elif state == "awaiting_threshold":
+            return RuntimeRecordStateEnum.AwaitingThreshold
+        elif state == "awaiting_condition":
+            return RuntimeRecordStateEnum.AwaitingCondition
+        else:
+            raise NotImplementedError(f"Searching for instruction state '{state}' is not supported")
 
     def run_until_instruction(  # noqa C901
             self,
@@ -177,39 +201,28 @@ class EngineTestInstance(EventListener):
 
         Raises TimeoutError if the instruction is not found before max_ticks is reached.
 
+        Note: Some instructions have special behavior, most notable Restart that restarts the engine which resets the
+        record state in which we search. Effectively, it only supports waiting with no state provided. Start and Stop
+        have similar quirks.
+
         Use `increment_index` to control searching within states of the same instruction as last search. The default
         value of True skips to the next instruction which is normally what you want. If set to False, search also
         includes the record of the previous match. This is useful if searching for different states for the same
         record, such as "started" and "completed". See also `index_step_back()`.
         """
-
-        # convert the easy-to-use literal into one of the enum states that find_instruction needs
-        request_state: RuntimeRecordStateEnum | None = None
-        if state != "any":
-            if state == "started":
-                request_state = RuntimeRecordStateEnum.Started
-            elif state == "completed":
-                request_state = RuntimeRecordStateEnum.Completed
-            elif state == "failed":
-                request_state = RuntimeRecordStateEnum.Failed
-            elif state == "cancelled":
-                request_state = RuntimeRecordStateEnum.Cancelled
-            elif state == "awaiting_threshold":
-                request_state = RuntimeRecordStateEnum.AwaitingThreshold
-            elif state == "awaiting_condition":
-                request_state = RuntimeRecordStateEnum.AwaitingCondition
-            elif state == "awaiting_interrupt":
-                request_state = RuntimeRecordStateEnum.AwaitingInterrrupt
+        request_state = self._convert_FindInstruction_state_to_enum(state)
+        if request_state is not None and instruction_name == EngineCommandEnum.RESTART:
+            raise ValueError("For the Restart command, searching is only supported using the default any/None state")
 
         def cond() -> bool:
-            index = self.engine.runtimeinfo.find_instruction(instruction_name, arguments, self._search_index, request_state)
+            index = self.runtimeinfo.find_instruction(instruction_name, arguments, self._search_index, request_state)
             if index is None:
                 return False
             else:
                 # store position so we only search from there next time
                 # print(f"Found {instruction_name} at index {index}")
                 self._search_index = index + 1 if increment_index else index
-                if instruction_name == "Restart":  # except if restarting in which case we start over
+                if instruction_name == EngineCommandEnum.RESTART:  # except if restarting in which case we start over
                     self._search_index = 0
                 return True
 
@@ -221,6 +234,42 @@ class EngineTestInstance(EventListener):
                 f"Timeout while waiting for instruction '{instruction_name}', state: {state}, arguments: {arguments}")
 
         logger.info(f"Done waiting for instruction {instruction_name}, state: {state}, arguments: {arguments}. " +
+                    f"Duration: {ticks} ticks.")
+        return ticks
+
+    def run_until_command(  # noqa C901
+            self,
+            command_name: str,
+            state: FindInstructionState = "any",
+            arguments: str | None = None,
+            max_ticks=30,
+            increment_index=True
+            ) -> int:
+
+        request_state = self._convert_FindInstruction_state_to_enum(state)
+        if request_state is not None and command_name == "Restart":
+            raise ValueError("For the Restart command, searching is only supported using the default 'any' state")
+
+        def cond() -> bool:
+            index = self.runtimeinfo.find_command(command_name, arguments, self._search_index, request_state)
+            if index is None:
+                return False
+            else:
+                # store position so we only search from there next time
+                # print(f"Found {instruction_name} at index {index}")
+                self._search_index = index + 1 if increment_index else index
+                if command_name == "Restart":  # except if restarting in which case we start over
+                    self._search_index = 0
+                return True
+
+        logger.info(f"Start waiting for command {command_name}, state: {state}, arguments: {arguments}")
+        try:
+            ticks = self.run_until_condition(cond, max_ticks=max_ticks)
+        except TimeoutError:
+            raise TimeoutError(
+                f"Timeout while waiting for command {command_name}, state: {state}, arguments: {arguments}")
+
+        logger.info(f"Done waiting for command {command_name}, state: {state}, arguments: {arguments}. " +
                     f"Duration: {ticks} ticks.")
         return ticks
 
@@ -268,22 +317,24 @@ class EngineTestInstance(EventListener):
             print("Waiting for started event")
             self.run_ticks(1)
 
-    def run_ticks(self, ticks: int) -> None:
+    def run_ticks(self, ticks: int, verbose=True) -> None:
         """ Continue program execution until te specified number of ticks. """
 
-        logger.info(f"Start waiting for {ticks} ticks")
+        if verbose:
+            logger.info(f"Start waiting for {ticks} ticks")
         max_ticks = ticks + 1
         try:
             _ = self.run_until_condition(lambda: False, max_ticks)
         except TimeoutError:
-            logger.info(f"Done waiting for {ticks} ticks")
+            if verbose:
+                logger.info(f"Done waiting for {ticks} ticks")
             return
 
         raise ValueError("Could not wait??")
 
     def get_runtime_table(self, description: str = "") -> str:
         """ Return a text view of the runtime table contents. """
-        return self.engine.runtimeinfo.get_as_table(description)
+        return self.runtimeinfo.get_as_table(description)
 
     # --- EventListener impl ----
 
@@ -353,14 +404,9 @@ def run_engine(engine: Engine, pcode: str, max_ticks: int = -1) -> int:
             logger.warning(f"Sleep deadline for tick was negative: {deadline}")
 
         if engine.has_error_state():
-            ex = engine.get_error_state_exception()
-            if ex is None:
-                raise EngineError("Engine failed with an unspecified error")
-            else:
-                raise EngineError(f"Engine failed with exception: {ex}", exception=ex)
+            _handle_engine_error(engine)
 
         ticks += 1
-
 
 def continue_engine(engine: Engine, max_ticks: int = -1) -> int:
     global last_tick_time, interval
@@ -391,26 +437,29 @@ def continue_engine(engine: Engine, max_ticks: int = -1) -> int:
             logger.warning(f"Sleep deadline for tick was negative: {deadline}")
 
         if engine.has_error_state():
-            ex = engine.get_error_state_exception()
-            if ex is None:
-                raise EngineError("Engine failed with an unspecified error")
-            else:
-                raise EngineError(f"Engine failed with exception: {ex}", exception=ex)
+            _handle_engine_error(engine)
 
         ticks += 1
 
 
 def print_runlog(e: Engine, description=""):
     runlog = e.interpreter.runtimeinfo.get_runlog()
-    print(f"Runlog {runlog.id} records: ", description)
+    print()
+    print(f"Runlog {runlog.id} items | ", description)
+    print("| ----------- instance_id ------------ | ---------- runlog name ---------- | -- state -- | progress | extras")
     for item in runlog.items:
-        name = f"{str(item.name):<20}"
-        prog = f"{item.progress:.2f}" if item.progress else ""
-        print(f"{name}   {item.state:<15}    {prog}")
+        name = f"{str(item.name):<25}"
+        progress = f"{item.progress:.2f}" if item.progress else ""
+        extra_state = "forced" if item.forced else ("cancelled" if item.cancelled else "")
+        print(f"  {item.id}   {name}           {item.state:<11}    {progress:<8}  {extra_state}")
 
 
 def print_runtime_records(e: Engine, description: str = ""):
     table = e.interpreter.runtimeinfo.get_as_table(description)
+    print(table)
+
+def print_runtime_records_alt(e: Engine, description: str = ""):
+    table = e.interpreter.runtimeinfo.get_as_table_alt(description)
     print(table)
 
 def clear_log_config():
@@ -424,11 +473,14 @@ def configure_test_logger():
 
 
 def set_engine_debug_logging():
+    # seems necessary to get log items for internal_commands_impl
+    import openpectus.engine.internal_commands_impl  # noqa: F401
+
     engine_modules = [
         "openpectus.engine.engine",
         # "openpectus.engine.internal_commands",
         "openpectus.engine.internal_commands_impl",
-        __name__
+        __name__,
     ]
     for m in engine_modules:
         logger = logging.getLogger(m)

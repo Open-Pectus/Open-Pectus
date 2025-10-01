@@ -44,6 +44,7 @@ class StartEngineCommand(InternalEngineCommand):
             e._system_tags[SystemTagName.PROCESS_TIME].set_value(0.0, e._tick_time)
             e._system_tags[SystemTagName.RUN_COUNTER].set_value(0, e._tick_time)
 
+            e.tracking.enable()
             e.emitter.emit_on_start(run_id)
 
 
@@ -78,7 +79,10 @@ class PauseEngineCommand(InternalEngineCommand):
             while self.engine._tick_time < duration_end_time:
                 yield
             logger.debug("Resuming using Unpause")
-            UnpauseEngineCommand(self.engine, self._registry)._run()
+            # reusing instance_id is ok
+            unpause = UnpauseEngineCommand(self.engine, self._registry)
+            unpause.instance_id = self.instance_id
+            unpause._run()
 
 
 @command_argument_none()
@@ -142,7 +146,9 @@ class HoldEngineCommand(InternalEngineCommand):
             while self.engine._tick_time < duration_end_time:
                 yield
             logger.debug("Resuming using Unhold")
-            UnholdEngineCommand(self.engine, self._registry)._run()
+            unhold = UnholdEngineCommand(self.engine, self._registry)
+            unhold.instance_id = self.instance_id
+            unhold._run()
 
 
 @command_argument_none()
@@ -193,6 +199,7 @@ class StopEngineCommand(InternalEngineCommand):
             e._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.OK, e._tick_time)
             e._apply_safe_state()
 
+            e.tracking.disable()
             e.emitter.emit_on_stop()
 
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Stopped, e._tick_time)
@@ -210,13 +217,13 @@ class RestartEngineCommand(InternalEngineCommand):
         e = self.engine
         sys_state = e._system_tags[SystemTagName.SYSTEM_STATE]
         if sys_state.get_value() == SystemStateEnum.Stopped:
-            logger.warning("Cannot restart when system state is Stopped")
+            logger.warning("Cannot restart run when system state is Stopped")
             self.fail()
         elif sys_state.get_value() == SystemStateEnum.Restarting:
-            logger.warning("Cannot restart when system state is Restarting")
+            logger.warning("Cannot restart run when system state is Restarting")
             self.fail()
         else:
-            logger.info("Restarting engine")
+            logger.info("Restarting run")
             sys_state.set_value(SystemStateEnum.Restarting, e._tick_time)
 
             e._runstate_stopping = True
@@ -225,27 +232,28 @@ class RestartEngineCommand(InternalEngineCommand):
             timeout_at_tick = e._tick_number + CANCEL_TIMEOUT_TICKS
             while e.uod.has_any_command_instances():
                 if e._tick_number > timeout_at_tick:
-                    logger.warning("Timeout waiting for uod commands to cancel")
+                    logger.warning("Timed out waiting for uod commands to cancel")
                     break
                 yield
             e._finalize_uod_commands()
 
-            logger.debug("Restarting engine - uod commands have completed execution")
+            logger.debug("Restarting run - uod commands have completed execution")
             e._runstate_started = False
             e._runstate_paused = False
             e._runstate_holding = False
             e._runstate_stopping = False
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Stopped, e._tick_time)
 
+            e.tracking.disable()
             e.emitter.emit_on_stop()
 
             e.clear_run_id()
             e._stop_interpreter()
-            logger.info("Restarting engine - engine stopped")
+            logger.info("Restarting run - engine stopped")
 
             yield
 
-            logger.info("Restarting engine - starting engine")
+            logger.info("Restarting run - starting engine")
             # potentially a lot more engine state to reset
             e._runstate_started = True
             e._runstate_started_time = time.time()
@@ -253,10 +261,11 @@ class RestartEngineCommand(InternalEngineCommand):
             e._runstate_holding = False
 
             run_id = e.set_run_id()
+            e.tracking.enable()
             e.emitter.emit_on_start(run_id)
 
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
-            logger.info("Restarting engine complete")
+            logger.info("Restarting run complete")
 
 
 @command_argument_regex(REGEX_TEXT)

@@ -118,7 +118,7 @@ class EngineMessageBuilder():
             )
             return msg
 
-        runlog = self.engine.runtimeinfo.get_runlog()
+        runlog = self.engine.tracking.get_runlog()
         return EM.RunLogMsg(
             id=runlog.id,
             run_id=run_id,

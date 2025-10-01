@@ -10,9 +10,6 @@ class Position:
         self.character: int = character
         """ Character number on line, zero-based. Corresponds to the indentation of the line """
 
-    def is_empty(self) -> bool:
-        return self == Position.empty
-
     @staticmethod
     def empty() -> Position:
         return Position(line=-1, character=-1)
@@ -132,9 +129,12 @@ class SupportCancelForce:
         """ Whether the node has been cancelled. Virtual property. """
         return self._cancelled
 
-    def cancel(self):
+    def cancel(self) -> bool:
+        """ Cancel the instruction. Returns a bool indication whether Cancel was valid at the time """
         if self.cancellable:
             self._cancelled = True
+            return True
+        return False
 
     @property
     def forcible(self) -> bool:
@@ -147,8 +147,11 @@ class SupportCancelForce:
         return self._forced
 
     def force(self):
+        """ Force the instruction. Returns a bool indication whether Force was valid at the time """
         if self.forcible:
             self._forced = True
+            return True
+        return False
 
 
 class SupportsInterrupt():
@@ -165,7 +168,7 @@ class Node(SupportCancelForce):
     instruction_names: list[str] = []
     """ Specifies which node the parser should instantiate for a given instruction name(s) """
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position: Position = Position.empty(), id=""):
         super().__init__()
 
         self.parent: NodeWithChildren | None = None
@@ -208,10 +211,7 @@ class Node(SupportCancelForce):
 
     @property
     def runlog_name(self) -> str | None:
-        return self.display_name
-
-    @property
-    def display_name(self) -> str:
+        """ The name to display in the runlog. Includes argument, if any, but no threshold or comment"""
         args = ": " + self.arguments if len(self.arguments) > 0 else ""
         return self.instruction_name + args
 
@@ -395,7 +395,7 @@ class Node(SupportCancelForce):
         return matches(self, other, logger)
 
 class NodeWithChildren(Node):
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self._children: list[Node] = []
         self.interrupt_registered: bool = False
@@ -467,7 +467,7 @@ class NodeWithChildren(Node):
         super().reset_runtime_state(recursive)
 
 class ProgramNode(NodeWithChildren):
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.active_node: Node | None = None
         """ The node currently executing. Is never ProgramNode. Is None untli first instruction is
@@ -560,7 +560,7 @@ class ProgramNode(NodeWithChildren):
 class MarkNode(Node):
     instruction_names = ["Mark"]
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self._forcible = False
 
@@ -568,7 +568,7 @@ class MarkNode(Node):
 class BlockNode(NodeWithChildren):
     instruction_names = ["Block"]
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.lock_aquired = False
 
@@ -601,7 +601,7 @@ class BatchNode(Node):
 class NodeWithTagOperatorValue(Node):
     operators: list[str]
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.tag_operator_value_part: str
         self.tag_operator_value: TagOperatorValue | None
@@ -610,7 +610,7 @@ class NodeWithTagOperatorValue(Node):
 class NodeWithCondition(NodeWithTagOperatorValue):
     operators = ["<=", ">=", "==", "!=", "<", ">", "="]
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.interrupt_registered: bool = False
         self.activated: bool = False
@@ -652,14 +652,32 @@ class NodeWithAssignment(NodeWithTagOperatorValue):
 class WatchNode(NodeWithChildren, NodeWithCondition, SupportsInterrupt):
     instruction_names = ["Watch"]
 
+    def __init__(self, position=Position.empty(), id=""):
+        super().__init__(position, id)
+        self.awaiting_condition = False
+
+    def extract_state(self):
+        state = super().extract_state()
+        state["awaiting_condition"] = self.awaiting_condition  # type: ignore
+        return state
+
+    def apply_state(self, state):
+        self.awaiting_condition = bool(state["awaiting_condition"])
+        super().apply_state(state)
+
+    def reset_runtime_state(self, recursive):
+        self.awaiting_condition = False
+        super().reset_runtime_state(recursive)
+
 
 class AlarmNode(NodeWithChildren, NodeWithCondition, SupportsInterrupt):
     instruction_names = ["Alarm"]
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.run_count: int = 0
         """ The number of times the alarm has completed """
+        self.awaiting_condition = False
 
     def extract_state(self):
         state = super().extract_state()
@@ -672,6 +690,7 @@ class AlarmNode(NodeWithChildren, NodeWithCondition, SupportsInterrupt):
 
     def reset_runtime_state(self, recursive):
         # Note: run_count is not reset because it counts alarm invocations
+        self.awaiting_condition = False
         super().reset_runtime_state(recursive)
 
 
@@ -707,7 +726,7 @@ class WhitespaceNode(Node):
 
     Populated by WhitespaceAnalyzer
     """
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.has_only_trailing_whitespace: bool = False
         """ Specifies that only whitespace instructions follow this whitespace instruction in
@@ -716,7 +735,7 @@ class WhitespaceNode(Node):
 
 class CommentNode(WhitespaceNode):
     """ Represents a line with only a comment. """
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.has_comment = True
         self.line: str = ""
@@ -733,7 +752,7 @@ class InjectedNode(NodeWithChildren, SupportsInterrupt):
 class MacroNode(NodeWithChildren):
     instruction_names = ["Macro"]
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.activated: bool = False
         self._cancellable = False
@@ -790,7 +809,7 @@ class MacroNode(NodeWithChildren):
 class CallMacroNode(Node):
     instruction_names = ["Call macro"]
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self._cancellable = False
         self._forcible = False
@@ -813,7 +832,7 @@ class CallMacroNode(Node):
 class NotifyNode(Node):
     instruction_names = ["Notify"]
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self._cancellable = False
         self._forcible = False
@@ -827,7 +846,7 @@ class InterpreterCommandNode(CommandBaseNode):
     """ Represents commands that are directly executable by the interpreter. """
     instruction_names = ["Base", "Increment run counter", "Run counter", "Wait"]
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.wait_start_time: float | None = None
 
@@ -861,6 +880,9 @@ class SimulateOffNode(Node):
 
 class UodCommandNode(CommandBaseNode):
     """ Represents a uod command, subclassing UodCommand. """
+    def __init__(self, position=Position.empty(), id=""):
+        super().__init__(position, id)
+        self._cancellable = True
 
 
 class Comment:
@@ -876,17 +898,27 @@ class Error:
 
 class BlankNode(WhitespaceNode):
     """ Represents a line that contains only whitespace. """
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
 
 
 class ErrorInstructionNode(Node):
     """ Represents non-parsable instruction line. """
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.line: str = ""
 
     def with_line(self, line: str):
         self.line = line
         return self
+
+
+class NullNode(Node):
+    """ Marker type for temporary nodes. """
+    def __init__(self, id=""):
+        super().__init__(Position.empty(), id)
+
+    @property
+    def runlog_name(self) -> str | None:
+        return "NullNode"

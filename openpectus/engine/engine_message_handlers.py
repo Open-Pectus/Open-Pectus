@@ -64,8 +64,7 @@ class EngineMessageHandlers():
         assert isinstance(msg, AM.CancelMsg)
         logger.info(f"Incomming cancel request {msg.exec_id}")
         try:
-            exec_id = UUID(msg.exec_id)
-            self.engine.cancel_instruction(exec_id)
+            self.engine.cancel_instruction(instance_id=msg.exec_id)
             return AM.SuccessMessage()
         except Exception:
             logger.error("Cancel failed", exc_info=True)
@@ -75,8 +74,7 @@ class EngineMessageHandlers():
         assert isinstance(msg, AM.ForceMsg)
         logger.info(f"Incomming force request {msg.exec_id}")
         try:
-            exec_id = UUID(msg.exec_id)
-            self.engine.force_instruction(exec_id)
+            self.engine.force_instruction(instance_id=msg.exec_id)
             return AM.SuccessMessage()
         except Exception:
             logger.error("Force failed", exc_info=True)

@@ -516,7 +516,7 @@ Reset
 Reset
 """, 5)
 
-        records = e.interpreter.runtimeinfo.records
+        records = e.tracking.records
 
         print_runtime_records(e)
 
@@ -543,7 +543,7 @@ overlap1
 overlap2
 """, 5)
 
-        rs = e.runtimeinfo.records
+        rs = e.tracking.records
 
         print_runtime_records(e)
 
@@ -580,7 +580,7 @@ Mark: X
         e = self.engine
         run_engine(e, program, 3)
 
-        rs = e.runtimeinfo.records
+        rs = e.tracking.records
 
         print_runtime_records(e)
 
@@ -595,6 +595,8 @@ Mark: X
 
         print_runtime_records(e)
 
+    # AssertionError: 'Watch: Block Time > 0.2s' != 'Block Time > 0.2s'
+    # r.name is incorrect
     def test_runlog_watch(self):
         program = """
 Watch: Block Time > 0.2s
@@ -606,10 +608,10 @@ Mark: X
 
         print_runtime_records(e)
 
-        r = e.interpreter.runtimeinfo.records[1]
+        r = e.tracking.records[1]
         self.assertEqual("Watch: Block Time > 0.2s", r.name)
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.AwaitingCondition))
-        # self.assertFalse(r.has_state(RuntimeRecordStateEnum.Started))
+        #self.assertFalse(r.has_state(RuntimeRecordStateEnum.Started))
 
         continue_engine(e, 1)
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
@@ -697,7 +699,7 @@ Mark: C
 
         print_runtime_records(e)
 
-        items = e.get_runlog().items
+        items = e.tracking.get_runlog().items
         self.assertEqual(1, len(items))
         self.assertEqual("Reset", items[0].name)
 

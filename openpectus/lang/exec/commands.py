@@ -1,7 +1,6 @@
 from __future__ import annotations
 from enum import StrEnum
 from typing import Callable, Dict, Iterable, List
-from uuid import UUID
 
 from openpectus.lang.exec.uod import RegexNamedArgumentParser
 from openpectus.lang.exec.argument_specification import ArgSpec
@@ -24,26 +23,28 @@ class InterpreterCommandEnum(StrEnum):
 
 class CommandRequest:
     """ Represents a command request for engine to execute. """
-    def __init__(self, name: str, arguments: str, source: str, exec_id: UUID | None = None) -> None:
+    def __init__(self, name: str, arguments: str, source: str, instance_id: str) -> None:
         self.name: str = name
         self.arguments: str = arguments
-        self.exec_id: UUID | None = exec_id
+        self.instance_id: str = instance_id
         self.source: str = source
-
-        # allows tracking individual commands
-        self.command_exec_id: UUID | None = None
 
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(name="{self.name}", arguments={self.arguments}, ' +
-                f'source="{self.source}", exec_id={self.exec_id}, command_exec_id={self.command_exec_id})')
+                f'source="{self.source}", instance_id={self.instance_id}')
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
     @staticmethod
-    def from_user(name: str, arguments: str = "") -> CommandRequest:
-        return CommandRequest(name=name, arguments=arguments, source='user')
+    def from_user(name: str, arguments: str, instance_id: str) -> CommandRequest:
+        # Note: We are responding to aggregator InvokeCommandMsg which is issued to perform simple commands
+        # like Start or Run counter: 4
+        return CommandRequest(name=name, arguments=arguments, source='user', instance_id=instance_id)
 
     @staticmethod
-    def from_interpreter(name: str, arguments: str, exec_id: UUID | None) -> CommandRequest:
-        return CommandRequest(name=name, arguments=arguments, source="@interpreter", exec_id=exec_id)
+    def from_interpreter(name: str, arguments: str, instance_id: str) -> CommandRequest:
+        return CommandRequest(name=name, arguments=arguments, source="@interpreter", instance_id=instance_id)
 
 
 # Represents command API towards interpreter

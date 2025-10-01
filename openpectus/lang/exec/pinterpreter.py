@@ -1,20 +1,22 @@
 from __future__ import annotations
 
 import logging
-from uuid import UUID
+import uuid
 
+from openpectus.engine.commands import EngineCommand
+from openpectus.engine.models import EngineCommandEnum
 from openpectus.lang.exec.argument_specification import ArgSpec
 from openpectus.lang.exec.events import EventEmitter
 from openpectus.lang.exec.regex import REGEX_DURATION, get_duration_end
 import openpectus.lang.exec.units as units
 from openpectus.lang.exec.base_unit import BaseUnitProvider
-from openpectus.lang.exec.commands import InterpreterCommandEnum
+from openpectus.lang.exec.commands import InterpreterCommandEnum, CommandRequest
 from openpectus.lang.exec.errors import (
     EngineError, InterpretationError, InterpretationInternalError, MethodEditError, NodeInterpretationError
 )
-from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
+from openpectus.lang.exec.runlog import RunLog, RuntimeInfo, RuntimeRecord, RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import (
-    TagCollection, SystemTagName,
+    TagCollection, SystemTagName, TagValueCollection,
 )
 from openpectus.lang.exec.visitor import (
     NodeGenerator, NodeVisitor, NodeAction, prepend, run_ffw_tick, run_tick
@@ -73,7 +75,7 @@ class InterpreterContext():
     def tags(self) -> TagCollection:
         raise NotImplementedError()
 
-    def schedule_execution(self, name: str, arguments: str = "", exec_id: UUID | None = None):
+    def schedule_execution(self, name: str, arguments: str, instance_id: str):
         raise NotImplementedError()
 
     @property
@@ -107,12 +109,14 @@ class PInterpreter(NodeVisitor):
         self._in_interrupt = False
 
         self.runtimeinfo: RuntimeInfo = RuntimeInfo()
+        self.tracking: Tracking = Tracking(self)
+
         self.ffw_tick_limit = FFW_TICK_LIMIT
         """ instructions pending following a ffw run """
 
         logger.debug("Interpreter initialized")
 
-    def with_edited_program(self, new_program: p.ProgramNode) -> PInterpreter:
+    def with_edited_program(self, new_program: p.ProgramNode, old_failed_node: p.Node | None) -> PInterpreter:
         """ Returns a new interpreter instance with program modified and in the state it would have been in if the updated
         program had been run from the beginning for the same number of ticks.
 
@@ -272,11 +276,11 @@ class PInterpreter(NodeVisitor):
     def get_marks(self) -> list[str]:
         records: list[tuple[str, int]] = []
         for r in self.runtimeinfo.records:
-            if isinstance(r.node, p.MarkNode):
+            if r.node.instruction_name == "Mark":
                 completed_states = [st for st in r.states if st.state_name == RuntimeRecordStateEnum.Completed]
                 for completed_state in completed_states:
                     end_tick = completed_state.state_tick
-                    records.append((r.node.name, end_tick))
+                    records.append((r.node.arguments, end_tick))
 
         def sort_fn(t: tuple[str, int]) -> int:
             return t[1]
@@ -284,13 +288,20 @@ class PInterpreter(NodeVisitor):
         records.sort(key=sort_fn)
         return [t[0] for t in records]
 
-    def inject_node(self, program: p.ProgramNode):
+    def get_node_by_id(self, node_id: str) -> p.Node | None:
+        return self._program.get_child_by_id(node_id, include_self=True)
+
+    def inject_node(self, injected_program: p.ProgramNode):
         """ Inject the child nodes of program into the running program in the current scope
         to be executed as the next instruction. """
-        node = p.InjectedNode()
-        for n in program.children:
+        node = p.InjectedNode(id=str(uuid.uuid4()))        
+        for n in injected_program.children:
             node.append_child(n)
         self._register_interrupt(node)
+
+        # because neither InjectedNode or any of its child nodes are inserted into 
+        # the program (yet?), we create a custom null node and record for it
+        self.tracking.create_injected_node_records(node)
 
     def _register_interrupt(self, node: p.NodeWithChildren):
         handler = self._create_interrupt_handler(node)
@@ -353,15 +364,14 @@ class PInterpreter(NodeVisitor):
             logger.debug("Main generator exhausted")
             pass
         except NodeInterpretationError as ex:
-            ex.node.failed = True
-            self._add_record_state_failed(ex.node)
+            self.tracking.mark_failed(ex.node)
             raise
         except AssertionError as ae:
             if self._program.active_node is not None:
                 self._program.active_node.failed = True
-                self._add_record_state_failed(self._program.active_node)
-                raise NodeInterpretationError(self._program.active_node, message=str(ae), exception=ae)
-            raise InterpretationError(message=str(ae), exception=ae)
+                self.tracking.mark_failed(self._program.active_node)
+                raise NodeInterpretationError(self._program.active_node, message=str(ae)) from ae
+            raise InterpretationError(message=str(ae)) from ae
         except InterpretationInternalError:
             raise
         except InterpretationError:
@@ -392,14 +402,14 @@ class PInterpreter(NodeVisitor):
                     self._register_interrupt(interrupt.node)
             except NodeInterpretationError as ex:
                 ex.node.failed = True
-                self._add_record_state_failed(ex.node)
+                self.tracking.mark_failed(ex.node)
                 raise
             except AssertionError as ae:
                 if self._program.active_node is not None:
                     self._program.active_node.failed = True
-                    self._add_record_state_failed(self._program.active_node)
-                    raise NodeInterpretationError(self._program.active_node, message=str(ae), exception=ae)
-                raise InterpretationError(message=str(ae), exception=ae)
+                    self.tracking.mark_failed(self._program.active_node)
+                    raise NodeInterpretationError(self._program.active_node, message=str(ae))
+                raise InterpretationError(message=str(ae)) from ae
             except (InterpretationInternalError, InterpretationError):
                 logger.error("Interpreter error in interrupt handler", exc_info=True)
                 raise
@@ -506,7 +516,7 @@ class PInterpreter(NodeVisitor):
 
         def start(node):
             # interrupts are visited multiple times and we only create a new record on the first visit
-            record = self.runtimeinfo.get_last_node_record_or_none(node)
+            record = self.runtimeinfo.get_record_by_node(node)
             if record is None:
                 record = self.runtimeinfo.begin_visit(
                     node,
@@ -521,7 +531,7 @@ class PInterpreter(NodeVisitor):
         # possibly wait for node threshold to expire
         if not node.started and not node.completed:
             if self._is_awaiting_threshold(node):
-                self._add_record_state_awaiting_threshold(node)
+                self.tracking.mark_awaiting_threshold(node)                
 
             while self._is_awaiting_threshold(node):
                 yield
@@ -532,8 +542,9 @@ class PInterpreter(NodeVisitor):
         # delegate to concrete visitor method via base method
         yield from super().visit(node)
 
-        def end(node):
-            record = self.runtimeinfo.get_last_node_record(node)
+        def end(node: p.Node):
+            record = self.runtimeinfo.get_record_by_node(node.id)
+            assert record is not None
             record.set_end_visit(
                 self._tick_time, self._tick_number,
                 self.context.tags.as_readonly())
@@ -587,8 +598,8 @@ class PInterpreter(NodeVisitor):
             except ValueError:
                 logger.error(f"Failed to get Mark tag {node}")
 
-            self._add_record_state_started(node)
-            self._add_record_state_complete(node)
+            self.tracking.mark_started(node)
+            self.tracking.mark_completed(node)
             node.completed = True
         yield NodeAction(node, do)
 
@@ -602,8 +613,8 @@ class PInterpreter(NodeVisitor):
                 batch_tag.set_value(node.name, self._tick_time)
             except ValueError:
                 logger.error("Failed to get Batch Name tag")
-            self._add_record_state_started(node)
-            self._add_record_state_complete(node)
+            self.tracking.mark_started(node)
+            self.tracking.mark_completed(node)
             node.completed = True
         yield NodeAction(node, do)
 
@@ -611,10 +622,7 @@ class PInterpreter(NodeVisitor):
     def visit_MacroNode(self, node: p.MacroNode) -> NodeGenerator:
 
         def init_define_macro(node: p.MacroNode):
-            record = self.runtimeinfo.get_last_node_record(node)
-            record.add_state_started(
-                self._tick_time, self._tick_number,
-                self.context.tags.as_readonly())
+            self.tracking.mark_started(node)
             logger.debug(f"Defining macro '{node}'")
         yield NodeAction(node, init_define_macro)
 
@@ -628,20 +636,14 @@ class PInterpreter(NodeVisitor):
                 logger.warning(f"Re-defining macro '{node.name}'")
             program_node.macros[node.name] = node
             logger.debug(f"Macro '{node}' registered")
-            record = self.runtimeinfo.get_last_node_record(node)
-            record.add_state_completed(
-                self._tick_time, self._tick_number,
-                self.context.tags.as_readonly())
+            self.tracking.mark_completed(node)
             node.is_registered = True
 
 
     def visit_CallMacroNode(self, node: p.CallMacroNode) -> NodeGenerator:
 
         def call_macro_init(node: p.CallMacroNode):
-            record = self.runtimeinfo.get_last_node_record(node)
-            record.add_state_started(
-                self._tick_time, self._tick_number,
-                self.context.tags.as_readonly())
+            self.tracking.mark_started(node)
         yield NodeAction(node, call_macro_init)
 
         def call_macro_check(node: p.CallMacroNode):
@@ -652,7 +654,7 @@ class PInterpreter(NodeVisitor):
                 available_macros = "None"
                 if len(program_node.macros.keys()):
                     available_macros = ", ".join(f'"{macro}"' for macro in program_node.macros.keys())
-                self._add_record_state_failed(node)
+                self.tracking.mark_failed(node)
                 raise NodeInterpretationError(
                     node,
                     f'No macro defined with name "{node.name}". Available macros: {available_macros}.')
@@ -668,8 +670,7 @@ class PInterpreter(NodeVisitor):
             temporary_macros[node.name] = macro_node
             cascade = macro_node.macro_calling_macro(temporary_macros)
             if cascade and node.name in cascade:
-                record = self.runtimeinfo.get_last_node_record(node)
-                record.add_state_cancelled(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+                self.tracking.mark_cancelled(node)
                 if len(cascade) == 1:
                     logger.warning(f'Macro "{node.name}" calls itself. This is not allowed.')
                     raise NodeInterpretationError(node, f'Macro "{node.name}" calls itself. ' +
@@ -695,10 +696,7 @@ class PInterpreter(NodeVisitor):
             macro_node.completed = True
 
         def call_macro_complete(node: p.CallMacroNode):
-            record = self.runtimeinfo.get_last_node_record(node)
-            record.add_state_completed(
-                self._tick_time, self._tick_number,
-                self.context.tags.as_readonly())
+            self.tracking.mark_completed(node)
             node.completed = True
         yield NodeAction(node, call_macro_complete)
 
@@ -729,8 +727,8 @@ class PInterpreter(NodeVisitor):
         yield NodeAction(node, push_to_stack)
 
         def emit_scope_activated(node: p.BlockNode):
-            self.context.emitter.emit_on_scope_activate(node.id, "Block", node.arguments)
-            self._add_record_state_started(node)
+            self.context.emitter.emit_on_scope_activate(node.id, "Block", node.arguments)            
+            self.tracking.mark_started(node)
         yield NodeAction(node, emit_scope_activated)
 
         yield from self._visit_children(node)
@@ -748,10 +746,10 @@ class PInterpreter(NodeVisitor):
 
     def visit_EndBlockNode(self, node: p.EndBlockNode) -> NodeGenerator:
         def end_block(node: p.EndBlockNode):
-            self._add_record_state_started(node)
+            self.tracking.mark_started(node)
             if not isinstance(self.stack.peek(), p.BlockNode):
                 logger.debug(f"No blocks to end for node {node}")
-                self._add_record_state_cancelled(node)
+                self.tracking.mark_cancelled(node, update_node=False)
                 return
             old_block = self.stack.pop()
             new_block = self.stack.peek()
@@ -761,8 +759,8 @@ class PInterpreter(NodeVisitor):
             self.context.emitter.emit_on_block_end(old_block.name, new_block_name or "", self._tick_number)
             old_block.children_complete = True
             old_block.completed = True
-            self._add_record_state_complete(node)
-            self._add_record_state_complete(old_block)
+            self.tracking.mark_completed(node)
+            self.tracking.mark_completed(old_block)
             self._abort_block_interrupts(old_block)
             node.completed = True
         yield NodeAction(node, end_block)
@@ -770,10 +768,10 @@ class PInterpreter(NodeVisitor):
 
     def visit_EndBlocksNode(self, node: p.EndBlocksNode) -> NodeGenerator:
         def end_blocks(node: p.EndBlocksNode):
-            self._add_record_state_started(node)
+            self.tracking.mark_started(node)
             if not isinstance(self.stack.peek(), p.BlockNode):
                 logger.debug(f"No blocks to end for node {node}")
-                self._add_record_state_cancelled(node)
+                self.tracking.mark_cancelled(node)
                 return
             while isinstance(self.stack.peek(), p.BlockNode):
                 old_block = self.stack.pop()
@@ -784,24 +782,24 @@ class PInterpreter(NodeVisitor):
                 self.context.emitter.emit_on_block_end(old_block.name, new_block_name or "", self._tick_number)
                 old_block.children_complete = True
                 old_block.completed = True
-                self._add_record_state_complete(node)
-                self._add_record_state_complete(old_block)
+                self.tracking.mark_completed(old_block)
                 self._abort_block_interrupts(old_block)
             node.completed = True
+            self.tracking.mark_completed(node)
         yield NodeAction(node, end_blocks)
 
 
     def visit_InterpreterCommandNode(self, node: p.InterpreterCommandNode) -> NodeGenerator:  # noqa C901
 
         def InterpreterCommandNode_start(node):
-            self._add_record_state_started(node)
+            self.tracking.mark_started(node)
         yield NodeAction(node, InterpreterCommandNode_start)
 
         if node.instruction_name == InterpreterCommandEnum.BASE:
             def base(node: p.InterpreterCommandNode):
                 valid_units = self.context.base_unit_provider.get_units()
                 if node.arguments is None or node.arguments not in valid_units:
-                    self._add_record_state_failed(node)
+                    self.tracking.mark_failed(node)
                     raise NodeInterpretationError(node, f"Base instruction has invalid argument '{node.arguments}'. \
                         Value must be one of {', '.join(valid_units)}")
                 self.context.tags[SystemTagName.BASE].set_value(node.arguments, self._tick_time)
@@ -855,17 +853,18 @@ class PInterpreter(NodeVisitor):
             while self._tick_time < duration_end_time and not node.forced:
                 if duration > 0:
                     progress = (self._tick_time - node.wait_start_time) / duration
-                    record = self.runtimeinfo.get_last_node_record(node)
+                    record = self.runtimeinfo.get_record_by_node(node.id)
+                    assert record is not None
                     record.progress = progress
                 yield
 
         else:  # unknown InterpreterCommandNode instruction
-            self._add_record_state_failed(node)
+            self.tracking.mark_failed(node)
             raise NodeInterpretationError(node, f"Interpreter command '{node.instruction_name}' is not supported")
 
         def complete(node: p.InterpreterCommandNode):
             logger.debug(f"Interpreter command Node {node} complete")
-            self._add_record_state_complete(node)
+            self.tracking.mark_completed(node)
             node.completed = True
 
         yield NodeAction(node, complete)
@@ -874,30 +873,30 @@ class PInterpreter(NodeVisitor):
     def visit_NotifyNode(self, node: p.NotifyNode):
         def do(node: p.NotifyNode):
             self.context.emitter.emit_on_notify_command(node.arguments)
-            self._add_record_state_started(node)
-            self._add_record_state_complete(node)
+            self.tracking.mark_started(node)
+            self.tracking.mark_completed(node)
             node.completed = True
         yield NodeAction(node, do)
 
 
     def visit_EngineCommandNode(self, node: p.EngineCommandNode) -> NodeGenerator:
-        # TODO node.completed
+
         def schedule(node: p.EngineCommandNode):
-            record = self.runtimeinfo.get_last_node_record(node)
+            instance_id = self.tracking.create_node_instance_id(node)
 
             # Note: Commands can be resident and last multiple ticks.
             # The context (Engine) keeps track of this and we just
             # move on to the next instruction when tick() is invoked.
-            # We do, however, provide the execution id to the context
-            # so that it can update the runtime record appropriately.
+            # We do, however, provide the instance_id to the context
+            # so that it can update the runtime record and node appropriately.
             try:
                 logger.debug(f"Executing command '{node}' via engine")
                 self.context.schedule_execution(
                     name=node.instruction_name,
                     arguments=node.arguments,
-                    exec_id=record.exec_id)
+                    instance_id=instance_id)
             except Exception as ex:
-                self._add_record_state_failed(node)
+                self.tracking.mark_failed(node)
                 if isinstance(ex, EngineError):
                     raise
                 else:
@@ -924,8 +923,8 @@ class PInterpreter(NodeVisitor):
                 )
             else:
                 logger.error(f"Unable to simulate {str(node)}")
-            self._add_record_state_started(node)
-            self._add_record_state_complete(node)
+            self.tracking.mark_started(node)
+            self.tracking.mark_completed(node)
             node.completed = True
 
         yield NodeAction(node, simulate_on)
@@ -935,8 +934,8 @@ class PInterpreter(NodeVisitor):
 
         def simulate_off(node: p.SimulateOffNode):
             self.context.tags.get(node.arguments).stop_simulation()
-            self._add_record_state_started(node)
-            self._add_record_state_complete(node)
+            self.tracking.mark_started(node)
+            self.tracking.mark_completed(node)
             node.completed = True
 
         yield NodeAction(node, simulate_off)
@@ -945,7 +944,7 @@ class PInterpreter(NodeVisitor):
     def visit_UodCommandNode(self, node: p.UodCommandNode) -> NodeGenerator:
 
         def schedule(node: p.UodCommandNode):
-            record = self.runtimeinfo.get_last_node_record(node)
+            instance_id = self.tracking.create_node_instance_id(node)
 
             # Note: Commands can be resident and last multiple ticks.
             # The context (Engine) keeps track of this and we just
@@ -953,13 +952,13 @@ class PInterpreter(NodeVisitor):
             # We do, however, provide the execution id to the context
             # so that it can update the runtime record appropriately.
             try:
-                logger.debug(f"Executing uod command '{node}' with record '{record}' via engine")
+                logger.debug(f"Executing uod command '{node}' with '{instance_id=}' via engine")
                 self.context.schedule_execution(
                     name=node.instruction_name,
                     arguments=node.arguments,
-                    exec_id=record.exec_id)
+                    instance_id=instance_id)
             except Exception as ex:
-                self._add_record_state_failed(node)
+                self.tracking.mark_failed(node)
                 if isinstance(ex, EngineError):
                     raise
                 else:
@@ -987,19 +986,27 @@ class PInterpreter(NodeVisitor):
         # running from interrupt
         assert self._in_interrupt, "Running visit_WatchOrAlarm body must always occur in an interrupt context"
 
-        if not node.activated:
-            yield NodeAction(node, self._add_record_state_awaiting_condition)
+        def await_condition(node: p.WatchNode | p.AlarmNode):
+            # create new instance_id here to allow multiple alarm runs
+            self.tracking.create_node_instance_id(node)
+            self.tracking.mark_awaiting_condition(node)
+            node.awaiting_condition = True
+
+        if not node.awaiting_condition:
+            yield NodeAction(node, await_condition)
 
         def start(node: p.WatchNode | p.AlarmNode):
             scope_type = "Watch" if isinstance(node, p.WatchNode) else "Alarm"
             self.context.emitter.emit_on_scope_activate(node.id, scope_type, node.arguments)
-            self._add_record_state_started(node)
+            self.tracking.mark_started(node)
+
 
         while not node.activated:
             if node.cancelled:
-                self._add_record_state_cancelled(node)
-                scope_type = "Watch" if isinstance(node, p.WatchNode) else "Alarm"
-                self.context.emitter.emit_on_scope_end(node.id, scope_type, node.arguments)
+                # TODO cancel causes emit_on_scope_end to fail, see test_runlog_cancel_watch()
+                # self.tracking.mark_cancelled(node)
+                # scope_type = "Watch" if isinstance(node, p.WatchNode) else "Alarm"
+                # self.context.emitter.emit_on_scope_end(node.id, scope_type, node.arguments)
                 logger.info(f"Instruction {node} cancelled")
                 node.completed = True
                 return
@@ -1013,7 +1020,7 @@ class PInterpreter(NodeVisitor):
         yield from self._visit_children(node)
 
         def complete(node: p.WatchNode | p.AlarmNode):
-            self._add_record_state_complete(node)
+            self.tracking.mark_completed(node)
             scope_type = "Watch" if isinstance(node, p.WatchNode) else "Alarm"
             self.context.emitter.emit_on_scope_end(node.id, scope_type, node.arguments)
             node.completed = True
@@ -1024,11 +1031,9 @@ class PInterpreter(NodeVisitor):
 
 
     def visit_InjectedNode(self, node: p.InjectedNode) -> NodeGenerator:
-        def start(node):
-            self._add_record_state_started(node)
-        yield NodeAction(node, start)
+        yield NodeAction(node, self.tracking.mark_started)
         yield from self._visit_children(node)
-        yield NodeAction(node, self._add_record_state_complete)
+        yield NodeAction(node, self.tracking.mark_completed)
         node.completed = True
 
 
@@ -1045,14 +1050,14 @@ class PInterpreter(NodeVisitor):
             # enable the Noop (no operation) instruction used in tests
             if node.instruction_name == "Noop":
                 def noop(node):
-                    self._add_record_state_started(node)
-                    self._add_record_state_complete(node)
+                    self.tracking.mark_started(node)
+                    self.tracking.mark_completed(node)
                 yield NodeAction(node, noop)
                 return
 
-        logger.error(f"Invalid instruction: {str(node)}:\n{node.line}")            
-        self._add_record_state_started(node)
-        self._add_record_state_failed(node)
+        logger.error(f"Invalid instruction: {str(node)}:\n{node.line}")
+        self.tracking.mark_started(node)
+        self.tracking.mark_failed(node)
         raise NodeInterpretationError(node, f"Invalid instruction '{node.name}'")
 
     # def helper methods for node manipulation
@@ -1061,9 +1066,9 @@ class PInterpreter(NodeVisitor):
         assert isinstance(node, p.NodeWithCondition)
         condition_result = False
         if node.cancelled:
-            raise TypeError("Cancel must be handled before _try_active_node")
+            logger.error("Cancel must be handled before _try_active_node")
+            return
         elif node.forced:
-            self._add_record_state_forced(node)
             logger.info(f"Instruction {node} forced")
             condition_result = True
         else:
@@ -1089,32 +1094,273 @@ class PInterpreter(NodeVisitor):
                     interrupt.node.children_complete = True
                     self._unregister_interrupt(interrupt.node)
 
-    # helper methods for recording node states
 
-    def _add_record_state_awaiting_condition(self, node: p.Node):
-        record = self.runtimeinfo.get_last_node_record(node)
-        record.add_state_awaiting_condition(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+class Tracking():
+    """ Manages tracking . API replaces the runtimeinfo API """
+    def __init__(self, interpreter: PInterpreter):
+        self.interpreter = interpreter
+        self.enabled = False
+        logger.info(f"Tracking instance {id(self)} created")
 
-    def _add_record_state_awaiting_threshold(self, node: p.Node):
-        record = self.runtimeinfo.get_last_node_record(node)
-        record.add_state_awaiting_threshold(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+    @property
+    def runtimeinfo(self) -> RuntimeInfo:
+        return self.interpreter.runtimeinfo
 
-    def _add_record_state_started(self, node):
-        record = self.runtimeinfo.get_last_node_record(node)
-        record.add_state_started(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+    def tags(self) -> TagValueCollection:
+        return self.interpreter.context.tags.as_readonly()
 
-    def _add_record_state_failed(self, node):
-        record = self.runtimeinfo.get_last_node_record(node)
-        record.add_state_failed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+    def enable(self):
+        logger.info("Tracking enabled")
+        self.enabled = True
 
-    def _add_record_state_complete(self, node):
-        record = self.runtimeinfo.get_last_node_record(node)
-        record.add_state_completed(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+    def disable(self):
+        logger.info("Tracking disabled")
+        self.enabled = False
 
-    def _add_record_state_cancelled(self, node):
-        record = self.runtimeinfo.get_last_node_record(node)
-        record.add_state_cancelled(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+    @property
+    def records(self):
+        return self.interpreter.runtimeinfo.records_filtered
 
-    def _add_record_state_forced(self, node):
-        record = self.runtimeinfo.get_last_node_record(node)
-        record.add_state_forced(self._tick_time, self._tick_number, self.context.tags.as_readonly())
+    def get_runlog(self) -> RunLog:
+        return self.interpreter.runtimeinfo.get_runlog()
+
+    def has_instance_id(self, instance_id: str) -> bool:
+        return instance_id in self.runtimeinfo._instance_record_map.keys()
+
+    def create_instance_id(self, name: str) -> str:
+        """ Create an instance id for an invocation of instruction from outside the interpreter,
+        like Start/Stop or ad-hoc commands requested from a frontend user via the aggregator.
+
+        This causes a null node and matching record (and Created state) to be created which owns
+        the states related to the instruction instance.
+        """
+        null_record, null_node = self.runtimeinfo.create_nulls(name)
+        self.runtimeinfo._add_record(null_record)
+        return self.create_node_instance_id(null_node)
+
+    def create_node_instance_id(self, node: p.Node) -> str:
+        """ Create an instance id for an invocation of the provided Node.
+
+        This is the default way used by calls from interpreter which always have a node context.
+        A 'Created' state is added to the record with the new instance_id
+        """
+        if not self.enabled and not self.silently_skip(node):
+            logger.warning("Trying to create instance_id while tracking is disabled")
+
+        instance_id = str(uuid.uuid4())
+        record = self.runtimeinfo.get_record_by_node(node.id)
+        if record is None:
+            logger.error(f"Failed to create instance id because no record was found for node: {node}", stack_info=True)
+        else:
+            self._add_record_state(instance_id, record, RuntimeRecordStateEnum.Created)
+        return instance_id
+
+    def create_injected_node_records(self, node: p.InjectedNode):
+        def register(node: p.Node):
+            record = RuntimeRecord.from_node(node)
+            self.runtimeinfo._injected_node_map[node.id] = node
+            self.runtimeinfo._add_record(record)
+        register(node)
+        for child_node in node.get_child_nodes(recursive=True):
+            register(child_node)
+
+    def get_known_node_by_id(self, node_id: str) -> p.Node | None:
+        if node_id in self.runtimeinfo._null_node_map.keys():
+            return self.runtimeinfo._null_node_map[node_id]
+        elif node_id in self.runtimeinfo._injected_node_map.keys():
+            return self.runtimeinfo._injected_node_map[node_id]
+        else:
+            return self.interpreter.get_node_by_id(node_id)
+
+    def get_record_by_instance_id(self, instance_id: str) -> RuntimeRecord | None:
+        return self.runtimeinfo.get_record_by_instance(instance_id)
+
+    def get_record_by_instance(self, instance: CommandRequest | EngineCommand | p.Node) -> RuntimeRecord | None:
+        match instance:
+            case CommandRequest() as req:
+                return self.runtimeinfo.get_record_by_instance(req.instance_id)
+            case EngineCommand() as cmd:
+                return self.runtimeinfo.get_record_by_instance(cmd.instance_id)
+            case p.Node() as node:
+                return self.runtimeinfo.get_record_by_node(node.id)
+
+    def get_command(self, instance_id: str) -> EngineCommand | None:
+        record = self.runtimeinfo.get_record_by_instance(instance_id)
+        if record is not None:
+            states = record.get_states_by_instance(instance_id)
+            for state in states:
+                if state.command is not None:
+                    return state.command
+
+    def mark_started(self, instance: CommandRequest | EngineCommand | p.Node):
+        if self.silently_skip(instance):
+            return
+        record = self.get_record_by_instance(instance)
+        if record is None:
+            raise ValueError(f"Invalid {instance=}. No record found")
+        node = self.get_known_node_by_id(record.node_id)
+        if node is None:
+            raise ValueError(f"Invalid record. Node '{record.node_id}' not found")
+        instance_id = record.last_instance_id or self.create_node_instance_id(node)
+        self._add_record_state(instance_id, record, RuntimeRecordStateEnum.Started)
+
+    def mark_uod_command_started(self, command: EngineCommand):
+        if self.silently_skip(command):
+            return
+        instance_id = command.instance_id
+        record = self.runtimeinfo.get_record_by_instance(instance_id)
+        if record is None:
+            raise ValueError(f"Invalid {instance_id=}. No record found")
+        self._add_record_state(instance_id, record, RuntimeRecordStateEnum.Started)
+        self._add_record_state(instance_id, record, RuntimeRecordStateEnum.UodCommandSet, command=command)
+
+    def mark_internal_command_started(self, command: EngineCommand):
+        if self.silently_skip(command):
+            return
+        instance_id = command.instance_id
+        record = self.runtimeinfo.get_record_by_instance(instance_id)
+        if record is None:
+            # hmm this may occur for an ad-hoc command...
+            raise ValueError(f"Invalid {instance_id=}. No record found")
+        self._add_record_state(instance_id, record, RuntimeRecordStateEnum.Started)
+        self._add_record_state(instance_id, record, RuntimeRecordStateEnum.InternalEngineCommandSet, command=command)
+
+    def mark_completed(self, instance: CommandRequest | EngineCommand | p.Node, update_node=True):
+        if self.silently_skip(instance):
+            return
+        record = self.get_record_by_instance(instance)
+        if record is None:
+            raise ValueError(f"Invalid {instance=}. No record found")
+        node = self.get_known_node_by_id(record.node_id)
+        if node is None:
+            raise ValueError(f"Invalid record. Node {record.node_id=} not found")
+        instance_id = record.last_instance_id or self.create_node_instance_id(node)        
+
+        if update_node:
+            node = self.get_known_node_by_id(record.node_id)
+            if node is None:
+                raise ValueError(f"Invalid node_id '{record.node_id}'. No matching record found")
+            else:
+                if not node.failed:
+                    node.completed = True
+        self._add_record_state(instance_id, record, RuntimeRecordStateEnum.Completed)
+
+    def mark_failed(self, instance: CommandRequest | EngineCommand | p.Node, update_node=True):
+        """ Track the instruction as failed and update record state and node accorrdingly. """
+        if self.silently_skip(instance):
+            return
+
+        match instance:
+            case CommandRequest() as req:
+                instance_id = req.instance_id
+                record = self.runtimeinfo.get_record_by_instance(instance_id)
+            case EngineCommand() as cmd:
+                instance_id = cmd.instance_id
+                record = self.runtimeinfo.get_record_by_instance(instance_id)
+            case p.Node() as node:
+                record = self.runtimeinfo.get_record_by_node(node.id)
+                if record is None:
+                    raise ValueError(f"Invalid {instance}. No record found")
+                if record.last_instance_id is None:
+                    raise ValueError(f"Invalid {instance}. No instances found")
+                instance_id = record.last_instance_id
+
+        if record is None:
+            raise ValueError(f"Invalid {instance}. No record found")
+        if update_node:
+            node = self.get_known_node_by_id(record.node_id)
+            assert node is not None
+            node.failed = True
+        self._add_record_state(instance_id, record, RuntimeRecordStateEnum.Failed)
+
+    def silently_skip(self, instance: CommandRequest | EngineCommand | p.Node) -> bool:
+        # Start and Restart operate too early and late for the mark_* methods to work. But it
+        # is safe to just skip them as these records are not used later.
+        skip_command_names = [EngineCommandEnum.START, EngineCommandEnum.RESTART]
+        if not self.enabled:
+            return True
+        else:
+            match instance:
+                case CommandRequest() as command_req:
+                    return command_req.name in skip_command_names
+                case EngineCommand() as command:
+                    return command.name in skip_command_names
+                case p.Node():
+                    return False
+                case _:
+                    logger.error(f"Invalid instance type: {type(instance)}")
+                    return False
+
+    def mark_cancelled(self, instance: CommandRequest | EngineCommand | p.Node, update_node=True):
+        if self.silently_skip(instance):
+            return
+        record = self.get_record_by_instance(instance)
+        if record is None:
+            raise ValueError(f"Invalid {instance=}. No record found")
+        node = instance if isinstance(instance, p.Node) else self.get_known_node_by_id(record.node_id)
+        if node is None:
+            raise ValueError(f"Invalid record. Node {record.node_id=} not found")
+        if update_node:
+            if not node.cancel():
+                logger.error(f"Cancel failed for node {node}")
+                raise ValueError(f"Cancel failed for node {node}")
+            # TODO why was this here?
+            # if not node.completed and not node.failed:
+            #     node.completed = True
+        instance_id = record.last_instance_id or self.create_node_instance_id(node)
+        self._add_record_state(instance_id, record, RuntimeRecordStateEnum.Cancelled)
+
+    def mark_forced(self, instance: CommandRequest | EngineCommand | p.Node, update_node=True):
+        if self.silently_skip(instance):
+            return
+        record = self.get_record_by_instance(instance)
+        if record is None:
+            raise ValueError(f"Record not found {instance=}")
+        node = self.get_known_node_by_id(record.node_id)
+        if node is None:
+            raise ValueError(f"Invalid record. Node not found {record.node_id=}")
+        if update_node:
+            if not node.force():
+                logger.error(f"Force failed for node {node}")
+                raise ValueError(f"Force failed for node {node}")
+        instance_id = record.last_instance_id or self.create_node_instance_id(node)
+        self._add_record_state(instance_id, record, RuntimeRecordStateEnum.Forced)
+
+    def mark_awaiting_condition(self, node: p.Node):
+        if self.silently_skip(node):
+            return
+        record = self.runtimeinfo.get_record_by_node(node.id)
+        if record is None:
+            raise ValueError(f"Invalid node {node}. No matching record found")
+        instance_id = record.last_instance_id or self.create_node_instance_id(node)
+        self._add_record_state(instance_id, record, RuntimeRecordStateEnum.AwaitingCondition)
+
+    def mark_awaiting_threshold(self, node: p.Node):
+        if self.silently_skip(node):
+            return
+        record = self.runtimeinfo.get_record_by_node(node.id)
+        if record is None:
+            raise ValueError(f"Invalid node {node}. No matching record found")
+        instance_id = record.last_instance_id or self.create_node_instance_id(node)
+        self._add_record_state(instance_id, record, RuntimeRecordStateEnum.AwaitingThreshold)
+
+    def _add_record_state(self, instance_id: str, record: RuntimeRecord, state: RuntimeRecordStateEnum,
+                          command: EngineCommand | None = None):
+        """ Helper method to add record state using the interpreter's current time/tick and tag values """
+        node = self.get_known_node_by_id(record.node_id)
+        if node is None:
+            raise ValueError(f"Invalid record node id {record.node=}. No matching node found")
+
+        if self.silently_skip(node):
+            return
+
+        if state in [RuntimeRecordStateEnum.Started, RuntimeRecordStateEnum.Completed, RuntimeRecordStateEnum.Failed]:
+            state_values = self.tags()
+        else:
+            state_values = None
+        record._add_state(instance_id, state, self.interpreter._tick_time, self.interpreter._tick_number,
+                          state_values=state_values, node=node, command=command)
+        info = self.runtimeinfo
+        if instance_id not in info._instance_record_map.keys():
+            index = info._node_record_map[record.node_id]
+            info._instance_record_map[instance_id] = index
