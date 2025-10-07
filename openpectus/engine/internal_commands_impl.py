@@ -108,14 +108,6 @@ class UnpauseEngineCommand(InternalEngineCommand):
         # Note: we currently don't have hold/unhold events to worry about here
         e.emitter.emit_on_runstate_change(RunStateChange.UNPAUSE)
 
-        # TODO Consider how a corrected error should be handled. It depends on the cause
-        # - Run time value is broken: Maybe trying again will fix it
-        # - Code is broken and the user fixes it: The interpreter should resume from the error node
-        # which can be complex and requires the full editing feature. For now, we just take the error
-        # flag down and hope for the best
-        e._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.OK, e._tick_time)
-
-
 @command_argument_regex(REGEX_DURATION_OPTIONAL)
 class HoldEngineCommand(InternalEngineCommand):
     """ Hold execution of commands and time, keeping ouput tags in their current state.

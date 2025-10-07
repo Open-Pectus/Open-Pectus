@@ -142,7 +142,6 @@ class TestMethodManager(unittest.TestCase):
             with self.assertRaises(MethodEditError):
                 instance.engine.set_method(method2)
 
-
     def test_may_edit_line_awaiting_threshold(self):
 
         method1 = Method.from_numbered_pcode("""\

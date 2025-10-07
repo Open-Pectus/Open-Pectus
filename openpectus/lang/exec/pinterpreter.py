@@ -116,7 +116,7 @@ class PInterpreter(NodeVisitor):
 
         logger.debug("Interpreter initialized")
 
-    def with_edited_program(self, new_program: p.ProgramNode, old_failed_node: p.Node | None) -> PInterpreter:
+    def with_edited_program(self, new_program: p.ProgramNode) -> PInterpreter:
         """ Returns a new interpreter instance with program modified and in the state it would have been in if the updated
         program had been run from the beginning for the same number of ticks.
 
@@ -124,7 +124,7 @@ class PInterpreter(NodeVisitor):
         The source interpreter and its entire state is unmodified, so the method edit is transactional. """
 
         # Use same context. We have to trust that e.g. tags will not be updated or events emitted until ffw is complete
-        # Note: We could possibly verify this by adding some safeguards
+        # Note: We could possibly verify this by adding some safeguards, seems to work fine though
         instance = PInterpreter(new_program, self.context)
         instance.runtimeinfo = self.runtimeinfo.with_edited_program(new_program)
         instance.stack = self.stack.with_edited_program(new_program)
@@ -390,7 +390,6 @@ class PInterpreter(NodeVisitor):
             try:
                 self._in_interrupt = True
                 run_tick(interrupt.actions)
-                self._in_interrupt = False
             except StopIteration:
                 logger.debug(f"Interrupt generator {interrupt.node} exhausted")
                 if isinstance(interrupt.node, p.AlarmNode):
@@ -1294,7 +1293,7 @@ class Tracking():
         elif not self.enabled:
             logger.warning(f"Skipping non-skip command {command_name} because tracking was not enabled")
             return True
-
+        return False
 
     def mark_cancelled(self, instance: CommandRequest | EngineCommand | p.Node, update_node=True):
         if self.silently_skip(instance):

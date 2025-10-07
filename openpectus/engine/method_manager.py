@@ -90,8 +90,7 @@ class MethodManager:
         try:
             # create new interpreter instance with the new method and whose
             # state is fast-forwarded to the same instruction as before
-            old_failed_node = self.program.get_child_by_condition(lambda node: node.failed)
-            interpreter = self.interpreter.with_edited_program(new_program, old_failed_node=old_failed_node)
+            interpreter = self.interpreter.with_edited_program(new_program)
         except MethodEditError:
             logger.error("Preparing new interpreter failed", exc_info=True)
             raise
