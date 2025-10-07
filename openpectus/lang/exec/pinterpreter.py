@@ -257,14 +257,13 @@ class PInterpreter(NodeVisitor):
                     target_index = all_nodes.index(target_node)
                     active_index = all_nodes.index(self._program.active_node)
                     err = f"FFW loop was idle but active node {self._program.active_node} is not the target: " +\
-                          f"{target_node} | {active_index=}, {target_index=}"
-                    logger.error(err)
+                          f"{target_node} | {active_index=}, {target_index=}"                    
                     if target_node.completed and active_index == target_index + 1:
                         # if the target node is completed, it's ok if active_node is just one step later
-                        pass
+                        logger.debug(err + " - but close enough")
                     else:
+                        logger.error(err)
                         raise MethodEditError(err)
-                    #raise MethodEditError(err)
                 break
             if ffw_tick > self.ffw_tick_limit:
                 logger.error(f"FFW failed to complete. Aborted after {ffw_tick} iterations.")
@@ -276,11 +275,11 @@ class PInterpreter(NodeVisitor):
     def get_marks(self) -> list[str]:
         records: list[tuple[str, int]] = []
         for r in self.runtimeinfo.records:
-            if r.node.instruction_name == "Mark":
+            if p.MarkNode.is_class_of_name(r.node_class_name):
                 completed_states = [st for st in r.states if st.state_name == RuntimeRecordStateEnum.Completed]
                 for completed_state in completed_states:
                     end_tick = completed_state.state_tick
-                    records.append((r.node.arguments, end_tick))
+                    records.append((completed_state.arguments, end_tick))
 
         def sort_fn(t: tuple[str, int]) -> int:
             return t[1]
@@ -1277,19 +1276,25 @@ class Tracking():
         # Start and Restart operate too early and late for the mark_* methods to work. But it
         # is safe to just skip them as these records are not used later.
         skip_command_names = [EngineCommandEnum.START, EngineCommandEnum.RESTART]
-        if not self.enabled:
+        command_name = ""
+        match instance:
+            case CommandRequest() as command_req:
+                command_name = command_req.name
+            case EngineCommand() as command:
+                command_name = command.name
+            case p.NullNode():
+                command_name = instance.command_name
+            case p.Node():
+                command_name = str(instance)
+            case _:
+                logger.error(f"Invalid instance type: {type(instance)}")
+
+        if command_name in skip_command_names:
             return True
-        else:
-            match instance:
-                case CommandRequest() as command_req:
-                    return command_req.name in skip_command_names
-                case EngineCommand() as command:
-                    return command.name in skip_command_names
-                case p.Node():
-                    return False
-                case _:
-                    logger.error(f"Invalid instance type: {type(instance)}")
-                    return False
+        elif not self.enabled:
+            logger.warning(f"Skipping non-skip command {command_name} because tracking was not enabled")
+            return True
+
 
     def mark_cancelled(self, instance: CommandRequest | EngineCommand | p.Node, update_node=True):
         if self.silently_skip(instance):
@@ -1349,7 +1354,7 @@ class Tracking():
         """ Helper method to add record state using the interpreter's current time/tick and tag values """
         node = self.get_known_node_by_id(record.node_id)
         if node is None:
-            raise ValueError(f"Invalid record node id {record.node=}. No matching node found")
+            raise ValueError(f"Invalid record node id {record.node_id}. No matching node found")
 
         if self.silently_skip(node):
             return

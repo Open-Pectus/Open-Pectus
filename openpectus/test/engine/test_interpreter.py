@@ -345,9 +345,8 @@ Watch: counter > 0
         engine = self.engine
         run_engine(engine, program, 15)
 
-        # TODO abgiguous ...
-        # self.assertEqual(["a", "c", "b", "e", "d"], engine.interpreter.get_marks())
-        self.assertEqual(["a", "c", "b", "d", "e"], engine.interpreter.get_marks())
+        marks = engine.interpreter.get_marks()
+        self.assertTrue(marks == ["a", "c", "b", "d", "e"] or marks == ["a", "c", "b", "e", "d"])
 
     def test_watch_restart(self):
         program = """

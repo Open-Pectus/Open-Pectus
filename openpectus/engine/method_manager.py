@@ -26,7 +26,13 @@ class MethodManager:
         self._interpreter: PInterpreter = self._create_interpreter(self._program)
 
     def _create_interpreter(self, program: p.ProgramNode) -> PInterpreter:
-        return PInterpreter(program, self._interpreter_context)
+        tracking_was_enabled = False
+        if hasattr(self, "_interpreter"):
+            tracking_was_enabled = self._interpreter.tracking.enabled if self._interpreter is not None else False
+        interpreter = PInterpreter(program, self._interpreter_context)
+        if tracking_was_enabled:
+            interpreter.tracking.enable()
+        return interpreter
 
     @property
     def interpreter(self) -> PInterpreter:
@@ -65,6 +71,10 @@ class MethodManager:
         self._interpreter = self._create_interpreter(self._program)
 
     def merge_method(self, _new_method: Mdl.Method):
+        tracking_was_enabled = False
+        if hasattr(self, "_interpreter"):
+            tracking_was_enabled = self._interpreter.tracking.enabled if self._interpreter is not None else False
+
         assert self.program_is_started, "Program has not yet started, use set_method() rather that merge_method()"
         try:
             new_method, new_program = self._merge_method(_new_method)
@@ -73,7 +83,7 @@ class MethodManager:
             raise
         except Exception as ex:
             logger.error("merge_method failed", exc_info=True)
-            raise MethodEditError(f"Merging the new method failed: Ex: {ex}", ex)
+            raise MethodEditError(f"Merging the new method failed: Ex: {ex}") from ex
 
         self._apply_analysis(new_program)
 
@@ -87,7 +97,10 @@ class MethodManager:
             raise
         except Exception as ex:
             logger.error("Preparing new interpreter failed", exc_info=True)
-            raise MethodEditError(f"Preparing new interpreter failed: Ex: {ex}", ex)
+            raise MethodEditError(f"Preparing new interpreter failed: Ex: {ex}") from ex
+
+        if tracking_was_enabled:
+            interpreter.tracking.enable()
 
         # finally commit the "transaction"
         self._interpreter = interpreter
@@ -188,7 +201,7 @@ class MethodManager:
         for node_id, value_dict in corrections.items():
             if node_id in corrected_state.keys():
                 for key in value_dict.keys():
-                    if key in corrected_state[node_id].keys():                            
+                    if key in corrected_state[node_id].keys():
                         logger.debug(f"Correcting state for node {node_id}, property '{key}'; changing value " +
                                      f"'{corrected_state[node_id][key]}' to '{value_dict[key]}'")
                         corrected_state[node_id][key] = value_dict[key]
@@ -225,7 +238,7 @@ class MethodManager:
             }
             out = self._serialize(debug_state)
             logger.debug("Tree debugging state:\n\n" + out + "\n")
-            raise MethodEditError("Failed to apply tree state to updated method", ex)
+            raise MethodEditError("Failed to apply tree state to updated method") from ex
 
         return _new_method, new_program
 

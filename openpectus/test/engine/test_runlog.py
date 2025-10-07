@@ -8,7 +8,7 @@ from openpectus.lang.exec.runlog import (
     assert_Runtime_HasRecord,
     assert_Runtime_HasRecord_Completed, assert_Runtime_HasRecord_Started,
     assert_Runlog_HasItem, assert_Runlog_HasNoItem,
-    assert_Runlog_HasItem_Completed, assert_Runlog_HasItem_Started,
+    assert_Runlog_HasItem_Completed, assert_Runlog_HasItem_Started, rjust,
 )
 from openpectus.lang.model.pprogramformatter import print_program
 import openpectus.lang.model.ast as p
@@ -364,12 +364,6 @@ Watch: Block Time > 3s
             result.append(x)
         self.assertEqual(['foo', 'bar', 'baz'], result)
 
-    # TODO add tests missing to covert all cases of
-    #  [force, cancel] x [UodCommandNode,EngineCommandNode,InterpreterCommandNode]
-
-    def test_runlog_cancel_engine_command_Wait(self):
-        raise NotImplementedError
-
     def test_runlog_cancel_uod_command_Reset(self):
         e = self.engine
         # start uod command
@@ -418,6 +412,42 @@ Watch: Block Time > 3s
 
         # assert we only have one item
         self.assertEqual(1, len([i for i in runlog.items if i.name == "Reset"]))
+
+    def test_runlog_force_interpretercommand_Wait(self):
+        e = self.engine
+        program = """\
+Mark: A
+Wait: 5s
+Mark: B
+"""
+        item_name = "Wait: 5s"
+        run_engine(e, program, 5)
+        self.assert_Runlog_HasItem(item_name)
+        runlog = e.tracking.get_runlog()
+        item = next((i for i in runlog.items if i.name == item_name), None)
+        assert isinstance(item, RunLogItem)
+
+        # verify that its runlog item is cancellable
+        self.assertEqual(item.cancellable, False)
+        self.assertEqual(item.cancelled, False)
+        self.assertEqual(item.forcible, True)
+        self.assertEqual(item.forced, False)
+
+        # print_runlog(e, "pre-force")
+        # print_runtime_records(e, "pre-force")
+
+        e.force_instruction(item.id)
+        continue_engine(e, 3)
+
+        runlog = e.tracking.get_runlog()
+        item = next((i for i in runlog.items if i.name == item_name), None)
+        assert isinstance(item, RunLogItem)
+
+        # print_runlog(e, "post-force")
+        # print_runtime_records(e, "post-force")
+
+        self.assertEqual(item.forcible, False)
+        self.assertEqual(item.forced, True)
 
     def test_runlog_force_alarm(self):
         e = self.engine
@@ -632,6 +662,20 @@ Mark: c"""
         self.assertEqual(2, len(states_list[0]))
         #self.assertEqual(3, len(states_list[0]))
         self.assertEqual(2, len(states_list[1]))
+
+    def test_formatting_str(self):
+        x_short = "a"
+        x_formatted = "         a"
+        x_long = x_formatted + "x"
+        self.assertEqual(rjust(x_short, 10), x_formatted)
+        self.assertEqual(rjust(x_long, 10), x_formatted)
+
+        self.assertEqual(rjust(" ", 4), "    ")
+        self.assertEqual(rjust("", 4), "    ")
+
+    def test_formatting_int(self):
+        self.assertEqual(rjust(23, 4), "  23")
+        self.assertEqual(rjust(12345, 4), "12345")  # don't crop ints
 
 
 if __name__ == "__main__":

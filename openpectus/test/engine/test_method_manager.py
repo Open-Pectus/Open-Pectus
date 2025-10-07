@@ -906,11 +906,34 @@ Watch: Run counter > 0
 
 # End Generational Edits
 
-    @unittest.skip("TODO")
     def test_edit_injected(self):
-        # hmm this is weird. a method is running and user injects code - that's not a method edit, just an injection
-        # discussion in issue #829
-        raise NotImplementedError()
+        method1 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Mark: B
+03 Mark: C
+04 
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Mark: A
+02 Mark: B
+03 Mark: C
+04 Mark: D
+""")
+        runner = EngineTestRunner(create_test_uod, method1)
+        with runner.run() as instance:
+            instance.start()
+
+            # method1 runs - macro registered
+            instance.run_until_instruction("Mark", state="completed", arguments="A")
+            instance.engine.inject_code("Mark: A2")
+            instance.run_until_instruction("Mark", state="completed", arguments="C")
+
+            self.assertEqual(['A', 'B', 'A2', 'C'], instance.marks)
+
+            instance.engine.set_method(method2)
+            instance.run_until_instruction("Mark", state="completed", arguments="D")
+
+            self.assertEqual(['A', 'B', 'A2', 'C', 'D'], instance.marks)
 
     def test_active_node(self):
         # program.active_node is never ProgramNode and is only None right at the beginning until the first program child
@@ -1000,7 +1023,7 @@ Watch: Run counter > 0
         edit_at(7)
 
 
-    def test_command_exec_id(self):
+    def test_command_instance_id(self):
         # Check how it works if a program containing commands is edited.
         # Specifically, RuntimeInfo.with_edited_program() use RuntimeRecordState.clone() which reuses the
         # command instance and command_exec_id which may be a problem.
@@ -1027,12 +1050,19 @@ Watch: Run counter > 0
             # Wait until mid-execution of Reset's 5 ticks, note that this is right at the end of the v0 method
             instance.run_until_instruction("Wait", state="completed", arguments="0.2s")
 
+        #     print_runtime_records(instance.engine, "pre-edit")
+        #     print_runlog(instance.engine, "pre-edit")
+
             instance.engine.set_method(method2)
+
+        #     instance.run_ticks(1)
+        #     print_runtime_records(instance.engine, "post-edit")
+        #     print_runlog(instance.engine, "post-edit")
 
             # note how Reset still gets ticked by engine, even though it's water under the bridge for interpreter
             instance.run_until_instruction("Wait", state="completed", arguments="0.6s")
 
-    def test_command_exec_id_2(self):
+    def test_command_instance_id_2(self):
         # Variation of the above that performs the edit earlier than end-of-method
 
         method1 = Method.from_numbered_pcode("""\
@@ -1105,7 +1135,7 @@ Watch: Run counter > 0
             with self.assertRaises(EngineError) as ctx:
                 instance.run_until_instruction("Watch", "completed")
 
-            ex = ctx.exception.exception
+            ex = ctx.exception.__cause__
             assert isinstance(ex, InterpretationError)
             assert "Invalid unit: 'x'" in ex.message
             watch_node = instance.method_manager.program.get_child_by_id("01")

@@ -230,6 +230,7 @@ class EngineTestInstance(EventListener):
         try:
             ticks = self.run_until_condition(cond, max_ticks=max_ticks)
         except TimeoutError:
+            logger.error(self.get_runtime_table("At TimeoutError"))
             raise TimeoutError(
                 f"Timeout while waiting for instruction '{instruction_name}', state: {state}, arguments: {arguments}")
 

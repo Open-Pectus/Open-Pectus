@@ -309,6 +309,18 @@ class Node(SupportCancelForce):
         return f"{indent_spaces}{self.instruction_part}{args} | id={self.id}"
 
     @property
+    def class_name(self) -> str:
+        return self.__class__.__name__
+
+    @classmethod
+    def is_class_of(cls, node: Node | None = None) -> bool:
+        return node.__class__ == cls
+
+    @classmethod
+    def is_class_of_name(cls, node_class_name: str) -> bool:
+        return node_class_name == cls.__name__
+
+    @property
     def parents(self) -> list[NodeWithChildren]:
         node = self
         parents: list[NodeWithChildren] = []
@@ -915,10 +927,21 @@ class ErrorInstructionNode(Node):
 
 
 class NullNode(Node):
-    """ Marker type for temporary nodes. """
-    def __init__(self, id=""):
+    """ Marker type for temporary nodes, notably for Start which is executed before tracking is initialized. """
+    def __init__(self, id: str, command_name: str):
+        self._command_name = command_name
+        self.arguments = command_name  # make runlog aware of name
         super().__init__(Position.empty(), id)
+
+    @property
+    def command_name(self) -> str:
+        """ Name of the original command """
+        return self._command_name
 
     @property
     def runlog_name(self) -> str | None:
         return "NullNode"
+
+    def __str__(self):
+        return f"{self.__class__.__name__}(command_name='{self.command_name}', " + \
+            f"arguments={self.arguments}, id='{self.id}')"
