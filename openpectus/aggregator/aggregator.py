@@ -1,8 +1,8 @@
 import asyncio
 import copy
 import logging
-from datetime import datetime, timezone
 import time
+from datetime import datetime, timezone, UTC
 
 import openpectus.aggregator.models as Mdl
 import openpectus.protocol.aggregator_messages as AM
@@ -53,7 +53,7 @@ class FromEngine:
                 logger.debug(f"Applying run_data {run_id=} from recent_engine")
                 if recent_engine.run_started is None:
                     logger.warning("Recent engine had a run without run_started value. Using now as run_started")
-                    run_started = datetime.now(timezone.utc)
+                    run_started = datetime.now(UTC)
                 else:
                     run_started = recent_engine.run_started
                 engine_data.run_data = Mdl.RunData.empty(run_id=run_id, run_started=run_started)
@@ -137,7 +137,7 @@ class FromEngine:
                     f"engine {engine_id}, run_data run_id: {engine_data.run_data.run_id}, message run_id: {_run_id}")
                 logger.warning(f"Saving existing run {_run_id}. No data is available for the other run")
                 try:
-                    recent_run_repo.store_recent_run(engine_data)
+                    recent_run_repo.store_recent_run(engine_data, archive=msg.archive, archive_filename=msg.archive_filename)
                     logger.info(f"Stored recent run {_run_id=}")
                 except Exception:
                     logger.error(f"Failed to persist recent run {_run_id=}")
@@ -146,7 +146,7 @@ class FromEngine:
                 engine_data.run_data.runlog = msg.runlog
                 engine_data.method_state = msg.method_state
                 try:
-                    recent_run_repo.store_recent_run(engine_data)
+                    recent_run_repo.store_recent_run(engine_data, archive=msg.archive, archive_filename=msg.archive_filename)
                     logger.info(f"Stored recent run {_run_id=}")
                 except Exception:
                     logger.error(f"Failed to persist recent run {_run_id=}")
@@ -324,7 +324,7 @@ class FromEngine:
             notification=WebPushNotification(
                 title=self._engine_data_map[engine_id].uod_name,
                 body="Connection between aggregator and engine has been lost.",
-                timestamp=int(time.time()*1000),
+                timestamp=int(time.time() * 1000),
                 data=Mdl.WebPushData(
                     process_unit_id=engine_id
                 ),
@@ -341,7 +341,8 @@ class FromEngine:
 
 
 class FromFrontend:
-    def __init__(self, engine_data_map: EngineDataMap, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, webpush_publisher: WebPushPublisher):
+    def __init__(self, engine_data_map: EngineDataMap, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher,
+                 webpush_publisher: WebPushPublisher):
         self._engine_data_map = engine_data_map
         self.dispatcher = dispatcher
         self.publisher = publisher
@@ -353,7 +354,7 @@ class FromFrontend:
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(engine_data_map={self._engine_data_map}, dispatcher={self.dispatcher})'
 
-    async def method_saved(self, engine_id: str, method: Mdl.Method, user: Contributor) -> int:
+    async def save_method(self, engine_id: str, method: Mdl.Method, user: Contributor) -> int:
         existing_version = self._engine_data_map[engine_id].method.version
         version_to_overwrite = method.version
         logger.debug(f"Save method version: {method.version}")
@@ -489,6 +490,30 @@ class FromFrontend:
             webpush_repo = WebPushRepository(database.scoped_session())
             webpush_repo.store_notifications_preferences(preferences)
 
+    async def add_contributor(self, unit_id: str, user_id: str | None, user_name: str):
+        contributor = Mdl.Contributor(id=user_id, name=user_name)
+        contributors = self._engine_data_map[unit_id].contributors
+        if contributor not in contributors:
+            self.publish_new_contributor_notification(unit_id, contributor)
+            contributors.add(contributor)
+
+    async def excute_command(self, unit_id: str, user_id: str | None, user_name: str, msg: AM.InjectCodeMsg):
+        logger.info(f"Sending msg '{str(msg)}' of type {type(msg)} to engine '{unit_id}'")
+        response = await self.dispatcher.rpc_call(unit_id, msg)
+        if isinstance(response, AM.ErrorMessage):
+            raise Exception(f"RPC call returned error message: {response.message}")
+        await self.add_contributor(unit_id, user_id, user_name)
+
+    async def excute_control_button_command(self, unit_id: str, user_id: str | None, user_name: str, msg: AM.ExecuteControlCommandMsg):
+        logger.info(f"Sending msg '{str(msg)}' of type {type(msg)} to engine '{unit_id}'")
+        response = await self.dispatcher.rpc_call(unit_id, msg)
+        if isinstance(response, AM.ErrorMessage):
+            if response.caller_error:
+                raise ValueError(f"RPC call returned error message: {response.message}")
+            else:
+                raise Exception(f"RPC call returned error message: {response.message}")
+        await self.add_contributor(unit_id, user_id, user_name)
+
     def publish_notification_test(self, user_id: None | str):
         asyncio.create_task(self.webpush_publisher.publish_test_message(str(user_id)))
 
@@ -516,8 +541,10 @@ class FromFrontend:
             process_unit=self._engine_data_map[engine_id],
         ))
 
+
 class Aggregator:
-    def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, webpush_publisher: WebPushPublisher, secret: str = "") -> None:
+    def __init__(self, dispatcher: AggregatorDispatcher, publisher: FrontendPublisher, webpush_publisher: WebPushPublisher,
+                 secret: str = "") -> None:
         self._engine_data_map: EngineDataMap = {}
         """ all client data except channels, indexed by engine_id """
         self.dispatcher = dispatcher
@@ -535,8 +562,8 @@ class Aggregator:
         with database.create_scope():
             repo = RecentEngineRepository(database.scoped_session())
             for engine_data in self._engine_data_map.values():
-                    repo.store_recent_engine(engine_data)
-                    logger.info(f"Storing {engine_data} as recent engine.")
+                repo.store_recent_engine(engine_data)
+                logger.info(f"Storing {engine_data} as recent engine.")
 
     def create_engine_id(self, register_engine_msg: EM.RegisterEngineMsg):
         """ Defines the generation of the engine_id that is uniquely assigned to each engine.

@@ -19,11 +19,18 @@ import { DetailsSelectors } from './ngrx/details.selectors';
       </div>
       <h1 class="text-4xl lg:text-5xl font-bold">{{ recentRun()?.engine_id }}</h1>
 
-      <button class="absolute top-0 right-0 px-3 py-1.5 rounded-md bg-sky-900 text-white flex items-center"
-              (click)="downloadCsv(recentRun()?.run_id)">
-        <i class="codicon codicon-desktop-download !text-xl mr-2.5"></i>
-        Data CSV-file
-      </button>
+      <div class="absolute top-0 right-0 flex gap-3">
+        <button class="px-3 py-1.5 rounded-md bg-sky-900 text-white flex items-center"
+                (click)="downloadCsv(recentRun()?.run_id)">
+          <i class="codicon codicon-desktop-download !text-xl mr-2.5"></i>
+          Plot CSV file
+        </button>
+        <button class="px-3 py-1.5 rounded-md bg-sky-900 text-white flex items-center"
+                (click)="downloadArchive(recentRun()?.run_id)">
+          <i class="codicon codicon-desktop-download !text-xl mr-2.5"></i>
+          Archive file
+        </button>
+      </div>
     </div>
   `,
 })
@@ -35,6 +42,11 @@ export class RecentRunHeaderComponent {
   downloadCsv(recentRunId?: string) {
     if(recentRunId === undefined) return;
     this.store.dispatch(DetailsActions.recentRunDownloadCsvButtonClicked({recentRunId}));
+  }
+
+  downloadArchive(recentRunId?: string) {
+    if(recentRunId === undefined) return;
+    this.store.dispatch(DetailsActions.recentRunDownloadArchiveButtonClicked({recentRunId}));
   }
 
   formatContributors(recentRun?: RecentRun) {

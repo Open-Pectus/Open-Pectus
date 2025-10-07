@@ -86,6 +86,7 @@ class RuntimeInfo:
 
     @property
     def records_filtered(self) -> list[RuntimeRecord]:
+        # consider removing this property, is really an impl detail
         return [r for r in self._records if r.node_class_name != "NullNode"]
 
     def get_runlog(self) -> RunLog:
@@ -614,7 +615,7 @@ class RuntimeRecordState:
         """ Note: command and command_exec_id are copied from existing state. These reference
         command objects outside or RuntimeInfo. """
         values = None if self.values is None else self.values.clone()
-        # TODO HMM - should we reuse instance_id's? 
+        # TODO HMM - should we reuse instance_id's?
         instance = RuntimeRecordState(self.instance_id, self.state_name, self.state_time, self.state_tick, values)
         instance.command = self.command
         instance.name = self.name

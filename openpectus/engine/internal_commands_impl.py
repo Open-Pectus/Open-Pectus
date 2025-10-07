@@ -182,6 +182,8 @@ class StopEngineCommand(InternalEngineCommand):
                     break
                 yield
             e._finalize_uod_commands()
+            e._apply_safe_state()
+            e.write_process_image()
 
             logger.debug("All uod commands have completed execution. Stop will now complete.")
             e._runstate_started = False
@@ -189,7 +191,6 @@ class StopEngineCommand(InternalEngineCommand):
             e._runstate_holding = False
             e._runstate_stopping = False
             e._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.OK, e._tick_time)
-            e._apply_safe_state()
 
             e.tracking.disable()
             e.emitter.emit_on_stop()

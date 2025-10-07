@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, UTC
 from enum import StrEnum, auto
 from typing import Literal
 
@@ -298,8 +298,8 @@ class RunLogLine(Dto):
                 source=CommandSource.METHOD,
                 value=None
             ),
-            start=datetime.fromtimestamp(model.start),
-            end=None if model.end is None else datetime.fromtimestamp(model.end),
+            start=datetime.fromtimestamp(model.start, UTC),
+            end=None if model.end is None else datetime.fromtimestamp(model.end, UTC),
             progress=model.progress,
             start_values=list(map(ProcessValue.create, model.start_values)),
             end_values=list(map(ProcessValue.create, model.end_values)),
@@ -507,6 +507,14 @@ class RecentRunMethod(Dto):
 class RecentRunCsv(Dto):
     filename: str
     csv_content: str
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(filename="{self.filename}")'
+
+
+class RecentRunArchive(Dto):
+    filename: str
+    content: str
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(filename="{self.filename}")'

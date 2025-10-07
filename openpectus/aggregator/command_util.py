@@ -3,27 +3,31 @@ import openpectus.aggregator.routers.dto as Dto
 import openpectus.protocol.aggregator_messages as AM
 
 
-def parse_as_message(cmd: Dto.ExecutableCommand, readings: list[Mdl.ReadingInfo]) -> AM.AggregatorMessage:
+def parse_control_button_command(cmd: Dto.ExecutableCommand) -> AM.ExecuteControlCommandMsg:
     if cmd.command is None or cmd.command.strip() == "":
         raise ValueError("Command is empty")
+    lines = cmd.command.splitlines(keepends=False)
+    line_count = len(lines)
+    if line_count < 1:
+        raise ValueError("Command is empty")
+    if cmd.source != Dto.CommandSource.UNIT_BUTTON:
+        raise ValueError("Command is not from unit button")
+    if line_count > 1:
+        raise ValueError("Unit Button command must be a single line command")
+    code = lines[0]
+    if not code.istitle():
+        raise ValueError("Unit Button commands must be title cased")
+    return AM.ExecuteControlCommandMsg(name=code)
 
+
+def parse_command(cmd: Dto.ExecutableCommand, readings: list[Mdl.ReadingInfo]) -> AM.InjectCodeMsg:
+    if cmd.command is None or cmd.command.strip() == "":
+        raise ValueError("Command is empty")
     lines = cmd.command.splitlines(keepends=False)
     line_count = len(lines)
     if line_count < 1:
         raise ValueError("Command is empty")
 
-    if cmd.source == Dto.CommandSource.UNIT_BUTTON:
-        if line_count > 1:
-            raise ValueError("Unit Button command must be a single line command")
-        code = lines[0]
-        if not code.istitle():
-            raise ValueError("Unit Button commands must be title cased")
-        return AM.InvokeCommandMsg(name=code)
-
-    return _parse_advanced_command(cmd, readings)
-
-
-def _parse_advanced_command(cmd: Dto.ExecutableCommand, readings: list[Mdl.ReadingInfo]) -> AM.AggregatorMessage:
     if cmd.value is None:
         return AM.InjectCodeMsg(pcode=cmd.command)
 

@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from unittest.mock import Mock, AsyncMock
 
 import openpectus.aggregator.data.models as DMdl
@@ -164,7 +164,7 @@ class AggregatorEventsTest(unittest.IsolatedAsyncioTestCase):
         self.process_tags(tags)
 
         # create run_data to simulate a started run
-        self.engine_data.run_data = Mdl.RunData.empty(run_id="run1", run_started=datetime.now(timezone.utc))
+        self.engine_data.run_data = Mdl.RunData.empty(run_id="run1", run_started=datetime.now(UTC))
 
         self.aggregator.from_engine._persist_tag_values(self.engine_data, self.plot_log_repo)
 
@@ -181,7 +181,7 @@ class AggregatorEventsTest(unittest.IsolatedAsyncioTestCase):
         self.process_tags(tags)
 
         # create run_data to simulate a started run
-        self.engine_data.run_data = Mdl.RunData.empty(run_id="run1", run_started=datetime.now(timezone.utc))
+        self.engine_data.run_data = Mdl.RunData.empty(run_id="run1", run_started=datetime.now(UTC))
 
         self.aggregator.from_engine._persist_tag_values(self.engine_data, self.plot_log_repo)
         self.stored_tags.clear()
@@ -214,7 +214,7 @@ class AggregatorEventsTest(unittest.IsolatedAsyncioTestCase):
         self.process_tags(tags)
 
         # create run_data to simulate a started run
-        self.engine_data.run_data = Mdl.RunData.empty(run_id="run1", run_started=datetime.now(timezone.utc))
+        self.engine_data.run_data = Mdl.RunData.empty(run_id="run1", run_started=datetime.now(UTC))
 
         self.aggregator.from_engine._persist_tag_values(self.engine_data, self.plot_log_repo)
         self.stored_tags.clear()

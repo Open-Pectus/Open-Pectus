@@ -1,12 +1,15 @@
 from __future__ import annotations
+
 import itertools
 import logging
 import uuid
 from queue import Empty, Queue
 from typing import Iterable, Literal, Set
 
-from openpectus.engine.internal_commands import InternalCommandsRegistry
+import openpectus.protocol.models as Mdl
+from openpectus.engine.archiver import ArchiverTag
 from openpectus.engine.hardware import HardwareLayerException, RegisterDirection
+from openpectus.engine.internal_commands import InternalCommandsRegistry
 from openpectus.engine.method_manager import MethodManager
 from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum, SystemTagName
 from openpectus.lang.exec.base_unit import BaseUnitProvider
@@ -15,30 +18,27 @@ from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.errors import (
     EngineError, InterpretationError, InterpretationInternalError, MethodEditError
 )
-from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext, Tracking
-from openpectus.lang.exec.runlog import RuntimeInfo, RunLog
 from openpectus.lang.exec.events import EventEmitter
+from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext, Tracking
 from openpectus.lang.exec.tags import (
     Tag,
     TagCollection,
-    TagDirection,
     TagValue,
     TagValueCollection,
     ChangeListener,
-    Unset,
     create_system_tags
 )
 from openpectus.lang.exec.tags_impl import BlockTimeTag, MarkTag, ScopeTimeTag
 from openpectus.lang.exec.timer import EngineTimer, OneThreadTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand
-import openpectus.protocol.models as Mdl
-from openpectus.engine.archiver import ArchiverTag
 
 logger = logging.getLogger(__name__)
 frontend_logger = logging.getLogger(__name__ + ".frontend")
 
+
 class EngineTiming():
     """ Represents timing information used by engine and any related components. """
+
     def __init__(self, clock: Clock, timer: EngineTimer, interval: float, speed: float) -> None:
         self._clock = clock
         self._timer = timer
@@ -68,6 +68,7 @@ class EngineTiming():
     @property
     def speed(self) -> float:
         return self._speed
+
 
 class Engine(InterpreterContext):
     """ Main engine class. Handles
@@ -141,7 +142,7 @@ class Engine(InterpreterContext):
         self._prev_state: TagValueCollection | None = None
         """ The state prior to applying safe state """
 
-        self._last_error : Exception | None = None
+        self._last_error: Exception | None = None
         """ Cause of error_state"""
 
         self._method_manager: MethodManager = MethodManager(uod.get_command_names(), self)
@@ -252,9 +253,9 @@ class Engine(InterpreterContext):
 
         # execute phase
         # excecute interpreter tick
-        if self._runstate_started and\
-                not self._runstate_paused and\
-                not self._runstate_holding and\
+        if self._runstate_started and \
+                not self._runstate_paused and \
+                not self._runstate_holding and \
                 not self._runstate_stopping:
             try:
                 # run one tick of interpretation, i.e. one instruction
@@ -290,7 +291,6 @@ class Engine(InterpreterContext):
 
         # write phase, error_state on HardwareLayerException
         self.write_process_image()
-
 
     def read_process_image(self):
         """ Read data from relevant hw registers into tags"""
@@ -619,12 +619,12 @@ class Engine(InterpreterContext):
 
     def _apply_safe_state(self) -> TagValueCollection:
         current_values: list[TagValue] = []
-        for t in self._iter_all_tags():
-            if t.direction == TagDirection.Output:
-                safe_value = t.safe_value
-                if not isinstance(safe_value, Unset):
-                    current_values.append(t.as_readonly())
-                    t.set_value(safe_value, self._tick_time)
+        hwl = self.uod.hwl
+        registers = [r for r in hwl.registers.values() if RegisterDirection.Write in r.direction and "safe_value" in r._options]
+        for r in registers:
+            tag = self.uod.tags[r.name]
+            current_values.append(tag.as_readonly())
+            tag.set_value(r._options["safe_value"], self._tick_time)
         return TagValueCollection(current_values)
 
     def _apply_state(self, state: TagValueCollection):
@@ -711,13 +711,45 @@ class Engine(InterpreterContext):
                 f"Unknown command: '{name}'"
             )
 
-    def schedule_execution_user(self, name: str, args: str | None = None):
+    def _validate_control_command(self, command_name: str):
+        """ Raise a ValueError if the command is a control command that is not valid in the current
+        engine state. """
+        sys_state_value = self._system_tags[SystemTagName.SYSTEM_STATE].get_value()
+        if command_name == EngineCommandEnum.START:
+            if sys_state_value != SystemStateEnum.Stopped:
+                raise ValueError(
+                    f"Start command is only valid when system state is stopped. Current state is {sys_state_value}")
+        elif command_name == EngineCommandEnum.STOP:
+            if sys_state_value in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
+                raise ValueError(f"Stop command is not valid when system state is {sys_state_value}")
+        elif command_name == EngineCommandEnum.RESTART:
+            if sys_state_value in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
+                raise ValueError(f"Restart command is not valid when system state is {sys_state_value}")
+        elif command_name == EngineCommandEnum.PAUSE:
+            if sys_state_value in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
+                raise ValueError(f"Pause command is not valid when system state is {sys_state_value}")
+            if self._runstate_paused:
+                raise ValueError("Pause command is not valid when system state is paused")
+        elif command_name == EngineCommandEnum.UNPAUSE:
+            if sys_state_value in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
+                raise ValueError(f"Unpause command is not valid when system state is {sys_state_value}")
+            if not self._runstate_paused:
+                raise ValueError("Unpause command is not valid when system state is not paused")
+        elif command_name == EngineCommandEnum.HOLD:
+            if sys_state_value in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
+                raise ValueError(f"Hold command is not valid when system state is {sys_state_value}")
+            if self._runstate_holding:
+                raise ValueError("Hold command is not valid when system state is on hold")
+        elif command_name == EngineCommandEnum.UNHOLD:
+            if sys_state_value in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
+                raise ValueError(f"Unhold command is not valid when system state is {sys_state_value}")
+            if not self._runstate_holding:
+                raise ValueError("Unhold command is not valid when system state is not on hold")
+
+    def execute_control_command_from_user(self, name: str):
         """ Execute named command from user """
-        # TODO args format needs to be specified in more detail. Its intended usage is
-        # to contain argument values added to tag buttons. But in that case why not just use pcode?
         if EngineCommandEnum.has_value(name) or self.uod.has_command_name(name):
-            if args is not None:
-                raise NotImplementedError("User arguments format not implemented - command name: " + name)
+            self._validate_control_command(name)
             request = CommandRequest.from_user(name, "", self.tracking.create_instance_id(name))
             self.cmd_queue.put_nowait(request)
         else:
@@ -780,7 +812,7 @@ class Engine(InterpreterContext):
     def cancel_instruction(self, instance_id: str):
         if not self.tracking.has_instance_id(instance_id):
             raise ValueError(f"Cannot cancel instruction {instance_id=}, no runtime record found")
-        else:            
+        else:
             logger.info(f"Cancel instruction {instance_id=} accepted")
             # TODO find out if this is an engine command, interpreter command or uod command
             record = self.tracking.get_record_by_instance_id(instance_id)

@@ -81,9 +81,12 @@ export class DetailsEffects {
     concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
     mergeMap(([{command}, unitId]) => {
       if(unitId === undefined) return of();
-      return this.processUnitService.executeCommand({unitId, requestBody: {command, source: 'unit_button'}});
+      return this.processUnitService.executeControlButtonCommand({unitId, requestBody: {command, source: 'unit_button'}}).pipe(
+        map(() => DetailsActions.controlCommandExecutionSucceeded()),
+        catchError(() => of(DetailsActions.controlCommandExecutionFailed())),
+      );
     }),
-  ), {dispatch: false});
+  ));
 
   executeManuallyEnteredCommandWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.commandsComponentExecuteClicked),
@@ -136,6 +139,20 @@ export class DetailsEffects {
           const link = document.createElement('a');
           link.download = RecentRunCsv.filename;
           link.href = URL.createObjectURL(new Blob([RecentRunCsv.csv_content]));
+          link.click();
+        }),
+      );
+    }),
+  ), {dispatch: false});
+
+  downloadRecentRunArchiveWhenButtonClicked = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.recentRunDownloadArchiveButtonClicked),
+    switchMap(({recentRunId}) => {
+      return this.recentRunsService.getRecentRunArchive({runId: recentRunId}).pipe(
+        map(recentRunArchive => {
+          const link = document.createElement('a');
+          link.download = recentRunArchive.filename;
+          link.href = URL.createObjectURL(new Blob([recentRunArchive.content]));
           link.click();
         }),
       );
