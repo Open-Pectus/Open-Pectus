@@ -148,8 +148,6 @@ class Engine(InterpreterContext):
         self._method_manager: MethodManager = MethodManager(uod.get_command_names(), self)
         """ The model handling changes to method code and interpreter running it """
 
-        self._cancel_command_instance_ids: set[str] = set()
-
         # initialize state
         self.uod.tags.add_listener(self._uod_listener)
         self._system_tags.add_listener(self._system_listener)
@@ -425,12 +423,6 @@ class Engine(InterpreterContext):
                         f"Failed to initialize arguments '{args}' for command '{cmd_request.name}'",
                         "same"
                     )
-                # if cmd_request.name in [EngineCommandEnum.STOP]:
-                #     self.tracking.disable()
-                # if cmd_request.name in [EngineCommandEnum.START, EngineCommandEnum.RESTART]:
-                #     self.tracking.enable()
-
-
         except ValueError:
             raise EngineError(
                 f"Unknown internal engine command '{cmd_request.name}'",
@@ -508,23 +500,6 @@ class Engine(InterpreterContext):
                 "same")
 
         cancel_this = False
-
-        # cancel any pending cancels (per user request)
-        for c in self.cmd_executing:
-            if c.instance_id in self._cancel_command_instance_ids:
-                cmds_done.add(c)
-                self._cancel_command_instance_ids.remove(c.instance_id)
-                if cmd_request.name == c.name:
-                    cancel_this = True
-                command = self.tracking.get_command(c.instance_id)
-                if command is not None:
-                    command.cancel()
-                    command.finalize()
-                    self.tracking.mark_cancelled(c)
-                    logger.info(f"Running command {c.name} cancelled per user request")
-                else:
-                    logger.error(f"Cannot cancel command {c}. No runtime record found  for command: '{c.name=}' " +
-                                 f" and {c.instance_id=}")
 
         # cancel any existing instance with same name
         for c in [_c for _c in self.cmd_executing if _c not in cmds_done]:
@@ -620,7 +595,8 @@ class Engine(InterpreterContext):
     def _apply_safe_state(self) -> TagValueCollection:
         current_values: list[TagValue] = []
         hwl = self.uod.hwl
-        registers = [r for r in hwl.registers.values() if RegisterDirection.Write in r.direction and "safe_value" in r._options]
+        registers = [r for r in hwl.registers.values()
+                     if RegisterDirection.Write in r.direction and "safe_value" in r._options]
         for r in registers:
             tag = self.uod.tags[r.name]
             current_values.append(tag.as_readonly())
@@ -814,7 +790,6 @@ class Engine(InterpreterContext):
             raise ValueError(f"Cannot cancel instruction {instance_id=}, no runtime record found")
         else:
             logger.info(f"Cancel instruction {instance_id=} accepted")
-            # TODO find out if this is an engine command, interpreter command or uod command
             record = self.tracking.get_record_by_instance_id(instance_id)
             assert record is not None
             command = self.tracking.get_command(instance_id)
@@ -825,7 +800,6 @@ class Engine(InterpreterContext):
                 node = self.tracking.get_known_node_by_id(record.node_id)
                 assert node is not None
                 self.tracking.mark_cancelled(node)
-            #self._cancel_command_instance_ids.add(instance_id)
 
     def force_instruction(self, instance_id: str):
         if not self.tracking.has_instance_id(instance_id):

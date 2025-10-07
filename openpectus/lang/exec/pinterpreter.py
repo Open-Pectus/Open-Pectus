@@ -725,7 +725,7 @@ class PInterpreter(NodeVisitor):
         yield NodeAction(node, push_to_stack)
 
         def emit_scope_activated(node: p.BlockNode):
-            self.context.emitter.emit_on_scope_activate(node.id, "Block", node.arguments)            
+            self.context.emitter.emit_on_scope_activate(node.id, "Block", node.arguments)
             self.tracking.mark_started(node)
         yield NodeAction(node, emit_scope_activated)
 
@@ -944,11 +944,7 @@ class PInterpreter(NodeVisitor):
         def schedule(node: p.UodCommandNode):
             instance_id = self.tracking.create_node_instance_id(node)
 
-            # Note: Commands can be resident and last multiple ticks.
-            # The context (Engine) keeps track of this and we just
-            # move on to the next instruction when tick() is invoked.
-            # We do, however, provide the execution id to the context
-            # so that it can update the runtime record appropriately.
+            # Note: Uod Commands can be resident and last multiple ticks just like Engine Commands.
             try:
                 logger.debug(f"Executing uod command '{node}' with '{instance_id=}' via engine")
                 self.context.schedule_execution(

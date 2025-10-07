@@ -555,8 +555,8 @@ class RuntimeRecord:
             # as that they cannot be edited, they only exist to show runlog history
             new_node = program.get_child_by_id(self.node_id)
             if new_node is None:
-                logger.warning(f"Record has node_id {self.node_id} which is not present in then edited program")
-                logger.warning(f"Record node_class_name: {self.node_class_name}")
+                logger.debug(f"Record has node_id {self.node_id} which is not present in then edited program")
+                logger.debug(f"Record node_class_name: {self.node_class_name}")
                 null_node = next((n for n in info._null_node_map.values() if n.id == self.node_id), None)
                 if null_node is None:
                     injected_node = next((n for n in info._injected_node_map.values() if n.id == self.node_id), None)

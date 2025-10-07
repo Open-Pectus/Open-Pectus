@@ -57,7 +57,6 @@ class InterpretationError(Exception):
 
 class NodeInterpretationError(InterpretationError):
     """ Raised by interpreter when an instruction specific error occurs """
-    # TODO remove exception argument+property. Replace usage with 'raise ... from ex'
     def __init__(self, node: p.Node, message: str, user_message: str | Literal["same"] | None = "same") -> None:
         self.node = node
         self.message: str = message
