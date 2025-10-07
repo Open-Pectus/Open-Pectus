@@ -276,6 +276,7 @@ class RunLogLine(Dto):
     cancellable: bool | SkipJsonSchema[None] = None
     forced: bool | SkipJsonSchema[None] = None
     cancelled: bool | SkipJsonSchema[None] = None
+    failed: bool | SkipJsonSchema[None] = None
 
     def __str__(self) -> str:
         if self.cancelled:
@@ -306,7 +307,8 @@ class RunLogLine(Dto):
             forcible=model.forcible,
             forced=model.forced,
             cancellable=model.cancellable,
-            cancelled=model.cancelled
+            cancelled=model.cancelled,
+            failed=model.failed
         )
 
 

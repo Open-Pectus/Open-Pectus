@@ -171,7 +171,7 @@ class RuntimeInfo:
                 elif state.state_name == RuntimeRecordStateEnum.Failed:
                     assert item is not None
                     item.state = RunLogItemState.Failed
-                    item.cancelled = True  #W HACK just to demonstrate in frontend that another color is picked
+                    item.failed = True
                 elif state.state_name == RuntimeRecordStateEnum.Cancelled:
                     assert item is not None
                     item.state = RunLogItemState.Cancelled
@@ -686,6 +686,7 @@ class RunLogItem:
         self.forced: bool = False
         self.cancellable: bool = False
         self.cancelled: bool = False
+        self.failed: bool = False
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(name="{self.name}")'

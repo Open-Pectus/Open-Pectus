@@ -99,6 +99,7 @@ class RunLogLine(ProtocolModel):
     cancellable: bool | None = None
     forced: bool | None = None
     cancelled: bool | None = None
+    failed: bool | None = None
 
     def __str__(self) -> str:
         if self.cancelled:

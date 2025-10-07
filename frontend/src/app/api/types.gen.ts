@@ -260,6 +260,7 @@ export type RunLogLine = {
     cancellable?: boolean;
     forced?: boolean;
     cancelled?: boolean;
+    failed?: boolean;
 };
 
 export type ServerErrorResponse = {

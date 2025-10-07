@@ -124,7 +124,8 @@ class EngineMessageBuilder():
                 forcible=item.forcible,
                 cancellable=item.cancellable,
                 forced=item.forced,
-                cancelled=item.cancelled
+                cancelled=item.cancelled,
+                failed=item.failed
             )
             return msg
 
