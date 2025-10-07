@@ -1,16 +1,17 @@
 import unittest
-from uuid import UUID
 
 from openpectus.aggregator.models import RunLog, RunLogLine
 from openpectus.engine.engine import Engine
 from openpectus.engine.models import EngineCommandEnum
 from openpectus.lang.exec.runlog import (
-    RunLogItem, assert_Runlog_HasItem,
-    assert_Runlog_HasItem_Completed, assert_Runlog_HasItem_Started,
-    assert_Runlog_HasNoItem, assert_Runtime_HasRecord,
-    assert_Runtime_HasRecord_Completed, assert_Runtime_HasRecord_Started
+    RunLogItem, RuntimeInfo, RuntimeRecord, RuntimeRecordStateEnum,
+    assert_Runtime_HasRecord,
+    assert_Runtime_HasRecord_Completed, assert_Runtime_HasRecord_Started,
+    assert_Runlog_HasItem, assert_Runlog_HasNoItem,
+    assert_Runlog_HasItem_Completed, assert_Runlog_HasItem_Started, rjust,
 )
 from openpectus.lang.model.pprogramformatter import print_program
+import openpectus.lang.model.ast as p
 from openpectus.test.engine.test_engine import create_engine, create_test_uod
 
 from openpectus.test.engine.utility_methods import (
@@ -34,25 +35,25 @@ class TestRunlog(unittest.TestCase):
         self.engine.cleanup()
 
     def assert_Runlog_HasItem(self, name: str):
-        assert_Runlog_HasItem(self.engine.runtimeinfo, name)
+        assert_Runlog_HasItem(self.engine.interpreter.runtimeinfo, name)
 
     def assert_Runlog_HasNoItem(self, name: str):
-        assert_Runlog_HasNoItem(self.engine.runtimeinfo, name)
+        assert_Runlog_HasNoItem(self.engine.interpreter.runtimeinfo, name)
 
     def assert_Runlog_HasItem_Started(self, name: str):
-        assert_Runlog_HasItem_Started(self.engine.runtimeinfo, name)
+        assert_Runlog_HasItem_Started(self.engine.interpreter.runtimeinfo, name)
 
     def assert_Runlog_HasItem_Completed(self, name: str, min_times=1):
-        assert_Runlog_HasItem_Completed(self.engine.runtimeinfo, name, min_times)
+        assert_Runlog_HasItem_Completed(self.engine.interpreter.runtimeinfo, name, min_times)
 
     def assert_Runtime_HasRecord(self, name: str):
-        assert_Runtime_HasRecord(self.engine.runtimeinfo, name)
+        assert_Runtime_HasRecord(self.engine.interpreter.runtimeinfo, name)
 
     def assert_Runtime_HasRecord_Started(self, name: str):
-        assert_Runtime_HasRecord_Started(self.engine.runtimeinfo, name)
+        assert_Runtime_HasRecord_Started(self.engine.interpreter.runtimeinfo, name)
 
     def assert_Runtime_HasRecord_Completed(self, name: str):
-        assert_Runtime_HasRecord_Completed(self.engine.runtimeinfo, name)
+        assert_Runtime_HasRecord_Completed(self.engine.interpreter.runtimeinfo, name)
 
     def test_start_complete_UodCommand(self):
         e = self.engine
@@ -152,7 +153,6 @@ Macro: A
     Mark: b
 """
         run_engine(e, cmd, 5)
-        print(self.engine.runtimeinfo.records)
         cmd = "Macro: A"
         self.assert_Runtime_HasRecord_Started(cmd)
         self.assert_Runtime_HasRecord_Completed(cmd)
@@ -170,7 +170,6 @@ Call macro: A
 """
         run_engine(e, program, 8)
         print_program(e.method_manager.program, show_blanks=True)
-        print(self.engine.runtimeinfo.records)
         cmd = "Macro: A"
         self.assert_Runtime_HasRecord_Started(cmd)
         self.assert_Runtime_HasRecord_Completed(cmd)
@@ -257,7 +256,6 @@ Call macro: A
 """
         run_engine(e, program, 8)
         print_program(e.method_manager.program, show_blanks=True)
-        print(self.engine.runtimeinfo.records)
         cmd = "Macro: A"
         self.assert_Runtime_HasRecord_Started(cmd)
         self.assert_Runtime_HasRecord_Completed(cmd)
@@ -271,7 +269,7 @@ Call macro: A
         self.assert_Runtime_HasRecord_Completed(cmd)
         self.assert_Runlog_HasItem_Completed(cmd, 1)
 
-    def test_runlog_cancel_watch(self):
+    def test_runlog_cancel_interpretercommand_watch(self):
         e = self.engine
         program = """
 Watch: Block Time > .3s
@@ -281,73 +279,74 @@ Watch: Block Time > .3s
         item_name = "Watch: Block Time > .3s"
         self.assert_Runlog_HasItem(item_name)
 
-        runlog = e.runtimeinfo.get_runlog()
+        runlog = e.tracking.get_runlog()
         item = next((i for i in runlog.items if i.name == item_name), None)
         assert isinstance(item, RunLogItem)
-        exec_id = item.id
+        instance_id = item.id
 
         # verify that its runlog item is cancelable
         self.assertEqual(item.cancellable, True)
         self.assertEqual(item.cancelled, False)
         print_runtime_records(e)
-        print_runlog(e, "pre-cancel")
+        #print_runlog(e, "pre-cancel")
 
         # cancel it. interpreter needs a tick to process it
-        e.cancel_instruction(UUID(exec_id))
+        e.cancel_instruction(instance_id)
         continue_engine(e, 5)
 
+        # print_runtime_records(e, "post-cancel")
+
         # fetch the updated (rebuilt from runtime records) runlog
-        runlog = e.runtimeinfo.get_runlog()
+        runlog = e.tracking.get_runlog()
         item = next((i for i in runlog.items if i.name == item_name), None)
         assert isinstance(item, RunLogItem)
 
         # verify it was cancelled
-        print_runtime_records(e, "post-cancel")
-        print_runlog(e, "post-cancel")
+        # print_runtime_records(e, "post-cancel")
+        # print_runlog(e, "post-cancel")
 
-        self.assertEqual(item.cancelled, True)
         self.assertEqual(item.cancellable, False)
+        self.assertEqual(item.cancelled, True)
         self.assertEqual([], e.interpreter.get_marks())
 
-        # needs end to be set or the frontend won't know the state is and end state
+        # needs end to be set or the frontend won't know the state is an end state
         self.assertIsNotNone(item.end)
 
-    def test_runlog_force_watch(self):
+    def test_runlog_force_interpretercommand_watch(self):
         e = self.engine
         program = """
-Watch: Block Time > .3s
+Watch: Block Time > 3s
     Mark: Foo
 """
         run_engine(e, program, 3)
-        item_name = "Watch: Block Time > .3s"
+        item_name = "Watch: Block Time > 3s"
         self.assert_Runlog_HasItem(item_name)
 
-        runlog = e.runtimeinfo.get_runlog()
+        runlog = e.tracking.get_runlog()
         item = next((i for i in runlog.items if i.name == item_name), None)
         assert isinstance(item, RunLogItem)
-        exec_id = item.id
 
         # verify that its runlog item is forcible
         self.assertEqual(item.forcible, True)
         self.assertEqual(item.forced, False)
-        print_runtime_records(e)
-        print_runlog(e, "pre-force")
+        # print_runtime_records(e)
+        # print_runlog(e, "pre-force")
 
         # force it. interpreter needs a tick to process it
-        e.force_instruction(UUID(exec_id))
+        e.force_instruction(instance_id=item.id)
         continue_engine(e, 1)
 
         # fetch the updated (rebuilt from runtime records) runlog
-        runlog = e.runtimeinfo.get_runlog()
+        runlog = e.tracking.get_runlog()
         item = next((i for i in runlog.items if i.name == item_name), None)
         assert isinstance(item, RunLogItem)
 
         # verify it was forced
-        print_runtime_records(e, "post-force")
-        print_runlog(e, "post-force")
+        # print_runtime_records(e, "post-force")
+        # print_runlog(e, "post-force")
 
-        self.assertEqual(item.forced, True)
         self.assertEqual(item.forcible, False)
+        self.assertEqual(item.forced, True)
 
         continue_engine(e, 2)
         self.assertEqual(['Foo'], e.interpreter.get_marks())
@@ -365,17 +364,17 @@ Watch: Block Time > .3s
             result.append(x)
         self.assertEqual(['foo', 'bar', 'baz'], result)
 
-    def test_runlog_cancel_uod_command(self):
+    def test_runlog_cancel_uod_command_Reset(self):
         e = self.engine
         # start uod command
         run_engine(e, "Reset", start_ticks + 1)
         self.assert_Runlog_HasItem_Started("Reset")
 
-        runlog = e.runtimeinfo.get_runlog()
+        runlog = e.tracking.get_runlog()
         self.assertEqual(1, len([i for i in runlog.items if i.name == "Reset"]))
         item = next((i for i in runlog.items if i.name == "Reset"), None)
         assert isinstance(item, RunLogItem)
-        exec_id = item.id
+        instance_id = item.id
 
         # verify that its runlog item is cancelable
         print_runlog(e)
@@ -387,22 +386,68 @@ Watch: Block Time > .3s
         self.assertEqual(item.progress > 0.0, True)
 
         # cancel it. engine needs a tick to process it
-        e.cancel_instruction(UUID(exec_id))
+        e.cancel_instruction(instance_id)
         continue_engine(e, 1)
 
         # fetch the updated (rebuilt from runtime records) runlog
-        runlog = e.runtimeinfo.get_runlog()
+        runlog = e.tracking.get_runlog()
         item = next((i for i in runlog.items if i.name == "Reset"), None)
         assert isinstance(item, RunLogItem)
 
         # verify it was cancelled
         print_runlog(e)
         print_runtime_records(e, "post-cancel")
-        self.assertEqual(item.cancelled, True)
+
+        # verify record state
+        record = e.tracking.records[0]
+        any_cancelled = False
+        for st in record.states:
+            if st.cancelled:
+                any_cancelled = True
+        self.assertEqual(any_cancelled, True)
+
+        # verify runlon
         self.assertEqual(item.cancellable, False)
+        self.assertEqual(item.cancelled, True)
 
         # assert we only have one item
         self.assertEqual(1, len([i for i in runlog.items if i.name == "Reset"]))
+
+    def test_runlog_force_interpretercommand_Wait(self):
+        e = self.engine
+        program = """\
+Mark: A
+Wait: 5s
+Mark: B
+"""
+        item_name = "Wait: 5s"
+        run_engine(e, program, 5)
+        self.assert_Runlog_HasItem(item_name)
+        runlog = e.tracking.get_runlog()
+        item = next((i for i in runlog.items if i.name == item_name), None)
+        assert isinstance(item, RunLogItem)
+
+        # verify that its runlog item is cancellable
+        self.assertEqual(item.cancellable, False)
+        self.assertEqual(item.cancelled, False)
+        self.assertEqual(item.forcible, True)
+        self.assertEqual(item.forced, False)
+
+        # print_runlog(e, "pre-force")
+        # print_runtime_records(e, "pre-force")
+
+        e.force_instruction(item.id)
+        continue_engine(e, 3)
+
+        runlog = e.tracking.get_runlog()
+        item = next((i for i in runlog.items if i.name == item_name), None)
+        assert isinstance(item, RunLogItem)
+
+        # print_runlog(e, "post-force")
+        # print_runtime_records(e, "post-force")
+
+        self.assertEqual(item.forcible, False)
+        self.assertEqual(item.forced, True)
 
     def test_runlog_force_alarm(self):
         e = self.engine
@@ -414,10 +459,9 @@ Alarm: Block Time > 3s
         item_name = "Alarm: Block Time > 3s"
         self.assert_Runlog_HasItem(item_name)
 
-        runlog = e.runtimeinfo.get_runlog()
+        runlog = e.tracking.get_runlog()
         item = next((i for i in runlog.items if i.name == item_name), None)
         assert isinstance(item, RunLogItem)
-        exec_id = item.id
 
         # verify that its runlog item is forcible
         self.assertEqual(item.forcible, True)
@@ -426,11 +470,11 @@ Alarm: Block Time > 3s
         print_runlog(e, "pre-force")
 
         # force it. interpreter needs a tick to process it
-        e.force_instruction(UUID(exec_id))
+        e.force_instruction(instance_id=item.id)
         continue_engine(e, 1)
 
         # fetch the updated (rebuilt from runtime records) runlog
-        runlog = e.runtimeinfo.get_runlog()
+        runlog = e.tracking.get_runlog()
         item = next((i for i in runlog.items if i.name == item_name), None)
         assert isinstance(item, RunLogItem)
 
@@ -490,7 +534,7 @@ Mark: A
 
         mark_name = "Mark: A"
         self.assert_Runlog_HasItem(mark_name)
-        runlog = e.runtimeinfo.get_runlog()
+        runlog = e.tracking.get_runlog()
         item = next(item for item in runlog.items if item.name == mark_name)
         assert item is not None
 
@@ -505,11 +549,12 @@ Mark: A
 
         run_engine(e, cmd, start_ticks)
         print_runtime_records(e)
+        print_runlog(e)
 
         self.assert_Runtime_HasRecord_Started(cmd)
         self.assert_Runlog_HasItem(item_name)
 
-        runlog = e.runtimeinfo.get_runlog()
+        runlog = e.tracking.get_runlog()
         item = next((i for i in runlog.items if i.name == item_name), None)
         assert item is not None and item.progress is not None
         self.assertAlmostEqual(item.progress, 0.2, delta=0.1)
@@ -517,14 +562,13 @@ Mark: A
         self.assertEqual(item.cancellable, False)
 
         continue_engine(e, 1)
-        runlog = e.runtimeinfo.get_runlog()
+        runlog = e.tracking.get_runlog()
         item = next((i for i in runlog.items if i.name == item_name), None)
         assert item is not None and item.progress is not None
         self.assertAlmostEqual(item.progress, 0.5, delta=0.1)
 
         continue_engine(e, 2)
         self.assert_Runlog_HasItem_Completed(cmd)
-
 
     def test_runlog_Wait_is_forcible(self):
         e = self.engine
@@ -535,19 +579,18 @@ Wait: 0.5s
 
         cmd_name = "Wait: 0.5s"
         self.assert_Runlog_HasItem(cmd_name)
-        runlog = e.runtimeinfo.get_runlog()
+        runlog = e.tracking.get_runlog()
         item = next(item for item in runlog.items if item.name == cmd_name)
         assert item is not None
-        exec_id = UUID(item.id)
 
         self.assertEqual(item.forcible, True)
         self.assertEqual(item.forced, False)
 
-        e.force_instruction(exec_id)
+        e.force_instruction(instance_id=item.id)
         continue_engine(e, 1)
 
         # get updated runlog
-        runlog = e.runtimeinfo.get_runlog()
+        runlog = e.tracking.get_runlog()
         item = next(item for item in runlog.items if item.name == cmd_name)
         assert item is not None
 
@@ -600,9 +643,39 @@ Mark: c"""
             instance.run_until_instruction("Mark", "completed", arguments="b")
 
             cmd = "Mark: b"
-            assert_Runtime_HasRecord_Started(instance.engine.runtimeinfo, cmd)
-            assert_Runtime_HasRecord_Completed(instance.engine.runtimeinfo, cmd)
-            assert_Runlog_HasItem_Completed(instance.engine.runtimeinfo, cmd)
+            assert_Runtime_HasRecord_Started(instance.runtimeinfo, cmd)
+            assert_Runtime_HasRecord_Completed(instance.runtimeinfo, cmd)
+            assert_Runlog_HasItem_Completed(instance.runtimeinfo, cmd)
+
+    def test_state_split(self):
+        rti = RuntimeInfo()
+        watch = p.WatchNode(id="1")
+        record = RuntimeRecord.from_node(watch)
+        rti._add_record(record)        
+        record._add_state("inst1", RuntimeRecordStateEnum.Started, 1, 1, None, watch)
+        record._add_state("inst1", RuntimeRecordStateEnum.Cancelled, 2, 2, None, watch)
+        #record._add_state("inst1", RuntimeRecordStateEnum.Cancelled, 3, 3, None, None)
+        record._add_state("inst2", RuntimeRecordStateEnum.Started, 4, 4, None, watch)
+        record._add_state("inst2", RuntimeRecordStateEnum.Completed, 5, 5, None, watch)
+        states_list = rti._split_states_by_instance_id(record)
+        self.assertEqual(2, len(states_list))
+        self.assertEqual(2, len(states_list[0]))
+        #self.assertEqual(3, len(states_list[0]))
+        self.assertEqual(2, len(states_list[1]))
+
+    def test_formatting_str(self):
+        x_short = "a"
+        x_formatted = "         a"
+        x_long = x_formatted + "x"
+        self.assertEqual(rjust(x_short, 10), x_formatted)
+        self.assertEqual(rjust(x_long, 10), x_formatted)
+
+        self.assertEqual(rjust(" ", 4), "    ")
+        self.assertEqual(rjust("", 4), "    ")
+
+    def test_formatting_int(self):
+        self.assertEqual(rjust(23, 4), "  23")
+        self.assertEqual(rjust(12345, 4), "12345")  # don't crop ints
 
 
 if __name__ == "__main__":

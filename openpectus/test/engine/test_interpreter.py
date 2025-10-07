@@ -19,7 +19,7 @@ from openpectus.protocol.models import Method
 from openpectus.test.engine.utility_methods import (
     EngineTestRunner, continue_engine, run_engine, build_program,
     configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging,
-    print_runlog
+    print_runlog, print_runtime_records_alt
 )
 
 
@@ -345,9 +345,8 @@ Watch: counter > 0
         engine = self.engine
         run_engine(engine, program, 15)
 
-        # TODO abgiguous ...
-        # self.assertEqual(["a", "c", "b", "e", "d"], engine.interpreter.get_marks())
-        self.assertEqual(["a", "c", "b", "d", "e"], engine.interpreter.get_marks())
+        marks = engine.interpreter.get_marks()
+        self.assertTrue(marks == ["a", "c", "b", "d", "e"] or marks == ["a", "c", "b", "e", "d"])
 
     def test_watch_restart(self):
         program = """
@@ -440,7 +439,9 @@ Mark: d
         self.assertEqual(["a", "c"], marks[:2])
         # also important but specific order is really an implementation detail
         self.assertTrue(marks[:4] == ["a", "c", "d", "b"] or marks[:4] == ["a", "c", "b", "d"])
+        print_runtime_records_alt(engine)
 
+    # duplicate state 'awaitingcondition'
     def test_alarm_can_retrigger(self):
         program = """
 Mark: a
@@ -788,12 +789,12 @@ Wait: 0.5 s
 03     Mark: B
 04     0.5 Mark: C
 """)
-        runner = EngineTestRunner(create_test_uod, method1)        
+        runner = EngineTestRunner(create_test_uod, method1)
         with runner.run() as instance:
             # Note: start() is skipped so the test is in control
             # instance.start()
             interpreter = instance.engine.interpreter
-            
+
             gen = interpreter.visit_ProgramNode(interpreter._program)
             xs = []
             for x in gen:
@@ -805,9 +806,9 @@ Wait: 0.5 s
 
                 if len(xs) > 5 and xs[-6:-1] == [None, None, None, None, None]:
                     break
-            
+
             print()
-            print(f"Nodes:")
+            print("Nodes:")
             print()
             [print(x) for x in xs]
             print()
@@ -833,7 +834,7 @@ Wait: 0.5 s
 
                     if len(xs) > 5 and xs[-6:-1] == [None, None, None, None, None]:
                         break
-                
+
                 [print(x) for x in xs]
                 print()
 

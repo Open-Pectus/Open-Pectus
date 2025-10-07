@@ -1,5 +1,6 @@
 
 import logging
+from typing import Any
 
 from openpectus.lang.exec.analyzer import WhitespaceCheckAnalyzer
 from openpectus.lang.exec.errors import MethodEditError
@@ -25,7 +26,13 @@ class MethodManager:
         self._interpreter: PInterpreter = self._create_interpreter(self._program)
 
     def _create_interpreter(self, program: p.ProgramNode) -> PInterpreter:
-        return PInterpreter(program, self._interpreter_context)
+        tracking_was_enabled = False
+        if hasattr(self, "_interpreter"):
+            tracking_was_enabled = self._interpreter.tracking.enabled if self._interpreter is not None else False
+        interpreter = PInterpreter(program, self._interpreter_context)
+        if tracking_was_enabled:
+            interpreter.tracking.enable()
+        return interpreter
 
     @property
     def interpreter(self) -> PInterpreter:
@@ -64,6 +71,10 @@ class MethodManager:
         self._interpreter = self._create_interpreter(self._program)
 
     def merge_method(self, _new_method: Mdl.Method):
+        tracking_was_enabled = False
+        if hasattr(self, "_interpreter"):
+            tracking_was_enabled = self._interpreter.tracking.enabled if self._interpreter is not None else False
+
         assert self.program_is_started, "Program has not yet started, use set_method() rather that merge_method()"
         try:
             new_method, new_program = self._merge_method(_new_method)
@@ -72,7 +83,7 @@ class MethodManager:
             raise
         except Exception as ex:
             logger.error("merge_method failed", exc_info=True)
-            raise MethodEditError(f"Merging the new method failed: Ex: {ex}", ex)
+            raise MethodEditError(f"Merging the new method failed: Ex: {ex}") from ex
 
         self._apply_analysis(new_program)
 
@@ -85,7 +96,10 @@ class MethodManager:
             raise
         except Exception as ex:
             logger.error("Preparing new interpreter failed", exc_info=True)
-            raise MethodEditError(f"Preparing new interpreter failed: Ex: {ex}", ex)
+            raise MethodEditError(f"Preparing new interpreter failed: Ex: {ex}") from ex
+
+        if tracking_was_enabled:
+            interpreter.tracking.enable()
 
         # finally commit the "transaction"
         self._interpreter = interpreter
@@ -150,23 +164,56 @@ class MethodManager:
             logger.error(f"Internal error. Target node {target_node} is already completed")
             raise Exception(f"Internal error. Target node {target_node} is already completed")
 
+        corrections: dict[str, dict[str, Any]] = {}
+
         # allow a started node that awaits its threshold to be changed to anything but clear history to start over
         # clearing history will disable importing state from source
         if self.interpreter._is_awaiting_threshold(old_program.active_node):
             logger.debug("Source active node is awaiting threshold - clearing its history to start over")
-            target_node.action_history.clear()
-        # allow any whitespace node to be changed, but clear its history to start over
+            if target_node.id not in corrections.keys():
+                corrections[target_node.id] = {}
+            corrections[target_node.id]['action_history'] = []
+
         for old_node in self._program.get_all_nodes():
+            # allow any whitespace node to be changed, but clear its history to start over
             if isinstance(old_node, p.WhitespaceNode):
                 node = new_program.get_child_by_id(old_node.id, include_self=True)
-                if node is not None:
-                    logger.debug(f"Clearing history of target node {node} because its source was whitespace")
-                    node.action_history.clear()
+                assert node is not None
+                if node.id not in corrections.keys():
+                    corrections[node.id] = {}
+                corrections[node.id]['action_history'] = []
+                logger.debug(f"Clear history of target node {node} because its source was whitespace")
+
+            # allow a failed node to be modified but clear its history
+            if old_node.failed:
+                logger.debug(f"Clear history for source node {old_node} that is a failed instruction")
+                if old_node.id not in corrections.keys():
+                    corrections[old_node.id] = {}
+                corrections[old_node.id]['action_history'] = []
+                corrections[old_node.id]['started'] = False
+                corrections[old_node.id]['completed'] = False
+                corrections[old_node.id]['failed'] = False
 
         debug_enabled = True  # logger.isEnabledFor(logging.DEBUG)
-        logger.info("Merging existing method state into modified method")
+        logger.debug("Applying corrections to extracted state")
+        corrected_state = existing_state.copy()
+        for node_id, value_dict in corrections.items():
+            if node_id in corrected_state.keys():
+                for key in value_dict.keys():
+                    if key in corrected_state[node_id].keys():
+                        logger.debug(f"Correcting state for node {node_id}, property '{key}'; changing value " +
+                                     f"'{corrected_state[node_id][key]}' to '{value_dict[key]}'")
+                        corrected_state[node_id][key] = value_dict[key]
+                    else:
+                        logger.debug(f"Correcting state for node {node_id}, adding property '{key}' with value " +
+                                     f"'{value_dict[key]}'")
+                        corrected_state[node_id][key] = value_dict[key]
+            else:
+                pass  # we don't need to add state for additional nodes
+
+        logger.debug("Merging corrected method state into modified method")
         try:
-            new_program.apply_tree_state(existing_state)
+            new_program.apply_tree_state(corrected_state)
             new_program.revision = old_program.revision + 1
             logger.debug(f"Updating method revision from {old_program.revision} to {new_program.revision}")
 
@@ -175,6 +222,7 @@ class MethodManager:
                 print(f"\n----- New method, rev {new_program.revision}: -----\n{_new_method.as_pcode_w_id()}\n")
                 debug_state = {
                     "old export state": existing_state,
+                    "corrected_old_state": corrected_state,
                     "new_patched_state": new_program.extract_tree_state()
                 }
                 out = self._serialize(debug_state)
@@ -184,11 +232,12 @@ class MethodManager:
             logger.error("Failed to apply tree state", exc_info=True)
             debug_state = {
                 "old export state": existing_state,
+                "corrected_old_state": corrected_state,
                 "new_patched_state": new_program.extract_tree_state()
             }
             out = self._serialize(debug_state)
             logger.debug("Tree debugging state:\n\n" + out + "\n")
-            raise MethodEditError("Failed to apply tree state to updated method", ex)
+            raise MethodEditError("Failed to apply tree state to updated method") from ex
 
         return _new_method, new_program
 
@@ -202,7 +251,9 @@ class MethodManager:
         all_nodes = program.get_all_nodes()
         method_state = Mdl.MethodState.empty()
         for node in all_nodes:
-            if node.completed:
+            if node.failed:
+                method_state.failed_line_ids.append(node.id)
+            elif node.completed:
                 method_state.executed_line_ids.append(node.id)
             elif node.started:
                 method_state.started_line_ids.append(node.id)

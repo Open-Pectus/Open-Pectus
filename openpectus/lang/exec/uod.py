@@ -354,7 +354,7 @@ The process values of PlotAxis '{plot_axis.label}' have the following units: {ta
     def has_any_command_instances(self) -> bool:
         return len(self.command_instances) > 0
 
-    def create_command(self, name: str) -> UodCommand:
+    def create_command(self, name: str, instance_id: str) -> UodCommand:
         """ Create a new command instance. Only one command instance with a given name can exist at a time. """
         if name.strip() == "":
             raise ValueError("Command name is None or empty")
@@ -363,7 +363,7 @@ The process values of PlotAxis '{plot_axis.label}' have the following units: {ta
         factory = self.command_factories.get(name)
         if factory is None:
             raise ValueError(f"Command {name} not found")
-        instance = factory.build(self)
+        instance = factory.build(self, instance_id)
         self.command_instances[name] = instance
         return instance
 
@@ -465,8 +465,8 @@ class UodCommand(ContextEngineCommand[UnitOperationDefinitionBase]):
 
     Uod commands are specified/implemented by using the UodCommandBuilder class.
     """
-    def __init__(self, context: UnitOperationDefinitionBase, name: str) -> None:
-        super().__init__(context, name)
+    def __init__(self, context: UnitOperationDefinitionBase, name: str, instance_id: str) -> None:
+        super().__init__(context, name, instance_id)
         self.init_fn: INIT_FN | None = None
         self.exec_fn: EXEC_FN | None = None
         self.finalize_fn: FINAL_FN | None = None
@@ -580,7 +580,7 @@ class UodCommandBuilder:
         self.arg_parse_fn = arg_parse_fn
         return self
 
-    def build(self, uod: UnitOperationDefinitionBase) -> UodCommand:  # noqa C901
+    def build(self, uod: UnitOperationDefinitionBase, instance_id: str) -> UodCommand:  # noqa C901
         """ Construct the command """
 
         def arg_parse(args: str) -> CommandArgs | None:
@@ -606,7 +606,7 @@ class UodCommandBuilder:
 
         if self.name is None or self.name.strip() == '':
             raise ValueError("Name is not set")
-        c = UodCommand(uod, self.name)
+        c = UodCommand(uod, self.name, instance_id)
         c.init_fn = initialize
         c.exec_fn = execute
         c.finalize_fn = finalize

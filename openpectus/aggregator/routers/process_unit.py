@@ -384,7 +384,7 @@ async def register_active_user(
         agg: Aggregator = Depends(agg_deps.get_aggregator)):
     _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
     resolved_user_id = user_id_from_token or user_id
-    if (resolved_user_id == None):
+    if (resolved_user_id is None):
         return Dto.ServerErrorResponse(message="User registration failed due to missing user_id")
     action_result = await agg.from_frontend.register_active_user(
         engine_id=unit_id,
@@ -405,7 +405,7 @@ async def unregister_active_user(
         agg: Aggregator = Depends(agg_deps.get_aggregator)):
     _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
     resolved_user_id = user_id_from_token or user_id
-    if (resolved_user_id == None):
+    if (resolved_user_id is None):
         return Dto.ServerErrorResponse(message="User unregistration failed due to missing user_id")
     action_result = await agg.from_frontend.unregister_active_user(
         engine_id=unit_id,

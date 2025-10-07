@@ -8,8 +8,9 @@ CommandArgs = dict[str, Any]
 
 class EngineCommand():
     """ Interface for commands runnable by engine. """
-    def __init__(self, name) -> None:
+    def __init__(self, name: str, instance_id: str) -> None:
         self.name: str = name
+        self.instance_id: str = instance_id
         self._cancelled: bool = False
         self._initialized: bool = False
         self._exec_started: bool = False
@@ -85,6 +86,6 @@ class ContextEngineCommand(Generic[TContext], EngineCommand):
 
     This allows Uod commands to extend EngineCommand without importing Engine.
     """
-    def __init__(self, context: TContext, name: str) -> None:
-        super().__init__(name)
+    def __init__(self, context: TContext, name: str, instance_id: str) -> None:
+        super().__init__(name, instance_id)
         self.context: TContext = context

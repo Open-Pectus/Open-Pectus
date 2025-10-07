@@ -3260,6 +3260,10 @@
           "cancelled": {
             "type": "boolean",
             "title": "Cancelled"
+          },
+          "failed": {
+            "type": "boolean",
+            "title": "Failed"
           }
         },
         "type": "object",
