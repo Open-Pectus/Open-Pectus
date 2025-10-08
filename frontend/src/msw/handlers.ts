@@ -371,6 +371,7 @@ const runLogLines: RunLogLine[] = [
     cancellable: false,
     forced: false,
     cancelled: true,
+    failed: false,
   },
   {
     id: '4',
