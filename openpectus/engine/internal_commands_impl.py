@@ -142,6 +142,16 @@ class HoldEngineCommand(InternalEngineCommand):
             unhold.instance_id = self.instance_id
             unhold._run()
 
+    # def cancel(self):
+    #     super().cancel()
+    #     logger.debug("Hold cancelled. Resuming using Unhold")
+    #     unhold = UnholdEngineCommand(self.engine, self._registry)
+    #     unhold.instance_id = self.instance_id
+    #     unhold._run()
+    #     # cancelling hold means aborting wait and completing the command
+    #     self.finalize()
+    #     self.set_complete()
+
 
 @command_argument_none()
 class UnholdEngineCommand(InternalEngineCommand):
@@ -173,7 +183,7 @@ class StopEngineCommand(InternalEngineCommand):
             self.fail()
         else:
             e._runstate_stopping = True
-            e._cancel_uod_commands()
+            e.cancel_uod_commands()
             yield
             timeout_at_tick = e._tick_number + CANCEL_TIMEOUT_TICKS
             while e.uod.has_any_command_instances():
@@ -181,7 +191,8 @@ class StopEngineCommand(InternalEngineCommand):
                     logger.warning("Timeout waiting for uod commands to cancel")
                     break
                 yield
-            e._finalize_uod_commands()
+            
+            e.finalize_uod_commands()
             e._apply_safe_state()
             e.write_process_image()
 
@@ -220,7 +231,7 @@ class RestartEngineCommand(InternalEngineCommand):
             sys_state.set_value(SystemStateEnum.Restarting, e._tick_time)
 
             e._runstate_stopping = True
-            e._cancel_uod_commands()
+            e.cancel_uod_commands()
             yield
             timeout_at_tick = e._tick_number + CANCEL_TIMEOUT_TICKS
             while e.uod.has_any_command_instances():
@@ -228,7 +239,7 @@ class RestartEngineCommand(InternalEngineCommand):
                     logger.warning("Timed out waiting for uod commands to cancel")
                     break
                 yield
-            e._finalize_uod_commands()
+            e.finalize_uod_commands()
 
             logger.debug("Restarting run - uod commands have completed execution")
             e._runstate_started = False
