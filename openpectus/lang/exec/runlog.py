@@ -4,7 +4,7 @@ import copy
 import logging
 from enum import StrEnum, auto
 import traceback
-from typing import Dict
+from typing import Callable, Dict
 import uuid
 
 from openpectus.engine.commands import EngineCommand
@@ -164,29 +164,32 @@ class RuntimeInfo:
                     item.cancelled = state.cancelled
                     item.forcible = state.forcible
                     item.forced = state.forced
+                else:
+                    states = "\n".join(str(st) for st in r.states)
+                    logger.error(f"""
+Error generating runlog.
+Item for record {r} was unexpectedly None in state {state.state_name}
+Record:\n{r}
+States:\n{states}""")
+                    raise AssertionError("Error generating runlog")
 
                 if state.state_name == RuntimeRecordStateEnum.Completed:
-                    assert item is not None
                     item.state = RunLogItemState.Completed
                 elif state.state_name == RuntimeRecordStateEnum.Failed:
-                    assert item is not None
                     item.state = RunLogItemState.Failed
                     item.failed = True
                 elif state.state_name == RuntimeRecordStateEnum.Cancelled:
-                    assert item is not None
                     item.state = RunLogItemState.Cancelled
                 elif state.state_name == RuntimeRecordStateEnum.Forced:
-                    assert item is not None
                     item.state = RunLogItemState.Forced
                 elif state.state_name == RuntimeRecordStateEnum.UodCommandSet:
                     command = state.command
                 elif state.state_name == RuntimeRecordStateEnum.InternalEngineCommandSet:
                     command = state.command
                 elif state.state_name == RuntimeRecordStateEnum.AwaitingThreshold:
-                    assert item is not None, f"Item for record {r} was unexpectedly None in state {state.state_name}. States: {invocation_states}"
                     item.state = RunLogItemState.AwaitingThreshold
 
-                if not is_conclusive_state and item is not None:
+                if not is_conclusive_state:
                     if command is not None:
                         if isinstance(command, UodCommand):
                             item.cancellable = True  # Node.cancellable does not support uod commands
@@ -195,14 +198,13 @@ class RuntimeInfo:
                         self._update_item_progress(item, r)
 
                 if is_conclusive_state:
-                    assert item is not None
                     item.end = state.state_time
                     item.end_values = state.values or TagValueCollection.empty()
                     item.cancellable = False
                     item.forcible = False
 
                 if not has_more_states or is_conclusive_state:
-                    if item is not None and item.state not in [RunLogItemState.Unknown, RunLogItemState.AwaitingThreshold]:
+                    if item.state not in [RunLogItemState.Unknown, RunLogItemState.AwaitingThreshold]:
                         items.append(item)
                         item = None
                         command = None
@@ -670,6 +672,10 @@ class RunLog:
     def size(self) -> int:
         return len(self.items)
 
+    def get_item_by_name(self, name: str) -> RunLogItem | None:
+        for item in self.items:
+            if item.name == name:
+                return item
 
 class RunLogItem:
     def __init__(self) -> None:
@@ -723,6 +729,13 @@ def assert_Runlog_HasItem(runtimeinfo: RuntimeInfo, name: str):
             return
     item_names = [item.name for item in runlog.items]
     raise AssertionError(f"Runlog has no item named '{name}'. It has these names:  {','.join(item_names)}")
+
+def assert_Runlog_HasItem_where(runtimeinfo: RuntimeInfo, name: str, predicate: Callable[[RunLogItem], bool]):
+    runlog = runtimeinfo.get_runlog()
+    for item in runlog.items:
+        if item.name == name and predicate(item):
+            return
+    raise AssertionError(f"Runlog has no item named '{name}' that satisfies the condition.")
 
 def assert_Runlog_HasNoItem(runtimeinfo: RuntimeInfo, name: str):
     runlog = runtimeinfo.get_runlog()

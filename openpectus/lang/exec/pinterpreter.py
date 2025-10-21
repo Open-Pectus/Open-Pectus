@@ -1268,9 +1268,9 @@ class Tracking():
         self._add_record_state(instance_id, record, RuntimeRecordStateEnum.Failed)
 
     def silently_skip(self, instance: CommandRequest | EngineCommand | p.Node) -> bool:
-        # Start and Restart operate too early and late for the mark_* methods to work. But it
-        # is safe to just skip them as these records are not used later.
-        skip_command_names = [EngineCommandEnum.START, EngineCommandEnum.RESTART]
+        # Start, Restart and Stop operate too early and late for the mark_* methods to work. But it
+        # is safe to just skip them as these records are not used for the runlog.
+        skip_command_names = [EngineCommandEnum.START, EngineCommandEnum.RESTART, EngineCommandEnum.STOP]
         command_name = ""
         match instance:
             case CommandRequest() as command_req:
