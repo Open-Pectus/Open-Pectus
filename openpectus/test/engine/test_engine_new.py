@@ -508,7 +508,7 @@ Warning: bar
 Error: baz
 Stop
 """
-        runner = EngineTestRunner(create_test_uod, pcode)
+        runner = EngineTestRunner(create_test_uod, pcode, fail_on_log_error=False)
         with runner.run() as instance:
             instance.start()
             instance.run_until_event("stop")  # will raise on engine error

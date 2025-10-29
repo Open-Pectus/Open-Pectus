@@ -33,6 +33,9 @@ class CommandManager():
         """ Uod commands currently being excuted """
         self.cmd_executing_done: Set[CommandRequest] = set()
         """ Uod commands completed in current tick """
+        self.in_executing_loop = False
+        """ Whether the executing tick loop is active. Changes to self.cmd_executing cannot occur in this 
+        phase but must be scheduled using and then committed with self._commit_commands_done()"""
 
     @property
     def tracking(self) -> Tracking:
@@ -50,40 +53,31 @@ class CommandManager():
     def schedule(self, req: CommandRequest):
         self.cmd_queue.put_nowait(req)
 
-    def get_command_instance(self, name: str) -> InternalEngineCommand | UodCommand | None:
-        cmd = self.registry.get_running_internal_command()
-        if cmd is not None and cmd.name == name:
+    def _get_command_instance(self, name: str) -> InternalEngineCommand | UodCommand | None:
+        cmd = self.registry.get_running_command(name)
+        if cmd is not None:
             return cmd
         if self.uod.has_command_instance(name):
             return self.uod.get_command(name)
 
     def tick(self):
+        # FIXME: clean up
         # run a tick
-        self.cmd_executing_done.clear()
-        
-        # highest priority - a hign priority command is running - let it and only it run
-        for cmd_request in self.currently_executing:
-            if cmd_request.name in priority_command_names:
-                logger.info(f"Priority command '{cmd_request.name}' running")
-                self._execute_command(cmd_request)
-                # cmd = self.get_command_instance(cmd_request.name)
-                # if cmd is not None:
-                    
-                #     #self.tick_command(cmd)                    
-                # else:
-                #     logger.error(f"Failed to get priority command '{cmd_request.name}")
-                #     self._remove_executing_command_request(cmd_request)
-                #     return
+        if len(self.cmd_executing_done) > 0:
+            # Possibly an error rather than a warning. In any case, it is often followed by a duplicate state error
+            cmds = ", ".join([str(cmd) for cmd in self.cmd_executing_done])
+            logger.warning(f"Executing_done is non-empty. Completed command(s) not comitted: {cmds}")
 
-        # high priority - a hign priority command is queued - start it and let only it run
+        # priority 1 - a hign priority command is running
+        # - just let it run as is
+
+        # priority 2 - a hign priority command is queued - start it immediately
         # TODO
-
-        # in high prio cases above, when do we finalize commands already running?
         queue_items: list[CommandRequest] = list(self.cmd_queue.queue)
-        queue_item_names = [cmd.name for cmd in queue_items]
-        for priority_cmd in priority_command_names:
-            if priority_cmd in queue_item_names:
-                logger.warning("Priority command in queue: " + priority_cmd)
+        for queue_req in queue_items:
+            if queue_req.name in priority_command_names:
+                logger.warning("Priority command in queue: " + str(queue_req))
+                #self._execute_command(queue_req)
                 # how about other running commands? Do they get any chance to clean up?
                 # We should at least (cancel? and) finalize them.
                 #return
@@ -94,51 +88,6 @@ class CommandManager():
         # for executing in self.cmd_executing:
         #     if executing.
         self.execute_commands()
-
-    # def tick_command(self, cmd_request: CommandRequest, cmd: InternalEngineCommand | UodCommand):
-    #     assert cmd_request.name == cmd.name
-    #     assert cmd_request.instance_id == cmd.instance_id
-    #     if isinstance(cmd, InternalEngineCommand):
-    #         cmd.tick()
-    #     elif isinstance(cmd, UodCommand):
-    #     # execute uod command state flow
-    #         try:
-    #             logger.debug(
-    #                 f"Executing uod command: '{cmd_request.name}' with parsed args '{parsed_args}', " +
-    #                 f"iteration {cmd._exec_iterations}")
-    #             if cmd.is_cancelled():
-    #                 if not cmd.is_finalized():
-    #                     self._remove_executing_command_request(cmd_request)
-    #                     cmd.finalize()
-
-    #             if not cmd.is_initialized():
-    #                 cmd.initialize()
-    #                 logger.debug(f"Command {cmd_request.name} initialized")
-
-    #             if not cmd.is_execution_started():
-    #                 self.tracking.mark_uod_command_started(cmd)
-    #                 cmd.execute(parsed_args)
-    #                 logger.debug(f"Command {cmd_request.name} executed first iteration {cmd._exec_iterations}")
-    #             elif not cmd.is_execution_complete():
-    #                 cmd.execute(parsed_args)
-    #                 logger.debug(f"Command {cmd_request.name} executed another iteration {cmd._exec_iterations}")
-
-    #             if cmd.is_execution_complete() and not cmd.is_finalized():
-    #                 self.tracking.mark_completed(cmd_request)
-    #                 self._remove_executing_command_request(cmd_request)
-    #                 cmd.finalize()
-    #                 logger.debug(f"Command {cmd_request.name} finalized")
-
-    #         except Exception:
-    #             # handle error locally because we need specific command cleanup
-    #             if not cmd.is_cancelled():
-    #                 cmd.cancel()
-    #                 self.tracking.mark_cancelled(cmd)
-
-    #                 logger.info(f"Cleaned up failed command {cmd.name}")
-
-    #             logger.error(f"Uod command execution failed. Command: '{cmd.name}'", exc_info=True)
-    #             raise
 
     def execute_commands(self):
         done = False
@@ -156,6 +105,7 @@ class CommandManager():
         self.cmd_executing_done.clear()
         latest_cmd = "(none)"
         try:
+            self.in_executing_loop = True
             for c in self.currently_executing:
                 latest_cmd = c.name
                 # Note: Executing one command may cause other commands to be cancelled (by identical or overlapping
@@ -171,14 +121,15 @@ class CommandManager():
             frontend_logger.error(f"Error executing command: '{latest_cmd}'")
             raise
         finally:
-            for c_done in self.cmd_executing_done:
-                self.cmd_executing.remove(c_done)
+            self.in_executing_loop = False
+            # commit removal of completed commands to self.cmd_executing
+            self._commit_commands_done()
 
     def _execute_command(self, cmd_request: CommandRequest):
         """ Execute a tick of the requested command, creating the command instance if needed """
 
         # validate
-        logger.debug("Executing command: " + cmd_request.name)
+        logger.debug(f"Executing command request: {cmd_request}")
         if cmd_request.name is None or len(cmd_request.name.strip()) == 0:
             logger.error("Command name empty")
             frontend_logger.error("Cannot execute command with empty name")
@@ -197,6 +148,7 @@ class CommandManager():
 
 
     def _execute_internal_command(self, cmd_request: CommandRequest):  # noqa C901
+        # FIXME: consider how this engine state can be accessed
         # if not self._runstate_started and cmd_request.name not in [EngineCommandEnum.START, EngineCommandEnum.RESTART]:
         #     logger.warning(f"Command '{cmd_request.name}' is invalid when Engine is not running")
         #     self._remove_executing_command_request(cmd_request)
@@ -204,12 +156,12 @@ class CommandManager():
 
         # an existing, long running engine_command is running. other commands must wait
         # Note: we need a priority mechanism - even Stop is waiting here
-        command = self.registry.get_running_internal_command()
+        command = self.registry.get_running_command(cmd_request.name)
         if command is not None:
             if cmd_request.name == command.name:
                 if command.is_cancelled():
                     if not command.is_finalized():
-                        command.finalize()
+                        self._finalize_command(cmd_request, command)
                 elif not command.is_finalized():
                     command.tick()
                 if command.has_failed():
@@ -242,8 +194,8 @@ class CommandManager():
         self.tracking.mark_internal_command_started(command)
         command.tick()
         if command.has_failed():
-            self.tracking.mark_failed(command)
             self._executing_command_done(cmd_request)
+            self.tracking.mark_failed(command)
         elif command.is_finalized():
             self._executing_command_done(cmd_request)
             self.tracking.mark_completed(command)
@@ -266,7 +218,7 @@ class CommandManager():
         for c in self.currently_executing:
             if c.name == cmd_request.name and c != cmd_request:
                 self._cancel_command(c)
-                logger.debug(f"Running command request '{c}' cancelled because a new instance was requested '{cmd_request}'")
+                logger.info(f"Running command request '{c}' cancelled because a new instance was requested '{cmd_request}'")
 
         # cancel any overlapping instance
         for c in self.currently_executing:
@@ -291,6 +243,7 @@ class CommandManager():
 
         if parsed_args is None:
             logger.error(f"Invalid argument string: '{cmd_request.arguments}' for command '{cmd_request.name}'")
+            # TODO possible more: tracking, node, command?
             self._executing_command_done(cmd_request)
             raise ValueError(f"Invalid arguments for command '{cmd_request.name}'")
 
@@ -301,8 +254,8 @@ class CommandManager():
                 f"iteration {uod_command._exec_iterations}")
             if uod_command.is_cancelled():
                 if not uod_command.is_finalized():
-                    self._executing_command_done(cmd_request)
-                    uod_command.finalize()
+                    self._finalize_command(cmd_request, uod_command)
+                return
 
             if not uod_command.is_initialized():
                 uod_command.initialize()
@@ -311,15 +264,14 @@ class CommandManager():
             if not uod_command.is_execution_started():
                 self.tracking.mark_uod_command_started(uod_command)
                 uod_command.execute(parsed_args)
-                logger.debug(f"Command {cmd_request.name} executed first iteration {uod_command._exec_iterations}")
+                logger.debug(f"Command {cmd_request.name} executed first iteration {uod_command.get_iteration_count()}")
             elif not uod_command.is_execution_complete():
                 uod_command.execute(parsed_args)
-                logger.debug(f"Command {cmd_request.name} executed another iteration {uod_command._exec_iterations}")
+                logger.debug(f"Command {cmd_request.name} executed another iteration {uod_command.get_iteration_count()}")
 
             if uod_command.is_execution_complete() and not uod_command.is_finalized():
                 self.tracking.mark_completed(cmd_request)
-                self._executing_command_done(cmd_request)
-                uod_command.finalize()
+                self._finalize_command(cmd_request, uod_command)
                 logger.debug(f"Command {cmd_request.name} finalized")
 
         except Exception:
@@ -331,48 +283,94 @@ class CommandManager():
             logger.error(f"Uod command execution failed. Command: '{cmd_request}'", exc_info=True)
             raise
 
-    def _executing_command_done(self, cmd_request: CommandRequest):
+    def _executing_command_done(self, cmd_request: CommandRequest, commit=False):
         if cmd_request in self.cmd_executing:
             self.cmd_executing_done.add(cmd_request)
+        if commit:
+            self._commit_commands_done()
 
-    def _cancel_command(self, cmd_request: CommandRequest):
-        self._executing_command_done(cmd_request)
-        cmd = self.get_command_instance(cmd_request.name)
-        if cmd is not None:
-            cmd.cancel()
-            self.tracking.mark_cancelled(cmd_request)
-            if not cmd.is_finalized():
-                cmd.finalize()
-        else:
-            # maybe this should not be a warning
-            logger.warning(f"Could not cancel command request '{cmd_request}'. No command instance was found")
+    def _commit_commands_done(self):
+        assert not self.in_executing_loop
+        for cmd_request in self.cmd_executing_done:
+            if cmd_request in self.cmd_executing:
+                self.cmd_executing.remove(cmd_request)
+        self.cmd_executing_done.clear()
 
+    def _cancel_command(self, cmd_request: CommandRequest, finalize=True):
+        """ Cancel the command request.
+
+        If finalize is False, the command is cancelled with command.cancel() and tracking, but no clean up is performed.
+        This means the command has a few ticks to cancel its work and set its is_execution_complete to True.
+        Currently - this is not implemented except when Stop or Restart cancels other commands
+
+        If finalize if True, both cancel() and finalize() is called without delay"""
+        try:
+            cmd = self._get_command_instance(cmd_request.name)
+            if cmd is not None:
+                if not cmd.is_execution_complete():
+                    cmd.cancel()
+                    self.tracking.mark_cancelled(cmd_request)
+                else:
+                    logger.warning(f"Cannot cancel command {cmd_request} because it is already completed")
+                if finalize:
+                    self._finalize_command(cmd_request, cmd)
+            else:
+                # maybe this should not be a warning
+                logger.warning(f"Could not cancel command request '{cmd_request}'. No command instance was found")
+        except Exception:
+            # Note: Consider making this method safer and idempotent. If this error occurs we should do it
+            logger.error("An error occurred during command cancellation", exc_info=True)
+
+    def _finalize_command(self, cmd_request: CommandRequest, cmd: InternalEngineCommand | UodCommand):
+        if cmd.is_finalized():
+            logger.warning(f"Command is already finalized: {cmd_request}")
+        try:
+            cmd.finalize()
+        finally:
+            self._executing_command_done(cmd_request)
+
+    def _get_executing_command_request(self, command_name: str) -> CommandRequest | None:
+        for cmd_request in self.currently_executing:
+            if cmd_request.name == command_name:
+                return cmd_request
+
+    def _get_executing_command_request_by_instance(self, instance_id: str) -> CommandRequest | None:
+        for cmd_request in self.cmd_executing:
+            if cmd_request.instance_id == instance_id:
+                return cmd_request
+    # ----------
     # API for outside calls. These are
-    # - cancel_uod_commands, finalize_uod_commands: called from other commands
-    # - cancel_instruction, force_instruction: called from aggregator in other thread
+    # - cancel_instruction, force_instruction: called from aggregator in other thread.
 
     def cancel_instruction(self, instance_id: str):
+        assert not self.in_executing_loop
         if not self.tracking.has_instance_id(instance_id):
             raise ValueError(f"Cannot cancel instruction {instance_id=}, no runtime record found")
         else:
             logger.info(f"Cancel instruction {instance_id=} accepted")
+            # use instead of tracking self._get_executing_command_request_by_instance(instance_id)
             record = self.tracking.get_record_by_instance_id(instance_id)
             assert record is not None
             command = self.tracking.get_command(instance_id)
             if command is not None:
-                command.cancel()
-                command.finalize()
-                self.tracking.mark_cancelled(command)
-                self.tracking.mark_completed(command)
-                cmd_request = next((r for r in self.cmd_executing if r.name == command.name), None)
+                cmd_request = self._get_executing_command_request(command.name)
                 if cmd_request is not None:
-                    self._executing_command_done(cmd_request)
+                    self._cancel_command(cmd_request)
+                else:
+                    # best effort cleanup when request is not available
+                    logger.warning(f"Command cancel clean up error. Command '{command.name}' had no cmd request")
+                    command.cancel()
+                    self.tracking.mark_cancelled(command)
+                    if not command.is_finalized():
+                        command.finalize()
             else:
                 node = self.tracking.get_known_node_by_id(record.node_id)
                 assert node is not None
                 self.tracking.mark_cancelled(node)
+        self._commit_commands_done()
 
     def force_instruction(self, instance_id: str):
+        assert not self.in_executing_loop
         if not self.tracking.has_instance_id(instance_id):
             logger.error(f"Cannot force instruction {instance_id=}, no runtime record found")
         else:
@@ -387,39 +385,55 @@ class CommandManager():
                 node = self.tracking.get_known_node_by_id(record.node_id)
                 assert node is not None
                 self.tracking.mark_forced(node)
+        self._commit_commands_done()
 
-    # API for commands
-    def cancel_uod_commands(self):
-        """ Cancel all uod commands to prepare for stop/restart """
-        logger.debug("Cancelling all uod commands")
-        cmds_to_cancel: list[UodCommand] = []
-        for name, command in self.uod.command_instances.items():
-            if command.is_cancelled() or command.is_execution_complete() or command.is_finalized():
-                logger.debug(f"Skipping command '{name}' that is no longer running")
-            else:
-                cmds_to_cancel.append(command)
+    # ----------
+    # API for other commands. These should not commit because they are called while in_executing_loop==True
+    #  - cancel_commands, finalize_commands: called from other commands via engine
 
-        # call outside the loop because cancel modifies the collection
-        for command in cmds_to_cancel:
-            command.cancel()
-            self.tracking.mark_cancelled(command)
+    def cancel_commands(self, source_command_name: str, finalize=False):
+        """ Cancel all commands except the source to prepare for stop/restart """
+        reqs = list(self.cmd_executing)
+        for cmd_request in reqs:
+            if cmd_request.name == source_command_name:
+                continue
+            self._cancel_command(cmd_request, finalize)
 
-        if any(cmds_to_cancel):
-            cmd_names = ",".join([c.name for c in cmds_to_cancel])
-            logger.debug(f"Cancelled {len(cmds_to_cancel)} uod commands: {cmd_names}")
+        if finalize:  # warn if we missed some
+            cmds_still_running = []
+            for name in self.registry.get_running_command_names():
+                if name != source_command_name:
+                    cmds_still_running.append(name)
+            for name, _ in self.uod.command_instances.items():
+                cmds_still_running.append(name)
+            if any(cmds_still_running):
+                logger.error("All commands should be cancelled but these are still not finalized: " +
+                             ", ".join(cmds_still_running))
 
-    def finalize_uod_commands(self):
-        """ Finalize all uod commands to prepare for stop/restart """
-        logger.debug("Finalizing uod commands")
-        cmds_to_finalize: list[UodCommand] = []
-        for command in self.uod.command_instances.values():
-            if not command.is_finalized():
-                cmds_to_finalize.append(command)
+    def finalize_commands(self, source_command_name: str):
+        """ Finalize all commands except the source to prepare for stop/restart """
+        cmds: list[InternalEngineCommand | UodCommand] = []
+        reqs = []
+        for cmd_request in self.cmd_executing.copy():
+            if cmd_request.name == source_command_name:
+                continue
+            reqs.append(cmd_request)
+            command = self._get_command_instance(cmd_request.name)
+            if command is not None:
+                cmds.append(command)
+        for command in cmds:
+            if command is not None and not command.is_finalized():
+                command.finalize()
+        for cmd_request in reqs:
+            self._executing_command_done(cmd_request, commit=True)
 
-        # call outside the loop because finalize modifies the collection
-        for command in cmds_to_finalize:
-            command.finalize()
-            # remove command request
-            for cmd_request in self.cmd_executing.copy():
-                if cmd_request.name == command.name:
-                    self._executing_command_done(cmd_request)
+        # warn if we missed some
+        cmds_still_running = []
+        for name in self.registry.get_running_command_names():
+            if name != source_command_name:
+                cmds_still_running.append(name)
+        for name, _ in self.uod.command_instances.items():
+            cmds_still_running.append(name)
+        if any(cmds_still_running):
+            logger.error("All commands should be finalized but these are still not finalized: " +
+                         ", ".join(cmds_still_running))

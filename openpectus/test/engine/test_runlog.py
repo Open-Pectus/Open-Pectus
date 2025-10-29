@@ -7,7 +7,7 @@ from openpectus.lang.exec.runlog import (
     RunLogItem, RuntimeInfo, RuntimeRecord, RuntimeRecordStateEnum,
     assert_Runtime_HasRecord,
     assert_Runtime_HasRecord_Completed, assert_Runtime_HasRecord_Started,
-    assert_Runlog_HasItem, assert_Runlog_HasNoItem,
+    assert_Runlog_HasItem, assert_Runlog_HasItem_where, assert_Runlog_HasNoItem,
     assert_Runlog_HasItem_Completed, assert_Runlog_HasItem_Started, rjust,
 )
 from openpectus.lang.model.pprogramformatter import print_program
@@ -25,7 +25,6 @@ set_engine_debug_logging()
 set_interpreter_debug_logging()
 
 start_ticks = 3
-
 
 class TestRunlog(unittest.TestCase):
     def setUp(self):
@@ -280,7 +279,7 @@ Watch: Block Time > .3s
         self.assert_Runlog_HasItem(item_name)
 
         runlog = e.tracking.get_runlog()
-        item = next((i for i in runlog.items if i.name == item_name), None)
+        item = runlog.get_item_by_name(item_name)
         assert isinstance(item, RunLogItem)
         instance_id = item.id
 
@@ -646,6 +645,107 @@ Mark: c"""
             assert_Runtime_HasRecord_Started(instance.runtimeinfo, cmd)
             assert_Runtime_HasRecord_Completed(instance.runtimeinfo, cmd)
             assert_Runlog_HasItem_Completed(instance.runtimeinfo, cmd)
+
+    def test_Hold_w_argument_is_cancellable_and_not_forcible(self):
+        method = """
+Hold: 5s
+Mark: A
+"""
+        cmd = "Hold: 5s"
+        runner = EngineTestRunner(create_test_uod, method=method)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_instruction("Hold", "started")
+
+            assert_Runtime_HasRecord_Started(instance.runtimeinfo, cmd)
+            assert_Runlog_HasItem_Started(instance.runtimeinfo, cmd)
+            item = instance.runtimeinfo.get_runlog().get_item_by_name(cmd)
+            assert item is not None
+            self.assertEqual(item.cancellable, True)
+            self.assertEqual(item.forcible, False)
+
+            instance.engine.cancel_instruction(item.id)
+
+            item = instance.runtimeinfo.get_runlog().get_item_by_name(cmd)
+            assert item is not None
+            self.assertEqual(item.cancellable, False)
+            self.assertEqual(item.cancelled, True)
+            self.assertEqual(item.forcible, False)
+
+            ticks = instance.run_until_instruction("Mark", "completed")
+            self.assertLess(ticks, 3)
+
+    def test_Hold_wo_argument_is_not_cancellable_and_not_forcible(self):
+        cmd = "Hold"
+        runner = EngineTestRunner(create_test_uod, method=cmd)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_instruction("Hold")
+
+            assert_Runtime_HasRecord_Started(instance.runtimeinfo, cmd)
+            item = instance.runtimeinfo.get_runlog().get_item_by_name(cmd)
+            assert item is not None
+            self.assertEqual(item.cancellable, False)
+            self.assertEqual(item.forcible, False)
+
+    def test_Pause_w_argument_is_cancellable_and_not_forcible(self):
+        method = """
+Pause: 5s
+Mark: A
+"""
+        cmd = "Pause: 5s"
+        runner = EngineTestRunner(create_test_uod, method=method)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_instruction("Pause", "started")
+
+            assert_Runtime_HasRecord_Started(instance.runtimeinfo, cmd)
+            assert_Runlog_HasItem_Started(instance.runtimeinfo, cmd)
+            item = instance.runtimeinfo.get_runlog().get_item_by_name(cmd)
+            assert item is not None
+            self.assertEqual(item.cancellable, True)
+            self.assertEqual(item.forcible, False)
+
+            instance.engine.cancel_instruction(item.id)
+
+            item = instance.runtimeinfo.get_runlog().get_item_by_name(cmd)
+            assert item is not None
+            self.assertEqual(item.cancellable, False)
+            self.assertEqual(item.cancelled, True)
+            self.assertEqual(item.forcible, False)
+
+            ticks = instance.run_until_instruction("Mark", "completed")
+            self.assertLess(ticks, 3)
+
+    def test_Pause_wo_argument_is_not_cancellable_and_not_forcible(self):
+        cmd = "Pause"
+        runner = EngineTestRunner(create_test_uod, method=cmd)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_instruction("Pause")
+
+            assert_Runtime_HasRecord_Started(instance.runtimeinfo, cmd)
+            item = instance.runtimeinfo.get_runlog().get_item_by_name(cmd)
+            assert item is not None
+            self.assertEqual(item.cancellable, False)
+            self.assertEqual(item.forcible, False)
+
+    def test_priority_command_Stop_interrupts_pause(self):
+        cmd = "Pause: 2s"
+        runner = EngineTestRunner(create_test_uod, method=cmd)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_instruction("Pause", "started")
+
+            assert_Runtime_HasRecord_Started(instance.runtimeinfo, cmd)
+            assert_Runlog_HasItem_Started(instance.runtimeinfo, cmd)
+            # item = instance.runtimeinfo.get_runlog().get_item_by_name(cmd)
+
+            instance.engine.schedule_execution(EngineCommandEnum.STOP)
+
+            ticks = instance.run_until_event("stop")
+            self.assertLess(ticks, 4)
+
 
     def test_state_split(self):
         rti = RuntimeInfo()

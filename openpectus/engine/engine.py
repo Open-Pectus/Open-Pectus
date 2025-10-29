@@ -360,12 +360,6 @@ class Engine(InterpreterContext):
         # sense to wait until start
         self.method_manager.reset_interpreter()
 
-    def cancel_uod_commands(self):
-        self._command_manager.cancel_uod_commands()
-
-    def finalize_uod_commands(self):
-        self._command_manager.finalize_uod_commands()
-
     def _apply_safe_state(self) -> TagValueCollection:
         current_values: list[TagValue] = []
         hwl = self.uod.hwl
@@ -518,7 +512,7 @@ class Engine(InterpreterContext):
             self.set_error_state(ex)
             raise
 
-    # code manipulation api
+    # Code manipulation api
     def set_method(self, method: Mdl.Method) -> Literal["merge_method", "set_method"]:
         """ Set new method. This will replace the current method, either by merging in changes in case the method is already
         running or just setting the method otherwise. """
@@ -559,11 +553,24 @@ class Engine(InterpreterContext):
             self.set_error_state(ex)
             raise
 
+    # Cancel/Force commands from user, originating from runlog item - lock should be used here, right?
     def cancel_instruction(self, instance_id: str):
-        self._command_manager.cancel_instruction(instance_id)
+        """ Cancel command instance and finalize it immidiately """
+        with self._lock:
+            self._command_manager.cancel_instruction(instance_id)
 
     def force_instruction(self, instance_id: str):
-        self._command_manager.force_instruction(instance_id)
+        """ Force the command instance """
+        with self._lock:
+            self._command_manager.force_instruction(instance_id)
+
+    # Cancel/Finalize originating from Stop/Restart commands, i.e. from the tick commands loop
+    def cancel_all_commands(self, source_command_name: str):
+        self._command_manager.cancel_commands(source_command_name, finalize=True)
+
+    # This is unnecessary until we support a cancellation cool-down period
+    # def finalize_all_commands(self, source_command_name: str):
+    #     self._command_manager.finalize_commands(source_command_name)
 
     def get_command_definitions(self) -> list[Mdl.CommandDefinition]:
         """ Return engine command definitions. """

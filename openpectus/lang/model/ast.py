@@ -886,7 +886,7 @@ class EngineCommandNode(CommandBaseNode):
 
     def parse_create_completed(self):
         if self.instruction_name in ['Pause', 'Hold']:
-            self._cancellable = True
+            self._cancellable = self.has_argument
             self._forcible = False
         return super().parse_create_completed()
 

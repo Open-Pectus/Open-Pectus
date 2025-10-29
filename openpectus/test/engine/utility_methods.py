@@ -1,11 +1,12 @@
 from __future__ import annotations
 from contextlib import contextmanager
 import logging
+from logging import LogRecord, Handler
 import time
 from typing import Callable, Generator, Literal
+
 from openpectus.engine.method_manager import MethodManager
 from openpectus.engine.models import EngineCommandEnum
-
 from openpectus.lang.exec.clock import WallClock
 from openpectus.lang.exec.errors import EngineError
 from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
@@ -66,12 +67,18 @@ FindInstructionState = Literal[
 
 class EngineTestRunner:
     """ Expose an interface of Engine similar to what is available in the frontend to tests. """
-    def __init__(self, uod_factory: UodFactory, method: str | Mdl.Method = "", interval: float = 0.1, speed: float = 1.0)\
-            -> None:
+    def __init__(self, uod_factory: UodFactory, method: str | Mdl.Method = "", interval: float = 0.1, speed: float = 1.0,
+                 fail_on_log_error=True, raise_on_emit=False) -> None:
         self.uod_factory = uod_factory
         self.method: str | Mdl.Method = method
         self.interval = interval
         self.speed = speed
+        self.error_log_handler = TestLogHandler(
+            enabled=fail_on_log_error,
+            auto_register=False,
+            raise_on_emit=raise_on_emit
+        )
+
         logger.debug(f"Created engine test runner, speed: {self.speed:.2f}, interval: {(self.interval*1000):.2f}ms")
 
     @contextmanager
@@ -80,14 +87,16 @@ class EngineTestRunner:
         uod = self.uod_factory()
         engine = Engine(uod, timing)
         instance = EngineTestInstance(engine, self.method, timing)
+        self.error_log_handler.register()
         try:
             yield instance
+            self.error_log_handler.raise_if_errors_encountered()
         except Exception:
             raise
         finally:
             engine.cleanup()
             del instance
-
+            self.error_log_handler.unregister()
 
 class EngineTestInstance(EventListener):
     def __init__(self, engine: Engine, method: str | Mdl.Method, timing: EngineTiming) -> None:
@@ -121,7 +130,7 @@ class EngineTestInstance(EventListener):
     def runtimeinfo(self) -> RuntimeInfo:
         return self.engine.interpreter.runtimeinfo
 
-    def run_until_condition(self, condition: RunCondition, max_ticks=30) -> int:
+    def run_until_condition(self, condition: RunCondition, max_ticks=30, fail_on_log_error=True) -> int:
         """ Continue program until condition occurs. Return the number of ticks spent.
 
         Raises TimeoutError if the condition is not met before max_ticks is reached.
@@ -129,6 +138,7 @@ class EngineTestInstance(EventListener):
         if condition():
             return 0
 
+        error_log_handler = TestLogHandler(enabled=fail_on_log_error)
         ticks = 0
         max_ticks_scaled = max_ticks * self.timing.speed
         last_tick_time = 0.0
@@ -161,6 +171,8 @@ class EngineTestInstance(EventListener):
 
             if self.engine.has_error_state():
                 _handle_engine_error(self.engine)
+            else:
+                error_log_handler.raise_if_errors_encountered()
 
         return ticks
 
@@ -371,13 +383,14 @@ last_tick_time = 0.0
 interval = 0.1
 
 
-def run_engine(engine: Engine, pcode: str, max_ticks: int = -1) -> int:
+def run_engine(engine: Engine, pcode: str, max_ticks: int = -1, fail_on_log_error=True) -> int:
     global last_tick_time, interval
     print("Interpretation started")
     engine._running = True
     engine.set_method(Mdl.Method.from_pcode(pcode=pcode))
     engine.schedule_execution(EngineCommandEnum.START)
 
+    error_log_handler = TestLogHandler(enabled=fail_on_log_error)
     ticks = 1
     last_tick_time = 0.0
 
@@ -406,13 +419,15 @@ def run_engine(engine: Engine, pcode: str, max_ticks: int = -1) -> int:
 
         if engine.has_error_state():
             _handle_engine_error(engine)
-
+        else:
+            error_log_handler.raise_if_errors_encountered()
         ticks += 1
 
-def continue_engine(engine: Engine, max_ticks: int = -1) -> int:
+def continue_engine(engine: Engine, max_ticks: int = -1, fail_on_log_error=True) -> int:
     global last_tick_time, interval
     print("Interpretation continuing")
     ticks = 1
+    error_log_handler = TestLogHandler(enabled=fail_on_log_error)
 
     while True:
         tick_time = time.time()
@@ -439,7 +454,8 @@ def continue_engine(engine: Engine, max_ticks: int = -1) -> int:
 
         if engine.has_error_state():
             _handle_engine_error(engine)
-
+        else:
+            error_log_handler.raise_if_errors_encountered()
         ticks += 1
 
 
@@ -498,3 +514,82 @@ def set_interpreter_debug_logging(include_events=False, include_runlog=False):
     if include_events:
         logging.getLogger("openpectus.lang.exec.events").setLevel(logging.DEBUG)
         logging.getLogger("openpectus.lang.exec.tags_impl").setLevel(logging.DEBUG)
+
+
+class TestLogHandler(Handler):
+    """ Log handler that is used during tests to discover errors being logged while tests run. """
+
+    def __init__(self, enabled=True, auto_register=True, raise_on_emit=False):
+        """Create new test log handler
+
+        Parameters:
+            enabled (bool, default True):
+                If False, no exceptions are raised by the handler
+            auto_register (bool, default True):
+                If True, register is called just after creation. Set to False to call register at a later time
+            raise_on_emit (bool, default False):
+                If True, the handler raises as soon as the first error is logged. This can help in discovering
+                the error location.
+        """
+        self.setLevel(logging.ERROR)
+        self._errors: list[LogRecord] = []
+        self.is_registered = False
+        super().__init__()
+        self.set_name(self.__class__.__name__)
+        self.enabled = enabled
+        self.raise_on_emit = raise_on_emit
+        if auto_register:
+            self.register()
+
+    def emit(self, record):
+        if record is None:
+            raise TypeError("emit was called with a record value of None")
+        if not isinstance(record, LogRecord):
+            raise TypeError(f"emit was called with a record of unexpected type {type(record)}. Expected type LogRecord")
+        if record.levelno >= logging.ERROR:
+            # skip TimeoutError and other internal errors
+            if record.name == __loader__.name:
+                return
+            self._errors.append(record)
+
+            if self.raise_on_emit:
+                raise Exception(record.msg)
+
+    @property
+    def has_errors(self) -> bool:
+        return len(self._errors) > 0
+
+    @property
+    def errors(self) -> list[LogRecord]:
+        return self._errors
+
+    def _get_loggers(self) -> list[logging.Logger]:
+        loggers = [logging.getLogger()]  # root logger
+        loggers += [logging.getLogger(name) for name in logging.root.manager.loggerDict]
+        return loggers
+
+    def register(self):
+        self.is_registered = True
+        self._errors.clear()
+        loggers = self._get_loggers()
+        for logger in loggers:
+            logger.addHandler(self)
+
+    def unregister(self):
+        self.is_registered = False
+        loggers = self._get_loggers()
+        for logger in loggers:
+            try:
+                logger.removeHandler(self)
+            except Exception as ex:
+                print(f"Error in TestLogHandler during unregister for logger {logger.name}: {ex}")
+
+    def raise_if_errors_encountered(self):
+        """ Unregister and verify that no errors were logged. Raises Exception if one or more errors were logged. """
+        if self.is_registered:
+            self.unregister()
+        if not self.enabled or not self.has_errors:
+            return
+        message = f"Errors were logged during the test, {len(self.errors)} errors in total.\n" +\
+                  f"First error:\n{str(self.errors[0])}"
+        raise Exception(message)

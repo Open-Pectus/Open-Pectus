@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 import logging
 from enum import StrEnum, auto
-import traceback
 from typing import Callable, Dict
 import uuid
 
@@ -155,7 +154,7 @@ class RuntimeInfo:
                     item = RunLogItem()
                     item.name = state.name
                     item.id = state.instance_id
-                    item.state = RunLogItemState.Started  # TODO possibly improve - could also be Waiting                    
+                    item.state = RunLogItemState.Started  # TODO possibly improve - could also be Waiting
                     item.start = state.state_time
                     item.start_values = state.values or r.start_values or TagValueCollection.empty()
 
@@ -460,7 +459,8 @@ class RuntimeRecord:
         )
 
     def __str__(self) -> str:
-        return f'{self.__class__.__name__}(name="{self.name}, node_class_name=:{self.node_class_name}, node_id={self.node_id}")'
+        return f'{self.__class__.__name__}(name="{self.name}, node_class_name={self.node_class_name}, ' +\
+               f'node_id={self.node_id}")'
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -495,7 +495,7 @@ class RuntimeRecord:
                    state_values: TagValueCollection | None,
                    node: p.Node,
                    command: EngineCommand | None = None
-                   ):  # -> RuntimeRecordState:
+                   ):
         record_state = RuntimeRecordState(instance_id, state, time, tick, state_values)
         record_state.command = command
         record_state.update_from_node(node)
@@ -506,17 +506,13 @@ class RuntimeRecord:
         # each state. we can't really store this information on the record because over time there may
         # be different values and we need all of them. For records without states we show nothing.
 
-        if __debug__:
-            # fail_on_duplicate = False
-            fail_on_duplicate = True
-            # check duplicate state for instance
-            for st in self.states:
-                if st.instance_id == instance_id and st.state_name == state:
-                    logger.warning(f"Duplicate state '{state}' for instance {instance_id} in record {self}")
-                    for line in traceback.format_stack():
-                        print(line)
-                    if fail_on_duplicate:
-                        raise Exception(f"Failing because duplicate state '{state}' was encountered")
+        # check for duplicate state in record
+        for st in self.states:
+            if st.instance_id == instance_id and st.state_name == state:
+                logger.error(f"Duplicate state '{state}' for instance {instance_id} in record {self}")
+                # we do not add the state, because that would cause the same error repeatedly in subsequent ticks
+                # tests that need to know about these errors can use the test log handler.
+                return
 
         self.states.append(record_state)
 
@@ -608,7 +604,8 @@ class RuntimeRecordState:
         self.forced = node.forced
 
     def __str__(self) -> str:
-        return f'{self.__class__.__name__}(state_name="{self.state_name}, instance_id={self.instance_id}")'
+        return f'{self.__class__.__name__}(state_name={self.state_name}, instruction_name={self.instruction_name}' +\
+               f', instance_id={self.instance_id})'
 
     def __repr__(self):
         return self.__str__()

@@ -441,7 +441,6 @@ Mark: d
         self.assertTrue(marks[:4] == ["a", "c", "d", "b"] or marks[:4] == ["a", "c", "b", "d"])
         print_runtime_records_alt(engine)
 
-    # duplicate state 'awaitingcondition'
     def test_alarm_can_retrigger(self):
         program = """
 Mark: a
