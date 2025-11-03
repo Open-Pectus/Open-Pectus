@@ -7,7 +7,7 @@ from openpectus.lang.exec.runlog import (
     RunLogItem, RuntimeInfo, RuntimeRecord, RuntimeRecordStateEnum,
     assert_Runtime_HasRecord,
     assert_Runtime_HasRecord_Completed, assert_Runtime_HasRecord_Started,
-    assert_Runlog_HasItem, assert_Runlog_HasItem_where, assert_Runlog_HasNoItem,
+    assert_Runlog_HasItem, assert_Runlog_HasNoItem,
     assert_Runlog_HasItem_Completed, assert_Runlog_HasItem_Started, rjust,
 )
 from openpectus.lang.model.pprogramformatter import print_program

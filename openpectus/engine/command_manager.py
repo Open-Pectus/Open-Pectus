@@ -1,6 +1,5 @@
-
 import logging
-from typing import Callable, Iterator, Set
+from typing import Iterator, Set
 from queue import Empty, Queue
 
 from openpectus.engine.models import EngineCommandEnum
@@ -20,10 +19,11 @@ class CommandManager():
 
     def __init__(
             self,
-            tracking_accessor: Callable[[], Tracking],
+            tracking: Tracking,
             uod: UnitOperationDefinitionBase,
-            registry: InternalCommandsRegistry):
-        self._tracking_accessor = tracking_accessor
+            registry: InternalCommandsRegistry,
+            restart_request_pending: CommandRequest | None = None):
+        self.tracking = tracking
         self.uod = uod
         self.registry = registry
 
@@ -34,14 +34,18 @@ class CommandManager():
         self.cmd_executing_done: Set[CommandRequest] = set()
         """ Uod commands completed in current tick """
         self.in_executing_loop = False
-        """ Whether the executing tick loop is active. Changes to self.cmd_executing cannot occur in this 
+        """ Whether the executing tick loop is active. Changes to self.cmd_executing cannot occur in this
         phase but must be scheduled using and then committed with self._commit_commands_done()"""
+        self.tick_time: float = 0.0
+        self.tick_number: int = -1
 
-    @property
-    def tracking(self) -> Tracking:
-        # until we know how lifetimes should work, we just resolve tracking on every call
-        instance = self._tracking_accessor()
-        return instance
+        self.restart_request_pending: CommandRequest | None = None
+        """ Restart command request to pass to next command manager instance during restart """
+
+        logger.warning(f"CommandManager instance {id(self)} created")
+        if restart_request_pending is not None:
+            logger.debug("New CommandManager instance, picking up Restart command")
+            self.cmd_executing.append(restart_request_pending)
 
     @property
     def currently_executing(self) -> Iterator[CommandRequest]:
@@ -60,8 +64,10 @@ class CommandManager():
         if self.uod.has_command_instance(name):
             return self.uod.get_command(name)
 
-    def tick(self):
+    def tick(self, tick_time: float, tick_number: int):
         # FIXME: clean up
+        self.tick_time = tick_time
+        self.tick_number = tick_number
         # run a tick
         if len(self.cmd_executing_done) > 0:
             # Possibly an error rather than a warning. In any case, it is often followed by a duplicate state error
@@ -77,16 +83,6 @@ class CommandManager():
         for queue_req in queue_items:
             if queue_req.name in priority_command_names:
                 logger.warning("Priority command in queue: " + str(queue_req))
-                #self._execute_command(queue_req)
-                # how about other running commands? Do they get any chance to clean up?
-                # We should at least (cancel? and) finalize them.
-                #return
-        # If queue has a priority command (Stop, Unpause or Unhold), that one is started and gets the tick
-        # Else, if a command is already running it get's a tick
-        # Else, a command is picked from the front of the queue and that is started and gets a tick
-        has_ticked_command = False
-        # for executing in self.cmd_executing:
-        #     if executing.
         self.execute_commands()
 
     def execute_commands(self):
@@ -98,6 +94,7 @@ class CommandManager():
                 # Note: New commands are inserted at the beginning of the list.
                 # This allows simpler cancellation of identical/overlapping commands
                 self.cmd_executing.insert(0, engine_command)
+                logger.debug(f"Queued command {engine_command} moved to executing list")
             except Empty:
                 done = True
 
@@ -128,8 +125,6 @@ class CommandManager():
     def _execute_command(self, cmd_request: CommandRequest):
         """ Execute a tick of the requested command, creating the command instance if needed """
 
-        # validate
-        logger.debug(f"Executing command request: {cmd_request}")
         if cmd_request.name is None or len(cmd_request.name.strip()) == 0:
             logger.error("Command name empty")
             frontend_logger.error("Cannot execute command with empty name")
@@ -156,6 +151,10 @@ class CommandManager():
 
         # an existing, long running engine_command is running. other commands must wait
         # Note: we need a priority mechanism - even Stop is waiting here
+        # The reason for this is that Pause/Hold block interpreter ticks using
+        # engine._runstate_paused and engine._runstate_holding. So interpreter cant
+        # schedule more commands
+        logger.debug(f"Executing internal command request: {cmd_request}, tick_number {self.tick_number}")
         command = self.registry.get_running_command(cmd_request.name)
         if command is not None:
             if cmd_request.name == command.name:
@@ -191,6 +190,9 @@ class CommandManager():
                 f"Unknown internal engine command '{cmd_request.name}'",
                 f"Unknown command '{cmd_request.name}'")
 
+        if command.name == EngineCommandEnum.RESTART:
+            self.restart_request_pending = cmd_request
+
         self.tracking.mark_internal_command_started(command)
         command.tick()
         if command.has_failed():
@@ -200,9 +202,7 @@ class CommandManager():
             self._executing_command_done(cmd_request)
             self.tracking.mark_completed(command)
 
-
     def _execute_uod_command(self, cmd_request: CommandRequest):  # noqa C901
-        
         assert self.uod.has_command_name(cmd_request.name), f"Expected Uod to have command named '{cmd_request.name}'"
 
         # if self._runstate_stopping:
@@ -214,6 +214,7 @@ class CommandManager():
         #         f"The hardware is disconnected. The command '{cmd_name}' was not allowed to start.",
         #         "same")
 
+        logger.debug(f"Executing uod command request: {cmd_request}, tick_number {self.tick_number}")
         # cancel any existing instance with same name
         for c in self.currently_executing:
             if c.name == cmd_request.name and c != cmd_request:
@@ -286,6 +287,7 @@ class CommandManager():
     def _executing_command_done(self, cmd_request: CommandRequest, commit=False):
         if cmd_request in self.cmd_executing:
             self.cmd_executing_done.add(cmd_request)
+            logger.debug(f"Command request {cmd_request} marked as done")
         if commit:
             self._commit_commands_done()
 

@@ -88,8 +88,6 @@ class PauseEngineCommand(InternalEngineCommand):
         unpause = UnpauseEngineCommand(self.engine, self._registry)
         unpause._run()
         # cancelling hold means aborting wait and completing the command
-        # FIXME: should not call finalize
-        self.finalize()
         self.set_complete()
 
 @command_argument_none()
@@ -153,10 +151,7 @@ class HoldEngineCommand(InternalEngineCommand):
         logger.debug("Hold cancelled via api. Resuming using Unhold")
         unhold = UnholdEngineCommand(self.engine, self._registry)
         unhold._run()
-        # cancelling hold means aborting wait and completing the command
-        # FIXME: clean up
-        #self.finalize()
-        #self.set_complete()
+        self.set_complete()
 
 
 @command_argument_none()
@@ -260,8 +255,10 @@ class RestartEngineCommand(InternalEngineCommand):
             e.emitter.emit_on_stop()
 
             e.clear_run_id()
+
+            # _stop_interpreter() restarts command_manager
             e._stop_interpreter()
-            logger.info("Restarting run - engine stopped")
+            logger.info(f"Restarting run - engine stopped, tick_number: {e._tick_number}")
 
             yield
 

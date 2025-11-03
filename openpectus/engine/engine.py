@@ -18,7 +18,7 @@ from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.clock import Clock, WallClock
 from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.errors import (
-    EngineError, InterpretationError, InterpretationInternalError, MethodEditError
+    EngineError, EngineNotInitializedError, InterpretationError, InterpretationInternalError, MethodEditError
 )
 from openpectus.lang.exec.events import EventEmitter
 from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext, Tracking
@@ -143,11 +143,6 @@ class Engine(InterpreterContext):
         self._last_error: Exception | None = None
         """ Cause of error_state"""
 
-        self._method_manager: MethodManager = MethodManager(uod.get_command_names(), self)
-        """ The model handling changes to method code and interpreter running it """
-
-        self._lock = Lock()
-
         # initialize state
         self.uod.tags.add_listener(self._uod_listener)
         self._system_tags.add_listener(self._system_listener)
@@ -155,7 +150,22 @@ class Engine(InterpreterContext):
         self._emitter = EventEmitter(self._tags)
         self._tick_timer.set_tick_fn(self.tick)
 
-        self._command_manager = CommandManager(lambda: self.tracking, self.uod, self.registry)
+        # there attributes must be declared before self.on_interpreter_reset() can use them
+        self._interpreter: PInterpreter | None = None
+        self._tracking: Tracking | None = None
+        self._command_manager: CommandManager | None = None
+
+        self._method_manager: MethodManager = MethodManager(uod.get_command_names(), self, self.on_interpreter_reset)
+        """ The model handling changes to method code and interpreter running it """
+
+        self._lock = Lock()
+
+
+    def on_interpreter_reset(self, interpreter: PInterpreter):
+        self._interpreter = interpreter
+        self._tracking = interpreter.tracking
+        restart_request_pending = None if self._command_manager is None else self._command_manager.restart_request_pending
+        self._command_manager = CommandManager(self._tracking, self.uod, self.registry, restart_request_pending)
 
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(uod={self.uod}, is_running={self.is_running}, ' +
@@ -185,11 +195,15 @@ class Engine(InterpreterContext):
 
     @property
     def interpreter(self) -> PInterpreter:
-        return self.method_manager.interpreter
+        if self._interpreter is None:
+            raise EngineNotInitializedError("interpreter not set")
+        return self._interpreter
 
     @property
     def tracking(self) -> Tracking:
-        return self.interpreter.tracking
+        if self._tracking is None:
+            raise EngineNotInitializedError("tracking not set")
+        return self._tracking
 
     def cleanup(self):
         self.emitter.emit_on_engine_shutdown()
@@ -253,6 +267,8 @@ class Engine(InterpreterContext):
 
         # execute phase
         with self._lock:
+            self.tracking.tick(tick_time, self._tick_number)
+
             # excecute interpreter tick
             if self._runstate_started and \
                     not self._runstate_paused and \
@@ -286,7 +302,8 @@ class Engine(InterpreterContext):
 
             # execute queued commands, go to error_state on error
             try:
-                self._command_manager.tick()
+                assert self._command_manager is not None
+                self._command_manager.tick(tick_time, self._tick_number)
             except Exception as ex:
                 self.set_error_state(ex)
 
@@ -444,6 +461,7 @@ class Engine(InterpreterContext):
 
     def schedule_execution(self, name: str, arguments: str = "", instance_id: str | None = None):
         """ Execute named command from interpreter """
+        assert self._command_manager is not None
         if instance_id is None:
             instance_id = self.tracking.create_instance_id(name)
         if EngineCommandEnum.has_value(name) or self.uod.has_command_name(name):
@@ -492,6 +510,7 @@ class Engine(InterpreterContext):
 
     def execute_control_command_from_user(self, name: str):
         """ Execute named command from user """
+        assert self._command_manager is not None
         if EngineCommandEnum.has_value(name) or self.uod.has_command_name(name):
             self._validate_control_command(name)
             request = CommandRequest.from_user(name, "", self.tracking.create_instance_id(name))
@@ -557,15 +576,18 @@ class Engine(InterpreterContext):
     def cancel_instruction(self, instance_id: str):
         """ Cancel command instance and finalize it immidiately """
         with self._lock:
+            assert self._command_manager is not None
             self._command_manager.cancel_instruction(instance_id)
 
     def force_instruction(self, instance_id: str):
         """ Force the command instance """
         with self._lock:
+            assert self._command_manager is not None
             self._command_manager.force_instruction(instance_id)
 
     # Cancel/Finalize originating from Stop/Restart commands, i.e. from the tick commands loop
     def cancel_all_commands(self, source_command_name: str):
+        assert self._command_manager is not None
         self._command_manager.cancel_commands(source_command_name, finalize=True)
 
     # This is unnecessary until we support a cancellation cool-down period

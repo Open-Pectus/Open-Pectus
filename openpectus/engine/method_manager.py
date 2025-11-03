@@ -1,10 +1,11 @@
 
 import logging
-from typing import Any
+from typing import Any, Callable
 
 from openpectus.lang.exec.analyzer import WhitespaceCheckAnalyzer
 from openpectus.lang.exec.errors import MethodEditError
 from openpectus.lang.exec.pinterpreter import InterpreterContext, PInterpreter
+from openpectus.lang.exec.runlog import RuntimeInfo
 from openpectus.lang.exec.units import as_int
 from openpectus.lang.model.parser import (
     ParserMethodLine, ParserMethod, create_inject_parser, create_method_parser
@@ -15,23 +16,27 @@ import openpectus.protocol.models as Mdl
 
 logger = logging.getLogger(__name__)
 
+InterpreterResetHandler = Callable[[PInterpreter], None]
+
 
 class MethodManager:
-    def __init__(self, uod_command_names: list[str], interpreter_context: InterpreterContext):
+    def __init__(self, uod_command_names: list[str], interpreter_context: InterpreterContext,
+                 interpreter_reset_handler: InterpreterResetHandler):
         self._uod_command_names = uod_command_names
         self._interpreter_context = interpreter_context
         self._method = ParserMethod.empty
         self._program = p.ProgramNode.empty()
         self._inject_parser = create_inject_parser(self._uod_command_names)
+        # set handler before the initial creation so we get the event right away
+        self._interpreter_reset_handler = interpreter_reset_handler
         self._interpreter: PInterpreter = self._create_interpreter(self._program)
 
     def _create_interpreter(self, program: p.ProgramNode) -> PInterpreter:
         tracking_was_enabled = False
         if hasattr(self, "_interpreter"):
             tracking_was_enabled = self._interpreter.tracking.enabled if self._interpreter is not None else False
-        interpreter = PInterpreter(program, self._interpreter_context)
-        if tracking_was_enabled:
-            interpreter.tracking.enable()
+        interpreter = PInterpreter(program, self._interpreter_context, RuntimeInfo(), tracking_was_enabled)
+        self._interpreter_reset_handler(interpreter)
         return interpreter
 
     @property
@@ -71,10 +76,6 @@ class MethodManager:
         self._interpreter = self._create_interpreter(self._program)
 
     def merge_method(self, _new_method: Mdl.Method):
-        tracking_was_enabled = False
-        if hasattr(self, "_interpreter"):
-            tracking_was_enabled = self._interpreter.tracking.enabled if self._interpreter is not None else False
-
         assert self.program_is_started, "Program has not yet started, use set_method() rather that merge_method()"
         try:
             new_method, new_program = self._merge_method(_new_method)
@@ -98,13 +99,13 @@ class MethodManager:
             logger.error("Preparing new interpreter failed", exc_info=True)
             raise MethodEditError(f"Preparing new interpreter failed: Ex: {ex}") from ex
 
-        if tracking_was_enabled:
-            interpreter.tracking.enable()
-
         # finally commit the "transaction"
         self._interpreter = interpreter
         self._method = new_method
         self._program = new_program
+
+        # and notify that interpreter was renewed
+        self._interpreter_reset_handler(interpreter)
 
     def _merge_method(self, new_method: Mdl.Method) -> tuple[ParserMethod, p.ProgramNode]:  # noqa C901
         """ User saved method while a run was active. The new method is replacing an existing method
