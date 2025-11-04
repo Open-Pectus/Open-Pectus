@@ -8,6 +8,7 @@ from openpectus.engine.models import EngineCommandEnum
 from openpectus.lang.exec.clock import WallClock
 from openpectus.lang.exec.errors import EngineError
 from openpectus.lang.exec.pinterpreter import PInterpreter
+from openpectus.lang.exec.runlog import RuntimeInfo
 from openpectus.lang.exec.tags import Tag, SystemTagName
 from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
@@ -73,7 +74,7 @@ def create_interpreter(
 
     engine = create_engine(uod)
 
-    return PInterpreter(program, engine)
+    return PInterpreter(program, engine, RuntimeInfo())
 
 
 def run_interpreter(interpreter: PInterpreter, max_ticks: int = -1):
@@ -441,7 +442,6 @@ Mark: d
         self.assertTrue(marks[:4] == ["a", "c", "d", "b"] or marks[:4] == ["a", "c", "b", "d"])
         print_runtime_records_alt(engine)
 
-    # duplicate state 'awaitingcondition'
     def test_alarm_can_retrigger(self):
         program = """
 Mark: a

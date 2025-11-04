@@ -356,6 +356,8 @@ class PcodeParser:
         if isinstance(node, p.NodeWithTagOperatorValue):
             self._parse_tag_operator_value(node)
 
+        node.parse_create_completed()
+
         return node
 
     @staticmethod

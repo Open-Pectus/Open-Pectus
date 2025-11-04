@@ -290,6 +290,9 @@ class Node(SupportCancelForce):
         self.id = gen.create_id(self)
         return self
 
+    def parse_create_completed(self):
+        pass
+
     def has_error(self) -> bool:
         return self.indent_error or len(self.errors) > 0
 
@@ -880,6 +883,12 @@ class EngineCommandNode(CommandBaseNode):
     """ Represents internal engine commands that have a command class subclassing InternalEngineCommand. """
     instruction_names = ["Stop", "Pause", "Unpause", "Hold", "Unhold", "Restart",
                          "Info", "Warning", "Error"]
+
+    def parse_create_completed(self):
+        if self.instruction_name in ['Pause', 'Hold']:
+            self._cancellable = self.has_argument
+            self._forcible = False
+        return super().parse_create_completed()
 
 
 class SimulateNode(NodeWithAssignment):

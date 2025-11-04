@@ -57,7 +57,8 @@ class InternalCommandsRegistry:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         logger.debug("Disposing registry")
         self._command_map.clear()
-        for cmd in self._command_instances.values():
+        instances = list(self._command_instances.values())
+        for cmd in instances:
             try:
                 cmd.cancel()
             except Exception as ex:
@@ -90,10 +91,14 @@ class InternalCommandsRegistry:
                         self._command_spec[command_name] = cls.argument_validation_spec
         logger.debug(f"Registered internal engine commands: {', '.join(registered_classes)}")
 
-    def get_running_internal_command(self) -> InternalEngineCommand | None:
-        if len(self._command_instances) > 0:
-            for cmd in self._command_instances.values():
+    def get_running_command(self, name: str) -> InternalEngineCommand | None:
+        cmds = list(self._command_instances.values())
+        for cmd in cmds:
+            if cmd.name == name:
                 return cmd
+
+    def get_running_command_names(self) -> list[str]:
+        return list(self._command_instances.keys())
 
     def create_internal_command(self, command_name: str, instance_id: str) -> InternalEngineCommand:
         if command_name not in self._command_map.keys():
@@ -202,6 +207,8 @@ class InternalEngineCommand(EngineCommand):
                     self.has_run = True
                 except Exception:
                     self.fail()
+                    # FIXME: answer and fix or remove
+                    # why not just finalize?
                     self._registry.dispose_command(self.name)
                     logger.error(f"Command '{self.name}' failed", exc_info=True)
                     return

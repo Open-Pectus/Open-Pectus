@@ -79,11 +79,16 @@ class PauseEngineCommand(InternalEngineCommand):
             while self.engine._tick_time < duration_end_time:
                 yield
             logger.debug("Resuming using Unpause")
-            # reusing instance_id is ok
             unpause = UnpauseEngineCommand(self.engine, self._registry)
-            unpause.instance_id = self.instance_id
             unpause._run()
 
+    def cancel(self):
+        super().cancel()
+        logger.debug("Pause cancelled via api. Resuming using Unpause")
+        unpause = UnpauseEngineCommand(self.engine, self._registry)
+        unpause._run()
+        # cancelling hold means aborting wait and completing the command
+        self.set_complete()
 
 @command_argument_none()
 class UnpauseEngineCommand(InternalEngineCommand):
@@ -139,8 +144,14 @@ class HoldEngineCommand(InternalEngineCommand):
                 yield
             logger.debug("Resuming using Unhold")
             unhold = UnholdEngineCommand(self.engine, self._registry)
-            unhold.instance_id = self.instance_id
             unhold._run()
+
+    def cancel(self):
+        super().cancel()
+        logger.debug("Hold cancelled via api. Resuming using Unhold")
+        unhold = UnholdEngineCommand(self.engine, self._registry)
+        unhold._run()
+        self.set_complete()
 
 
 @command_argument_none()
@@ -173,15 +184,17 @@ class StopEngineCommand(InternalEngineCommand):
             self.fail()
         else:
             e._runstate_stopping = True
-            e._cancel_uod_commands()
+            e.cancel_all_commands(source_command_name=self.name)
             yield
-            timeout_at_tick = e._tick_number + CANCEL_TIMEOUT_TICKS
-            while e.uod.has_any_command_instances():
-                if e._tick_number > timeout_at_tick:
-                    logger.warning("Timeout waiting for uod commands to cancel")
-                    break
-                yield
-            e._finalize_uod_commands()
+            # FIXME: Clean up
+            # timeout_at_tick = e._tick_number + CANCEL_TIMEOUT_TICKS
+            # while e.uod.has_any_command_instances():
+            #     if e._tick_number > timeout_at_tick:
+            #         logger.warning("Timeout waiting for uod commands to cancel")
+            #         break
+            #     yield
+
+            # e.finalize_all_commands(source_command_name=self.name)
             e._apply_safe_state()
             e.write_process_image()
 
@@ -220,15 +233,16 @@ class RestartEngineCommand(InternalEngineCommand):
             sys_state.set_value(SystemStateEnum.Restarting, e._tick_time)
 
             e._runstate_stopping = True
-            e._cancel_uod_commands()
+            e.cancel_all_commands(source_command_name=self.name)
             yield
-            timeout_at_tick = e._tick_number + CANCEL_TIMEOUT_TICKS
-            while e.uod.has_any_command_instances():
-                if e._tick_number > timeout_at_tick:
-                    logger.warning("Timed out waiting for uod commands to cancel")
-                    break
-                yield
-            e._finalize_uod_commands()
+            # FIXME: Clean up
+            # timeout_at_tick = e._tick_number + CANCEL_TIMEOUT_TICKS
+            # while e.uod.has_any_command_instances():
+            #     if e._tick_number > timeout_at_tick:
+            #         logger.warning("Timed out waiting for uod commands to cancel")
+            #         break
+            #     yield
+            # e.finalize_all_commands(source_command_name=self.name)
 
             logger.debug("Restarting run - uod commands have completed execution")
             e._runstate_started = False
@@ -241,8 +255,10 @@ class RestartEngineCommand(InternalEngineCommand):
             e.emitter.emit_on_stop()
 
             e.clear_run_id()
+
+            # _stop_interpreter() restarts command_manager
             e._stop_interpreter()
-            logger.info("Restarting run - engine stopped")
+            logger.info(f"Restarting run - engine stopped, tick_number: {e._tick_number}")
 
             yield
 

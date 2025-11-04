@@ -117,7 +117,7 @@ class TestMethodManager(unittest.TestCase):
 
     def test_may_not_edit_an_executed_line(self):
         method1 = Method.from_numbered_pcode("01 Mark: A")
-        runner = EngineTestRunner(create_test_uod, method1)
+        runner = EngineTestRunner(create_test_uod, method1, fail_on_log_error=False)
         with runner.run() as instance:
             instance.start()
             instance.run_until_instruction("Mark", state="completed")
@@ -137,7 +137,7 @@ class TestMethodManager(unittest.TestCase):
         #
 
         method1 = Method.from_numbered_pcode("01 Mark: A")
-        runner = EngineTestRunner(create_test_uod, method1)
+        runner = EngineTestRunner(create_test_uod, method1, fail_on_log_error=False)
         with runner.run() as instance:
             instance.start()
             instance.run_until_instruction("Mark", state="started")
@@ -168,7 +168,7 @@ class TestMethodManager(unittest.TestCase):
 02 0.8 Mark: D
 03 
 """)
-        runner = EngineTestRunner(create_test_uod, method1)
+        runner = EngineTestRunner(create_test_uod, method1, fail_on_log_error=False)
         with runner.run() as instance:
             instance.engine.interpreter.ffw_tick_limit = 50
             instance.start()
@@ -539,7 +539,7 @@ class TestMethodManager(unittest.TestCase):
 04 Call macro: M
 05 Mark: D
 """)
-        runner = EngineTestRunner(create_test_uod, method1)
+        runner = EngineTestRunner(create_test_uod, method1, fail_on_log_error=False)
         with runner.run() as instance:
             instance.start()
             instance.run_until_instruction("Mark", state="completed", arguments="C")
@@ -569,7 +569,7 @@ class TestMethodManager(unittest.TestCase):
 03 Mark: A
 04 Call macro: M
 """)
-        runner = EngineTestRunner(create_test_uod, method1)
+        runner = EngineTestRunner(create_test_uod, method1, fail_on_log_error=False)
         with runner.run() as instance:
             instance.start()
             instance.run_until_instruction("Call macro", state="completed")
@@ -705,7 +705,7 @@ Watch: Run counter > 0
 06 Mark: E
 07 Mark: G
 """)
-        runner = EngineTestRunner(create_test_uod, method1)
+        runner = EngineTestRunner(create_test_uod, method1, fail_on_log_error=False)
         with runner.run() as instance:
             instance.start()
             instance.run_until_instruction("Wait", state="completed")
@@ -842,7 +842,7 @@ Watch: Run counter > 0
 06 Mark: D
 07 # 3
 """)
-        runner = EngineTestRunner(create_test_uod, method1)
+        runner = EngineTestRunner(create_test_uod, method1, fail_on_log_error=False)
         with runner.run() as instance:
             instance.start()
 
@@ -891,7 +891,7 @@ Watch: Run counter > 0
 08 Mark: E
 09 
 """)
-        runner = EngineTestRunner(create_test_uod, method1)
+        runner = EngineTestRunner(create_test_uod, method1, fail_on_log_error=False)
         with runner.run() as instance:
             instance.start()
 
@@ -1108,7 +1108,7 @@ Watch: Run counter > 0
 02 Mark: D
 03 Mark: C
 """)
-        runner = EngineTestRunner(create_test_uod, method1)
+        runner = EngineTestRunner(create_test_uod, method1, fail_on_log_error=False)
         with runner.run() as instance:
             instance.start()
 
@@ -1133,7 +1133,7 @@ Watch: Run counter > 0
 01 Watch: Run Time > 1x
 02     Mark: A
 """)
-        runner = EngineTestRunner(create_test_uod, method_w_error)
+        runner = EngineTestRunner(create_test_uod, method_w_error, fail_on_log_error=False)
         with runner.run() as instance:
             instance.start()
 

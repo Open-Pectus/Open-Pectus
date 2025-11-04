@@ -3,8 +3,7 @@ from __future__ import annotations
 import copy
 import logging
 from enum import StrEnum, auto
-import traceback
-from typing import Dict
+from typing import Callable, Dict
 import uuid
 
 from openpectus.engine.commands import EngineCommand
@@ -155,7 +154,7 @@ class RuntimeInfo:
                     item = RunLogItem()
                     item.name = state.name
                     item.id = state.instance_id
-                    item.state = RunLogItemState.Started  # TODO possibly improve - could also be Waiting                    
+                    item.state = RunLogItemState.Started  # TODO possibly improve - could also be Waiting
                     item.start = state.state_time
                     item.start_values = state.values or r.start_values or TagValueCollection.empty()
 
@@ -164,29 +163,32 @@ class RuntimeInfo:
                     item.cancelled = state.cancelled
                     item.forcible = state.forcible
                     item.forced = state.forced
+                else:
+                    states = "\n".join(str(st) for st in r.states)
+                    logger.error(f"""
+Error generating runlog.
+Item for record {r} was unexpectedly None in state {state.state_name}
+Record:\n{r}
+States:\n{states}""")
+                    raise AssertionError("Error generating runlog")
 
                 if state.state_name == RuntimeRecordStateEnum.Completed:
-                    assert item is not None
                     item.state = RunLogItemState.Completed
                 elif state.state_name == RuntimeRecordStateEnum.Failed:
-                    assert item is not None
                     item.state = RunLogItemState.Failed
                     item.failed = True
                 elif state.state_name == RuntimeRecordStateEnum.Cancelled:
-                    assert item is not None
                     item.state = RunLogItemState.Cancelled
                 elif state.state_name == RuntimeRecordStateEnum.Forced:
-                    assert item is not None
                     item.state = RunLogItemState.Forced
                 elif state.state_name == RuntimeRecordStateEnum.UodCommandSet:
                     command = state.command
                 elif state.state_name == RuntimeRecordStateEnum.InternalEngineCommandSet:
                     command = state.command
                 elif state.state_name == RuntimeRecordStateEnum.AwaitingThreshold:
-                    assert item is not None, f"Item for record {r} was unexpectedly None in state {state.state_name}. States: {invocation_states}"
                     item.state = RunLogItemState.AwaitingThreshold
 
-                if not is_conclusive_state and item is not None:
+                if not is_conclusive_state:
                     if command is not None:
                         if isinstance(command, UodCommand):
                             item.cancellable = True  # Node.cancellable does not support uod commands
@@ -195,14 +197,13 @@ class RuntimeInfo:
                         self._update_item_progress(item, r)
 
                 if is_conclusive_state:
-                    assert item is not None
                     item.end = state.state_time
                     item.end_values = state.values or TagValueCollection.empty()
                     item.cancellable = False
                     item.forcible = False
 
                 if not has_more_states or is_conclusive_state:
-                    if item is not None and item.state not in [RunLogItemState.Unknown, RunLogItemState.AwaitingThreshold]:
+                    if item.state not in [RunLogItemState.Unknown, RunLogItemState.AwaitingThreshold]:
                         items.append(item)
                         item = None
                         command = None
@@ -458,7 +459,8 @@ class RuntimeRecord:
         )
 
     def __str__(self) -> str:
-        return f'{self.__class__.__name__}(name="{self.name}, node_class_name=:{self.node_class_name}, node_id={self.node_id}")'
+        return f'{self.__class__.__name__}(name="{self.name}, node_class_name={self.node_class_name}, ' +\
+               f'node_id={self.node_id}")'
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -493,7 +495,7 @@ class RuntimeRecord:
                    state_values: TagValueCollection | None,
                    node: p.Node,
                    command: EngineCommand | None = None
-                   ):  # -> RuntimeRecordState:
+                   ):
         record_state = RuntimeRecordState(instance_id, state, time, tick, state_values)
         record_state.command = command
         record_state.update_from_node(node)
@@ -504,17 +506,13 @@ class RuntimeRecord:
         # each state. we can't really store this information on the record because over time there may
         # be different values and we need all of them. For records without states we show nothing.
 
-        if __debug__:
-            # fail_on_duplicate = False
-            fail_on_duplicate = True
-            # check duplicate state for instance
-            for st in self.states:
-                if st.instance_id == instance_id and st.state_name == state:
-                    logger.warning(f"Duplicate state '{state}' for instance {instance_id} in record {self}")
-                    for line in traceback.format_stack():
-                        print(line)
-                    if fail_on_duplicate:
-                        raise Exception(f"Failing because duplicate state '{state}' was encountered")
+        # check for duplicate state in record
+        for st in self.states:
+            if st.instance_id == instance_id and st.state_name == state:
+                logger.error(f"Duplicate state '{state}' for instance {instance_id} in record {self}")
+                # we do not add the state, because that would cause the same error repeatedly in subsequent ticks
+                # tests that need to know about these errors can use the test log handler.
+                return
 
         self.states.append(record_state)
 
@@ -606,7 +604,8 @@ class RuntimeRecordState:
         self.forced = node.forced
 
     def __str__(self) -> str:
-        return f'{self.__class__.__name__}(state_name="{self.state_name}, instance_id={self.instance_id}")'
+        return f'{self.__class__.__name__}(state_name={self.state_name}, instruction_name={self.instruction_name}' +\
+               f', instance_id={self.instance_id})'
 
     def __repr__(self):
         return self.__str__()
@@ -670,6 +669,10 @@ class RunLog:
     def size(self) -> int:
         return len(self.items)
 
+    def get_item_by_name(self, name: str) -> RunLogItem | None:
+        for item in self.items:
+            if item.name == name:
+                return item
 
 class RunLogItem:
     def __init__(self) -> None:
@@ -723,6 +726,13 @@ def assert_Runlog_HasItem(runtimeinfo: RuntimeInfo, name: str):
             return
     item_names = [item.name for item in runlog.items]
     raise AssertionError(f"Runlog has no item named '{name}'. It has these names:  {','.join(item_names)}")
+
+def assert_Runlog_HasItem_where(runtimeinfo: RuntimeInfo, name: str, predicate: Callable[[RunLogItem], bool]):
+    runlog = runtimeinfo.get_runlog()
+    for item in runlog.items:
+        if item.name == name and predicate(item):
+            return
+    raise AssertionError(f"Runlog has no item named '{name}' that satisfies the condition.")
 
 def assert_Runlog_HasNoItem(runtimeinfo: RuntimeInfo, name: str):
     runlog = runtimeinfo.get_runlog()
