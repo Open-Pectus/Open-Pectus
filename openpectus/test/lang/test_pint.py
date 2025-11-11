@@ -12,7 +12,7 @@ U_ = Unit
 class PintTest(unittest.TestCase):
 
     def test_basics_quantity(self):
-        distance = 24.0 * ureg.meter
+        distance: Quantity = 24.0 * ureg.meter
         assert isinstance(distance, Quantity)
         self.assertIsInstance(distance, Quantity)
         self.assertEqual("24.0 meter", str(distance))
@@ -26,16 +26,17 @@ class PintTest(unittest.TestCase):
         self.assertEqual("[length]", distance.dimensionality)
         self.assertFalse(distance.dimensionless)
 
-        velocity = 7 * ureg.meter / 1 * ureg.second
+        velocity: Quantity = 7 * ureg.meter / 1 * ureg.second
+        assert isinstance(velocity, Quantity)
         self.assertIsInstance(velocity.dimensionality, UnitsContainer)
         self.assertEqual("[length] * [time]", velocity.dimensionality)
 
-        weight = 2 * ureg.kg
+        weight: Quantity = 2 * ureg.kg
         assert isinstance(weight, Quantity)
         self.assertEqual("kilogram", str(weight.units))
         self.assertEqual("[mass]", weight.dimensionality)
 
-        volume = 3 * ureg.liter  # hmm, no sign of 'volume' anywhere in the api
+        volume: Quantity = 3 * ureg.liter  # hmm, no sign of 'volume' anywhere in the api
         assert isinstance(volume, Quantity)
         self.assertEqual("liter", str(volume.units))
         self.assertEqual("[length] * [length] * [length]", volume.dimensionality)

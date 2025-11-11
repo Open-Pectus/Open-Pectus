@@ -824,7 +824,7 @@ Mark: C
         e.schedule_execution("Pause")
         tick()
 
-        pause_process_time = process_time_tag.as_number()
+        pause_process_time = process_time_tag.as_float()
 
         e.schedule_execution("Unpause")
         tick()
@@ -840,7 +840,7 @@ Mark: C
         tick()
 
         # process time is resumed
-        process_time_increment = process_time_tag.as_number() - pause_process_time
+        process_time_increment = process_time_tag.as_float() - pause_process_time
         self.assertTrue(process_time_increment > 0.0)
 
     def test_runstate_hold(self):

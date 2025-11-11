@@ -9,7 +9,6 @@ from openpectus.lang.exec.events import RunStateChange
 from openpectus.lang.exec.regex import REGEX_DURATION_OPTIONAL, REGEX_TEXT, get_duration_end
 from openpectus.lang.exec.tags import SystemTagName
 from openpectus.engine.engine import Engine
-from openpectus.lang.exec.units import as_float
 
 
 logger = logging.getLogger(__name__)
@@ -60,13 +59,13 @@ class PauseEngineCommand(InternalEngineCommand):
 
     def _run(self):
         duration_end_time : float | None = None
-        time = as_float(self.kvargs.pop("number", ""))
+        time = self.kvargs.pop("number", None)
         if time is not None:
             try:
                 unit = self.kvargs.pop("number_unit")
             except Exception:
                 raise ValueError(f"Argument error. Actual kvargs: {self.kvargs}")
-            duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
+            duration_end_time = get_duration_end(self.engine._tick_time, float(time), unit)
 
         e = self.engine
         e._runstate_paused = True
@@ -125,13 +124,13 @@ class HoldEngineCommand(InternalEngineCommand):
 
     def _run(self):
         duration_end_time : float | None = None
-        time = as_float(self.kvargs.pop("number", ""))
+        time = self.kvargs.pop("number", None)
         if time is not None:
             try:
                 unit = self.kvargs.pop("number_unit")
             except Exception:
                 raise ValueError(f"Argument error. Actual kvargs: {self.kvargs}")
-            duration_end_time = get_duration_end(self.engine._tick_time, time, unit)
+            duration_end_time = get_duration_end(self.engine._tick_time, float(time), unit)
 
         e = self.engine
         e._runstate_holding = True
