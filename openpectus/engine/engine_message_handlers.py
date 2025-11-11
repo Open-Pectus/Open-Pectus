@@ -2,12 +2,11 @@ import logging
 from typing import Protocol
 from uuid import UUID
 
-import openpectus.sentry as sentry
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.messages as M
+import openpectus.sentry as sentry
 from openpectus.engine.engine import Engine
 from openpectus.protocol.engine_dispatcher import EngineMessageHandler
-
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +19,7 @@ class EngineDispatcherRpcHandler(Protocol):
 class EngineMessageHandlers():
     def __init__(self, engine: Engine, dispatcher: EngineDispatcherRpcHandler) -> None:
         self.engine = engine
-        dispatcher.set_rpc_handler(AM.InvokeCommandMsg, self.handle_invokeCommandMsg)
+        dispatcher.set_rpc_handler(AM.ExecuteControlCommandMsg, self.handle_executeControlCommandMsg)
         dispatcher.set_rpc_handler(AM.InjectCodeMsg, self.handle_injectCodeMsg)
         dispatcher.set_rpc_handler(AM.MethodMsg, self.handle_methodMsg)
         dispatcher.set_rpc_handler(AM.CancelMsg, self.handle_cancelMsg)
@@ -37,17 +36,20 @@ class EngineMessageHandlers():
             sentry.engine_method_set(msg.method.as_pcode())
             return AM.SuccessMessage()
         except Exception as ex:
-            logger.error("Failed to set method")
+            logger.error(f"Failed to set method. Exception: {ex}")
             return AM.ErrorMessage(message="Failed to set method", exception_message=str(ex))
 
-    async def handle_invokeCommandMsg(self, msg: AM.AggregatorMessage) -> M.MessageBase:
-        assert isinstance(msg, AM.InvokeCommandMsg)
-        logger.info(f"Incomming command from aggregator: {msg.name}")
+    async def handle_executeControlCommandMsg(self, msg: AM.AggregatorMessage) -> M.MessageBase:
+        assert isinstance(msg, AM.ExecuteControlCommandMsg)
+        logger.info(f"Incomming control command from aggregator: {msg.name}")
         try:
-            self.engine.schedule_execution_user(name=msg.name, args=msg.arguments)
+            self.engine.execute_control_command_from_user(name=msg.name)
             return AM.SuccessMessage()
-        except Exception:
-            logger.error(f"The command '{msg.name}' could not be scheduled")
+        except ValueError as ex:
+            logger.error(f"The command '{msg.name}' was invalid. Exception: {ex}")
+            return AM.ErrorMessage(message=f"The command '{msg.name}' was invalid", caller_error=True)
+        except Exception as ex:
+            logger.error(f"The command '{msg.name}' could not be scheduled. Exception: {ex}")
             return AM.ErrorMessage(message=f"The command '{msg.name}' could not be scheduled")
 
     async def handle_injectCodeMsg(self, msg: AM.AggregatorMessage) -> M.MessageBase:
@@ -64,8 +66,7 @@ class EngineMessageHandlers():
         assert isinstance(msg, AM.CancelMsg)
         logger.info(f"Incomming cancel request {msg.exec_id}")
         try:
-            exec_id = UUID(msg.exec_id)
-            self.engine.cancel_instruction(exec_id)
+            self.engine.cancel_instruction(instance_id=msg.exec_id)
             return AM.SuccessMessage()
         except Exception:
             logger.error("Cancel failed", exc_info=True)
@@ -75,8 +76,7 @@ class EngineMessageHandlers():
         assert isinstance(msg, AM.ForceMsg)
         logger.info(f"Incomming force request {msg.exec_id}")
         try:
-            exec_id = UUID(msg.exec_id)
-            self.engine.force_instruction(exec_id)
+            self.engine.force_instruction(instance_id=msg.exec_id)
             return AM.SuccessMessage()
         except Exception:
             logger.error("Force failed", exc_info=True)

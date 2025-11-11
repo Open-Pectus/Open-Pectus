@@ -97,10 +97,16 @@ def create_test_uod() -> UnitOperationDefinitionBase:  # noqa C901
             from_tag=lambda x: 1 if x == "Reset" else 0,
             to_tag=lambda x: "Reset" if x == 1 else "N/A",
         )
+        .with_hardware_register(
+            "Danger",
+            RegisterDirection.Write,
+            path="Objects;2:System;2:Danger",
+            safe_value=False,
+        )
         # Readings
         .with_tag(ReadingTag("FT01", "L/h"))
         .with_tag(SelectTag("Reset", value="N/A", unit=None, choices=["Reset", "N/A"]))
-        .with_tag(Tag("Danger", value=True, unit=None, direction=TagDirection.Output, safe_value=False))
+        .with_tag(Tag("Danger", value=True, unit=None, direction=TagDirection.Output))
         .with_command(name="Reset", exec_fn=reset)
         .with_command(name="CmdWithArgs", exec_fn=cmd_with_args, arg_parse_fn=cmd_arg_parse)
         .with_command(name="overlap1", exec_fn=overlap_exec)
@@ -289,6 +295,16 @@ class TestEngine(unittest.TestCase):
         run_engine(e, program, 10)
 
         self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.OK)
+
+    def test_uod_command_method_state(self):
+        e = self.engine
+        program = "CmdWithArgs: a, b,c ,  d"
+        run_engine(e, program, 10)
+
+        method_state = e.method_manager.get_method_state()
+        node = e.method_manager.program.get_child_by_instruction("CmdWithArgs")
+        assert node is not None
+        self.assertTrue(node.id in method_state.executed_line_ids)
 
     def test_uod_command_w_arguments_fail(self):
         e = self.engine
@@ -506,7 +522,7 @@ Reset
 Reset
 """, 5)
 
-        records = e.interpreter.runtimeinfo.records
+        records = e.tracking.records
 
         print_runtime_records(e)
 
@@ -533,7 +549,7 @@ overlap1
 overlap2
 """, 5)
 
-        rs = e.runtimeinfo.records
+        rs = e.tracking.records
 
         print_runtime_records(e)
 
@@ -570,7 +586,7 @@ Mark: X
         e = self.engine
         run_engine(e, program, 3)
 
-        rs = e.runtimeinfo.records
+        rs = e.tracking.records
 
         print_runtime_records(e)
 
@@ -585,6 +601,8 @@ Mark: X
 
         print_runtime_records(e)
 
+    # AssertionError: 'Watch: Block Time > 0.2s' != 'Block Time > 0.2s'
+    # r.name is incorrect
     def test_runlog_watch(self):
         program = """
 Watch: Block Time > 0.2s
@@ -596,10 +614,10 @@ Mark: X
 
         print_runtime_records(e)
 
-        r = e.interpreter.runtimeinfo.records[1]
+        r = e.tracking.records[1]
         self.assertEqual("Watch: Block Time > 0.2s", r.name)
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.AwaitingCondition))
-        # self.assertFalse(r.has_state(RuntimeRecordStateEnum.Started))
+        #self.assertFalse(r.has_state(RuntimeRecordStateEnum.Started))
 
         continue_engine(e, 1)
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
@@ -687,7 +705,7 @@ Mark: C
 
         print_runtime_records(e)
 
-        items = e.get_runlog().items
+        items = e.tracking.get_runlog().items
         self.assertEqual(1, len(items))
         self.assertEqual("Reset", items[0].name)
 

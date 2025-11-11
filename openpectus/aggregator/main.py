@@ -8,17 +8,13 @@ from openpectus import log_setup_colorlog
 from openpectus.aggregator.aggregator_server import AggregatorServer
 from openpectus import sentry, __version__, build_number
 
-# - add lsp thingys
-# - start (manage) lsp server instance for each client
-
-# Start env in docker
-# ../docker compose up --build
 
 log_setup_colorlog(root_loglevel=logging.INFO)
 logger = logging.getLogger("openpectus.aggregator.aggregator")
 logger.setLevel(logging.INFO)
 logging.getLogger("openpectus.protocol.aggregator_dispatcher").setLevel(logging.INFO)
 logging.getLogger("openpectus.aggregator.routers.webpush").setLevel(logging.DEBUG)
+
 
 def get_arg_parser():
     parser = ArgumentParser("Start Aggregator server")

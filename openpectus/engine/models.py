@@ -6,6 +6,7 @@ SystemTagName = SystemTagName
 TagDirection = TagDirection
 
 class EngineCommandEnum(StrEnum):
+    """ The internal engine command names. Each name correspond to a InternalEngineCommand subclass. """
     START = "Start"
     STOP = "Stop"
     PAUSE = "Pause"

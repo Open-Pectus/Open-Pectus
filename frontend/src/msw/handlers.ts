@@ -371,6 +371,7 @@ const runLogLines: RunLogLine[] = [
     cancellable: false,
     forced: false,
     cancelled: true,
+    failed: false,
   },
   {
     id: '4',
@@ -504,6 +505,7 @@ export const handlers = [
   }),
 
   http.post<PathParams, ExecutableCommand>('/api/process_unit/:unitId/execute_command', ({request}) => {
+    // return HttpResponse.text(null, {status: 500});
     request.json().then(executableCommand => {
       if(executableCommand.source === 'unit_button') {
         switch(executableCommand.command) {
@@ -1168,8 +1170,10 @@ Some;Csv;Data
     return new HttpResponse();
   }),
 
-  http.get('/api/process_unit/:unitId/other_active_users', () => {
-    return HttpResponse.json<ActiveUser[]>([]);
+  http.get('/api/process_unit/:unitId/active_users', () => {
+    return HttpResponse.json<ActiveUser[]>([
+      {id: 'fdsa', name: 'fdsa'},
+    ]);
   }),
 
   http.get('api/lsp/engine/:unitId/pcode.tmLanguage.json', () => {
@@ -1215,4 +1219,12 @@ Some;Csv;Data
       ],
     });
   }),
+
+  http.get('https://graph.microsoft.com/beta/users/:userId/photos/48x48/$value', () => {
+    return new HttpResponse(null, {status: 404});
+  }),
+
+  // http.get('https://graph.microsoft.com/beta/me/photos/48x48/$value', () => {
+  //   return new HttpResponse(null, {status: 404});
+  // }),
 ];

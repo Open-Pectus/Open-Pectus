@@ -234,6 +234,11 @@ export type RecentRun = {
     contributors?: Array<Contributor>;
 };
 
+export type RecentRunArchive = {
+    filename: string;
+    content: string;
+};
+
 export type RecentRunCsv = {
     filename: string;
     csv_content: string;
@@ -255,6 +260,16 @@ export type RunLogLine = {
     cancellable?: boolean;
     forced?: boolean;
     cancelled?: boolean;
+    failed?: boolean;
+};
+
+export type ServerErrorResponse = {
+    error?: boolean;
+    message: string;
+};
+
+export type ServerSuccessResponse = {
+    message?: string;
 };
 
 export type SubPlot = {
@@ -359,7 +374,15 @@ export type ExecuteCommandData = {
     xIdentity?: string;
 };
 
-export type ExecuteCommandResponse = (unknown);
+export type ExecuteCommandResponse = ((ServerErrorResponse | ServerSuccessResponse));
+
+export type ExecuteControlButtonCommandData = {
+    requestBody: ExecutableCommand;
+    unitId: string;
+    xIdentity?: string;
+};
+
+export type ExecuteControlButtonCommandResponse = ((ServerErrorResponse | ServerSuccessResponse));
 
 export type GetProcessDiagramData = {
     unitId: string;
@@ -524,6 +547,13 @@ export type GetRecentRunCsvJsonData = {
 };
 
 export type GetRecentRunCsvJsonResponse = (RecentRunCsv);
+
+export type GetRecentRunArchiveData = {
+    runId: string;
+    xIdentity?: string;
+};
+
+export type GetRecentRunArchiveResponse = (RecentRunArchive);
 
 export type GetRecentRunErrorLogData = {
     runId: string;

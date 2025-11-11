@@ -1,44 +1,46 @@
 from __future__ import annotations
+
 import itertools
 import logging
+from threading import Lock
 import uuid
-from queue import Empty, Queue
-from typing import Iterable, Literal, Set
-from uuid import UUID
-from openpectus.engine.internal_commands import InternalCommandsRegistry
+from queue import Queue
+from typing import Iterable, Literal
+
+from openpectus.engine.command_manager import CommandManager
+import openpectus.protocol.models as Mdl
+from openpectus.engine.archiver import ArchiverTag
 from openpectus.engine.hardware import HardwareLayerException, RegisterDirection
+from openpectus.engine.internal_commands import InternalCommandsRegistry
 from openpectus.engine.method_manager import MethodManager
 from openpectus.engine.models import MethodStatusEnum, SystemStateEnum, EngineCommandEnum, SystemTagName
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.clock import Clock, WallClock
 from openpectus.lang.exec.commands import CommandRequest
 from openpectus.lang.exec.errors import (
-    EngineError, InterpretationError, InterpretationInternalError, MethodEditError
+    EngineError, EngineNotInitializedError, InterpretationError, InterpretationInternalError, MethodEditError
 )
-from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext
-from openpectus.lang.exec.runlog import RuntimeInfo, RunLog, RuntimeRecord
 from openpectus.lang.exec.events import EventEmitter
+from openpectus.lang.exec.pinterpreter import PInterpreter, InterpreterContext, Tracking
 from openpectus.lang.exec.tags import (
     Tag,
     TagCollection,
-    TagDirection,
     TagValue,
     TagValueCollection,
     ChangeListener,
-    Unset,
     create_system_tags
 )
 from openpectus.lang.exec.tags_impl import BlockTimeTag, MarkTag, ScopeTimeTag
 from openpectus.lang.exec.timer import EngineTimer, OneThreadTimer
-from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand
-import openpectus.protocol.models as Mdl
-from openpectus.engine.archiver import ArchiverTag
+from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 
 logger = logging.getLogger(__name__)
 frontend_logger = logging.getLogger(__name__ + ".frontend")
 
+
 class EngineTiming():
     """ Represents timing information used by engine and any related components. """
+
     def __init__(self, clock: Clock, timer: EngineTimer, interval: float, speed: float) -> None:
         self._clock = clock
         self._timer = timer
@@ -68,6 +70,7 @@ class EngineTiming():
     @property
     def speed(self) -> float:
         return self._speed
+
 
 class Engine(InterpreterContext):
     """ Main engine class. Handles
@@ -110,17 +113,13 @@ class Engine(InterpreterContext):
         # not after).
         if enable_archiver:
             archiver = ArchiverTag(
-                lambda : self.runtimeinfo.get_runlog(),
+                lambda : self.tracking.get_runlog(),
                 lambda : self.tags,
                 self.uod.data_log_interval_seconds)
             self._system_tags.add(archiver)
 
         self.uod.system_tags = self._system_tags
 
-        self.cmd_queue: Queue[CommandRequest] = Queue()
-        """ Commands to execute, coming from interpreter and from aggregator """
-        self.cmd_executing: list[CommandRequest] = []
-        """ Uod commands currently being excuted """
         self.tag_updates: Queue[Tag] = Queue()
         """ Tags updated in last tick """
 
@@ -141,13 +140,8 @@ class Engine(InterpreterContext):
         self._prev_state: TagValueCollection | None = None
         """ The state prior to applying safe state """
 
-        self._last_error : Exception | None = None
+        self._last_error: Exception | None = None
         """ Cause of error_state"""
-
-        self._method_manager: MethodManager = MethodManager(uod.get_command_names(), self)
-        """ The model handling changes to method code and interpreter running it """
-
-        self._cancel_command_exec_ids: set[UUID] = set()
 
         # initialize state
         self.uod.tags.add_listener(self._uod_listener)
@@ -155,6 +149,23 @@ class Engine(InterpreterContext):
         self._tags = self._system_tags.merge_with(self.uod.tags)
         self._emitter = EventEmitter(self._tags)
         self._tick_timer.set_tick_fn(self.tick)
+
+        # there attributes must be declared before self.on_interpreter_reset() can use them
+        self._interpreter: PInterpreter | None = None
+        self._tracking: Tracking | None = None
+        self._command_manager: CommandManager | None = None
+
+        self._method_manager: MethodManager = MethodManager(uod.get_command_names(), self, self.on_interpreter_reset)
+        """ The model handling changes to method code and interpreter running it """
+
+        self._lock = Lock()
+
+
+    def on_interpreter_reset(self, interpreter: PInterpreter):
+        self._interpreter = interpreter
+        self._tracking = interpreter.tracking
+        restart_request_pending = None if self._command_manager is None else self._command_manager.restart_request_pending
+        self._command_manager = CommandManager(self._tracking, self.uod, self.registry, restart_request_pending)
 
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(uod={self.uod}, is_running={self.is_running}, ' +
@@ -184,19 +195,19 @@ class Engine(InterpreterContext):
 
     @property
     def interpreter(self) -> PInterpreter:
-        return self.method_manager.interpreter
+        if self._interpreter is None:
+            raise EngineNotInitializedError("interpreter not set")
+        return self._interpreter
 
     @property
-    def runtimeinfo(self) -> RuntimeInfo:
-        return self.interpreter.runtimeinfo
-
+    def tracking(self) -> Tracking:
+        if self._tracking is None:
+            raise EngineNotInitializedError("tracking not set")
+        return self._tracking
 
     def cleanup(self):
         self.emitter.emit_on_engine_shutdown()
         self.registry.__exit__(None, None, None)
-
-    def get_runlog(self) -> RunLog:
-        return self.runtimeinfo.get_runlog()
 
     def run(self, skip_timer_start=False):
         self._run(skip_timer_start)
@@ -255,46 +266,52 @@ class Engine(InterpreterContext):
         self.read_process_image()
 
         # execute phase
-        # excecute interpreter tick
-        if self._runstate_started and\
-                not self._runstate_paused and\
-                not self._runstate_holding and\
-                not self._runstate_stopping:
+        with self._lock:
+            self.tracking.tick(tick_time, self._tick_number)
+
+            # excecute interpreter tick
+            if self._runstate_started and \
+                    not self._runstate_paused and \
+                    not self._runstate_holding and \
+                    not self._runstate_stopping:
+                try:
+                    # run one tick of interpretation, i.e. one instruction
+                    self.interpreter.tick(tick_time, self._tick_number)
+                except InterpretationInternalError as ex:
+                    logger.fatal("A serious internal interpreter error occured. The method should be stopped. If it is resumed, \
+                                additional errors may occur.", exc_info=True)
+                    self.set_error_state(ex)
+                except EngineError as eex:
+                    logger.error(eex.message)
+                    if eex.user_message is not None:
+                        frontend_logger.error(eex.user_message)
+                    self.set_error_state(eex)
+                except InterpretationError as ie:
+                    logger.error("Interpretation error", exc_info=True)
+                    if ie.user_message is not None:
+                        frontend_logger.error(ie.user_message)
+                    self.set_error_state(ie)
+                except Exception as ex:
+                    logger.error("Unhandled interpretation error", exc_info=True)
+                    frontend_logger.error("Method error")
+                    self.set_error_state(ex)
+
+            # update calculated tags
+            if self._runstate_started:
+                self.update_calculated_tags(tick_time, increment_time)
+
+            # execute queued commands, go to error_state on error
             try:
-                # run one tick of interpretation, i.e. one instruction
-                self.interpreter.tick(tick_time, self._tick_number)
-            except InterpretationInternalError as ex:
-                logger.fatal("A serious internal interpreter error occured. The method should be stopped. If it is resumed, \
-                             additional errors may occur.", exc_info=True)
-                self.set_error_state(ex)
-            except EngineError as eex:
-                logger.error(eex.message)
-                if eex.user_message is not None:
-                    frontend_logger.error(eex.user_message)
-                self.set_error_state(eex)
-            except InterpretationError as ie:
-                logger.error("Interpretation error", exc_info=True)
-                if ie.user_message is not None:
-                    frontend_logger.error(ie.user_message)
-                self.set_error_state(ie)
+                assert self._command_manager is not None
+                self._command_manager.tick(tick_time, self._tick_number)
             except Exception as ex:
-                logger.error("Unhandled interpretation error", exc_info=True)
-                frontend_logger.error("Method error")
                 self.set_error_state(ex)
 
-        # update calculated tags
-        if self._runstate_started:
-            self.update_calculated_tags(tick_time, increment_time)
+            # notify of tag changes
+            self.notify_tag_updates()
 
-        # execute queued commands, go to error_state on error
-        self.execute_commands()
-
-        # notify of tag changes
-        self.notify_tag_updates()
-
-        # write phase, error_state on HardwareLayerException
-        self.write_process_image()
-
+            # write phase, error_state on HardwareLayerException
+            self.write_process_image()
 
     def read_process_image(self):
         """ Read data from relevant hw registers into tags"""
@@ -339,122 +356,6 @@ class Engine(InterpreterContext):
         # Execute the tick lifetime hook on tags
         self.emitter.emit_on_tick(tick_time, increment_time)
 
-    def execute_commands(self):
-        done = False
-        # add command request from incoming queue
-
-        while self.cmd_queue.qsize() > 0 and not done:
-            try:
-                engine_command = self.cmd_queue.get()
-                # Note: New commands are inserted at the beginning of the list.
-                # This allows simpler cancellation of identical/overlapping commands
-                self.cmd_executing.insert(0, engine_command)
-            except Empty:
-                done = True
-
-        # execute a tick of each running command
-        cmds_done: Set[CommandRequest] = set()
-        latest_cmd = "(none)"
-        try:
-            for c in self.cmd_executing:
-                latest_cmd = c.name
-                if c not in cmds_done:
-                    # Note: Executing one command may cause other commands to be cancelled (by identical or overlapping
-                    # commands) Rather than modify self.cmd_executing (while iterating over it), cancelled/completed
-                    # commands are added to the cmds_done set.
-                    self._execute_command(c, cmds_done)
-        except ValueError as ve:
-            logger.error(f"Error executing command: '{latest_cmd}'. Command failed with error: {ve}", exc_info=True)
-            frontend_logger.error(f"Command '{latest_cmd}' failed: {ve}")
-            self.set_error_state(ve)
-        except Exception as ex:
-            logger.error(f"Error executing command: '{latest_cmd}'", exc_info=True)
-            frontend_logger.error(f"Error executing command: '{latest_cmd}'")
-            self.set_error_state(ex)
-        finally:
-            for c_done in cmds_done:
-                self.cmd_executing.remove(c_done)
-
-    def _execute_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):
-        # execute an internal engine command or a uod command
-
-        logger.debug("Executing command: " + cmd_request.name)
-        if cmd_request.name is None or len(cmd_request.name.strip()) == 0:
-            logger.error("Command name empty")
-            frontend_logger.error("Cannot execute command with empty name")
-            cmds_done.add(cmd_request)
-            return
-
-        if EngineCommandEnum.has_value(cmd_request.name):
-            self._execute_internal_command(cmd_request, cmds_done)
-        else:
-            self._execute_uod_command(cmd_request, cmds_done)
-
-    def _execute_internal_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):  # noqa C901
-        if not self._runstate_started and cmd_request.name not in [EngineCommandEnum.START, EngineCommandEnum.RESTART]:
-            logger.warning(f"Command {cmd_request.name} is invalid when Engine is not running")
-            cmds_done.add(cmd_request)
-            return
-
-        # get the runtime record to use for tracking if possible
-        record = RuntimeRecord.null_record()
-        if cmd_request.exec_id is not None:  # happens for all commands not originating from interpreter
-            # during restart, record is None - should not occur otherwise
-            record = self.interpreter.runtimeinfo.get_exec_record(cmd_request.exec_id)
-
-        # an existing, long running engine_command is running. other commands must wait
-        # Note: we need a priority mechanism - even Stop is waiting here
-        command = self.registry.get_running_internal_command()
-        if command is not None:
-            if cmd_request.name == command.name:
-                if not command.is_finalized():
-                    command.tick()
-                if command.has_failed():
-                    cmds_done.add(cmd_request)
-                    if record is not None:
-                        record.add_state_failed(self._tick_time, self._tick_number, self.tags_as_readonly())
-                    else:
-                        logger.error(f"Failed to record failed state for command {cmd_request}")
-                elif command.is_finalized():
-                    cmds_done.add(cmd_request)
-                    if record is not None:
-                        record.add_state_completed(self._tick_time, self._tick_number, self.tags_as_readonly())
-                    else:
-                        logger.error(f"Failed to record completed state for command {cmd_request}")
-            return
-
-        # no engine command is running - start one
-        try:
-            command = self.registry.create_internal_command(cmd_request.name)
-            args = cmd_request.arguments
-            if args is not None:
-                try:
-                    command.validate_arguments(args)
-                    logger.debug(f"Initialized command {cmd_request.name} with arguments '{args}'")
-                except Exception:
-                    raise EngineError(
-                        f"Failed to initialize arguments '{args}' for command '{cmd_request.name}'",
-                        "same"
-                    )
-        except ValueError:
-            raise EngineError(
-                f"Unknown internal engine command '{cmd_request.name}'",
-                f"Unknown command '{cmd_request.name}'")
-
-        if record is not None:
-            record.add_state_started(self._tick_time, self._tick_number, self.tags_as_readonly())
-            record.add_state_internal_engine_command_set(command, self._tick_time,
-                                                         self._tick_number, self.tags_as_readonly())
-            command.tick()
-            if command.has_failed():
-                record.add_state_failed(self._tick_time, self._tick_number, self.tags_as_readonly())
-                cmds_done.add(cmd_request)
-            elif command.is_finalized():
-                record.add_state_completed(self._tick_time, self._tick_number, self.tags_as_readonly())
-                cmds_done.add(cmd_request)
-        else:
-            logger.error(f"Runtime record is None for command {cmd_request}, this should not occur")
-
     def set_run_id(self) -> str:
         """ Creates a new run_id, sets the Run Id tag to it and returns it. """
         run_id = str(uuid.uuid4())
@@ -476,192 +377,15 @@ class Engine(InterpreterContext):
         # sense to wait until start
         self.method_manager.reset_interpreter()
 
-    def _cancel_uod_commands(self):
-        logger.debug("Cancelling uod commands")
-        cmds_to_cancel: list[UodCommand] = []
-        for name, command in self.uod.command_instances.items():
-            if command.is_cancelled() or command.is_execution_complete() or command.is_finalized():
-                logger.debug(f"Skipping command '{name}' that is no longer running")
-            else:
-                cmds_to_cancel.append(command)
-
-        # call outside the loop because cancel modifies the collection
-        for command in cmds_to_cancel:
-            command.cancel()
-
-    def _finalize_uod_commands(self):
-        logger.debug("Cancelling uod commands")
-        cmds_to_finalize: list[UodCommand] = []
-        for command in self.uod.command_instances.values():
-            if not command.is_finalized():
-                cmds_to_finalize.append(command)
-
-        # call outside the loop because finalize modifies the collection
-        for command in cmds_to_finalize:
-            command.finalize()
-
-    def _execute_uod_command(self, cmd_request: CommandRequest, cmds_done: Set[CommandRequest]):  # noqa C901
-        cmd_name = cmd_request.name
-        assert self.uod.has_command_name(cmd_name), f"Expected Uod to have command named '{cmd_name}'"
-        assert cmd_request.exec_id is not None, f"Expected uod command request '{cmd_name}' to have exec_id"
-
-        if not self.uod.hwl.is_connected:
-            raise EngineError(
-                f"The hardware is disconnected. The command '{cmd_name}' was not allowed to start.",
-                "same")
-
-        cancel_this = False
-
-        # cancel any pending cancels (per user request)
-        for c in self.cmd_executing:
-            if c.command_exec_id is not None and c.command_exec_id in self._cancel_command_exec_ids:
-                cmds_done.add(c)
-                assert c.command_exec_id is not None, f"Expected uod command request '{c.name}' to have command_exec_id"
-                self._cancel_command_exec_ids.remove(c.command_exec_id)
-                if cmd_request.name == c.name:
-                    cancel_this = True
-                cmd_record = self.runtimeinfo.get_command_and_record(c.command_exec_id)
-                if cmd_record is not None:
-                    command, c_record = cmd_record
-                    command.cancel()
-                    command.finalize()
-                    c_record.add_command_state_cancelled(
-                        c.command_exec_id, self._tick_time, self._tick_number, self.tags_as_readonly())
-                    logger.info(f"Running command {c.name} cancelled per user request")
-                else:
-                    logger.error(f"Cannot cancel command {c}. No runtime record found with {c.exec_id=}" +
-                                 f" and {c.command_exec_id=}")
-
-        # cancel any existing instance with same name
-        for c in [_c for _c in self.cmd_executing if _c not in cmds_done]:
-            if c.name == cmd_name and not c == cmd_request:
-                cmds_done.add(c)
-                assert c.command_exec_id is not None, f"command_exec_id should be set for command '{cmd_name}'"
-                cmd_record = self.runtimeinfo.get_command_and_record(c.command_exec_id)
-                assert cmd_record is not None
-                command, c_record = cmd_record
-                command.cancel()
-                command.finalize()
-                c_record.add_command_state_cancelled(
-                    c.command_exec_id, self._tick_time, self._tick_number,
-                    self.tags_as_readonly())
-                logger.debug(f"Running command {c.name} cancelled because another was started")
-
-        # cancel any overlapping instance
-        for c in [_c for _c in self.cmd_executing if _c not in cmds_done]:
-            if not c == cmd_request:
-                for overlap_list in self.uod.overlapping_command_names_lists:
-                    if c.name in overlap_list and cmd_name in overlap_list:
-                        cmds_done.add(c)
-                        assert c.command_exec_id is not None, f"command_exec_id should be set for command '{c.name}'"
-                        cmd_record = self.runtimeinfo.get_command_and_record(c.command_exec_id)
-                        assert cmd_record is not None
-                        command, c_record = cmd_record
-                        command.cancel()
-                        command.finalize()
-                        c_record.add_command_state_cancelled(
-                            c.command_exec_id, self._tick_time, self._tick_number,
-                            self.tags_as_readonly())
-                        logger.info(
-                            f"Running command {c.name} cancelled because overlapping command " +
-                            f"'{cmd_name}' was started")
-                        break
-
-        if cancel_this:
-            # don't start command again that was just cancelled
-            return
-
-        record = self.interpreter.runtimeinfo.get_exec_record(cmd_request.exec_id)
-        if record is None:
-            logger.error(f"Failed to get record for command {cmd_request}")
-            return
-
-        # create or get command instance
-        if not self.uod.has_command_instance(cmd_name):
-            uod_command = self.uod.create_command(cmd_name)
-            cmd_request.command_exec_id = record.add_state_uod_command_set(
-                uod_command,
-                self._tick_time,
-                self._tick_number,
-                self.tags_as_readonly())
-        else:
-            uod_command = self.uod.get_command(cmd_name)
-
-        assert uod_command is not None, f"Failed to get uod_command for command '{cmd_name}'"
-
-        logger.debug(f"Parsing arguments '{cmd_request.arguments}' for uod command {cmd_name}")
-        parsed_args = uod_command.parse_args(cmd_request.arguments)
-
-        if parsed_args is None:
-            logger.error(f"Invalid argument string: '{cmd_request.arguments}' for command '{cmd_name}'")
-            cmds_done.add(cmd_request)
-            raise ValueError(f"Invalid arguments for command '{cmd_name}'")
-
-        # execute command state flow
-        try:
-            logger.debug(
-                f"Executing uod command: '{cmd_request.name}' with parsed args '{parsed_args}', " +
-                f"iteration {uod_command._exec_iterations}")
-            if uod_command.is_cancelled():
-                if not uod_command.is_finalized():
-                    cmds_done.add(cmd_request)
-                    uod_command.finalize()
-
-            if not uod_command.is_initialized():
-                uod_command.initialize()
-                logger.debug(f"Command {cmd_request.name} initialized")
-
-            if not uod_command.is_execution_started():
-                assert cmd_request.command_exec_id is not None
-                record.add_command_state_started(
-                    cmd_request.command_exec_id,
-                    self._tick_time, self._tick_number,
-                    self.tags_as_readonly())
-                uod_command.execute(parsed_args)
-                logger.debug(f"Command {cmd_request.name} executed first iteration {uod_command._exec_iterations}")
-            elif not uod_command.is_execution_complete():
-                uod_command.execute(parsed_args)
-                logger.debug(f"Command {cmd_request.name} executed another iteration {uod_command._exec_iterations}")
-
-            if uod_command.is_execution_complete() and not uod_command.is_finalized():
-                assert cmd_request.command_exec_id is not None
-                record.add_command_state_completed(
-                    cmd_request.command_exec_id,
-                    self._tick_time, self._tick_number,
-                    self.tags_as_readonly())
-                cmds_done.add(cmd_request)
-                uod_command.finalize()
-                logger.debug(f"Command {cmd_request.name} finalized")
-
-        except Exception as ex:
-            if cmd_request in self.cmd_executing:
-                cmds_done.add(cmd_request)
-            assert cmd_request.command_exec_id is not None
-            record.add_command_state_failed(
-                cmd_request.command_exec_id,
-                self._tick_time, self._tick_number,
-                self.tags_as_readonly())
-            cmd_record = self.runtimeinfo.get_command_and_record(cmd_request.command_exec_id)
-            if cmd_record is not None:
-                assert cmd_record[1].exec_id == record.exec_id
-                command = cmd_record[0]
-                if command is not None and not command.is_cancelled():
-                    command.cancel()
-                    logger.info(f"Cleaned up failed command {cmd_name}")
-
-            logger.error(
-                f"Uod command execution failed. Command: '{cmd_request.name}', " +
-                f"argument string: '{cmd_request.arguments}'", exc_info=True)
-            raise ex
-
     def _apply_safe_state(self) -> TagValueCollection:
         current_values: list[TagValue] = []
-        for t in self._iter_all_tags():
-            if t.direction == TagDirection.Output:
-                safe_value = t.safe_value
-                if not isinstance(safe_value, Unset):
-                    current_values.append(t.as_readonly())
-                    t.set_value(safe_value, self._tick_time)
+        hwl = self.uod.hwl
+        registers = [r for r in hwl.registers.values()
+                     if RegisterDirection.Write in r.direction and "safe_value" in r._options]
+        for r in registers:
+            tag = self.uod.tags[r.name]
+            current_values.append(tag.as_readonly())
+            tag.set_value(r._options["safe_value"], self._tick_time)
         return TagValueCollection(current_values)
 
     def _apply_state(self, state: TagValueCollection):
@@ -705,11 +429,14 @@ class Engine(InterpreterContext):
         self._emitter.emit_on_method_error(exception)
 
     def has_error_state(self) -> bool:
-        method_status = self._system_tags[SystemTagName.METHOD_STATUS]
-        return method_status.get_value() == MethodStatusEnum.ERROR
+        return self._last_error is not None
 
     def get_error_state_exception(self) -> Exception | None:
         return self._last_error
+
+    def clear_error_state(self):
+        self._last_error = None
+        self._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.OK, self._tick_time)
 
     def write_process_image(self):
         if not self._runstate_started:
@@ -732,26 +459,62 @@ class Engine(InterpreterContext):
                 logger.error("Hardware write_batch error", exc_info=True)
                 self.set_error_state(ex)
 
-    def schedule_execution(self, name: str, arguments: str = "", exec_id: UUID | None = None):
+    def schedule_execution(self, name: str, arguments: str = "", instance_id: str | None = None):
         """ Execute named command from interpreter """
+        assert self._command_manager is not None
+        if instance_id is None:
+            instance_id = self.tracking.create_instance_id(name)
         if EngineCommandEnum.has_value(name) or self.uod.has_command_name(name):
-            request = CommandRequest.from_interpreter(name, arguments, exec_id)
-            self.cmd_queue.put_nowait(request)
+            request = CommandRequest.from_interpreter(name, arguments, instance_id)
+            self._command_manager.schedule(request)
         else:
             raise EngineError(
                 f"Invalid command type scheduled: '{name}'",
                 f"Unknown command: '{name}'"
             )
 
-    def schedule_execution_user(self, name: str, args: str | None = None):
+    def _validate_control_command(self, command_name: str):
+        """ Raise a ValueError if the command is a control command that is not valid in the current
+        engine state. """
+        sys_state_value = self._system_tags[SystemTagName.SYSTEM_STATE].get_value()
+        if command_name == EngineCommandEnum.START:
+            if sys_state_value != SystemStateEnum.Stopped:
+                raise ValueError(
+                    f"Start command is only valid when system state is stopped. Current state is {sys_state_value}")
+        elif command_name == EngineCommandEnum.STOP:
+            if sys_state_value in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
+                raise ValueError(f"Stop command is not valid when system state is {sys_state_value}")
+        elif command_name == EngineCommandEnum.RESTART:
+            if sys_state_value in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
+                raise ValueError(f"Restart command is not valid when system state is {sys_state_value}")
+        elif command_name == EngineCommandEnum.PAUSE:
+            if sys_state_value in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
+                raise ValueError(f"Pause command is not valid when system state is {sys_state_value}")
+            if self._runstate_paused:
+                raise ValueError("Pause command is not valid when system state is paused")
+        elif command_name == EngineCommandEnum.UNPAUSE:
+            if sys_state_value in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
+                raise ValueError(f"Unpause command is not valid when system state is {sys_state_value}")
+            if not self._runstate_paused:
+                raise ValueError("Unpause command is not valid when system state is not paused")
+        elif command_name == EngineCommandEnum.HOLD:
+            if sys_state_value in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
+                raise ValueError(f"Hold command is not valid when system state is {sys_state_value}")
+            if self._runstate_holding:
+                raise ValueError("Hold command is not valid when system state is on hold")
+        elif command_name == EngineCommandEnum.UNHOLD:
+            if sys_state_value in [SystemStateEnum.Stopped, SystemStateEnum.Restarting]:
+                raise ValueError(f"Unhold command is not valid when system state is {sys_state_value}")
+            if not self._runstate_holding:
+                raise ValueError("Unhold command is not valid when system state is not on hold")
+
+    def execute_control_command_from_user(self, name: str):
         """ Execute named command from user """
-        # TODO args format needs to be specified in more detail. Its intended usage is
-        # to contain argument values added to tag buttons. But in that case why not just use pcode?
+        assert self._command_manager is not None
         if EngineCommandEnum.has_value(name) or self.uod.has_command_name(name):
-            if args is not None:
-                raise NotImplementedError("User arguments format not implemented - command name: " + name)
-            request = CommandRequest.from_user(name)
-            self.cmd_queue.put_nowait(request)
+            self._validate_control_command(name)
+            request = CommandRequest.from_user(name, "", self.tracking.create_instance_id(name))
+            self._command_manager.schedule(request)
         else:
             logger.error(f"Invalid command type scheduled: '{name}'")
             frontend_logger.error(f"Unknown command: '{name}'")
@@ -768,7 +531,7 @@ class Engine(InterpreterContext):
             self.set_error_state(ex)
             raise
 
-    # code manipulation api
+    # Code manipulation api
     def set_method(self, method: Mdl.Method) -> Literal["merge_method", "set_method"]:
         """ Set new method. This will replace the current method, either by merging in changes in case the method is already
         running or just setting the method otherwise. """
@@ -779,9 +542,14 @@ class Engine(InterpreterContext):
                 try:
                     self._method_manager.merge_method(method)
                     logger.info(f"Method merged successfully. Revision is now {self.method_manager.program.revision}")
+
+                    # consider the edit an attempt to fix error state
+                    if self.has_error_state():
+                        self.clear_error_state()
+
                     return "merge_method"
                 except Exception:
-                    logger.error("Error merging method", exc_info=True)
+                    logger.error("Error merging method")
                     raise
             else:
                 logger.info("Setting new method")
@@ -790,51 +558,41 @@ class Engine(InterpreterContext):
                     logger.info(f"Method set successfully. Revision is {self.method_manager.program.revision}")
                     return "set_method"
                 except Exception:
-                    logger.error("Error setting method", exc_info=True)
+                    logger.error("Error setting method")
                     raise
 
         except MethodEditError:
-            # skip setting error_state(?)
+            # skip setting error_state(?) tests expects this and fails on error_state
             # depends on how we will handle these errors on the client side
             raise
         except Exception as ex:
             logger.error("Failed to set method", exc_info=True)
+            logger.error(f"Current method content:\n\n{self.method_manager._method}\n")
+            logger.error(f"New method content:\n\n{method}\n")
             self.set_error_state(ex)
             raise
 
-    def cancel_instruction(self, exec_id: UUID):
-        # try exec_id as a record exec_id
-        record = self.runtimeinfo.get_exec_record(exec_id=exec_id)
-        if record is not None:
-            logger.info(f"Cancelling instruction {exec_id=}")
-            record.node.cancel()
-        else:
-            # try exec_id as a command_exec_id
-            result = self.runtimeinfo.get_command_and_record(command_exec_id=exec_id)
-            if result is not None:
-                _, record = result
-                logger.info(f"Schedule cancellation of uod command {exec_id=}")
-                self._cancel_command_exec_ids.add(exec_id)
-                record.node.cancel()  # also need to mark the node as cancelled to update the runlog
+    # Cancel/Force commands from user, originating from runlog item - lock should be used here, right?
+    def cancel_instruction(self, instance_id: str):
+        """ Cancel command instance and finalize it immidiately """
+        with self._lock:
+            assert self._command_manager is not None
+            self._command_manager.cancel_instruction(instance_id)
 
-        if record is None:
-            logger.error(f"Cannot cancel instruction {exec_id=}, no runtime record exec_id or command_exec_id found")
+    def force_instruction(self, instance_id: str):
+        """ Force the command instance """
+        with self._lock:
+            assert self._command_manager is not None
+            self._command_manager.force_instruction(instance_id)
 
-    def force_instruction(self, exec_id: UUID):
-        record = self.runtimeinfo.get_exec_record(exec_id=exec_id)
-        if record is not None:
-            logger.info(f"Forcing instruction with exec_id {exec_id=}")
-            record.node.force()
-        else:
-            result = self.runtimeinfo.get_command_and_record(command_exec_id=exec_id)
-            if result is not None:
-                command, record = result
-                logger.info(f"Forcing instruction with command_exec_id {exec_id=}")
-                command.force()
-                record.node.force()  # also need to mark the node as cancelled to update the runlog
+    # Cancel/Finalize originating from Stop/Restart commands, i.e. from the tick commands loop
+    def cancel_all_commands(self, source_command_name: str):
+        assert self._command_manager is not None
+        self._command_manager.cancel_commands(source_command_name, finalize=True)
 
-        if record is None:
-            logger.error(f"Cannot force instruction {exec_id=}, no runtime record found")
+    # This is unnecessary until we support a cancellation cool-down period
+    # def finalize_all_commands(self, source_command_name: str):
+    #     self._command_manager.finalize_commands(source_command_name)
 
     def get_command_definitions(self) -> list[Mdl.CommandDefinition]:
         """ Return engine command definitions. """

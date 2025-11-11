@@ -81,13 +81,19 @@ builder method. For OPC-UA, this may look like:
 
 .. code-block:: python
 
-   with_hardware_register("FT01", "Read", path='Objects;2:System;3:FT01')
+   with_hardware_register("FT01", RegisterDirection.Read, path='Objects;2:System;3:FT01')
 
 Note that the :console:`name` argument specifies the name to use for the register inside Open Pectus while the :console:`path` option specifies how to refer to the register when communicating with the hardware.
 
 Registers are not used directly. Instead register values are wrapped in instances of the :python:`Tag` class. Two special register options :python:`to_tag` and :python:`from_tag` specify how to convert between the register values (the raw values read from the hardware)  and :python:`tag` values (the values used in P-code). If these options are not set, no conversion of the value is performed.
 
 As an example, a unit may have a valve that is exposed as a register whose values are the integers 0 and 1. The :python:`to_tag` and :python:`from_tag` options can be used to map theses values to a tag with the string values 'On' and 'Off' which would be a more natural choice for process operators.
+
+An output register can also have a safe value which is applied before `Start` and after `Stop` of a run:
+
+.. code-block:: python
+
+   with_hardware_register("Output", RegisterDirection.Write, path='Objects;2:System;3:PU01', safe_value=0.0)
 
 Tags
 ^^^^
@@ -105,7 +111,6 @@ Besides holding a value, a tag also has these properties:
   * :python:`OUTPUT` - Tag is written to hardware, e.g. an actuator
   * :python:`NA` - Tag is calculated/derived and neither read from or written to hardware
   * :python:`UNSPECIFIED` - Not specified. The system may not be able to handle its values properly
-* :python:`safe_value`: Specifies a value that represents a safe position, e.g. an `OFF` value for a valve.
 
 To define a tag, use the :python:`with_tag` builder method. If a tag is given the same name as a register, the two are automatically matched. This means that (depending on the directions of the register and tag), the register's value and the tag are synchronized as appropriate.
 

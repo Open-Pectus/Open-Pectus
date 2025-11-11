@@ -1,6 +1,7 @@
 import time
 import unittest
 from typing import Any
+from openpectus.aggregator.models import SystemStateEnum
 from openpectus.lang.exec.regex import RegexNumber
 from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 from openpectus.engine.hardware import RegisterDirection
@@ -10,7 +11,11 @@ from openpectus.lang.exec.tags import SystemTagName, Tag, TagDirection
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand, UodBuilder
 from openpectus.test.engine.utility_methods import (
     EngineTestRunner,
-    configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging
+    configure_test_logger,
+    print_runlog,
+    print_runtime_records,
+    print_runtime_records_alt,
+    set_engine_debug_logging, set_interpreter_debug_logging
 )
 
 
@@ -69,10 +74,16 @@ def create_test_uod() -> UnitOperationDefinitionBase:  # noqa
             from_tag=lambda x: 1 if x == "Reset" else 0,
             to_tag=lambda x: "Reset" if x == 1 else "N/A",
         )
+        .with_hardware_register(
+            "Danger",
+            RegisterDirection.Write,
+            path="Objects;2:System;2:Danger",
+            safe_value=False,
+        )
         # Readings
         .with_tag(ReadingTag("FT01", "L/h"))
         .with_tag(SelectTag("Reset", value="N/A", unit=None, choices=["Reset", "N/A"]))
-        .with_tag(Tag("Danger", value=True, unit=None, direction=TagDirection.Output, safe_value=False))
+        .with_tag(Tag("Danger", value=True, unit=None, direction=TagDirection.Output))
         .with_command(name="Reset", exec_fn=reset)
         .with_command(name="CmdWithArgs", exec_fn=cmd_with_args, arg_parse_fn=cmd_arg_parse)
         .with_command(name="overlap1", exec_fn=overlap_exec)
@@ -200,44 +211,43 @@ Restart
     # --- Restart ---
 
 
-#     def test_restart_can_restart(self):
-#         set_engine_debug_logging()
-#         set_interpreter_debug_logging()
-#         program = """
-# Mark: A
-# Increment run counter
-# Restart
-# """
-#         e = self.engine
-#         self.assertEqual(0, e.tags[SystemTagName.RUN_COUNTER].as_number())
+    def test_restart_can_restart(self):
+        set_engine_debug_logging()
+        set_interpreter_debug_logging()
+        code = """
+Mark: A
+Increment run counter
+Restart
+"""
+        runner = EngineTestRunner(create_test_uod, code)
 
-#         run_engine(e, program, start_ticks + 2)
+        with runner.run() as instance:
+            sys_state = instance.engine.tags[SystemTagName.SYSTEM_STATE]
+            run_counter = instance.engine.tags[SystemTagName.RUN_COUNTER]
+            run_id = instance.engine.tags[SystemTagName.RUN_ID]
+            instance.start()
 
-#         run_id_1 = e.tags[SystemTagName.RUN_ID].get_value()
-#         self.assertEqual(e.tags[SystemTagName.SYSTEM_STATE].get_value(), SystemStateEnum.Restarting)
-#         self.assertEqual(1, e.tags[SystemTagName.RUN_COUNTER].as_number())
+            instance.run_until_condition(lambda : sys_state.get_value() == SystemStateEnum.Restarting)
+            run_id_1 = run_id.get_value()
+            self.assertIsNotNone(run_id.get_value())
+            self.assertEqual(["A"], instance.marks)
+            self.assertEqual(1, run_counter.as_number())
 
-#         self.assertEqual(e.interpreter.get_marks(), ["A"])
+            instance.run_until_condition(lambda : sys_state.get_value() == SystemStateEnum.Stopped)
+            self.assertIsNone(run_id.get_value())
+            self.assertEqual([], instance.marks)
+            self.assertEqual(1, run_counter.as_number())
 
-#         continue_engine(e, 1)
+            instance.run_until_condition(lambda : sys_state.get_value() == SystemStateEnum.Running)
+            run_id_2 = run_id.get_value()
+            self.assertIsNotNone(run_id_2)
+            self.assertNotEqual(run_id_1, run_id_2)
+            self.assertEqual([], instance.marks)
+            self.assertEqual(1, run_counter.as_number())
 
-#         self.assertEqual(e.tags[SystemTagName.SYSTEM_STATE].get_value(), SystemStateEnum.Stopped)
-#         self.assertIsNone(e.tags[SystemTagName.RUN_ID].get_value())
-#         self.assertEqual(e.interpreter.get_marks(), [])
-#         self.assertEqual(1, e.tags[SystemTagName.RUN_COUNTER].as_number())
-
-#         continue_engine(e, 1)
-
-#         run_id2 = e.tags[SystemTagName.RUN_ID].get_value()
-#         self.assertEqual(e.tags[SystemTagName.SYSTEM_STATE].get_value(), SystemStateEnum.Running)
-#         self.assertNotEqual(run_id_1, run_id2)
-#         self.assertEqual(e.interpreter.get_marks(), [])
-#         self.assertEqual(1, e.tags[SystemTagName.RUN_COUNTER].as_number())
-
-#         continue_engine(e, 3)
-
-#         self.assertEqual(e.interpreter.get_marks(), ["A"])
-#         self.assertEqual(2, e.tags[SystemTagName.RUN_COUNTER].as_number())
+            instance.run_until_instruction("Increment run counter")
+            self.assertEqual(["A"], instance.marks)
+            self.assertEqual(2, run_counter.as_number())
 
 #     def test_restart_stop_ticking_interpreter(self):
 
@@ -254,32 +264,53 @@ Restart
 #             continue_engine(e, 1)
 #             self.assertTrue("X" not in e.interpreter.get_marks())
 
-#     def test_restart_cancels_running_commands(self):
-#         program = """
-# Reset
-# Restart
-# """
-#         e = self.engine
-#         run_engine(e, program, start_ticks + 1)
+    def test_restart_cancels_running_commands(self):
+        set_engine_debug_logging()
 
-#         system_state = e.tags[SystemTagName.SYSTEM_STATE]
-#         self.assertEqual(system_state.get_value(), SystemStateEnum.Restarting)
+        code1 = """\
+Reset
+"""
+        code2 = """\
+Reset
+Restart
+"""
+        # verify Reset duration is 5 ticks
+        runner = EngineTestRunner(create_test_uod, code1)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_command("Reset")
 
-#     def test_restart_can_stop(self):
-#         set_engine_debug_logging()
-#         set_interpreter_debug_logging()
-#         program = """
-# Mark: A
-# Restart
-# """
-#         e = self.engine
-#         run_engine(e, program, start_ticks + 1)
+            instance.index_step_back(1)
+            reset_ticks = instance.run_until_command("Reset", state="completed")
+            self.assertEqual(5, reset_ticks)
 
-#         # when no commands need to be stopped, restart immediately moves to Stopped
-#         system_state = e.tags[SystemTagName.SYSTEM_STATE]
-#         self.assertEqual(system_state.get_value(), SystemStateEnum.Restarting)
+        # verify that total duration is faster than 5 ticks
+        runner = EngineTestRunner(create_test_uod, code2)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_command("Reset")
 
+            total_ticks = instance.run_until_instruction("Restart")
+            self.assertLess(total_ticks, 3)
 
+    def test_restart_can_stop(self):
+        set_engine_debug_logging()
+        set_interpreter_debug_logging()
+        code = """
+Mark: A
+Restart
+"""
+        runner = EngineTestRunner(create_test_uod, code)
+        with runner.run() as instance:
+            sys_state = instance.engine.tags[SystemTagName.SYSTEM_STATE]
+            instance.start()
+
+            instance.run_until_instruction("Restart")
+            self.assertEqual(sys_state.get_value(), SystemStateEnum.Restarting)
+
+            # when no commands need to be stopped, restart directly moves to Stopped
+            instance.run_ticks(1)
+            self.assertEqual(sys_state.get_value(), SystemStateEnum.Stopped)
 
     def test_mark_in_alarm_body_runs_in_each_alarm_instance(self):
         code = """
@@ -293,17 +324,18 @@ Alarm: Block Time > 0s
             instance.run_until_instruction("Alarm", "started")
 
             # print(instance.get_runtime_table("start"))
+            # print_runtime_records(instance.engine, "A")
 
             instance.run_until_instruction("Mark", "completed")
             self.assertEqual(['A'], instance.marks)
-
-            # instance.run_until_event("method_end")
-            # instance.run_until_event("method_end")
-            # self.assertEqual(['A', 'A'], instance.marks)
-
+            # print_runtime_records_alt(instance.engine, "B")
 
             instance.run_until_condition(lambda : instance.marks == ['A', 'A'])
+            # print_runtime_records_alt(instance.engine, "C")
+
             instance.run_until_condition(lambda : instance.marks == ['A', 'A', 'A'])
+            # print_runtime_records_alt(instance.engine, "D")
+            # print_runlog(instance.engine)
 
     def test_watch_in_alarm_body_runs_in_each_alarm_instance(self):
         code = """
@@ -476,7 +508,7 @@ Warning: bar
 Error: baz
 Stop
 """
-        runner = EngineTestRunner(create_test_uod, pcode)
+        runner = EngineTestRunner(create_test_uod, pcode, fail_on_log_error=False)
         with runner.run() as instance:
             instance.start()
             instance.run_until_event("stop")  # will raise on engine error

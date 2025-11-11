@@ -43,6 +43,7 @@ class StartEngineCommand(InternalEngineCommand):
             e._system_tags[SystemTagName.PROCESS_TIME].set_value(0.0, e._tick_time)
             e._system_tags[SystemTagName.RUN_COUNTER].set_value(0, e._tick_time)
 
+            e.tracking.enable()
             e.emitter.emit_on_start(run_id)
 
 
@@ -77,8 +78,16 @@ class PauseEngineCommand(InternalEngineCommand):
             while self.engine._tick_time < duration_end_time:
                 yield
             logger.debug("Resuming using Unpause")
-            UnpauseEngineCommand(self.engine, self._registry)._run()
+            unpause = UnpauseEngineCommand(self.engine, self._registry)
+            unpause._run()
 
+    def cancel(self):
+        super().cancel()
+        logger.debug("Pause cancelled via api. Resuming using Unpause")
+        unpause = UnpauseEngineCommand(self.engine, self._registry)
+        unpause._run()
+        # cancelling hold means aborting wait and completing the command
+        self.set_complete()
 
 @command_argument_none()
 class UnpauseEngineCommand(InternalEngineCommand):
@@ -102,14 +111,6 @@ class UnpauseEngineCommand(InternalEngineCommand):
 
         # Note: we currently don't have hold/unhold events to worry about here
         e.emitter.emit_on_runstate_change(RunStateChange.UNPAUSE)
-
-        # TODO Consider how a corrected error should be handled. It depends on the cause
-        # - Run time value is broken: Maybe trying again will fix it
-        # - Code is broken and the user fixes it: The interpreter should resume from the error node
-        # which can be complex and requires the full editing feature. For now, we just take the error
-        # flag down and hope for the best
-        e._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.OK, e._tick_time)
-
 
 @command_argument_regex(REGEX_DURATION_OPTIONAL)
 class HoldEngineCommand(InternalEngineCommand):
@@ -141,7 +142,15 @@ class HoldEngineCommand(InternalEngineCommand):
             while self.engine._tick_time < duration_end_time:
                 yield
             logger.debug("Resuming using Unhold")
-            UnholdEngineCommand(self.engine, self._registry)._run()
+            unhold = UnholdEngineCommand(self.engine, self._registry)
+            unhold._run()
+
+    def cancel(self):
+        super().cancel()
+        logger.debug("Hold cancelled via api. Resuming using Unhold")
+        unhold = UnholdEngineCommand(self.engine, self._registry)
+        unhold._run()
+        self.set_complete()
 
 
 @command_argument_none()
@@ -174,15 +183,19 @@ class StopEngineCommand(InternalEngineCommand):
             self.fail()
         else:
             e._runstate_stopping = True
-            e._cancel_uod_commands()
+            e.cancel_all_commands(source_command_name=self.name)
             yield
-            timeout_at_tick = e._tick_number + CANCEL_TIMEOUT_TICKS
-            while e.uod.has_any_command_instances():
-                if e._tick_number > timeout_at_tick:
-                    logger.warning("Timeout waiting for uod commands to cancel")
-                    break
-                yield
-            e._finalize_uod_commands()
+            # FIXME: Clean up
+            # timeout_at_tick = e._tick_number + CANCEL_TIMEOUT_TICKS
+            # while e.uod.has_any_command_instances():
+            #     if e._tick_number > timeout_at_tick:
+            #         logger.warning("Timeout waiting for uod commands to cancel")
+            #         break
+            #     yield
+
+            # e.finalize_all_commands(source_command_name=self.name)
+            e._apply_safe_state()
+            e.write_process_image()
 
             logger.debug("All uod commands have completed execution. Stop will now complete.")
             e._runstate_started = False
@@ -190,8 +203,8 @@ class StopEngineCommand(InternalEngineCommand):
             e._runstate_holding = False
             e._runstate_stopping = False
             e._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.OK, e._tick_time)
-            e._apply_safe_state()
 
+            e.tracking.disable()
             e.emitter.emit_on_stop()
 
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Stopped, e._tick_time)
@@ -209,42 +222,46 @@ class RestartEngineCommand(InternalEngineCommand):
         e = self.engine
         sys_state = e._system_tags[SystemTagName.SYSTEM_STATE]
         if sys_state.get_value() == SystemStateEnum.Stopped:
-            logger.warning("Cannot restart when system state is Stopped")
+            logger.warning("Cannot restart run when system state is Stopped")
             self.fail()
         elif sys_state.get_value() == SystemStateEnum.Restarting:
-            logger.warning("Cannot restart when system state is Restarting")
+            logger.warning("Cannot restart run when system state is Restarting")
             self.fail()
         else:
-            logger.info("Restarting engine")
+            logger.info("Restarting run")
             sys_state.set_value(SystemStateEnum.Restarting, e._tick_time)
 
             e._runstate_stopping = True
-            e._cancel_uod_commands()
+            e.cancel_all_commands(source_command_name=self.name)
             yield
-            timeout_at_tick = e._tick_number + CANCEL_TIMEOUT_TICKS
-            while e.uod.has_any_command_instances():
-                if e._tick_number > timeout_at_tick:
-                    logger.warning("Timeout waiting for uod commands to cancel")
-                    break
-                yield
-            e._finalize_uod_commands()
+            # FIXME: Clean up
+            # timeout_at_tick = e._tick_number + CANCEL_TIMEOUT_TICKS
+            # while e.uod.has_any_command_instances():
+            #     if e._tick_number > timeout_at_tick:
+            #         logger.warning("Timed out waiting for uod commands to cancel")
+            #         break
+            #     yield
+            # e.finalize_all_commands(source_command_name=self.name)
 
-            logger.debug("Restarting engine - uod commands have completed execution")
+            logger.debug("Restarting run - uod commands have completed execution")
             e._runstate_started = False
             e._runstate_paused = False
             e._runstate_holding = False
             e._runstate_stopping = False
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Stopped, e._tick_time)
 
+            e.tracking.disable()
             e.emitter.emit_on_stop()
 
             e.clear_run_id()
+
+            # _stop_interpreter() restarts command_manager
             e._stop_interpreter()
-            logger.info("Restarting engine - engine stopped")
+            logger.info(f"Restarting run - engine stopped, tick_number: {e._tick_number}")
 
             yield
 
-            logger.info("Restarting engine - starting engine")
+            logger.info("Restarting run - starting engine")
             # potentially a lot more engine state to reset
             e._runstate_started = True
             e._runstate_started_time = time.time()
@@ -252,10 +269,11 @@ class RestartEngineCommand(InternalEngineCommand):
             e._runstate_holding = False
 
             run_id = e.set_run_id()
+            e.tracking.enable()
             e.emitter.emit_on_start(run_id)
 
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Running, e._tick_time)
-            logger.info("Restarting engine complete")
+            logger.info("Restarting run complete")
 
 
 @command_argument_regex(REGEX_TEXT)

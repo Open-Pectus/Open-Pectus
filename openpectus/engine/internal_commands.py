@@ -57,7 +57,8 @@ class InternalCommandsRegistry:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         logger.debug("Disposing registry")
         self._command_map.clear()
-        for cmd in self._command_instances.values():
+        instances = list(self._command_instances.values())
+        for cmd in instances:
             try:
                 cmd.cancel()
             except Exception as ex:
@@ -90,18 +91,25 @@ class InternalCommandsRegistry:
                         self._command_spec[command_name] = cls.argument_validation_spec
         logger.debug(f"Registered internal engine commands: {', '.join(registered_classes)}")
 
-    def get_running_internal_command(self) -> InternalEngineCommand | None:
-        if len(self._command_instances) > 0:
-            for cmd in self._command_instances.values():
+    def get_running_command(self, name: str) -> InternalEngineCommand | None:
+        cmds = list(self._command_instances.values())
+        for cmd in cmds:
+            if cmd.name == name:
                 return cmd
 
-    def create_internal_command(self, command_name: str) -> InternalEngineCommand:
+    def get_running_command_names(self) -> list[str]:
+        return list(self._command_instances.keys())
+
+    def create_internal_command(self, command_name: str, instance_id: str) -> InternalEngineCommand:
         if command_name not in self._command_map.keys():
             raise ValueError(f"Command name '{command_name}' is not a known internal engine command")
         if command_name in self._command_instances.keys():
             raise ValueError(f"There is already a command instance for command name '{command_name}'")
 
         instance = self._command_map[command_name]()
+        # set instance_id after creation to avoid reworking registration plumbing
+        # ok since this is the single factory that creates these commands
+        instance.instance_id = instance_id
         self._command_instances[command_name] = instance
         logger.debug(f"Created instance {type(instance).__name__} for command '{command_name}'")
         return instance
@@ -130,9 +138,11 @@ class InternalCommandsRegistry:
             spec = self._command_spec.get(name)
             if isinstance(spec, ArgSpec):
                 parser = RegexNamedArgumentParser(regex=spec.regex)
-                command_definitions.append(CommandDefinition(name=name, validator=parser.serialize(), docstring=example.example))
+                command_definitions.append(
+                    CommandDefinition(name=name, validator=parser.serialize(), docstring=example.example))
             else:
-                command_definitions.append(CommandDefinition(name=name, validator=None, docstring=example.example))
+                command_definitions.append(
+                    CommandDefinition(name=name, validator=None, docstring=example.example))
         return command_definitions
 
 class InternalEngineCommand(EngineCommand):
@@ -144,7 +154,8 @@ class InternalEngineCommand(EngineCommand):
     argument_validation_spec: ArgSpec = ArgSpec.NoCheck()
 
     def __init__(self, name: str, registry: InternalCommandsRegistry) -> None:
-        super().__init__(name)
+        # InternalCommandsRegistry.create_internal_command sets instance_id right after creation
+        super().__init__(name, "-")
         self._registry = registry
         self._failed = False
         self.has_run = False
@@ -196,6 +207,8 @@ class InternalEngineCommand(EngineCommand):
                     self.has_run = True
                 except Exception:
                     self.fail()
+                    # FIXME: answer and fix or remove
+                    # why not just finalize?
                     self._registry.dispose_command(self.name)
                     logger.error(f"Command '{self.name}' failed", exc_info=True)
                     return

@@ -58,6 +58,10 @@ class ParserMethod:
         pcode = '\n'.join([line.content for line in self.lines])
         return pcode
 
+    def as_pcode_w_id(self) -> str:
+        pcode = '\n'.join([line.id + ' ' + line.content for line in self.lines])
+        return pcode
+
 
 ParserMethod.empty = ParserMethod.create_empty()
 
@@ -351,6 +355,8 @@ class PcodeParser:
         # could leave this out initially to speed up parsing
         if isinstance(node, p.NodeWithTagOperatorValue):
             self._parse_tag_operator_value(node)
+
+        node.parse_create_completed()
 
         return node
 

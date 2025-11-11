@@ -1,14 +1,14 @@
 from __future__ import annotations
-from typing import Self, Type, TypeVar, TypedDict
+from logging import Logger
+from typing import Callable, Self, Type, TypeVar, TypedDict
 
 
 class Position:
     def __init__(self, line: int, character: int):
-        self.line: int = line   # todo define 0-1 based. should probably change from before to just match lsp
-        self.character: int = character  # start index = indentation
-
-    def is_empty(self) -> bool:
-        return self == Position.empty
+        self.line: int = line
+        """ Line number, zero based """
+        self.character: int = character
+        """ Character number on line, zero-based. Corresponds to the indentation of the line """
 
     @staticmethod
     def empty() -> Position:
@@ -102,6 +102,7 @@ class NodeState(TypedDict):
     name: str
     started: bool
     completed: bool
+    failed: bool
     cancelled: bool
     forced: bool
     action_history: list[str]
@@ -128,9 +129,12 @@ class SupportCancelForce:
         """ Whether the node has been cancelled. Virtual property. """
         return self._cancelled
 
-    def cancel(self):
+    def cancel(self) -> bool:
+        """ Cancel the instruction. Returns a bool indication whether Cancel was valid at the time """
         if self.cancellable:
             self._cancelled = True
+            return True
+        return False
 
     @property
     def forcible(self) -> bool:
@@ -143,8 +147,11 @@ class SupportCancelForce:
         return self._forced
 
     def force(self):
+        """ Force the instruction. Returns a bool indication whether Force was valid at the time """
         if self.forcible:
             self._forced = True
+            return True
+        return False
 
 
 class SupportsInterrupt():
@@ -161,7 +168,7 @@ class Node(SupportCancelForce):
     instruction_names: list[str] = []
     """ Specifies which node the parser should instantiate for a given instruction name(s) """
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position: Position = Position.empty(), id=""):
         super().__init__()
 
         self.parent: NodeWithChildren | None = None
@@ -187,11 +194,15 @@ class Node(SupportCancelForce):
         # interpretation state
         self.started: bool = False
         self.completed: bool = False
+        self.failed: bool = False
         self.action_history: list[str] = []
         self._empty_node_class_names = [BlankNode.__name__, CommentNode.__name__]
 
     @property
     def name(self) -> str:
+        """ Get node name. Parser guarantees it to not be None and be stripped. May be the empty string"""
+        # parser guards against None
+        assert self.arguments is not None
         return self.arguments
 
     @property
@@ -200,10 +211,7 @@ class Node(SupportCancelForce):
 
     @property
     def runlog_name(self) -> str | None:
-        return self.display_name
-
-    @property
-    def display_name(self) -> str:
+        """ The name to display in the runlog. Includes argument, if any, but no threshold or comment"""
         args = ": " + self.arguments if len(self.arguments) > 0 else ""
         return self.instruction_name + args
 
@@ -233,6 +241,7 @@ class Node(SupportCancelForce):
             raise ValueError(f"Cannot load state from {state['class_name']} into {self.__class__}")
         self.started = state["started"]
         self.completed = state["completed"]
+        self.failed = state["failed"]
         self._cancelled = state["cancelled"]
         self._forced = state["forced"]
         self.action_history = state["action_history"]
@@ -244,6 +253,7 @@ class Node(SupportCancelForce):
             name=self.name,
             started=self.started,
             completed=self.completed,
+            failed=self.failed,
             cancelled=self.cancelled,
             forced=self.forced,
             action_history=self.action_history
@@ -264,9 +274,24 @@ class Node(SupportCancelForce):
 
         return get_by_instruction(self, instruction_name, arguments)
 
+    def get_child_by_condition(self, predicate: Callable[[Node], bool], include_self=True) -> Node | None:
+        """ Return the first child node that matches the condition """
+        if include_self and predicate(self):
+            return self
+        if isinstance(self, NodeWithChildren):
+            for child in self.children:
+                # Note: we must use include_self=True here regardless of its value above
+                result = child.get_child_by_condition(predicate, include_self=True)
+                if result is not None:
+                    return result
+        return None
+
     def with_id(self, gen: NodeIdGenerator) -> Self:
         self.id = gen.create_id(self)
         return self
+
+    def parse_create_completed(self):
+        pass
 
     def has_error(self) -> bool:
         return self.indent_error or len(self.errors) > 0
@@ -285,6 +310,18 @@ class Node(SupportCancelForce):
         indent_spaces = "".join(" " for _ in range(self.position.character))
         args = "" if self.arguments_part == "" else ": " + self.arguments_part
         return f"{indent_spaces}{self.instruction_part}{args} | id={self.id}"
+
+    @property
+    def class_name(self) -> str:
+        return self.__class__.__name__
+
+    @classmethod
+    def is_class_of(cls, node: Node | None = None) -> bool:
+        return node.__class__ == cls
+
+    @classmethod
+    def is_class_of_name(cls, node_class_name: str) -> bool:
+        return node_class_name == cls.__name__
 
     @property
     def parents(self) -> list[NodeWithChildren]:
@@ -316,9 +353,64 @@ class Node(SupportCancelForce):
                 for child in self.children:
                     child.reset_runtime_state(True)
 
+    def matches_source(self, other: Node, logger: Logger) -> bool:  # noqa: C901
+        """ Returns True if the two nodes correspond to the same pcode source lines, else False.
+
+        Some white space and comments are not considered changes
+        """
+        logger.debug(f"Comparing nodes {self} and {other}")
+
+        def is_significant_node(node: Node) -> bool:
+            if isinstance(node, WhitespaceNode):
+                return False
+            return True
+
+        def matches(node: Node, other: Node, logger: Logger) -> bool:
+            if node.__class__ != other.__class__:
+                logger.debug(f"Nodes differ by class on line {node.position.line}. " +
+                             f"'{node.__class__}' differs from '{other.__class__}'")
+                return False
+            if node.name != other.name:
+                # Note: This may never happen because if their names differ, they would not be chosen for comparison.
+                logger.debug(f"Nodes differ by name on line {node.position.line}")
+                return False
+            if node.arguments != other.arguments:
+                logger.debug(f"Nodes differ by argument, {node.arguments} differs from {other.arguments} " +
+                             f"on line {node.position.line}")
+                return False
+            if node.threshold != other.threshold:
+                logger.debug(f"Nodes differ by threshold, {node.threshold} differs from {other.threshold} " +
+                             f"on line {node.position.line}")
+                return False
+            if node.position.character != other.position.character:
+                logger.debug(f"Nodes differ by indentation, {node.position.character} differs from {other.position.character} " +
+                             f"on line {node.position.line}")
+            if isinstance(node, NodeWithChildren):
+                assert isinstance(other, NodeWithChildren)  # node and other have the same class
+                node_significant_child_count = len([n for n in node.children if is_significant_node(n)])
+                other_significant_child_count = len([n for n in other.children if is_significant_node(n)])
+                if node_significant_child_count != other_significant_child_count:
+                    logger.debug(f"Nodes differ by number of significant child nodes following line {node.position.line}")
+                    return False
+                match_index = -1
+                for child in node.children:
+                    if not is_significant_node(child):
+                        continue
+                    for index, other_child in enumerate(other.children):
+                        if index <= match_index:
+                            continue
+                        if not is_significant_node(other_child):
+                            continue
+                        match_index = index
+                        result = matches(child, other_child, logger)
+                        if not result:
+                            return False
+                        break
+            return True
+        return matches(self, other, logger)
 
 class NodeWithChildren(Node):
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self._children: list[Node] = []
         self.interrupt_registered: bool = False
@@ -390,7 +482,7 @@ class NodeWithChildren(Node):
         super().reset_runtime_state(recursive)
 
 class ProgramNode(NodeWithChildren):
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.active_node: Node | None = None
         """ The node currently executing. Is never ProgramNode. Is None untli first instruction is
@@ -400,6 +492,8 @@ class ProgramNode(NodeWithChildren):
 
         self.revision: int = 0
         """ The program revision. Starts as 0 and increments every time an edit is performed while running. """
+
+        self.macros: dict[str, MacroNode] = dict()
 
     def get_instructions(self, include_blanks: bool = False) -> list[Node]:
         """ Return list of all program instructions, recursively, depth first. """
@@ -459,12 +553,14 @@ class ProgramNode(NodeWithChildren):
     def extract_state(self) -> NodeState:
         state = super().extract_state()
         state["revision"] = self.revision  # type: ignore
+        state["active_node"] = "" if self.active_node is None else str(self.active_node)  # type: ignore
         return state
 
     def apply_state(self, state: NodeState):
         # Note: while revision is imported from the edited method, method_manager increments it
         # right after the merge
         self.revision = int(state["revision"])  # type: ignore
+        # active_node is not imported, it is only used during FFW
         return super().apply_state(state)
 
     def __str__(self):
@@ -479,7 +575,7 @@ class ProgramNode(NodeWithChildren):
 class MarkNode(Node):
     instruction_names = ["Mark"]
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self._forcible = False
 
@@ -487,7 +583,7 @@ class MarkNode(Node):
 class BlockNode(NodeWithChildren):
     instruction_names = ["Block"]
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.lock_aquired = False
 
@@ -502,7 +598,8 @@ class BlockNode(NodeWithChildren):
 
     def apply_state(self, state: NodeState):
         self.lock_aquired = bool(state["lock_aquired"])  # type: ignore
-        return super().apply_state(state)    
+        return super().apply_state(state)
+
 
 class EndBlockNode(Node):
     instruction_names = ["End block"]
@@ -511,6 +608,7 @@ class EndBlockNode(Node):
 class EndBlocksNode(Node):
     instruction_names = ["End blocks"]
 
+
 class BatchNode(Node):
     instruction_names = ["Batch"]
 
@@ -518,7 +616,7 @@ class BatchNode(Node):
 class NodeWithTagOperatorValue(Node):
     operators: list[str]
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.tag_operator_value_part: str
         self.tag_operator_value: TagOperatorValue | None
@@ -527,7 +625,7 @@ class NodeWithTagOperatorValue(Node):
 class NodeWithCondition(NodeWithTagOperatorValue):
     operators = ["<=", ">=", "==", "!=", "<", ">", "="]
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.interrupt_registered: bool = False
         self.activated: bool = False
@@ -569,14 +667,32 @@ class NodeWithAssignment(NodeWithTagOperatorValue):
 class WatchNode(NodeWithChildren, NodeWithCondition, SupportsInterrupt):
     instruction_names = ["Watch"]
 
+    def __init__(self, position=Position.empty(), id=""):
+        super().__init__(position, id)
+        self.awaiting_condition = False
+
+    def extract_state(self):
+        state = super().extract_state()
+        state["awaiting_condition"] = self.awaiting_condition  # type: ignore
+        return state
+
+    def apply_state(self, state):
+        self.awaiting_condition = bool(state["awaiting_condition"])
+        super().apply_state(state)
+
+    def reset_runtime_state(self, recursive):
+        self.awaiting_condition = False
+        super().reset_runtime_state(recursive)
+
 
 class AlarmNode(NodeWithChildren, NodeWithCondition, SupportsInterrupt):
     instruction_names = ["Alarm"]
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.run_count: int = 0
         """ The number of times the alarm has completed """
+        self.awaiting_condition = False
 
     def extract_state(self):
         state = super().extract_state()
@@ -589,6 +705,7 @@ class AlarmNode(NodeWithChildren, NodeWithCondition, SupportsInterrupt):
 
     def reset_runtime_state(self, recursive):
         # Note: run_count is not reset because it counts alarm invocations
+        self.awaiting_condition = False
         super().reset_runtime_state(recursive)
 
 
@@ -624,15 +741,16 @@ class WhitespaceNode(Node):
 
     Populated by WhitespaceAnalyzer
     """
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.has_only_trailing_whitespace: bool = False
-        """ Specifies that only whitespace instructions follow this whitespace instruction. """
+        """ Specifies that only whitespace instructions follow this whitespace instruction in
+        the current scope as well as outer scopes. """
 
 
 class CommentNode(WhitespaceNode):
     """ Represents a line with only a comment. """
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.has_comment = True
         self.line: str = ""
@@ -649,26 +767,87 @@ class InjectedNode(NodeWithChildren, SupportsInterrupt):
 class MacroNode(NodeWithChildren):
     instruction_names = ["Macro"]
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.activated: bool = False
         self._cancellable = False
         self._forcible = False
+        self.is_registered: bool = False
+        """ Whether the macro has been registered in the revision. Lifetime is revision. """
+        self.run_started_count: int = 0
+        """ The number of times the macro has started. Life time is the whole run """
 
+    def extract_state(self):
+        state = super().extract_state()
+        state["is_registered"] = self.is_registered  # type: ignore
+        state["run_started_count"] = self.run_started_count  # type: ignore
+        return state
+
+    def apply_state(self, state):
+        self.is_registered = bool(state["is_registered"])
+        self.run_started_count = int(state["run_started_count"])
+        super().apply_state(state)
+
+    def prepare_for_call(self):
+        """ Clears state left over by any previous calls of the macro so it can be called again """
+        self.children_complete = False
+        self.completed = False
+        for macro_child in self.children:
+            macro_child.reset_runtime_state(recursive=True)
+
+    def reset_runtime_state(self, recursive):
+        # Note: is_registered is not reset because that would cause re-registering the macro
+        # Note: run_started_count is not reset because it must maintain the macro invocations count
+        super().reset_runtime_state(recursive)
+
+    def macro_calling_macro(self, macros: dict[str, MacroNode], name: str | None = None) -> list[str]:
+        """ Recurse through macro to produce a path of calls it makes to other macros.
+
+        This is used to identify if a macro will at some point call itself. """
+
+        # Note: This should be done once during analysis and the result be exposed 
+        # and cached on MacroNode/CallMacroNode, possibly as lists of incoming and 
+        # outgoing calls, which could even make this method reduntant
+        # In that case remember injected nodes - should probably rerun analysis on
+        # injection because that may change macro definitions
+
+        name = name if name is not None else self.name
+        assert self.children is not None
+        for child in self.children:
+            if isinstance(child, CallMacroNode):
+                if child.name == name:
+                    return [child.name]
+                elif child.name in macros.keys():
+                    return [child.name] + macros[child.name].macro_calling_macro(macros, name)
+        return []
 
 class CallMacroNode(Node):
     instruction_names = ["Call macro"]
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self._cancellable = False
         self._forcible = False
+        self.activated = False
+
+    def extract_state(self):
+        state = super().extract_state()
+        state["activated"] = self.activated  # type: ignore
+        return state
+
+    def apply_state(self, state):
+        self.activated = bool(state["activated"])  # type: ignore
+        super().apply_state(state)
+
+    def reset_runtime_state(self, recursive):
+        self.activated = False
+        super().reset_runtime_state(recursive)
 
 
 class NotifyNode(Node):
     instruction_names = ["Notify"]
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self._cancellable = False
         self._forcible = False
@@ -682,7 +861,7 @@ class InterpreterCommandNode(CommandBaseNode):
     """ Represents commands that are directly executable by the interpreter. """
     instruction_names = ["Base", "Increment run counter", "Run counter", "Wait"]
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.wait_start_time: float | None = None
 
@@ -692,10 +871,7 @@ class InterpreterCommandNode(CommandBaseNode):
         return state
 
     def apply_state(self, state):
-        try:
-            self.wait_start_time = state["wait_start_time"]  # type: ignore
-        except KeyError:
-            self.wait_start_time = None
+        self.wait_start_time = state["wait_start_time"]  # type: ignore
         super().apply_state(state)
 
     def reset_runtime_state(self, recursive):
@@ -708,6 +884,12 @@ class EngineCommandNode(CommandBaseNode):
     instruction_names = ["Stop", "Pause", "Unpause", "Hold", "Unhold", "Restart",
                          "Info", "Warning", "Error"]
 
+    def parse_create_completed(self):
+        if self.instruction_name in ['Pause', 'Hold']:
+            self._cancellable = self.has_argument
+            self._forcible = False
+        return super().parse_create_completed()
+
 
 class SimulateNode(NodeWithAssignment):
     instruction_names = ["Simulate"]
@@ -719,6 +901,9 @@ class SimulateOffNode(Node):
 
 class UodCommandNode(CommandBaseNode):
     """ Represents a uod command, subclassing UodCommand. """
+    def __init__(self, position=Position.empty(), id=""):
+        super().__init__(position, id)
+        self._cancellable = True
 
 
 class Comment:
@@ -734,17 +919,38 @@ class Error:
 
 class BlankNode(WhitespaceNode):
     """ Represents a line that contains only whitespace. """
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
 
 
 class ErrorInstructionNode(Node):
     """ Represents non-parsable instruction line. """
 
-    def __init__(self, position=Position.empty, id=""):
+    def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.line: str = ""
 
     def with_line(self, line: str):
         self.line = line
         return self
+
+
+class NullNode(Node):
+    """ Marker type for temporary nodes, notably for Start which is executed before tracking is initialized. """
+    def __init__(self, id: str, command_name: str):
+        self._command_name = command_name
+        self.arguments = command_name  # make runlog aware of name
+        super().__init__(Position.empty(), id)
+
+    @property
+    def command_name(self) -> str:
+        """ Name of the original command """
+        return self._command_name
+
+    @property
+    def runlog_name(self) -> str | None:
+        return "NullNode"
+
+    def __str__(self):
+        return f"{self.__class__.__name__}(command_name='{self.command_name}', " + \
+            f"arguments={self.arguments}, id='{self.id}')"

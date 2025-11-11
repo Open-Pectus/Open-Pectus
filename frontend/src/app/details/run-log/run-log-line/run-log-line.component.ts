@@ -12,22 +12,23 @@ import { RunLogLineForceButtonComponent } from './run-log-line-force-button.comp
 import { RunLogLineProgressComponent } from './run-log-line-progress.component';
 
 @Component({
-    selector: 'app-run-log-line',
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [
-        LetDirective,
-        NgIf,
-        RunLogLineProgressComponent,
-        RunLogLineForceButtonComponent,
-        RunLogLineCancelButtonComponent,
-        RunLogAdditionalValuesComponent,
-        DatePipe,
-    ],
-    template: `
+  selector: 'app-run-log-line',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    LetDirective,
+    NgIf,
+    RunLogLineProgressComponent,
+    RunLogLineForceButtonComponent,
+    RunLogLineCancelButtonComponent,
+    RunLogAdditionalValuesComponent,
+    DatePipe,
+  ],
+  template: `
     <div [class.bg-slate-50]="rowIndex % 2 === 0"
          [class.bg-slate-100]="rowIndex % 2 === 1"
-         [class.!bg-yellow-100]="runLogLine?.forced"
-         [class.!bg-red-200]="runLogLine?.cancelled"
+         [class.!bg-yellow-100]="runLogLine?.forced && !runLogLine?.cancelled && !runLogLine?.failed"
+         [class.!bg-red-200]="runLogLine?.cancelled && !runLogLine?.failed"
+         [class.!bg-red-600]="runLogLine?.failed"
          class="border-b-2 border-white cursor-pointer"
          *ngrxLet="expanded as expanded" (click)="toggleCollapse(expanded)">
       <div class="grid gap-2 px-3 py-2" [style.grid]="gridFormat">

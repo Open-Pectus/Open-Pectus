@@ -1,4 +1,8 @@
+import datetime
 import logging
+import os
+import time
+from datetime import UTC
 from logging.handlers import QueueHandler
 from queue import Empty, SimpleQueue
 import time
@@ -7,13 +11,13 @@ import decimal
 
 import openpectus.protocol.engine_messages as EM
 import openpectus.protocol.models as Mdl
+from openpectus.engine.archiver import ArchiverTag, logger as archiver_logger
 from openpectus.engine.engine import Engine
-from openpectus.lang.exec.runlog import RunLogItem
-from openpectus.lang.exec.tags import TagValue
-from openpectus.lang.exec.uod import logger as uod_logger
 from openpectus.engine.engine import frontend_logger as engine_logger
-from openpectus.engine.archiver import logger as archiver_logger
 from openpectus.engine.internal_commands_impl import logger as internal_cmds_logger
+from openpectus.lang.exec.runlog import RunLogItem
+from openpectus.lang.exec.tags import SystemTagName, TagValue
+from openpectus.lang.exec.uod import logger as uod_logger
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +30,7 @@ uod_logger.addHandler(frontend_logging_handler)
 engine_logger.addHandler(frontend_logging_handler)
 archiver_logger.addHandler(frontend_logging_handler)
 internal_cmds_logger.addHandler(frontend_logging_handler)
+
 
 def to_model_tag(tag: TagValue) -> Mdl.TagValue:
     if tag.tick_time == 0.0:
@@ -44,8 +49,10 @@ def to_model_tag(tag: TagValue) -> Mdl.TagValue:
         simulated=tag.simulated
     )
 
+
 class EngineMessageBuilder():
     """ Collects data from engine and constructs engine messages """
+
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
 
@@ -96,7 +103,12 @@ class EngineMessageBuilder():
     def create_run_stopped_msg(self, run_id: str) -> EM.RunStoppedMsg:
         runlog_msg = self.create_runlog_msg(run_id)
         state = self.engine.method_manager.get_method_state()
-        return EM.RunStoppedMsg(run_id=run_id, runlog=runlog_msg.runlog, method_state=state)
+        archiver = self.engine._system_tags.get(SystemTagName.ARCHIVER)
+        assert isinstance(archiver, ArchiverTag)
+        archive = archiver.read_last_run_archive(run_id)
+        assert archiver.last_run_file_path is not None
+        archive_filename = os.path.basename(archiver.last_run_file_path)
+        return EM.RunStoppedMsg(run_id=run_id, runlog=runlog_msg.runlog, method_state=state, archive=archive, archive_filename=archive_filename)
 
     def create_runlog_msg(self, run_id: str) -> EM.RunLogMsg:
         tag_names: list[str] = []
@@ -118,11 +130,12 @@ class EngineMessageBuilder():
                 forcible=item.forcible,
                 cancellable=item.cancellable,
                 forced=item.forced,
-                cancelled=item.cancelled
+                cancelled=item.cancelled,
+                failed=item.failed
             )
             return msg
 
-        runlog = self.engine.runtimeinfo.get_runlog()
+        runlog = self.engine.tracking.get_runlog()
         return EM.RunLogMsg(
             id=runlog.id,
             run_id=run_id,
@@ -159,7 +172,7 @@ class EngineMessageBuilder():
         started_datetime = datetime.datetime.fromtimestamp(self.engine._runstate_started_time)
 
         started_time_str = started_datetime.strftime("%H:%M")
-        if datetime.datetime.now().day != started_datetime.day:
+        if datetime.datetime.now(UTC).day != started_datetime.day:
             started_time_str = started_datetime.strftime("%Y-%m-%d %H:%M")
 
         return EM.WebPushNotificationMsg(
@@ -169,7 +182,7 @@ class EngineMessageBuilder():
             ),
             topic=EM.NotificationTopic.RUN_STOP,
         )
-    
+
     def create_wpn_run_started_msg(self) -> EM.WebPushNotificationMsg:
         started_datetime = datetime.datetime.fromtimestamp(self.engine._runstate_started_time)
         started_time_str = started_datetime.strftime("%H:%M")
@@ -181,7 +194,7 @@ class EngineMessageBuilder():
             ),
             topic=EM.NotificationTopic.RUN_START,
         )
-    
+
     def create_wpn_run_paused_msg(self) -> EM.WebPushNotificationMsg:
         return EM.WebPushNotificationMsg(
             notification=EM.WebPushNotification(
@@ -190,7 +203,7 @@ class EngineMessageBuilder():
             ),
             topic=EM.NotificationTopic.RUN_PAUSE,
         )
-    
+
     def create_wpn_block_started_msg(self, block_name: str) -> EM.WebPushNotificationMsg:
         return EM.WebPushNotificationMsg(
             notification=EM.WebPushNotification(
@@ -199,7 +212,7 @@ class EngineMessageBuilder():
             ),
             topic=EM.NotificationTopic.BLOCK_START,
         )
-    
+
     def create_wpn_notify_command_msg(self, text: str) -> EM.WebPushNotificationMsg:
         return EM.WebPushNotificationMsg(
             notification=EM.WebPushNotification(
@@ -208,7 +221,7 @@ class EngineMessageBuilder():
             ),
             topic=EM.NotificationTopic.NOTIFICATION_CMD,
         )
-    
+
     def create_wpn_watch_activated_msg(self, watch_argument: str) -> EM.WebPushNotificationMsg:
         return EM.WebPushNotificationMsg(
             notification=EM.WebPushNotification(
@@ -217,7 +230,7 @@ class EngineMessageBuilder():
             ),
             topic=EM.NotificationTopic.WATCH_TRIGGERED,
         )
-    
+
     def create_wpn_method_error_msg(self) -> EM.WebPushNotificationMsg:
         return EM.WebPushNotificationMsg(
             notification=EM.WebPushNotification(
@@ -226,7 +239,7 @@ class EngineMessageBuilder():
             ),
             topic=EM.NotificationTopic.METHOD_ERROR,
         )
-    
+
     def create_wpn_network_error_msg(self) -> EM.WebPushNotificationMsg:
         return EM.WebPushNotificationMsg(
             notification=EM.WebPushNotification(

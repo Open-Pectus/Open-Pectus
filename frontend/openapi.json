@@ -311,7 +311,87 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ServerErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServerSuccessResponse"
+                    }
+                  ],
+                  "title": "Response Execute Command"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/process_unit/{unit_id}/execute_control_button_command": {
+      "post": {
+        "tags": [
+          "process_unit"
+        ],
+        "summary": "Execute Control Button Command",
+        "operationId": "execute_control_button_command",
+        "parameters": [
+          {
+            "name": "unit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unit Id"
+            }
+          },
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecutableCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ServerErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServerSuccessResponse"
+                    }
+                  ],
+                  "title": "Response Execute Control Button Command"
+                }
               }
             }
           },
@@ -1537,6 +1617,58 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RecentRunCsv"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recent_runs/{run_id}/archive": {
+      "get": {
+        "tags": [
+          "recent_runs"
+        ],
+        "summary": "Get Recent Run Archive",
+        "operationId": "get_recent_run_archive",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "x-identity",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Identity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecentRunArchive"
                 }
               }
             }
@@ -3024,6 +3156,24 @@
         "title": "RecentRun",
         "description": "Represents a historical run of a process unit. "
       },
+      "RecentRunArchive": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "content"
+        ],
+        "title": "RecentRunArchive"
+      },
       "RecentRunCsv": {
         "properties": {
           "filename": {
@@ -3110,6 +3260,10 @@
           "cancelled": {
             "type": "boolean",
             "title": "Cancelled"
+          },
+          "failed": {
+            "type": "boolean",
+            "title": "Failed"
           }
         },
         "type": "object",
@@ -3121,6 +3275,34 @@
           "end_values"
         ],
         "title": "RunLogLine"
+      },
+      "ServerErrorResponse": {
+        "properties": {
+          "error": {
+            "type": "boolean",
+            "title": "Error",
+            "default": true
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "ServerErrorResponse"
+      },
+      "ServerSuccessResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "title": "ServerSuccessResponse"
       },
       "SubPlot": {
         "properties": {

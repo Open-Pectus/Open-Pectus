@@ -2,6 +2,14 @@ import { createReducer, on } from '@ngrx/store';
 import { produce } from 'immer';
 import { ActiveUser, AggregatedErrorLog, ApiError, CommandExample, ControlState, ProcessDiagram, ProcessValue, RecentRun } from '../../api';
 import { DetailsActions } from './details.actions';
+import { UnitControlCommands } from '../unit-control-commands.';
+
+export interface OptimisticClickedControlButtons {
+  start: boolean,
+  hold: boolean,
+  pause: boolean,
+  stop: boolean,
+}
 
 export interface DetailsState {
   processValues: ProcessValue[];
@@ -9,6 +17,7 @@ export interface DetailsState {
   processDiagram?: ProcessDiagram;
   commandExamples: CommandExample[];
   controlState: ControlState;
+  optimisticClickedControlButtons: OptimisticClickedControlButtons;
   recentRun?: RecentRun;
   shouldPoll: boolean;
   errorLog: AggregatedErrorLog;
@@ -26,6 +35,12 @@ const initialState: DetailsState = {
     is_running: false,
     is_holding: false,
     is_paused: false,
+  },
+  optimisticClickedControlButtons: {
+    start: false,
+    hold: false,
+    pause: false,
+    stop: false,
   },
   otherActiveUsers: [],
 };
@@ -63,6 +78,7 @@ const reducer = createReducer(initialState,
   })),
   on(DetailsActions.controlStateFetched, (state, {controlState}) => produce(state, draft => {
     draft.controlState = controlState;
+    draft.optimisticClickedControlButtons = {start: false, stop: false, pause: false, hold: false};
   })),
   on(DetailsActions.recentRunFetched, (state, {recentRun}) => produce(state, draft => {
     draft.recentRun = recentRun;
@@ -76,6 +92,17 @@ const reducer = createReducer(initialState,
   })),
   on(DetailsActions.otherActiveUsersFetched, (state, {otherActiveUsers}) => produce(state, draft => {
     draft.otherActiveUsers = otherActiveUsers;
+  })),
+  on(DetailsActions.processUnitCommandButtonClicked, (state, {command}) => produce(state, draft => {
+    if(command === UnitControlCommands.Start) draft.optimisticClickedControlButtons.start = true;
+    if(command === UnitControlCommands.Stop) draft.optimisticClickedControlButtons.stop = true;
+    if(command === UnitControlCommands.Pause) draft.optimisticClickedControlButtons.pause = true;
+    if(command === UnitControlCommands.Unpause) draft.optimisticClickedControlButtons.pause = true;
+    if(command === UnitControlCommands.Hold) draft.optimisticClickedControlButtons.hold = true;
+    if(command === UnitControlCommands.Unhold) draft.optimisticClickedControlButtons.hold = true;
+  })),
+  on(DetailsActions.controlCommandExecutionFailed, state => produce(state, draft => {
+    draft.optimisticClickedControlButtons = {start: false, stop: false, pause: false, hold: false};
   })),
 );
 

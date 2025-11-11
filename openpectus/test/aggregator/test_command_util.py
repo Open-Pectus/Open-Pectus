@@ -2,10 +2,9 @@ import unittest
 
 import openpectus.aggregator.models as Mdl
 import openpectus.aggregator.routers.dto as Dto
-from openpectus.lang.exec.readings import Reading, ReadingWithEntry, ReadingWithChoice
 import openpectus.protocol.aggregator_messages as AM
-
 from openpectus.aggregator import command_util as cu
+from openpectus.lang.exec.readings import Reading, ReadingWithEntry, ReadingWithChoice
 
 
 def create_ReadingInfo(reading: Reading) -> Mdl.ReadingInfo:
@@ -27,20 +26,19 @@ class CommantUtilTest(unittest.TestCase):
                     value=None)
 
                 if expectSuccess:
-                    msg = cu.parse_as_message(cmd, [])
+                    msg = cu.parse_control_button_command(cmd)
                     if expectedResultType is not None:
                         self.assertIsInstance(msg, expectedResultType)
                 else:
                     with self.assertRaises(ValueError, msg="Expected parse error"):
-                        cu.parse_as_message(cmd, [])
+                        cu.parse_control_button_command(cmd)
 
-        test("Start", "", True, AM.InvokeCommandMsg)
-        test("Stop", "", True, AM.InvokeCommandMsg)
+        test("Start", "", True, AM.ExecuteControlCommandMsg)
+        test("Stop", "", True, AM.ExecuteControlCommandMsg)
 
         test("", "", False)
         test("stop", "", False)
         test("Stop\nStart", "", False)
-
 
     def test_cmd_without_value_parse_as_injected_with_command_as_pcode(self):
         cmd = Dto.ExecutableCommand(
@@ -50,10 +48,9 @@ class CommantUtilTest(unittest.TestCase):
             name=None,
             value=None)
 
-        msg = cu.parse_as_message(cmd, [])
+        msg = cu.parse_command(cmd, [])
         assert isinstance(msg, AM.InjectCodeMsg)
         self.assertEqual("foo", msg.pcode)
-
 
     def test_cmd_with_value_Number_float_no_unit(self):
         reading = create_ReadingInfo(ReadingWithEntry(tag_name="foo", entry_data_type="float"))
@@ -71,7 +68,7 @@ class CommantUtilTest(unittest.TestCase):
             )
         )
 
-        msg = cu.parse_as_message(cmd, [reading])
+        msg = cu.parse_command(cmd, [reading])
 
         assert isinstance(msg, AM.InjectCodeMsg)
         self.assertEqual("foo: 13.5", msg.pcode)
@@ -92,7 +89,7 @@ class CommantUtilTest(unittest.TestCase):
             )
         )
 
-        msg = cu.parse_as_message(cmd, [reading])
+        msg = cu.parse_command(cmd, [reading])
 
         assert isinstance(msg, AM.InjectCodeMsg)
         self.assertEqual("bar: 87 kg", msg.pcode)
@@ -111,7 +108,7 @@ class CommantUtilTest(unittest.TestCase):
             )
         )
 
-        msg = cu.parse_as_message(cmd, [reading])
+        msg = cu.parse_command(cmd, [reading])
 
         assert isinstance(msg, AM.InjectCodeMsg)
         self.assertEqual("bar: freetext VaLuE", msg.pcode)
@@ -130,7 +127,7 @@ class CommantUtilTest(unittest.TestCase):
                 options=['A', 'B']
             ))
 
-        msg = cu.parse_as_message(cmd, [reading])
+        msg = cu.parse_command(cmd, [reading])
 
         assert isinstance(msg, AM.InjectCodeMsg)
         self.assertEqual("Foo: B", msg.pcode)

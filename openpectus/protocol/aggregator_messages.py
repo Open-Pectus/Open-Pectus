@@ -26,13 +26,12 @@ class RegisterEngineReplyMsg(AggregatorMessage):
         return f'{self.__class__.__name__}(engine_id="{self.engine_id}", success={self.success})'
 
 
-class InvokeCommandMsg(AggregatorMessage):
+class ExecuteControlCommandMsg(AggregatorMessage):
     """ Request from user to invoke a command. """
     name: str = ""
-    arguments: str | None = None
 
     def __str__(self) -> str:
-        return f'{self.__class__.__name__}(name="{self.name}", arguments={self.arguments})'
+        return f'{self.__class__.__name__}(name="{self.name}")'
 
 
 class InjectCodeMsg(AggregatorMessage):

@@ -1,5 +1,4 @@
 import logging
-import asyncio
 
 import openpectus.aggregator.deps as agg_deps
 import openpectus.aggregator.models as Mdl
@@ -12,7 +11,7 @@ from openpectus.aggregator.data import database
 from openpectus.aggregator.data.repository import PlotLogRepository, RecentEngineRepository
 from openpectus.aggregator.routers.auth import UserIdValue, has_access, UserRolesValue, UserNameValue
 from pydantic.json_schema import SkipJsonSchema
-from starlette.status import HTTP_403_FORBIDDEN, HTTP_404_NOT_FOUND
+from starlette.status import HTTP_400_BAD_REQUEST, HTTP_403_FORBIDDEN, HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["process_unit"])
@@ -35,7 +34,7 @@ def map_pu(engine_data: Mdl.EngineData) -> Dto.ProcessUnit:
         name=f"{engine_data.computer_name} ({engine_data.uod_name})",
         state=state,
         location=engine_data.location,
-        runtime_msec=int(engine_data.runtime.value*1000) if (
+        runtime_msec=int(engine_data.runtime.value * 1000) if (
                 engine_data.runtime is not None and engine_data.runtime.value is not None
         ) else 0,
         current_user_role=Dto.UserRole.ADMIN,
@@ -170,28 +169,40 @@ async def execute_command(
         user_roles: UserRolesValue,
         unit_id: str,
         command: Dto.ExecutableCommand,
-        agg: Aggregator = Depends(agg_deps.get_aggregator)):
-    if __debug__:
-        print("ExecutableCommand", command)
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.ServerErrorResponse | Dto.ServerSuccessResponse:
     engine_data = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
     try:
-        msg = command_util.parse_as_message(command, engine_data.readings)
+        msg = command_util.parse_command(command, engine_data.readings)
     except Exception:
         logger.error(f"Parse error for command: {command}", exc_info=True)
-        return Dto.ServerErrorResponse(message="Message parse error")
-    logger.info(f"Sending msg '{str(msg)}' of type {type(msg)} to engine '{unit_id}'")
+        raise HTTPException(status_code=500, detail="Message parse error")
     try:
-        await agg.dispatcher.rpc_call(unit_id, msg)
-    except Exception:
-        logger.error(f"Rpc call to engine_id '{unit_id}' failed", exc_info=True)
-        return Dto.ServerErrorResponse(message="Failed to send message")
+        await agg.from_frontend.excute_command(unit_id, user_id, user_name, msg)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to execute command: {e}")
+    return Dto.ServerSuccessResponse()
 
-    # for now, all users issuing a command become contributors. may nee to filter that somehow
-    # and when wo we clear the contributors?
-    contributor = Mdl.Contributor(id=user_id, name=user_name)
-    if contributor not in engine_data.contributors:
-            agg.from_frontend.publish_new_contributor_notification(unit_id, contributor)
-    engine_data.contributors.add(contributor)
+
+@router.post("/process_unit/{unit_id}/execute_control_button_command", response_model_exclude_none=True)
+async def execute_control_button_command(
+        user_name: UserNameValue,
+        user_id: UserIdValue,
+        user_roles: UserRolesValue,
+        unit_id: str,
+        command: Dto.ExecutableCommand,
+        agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.ServerErrorResponse | Dto.ServerSuccessResponse:
+    get_registered_engine_data_or_fail(unit_id, user_roles, agg)
+    try:
+        msg = command_util.parse_control_button_command(command)
+    except Exception:
+        logger.error(f"Parse error for command: {command}", exc_info=True)
+        raise HTTPException(status_code=HTTP_500_INTERNAL_SERVER_ERROR, detail="Message parse error")
+    try:
+        await agg.from_frontend.excute_control_button_command(unit_id, user_id, user_name, msg)
+    except ValueError:
+        raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail=f"Engine is not in a state to receive that command")
+    except Exception as e:
+        raise HTTPException(status_code=HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to execute control button command: {e}")
     return Dto.ServerSuccessResponse()
 
 
@@ -263,7 +274,7 @@ async def save_method(
         version=method_dto.version,
         last_author=user_name
     )
-    new_version = await agg.from_frontend.method_saved(engine_id=unit_id, method=method_mdl, user=Mdl.Contributor(id=user_id, name=user_name))
+    new_version = await agg.from_frontend.save_method(engine_id=unit_id, method=method_mdl, user=Mdl.Contributor(id=user_id, name=user_name))
     return Dto.MethodVersion(version=new_version)
 
 
@@ -373,7 +384,7 @@ async def register_active_user(
         agg: Aggregator = Depends(agg_deps.get_aggregator)):
     _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
     resolved_user_id = user_id_from_token or user_id
-    if(resolved_user_id == None):
+    if (resolved_user_id is None):
         return Dto.ServerErrorResponse(message="User registration failed due to missing user_id")
     action_result = await agg.from_frontend.register_active_user(
         engine_id=unit_id,
@@ -384,6 +395,7 @@ async def register_active_user(
         return Dto.ServerErrorResponse(message="User registration failed")
     return Dto.ServerSuccessResponse(message="User successfully registered")
 
+
 @router.post('/process_unit/{unit_id}/unregister_active_user', response_model_exclude_none=True)
 async def unregister_active_user(
         user_id_from_token: UserIdValue,
@@ -393,7 +405,7 @@ async def unregister_active_user(
         agg: Aggregator = Depends(agg_deps.get_aggregator)):
     _ = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
     resolved_user_id = user_id_from_token or user_id
-    if(resolved_user_id == None):
+    if (resolved_user_id is None):
         return Dto.ServerErrorResponse(message="User unregistration failed due to missing user_id")
     action_result = await agg.from_frontend.unregister_active_user(
         engine_id=unit_id,

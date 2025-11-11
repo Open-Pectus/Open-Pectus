@@ -92,8 +92,12 @@ class AnalyzerVisitorBase(NodeVisitor):
         self.items.append(item)
 
     def analyze(self, n: p.ProgramNode):
-        """ Run analysis synchronously. """
-        for _ in self.visit(n):
+        """ Run analysis synchronously.
+
+        Note: This runs visit_ProgramNode(n) for ProgramNode, same way as interpreter. For interpretation,
+        this differs from visit(n) but for analysis it should not make a difference.
+        """
+        for _ in self.visit_ProgramNode(n):
             pass
 
 
@@ -357,7 +361,13 @@ class WhitespaceCheckAnalyzer(AnalyzerVisitorBase):
         super().analyze(n)
 
         for node in self.whitespace_nodes:
-            if node.parent is not None and node.position.line > node.parent._last_non_ws_line:
+            last_non_ws_line = -1
+            parent = node.parent
+            while parent is not None:
+                if parent._last_non_ws_line > last_non_ws_line:
+                    last_non_ws_line = parent._last_non_ws_line
+                parent = parent.parent
+            if node.position.line > last_non_ws_line:
                 node.has_only_trailing_whitespace = True
 
 
@@ -875,7 +885,7 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
         self.macros_called: list[p.MacroNode] = []
 
     def visit_CallMacroNode(self, node: p.CallMacroNode):
-        if node.name is None or node.name.strip() == "":
+        if node.name == "":
             self.add_item(AnalyzerItem(
                 "MacroCallNameInvalid",
                 "Invalid macro call",
@@ -883,8 +893,8 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                 AnalyzerItemType.ERROR,
                 "Call macro must refer to a Macro definition"
             ))
-        elif node.name and node.name.strip() not in self.macros:
-            similarity = {macro: ratio(node.name.strip(), macro) for macro in self.macros.keys()}
+        elif node.name not in self.macros:
+            similarity = {macro: ratio(node.name, macro) for macro in self.macros.keys()}
             most_similar_macro = max(similarity, key=similarity.get) if similarity else None  # type: ignore
             if most_similar_macro and similarity[most_similar_macro] > 0.7:
                 self.add_item(AnalyzerItem(
@@ -903,18 +913,18 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                     "Referenced macro is not defined",
                     node,
                     AnalyzerItemType.ERROR,
-                    f"Cannot call macro '{node.name.strip()}' because it is not defined",
+                    f"Cannot call macro '{node.name}' because it is not defined",
                     start=node.stripped_arguments_range.start.character,
                     end=node.stripped_arguments_range.end.character,
                 ))
-        elif node.name and node.name.strip() in self.macros:
+        elif node.name in self.macros:
             macro_node = self.macros[node.name]
             self.macro_calls.append(node)
             self.macros_called.append(macro_node)
         return super().visit_CallMacroNode(node)
 
     def visit_MacroNode(self, node: p.MacroNode):
-        if node.name is None or node.name.strip() == "":
+        if node.name == "":
             self.add_item(AnalyzerItem(
                 "MacroNameInvalid",
                 "Invalid macro definition",
@@ -922,9 +932,9 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                 AnalyzerItemType.ERROR,
                 "A Macro definition must include a name"
             ))
-        if node.name and node.name.strip():
-            if node.name.strip() in self.macros:
-                previous_macro_with_same_name = self.macros[node.name.strip()]
+        else:
+            if node.name in self.macros:
+                previous_macro_with_same_name = self.macros[node.name]
                 self.add_item(AnalyzerItem(
                     "MacroRedefined",
                     "Macro redefined",
@@ -932,10 +942,10 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                     AnalyzerItemType.INFO,
                     f"This macro definition overwrites the previous definition at line {previous_macro_with_same_name.position.line+1}."
                 ))
-            self.macros[node.name.strip()] = node
+            self.macros[node.name] = node
             self.macros_registered.append(node)
 
-            cascade = self.macro_calling_macro(node)
+            cascade = node.macro_calling_macro(self.macros)
             if cascade and node.name in cascade:
                 if len(cascade) == 1:
                     self.add_item(AnalyzerItem(
@@ -956,21 +966,6 @@ class MacroCheckAnalyzer(AnalyzerVisitorBase):
                     ))
 
         return super().visit_MacroNode(node)
-
-    def macro_calling_macro(self, node: p.MacroNode, name: str | None = None) -> list[str]:
-        '''
-        Recurse through macro to produce a path of calls it makes to other macros.
-        This is used to identify if a macro will at some point call itself.
-        '''
-        name = name if name is not None else node.name
-        assert node.children is not None
-        for child in node.children:
-            if isinstance(child, p.CallMacroNode):
-                if child.name == name:
-                    return [child.name]
-                elif child.name in self.macros.keys():
-                    return [child.name] + self.macro_calling_macro(self.macros[child.name], name)
-        return []
 
     def analyze(self, n):
         super().analyze(n)
