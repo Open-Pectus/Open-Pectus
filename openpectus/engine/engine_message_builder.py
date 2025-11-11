@@ -5,8 +5,6 @@ import time
 from datetime import UTC
 from logging.handlers import QueueHandler
 from queue import Empty, SimpleQueue
-import time
-import datetime
 import decimal
 
 import openpectus.protocol.engine_messages as EM
@@ -108,7 +106,8 @@ class EngineMessageBuilder():
         archive = archiver.read_last_run_archive(run_id)
         assert archiver.last_run_file_path is not None
         archive_filename = os.path.basename(archiver.last_run_file_path)
-        return EM.RunStoppedMsg(run_id=run_id, runlog=runlog_msg.runlog, method_state=state, archive=archive, archive_filename=archive_filename)
+        return EM.RunStoppedMsg(run_id=run_id, runlog=runlog_msg.runlog, method_state=state, archive=archive,
+                                archive_filename=archive_filename)
 
     def create_runlog_msg(self, run_id: str) -> EM.RunLogMsg:
         tag_names: list[str] = []
@@ -199,7 +198,7 @@ class EngineMessageBuilder():
         return EM.WebPushNotificationMsg(
             notification=EM.WebPushNotification(
                 title=self.engine.uod.instrument,
-                body=f"Run has been paused.",
+                body="Run has been paused.",
             ),
             topic=EM.NotificationTopic.RUN_PAUSE,
         )
@@ -235,7 +234,7 @@ class EngineMessageBuilder():
         return EM.WebPushNotificationMsg(
             notification=EM.WebPushNotification(
                 title=self.engine.uod.instrument,
-                body=f"Error in method. Run paused.",
+                body="Error in method. Run paused.",
             ),
             topic=EM.NotificationTopic.METHOD_ERROR,
         )

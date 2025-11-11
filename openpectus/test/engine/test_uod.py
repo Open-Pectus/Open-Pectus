@@ -232,7 +232,8 @@ class TestConversions(unittest.TestCase):
                     self.assertEqual(result, expected_result)
                 else:
                     self.assertEqual(float(result), expected_result)
-                
+                if expected_result is not None:
+                    self.assertIsInstance(result, decimal.Decimal)
 
         test_value("0",  0)
         test_value("0.002",  0.002)
@@ -242,6 +243,7 @@ class TestConversions(unittest.TestCase):
         test_value("  3  ",  3.0)
 
         test_value("",  None)
+        test_value(" ",  None)
         test_value("3f",  None)
         test_value("f",  None)
 
@@ -250,6 +252,8 @@ class TestConversions(unittest.TestCase):
             with self.subTest(value):
                 result = as_int(value)
                 self.assertEqual(result, expected_result)
+                if expected_result is not None:
+                    self.assertIsInstance(result, int, f"result: '{result}' has type {type(result)}")
 
         test_value("0",  0)
         test_value("3",  3)
