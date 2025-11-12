@@ -216,7 +216,7 @@ Run Aggregator to serve frontend from its default build directory. This also sta
 .. code-block:: console
 
    cd Open-Pectus
-   pectus-aggregator -fdd .\openpectus\frontend\dist\
+   pectus-aggregator -fdd .\frontend\dist\
 
 When Aggregator is running, the aggregator services are available, including:
 
