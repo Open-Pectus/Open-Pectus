@@ -17,6 +17,7 @@ from openpectus.lang.exec.commands import CommandCollection, Command
 from openpectus.lang.exec.tags import TagValueCollection, TagValue
 from openpectus.lang.exec.argument_specification import ArgSpec
 from openpectus.lang.exec.uod import RegexNamedArgumentParser
+from openpectus.lang.model.pprogramformatter import print_program
 from openpectus.test.engine.utility_methods import build_program
 
 
@@ -261,6 +262,20 @@ Block: A
         item = analyzer.items[0]
         self.assertEqual(item.range.start.line, 2)
         self.assertEqual(item.range.end.line, 3)
+
+    def test_block_w_excessive_indentation(self):
+        program = build_program("""
+Block: A
+        Block: B
+        End block
+    End block
+""")
+        print_program(program, show_line_numbers=True, show_errors=True, show_blanks=True)
+        analyzer = IndentationCheckAnalyzer()
+        analyzer.analyze(program)
+        for item in analyzer.items:
+            print(item)
+        assert len(analyzer.items) > 0
 
 
 class ThresholdCheckAnalyzerTest(unittest.TestCase):

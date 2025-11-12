@@ -236,6 +236,9 @@ class PcodeParser:
             elif node.position.character > prev_indent + 4:  # indentation increased multiple levels
                 node.indent_error = True
                 node_error = True
+                # Add the excessively indented node to current parent. It has to go somewhere
+                # for the error to be visible and current_parent is the best match
+                parent_node.append_child(node)
 
             elif node.position.character < prev_indent:  # indentation decreased one or more levels
                 if not is_whitespace_node:
