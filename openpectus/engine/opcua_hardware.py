@@ -297,9 +297,11 @@ class OPCUA_Hardware(HardwareLayerBase):
                 result = write_attributes(node_id_batch, data_value_batch, asyncua.ua.AttributeIds.Value)
                 assert isinstance(result, list)
                 write_status_codes.extend(result)
-            for register, value, status_code in  zip(registers, values, write_status_codes):
+            for register, value, status_code in zip(registers, values, write_status_codes):
                 if status_code.value != 0:
-                    raise HardwareLayerException(f'Write of value "{value}" to register {register} failed with status code {asyncua.ua.status_codes.get_name_and_doc(status_code.value)}.')
+                    raise HardwareLayerException(
+                        f'Write of value "{value}" to register {register} failed with status code ' +
+                        f'{asyncua.ua.status_codes.get_name_and_doc(status_code.value)}.')
         except ConnectionError:
             raise HardwareLayerException(f"Not connected to {self.host}")
         except asyncua.sync.ThreadLoopNotRunning:

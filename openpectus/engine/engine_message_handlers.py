@@ -1,6 +1,5 @@
 import logging
 from typing import Protocol
-from uuid import UUID
 
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.messages as M

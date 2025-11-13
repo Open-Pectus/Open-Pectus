@@ -325,7 +325,8 @@ def hover(document: Document, position: Position, engine_id: str) -> Hover | Non
         # Hovering condition
         if isinstance(node, p.NodeWithTagOperatorValue) and node.tag_operator_value:
             # Show current tag value
-            if node.tag_operator_value.tag_name and analysis_input.tags.has(node.tag_operator_value.tag_name) and position_ast in node.tag_operator_value.stripped_lhs_range:
+            if node.tag_operator_value.tag_name and analysis_input.tags.has(node.tag_operator_value.tag_name) and \
+                    position_ast in node.tag_operator_value.stripped_lhs_range:
                 process_value = fetch_process_value(engine_id, node.tag_operator_value.tag_name)
                 if not process_value:
                     return
@@ -474,7 +475,8 @@ def completions(document: Document, position: Position, ignored_names, engine_id
             # Completion of Watch/Alarm which are special because of conditions
             if isinstance(node, p.NodeWithTagOperatorValue) and node.tag_operator_value:
                 # Complete tag name
-                if position_ast in node.tag_operator_value.stripped_lhs_range or (node.tag_operator_value.lhs == "" and node.arguments_part.strip() not in analysis_input.tags.names):
+                if position_ast in node.tag_operator_value.stripped_lhs_range or (node.tag_operator_value.lhs == "" and
+                                                                                  node.arguments_part.strip() not in analysis_input.tags.names):
                     prefix = "" if leading_space else " "
                     if node.tag_operator_value.lhs_range.is_empty():
                         return [
@@ -508,7 +510,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                                 label=f"{operator} ({operator_descriptions[operator]})",
                                 insertText=prefix+operator+" ",
                                 kind=CompletionItemKind.Enum,
-                                command=LSPCommand(title="", command="editor.action.triggerSuggest") if node.tag_operator_value.tag_unit is None else None
+                                command=LSPCommand(title="", command="editor.action.triggerSuggest") if node.tag_operator_value.tag_unit is None else None  # noqa: E501
                             )
                             for operator in node.operators
                         ]
@@ -521,7 +523,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                                     range=lsp_range_from_ast_range(node.tag_operator_value.op_range),
                                     newText=operator
                                 ),
-                                command=LSPCommand(title="", command="editor.action.triggerSuggest") if node.tag_operator_value.tag_unit is None else None
+                                command=LSPCommand(title="", command="editor.action.triggerSuggest") if node.tag_operator_value.tag_unit is None else None  # noqa: E501
                             )
                             for operator in node.operators
                         ]

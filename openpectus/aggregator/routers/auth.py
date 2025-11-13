@@ -1,5 +1,4 @@
 import os
-import uuid
 from typing import Annotated, Any
 
 import jwt

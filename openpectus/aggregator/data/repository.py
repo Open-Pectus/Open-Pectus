@@ -246,7 +246,7 @@ class WebPushRepository(RepositoryBase):
 
     def store_notifications_preferences(self, agg_notification_preferences: agg_mdl.WebPushNotificationPreferences):
         existing = self.get_notification_preferences_for_user(agg_notification_preferences.user_id)
-        if (existing == None):
+        if existing is None:
             model = WebPushNotificationPreferences(user_id=agg_notification_preferences.user_id)
         else:
             model = existing

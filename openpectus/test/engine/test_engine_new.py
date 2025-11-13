@@ -12,9 +12,6 @@ from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodCommand, Uo
 from openpectus.test.engine.utility_methods import (
     EngineTestRunner,
     configure_test_logger,
-    print_runlog,
-    print_runtime_records,
-    print_runtime_records_alt,
     set_engine_debug_logging, set_interpreter_debug_logging
 )
 

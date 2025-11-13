@@ -3,7 +3,7 @@ from typing import Any, TypeVar
 import unittest
 
 
-from openpectus.lang.exec.visitor import NodeGenerator, NodeVisitor
+from openpectus.lang.exec.visitor import NodeVisitor
 from openpectus.lang.model.parser import PcodeParser
 import openpectus.lang.model.ast as p
 

@@ -32,7 +32,8 @@ def get_arg_parser():
     parser.add_argument("-secret", "--secret", required=False, default=AggregatorServer.default_secret,
                         help="Engines must know this secret to connect to the aggregator")
     parser.add_argument("-wpk", "--webpush_keys_path", required=False, default=AggregatorServer.default_webpush_keys_path,
-                        help=f"Path to directory where VAPID key files for Webpush should be stored. Default: {AggregatorServer.default_webpush_keys_path}")
+                        help="Path to directory where VAPID key files for Webpush should be stored. " +
+                             f"Default: {AggregatorServer.default_webpush_keys_path}")
     return parser
 
 

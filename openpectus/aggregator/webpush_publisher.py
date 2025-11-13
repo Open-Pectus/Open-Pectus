@@ -41,7 +41,7 @@ class WebPushPublisher:
                 open(app_server_key_path, 'xt').write(self.app_server_key)
 
             webpush_subscriber_email = os.getenv('WEBPUSH_SUBSCRIBER_EMAIL')
-            if (webpush_subscriber_email == None):
+            if (webpush_subscriber_email is None):
                 logger.warning('Missing WEBPUSH_SUBSCRIBER_EMAIL environment variable. Webpush will not work.')
             else:
                 self.wp = WebPush(
@@ -54,7 +54,8 @@ class WebPushPublisher:
             self.app_server_key = None
 
     async def publish_test_message(self, user_id: None | str):
-        if (self.wp == None): return
+        if (self.wp is None):
+            return
 
         notification = WebPushNotification(
             title="Open Pectus",
@@ -74,7 +75,8 @@ class WebPushPublisher:
             await asyncio.gather(*tasks)
 
     async def publish_message(self, notification: WebPushNotification, topic: NotificationTopic, process_unit: EngineData):
-        if (self.wp == None): return
+        if (self.wp is None):
+            return
         if notification.timestamp and (time.time()-5*60)*1000 > notification.timestamp:
             logger.warning(f"Notification {notification} is more than 5 minutes old and will not be published.")
             return
@@ -96,7 +98,8 @@ class WebPushPublisher:
                 )))
             await asyncio.gather(*tasks)
 
-    def _get_subscriptions_for_topic(self, topic: NotificationTopic, process_unit: EngineData, webpush_repo: WebPushRepository) -> Sequence[db_mdl.WebPushSubscription]:
+    def _get_subscriptions_for_topic(self, topic: NotificationTopic, process_unit: EngineData, webpush_repo: WebPushRepository)\
+            -> Sequence[db_mdl.WebPushSubscription]:
         notification_preferences = webpush_repo.get_notification_preferences_for_topic(topic)
         access = [np.user_id for np in notification_preferences
                   if np.scope == NotificationScope.PROCESS_UNITS_I_HAVE_ACCESS_TO
@@ -112,10 +115,10 @@ class WebPushPublisher:
 
         return webpush_repo.get_subscriptions(access + contributed + specific)
 
-    async def _post_webpush(self, 
-                                    subscription: db_mdl.WebPushSubscription,
-                                    web_push_repository: WebPushRepository,
-                                    notification: WebPushNotification):
+    async def _post_webpush(self,
+                            subscription: db_mdl.WebPushSubscription,
+                            web_push_repository: WebPushRepository,
+                            notification: WebPushNotification):
         assert self.wp
         web_push_subscription = WebPushSubscription(
             endpoint=AnyHttpUrl(subscription.endpoint),
@@ -134,5 +137,7 @@ class WebPushPublisher:
             )
         if (response.status_code == HTTP_410_GONE):
             web_push_repository.delete_subscription(subscription)
-        if(response.status_code != HTTP_201_CREATED):
-            logger.warning(f"Tried publishing message for user {subscription.user_id} to endpoint {subscription.endpoint} but got response status {response.status_code}")
+        if (response.status_code != HTTP_201_CREATED):
+            logger.warning(
+                f"Tried publishing message for user {subscription.user_id} to endpoint " +
+                f"{subscription.endpoint} but got response status {response.status_code}")

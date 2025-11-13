@@ -18,7 +18,9 @@ class RunStateChange(StrEnum):
     PAUSE = "Pause"
     UNPAUSE = "Unpause"
 
+
 ScopeType = Literal["Program", "Watch", "Alarm", "Block"]
+
 
 class EventListener:
     """ Defines the listener interface and base class for engine life-time events. """

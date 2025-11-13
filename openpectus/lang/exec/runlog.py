@@ -90,7 +90,7 @@ class RuntimeInfo:
 
     def get_runlog(self) -> RunLog:
         """ Distill the runtime records into the simple RunLog shape that clients
-        understand, basically a list of (instruction,state) for each instruction 
+        understand, basically a list of (instruction,state) for each instruction
         invocation (instance).
 
         This allows the client to force or cancel a particular command instance using
@@ -419,7 +419,7 @@ States:\n{states}""")
             # clone record and add the clone
             # beware of the maps
             instance._null_node_map = copy.copy(self._null_node_map)
-            instance._instance_record_map = copy.copy(self._instance_record_map)            
+            instance._instance_record_map = copy.copy(self._instance_record_map)
             instance._injected_node_map = copy.copy(self._injected_node_map)
             record = r.with_edited_node(program, instance)
             instance._add_record(record)

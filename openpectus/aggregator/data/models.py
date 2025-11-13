@@ -4,7 +4,16 @@ from datetime import datetime, UTC
 from enum import StrEnum, auto
 from typing import Dict
 
-from openpectus.aggregator.models import Contributor, Method, MethodState, PlotConfiguration, RunLog, AggregatedErrorLog, NotificationTopic, NotificationScope
+from openpectus.aggregator.models import (
+    Contributor,
+    Method,
+    MethodState,
+    PlotConfiguration,
+    RunLog,
+    AggregatedErrorLog,
+    NotificationTopic,
+    NotificationScope
+)
 from sqlalchemy import JSON, ForeignKey, MetaData, TypeDecorator, DateTime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, attribute_keyed_dict
 
