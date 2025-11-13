@@ -617,7 +617,6 @@ Mark: X
         r = e.tracking.records[1]
         self.assertEqual("Watch: Block Time > 0.2s", r.name)
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.AwaitingCondition))
-        #self.assertFalse(r.has_state(RuntimeRecordStateEnum.Started))
 
         continue_engine(e, 1)
         self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
@@ -919,7 +918,6 @@ Wait: .5s
 Mark: b
 """
         run_engine(e, program, 2)
-        #run_engine(e, program, start_ticks)
         self.assertEqual([], e.interpreter.get_marks())
 
         continue_engine(e, 1)
@@ -1286,6 +1284,7 @@ Block: A
 
 
 # ----------- Engine Error -------------
+
 
     def test_engine_error_causes_Paused_state(self):
         e = self.engine

@@ -290,7 +290,7 @@ either a 'value' argument or a '**kvargs' argument""")
                     raise UodValidationError(f"""Command '{key}' has an error.
 The execution function is missing named arguments or a '**kvargs' argument""")
 
-    def validate_plot_configuration(self):
+    def validate_plot_configuration(self):  # noqa: C901
         """ Validate plot configuration """
         # Create complete list of tags
         assert self.system_tags
@@ -315,7 +315,8 @@ The execution function is missing named arguments or a '**kvargs' argument""")
 
         for process_value_name in self.plot_configuration.process_value_names_to_annotate:
             if not tags.has(process_value_name):
-                raise UodValidationError(f"Tag '{process_value_name}' referenced in process_value_names_to_annotate of plot configuration does not exist.")
+                raise UodValidationError(
+                    f"Tag '{process_value_name}' referenced in process_value_names_to_annotate of plot configuration does not exist.")
 
         for color_region in self.plot_configuration.color_regions:
             if not tags.has(color_region.process_value_name):
@@ -912,7 +913,7 @@ class UodBuilder:
         if not self.tags.has(tag_name):
             raise ValueError(f"Cannot add process value choice for tag name {tag_name}. The tag name was not found")
         if not command_options:
-            raise ValueError(f"Cannot add process value choice without any command_options. Use 'with_process_value' instead.")
+            raise ValueError("Cannot add process value choice without any command_options. Use 'with_process_value' instead.")
         if command_options is not None:
             reading = ReadingWithChoice(tag_name, command_options)
         return self._with_process_value(reading)

@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime, timezone, UTC
+from datetime import datetime, UTC
 from unittest.mock import Mock, AsyncMock
 
 import openpectus.aggregator.data.models as DMdl

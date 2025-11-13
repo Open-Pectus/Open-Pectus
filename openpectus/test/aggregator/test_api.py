@@ -24,7 +24,7 @@ class AggregatorOpenAPIApiTest(unittest.TestCase):
         global fastapi, client
         fastapi = AggregatorServer().fastapi
         client = TestClient(fastapi)
-    
+
     def test_read_openapi_docs(self):
         response = client.get("/docs")
         self.assertEqual(200, response.status_code)

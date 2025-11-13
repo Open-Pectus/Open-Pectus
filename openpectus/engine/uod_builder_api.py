@@ -10,7 +10,7 @@ import openpectus.lang.exec.units as units
 from openpectus.lang.exec.units import as_decimal, as_int
 
 __all__ = [
-    'HardwareLayerBase', 'Register',
+    'HardwareLayerBase', 'Register', 'RegisterDirection',
     'UnitOperationDefinitionBase', 'UodCommand', 'UodBuilder',
     'RegexNumber', 'RegexText', 'RegexCategorical',
     'PlotConfiguration', 'SubPlot', 'PlotAxis', 'PlotColorRegion',

@@ -13,15 +13,15 @@ def random_string(n: int) -> str:
     return ''.join(random.choices(string.ascii_lowercase + string.ascii_uppercase + string.digits, k=n))
 
 def generate_tag_value(value_type) -> str | float | int | None:
-        if value_type is float:
-            return random.random()*10**(random.randrange(-4, 4))
-        elif value_type is str:
-            return ''.join(random.choices(string.ascii_uppercase + string.digits, k=random.randint(5,30)))
-        elif value_type is int:
-            return random.randint(int(-1e6), int(1e6))
+    if value_type is float:
+        return random.random()*10**(random.randrange(-4, 4))
+    elif value_type is str:
+        return ''.join(random.choices(string.ascii_uppercase + string.digits, k=random.randint(5, 30)))
+    elif value_type is int:
+        return random.randint(int(-1e6), int(1e6))
 
 def generate_tags(n_tags):
-    tag_names = [random_string(n) for n in [random.randint(5,20) for n in range(n_tags)]]
+    tag_names = [random_string(n) for n in [random.randint(5, 20) for n in range(n_tags)]]
     possible_units = [unit for units in QUANTITY_UNIT_MAP.values() for unit in units]
 
     tags = dict()
@@ -41,19 +41,19 @@ def generate_tags(n_tags):
 
     return tags
 
+
 random.seed(a=0)
 tags_dict = generate_tags(n_tags=1000)
 
 def create() -> UnitOperationDefinitionBase:
     builder = UodBuilder()
-
     (
-    builder
-    .with_instrument("HeavyUod")
-    .with_author("Demo Author", "demo@openpectus.org")
-    .with_filename(__file__)
-    .with_hardware(DemoHardware())
-    .with_location("Demo location")
+        builder
+        .with_instrument("HeavyUod")
+        .with_author("Demo Author", "demo@openpectus.org")
+        .with_filename(__file__)
+        .with_hardware(DemoHardware())
+        .with_location("Demo location")
     )
 
     for tag_name, value_type, value, value_unit in tags_dict.values():

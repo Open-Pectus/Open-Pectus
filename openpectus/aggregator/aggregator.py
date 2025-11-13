@@ -251,7 +251,7 @@ class FromEngine:
         tag_values = engine_data.tags_info.map.values()
         latest_tag_tick_time = max([tag.tick_time for tag in tag_values]) if len(tag_values) > 0 else 0
         time_threshold_exceeded = latest_persisted_tick_time is None \
-                                  or latest_tag_tick_time - latest_persisted_tick_time > engine_data.data_log_interval_seconds
+            or latest_tag_tick_time - latest_persisted_tick_time > engine_data.data_log_interval_seconds
 
         if engine_data.run_data.run_id is not None and time_threshold_exceeded:
             tag_values_to_persist = [tag_value.model_copy() for tag_value in engine_data.tags_info.map.values()
@@ -432,10 +432,11 @@ class FromFrontend:
         user_id = self.dead_man_switch_user_ids[subscriber_id]
         other_dead_man_switches = [other_user_id for other_user_id in self.dead_man_switch_user_ids.values() if other_user_id == user_id]
         user_has_other_dead_man_switch = len(other_dead_man_switches) > 1
-        if (user_has_other_dead_man_switch): return
+        if (user_has_other_dead_man_switch):
+            return
         for engine_data in self._engine_data_map.values():
             popped_user_id = engine_data.active_users.pop(user_id, None)
-            if (popped_user_id != None):
+            if (popped_user_id is not None):
                 asyncio.create_task(self.publisher.publish_active_users_changed(engine_data.engine_id))
 
     async def register_active_user(self, engine_id: str, user_id: str, user_name: str):
@@ -472,7 +473,7 @@ class FromFrontend:
         with database.create_scope():
             webpush_repo = WebPushRepository(database.scoped_session())
             preferences = webpush_repo.get_notification_preferences_for_user(user_id_as_string)
-            if (preferences == None):
+            if (preferences is None):
                 # create a default set of notifications preferences
                 preferences = Mdl.WebPushNotificationPreferences(
                     user_id=user_id_as_string,

@@ -1,6 +1,5 @@
 import datetime
 import logging
-import platform
 import time
 import unittest
 from typing import Any
@@ -168,7 +167,7 @@ class TestEngineTags(unittest.TestCase):
             # not paused while system is Paused
             self.assertAlmostEqual(1.0, run_time.as_float(), delta=delta)
 
-    
+
     def test_tag_block_time(self):
         p = """\
 Wait: 0.9s
@@ -206,7 +205,7 @@ Wait: 0.99s
             self.assertAlmostEqual(2 + 3, block_time.as_number(), delta=delta)
 
             instance.index_step_back(10)
-            #instance.run_until_instruction("Block", state="completed")
+            # instance.run_until_instruction("Block", state="completed")
             instance.run_until_instruction("Noop", arguments="2")
 
             self.assertEqual(None, block.get_value())
@@ -297,7 +296,7 @@ Wait: 1s
             instance.run_until_instruction("Block", state="completed", arguments="B", increment_index=False)
             # print(instance.get_runtime_table())
             # return
-            
+
             self.assertEqual("A", block.get_value())
             self.assertAlmostEqual(2 + 3, block_time.as_number(), delta=delta)
 
@@ -441,7 +440,7 @@ Watch: Run Time > 0s
         code = """\
 Simulate: Run Counter = 7
 Simulate off: Run Counter
-"""        
+"""
         runner = EngineTestRunner(create_test_uod, code)
         with runner.run() as instance:
             instance.start()
@@ -459,17 +458,17 @@ Simulate off: Run Counter
         code = """\
 Simulate: Run Counter = 7
 Stop
-"""        
+"""
         runner = EngineTestRunner(create_test_uod, code)
         with runner.run() as instance:
             instance.start()
             run_counter = instance.engine.tags[SystemTagName.RUN_COUNTER]
 
             self.assertEqual(run_counter.as_number(), 0)
-            
+
             instance.run_until_instruction("Simulate", state="completed")
             self.assertEqual(run_counter.as_number(), 7)
-            
+
             # Stop should have this effect
             instance.run_until_condition(lambda : run_counter.as_number() == 0)
 

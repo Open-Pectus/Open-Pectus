@@ -287,7 +287,6 @@ Watch: Block Time > .3s
         self.assertEqual(item.cancellable, True)
         self.assertEqual(item.cancelled, False)
         print_runtime_records(e)
-        #print_runlog(e, "pre-cancel")
 
         # cancel it. interpreter needs a tick to process it
         e.cancel_instruction(instance_id)
@@ -498,8 +497,6 @@ Alarm: Block Time > 0s
         run_engine(e, program, 5)
         alarm_item_name = "Alarm: Block Time > 0s"
         watch_item_name = "Watch: Block Time > 0.5s"
-
-        #print_runtime_records(e, "start")
 
         self.assert_Runlog_HasItem(alarm_item_name)
         self.assert_Runlog_HasItem(watch_item_name)
@@ -751,16 +748,14 @@ Mark: A
         rti = RuntimeInfo()
         watch = p.WatchNode(id="1")
         record = RuntimeRecord.from_node(watch)
-        rti._add_record(record)        
+        rti._add_record(record)
         record._add_state("inst1", RuntimeRecordStateEnum.Started, 1, 1, None, watch)
         record._add_state("inst1", RuntimeRecordStateEnum.Cancelled, 2, 2, None, watch)
-        #record._add_state("inst1", RuntimeRecordStateEnum.Cancelled, 3, 3, None, None)
         record._add_state("inst2", RuntimeRecordStateEnum.Started, 4, 4, None, watch)
         record._add_state("inst2", RuntimeRecordStateEnum.Completed, 5, 5, None, watch)
         states_list = rti._split_states_by_instance_id(record)
         self.assertEqual(2, len(states_list))
         self.assertEqual(2, len(states_list[0]))
-        #self.assertEqual(3, len(states_list[0]))
         self.assertEqual(2, len(states_list[1]))
 
     def test_formatting_str(self):

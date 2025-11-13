@@ -387,7 +387,7 @@ Mark: b3
         engine = self.engine
         run_engine(engine, program, 30)
 
-        #self.assertEqual(["a", "b", "a1", "b1", "a2", "b2", "a3", "b3"], engine.interpreter.get_marks())
+        # self.assertEqual(["a", "b", "a1", "b1", "a2", "b2", "a3", "b3"], engine.interpreter.get_marks())
         self.assertEqual(['a', 'a1', 'a2', 'b', 'a3', 'b1', 'b2', 'b3'], engine.interpreter.get_marks())
 
     @unittest.skip("Block in Watch not supported")
@@ -814,9 +814,11 @@ Wait: 0.5 s
             print()
 
             interpreter._in_interrupt = True
+
             def evaluate_condition(node: p.NodeWithCondition):
                 return True
             interpreter._evaluate_condition = evaluate_condition
+
             def is_awaiting_threshold(node: p.Node):
                 return False
             interpreter._is_awaiting_threshold = is_awaiting_threshold

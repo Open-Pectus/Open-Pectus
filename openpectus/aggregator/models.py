@@ -289,11 +289,13 @@ class WebPushData(BaseModel):
     contributor_id: str | None = None
 
 
-class WebPushNotification(BaseModel): # see https://developer.mozilla.org/en-US/docs/Web/API/Notification/Notification#parameters for more information
+class WebPushNotification(BaseModel):
+    # see https://developer.mozilla.org/en-US/docs/Web/API/Notification/Notification#parameters for more information
     actions: list[WebPushAction] = Field(default_factory=list)  # buttons user can press
     badge: str | None = None  # url for smaller image for e.g. the notifcation bar
     body: str | None = None
-    data: WebPushData = Field(default_factory=WebPushData)  # arbitrary data the frontend can use for e.g. navigating when user clicks an action button
+    # arbitrary data the frontend can use for e.g. navigating when user clicks an action button
+    data: WebPushData = Field(default_factory=WebPushData)
     icon: str | None = "/assets/icons/icon-192x192.png"  # url
     image: str | None = None  # url
     renotify: bool | None = None  # if set to true, tag must also be set
@@ -303,4 +305,3 @@ class WebPushNotification(BaseModel): # see https://developer.mozilla.org/en-US/
     timestamp: NonNegativeInt | None = Field(default_factory=lambda: int(time.time()*1000))  # unix timestamp in milliseconds
     title: str
     vibrate: list[NonNegativeInt] | None = None
-

@@ -231,7 +231,7 @@ class Node(SupportCancelForce):
                     return match
 
     def can_load_state(self, state: NodeState) -> bool:
-        """ Determine whether state is valid for this kind of node """        
+        """ Determine whether state is valid for this kind of node """
         if state["class_name"] in self._empty_node_class_names:
             return True
         return state["class_name"] == self.__class__.__name__
@@ -805,8 +805,8 @@ class MacroNode(NodeWithChildren):
 
         This is used to identify if a macro will at some point call itself. """
 
-        # Note: This should be done once during analysis and the result be exposed 
-        # and cached on MacroNode/CallMacroNode, possibly as lists of incoming and 
+        # Note: This should be done once during analysis and the result be exposed
+        # and cached on MacroNode/CallMacroNode, possibly as lists of incoming and
         # outgoing calls, which could even make this method reduntant
         # In that case remember injected nodes - should probably rerun analysis on
         # injection because that may change macro definitions

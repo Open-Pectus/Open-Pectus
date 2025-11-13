@@ -200,7 +200,7 @@ async def execute_control_button_command(
     try:
         await agg.from_frontend.excute_control_button_command(unit_id, user_id, user_name, msg)
     except ValueError:
-        raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail=f"Engine is not in a state to receive that command")
+        raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Engine is not in a state to receive that command")
     except Exception as e:
         raise HTTPException(status_code=HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to execute control button command: {e}")
     return Dto.ServerSuccessResponse()

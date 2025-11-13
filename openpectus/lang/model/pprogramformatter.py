@@ -50,7 +50,13 @@ class ProgramFormatter():
             self.out.write("".join(" " for _ in range(indent)))
             self.out.write(type(node).__name__)
             if self.opts.errors:
-                err = node.errors[0].message if node.has_error() else ""
+                err = ""
+                if node.has_error():
+                    err = "Unknown error"
+                    if node.indent_error:
+                        err = "Indentation error"
+                    elif len(node.errors) > 0:
+                        err = node.errors[0].message or ""
                 self.out.write(f" | Err: {err}")
             if self.opts.line_numbers:
                 self.out.write(f" | Line: {node.position.line}")

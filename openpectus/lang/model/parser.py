@@ -221,8 +221,8 @@ class PcodeParser:
                 else:
                     increment_required = False
 
-            elif node.position.character == parent_node.position.character + 4 and not isinstance(parent_node, p.ProgramNode):  # indentation increased one level
-                # TODO fail if not valid increment
+            elif node.position.character == parent_node.position.character + 4 \
+                    and not isinstance(parent_node, p.ProgramNode):  # indentation increased one level
                 if not increment_required and not is_whitespace_node:
                     node.indent_error = True
                     node_error = True
@@ -230,12 +230,15 @@ class PcodeParser:
                 if isinstance(node, p.NodeWithChildren):
                     parent_node = node
                     increment_required = True
-                else:
+                elif not is_whitespace_node:
                     increment_required = False
 
             elif node.position.character > prev_indent + 4:  # indentation increased multiple levels
                 node.indent_error = True
                 node_error = True
+                # Add the excessively indented node to current parent. It has to go somewhere
+                # for the error to be visible and current_parent is the best match
+                parent_node.append_child(node)
 
             elif node.position.character < prev_indent:  # indentation decreased one or more levels
                 if not is_whitespace_node:
@@ -262,9 +265,6 @@ class PcodeParser:
                 prev_node = node
                 if not is_whitespace_node:
                     prev_indent = prev_node.position.character
-
-            if increment_required and not isinstance(node, (p.ProgramNode, p.WatchNode, p.AlarmNode, p.MacroNode, p.BlockNode,)) and not node_error:
-                increment_required = False
 
         return program
 
