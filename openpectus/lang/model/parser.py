@@ -266,10 +266,6 @@ class PcodeParser:
                 if not is_whitespace_node:
                     prev_indent = prev_node.position.character
 
-            # TODO possibly replace with check for NodeWithChildren
-            # if increment_required and not isinstance(node, (p.ProgramNode, p.WatchNode, p.AlarmNode, p.MacroNode, p.BlockNode,)) and not node_error:
-            #     increment_required = False
-
         return program
 
     def _parse_line(self, line: str, line_no: int) -> p.Node:

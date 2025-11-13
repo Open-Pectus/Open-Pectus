@@ -263,6 +263,32 @@ Block: A
         self.assertEqual(item.range.start.line, 2)
         self.assertEqual(item.range.end.line, 3)
 
+    def test_block_starting_w_comment(self):
+        program = build_program("""
+Block: A
+    # Comment
+    End block
+""")
+        print_program(program, show_line_numbers=True, show_errors=True, show_blanks=True)
+        analyzer = IndentationCheckAnalyzer()
+        analyzer.analyze(program)
+        for item in analyzer.items:
+            print(item)
+        self.assertEqual(0, len(analyzer.items))
+
+    def test_block_starting_w_multiple_comments(self):
+        program = build_program("""
+Block: A
+    # Comment line 1
+    # Comment line 2
+    End block
+""")
+        analyzer = IndentationCheckAnalyzer()
+        analyzer.analyze(program)
+        for item in analyzer.items:
+            print(item)
+        self.assertEqual(0, len(analyzer.items))
+
     def test_block_w_excessive_indentation(self):
         program = build_program("""
 Block: A
@@ -270,7 +296,6 @@ Block: A
         End block
     End block
 """)
-        print_program(program, show_line_numbers=True, show_errors=True, show_blanks=True)
         analyzer = IndentationCheckAnalyzer()
         analyzer.analyze(program)
         for item in analyzer.items:
@@ -817,7 +842,8 @@ Food: bar
         program = build_program("""
 Foo
 """)
-        cmds = CommandCollection().with_cmd(Command("Foo", arg_parser=RegexNamedArgumentParser(regex=ArgSpec.NoArgsInstance.regex)))
+        cmds = CommandCollection().with_cmd(
+            Command("Foo", arg_parser=RegexNamedArgumentParser(regex=ArgSpec.NoArgsInstance.regex)))
         analyzer = CommandCheckAnalyzer(cmds)
         analyzer.analyze(program)
         self.assertEqual(0, len(analyzer.items))
@@ -826,7 +852,8 @@ Foo
         program = build_program("""
 Foo: bar
 """)
-        cmds = CommandCollection().with_cmd(Command("Foo", arg_parser=RegexNamedArgumentParser(regex=ArgSpec.NoArgsInstance.regex)))
+        cmds = CommandCollection().with_cmd(
+            Command("Foo", arg_parser=RegexNamedArgumentParser(regex=ArgSpec.NoArgsInstance.regex)))
         analyzer = CommandCheckAnalyzer(cmds)
         analyzer.analyze(program)
         self.assertEqual(1, len(analyzer.items))
