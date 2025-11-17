@@ -3,7 +3,7 @@ import asyncio
 from dataclasses import dataclass
 import logging
 import unittest
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 from openpectus.aggregator.aggregator_message_handlers import AggregatorMessageHandlers
 from openpectus.aggregator.data import database
@@ -72,7 +72,8 @@ class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
 
         aggregatorDispatcher = AggregatorTestDispatcher()
         frontendPublisher = FrontendPublisher()
-        aggregator = Aggregator(aggregatorDispatcher, frontendPublisher, Mock())
+        web_push_publisher = Mock(publish_message=AsyncMock())
+        aggregator = Aggregator(aggregatorDispatcher, frontendPublisher, web_push_publisher)
         _ = AggregatorMessageHandlers(aggregator)
 
         # connect the two test dispatchers for direct communication
@@ -149,6 +150,31 @@ class ProtocolIntegrationTest(ProtocolIntegrationTestCase):
         assert engine_data is not None
         self.assertEqual(len(engine_data.tags_info.map), len(self.ctx.engine.tags))
         self.assertEqual(engine_data.system_state.value, SystemStateEnum.Stopped)  # type: ignore
+
+    async def test_can_start_and_stop_run(self):
+        assert self.ctx is not None
+        with database.create_scope():
+            await self.ctx.engineRunner._connect_async()
+            while self.ctx.engineRunner.state != "Connected":
+                await asyncio.sleep(.5)
+        assert self.ctx.engineDispatcher._engine_id is not None
+        engine_id = self.ctx.engineDispatcher._engine_id
+        assert self.ctx.engineRunner.run_id is None
+        engine_data = self.ctx.aggregator.get_registered_engine_data(engine_id)
+        assert engine_data is not None
+        assert not engine_data.has_run()
+        await asyncio.sleep(1)
+
+        self.ctx.engine.execute_control_command_from_user("Start")
+        await asyncio.sleep(1)
+        assert self.ctx.engineRunner.run_id is not None
+        assert engine_data.has_run()
+        self.assertEqual(engine_data.run_data.run_id, self.ctx.engineRunner.run_id)
+
+        self.ctx.engine.execute_control_command_from_user("Stop")
+        await asyncio.sleep(1)
+        assert self.ctx.engineRunner.run_id is None
+        assert not engine_data.has_run()
 
     async def test_can_detect_network_down_and_buffer_up_messages(self):
         assert self.ctx is not None

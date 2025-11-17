@@ -89,11 +89,11 @@ class EngineMessageBuilder():
         tags = self.collect_tag_updates(snapshot=True)
         return EM.TagsUpdatedMsg(tags=tags)
 
-    def create_tag_updates_msg(self) -> EM.TagsUpdatedMsg | None:
+    def create_tag_updates_msg(self, run_id: str | None) -> EM.TagsUpdatedMsg | None:
         tags = self.collect_tag_updates()
         # print("tags with updates", str([t.name for t in tags]))
         if len(tags) > 0:
-            return EM.TagsUpdatedMsg(tags=tags)
+            return EM.TagsUpdatedMsg(tags=tags, run_id=run_id)
 
     def create_run_started_msg(self, run_id: str, tick_time: float) -> EM.RunStartedMsg:
         return EM.RunStartedMsg(run_id=run_id, started_tick=tick_time)
@@ -101,11 +101,15 @@ class EngineMessageBuilder():
     def create_run_stopped_msg(self, run_id: str) -> EM.RunStoppedMsg:
         runlog_msg = self.create_runlog_msg(run_id)
         state = self.engine.method_manager.get_method_state()
-        archiver = self.engine._system_tags.get(SystemTagName.ARCHIVER)
-        assert isinstance(archiver, ArchiverTag)
-        archive = archiver.read_last_run_archive(run_id)
-        assert archiver.last_run_file_path is not None
-        archive_filename = os.path.basename(archiver.last_run_file_path)
+        archiver = self.engine._system_tags.get_value_or_default(SystemTagName.ARCHIVER)
+        if archiver is None:  # if archiver is disabled
+            archive = None
+            archive_filename = None
+        else:
+            assert isinstance(archiver, ArchiverTag)
+            archive = archiver.read_last_run_archive(run_id)
+            assert archiver.last_run_file_path is not None
+            archive_filename = os.path.basename(archiver.last_run_file_path)
         return EM.RunStoppedMsg(run_id=run_id, runlog=runlog_msg.runlog, method_state=state, archive=archive,
                                 archive_filename=archive_filename)
 

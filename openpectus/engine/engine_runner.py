@@ -364,7 +364,7 @@ class EngineRunner(EventListener):
             if self.state == "Stopped":
                 return
             for msg in [
-                self._message_builder.create_tag_updates_msg(),
+                self._message_builder.create_tag_updates_msg(self.run_id),
                 self._message_builder.create_method_state_msg(),
                 self._message_builder.create_error_log_msg(),
             ]:
@@ -410,7 +410,7 @@ class EngineRunner(EventListener):
                     self._message_builder.create_control_state_msg(),
                     self._message_builder.create_method_state_msg(),
                     self._message_builder.create_error_log_msg(),
-                    self._message_builder.create_tag_updates_msg(),
+                    self._message_builder.create_tag_updates_msg(self.run_id),
                 ]
                 if self.run_id is not None:
                     messages.append(self._message_builder.create_runlog_msg(self.run_id))

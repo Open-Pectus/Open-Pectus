@@ -71,6 +71,7 @@ class UodInfoMsg(EngineMessage):
 
 class TagsUpdatedMsg(EngineMessage):
     tags: list[Mdl.TagValue] = []
+    run_id: str | None = None
 
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(engine_id="{self.engine_id}", sequence_number={self.sequence_number}, ' +

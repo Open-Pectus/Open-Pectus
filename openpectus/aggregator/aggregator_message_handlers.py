@@ -106,7 +106,7 @@ class AggregatorMessageHandlers:
             return validation_errors
 
         logger.debug(f"Got tags update from client: {str(msg)}")
-        self.aggregator.from_engine.tag_values_changed(msg.engine_id, msg.tags)
+        self.aggregator.from_engine.tag_values_changed(msg.engine_id, msg.tags, msg.run_id)
         return AM.SuccessMessage()
 
     async def handle_RunLogMsg(self, msg: EM.RunLogMsg) -> AM.SuccessMessage | AM.ErrorMessage:
