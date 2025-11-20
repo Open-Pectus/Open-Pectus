@@ -1,5 +1,6 @@
 import openpectus.protocol.messages as Msg
 import openpectus.protocol.models as Mdl
+from openpectus import __version__
 
 # Note: These are the messages sent by AggregatorDispatcher and handled by EngineMessageHandlers.
 
@@ -20,10 +21,15 @@ class RegisterEngineReplyMsg(AggregatorMessage):
     """ Reply to a RegisterEngineMsg from engine. """
     success: bool
     engine_id: str | None = None
-    secret_match: bool
+    secret_match: bool | None = None
+    version_match: bool | None = None
+    aggregator_build_number: str = __version__
 
     def __str__(self) -> str:
-        return f'{self.__class__.__name__}(engine_id="{self.engine_id}", success={self.success})'
+        return f'{self.__class__.__name__}(engine_id="{self.engine_id}", success={self.success}, ' +\
+               f'secret_match={self.secret_match})' +\
+               f'version_match={self.version_match})' +\
+               f'aggregator_build_number={self.aggregator_build_number})'
 
 
 class ExecuteControlCommandMsg(AggregatorMessage):

@@ -5,7 +5,6 @@ import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 from openpectus.protocol.serialization import serialize, deserialize
 
-
 class SerializationTest(unittest.TestCase):
     def test_serialization_RegisterEngineMsg(self):
         reg = EM.RegisterEngineMsg(
@@ -22,7 +21,9 @@ class SerializationTest(unittest.TestCase):
              'computer_name': 'foo', 'engine_version': '0.0.1', 'uod_name': 'bar',
              'uod_author_name': 'author_name', 'uod_author_email': '', 'uod_filename': '',
              'location': 'baz', 'secret': '',
-             'sequence_number': -2, 'version': 0},
+             'sequence_number': -2,
+             'ignore_version_error': False,
+             'version': 0},
             reg_s)
         self.assertIsNotNone(reg_s)
 

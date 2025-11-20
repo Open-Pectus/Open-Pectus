@@ -12,10 +12,11 @@ from openpectus.aggregator.models import SystemStateEnum
 from openpectus.engine.engine import Engine
 from openpectus.engine.engine_message_handlers import EngineMessageHandlers
 from openpectus.engine.engine_message_builder import EngineMessageBuilder
+from openpectus.lang.exec.events import EventListener
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 import openpectus.protocol.aggregator_messages as AM
 from openpectus.protocol.engine_dispatcher import EngineDispatcher
-from openpectus.engine.engine_runner import EngineRunner
+from openpectus.engine.engine_runner import EngineRunner, RecoverState
 import openpectus.protocol.engine_messages as EM
 from openpectus.protocol.exceptions import ProtocolException, ProtocolNetworkException
 import openpectus.protocol.messages as M
@@ -45,13 +46,16 @@ class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
     class Context:
         """ Test helper class """
         engine: Engine
-        engineDispatcher: EngineTestDispatcher
-        engineRunner: EngineRunner
-        engineMessageHandlers: EngineMessageHandlers
+        engine_dispatcher: EngineTestDispatcher
+        engine_runner: EngineRunner
+        engine_message_handlers: EngineMessageHandlers
+        engine_message_builder: EngineMessageBuilder
 
-        aggregatorDispatcher: AggregatorTestDispatcher
-        frontendPublisher: FrontendPublisher
+        aggregator_dispatcher: AggregatorTestDispatcher
+        frontend_publisher: FrontendPublisher
         aggregator: Aggregator
+        fail_test_on_error_event: bool = True
+        fail_test_on_runner_state_error: bool = True
 
     async def asyncSetUp(self) -> None:
         assert self.ctx is None
@@ -66,23 +70,40 @@ class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
 
         uod = create_test_uod()
         engine = Engine(uod)
-        engineDispatcher = EngineTestDispatcher()
-        engineRunner = EngineRunner(engineDispatcher, EngineMessageBuilder(engine), engine.emitter, loop)
-        engineMessageHandlers = EngineMessageHandlers(engine, engineDispatcher)
+        engine_message_builder = EngineMessageBuilder(engine, secret="", ignore_version_error=False)
+        engine_dispatcher = EngineTestDispatcher(engine_message_builder)
+        engine_runner = EngineRunner(engine_dispatcher, engine_message_builder, engine.emitter, loop)
+        engine_message_handlers = EngineMessageHandlers(engine, engine_dispatcher)
 
-        aggregatorDispatcher = AggregatorTestDispatcher()
-        frontendPublisher = FrontendPublisher()
+        async def on_state_changing(before: RecoverState, after: RecoverState):
+            assert self.ctx is not None
+            if self.ctx.fail_test_on_runner_state_error and after == "Failed":
+                logger.error("EngineRunner unexpectedly entered the failed state")
+                raise AssertionError("EngineRunner unexpectedly entered the failed state")
+
+        engine_runner.state_changing_callback = on_state_changing
+
+        def on_error_event(exception: Exception):
+            logger.error("Exception during test", exc_info=True)
+            raise exception
+
+        error_listener = EventListener()
+        error_listener.on_method_error = on_error_event
+        engine.emitter.add_listener(error_listener)
+
+        aggregator_dispatcher = AggregatorTestDispatcher()
+        frontend_publisher = FrontendPublisher()
         web_push_publisher = Mock(publish_message=AsyncMock())
-        aggregator = Aggregator(aggregatorDispatcher, frontendPublisher, web_push_publisher)
+        aggregator = Aggregator(aggregator_dispatcher, frontend_publisher, web_push_publisher)
         _ = AggregatorMessageHandlers(aggregator)
 
         # connect the two test dispatchers for direct communication
-        aggregatorDispatcher.engineDispatcher = engineDispatcher
-        engineDispatcher.aggregatorDispatcher = aggregatorDispatcher
+        aggregator_dispatcher.engineDispatcher = engine_dispatcher
+        engine_dispatcher.aggregator_dispatcher = aggregator_dispatcher
 
         self.ctx = ProtocolIntegrationTestCase.Context(
-            engine, engineDispatcher, engineRunner, engineMessageHandlers,
-            aggregatorDispatcher, frontendPublisher, aggregator)
+            engine, engine_dispatcher, engine_runner, engine_message_handlers, engine_message_builder,
+            aggregator_dispatcher, frontend_publisher, aggregator)
 
         # not sure why this is necessary. asyncTeardown should be doing this already
         self.addCleanup(lambda : engine.stop())
@@ -98,29 +119,28 @@ class ProtocolIntegrationTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def stop(self):
         assert self.ctx is not None
-        await self.ctx.engineDispatcher.disconnect_async()
-        await self.ctx.engineRunner.shutdown()
+        await self.ctx.engine_dispatcher.disconnect_async()
+        await self.ctx.engine_runner.shutdown()
 
     async def register(self) -> str:
         assert self.ctx is not None
 
-        register_message = EM.RegisterEngineMsg(
-            computer_name="test_host",
+        register_message = self.ctx.engine_message_builder.create_register_engine_msg(
             uod_name="test_uod_name",
             uod_author_name="uod-author-name",
             uod_author_email="uod-author-email",
             uod_filename="uod-filename",
-            location="test_location",
-            engine_version="1")
+            location="test_location"
+        )
 
-        register_response = await self.ctx.engineDispatcher.send_registration_msg_async(register_message)
+        register_response = await self.ctx.engine_dispatcher.send_registration_msg_async(register_message)
         assert isinstance(register_response, AM.RegisterEngineReplyMsg)
         self.assertTrue(register_response.success)
         engine_id = register_response.engine_id
         assert engine_id is not None
         self.assertTrue(engine_id != "")
-        self.assertEqual(self.ctx.engineDispatcher._engine_id, engine_id)
-        self.assertTrue(self.ctx.aggregatorDispatcher.has_connected_engine_id(engine_id))
+        self.assertEqual(self.ctx.engine_dispatcher._engine_id, engine_id)
+        self.assertTrue(self.ctx.aggregator_dispatcher.has_connected_engine_id(engine_id))
         return engine_id
 
 
@@ -134,19 +154,44 @@ class ProtocolIntegrationTest(ProtocolIntegrationTestCase):
         engine_data = self.ctx.aggregator.get_registered_engine_data(engine_id)
         assert engine_data is not None
 
+    async def test_cannot_register_w_invalid_secret(self):
+        assert self.ctx is not None
+        self.ctx.engine_message_builder.secret = "this is an invalid secret"
+
+        with self.assertRaises(Exception):
+            _ = await self.register()
+
+    async def test_cannot_register_w_different_version(self):
+        assert self.ctx is not None
+        self.ctx.engine_message_builder.version_override = "0.0.5"
+
+        with self.assertRaises(Exception):
+            _ = await self.register()
+
+    async def test_can_register_w_different_version_and_ignore_version_flag(self):
+        assert self.ctx is not None
+        self.ctx.engine_message_builder.version_override = "0.0.5"
+        self.ctx.engine_message_builder.ignore_version_error = True
+
+        engine_id = await self.register()
+        self.assertTrue(engine_id != "")
+
+        engine_data = self.ctx.aggregator.get_registered_engine_data(engine_id)
+        assert engine_data is not None
+
     async def test_can_send_tag_updates(self):
         assert self.ctx is not None
 
         with database.create_scope():
-            await self.ctx.engineRunner._connect_async()
-            while self.ctx.engineRunner.state != "Connected":
+            await self.ctx.engine_runner._connect_async()
+            while self.ctx.engine_runner.state != "Connected":
                 await asyncio.sleep(.5)
 
-        assert self.ctx.engineDispatcher._engine_id is not None
+        assert self.ctx.engine_dispatcher._engine_id is not None
 
         await asyncio.sleep(1)
 
-        engine_data = self.ctx.aggregator.get_registered_engine_data(self.ctx.engineDispatcher._engine_id)
+        engine_data = self.ctx.aggregator.get_registered_engine_data(self.ctx.engine_dispatcher._engine_id)
         assert engine_data is not None
         self.assertEqual(len(engine_data.tags_info.map), len(self.ctx.engine.tags))
         self.assertEqual(engine_data.system_state.value, SystemStateEnum.Stopped)  # type: ignore
@@ -154,12 +199,12 @@ class ProtocolIntegrationTest(ProtocolIntegrationTestCase):
     async def test_can_start_and_stop_run(self):
         assert self.ctx is not None
         with database.create_scope():
-            await self.ctx.engineRunner._connect_async()
-            while self.ctx.engineRunner.state != "Connected":
+            await self.ctx.engine_runner._connect_async()
+            while self.ctx.engine_runner.state != "Connected":
                 await asyncio.sleep(.5)
-        assert self.ctx.engineDispatcher._engine_id is not None
-        engine_id = self.ctx.engineDispatcher._engine_id
-        assert self.ctx.engineRunner.run_id is None
+        assert self.ctx.engine_dispatcher._engine_id is not None
+        engine_id = self.ctx.engine_dispatcher._engine_id
+        assert self.ctx.engine_runner.run_id is None
         engine_data = self.ctx.aggregator.get_registered_engine_data(engine_id)
         assert engine_data is not None
         assert not engine_data.has_run()
@@ -167,29 +212,32 @@ class ProtocolIntegrationTest(ProtocolIntegrationTestCase):
 
         self.ctx.engine.execute_control_command_from_user("Start")
         await asyncio.sleep(1)
-        assert self.ctx.engineRunner.run_id is not None
+        assert self.ctx.engine_runner.run_id is not None
         assert engine_data.has_run()
-        self.assertEqual(engine_data.run_data.run_id, self.ctx.engineRunner.run_id)
+        self.assertEqual(engine_data.run_data.run_id, self.ctx.engine_runner.run_id)
 
         self.ctx.engine.execute_control_command_from_user("Stop")
         await asyncio.sleep(1)
-        assert self.ctx.engineRunner.run_id is None
+        assert self.ctx.engine_runner.run_id is None
         assert not engine_data.has_run()
 
     async def test_can_detect_network_down_and_buffer_up_messages(self):
         assert self.ctx is not None
-        with database.create_scope():
-            await self.ctx.engineRunner._connect_async()
+        # we're simulating errors so we don't want to fail when they occur
+        self.ctx.fail_test_on_runner_state_error = False
 
-        self.ctx.engineDispatcher.network_failing = True
-        self.assertTrue(self.ctx.engineRunner._get_buffer_size() == 0)
+        with database.create_scope():
+            await self.ctx.engine_runner._connect_async()
+
+        self.ctx.engine_dispatcher.network_failing = True
+        self.assertTrue(self.ctx.engine_runner._get_buffer_size() == 0)
 
         # post message while network_failing==True triggers Failed state
         # and the message is buffered
-        await self.ctx.engineRunner._post_async(EM.EngineMessage())
+        await self.ctx.engine_runner._post_async(EM.EngineMessage())
 
-        self.assertEqual(self.ctx.engineRunner.state, "Failed")
-        self.assertTrue(self.ctx.engineRunner._get_buffer_size() > 0)
+        self.assertEqual(self.ctx.engine_runner.state, "Failed")
+        self.assertTrue(self.ctx.engine_runner._get_buffer_size() > 0)
 
 
 class AggregatorErrorTest(ProtocolIntegrationTestCase):
@@ -205,19 +253,19 @@ class AggregatorErrorTest(ProtocolIntegrationTestCase):
         assert self.ctx is not None
 
         with database.create_scope():
-            await self.ctx.engineRunner._connect_async()
-            engine_id = self.ctx.engineDispatcher._engine_id
+            await self.ctx.engine_runner._connect_async()
+            engine_id = self.ctx.engine_dispatcher._engine_id
             assert engine_id is not None
 
-        self.assertTrue(self.ctx.aggregatorDispatcher.has_connected_engine_id(engine_id))
+        self.assertTrue(self.ctx.aggregator_dispatcher.has_connected_engine_id(engine_id))
 
-        self.ctx.aggregatorDispatcher.set_engine_fail(engine_id, True)
+        self.ctx.aggregator_dispatcher.set_engine_fail(engine_id, True)
         try:
-            await self.ctx.aggregatorDispatcher.rpc_call(engine_id=engine_id, message=M.MessageBase())
+            await self.ctx.aggregator_dispatcher.rpc_call(engine_id=engine_id, message=M.MessageBase())
         except Exception:
             pass
 
-        self.assertFalse(self.ctx.aggregatorDispatcher.has_connected_engine_id(engine_id))
+        self.assertFalse(self.ctx.aggregator_dispatcher.has_connected_engine_id(engine_id))
 
         engine_data = self.ctx.aggregator.get_registered_engine_data(engine_id)
         self.assertIsNone(engine_data)
@@ -258,7 +306,7 @@ class AggregatorTestDispatcher(AggregatorDispatcher):
         return engine_id in self.connected_engines
 
 class EngineTestDispatcher(EngineDispatcher):
-    def __init__(self) -> None:
+    def __init__(self, engine_message_builder: EngineMessageBuilder) -> None:
         uod_options = {
             'uod_name': 'my_uod_name',
             'uod_author_name': 'my_uod_author_name',
@@ -266,8 +314,8 @@ class EngineTestDispatcher(EngineDispatcher):
             'uod_filename': 'my_uod_filename',
             'location': 'my_location'
         }
-        super().__init__(aggregator_host="", secure=False, uod_options=uod_options)
-        self.aggregatorDispatcher: AggregatorTestDispatcher
+        super().__init__(engine_message_builder, aggregator_host="", secure=False, uod_options=uod_options)
+        self.aggregator_dispatcher: AggregatorTestDispatcher
         self.network_failing = False
 
     async def connect_async(self):
@@ -279,13 +327,19 @@ class EngineTestDispatcher(EngineDispatcher):
                 raise ValueError("Failed to register. Aggregator refused registration.")
 
     async def send_registration_msg_async(self, message: EM.RegisterEngineMsg) -> M.MessageBase:
-        assert self.aggregatorDispatcher is not None
-        assert self.aggregatorDispatcher._register_handler is not None
-        result = await self.aggregatorDispatcher._register_handler(message)
+        # called by _register_for_engine_id_async(). we override to call
+        # aggregator_dispatcher._register_handler(message) directly
+        assert self.aggregator_dispatcher is not None
+        assert self.aggregator_dispatcher._register_handler is not None
+        try:
+            result = await self.aggregator_dispatcher._register_handler(message)
+        except Exception:
+            return M.ErrorMessage(message="Registration failed with exception")
         assert isinstance(result, AM.RegisterEngineReplyMsg)
-        assert result.engine_id is not None
-        self.aggregatorDispatcher.connected_engines.add(result.engine_id)
-        self._engine_id = result.engine_id
+        if result.success:
+            assert result.engine_id is not None
+            self.aggregator_dispatcher.connected_engines.add(result.engine_id)
+            self._engine_id = result.engine_id
         return result
 
     async def send_async(self, message: EM.EngineMessage) -> M.MessageBase:
@@ -296,7 +350,7 @@ class EngineTestDispatcher(EngineDispatcher):
         if self.network_failing:
             raise ProtocolNetworkException
         # post message directly to aggregatorDispatcher
-        response = await self.aggregatorDispatcher.dispatch_message(message)
+        response = await self.aggregator_dispatcher.dispatch_message(message)
         if isinstance(response, AM.RegisterEngineReplyMsg) and response.success:
             self._engine_id = response.engine_id
         return response

@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+import socket
 import time
 from datetime import UTC
 from logging.handlers import QueueHandler
@@ -16,6 +17,7 @@ from openpectus.engine.internal_commands_impl import logger as internal_cmds_log
 from openpectus.lang.exec.runlog import RunLogItem
 from openpectus.lang.exec.tags import SystemTagName, TagValue
 from openpectus.lang.exec.uod import logger as uod_logger
+from openpectus import __version__
 
 logger = logging.getLogger(__name__)
 
@@ -51,11 +53,37 @@ def to_model_tag(tag: TagValue) -> Mdl.TagValue:
 class EngineMessageBuilder():
     """ Collects data from engine and constructs engine messages """
 
-    def __init__(self, engine: Engine) -> None:
+    def __init__(self, engine: Engine, secret: str, ignore_version_error: bool) -> None:
         self.engine = engine
+        self.secret = secret
+        self.ignore_version_error = ignore_version_error
+        self.version_override: str | None = None
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(engine={self.engine})'
+
+    def create_register_engine_msg(
+            self,
+            uod_name: str,
+            uod_author_name: str,
+            uod_author_email: str,
+            uod_filename: str,
+            location: str,
+            ) -> EM.RegisterEngineMsg:
+
+        version = self.version_override or __version__
+
+        return EM.RegisterEngineMsg(
+            uod_name=uod_name,  # set automatically from context
+            uod_author_name=uod_author_name,
+            uod_author_email=uod_author_email,
+            uod_filename=uod_filename,
+            location=location,
+            secret=self.secret,
+            engine_version=version,
+            computer_name=socket.gethostname(),
+            ignore_version_error=self.ignore_version_error
+        )
 
     def create_uod_info(self) -> EM.UodInfoMsg:
 
