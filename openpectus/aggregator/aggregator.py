@@ -180,13 +180,22 @@ class FromEngine:
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set uod info.')
 
-    def tag_values_changed(self, engine_id: str, changed_tag_values: list[Mdl.TagValue]):
+    def tag_values_changed(self, engine_id: str, changed_tag_values: list[Mdl.TagValue], msg_run_id : str | None):
         with database.create_scope():
             plot_log_repo = PlotLogRepository(database.scoped_session())
 
             engine_data = self._engine_data_map.get(engine_id)
             if engine_data is None:
                 logger.error(f'No engine registered under id {engine_id} when trying to upsert tag values.')
+                return
+            run_id = engine_data.run_data.run_id if engine_data.has_run() else None
+            if run_id is None and msg_run_id is not None:
+                logger.error("Skipping tag update message because it belongs to run " +
+                             f"'{msg_run_id}' but there is no active run")
+                return
+            elif run_id is not None and msg_run_id is None:
+                logger.error("Skipping tag update message because it belongs to run " +
+                             f"'{msg_run_id}' but the current run is '{run_id}'")
                 return
 
             for changed_tag_value in changed_tag_values:
@@ -206,41 +215,10 @@ class FromEngine:
                     asyncio.create_task(self.publisher.publish_process_units_changed())
 
                 # if a tag doesn't appear with value until after start and run_id, we need to store the info here
-                if was_inserted and engine_data.has_run():
+                if was_inserted and engine_data.has_run() and engine_data.run_data.run_id == msg_run_id:
                     plot_log_repo.store_new_tag_info(engine_data.engine_id, engine_data.run_data.run_id, changed_tag_value)
 
             self._persist_tag_values(engine_data, plot_log_repo)
-
-    def __run_id_changed(
-            self,
-            plot_log_repo: PlotLogRepository,
-            recent_run_repo: RecentRunRepository,
-            engine_data: EngineData,
-            run_id_tag: Mdl.TagValue):
-        """ Handles persistance related to start and end of a run """
-        raise NotImplementedError("not needed anymore")
-
-        logger.info(f"RunId changed from {engine_data.run_id} to {run_id_tag.value}, Engine: {engine_data.engine_id}")
-        if run_id_tag.value is None and engine_data.run_id is None:
-            logger.info("Engine has no active run")
-        elif run_id_tag.value is None and engine_data.run_id is not None:
-            # Run stopped
-            logger.info(f"Run was stopped. Saving Recent Run. Engine: {engine_data.engine_id}")
-            recent_run_repo.store_recent_run(engine_data)
-            engine_data.run_data.error_log = Mdl.AggregatedErrorLog.empty()
-            asyncio.create_task(self.publisher.publish_error_log_changed(engine_data.engine_id))
-        elif run_id_tag.value is not None and engine_data.run_id is not None:
-            # Ongoing run. run_id was only detected as changed because of complete tags set,
-            # caused by e.g. an aggregator restart
-            if run_id_tag.value != engine_data.run_id:
-                logger.error(f"Run_Id inconsistent, run_id tag {run_id_tag.value}, engine_data {engine_data.run_id}")
-            else:
-                logger.info(f"Run {run_id_tag.value} resumed")
-        else:
-            # Run started
-            logger.info(f"A new Run was started, Engine: {engine_data.engine_id}, Run_Id: {str(run_id_tag.value)}")
-            engine_data.run_data.run_started = datetime.fromtimestamp(run_id_tag.tick_time, timezone.utc)
-            plot_log_repo.create_plot_log(engine_data, str(run_id_tag.value))
 
     def _persist_tag_values(self, engine_data: EngineData, plot_log_repo: PlotLogRepository):
         if not engine_data.has_run():
