@@ -42,7 +42,7 @@ class CommandManager():
         self.restart_request_pending: CommandRequest | None = None
         """ Restart command request to pass to next command manager instance during restart """
 
-        logger.warning(f"CommandManager instance {id(self)} created")
+        logger.debug(f"CommandManager instance {id(self)} created")
         if restart_request_pending is not None:
             logger.debug("New CommandManager instance, picking up Restart command")
             self.cmd_executing.append(restart_request_pending)
@@ -82,7 +82,7 @@ class CommandManager():
         queue_items: list[CommandRequest] = list(self.cmd_queue.queue)
         for queue_req in queue_items:
             if queue_req.name in priority_command_names:
-                logger.warning("Priority command in queue: " + str(queue_req))
+                logger.debug("Priority command in queue: " + str(queue_req))
         self.execute_commands()
 
     def execute_commands(self):
