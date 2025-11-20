@@ -6,6 +6,7 @@ import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
 from openpectus.aggregator.aggregator import Aggregator
 from openpectus.lsp.lsp_analysis import create_analysis_input
+from openpectus import __version__
 
 logger = logging.getLogger(__name__)
 
@@ -45,12 +46,22 @@ class AggregatorMessageHandlers:
                 has a websocket connection. """
             )
             return AM.RegisterEngineReplyMsg(success=False, engine_id=engine_id, secret_match=True)
-
-        # TODO consider how to handle registrations
-        # - disconnect/reconnect should work
-        # - client kill/reconnect should work
-        # - engine_id reused with "same uod" should take over session, else fail as misconfigured client
-        # - add machine name + uod secret
+        version_match = True
+        if register_engine_msg.engine_version != __version__:
+            version_match = False
+            # If protocol versions don't match, we consider it a breaking change, disallow registration and
+            # encourage the user to upgrade. Unless Engine has the ignore_version_errors flag set in RegisterEngineMsg
+            # in which case we allow engine to continue.
+            logger.warning(
+                f"""Version check failed for engine: {engine_id=}, version: {register_engine_msg.engine_version}
+The engine may not be compatible with the current Aggregator, version {__version__}"""
+            )
+            if not register_engine_msg.ignore_version_error:
+                logger.warning(f"Engine {engine_id} was denied access")
+                return AM.RegisterEngineReplyMsg(
+                    success=False, engine_id=engine_id, secret_match=True, version_match=version_match)
+            else:
+                logger.warning(f"Engine {engine_id} requested to ignore the version check")
 
         # initialize client data
         if not self.aggregator.has_registered_engine_id(engine_id):
@@ -72,7 +83,11 @@ class AggregatorMessageHandlers:
         # This fits better in aggregator, but it cannot be there because it would incur
         # a circular import.
         create_analysis_input.cache_clear()
-        return AM.RegisterEngineReplyMsg(success=True, engine_id=engine_id, secret_match=True)
+        return AM.RegisterEngineReplyMsg(
+            success=True,
+            engine_id=engine_id,
+            secret_match=True,
+            version_match=version_match)
 
     def validate_msg(self, msg: EM.EngineMessage):
         if not self.aggregator.has_registered_engine_id(msg.engine_id):

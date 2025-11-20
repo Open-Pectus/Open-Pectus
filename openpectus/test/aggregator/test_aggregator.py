@@ -12,7 +12,7 @@ from openpectus.aggregator.aggregator_message_handlers import AggregatorMessageH
 from openpectus.aggregator.data import database
 from openpectus.protocol.aggregator_dispatcher import AggregatorDispatcher
 from openpectus.protocol.models import SystemTagName
-
+from openpectus import __version__
 
 class AggregatorTest(unittest.IsolatedAsyncioTestCase):
     def __init__(self, methodName: str = "runTest") -> None:
@@ -52,7 +52,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
             uod_author_email="uod-author-email",
             uod_filename="uod-filename",
             location="test location",
-            engine_version='0.0.1')
+            engine_version=__version__)
         engine_id = aggregator.create_engine_id(register_engine_msg)
 
         # connecting rpc with no response for engine id should close connection
@@ -99,7 +99,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
             uod_author_email="uod-author-email",
             uod_filename="uod-filename",
             location="test-loc",
-            engine_version='0.0.1')
+            engine_version=__version__)
         register_engine_msg_different_computer = EM.RegisterEngineMsg(
             computer_name='computer-name2',
             uod_name='uod-name',
@@ -107,7 +107,7 @@ class AggregatorTest(unittest.IsolatedAsyncioTestCase):
             uod_author_email="uod-author-email",
             uod_filename="uod-filename",
             location="test-loc",
-            engine_version='0.0.1')
+            engine_version=__version__)
         engine_id1 = aggregator.create_engine_id(register_engine_msg)
         _ = aggregator.create_engine_id(register_engine_msg_different_computer)
 

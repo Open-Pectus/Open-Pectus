@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import socket
 from typing import Callable, Any, Awaitable
 import json
 import ssl
@@ -16,6 +15,7 @@ import tenacity
 
 import openpectus.protocol.aggregator_messages as AM
 import openpectus.protocol.engine_messages as EM
+from openpectus.engine.engine_message_builder import EngineMessageBuilder
 from openpectus.protocol.exceptions import ProtocolException, ProtocolNetworkException
 import openpectus.protocol.messages as M
 from openpectus import __version__, __name__ as client_name
@@ -80,8 +80,9 @@ class EngineDispatcher():
             # Note: Must be declared async to be usable by RPC
             return self.engine_id
 
-    def __init__(self, aggregator_host: str, secure: bool, uod_options: dict[str, str], secret: str = "") -> None:
+    def __init__(self, message_builder: EngineMessageBuilder, aggregator_host: str, secure: bool, uod_options: dict[str, str]) -> None:
         super().__init__()
+        self._message_builder = message_builder
         self._aggregator_host = aggregator_host
         self._uod_name = uod_options.pop("uod_name")
         self._uod_author_name = uod_options.pop("uod_author_name")
@@ -90,9 +91,8 @@ class EngineDispatcher():
         self._location = uod_options.pop("location")
         self._rpc_client: WebSocketRpcClient | None = None
         self._handlers: dict[type, Callable[[Any], Awaitable[M.MessageBase]]] = {}
-        self._engine_id = None
+        self._engine_id: str | None = None
         self._sequence_number = 1
-        self._secret = secret
 
         http_scheme = "https" if secure else "http"
         ws_scheme = "wss" if secure else "ws"
@@ -277,21 +277,39 @@ class EngineDispatcher():
 
     async def _register_for_engine_id_async(self) -> str | None:
         logger.info("Registering for engine id")
-        register_engine_msg = EM.RegisterEngineMsg(
-            computer_name=socket.gethostname(),
+        register_engine_msg = self._message_builder.create_register_engine_msg(
             uod_name=self._uod_name,
             uod_author_name=self._uod_author_name,
             uod_author_email=self._uod_author_email,
             uod_filename=self._uod_filename,
             location=self._location,
-            engine_version=__version__,
-            secret=self._secret)
+        )
         register_response = await self.send_registration_msg_async(register_engine_msg)
-        if not isinstance(register_response, AM.RegisterEngineReplyMsg) or not register_response.success:
+        if not isinstance(register_response, AM.RegisterEngineReplyMsg):
+            logger.error("Aggregator registration reply message was invalid")
+            return None
+
+        if not register_response.version_match:
+            # Aggregator refused us because we have a different version
+            # this is probably the most likely arguments to not cause issues:
+            # --force-reinstall: Reinstall all packages even if they are already up-to-date
+            logger.warning(f"""\
+Engine protocol version {__version__} does not match aggregator version {register_response.aggregator_build_number}.
+Please upgrade engine:
+
+pip install --force-reinstall openpectus=={register_response.aggregator_build_number}
+""")
+            if register_response.success:
+                logger.info("Version mismatch ignored")
+            else:
+                logger.info("Start engine with --ignore_version_error to connect anyway")
+
+        if not register_response.success:
             logger.warning("Aggregator refused registration")
-            if isinstance(register_response, AM.RegisterEngineReplyMsg) and not register_response.secret_match:
+            if not register_response.secret_match:
                 logger.error("Secret supplied by engine does not match aggregator secret")
             return None
+
         logger.debug(f"Aggregator accepted registration and issued engine_id: {register_response.engine_id}")
         return register_response.engine_id
 

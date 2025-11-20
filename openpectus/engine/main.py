@@ -76,6 +76,8 @@ def get_arg_parser():
                         help=f"Minimum log level to send as sentry events. Default is '{sentry.EVENT_LEVEL_DEFAULT}'")
     parser.add_argument("-secret", "--secret", required=False, default="",
                         help="Secret used to get access to aggregator")
+    parser.add_argument("-ignore", "--ignore_version_error", required=False, default=False,
+                        help="If True, informs aggregator to ignore any protocol version conflicts and allow connection")
     return parser
 
 
@@ -115,7 +117,8 @@ async def main_async(args, loop: asyncio.AbstractEventLoop):
     else:
         port = default_port_secure if args.secure else default_port
 
-    dispatcher = EngineDispatcher(f"{args.aggregator_hostname}:{port}", args.secure, uod.options, args.secret)
+    message_builder = EngineMessageBuilder(engine, args.secret, args.ignore_version_error)
+    dispatcher = EngineDispatcher(message_builder, f"{args.aggregator_hostname}:{port}", args.secure, uod.options)
 
     if len(uod.required_roles) > 0 and not dispatcher.is_aggregator_authentication_enabled():
         logger.warning('"with_required_roles" specified in "demo_uod.py" but aggregator does ' +
@@ -130,7 +133,6 @@ async def main_async(args, loop: asyncio.AbstractEventLoop):
     connection_status_tag = engine._system_tags[SystemTagName.CONNECTION_STATUS]
     uod.hwl = ErrorRecoveryDecorator(uod.hwl, ErrorRecoveryConfig(), connection_status_tag)
 
-    message_builder = EngineMessageBuilder(engine)
     # create runner that orchestrates the error recovery mechanism
     runner = EngineRunner(dispatcher, message_builder, engine.emitter, loop)
     _ = EngineMessageHandlers(engine, dispatcher)

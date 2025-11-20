@@ -44,6 +44,7 @@ class RegisterEngineMsg(Msg.MessageBase):
     # uod file hash, file change date
 
     sequence_number: int = -2
+    ignore_version_error: bool = False
 
     @property
     def ident(self) -> str:
