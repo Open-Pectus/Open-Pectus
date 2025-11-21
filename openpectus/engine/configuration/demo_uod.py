@@ -15,6 +15,7 @@ from openpectus.lang.exec.tags import format_time_as_clock
 
 def create() -> UnitOperationDefinitionBase:
     builder = UodBuilder()
+
     # use this logger to send warnings/errors to the frontend error log
     # logger = builder.get_logger()
 
@@ -35,7 +36,7 @@ def create() -> UnitOperationDefinitionBase:
             cmd.context.tags.get("Reset").set_value("N/A", time())
             cmd.set_complete()
         else:
-            progress = count/max_ticks
+            progress = count / max_ticks
             cmd.set_progress(progress)
 
     def test_int(cmd: UodCommand, value):
@@ -82,6 +83,13 @@ def create() -> UnitOperationDefinitionBase:
         # tag is controlled and constantly updated by the demo hardware.
         Category: Falling"""
         cmd.context.tags["Category"].set_value(value, time())
+        cmd.set_complete()
+
+    def _set_area(cmd: UodCommand, number: str, number_unit: str):
+        """# Set the CmdWithRegexArgs tag value
+        CmdWithRegexArgs: 5 dm2
+        """
+        cmd.context.tags.get("Area").set_value_and_unit(as_decimal(number), number_unit, time())
         cmd.set_complete()
 
     def get_plot_configuration() -> PlotConfiguration:
@@ -166,6 +174,13 @@ def create() -> UnitOperationDefinitionBase:
                                              additive_options=["1", "2", "3"]),
             exec_fn=cmd_regex_categorical)
         .with_process_value_entry(tag_name="TestPercentage")
+
+        .with_tag(tags.Tag("Area", value=2.0, unit="m2"))
+        .with_command_regex_arguments(
+            name="Set area",
+            arg_parse_regex=RegexNumber(units=['m2', 'dm2']),
+            exec_fn=_set_area)
+        .with_process_value_entry(tag_name="Area", execute_command_name="Set area")
 
         .with_plot_configuration(get_plot_configuration())
         .build()
