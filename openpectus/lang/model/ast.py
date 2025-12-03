@@ -585,19 +585,19 @@ class BlockNode(NodeWithChildren):
 
     def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
-        self.lock_aquired = False
+        self.lock_acquired = False
 
     def reset_runtime_state(self, recursive):
-        self.lock_aquired = False
+        self.lock_acquired = False
         super().reset_runtime_state(recursive)
 
     def extract_state(self) -> NodeState:
         state = super().extract_state()
-        state["lock_aquired"] = self.lock_aquired  # type: ignore
+        state["lock_acquired"] = self.lock_acquired  # type: ignore
         return state
 
     def apply_state(self, state: NodeState):
-        self.lock_aquired = bool(state["lock_aquired"])  # type: ignore
+        self.lock_acquired = bool(state["lock_acquired"])  # type: ignore
         return super().apply_state(state)
 
 

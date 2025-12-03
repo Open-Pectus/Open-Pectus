@@ -700,22 +700,22 @@ class PInterpreter(NodeVisitor):
 
     def visit_BlockNode(self, node: p.BlockNode) -> NodeGenerator:
 
-        def try_aquire_block_lock(node: p.BlockNode):
+        def try_acquire_block_lock(node: p.BlockNode):
             scope = self.stack.peek()
             if isinstance(scope, p.ProgramNode) or scope == node.parent:
-                logger.debug(f"Block lock for {node} aquired")
-                node.lock_aquired = True
+                logger.debug(f"Block lock for {node} acquired")
+                node.lock_acquired = True
 
-        if not node.lock_aquired:
-            while not node.lock_aquired:
-                logger.debug(f"Waiting to aquire block lock for {node}")
-                try_aquire_block_lock(node)
-                if node.lock_aquired:
+        if not node.lock_acquired:
+            while not node.lock_acquired:
+                logger.debug(f"Waiting to acquire block lock for {node}")
+                try_acquire_block_lock(node)
+                if node.lock_acquired:
                     break
                 yield
 
         def push_to_stack(node: p.BlockNode):
-            node.lock_aquired = True
+            node.lock_acquired = True
             self.stack.push(node)
             self.context.tags[SystemTagName.BLOCK].set_value(node.name, self._tick_number)
             self.context.emitter.emit_on_block_start(node.name, self._tick_number)
@@ -1077,7 +1077,7 @@ class PInterpreter(NodeVisitor):
 
 
     def _abort_block_interrupts(self, block: p.BlockNode):
-        logger.debug(f"Cancelling interrupts for block {block}")
+        logger.debug(f"Cancelling any interrupts in block {block}")
         descendants = block.get_child_nodes(recursive=True)
         interrupts = list(self._interrupts_map.values())
         for interrupt in interrupts:
