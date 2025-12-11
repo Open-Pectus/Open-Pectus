@@ -417,7 +417,8 @@ class NodeWithChildren(Node):
         """ Whether an interrupt was registered to execute the node. """
         self.children_complete: bool = False
         """ Specifies that execution of child nodes should stop or is completed. """
-
+        self.child_index: int = 0
+        """ The index of the completed child """
         self._last_non_ws_line: int = 0
         """ Populated by WhitespaceAnalyzer """
 
@@ -469,16 +470,19 @@ class NodeWithChildren(Node):
         state = super().extract_state()
         state["interrupt_registered"] = self.interrupt_registered  # type: ignore
         state["children_complete"] = self.children_complete  # type: ignore
+        state["child_index"] = self.child_index  # type: ignore
         return state
 
     def apply_state(self, state):
-        self.interrupt_registered = state["interrupt_registered"]  # type: ignore
-        self.children_complete = state["children_complete"]  # type: ignore
+        self.interrupt_registered = bool(state["interrupt_registered"])  # type: ignore
+        self.children_complete = bool(state["children_complete"])  # type: ignore
+        self.child_index = int(state["child_index"])  # type: ignore
         super().apply_state(state)
 
     def reset_runtime_state(self, recursive):
         self.interrupt_registered = False
         self.children_complete = False
+        self.child_index = 0
         super().reset_runtime_state(recursive)
 
 class ProgramNode(NodeWithChildren):
@@ -791,6 +795,7 @@ class MacroNode(NodeWithChildren):
     def prepare_for_call(self):
         """ Clears state left over by any previous calls of the macro so it can be called again """
         self.children_complete = False
+        self.child_index = 0
         self.completed = False
         for macro_child in self.children:
             macro_child.reset_runtime_state(recursive=True)

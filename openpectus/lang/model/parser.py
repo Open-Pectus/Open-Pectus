@@ -26,8 +26,6 @@ class ParserMethodLine:
 
 
 class ParserMethod:
-    empty: ParserMethod
-
     def __init__(self, lines: list[ParserMethodLine]):
         self.version = 0
         self.lines: list[ParserMethodLine] = lines
@@ -39,7 +37,7 @@ class ParserMethod:
         return f'{self.__class__.__name__}(lines={lines})'
 
     @staticmethod
-    def create_empty() -> ParserMethod:
+    def empty() -> ParserMethod:
         return ParserMethod(lines=[])
 
     def is_empty(self) -> bool:
@@ -47,7 +45,7 @@ class ParserMethod:
 
     @staticmethod
     def from_pcode(pcode: str) -> ParserMethod:
-        method = ParserMethod.create_empty()
+        method = ParserMethod.empty()
         line_num: int = 1
         for line in pcode.splitlines():
             method.lines.append(ParserMethodLine(id=f"id_{line_num}", content=line))
@@ -61,9 +59,6 @@ class ParserMethod:
     def as_pcode_w_id(self) -> str:
         pcode = '\n'.join([line.id + ' ' + line.content for line in self.lines])
         return pcode
-
-
-ParserMethod.empty = ParserMethod.create_empty()
 
 
 class IncrementalIdGenerator(NodeIdGenerator):

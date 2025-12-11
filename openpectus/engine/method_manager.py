@@ -24,7 +24,7 @@ class MethodManager:
                  interpreter_reset_handler: InterpreterResetHandler):
         self._uod_command_names = uod_command_names
         self._interpreter_context = interpreter_context
-        self._method = ParserMethod.empty
+        self._method = ParserMethod.empty()
         self._program = p.ProgramNode.empty()
         self._inject_parser = create_inject_parser(self._uod_command_names)
         # set handler before the initial creation so we get the event right away

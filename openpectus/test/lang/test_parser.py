@@ -277,6 +277,23 @@ Block: A
         self.assertIsInstance(block_node.children[1], p.BlankNode)
         self.assertIsInstance(block_node.children[2], p.MarkNode)
 
+    def test_block_with_blanks(self):
+        code = """\
+Mark: A
+Block: B
+    Mark: B1
+    Mark: B2
+
+    End block
+Mark: C
+"""
+        program = parse_program(code)
+        print(program.as_tree())
+        self.assertEqual(3, len(program.children))
+        block = program.children[1]
+        assert isinstance(block, p.BlockNode)
+        self.assertEqual(4, len(block.children))
+
     def test_parse_block_w_blank_5(self):
         code = """\
 Block: A

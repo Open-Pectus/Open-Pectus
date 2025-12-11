@@ -492,14 +492,33 @@ class PInterpreter(NodeVisitor):
             expected_unit)
 
     def _visit_children(self, node: p.NodeWithChildren) -> NodeGenerator:
-        for child in node.children:
-            if node.children_complete:
+        while True:
+            # this somewhat helps if children list changes, but we would need
+            # to handle child node addition and removal to modify inx
+            # maybe add a prop run_inx to NodeWithChildren so it can handle that
+            # itself
+            children = node.children
+            size = len(children)
+            if node.child_index < size:
+                child = children[node.child_index]
+                if node.children_complete:
+                    break
+                child_result = self.visit(child)
+                yield from child_result
+                node.child_index += 1
+            else:
                 break
-            child_result = self.visit(child)
-            if node.children_complete:
-                break
-            yield from child_result
         node.children_complete = True
+
+
+        # for child in node.children:
+        #     if node.children_complete:
+        #         break
+        #     child_result = self.visit(child)
+        #     if node.children_complete:
+        #         break
+        #     yield from child_result
+        # node.children_complete = True
 
     # Visitor Impl
 
@@ -1077,7 +1096,7 @@ class PInterpreter(NodeVisitor):
 
 
     def _abort_block_interrupts(self, block: p.BlockNode):
-        logger.debug(f"Cancelling any interrupts in block {block}")
+        logger.debug(f"Cancelling any interrupts for block {block}")
         descendants = block.get_child_nodes(recursive=True)
         interrupts = list(self._interrupts_map.values())
         for interrupt in interrupts:
