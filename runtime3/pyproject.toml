@@ -1,0 +1,61 @@
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "opruntime"
+authors = [
+  {name = "Morten Passow Odgaard", email = "mpo@mjolner.dk"},
+]
+dynamic = ["version", "description"]
+readme = "README.md"
+requires-python = ">= 3.11"
+
+dependencies = [
+    "pyright==1.1.391",
+]
+
+keywords = ["process control", "process control system", "P code", "P-code", "chemical engineering", "SCADA", "PCS"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+]
+
+[project.optional-dependencies]
+development = [
+    "flake8==7.1.1",
+    "build==1.2.2.post1",
+    "pytest==8.3.4",
+    "pytest-xdist==3.6.1",
+    "pytest-md-report==0.6.3",
+]
+
+[project.urls]
+Documentation = "https://docs.openpectus.org/"
+
+[tool.flit.sdist]
+include = ["lang"]
+
+[tool.pyright]
+include = ["lang"]
+defineConstant = { DEBUG = true }
+venv = "env367"
+
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportImportCycles = true
+reportIncompatibleMethodOverride = true
+reportIncompatibleVariableOverride = true
+
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+
+reportMissingTypeArgument = true
+#reportUnnecessaryComparison = true # TODO consider enabling this
+reportImplicitStringConcatenation = true
+reportUnnecessaryTypeIgnoreComment = "warning"
+reportMatchNotExhaustive = true
+#reportImplicitOverride = true # TODO consider enabling this
+reportShadowedImports = true
+
+pythonVersion = "3.13"
+pythonPlatform = "Linux"
