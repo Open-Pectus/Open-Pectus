@@ -335,6 +335,10 @@ class TestEngine(unittest.TestCase):
         parser = RegexNamedArgumentParser(regex)
         self.assertEqual(['value', 'unit'], parser.get_named_groups())
 
+        regex = r"(?P<value2>[0-9]+[.][0-9]*?|[.][0-9]+|[0-9]+) ?(?P<unit>m2)"
+        parser = RegexNamedArgumentParser(regex)
+        self.assertEqual(['value2', 'unit'], parser.get_named_groups())
+
     def test_uod_verify_command_signatures_regex(self):
 
         def no_args(cmd: UodCommand):
