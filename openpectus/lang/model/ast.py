@@ -1,6 +1,6 @@
 from __future__ import annotations
 from logging import Logger
-from typing import Callable, Self, Type, TypeVar, TypedDict
+from typing import Callable, Self, Sequence, Type, TypeVar, TypedDict
 
 
 class Position:
@@ -105,7 +105,6 @@ class NodeState(TypedDict):
     failed: bool
     cancelled: bool
     forced: bool
-    action_history: list[str]
 
 
 TNode = TypeVar("TNode", bound="Node")
@@ -154,16 +153,6 @@ class SupportCancelForce:
         return False
 
 
-class SupportsInterrupt():
-    """ Marker interface that indicates that the node type uses the interrupt mechanism.
-
-    Requirements:
-    - it must provide a interrupt_registered property, currently NodeWithChildren does this
-    - interpreter._create_interrupt_handler() must be able to create a handler for the node type
-    """
-    ...
-
-
 class Node(SupportCancelForce):
     instruction_names: list[str] = []
     """ Specifies which node the parser should instantiate for a given instruction name(s) """
@@ -195,7 +184,6 @@ class Node(SupportCancelForce):
         self.started: bool = False
         self.completed: bool = False
         self.failed: bool = False
-        self.action_history: list[str] = []
         self._empty_node_class_names = [BlankNode.__name__, CommentNode.__name__]
 
     @property
@@ -208,6 +196,24 @@ class Node(SupportCancelForce):
     @property
     def instruction_name(self) -> str:
         return self.instruction_part.strip()
+
+    @property
+    def key(self) -> str:
+        return f"{self.id}.{self.name}"
+
+    @property
+    def key_path(self) -> str:
+        """ Key path for node. Looks similar to SePath and sometimes is the same.
+
+        But key_path consists only of the node keys from root to the node in the ast whereas
+        SePath includes invocation information such as interrupts and macro invocations. In particular,
+        a node has one static key_path (when not considering live-editing or the method). But the node
+        may occur in multiple SePaths if invoked multiple times.
+        """
+        keys = [p.key for p in self.parents]
+        keys.reverse()
+        keys.append(self.key)
+        return " > ".join(keys)
 
     @property
     def runlog_name(self) -> str | None:
@@ -244,7 +250,6 @@ class Node(SupportCancelForce):
         self.failed = state["failed"]
         self._cancelled = state["cancelled"]
         self._forced = state["forced"]
-        self.action_history = state["action_history"]
 
     def extract_state(self) -> NodeState:
         return NodeState(
@@ -256,7 +261,6 @@ class Node(SupportCancelForce):
             failed=self.failed,
             cancelled=self.cancelled,
             forced=self.forced,
-            action_history=self.action_history
         )
 
     def get_child_by_instruction(self, instruction_name: str, arguments: str | None = None) -> Node | None:
@@ -291,6 +295,7 @@ class Node(SupportCancelForce):
         return self
 
     def parse_create_completed(self):
+        """ Override to be notified when parsing is complete. Allows performing additional initialization after parsing is complete. """
         pass
 
     def has_error(self) -> bool:
@@ -301,7 +306,7 @@ class Node(SupportCancelForce):
 
     def __str__(self):
         return f"{self.__class__.__name__}(instruction_name='{self.instruction_name}', " + \
-            f"arguments={self.arguments}, id='{self.id}')"
+            f"arguments={self.arguments}, key='{self.key}')"
 
     def __repr__(self):
         return self.__str__()
@@ -324,7 +329,7 @@ class Node(SupportCancelForce):
         return node_class_name == cls.__name__
 
     @property
-    def parents(self) -> list[NodeWithChildren]:
+    def parents(self) -> list[NodeWithChildren]:  # TODO rename to ancesters
         node = self
         parents: list[NodeWithChildren] = []
         while node.parent is not None:
@@ -343,15 +348,11 @@ class Node(SupportCancelForce):
 
     def reset_runtime_state(self, recursive: bool):
         self._forced = False
+        self._cancelled = False
 
         self.started = False
         self.completed = False
-        self.action_history = []
 
-        if recursive:
-            if isinstance(self, NodeWithChildren):
-                for child in self.children:
-                    child.reset_runtime_state(True)
 
     def matches_source(self, other: Node, logger: Logger) -> bool:  # noqa: C901
         """ Returns True if the two nodes correspond to the same pcode source lines, else False.
@@ -414,7 +415,11 @@ class NodeWithChildren(Node):
         super().__init__(position, id)
         self._children: list[Node] = []
         self.interrupt_registered: bool = False
-        """ Whether an interrupt was registered to execute the node. """
+        """ Whether an interrupt was registered to execute the node.
+
+        During live-edit and cold state merge, it has the slightly different meaning
+        that the interrupt must be registered during merge.
+        """
         self.children_complete: bool = False
         """ Specifies that execution of child nodes should stop or is completed. """
         self.child_index: int = 0
@@ -423,7 +428,7 @@ class NodeWithChildren(Node):
         """ Populated by WhitespaceAnalyzer """
 
     @property
-    def children(self) -> list[Node]:
+    def children(self) -> Sequence[Node]:
         return self._children
 
     def append_child(self, child: Node):
@@ -454,6 +459,12 @@ class NodeWithChildren(Node):
                     return match
         return None
 
+    def get_first_child_or_throw(self, node_type: Type[TNode]) -> TNode:
+        value = self.get_first_child(node_type)
+        if value is None:
+            raise ValueError(f"No node of type {node_type} was found")
+        return value
+
     # def __str__(self):
     #     args = "" if self.arguments_part == "" else ": " + self.arguments_part
     #     children = [c.name_part for c in self.children]
@@ -480,24 +491,27 @@ class NodeWithChildren(Node):
         super().apply_state(state)
 
     def reset_runtime_state(self, recursive):
+        super().reset_runtime_state(recursive)
         self.interrupt_registered = False
         self.children_complete = False
         self.child_index = 0
-        super().reset_runtime_state(recursive)
+        if recursive:
+            for child in self.children:
+                child.reset_runtime_state(recursive)
 
 class ProgramNode(NodeWithChildren):
     def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
-        self.active_node: Node | None = None
-        """ The node currently executing. Is never ProgramNode. Is None untli first instruction is
-        visited. Is not cleared at the end but keeps pointing to the last instruction.
-
-        The value is maintained by the interpreters program iterator. """
-
         self.revision: int = 0
         """ The program revision. Starts as 0 and increments every time an edit is performed while running. """
 
         self.macros: dict[str, MacroNode] = dict()
+        """ Registered macros """
+
+    @property
+    def key(self) -> str:
+        """ Overridden, key of ProgramNode is just 'root' rather than the verbose 'root.ProgramNode'"""
+        return "root"
 
     def get_instructions(self, include_blanks: bool = False) -> list[Node]:
         """ Return list of all program instructions, recursively, depth first. """
@@ -516,6 +530,9 @@ class ProgramNode(NodeWithChildren):
         nodes = []
         add_child_nodes(self, nodes)
         return nodes
+
+    def get_locked_blocks(self) -> list[BlockNode]:
+        return [n for n in self.get_all_nodes() if isinstance(n, BlockNode) and n.lock_acquired]
 
     def extract_tree_state(self) -> dict[str, NodeState]:
         """ Return map of all nodes' state keyed by their node id.
@@ -539,10 +556,7 @@ class ProgramNode(NodeWithChildren):
             try:
                 node_state = state.get(node.id, None)
                 if node_state is not None:
-                    # Only import state from nodes that have run, i.e nodes before active_node. This leaves
-                    # nodes after active_node alone, which allows changing node types for all nodes that have not started.
-                    if len(node_state["action_history"]) > 0:
-                        node.apply_state(node_state)
+                    node.apply_state(node_state)
             except KeyError as ke:
                 raise ValueError(f"Failed to apply state {state} to node {node}. Error: {str(ke)}")
             if isinstance(node, NodeWithChildren):
@@ -551,7 +565,7 @@ class ProgramNode(NodeWithChildren):
         apply_child_state(self)
 
     def reset_runtime_state(self, recursive):
-        self.active_node = None
+        self.macros.clear()
         super().reset_runtime_state(recursive)
 
     def extract_state(self) -> NodeState:
@@ -571,10 +585,6 @@ class ProgramNode(NodeWithChildren):
         return f"{self.__class__.__name__}(instruction_name='{self.instruction_name}', revision={self.revision}, " + \
             f"id='{self.id}')"
 
-    @staticmethod
-    def empty() -> ProgramNode:
-        return ProgramNode()
-
 
 class MarkNode(Node):
     instruction_names = ["Mark"]
@@ -589,18 +599,23 @@ class BlockNode(NodeWithChildren):
 
     def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
+        self.block_ended: bool = False
+        """ Signal from End block/End blocks that the block should end """
         self.lock_acquired = False
 
     def reset_runtime_state(self, recursive):
+        self.block_ended = False
         self.lock_acquired = False
         super().reset_runtime_state(recursive)
 
     def extract_state(self) -> NodeState:
         state = super().extract_state()
+        state["block_ended"] = self.block_ended  # type: ignore
         state["lock_acquired"] = self.lock_acquired  # type: ignore
         return state
 
     def apply_state(self, state: NodeState):
+        self.block_ended = bool(state["block_ended"])  # type: ignore
         self.lock_acquired = bool(state["lock_acquired"])  # type: ignore
         return super().apply_state(state)
 
@@ -626,33 +641,30 @@ class NodeWithTagOperatorValue(Node):
         self.tag_operator_value: TagOperatorValue | None
 
 
-class NodeWithCondition(NodeWithTagOperatorValue):
+class NodeWithCondition(NodeWithChildren, NodeWithTagOperatorValue):
     operators = ["<=", ">=", "==", "!=", "<", ">", "="]
 
     def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
-        self.interrupt_registered: bool = False
+        self.awaiting_condition = False
         self.activated: bool = False
         """ Node condition was evaluated true"""
 
     def apply_state(self, state: NodeState):
         super().apply_state(state)
-        if "activated" not in state.keys():
-            raise ValueError(f"Failed to apply state to node {self}. Missing state key 'activated'")
-        self.interrupt_registered = bool(state["interrupt_registered"])  # type: ignore
+        self.awaiting_condition = bool(state["awaiting_condition"])  # type: ignore
         self.activated = bool(state["activated"])  # type: ignore
 
     def extract_state(self) -> NodeState:
         state = super().extract_state()
-        state["interrupt_registered"] = self.interrupt_registered  # type: ignore
+        state["awaiting_condition"] = self.awaiting_condition  # type: ignore
         state["activated"] = self.activated  # type: ignore
         return state
 
     def reset_runtime_state(self, recursive):
-        self.interrupt_registered = False
+        self.awaiting_condition = False
         self.activated = False
-        self._cancelled = False
-        self._forced = False
+        self.tag_operator_value = None
         super().reset_runtime_state(recursive)
 
     @property
@@ -668,35 +680,17 @@ class NodeWithAssignment(NodeWithTagOperatorValue):
     operators = ["="]
 
 
-class WatchNode(NodeWithChildren, NodeWithCondition, SupportsInterrupt):
+class WatchNode(NodeWithCondition):
     instruction_names = ["Watch"]
 
-    def __init__(self, position=Position.empty(), id=""):
-        super().__init__(position, id)
-        self.awaiting_condition = False
 
-    def extract_state(self):
-        state = super().extract_state()
-        state["awaiting_condition"] = self.awaiting_condition  # type: ignore
-        return state
-
-    def apply_state(self, state):
-        self.awaiting_condition = bool(state["awaiting_condition"])
-        super().apply_state(state)
-
-    def reset_runtime_state(self, recursive):
-        self.awaiting_condition = False
-        super().reset_runtime_state(recursive)
-
-
-class AlarmNode(NodeWithChildren, NodeWithCondition, SupportsInterrupt):
+class AlarmNode(NodeWithCondition):
     instruction_names = ["Alarm"]
 
     def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.run_count: int = 0
         """ The number of times the alarm has completed """
-        self.awaiting_condition = False
 
     def extract_state(self):
         state = super().extract_state()
@@ -704,16 +698,12 @@ class AlarmNode(NodeWithChildren, NodeWithCondition, SupportsInterrupt):
         return state
 
     def apply_state(self, state):
-        self.run_count = int(state["run_count"])
+        self.run_count = int(state["run_count"])  # type: ignore
         super().apply_state(state)
-
-    def reset_runtime_state(self, recursive):
-        # Note: run_count is not reset because it counts alarm invocations
-        self.awaiting_condition = False
-        super().reset_runtime_state(recursive)
 
 
 class TagOperatorValue:
+    """ Represents a runtime condition """
     def __init__(self):
         self.error = True
         self.lhs = ""
@@ -764,7 +754,7 @@ class CommentNode(WhitespaceNode):
         return self
 
 
-class InjectedNode(NodeWithChildren, SupportsInterrupt):
+class InjectedNode(NodeWithChildren):
     pass
 
 
@@ -773,23 +763,32 @@ class MacroNode(NodeWithChildren):
 
     def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
-        self.activated: bool = False
         self._cancellable = False
         self._forcible = False
         self.is_registered: bool = False
         """ Whether the macro has been registered in the revision. Lifetime is revision. """
+
         self.run_started_count: int = 0
         """ The number of times the macro has started. Life time is the whole run """
+        self.run_completed_count: int = 0
+        """ The number of times the macro has completed. Life time is the whole run """
+
+    @property
+    def macro_name(self) -> str:
+        """ Returns the name of the macro """
+        return self.arguments
 
     def extract_state(self):
         state = super().extract_state()
         state["is_registered"] = self.is_registered  # type: ignore
         state["run_started_count"] = self.run_started_count  # type: ignore
+        state["run_completed_count"] = self.run_completed_count  # type: ignore
         return state
 
     def apply_state(self, state):
         self.is_registered = bool(state["is_registered"])
         self.run_started_count = int(state["run_started_count"])
+        self.run_completed_count = int(state["run_completed_count"])
         super().apply_state(state)
 
     def prepare_for_call(self):
@@ -800,10 +799,11 @@ class MacroNode(NodeWithChildren):
         for macro_child in self.children:
             macro_child.reset_runtime_state(recursive=True)
 
-    def reset_runtime_state(self, recursive):
-        # Note: is_registered is not reset because that would cause re-registering the macro
-        # Note: run_started_count is not reset because it must maintain the macro invocations count
-        super().reset_runtime_state(recursive)
+    def reset_runtime_state(self, recursive: bool):
+        # Deliberately skipping is_registered
+        # Deliberately skipping run_started_count
+        # Deliberately skipping run_completed_count
+        return super().reset_runtime_state(recursive)
 
     def macro_calling_macro(self, macros: dict[str, MacroNode], name: str | None = None) -> list[str]:
         """ Recurse through macro to produce a path of calls it makes to other macros.
@@ -826,6 +826,7 @@ class MacroNode(NodeWithChildren):
                     return [child.name] + macros[child.name].macro_calling_macro(macros, name)
         return []
 
+
 class CallMacroNode(Node):
     instruction_names = ["Call macro"]
 
@@ -833,20 +834,11 @@ class CallMacroNode(Node):
         super().__init__(position, id)
         self._cancellable = False
         self._forcible = False
-        self.activated = False
 
-    def extract_state(self):
-        state = super().extract_state()
-        state["activated"] = self.activated  # type: ignore
-        return state
-
-    def apply_state(self, state):
-        self.activated = bool(state["activated"])  # type: ignore
-        super().apply_state(state)
-
-    def reset_runtime_state(self, recursive):
-        self.activated = False
-        super().reset_runtime_state(recursive)
+    @property
+    def macro_name(self) -> str:
+        """ Name of the macro to call """
+        return self.arguments
 
 
 class NotifyNode(Node):
@@ -905,7 +897,7 @@ class SimulateOffNode(Node):
 
 
 class UodCommandNode(CommandBaseNode):
-    """ Represents a uod command, subclassing UodCommand. """
+    """ Represents a uod command, a subclass of UodCommand. """
     def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self._cancellable = True

@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Callable, Iterator, TypeVar
 import logging
 
@@ -8,38 +9,17 @@ logger = logging.getLogger(__name__)
 TNode = TypeVar("TNode", bound=p.Node)
 
 
-class NodeAction():
-    """ Represents an action (of possibly many) to perform when interpreting a node. Allows
-    side effect free visits of an ast tree.  """
-
-    def __init__(self, node: TNode, action: Callable[[TNode], None], name: str = "", tick_break: bool = False):
-        self.node = node
-        self.action = action
-        self.tick_break = tick_break
-
-        if name == "":
-            if action is None:
-                raise ValueError("Argument 'action' was None")
-            action_name = action.__name__
-            if action_name == "<lambda>":
-                if name == "":
-                    raise ValueError("When passing a lambda as action, the name argument must be provided and be " +
-                                     "unique for the calling method")
-            self.action_name = action_name
-        else:
-            self.action_name = name
-
-    def execute(self):
-        if self.action_name in self.node.action_history:
-            logger.error(f"The action '{self.action_name}' for node {self.node} has already been executed")
-            raise AssertionError(f"The action '{self.action_name}' for node {self.node} has already been executed")
-        logger.debug(f"Executing action '{self.action_name}' for node {self.node}")
-        self.action(self.node)
-        self.node.action_history.append(self.action_name)
+class VisitResult(Enum):
+    """ The result of an iteration step i.e. visit_*(node) """
+    EndTick = 0
+    """ Means the tick should end, i.e. the current visit has completed its work for this tick and will continue on the next tick """
+    ContinueTick = 1
+    """ The visit has completed its work and more work can start immidiately in the same tick. Continue iteration of the generator until EndTick is encountered """
+    IteratorExhausted = 2
+    """ Iterator is exhausted and cannot currently iterate any further. This may change if a live-edit occurs """
 
 
-NullableActionResult = NodeAction | None
-NodeGenerator = Iterator[NullableActionResult]
+NodeGenerator = Iterator[VisitResult]
 """ The generator return type for visitor methods. """
 
 
@@ -49,6 +29,12 @@ class NodeVisitorGeneric:
         method_name = 'visit_' + type(node).__name__
         visitor = getattr(self, method_name, self.generic_visit)
         result = visitor(node)
+
+        if __debug__:
+            import inspect
+            if not inspect.isgenerator(result):
+                raise TypeError("Visitor methods must return NodeGenerator")
+
         yield from result
 
     def generic_visit(self, node):
@@ -56,61 +42,6 @@ class NodeVisitorGeneric:
 
     def visit_Node(self, node: p.Node) -> NodeGenerator:
         yield from ()
-
-
-
-def run_tick(gen: NodeGenerator):
-    """ Execute one interpretation tick """
-    while True:
-        x = next(gen)
-        if isinstance(x, NodeAction):
-            # account for exhausted pre-edit program which will have the last onde
-            # as active_node even when it is completed
-            # see tests test_wait and test_command_exec_id for details
-            if x.node.completed and 'visit_end' in x.node.action_history:
-                pass
-            else:
-                x.execute()
-            if x.tick_break:
-                break
-        else:
-            break
-
-
-def run_ffw_tick(gen: NodeGenerator) -> bool | NodeAction:
-    """ Advance the generator a single tick while skipping execution.
-
-    Calls interrupt_node_callback if it encounters a node that may require interrupt registration.
-
-    Return value:
-        - node action
-            if the generator has reached an action whose name was not in action history. This
-            means that ffw should complete and the action should be executed before resuming
-            normal method excution.
-        - False
-            if tick_break or None was encountered
-        - True
-            if the generator was exhausted"""
-    while True:
-        try:
-            x = next(gen)
-            if isinstance(x, NodeAction):
-                if x.action_name not in x.node.action_history:
-                    logger.info(f"FFW about to complete, action '{x.action_name}' not in history for node {x.node}")
-                    # We got one step too far, x needs to be executed, caller will handle that
-                    return x
-                if x.tick_break:
-                    break
-            else:
-                break
-        except StopIteration:
-            return True
-    return False
-
-
-def prepend(action: NodeAction, gen: NodeGenerator) -> NodeGenerator:
-    yield action
-    yield from gen
 
 
 class NodeVisitor(NodeVisitorGeneric):
@@ -122,25 +53,25 @@ class NodeVisitor(NodeVisitorGeneric):
             yield from self.visit(child)
 
     def visit_BlankNode(self, node: p.BlankNode) -> NodeGenerator:
-        yield from ()
+        yield VisitResult.EndTick
 
     def visit_CommentNode(self, node: p.CommentNode) -> NodeGenerator:
-        yield from ()
+        yield VisitResult.EndTick
 
     def visit_MarkNode(self, node: p.MarkNode) -> NodeGenerator:
-        yield
+        yield VisitResult.EndTick
 
     def visit_BlockNode(self, node: p.BlockNode) -> NodeGenerator:
         yield from self._visit_children(node)
 
     def visit_EndBlockNode(self, node: p.EndBlockNode) -> NodeGenerator:
-        yield
+        yield VisitResult.EndTick
 
     def visit_EndBlocksNode(self, node: p.EndBlocksNode) -> NodeGenerator:
-        yield
+        yield VisitResult.EndTick
 
     def visit_BatchNode(self, node: p.BatchNode) -> NodeGenerator:
-        yield
+        yield VisitResult.EndTick
 
     def visit_WatchNode(self, node: p.WatchNode) -> NodeGenerator:
         yield from self._visit_children(node)
@@ -152,25 +83,25 @@ class NodeVisitor(NodeVisitorGeneric):
         yield from self._visit_children(node)
 
     def visit_CallMacroNode(self, node: p.CallMacroNode) -> NodeGenerator:
-        yield
+        yield VisitResult.EndTick
 
     def visit_InterpreterCommandNode(self, node: p.InterpreterCommandNode) -> NodeGenerator:
-        yield
+        yield VisitResult.EndTick
 
     def visit_NotifyNode(self, node: p.NotifyNode) -> NodeGenerator:
-        yield
+        yield VisitResult.EndTick
 
     def visit_EngineCommandNode(self, node: p.EngineCommandNode) -> NodeGenerator:
-        yield
+        yield VisitResult.EndTick
 
     def visit_UodCommandNode(self, node: p.UodCommandNode) -> NodeGenerator:
-        yield
+        yield VisitResult.EndTick
 
     def visit_ErrorInstructionNode(self, node: p.ErrorInstructionNode) -> NodeGenerator:
-        yield
+        yield VisitResult.EndTick
 
     def visit_SimulateNode(self, node: p.SimulateNode) -> NodeGenerator:
-        yield
+        yield VisitResult.EndTick
 
     def visit_SimulateOffNode(self, node: p.SimulateOffNode) -> NodeGenerator:
-        yield
+        yield VisitResult.EndTick
