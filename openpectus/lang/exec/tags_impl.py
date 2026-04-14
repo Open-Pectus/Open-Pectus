@@ -89,7 +89,10 @@ class AccumulatorTag(Tag):
 
     def on_tick(self, tick_time: float, increment_time: float):
         assert self.v0 is not None, f"Error in aggregator tag '{self.name}', v0 was not set."
-        self.value = self.totalizer.as_float() - self.v0
+        try:
+            self.value = self.totalizer.as_float() - self.v0
+        except ValueError:
+            self.value = 0.0
 
 
 class BlockTimeTag(Tag):
