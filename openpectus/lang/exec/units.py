@@ -9,15 +9,7 @@ import decimal
 import pint
 from pint import UnitRegistry, Quantity
 
-
-cache_folder = os.path.join(os.path.dirname(__file__), "pint-cache")
-try:
-    ureg = UnitRegistry(cache_folder=cache_folder, non_int_type=decimal.Decimal)  # type: ignore
-except EOFError:
-    time.sleep(0.2)
-    ureg = UnitRegistry(cache_folder=cache_folder, non_int_type=decimal.Decimal)  # type: ignore
-
-
+ureg = UnitRegistry(non_int_type=decimal.Decimal)  # type: ignore
 ureg.define("m3 = m**3")
 ureg.define("m2 = m**2")
 ureg.define("dm2 = dm**2")
