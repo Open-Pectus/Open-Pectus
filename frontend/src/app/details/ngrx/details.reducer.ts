@@ -16,6 +16,7 @@ export interface DetailsState {
   allProcessValues: boolean;
   processDiagram?: ProcessDiagram;
   commandExamples: CommandExample[];
+  previousControlState: ControlState;
   controlState: ControlState;
   optimisticClickedControlButtons: OptimisticClickedControlButtons;
   recentRun?: RecentRun;
@@ -31,6 +32,11 @@ const initialState: DetailsState = {
   commandExamples: [],
   shouldPoll: false,
   errorLog: {entries: []},
+  previousControlState: {
+    is_running: false,
+    is_holding: false,
+    is_paused: false,
+  },
   controlState: {
     is_running: false,
     is_holding: false,
@@ -77,6 +83,7 @@ const reducer = createReducer(initialState,
     draft.commandExamples = commandExamples;
   })),
   on(DetailsActions.controlStateFetched, (state, {controlState}) => produce(state, draft => {
+    draft.previousControlState = state.controlState;
     draft.controlState = controlState;
     draft.optimisticClickedControlButtons = {start: false, stop: false, pause: false, hold: false};
   })),
