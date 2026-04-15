@@ -258,6 +258,6 @@ class AccumulatedColumnVolume(Tag):
         cv = self.column_volume.as_float()
         v = self.totalizer.as_float()
         if cv == 0.0:
-            self.value = None
+            self.value = 0.0
         else:
             self.value = (v-self.v0) / cv
