@@ -9,6 +9,7 @@ export class DetailsSelectors {
   static processValues = createSelector(this.selectFeature, state => state.processValues);
   static processDiagram = createSelector(this.selectFeature, state => state.processDiagram);
   static commandExamples = createSelector(this.selectFeature, state => state.commandExamples);
+  static previousControlState = createSelector(this.selectFeature, state => state.previousControlState);
   static controlState = createSelector(this.selectFeature, state => state.controlState);
   static optimisticClickedControlButtons = createSelector(this.selectFeature, state => state.optimisticClickedControlButtons);
   static recentRun = createSelector(this.selectFeature, state => state.recentRun);
