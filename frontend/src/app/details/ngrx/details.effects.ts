@@ -215,6 +215,14 @@ export class DetailsEffects {
     }),
   ));
 
+  controlStateChanged = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.controlStateFetched),
+    concatLatestFrom(() => this.store.select(DetailsSelectors.previousControlState)),
+    switchMap(([{controlState}, previousControlState]) => {
+      return of(DetailsActions.controlStateChanged({oldControlState: previousControlState, newControlState: controlState}));
+    })
+  ));
+
   constructor(private actions: Actions,
               private store: Store,
               private processUnitService: ProcessUnitService,
