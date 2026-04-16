@@ -215,6 +215,7 @@ class ProcessValue(Dto):
     commands: list[ProcessValueCommand] | SkipJsonSchema[None] = None
     direction: Mdl.TagDirection
     simulated: bool | SkipJsonSchema[None] = None
+    plot_only: bool | SkipJsonSchema[None] = None
 
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(name="{self.name}", value="{self.value}", ' +
