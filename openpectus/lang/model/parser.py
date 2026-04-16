@@ -1,7 +1,9 @@
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+import difflib
 import logging
 import re
+from typing import Any
 
 from openpectus.lang.model.ast import NodeIdGenerator, Position
 import openpectus.lang.model.ast as p
@@ -26,8 +28,8 @@ class ParserMethodLine:
 
 
 class ParserMethod:
-    def __init__(self, lines: list[ParserMethodLine]):
-        self.version = 0
+    def __init__(self, lines: list[ParserMethodLine], version=0):
+        self.version = version
         self.lines: list[ParserMethodLine] = lines
         # TODO add version and author - we should keep a version number so we can easily detect
         # multiple concurrent editors and bail out quick in that case
@@ -56,10 +58,43 @@ class ParserMethod:
         pcode = '\n'.join([line.content for line in self.lines])
         return pcode
 
-    def as_pcode_w_id(self) -> str:
+    def as_numbered_pcode(self) -> str:
         pcode = '\n'.join([line.id + ' ' + line.content for line in self.lines])
         return pcode
+    
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "version": self.version,
+            "lines": [asdict(line) for line in self.lines]
+        }
 
+    @staticmethod
+    def compare(a: ParserMethod, b: ParserMethod) -> list[str]:
+        """ Compare method a and b and return differences as string list. The list is empty if the methods match.
+        If the difference is simple, return a textual description, otherwise a list of unified diffs are returned. """
+
+        if (len(a.lines) != len(b.lines)):
+            # if the only difference is whole lines being added and remove, we describe this
+            diff_is_simple = True
+            for line_a in a.lines:
+                for line_b in b.lines:
+                    if line_a.id == line_b.id and line_a.content != line_b.content:
+                        diff_is_simple = False
+            if diff_is_simple:
+                ids_added = [line_b.id for line_b in b.lines if all([line_a.id != line_b.id for line_a in a.lines])]
+                ids_removed = [line_a.id for line_a in a.lines if all([line_a.id != line_b.id for line_b in b.lines])]
+                return [
+                    f'{len(ids_added)} lines added: ' + ", ".join(ids_added),
+                    f'{len(ids_removed)} lines removed: ' + ", ".join(ids_removed)
+                ]
+        a_text = a.as_numbered_pcode()
+        b_text = b.as_numbered_pcode()
+
+        result = difflib.unified_diff(a=a_text, b=b_text, n=2, lineterm="")
+        return list(result)
+
+    def clone(self) -> ParserMethod:
+        return ParserMethod(lines=[ParserMethodLine(line.id, line.content) for line in self.lines], version=self.version)
 
 class IncrementalIdGenerator(NodeIdGenerator):
     def __init__(self):

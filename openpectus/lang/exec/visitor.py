@@ -41,7 +41,7 @@ class NodeVisitorGeneric:
         raise TypeError('No visit_{} method'.format(type(node).__name__))
 
     def visit_Node(self, node: p.Node) -> NodeGenerator:
-        yield from ()
+        yield VisitResult.EndTick
 
 
 class NodeVisitor(NodeVisitorGeneric):

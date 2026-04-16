@@ -12,7 +12,6 @@ from openpectus.lang.exec.runlog import RuntimeInfo
 from openpectus.lang.exec.tags import Tag, SystemTagName
 from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
-from openpectus.lang.exec.visitor import NodeAction
 from openpectus.lang.model.pprogramformatter import print_parsed_program as print_program
 import openpectus.lang.model.ast as p
 from openpectus.lang.model.parser import PcodeParser
