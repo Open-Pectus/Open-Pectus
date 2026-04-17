@@ -179,6 +179,7 @@ export type ProcessValue = {
     commands?: Array<ProcessValueCommand>;
     direction: TagDirection;
     simulated?: boolean;
+    plot_only?: boolean;
 };
 
 export type ProcessValueCommand = {

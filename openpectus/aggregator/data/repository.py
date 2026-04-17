@@ -33,14 +33,23 @@ class PlotLogRepository(RepositoryBase):
         plot_log.engine_id = engine_data.engine_id
         plot_log.run_id = run_id
 
-        def map_reading(reading: agg_mdl.ReadingInfo):
+        def map_reading(tag_name: str):
             entry = PlotLogEntry()
             entry.plot_log = plot_log
             entry.value_type = ProcessValueType.NONE
-            entry.name = reading.tag_name
+            entry.name = tag_name
             return entry
 
-        entries = map(map_reading, engine_data.readings)
+        # Make set of tags to store
+        tags_to_store = set()
+        tags_to_store.update([reading.tag_name for reading in engine_data.readings])
+        tags_to_store.update([color_region.process_value_name for color_region in engine_data.plot_configuration.color_regions])
+        tags_to_store.update([process_value_name_to_annotate for process_value_name_to_annotate in engine_data.plot_configuration.process_value_names_to_annotate])
+        for sub_plot in engine_data.plot_configuration.sub_plots:
+            for axis in sub_plot.axes:
+                for process_value_name in axis.process_value_names:
+                    tags_to_store.add(process_value_name)
+        entries = map(map_reading, tags_to_store)
 
         self.db_session.add(plot_log)
         self.db_session.add_all(entries)

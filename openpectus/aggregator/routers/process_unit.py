@@ -111,6 +111,27 @@ def get_process_values(
                 process_values.append(Dto.ProcessValue.create_w_commands(tag_value, cmds))
             except Exception as ex:
                 logger.error(f"Error creating commands for process value '{reading.tag_name}': {ex}")
+    
+    # Determine which process values are necessary to populate plot
+    process_values_for_plot = set()
+    for color_region in engine_data.plot_configuration.color_regions:
+        process_values_for_plot.add(color_region.process_value_name)
+    for process_value_name_to_annotate in engine_data.plot_configuration.process_value_names_to_annotate:
+        process_values_for_plot.add(process_value_name_to_annotate)
+    for sub_plot in engine_data.plot_configuration.sub_plots:
+        for axis in sub_plot.axes:
+            for process_value_name in axis.process_value_names:
+                process_values_for_plot.add(process_value_name)
+    
+    # Add any process values that the plot might need
+    reading_process_value_tag_names = [process_value.name for process_value in process_values]
+    for process_value_tag_name in process_values_for_plot:
+        if process_value_tag_name not in reading_process_value_tag_names:
+            tag_value = tags_info.get(process_value_tag_name)
+            if tag_value is not None:
+                process_value = Dto.ProcessValue.create(tag_value)
+                process_value.plot_only = True
+                process_values.append(process_value)
     return process_values
 
 
