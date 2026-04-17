@@ -402,7 +402,7 @@ class EngineRunner(EventListener):
 
     async def steady_state_send_messages(self):
         logger.info("Started steady-state sending loop")
-        await self._post_async(self._message_builder.create_tag_updates_snapshot_msg())
+        await self._post_async(self._message_builder.create_tag_updates_snapshot_msg(self.run_id))
         while self._state_task and self._state_task.cancelling() == 0:
             messages = []
             try:

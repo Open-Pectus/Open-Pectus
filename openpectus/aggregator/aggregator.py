@@ -190,13 +190,21 @@ class FromEngine:
                 return
             run_id = engine_data.run_data.run_id if engine_data.has_run() else None
             if run_id is None and msg_run_id is not None:
+                # A run can only be started with an aggregator connected,
+                # so it should not be possible for the aggregator to not
+                # know about a run.
+                # This situation should never happen.
                 logger.error("Skipping tag update message because it belongs to run " +
                              f"'{msg_run_id}' but there is no active run")
                 return
             elif run_id is not None and msg_run_id is None:
-                logger.error("Skipping tag update message because it belongs to run " +
-                             f"'{msg_run_id}' but the current run is '{run_id}'")
-                return
+                # If the aggregator knows about the run, but the engine doesn't
+                # then that indicates that the engine process was restarted.
+                # In that case, archive the run and move on.
+                recent_run_repo = RecentRunRepository(database.scoped_session())
+                recent_run_repo.store_recent_run(engine_data)
+                logger.info(f"Engine appears to have been reset. Storing run_id {run_id}.")
+                engine_data.reset_run()
 
             for changed_tag_value in changed_tag_values:
                 if changed_tag_value.name == SystemTagName.METHOD_STATUS.value and engine_data.has_run():
