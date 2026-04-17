@@ -113,9 +113,9 @@ class EngineMessageBuilder():
             pass
         return [tag for tag in tags.values()]
 
-    def create_tag_updates_snapshot_msg(self) -> EM.TagsUpdatedMsg:
+    def create_tag_updates_snapshot_msg(self, run_id: str | None) -> EM.TagsUpdatedMsg:
         tags = self.collect_tag_updates(snapshot=True)
-        return EM.TagsUpdatedMsg(tags=tags)
+        return EM.TagsUpdatedMsg(tags=tags, run_id=run_id)
 
     def create_tag_updates_msg(self, run_id: str | None) -> EM.TagsUpdatedMsg | None:
         tags = self.collect_tag_updates()
