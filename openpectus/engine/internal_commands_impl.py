@@ -195,7 +195,6 @@ class StopEngineCommand(InternalEngineCommand):
 
             # e.finalize_all_commands(source_command_name=self.name)
             e._apply_safe_state()
-            e.emitter.emit_on_stop()
 
             logger.debug("All uod commands have completed execution. Stop will now complete.")
             e._runstate_paused = False
@@ -204,6 +203,7 @@ class StopEngineCommand(InternalEngineCommand):
             e._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.OK, e._tick_time)
 
             e.tracking.disable()
+            e.emitter.emit_on_stop()
 
             e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Stopped, e._tick_time)
             e.clear_run_id()
