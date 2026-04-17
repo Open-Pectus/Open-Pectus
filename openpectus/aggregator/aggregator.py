@@ -205,6 +205,12 @@ class FromEngine:
                     else:
                         engine_data.run_data.interrupted_by_error = False
 
+                # The Mark tag is used to "set at mark" in a plot to note that something happened
+                # at that time. The value is set by the "Mark" command and is automatically reset
+                # after it has been archived on the engine. We should only save the non-reset value.
+                if changed_tag_value.name == SystemTagName.MARK and changed_tag_value.value == "":
+                    continue
+
                 was_inserted = engine_data.tags_info.upsert(changed_tag_value)
 
                 if changed_tag_value.name in [
