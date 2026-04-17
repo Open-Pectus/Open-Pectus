@@ -69,8 +69,16 @@ class RecentEngine(DBModel):
     system_state: Mapped[str] = mapped_column()
     location: Mapped[str] = mapped_column()
     last_update: Mapped[datetime] = mapped_column(TZDateTime)
-    contributors: Mapped[list[Contributor]] = mapped_column(type_=JSON, default=[])
+    _contributors: Mapped[list[Contributor]] = mapped_column("contributors", type_=JSON, default=[])
     required_roles: Mapped[list[str]] = mapped_column(type_=JSON, default=[])
+
+    @property
+    def contributors(self):
+        return set([Contributor(id=contributor["id"], name=contributor["name"]) for contributor in self._contributors if isinstance(contributor, dict)])
+    
+    @contributors.setter
+    def contributors(self, contributors):
+        self._contributors = contributors
 
 
 class RecentRun(DBModel):
