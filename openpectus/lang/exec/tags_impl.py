@@ -47,7 +47,7 @@ class SelectTag(Tag):
 
 class MarkTag(Tag):
     def __init__(self) -> None:
-        super().__init__(name=SystemTagName.MARK)
+        super().__init__(name=SystemTagName.MARK, value="")
 
     def set_value(self, val: int | float | str | None, tick_time: float, *args, **kwargs) -> None:
         """ Append value to existing value """
