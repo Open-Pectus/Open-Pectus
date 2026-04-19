@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 EngineDataMap = dict[str, EngineData]
 
+MARK_SEPARATOR = "; "
+
 
 class FromEngine:
     def __init__(self, engine_data_map: EngineDataMap, publisher: FrontendPublisher, webpush_publisher: WebPushPublisher):
@@ -214,10 +216,10 @@ class FromEngine:
                         current_value = engine_data.tags_info.map[SystemTagName.MARK].value
                         assert isinstance(current_value, str)
                         assert isinstance(changed_tag_value.value, str)
-                        if changed_tag_value.value != "":
-                            changed_tag_value.value = current_value + ", " + changed_tag_value.value
-                        else:
+                        if current_value != "" and changed_tag_value.value == "":
                             changed_tag_value.value = current_value
+                        elif current_value != "" and changed_tag_value.value != "":
+                            changed_tag_value.value = current_value + MARK_SEPARATOR + changed_tag_value.value
 
                 was_inserted = engine_data.tags_info.upsert(changed_tag_value)
 
@@ -244,8 +246,9 @@ class FromEngine:
         latest_tag_tick_time = max([tag.tick_time for tag in tag_values]) if len(tag_values) > 0 else 0
         time_threshold_exceeded = latest_persisted_tick_time is None \
             or latest_tag_tick_time - latest_persisted_tick_time > engine_data.data_log_interval_seconds
+        mark_available = engine_data.tags_info.map[SystemTagName.MARK].value != ""
 
-        if engine_data.run_data.run_id is not None and time_threshold_exceeded:
+        if engine_data.run_data.run_id is not None and (time_threshold_exceeded or mark_available):
             tag_values_to_persist = [tag_value.model_copy() for tag_value in engine_data.tags_info.map.values()
                                      if latest_persisted_tick_time is None
                                      or tag_value.tick_time > latest_persisted_tick_time]
