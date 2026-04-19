@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, UTC
 from enum import StrEnum, auto
-from typing import Dict
+from typing import Dict, Any, final, override
 
 from openpectus.aggregator.models import (
     Contributor,
@@ -14,9 +14,46 @@ from openpectus.aggregator.models import (
     NotificationTopic,
     NotificationScope
 )
-from sqlalchemy import JSON, ForeignKey, MetaData, TypeDecorator, DateTime
+from sqlalchemy import JSON, ForeignKey, MetaData, TypeDecorator, DateTime, Dialect
+from sqlalchemy.sql.type_api import TypeEngine, TypeDecorator
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, attribute_keyed_dict
+from pydantic import BaseModel, TypeAdapter
 
+
+# Adapted from: https://gist.github.com/pdmtt/a6dc62f051c5597a8cdeeb8271c1e079?permalink_comment_id=5926672#gistcomment-5926672
+@final
+class PydanticJSON(TypeDecorator[BaseModel]):
+    """JSON column type that encodes/decodes the value using Pydantic TypeAdapter 
+
+    SAVING:
+    - Uses SQLAlchemy JSON type under the hood.
+    - Acceps any type supported by Pydantic's TypeAdapter and converts it to a dict on save.
+    - SQLAlchemy engine JSON-encodes the dict to a string.
+    RETRIEVING:
+    - Pulls the string from the database.
+    - SQLAlchemy engine JSON-decodes the string to a dict.
+    - Validates the dict using the Type Adapter.
+    """
+    impl = JSON
+    cache_ok = False
+
+    def __init__(self, pydantic_type: type) -> None:
+        super().__init__()
+        self.type_adapter = TypeAdapter(pydantic_type)
+
+    @override
+    def load_dialect_impl(self, dialect: Dialect) -> TypeEngine[JSON]:
+        return dialect.type_descriptor(JSON())
+
+    @override
+    def process_bind_param(self, value: BaseModel | None,  dialect: Dialect) -> dict[str, Any] | None:
+        if value is None:
+            return None
+        return self.type_adapter.dump_python(value, mode="json")
+
+    @override
+    def process_result_value(self, value: dict[str, Any] | None, dialect: Dialect) -> BaseModel | None:
+        return self.type_adapter.validate_python(value)
 
 # class IdLessDBModel(DeclarativeBase):
 #     metadata = MetaData(naming_convention={
@@ -69,7 +106,7 @@ class RecentEngine(DBModel):
     system_state: Mapped[str] = mapped_column()
     location: Mapped[str] = mapped_column()
     last_update: Mapped[datetime] = mapped_column(TZDateTime)
-    contributors: Mapped[list[Contributor]] = mapped_column(type_=JSON, default=[])
+    contributors: Mapped[list[Contributor]] = mapped_column(PydanticJSON(list[Contributor]), default=[])
     required_roles: Mapped[list[str]] = mapped_column(type_=JSON, default=[])
 
 
@@ -89,7 +126,7 @@ class RecentRun(DBModel):
     uod_author_email: Mapped[str] = mapped_column()
     started_date: Mapped[datetime] = mapped_column(TZDateTime)
     completed_date: Mapped[datetime] = mapped_column(TZDateTime)
-    contributors: Mapped[list[Contributor]] = mapped_column(type_=JSON, default=[])
+    contributors: Mapped[list[Contributor]] = mapped_column(PydanticJSON(list[Contributor]), default=[])
     required_roles: Mapped[list[str]] = mapped_column(type_=JSON, default=[])
     plot_log: Mapped[PlotLog] = relationship(back_populates="recent_run", cascade="all, delete-orphan")
     plot_configuration: Mapped[RecentRunPlotConfiguration] = relationship(back_populates="recent_run", cascade="all, delete-orphan")
@@ -103,29 +140,29 @@ class RecentRun(DBModel):
 class RecentRunMethodAndState(DBModel):
     __tablename__ = "RecentRunMethodAndStates"
     run_id: Mapped[str] = mapped_column(ForeignKey("RecentRuns.run_id"))
-    method: Mapped[Method] = mapped_column(type_=JSON)
-    state: Mapped[MethodState] = mapped_column(type_=JSON)
+    method: Mapped[Method] = mapped_column(PydanticJSON(Method))
+    state: Mapped[MethodState] = mapped_column(PydanticJSON(MethodState))
     recent_run: Mapped[RecentRun] = relationship(back_populates="method_and_state")
 
 
 class RecentRunRunLog(DBModel):
     __tablename__ = "RecentRunRunLogs"
     run_id: Mapped[str] = mapped_column(ForeignKey("RecentRuns.run_id"))
-    run_log: Mapped[RunLog] = mapped_column(type_=JSON)
+    run_log: Mapped[RunLog] = mapped_column(PydanticJSON(RunLog))
     recent_run: Mapped[RecentRun] = relationship(back_populates="run_log")
 
 
 class RecentRunErrorLog(DBModel):
     __tablename__ = "RecentRunErrorLogs"
     run_id: Mapped[str] = mapped_column(ForeignKey("RecentRuns.run_id"))
-    error_log: Mapped[AggregatedErrorLog] = mapped_column(type_=JSON)
+    error_log: Mapped[AggregatedErrorLog] = mapped_column(PydanticJSON(AggregatedErrorLog))
     recent_run: Mapped[RecentRun] = relationship(back_populates="error_log")
 
 
 class RecentRunPlotConfiguration(DBModel):
     __tablename__ = "RecentRunPlotConfigurations"
     run_id: Mapped[str] = mapped_column(ForeignKey("RecentRuns.run_id"))
-    plot_configuration: Mapped[PlotConfiguration] = mapped_column(type_=JSON)
+    plot_configuration: Mapped[PlotConfiguration] = mapped_column(PydanticJSON(PlotConfiguration))
     recent_run: Mapped[RecentRun] = relationship(back_populates="plot_configuration")
 
 
