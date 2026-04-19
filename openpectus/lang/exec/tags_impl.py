@@ -46,24 +46,25 @@ class SelectTag(Tag):
 
 
 class MarkTag(Tag):
+    """ Tag used to store a string value at a specific point in time.
+        Multiple writes to the tag are accumulated until the tag
+        value is persisted at which point the tag value is reset."""
     def __init__(self) -> None:
-        super().__init__(name=SystemTagName.MARK)
+        super().__init__(name=SystemTagName.MARK, value="")
+        self._archive_value = ""
 
     def set_value(self, val: int | float | str | None, tick_time: float, *args, **kwargs) -> None:
-        """ Append value to existing value """
+        """ Append value to existing value for archival """
         assert isinstance(val, str), f"The Mark tag value must be a str, not a {type(val).__name__}"
-        value = str(self.get_value() or "")
-        if value == "":
-            value = str(val)
-        else:
-            value += MARK_SEPARATOR + str(val)
-        super().set_value(value, tick_time, *args, **kwargs)
+        self._archive_value += val if self._archive_value == "" else MARK_SEPARATOR+val
+        super().set_value(val, tick_time, *args, **kwargs)
 
     def archive(self) -> str | None:
         """ Reset value and return it """
-        value = self.value
+        value = self._archive_value
+        self._archive_value = ""
         super().set_value("", time.time())
-        return str(value or "")
+        return value
 
 
 class AccumulatorTag(Tag):
