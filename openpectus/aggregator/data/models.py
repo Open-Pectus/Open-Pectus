@@ -35,6 +35,7 @@ class PydanticJSON(TypeDecorator[BaseModel]):
     - Validates the dict using the Type Adapter.
     """
     impl = JSON
+    cache_ok = False
 
     def __init__(self, pydantic_type: type) -> None:
         super().__init__()
