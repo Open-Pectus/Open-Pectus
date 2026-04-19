@@ -205,6 +205,20 @@ class FromEngine:
                     else:
                         engine_data.run_data.interrupted_by_error = False
 
+                # The Mark tag is used to "set at mark" in a plot to note that something happened
+                # at that time. The value is set by the "Mark" command and is automatically reset
+                # after it has been archived on the engine. We should only save the non-reset value.
+                # Additionally, append new values until value is persisted.
+                if changed_tag_value.name == SystemTagName.MARK:
+                    if SystemTagName.MARK in engine_data.tags_info.map:
+                        current_value = engine_data.tags_info.map[SystemTagName.MARK].value
+                        assert isinstance(current_value, str)
+                        assert isinstance(changed_tag_value.value, str)
+                        if changed_tag_value.value != "":
+                            changed_tag_value.value = current_value + ", " + changed_tag_value.value
+                        else:
+                            changed_tag_value.value = current_value
+
                 was_inserted = engine_data.tags_info.upsert(changed_tag_value)
 
                 if changed_tag_value.name in [
@@ -247,6 +261,8 @@ class FromEngine:
             highest_tick_time_to_persist = max([tag_Value.tick_time for tag_Value in tag_values_to_persist])
             for tag_value_to_persist in tag_values_to_persist:
                 tag_value_to_persist.tick_time = highest_tick_time_to_persist
+                if tag_value_to_persist.name == SystemTagName.MARK:
+                    engine_data.tags_info.map[SystemTagName.MARK].value = ""
 
             # Note: to store tag values, the run_id is needed
             plot_log_repo.store_tag_values(engine_data.engine_id, engine_data.run_data.run_id, tag_values_to_persist)
