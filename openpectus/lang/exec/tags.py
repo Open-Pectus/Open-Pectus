@@ -58,19 +58,19 @@ class ChangeListener:
     """ Collects named changes. Used by engine to track tag changes """
 
     def __init__(self) -> None:
-        self._changes: Set[str] = set()
+        self._changes: list[TagValue] = []
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(_changes="{self._changes}")'
 
-    def notify_change(self, elm: str):
-        self._changes.add(elm)
+    def notify_change(self, tag_value: TagValue):
+        self._changes.append(tag_value)
 
     def clear_changes(self):
         self._changes.clear()
 
     @property
-    def changes(self) -> list[str]:
+    def changes(self) -> list[TagValue]:
         return list(self._changes)
 
 
@@ -89,9 +89,9 @@ class ChangeSubject:
     def add_listener(self, listener: ChangeListener):
         self._listeners.append(listener)
 
-    def notify_listeners(self, elm: str):
+    def notify_listeners(self, tag_value: TagValue):
         for listener in self._listeners:
-            listener.notify_change(elm)
+            listener.notify_change(tag_value)
 
     def clear_listeners(self):
         # for listener in self._listeners:
@@ -185,7 +185,7 @@ class Tag(ChangeSubject, EventListener):
         if val != self.value:
             self.value = val
             self.tick_time = tick_time
-            self.notify_listeners(self.name)
+            self.notify_listeners(self.as_readonly())
 
     def set_value_and_unit(self, val: TagValueType, unit: str, tick_time: float) -> None:
         """ Set a new value by converting the provided value and unit into the the unit of the tag. """
@@ -207,20 +207,20 @@ class Tag(ChangeSubject, EventListener):
         if val != self.simulated_value:
             self.simulated_value = val
             self.tick_time = tick_time
-            self.notify_listeners(self.name)
+            self.notify_listeners(self.as_readonly())
 
     def simulate_value(self, val: TagValueType, tick_time: float):
         self.simulated = True
         if val != self.simulated_value:
             self.simulated_value = val
             self.tick_time = tick_time
-            self.notify_listeners(self.name)
+            self.notify_listeners(self.as_readonly())
 
     def stop_simulation(self):
         self.simulated = False
         self.simulated_value = None
         if self.value != self.simulated_value:
-            self.notify_listeners(self.name)
+            self.notify_listeners(self.as_readonly())
 
     def get_value(self):
         return self.simulated_value if self.simulated else self.value
@@ -273,8 +273,8 @@ class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
         return TagValueCollection([t.as_readonly() for t in self.tags.values()])
 
     # propagate tag changes to collection changes
-    def notify_change(self, elm: str):
-        self.notify_listeners(elm)
+    def notify_change(self, tag_value):
+        self.notify_listeners(tag_value)
 
     @property
     def names(self) -> list[str]:

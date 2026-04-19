@@ -120,7 +120,7 @@ class Engine(InterpreterContext):
 
         self.uod.system_tags = self._system_tags
 
-        self.tag_updates: Queue[Tag] = Queue()
+        self.tag_updates: Queue[TagValue] = Queue()
         """ Tags updated in last tick """
 
         self._uod_listener = ChangeListener()
@@ -400,24 +400,22 @@ class Engine(InterpreterContext):
             if tag.tick_time is None:
                 logger.warning(f'Setting a tick time on {tag.name} tag missing it in notify_all_tags()')
                 tag.tick_time = self._tick_time
-            self.tag_updates.put(tag)
+            self.tag_updates.put(tag.as_readonly())
 
     def notify_tag_updates(self):
         """ Collect tag updates from tags modified since last cycle """
         # pick up changes from listeners and queue them up
-        for tag_name in self._system_listener.changes:
-            tag = self._system_tags[tag_name]
-            self.tag_updates.put(tag)
-            if tag_name == SystemTagName.CONNECTION_STATUS:
+        for tag_value in self._system_listener.changes:
+            self.tag_updates.put(tag_value)
+            if tag_value.name == SystemTagName.CONNECTION_STATUS:
                 status = self._system_tags[SystemTagName.CONNECTION_STATUS].get_value()
                 assert isinstance(status, str)
                 assert status == "Disconnected" or status == "Connected"
                 self._emitter.emit_on_connection_status_change(status)
         self._system_listener.clear_changes()
 
-        for tag_name in self._uod_listener.changes:
-            tag = self.uod.tags[tag_name]
-            self.tag_updates.put(tag)
+        for tag_value in self._uod_listener.changes:
+            self.tag_updates.put(tag_value)
         self._uod_listener.clear_changes()
 
     def set_error_state(self, exception: Exception):

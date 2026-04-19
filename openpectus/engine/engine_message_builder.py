@@ -102,16 +102,15 @@ class EngineMessageBuilder():
     def collect_tag_updates(self, snapshot=False) -> list[Mdl.TagValue]:
         if snapshot:
             self.engine.notify_all_tags()
-        tags: dict[str, Mdl.TagValue] = {}  # using dict to de-duplicate
+        tags = []
         try:
             while True:
                 tag_org = self.engine.tag_updates.get_nowait()
-                tag = tag_org.as_readonly()
-                tags[tag.name] = to_model_tag(tag)
+                tags.append(to_model_tag(tag_org))
                 self.engine.tag_updates.task_done()
         except Empty:
             pass
-        return [tag for tag in tags.values()]
+        return tags
 
     def create_tag_updates_snapshot_msg(self) -> EM.TagsUpdatedMsg:
         tags = self.collect_tag_updates(snapshot=True)
