@@ -1,3 +1,4 @@
+import inspect
 import json
 import re
 from typing import Any, Type, TypeVar
@@ -6,8 +7,8 @@ import unittest
 
 from opruntime.lang.interpreter import Interpreter
 import opruntime.lang.program as p
-from opruntime.lang.visitor import NodeVisitor
-from opruntime.lang.parser import Method, PcodeParser, Grammar
+from opruntime.lang.visitor import NodeGenerator, NodeVisitor, create_generator
+from opruntime.lang.parser import Method, PcodeParser, Grammar, create_method_parser, IncrementalIdGenerator
 
 def create_parser(uod_command_names: list[str] = []) -> PcodeParser:
     return PcodeParser(uod_command_names=uod_command_names)

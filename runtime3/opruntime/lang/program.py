@@ -237,11 +237,7 @@ class NodeWithChildren(Node):
         self._children: list[Node] = []
 
         self.interrupt_registered: bool = False
-        """ Whether an interrupt was registered to execute the node.
-
-        During live-edit and cold state merge, it has the slightly different meaning
-        that the interrupt must be registered during merge.
-        """
+        """ Whether an interrupt was registered to execute the node. """
         self.children_complete: bool = False
         """ Specifies that execution of child nodes should stop or is completed. """
         self.child_index: int = 0
@@ -255,28 +251,6 @@ class NodeWithChildren(Node):
     def append_child(self, child: Node):
         child.parent = self
         self._children.append(child)
-
-    def replace_child(self, child: Node, new_child: Node):
-        if child.parent is None:
-            raise ValueError(f"Cannot replace node {child} without parent")
-        if child.parent is not self:
-            raise ValueError(f"Cannot replace node {child} whose parent {child.parent} is not self")
-        if child not in self.children:
-            raise ValueError(f"Cannot replace node {child} not in self.children")
-        child.parent = None
-        new_child.parent = self
-        index = self.children.index(child)
-        self._children[index] = new_child
-
-    def remove_child(self, child: Node):
-        if child.parent is None:
-            raise ValueError(f"Cannot replace node {child} without parent")
-        if child.parent is not self:
-            raise ValueError(f"Cannot replace node {child} whose parent {child.parent} is not self")
-        if child not in self.children:
-            raise ValueError(f"Cannot replace node {child} not in self.children")
-        child.parent = None
-        self._children.remove(child)
 
     def has_children(self):
         return len(self._children) > 0
@@ -347,8 +321,6 @@ class NodeWithChildren(Node):
         super().apply_state(state)
 
     def reset_runtime_state(self, recursive):
-        # TODO should we not clear additional properties:
-        # cancelled, failed?
         super().reset_runtime_state(recursive)
         self.interrupt_registered = False
         self.children_complete = False
@@ -362,7 +334,7 @@ class ProgramNode(NodeWithChildren):
         super().__init__(position, id)
         self.name = "ProgramNode"
         self.macros: dict[str, MacroNode] = {}
-        """ Set by register macro during Macro calls """
+        """ Registered macros """
 
     @property
     def key(self) -> str:
@@ -572,15 +544,12 @@ class MacroNode(NodeWithChildren):
     def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
         self.is_registered: bool = False
-        """ Whether the macro has been registered in the revision. Lifetime is revision.
-
-        Note: The is_registered property is subject to the same discussion as
-        NodeWithChildren.interrupt_registered regarding live-edit/cold start
-        """
+        """ Whether the macro has been registered in the revision. Lifetime is revision. """
 
         self.run_started_count: int = 0
         """ The number of times the macro has started. Life time is the whole run """
         self.run_completed_count: int = 0
+        """ The number of times the macro has completed. Life time is the whole run """
 
 
     @property

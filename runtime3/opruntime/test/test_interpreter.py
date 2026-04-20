@@ -83,7 +83,6 @@ class Runner():
             self,
             start_tick=1,
             max_ticks=30,
-            iterate_sub_ticks=False,
             action: InterpreterAction | None = None,
             stop_predicate: InterpreterPredicate | None = None,
             fail_if_max_ticks_is_reached=False
@@ -102,13 +101,10 @@ class Runner():
                 return
 
             t0 = time()
-            if iterate_sub_ticks:
-                for _ in self.interpreter.tick_iterate_subticks(tick_time, tick_number):
-                    if stop_predicate is not None and stop_predicate():
-                        logger.info("Run ended because predicate was True")
-                        return
-            else:
-                self.interpreter.tick(tick_time, tick_number)
+            for _ in self.interpreter.tick_iterate_subticks(tick_time, tick_number):
+                if stop_predicate is not None and stop_predicate():
+                    logger.info("Run ended because predicate was True")
+                    return
 
             t1 = time()
             td = t1-t0
@@ -133,7 +129,6 @@ class Runner():
         self.run_internal(
                 start_tick=start_tick,
                 max_ticks=max_ticks,
-                iterate_sub_ticks=True,
                 action=action,
                 stop_predicate=stop_predicate,
                 fail_if_max_ticks_is_reached=False
@@ -149,7 +144,6 @@ class Runner():
         self.run_internal(
             start_tick=start_tick,
             max_ticks=max_ticks,
-            iterate_sub_ticks=True,
             action=action,
             stop_predicate=stop_predicate,
             fail_if_max_ticks_is_reached=True
@@ -1606,7 +1600,7 @@ Methods are not equal:
 
         method2 = Method.from_numbered_pcode(code2)
         #interpreter2, runner2 = merge(interpreter, method2, transter_environment=False)
-        new_state = interpreter._new_merge(method2)
+        new_state = interpreter.create_merge_state(method2)
         self.assertIn(macro_id, new_state.macros_registered)
 
 

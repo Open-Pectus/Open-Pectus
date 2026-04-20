@@ -79,18 +79,16 @@ class Interpreter(NodeVisitor):
             tree_state=self.program.extract_tree_state(),
             main_sep=self.sep.clone(),
             interrupt_states=[InterruptState(intr.node.id) for intr in self._interrupts_map.values()],
-
-            # TODO: we may need to include both name and node to support re-registering?!
             macros_registered=[node.id for node in self.program.macros.values()]
         )
 
     def from_merge(self, new_method: Method) -> "Interpreter":
         assert self.method is not None
         assert self.program is not None
-        new_state = self._new_merge(new_method)         # create state that represents the merge - does not apply it
+        new_state = self.create_merge_state(new_method)         # create state that represents the merge - does not apply it
         return Interpreter.from_cold_state(new_state)   # here the state is applied to the program
 
-    def _new_merge(self, new_method: Method) -> InterpreterState:
+    def create_merge_state(self, new_method: Method) -> InterpreterState:
         assert self.method is not None
         assert self.program is not None
         method = self.method
@@ -492,41 +490,37 @@ Edited line:   '{new_line.content}'
         # there may be locked blocks in interrupts/main other that the current interrupt/main.
         # Lookup locked blocks and find the innermost Block node which is the first to end.
 
-        # first look for parent/ancestor block
-        block_candidate = node.parent
-        while not isinstance(block_candidate, p.BlockNode):
-            if block_candidate is None or isinstance(block_candidate, p.ProgramNode):
-                break
-            block_candidate = block_candidate.parent
+        old_block: p.BlockNode | None = None
+        new_block: p.BlockNode | None = None
 
-        if block_candidate is None or isinstance(block_candidate, p.ProgramNode):
-            # that didn't work so look for all locked blocks
-            assert self.program is not None
-            locked_blocks = self.program.get_locked_blocks()
-            locked_block_keys = [b.key for b in locked_blocks]
-            logger.warning("Locked blocks: " + '\n'.join(locked_block_keys))
-            if len(locked_blocks) == 0:
-                pass
-            elif len(locked_blocks) == 1:
-                block_candidate = locked_blocks[0]
-            else:
-                # There are multiple locked blocks. This can only occur if they are contained in each other so the
-                # innermost block is the first to be unlocked. When sorted by key_path, the innermost block is the last
-                locked_blocks.sort(key=lambda node: node.key_path)
-                block_candidate = locked_blocks[-1]
+        assert self.program is not None
+        locked_blocks = self.program.get_locked_blocks()
+        locked_block_keys = [b.key for b in locked_blocks]
+        logger.warning("Locked blocks: " + '\n'.join(locked_block_keys))
+        if len(locked_blocks) == 0:
+            pass
+        elif len(locked_blocks) == 1:
+            old_block = locked_blocks[0]
+        else:
+            # There are multiple locked blocks. This can only occur if they are contained in each other so the
+            # innermost block is the first to be unlocked. When sorted by key_path, the innermost block is the last
+            locked_blocks.sort(key=lambda node: node.key_path)
+            old_block = locked_blocks[-1]
+            new_block = locked_blocks[-2]
 
-                # if __debug__:
-                #     # Lets verify that
-                #     last_block_parents = block_candidate.parents
-                #     for i in range(0, len(locked_blocks) - 1):
-                #         assert locked_blocks[i] in last_block_parents
-        if block_candidate is None or isinstance(block_candidate, p.ProgramNode):
+            if __debug__:
+                # Lets verify that
+                last_block_ancestors = old_block.parents
+                for i in range(0, len(locked_blocks) - 1):
+                    assert locked_blocks[i] in last_block_ancestors
+
+        if old_block is None:
             logger.warning("EndBlock found no block to end")
         else:
-            assert isinstance(block_candidate, p.BlockNode), f"Expected BlockNode, not {block_candidate.__class__.__name__}"
-            block_candidate.block_ended = True
-            self._abort_block_interrupts(block_candidate)
-            logger.debug(f"EndBlockNode {node.key} has ended block {block_candidate.key}")
+            old_block.block_ended = True
+            self._abort_block_interrupts(old_block)
+            logger.debug(f"EndBlockNode {node.key} has ended block {old_block.key}")
+            logger.debug(f"New active block is: {new_block.key if new_block is not None else "No active block"}")
 
         node.completed = True
         yield VisitResult.EndTick
@@ -577,13 +571,7 @@ Edited line:   '{new_line.content}'
     def visit_AlarmNode(self, node: p.AlarmNode) -> NodeGenerator:
         if not node.interrupt_registered:
             # Note self._in_interrupt == True is uncommon but valid if watch/alarm is nested inside a watch/alarm
-
-            # Adding a 'register' path would look like this. Unfortunately that will change execution order because of the
-            # added ContinueTick, which affects tests. So lets not do it right now.
-            #self.sep.push(node, "register")
             self._register_interrupt(node)
-            #yield VisitResult.ContinueTick
-            #self.sep.pop()
             yield VisitResult.EndTick
             return
 
@@ -692,15 +680,9 @@ Edited line:   '{new_line.content}'
         node.interrupt_registered = True
 
     def _unregister_interrupt(self, node: p.NodeWithChildren, warn_on_no_registration=True):
-        # if not isinstance(node, p.SupportsInterrupt):
-        #     logger.error(f"Node {node} does not support interrupts")
-        #     raise Exception(f"Node {node} does not support interrupts")
-        if not isinstance(node, p.NodeWithChildren):
-            raise TypeError(f"Node {node} implements SupportsInterrupt but not NodeWithChildren")
-
+        node.interrupt_registered = False
         if node.id in self._interrupts_map.keys():
             del self._interrupts_map[node.id]
-            node.interrupt_registered = False
             logger.debug(f"Interrupt handler unregistered for {node}")
         else:
             if warn_on_no_registration:
@@ -721,8 +703,7 @@ Edited line:   '{new_line.content}'
     def _abort_block_interrupts(self, block: p.BlockNode):
         logger.debug(f"Cancelling any interrupts for nodes in block '{block}'")
         descendants = block.get_child_nodes(recursive=True)
-        interrupts = list(self._interrupts_map.values())
-        for interrupt in interrupts:
+        for interrupt in self.interrupts:
             for child in descendants:
                 if child.id == interrupt.node.id:
                     logger.debug(f"Cancelling interrupt for {child} in block")

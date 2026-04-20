@@ -92,7 +92,7 @@ class HotSwapVisitor(NodeVisitor):
 
     def _visit_children(self, node: p.NodeWithChildren) -> NodeGenerator:
         if node.completed:
-            raise Exception("Unexpected call to _visit_children then node is completed")
+            raise Exception("Unexpected call to _visit_children when node is completed")
 
         old_node = self.old_program.get_child_by_id(node.id)
         if old_node is not None:
