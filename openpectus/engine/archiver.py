@@ -23,7 +23,7 @@ encoding = 'utf-8'
 delimiter = ','  # used in old system
 # delimiter = ';'    # makes Excel 365 understand it out of the box
 quoting: Literal[3] = csv.QUOTE_NONE
-escapechar = None
+escapechar = "\\"
 
 
 # Note:  The MarkTag value may include a separator char/string. Make sure that does not conflict with the options here.
@@ -124,7 +124,7 @@ class ArchiverTag(Tag):
 
         logger.info(f"Writing runlog to {runlog_file_path}")
         with open(runlog_file_path, 'xt', newline='', encoding=encoding) as f:
-            writer = csv.writer(f, delimiter=delimiter, quoting=quoting)
+            writer = csv.writer(f, delimiter=delimiter, quoting=quoting, escapechar=escapechar)
             writer.writerow(['Command', 'Start time (UTC)', 'Completed time (UTC)'])
             try:
                 runlog = self.runlog_accessor()
