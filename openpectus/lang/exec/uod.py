@@ -1027,7 +1027,7 @@ class RegexNamedArgumentParser:
         if "number_unit" not in self.get_named_groups():
             return []
         start = self.regex.index("<number_unit>") + len("<number_unit>")
-        end = self.regex.index(")", start)
+        end = self.regex.rindex(")", start)
         result = unescape(self.regex[start: end]).split("|")
         return result
 
