@@ -18,6 +18,9 @@ export class DetailsActions {
   static commandExamplesFetched = createAction(source + 'Command Examples Fetched', props<{ commandExamples: CommandExample[] }>());
   static commandsComponentExecuteClicked = createAction(source + 'Commands Component Execute Clicked', props<{ command: ExecutableCommand }>());
   static controlStateFetched = createAction(source + 'Control State Fetched', props<{ controlState: ControlState }>());
+  static controlStateFetchedFromUpdate = createAction(source + 'Control State Fetched From Update', props<{ controlState: ControlState }>());
+  static controlStateChanged = createAction(source + 'Control State Changed',
+    props<{ oldControlState: ControlState, newControlState: ControlState }>());
   static controlCommandExecutionFailed = createAction(source + 'Control Command Execution Failed');
   static controlCommandExecutionSucceeded = createAction(source + 'Control Command Execution Succeeded');
   static recentRunDetailsInitialized = createAction(source + 'Recent Run Details Initialized');
@@ -32,6 +35,4 @@ export class DetailsActions {
   static processUnitNavigatedFrom = createAction(source + 'Process Unit Navigated From', props<{ oldUnitId?: string, newUnitId?: string }>());
   static otherActiveUsersFetched = createAction(source + 'Other Active Users Fetched', props<{ otherActiveUsers: ActiveUser[] }>());
   static activeUsersUpdatedOnBackend = createAction(source + 'Active Users Updated On Backend', props<{ unitId: string }>());
-  static controlStateChanged = createAction(source + 'Control State Changed',
-    props<{ oldControlState: ControlState, newControlState: ControlState }>());
 }
