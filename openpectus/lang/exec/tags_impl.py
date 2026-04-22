@@ -1,8 +1,9 @@
 from __future__ import annotations
 import logging
 import time
+from typing import Callable
 
-from openpectus.lang.exec.tags import SystemTagName, Tag, TagDirection, TagFormatFunction, format_time_as_clock
+from openpectus.lang.exec.tags import SystemTagName, Tag, TagDirection, TagFormatFunction, format_time_as_clock, TagValueType, ChangeListener
 from openpectus.lang.exec.events import BlockInfo, RunStateChange
 from openpectus.lang.exec.tracer import Tracer
 
@@ -261,3 +262,82 @@ class AccumulatedColumnVolume(Tag):
             self.value = None
         else:
             self.value = (v-self.v0) / cv
+
+class DerivedTag(Tag, ChangeListener):
+    """Tag with value derived from other tags using a function.
+       Tag has simulated status if any tags used for calculation
+       are simulated, or if the tag is simulated on its own.
+       Calculation is performed when an input tag changes value.
+
+       The provided function is called with tag values as argument
+       in the order they appear in the list of input tags.
+    """
+    def __init__(self,
+                 name,
+                 fn: Callable[..., TagValueType],
+                 input_tags: list[Tag],
+                 tick_time = None,
+                 value = None,
+                 unit = None,
+                 direction = TagDirection.NA,
+                 format_fn = None):
+        super().__init__(name, tick_time, value, unit, direction, format_fn)
+        self._fn = fn
+        self._input_tags = input_tags
+        self._simulated_directly = False
+
+        # Listen to tag changes from input tags
+        [tag.add_listener(self) for tag in input_tags]
+
+    def calculate(self) -> TagValueType:
+        input_tag_values = [tag.get_value() for tag in self._input_tags]
+        calculated_value = None
+        try:
+            calculated_value = self._fn(*input_tag_values)
+        except Exception as e:
+            logger.error(f"Calculation of tag '{self.name}' with function "+
+                         f"'{self._fn.__name__}' called with arguments "+
+                         f"{input_tag_values} failed with exception {e}.")
+        return calculated_value
+
+    def notify_change(self, elm):
+        """Calculate value in response to new input_tag values."""
+        calculated_value = self.calculate()
+        self.set_value(calculated_value, time.time())
+        if self.input_tag_simulated:
+            self.simulate_value(calculated_value, time.time(), _internal_call=True)
+        else:
+            self.stop_simulation(_internal_call=True)
+
+    def clear_changes(self):
+        return
+
+    @property
+    def changes(self):
+        return []
+
+    @property
+    def input_tag_simulated(self):
+        return any(tag.simulated for tag in self._input_tags)
+
+    def simulate_value(self, val, tick_time, _internal_call: bool = False):
+        """The DerivedTag can attain simulated status by two means:
+           1) An input tag is simulated
+           2) The DerivedTag itself is simulated
+           
+           Simulation of the DerivedTag itself takes priority."""
+        if not _internal_call:
+            self._simulated_directly = True
+        elif _internal_call and self._simulated_directly:
+            return
+        super().simulate_value(val, tick_time)
+
+    def stop_simulation(self, _internal_call: bool = False):
+        if not _internal_call:
+            self._simulated_directly = False
+            if self.input_tag_simulated:
+                self.simulate_value(self.value, time.time(), _internal_call=True)
+            else:
+                super().stop_simulation()
+        elif _internal_call and not self._simulated_directly:
+            super().stop_simulation()

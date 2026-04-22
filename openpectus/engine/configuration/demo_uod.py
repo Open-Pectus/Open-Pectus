@@ -22,6 +22,9 @@ def create() -> UnitOperationDefinitionBase:
     # this signature is usable for the default argument parser
     # def reset(cmd: UodCommand, **kvargs):
 
+    def _calculated(ft02):
+        return 2 * ft02
+
     # this signature is valid for arg_parse_fn=None
     def reset(cmd: UodCommand):
         """ # Resets the demo unit
@@ -135,7 +138,9 @@ def create() -> UnitOperationDefinitionBase:
                                 from_tag=lambda x: 1 if x == 'Reset' else 0,
                                 to_tag=lambda x: "Reset" if x == 1 else "N/A")
         .with_tag(tags.ReadingTag("FT01", "L/h"))
-        .with_tag(tags.ReadingTag("FT02", "L/h"))
+        .with_tag(tags.DerivedTag("Calculated", fn=_calculated, input_tags=[
+            tags.Tag("FT02", unit="L/h").with_builder(builder)
+        ]))
         .with_tag(tags.SelectTag("Category", "Rising", unit=None, choices=["Rising", "Falling"]))
         .with_tag(tags.ReadingTag("Time", unit="s", format_fn=format_time_as_clock))
         .with_tag(tags.Tag("TestInt", value="42"))
@@ -148,6 +153,7 @@ def create() -> UnitOperationDefinitionBase:
         .with_command(name="Reset", exec_fn=reset, arg_parse_fn=None)
         .with_command(name="TestInt", exec_fn=test_int)
         .with_command(name="Category", exec_fn=set_category)
+        .with_process_value(tag_name="Calculated")
         .with_process_value(tag_name="Run Time")
         .with_process_value(tag_name="FT01")
         .with_process_value_entry(tag_name="TestInt")
