@@ -13,6 +13,8 @@ from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
 from openpectus.lang.exec.events import BlockInfo, EventListener
 from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
+from openpectus.lang.exec.pinterpreter import PInterpreter
+from openpectus.lang.exec.interpreter_models import SePath
 import openpectus.protocol.models as Mdl
 from openpectus.engine.engine import Engine, EngineTiming
 import openpectus.lang.model.ast as p
@@ -41,7 +43,7 @@ RunCondition = Callable[[], bool]
 EventName = Literal[
     "start", "stop", "block_start", "block_end",
     "restart", "pause", "hold",
-    "method_end"
+    "method_end", "method_edited"
 ]
 """ Defines the awaitable events of the test engine runner """
 
@@ -372,6 +374,10 @@ class EngineTestInstance(EventListener):
     def on_stop(self):
         self._last_event = "stop"
 
+    def on_method_edited(self, live_edit: bool):
+        self._last_event = "method_edited"
+        self._search_index = 0
+
     def on_engine_shutdown(self):
         pass
 
@@ -506,13 +512,13 @@ def set_engine_debug_logging():
 
 
 def set_interpreter_debug_logging(include_events=False, include_runlog=False):
-    logger = logging.getLogger("openpectus.lang.exec.pinterpreter")
-    logger.setLevel(logging.DEBUG)
+    logging.getLogger(PInterpreter.__module__).setLevel(logging.DEBUG)
+    logging.getLogger(SePath.__module__).setLevel(logging.DEBUG)
 
     if include_runlog:
-        logging.getLogger("openpectus.lang.exec.runlog").setLevel(logging.DEBUG)
-    if include_events:
-        logging.getLogger("openpectus.lang.exec.events").setLevel(logging.DEBUG)
+        logging.getLogger(RuntimeInfo.__module__).setLevel(logging.DEBUG)
+    if include_events:        
+        logging.getLogger(EventListener.__module__).setLevel(logging.DEBUG)
         logging.getLogger("openpectus.lang.exec.tags_impl").setLevel(logging.DEBUG)
 
 

@@ -547,6 +547,7 @@ class Engine(InterpreterContext):
                     if self.has_error_state():
                         self.clear_error_state()
 
+                    self.emitter.emit_on_method_edited(live_edit=True)
                     return "merge_method"
                 except Exception:
                     logger.error("Error merging method")
@@ -556,6 +557,7 @@ class Engine(InterpreterContext):
                 try:
                     self._method_manager.set_method(method)
                     logger.info(f"Method set successfully. Version is {self.method_manager.program.version}")
+                    self.emitter.emit_on_method_edited(live_edit=False)
                     return "set_method"
                 except Exception:
                     logger.error("Error setting method")
