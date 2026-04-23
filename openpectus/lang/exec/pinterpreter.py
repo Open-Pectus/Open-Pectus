@@ -421,6 +421,11 @@ class PInterpreter(NodeVisitor):
         self._program.reset_runtime_state(recursive=True)
 
     def _is_awaiting_threshold(self, node: p.Node):
+        # A parent Block node might have been completed
+        # by an "End block" command. In that case, the
+        # threshold is no longer relevant.
+        if node.parent and node.parent.completed:
+            return False
         if node.completed:
             return False
 
