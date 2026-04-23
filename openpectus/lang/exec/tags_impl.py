@@ -268,6 +268,8 @@ class DerivedTag(Tag, ChangeListener):
        Tag has simulated status if any tags used for calculation
        are simulated, or if the tag is simulated on its own.
        Calculation is performed when an input tag changes value.
+       If there are no input tags, then the tag value is updated
+       on every tick.
 
        The provided function is called with tag values as argument
        in the order they appear in the list of input tags.
@@ -276,6 +278,7 @@ class DerivedTag(Tag, ChangeListener):
                  name,
                  fn: Callable[..., TagValueType],
                  input_tags: list[Tag],
+                 calculate_on_tick: None | bool = None,
                  tick_time = None,
                  value = None,
                  unit = None,
@@ -285,23 +288,23 @@ class DerivedTag(Tag, ChangeListener):
         self._fn = fn
         self._input_tags = input_tags
         self._simulated_directly = False
+        self._calculate_on_tick = calculate_on_tick or (calculate_on_tick is None and len(input_tags) == 0)
 
         # Listen to tag changes from input tags
         [tag.add_listener(self) for tag in input_tags]
 
+        self._set_calculated_value()
+
     def calculate(self) -> TagValueType:
         input_tag_values = [tag.get_value() for tag in self._input_tags]
-        calculated_value = None
         try:
-            calculated_value = self._fn(*input_tag_values)
+            return self._fn(*input_tag_values)
         except Exception as e:
             logger.error(f"Calculation of tag '{self.name}' with function "+
                          f"'{self._fn.__name__}' called with arguments "+
                          f"{input_tag_values} failed with exception {e}.")
-        return calculated_value
 
-    def notify_change(self, elm):
-        """Calculate value in response to new input_tag values."""
+    def _set_calculated_value(self):
         calculated_value = self.calculate()
         self.set_value(calculated_value, time.time())
         if self.input_tag_simulated:
@@ -309,12 +312,20 @@ class DerivedTag(Tag, ChangeListener):
         else:
             self.stop_simulation(_internal_call=True)
 
+    def on_tick(self, tick_time: float, increment_time: float):
+        if self._calculate_on_tick:
+            self._set_calculated_value()
+
+    def notify_change(self, elm):
+        """Calculate value in response to new input_tag values."""
+        self._set_calculated_value()
+
     def clear_changes(self):
-        return
+        raise NotImplemented
 
     @property
     def changes(self):
-        return []
+        raise NotImplemented
 
     @property
     def input_tag_simulated(self):
