@@ -23,6 +23,8 @@ def create() -> UnitOperationDefinitionBase:
     # def reset(cmd: UodCommand, **kvargs):
 
     def _calculated(ft02):
+        if ft02 is None:
+            return 0.0
         return 2 * ft02
 
     # this signature is valid for arg_parse_fn=None
