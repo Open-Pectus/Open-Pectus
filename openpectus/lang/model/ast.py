@@ -502,8 +502,8 @@ class NodeWithChildren(Node):
 class ProgramNode(NodeWithChildren):
     def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
-        self.revision: int = 0
-        """ The program revision. Starts as 0 and increments every time an edit is performed while running. """
+        self.version: int = 0
+        """ The program version. Starts as 0 and increments every time an edit is performed while running. """
 
         self.macros: dict[str, MacroNode] = dict()
         """ Registered macros """
@@ -570,16 +570,15 @@ class ProgramNode(NodeWithChildren):
 
     def extract_state(self) -> NodeState:
         state = super().extract_state()
-        state["revision"] = self.revision  # type: ignore
+        state["version"] = self.version  # type: ignore
         return state
 
     def apply_state(self, state: NodeState):
-        # Note: while revision is imported from the edited method, method_manager increments it right after the merge
-        self.revision = int(state["revision"])  # type: ignore
+        self.version = int(state["version"])  # type: ignore
         return super().apply_state(state)
 
     def __str__(self):
-        return f"{self.__class__.__name__}(instruction_name='{self.instruction_name}', revision={self.revision}, " + \
+        return f"{self.__class__.__name__}(instruction_name='{self.instruction_name}', version={self.version}, " + \
             f"id='{self.id}')"
 
 

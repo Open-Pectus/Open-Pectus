@@ -116,11 +116,6 @@ class MethodManager:
         state = self._get_interpreter_state()
         new_program = self._parse(new_method)
 
-        if new_program.revision == 0:
-            new_program.revision = program.revision + 1
-            logger.debug(f"New method has no version specified, using {new_program.revision} " +
-                         "which is the old version incremented by 1")
-
         if new_program.has_error():
             logger.warning("Target merge method has parse errors")
 
@@ -163,7 +158,7 @@ class MethodManager:
         return new_state
 
     def _to_parser_method(self, method: Mdl.Method) -> ParserMethod:
-        return ParserMethod(lines=[ParserMethodLine(line.id, line.content) for line in method.lines])
+        return ParserMethod(lines=[ParserMethodLine(line.id, line.content) for line in method.lines], version=method.version)
 
     def _parse(self, _method: ParserMethod) -> p.ProgramNode:
         parser = create_method_parser(_method, self._uod_command_names)
@@ -206,6 +201,16 @@ class MethodManager:
 
     def merge_method(self, _new_method: Mdl.Method):
         assert self.program_is_started, "Program has not yet started, use set_method() rather that merge_method()"
+
+        # handle versions before converting _new_method
+        old_version = self._method.version
+        if _new_method.version == 0:            
+            _new_method.version = old_version + 1            
+            logger.debug(f"New method has no version specified, using {_new_method.version} " +
+                         "which is the old version incremented by 1")
+        elif _new_method.version == old_version:
+            logger.warning(f"new_method version is equal to old method version: {old_version}")
+
         new_method = self._to_parser_method(_new_method)
         new_program = self._parse(new_method)
         try:

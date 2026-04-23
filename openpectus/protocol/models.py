@@ -136,6 +136,7 @@ class MethodLine(ProtocolModel):
 
 
 class Method(ProtocolModel):
+    version: int
     lines: list[MethodLine]
 
     def __str__(self) -> str:
@@ -144,7 +145,7 @@ class Method(ProtocolModel):
 
     @staticmethod
     def empty() -> Method:
-        return Method(lines=[])
+        return Method(lines=[], version=0)
 
     @staticmethod
     def from_pcode(pcode: str) -> Method:
@@ -174,23 +175,15 @@ class Method(ProtocolModel):
                 raise ValueError("Numbered method requires a two-digit number on all lines")
         return method
 
-    def modify_to(self, pcode: str) -> Method:
-        """ Edit the method code while maintaining line ids. Used to emulate method input
-        coming from frontend where line ids are maintained in changed methods. """
-        new_method = Method.from_pcode(pcode)
-        for i, line in enumerate(new_method.lines):
-            if i < len(self.lines):
-                line.id = self.lines[i].id
-        return new_method
-
     def to_parser_method(self) -> ParserMethod:
         return ParserMethod(
-            lines=[ParserMethodLine(line.id, line.content) for line in self.lines]
+            lines=[ParserMethodLine(line.id, line.content) for line in self.lines],
+            version=self.version
         )
 
     @staticmethod
     def from_parser_method(method: ParserMethod) -> Method:
-        return Method(lines=[MethodLine(id=line.id, content=line.content) for line in method.lines])
+        return Method(lines=[MethodLine(id=line.id, content=line.content) for line in method.lines],version=method.version)
 
 
 class MethodState(ProtocolModel):

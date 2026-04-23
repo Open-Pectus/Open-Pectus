@@ -200,6 +200,7 @@ class PcodeParser:
 
     def parse_method(self, method: ParserMethod) -> p.ProgramNode:  # noqa C901
         program = p.ProgramNode(position=Position(0, 0)).with_id(self.id_generator)
+        program.version = method.version
 
         # first parse all lines individually in one fast pass, ignoring indentation and parent
         nodes: list[p.Node] = []
