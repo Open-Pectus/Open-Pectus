@@ -70,7 +70,7 @@ const reducer = createReducer(initialState,
     draft.shouldPoll = false;
   })),
   on(DetailsActions.processValuesFetched, (state, {processValues}) => produce(state, draft => {
-    draft.processValues = processValues;
+    draft.processValues = processValues.filter(processValue => !processValue.plot_only);
     draft.missingRoles = undefined;
   })),
   on(DetailsActions.processValuesFailedToLoad, (state, {error}) => produce(state, draft => {

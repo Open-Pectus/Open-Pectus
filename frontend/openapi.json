@@ -2896,6 +2896,10 @@
           "simulated": {
             "type": "boolean",
             "title": "Simulated"
+          },
+          "plot_only": {
+            "type": "boolean",
+            "title": "Plot Only"
           }
         },
         "type": "object",
