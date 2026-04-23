@@ -6,7 +6,7 @@ from typing import Any
 
 from openpectus.engine.models import EngineCommandEnum
 from openpectus.lang.exec.regex import RegexNumber
-from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
+from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag, DerivedTag
 from openpectus.engine.hardware import RegisterDirection
 
 import pint
@@ -553,3 +553,74 @@ class CalculatedLinearTag(Tag):
 
     def on_tick(self, tick_time: float, increment_time: float):
         self.value = time.time() * self.slope
+
+class TestDerivedTag(unittest.TestCase):
+
+    def test_no_tags_constant_value(self):
+        constant_value = 1.234
+        derived_tag = DerivedTag("Derived", fn=lambda: constant_value, input_tags=[])
+        self.assertEqual(derived_tag.get_value(), constant_value)
+
+    def test_no_tags_developing_value(self):
+        x = 0
+        def fn():
+            nonlocal x
+            x += 1
+            return x
+        derived_tag = DerivedTag("Derived", fn=fn, input_tags=[])
+        self.assertEqual(derived_tag.get_value(), 1)
+        derived_tag.on_tick(0.0, 0.0)
+        self.assertEqual(derived_tag.get_value(), 2)
+        self.assertEqual(derived_tag.get_value(), 2)
+        derived_tag.on_tick(0.0, 0.0)
+        self.assertEqual(derived_tag.get_value(), 3)
+
+    def test_with_input_tag(self):
+        constant_value = 1.234
+        tag1 = Tag("Input1", value=constant_value)
+        derived_tag = DerivedTag("Derived", fn=lambda input1: input1, input_tags=[tag1])
+        self.assertEqual(derived_tag.get_value(), constant_value)
+        tag1.set_value(2*constant_value, 0.0)
+        self.assertEqual(derived_tag.get_value(), 2*constant_value)
+
+
+    def test_with_input_tag_simulate_derived_tag(self):
+        constant_value = 1.234
+        tag1 = Tag("Input1", value=constant_value)
+        derived_tag = DerivedTag("Derived", fn=lambda input1: input1, input_tags=[tag1])
+
+        # Simulate derived tag and show it has no impact on input tags.
+        derived_tag.simulate_value(5.0, 0.0)
+        self.assertTrue(derived_tag.simulated)
+        self.assertEqual(derived_tag.get_value(), 5.0)
+        self.assertFalse(tag1.simulated)
+        self.assertEqual(tag1.get_value(), constant_value)
+        # Stop simulation and show that the tag returns to the expected value
+        derived_tag.stop_simulation()
+        self.assertFalse(derived_tag.simulated)
+        self.assertEqual(derived_tag.get_value(), constant_value)
+
+
+    def test_with_input_tag_simulate_input_tag(self):
+        constant_value = 1.234
+        tag1 = Tag("Input1", value=constant_value)
+        derived_tag = DerivedTag("Derived", fn=lambda input1: input1, input_tags=[tag1])
+        # Simulate input tag and show that it impacts the derived tag.
+        tag1.simulate_value(5.0, 0.0)
+        self.assertTrue(tag1.simulated)
+        self.assertEqual(tag1.get_value(), 5.0)
+        self.assertTrue(derived_tag.simulated)
+        self.assertEqual(derived_tag.get_value(), 5.0)
+        # Simulate derived tag and show that it takes priority
+        self.assertTrue(derived_tag.simulated)
+        derived_tag.simulate_value(7.0, 0.0)
+        self.assertEqual(derived_tag.get_value(), 7.0)
+        # Stop simulation of derived tag and show that it still
+        # has simulated status due to the input tag.
+        derived_tag.stop_simulation()
+        self.assertTrue(derived_tag.simulated)
+        self.assertEqual(derived_tag.get_value(), 5.0)
+        # Stop simulation of input tag and show that the tag returns to the expected value
+        tag1.stop_simulation()
+        self.assertFalse(derived_tag.simulated)
+        self.assertEqual(derived_tag.get_value(), constant_value)

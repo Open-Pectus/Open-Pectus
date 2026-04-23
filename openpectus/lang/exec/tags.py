@@ -253,6 +253,10 @@ class Tag(ChangeSubject, EventListener):
         if self.simulated:
             self.stop_simulation()
         return super().on_stop()
+    
+    def with_builder(self, builder):
+        builder.with_tag(self)
+        return self
 
 
 class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):
