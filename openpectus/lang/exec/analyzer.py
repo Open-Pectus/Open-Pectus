@@ -137,7 +137,8 @@ class UnreachableCodeCheckAnalyzer(AnalyzerVisitorBase):
     def visit_EngineCommandNode(self, node: p.EngineCommandNode):
         super().visit_EngineCommandNode(node)
         if not self.method_end and node.instruction_name in ["Stop", "Restart"]:
-            self.method_end = node
+            if not any(isinstance(parent, p.NodeWithCondition) for parent in node.parents):
+                self.method_end = node
         yield
 
     def visit_Node(self, node) -> NodeGenerator:
