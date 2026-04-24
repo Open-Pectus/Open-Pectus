@@ -62,6 +62,18 @@ def fetch_process_value(engine_id: str, tag_name) -> ProMdl.TagValue | None:
     return engine_data.tags_info.map.get(tag_name, None)
 
 
+def fetch_simulated_tags(engine_id: str) -> list[str]:
+    aggregator = agg_deps.get_aggregator()
+
+    if not aggregator:
+        return []
+    engine_data = aggregator.get_registered_engine_data(engine_id)
+    if not engine_data:
+        return []
+    
+    return [tag_name for tag_name, tag in engine_data.tags_info.map.items() if tag.simulated]
+
+
 def build_tags(uod_def: ProMdl.UodDefinition) -> TagValueCollection:
     return TagValueCollection([TagValue(name=t.name, unit=t.unit) for t in uod_def.tags])
 
@@ -582,12 +594,15 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                 # Complete tag name
                 if position_ast in node.arguments_range or node.arguments == "" or node.arguments not in analysis_input.tags.names:
                     prefix = "" if leading_space else " "
+                    # Sort so simulated tags are at the top of the list.
+                    simulated_tags = fetch_simulated_tags(engine_id)
                     if node.arguments_range.is_empty():
                         return [
                             CompletionItem(
                                 label=name,
                                 insertText=prefix+name,
                                 kind=CompletionItemKind.Enum,
+                                sortText="0" if name in simulated_tags else "1"+name
                             )
                             for name in analysis_input.get_tag_completions(node.arguments)
                         ]
@@ -600,6 +615,7 @@ def completions(document: Document, position: Position, ignored_names, engine_id
                                     range=lsp_range_from_ast_range(node.arguments_range),
                                     newText=prefix+name
                                 ),
+                                sortText="0" if name in simulated_tags else "1"+name
                             )
                             for name in analysis_input.get_tag_completions(node.arguments)
                         ]
