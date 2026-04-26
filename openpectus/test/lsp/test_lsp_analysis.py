@@ -47,6 +47,7 @@ class TestLspAnalysisCompletion(unittest.TestCase):
                 tags=[])
 
         setattr(lsp_analysis, "fetch_uod_info", lambda _: uod_info)
+        setattr(lsp_analysis, "fetch_simulated_tags", lambda _: list())
         result = lsp_analysis.completions(document, position, ignored_names=None, engine_id="eng_id")
         return result
 
