@@ -31,6 +31,7 @@ import { MonacoWrapperConfig } from './monaco-wrapper-config';
 })
 export class MonacoEditorComponent implements AfterViewInit {
   editorSizeChange = input.required<Observable<void>>();
+  fileUriPrefix = input.required<string>();
   unitId = input<string>();
   editorContent = input<string>();
   editorOptions = input<MonacoEditor.IEditorOptions & MonacoEditor.IGlobalEditorOptions>({});
@@ -115,7 +116,7 @@ export class MonacoEditorComponent implements AfterViewInit {
   }
 
   private async initAndStartWrapper() {
-    const wrapperConfig = MonacoWrapperConfig.buildWrapperConfig(this.editorElement.nativeElement, this.unitId());
+    const wrapperConfig = MonacoWrapperConfig.buildWrapperConfig(this.editorElement.nativeElement, this.fileUriPrefix(), this.unitId());
     await this.wrapper.initAndStart(wrapperConfig);
     this.destroyRef.onDestroy(() => {
       this.wrapper.dispose();

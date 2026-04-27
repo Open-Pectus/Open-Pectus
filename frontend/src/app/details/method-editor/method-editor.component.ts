@@ -30,7 +30,7 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
           <app-monaco-editor class="block rounded-sm flex-1 pl-1" [editorSizeChange]="editorSizeChange"
                              [unitId]="unitId()" (editorIsReady)="onEditorReady($event)"
                              [dropFileEnabled]="isStopped()" [dropFileDisabledReason]="dropFileDisabledReason"
-                             [editorOptions]="editorOptions()"></app-monaco-editor>
+                             [editorOptions]="editorOptions()" [fileUriPrefix]="'method_editor'"></app-monaco-editor>
         </div>
       }
       @if (!collapsed && methodEditorIsDirty()) {
