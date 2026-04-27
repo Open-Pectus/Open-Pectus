@@ -20,12 +20,12 @@ import { CommandExamplesListComponent } from './command-examples-list.component'
           <app-command-examples-list class="overflow-y-hidden" [commandExamples]="commandExamples()" [chosenExample]="chosenExample"
                                      (exampleChosen)="chosenExample = $event"></app-command-examples-list>
           <app-monaco-editor [editorSizeChange]="editorSizeChange" [editorOptions]="exampleEditorOptions"
-                             [editorContent]="chosenExampleContent"
+                             [editorContent]="chosenExampleContent" [fileUriPrefix]="fileUriPrefix"
                              [dropFileDisabledReason]="'Cannot change example content'"
                              class="ml-1"></app-monaco-editor>
           <div class="h-full w-[1px] bg-slate-500"></div>
           <app-monaco-editor [editorSizeChange]="editorSizeChange" (editorContentChanged)="onEditorContentChanged($event)"
-                             [editorContent]="commandToExecute" [unitId]="unitId()"
+                             [editorContent]="commandToExecute" [unitId]="unitId()" [fileUriPrefix]="fileUriPrefix"
                              [dropFileEnabled]="true"
                              class="ml-1"></app-monaco-editor>
           @if (commandToExecute !== '') {
@@ -43,6 +43,7 @@ import { CommandExamplesListComponent } from './command-examples-list.component'
 export class CommandsComponent implements OnInit {
   protected exampleEditorOptions = {readOnly: true, readOnlyMessage: {value: 'You cannot edit an example'}};
   protected collapsed = false;
+  protected readonly fileUriPrefix = 'commands_editor';
   protected commandExamples = this.store.selectSignal(DetailsSelectors.commandExamples);
   protected unitId = this.store.selectSignal(DetailsSelectors.processUnitId);
   protected chosenExample?: CommandExample;

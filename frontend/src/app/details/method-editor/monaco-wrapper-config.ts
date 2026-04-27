@@ -6,7 +6,7 @@ import { LogLevel } from 'vscode';
 export class MonacoWrapperConfig {
   static isInitialized = false;
 
-  static buildWrapperConfig(htmlContainer: HTMLElement, unitId?: string): WrapperConfig {
+  static buildWrapperConfig(htmlContainer: HTMLElement, fileUriPrefix: string, unitId?: string): WrapperConfig {
     const isInitialized = MonacoWrapperConfig.isInitialized;
     MonacoWrapperConfig.isInitialized = true;
 
@@ -22,7 +22,7 @@ export class MonacoWrapperConfig {
         codeResources: {
           modified: {
             text: '',
-            uri: `/workspace/${crypto.randomUUID()}.pcode`,
+            uri: `/workspace/${fileUriPrefix}/${crypto.randomUUID()}.pcode`,
           },
         },
         monacoWorkerFactory: this.configureMonacoWorkers,
@@ -46,7 +46,7 @@ export class MonacoWrapperConfig {
             'editor.lightbulb.enabled': true,
             'editor.experimental.asyncTokenization': true,
             'editor.foldingStrategy': 'indentation',
-            'editor.wordBasedSuggestions': "off",
+            'editor.wordBasedSuggestions': 'off',
             'editor.codeLens': false,
             'scm.diffDecorations': 'none',
             'editor.lineDecorationsWidth': 12,
@@ -56,7 +56,7 @@ export class MonacoWrapperConfig {
             'editor.scrollBeyondLastColumn': 1,
             'editor.scrollBeyondLastLine': false,
             'editor.stickyScroll.enabled': false,
-            "editor.suggest.preview": true,
+            'editor.suggest.preview': true,
           }),
         },
       },
