@@ -4,7 +4,7 @@ import unittest
 
 
 from openpectus.lang.model.pprogramformatter import print_program
-from openpectus.lang.model.parser import PcodeParser, Grammar
+from openpectus.lang.model.parser import ParserMethod, PcodeParser, Grammar
 import openpectus.lang.model.ast as p
 
 
@@ -227,6 +227,37 @@ Block: A
         self.assertIsInstance(block_node.children[0], p.MarkNode)
         self.assertIsInstance(block_node.children[1], p.BlankNode)
         self.assertIsInstance(block_node.children[2], p.MarkNode)
+
+
+    def test_instruction_name_is_set(self):
+        instructions = {
+            "Mark": "Mark",
+            "Block: A": "Block",
+            " ": "Blank",
+            "End block": "End block",
+            "End blocks": "End blocks",
+            "Batch: B": "Batch",
+            "Watch: foo": "Watch",
+            "Alarm: foo": "Alarm",
+            "# comment": "Comment",
+            "Macro: M": "Macro",
+            "Call macro: M": "Call macro",
+            "Notify": "Notify",
+            "Base": "Base", # InterpreterCommandNode sample
+            "Stop": "Stop", # EngineCommandNode sample
+            "Simulate": "Simulate",
+            "Simulate off": "Simulate off",
+            "foo": "foo", #or "Error"? 'key' is 'Error'
+            "MyUodCommand: foo bar='baz'": "MyUodCommand",
+            # NullNode?
+        }
+        
+        parser = create_parser(uod_command_names=["MyUodCommand"])
+        for instruction, expected_instruction_name in instructions.items():
+            with self.subTest(instruction):
+                program = parser.parse_method(ParserMethod.from_pcode(instruction))
+                node = program.children[0]
+                self.assertEqual(node.instruction_name, expected_instruction_name)
 
     def test_parse_block_w_blank_2(self):
         code = """\

@@ -388,6 +388,8 @@ class PcodeParser:
             self._parse_tag_operator_value(node)
 
         node.parse_create_completed()
+        if node.instruction_name is None or node.instruction_name.strip() == "":
+            logger.error(f"instruction_name is empty for node type {type(node)}")
 
         return node
 

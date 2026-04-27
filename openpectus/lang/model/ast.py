@@ -199,7 +199,7 @@ class Node(SupportCancelForce):
 
     @property
     def key(self) -> str:
-        return f"{self.id}.{self.name}"
+        return f"{self.id}.{self.instruction_name}"
 
     @property
     def key_path(self) -> str:
@@ -749,6 +749,9 @@ class CommentNode(WhitespaceNode):
         self.line = line
         return self
 
+    @property
+    def instruction_name(self):
+        return "Comment"
 
 class InjectedNode(NodeWithChildren):
     pass
@@ -915,6 +918,9 @@ class BlankNode(WhitespaceNode):
     def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
 
+    @property
+    def instruction_name(self) -> str:
+        return "Blank"
 
 class ErrorInstructionNode(Node):
     """ Represents non-parsable instruction line. """
@@ -926,6 +932,10 @@ class ErrorInstructionNode(Node):
     def with_line(self, line: str):
         self.line = line
         return self
+    
+    @property
+    def key(self):
+        return "Error"
 
 
 class NullNode(Node):
