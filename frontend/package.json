@@ -36,17 +36,18 @@
     "d3": "^7.8.5",
     "date-fns": "^4.1.0",
     "immer": "^10.0.2",
-    "monaco-editor-wrapper": "^6.4.0",
+    "monaco-editor-wrapper": "^6.12.0",
     "ngx-toastr": "^19.0.0",
     "rxjs": "~7.8.0",
     "tslib": "2.8",
     "vscode-ws-jsonrpc": "^3.3.2"
   },
   "devDependencies": {
-    "@angular-builders/custom-webpack": "^19.0.0",
-    "@angular-devkit/build-angular": "^19.0.6",
+    "@analogjs/vite-plugin-angular": "^2.4.10",
+    "@angular/build": "^19.0.5",
     "@angular/cli": "^19.0.6",
     "@angular/compiler-cli": "^19.0.5",
+    "@codingame/esbuild-import-meta-url-plugin": "^1.0.3",
     "@hey-api/openapi-ts": "^0.69.2",
     "@types/d3": "^7.4.0",
     "@types/node": "^22.10.5",
@@ -57,11 +58,10 @@
     "msw": "^2.3.1",
     "path-browserify": "^1.0.1",
     "postcss": "^8.4.38",
-    "style-loader": "^4.0.0",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.19.0",
-    "webpack-cli": "^6.0.1"
+    "vite": "^8.0.10"
   },
   "msw": {
     "workerDirectory": "src"
