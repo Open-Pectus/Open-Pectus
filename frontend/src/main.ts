@@ -3,7 +3,6 @@ import '@angular/common/locales/global/da';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { isDevMode, LOCALE_ID, provideZonelessChangeDetection } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { provideAnimations } from '@angular/platform-browser/animations';
 import { PreloadAllModules, provideRouter, withPreloading } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 import { provideEffects } from '@ngrx/effects';
@@ -83,7 +82,7 @@ enableMocking().then(() => bootstrapApplication(AppComponent, {
       ],
     }),
     provideRouter(APP_ROUTES, withPreloading(PreloadAllModules)),
-    provideAnimations(),
+    // provideAnimations(),
     provideToastr({
       progressBar: true,
       progressAnimation: 'increasing',
