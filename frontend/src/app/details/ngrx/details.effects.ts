@@ -71,7 +71,7 @@ export class DetailsEffects {
     ofType(DetailsActions.controlStateUpdatedOnBackend),
     mergeMap(({unitId}) => {
       return this.processUnitService.getControlState({unitId}).pipe(
-        map(controlState => DetailsActions.controlStateFetched({controlState})),
+        map(controlState => DetailsActions.controlStateFetchedFromUpdate({controlState})),
       );
     }),
   ));
@@ -216,7 +216,7 @@ export class DetailsEffects {
   ));
 
   controlStateChanged = createEffect(() => this.actions.pipe(
-    ofType(DetailsActions.controlStateFetched),
+    ofType(DetailsActions.controlStateFetchedFromUpdate),
     concatLatestFrom(() => this.store.select(DetailsSelectors.previousControlState)),
     switchMap(([{controlState}, previousControlState]) => {
       return of(DetailsActions.controlStateChanged({oldControlState: previousControlState, newControlState: controlState}));
