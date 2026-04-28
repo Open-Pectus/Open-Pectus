@@ -14,7 +14,7 @@ import { ProcessUnitCardComponent } from './process-unit-card.component';
     <div class="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
       @for (processUnit of processUnits(); track processUnit.id) {
         <app-process-unit-card [processUnit]="processUnit"
-                               (click)="onCardClick(processUnit.id)"></app-process-unit-card>
+                               (click)="onCardClick(processUnit.id)" />
       }
     </div>
     @if (processUnits().length === 0) {

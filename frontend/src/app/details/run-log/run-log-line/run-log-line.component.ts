@@ -43,17 +43,17 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
         }
         @if (runLogLine()?.end === undefined) {
           <app-run-log-line-progress [value]="runLogLine()?.progress" class="py-0.5"
-          ></app-run-log-line-progress>
+           />
         }
         <p>{{ runLogLine()?.command?.command }}</p>
         <div class="col-end-6 flex gap-2">
           @if (runLogLine()?.forcible) {
             <app-run-log-line-force-button [lineId]="runLogLine()?.id"
-                                           (click)="$event.stopPropagation()"></app-run-log-line-force-button>
+                                           (click)="$event.stopPropagation()" />
           }
           @if (runLogLine()?.cancellable) {
             <app-run-log-line-cancel-button [lineId]="runLogLine()?.id"
-                                            (click)="$event.stopPropagation()"></app-run-log-line-cancel-button>
+                                            (click)="$event.stopPropagation()" />
           }
         </div>
       </div>
@@ -69,11 +69,11 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
           }
           @if (runLogLine()?.start_values?.length) {
             <app-run-log-additional-values [type]="AdditionalValueType.Start"
-                                           [values]="runLogLine()?.start_values"></app-run-log-additional-values>
+                                           [values]="runLogLine()?.start_values" />
           }
           @if (runLogLine()?.end_values?.length) {
             <app-run-log-additional-values [type]="AdditionalValueType.End"
-                                           [values]="runLogLine()?.end_values"></app-run-log-additional-values>
+                                           [values]="runLogLine()?.end_values" />
           }
         </div>
       </div>

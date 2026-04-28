@@ -12,8 +12,7 @@ import { RunLogLineButtonComponent } from './run-log-line-button.component';
                              colorClass="bg-red-200"
                              confirmColorClass="bg-red-800"
                              codiconClass="codicon-chrome-close"
-                             (confirmedClick)="onClick()">
-    </app-run-log-line-button>
+                             (confirmedClick)="onClick()" />
   `
 })
 export class RunLogLineCancelButtonComponent {

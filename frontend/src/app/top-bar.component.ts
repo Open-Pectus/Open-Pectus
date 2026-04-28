@@ -13,13 +13,13 @@ import { NotificationPreferencesComponent } from './notification-preferences.com
     <div class="w-full grid grid-cols-3 items-center px-4 bg-slate-600 text-white relative overflow-y-visible">
       <div class="flex items-center">
         @if (isDev()) {
-          <app-msw-enablement></app-msw-enablement>
+          <app-msw-enablement />
         }
         <span class="ml-2 text-xs text-slate-400">{{ formattedBuildInfo() }}</span>
       </div>
       <button class="text-3xl font-bold mx-4 my-2.5" (click)="navigateToRoot()">Open Pectus</button>
       <div class="flex gap-3 items-center flex-1 justify-end">
-        <app-notification-preferences class="mx-3"></app-notification-preferences>
+        <app-notification-preferences class="mx-3" />
         <p>{{ formatInitials(userData()) ?? 'Anon' }}</p>
         @if (userPicture() === undefined) {
           <div class="codicon codicon-account !text-3xl"></div>

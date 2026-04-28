@@ -9,8 +9,8 @@ import { TopBarComponent } from './top-bar.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TopBarComponent, RouterOutlet],
   template: `
-    <app-top-bar></app-top-bar>
-    <router-outlet></router-outlet>
+    <app-top-bar />
+    <router-outlet />
   `,
 })
 export class AppComponent implements OnInit {

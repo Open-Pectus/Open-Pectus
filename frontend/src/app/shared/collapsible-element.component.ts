@@ -21,7 +21,7 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
         </div>
         @if (!collapsed) {
           <div class="flex gap-4 items-center mr-10" (click)="$event.stopPropagation()">
-            <ng-content select="[buttons]"></ng-content>
+            <ng-content select="[buttons]" />
           </div>
         }
 
@@ -32,7 +32,7 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
       <div class="bg-white lg:rounded-sm mt-1 h-full outline-1 outline-gray-300" [class.transition-[height]]="!isDragging" #content
            [class.overflow-hidden]="!contentOverflow()" [class.outline]="!collapsed"
            [style.height.px]="height" (transitionend)="onTransitionEndContentContainer($event)">
-        <ng-content select="[content]"></ng-content>
+        <ng-content select="[content]" />
       </div>
       <div class="absolute bottom-0 left-0 w-full h-1.5" [class.-mb-8]="widenDragHandler"
            [style.height.rem]="widenDragHandler ? 4 : null"
@@ -43,7 +43,7 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
            (drag)="onDragHandle($event)" (dragover)="allowDragOver($event)"></div>
 
       <div class="absolute top-0 left-0">
-        <ng-content select="[popover]"></ng-content>
+        <ng-content select="[popover]" />
       </div>
     </div>
   `,

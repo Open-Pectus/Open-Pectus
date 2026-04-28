@@ -28,7 +28,7 @@ import { ProcessPlotComponent } from './process-plot.component';
         </button>
       }
       @if (!isCollapsed) {
-        <app-process-plot content class="block w-full h-full relative"></app-process-plot>
+        <app-process-plot content class="block w-full h-full relative" />
       }
     </app-collapsible-element>
   `

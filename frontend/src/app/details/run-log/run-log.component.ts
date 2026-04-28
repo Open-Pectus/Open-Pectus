@@ -20,15 +20,15 @@ import { RunLogLineComponent } from './run-log-line/run-log-line.component';
     <app-collapsible-element [name]="'Run Log'" [heightResizable]="true" [initialContentHeight]="400"
                              (collapseStateChanged)="collapsed = $event"
                              [codiconName]="'codicon-tasklist'">
-      <app-run-log-filters buttons [showRunningFilter]="unitId() !== undefined"></app-run-log-filters>
+      <app-run-log-filters buttons [showRunningFilter]="unitId() !== undefined" />
       @if (!collapsed) {
         <div content class="h-full overflow-auto">
           <div class="min-w-fit">
-            <app-run-log-header [gridFormat]="gridFormat" (expandAll)="expandAll()" (collapseAll)="collapseAll()"></app-run-log-header>
+            <app-run-log-header [gridFormat]="gridFormat" (expandAll)="expandAll()" (collapseAll)="collapseAll()" />
             @for (runLogLine of runLog().lines; track runLogLine.id; let index = $index) {
               <app-run-log-line [runLogLine]="runLogLine"
                                 [rowIndex]="index"
-                                [gridFormat]="gridFormat"></app-run-log-line>
+                                [gridFormat]="gridFormat" />
             }
             @if (runLog().lines.length === 0) {
               <p class="text-center p-2 font-semibold">

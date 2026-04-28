@@ -18,7 +18,7 @@ import { TagDirectionPipe } from './tag-direction.pipe';
             <div class="flex gap-2 items-start flex-wrap mt-1">
               @for (processValue of getProcessValuesOfCategory(direction); track processValue.name) {
                 <app-process-value [processValue]="processValue"
-                                   (openCommands)="openCommands.emit($event)"></app-process-value>
+                                   (openCommands)="openCommands.emit($event)" />
               } @empty {
                 No process values for this category
               }
@@ -30,7 +30,7 @@ import { TagDirectionPipe } from './tag-direction.pipe';
       <div class="flex gap-2 items-start flex-wrap">
         @for (processValue of processValues(); track processValue.name) {
           <app-process-value [processValue]="processValue"
-                             (openCommands)="openCommands.emit($event)"></app-process-value>
+                             (openCommands)="openCommands.emit($event)" />
         } @empty {
           <div class="m-auto">No process values available</div>
         }

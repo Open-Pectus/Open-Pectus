@@ -23,15 +23,15 @@ type FocusableCommandComponent = ProcessValueCommandButtonComponent | ProcessVal
       @for (command of processValueCommands(); track command) {
         @if (shouldUseEditor(command)) {
           <app-process-value-editor #focusableElement [command]="command" (inputBlur)="onBlur($event)"
-                                    (save)="onEditorSave($event, command)"></app-process-value-editor>
+                                    (save)="onEditorSave($event, command)"/>
         }
         @if (shouldUseChoice(command)) {
           <app-process-value-command-choice #focusableElement [command]="command" (buttonBlur)="onBlur($event)"
-                                            (choiceMade)="onChoiceMade($event, command)"></app-process-value-command-choice>
+                                            (choiceMade)="onChoiceMade($event, command)"/>
         }
         @if (shouldUseButton(command)) {
           <app-process-value-command-button #focusableElement [command]="command" (buttonBlur)="onBlur($event)"
-                                            (click)="$event.stopPropagation(); onButtonClick(command)"></app-process-value-command-button>
+                                            (click)="$event.stopPropagation(); onButtonClick(command)"/>
         }
       }
     </div>

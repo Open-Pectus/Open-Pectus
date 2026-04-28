@@ -13,18 +13,18 @@ import { UnitControlCommands } from '../unit-control-commands.';
     <div class="flex gap-3.5 flex-wrap">
       <app-unit-control-button [command]="UnitControlCommands.Start" [iconName]="'play'" [toggledColor]="startColor"
                                [toggled]="controlState().is_running"
-                               [optimisticClicked]="optimisticClickedButtons().start"></app-unit-control-button>
+                               [optimisticClicked]="optimisticClickedButtons().start" />
       <app-unit-control-button [command]="UnitControlCommands.Pause" [iconName]="'debug-pause'"
                                [unCommand]="UnitControlCommands.Unpause" [toggledColor]="pauseColor"
                                [toggled]="controlState().is_paused"
-                               [optimisticClicked]="optimisticClickedButtons().pause"></app-unit-control-button>
+                               [optimisticClicked]="optimisticClickedButtons().pause" />
       <app-unit-control-button [command]="UnitControlCommands.Hold" [iconName]="'debug-stop'"
                                [unCommand]="UnitControlCommands.Unhold" [toggledColor]="pauseColor"
                                [toggled]="controlState().is_holding"
-                               [optimisticClicked]="optimisticClickedButtons().hold"></app-unit-control-button>
+                               [optimisticClicked]="optimisticClickedButtons().hold" />
       <app-unit-control-button [command]="UnitControlCommands.Stop" [iconName]="'chrome-close'" [toggledColor]="stopColor"
                                [toggled]="!controlState().is_running" [optimisticClicked]="optimisticClickedButtons().stop"
-                               [hasLock]="true"></app-unit-control-button>
+                               [hasLock]="true" />
     </div>
   `
 })

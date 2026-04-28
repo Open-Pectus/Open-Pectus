@@ -13,7 +13,7 @@ import { DetailsSelectors } from './ngrx/details.selectors';
       <button class="bg-slate-600 rounded text-white px-4 py-2" (click)="refreshToken()">Force refresh session and try again</button>
     </span>
     } @else {
-      <ng-content></ng-content>
+      <ng-content />
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush

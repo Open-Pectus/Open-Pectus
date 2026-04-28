@@ -19,16 +19,16 @@ import { CommandExamplesListComponent } from './command-examples-list.component'
       @if (!collapsed) {
         <div content class="grid grid-cols-[14rem_minmax(0,1fr)_1px_minmax(0,1fr)] grid-rows-[100%] h-full">
           <app-command-examples-list class="overflow-y-hidden" [commandExamples]="commandExamples()" [chosenExample]="chosenExample"
-                                     (exampleChosen)="chosenExample = $event"></app-command-examples-list>
+                                     (exampleChosen)="chosenExample = $event" />
           <app-monaco-editor [editorSizeChange]="editorSizeChange" [editorOptions]="exampleEditorOptions"
                              [editorContent]="chosenExampleContent" [fileUriPrefix]="fileUriPrefix"
                              [dropFileDisabledReason]="'Cannot change example content'"
-                             class="ml-1"></app-monaco-editor>
+                             class="ml-1" />
           <div class="h-full w-[1px] bg-slate-500"></div>
           <app-monaco-editor [editorSizeChange]="editorSizeChange" (editorContentChanged)="onEditorContentChanged($event)"
                              [editorContent]="commandToExecute" [unitId]="unitId()" [fileUriPrefix]="fileUriPrefix"
                              [dropFileEnabled]="true"
-                             class="ml-1"></app-monaco-editor>
+                             class="ml-1" />
           @if (commandToExecute !== '') {
             <button class="absolute right-4 bottom-4 rounded-md bg-green-300 text-black px-3 py-2 flex items-center"
                     (click)="onExecute()">

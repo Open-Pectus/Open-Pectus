@@ -45,13 +45,13 @@ import { AsyncPipe } from '@angular/common';
           </label>
           @if (specificProcessUnitsSelected) {
             <app-multi-select class="ml-7 border-l pl-3.5 border-slate-400" [formControlName]="processUnitsControlName"
-                              [options]="processUnitOptions()"></app-multi-select>
+                              [options]="processUnitOptions()" />
           }
         </div>
 
         <div class="flex flex-col">
           <h1 class="font-bold mt-4 mb-0.5">Topics:</h1>
-          <app-multi-select [formControlName]="topicsControlName" [options]="topicOptions"></app-multi-select>
+          <app-multi-select [formControlName]="topicsControlName" [options]="topicOptions" />
         </div>
       </form>
       <button class="bg-green-300 py-1.5 px-2.5 rounded-md border-slate-400 absolute right-4 bottom-4" (click)="onTestNotificationClick()">

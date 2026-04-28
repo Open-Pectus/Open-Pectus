@@ -18,7 +18,7 @@ import { RunLogActions } from './ngrx/run-log.actions';
                   (click)="filterInput.value = ''; filterTextChanged('')"></button>
         }
       </label>
-      <app-toggle-button [label]="'In progress only'" (changed)="onlyRunningChanged($event)"></app-toggle-button>
+      <app-toggle-button [label]="'In progress only'" (changed)="onlyRunningChanged($event)" />
     </div>
   `
 })
