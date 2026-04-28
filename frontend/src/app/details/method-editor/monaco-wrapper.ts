@@ -1,6 +1,7 @@
 import { EditorApp } from 'monaco-languageclient/editorApp';
 import { MonacoVscodeApiConfig, MonacoVscodeApiWrapper } from 'monaco-languageclient/vscodeApiWrapper';
 import { LanguageClientConfig, LanguageClientWrapper } from 'monaco-languageclient/lcwrapper';
+import { configureDefaultWorkerFactory } from 'monaco-languageclient/workerFactory';
 
 export class MonacoWrapper {
   static isInitialized = false;
@@ -88,7 +89,7 @@ export class MonacoWrapper {
           'editor.suggest.preview': true,
         }),
       },
-
+      monacoWorkerFactory: configureDefaultWorkerFactory,
       extensions: [{
         config: {
           name: 'pcode',
