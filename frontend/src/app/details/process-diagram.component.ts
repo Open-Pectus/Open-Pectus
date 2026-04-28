@@ -1,5 +1,4 @@
-import { NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Store } from '@ngrx/store';
 import { CollapsibleElementComponent } from '../shared/collapsible-element.component';
@@ -10,31 +9,31 @@ import { DetailsSelectors } from './ngrx/details.selectors';
 @Component({
   selector: 'app-process-diagram',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    CollapsibleElementComponent,
-    NgIf,
-
-  ],
+  imports: [CollapsibleElementComponent],
   styles: [
     ':host ::ng-deep svg { height: 100%; width: 100% }',
   ],
   template: `
     <app-collapsible-element [name]="'Process Diagram'" [heightResizable]="true" [contentHeight]="400"
                              (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-circuit-board'">
-      <div class="flex justify-center h-full" content *ngIf="!collapsed">
-        <div class="m-auto" *ngIf="processDiagram()?.svg === ''">No diagram available</div>
-        <div class="bg-white rounded-sm p-2" [innerHTML]="diagramWithValues()"></div>
-      </div>
+      @if (!collapsed) {
+        <div class="flex justify-center h-full" content>
+          @if (processDiagram()?.svg === '') {
+            <div class="m-auto">No diagram available</div>
+          }
+          <div class="bg-white rounded-sm p-2" [innerHTML]="diagramWithValues()"></div>
+        </div>
+      }
     </app-collapsible-element>
   `
 })
 export class ProcessDiagramComponent implements OnInit {
+  protected collapsed = false;
   private store = inject(Store);
-  private domSanitizer = inject(DomSanitizer);
-  private processValuePipe = inject(ProcessValuePipe);
-
   processDiagram = this.store.selectSignal(DetailsSelectors.processDiagram);
   processValues = this.store.selectSignal(DetailsSelectors.processValues);
+  private domSanitizer = inject(DomSanitizer);
+  private processValuePipe = inject(ProcessValuePipe);
   diagramWithValues = computed(() => {
     const processDiagramString = this.processDiagram()?.svg?.replaceAll(/{{(?<inCurlyBraces>[^}]+)}}/g, (match, inCurlyBraces: string) => {
       const withoutSvgTags = inCurlyBraces.replaceAll(/<.+>/g, '').trim();
@@ -54,7 +53,6 @@ export class ProcessDiagramComponent implements OnInit {
     }) ?? '';
     return this.domSanitizer.bypassSecurityTrustHtml(processDiagramString);
   });
-  protected collapsed = false;
 
   ngOnInit() {
     this.store.dispatch(DetailsActions.processDiagramInitialized());

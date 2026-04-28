@@ -1,11 +1,10 @@
-import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 
 @Component({
-    selector: 'app-toggle-button',
-    imports: [CommonModule],
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    template: `
+  selector: 'app-toggle-button',
+  imports: [],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
     <label class="flex items-center gap-1 cursor-pointer rounded px-2 bg-gray-50 border-gray-300 border !text-black h-8">
       {{ label }}
       <input type="checkbox" (change)="checked = checkbox.checked; changed.emit(checkbox.checked)" #checkbox [checked]="checked"

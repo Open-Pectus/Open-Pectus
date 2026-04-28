@@ -1,5 +1,4 @@
-import { NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, Input, OnDestroy, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
@@ -11,31 +10,34 @@ import { ProcessPlotComponent } from './process-plot.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CollapsibleElementComponent,
-    NgIf,
-    ProcessPlotComponent,
+    ProcessPlotComponent
   ],
   template: `
     <app-collapsible-element [name]="'Process Plot'" [heightResizable]="true" [contentHeight]="670" [contentOverflow]="true"
                              (collapseStateChanged)="isCollapsed = $event" [codiconName]="'codicon-graph-line'">
-      <button *ngIf="isZoomed()" buttons (click)="onResetZoom()"
-              class="bg-stone-50 text-black border border-1 border-gray-400 rounded pl-2.5 pr-3 py-0.5 flex items-center">
-        <span class="codicon codicon-zoom-out mr-1.5"></span> Reset zoom
-      </button>
-      <button *ngIf="axesAreOverridden()" buttons (click)="onResetAxes()"
-              class="bg-stone-50 text-black border border-1 border-gray-400 rounded pl-2.5 pr-3 py-0.5 flex items-center">
-        <span class="codicon codicon-discard mr-1.5"></span> Reset axes
-      </button>
-      <app-process-plot content class="block w-full h-full relative" *ngIf="!isCollapsed"></app-process-plot>
+      @if (isZoomed()) {
+        <button buttons (click)="onResetZoom()"
+                class="bg-stone-50 text-black border border-1 border-gray-400 rounded pl-2.5 pr-3 py-0.5 flex items-center">
+          <span class="codicon codicon-zoom-out mr-1.5"></span> Reset zoom
+        </button>
+      }
+      @if (axesAreOverridden()) {
+        <button buttons (click)="onResetAxes()"
+                class="bg-stone-50 text-black border border-1 border-gray-400 rounded pl-2.5 pr-3 py-0.5 flex items-center">
+          <span class="codicon codicon-discard mr-1.5"></span> Reset axes
+        </button>
+      }
+      @if (!isCollapsed) {
+        <app-process-plot content class="block w-full h-full relative"></app-process-plot>
+      }
     </app-collapsible-element>
   `
 })
 export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
-  private store = inject(Store);
-
   @Input() unitId?: string;
   @Input() recentRunId?: string;
-
   protected isCollapsed = false;
+  private store = inject(Store);
   protected isZoomed = this.store.selectSignal(ProcessPlotSelectors.anySubplotZoomed);
   protected axesAreOverridden = this.store.selectSignal(ProcessPlotSelectors.axesAreOverridden);
 

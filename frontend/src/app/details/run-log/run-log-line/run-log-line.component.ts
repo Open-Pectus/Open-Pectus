@@ -1,5 +1,15 @@
-import { DatePipe, NgIf } from '@angular/common';
-import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, EventEmitter, Input, Output, inject } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  computed,
+  EventEmitter,
+  inject,
+  Input,
+  Output
+} from '@angular/core';
 import { Store } from '@ngrx/store';
 import { RunLogLine } from '../../../api';
 import { RunLogActions } from '../ngrx/run-log.actions';
@@ -13,12 +23,11 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
   selector: 'app-run-log-line',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    NgIf,
     RunLogLineProgressComponent,
     RunLogLineForceButtonComponent,
     RunLogLineCancelButtonComponent,
     RunLogAdditionalValuesComponent,
-    DatePipe,
+    DatePipe
   ],
   template: `
     <div [class.bg-slate-50]="rowIndex % 2 === 0"
@@ -30,15 +39,23 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
          (click)="toggleCollapse(expanded())">
       <div class="grid gap-2 px-3 py-2" [style.grid]="gridFormat">
         <p>{{ runLogLine?.start ?? '' | date }}</p>
-        <p *ngIf="runLogLine?.end !== undefined">{{ runLogLine?.end ?? '' | date }}</p>
-        <app-run-log-line-progress [value]="runLogLine?.progress" class="py-0.5"
-                                   *ngIf="runLogLine?.end === undefined"></app-run-log-line-progress>
+        @if (runLogLine?.end !== undefined) {
+          <p>{{ runLogLine?.end ?? '' | date }}</p>
+        }
+        @if (runLogLine?.end === undefined) {
+          <app-run-log-line-progress [value]="runLogLine?.progress" class="py-0.5"
+          ></app-run-log-line-progress>
+        }
         <p>{{ runLogLine?.command?.command }}</p>
         <div class="col-end-6 flex gap-2">
-          <app-run-log-line-force-button *ngIf="runLogLine?.forcible" [lineId]="runLogLine?.id"
-                                         (click)="$event.stopPropagation()"></app-run-log-line-force-button>
-          <app-run-log-line-cancel-button *ngIf="runLogLine?.cancellable" [lineId]="runLogLine?.id"
-                                          (click)="$event.stopPropagation()"></app-run-log-line-cancel-button>
+          @if (runLogLine?.forcible) {
+            <app-run-log-line-force-button [lineId]="runLogLine?.id"
+                                           (click)="$event.stopPropagation()"></app-run-log-line-force-button>
+          }
+          @if (runLogLine?.cancellable) {
+            <app-run-log-line-cancel-button [lineId]="runLogLine?.id"
+                                            (click)="$event.stopPropagation()"></app-run-log-line-cancel-button>
+          }
         </div>
       </div>
 
@@ -46,33 +63,38 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
            [class.transition-[height]]="initialHeightAchieved"
            class="w-full overflow-hidden">
         <div #additionalValues>
-          <p class="text-end p-2" *ngIf="!runLogLine?.start_values?.length && !runLogLine?.end_values?.length">
-            No additional values available.
-          </p>
-          <app-run-log-additional-values *ngIf="runLogLine?.start_values?.length" [type]="AdditionalValueType.Start"
-                                         [values]="runLogLine?.start_values"></app-run-log-additional-values>
-          <app-run-log-additional-values *ngIf="runLogLine?.end_values?.length" [type]="AdditionalValueType.End"
-                                         [values]="runLogLine?.end_values"></app-run-log-additional-values>
+          @if (!runLogLine?.start_values?.length && !runLogLine?.end_values?.length) {
+            <p class="text-end p-2">
+              No additional values available.
+            </p>
+          }
+          @if (runLogLine?.start_values?.length) {
+            <app-run-log-additional-values [type]="AdditionalValueType.Start"
+                                           [values]="runLogLine?.start_values"></app-run-log-additional-values>
+          }
+          @if (runLogLine?.end_values?.length) {
+            <app-run-log-additional-values [type]="AdditionalValueType.End"
+                                           [values]="runLogLine?.end_values"></app-run-log-additional-values>
+          }
         </div>
       </div>
     </div>
   `
 })
 export class RunLogLineComponent implements AfterViewInit {
-  private store = inject(Store);
-  private cd = inject(ChangeDetectorRef);
-
   @Input() runLogLine?: RunLogLine;
   @Input() rowIndex = 0;
   @Input() gridFormat? = 'auto / 1fr 1fr 1fr';
   @Output() collapseToggled = new EventEmitter<boolean>();
   protected readonly AdditionalValueType = AdditionalValueType;
+  protected additionalValuesElementHasHeight = false;
+  protected initialHeightAchieved = false;
+  private store = inject(Store);
   protected readonly expanded = computed(() => {
     const lineIds = this.store.selectSignal(RunLogSelectors.expandedLines);
     return lineIds().some(lineId => lineId === this.runLogLine?.id);
   });
-  protected additionalValuesElementHasHeight = false;
-  protected initialHeightAchieved = false;
+  private cd = inject(ChangeDetectorRef);
 
   ngAfterViewInit() {
     setTimeout(() => {

@@ -1,4 +1,3 @@
-import { NgFor, NgIf } from '@angular/common';
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
@@ -20,28 +19,32 @@ import { ProcessValueEditorComponent, ValueAndUnit } from './process-value-edito
 type FocusableCommandComponent = ProcessValueCommandButtonComponent | ProcessValueEditorComponent | ProcessValueCommandChoiceComponent;
 
 @Component({
-    selector: 'app-process-value-commands',
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [
-        NgFor,
-        NgIf,
-        ProcessValueEditorComponent,
-        ProcessValueCommandChoiceComponent,
-        ProcessValueCommandButtonComponent,
-    ],
-    template: `
+  selector: 'app-process-value-commands',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    ProcessValueEditorComponent,
+    ProcessValueCommandChoiceComponent,
+    ProcessValueCommandButtonComponent
+  ],
+  template: `
     <div tabindex="0" #container
          class="absolute left-1/2 -translate-x-1/2 top-0.5 z-10 flex flex-col gap-3 p-3 bg-white border-4 border-sky-50 outline outline-1 outline-slate-500 rounded-md shadow-lg shadow-slate-500"
          (blur)="onBlur($event)">
 
-      <ng-container *ngFor="let command of processValueCommands">
-        <app-process-value-editor #focusableElement *ngIf="shouldUseEditor(command)" [command]="command" (inputBlur)="onBlur($event)"
-                                  (save)="onEditorSave($event, command)"></app-process-value-editor>
-        <app-process-value-command-choice #focusableElement [command]="command" *ngIf="shouldUseChoice(command)" (buttonBlur)="onBlur($event)"
-                                          (choiceMade)="onChoiceMade($event, command)"></app-process-value-command-choice>
-        <app-process-value-command-button #focusableElement [command]="command" *ngIf="shouldUseButton(command)" (buttonBlur)="onBlur($event)"
-                                          (click)="$event.stopPropagation(); onButtonClick(command)"></app-process-value-command-button>
-      </ng-container>
+      @for (command of processValueCommands; track command) {
+        @if (shouldUseEditor(command)) {
+          <app-process-value-editor #focusableElement [command]="command" (inputBlur)="onBlur($event)"
+                                    (save)="onEditorSave($event, command)"></app-process-value-editor>
+        }
+        @if (shouldUseChoice(command)) {
+          <app-process-value-command-choice #focusableElement [command]="command" (buttonBlur)="onBlur($event)"
+                                            (choiceMade)="onChoiceMade($event, command)"></app-process-value-command-choice>
+        }
+        @if (shouldUseButton(command)) {
+          <app-process-value-command-button #focusableElement [command]="command" (buttonBlur)="onBlur($event)"
+                                            (click)="$event.stopPropagation(); onButtonClick(command)"></app-process-value-command-button>
+        }
+      }
     </div>
   `
 })
