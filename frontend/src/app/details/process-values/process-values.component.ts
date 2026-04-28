@@ -1,6 +1,5 @@
 import { NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
-import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { ProcessValueCommand } from '../../api';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
@@ -20,17 +19,16 @@ import { ProcessValuesCategorizedComponent } from './process-values-categorized.
     CollapsibleElementComponent,
     NgIf,
     ProcessValueCommandsComponent,
-    PushPipe,
     ToggleButtonComponent,
     ProcessValuesCategorizedComponent,
   ],
   template: `
     <app-collapsible-element [name]="'Process Values'" (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-dashboard'">
-      <app-toggle-button [label]="'All Process Values'" buttons [checked]="allProcessValues | ngrxPush"
+      <app-toggle-button [label]="'All Process Values'" buttons [checked]="allProcessValues()"
                          (changed)="onToggleAllProcessValues($event)"></app-toggle-button>
 
       <div class="py-2 px-1 lg:px-2" content *ngIf="!collapsed">
-        <app-process-values-categorized [processValues]="processValues | ngrxPush"
+        <app-process-values-categorized [processValues]="processValues()"
                                         (openCommands)="onOpenCommands($event)"></app-process-values-categorized>
       </div>
 
@@ -43,8 +41,8 @@ import { ProcessValuesCategorizedComponent } from './process-values-categorized.
   `,
 })
 export class ProcessValuesComponent implements OnInit, OnDestroy {
-  allProcessValues = this.store.select(DetailsSelectors.allProcessValues);
-  processValues = this.store.select(DetailsSelectors.processValues);
+  allProcessValues = this.store.selectSignal(DetailsSelectors.allProcessValues);
+  processValues = this.store.selectSignal(DetailsSelectors.processValues);
   protected showCommands = false;
   protected pvAndPositionForPopover?: PvAndPosition;
   protected collapsed = false;

@@ -1,6 +1,5 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, EventEmitter, input, Output } from '@angular/core';
-import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { ProcessValue, TagDirection } from '../../api';
 import { DetailsSelectors } from '../ngrx/details.selectors';
@@ -8,11 +7,11 @@ import { ProcessValueComponent, PvAndPosition } from './process-value.component'
 import { TagDirectionPipe } from './tag-direction.pipe';
 
 @Component({
-    selector: 'app-process-values-categorized',
-    imports: [CommonModule, ProcessValueComponent, PushPipe, TagDirectionPipe],
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    template: `
-    @if (allProcessValues | ngrxPush) {
+  selector: 'app-process-values-categorized',
+  imports: [CommonModule, ProcessValueComponent, TagDirectionPipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    @if (allProcessValues()) {
       <div class="flex flex-col gap-4 -mt-1">
         @for (direction of tagDirections; track direction) {
           <div>
@@ -43,8 +42,8 @@ import { TagDirectionPipe } from './tag-direction.pipe';
 export class ProcessValuesCategorizedComponent {
   processValues = input<ProcessValue[]>();
   @Output() openCommands = new EventEmitter<PvAndPosition>();
-  allProcessValues = this.store.select(DetailsSelectors.allProcessValues);
-  protected readonly tagDirections: TagDirection[] = ['input', 'output', 'na', 'unspecified']
+  allProcessValues = this.store.selectSignal(DetailsSelectors.allProcessValues);
+  protected readonly tagDirections: TagDirection[] = ['input', 'output', 'na', 'unspecified'];
   protected readonly Object = Object;
 
   constructor(private store: Store) {}

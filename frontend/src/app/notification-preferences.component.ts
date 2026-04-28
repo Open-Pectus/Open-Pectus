@@ -3,7 +3,6 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SwPush } from '@angular/service-worker';
-import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { firstValueFrom, map } from 'rxjs';
 import { NotificationScope, NotificationTopic, WebPushNotificationPreferences, WebpushService, WebPushSubscription } from './api';
@@ -13,10 +12,11 @@ import { AppSelectors } from './ngrx/app.selectors';
 import { notificationScopes, topics } from './notification.types';
 import { MultiSelectComponent } from './shared/multi-select.component';
 import { UtilMethods } from './shared/util-methods';
+import { AsyncPipe } from '@angular/common';
 
 @Component({
   selector: 'app-notification-preferences',
-  imports: [ReactiveFormsModule, PushPipe, MultiSelectComponent],
+  imports: [ReactiveFormsModule, MultiSelectComponent, AsyncPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <button #bell class="codicon codicon-bell !text-xl" (click)="onBellClick()"></button>
@@ -25,7 +25,7 @@ import { UtilMethods } from './shared/util-methods';
          class="text-black bg-white border-slate-400 p-3.5 border rounded-lg m-0 shadow-lg shadow-slate-500 outline outline-4 outline-slate-300"
          [style.top.px]="bellPosition.bottom" [style.left.px]="popoverLeft" [style.width.px]="popoverWidth">
       <label class="flex items-center gap-2">
-        <input type="checkbox" [checked]="hasSubscription | ngrxPush" class="w-5 h-5 accent-blue-500"
+        <input type="checkbox" [checked]="hasSubscription | async" class="w-5 h-5 accent-blue-500"
                (change)="onEnabledChanged($event)"> Notifications enabled (this device)
       </label>
       <form [formGroup]="formGroup">

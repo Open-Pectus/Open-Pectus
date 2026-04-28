@@ -1,8 +1,6 @@
 import { DatePipe, NgIf } from '@angular/common';
-import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
-import { LetDirective } from '@ngrx/component';
+import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, EventEmitter, Input, Output } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { map } from 'rxjs';
 import { RunLogLine } from '../../../api';
 import { RunLogActions } from '../ngrx/run-log.actions';
 import { RunLogSelectors } from '../ngrx/run-log.selectors';
@@ -15,7 +13,6 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
   selector: 'app-run-log-line',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    LetDirective,
     NgIf,
     RunLogLineProgressComponent,
     RunLogLineForceButtonComponent,
@@ -30,7 +27,7 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
          [class.!bg-red-200]="runLogLine?.cancelled && !runLogLine?.failed"
          [class.!bg-red-600]="runLogLine?.failed"
          class="border-b-2 border-white cursor-pointer"
-         *ngrxLet="expanded as expanded" (click)="toggleCollapse(expanded)">
+         (click)="toggleCollapse(expanded())">
       <div class="grid gap-2 px-3 py-2" [style.grid]="gridFormat">
         <p>{{ runLogLine?.start ?? '' | date }}</p>
         <p *ngIf="runLogLine?.end !== undefined">{{ runLogLine?.end ?? '' | date }}</p>
@@ -45,7 +42,7 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
         </div>
       </div>
 
-      <div [style.height.px]="expanded && additionalValuesElementHasHeight ? additionalValues.scrollHeight : 0"
+      <div [style.height.px]="expanded() && additionalValuesElementHasHeight ? additionalValues.scrollHeight : 0"
            [class.transition-[height]]="initialHeightAchieved"
            class="w-full overflow-hidden">
         <div #additionalValues>
@@ -67,9 +64,10 @@ export class RunLogLineComponent implements AfterViewInit {
   @Input() gridFormat? = 'auto / 1fr 1fr 1fr';
   @Output() collapseToggled = new EventEmitter<boolean>();
   protected readonly AdditionalValueType = AdditionalValueType;
-  protected readonly expanded = this.store.select(RunLogSelectors.expandedLines).pipe(
-    map(lineIds => lineIds.some(lineId => lineId === this.runLogLine?.id)),
-  );
+  protected readonly expanded = computed(() => {
+    const lineIds = this.store.selectSignal(RunLogSelectors.expandedLines);
+    return lineIds().some(lineId => lineId === this.runLogLine?.id);
+  });
   protected additionalValuesElementHasHeight = false;
   protected initialHeightAchieved = false;
 
