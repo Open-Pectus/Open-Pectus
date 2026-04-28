@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, OnDestroy, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { Defaults } from '../../defaults';
@@ -8,7 +8,7 @@ import { ErrorLogSelectors } from './ngrx/error-log.selectors';
 
 @Component({
   selector: 'app-error-log',
-  imports: [CommonModule, CollapsibleElementComponent],
+  imports: [CollapsibleElementComponent, DatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-collapsible-element [name]="'Error Log'" [heightResizable]="true" [initialContentHeight]="200" [codiconName]="'codicon-warning'"
@@ -44,15 +44,15 @@ export class ErrorLogComponent implements OnInit, OnDestroy {
   readonly unitId = input<string>();
   readonly recentRunId = input<string>();
   protected readonly dateFormat = Defaults.dateFormat + '.SSS';
+  protected collapsed = false;
+  private store = inject(Store);
+  protected readonly errorLog = this.store.selectSignal(ErrorLogSelectors.errorLog);
   protected readonly sortedErrorLog = computed(() => {
     const sortedEntries = [...this.errorLog().entries].sort((a, b) => {
       return new Date(b.created_time).valueOf() - new Date(a.created_time).valueOf();
     });
     return {...this.errorLog(), entries: sortedEntries};
   });
-  protected collapsed = false;
-  private store = inject(Store);
-  protected readonly errorLog = this.store.selectSignal(ErrorLogSelectors.errorLog);
 
   ngOnInit() {
     const unitId = this.unitId();
