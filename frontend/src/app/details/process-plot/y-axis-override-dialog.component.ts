@@ -1,5 +1,5 @@
 import { AsyncPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ElementRef, ViewChild, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, input, viewChild } from '@angular/core';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { map, Observable, tap } from 'rxjs';
@@ -44,7 +44,7 @@ export class YAxisOverrideDialogComponent {
   private store = inject(Store);
 
   readonly margin = input<string>();
-  @ViewChild('max') maxInput?: ElementRef<HTMLInputElement>;
+  readonly maxInput = viewChild<ElementRef<HTMLInputElement>>('max');
   protected data$ = this.store.select(ProcessPlotSelectors.yAxisOverrideDialogData);
   protected data = this.store.selectSignal(ProcessPlotSelectors.yAxisOverrideDialogData);
   private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration);
@@ -65,7 +65,7 @@ export class YAxisOverrideDialogComponent {
       };
     }),
     tap(axisConfiguration => {
-      if(axisConfiguration !== undefined) setTimeout(() => this.maxInput?.nativeElement.select());
+      if(axisConfiguration !== undefined) setTimeout(() => this.maxInput()?.nativeElement.select());
     }),
   );
 

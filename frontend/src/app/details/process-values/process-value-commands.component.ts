@@ -1,14 +1,4 @@
-import {
-  AfterViewInit,
-  ChangeDetectionStrategy,
-  Component,
-  ElementRef,
-  input,
-  output,
-  QueryList,
-  ViewChild,
-  ViewChildren
-} from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, input, output, viewChild, viewChildren } from '@angular/core';
 import { produce } from 'immer';
 import { ProcessValueCommand } from '../../api';
 import { ProcessValueCommandButtonComponent } from './process-value-command-button.component';
@@ -50,16 +40,16 @@ type FocusableCommandComponent = ProcessValueCommandButtonComponent | ProcessVal
 export class ProcessValueCommandsComponent implements AfterViewInit {
   readonly shouldClose = output<ProcessValueCommand | undefined>();
   readonly processValueCommands = input<ProcessValueCommand[]>();
-  @ViewChild('container', {static: true}) container!: ElementRef<HTMLDivElement>;
-  @ViewChildren('focusableElement') focusableElements!: QueryList<FocusableCommandComponent>;
+  readonly container = viewChild.required<ElementRef<HTMLDivElement>>('container');
+  readonly focusableElements = viewChildren<FocusableCommandComponent>('focusableElement');
 
   ngAfterViewInit() {
-    this.focusableElements.first?.focus();
+    this.focusableElements().at(0)?.focus();
   }
 
   onBlur(event: FocusEvent) {
     // only close if it is not one of our subelements buttons or editors receiving focus.
-    if((event.relatedTarget as Element | null)?.compareDocumentPosition(this.container.nativeElement) === 10) return;
+    if((event.relatedTarget as Element | null)?.compareDocumentPosition(this.container().nativeElement) === 10) return;
     this.shouldClose.emit(undefined);
   }
 

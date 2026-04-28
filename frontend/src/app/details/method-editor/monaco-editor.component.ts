@@ -9,7 +9,7 @@ import {
   input,
   output,
   runInInjectionContext,
-  ViewChild
+  viewChild
 } from '@angular/core';
 // import '@codingame/monaco-vscode-json-default-extension';
 // import '@codingame/monaco-vscode-theme-defaults-default-extension';
@@ -39,7 +39,7 @@ export class MonacoEditorComponent implements AfterViewInit {
   dropFileDisabledReason = input<string>();
   readonly editorContentChanged = output<string[]>();
   readonly editorIsReady = output<MonacoEditor.IStandaloneCodeEditor>();
-  @ViewChild('editor', {static: true}) editorElement!: ElementRef<HTMLDivElement>;
+  readonly editorElement = viewChild.required<ElementRef<HTMLDivElement>>('editor');
   private editorApp?: EditorApp;
   private injector = inject(Injector);
   private destroyRef = inject(DestroyRef);
@@ -115,7 +115,7 @@ export class MonacoEditorComponent implements AfterViewInit {
     await MonacoWrapper.buildLanguageClient(languageId, this.unitId());
 
     this.editorApp = MonacoWrapper.buildEditorApp(this.fileUriPrefix());
-    const htmlContainer = this.editorElement.nativeElement;
+    const htmlContainer = this.editorElement().nativeElement;
     await this.editorApp.start(htmlContainer);
 
     this.destroyRef.onDestroy(() => {

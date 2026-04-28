@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, ElementRef, ViewChild, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, ElementRef, inject, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -67,8 +67,8 @@ export class NotificationPreferencesComponent {
   private cdRef = inject(ChangeDetectorRef);
   private router = inject(Router);
 
-  @ViewChild('popover') popover!: ElementRef<HTMLDivElement>;
-  @ViewChild('bell') bell!: ElementRef<HTMLButtonElement>;
+  readonly popover = viewChild.required<ElementRef<HTMLDivElement>>('popover');
+  readonly bell = viewChild.required<ElementRef<HTMLButtonElement>>('bell');
   protected readonly notificationScopes = notificationScopes;
   protected readonly popoverWidth = 350; // When popover anchor positioning is widely available that should be used instead.
 
@@ -125,9 +125,9 @@ export class NotificationPreferencesComponent {
   }
 
   onBellClick() {
-    const bellBoundingRect = this.bell.nativeElement.getBoundingClientRect();
+    const bellBoundingRect = this.bell().nativeElement.getBoundingClientRect();
     this.bellPosition = {bottom: bellBoundingRect.bottom, right: bellBoundingRect.right};
-    this.popover.nativeElement.showPopover();
+    this.popover().nativeElement.showPopover();
     this.webpushService.getNotificationPreferences().subscribe(preferences => {
       this.formGroup.reset(preferences, {emitEvent: false});
       this.cdRef.markForCheck();

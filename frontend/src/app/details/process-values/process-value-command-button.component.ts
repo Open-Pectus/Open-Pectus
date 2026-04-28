@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, ViewChild, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, input, output, viewChild } from '@angular/core';
 import { ProcessValueCommand } from 'src/app/api';
 
 @Component({
@@ -14,9 +14,9 @@ import { ProcessValueCommand } from 'src/app/api';
 export class ProcessValueCommandButtonComponent {
   readonly command = input<ProcessValueCommand>();
   readonly buttonBlur = output<FocusEvent>();
-  @ViewChild('button') button!: ElementRef<HTMLButtonElement>;
+  readonly button = viewChild.required<ElementRef<HTMLButtonElement>>('button');
 
   focus() {
-    this.button.nativeElement.focus();
+    this.button().nativeElement.focus();
   }
 }

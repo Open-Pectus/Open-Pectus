@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input, OnDestroy, OnInit, QueryList, ViewChildren } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, OnDestroy, OnInit, viewChildren } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { RunLogActions } from './ngrx/run-log.actions';
@@ -44,7 +44,7 @@ import { RunLogLineComponent } from './run-log-line/run-log-line.component';
 export class RunLogComponent implements OnInit, OnDestroy {
   readonly unitId = input<string>();
   readonly recentRunId = input<string>();
-  @ViewChildren(RunLogLineComponent) runLogLines?: QueryList<RunLogLineComponent>;
+  readonly runLogLines = viewChildren(RunLogLineComponent);
   protected collapsed = false;
   protected readonly gridFormat = 'auto / 15ch 15ch 1fr auto auto';
   private store = inject(Store);

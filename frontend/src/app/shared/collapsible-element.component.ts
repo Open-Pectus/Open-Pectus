@@ -1,5 +1,5 @@
 import { NgClass } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ElementRef, inject, input, linkedSignal, OnInit, output, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, input, linkedSignal, OnInit, output, viewChild } from '@angular/core';
 import { CollapsibleElementStorageService } from './collapsible-element-storage.service';
 
 @Component({
@@ -56,7 +56,7 @@ export class CollapsibleElementComponent implements OnInit {
   readonly codiconName = input<string>();
   readonly contentHeightChanged = output<number | undefined>();
   readonly collapseStateChanged = output<boolean>();
-  @ViewChild('content') contentElementRef?: ElementRef<HTMLDivElement>;
+  readonly contentElementRef = viewChild<ElementRef<HTMLDivElement>>('content');
   protected contentHeight = linkedSignal(() => this.initialContentHeight());
   protected collapsed = false;
   protected widenDragHandler = false;
@@ -89,7 +89,7 @@ export class CollapsibleElementComponent implements OnInit {
     const element = event.target as HTMLDivElement;
     const parentElement = element.parentElement as HTMLDivElement;
     const top = parentElement.offsetTop;
-    const contentTop = this.contentElementRef?.nativeElement.offsetTop;
+    const contentTop = this.contentElementRef()?.nativeElement.offsetTop;
     if(top === undefined || contentTop === undefined) return;
     let height = event.pageY - top - contentTop - 3; // 3 is half the draghandler height when not widened;
     if(height < this.minHeight) height = this.minHeight;

@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostBinding, OnDestroy, ViewChild, inject } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostBinding, OnDestroy, inject, viewChild } from '@angular/core';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { axisBottom, ScaleLinear, scaleLinear, select } from 'd3';
@@ -34,7 +34,7 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
   private store = inject(Store);
   private processValuePipe = inject(ProcessValuePipe);
 
-  @ViewChild('plot', {static: false}) plotElement?: ElementRef<SVGSVGElement>;
+  readonly plotElement = viewChild<ElementRef<SVGSVGElement>>('plot');
   @HostBinding('style.padding') readonly padding = '1rem .5rem';
   private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(
     filter(UtilMethods.isNotNullOrUndefined));
@@ -63,8 +63,9 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
 
   ngAfterViewInit() {
     this.plotConfiguration.pipe(take(1)).subscribe(plotConfiguration => {
-      if(this.plotElement === undefined) return;
-      this.svg = select<SVGSVGElement, unknown>(this.plotElement.nativeElement);
+      const plotElement = this.plotElement();
+      if(plotElement === undefined) return;
+      this.svg = select<SVGSVGElement, unknown>(plotElement.nativeElement);
       this.yScales = this.createYScales(plotConfiguration);
       this.insertSvgElements(plotConfiguration, this.svg);
 
@@ -78,7 +79,7 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
       );
       this.axesOverrides = new ProcessPlotAxesOverrides(this.store, plotConfiguration, this.svg);
 
-      this.setupOnResize(this.plotElement.nativeElement);
+      this.setupOnResize(plotElement.nativeElement);
       this.setupOnDataChange(plotConfiguration);
       this.setupOnAxesConfigurationChange(this.svg);
       this.setupOnMarkedDirty();

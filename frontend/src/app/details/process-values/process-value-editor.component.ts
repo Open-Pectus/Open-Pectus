@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject, input, output, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, input, output, viewChild } from '@angular/core';
 import { ProcessValueCommand } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 
@@ -28,23 +28,23 @@ export interface ValueAndUnit {
 })
 export class ProcessValueEditorComponent {
   readonly command = input<ProcessValueCommand>();
-  @ViewChild('inputElement', {static: false}) inputElement?: ElementRef<HTMLInputElement>;
-  @ViewChild('saveButtonElement', {static: false}) saveButtonElement?: ElementRef<HTMLButtonElement>;
+  readonly inputElement = viewChild<ElementRef<HTMLInputElement>>('inputElement');
+  readonly saveButtonElement = viewChild<ElementRef<HTMLButtonElement>>('saveButtonElement');
   readonly save = output<ValueAndUnit | undefined>();
   readonly inputBlur = output<FocusEvent>();
   isValid = true;
   private processValuePipe = inject(ProcessValuePipe);
 
   focus() {
-    this.inputElement?.nativeElement.focus();
+    this.inputElement()?.nativeElement.focus();
   }
 
   onFocusInput() {
     const command = this.command();
-    if(command?.value?.value_type === 'string') return this.inputElement?.nativeElement.select();
+    if(command?.value?.value_type === 'string') return this.inputElement()?.nativeElement.select();
     const formattedValue = this.processValuePipe.transform(command?.value);
     const valueLength = formattedValue?.indexOf(' ');
-    if(valueLength !== undefined) this.inputElement?.nativeElement.setSelectionRange(0, valueLength);
+    if(valueLength !== undefined) this.inputElement()?.nativeElement.setSelectionRange(0, valueLength);
   }
 
   toValueAndUnit(asString: string): ValueAndUnit | undefined {
