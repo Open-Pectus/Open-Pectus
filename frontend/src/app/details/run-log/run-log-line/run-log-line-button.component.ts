@@ -1,30 +1,29 @@
 import { NgClass } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Output, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, input, output } from '@angular/core';
 
 @Component({
-    selector: 'app-run-log-line-button',
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [NgClass],
-    template: `
+  selector: 'app-run-log-line-button',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [NgClass],
+  template: `
     <button class="flex items-center gap-1.5 rounded-md px-2 py-1 !text-xs"
             [class.text-white]="isConfirming"
             [class.font-semibold]="isConfirming"
             [ngClass]="isConfirming ? confirmColorClass() : colorClass()"
             (click)="onClick()">
       <i class="codicon" [ngClass]="codiconClass()"></i>
-      {{isConfirming ? 'Confirm' : ''}} {{buttonText()}}{{isConfirming ? '?' : ''}}
+      {{ isConfirming ? 'Confirm' : '' }} {{ buttonText() }}{{ isConfirming ? '?' : '' }}
     </button>
   `
 })
 export class RunLogLineButtonComponent {
-  private cd = inject(ChangeDetectorRef);
-
   readonly codiconClass = input<string>();
   readonly colorClass = input<string>();
   readonly confirmColorClass = input<string>();
   readonly buttonText = input<string>();
-  @Output() confirmedClick = new EventEmitter<void>();
+  readonly confirmedClick = output();
   protected isConfirming = false;
+  private cd = inject(ChangeDetectorRef);
 
   onClick() {
     if(this.isConfirming) this.confirmedClick.emit();

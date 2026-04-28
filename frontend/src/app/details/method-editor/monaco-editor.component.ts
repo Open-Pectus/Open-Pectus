@@ -4,13 +4,12 @@ import {
   Component,
   DestroyRef,
   ElementRef,
-  EventEmitter,
   inject,
   Injector,
   input,
-  Output,
+  output,
   runInInjectionContext,
-  ViewChild,
+  ViewChild
 } from '@angular/core';
 // import '@codingame/monaco-vscode-json-default-extension';
 // import '@codingame/monaco-vscode-theme-defaults-default-extension';
@@ -38,8 +37,8 @@ export class MonacoEditorComponent implements AfterViewInit {
   editorOptions = input<MonacoEditor.IEditorOptions & MonacoEditor.IGlobalEditorOptions>({});
   dropFileEnabled = input<boolean>(false);
   dropFileDisabledReason = input<string>();
-  @Output() editorContentChanged = new EventEmitter<string[]>();
-  @Output() editorIsReady = new EventEmitter<MonacoEditor.IStandaloneCodeEditor>();
+  readonly editorContentChanged = output<string[]>();
+  readonly editorIsReady = output<MonacoEditor.IStandaloneCodeEditor>();
   @ViewChild('editor', {static: true}) editorElement!: ElementRef<HTMLDivElement>;
   private editorApp?: EditorApp;
   private injector = inject(Injector);
@@ -49,9 +48,10 @@ export class MonacoEditorComponent implements AfterViewInit {
   async ngAfterViewInit() {
     await this.initAndStartWrapper();
     // if a collapsible element with a monaco editor starts collapsed, the above will run, but we won't have an editor afterward
-    if(this.editorApp?.getEditor() === undefined) return;
+    const editor = this.editorApp?.getEditor();
+    if(editor === undefined) return;
     runInInjectionContext(this.injector, this.setupEditorBehaviours.bind(this));
-    this.editorIsReady.emit(this.editorApp.getEditor());
+    this.editorIsReady.emit(editor);
   }
 
   onDragOver(event: DragEvent) {

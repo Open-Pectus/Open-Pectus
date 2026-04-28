@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, inject, input, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, input, Input, output } from '@angular/core';
 import { compareAsc, compareDesc } from 'date-fns';
 
 export interface TableColumn<T, E extends keyof T = keyof T> {
@@ -63,7 +63,7 @@ export class TableComponent<T> {
   readonly columns = input<TableColumn<T>[]>();
   readonly filter = input<string>();
   extractId = input.required<(x: T) => string>();
-  @Output() rowClicked = new EventEmitter<T>();
+  readonly rowClicked = output<T>();
   protected sortDir = TableSortDirection.Ascending;
   protected sortColumn?: TableColumn<T>;
   protected readonly TableSortDirection = TableSortDirection;

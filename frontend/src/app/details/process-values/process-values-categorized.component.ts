@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, inject, input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { ProcessValue, TagDirection } from '../../api';
 import { DetailsSelectors } from '../ngrx/details.selectors';
@@ -40,7 +40,7 @@ import { TagDirectionPipe } from './tag-direction.pipe';
 })
 export class ProcessValuesCategorizedComponent {
   processValues = input<ProcessValue[]>();
-  @Output() openCommands = new EventEmitter<PvAndPosition>();
+  readonly openCommands = output<PvAndPosition>();
   protected readonly tagDirections: TagDirection[] = ['input', 'output', 'na', 'unspecified'];
   protected readonly Object = Object;
   private store = inject(Store);

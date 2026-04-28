@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, inject, input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, input, output } from '@angular/core';
 import { ProcessValue } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 
@@ -44,7 +44,7 @@ export interface PvAndPosition {
 })
 export class ProcessValueComponent {
   processValue = input.required<ProcessValue>();
-  @Output() openCommands = new EventEmitter<PvAndPosition>();
+  readonly openCommands = output<PvAndPosition>();
   private element = inject<ElementRef<HTMLDivElement>>(ElementRef);
 
   onClick() {

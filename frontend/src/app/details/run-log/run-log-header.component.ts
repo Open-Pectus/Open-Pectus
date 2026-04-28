@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Output, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 @Component({
   selector: 'app-run-log-header',
@@ -21,6 +21,6 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Output, input } from 
 })
 export class RunLogHeaderComponent {
   readonly gridFormat = input('');
-  @Output() expandAll = new EventEmitter<void>();
-  @Output() collapseAll = new EventEmitter<void>();
+  readonly expandAll = output<void>();
+  readonly collapseAll = output<void>();
 }

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Output, ViewChild, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, ViewChild, input, output } from '@angular/core';
 import { ProcessValueCommand } from '../../api';
 
 @Component({
@@ -19,8 +19,8 @@ import { ProcessValueCommand } from '../../api';
 })
 export class ProcessValueCommandChoiceComponent {
   readonly command = input<ProcessValueCommand>();
-  @Output() choiceMade = new EventEmitter<string>();
-  @Output() buttonBlur = new EventEmitter<FocusEvent>();
+  readonly choiceMade = output<string>();
+  readonly buttonBlur = output<FocusEvent>();
   @ViewChild('button') button!: ElementRef<HTMLButtonElement>;
 
   get options() {

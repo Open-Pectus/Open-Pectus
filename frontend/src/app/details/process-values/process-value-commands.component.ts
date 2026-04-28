@@ -3,12 +3,11 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
-  EventEmitter,
-  Output,
+  input,
+  output,
   QueryList,
   ViewChild,
-  ViewChildren,
-  input
+  ViewChildren
 } from '@angular/core';
 import { produce } from 'immer';
 import { ProcessValueCommand } from '../../api';
@@ -49,7 +48,7 @@ type FocusableCommandComponent = ProcessValueCommandButtonComponent | ProcessVal
   `
 })
 export class ProcessValueCommandsComponent implements AfterViewInit {
-  @Output() shouldClose = new EventEmitter<ProcessValueCommand | undefined>();
+  readonly shouldClose = output<ProcessValueCommand | undefined>();
   readonly processValueCommands = input<ProcessValueCommand[]>();
   @ViewChild('container', {static: true}) container!: ElementRef<HTMLDivElement>;
   @ViewChildren('focusableElement') focusableElements!: QueryList<FocusableCommandComponent>;
@@ -61,7 +60,7 @@ export class ProcessValueCommandsComponent implements AfterViewInit {
   onBlur(event: FocusEvent) {
     // only close if it is not one of our subelements buttons or editors receiving focus.
     if((event.relatedTarget as Element | null)?.compareDocumentPosition(this.container.nativeElement) === 10) return;
-    this.shouldClose.emit();
+    this.shouldClose.emit(undefined);
   }
 
   onButtonClick(command: ProcessValueCommand) {

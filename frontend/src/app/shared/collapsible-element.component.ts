@@ -1,16 +1,5 @@
 import { NgClass } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  ElementRef,
-  EventEmitter,
-  inject,
-  input,
-  linkedSignal,
-  OnInit,
-  Output,
-  ViewChild
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, input, linkedSignal, OnInit, output, ViewChild } from '@angular/core';
 import { CollapsibleElementStorageService } from './collapsible-element-storage.service';
 
 @Component({
@@ -65,8 +54,8 @@ export class CollapsibleElementComponent implements OnInit {
   readonly initialContentHeight = input(0);
   readonly contentOverflow = input(false);
   readonly codiconName = input<string>();
-  @Output() contentHeightChanged = new EventEmitter<number>();
-  @Output() collapseStateChanged = new EventEmitter<boolean>();
+  readonly contentHeightChanged = output<number | undefined>();
+  readonly collapseStateChanged = output<boolean>();
   @ViewChild('content') contentElementRef?: ElementRef<HTMLDivElement>;
   protected contentHeight = linkedSignal(() => this.initialContentHeight());
   protected collapsed = false;

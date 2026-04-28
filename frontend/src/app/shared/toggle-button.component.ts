@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 @Component({
   selector: 'app-toggle-button',
@@ -16,5 +16,5 @@ import { ChangeDetectionStrategy, Component, EventEmitter, input, Output } from 
 export class ToggleButtonComponent {
   readonly checked = input<boolean>();
   readonly label = input<string>();
-  @Output() changed = new EventEmitter<boolean>();
+  readonly changed = output<boolean>();
 }

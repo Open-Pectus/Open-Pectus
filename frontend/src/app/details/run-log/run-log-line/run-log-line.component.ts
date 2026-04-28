@@ -5,10 +5,9 @@ import {
   ChangeDetectorRef,
   Component,
   computed,
-  EventEmitter,
   inject,
-  Output,
-  input
+  input,
+  output
 } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { RunLogLine } from '../../../api';
@@ -85,7 +84,7 @@ export class RunLogLineComponent implements AfterViewInit {
   readonly runLogLine = input<RunLogLine>();
   readonly rowIndex = input(0);
   readonly gridFormat = input<string | undefined>('auto / 1fr 1fr 1fr');
-  @Output() collapseToggled = new EventEmitter<boolean>();
+  readonly collapseToggled = output<boolean>();
   protected readonly AdditionalValueType = AdditionalValueType;
   protected additionalValuesElementHasHeight = false;
   protected initialHeightAchieved = false;

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Output, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { CommandExample } from '../../api';
 
 @Component({
@@ -29,5 +29,5 @@ import { CommandExample } from '../../api';
 export class CommandExamplesListComponent {
   readonly commandExamples = input<CommandExample[]>();
   readonly chosenExample = input<CommandExample>();
-  @Output() exampleChosen = new EventEmitter<CommandExample>();
+  readonly exampleChosen = output<CommandExample>();
 }
