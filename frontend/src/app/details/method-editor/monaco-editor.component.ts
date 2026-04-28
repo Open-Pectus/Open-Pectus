@@ -41,11 +41,7 @@ export class MonacoEditorComponent implements AfterViewInit {
   @Output() editorContentChanged = new EventEmitter<string[]>();
   @Output() editorIsReady = new EventEmitter<MonacoEditor.IStandaloneCodeEditor>();
   @ViewChild('editor', {static: true}) editorElement!: ElementRef<HTMLDivElement>;
-  // private wrapper = new MonacoEditorLanguageClientWrapper();
-  // private readonly languageId = 'pcode';
-  // private editorApp: EditorApp;
-  private editorApp?: EditorApp; // = new EditorApp(MonacoWrapperConfig.buildEditorAppConfig(this.fileUriPrefix()));
-  // private apiWrapper = new MonacoVscodeApiWrapper(MonacoWrapperConfig.buildVsCodeApiConfig(this.languageId, this.unitId()));
+  private editorApp?: EditorApp;
   private injector = inject(Injector);
   private destroyRef = inject(DestroyRef);
   private toastr = inject(ToastrService);

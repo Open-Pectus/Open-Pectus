@@ -7,43 +7,6 @@ export class MonacoWrapper {
   static isInitialized = false;
   private static apiWrapper?: Promise<MonacoVscodeApiWrapper>;
   private static languageClientWrapper?: Promise<LanguageClientWrapper>;
-  // private readonly languageId = 'pcode';
-
-  // static buildWrapperConfig(htmlContainer: HTMLElement, unitId?: string): WrapperConfig {
-  //   const isInitialized = MonacoWrapperConfig.isInitialized;
-  //   MonacoWrapperConfig.isInitialized = true;
-  //
-  //   const specificConfig = {
-  //     htmlContainer,
-  //     logLevel: LogLevel.Warning,
-  //
-  //   } satisfies WrapperConfig;
-  //
-  //   if(isInitialized) return specificConfig;
-  //
-  //   // if multiple editors are on screen, only one of those should initialize this
-  //   const sharedConfig = {
-  //     languageClientConfigs: {},
-  //   } satisfies Partial<WrapperConfig>;
-  //
-  //   return {...specificConfig, ...sharedConfig};
-  // };
-
-  // adapted from https://github.com/TypeFox/monaco-languageclient/blob/70f92b740a06f56210f91464d694b5e5d4dc87db/packages/examples/src/common/client/utils.ts
-  // static configureMonacoWorkers(logger?: Logger) {
-  //   useWorkerFactory({
-  //     workerLoaders: {
-  //       'TextEditorWorker': () => new Worker('/assets/monaco-workers/editor.js', {type: 'module'}),
-  //       'TextMateWorker': () => new Worker('/assets/monaco-workers/textmate.js', {type: 'module'}),
-  //       // 'editorWorkerService': () => new Worker('/assets/monaco-workers/editorService.js', {type: 'module'}),
-  //       OutputLinkDetectionWorker: undefined,
-  //       LanguageDetectionWorker: undefined,
-  //       NotebookEditorWorker: undefined,
-  //       LocalFileSearchWorker: undefined,
-  //     },
-  //     logger,
-  //   });
-  // };
 
   static buildEditorApp(fileUriPrefix: string): EditorApp {
     return new EditorApp({
@@ -53,7 +16,6 @@ export class MonacoWrapper {
           uri: `/workspace/${fileUriPrefix}/${crypto.randomUUID()}.pcode`,
         },
       },
-      // monacoWorkerFactory: this.configureMonacoWorkers,
     });
   }
 
