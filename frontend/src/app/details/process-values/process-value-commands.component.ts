@@ -4,11 +4,11 @@ import {
   Component,
   ElementRef,
   EventEmitter,
-  Input,
   Output,
   QueryList,
   ViewChild,
   ViewChildren,
+  input
 } from '@angular/core';
 import { produce } from 'immer';
 import { ProcessValueCommand } from '../../api';
@@ -31,7 +31,7 @@ type FocusableCommandComponent = ProcessValueCommandButtonComponent | ProcessVal
          class="absolute left-1/2 -translate-x-1/2 top-0.5 z-10 flex flex-col gap-3 p-3 bg-white border-4 border-sky-50 outline outline-1 outline-slate-500 rounded-md shadow-lg shadow-slate-500"
          (blur)="onBlur($event)">
 
-      @for (command of processValueCommands; track command) {
+      @for (command of processValueCommands(); track command) {
         @if (shouldUseEditor(command)) {
           <app-process-value-editor #focusableElement [command]="command" (inputBlur)="onBlur($event)"
                                     (save)="onEditorSave($event, command)"></app-process-value-editor>
@@ -50,7 +50,7 @@ type FocusableCommandComponent = ProcessValueCommandButtonComponent | ProcessVal
 })
 export class ProcessValueCommandsComponent implements AfterViewInit {
   @Output() shouldClose = new EventEmitter<ProcessValueCommand | undefined>();
-  @Input() processValueCommands?: ProcessValueCommand[];
+  readonly processValueCommands = input<ProcessValueCommand[]>();
   @ViewChild('container', {static: true}) container!: ElementRef<HTMLDivElement>;
   @ViewChildren('focusableElement') focusableElements!: QueryList<FocusableCommandComponent>;
 

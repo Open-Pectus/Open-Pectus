@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, Input, OnDestroy, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, OnDestroy, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { Defaults } from '../../defaults';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
@@ -11,7 +11,7 @@ import { ErrorLogSelectors } from './ngrx/error-log.selectors';
   imports: [CommonModule, CollapsibleElementComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-collapsible-element [name]="'Error Log'" [heightResizable]="true" [contentHeight]="200" [codiconName]="'codicon-warning'"
+    <app-collapsible-element [name]="'Error Log'" [heightResizable]="true" [initialContentHeight]="200" [codiconName]="'codicon-warning'"
                              (collapseStateChanged)="collapsed = $event">
       @if (!collapsed) {
         <div content class="py-0.5 pr-0.5 h-full grid grid-cols-[auto_1fr] auto-rows-min items-center">
@@ -41,12 +41,9 @@ import { ErrorLogSelectors } from './ngrx/error-log.selectors';
   `
 })
 export class ErrorLogComponent implements OnInit, OnDestroy {
-  private store = inject(Store);
-
-  @Input() unitId?: string;
-  @Input() recentRunId?: string;
+  readonly unitId = input<string>();
+  readonly recentRunId = input<string>();
   protected readonly dateFormat = Defaults.dateFormat + '.SSS';
-  protected readonly errorLog = this.store.selectSignal(ErrorLogSelectors.errorLog);
   protected readonly sortedErrorLog = computed(() => {
     const sortedEntries = [...this.errorLog().entries].sort((a, b) => {
       return new Date(b.created_time).valueOf() - new Date(a.created_time).valueOf();
@@ -54,11 +51,15 @@ export class ErrorLogComponent implements OnInit, OnDestroy {
     return {...this.errorLog(), entries: sortedEntries};
   });
   protected collapsed = false;
+  private store = inject(Store);
+  protected readonly errorLog = this.store.selectSignal(ErrorLogSelectors.errorLog);
 
   ngOnInit() {
-    if(this.unitId !== undefined) this.store.dispatch(ErrorLogActions.errorLogComponentInitializedForUnit({unitId: this.unitId}));
-    if(this.recentRunId !== undefined) {
-      this.store.dispatch(ErrorLogActions.errorLogComponentInitializedForRecentRun({recentRunId: this.recentRunId}));
+    const unitId = this.unitId();
+    if(unitId !== undefined) this.store.dispatch(ErrorLogActions.errorLogComponentInitializedForUnit({unitId: unitId}));
+    const recentRunId = this.recentRunId();
+    if(recentRunId !== undefined) {
+      this.store.dispatch(ErrorLogActions.errorLogComponentInitializedForRecentRun({recentRunId: recentRunId}));
     }
   }
 

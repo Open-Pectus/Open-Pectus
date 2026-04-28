@@ -1,5 +1,5 @@
 import { AsyncPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ElementRef, Input, ViewChild, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, ViewChild, inject, input } from '@angular/core';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { map, Observable, tap } from 'rxjs';
@@ -17,7 +17,7 @@ import { AxisLimits } from './process-plot.types';
       <div class="fixed left-0 top-0 right-0 bottom-0" (click)="onClose()"></div>
       @let axisConfiguration = axisConfiguration$ | async;
       <div class="bg-white p-2.5 rounded-md border-2 flex flex-col absolute gap-2.5 shadow-md shadow-gray-400"
-           [style.margin]="margin"
+           [style.margin]="margin()"
            [style.border-color]="axisConfiguration?.color"
            [style.transform]="data()?.axisIndex !== 0 ? 'translateX(-100%)' : null"
            [style.left.px]="data()?.position?.x"
@@ -43,7 +43,7 @@ import { AxisLimits } from './process-plot.types';
 export class YAxisOverrideDialogComponent {
   private store = inject(Store);
 
-  @Input() margin?: string;
+  readonly margin = input<string>();
   @ViewChild('max') maxInput?: ElementRef<HTMLInputElement>;
   protected data$ = this.store.select(ProcessPlotSelectors.yAxisOverrideDialogData);
   protected data = this.store.selectSignal(ProcessPlotSelectors.yAxisOverrideDialogData);

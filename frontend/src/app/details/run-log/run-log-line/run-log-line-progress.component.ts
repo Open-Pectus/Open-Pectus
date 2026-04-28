@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 @Component({
   selector: 'app-run-log-line-progress',
@@ -7,24 +7,25 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
   imports: [DecimalPipe],
   template: `
     <div class="border-gray-400 bg-white border rounded-md overflow-hidden w-28 h-full flex items-center relative">
-      @if (value !== undefined) {
+      @let _value = value();
+      @if (_value !== undefined) {
         <div class="bg-sky-600 saturate-50 h-full overflow-visible flex items-center"
-             [style.width.%]="value * 100">
+             [style.width.%]="_value * 100">
         </div>
       }
-      @if (value === undefined) {
+      @if (_value === undefined) {
         <div class="bg-sky-600 saturate-50 h-full rounded-md w-1/3 relative animate-ping-pong-x"
         ></div>
       }
-      @if (value !== undefined) {
+      @if (_value !== undefined) {
         <span class="absolute text-xs mx-1 font-semibold"
-              [class.left-0]="value >= .5" [class.right-0]="value < .5"
-              [class.text-white]="value >= .5" [class.text-black]="value < .5"
-        >{{ value * 100 | number:'1.1-1' }} %</span>
+              [class.left-0]="_value >= .5" [class.right-0]="_value < .5"
+              [class.text-white]="_value >= .5" [class.text-black]="_value < .5"
+        >{{ _value * 100 | number:'1.1-1' }} %</span>
       }
     </div>
   `
 })
 export class RunLogLineProgressComponent {
-  @Input() value?: number;
+  readonly value = input<number>();
 }

@@ -7,8 +7,8 @@ import {
   computed,
   EventEmitter,
   inject,
-  Input,
-  Output
+  Output,
+  input
 } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { RunLogLine } from '../../../api';
@@ -30,30 +30,30 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
     DatePipe
   ],
   template: `
-    <div [class.bg-slate-50]="rowIndex % 2 === 0"
-         [class.bg-slate-100]="rowIndex % 2 === 1"
-         [class.!bg-yellow-100]="runLogLine?.forced && !runLogLine?.cancelled && !runLogLine?.failed"
-         [class.!bg-red-200]="runLogLine?.cancelled && !runLogLine?.failed"
-         [class.!bg-red-600]="runLogLine?.failed"
+    <div [class.bg-slate-50]="rowIndex() % 2 === 0"
+         [class.bg-slate-100]="rowIndex() % 2 === 1"
+         [class.!bg-yellow-100]="runLogLine()?.forced && !runLogLine()?.cancelled && !runLogLine()?.failed"
+         [class.!bg-red-200]="runLogLine()?.cancelled && !runLogLine()?.failed"
+         [class.!bg-red-600]="runLogLine()?.failed"
          class="border-b-2 border-white cursor-pointer"
          (click)="toggleCollapse(expanded())">
-      <div class="grid gap-2 px-3 py-2" [style.grid]="gridFormat">
-        <p>{{ runLogLine?.start ?? '' | date }}</p>
-        @if (runLogLine?.end !== undefined) {
-          <p>{{ runLogLine?.end ?? '' | date }}</p>
+      <div class="grid gap-2 px-3 py-2" [style.grid]="gridFormat()">
+        <p>{{ runLogLine()?.start ?? '' | date }}</p>
+        @if (runLogLine()?.end !== undefined) {
+          <p>{{ runLogLine()?.end ?? '' | date }}</p>
         }
-        @if (runLogLine?.end === undefined) {
-          <app-run-log-line-progress [value]="runLogLine?.progress" class="py-0.5"
+        @if (runLogLine()?.end === undefined) {
+          <app-run-log-line-progress [value]="runLogLine()?.progress" class="py-0.5"
           ></app-run-log-line-progress>
         }
-        <p>{{ runLogLine?.command?.command }}</p>
+        <p>{{ runLogLine()?.command?.command }}</p>
         <div class="col-end-6 flex gap-2">
-          @if (runLogLine?.forcible) {
-            <app-run-log-line-force-button [lineId]="runLogLine?.id"
+          @if (runLogLine()?.forcible) {
+            <app-run-log-line-force-button [lineId]="runLogLine()?.id"
                                            (click)="$event.stopPropagation()"></app-run-log-line-force-button>
           }
-          @if (runLogLine?.cancellable) {
-            <app-run-log-line-cancel-button [lineId]="runLogLine?.id"
+          @if (runLogLine()?.cancellable) {
+            <app-run-log-line-cancel-button [lineId]="runLogLine()?.id"
                                             (click)="$event.stopPropagation()"></app-run-log-line-cancel-button>
           }
         </div>
@@ -63,18 +63,18 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
            [class.transition-[height]]="initialHeightAchieved"
            class="w-full overflow-hidden">
         <div #additionalValues>
-          @if (!runLogLine?.start_values?.length && !runLogLine?.end_values?.length) {
+          @if (!runLogLine()?.start_values?.length && !runLogLine()?.end_values?.length) {
             <p class="text-end p-2">
               No additional values available.
             </p>
           }
-          @if (runLogLine?.start_values?.length) {
+          @if (runLogLine()?.start_values?.length) {
             <app-run-log-additional-values [type]="AdditionalValueType.Start"
-                                           [values]="runLogLine?.start_values"></app-run-log-additional-values>
+                                           [values]="runLogLine()?.start_values"></app-run-log-additional-values>
           }
-          @if (runLogLine?.end_values?.length) {
+          @if (runLogLine()?.end_values?.length) {
             <app-run-log-additional-values [type]="AdditionalValueType.End"
-                                           [values]="runLogLine?.end_values"></app-run-log-additional-values>
+                                           [values]="runLogLine()?.end_values"></app-run-log-additional-values>
           }
         </div>
       </div>
@@ -82,9 +82,9 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
   `
 })
 export class RunLogLineComponent implements AfterViewInit {
-  @Input() runLogLine?: RunLogLine;
-  @Input() rowIndex = 0;
-  @Input() gridFormat? = 'auto / 1fr 1fr 1fr';
+  readonly runLogLine = input<RunLogLine>();
+  readonly rowIndex = input(0);
+  readonly gridFormat = input<string | undefined>('auto / 1fr 1fr 1fr');
   @Output() collapseToggled = new EventEmitter<boolean>();
   protected readonly AdditionalValueType = AdditionalValueType;
   protected additionalValuesElementHasHeight = false;
@@ -92,7 +92,7 @@ export class RunLogLineComponent implements AfterViewInit {
   private store = inject(Store);
   protected readonly expanded = computed(() => {
     const lineIds = this.store.selectSignal(RunLogSelectors.expandedLines);
-    return lineIds().some(lineId => lineId === this.runLogLine?.id);
+    return lineIds().some(lineId => lineId === this.runLogLine()?.id);
   });
   private cd = inject(ChangeDetectorRef);
 
@@ -108,9 +108,10 @@ export class RunLogLineComponent implements AfterViewInit {
   }
 
   protected toggleCollapse(expanded: boolean) {
-    if(this.runLogLine === undefined) return;
+    const runLogLine = this.runLogLine();
+    if(runLogLine === undefined) return;
     this.store.dispatch(expanded
-                        ? RunLogActions.collapseLine({id: this.runLogLine.id})
-                        : RunLogActions.expandLine({id: this.runLogLine.id}));
+                        ? RunLogActions.collapseLine({id: runLogLine.id})
+                        : RunLogActions.expandLine({id: runLogLine.id}));
   }
 }

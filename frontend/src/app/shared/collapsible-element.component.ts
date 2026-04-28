@@ -1,5 +1,16 @@
 import { NgClass } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, inject, Input, OnInit, Output, ViewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  EventEmitter,
+  inject,
+  input,
+  linkedSignal,
+  OnInit,
+  Output,
+  ViewChild
+} from '@angular/core';
 import { CollapsibleElementStorageService } from './collapsible-element-storage.service';
 
 @Component({
@@ -12,12 +23,12 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
         [class.pb-0]="collapsed">
       <div class="flex items-center flex-wrap py-1 px-2 gap-3 cursor-pointer select-none" (click)="toggleCollapsed()">
         <div class="flex flex-1 items-center mr-1 !text-slate-900 tracking-wide">
-          @if (codiconName !== undefined) {
-            <span class="codicon !text-2xl mr-2.5" [ngClass]="codiconName"
-                  [style.margin-bottom.px]="codiconName === 'codicon-graph-line' ? -1 : codiconName === 'codicon-dashboard' ? -1 : null"
+          @if (codiconName() !== undefined) {
+            <span class="codicon !text-2xl mr-2.5" [ngClass]="codiconName()"
+                  [style.margin-bottom.px]="codiconName() === 'codicon-graph-line' ? -1 : codiconName() === 'codicon-dashboard' ? -1 : null"
                   [style.--vscode-symbolIcon-keywordForeground]="'initial'"></span>
           }
-          <span class="text-lg">{{ name }}</span>
+          <span class="text-lg">{{ name() }}</span>
         </div>
         @if (!collapsed) {
           <div class="flex gap-4 items-center mr-10" (click)="$event.stopPropagation()">
@@ -30,14 +41,14 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
              (click)="$event.stopPropagation(); toggleCollapsed()"></div>
       </div>
       <div class="bg-white lg:rounded-sm mt-1 h-full outline-1 outline-gray-300" [class.transition-[height]]="!isDragging" #content
-           [class.overflow-hidden]="!contentOverflow" [class.outline]="!collapsed"
+           [class.overflow-hidden]="!contentOverflow()" [class.outline]="!collapsed"
            [style.height.px]="height" (transitionend)="onTransitionEndContentContainer($event)">
         <ng-content select="[content]"></ng-content>
       </div>
       <div class="absolute bottom-0 left-0 w-full h-1.5" [class.-mb-8]="widenDragHandler"
            [style.height.rem]="widenDragHandler ? 4 : null"
-           [class.cursor-ns-resize]="heightResizable"
-           [draggable]="heightResizable"
+           [class.cursor-ns-resize]="heightResizable()"
+           [draggable]="heightResizable()"
            (dragstart)="onDragStartHandle($event)" (dragend)="onDragEndHandle()"
            (mousedown)="onMouseDownHandle()" (mouseup)="onMouseUpHandle()"
            (drag)="onDragHandle($event)" (dragover)="allowDragOver($event)"></div>
@@ -49,14 +60,15 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
   `,
 })
 export class CollapsibleElementComponent implements OnInit {
-  @Input() name?: string;
-  @Input() heightResizable = false;
-  @Input() contentHeight = 0;
-  @Input() contentOverflow = false;
-  @Input() codiconName?: string;
+  readonly name = input<string>();
+  readonly heightResizable = input(false);
+  readonly initialContentHeight = input(0);
+  readonly contentOverflow = input(false);
+  readonly codiconName = input<string>();
   @Output() contentHeightChanged = new EventEmitter<number>();
   @Output() collapseStateChanged = new EventEmitter<boolean>();
   @ViewChild('content') contentElementRef?: ElementRef<HTMLDivElement>;
+  protected contentHeight = linkedSignal(() => this.initialContentHeight());
   protected collapsed = false;
   protected widenDragHandler = false;
   protected isDragging = false;
@@ -65,12 +77,12 @@ export class CollapsibleElementComponent implements OnInit {
 
   protected get height() {
     if(this.collapsed) return 0;
-    return this.heightResizable ? this.contentHeight : undefined;
+    return this.heightResizable() ? this.contentHeight() : undefined;
   }
 
   private set height(height: number | undefined) {
     if(height === undefined) return;
-    this.contentHeight = height;
+    this.contentHeight.set(height);
     this.contentHeightChanged.emit(this.height);
   }
 
@@ -84,7 +96,7 @@ export class CollapsibleElementComponent implements OnInit {
   }
 
   protected onDragHandle(event: DragEvent) {
-    if(!this.heightResizable) return;
+    if(!this.heightResizable()) return;
     const element = event.target as HTMLDivElement;
     const parentElement = element.parentElement as HTMLDivElement;
     const top = parentElement.offsetTop;
@@ -105,7 +117,7 @@ export class CollapsibleElementComponent implements OnInit {
   protected onDragEndHandle() {
     this.isDragging = false;
     this.widenDragHandler = false;
-    this.collapsibleElementStorageService.saveHeight(this.name, this.contentHeight);
+    this.collapsibleElementStorageService.saveHeight(this.name(), this.contentHeight());
   }
 
   protected onMouseDownHandle() {
@@ -118,7 +130,7 @@ export class CollapsibleElementComponent implements OnInit {
 
   protected toggleCollapsed() {
     this.collapsed = !this.collapsed;
-    this.collapsibleElementStorageService.saveCollapsedState(this.name, this.collapsed);
+    this.collapsibleElementStorageService.saveCollapsedState(this.name(), this.collapsed);
     this.collapseStateChanged.emit(this.collapsed);
   }
 
@@ -127,15 +139,17 @@ export class CollapsibleElementComponent implements OnInit {
   }
 
   private getHeightFromStorage() {
-    if(this.name === undefined) throw Error('Name of CollapsibleElementComponent should be defined');
-    const height = this.collapsibleElementStorageService.getHeight(this.name);
+    const name = this.name();
+    if(name === undefined) throw Error('Name of CollapsibleElementComponent should be defined');
+    const height = this.collapsibleElementStorageService.getHeight(name);
     if(height === null) return;
     this.height = height;
   }
 
   private getCollapsedStateFromStorage() {
-    if(this.name === undefined) throw Error('Name of CollapsibleElementComponent should be defined');
-    const collapsed = this.collapsibleElementStorageService.getCollapsedState(this.name);
+    const name = this.name();
+    if(name === undefined) throw Error('Name of CollapsibleElementComponent should be defined');
+    const collapsed = this.collapsibleElementStorageService.getCollapsedState(name);
     if(collapsed === null) return;
     this.collapsed = collapsed;
     setTimeout(() => this.collapseStateChanged.emit(this.collapsed));

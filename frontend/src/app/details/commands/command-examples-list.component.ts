@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Output, input } from '@angular/core';
 import { CommandExample } from '../../api';
 
 @Component({
@@ -10,14 +10,14 @@ import { CommandExample } from '../../api';
   ],
   template: `
     <div class="flex flex-col gap-1 overflow-y-auto h-full pl-1.5 py-1.5" [style.scrollbar-width]="'none'">
-      @if (commandExamples?.length === 0) {
+      @if (commandExamples()?.length === 0) {
         <div class="m-auto">No examples available</div>
       }
-      @for (commandExample of commandExamples; track $index) {
+      @for (commandExample of commandExamples(); track $index) {
         <button class="rounded-l-lg p-2 bg-sky-50 select-none border border-r-0 border-gray-400"
-                [class.text-gray-700]="commandExample !== chosenExample"
-                [class.!bg-white]="commandExample === chosenExample"
-                [class.z-10]="commandExample === chosenExample"
+                [class.text-gray-700]="commandExample !== chosenExample()"
+                [class.!bg-white]="commandExample === chosenExample()"
+                [class.z-10]="commandExample === chosenExample()"
                 (click)="exampleChosen.emit(commandExample)">
           {{ commandExample.name }}
         </button>
@@ -27,7 +27,7 @@ import { CommandExample } from '../../api';
   `,
 })
 export class CommandExamplesListComponent {
-  @Input() commandExamples?: CommandExample[];
-  @Input() chosenExample?: CommandExample;
+  readonly commandExamples = input<CommandExample[]>();
+  readonly chosenExample = input<CommandExample>();
   @Output() exampleChosen = new EventEmitter<CommandExample>();
 }

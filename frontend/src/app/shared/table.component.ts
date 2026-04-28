@@ -29,7 +29,7 @@ export interface DefaultTableSort<T> {
       <table class="w-full table-fixed border-collapse">
         <thead>
         <tr class="bg-slate-600 text-white cursor-pointer select-none">
-          @for (column of columns; track column) {
+          @for (column of columns(); track column) {
             <th class="px-3 py-2" (click)="setSortByColumn(column)">
               <span>{{ column.header }}</span>
               @if (sortColumn === column) {
@@ -47,7 +47,7 @@ export interface DefaultTableSort<T> {
         <tbody class="cursor-pointer">
           @for (row of data; track extractId()(row)) {
             <tr class="border-y last-of-type:border-none border-gray-300" (click)="rowClicked.emit(row)">
-              @for (column of columns; track column) {
+              @for (column of columns(); track column) {
                 <td class="text-center px-3 py-2">
                   {{ format(row[column.key], column) }}
                 </td>
@@ -60,8 +60,8 @@ export interface DefaultTableSort<T> {
   `,
 })
 export class TableComponent<T> {
-  @Input() columns?: TableColumn<T>[];
-  @Input() filter?: string;
+  readonly columns = input<TableColumn<T>[]>();
+  readonly filter = input<string>();
   extractId = input.required<(x: T) => string>();
   @Output() rowClicked = new EventEmitter<T>();
   protected sortDir = TableSortDirection.Ascending;
@@ -71,7 +71,7 @@ export class TableComponent<T> {
   private cd = inject(ChangeDetectorRef);
 
   @Input() set defaultSort(defaultSort: DefaultTableSort<T>) {
-    this.sortColumn = this.columns?.find((column => column.key === defaultSort.columnKey));
+    this.sortColumn = this.columns()?.find((column => column.key === defaultSort.columnKey));
     this.sortDir = defaultSort.direction;
   }
 
@@ -79,7 +79,8 @@ export class TableComponent<T> {
 
   get data(): T[] | undefined {
     let data = this._data;
-    if(this.filter !== undefined) data = this.filterData(data, this.filter);
+    const filter = this.filter();
+    if(filter !== undefined) data = this.filterData(data, filter);
     if(this.sortColumn !== undefined) data = this.sortData(data, this.sortColumn);
     this.cd.markForCheck();
     return data;
@@ -160,7 +161,7 @@ export class TableComponent<T> {
 
   private filterData(data: T[] | undefined, filter: string) {
     return data?.filter(row => {
-      return this.columns?.some(column => {
+      return this.columns()?.some(column => {
         const value = row[column.key];
         let stringValue = '';
         if(column.isDate) {

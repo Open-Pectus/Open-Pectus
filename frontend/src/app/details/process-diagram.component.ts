@@ -14,7 +14,7 @@ import { DetailsSelectors } from './ngrx/details.selectors';
     ':host ::ng-deep svg { height: 100%; width: 100% }',
   ],
   template: `
-    <app-collapsible-element [name]="'Process Diagram'" [heightResizable]="true" [contentHeight]="400"
+    <app-collapsible-element [name]="'Process Diagram'" [heightResizable]="true" [initialContentHeight]="400"
                              (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-circuit-board'">
       @if (!collapsed) {
         <div class="flex justify-center h-full" content>

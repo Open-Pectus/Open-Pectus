@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
 import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
@@ -11,7 +11,7 @@ import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
       <div class="fixed left-0 top-0 right-0 bottom-0" (click)="onClose()">&nbsp;</div>
       <div
           class="bg-white p-2.5 rounded-md border-2 border-gray-400 flex flex-col absolute gap-2.5 shadow-md shadow-gray-400 -translate-y-full"
-          [style.margin]="margin"
+          [style.margin]="margin()"
           [style.left.px]="data()?.position?.x"
           [style.top.px]="data()?.position?.y"
           (keyup.enter)="saveButton.click()"
@@ -32,7 +32,7 @@ import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
   `
 })
 export class XAxisOverrideDialogComponent {
-  @Input() margin?: string;
+  readonly margin = input<string>();
   private store = inject(Store);
   protected data = this.store.selectSignal(ProcessPlotSelectors.xAxisOverrideDialogData);
   protected options = this.store.selectSignal(ProcessPlotSelectors.xAxisProcessValueCandidates);

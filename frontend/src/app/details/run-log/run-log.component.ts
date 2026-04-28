@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, Input, OnDestroy, OnInit, QueryList, ViewChildren } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, OnDestroy, OnInit, QueryList, ViewChildren } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { RunLogActions } from './ngrx/run-log.actions';
@@ -17,9 +17,10 @@ import { RunLogLineComponent } from './run-log-line/run-log-line.component';
     RunLogLineComponent,
   ],
   template: `
-    <app-collapsible-element [name]="'Run Log'" [heightResizable]="true" [contentHeight]="400" (collapseStateChanged)="collapsed = $event"
+    <app-collapsible-element [name]="'Run Log'" [heightResizable]="true" [initialContentHeight]="400"
+                             (collapseStateChanged)="collapsed = $event"
                              [codiconName]="'codicon-tasklist'">
-      <app-run-log-filters buttons [showRunningFilter]="unitId !== undefined"></app-run-log-filters>
+      <app-run-log-filters buttons [showRunningFilter]="unitId() !== undefined"></app-run-log-filters>
       @if (!collapsed) {
         <div content class="h-full overflow-auto">
           <div class="min-w-fit">
@@ -41,8 +42,8 @@ import { RunLogLineComponent } from './run-log-line/run-log-line.component';
   `
 })
 export class RunLogComponent implements OnInit, OnDestroy {
-  @Input() unitId?: string;
-  @Input() recentRunId?: string;
+  readonly unitId = input<string>();
+  readonly recentRunId = input<string>();
   @ViewChildren(RunLogLineComponent) runLogLines?: QueryList<RunLogLineComponent>;
   protected collapsed = false;
   protected readonly gridFormat = 'auto / 15ch 15ch 1fr auto auto';
@@ -50,9 +51,11 @@ export class RunLogComponent implements OnInit, OnDestroy {
   protected runLog = this.store.selectSignal(RunLogSelectors.runLog);
 
   ngOnInit() {
-    if(this.unitId !== undefined) this.store.dispatch(RunLogActions.runLogComponentInitializedForUnit({unitId: this.unitId}));
-    if(this.recentRunId !== undefined) {
-      this.store.dispatch(RunLogActions.runLogComponentInitializedForRecentRun({recentRunId: this.recentRunId}));
+    const unitId = this.unitId();
+    if(unitId !== undefined) this.store.dispatch(RunLogActions.runLogComponentInitializedForUnit({unitId: unitId}));
+    const recentRunId = this.recentRunId();
+    if(recentRunId !== undefined) {
+      this.store.dispatch(RunLogActions.runLogComponentInitializedForRecentRun({recentRunId: recentRunId}));
     }
   }
 

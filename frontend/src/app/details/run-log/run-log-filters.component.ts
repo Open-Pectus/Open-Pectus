@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { ToggleButtonComponent } from '../../shared/toggle-button.component';
 import { RunLogActions } from './ngrx/run-log.actions';
@@ -23,7 +23,7 @@ import { RunLogActions } from './ngrx/run-log.actions';
   `
 })
 export class RunLogFiltersComponent {
-  @Input() showRunningFilter = true;
+  readonly showRunningFilter = input(true);
   private store = inject(Store);
 
   filterTextChanged(filterText: string) {

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, Input, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, OnDestroy, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
@@ -13,7 +13,7 @@ import { ProcessPlotComponent } from './process-plot.component';
     ProcessPlotComponent
   ],
   template: `
-    <app-collapsible-element [name]="'Process Plot'" [heightResizable]="true" [contentHeight]="670" [contentOverflow]="true"
+    <app-collapsible-element [name]="'Process Plot'" [heightResizable]="true" [initialContentHeight]="670" [contentOverflow]="true"
                              (collapseStateChanged)="isCollapsed = $event" [codiconName]="'codicon-graph-line'">
       @if (isZoomed()) {
         <button buttons (click)="onResetZoom()"
@@ -34,17 +34,19 @@ import { ProcessPlotComponent } from './process-plot.component';
   `
 })
 export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
-  @Input() unitId?: string;
-  @Input() recentRunId?: string;
+  readonly unitId = input<string>();
+  readonly recentRunId = input<string>();
   protected isCollapsed = false;
   private store = inject(Store);
   protected isZoomed = this.store.selectSignal(ProcessPlotSelectors.anySubplotZoomed);
   protected axesAreOverridden = this.store.selectSignal(ProcessPlotSelectors.axesAreOverridden);
 
   ngOnInit() {
-    if(this.unitId !== undefined) this.store.dispatch(ProcessPlotActions.processPlotComponentInitializedForUnit({unitId: this.unitId}));
-    if(this.recentRunId !== undefined) {
-      this.store.dispatch(ProcessPlotActions.processPlotComponentInitializedForRecentRun({recentRunId: this.recentRunId}));
+    const unitId = this.unitId();
+    if(unitId !== undefined) this.store.dispatch(ProcessPlotActions.processPlotComponentInitializedForUnit({unitId: unitId}));
+    const recentRunId = this.recentRunId();
+    if(recentRunId !== undefined) {
+      this.store.dispatch(ProcessPlotActions.processPlotComponentInitializedForRecentRun({recentRunId: recentRunId}));
     }
   }
 

@@ -1,10 +1,10 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Output, input } from '@angular/core';
 
 @Component({
   selector: 'app-run-log-header',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="grid bg-slate-100 text-gray-900 items-center gap-2 px-3 py-2" [style.grid]="gridFormat">
+    <div class="grid bg-slate-100 text-gray-900 items-center gap-2 px-3 py-2" [style.grid]="gridFormat()">
       <b>Start</b>
       <b>End</b>
       <b>Command</b>
@@ -20,7 +20,7 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from 
   `,
 })
 export class RunLogHeaderComponent {
-  @Input() gridFormat = '';
+  readonly gridFormat = input('');
   @Output() expandAll = new EventEmitter<void>();
   @Output() collapseAll = new EventEmitter<void>();
 }

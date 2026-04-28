@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { Subject } from 'rxjs';
 import { CommandExample } from '../../api';
@@ -13,7 +13,8 @@ import { CommandExamplesListComponent } from './command-examples-list.component'
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CollapsibleElementComponent, CommandExamplesListComponent, MonacoEditorComponent],
   template: `
-    <app-collapsible-element [name]="'Commands'" [heightResizable]="true" [contentHeight]="400" (collapseStateChanged)="collapsed = $event"
+    <app-collapsible-element [name]="'Commands'" [heightResizable]="true" [initialContentHeight]="400"
+                             (collapseStateChanged)="collapsed = $event"
                              [codiconName]="'codicon-terminal'" (contentHeightChanged)="onContentHeightChanged()">
       @if (!collapsed) {
         <div content class="grid grid-cols-[14rem_minmax(0,1fr)_1px_minmax(0,1fr)] grid-rows-[100%] h-full">
@@ -41,16 +42,15 @@ import { CommandExamplesListComponent } from './command-examples-list.component'
   `,
 })
 export class CommandsComponent implements OnInit {
-  private store = inject(Store);
-
   protected exampleEditorOptions = {readOnly: true, readOnlyMessage: {value: 'You cannot edit an example'}};
   protected collapsed = false;
   protected readonly fileUriPrefix = 'commands_editor';
-  protected commandExamples = this.store.selectSignal(DetailsSelectors.commandExamples);
-  protected unitId = this.store.selectSignal(DetailsSelectors.processUnitId);
   protected chosenExample?: CommandExample;
   protected editorSizeChange = new Subject<void>();
   protected commandToExecute = '';
+  private store = inject(Store);
+  protected commandExamples = this.store.selectSignal(DetailsSelectors.commandExamples);
+  protected unitId = this.store.selectSignal(DetailsSelectors.processUnitId);
 
   get chosenExampleContent() {
     return this.chosenExample?.example; // doing this in getter instead of template, because ?. in template can apparently return null.
