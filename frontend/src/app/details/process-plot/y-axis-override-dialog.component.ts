@@ -1,5 +1,5 @@
 import { AsyncPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ElementRef, Input, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, Input, ViewChild, inject } from '@angular/core';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { map, Observable, tap } from 'rxjs';
@@ -41,6 +41,8 @@ import { AxisLimits } from './process-plot.types';
   `
 })
 export class YAxisOverrideDialogComponent {
+  private store = inject(Store);
+
   @Input() margin?: string;
   @ViewChild('max') maxInput?: ElementRef<HTMLInputElement>;
   protected data$ = this.store.select(ProcessPlotSelectors.yAxisOverrideDialogData);
@@ -66,8 +68,6 @@ export class YAxisOverrideDialogComponent {
       if(axisConfiguration !== undefined) setTimeout(() => this.maxInput?.nativeElement.select());
     }),
   );
-
-  constructor(private store: Store) {}
 
   onClose() {
     this.store.dispatch(ProcessPlotActions.yOverrideDialogClosed());

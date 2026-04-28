@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
 import { pairwise } from 'rxjs';
@@ -58,11 +58,13 @@ import { VariableRowSpanDirective } from './variable-row-span.directive';
   `,
 })
 export class UnitDetailsComponent implements OnInit, OnDestroy {
+  private store = inject(Store);
+
   public readonly methodIsDirty = this.store.selectSignal(MethodEditorSelectors.isDirty);
   protected readonly unitId = this.store.selectSignal(DetailsSelectors.processUnitId);
   protected readonly processUnit = this.store.selectSignal(DetailsSelectors.processUnit);
 
-  constructor(private store: Store) {
+  constructor() {
     this.store.select(DetailsSelectors.processUnitId).pipe(pairwise(), takeUntilDestroyed()).subscribe(([oldUnitId, newUnitId]) => {
       this.store.dispatch(DetailsActions.processUnitNavigatedFrom({oldUnitId, newUnitId}));
     });

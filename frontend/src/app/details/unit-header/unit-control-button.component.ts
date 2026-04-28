@@ -1,5 +1,5 @@
 import { NgClass, TitleCasePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, input, Input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, Input, signal, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { DetailsActions } from '../ngrx/details.actions';
 import { UnitControlCommands } from '../unit-control-commands.';
@@ -29,6 +29,8 @@ import { UnitControlCommands } from '../unit-control-commands.';
   `
 })
 export class UnitControlButtonComponent {
+  private store = inject(Store);
+
   @Input() command?: UnitControlCommands;
   @Input() unCommand?: UnitControlCommands;
   @Input() iconName?: string;
@@ -41,8 +43,6 @@ export class UnitControlButtonComponent {
   showLock = computed(() => this.hasLock() && this.isLocked() && !this.toggled() && !this.optimisticClicked());
   showPressed = computed(() => (this.toggled() && !this.optimisticClicked()) || (!this.toggled() && this.optimisticClicked()));
   color = computed(() => this.toggled() ? this.toggledColor : '#0369a1');
-
-  constructor(private store: Store) {}
 
   executeCommand() {
     if(this.optimisticClicked()) return;

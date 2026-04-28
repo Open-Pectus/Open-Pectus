@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { MswEnablementComponent } from './msw-enablement.component';
@@ -31,14 +31,14 @@ import { NotificationPreferencesComponent } from './notification-preferences.com
   `,
 })
 export class TopBarComponent {
+  private store = inject(Store);
+  private router = inject(Router);
+
   buildInfo = this.store.selectSignal(AppSelectors.buildInfo);
   formattedBuildInfo = computed(() => `#${this.buildInfo()?.build_number}-${this.buildInfo()?.git_sha?.substring(0, 7)}`);
   isDev = computed(() => this.buildInfo()?.build_number?.endsWith('dev'));
   userData = this.store.selectSignal(AppSelectors.userData);
   userPicture = this.store.selectSignal(AppSelectors.userPicture);
-
-  constructor(private store: Store,
-              private router: Router) {}
 
   navigateToRoot() {
     this.router.navigate(['/']).then();

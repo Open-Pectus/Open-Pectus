@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostBinding, OnDestroy, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostBinding, OnDestroy, ViewChild, inject } from '@angular/core';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { axisBottom, ScaleLinear, scaleLinear, select } from 'd3';
@@ -31,6 +31,9 @@ import { YAxisOverrideDialogComponent } from './y-axis-override-dialog.component
   `
 })
 export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
+  private store = inject(Store);
+  private processValuePipe = inject(ProcessValuePipe);
+
   @ViewChild('plot', {static: false}) plotElement?: ElementRef<SVGSVGElement>;
   @HostBinding('style.padding') readonly padding = '1rem .5rem';
   private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(
@@ -53,9 +56,6 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
   private tooltip?: ProcessPlotTooltip;
   private zoomAndPan?: ProcessPlotZoomAndPan;
   private axesOverrides?: ProcessPlotAxesOverrides;
-
-  constructor(private store: Store,
-              private processValuePipe: ProcessValuePipe) {}
 
   ngOnDestroy() {
     this.componentDestroyed.next();

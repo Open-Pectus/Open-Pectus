@@ -1,5 +1,5 @@
 import { TitleCasePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { AppSelectors } from '../../ngrx/app.selectors';
 import { DetailsSelectors } from '../ngrx/details.selectors';
@@ -43,9 +43,9 @@ import { UnitControlsComponent } from './unit-controls.component';
   `,
 })
 export class UnitHeaderComponent {
+  private store = inject(Store);
+
   protected processUnit = this.store.selectSignal(DetailsSelectors.processUnit);
   protected webSocketIsDisconnected = this.store.selectSignal(AppSelectors.webSocketIsDisconnected);
   protected otherActiveUsers = this.store.selectSignal(DetailsSelectors.otherActiveUsers);
-
-  constructor(private store: Store) {}
 }

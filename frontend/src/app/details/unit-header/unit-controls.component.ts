@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { DetailsSelectors } from '../ngrx/details.selectors';
 import { UnitControlButtonComponent } from './unit-control-button.component';
@@ -29,12 +29,12 @@ import { UnitControlCommands } from '../unit-control-commands.';
   `
 })
 export class UnitControlsComponent {
+  private store = inject(Store);
+
   readonly startColor = '#047857';
   readonly pauseColor = '#ca8a04';
   readonly stopColor = '#b91c1c';
   protected readonly UnitControlCommands = UnitControlCommands;
   protected controlState = this.store.selectSignal(DetailsSelectors.controlState);
   protected optimisticClickedButtons = this.store.selectSignal(DetailsSelectors.optimisticClickedControlButtons);
-
-  constructor(private store: Store) {}
 }

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { DashboardActions } from './ngrx/dashboard.actions';
 import { DashboardProcessUnitsComponent } from './process-units/dashboard-process-units.component';
@@ -24,7 +24,8 @@ import { RecentRunsComponent } from './recent-runs/recent-runs.component';
   `
 })
 export class DashboardComponent {
-  constructor(private store: Store) {}
+  private store = inject(Store);
+
 
   filterChange(filter: string) {
     this.store.dispatch(DashboardActions.recentRunsFilterChanged({filter}));

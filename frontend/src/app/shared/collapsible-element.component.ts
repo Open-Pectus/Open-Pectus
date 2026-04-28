@@ -1,5 +1,5 @@
 import { NgClass, NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, inject } from '@angular/core';
 import { CollapsibleElementStorageService } from './collapsible-element-storage.service';
 
 @Component({
@@ -45,6 +45,8 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
   `,
 })
 export class CollapsibleElementComponent implements OnInit {
+  private collapsibleElementStorageService = inject(CollapsibleElementStorageService);
+
   @Input() name?: string;
   @Input() heightResizable = false;
   @Input() contentHeight = 0;
@@ -57,8 +59,6 @@ export class CollapsibleElementComponent implements OnInit {
   protected widenDragHandler = false;
   protected isDragging = false;
   private minHeight = 200;
-
-  constructor(private collapsibleElementStorageService: CollapsibleElementStorageService) {}
 
   protected get height() {
     if(this.collapsed) return 0;

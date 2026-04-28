@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { RecentRun } from '../api';
 import { DetailsActions } from './ngrx/details.actions';
@@ -35,9 +35,9 @@ import { DetailsSelectors } from './ngrx/details.selectors';
   `,
 })
 export class RecentRunHeaderComponent {
-  protected recentRun = this.store.selectSignal(DetailsSelectors.recentRun);
+  private store = inject(Store);
 
-  constructor(private store: Store) {}
+  protected recentRun = this.store.selectSignal(DetailsSelectors.recentRun);
 
   downloadCsv(recentRunId?: string) {
     if(recentRunId === undefined) return;

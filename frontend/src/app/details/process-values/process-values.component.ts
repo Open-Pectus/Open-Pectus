@@ -1,5 +1,5 @@
 import { NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { ProcessValueCommand } from '../../api';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
@@ -41,13 +41,13 @@ import { ProcessValuesCategorizedComponent } from './process-values-categorized.
   `,
 })
 export class ProcessValuesComponent implements OnInit, OnDestroy {
+  private store = inject(Store);
+
   allProcessValues = this.store.selectSignal(DetailsSelectors.allProcessValues);
   processValues = this.store.selectSignal(DetailsSelectors.processValues);
   protected showCommands = false;
   protected pvAndPositionForPopover?: PvAndPosition;
   protected collapsed = false;
-
-  constructor(private store: Store) {}
 
   ngOnInit() {
     this.store.dispatch(ProcessValuesActions.processValuesComponentInitialized());

@@ -1,5 +1,5 @@
 import { NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { ToggleButtonComponent } from '../../shared/toggle-button.component';
 import { RunLogActions } from './ngrx/run-log.actions';
@@ -22,9 +22,9 @@ import { RunLogActions } from './ngrx/run-log.actions';
   `
 })
 export class RunLogFiltersComponent {
-  @Input() showRunningFilter = true;
+  private store = inject(Store);
 
-  constructor(private store: Store) {}
+  @Input() showRunningFilter = true;
 
   filterTextChanged(filterText: string) {
     this.store.dispatch(RunLogActions.filterTextChanged({filterText}));

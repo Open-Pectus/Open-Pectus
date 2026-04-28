@@ -1,5 +1,5 @@
 import { NgClass } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output, inject } from '@angular/core';
 
 @Component({
     selector: 'app-run-log-line-button',
@@ -17,14 +17,14 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, In
   `
 })
 export class RunLogLineButtonComponent {
+  private cd = inject(ChangeDetectorRef);
+
   @Input() codiconClass?: string;
   @Input() colorClass?: string;
   @Input() confirmColorClass?: string;
   @Input() buttonText?: string;
   @Output() confirmedClick = new EventEmitter<void>();
   protected isConfirming = false;
-
-  constructor(private cd: ChangeDetectorRef) {}
 
   onClick() {
     if(this.isConfirming) this.confirmedClick.emit();

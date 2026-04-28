@@ -1,5 +1,5 @@
 import { DatePipe, NgFor, NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { compareAsc, compareDesc } from 'date-fns';
 
 export interface TableColumn<T, E extends keyof T = keyof T> {
@@ -50,14 +50,15 @@ export interface DefaultTableSort<T> {
   `,
 })
 export class TableComponent<T> {
+  private datePipe = inject(DatePipe);
+  private cd = inject(ChangeDetectorRef);
+
   @Input() columns?: TableColumn<T>[];
   @Input() filter?: string;
   @Output() rowClicked = new EventEmitter<T>();
   protected sortDir = TableSortDirection.Ascending;
   protected sortColumn?: TableColumn<T>;
   protected readonly TableSortDirection = TableSortDirection;
-
-  constructor(private datePipe: DatePipe, private cd: ChangeDetectorRef) {}
 
   @Input() set defaultSort(defaultSort: DefaultTableSort<T>) {
     this.sortColumn = this.columns?.find((column => column.key === defaultSort.columnKey));

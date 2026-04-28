@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, Input, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, Input, OnDestroy, OnInit, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { Defaults } from '../../defaults';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
@@ -41,6 +41,8 @@ import { ErrorLogSelectors } from './ngrx/error-log.selectors';
   `
 })
 export class ErrorLogComponent implements OnInit, OnDestroy {
+  private store = inject(Store);
+
   @Input() unitId?: string;
   @Input() recentRunId?: string;
   protected readonly dateFormat = Defaults.dateFormat + '.SSS';
@@ -52,8 +54,6 @@ export class ErrorLogComponent implements OnInit, OnDestroy {
     return {...this.errorLog(), entries: sortedEntries};
   });
   protected collapsed = false;
-
-  constructor(private store: Store) {}
 
   ngOnInit() {
     if(this.unitId !== undefined) this.store.dispatch(ErrorLogActions.errorLogComponentInitializedForUnit({unitId: this.unitId}));

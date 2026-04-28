@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, OnDestroy, OnInit, inject } from '@angular/core';
 import { editor as MonacoEditor } from '@codingame/monaco-vscode-editor-api';
 import { Store } from '@ngrx/store';
 import { Subject } from 'rxjs';
@@ -45,6 +45,8 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
   `,
 })
 export class MethodEditorComponent implements OnInit, OnDestroy {
+  private store = inject(Store);
+
   unitId = input<string>();
   recentRunId = input<string>();
 
@@ -59,8 +61,6 @@ export class MethodEditorComponent implements OnInit, OnDestroy {
     return {readOnly: this.recentRunId() !== undefined, readOnlyMessage: {value: 'You cannot edit an already executed program'}};
   });
   private componentDestroyed = new Subject<void>();
-
-  constructor(private store: Store) {}
 
   get dropFileDisabledReason() {
     if(this.recentRunId() !== undefined) return 'Cannot replace an already run program';

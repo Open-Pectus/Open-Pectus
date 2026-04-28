@@ -1,5 +1,5 @@
 import { NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, inject, input, Output } from '@angular/core';
 import { ProcessValue } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 
@@ -42,8 +42,7 @@ export interface PvAndPosition {
 export class ProcessValueComponent {
   processValue = input.required<ProcessValue>();
   @Output() openCommands = new EventEmitter<PvAndPosition>();
-
-  constructor(private element: ElementRef<HTMLDivElement>) {}
+  private element = inject<ElementRef<HTMLDivElement>>(ElementRef);
 
   onClick() {
     if(!this.hasCommands(this.processValue())) return;

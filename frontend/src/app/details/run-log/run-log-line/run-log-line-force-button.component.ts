@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { RunLogActions } from '../ngrx/run-log.actions';
 import { RunLogLineButtonComponent } from './run-log-line-button.component';
@@ -17,9 +17,9 @@ import { RunLogLineButtonComponent } from './run-log-line-button.component';
   `
 })
 export class RunLogLineForceButtonComponent {
-  @Input() lineId?: string;
+  private store = inject(Store);
 
-  constructor(private store: Store) {}
+  @Input() lineId?: string;
 
   onClick() {
     if(this.lineId === undefined) return;

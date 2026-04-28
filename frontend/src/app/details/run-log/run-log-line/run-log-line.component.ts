@@ -1,5 +1,5 @@
 import { DatePipe, NgIf } from '@angular/common';
-import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, EventEmitter, Input, Output } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, EventEmitter, Input, Output, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { RunLogLine } from '../../../api';
 import { RunLogActions } from '../ngrx/run-log.actions';
@@ -59,6 +59,9 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
   `
 })
 export class RunLogLineComponent implements AfterViewInit {
+  private store = inject(Store);
+  private cd = inject(ChangeDetectorRef);
+
   @Input() runLogLine?: RunLogLine;
   @Input() rowIndex = 0;
   @Input() gridFormat? = 'auto / 1fr 1fr 1fr';
@@ -70,8 +73,6 @@ export class RunLogLineComponent implements AfterViewInit {
   });
   protected additionalValuesElementHasHeight = false;
   protected initialHeightAchieved = false;
-
-  constructor(private store: Store, private cd: ChangeDetectorRef) {}
 
   ngAfterViewInit() {
     setTimeout(() => {

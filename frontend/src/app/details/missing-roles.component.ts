@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
 import { DetailsSelectors } from './ngrx/details.selectors';
@@ -19,10 +19,10 @@ import { DetailsSelectors } from './ngrx/details.selectors';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MissingRolesComponent {
-  protected readonly missingRoles = this.store.selectSignal(DetailsSelectors.missingRoles);
+  private store = inject(Store);
+  private oidcService = inject(OidcSecurityService);
 
-  constructor(private store: Store,
-              private oidcService: OidcSecurityService) {}
+  protected readonly missingRoles = this.store.selectSignal(DetailsSelectors.missingRoles);
 
   protected refreshToken() {
     this.oidcService.forceRefreshSession().subscribe(() => window.location.reload());

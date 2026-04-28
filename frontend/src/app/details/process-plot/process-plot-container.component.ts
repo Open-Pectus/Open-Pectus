@@ -1,5 +1,5 @@
 import { NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
 import { ProcessPlotActions } from './ngrx/process-plot.actions';
@@ -30,14 +30,14 @@ import { ProcessPlotComponent } from './process-plot.component';
   `
 })
 export class ProcessPlotContainerComponent implements OnInit, OnDestroy {
+  private store = inject(Store);
+
   @Input() unitId?: string;
   @Input() recentRunId?: string;
 
   protected isCollapsed = false;
   protected isZoomed = this.store.selectSignal(ProcessPlotSelectors.anySubplotZoomed);
   protected axesAreOverridden = this.store.selectSignal(ProcessPlotSelectors.axesAreOverridden);
-
-  constructor(private store: Store) {}
 
   ngOnInit() {
     if(this.unitId !== undefined) this.store.dispatch(ProcessPlotActions.processPlotComponentInitializedForUnit({unitId: this.unitId}));

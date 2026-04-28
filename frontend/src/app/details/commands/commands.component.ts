@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { Subject } from 'rxjs';
 import { CommandExample } from '../../api';
@@ -41,6 +41,8 @@ import { CommandExamplesListComponent } from './command-examples-list.component'
   `,
 })
 export class CommandsComponent implements OnInit {
+  private store = inject(Store);
+
   protected exampleEditorOptions = {readOnly: true, readOnlyMessage: {value: 'You cannot edit an example'}};
   protected collapsed = false;
   protected readonly fileUriPrefix = 'commands_editor';
@@ -49,8 +51,6 @@ export class CommandsComponent implements OnInit {
   protected chosenExample?: CommandExample;
   protected editorSizeChange = new Subject<void>();
   protected commandToExecute = '';
-
-  constructor(private store: Store) {}
 
   get chosenExampleContent() {
     return this.chosenExample?.example; // doing this in getter instead of template, because ?. in template can apparently return null.

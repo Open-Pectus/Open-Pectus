@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild, inject } from '@angular/core';
 import { ProcessValueCommand } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 
@@ -27,6 +27,8 @@ export interface ValueAndUnit {
   `
 })
 export class ProcessValueEditorComponent {
+  private processValuePipe = inject(ProcessValuePipe);
+
   @Input() command?: ProcessValueCommand;
   @ViewChild('inputElement', {static: false}) inputElement?: ElementRef<HTMLInputElement>;
   @ViewChild('saveButtonElement', {static: false}) saveButtonElement?: ElementRef<HTMLButtonElement>;
@@ -34,8 +36,6 @@ export class ProcessValueEditorComponent {
   @Output() inputBlur = new EventEmitter<FocusEvent>();
 
   isValid = true;
-
-  constructor(private processValuePipe: ProcessValuePipe) {}
 
   focus() {
     this.inputElement?.nativeElement.focus();

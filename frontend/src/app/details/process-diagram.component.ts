@@ -1,5 +1,5 @@
 import { NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, OnInit, inject } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Store } from '@ngrx/store';
 import { CollapsibleElementComponent } from '../shared/collapsible-element.component';
@@ -29,6 +29,10 @@ import { DetailsSelectors } from './ngrx/details.selectors';
   `
 })
 export class ProcessDiagramComponent implements OnInit {
+  private store = inject(Store);
+  private domSanitizer = inject(DomSanitizer);
+  private processValuePipe = inject(ProcessValuePipe);
+
   processDiagram = this.store.selectSignal(DetailsSelectors.processDiagram);
   processValues = this.store.selectSignal(DetailsSelectors.processValues);
   diagramWithValues = computed(() => {
@@ -51,10 +55,6 @@ export class ProcessDiagramComponent implements OnInit {
     return this.domSanitizer.bypassSecurityTrustHtml(processDiagramString);
   });
   protected collapsed = false;
-
-  constructor(private store: Store,
-              private domSanitizer: DomSanitizer,
-              private processValuePipe: ProcessValuePipe) {}
 
   ngOnInit() {
     this.store.dispatch(DetailsActions.processDiagramInitialized());

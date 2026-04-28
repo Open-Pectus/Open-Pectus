@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, inject } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
 import { combineLatest, EMPTY, map, shareReplay, switchMap } from 'rxjs';
@@ -23,6 +23,9 @@ import { AsyncPipe } from '@angular/common';
   `,
 })
 export class ActiveUserComponent {
+  private store = inject(Store);
+  private httpClient = inject(HttpClient);
+
   activeUser = input.required<ActiveUser>();
   authIsEnabled = this.store.select(AppSelectors.authIsEnabled);
   profileImage = combineLatest([toObservable(this.activeUser), this.authIsEnabled]).pipe(
@@ -36,6 +39,4 @@ export class ActiveUserComponent {
     map(imageBlob => URL.createObjectURL(imageBlob)),
     shareReplay(1),
   );
-
-  constructor(private store: Store, private httpClient: HttpClient) {}
 }

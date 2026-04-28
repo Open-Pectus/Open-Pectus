@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, EventEmitter, input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, input, Output, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { ProcessValue, TagDirection } from '../../api';
 import { DetailsSelectors } from '../ngrx/details.selectors';
@@ -40,13 +40,13 @@ import { TagDirectionPipe } from './tag-direction.pipe';
   `
 })
 export class ProcessValuesCategorizedComponent {
+  private store = inject(Store);
+
   processValues = input<ProcessValue[]>();
   @Output() openCommands = new EventEmitter<PvAndPosition>();
   allProcessValues = this.store.selectSignal(DetailsSelectors.allProcessValues);
   protected readonly tagDirections: TagDirection[] = ['input', 'output', 'na', 'unspecified'];
   protected readonly Object = Object;
-
-  constructor(private store: Store) {}
 
   protected getProcessValuesOfCategory(direction: string) {
     const processValues = this.processValues()?.filter(processValue => processValue.direction === direction) ?? [];

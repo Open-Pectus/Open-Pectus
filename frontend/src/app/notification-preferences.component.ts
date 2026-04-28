@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, ElementRef, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, ElementRef, ViewChild, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -61,6 +61,12 @@ import { AsyncPipe } from '@angular/common';
   `,
 })
 export class NotificationPreferencesComponent {
+  private store = inject(Store);
+  private webpushService = inject(WebpushService);
+  private swPush = inject(SwPush);
+  private cdRef = inject(ChangeDetectorRef);
+  private router = inject(Router);
+
   @ViewChild('popover') popover!: ElementRef<HTMLDivElement>;
   @ViewChild('bell') bell!: ElementRef<HTMLButtonElement>;
   protected readonly notificationScopes = notificationScopes;
@@ -82,11 +88,7 @@ export class NotificationPreferencesComponent {
   });
   protected hasSubscription = this.swPush.subscription.pipe(map(subscription => subscription !== null));
 
-  constructor(private store: Store,
-              private webpushService: WebpushService,
-              private swPush: SwPush,
-              private cdRef: ChangeDetectorRef,
-              private router: Router) {
+  constructor() {
     this.formGroup.valueChanges.pipe(takeUntilDestroyed()).subscribe(_ => {
       this.webpushService.saveNotificationPreferences({requestBody: this.formGroup.value as WebPushNotificationPreferences}).subscribe();
     });

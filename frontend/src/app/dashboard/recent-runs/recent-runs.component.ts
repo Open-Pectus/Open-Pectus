@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { Contributor, RecentRun } from '../../api';
@@ -22,6 +22,9 @@ import { DashboardSelectors } from '../ngrx/dashboard.selectors';
   `,
 })
 export class RecentRunsComponent implements OnInit {
+  private router = inject(Router);
+  private store = inject(Store);
+
   protected readonly recentRunsFilter = this.store.selectSignal(DashboardSelectors.recentRunsFilter);
   protected readonly recentRuns = this.store.selectSignal(DashboardSelectors.recentRuns);
   protected readonly defaultSort: DefaultTableSort<RecentRun> = {columnKey: 'completed_date', direction: TableSortDirection.Descending};
@@ -46,9 +49,6 @@ export class RecentRunsComponent implements OnInit {
       transform: (c?: Contributor[]) => c?.map(c => c.name).join(', ') ?? '',
     } satisfies TableColumn<RecentRun, 'contributors'>,
   ] satisfies TableColumn<RecentRun>[];
-
-
-  constructor(private router: Router, private store: Store) {}
 
   ngOnInit() {
     this.store.dispatch(DashboardActions.recentRunsInitialized());
