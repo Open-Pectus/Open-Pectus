@@ -47,7 +47,7 @@
     "@angular/cli": "^21.2.8",
     "@angular/compiler-cli": "^21.2.10",
     "@codingame/esbuild-import-meta-url-plugin": "^1.0.3",
-    "@hey-api/openapi-ts": "^0.69.2",
+    "@hey-api/openapi-ts": "^0.86.12",
     "@types/d3": "^7.4.0",
     "@types/node": "^24.12.2",
     "@types/vscode": "^1.100.0",
