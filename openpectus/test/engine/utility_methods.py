@@ -70,7 +70,14 @@ FindInstructionState = Literal[
 class EngineTestRunner:
     """ Expose an interface of Engine similar to what is available in the frontend to tests. """
     def __init__(self, uod_factory: UodFactory, method: str | Mdl.Method = "", interval: float = 0.1, speed: float = 1.0,
-                 fail_on_log_error=True, raise_on_emit=False) -> None:
+                 fail_on_log_error=True,
+                 raise_on_emit=False
+        ) -> None:
+        """ Create an engine test runner instance.
+
+        Args:
+            method: Method to run. The format should be either raw pcode, numbered pcode or pre-parsed
+        """ 
         self.uod_factory = uod_factory
         self.method: str | Mdl.Method = method
         self.interval = interval
@@ -107,7 +114,11 @@ class EngineTestInstance(EventListener):
 
         self.engine.run(skip_timer_start=True)
         if isinstance(method, str):
-            method = Mdl.Method.from_pcode(method)
+            if Mdl.Method.is_probably_numbered_pcode(method):
+                method = Mdl.Method.from_numbered_pcode(method)
+            else:
+                method = Mdl.Method.from_pcode(method)
+            
         self.engine.set_method(method)
 
         self._search_index = 0
