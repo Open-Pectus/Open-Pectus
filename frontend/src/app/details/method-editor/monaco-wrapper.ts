@@ -1,7 +1,7 @@
 import { EditorApp } from 'monaco-languageclient/editorApp';
 import { MonacoVscodeApiConfig, MonacoVscodeApiWrapper } from 'monaco-languageclient/vscodeApiWrapper';
 import { LanguageClientConfig, LanguageClientWrapper } from 'monaco-languageclient/lcwrapper';
-import { useWorkerFactory, Worker } from 'monaco-languageclient/workerFactory';
+import { useWorkerFactory, Worker, WorkerFactoryConfig } from 'monaco-languageclient/workerFactory';
 
 export class MonacoWrapper {
   static isInitialized = false;
@@ -116,7 +116,7 @@ export class MonacoWrapper {
 
   // adapted from https://github.com/TypeFox/monaco-languageclient/blob/70f92b740a06f56210f91464d694b5e5d4dc87db/packages/examples/src/common/client/utils.ts
   // later based on node_modules/monaco-languageclient/src/worker/index.ts
-  private static configureMonacoWorkers(logger: any) { // any because I can't import the interface
+  private static configureMonacoWorkers(logger: WorkerFactoryConfig['logger']) {
     useWorkerFactory({
       workerLoaders: {
         'TextMateWorker': () => new Worker('/assets/monaco-workers/textmate.js', {type: 'module'}),
