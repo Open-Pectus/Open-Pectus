@@ -41,19 +41,36 @@
       "prefix": "app",
       "architect": {
         "build": {
-          "builder": "@angular/build:application",
+          "builder": "@angular-builders/custom-webpack:browser",
           "options": {
             "outputPath": "dist",
             "index": "src/index.html",
-            "browser": "src/main.ts",
+            "main": "src/main.ts",
             "polyfills": [],
             "tsConfig": "tsconfig.app.json",
-            "inlineStyleLanguage": "scss",
-            "loader": {
-              ".svg": "text",
-              ".png": "text",
-              ".ttf": "text"
+            "customWebpackConfig": {
+              "path": "./extra-webpack.config.js",
+              "mergeRules": {
+                "externals": "replace"
+              }
             },
+            "allowedCommonJsDependencies": [
+              "vscode-jsonrpc",
+              "@vscode/iconv-lite-umd",
+              "!../../../../../../../../../style-loader/dist/runtime/styleTagTransform.js",
+              "!../../../../../../../../../style-loader/dist/runtime/injectStylesIntoStyleTag.js",
+              "!../../../../../../../../../style-loader/dist/runtime/insertBySelector.js",
+              "!../../../../../../../../../style-loader/dist/runtime/insertStyleElement.js",
+              "!../../../../../../../../../style-loader/dist/runtime/setAttributesWithoutAttributes.js",
+              "!../../../../../../../../../style-loader/dist/runtime/styleDomAPI.js",
+              "!../../../../../../../../style-loader/dist/runtime/styleTagTransform.js",
+              "!../../../../../../../../style-loader/dist/runtime/injectStylesIntoStyleTag.js",
+              "!../../../../../../../../style-loader/dist/runtime/insertBySelector.js",
+              "!../../../../../../../../style-loader/dist/runtime/insertStyleElement.js",
+              "!../../../../../../../../style-loader/dist/runtime/setAttributesWithoutAttributes.js",
+              "!../../../../../../../../style-loader/dist/runtime/styleDomAPI.js"
+            ],
+            "inlineStyleLanguage": "scss",
             "assets": [
               "src/favicon.ico",
               "src/assets",
@@ -94,7 +111,7 @@
           "defaultConfiguration": "production"
         },
         "serve": {
-          "builder": "@angular/build:dev-server",
+          "builder": "@angular-builders/custom-webpack:dev-server",
           "configurations": {
             "production": {
               "buildTarget": "frontend:build:production"

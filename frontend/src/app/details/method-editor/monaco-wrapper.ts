@@ -1,7 +1,7 @@
 import { EditorApp } from 'monaco-languageclient/editorApp';
 import { MonacoVscodeApiConfig, MonacoVscodeApiWrapper } from 'monaco-languageclient/vscodeApiWrapper';
 import { LanguageClientConfig, LanguageClientWrapper } from 'monaco-languageclient/lcwrapper';
-import { configureDefaultWorkerFactory } from 'monaco-languageclient/workerFactory';
+import { useWorkerFactory, Worker } from 'monaco-languageclient/workerFactory';
 
 export class MonacoWrapper {
   static isInitialized = false;
@@ -26,8 +26,9 @@ export class MonacoWrapper {
       viewsConfig: {
         $type: 'EditorService'
       },
-      // vscodeApiInitPerformExternally: true,
-      // enableExtHostWorker: true,
+      // advanced: {
+      //   enableExtHostWorker: true,
+      // },
       userConfiguration: {
         json: JSON.stringify({
           'editor.fontSize': 18,
@@ -51,7 +52,8 @@ export class MonacoWrapper {
           'editor.suggest.preview': true,
         }),
       },
-      monacoWorkerFactory: configureDefaultWorkerFactory,
+      monacoWorkerFactory: MonacoWrapper.configureMonacoWorkers,
+      // monacoWorkerFactory: configureDefaultWorkerFactory,
       extensions: [{
         config: {
           name: 'pcode',
@@ -111,4 +113,21 @@ export class MonacoWrapper {
     MonacoWrapper.languageClientWrapper = apiWrapper.start().then(() => apiWrapper);
     return MonacoWrapper.languageClientWrapper;
   }
+
+  // adapted from https://github.com/TypeFox/monaco-languageclient/blob/70f92b740a06f56210f91464d694b5e5d4dc87db/packages/examples/src/common/client/utils.ts
+  // later based on node_modules/monaco-languageclient/src/worker/index.ts
+  private static configureMonacoWorkers(logger: any) { // any because I can't import the interface
+    useWorkerFactory({
+      workerLoaders: {
+        'TextMateWorker': () => new Worker('/assets/monaco-workers/textmate.js', {type: 'module'}),
+        'editorWorkerService': () => new Worker('/assets/monaco-workers/editorService.js', {type: 'module'}),
+        // 'extensionHostWorkerMain': () => new Worker('/assets/monaco-workers/extensionHost.js', {type: 'module'}),
+        OutputLinkDetectionWorker: undefined,
+        LanguageDetectionWorker: undefined,
+        NotebookEditorWorker: undefined,
+        LocalFileSearchWorker: undefined,
+      },
+      logger,
+    });
+  };
 }

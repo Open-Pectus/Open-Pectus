@@ -42,7 +42,7 @@
     "vscode-ws-jsonrpc": "^3.3.2"
   },
   "devDependencies": {
-    "@analogjs/vite-plugin-angular": "^2.4.10",
+    "@angular-builders/custom-webpack": "^21.0.3",
     "@angular/build": "^21.2.8",
     "@angular/cli": "^21.2.8",
     "@angular/compiler-cli": "^21.2.10",
@@ -56,9 +56,10 @@
     "msw": "^2.3.1",
     "path-browserify": "^1.0.1",
     "postcss": "^8.4.38",
+    "style-loader": "^4.0.0",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.9.3",
-    "vite": "^8.0.10"
+    "webpack-cli": "^7.0.2"
   },
   "msw": {
     "workerDirectory": "src"
