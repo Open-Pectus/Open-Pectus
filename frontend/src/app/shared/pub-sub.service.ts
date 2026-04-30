@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { PubSubRxjsClient } from '../../fastapi_websocket/pub-sub-rxjs-client';
 import { PubSubTopic } from '../api';
@@ -8,6 +8,8 @@ import { AppActions } from '../ngrx/app.actions';
   providedIn: 'root',
 })
 export class PubSubService {
+  private store = inject(Store);
+
   private readonly pubSubTopics: Record<PubSubTopic, PubSubTopic> = {
     process_units: 'process_units',
     control_state: 'control_state',
@@ -24,8 +26,6 @@ export class PubSubService {
     onDisconnect: () => this.store.dispatch(AppActions.websocketDisconnected()),
     onReconnect: () => this.store.dispatch(AppActions.websocketReconnected()),
   });
-
-  constructor(private store: Store) {}
 
   subscribeProcessUnits() {
     return this.client.forTopic(this.pubSubTopics.process_units);

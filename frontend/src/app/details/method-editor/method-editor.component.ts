@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, OnDestroy, OnInit } from '@angular/core';
 import { editor as MonacoEditor } from '@codingame/monaco-vscode-editor-api';
 import { Store } from '@ngrx/store';
 import { Subject } from 'rxjs';
@@ -15,7 +15,7 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
   imports: [CollapsibleElementComponent, MonacoEditorComponent],
   template: `
     <app-collapsible-element [name]="'Method Editor'" [heightResizable]="true" (contentHeightChanged)="onContentHeightChanged()"
-                             [contentHeight]="400" (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-list-flat'">
+                             [initialContentHeight]="400" (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-list-flat'">
 
       @if (!collapsed) {
         <div class="h-full flex flex-col" content>
@@ -30,7 +30,7 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
           <app-monaco-editor class="block rounded-sm flex-1 pl-1" [editorSizeChange]="editorSizeChange"
                              [unitId]="unitId()" (editorIsReady)="onEditorReady($event)"
                              [dropFileEnabled]="isStopped()" [dropFileDisabledReason]="dropFileDisabledReason"
-                             [editorOptions]="editorOptions()" [fileUriPrefix]="'method_editor'"></app-monaco-editor>
+                             [editorOptions]="editorOptions()" [fileUriPrefix]="'method_editor'" />
         </div>
       }
       @if (!collapsed && methodEditorIsDirty()) {
@@ -47,20 +47,18 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
 export class MethodEditorComponent implements OnInit, OnDestroy {
   unitId = input<string>();
   recentRunId = input<string>();
-
-  protected methodEditorIsDirty = this.store.selectSignal(MethodEditorSelectors.isDirty);
-  protected versionMismatch = this.store.selectSignal(MethodEditorSelectors.versionMismatch);
-  protected method = this.store.selectSignal(MethodEditorSelectors.method);
-  protected controlState = this.store.selectSignal(DetailsSelectors.controlState);
   protected isStopped = computed(() => !this.controlState().is_running);
   protected editorSizeChange = new Subject<void>();
   protected collapsed = false;
   protected editorOptions = computed(() => {
     return {readOnly: this.recentRunId() !== undefined, readOnlyMessage: {value: 'You cannot edit an already executed program'}};
   });
+  private store = inject(Store);
+  protected methodEditorIsDirty = this.store.selectSignal(MethodEditorSelectors.isDirty);
+  protected versionMismatch = this.store.selectSignal(MethodEditorSelectors.versionMismatch);
+  protected method = this.store.selectSignal(MethodEditorSelectors.method);
+  protected controlState = this.store.selectSignal(DetailsSelectors.controlState);
   private componentDestroyed = new Subject<void>();
-
-  constructor(private store: Store) {}
 
   get dropFileDisabledReason() {
     if(this.recentRunId() !== undefined) return 'Cannot replace an already run program';
