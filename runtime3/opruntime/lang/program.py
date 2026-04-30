@@ -353,8 +353,23 @@ class ProgramNode(NodeWithChildren):
         return nodes
 
     def get_locked_blocks(self) -> list[BlockNode]:
-        return [n for n in self.get_all_nodes() if isinstance(n, BlockNode) and n.lock_acquired]
+        """ Return the locked blocks, ordered from inner to outer so the first block is currently active. """
+        blocks = [n for n in self.get_all_nodes() if isinstance(n, BlockNode) and n.lock_acquired]
+        if len(blocks) > 1:
+            # When sorted by key_path, the order should be outer to inner, then reversed so innermost block is the first
+            blocks.sort(key=lambda node: node.key_path, reverse=True)            
+            if __debug__:
+                # Lets verify that
+                # - all blocks are contained in a single branch
+                # - each block is an ancestor of the previous one, so last is innermost
+                first_block = blocks[0]
+                first_block_ancestors = first_block.parents
+                for i in range(0, len(blocks)):                    
+                    if i > 0:
+                        assert blocks[i] in first_block_ancestors
+                        assert blocks[i].key_path in blocks[i-1].key_path
 
+        return blocks
 
     def extract_tree_state(self) -> dict[str, NodeState]:
         """ Return map of all nodes' state keyed by their node id """

@@ -502,17 +502,8 @@ Edited line:   '{new_line.content}'
         elif len(locked_blocks) == 1:
             old_block = locked_blocks[0]
         else:
-            # There are multiple locked blocks. This can only occur if they are contained in each other so the
-            # innermost block is the first to be unlocked. When sorted by key_path, the innermost block is the last
-            locked_blocks.sort(key=lambda node: node.key_path)
-            old_block = locked_blocks[-1]
-            new_block = locked_blocks[-2]
-
-            if __debug__:
-                # Lets verify that
-                last_block_ancestors = old_block.parents
-                for i in range(0, len(locked_blocks) - 1):
-                    assert locked_blocks[i] in last_block_ancestors
+            old_block = locked_blocks[0]
+            new_block = locked_blocks[1]
 
         if old_block is None:
             logger.warning("EndBlock found no block to end")
@@ -524,6 +515,29 @@ Edited line:   '{new_line.content}'
 
         node.completed = True
         yield VisitResult.EndTick
+
+    def visit_EndBlocksNode(self, node: p.EndBlocksNode) -> NodeGenerator:
+        assert self.program is not None
+        locked_blocks = self.program.get_locked_blocks()
+        locked_block_keys = [b.key for b in locked_blocks]
+        logger.warning("Locked blocks: " + '\n'.join(locked_block_keys))
+        if len(locked_blocks) == 0:
+            pass
+        else:
+            for i, old_block in enumerate(locked_blocks):
+                old_block.block_ended = True
+                self._abort_block_interrupts(old_block)
+                logger.debug(f"EndBlockNode {node.key} has ended block {old_block.key}")
+                if i + 1 < len(locked_blocks) - 1:
+                    new_block = locked_blocks[i+1]
+                    logger.debug(f"New active block is: {new_block.key}")
+                    yield VisitResult.ContinueTick
+
+            logger.debug("No active block")
+
+        node.completed = True
+        yield VisitResult.EndTick
+
 
     def visit_WatchNode(self, node: p.WatchNode) -> NodeGenerator:
         if not node.interrupt_registered:

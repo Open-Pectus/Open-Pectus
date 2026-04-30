@@ -692,6 +692,23 @@ Methods are not equal:
         self.assertEqual(block_b2.lock_acquired, False)
         self.assertEqual(block_b2.block_ended, True)
 
+    def test_run_block_deeply_nested_post_block_commands(self):
+        code = """\
+01 Block: B1
+02     Block: B2
+03         Block: B3
+04             End blocks
+05         Mark: A
+06     Mark: B
+07 Mark: C
+"""
+        interpreter, runner = create(code)
+        assert interpreter.program is not None
+        runner.run_until_instruction("07.Mark")
+
+        # verify A and B marks are skipped because their surrounding block is ended
+        self.assertEqual(interpreter.marks, ["C"])
+
     def test_run_block_deeply_nested_lock_interrupt(self):
         code = """\
 01 Watch: true
