@@ -99,7 +99,8 @@
               ],
               "outputHashing": "all",
               "extractLicenses": false,
-              "serviceWorker": "ngsw-config.json"
+              "serviceWorker": true,
+              "ngswConfigPath": "ngsw-config.json"
             },
             "development": {
               "optimization": false,
