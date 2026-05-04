@@ -584,7 +584,7 @@ class PInterpreter(NodeVisitor):
 
             old_block.block_ended = True
             self._abort_block_interrupts(old_block)
-            self.context.emitter.emit_on_scope_end(node.id, "Block", node.arguments)
+            self.context.emitter.emit_on_scope_end(old_block.id, "Block", old_block.arguments)
 
             logger.debug(f"EndBlockNode {node.key} has ended block {old_block.key}")
             logger.debug(f"New active block is: {new_block.key if new_block is not None else "No active block"}")
@@ -613,6 +613,8 @@ class PInterpreter(NodeVisitor):
 
                 old_block.block_ended = True
                 self._abort_block_interrupts(old_block)
+                self.context.emitter.emit_on_scope_end(old_block.id, "Block", old_block.arguments)
+
                 logger.debug(f"EndBlockNode {node.key} has ended block {old_block.key}")
                 logger.debug(f"New active block is: {new_block.key if new_block is not None else "No active block"}")
 
