@@ -123,6 +123,9 @@ const reducer = createReducer(initialState,
     });
     draft.plotLog.entries = newEntries;
   })),
+  on(DetailsActions.controlStateChanged, (state, {oldControlState, newControlState}) => produce(state, draft => {
+    if(!oldControlState.is_running && newControlState.is_running) draft.plotLog = {entries: {}};
+  })),
 );
 
 export const processPlotSlice = {name: 'processPlot', reducer};

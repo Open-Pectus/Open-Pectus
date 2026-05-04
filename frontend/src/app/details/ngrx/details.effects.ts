@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
@@ -14,6 +14,12 @@ import { DetailsSelectors } from './details.selectors';
 // noinspection JSUnusedGlobalSymbols
 @Injectable()
 export class DetailsEffects {
+  private actions = inject(Actions);
+  private store = inject(Store);
+  private processUnitService = inject(ProcessUnitService);
+  private recentRunsService = inject(RecentRunsService);
+  private pubSubService = inject(PubSubService);
+
   fetchProcessValuesWhenPageInitialized = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.unitDetailsInitialized),
     switchMap(({unitId}) => {
@@ -71,7 +77,7 @@ export class DetailsEffects {
     ofType(DetailsActions.controlStateUpdatedOnBackend),
     mergeMap(({unitId}) => {
       return this.processUnitService.getControlState({unitId}).pipe(
-        map(controlState => DetailsActions.controlStateFetched({controlState})),
+        map(controlState => DetailsActions.controlStateFetchedFromUpdate({controlState})),
       );
     }),
   ));
@@ -215,9 +221,11 @@ export class DetailsEffects {
     }),
   ));
 
-  constructor(private actions: Actions,
-              private store: Store,
-              private processUnitService: ProcessUnitService,
-              private recentRunsService: RecentRunsService,
-              private pubSubService: PubSubService) {}
+  controlStateChanged = createEffect(() => this.actions.pipe(
+    ofType(DetailsActions.controlStateFetchedFromUpdate),
+    concatLatestFrom(() => this.store.select(DetailsSelectors.previousControlState)),
+    switchMap(([{controlState}, previousControlState]) => {
+      return of(DetailsActions.controlStateChanged({oldControlState: previousControlState, newControlState: controlState}));
+    })
+  ));
 }

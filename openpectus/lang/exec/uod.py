@@ -1018,7 +1018,7 @@ class RegexNamedArgumentParser:
         # ex2: ' ?(?P<number_unit>kg)'
         # eg3: '^\\s*(?P<number>-?[0-9]+[.][0-9]*?|-?[.][0-9]+|-?[0-9]+)\\s* ?(?P<number_unit>kg|g)\\s*$'
         result = []
-        p = re.compile(r"\<(?P<name>([a-zA-Z]|_)+)\>")
+        p = re.compile(r"\<(?P<name>([a-zA-Z0-9]|_)+)\>")
         for match in p.finditer(self.regex):
             result.append(match.group("name"))
         return result

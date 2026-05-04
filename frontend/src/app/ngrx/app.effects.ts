@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
@@ -13,6 +13,14 @@ import { AppSelectors } from './app.selectors';
 // noinspection JSUnusedGlobalSymbols
 @Injectable()
 export class AppEffects {
+  private actions = inject(Actions);
+  private store = inject(Store);
+  private processUnitService = inject(ProcessUnitService);
+  private pubSubService = inject(PubSubService);
+  private versionService = inject(VersionService);
+  private httpClient = inject(HttpClient);
+  private oidcSecurityService = inject(OidcSecurityService);
+
   fetchAuthConfigAtStart = createEffect(() => this.actions.pipe(
     ofType(AppActions.pageInitialized),
     switchMap(() => this.oidcSecurityService.getConfiguration()),
@@ -100,12 +108,4 @@ export class AppEffects {
       this.pubSubService.subscribeDeadManSwitch(userId).subscribe();
     }),
   ), {dispatch: false});
-
-  constructor(private actions: Actions,
-              private store: Store,
-              private processUnitService: ProcessUnitService,
-              private pubSubService: PubSubService,
-              private versionService: VersionService,
-              private httpClient: HttpClient,
-              private oidcSecurityService: OidcSecurityService) {}
 }

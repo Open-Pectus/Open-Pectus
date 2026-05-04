@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
@@ -16,9 +16,10 @@ import { AppSelectors } from '../ngrx/app.selectors';
   `,
 })
 export class AuthCallbackComponent implements OnInit {
-  constructor(private router: Router,
-              private oidcSecurityService: OidcSecurityService,
-              private store: Store) {}
+  private router = inject(Router);
+  private oidcSecurityService = inject(OidcSecurityService);
+  private store = inject(Store);
+
 
   ngOnInit() {
     this.store.select(AppSelectors.hasFinishedAuthentication).pipe(filter(identity), take(1), tap(() => {
