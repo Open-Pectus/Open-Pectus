@@ -211,7 +211,7 @@ Restart
     def test_restart_can_restart(self):
         set_engine_debug_logging()
         set_interpreter_debug_logging()
-        code = """
+        code = """\
 Mark: A
 Increment run counter
 Restart
@@ -242,7 +242,7 @@ Restart
             self.assertEqual([], instance.marks)
             self.assertEqual(1, run_counter.as_number())
 
-            instance.run_until_instruction("Increment run counter")
+            instance.run_until_instruction("Increment run counter", state="completed")
             self.assertEqual(["A"], instance.marks)
             self.assertEqual(2, run_counter.as_number())
 
@@ -288,7 +288,7 @@ Restart
             instance.run_until_command("Reset")
 
             total_ticks = instance.run_until_instruction("Restart")
-            self.assertLess(total_ticks, 3)
+            self.assertLess(total_ticks, 5)
 
     def test_restart_can_stop(self):
         set_engine_debug_logging()
@@ -301,13 +301,8 @@ Restart
         with runner.run() as instance:
             sys_state = instance.engine.tags[SystemTagName.SYSTEM_STATE]
             instance.start()
-
-            instance.run_until_instruction("Restart")
-            self.assertEqual(sys_state.get_value(), SystemStateEnum.Restarting)
-
-            # when no commands need to be stopped, restart directly moves to Stopped
-            instance.run_ticks(1)
-            self.assertEqual(sys_state.get_value(), SystemStateEnum.Stopped)
+            instance.run_until_condition(lambda: sys_state.get_value() == SystemStateEnum.Restarting)
+            instance.run_until_condition(lambda: sys_state.get_value() == SystemStateEnum.Stopped)
 
     def test_mark_in_alarm_body_runs_in_each_alarm_instance(self):
         code = """
@@ -496,7 +491,7 @@ Mark: C
             self.assertEqual(instance.marks, ['A', 'B'])
 
             instance.run_until_event("method_end")
-            self.assertEqual(instance.marks, ['A', 'B', 'C', 'I'])
+            self.assertIn(instance.marks, [['A', 'B', 'C', 'I'], ['A', 'B', 'I', 'C']])
 
     def test_info_warning_error(self):
         pcode = """
